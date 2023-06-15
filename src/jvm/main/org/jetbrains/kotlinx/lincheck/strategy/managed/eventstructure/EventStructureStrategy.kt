@@ -329,7 +329,7 @@ private class EventStructureMemoryTracker(private val eventStructure: EventStruc
             val finalWrites = eventStructure.calculateRacyWrites(location, eventStructure.currentExecution.toFrontier())
             // we choose one of the racy final writes non-deterministically and dump it to the memory
             val write = finalWrites.firstOrNull() ?: continue
-            val label = write.label.asMemoryAccessLabel(location).ensureNotNull()
+            val label = write.label.asWriteAccessLabel(location).ensureNotNull()
             location.write(label.value?.unwrap())
         }
     }

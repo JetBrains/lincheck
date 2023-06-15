@@ -21,6 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.unreachable
 
 /**
  * Hyper event is a composite event consisting of multiple atomic events.
@@ -153,6 +154,8 @@ fun List<Event>.nextAtomicMemoryAccessEvent(firstEvent: Event): HyperEvent {
             writeEvent.label.remapRecipient(readResponseEvent.label)
             ReadModifyWriteEvent(readRequestEvent, readResponseEvent, writeEvent)
         }
+
+        else -> unreachable()
     }
 }
 

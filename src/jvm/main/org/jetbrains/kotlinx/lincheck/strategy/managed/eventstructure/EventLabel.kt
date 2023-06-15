@@ -65,25 +65,32 @@ sealed class EventLabel(
         get() = (kind == LabelKind.Response)
 
     /**
+     * Checks whether this label is recieve label.
+     */
+    val isReceive: Boolean
+        get() = (kind == LabelKind.Receive)
+
+    /**
      * Type of the label.
      *
      * @see LabelType
      */
     val type: LabelType
         get() = when (this) {
-            is InitializationLabel  -> LabelType.Initialization
-            is ThreadStartLabel     -> LabelType.ThreadStart
-            is ThreadFinishLabel    -> LabelType.ThreadFinish
-            is ThreadForkLabel      -> LabelType.ThreadFork
-            is ThreadJoinLabel      -> LabelType.ThreadJoin
-            is ReadAccessLabel      -> LabelType.ReadAccess
-            is WriteAccessLabel     -> LabelType.WriteAccess
-            is LockLabel            -> LabelType.Lock
-            is UnlockLabel          -> LabelType.Unlock
-            is WaitLabel            -> LabelType.Wait
-            is NotifyLabel          -> LabelType.Notify
-            is ParkLabel            -> LabelType.Park
-            is UnparkLabel          -> LabelType.Unpark
+            is InitializationLabel          -> LabelType.Initialization
+            is ThreadStartLabel             -> LabelType.ThreadStart
+            is ThreadFinishLabel            -> LabelType.ThreadFinish
+            is ThreadForkLabel              -> LabelType.ThreadFork
+            is ThreadJoinLabel              -> LabelType.ThreadJoin
+            is ReadAccessLabel              -> LabelType.ReadAccess
+            is WriteAccessLabel             -> LabelType.WriteAccess
+            is ReadModifyWriteAccessLabel   -> LabelType.ReadModifyWriteAccess
+            is LockLabel                    -> LabelType.Lock
+            is UnlockLabel                  -> LabelType.Unlock
+            is WaitLabel                    -> LabelType.Wait
+            is NotifyLabel                  -> LabelType.Notify
+            is ParkLabel                    -> LabelType.Park
+            is UnparkLabel                  -> LabelType.Unpark
         }
 
     /**
@@ -156,13 +163,14 @@ sealed class EventLabel(
  * - [LabelKind.Send] --- send label.
  * - [LabelKind.Request] --- request label.
  * - [LabelKind.Response] --- response label.
+ * - [LabelKind.Receive] --- receive label.
  *
  * For example, [WriteAccessLabel] is an example of the send label,
  * while [ReadAccessLabel] is split into request and response part.
  *
  * @see EventLabel
  */
-enum class LabelKind { Send, Request, Response }
+enum class LabelKind { Send, Request, Response, Receive }
 
 enum class LabelType {
     Initialization,
@@ -172,6 +180,7 @@ enum class LabelType {
     ThreadJoin,
     ReadAccess,
     WriteAccess,
+    ReadModifyWriteAccess,
     Lock,
     Unlock,
     Wait,
@@ -214,8 +223,8 @@ class InitializationLabel(
     fun asThreadForkLabel() = ThreadForkLabel(setOf(mainThreadID))
 
     fun asWriteAccessLabel(location: MemoryLocation) = WriteAccessLabel(
-        location_ = location,
-        value_ = initialValue(location),
+        location = location,
+        _value = initialValue(location),
         isExclusive = false,
     )
 
@@ -280,7 +289,7 @@ data class ThreadStartLabel(
 ): ThreadEventLabel(kind) {
 
     init {
-        check(isRequest || isResponse)
+        check(isRequest || isResponse || isReceive)
     }
 
     fun isValidResponse(request: ThreadStartLabel): Boolean {
@@ -351,7 +360,7 @@ data class ThreadJoinLabel(
     unblocked = (kind == LabelKind.Response) implies joinThreadIds.isEmpty(),
 ) {
     init {
-        check(isRequest || isResponse)
+        check(isRequest || isResponse || isReceive)
     }
 
     override fun toString(): String =
@@ -376,7 +385,7 @@ fun EventLabel.asThreadEventLabel(): ThreadEventLabel? = when (this) {
  * such as accessing memory location and read or written value.
  *
  * @param kind the kind of this label.
- * @param location_ memory location affected by this memory access.
+ * @param location memory location affected by this memory access.
  * @param value_ written value for write access, read value for read access.
  * @param kClass class of written or read value.
  * @param isExclusive flag indicating whether this access is exclusive.
@@ -385,23 +394,20 @@ fun EventLabel.asThreadEventLabel(): ThreadEventLabel? = when (this) {
  */
 sealed class MemoryAccessLabel(
     kind: LabelKind,
-    protected open var location_: MemoryLocation,
-    protected open var value_: OpaqueValue?,
+    open val location: MemoryLocation,
     open val kClass: KClass<*>?,
     open val isExclusive: Boolean = false
 ): EventLabel(kind) {
 
     /**
-     * Memory location affected by this memory access.
+     * Read value for read access.
      */
-    val location: MemoryLocation
-        get() = location_
+    abstract val readValue: OpaqueValue?
 
     /**
-     * Written value for write access, read value for read access.
+     * Written value for write access.
      */
-    val value: OpaqueValue?
-        get() = value_
+    abstract val writeValue: OpaqueValue?
 
     /**
      * Kind of memory access of this label:
@@ -411,19 +417,20 @@ sealed class MemoryAccessLabel(
         get() = when(this) {
             is WriteAccessLabel -> MemoryAccessKind.Write
             is ReadAccessLabel -> MemoryAccessKind.Read
+            is ReadModifyWriteAccessLabel -> MemoryAccessKind.ReadModifyWrite
         }
-
-    /**
-     * Checks whether this memory access is write.
-     */
-    val isWrite: Boolean
-        get() = (accessKind == MemoryAccessKind.Write)
 
     /**
      * Checks whether this memory access is read.
      */
     val isRead: Boolean
-        get() = (this is ReadAccessLabel)
+        get() = (accessKind == MemoryAccessKind.Read || accessKind == MemoryAccessKind.ReadModifyWrite)
+
+    /**
+     * Checks whether this memory access is write.
+     */
+    val isWrite: Boolean
+        get() = (accessKind == MemoryAccessKind.Write || accessKind == MemoryAccessKind.ReadModifyWrite)
 
     /**
      * Recipient of a memory access label is equal to its memory location's recipient.
@@ -438,23 +445,25 @@ sealed class MemoryAccessLabel(
         get() = location
 
     /**
+     * Checks whether this label can be replayed by another [label].
+     */
+    private fun replayable(label: MemoryAccessLabel): Boolean =
+        kind == label.kind &&
+        kClass == label.kClass &&
+        isExclusive == label.isExclusive &&
+        accessKind == label.accessKind
+
+    /**
      * Replays this memory access label using another memory access label given as argument.
      * Replaying can substitute accessed memory location and read/written value of the memory access.
      *
      * @see EventLabel.replay
      */
     override fun replay(label: EventLabel, remapping: Remapping) {
-        check(label is MemoryAccessLabel &&
-            kind == label.kind &&
-            accessKind == label.accessKind &&
-            kClass == label.kClass &&
-            isExclusive == label.isExclusive) {
+        check(label is MemoryAccessLabel && replayable(label)) {
             "Event label $this cannot be replayed by $label"
         }
         location.replay(label.location, remapping)
-        // TODO: check primitive values are equal
-        remapping[value?.unwrap()] = label.value?.unwrap()
-        value_ = label.value
     }
 
     /**
@@ -464,9 +473,6 @@ sealed class MemoryAccessLabel(
      */
     override fun remap(remapping: Remapping) {
         location.remap(remapping)
-        value?.unwrap()
-            ?.let { remapping[it] }
-            ?.also { value_ = it.opaque() }
     }
 
     override fun toString(): String {
@@ -474,9 +480,14 @@ sealed class MemoryAccessLabel(
             LabelKind.Send -> ""
             LabelKind.Request -> "^req"
             LabelKind.Response -> "^rsp"
+            LabelKind.Receive -> ""
         }
         val exclString = if (isExclusive) "_ex" else ""
-        val argsString = "$location" + if (kind != LabelKind.Request) ", $value" else ""
+        val argsString = listOfNotNull(
+            "$location",
+            if (isRead && kind != LabelKind.Request) "$readValue" else null,
+            if (isWrite) "$writeValue" else null,
+        ).joinToString()
         return "${accessKind}${kindString}${exclString}(${argsString})"
     }
 
@@ -487,20 +498,14 @@ sealed class MemoryAccessLabel(
  *
  * @see MemoryAccessLabel
  */
-enum class MemoryAccessKind { Read, Write }
+enum class MemoryAccessKind { Read, Write, ReadModifyWrite }
 
 /**
  * Label denoting read access to shared memory.
  *
- * Can either be of [LabelKind.Request] or [LabelKind.Response] kind.
- * Read-request can synchronize either with [InitializationLabel] or with [WriteAccessLabel]
- * to produce read-response label. In the former case response will take default value
- * for given class, provided by [kClass] constructor argument.
- * In the latter case read-response will take value of the write label.
- *
  * @param kind the kind of this label: [LabelKind.Request] or [LabelKind.Response] kind.
- * @param location_ memory location of this read.
- * @param value_ the read value, for read-request label equals to null.
+ * @param location memory location of this read.
+ * @param _value the read value, for read-request label equals to null.
  * @param kClass the class of read value.
  * @param isExclusive exclusive access flag.
  *
@@ -508,16 +513,25 @@ enum class MemoryAccessKind { Read, Write }
  */
 data class ReadAccessLabel(
     override val kind: LabelKind,
-    override var location_: MemoryLocation,
-    override var value_: OpaqueValue?,
+    override val location: MemoryLocation,
+    private var _value: OpaqueValue?,
     override val kClass: KClass<*>?,
     override val isExclusive: Boolean = false
-): MemoryAccessLabel(kind, location_, value_, kClass, isExclusive) {
+): MemoryAccessLabel(kind, location, kClass, isExclusive) {
 
     init {
-        require(isRequest || isResponse)
+        require(isRequest || isResponse || isReceive)
         require(isRequest implies (value == null))
     }
+
+    val value: OpaqueValue?
+        get() = _value
+
+    override val readValue: OpaqueValue?
+        get() = value
+
+    override val writeValue: OpaqueValue?
+        get() = null
 
     fun isValidResponse(request: ReadAccessLabel): Boolean {
         require(request.isRequest)
@@ -533,17 +547,44 @@ data class ReadAccessLabel(
         // require(value.isInstanceOf(kClass))
         return ReadAccessLabel(
             kind = LabelKind.Response,
-            location_ = location,
+            location = location,
             kClass = kClass,
-            value_ = value,
+            _value = value,
             isExclusive = isExclusive,
         )
+    }
+
+    fun isValidReceive(label: ReadAccessLabel): Boolean {
+        require(label.isRequest || label.isResponse)
+        require(isReceive)
+        return kClass == label.kClass
+                && location == label.location
+                && isExclusive == label.isExclusive
+    }
+
+    fun getReceive(): ReadAccessLabel {
+        require(isResponse)
+        return copy(kind = LabelKind.Receive)
     }
 
     fun canReadFrom(write: WriteAccessLabel): Boolean {
         require(isResponse)
         // TODO: also check kClass
         return value == write.value
+    }
+
+    override fun replay(label: EventLabel, remapping: Remapping) {
+        super.replay(label, remapping)
+        // TODO: check primitive values are equal
+        remapping[value?.unwrap()] = (label as ReadAccessLabel).value?.unwrap()
+        _value = label.value
+    }
+
+    override fun remap(remapping: Remapping) {
+        super.remap(remapping)
+        value?.unwrap()
+            ?.let { remapping[it] }
+            ?.also { _value = it.opaque() }
     }
 
     override fun toString(): String =
@@ -553,26 +594,129 @@ data class ReadAccessLabel(
 /**
  * Label denoting write access to shared memory.
  *
- * Has [LabelKind.Send] kind.
- * Can synchronize with request [ReadAccessLabel] producing read-response label.
- *
- * @param location_ the memory location affected by this write.
- * @param value_ the written value.
+ * @param location the memory location affected by this write.
+ * @param _value the written value.
  * @param kClass the class of written value.
  * @param isExclusive exclusive access flag.
  *
  * @see MemoryAccessLabel
  */
 data class WriteAccessLabel(
-    override var location_: MemoryLocation,
-    override var value_: OpaqueValue?,
-    override val kClass: KClass<*>? = value_?.unwrap()?.javaClass?.kotlin,
+    override val location: MemoryLocation,
+    private var _value: OpaqueValue?,
+    override val kClass: KClass<*>? = _value?.unwrap()?.javaClass?.kotlin,
     override val isExclusive: Boolean = false
-): MemoryAccessLabel(LabelKind.Send, location_, value_, kClass, isExclusive) {
+): MemoryAccessLabel(LabelKind.Send, location, kClass, isExclusive) {
+
+    val value: OpaqueValue?
+        get() = _value
+
+    override val readValue: OpaqueValue?
+        get() = null
+
+    override val writeValue: OpaqueValue?
+        get() = value
+
+    override fun replay(label: EventLabel, remapping: Remapping) {
+        super.replay(label, remapping)
+        // TODO: check primitive values are equal
+        remapping[value?.unwrap()] = (label as WriteAccessLabel).value?.unwrap()
+        _value = label.value
+    }
+
+    override fun remap(remapping: Remapping) {
+        super.remap(remapping)
+        value?.unwrap()
+            ?.let { remapping[it] }
+            ?.also { _value = it.opaque() }
+    }
 
     override fun toString(): String =
         super.toString()
 }
+
+/**
+ * Label denoting read-modify-write (RMW) access to shared memory
+ * (e.g. compare-and-swap, get-and-increment, etc).
+ *
+ * @param location the memory location affected by this write.
+ * @param _readValue the read value.
+ * @param _writeValue the written value.
+ * @param kClass the class of written value.
+ * @param isExclusive exclusive access flag.
+ *
+ * @see MemoryAccessLabel
+ */
+data class ReadModifyWriteAccessLabel(
+    override val kind: LabelKind,
+    override val location: MemoryLocation,
+    private var _readValue: OpaqueValue?,
+    private var _writeValue: OpaqueValue?,
+    override val kClass: KClass<*>? = _writeValue?.unwrap()?.javaClass?.kotlin
+): MemoryAccessLabel(kind, location, kClass, isExclusive = true) {
+
+    init {
+        require(kind == LabelKind.Response || kind == LabelKind.Receive)
+    }
+
+    constructor(kind: LabelKind, read: ReadAccessLabel, write: WriteAccessLabel) : this(
+        kind = kind,
+        kClass = read.kClass,
+        location = read.location,
+        _readValue = read.value,
+        _writeValue = write.value,
+    ) {
+        require(read.kClass == write.kClass)
+        require(read.location == write.location)
+        require(read.isExclusive == write.isExclusive)
+    }
+
+    override val readValue: OpaqueValue?
+        get() = _readValue
+
+    override val writeValue: OpaqueValue?
+        get() = _writeValue
+
+    fun getReceive(): ReadModifyWriteAccessLabel {
+        require(isResponse)
+        return copy(kind = LabelKind.Receive)
+    }
+
+    override fun replay(label: EventLabel, remapping: Remapping) {
+        super.replay(label, remapping)
+        // TODO: check primitive values are equal
+        check(label is ReadModifyWriteAccessLabel)
+        remapping[readValue?.unwrap()] = label.readValue?.unwrap()
+        remapping[writeValue?.unwrap()] = label.writeValue?.unwrap()
+        _readValue = label._readValue
+        _writeValue = label._writeValue
+    }
+
+    override fun remap(remapping: Remapping) {
+        super.remap(remapping)
+        readValue?.unwrap()
+            ?.let { remapping[it] }
+            ?.also { _readValue = it.opaque() }
+        writeValue?.unwrap()
+            ?.let { remapping[it] }
+            ?.also { _writeValue = it.opaque() }
+    }
+
+    override fun toString(): String =
+        super.toString()
+}
+
+fun ReadAccessLabel.isValidReadPart(label: ReadModifyWriteAccessLabel): Boolean =
+    kClass == label.kClass &&
+    location == label.location &&
+    isExclusive == label.isExclusive &&
+    (isResponse implies (readValue == label.readValue))
+
+fun WriteAccessLabel.isValidWritePart(label: ReadModifyWriteAccessLabel): Boolean =
+    kClass == label.kClass &&
+    location == label.location &&
+    isExclusive == label.isExclusive &&
+    writeValue == label.writeValue
 
 fun EventLabel.asWriteAccessLabel(location: MemoryLocation): WriteAccessLabel? = when (this) {
     is WriteAccessLabel -> this.takeIf { it.location == location }
@@ -665,6 +809,7 @@ sealed class MutexLabel(
             LabelKind.Send -> ""
             LabelKind.Request -> "^req"
             LabelKind.Response -> "^rsp"
+            LabelKind.Receive -> ""
         }
         return "${operationKind}${kindString}($mutex)"
     }
@@ -877,6 +1022,7 @@ sealed class ParkingEventLabel(
             LabelKind.Send -> ""
             LabelKind.Request -> "^req"
             LabelKind.Response -> "^rsp"
+            LabelKind.Receive -> ""
         }
         val argsString = if (operationKind == ParkingOperationKind.Unpark) "($threadId)" else ""
         return "${operationKind}${kindString}${argsString}"

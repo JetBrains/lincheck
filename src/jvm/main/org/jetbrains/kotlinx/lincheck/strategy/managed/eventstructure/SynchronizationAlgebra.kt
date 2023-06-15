@@ -346,3 +346,51 @@ val AtomicSynchronizationAlgebra = object : SynchronizationAlgebra {
     }
 
 }
+
+val MemoryAccessAggregationAlgebra = object : SynchronizationAlgebra {
+
+    override fun syncType(label: EventLabel): SynchronizationType? = when(label) {
+        is MemoryAccessLabel -> SynchronizationType.Binary
+        else                 -> null
+    }
+
+    override fun forwardSynchronize(label: EventLabel, other: EventLabel): EventLabel? = when {
+        // read request synchronizes with read response
+        label is ReadAccessLabel && label.isRequest && other is ReadAccessLabel && other.isResponse
+                && other.isValidResponse(label) ->
+            other.getReceive()
+
+        // exclusive read response/receive synchronizes with exclusive write
+        label is ReadAccessLabel && (label.isResponse || label.isReceive) && other is WriteAccessLabel
+                && label.location == other.location
+                && label.kClass == other.kClass
+                && label.isExclusive && other.isExclusive ->
+            ReadModifyWriteAccessLabel(label.kind, label, other)
+
+        // exclusive read request synchronizes with read-modify-write response
+        label is ReadAccessLabel && label.isRequest && other is ReadModifyWriteAccessLabel && other.isResponse
+                && label.location == other.location
+                && label.kClass == other.kClass
+                && label.isExclusive && other.isExclusive ->
+            other.getReceive()
+
+        else -> null
+    }
+
+    override fun synchronizesInto(label: EventLabel, other: EventLabel): Boolean = when {
+        // read request/response can produce read receive access
+        label is ReadAccessLabel && (label.isRequest || label.isResponse) && other is ReadAccessLabel && other.isReceive ->
+            other.isValidReceive(label)
+
+        // read request/receive can can produce read-modify-write receive access
+        label is ReadAccessLabel && (label.isRequest || label.isReceive) && other is ReadModifyWriteAccessLabel && other.isReceive ->
+            label.isValidReadPart(other)
+
+        // write can can produce read-modify-write receive access
+        label is WriteAccessLabel && other is ReadModifyWriteAccessLabel && other.isReceive ->
+            label.isValidWritePart(other)
+
+        else -> false
+    }
+
+}

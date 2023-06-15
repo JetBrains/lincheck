@@ -679,8 +679,8 @@ class EventStructure(
     fun addWriteEvent(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?,
                       isExclusive: Boolean = false): Event {
         val label = WriteAccessLabel(
-            location_ = location,
-            value_ = value,
+            location = location,
+            _value = value,
             kClass = kClass,
             isExclusive = isExclusive,
         )
@@ -693,8 +693,8 @@ class EventStructure(
         // value will be filled later in read-response event
         val label = ReadAccessLabel(
             kind = LabelKind.Request,
-            location_ = location,
-            value_ = null,
+            location = location,
+            _value = null,
             kClass = kClass,
             isExclusive = isExclusive,
         )
