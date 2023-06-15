@@ -37,8 +37,7 @@ class EventStructure(
     private val maxThreadId = initThreadId
     private val nThreads = maxThreadId + 1
 
-    val syncAlgebra: SynchronizationAlgebra =
-        AtomicSynchronizationAlgebra()
+    val syncAlgebra: SynchronizationAlgebra = AtomicSynchronizationAlgebra
 
     val root: Event
 

@@ -20,7 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
-import org.jetbrains.kotlinx.lincheck.strategy.managed.OpaqueValue
+import org.jetbrains.kotlinx.lincheck.implies
 
 /**
  * Synchronization algebra describes how event labels can synchronize to form new labels using [synchronize] method.
@@ -142,49 +142,24 @@ fun SynchronizationAlgebra.isBarrierSynchronizing(label: EventLabel): Boolean =
  */
 enum class SynchronizationType { Binary, Barrier }
 
-class ThreadForkSynchronizationAlgebra : SynchronizationAlgebra {
+val ThreadSynchronizationAlgebra = object : SynchronizationAlgebra {
 
     override fun syncType(label: EventLabel): SynchronizationType? = when(label) {
-        is ThreadForkLabel  -> SynchronizationType.Binary
-        is ThreadStartLabel -> SynchronizationType.Binary
-        else                -> null
+        is ThreadForkLabel      -> SynchronizationType.Binary
+        is ThreadStartLabel     -> SynchronizationType.Binary
+        is ThreadFinishLabel    -> SynchronizationType.Barrier
+        is ThreadJoinLabel      -> SynchronizationType.Barrier
+        else                    -> null
     }
 
     override fun forwardSynchronize(label: EventLabel, other: EventLabel): EventLabel? = when {
+        // thread fork synchronizes with thread start request
         other is ThreadStartLabel && other.isRequest ->
             label.asThreadForkLabel()
                 ?.takeIf { other.threadId in it.forkThreadIds }
                 ?.let { other.getResponse() }
 
-        else -> null
-    }
-
-    override fun synchronizesInto(label: EventLabel, other: EventLabel): Boolean = when {
-        label is ThreadStartLabel && label.isRequest && other is ThreadStartLabel && other.isResponse ->
-            other.isValidResponse(label)
-
-        other is ThreadStartLabel && other.isResponse ->
-            label.asThreadForkLabel()?.let { other.threadId in it.forkThreadIds } ?: false
-
-        else -> false
-    }
-
-}
-
-class ThreadJoinSynchronizationAlgebra : SynchronizationAlgebra {
-
-    override fun syncType(label: EventLabel): SynchronizationType? = when(label) {
-        is ThreadJoinLabel      -> SynchronizationType.Barrier
-        is ThreadFinishLabel    -> SynchronizationType.Barrier
-        else                    -> null
-    }
-
-    override fun forwardSynchronize(label: EventLabel, other: EventLabel): EventLabel? = when {
-        // TODO: handle cases of invalid synchronization:
-        //  - when there are multiple ThreadFinish labels with the same thread id
-        //  - when thread finishes outside of matching ThreadFork/ThreadJoin scope
-        //  In order to handle the last case we need to add `scope` parameter to Thread labels?.
-        //  Throw `InvalidBarrierSynchronizationException` in these cases.
+        // thread finish synchronizes with thread join
         (label is ThreadFinishLabel && other is ThreadJoinLabel && other.joinThreadIds.containsAll(label.finishedThreadIds)) -> {
             ThreadJoinLabel(
                 kind = LabelKind.Response,
@@ -192,6 +167,7 @@ class ThreadJoinSynchronizationAlgebra : SynchronizationAlgebra {
             )
         }
 
+        // two thread finish labels can synchronize and merge their ids
         (label is ThreadFinishLabel && other is ThreadFinishLabel) -> {
             ThreadFinishLabel(
                 finishedThreadIds = label.finishedThreadIds + other.finishedThreadIds
@@ -202,44 +178,40 @@ class ThreadJoinSynchronizationAlgebra : SynchronizationAlgebra {
     }
 
     override fun synchronizesInto(label: EventLabel, other: EventLabel): Boolean = when {
-        label is ThreadJoinLabel && label.isRequest && other is ThreadJoinLabel && other.isResponse
-                && label.joinThreadIds.containsAll(other.joinThreadIds) ->
-            true
+        // thread start request can produce thread start response
+        label is ThreadStartLabel && label.isRequest && other is ThreadStartLabel && other.isResponse ->
+            other.isValidResponse(label)
 
-        label is ThreadFinishLabel && other is ThreadJoinLabel && other.isResponse
-                && label.finishedThreadIds.all { it !in other.joinThreadIds } ->
-            true
+        // thread fork can produce thread start response
+        other is ThreadStartLabel && other.isResponse ->
+            label.asThreadForkLabel()?.let { other.threadId in it.forkThreadIds } ?: false
 
-        label is ThreadFinishLabel && other is ThreadFinishLabel
-                && other.finishedThreadIds.containsAll(label.finishedThreadIds) ->
-            true
+        // thread join (request or response) can produce thread join response
+        label is ThreadJoinLabel && other is ThreadJoinLabel && other.isResponse ->
+            label.joinThreadIds.containsAll(other.joinThreadIds)
+
+        // thread finish can produce thread join response
+        label is ThreadFinishLabel && other is ThreadJoinLabel && other.isResponse ->
+            label.finishedThreadIds.all { it !in other.joinThreadIds }
+
+        // thread finish can produce another thread finish
+        label is ThreadFinishLabel && other is ThreadFinishLabel ->
+            other.finishedThreadIds.containsAll(label.finishedThreadIds)
 
         else -> false
     }
 
 }
 
-class MemoryAccessSynchronizationAlgebra : SynchronizationAlgebra {
+val MemoryAccessSynchronizationAlgebra = object : SynchronizationAlgebra {
 
     override fun syncType(label: EventLabel): SynchronizationType? = when(label) {
         is MemoryAccessLabel -> SynchronizationType.Binary
         else                 -> null
     }
 
-    private fun ReadAccessLabel.getResponse(value: OpaqueValue?): ReadAccessLabel {
-        require(isRequest)
-        // TODO: perform dynamic type-check
-        // require(value.isInstanceOf(kClass))
-        return ReadAccessLabel(
-            kind = LabelKind.Response,
-            location_ = location,
-            kClass = kClass,
-            value_ = value,
-            isExclusive = isExclusive,
-        )
-    }
-
     override fun forwardSynchronize(label: EventLabel, other: EventLabel): EventLabel? = when {
+        // write access synchronizes with read request access
         (other is ReadAccessLabel && other.isRequest) ->
             label.asWriteAccessLabel(other.location)
                 ?.let { other.getResponse(it.value) }
@@ -248,112 +220,70 @@ class MemoryAccessSynchronizationAlgebra : SynchronizationAlgebra {
     }
 
     override fun synchronizesInto(label: EventLabel, other: EventLabel): Boolean = when {
-        label is ReadAccessLabel && label.isRequest && other is ReadAccessLabel && other.isResponse
-                && label.kClass == other.kClass
-                && label.location == other.location
-                && label.isExclusive == other.isExclusive ->
-            true
+        // read request access can produce read response access
+        label is ReadAccessLabel && label.isRequest && other is ReadAccessLabel && other.isResponse ->
+            other.isValidResponse(label)
 
-        other is ReadAccessLabel && other.isResponse && (label.asWriteAccessLabel(other.location)?.let {
-            // TODO: also check kClass
-            it.value == other.value
-        } ?: false) ->
-            true
+        // write access can produce read response access
+        other is ReadAccessLabel && other.isResponse ->
+            label.asWriteAccessLabel(other.location)?.let { other.canReadFrom(it) } ?: false
 
         else -> false
     }
 
 }
 
-class LockSynchronizationAlgebra : SynchronizationAlgebra {
+val MutexSynchronizationAlgebra = object : SynchronizationAlgebra {
 
     override fun syncType(label: EventLabel): SynchronizationType? = when(label) {
         is LockLabel    -> SynchronizationType.Binary
         is UnlockLabel  -> SynchronizationType.Binary
-        else            -> null
-    }
-
-    private fun LockLabel.getResponse(): LockLabel {
-        require(isRequest)
-        return LockLabel(
-            kind = LabelKind.Response,
-            mutex_ = mutex,
-            reentranceDepth = reentranceDepth,
-            reentranceCount = reentranceCount,
-        )
-    }
-
-    override fun forwardSynchronize(label: EventLabel, other: EventLabel): EventLabel? = when {
-        label is UnlockLabel && !label.isReentry && other is LockLabel && other.isRequest && !other.isReentry
-                && label.mutex == other.mutex ->
-            other.getResponse()
-
-        label is InitializationLabel && other is LockLabel && other.isRequest ->
-            other.getResponse()
-
-        else -> null
-    }
-
-    override fun synchronizesInto(label: EventLabel, other: EventLabel): Boolean = when {
-        label is LockLabel && label.isRequest && other is LockLabel && other.isResponse
-                && label.mutex == other.mutex ->
-            true
-
-        label is UnlockLabel && other is LockLabel && other.isResponse && !other.isReentry
-                && label.mutex == other.mutex ->
-            true
-
-        label is InitializationLabel && other is LockLabel && other.isResponse ->
-            true
-
-        else -> false
-    }
-
-}
-
-class WaitSynchronizationAlgebra : SynchronizationAlgebra {
-
-    override fun syncType(label: EventLabel): SynchronizationType? = when(label) {
         is WaitLabel    -> SynchronizationType.Binary
         is NotifyLabel  -> SynchronizationType.Binary
         else            -> null
     }
 
-    private fun WaitLabel.getResponse(): WaitLabel {
-        require(isRequest)
-        return WaitLabel(LabelKind.Response, mutex)
-    }
-
     override fun forwardSynchronize(label: EventLabel, other: EventLabel): EventLabel? = when {
-        // TODO: provide an option to enable spurious wake-ups
-        // (isRequest && label is InitializationLabel) ->
-        //     WaitLabel(LabelKind.Response, mutex)
+        // unlock can synchronize with lock request
+        other is LockLabel && other.isRequest ->
+            label.asUnlockLabel(other.mutex)
+                // TODO: do not add reentry lock/unlock events to the event structure!
+                ?.takeIf { !it.isReentry && (other.isReentry implies it.isInitUnlock) }
+                ?.let { other.getResponse() }
 
-        label is NotifyLabel && other is WaitLabel && other.isRequest
-                && label.mutex == other.mutex ->
-            other.getResponse()
+        // notify can synchronize with wait request
+        // TODO: provide an option to enable spurious wake-ups
+        other is WaitLabel && other.isRequest ->
+            label.asNotifyLabel(other.mutex)
+                ?.let { other.getResponse() }
 
         else -> null
     }
 
     override fun synchronizesInto(label: EventLabel, other: EventLabel): Boolean = when {
-        label is WaitLabel && label.isRequest && other is WaitLabel && other.isResponse
-                && label.mutex == other.mutex ->
-            true
+        // lock request can produce lock response
+        label is LockLabel && label.isRequest && other is LockLabel && other.isResponse ->
+            other.isValidResponse(label)
 
-        label is NotifyLabel && other is WaitLabel && other.isResponse
+        // unlock can produce lock response
+        label is UnlockLabel && other is LockLabel && other.isResponse
                 && label.mutex == other.mutex ->
-            true
+            label.asUnlockLabel(other.mutex)?.let { other.canBeUnlockedBy(it) } ?: false
 
-        // TODO: provide an option to enable spurious wake-ups
-        // label is InitializationLabel -> true
+        // wait request can produce wait response
+        label is WaitLabel && label.isRequest && other is WaitLabel && other.isResponse ->
+            other.isValidResponse(label)
+
+        // notify label can produce wait response
+        other is WaitLabel && other.isResponse ->
+            label.asNotifyLabel(other.mutex) != null
 
         else -> false
     }
 
 }
 
-class ParkSynchronizationAlgebra : SynchronizationAlgebra {
+val ParkingSynchronizationAlgebra = object : SynchronizationAlgebra {
 
     override fun syncType(label: EventLabel): SynchronizationType? = when(label) {
         is ParkLabel    -> SynchronizationType.Binary
@@ -373,13 +303,11 @@ class ParkSynchronizationAlgebra : SynchronizationAlgebra {
     }
 
     override fun synchronizesInto(label: EventLabel, other: EventLabel): Boolean = when {
-        label is ParkLabel && label.isRequest && other is ParkLabel && other.isResponse
-                && label.threadId == other.threadId ->
-            true
+        label is ParkLabel && label.isRequest && other is ParkLabel && other.isResponse ->
+            label.threadId == other.threadId
 
-        label is UnparkLabel && other is ParkLabel && other.isResponse
-                && label.threadId == other.threadId ->
-            true
+        label is UnparkLabel && other is ParkLabel && other.isResponse ->
+            label.threadId == other.threadId
 
         // TODO: provide an option to enable spurious wake-ups
         // label is InitializationLabel -> true
@@ -389,50 +317,31 @@ class ParkSynchronizationAlgebra : SynchronizationAlgebra {
 
 }
 
-class AtomicSynchronizationAlgebra : SynchronizationAlgebra {
+val AtomicSynchronizationAlgebra = object : SynchronizationAlgebra {
 
-    // TODO: generalize this construction to arbitrary list of disjoint algebras
-
-    val threadForkAlgebra   = ThreadForkSynchronizationAlgebra()
-    val threadJoinAlgebra   = ThreadJoinSynchronizationAlgebra()
-    val memoryAccessAlgebra = MemoryAccessSynchronizationAlgebra()
-    val lockAlgebra         = LockSynchronizationAlgebra()
-    val waitAlgebra         = WaitSynchronizationAlgebra()
-    val parkAlgebra         = ParkSynchronizationAlgebra()
+    // TODO: generalize this construction to arbitrary list of disjoint algebras (?)
 
     override fun syncType(label: EventLabel): SynchronizationType? = when(label) {
-        is ThreadStartLabel     -> threadForkAlgebra.syncType(label)
-        is ThreadForkLabel      -> threadForkAlgebra.syncType(label)
-        is ThreadJoinLabel      -> threadJoinAlgebra.syncType(label)
-        is ThreadFinishLabel    -> threadJoinAlgebra.syncType(label)
-        is MemoryAccessLabel    -> memoryAccessAlgebra.syncType(label)
-        is LockLabel            -> lockAlgebra.syncType(label)
-        is UnlockLabel          -> lockAlgebra.syncType(label)
-        is WaitLabel            -> waitAlgebra.syncType(label)
-        is NotifyLabel          -> waitAlgebra.syncType(label)
-        is ParkingEventLabel    -> parkAlgebra.syncType(label)
+        is ThreadEventLabel     -> ThreadSynchronizationAlgebra.syncType(label)
+        is MemoryAccessLabel    -> MemoryAccessSynchronizationAlgebra.syncType(label)
+        is MutexLabel           -> MutexSynchronizationAlgebra.syncType(label)
+        is ParkingEventLabel    -> ParkingSynchronizationAlgebra.syncType(label)
         else                    -> null
     }
 
     override fun forwardSynchronize(label: EventLabel, other: EventLabel): EventLabel? = when (other) {
-        is ThreadStartLabel     -> threadForkAlgebra.forwardSynchronize(label, other)
-        is ThreadJoinLabel      -> threadJoinAlgebra.forwardSynchronize(label, other)
-        is ThreadFinishLabel    -> threadJoinAlgebra.forwardSynchronize(label, other)
-        is ReadAccessLabel      -> memoryAccessAlgebra.forwardSynchronize(label, other)
-        is LockLabel            -> lockAlgebra.forwardSynchronize(label, other)
-        is WaitLabel            -> waitAlgebra.forwardSynchronize(label, other)
-        is ParkLabel            -> parkAlgebra.forwardSynchronize(label, other)
+        is ThreadEventLabel     -> ThreadSynchronizationAlgebra.forwardSynchronize(label, other)
+        is MemoryAccessLabel    -> MemoryAccessSynchronizationAlgebra.forwardSynchronize(label, other)
+        is MutexLabel           -> MutexSynchronizationAlgebra.forwardSynchronize(label, other)
+        is ParkLabel            -> ParkingSynchronizationAlgebra.forwardSynchronize(label, other)
         else                    -> null
     }
 
     override fun synchronizesInto(label: EventLabel, other: EventLabel): Boolean = when (other) {
-        is ThreadStartLabel     -> threadForkAlgebra.synchronizesInto(label, other)
-        is ThreadJoinLabel      -> threadJoinAlgebra.synchronizesInto(label, other)
-        is ThreadFinishLabel    -> threadJoinAlgebra.synchronizesInto(label, other)
-        is ReadAccessLabel      -> memoryAccessAlgebra.synchronizesInto(label, other)
-        is LockLabel            -> lockAlgebra.synchronizesInto(label, other)
-        is WaitLabel            -> waitAlgebra.synchronizesInto(label, other)
-        is ParkLabel            -> parkAlgebra.synchronizesInto(label, other)
+        is ThreadEventLabel     -> ThreadSynchronizationAlgebra.synchronizesInto(label, other)
+        is MemoryAccessLabel    -> MemoryAccessSynchronizationAlgebra.synchronizesInto(label, other)
+        is MutexLabel           -> MutexSynchronizationAlgebra.synchronizesInto(label, other)
+        is ParkLabel            -> ParkingSynchronizationAlgebra.synchronizesInto(label, other)
         else                    -> false
     }
 

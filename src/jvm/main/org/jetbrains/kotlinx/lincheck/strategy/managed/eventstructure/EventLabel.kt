@@ -211,13 +211,18 @@ class InitializationLabel(
             .computeIfAbsent(location) { memoryInitializer(it) ?: NULL }
             .takeIf { it != NULL }
 
+    fun asThreadForkLabel() = ThreadForkLabel(setOf(mainThreadID))
+
     fun asWriteAccessLabel(location: MemoryLocation) = WriteAccessLabel(
         location_ = location,
         value_ = initialValue(location),
         isExclusive = false,
     )
 
-    fun asThreadForkLabel() = ThreadForkLabel(setOf(mainThreadID))
+    fun asUnlockLabel(mutex: OpaqueValue) = UnlockLabel(
+        mutex_ = mutex,
+        isInitUnlock = true,
+    )
 
     override fun toString(): String = "Init"
 
@@ -514,6 +519,33 @@ data class ReadAccessLabel(
         require(isRequest implies (value == null))
     }
 
+    fun isValidResponse(request: ReadAccessLabel): Boolean {
+        require(request.isRequest)
+        require(isResponse)
+        return kClass == request.kClass
+                && location == request.location
+                && isExclusive == request.isExclusive
+    }
+
+    fun getResponse(value: OpaqueValue?): ReadAccessLabel {
+        require(isRequest)
+        // TODO: perform dynamic type-check
+        // require(value.isInstanceOf(kClass))
+        return ReadAccessLabel(
+            kind = LabelKind.Response,
+            location_ = location,
+            kClass = kClass,
+            value_ = value,
+            isExclusive = isExclusive,
+        )
+    }
+
+    fun canReadFrom(write: WriteAccessLabel): Boolean {
+        require(isResponse)
+        // TODO: also check kClass
+        return value == write.value
+    }
+
     override fun toString(): String =
         super.toString()
 }
@@ -680,6 +712,31 @@ data class LockLabel(
     val isReentry: Boolean =
         (reentranceDepth - reentranceCount > 0)
 
+    fun isValidResponse(request: LockLabel): Boolean {
+        require(request.isRequest)
+        require(isResponse)
+        return mutex == request.mutex
+                && reentranceDepth == request.reentranceDepth
+                && reentranceCount == request.reentranceCount
+    }
+
+    fun getResponse(): LockLabel {
+        require(isRequest)
+        return LockLabel(
+            kind = LabelKind.Response,
+            mutex_ = mutex,
+            reentranceDepth = reentranceDepth,
+            reentranceCount = reentranceCount,
+        )
+    }
+
+    fun canBeUnlockedBy(unlock: UnlockLabel): Boolean {
+        require(isResponse)
+        return mutex == unlock.mutex
+                && !unlock.isReentry
+                && (isReentry implies unlock.isInitUnlock)
+    }
+
     override fun toString(): String =
         super.toString()
 }
@@ -699,7 +756,10 @@ data class UnlockLabel(
     override var mutex_: OpaqueValue,
     val reentranceDepth: Int = 1,
     val reentranceCount: Int = 1,
+    // TODO: get rid of this!
     val isWaitUnlock: Boolean = false,
+    // TODO: get rid of this!
+    val isInitUnlock: Boolean = false,
 ) : MutexLabel(LabelKind.Send, mutex_) {
 
     init {
@@ -740,6 +800,17 @@ data class WaitLabel(
         require(isRequest || isResponse)
     }
 
+    fun isValidResponse(request: WaitLabel): Boolean {
+        require(request.isRequest)
+        require(isResponse)
+        return mutex == request.mutex
+    }
+
+    fun getResponse(): WaitLabel {
+        require(isRequest)
+        return WaitLabel(LabelKind.Response, mutex)
+    }
+
     override fun toString(): String =
         super.toString()
 }
@@ -766,6 +837,16 @@ data class NotifyLabel(
         super.toString()
 }
 
+fun EventLabel.asUnlockLabel(mutex: OpaqueValue): UnlockLabel? = when (this) {
+    is UnlockLabel -> this.takeIf { it.mutex == mutex }
+    is InitializationLabel -> asUnlockLabel(mutex)
+    else -> null
+}
+
+fun EventLabel.asNotifyLabel(mutex: OpaqueValue): NotifyLabel? = when (this) {
+    is NotifyLabel -> this.takeIf { it.mutex == mutex }
+    else -> null
+}
 
 /**
  * Base class for park and unpark event labels.
