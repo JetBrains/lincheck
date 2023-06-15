@@ -150,39 +150,21 @@ class ThreadForkSynchronizationAlgebra : SynchronizationAlgebra {
         else                -> null
     }
 
-    private fun ThreadStartLabel.getResponse(): ThreadStartLabel {
-        require(isRequest)
-        return ThreadStartLabel(
-            kind = LabelKind.Response,
-            threadId = threadId,
-            isMainThread = isMainThread,
-        )
-    }
-
     override fun forwardSynchronize(label: EventLabel, other: EventLabel): EventLabel? = when {
-        // TODO: get rid of this special case
-        label is InitializationLabel && other is ThreadStartLabel && other.isRequest && other.isMainThread ->
-            other.getResponse()
-
-        label is ThreadForkLabel && other is ThreadStartLabel && other.isRequest && other.threadId in label.forkThreadIds ->
-            other.getResponse()
+        other is ThreadStartLabel && other.isRequest ->
+            label.asThreadForkLabel()
+                ?.takeIf { other.threadId in it.forkThreadIds }
+                ?.let { other.getResponse() }
 
         else -> null
     }
 
     override fun synchronizesInto(label: EventLabel, other: EventLabel): Boolean = when {
-        // TODO: get rid of this special case
-        label is InitializationLabel && other is ThreadStartLabel && other.isResponse
-                && other.isMainThread ->
-            true
+        label is ThreadStartLabel && label.isRequest && other is ThreadStartLabel && other.isResponse ->
+            other.isValidResponse(label)
 
-        label is ThreadStartLabel && label.isRequest && other is ThreadStartLabel && other.isResponse
-                && label.threadId == other.threadId ->
-            true
-
-        label is ThreadForkLabel && other is ThreadStartLabel && other.isResponse
-                && other.threadId in label.forkThreadIds ->
-            true
+        other is ThreadStartLabel && other.isResponse ->
+            label.asThreadForkLabel()?.let { other.threadId in it.forkThreadIds } ?: false
 
         else -> false
     }
@@ -259,7 +241,8 @@ class MemoryAccessSynchronizationAlgebra : SynchronizationAlgebra {
 
     override fun forwardSynchronize(label: EventLabel, other: EventLabel): EventLabel? = when {
         (other is ReadAccessLabel && other.isRequest) ->
-            label.asWriteAccessLabel(other.location)?.let { other.getResponse(it.value) }
+            label.asWriteAccessLabel(other.location)
+                ?.let { other.getResponse(it.value) }
 
         else -> null
     }

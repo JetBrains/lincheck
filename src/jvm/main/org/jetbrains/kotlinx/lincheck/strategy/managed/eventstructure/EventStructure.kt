@@ -504,7 +504,7 @@ class EventStructure(
         // we do not mark root event as visited purposefully;
         // this is just a trick to make first call to `startNextExploration`
         // to pick the root event as the next event to explore from.
-        val label = InitializationLabel(memoryInitializer)
+        val label = InitializationLabel(mainThreadId, memoryInitializer)
         return addEvent(initThreadId, label, parent = null, dependencies = emptyList())!!.also {
             addEventToCurrentExecution(it, visit = false)
         }
@@ -642,7 +642,6 @@ class EventStructure(
         val label = ThreadStartLabel(
             threadId = iThread,
             kind = LabelKind.Request,
-            isMainThread = (iThread == mainThreadId)
         )
         val requestEvent = addRequestEvent(iThread, label)
         val (responseEvent, responseEvents) = addResponseEvents(requestEvent)

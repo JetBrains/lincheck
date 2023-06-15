@@ -196,6 +196,7 @@ enum class LabelType {
  * ```
  */
 class InitializationLabel(
+    val mainThreadID: ThreadID,
     val memoryInitializer: MemoryInitializer
 ) : EventLabel(LabelKind.Send) {
     // TODO: can barrier-synchronizing events also utilize InitializationLabel?
@@ -215,6 +216,8 @@ class InitializationLabel(
         value_ = initialValue(location),
         isExclusive = false,
     )
+
+    fun asThreadForkLabel() = ThreadForkLabel(setOf(mainThreadID))
 
     override fun toString(): String = "Init"
 
@@ -265,17 +268,28 @@ data class ThreadForkLabel(
  *
  * @param kind the kind of this label: [LabelKind.Request] or [LabelKind.Response]..
  * @param threadId thread id of started thread.
- * @param isMainThread whether this is the main thread,
- *   i.e. the thread starting the execution of the whole program.
  */
 data class ThreadStartLabel(
     override val kind: LabelKind,
     val threadId: Int,
-    val isMainThread: Boolean = false,
 ): ThreadEventLabel(kind) {
 
     init {
         check(isRequest || isResponse)
+    }
+
+    fun isValidResponse(request: ThreadStartLabel): Boolean {
+        require(request.isRequest)
+        require(isResponse)
+        return threadId == request.threadId
+    }
+
+    fun getResponse(): ThreadStartLabel {
+        require(isRequest)
+        return ThreadStartLabel(
+            kind = LabelKind.Response,
+            threadId = threadId,
+        )
     }
 
     // TODO: should we override `recipient` of `ThreadStartLabel` to be the thread id of the starting thread?
@@ -337,6 +351,18 @@ data class ThreadJoinLabel(
 
     override fun toString(): String =
         "ThreadJoin(${joinThreadIds})"
+}
+
+fun EventLabel.asThreadForkLabel(): ThreadForkLabel? = when (this) {
+    is ThreadForkLabel -> this
+    is InitializationLabel -> asThreadForkLabel()
+    else -> null
+}
+
+fun EventLabel.asThreadEventLabel(): ThreadEventLabel? = when (this) {
+    is ThreadEventLabel -> this
+    is InitializationLabel -> asThreadForkLabel()
+    else -> null
 }
 
 /**
