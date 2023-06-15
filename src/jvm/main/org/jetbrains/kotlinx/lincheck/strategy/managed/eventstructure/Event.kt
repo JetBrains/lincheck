@@ -35,6 +35,10 @@ typealias MutableThreadMap<T> = MutableIntMap<T>
 class Event private constructor(
     val id: EventID,
     /**
+     * Event's label.
+     */
+    val label: EventLabel,
+    /**
      * Event's thread
      */
     val threadId: Int,
@@ -43,10 +47,6 @@ class Event private constructor(
      * (i.e. number of its program-order predecessors).
      */
     val threadPosition: Int = 0,
-    /**
-     * Event's label.
-     */
-    val label: EventLabel = EmptyLabel(),
     /**
      * Event's parent in program order.
      */
