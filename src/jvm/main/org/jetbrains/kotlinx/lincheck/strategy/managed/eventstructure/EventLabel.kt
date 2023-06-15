@@ -34,21 +34,14 @@ import kotlin.reflect.KClass
  * - lock acquisitions and releases;
  * and other (see subclasses of this class).
  *
- * Label can be one of the following kind (see [LabelKind]):
- * - [LabelKind.Send] --- send label.
- * - [LabelKind.Request] --- request label.
- * - [LabelKind.Response] --- response label.
- * For example, giving [MemoryAccessLabel],
- * [WriteAccessLabel] is an example of the send label,
- * while [ReadAccessLabel] is split into request and response part.
  *
- * @param kind the kind of this label: send, request or response.
+ * @param kind the kind of this label (see [LabelKind]).
  * @param isBlocking whether this label is blocking.
  *    Load acquire-request and thread join-request/response are examples of blocking labels.
  * @param unblocked whether this blocking label is already unblocked.
  *   For example, thread join-response is unblocked when all the threads it waits for have finished.
  */
-abstract class EventLabel(
+sealed class EventLabel(
     open val kind: LabelKind,
     val isBlocking: Boolean = false,
     val unblocked: Boolean = true,
@@ -70,6 +63,28 @@ abstract class EventLabel(
      */
     val isResponse: Boolean
         get() = (kind == LabelKind.Response)
+
+    /**
+     * Type of the label.
+     *
+     * @see LabelType
+     */
+    val type: LabelType
+        get() = when (this) {
+            is InitializationLabel  -> LabelType.Initialization
+            is ThreadStartLabel     -> LabelType.ThreadStart
+            is ThreadFinishLabel    -> LabelType.ThreadFinish
+            is ThreadForkLabel      -> LabelType.ThreadFork
+            is ThreadJoinLabel      -> LabelType.ThreadJoin
+            is ReadAccessLabel      -> LabelType.ReadAccess
+            is WriteAccessLabel     -> LabelType.WriteAccess
+            is LockLabel            -> LabelType.Lock
+            is UnlockLabel          -> LabelType.Unlock
+            is WaitLabel            -> LabelType.Wait
+            is NotifyLabel          -> LabelType.Notify
+            is ParkLabel            -> LabelType.Park
+            is UnparkLabel          -> LabelType.Unpark
+        }
 
     /**
      * Recipient object for the operation represented by the label.
@@ -137,11 +152,33 @@ abstract class EventLabel(
 }
 
 /**
- * Kind of label: send, request or response.
+ * Kind of label. Can be one of the following:
+ * - [LabelKind.Send] --- send label.
+ * - [LabelKind.Request] --- request label.
+ * - [LabelKind.Response] --- response label.
+ *
+ * For example, [WriteAccessLabel] is an example of the send label,
+ * while [ReadAccessLabel] is split into request and response part.
  *
  * @see EventLabel
  */
 enum class LabelKind { Send, Request, Response }
+
+enum class LabelType {
+    Initialization,
+    ThreadStart,
+    ThreadFinish,
+    ThreadFork,
+    ThreadJoin,
+    ReadAccess,
+    WriteAccess,
+    Lock,
+    Unlock,
+    Wait,
+    Notify,
+    Park,
+    Unpark,
+}
 
 /**
  * Special label acting as a label of the virtual root event of every execution.
@@ -195,7 +232,7 @@ class InitializationLabel(
  * @param isBlocking whether this label is blocking.
  * @param unblocked whether this blocking label is already unblocked.
   */
-abstract class ThreadEventLabel(
+sealed class ThreadEventLabel(
     kind: LabelKind,
     isBlocking: Boolean = false,
     unblocked: Boolean = true,
