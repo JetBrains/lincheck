@@ -52,3 +52,21 @@ fun<T> MutableList<T>.cut(index: Int) {
     require(index <= size)
     subList(index, size).clear()
 }
+
+fun <T> List<T>.squash(relation: (T, T) -> Boolean): List<List<T>> {
+    if (isEmpty())
+        return emptyList()
+    val squashed = arrayListOf<List<T>>()
+    var pos = 0
+    while (pos < size) {
+        val i = pos
+        var j = i
+        while (++j < size) {
+            if (!relation(get(j - 1), get(j)))
+                break
+        }
+        squashed.add(subList(i, j))
+        pos = j
+    }
+    return squashed
+}
