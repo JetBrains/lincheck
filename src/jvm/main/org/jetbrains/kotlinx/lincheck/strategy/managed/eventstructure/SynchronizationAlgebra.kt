@@ -32,7 +32,8 @@ import org.jetbrains.kotlinx.lincheck.implies
  * Write(x, v) \+ Read^{req}(x) = Read^{rsp}(x, v)
  * ```
  *
- * Synchronize operation is expected to be associative and commutative.
+ * Synchronize operation is expected to be associative
+ * (and commutative in case of [CommutativeSynchronizationAlgebra]).
  * It is partial operation --- some labels cannot participate in
  * synchronization (e.g. write access label cannot synchronize with another write access label).
  * In such cases [synchronize] returns null.
@@ -73,19 +74,11 @@ interface SynchronizationAlgebra {
 
     /**
      * Synchronizes two event labels.
-     * Default implementation uses directed [forwardSynchronize] method.
      *
      * @return label representing result of synchronization
      *   or null if this label cannot synchronize with [label].
      */
-    fun synchronize(label: EventLabel, other: EventLabel): EventLabel? =
-        forwardSynchronize(label, other) ?: forwardSynchronize(other, label)
-
-    /**
-     * Directed (non-commutative) version of synchronization operation.
-     * Inheritors can only implement this function and derive default implementation of commutative version.
-     */
-    fun forwardSynchronize(label: EventLabel, other: EventLabel): EventLabel?
+    fun synchronize(label: EventLabel, other: EventLabel): EventLabel?
 
     /**
      * Checks whether two labels can synchronize.
@@ -109,6 +102,29 @@ interface SynchronizationAlgebra {
     //   currently it does not always hold
     //   (e.g. because of InitializationLabel synchronizing with ReadLabel).
     //   We need to apply some tricks to overcome this.
+}
+
+/**
+ * A commutative synchronization algebra --- its [synchronize] operation is expected to be commutative.
+ */
+interface CommutativeSynchronizationAlgebra : SynchronizationAlgebra
+
+/**
+ * Constructs commutative synchronization algebra based on non-commutative one
+ * by trying to apply [synchronize] operation in both directions.
+ */
+fun CommutativeSynchronizationAlgebra(algebra: SynchronizationAlgebra) = object : CommutativeSynchronizationAlgebra {
+    val algebra = algebra
+
+    override fun syncType(label: EventLabel): SynchronizationType? =
+        algebra.syncType(label)
+
+    override fun synchronize(label: EventLabel, other: EventLabel): EventLabel? =
+        algebra.synchronize(label, other) ?: algebra.synchronize(other, label)
+
+    override fun synchronizesInto(label: EventLabel, other: EventLabel): Boolean =
+        algebra.synchronizesInto(label, other)
+
 }
 
 /**
@@ -142,7 +158,7 @@ fun SynchronizationAlgebra.isBarrierSynchronizing(label: EventLabel): Boolean =
  */
 enum class SynchronizationType { Binary, Barrier }
 
-val ThreadSynchronizationAlgebra = object : SynchronizationAlgebra {
+private val ThreadSynchronizationAlgebra = object : SynchronizationAlgebra {
 
     override fun syncType(label: EventLabel): SynchronizationType? = when(label) {
         is ThreadForkLabel      -> SynchronizationType.Binary
@@ -152,7 +168,7 @@ val ThreadSynchronizationAlgebra = object : SynchronizationAlgebra {
         else                    -> null
     }
 
-    override fun forwardSynchronize(label: EventLabel, other: EventLabel): EventLabel? = when {
+    override fun synchronize(label: EventLabel, other: EventLabel): EventLabel? = when {
         // thread fork synchronizes with thread start request
         other is ThreadStartLabel && other.isRequest ->
             label.asThreadForkLabel()
@@ -203,14 +219,14 @@ val ThreadSynchronizationAlgebra = object : SynchronizationAlgebra {
 
 }
 
-val MemoryAccessSynchronizationAlgebra = object : SynchronizationAlgebra {
+private val MemoryAccessSynchronizationAlgebra = object : SynchronizationAlgebra {
 
     override fun syncType(label: EventLabel): SynchronizationType? = when(label) {
         is MemoryAccessLabel -> SynchronizationType.Binary
         else                 -> null
     }
 
-    override fun forwardSynchronize(label: EventLabel, other: EventLabel): EventLabel? = when {
+    override fun synchronize(label: EventLabel, other: EventLabel): EventLabel? = when {
         // write access synchronizes with read request access
         (other is ReadAccessLabel && other.isRequest) ->
             label.asWriteAccessLabel(other.location)
@@ -233,17 +249,14 @@ val MemoryAccessSynchronizationAlgebra = object : SynchronizationAlgebra {
 
 }
 
-val MutexSynchronizationAlgebra = object : SynchronizationAlgebra {
+private val MutexSynchronizationAlgebra = object : SynchronizationAlgebra {
 
     override fun syncType(label: EventLabel): SynchronizationType? = when(label) {
-        is LockLabel    -> SynchronizationType.Binary
-        is UnlockLabel  -> SynchronizationType.Binary
-        is WaitLabel    -> SynchronizationType.Binary
-        is NotifyLabel  -> SynchronizationType.Binary
+        is MutexLabel   -> SynchronizationType.Binary
         else            -> null
     }
 
-    override fun forwardSynchronize(label: EventLabel, other: EventLabel): EventLabel? = when {
+    override fun synchronize(label: EventLabel, other: EventLabel): EventLabel? = when {
         // unlock can synchronize with lock request
         other is LockLabel && other.isRequest ->
             label.asUnlockLabel(other.mutex)
@@ -266,8 +279,7 @@ val MutexSynchronizationAlgebra = object : SynchronizationAlgebra {
             other.isValidResponse(label)
 
         // unlock can produce lock response
-        label is UnlockLabel && other is LockLabel && other.isResponse
-                && label.mutex == other.mutex ->
+        label is UnlockLabel && other is LockLabel && other.isResponse ->
             label.asUnlockLabel(other.mutex)?.let { other.canBeUnlockedBy(it) } ?: false
 
         // wait request can produce wait response
@@ -283,15 +295,14 @@ val MutexSynchronizationAlgebra = object : SynchronizationAlgebra {
 
 }
 
-val ParkingSynchronizationAlgebra = object : SynchronizationAlgebra {
+private val ParkingSynchronizationAlgebra = object : SynchronizationAlgebra {
 
     override fun syncType(label: EventLabel): SynchronizationType? = when(label) {
-        is ParkLabel    -> SynchronizationType.Binary
-        is UnparkLabel  -> SynchronizationType.Binary
-        else            -> null
+        is ParkingEventLabel -> SynchronizationType.Binary
+        else                 -> null
     }
 
-    override fun forwardSynchronize(label: EventLabel, other: EventLabel): EventLabel? = when {
+    override fun synchronize(label: EventLabel, other: EventLabel): EventLabel? = when {
         label is UnparkLabel && other is ParkLabel && other.isRequest && label.threadId == other.threadId ->
             ParkLabel(LabelKind.Response, other.threadId)
 
@@ -317,7 +328,7 @@ val ParkingSynchronizationAlgebra = object : SynchronizationAlgebra {
 
 }
 
-val AtomicSynchronizationAlgebra = object : SynchronizationAlgebra {
+val AtomicSynchronizationAlgebra = CommutativeSynchronizationAlgebra(object : SynchronizationAlgebra {
 
     // TODO: generalize this construction to arbitrary list of disjoint algebras (?)
 
@@ -329,11 +340,11 @@ val AtomicSynchronizationAlgebra = object : SynchronizationAlgebra {
         else                    -> null
     }
 
-    override fun forwardSynchronize(label: EventLabel, other: EventLabel): EventLabel? = when (other) {
-        is ThreadEventLabel     -> ThreadSynchronizationAlgebra.forwardSynchronize(label, other)
-        is MemoryAccessLabel    -> MemoryAccessSynchronizationAlgebra.forwardSynchronize(label, other)
-        is MutexLabel           -> MutexSynchronizationAlgebra.forwardSynchronize(label, other)
-        is ParkLabel            -> ParkingSynchronizationAlgebra.forwardSynchronize(label, other)
+    override fun synchronize(label: EventLabel, other: EventLabel): EventLabel? = when (other) {
+        is ThreadEventLabel     -> ThreadSynchronizationAlgebra.synchronize(label, other)
+        is MemoryAccessLabel    -> MemoryAccessSynchronizationAlgebra.synchronize(label, other)
+        is MutexLabel           -> MutexSynchronizationAlgebra.synchronize(label, other)
+        is ParkLabel            -> ParkingSynchronizationAlgebra.synchronize(label, other)
         else                    -> null
     }
 
@@ -345,33 +356,49 @@ val AtomicSynchronizationAlgebra = object : SynchronizationAlgebra {
         else                    -> false
     }
 
+})
+
+private val ReceiveAggregationAlgebra = object : SynchronizationAlgebra {
+
+    override fun syncType(label: EventLabel): SynchronizationType? =
+        if (label.isRequest || label.isResponse) SynchronizationType.Binary else null
+
+    override fun synchronize(label: EventLabel, other: EventLabel): EventLabel? = when {
+        label.isRequest && other.isResponse && other.isValidResponse(label) ->
+            other.getReceive()
+
+        else -> null
+    }
+
+    override fun synchronizesInto(label: EventLabel, other: EventLabel): Boolean = when {
+        (label.isRequest || label.isResponse) && other.isReceive ->
+            other.isValidReceive(label)
+
+        else -> false
+    }
+
 }
 
-val MemoryAccessAggregationAlgebra = object : SynchronizationAlgebra {
+private val MemoryAccessAggregationAlgebra = object : SynchronizationAlgebra {
 
     override fun syncType(label: EventLabel): SynchronizationType? = when(label) {
         is MemoryAccessLabel -> SynchronizationType.Binary
         else                 -> null
     }
 
-    override fun forwardSynchronize(label: EventLabel, other: EventLabel): EventLabel? = when {
+    override fun synchronize(label: EventLabel, other: EventLabel): EventLabel? = when {
         // read request synchronizes with read response
         label is ReadAccessLabel && label.isRequest && other is ReadAccessLabel && other.isResponse
                 && other.isValidResponse(label) ->
             other.getReceive()
 
         // exclusive read response/receive synchronizes with exclusive write
-        label is ReadAccessLabel && (label.isResponse || label.isReceive) && other is WriteAccessLabel
-                && label.location == other.location
-                && label.kClass == other.kClass
-                && label.isExclusive && other.isExclusive ->
-            ReadModifyWriteAccessLabel(label.kind, label, other)
+        label is ReadAccessLabel && (label.isResponse || label.isReceive) && other is WriteAccessLabel ->
+            ReadModifyWriteAccessLabel(label, other)
 
         // exclusive read request synchronizes with read-modify-write response
         label is ReadAccessLabel && label.isRequest && other is ReadModifyWriteAccessLabel && other.isResponse
-                && label.location == other.location
-                && label.kClass == other.kClass
-                && label.isExclusive && other.isExclusive ->
+                && label.isValidReadPart(other) ->
             other.getReceive()
 
         else -> null
@@ -382,7 +409,7 @@ val MemoryAccessAggregationAlgebra = object : SynchronizationAlgebra {
         label is ReadAccessLabel && (label.isRequest || label.isResponse) && other is ReadAccessLabel && other.isReceive ->
             other.isValidReceive(label)
 
-        // read request/receive can can produce read-modify-write receive access
+        // read request/receive can produce read-modify-write receive access
         label is ReadAccessLabel && (label.isRequest || label.isReceive) && other is ReadModifyWriteAccessLabel && other.isReceive ->
             label.isValidReadPart(other)
 
@@ -391,6 +418,72 @@ val MemoryAccessAggregationAlgebra = object : SynchronizationAlgebra {
             label.isValidWritePart(other)
 
         else -> false
+    }
+
+}
+
+val MutexAggregationAlgebra = object : SynchronizationAlgebra {
+
+    override fun syncType(label: EventLabel): SynchronizationType? = when (label) {
+        is MutexLabel   -> SynchronizationType.Binary
+        else            -> null
+    }
+
+    override fun synchronize(label: EventLabel, other: EventLabel): EventLabel? = when {
+        // unlock label can be merged with the subsequent wait request
+        label is UnlockLabel && other is WaitLabel && other.isRequest && !other.unlocking
+                && label.mutex == other.mutex ->
+            WaitLabel(LabelKind.Request, label.mutex, unlocking = true)
+
+        // wait response label can be merged with the subsequent lock request
+        label is WaitLabel && label.isResponse && !label.locking && other is LockLabel && other.isRequest
+                && label.mutex == other.mutex ->
+            WaitLabel(LabelKind.Response, label.mutex, locking = true)
+
+        // TODO: do we need to merge lock request/response (?)
+        else -> null
+    }
+
+    override fun synchronizesInto(label: EventLabel, other: EventLabel): Boolean = when {
+        // unlock can produce unlocking wait request
+        label is UnlockLabel && other is WaitLabel && other.isRequest ->
+            other.unlocking
+
+        // lock request can produce locking wait response
+        label is LockLabel && label.isRequest && other is WaitLabel && other.isResponse ->
+            other.locking
+
+        // wait request can produce unlocking wait request
+        label is WaitLabel && label.isRequest && other is WaitLabel && other.isRequest ->
+            !label.unlocking && other.unlocking
+
+        // wait response can produce locking wait response
+        label is WaitLabel && label.isResponse && other is WaitLabel && other.isResponse ->
+            !label.locking && other.locking
+
+        else -> false
+    }
+
+}
+
+val ThreadAggregationAlgebra = object : SynchronizationAlgebra {
+
+    override fun syncType(label: EventLabel): SynchronizationType? = when (label) {
+        is MemoryAccessLabel    -> MemoryAccessAggregationAlgebra.syncType(label)
+        is MutexLabel           -> MutexAggregationAlgebra.syncType(label)
+        else                    -> ReceiveAggregationAlgebra.syncType(label)
+    }
+
+    override fun synchronize(label: EventLabel, other: EventLabel): EventLabel? = when (label) {
+        is MemoryAccessLabel    -> MemoryAccessAggregationAlgebra.synchronize(label, other)
+        is MutexLabel           -> MutexSynchronizationAlgebra.synchronize(label, other)
+        else                    -> ReceiveAggregationAlgebra.synchronize(label, other)
+    }
+
+    override fun synchronizesInto(label: EventLabel, other: EventLabel): Boolean = when (label) {
+        is MemoryAccessLabel    -> MemoryAccessAggregationAlgebra.synchronizesInto(label, other)
+        is MutexLabel           -> MutexSynchronizationAlgebra.synchronizesInto(label, other)
+        else                    -> ReceiveAggregationAlgebra.synchronizesInto(label, other)
     }
 
 }
