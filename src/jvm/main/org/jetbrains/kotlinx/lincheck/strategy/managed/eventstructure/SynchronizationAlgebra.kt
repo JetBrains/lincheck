@@ -41,13 +41,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.OpaqueValue
  * Write(x, v) \+ Write(y, u) = null
  * ```
  *
- * Special dummy [EmptyLabel] behaves as a neutral element of [synchronize] operation.
- * That is, every label should be able to synchronize with [EmptyLabel] and produce itself.
- *
- * ```
- * Write(x, v) \+ Empty = Write(x, v)
- * ```
- *
  * In case when a pair of labels can synchronize we also say that they are synchronizable.
  * Given a pair of synchronizable labels, we say that
  * these labels synchronize-into the synchronization result label.
@@ -148,21 +141,6 @@ fun SynchronizationAlgebra.isBarrierSynchronizing(label: EventLabel): Boolean =
  * @see [EventLabel]
  */
 enum class SynchronizationType { Binary, Barrier }
-
-/**
- * Dummy empty label acting as a neutral element of [synchronize] operation.
- *
- * For each label `L` it should be true that:
- *
- * ```
- * L \+ Empty = Empty \+ L = L
- * ```
- */
-class EmptyLabel : EventLabel(LabelKind.Send) {
-    override fun toString(): String = "Empty"
-
-    // TODO: add synchronization rules for it!
-}
 
 class ThreadForkSynchronizationAlgebra : SynchronizationAlgebra {
 
