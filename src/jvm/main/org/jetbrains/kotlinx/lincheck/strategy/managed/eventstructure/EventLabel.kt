@@ -114,24 +114,32 @@ sealed class EventLabel(
     open val index: Any? = null
 
     /**
-     * Checks whether this label is valid response to given [request] label passed as argument.
+     * Checks whether this label is valid response to given [label] passed as argument.
      *
-     * @throws IllegalArgumentException is this is not response label or [request] is not request label.
+     * @throws IllegalArgumentException is this is not a response label.
      */
-    open fun isValidResponse(request: EventLabel): Boolean {
+    open fun isValidResponse(label: EventLabel): Boolean {
         require(isResponse)
-        require(request.isRequest)
         return false
     }
 
     /**
-     * Checks whether this label is valid receive to given request or response [label].
+     * For this request (or response) returns its corresponding response label to given [label].
      *
-     * @throws IllegalArgumentException is this is not receive label or [label] is not request or response label.
+     * @throws IllegalArgumentException if this is not either request or response label.
+     */
+    open fun getResponse(label: EventLabel): EventLabel? {
+        require(isRequest || isResponse)
+        return null
+    }
+
+    /**
+     * Checks whether this label is valid receive to given [label].
+     *
+     * @throws IllegalArgumentException is this is not receive label.
      */
     open fun isValidReceive(label: EventLabel): Boolean {
         require(isReceive)
-        require(label.isRequest || label.isResponse)
         return false
     }
 
@@ -145,6 +153,18 @@ sealed class EventLabel(
         require(isResponse)
         return null
     }
+
+    /**
+     * Partial join operation combining semantics of two labels.
+     */
+    open fun join(label: EventLabel): EventLabel? = null
+
+    /**
+     * Checks whether semantics of this label subsumes another label.
+     * Should be consistent with respect to [join] operation:
+     *   if `A join B = C` then `C subsumes A` and `C subsumes B`.
+     */
+    open fun subsumes(label: EventLabel): Boolean = false
 
     /**
      * Replays this label using another label given as argument.
@@ -325,25 +345,32 @@ data class ThreadStartLabel(
         check(isRequest || isResponse || isReceive)
     }
 
-    override fun isValidResponse(request: EventLabel): Boolean {
+    override fun isValidResponse(label: EventLabel): Boolean {
         require(isResponse)
-        require(request.isRequest)
-        return request is ThreadStartLabel
-                && threadId == request.threadId
+        return when (label) {
+            is ThreadStartLabel ->
+                label.isRequest && threadId == label.threadId
+            else ->
+                label.asThreadForkLabel()
+                    ?.let { threadId in it.forkThreadIds } ?: false
+        }
     }
 
-    fun getResponse(): ThreadStartLabel {
-        require(isRequest)
-        return ThreadStartLabel(
-            kind = LabelKind.Response,
-            threadId = threadId,
-        )
+    override fun getResponse(label: EventLabel): ThreadStartLabel? {
+        require(isRequest || isResponse)
+        return label.asThreadForkLabel()
+            ?.takeIf { isRequest && threadId in it.forkThreadIds }
+            ?.let {
+                ThreadStartLabel(
+                    kind = LabelKind.Response,
+                    threadId = threadId,
+                )
+            }
     }
 
     override fun isValidReceive(label: EventLabel): Boolean {
         require(isReceive)
-        require(label.isRequest || label.isResponse)
-        return label is ThreadStartLabel
+        return label is ThreadStartLabel && !label.isReceive
                 && threadId == label.threadId
     }
 
@@ -379,6 +406,16 @@ data class ThreadFinishLabel(
 ) {
     constructor(threadId: Int): this(setOf(threadId))
 
+    override fun join(label: EventLabel): ThreadFinishLabel? =
+        if (label is ThreadFinishLabel)
+            ThreadFinishLabel(finishedThreadIds + label.finishedThreadIds)
+        else null
+
+    override fun subsumes(label: EventLabel): Boolean =
+        if (label is ThreadFinishLabel)
+            finishedThreadIds.containsAll(label.finishedThreadIds)
+        else false
+
     override fun toString(): String =
         "ThreadFinish"
 }
@@ -403,23 +440,39 @@ data class ThreadJoinLabel(
 ): ThreadEventLabel(
     kind = kind,
     isBlocking = true,
-    unblocked = (kind == LabelKind.Response) implies joinThreadIds.isEmpty(),
+    unblocked = (kind == LabelKind.Response || kind == LabelKind.Receive) implies joinThreadIds.isEmpty(),
 ) {
+
     init {
-        check(isRequest || isResponse || isReceive)
+        require(isRequest || isResponse || isReceive)
+        require(isReceive implies unblocked)
     }
 
-    override fun isValidResponse(request: EventLabel): Boolean {
+    override fun isValidResponse(label: EventLabel): Boolean {
         require(isResponse)
-        require(request.isRequest)
-        return request is ThreadJoinLabel
-                && request.joinThreadIds.containsAll(joinThreadIds)
+        return when (label) {
+            is ThreadJoinLabel ->
+                label.joinThreadIds.containsAll(joinThreadIds)
+            is ThreadFinishLabel ->
+                label.finishedThreadIds.all { it !in joinThreadIds }
+            else -> false
+        }
+    }
+
+    override fun getResponse(label: EventLabel): EventLabel? {
+        require(isRequest || isResponse)
+        return if (label is ThreadFinishLabel && joinThreadIds.containsAll(label.finishedThreadIds))
+            ThreadJoinLabel(
+                kind = LabelKind.Response,
+                joinThreadIds = joinThreadIds - label.finishedThreadIds,
+            )
+        else null
     }
 
     override fun isValidReceive(label: EventLabel): Boolean {
         require(isReceive)
-        require(label.isRequest || label.isResponse)
-        return label is ThreadJoinLabel && unblocked && label.unblocked
+        return label is ThreadJoinLabel && !label.isReceive
+                && unblocked && label.unblocked
     }
 
     override fun getReceive(): EventLabel? {
@@ -599,44 +652,48 @@ data class ReadAccessLabel(
     override val writeValue: OpaqueValue?
         get() = null
 
-    fun isValidResponse(request: ReadAccessLabel): Boolean {
-        require(request.isRequest)
+    override fun isValidResponse(label: EventLabel): Boolean {
         require(isResponse)
-        return kClass == request.kClass
-                && location == request.location
-                && isExclusive == request.isExclusive
+        return when (label) {
+            is ReadAccessLabel ->
+                label.isRequest &&
+                kClass == label.kClass &&
+                location == label.location &&
+                isExclusive == label.isExclusive
+
+            else -> label.asWriteAccessLabel(location)?.let {
+                // TODO: also check kClass
+                value == it.value
+            } ?: false
+        }
     }
 
-    fun getResponse(value: OpaqueValue?): ReadAccessLabel {
+    override fun getResponse(label: EventLabel): EventLabel? {
         require(isRequest)
-        // TODO: perform dynamic type-check
-        // require(value.isInstanceOf(kClass))
-        return ReadAccessLabel(
-            kind = LabelKind.Response,
-            location = location,
-            kClass = kClass,
-            _value = value,
-            isExclusive = isExclusive,
-        )
+        return label.asWriteAccessLabel(location)?.let {
+            // TODO: perform dynamic type-check
+            ReadAccessLabel(
+                kind = LabelKind.Response,
+                location = location,
+                kClass = kClass,
+                _value = it.value,
+                isExclusive = isExclusive,
+            )
+        }
     }
 
-    fun isValidReceive(label: ReadAccessLabel): Boolean {
-        require(label.isRequest || label.isResponse)
+    override fun isValidReceive(label: EventLabel): Boolean {
         require(isReceive)
-        return kClass == label.kClass
+        return label is ReadAccessLabel && !label.isReceive
+                && kClass == label.kClass
                 && location == label.location
                 && isExclusive == label.isExclusive
+                && value == label.value
     }
 
     override fun getReceive(): ReadAccessLabel {
         require(isResponse)
         return copy(kind = LabelKind.Receive)
-    }
-
-    fun canReadFrom(write: WriteAccessLabel): Boolean {
-        require(isResponse)
-        // TODO: also check kClass
-        return value == write.value
     }
 
     override fun replay(label: EventLabel, remapping: Remapping) {
@@ -725,23 +782,21 @@ data class ReadModifyWriteAccessLabel(
         require(kind == LabelKind.Response || kind == LabelKind.Receive)
     }
 
-    constructor(kind: LabelKind, read: ReadAccessLabel, write: WriteAccessLabel) : this(
-        kind = kind,
-        kClass = read.kClass,
-        location = read.location,
-        _readValue = read.value,
-        _writeValue = write.value,
-    ) {
-        require(read.kClass == write.kClass)
-        require(read.location == write.location)
-        require(read.isExclusive == write.isExclusive)
-    }
-
     override val readValue: OpaqueValue?
         get() = _readValue
 
     override val writeValue: OpaqueValue?
         get() = _writeValue
+
+    override fun isValidReceive(label: EventLabel): Boolean {
+        require(isReceive)
+        return label is ReadModifyWriteAccessLabel && !label.isReceive
+                && kClass == label.kClass
+                && location == label.location
+                && isExclusive == label.isExclusive
+                && readValue == label.readValue
+                && writeValue == label.writeValue
+    }
 
     override fun getReceive(): ReadModifyWriteAccessLabel {
         require(isResponse)
@@ -938,29 +993,34 @@ data class LockLabel(
     val isReentry: Boolean =
         (reentranceDepth - reentranceCount > 0)
 
-    fun isValidResponse(request: LockLabel): Boolean {
-        require(request.isRequest)
+    override fun isValidResponse(label: EventLabel): Boolean {
         require(isResponse)
-        return mutex == request.mutex
-                && reentranceDepth == request.reentranceDepth
-                && reentranceCount == request.reentranceCount
+        return when (label) {
+            is LockLabel ->
+                label.isRequest
+                && mutex == label.mutex
+                && reentranceDepth == label.reentranceDepth
+                && reentranceCount == label.reentranceCount
+
+            else ->
+                label.asUnlockLabel(mutex)?.let {
+                    !it.isReentry && (isReentry implies it.isInitUnlock)
+                } ?: false
+        }
     }
 
-    fun getResponse(): LockLabel {
+    override fun getResponse(label: EventLabel): LockLabel? {
         require(isRequest)
-        return LockLabel(
-            kind = LabelKind.Response,
-            mutex_ = mutex,
-            reentranceDepth = reentranceDepth,
-            reentranceCount = reentranceCount,
-        )
-    }
-
-    fun canBeUnlockedBy(unlock: UnlockLabel): Boolean {
-        require(isResponse)
-        return mutex == unlock.mutex
-                && !unlock.isReentry
-                && (isReentry implies unlock.isInitUnlock)
+        return label.asUnlockLabel(mutex)
+            ?.takeIf { !it.isReentry && (isReentry implies it.isInitUnlock) }
+            ?.let {
+                LockLabel(
+                    kind = LabelKind.Response,
+                    mutex_ = mutex,
+                    reentranceDepth = reentranceDepth,
+                    reentranceCount = reentranceCount,
+                )
+            }
     }
 
     override fun toString(): String =
@@ -1030,15 +1090,21 @@ data class WaitLabel(
         require(isResponse implies !unlocking)
     }
 
-    fun isValidResponse(request: WaitLabel): Boolean {
-        require(request.isRequest)
+    override fun isValidResponse(label: EventLabel): Boolean {
         require(isResponse)
-        return mutex == request.mutex
+        return when (label) {
+            is WaitLabel ->
+                label.isRequest && mutex == label.mutex
+            else ->
+                label.asNotifyLabel(mutex) != null
+        }
     }
 
-    fun getResponse(): WaitLabel {
+    override fun getResponse(label: EventLabel): WaitLabel? {
         require(isRequest)
-        return WaitLabel(LabelKind.Response, mutex)
+        return label.asNotifyLabel(mutex)?.let {
+            WaitLabel(LabelKind.Response, mutex)
+        }
     }
 
     override fun toString(): String =
@@ -1150,10 +1216,29 @@ data class ParkLabel(
         require(isRequest || isResponse)
     }
 
+    override fun isValidResponse(label: EventLabel): Boolean {
+        require(isResponse)
+        return when (label) {
+            is ParkingEventLabel ->
+                (label.isRequest || label.isSend) && threadId == label.threadId
+            else -> false
+        }
+    }
+
+    override fun getResponse(label: EventLabel): ParkLabel? {
+        require(isRequest)
+        return when {
+            label is UnparkLabel && threadId == label.threadId ->
+                ParkLabel(LabelKind.Response, threadId)
+            // TODO: provide an option to enable spurious wake-ups
+            else -> null
+        }
+    }
+
     override fun isValidReceive(label: EventLabel): Boolean {
         require(isReceive)
-        require(label.isRequest || label.isResponse)
-        return label is ParkLabel && threadId == label.threadId
+        return label is ParkLabel && !label.isReceive
+                && threadId == label.threadId
     }
 
     override fun getReceive(): EventLabel {
