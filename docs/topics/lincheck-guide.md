@@ -61,13 +61,5 @@ Lincheck features step-by-step:
 6. [Define sequential specification of the algorithm](sequential-specification.md)
 
 ## Additional references
-
-* Workshop. Lincheck: Testing concurrency on the JVM: [Part 1](https://www.youtube.com/watch?v=YNtUK9GK4pA),
-  Hydra 2021, EN
-* Workshop. Lincheck: Testing concurrency on the JVM: [Part 2](https://www.youtube.com/watch?v=EW7mkAOErWw),
-  Hydra 2021, EN
-* [Lincheck. Testing concurrent data structures in Java](https://www.youtube.com/watch?v=YAb7YoEd6mM), Heisenbug 2019,
-  RU
-* [Testing concurrent algorithms with Lincheck](https://www.youtube.com/watch?v=9cB36asOjPo), Joker 2019, RU
-* [Lincheck: testing concurrent data structures on Java](https://www.youtube.com/watch?v=hwbpUEGHvvY), Hydra 2019, RU
-* [Lock-free algorithms testing](https://www.youtube.com/watch?v=_0_HOnTSS0E), Joker 2017, RU
+* "How we test concurrent algorithms in Kotlin Coroutines" by Nikita Koval: [Video](https://youtu.be/jZqkWfa11Js). KotlinConf 2023
+* "Lincheck: Testing concurrency on the JVM" workshop by Maria Sokolova: [Part 1](https://www.youtube.com/watch?v=YNtUK9GK4pA), [Part 2](https://www.youtube.com/watch?v=EW7mkAOErWw). Hydra 2021
