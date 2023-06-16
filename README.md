@@ -19,6 +19,7 @@ Please see the [official tutorial](/docs/topics/lincheck-guide.md) that showcase
 
 You may also be interested in the following public talks:
 
+* "How we test concurrent algorithms in Kotlin Coroutines" by Nikita Koval: [Video](https://youtu.be/jZqkWfa11Js). KotlinConf 2023
 * "Lincheck: Testing concurrency on the JVM" workshop by Maria Sokolova: [Part 1](https://www.youtube.com/watch?v=YNtUK9GK4pA), [Part 2](https://www.youtube.com/watch?v=EW7mkAOErWw). Hydra 2021
 
 ## Using in Your Project
