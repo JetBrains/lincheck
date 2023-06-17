@@ -1,7 +1,7 @@
 [//]: # (title: Stress testing and model checking)
 
-Lincheck provides two testing strategies: stress testing and model checking. Learn what happens under the hood of both
-testing strategies using the `Counter` example, defined in the `BasicCounterTest.kt` file, from the [previous step](introduction.md):
+Lincheck offers two testing strategies: stress testing and model checking. Learn what happens under the hood of both
+approaches using the `Counter` we coded in the `BasicCounterTest.kt` file in the [previous step](introduction.md):
 
 ```kotlin
 class Counter {
@@ -106,8 +106,13 @@ class CounterTest {
 >
 > ```
 > tasks.withType<Test> {
->     jvmArgs("--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED", "--add-exports=java.base/jdk.internal.util=ALL-UNNAMED")
+>   jvmArgs(
+>     "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
+>     "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED",
+>     "--add-exports", "java.base/sun.security.action=ALL-UNNAMED"
+>   )
 > }
+> ```
 >
 {type="tip"}
 

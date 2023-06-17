@@ -93,8 +93,7 @@ For this, configure the generator for a `key: Int` parameter:
    Post part:
    [get(2): [0]]
    ```
-6. To use model checking strategy for Java 9 and later, add the required JVM properties before running `modelCheckingTest` as mentioned in the [previous step](testing-strategies.md#write-a-model-checking-test)
-7. Finally, run `modelCheckingTest()`. It fails with the following output:
+6. Finally, run `modelCheckingTest()`. It fails with the following output:
 
    ```text
    = Invalid execution results =

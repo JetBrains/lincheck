@@ -8,7 +8,7 @@ Consider the [single-consumer queue](https://github.com/JCTools/JCTools/blob/66e
 from the [JCTools library](https://github.com/JCTools/JCTools). Let's write a test to check correctness of its `poll()`,
 `peek()`, and `offer(x)` operations.
 
-In your `build.gradle(.kts)` file, add the following dependency to the already existing ones:
+In your `build.gradle(.kts)` file, add the JCTools dependency:
 
    <tabs group="build-script">
    <tab title="Kotlin" group-key="kotlin">

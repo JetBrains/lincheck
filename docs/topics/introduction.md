@@ -48,9 +48,10 @@ When creating a project, use the Gradle build system.
    </tab>
    </tabs>
 
-## Write and run the test
+## Write a concurrent counter and run the test
 
-1. In the `src/test/kotlin` directory, create a `BasicCounterTest.kt` file and add the following code:
+1. In the `src/test/kotlin` directory, create a `BasicCounterTest.kt` file and
+   add the following code with a buggy concurrent counter and a Lincheck test for it:
 
    ```kotlin
    import org.jetbrains.kotlinx.lincheck.annotations.*
