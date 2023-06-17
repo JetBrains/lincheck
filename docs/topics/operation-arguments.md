@@ -46,6 +46,7 @@ For this, configure the generator for a `key: Int` parameter:
    import org.jetbrains.kotlinx.lincheck.check
    import org.jetbrains.kotlinx.lincheck.paramgen.*
    import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+   import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
    import org.junit.*
    
    class MultiMap<K, V> {
@@ -88,30 +89,30 @@ For this, configure the generator for a `key: Int` parameter:
    ```text
    = Invalid execution results =
    Parallel part:
-   | add(1, 1): void | add(1, 4): void |
+   | add(2, 0): void | add(2, -1): void |
    Post part:
-   [get(1): [4]]
+   [get(2): [0]]
    ```
-
 6. Finally, run `modelCheckingTest()`. It fails with the following output:
 
    ```text
    = Invalid execution results =
    Parallel part:
-   | add(1, 6): void | add(1, -8): void |
+   | add(2, 0): void | add(2, -1): void |
    Post part:
-   [get(1): [-8]]
+   [get(2): [-1]]
+   
    = The following interleaving leads to the error =
    Parallel part trace:
-   |                      | add(1, -8)                                               |
-   |                      |   add(1,-8) at MultiMapTest.add(MultiMapTest.kt:61)      |
-   |                      |     get(1): null at MultiMap.add(MultiMapTest.kt:38)     |
-   |                      |     switch                                               |
-   | add(1, 6): void      |                                                          |
-   |   thread is finished |                                                          |
-   |                      |     put(1,[-8]): [6] at MultiMap.add(MultiMapTest.kt:40) |
-   |                      |   result: void                                           |
-   |                      |   thread is finished                                     |
+   |                      | add(2, -1)                                           |
+   |                      |   add(2,-1) at MultiMapTest.add(MultiMap.kt:31)      |
+   |                      |     get(2): null at MultiMap.add(MultiMap.kt:15)     |
+   |                      |     switch                                           |
+   | add(2, 0): void      |                                                      |
+   |   thread is finished |                                                      |
+   |                      |     put(2,[-1]): [0] at MultiMap.add(MultiMap.kt:17) |
+   |                      |   result: void                                       |
+   |                      |   thread is finished                                 |
    ```
 
 Due to the small range of keys, Lincheck quickly reveals the race: when two values are being added concurrently by the same key, 

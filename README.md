@@ -15,7 +15,7 @@ verifies that the results of each invocation satisfy the required correctness pr
 
 ## Documentation and Presentations
 
-Please see the [official tutorial](/docs/topics/lincheck-guide.md) that showcases Lincheck features through examples.
+Please see the [official tutorial](https://kotlinlang.org/docs/lincheck-guide.html) that showcases Lincheck features through examples.
 
 You may also be interested in the following public talks:
 
