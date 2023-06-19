@@ -16,6 +16,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelChecki
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 
+// tests wait/notify support in model checking strategy
 @ModelCheckingCTest(iterations = 30)
 class WaitNotifyLockTest : VerifierState() {
     private var counter = 0
@@ -32,6 +33,7 @@ class WaitNotifyLockTest : VerifierState() {
     }
 }
 
+// tests wait/notify support under lock re-entrance in model checking strategy
 @ModelCheckingCTest(iterations = 30)
 class NestedWaitNotifyLockTest : VerifierState() {
     private var counter = 0
