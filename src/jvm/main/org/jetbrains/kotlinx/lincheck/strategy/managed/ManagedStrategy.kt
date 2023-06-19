@@ -276,7 +276,7 @@ abstract class ManagedStrategy(
             failIfObstructionFreedomIsRequired {
                 // Log the last event that caused obstruction freedom violation
                 traceCollector?.passCodeLocation(tracePoint)
-                "Obstruction-freedom is required but an active lock has been found"
+                ObstructionFreedomSpinLockViolationMessage
             }
             checkLiveLockHappened(loopDetector.totalOperations)
             isLoop = true
@@ -440,7 +440,7 @@ abstract class ManagedStrategy(
         // Try to acquire the monitor
         while (!monitorTracker.acquireMonitor(iThread, monitor)) {
             failIfObstructionFreedomIsRequired {
-                "Obstruction-freedom is required but a lock has been found"
+                ObstructionFreedomLockViolationMessage
             }
             // Switch to another thread and wait for a moment when the monitor can be acquired
             switchCurrentThread(iThread, SwitchReason.LOCK_WAIT, true)
@@ -495,7 +495,7 @@ abstract class ManagedStrategy(
         if (inIgnoredSection(iThread)) return false
         newSwitchPoint(iThread, codeLocation, tracePoint)
         failIfObstructionFreedomIsRequired {
-            "Obstruction-freedom is required but a waiting on a monitor block has been found"
+            ObstructionFreedomWaitViolationMessage
         }
         if (withTimeout) return false // timeouts occur instantly
         while (monitorTracker.waitOnMonitor(iThread, monitor)) {
@@ -941,3 +941,12 @@ internal object ForcibleExecutionFinishException : RuntimeException() {
 }
 
 private const val COROUTINE_SUSPENSION_CODE_LOCATION = -1 // currently the exact place of coroutine suspension is not known
+
+private const val ObstructionFreedomSpinLockViolationMessage =
+    "Obstruction-freedom is required but an active lock has been found"
+
+private const val ObstructionFreedomLockViolationMessage =
+    "Obstruction-freedom is required but a lock has been found"
+
+private const val ObstructionFreedomWaitViolationMessage =
+    "Obstruction-freedom is required but a waiting on a monitor block has been found"
