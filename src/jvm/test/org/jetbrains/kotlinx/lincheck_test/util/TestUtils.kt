@@ -22,10 +22,13 @@ import org.junit.Assert.*
  *
  * @receiver The test instance, its class will be passed to [checkImpl] as testClass.
  * @param expectedOutputFile file name from resources/expected_logs, the expected lincheck output
+ * @param linesToRemoveRegex regex to filter expected and actual output to remove test suite-dependent lines
  * @param testConfiguration options configuration action
  */
 internal fun Any.runModelCheckingTestAndCheckOutput(
-    expectedOutputFile: String, testConfiguration: ModelCheckingOptions.() -> Unit
+    expectedOutputFile: String,
+    linesToRemoveRegex: Regex? = null,
+    testConfiguration: ModelCheckingOptions.() -> Unit = {},
 ) {
     val modelCheckingOptions = ModelCheckingOptions()
     testConfiguration(modelCheckingOptions)
@@ -34,9 +37,9 @@ internal fun Any.runModelCheckingTestAndCheckOutput(
     check(failure != null) { "The test should fail" }
 
     val actualOutput = StringBuilder().appendFailure(failure).toString()
-    val actualOutputLines = actualOutput.lines()
+    val actualOutputLines = actualOutput.getLines(linesToRemoveRegex)
     val expectedOutput = getExpectedLogFromResources(expectedOutputFile)
-    val expectedOutputLines = expectedOutput.lines()
+    val expectedOutputLines = expectedOutput.getLines(linesToRemoveRegex)
 
     expectedOutputLines.zip(actualOutputLines).forEachIndexed { index, (expectedLine, actualLine) ->
         assertValuesEqualsAndPrintAllOutputsIfFailed(
@@ -53,6 +56,10 @@ internal fun Any.runModelCheckingTestAndCheckOutput(
         expectedOutput = expectedOutput,
         actualOutput = actualOutput
     ) { "Expected output size doesn't match actual" }
+}
+
+private fun String.getLines(filterRegex: Regex?): List<String> {
+    return filterRegex?.let {  lines().filter { !it.matches(filterRegex) } } ?: lines()
 }
 
 private fun assertValuesEqualsAndPrintAllOutputsIfFailed(
@@ -85,10 +92,13 @@ private fun assertValuesEqualsAndPrintAllOutputsIfFailed(
     }
 }
 
-private fun getExpectedLogFromResources(testFileName: String): String {
+internal fun getExpectedLogFromResources(testFileName: String): String {
     val resourceName = "expected_logs/$testFileName"
     val expectedLogResource = LTS::class.java.classLoader.getResourceAsStream(resourceName)
         ?: error("Expected log resource: $resourceName does not exist")
 
     return expectedLogResource.reader().readText()
 }
+
+internal val TEST_EXECUTION_TRACE_ELEMENT_REGEX =
+    "(\\W*)at org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution(\\d+)\\.run\\(Unknown Source\\)".toRegex()

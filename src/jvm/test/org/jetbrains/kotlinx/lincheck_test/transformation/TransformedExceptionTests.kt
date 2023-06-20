@@ -9,7 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.transformation
 
-import org.jetbrains.kotlinx.lincheck.InternalLincheckTestException
+import org.jetbrains.kotlinx.lincheck.InternalLincheckTestUnexpectedException
 import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -35,7 +35,7 @@ class UnexpectedTransformedExceptionTest : AbstractLincheckTest(UnexpectedExcept
         throwException = true
         throwException = false
         if (throwException)
-            throw InternalLincheckTestException
+            throw InternalLincheckTestUnexpectedException
         return 0
     }
 

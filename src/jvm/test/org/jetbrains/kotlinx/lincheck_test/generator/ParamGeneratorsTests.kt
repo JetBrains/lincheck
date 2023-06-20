@@ -51,7 +51,7 @@ class MethodParameterGenerationTestWithBothParametersAnnotated {
     fun operation(@Param(name = "key") first: Int, @Param(name = "key") second: Int) =
         throwInternalExceptionIfParamsNotEquals(first, second)
 
-    @Test(expected = IllegalStateException::class)
+    @Test(expected = LincheckAssertionError::class)
     fun test() = ModelCheckingOptions().logLevel(LoggingLevel.INFO).check(this::class)
 
 }
@@ -66,7 +66,7 @@ class MethodParameterGenerationTestWithFirstParameterAnnotated {
     @Operation
     fun operation(@Param(name = "key") first: Int, second: Int) = throwInternalExceptionIfParamsNotEquals(first, second)
 
-    @Test(expected = IllegalStateException::class)
+    @Test(expected = LincheckAssertionError::class)
     fun test() = ModelCheckingOptions().logLevel(LoggingLevel.INFO).check(this::class)
 
 }
@@ -80,7 +80,7 @@ class MethodParameterGenerationTestWithSecondParameterAnnotated {
     @Operation
     fun operation(first: Int, @Param(name = "key") second: Int) = throwInternalExceptionIfParamsNotEquals(first, second)
 
-    @Test(expected = IllegalStateException::class)
+    @Test(expected = LincheckAssertionError::class)
     fun test() = ModelCheckingOptions().logLevel(LoggingLevel.INFO).check(this::class)
 
 }
@@ -92,14 +92,14 @@ class MethodParameterGenerationTest {
     @Operation
     fun operation(first: Int, second: Int) = throwInternalExceptionIfParamsNotEquals(first, second)
 
-    @Test(expected = IllegalStateException::class)
+    @Test(expected = LincheckAssertionError::class)
     fun test() = ModelCheckingOptions().logLevel(LoggingLevel.INFO).check(this::class)
 
 }
 
 private fun throwInternalExceptionIfParamsNotEquals(first: Int, second: Int) {
     if (first != second) {
-        throw InternalLincheckTestException
+        throw InternalLincheckTestUnexpectedException
     }
 }
 

@@ -17,7 +17,7 @@ data class HBClock(val clock: IntArray) {
     operator fun get(i: Int) = clock[i]
 
     override fun toString() = clock.joinToString(prefix = "[", separator = ",", postfix = "]") {
-        if (it == 0) "-" else "$it"
+        if (it == 0) "0" else "$it"
     }
 
     override fun equals(other: Any?): Boolean {

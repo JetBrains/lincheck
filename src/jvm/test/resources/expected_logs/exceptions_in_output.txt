@@ -18,7 +18,7 @@ Parallel part trace:
 |   result: IllegalStateException #1                                                                         |                                        |
 |   thread is finished                                                                                       |                                        |
 
-Exceptions traces:
+Exception stack traces:
 #1: java.lang.IllegalStateException
 	at org.jetbrains.kotlinx.lincheck_test.representation.ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:26)
 

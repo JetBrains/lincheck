@@ -59,14 +59,13 @@ object Cancelled : Result() {
 /**
  * Type of result used if the actor invocation fails with the specified in {@link Operation#handleExceptionsAsResult()} exception [tClazz].
  */
-@Suppress("DataClassPrivateConstructor")
 class ExceptionResult private constructor(
     /**
      * Exception is stored to print it's stackTrace in case of incorrect results
      */
     val throwable: Throwable,
     /**
-     * Normalized version of exception class
+     * Normalized version of the exception class
      */
     val tClazz: Class<out Throwable>,
     override val wasSuspended: Boolean

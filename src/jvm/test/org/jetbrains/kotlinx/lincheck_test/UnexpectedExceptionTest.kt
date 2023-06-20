@@ -10,7 +10,7 @@
 package org.jetbrains.kotlinx.lincheck_test
 
 import kotlinx.coroutines.*
-import org.jetbrains.kotlinx.lincheck.InternalLincheckTestException
+import org.jetbrains.kotlinx.lincheck.InternalLincheckTestUnexpectedException
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import kotlin.coroutines.*
@@ -26,7 +26,7 @@ class UnexpectedExceptionTest : AbstractLincheckTest(UnexpectedExceptionFailure:
 
     @Operation
     fun operation2() {
-        if (canEnterForbiddenSection) throw InternalLincheckTestException
+        if (canEnterForbiddenSection) throw InternalLincheckTestUnexpectedException
     }
 
     override fun extractState(): Any = canEnterForbiddenSection
@@ -37,7 +37,7 @@ class CoroutineResumedWithUnexpectedExceptionTest : AbstractLincheckTest(Unexpec
     @Operation
     suspend fun operation() {
         suspendCancellableCoroutine<Unit> { cont ->
-            cont.resumeWithException(InternalLincheckTestException)
+            cont.resumeWithException(InternalLincheckTestUnexpectedException)
         }
     }
 

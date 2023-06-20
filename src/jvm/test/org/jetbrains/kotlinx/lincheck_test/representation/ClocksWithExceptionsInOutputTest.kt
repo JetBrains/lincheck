@@ -14,6 +14,9 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck_test.util.runModelCheckingTestAndCheckOutput
 import org.junit.Test
 
+/**
+ * Checks output when both messages about clocks and exceptions are present in output.
+ */
 @Suppress("UNUSED")
 class ClocksWithExceptionsInOutputTest {
 
