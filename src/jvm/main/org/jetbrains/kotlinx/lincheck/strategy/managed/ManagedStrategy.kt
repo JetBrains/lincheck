@@ -276,7 +276,7 @@ abstract class ManagedStrategy(
             failIfObstructionFreedomIsRequired {
                 // Log the last event that caused obstruction freedom violation
                 traceCollector?.passCodeLocation(tracePoint)
-                ObstructionFreedomSpinLockViolationMessage
+                OBSTRUCTION_FREEDOM_SPINLOCK_VIOLATION_MESSAGE
             }
             checkLiveLockHappened(loopDetector.totalOperations)
             isLoop = true
@@ -440,7 +440,7 @@ abstract class ManagedStrategy(
         // Try to acquire the monitor
         while (!monitorTracker.acquireMonitor(iThread, monitor)) {
             failIfObstructionFreedomIsRequired {
-                ObstructionFreedomLockViolationMessage
+                OBSTRUCTION_FREEDOM_LOCK_VIOLATION_MESSAGE
             }
             // Switch to another thread and wait for a moment when the monitor can be acquired
             switchCurrentThread(iThread, SwitchReason.LOCK_WAIT, true)
@@ -495,7 +495,7 @@ abstract class ManagedStrategy(
         if (inIgnoredSection(iThread)) return false
         newSwitchPoint(iThread, codeLocation, tracePoint)
         failIfObstructionFreedomIsRequired {
-            ObstructionFreedomWaitViolationMessage
+            OBSTRUCTION_FREEDOM_WAIT_VIOLATION_MESSAGE
         }
         if (withTimeout) return false // timeouts occur instantly
         while (monitorTracker.waitOnMonitor(iThread, monitor)) {
@@ -821,12 +821,12 @@ private class LoopDetector(private val hangingDetectionThreshold: Int) {
  */
 private class MonitorTracker(nThreads: Int) {
     // Maintains a set of acquired monitors with an information on which thread
-    // performed the acquisition and the the reentrancy depth.
+    // performed the acquisition and the reentrancy depth.
     private val acquiredMonitors = IdentityHashMap<Any, MonitorAcquiringInfo>()
     // Maintains a set of monitors on which each thread is waiting.
     // Note, that a thread can wait on a free monitor if it is waiting for a `notify` call.
     // Stores `null` if thread is not waiting on any monitor.
-    private val waitingMonitors = Array<MonitorAcquiringInfo?>(nThreads) { null }
+    private val waitingMonitor = Array<MonitorAcquiringInfo?>(nThreads) { null }
     // Stores `true` for the threads which are waiting for a
     // `notify` call on the monitor stored in `acquiringMonitor`.
     private val waitForNotify = BooleanArray(nThreads) { false }
@@ -841,11 +841,11 @@ private class MonitorTracker(nThreads: Int) {
             MonitorAcquiringInfo(monitor, iThread, 0)
         }
         if (info.iThread != iThread) {
-            waitingMonitors[iThread] = MonitorAcquiringInfo(monitor, iThread, 0)
+            waitingMonitor[iThread] = MonitorAcquiringInfo(monitor, iThread, 0)
             return false
         }
         info.timesAcquired++
-        waitingMonitors[iThread] = null
+        waitingMonitor[iThread] = null
         return true
     }
 
@@ -865,7 +865,7 @@ private class MonitorTracker(nThreads: Int) {
      * Returns `true` if the corresponding threads is waiting on some monitor.
      */
     fun isWaiting(iThread: Int): Boolean {
-        val monitor = waitingMonitors[iThread]?.monitor ?: return false
+        val monitor = waitingMonitor[iThread]?.monitor ?: return false
         return waitForNotify[iThread] || !canAcquireMonitor(iThread, monitor)
     }
 
@@ -891,12 +891,12 @@ private class MonitorTracker(nThreads: Int) {
             // in order to give other thread a chance to acquire it
             // and put the current thread into waiting state
             waitForNotify[iThread] = true
-            waitingMonitors[iThread] = info
+            waitingMonitor[iThread] = info
             acquiredMonitors.remove(monitor)
             return true
         }
         // otherwise the lock is held by no-one and can be acquired
-        info = waitingMonitors[iThread]
+        info = waitingMonitor[iThread]
         check(info != null && info.monitor === monitor && info.iThread == iThread) {
             "Monitor should have been acquired by this thread"
         }
@@ -905,7 +905,7 @@ private class MonitorTracker(nThreads: Int) {
             return true
         // otherwise acquire monitor restoring its re-entrance depth
         acquiredMonitors[monitor] = info
-        waitingMonitors[iThread] = null
+        waitingMonitor[iThread] = null
         return false
     }
 
@@ -917,7 +917,7 @@ private class MonitorTracker(nThreads: Int) {
     /**
      * Performs the logical `notifyAll`.
      */
-    fun notifyAll(monitor: Any): Unit = waitingMonitors.forEachIndexed { iThread, info ->
+    fun notifyAll(monitor: Any): Unit = waitingMonitor.forEachIndexed { iThread, info ->
         if (monitor === info?.monitor)
             waitForNotify[iThread] = false
     }
@@ -942,11 +942,11 @@ internal object ForcibleExecutionFinishException : RuntimeException() {
 
 private const val COROUTINE_SUSPENSION_CODE_LOCATION = -1 // currently the exact place of coroutine suspension is not known
 
-private const val ObstructionFreedomSpinLockViolationMessage =
-    "Obstruction-freedom is required but an active lock has been found"
+private const val OBSTRUCTION_FREEDOM_SPINLOCK_VIOLATION_MESSAGE =
+    "The algorithm should be non-blocking, but an active lock is detected"
 
-private const val ObstructionFreedomLockViolationMessage =
-    "Obstruction-freedom is required but a lock has been found"
+private const val OBSTRUCTION_FREEDOM_LOCK_VIOLATION_MESSAGE =
+    "The algorithm should be non-blocking, but a lock is detected"
 
-private const val ObstructionFreedomWaitViolationMessage =
-    "Obstruction-freedom is required but a waiting on a monitor block has been found"
+private const val OBSTRUCTION_FREEDOM_WAIT_VIOLATION_MESSAGE =
+    "The algorithm should be non-blocking, but a wait call is detected"
