@@ -10,8 +10,8 @@
   package org.jetbrains.kotlinx.lincheck.test
 
 import kotlinx.atomicfu.*
-import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
+import org.jetbrains.kotlinx.lincheck.paramgen.*
 
 class ThreadIdTest : AbstractLincheckTest() {
     private val balances = IntArray(5)

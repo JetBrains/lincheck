@@ -1,4 +1,4 @@
-# kotlinx-lincheck
+# Lincheck
 
 [![Kotlin Beta](https://kotl.in/badges/beta.svg)](https://kotlinlang.org/docs/components-stability.html)
 [![JetBrains official project](https://jb.gg/badges/official.svg)](https://confluence.jetbrains.com/display/ALL/JetBrains+on+GitHub)
@@ -15,10 +15,11 @@ verifies that the results of each invocation satisfy the required correctness pr
 
 ## Documentation and Presentations
 
-Please see the [official tutorial](/docs/topics/lincheck-guide.md) that showcases Lincheck features through examples.
+Please see the [official tutorial](https://kotlinlang.org/docs/lincheck-guide.html) that showcases Lincheck features through examples.
 
 You may also be interested in the following public talks:
 
+* "How we test concurrent algorithms in Kotlin Coroutines" by Nikita Koval: [Video](https://youtu.be/jZqkWfa11Js). KotlinConf 2023
 * "Lincheck: Testing concurrency on the JVM" workshop by Maria Sokolova: [Part 1](https://www.youtube.com/watch?v=YNtUK9GK4pA), [Part 2](https://www.youtube.com/watch?v=EW7mkAOErWw). Hydra 2021
 
 ## Using in Your Project
@@ -32,7 +33,7 @@ repositories {
 
 dependencies {
    // Lincheck dependency
-   testImplementation("org.jetbrains.kotlinx:lincheck:2.17")
+   testImplementation("org.jetbrains.kotlinx:lincheck:2.19")
 }
 ```
 

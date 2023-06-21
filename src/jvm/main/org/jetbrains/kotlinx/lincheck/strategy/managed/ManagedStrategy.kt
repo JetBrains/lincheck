@@ -344,10 +344,11 @@ abstract class ManagedStrategy(
      */
     private fun awaitTurn(iThread: Int) {
         // Wait actively until the thread is allowed to continue
+        var i = 0
         while (currentThread != iThread) {
             // Finish forcibly if an error occurred and we already have an `InvocationResult`.
             if (suddenInvocationResult != null) throw ForcibleExecutionFinishException
-            Thread.yield()
+            if (++i % SPINNING_LOOP_ITERATIONS_BEFORE_YIELD == 0) Thread.yield()
         }
     }
 
@@ -941,6 +942,8 @@ internal object ForcibleExecutionFinishException : RuntimeException() {
 }
 
 private const val COROUTINE_SUSPENSION_CODE_LOCATION = -1 // currently the exact place of coroutine suspension is not known
+
+private const val SPINNING_LOOP_ITERATIONS_BEFORE_YIELD = 100_000
 
 private const val OBSTRUCTION_FREEDOM_SPINLOCK_VIOLATION_MESSAGE =
     "The algorithm should be non-blocking, but an active lock is detected"

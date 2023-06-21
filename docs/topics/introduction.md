@@ -6,22 +6,8 @@ finding and analyzing the bug afterward.
 
 ## Create a project
 
-1. Open an existing Kotlin project in IntelliJ IDEA or [create a new one](https://kotlinlang.org/docs/jvm-get-started.html).
+Open an existing Kotlin project in IntelliJ IDEA or [create a new one](https://kotlinlang.org/docs/jvm-get-started.html).
 When creating a project, use the Gradle build system.
-2. In the `src/main/kotlin` directory, open the `main.kt` file.
-3. Replace the code in `main.kt` with the following counter implementation:
-
-    ```kotlin
-    class Counter {
-        @Volatile
-        private var value = 0
-   
-        fun inc(): Int = ++value
-        fun get() = value
-    }
-    ```
-
-    Your Lincheck test will check whether the counter is thread-safe.
 
 ## Add required dependencies
 
@@ -62,24 +48,25 @@ When creating a project, use the Gradle build system.
    </tab>
    </tabs>
 
-## Write and run the test
+## Write a concurrent counter and run the test
 
-1. In the `src/test/kotlin` directory, create a `BasicCounterTest.kt` file and add the following code:
+1. In the `src/test/kotlin` directory, create a `BasicCounterTest.kt` file and
+   add the following code with a buggy concurrent counter and a Lincheck test for it:
 
    ```kotlin
    import org.jetbrains.kotlinx.lincheck.annotations.*
    import org.jetbrains.kotlinx.lincheck.*
    import org.jetbrains.kotlinx.lincheck.strategy.stress.*
    import org.junit.*
-   
+
    class Counter {
-        @Volatile
-        private var value = 0
-   
-        fun inc(): Int = ++value
-        fun get() = value
+       @Volatile
+       private var value = 0
+
+       fun inc(): Int = ++value
+       fun get() = value
    }
-   
+
    class BasicCounterTest {
        private val c = Counter() // Initial state
    
@@ -96,7 +83,7 @@ When creating a project, use the Gradle build system.
    ```
 
    This Lincheck test automatically: 
-   * Generates several random concurrent scenarios with the specified `inc()` and `dec()` operations.
+   * Generates several random concurrent scenarios with the specified `inc()` and `get()` operations.
    * Performs a lot of invocations for each of the generated scenarios.
    * Verifies that each invocation result is correct.
 
@@ -124,22 +111,21 @@ The updated `BasicCounterTest` class will look like this:
    import org.jetbrains.kotlinx.lincheck.annotations.*
    import org.jetbrains.kotlinx.lincheck.check
    import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-   import org.jetbrains.kotlinx.lincheck.verifier.*
    import org.junit.*
    
    class Counter {
        @Volatile
        private var value = 0
-   
+
        fun inc(): Int = ++value
        fun get() = value
    }
-   
+
    class BasicCounterTest {
        private val c = Counter()
    
        @Operation
-       fun getAndInc() = c.getAndInc()
+       fun inc() = c.inc()
    
        @Operation
        fun get() = c.get()
@@ -155,16 +141,17 @@ The updated `BasicCounterTest` class will look like this:
    = Invalid execution results =
    Parallel part:
    | inc(): 1 | inc(): 1 |
+   
    = The following interleaving leads to the error =
    Parallel part trace:
    |                      | inc()                                                      |
-   |                      |   inc(): 1 at BasicCounterTest.inc(BasicCounterTest.kt:11) |
-   |                      |     value.READ: 0 at Counter.inc(Counter.kt:5)             |
+   |                      |   inc(): 1 at BasicCounterTest.inc(BasicCounterTest.kt:18) |
+   |                      |     value.READ: 0 at Counter.inc(BasicCounterTest.kt:10)   |
    |                      |     switch                                                 |
    | inc(): 1             |                                                            |
    |   thread is finished |                                                            |
-   |                      |     value.WRITE(1) at Counter.inc(Counter.kt:5)            |
-   |                      |     value.READ: 1 at Counter.inc(Counter.kt:5)             |
+   |                      |     value.WRITE(1) at Counter.inc(BasicCounterTest.kt:10)  |
+   |                      |     value.READ: 1 at Counter.inc(BasicCounterTest.kt:10)   |
    |                      |   result: 1                                                |
    |                      |   thread is finished                                       |
    ```
@@ -223,10 +210,11 @@ Run `modelCheckingTest()`. The test will fail with the following output:
 ```text
 = Invalid execution results =
 Init part:
-[addLast(4): void]
+[addLast(22): void]
 Parallel part:
-| pollFirst(): 4 | addFirst(-4): void       |
-|                | peekLast():   4    [-,1] |
+| pollFirst(): 22 | addFirst(8): void       |
+|                 | peekLast():  22   [-,1] |
+
 ---
 values in "[..]" brackets indicate the number of completed operations 
 in each of the parallel threads seen at the beginning of the current operation
@@ -234,21 +222,21 @@ in each of the parallel threads seen at the beginning of the current operation
 
 = The following interleaving leads to the error =
 Parallel part trace:
-| pollFirst()                                                                                               |                      |
-|   pollFirst(): 4 at ConcurrentDequeTest.pollFirst(ConcurrentDequeTest.kt:39)                              |                      |
-|     first(): Node@1 at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:915)                    |                      |
-|     item.READ: null at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:917)                    |                      |
-|     next.READ: Node@2 at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:925)                  |                      |
-|     item.READ: 4 at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:917)                       |                      |
-|     prev.READ: null at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:919)                    |                      |
-|     switch                                                                                                |                      |
-|                                                                                                           | addFirst(-4): void   |
-|                                                                                                           | peekLast(): 4        |
-|                                                                                                           |   thread is finished |
-|     compareAndSet(Node@2,4,null): true at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:920) |                      |
-|     unlink(Node@2) at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:921)                     |                      |
-|   result: 4                                                                                               |                      |
-|   thread is finished                                                                                      |                      |
+| pollFirst()                                                                                                |                      |
+|   pollFirst(): 22 at ConcurrentDequeTest.pollFirst(ConcurrentDequeTest.kt:17)                              |                      |
+|     first(): Node@1 at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:915)                     |                      |
+|     item.READ: null at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:917)                     |                      |
+|     next.READ: Node@2 at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:925)                   |                      |
+|     item.READ: 22 at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:917)                       |                      |
+|     prev.READ: null at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:919)                     |                      |
+|     switch                                                                                                 |                      |
+|                                                                                                            | addFirst(8): void    |
+|                                                                                                            | peekLast(): 22       |
+|                                                                                                            |   thread is finished |
+|     compareAndSet(Node@2,22,null): true at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:920) |                      |
+|     unlink(Node@2) at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:921)                      |                      |
+|   result: 22                                                                                               |                      |
+|   thread is finished                                                                                       |                      |
 ```
 
 > [Get the full code](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/ConcurrentLinkedDequeTest.kt).

@@ -13,6 +13,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
+import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.kotlinx.lincheck.test.*
 
 @InternalCoroutinesApi

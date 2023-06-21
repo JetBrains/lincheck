@@ -1,5 +1,5 @@
-# kotlinx-lincheck release checklist
-Follow these steps to release a new `<version>` of `kotlinx-lincheck`.
+# Lincheck release checklist
+Follow these steps to release a new `<version>` of Lincheck.
 
 1. Checkout `develop` branch: <br>
    `git checkout develop`
@@ -22,8 +22,9 @@ Follow these steps to release a new `<version>` of `kotlinx-lincheck`.
 6. Create a tag related to the releasing `<version>`: <br>
    `git tag lincheck-<version>`
 
-7. Push the release commit and tag: <br>
-   `git push --follow-tags`
+7. Push the release commit and the tag: <br>
+   `git push` <br>
+   `git push origin lincheck-<version>`
 
 8. Merge the new version into `master`: <br>
    `git checkout master` <br>
@@ -35,9 +36,9 @@ Follow these steps to release a new `<version>` of `kotlinx-lincheck`.
 10. Press 'deploy' button in the [Teamcity publish configuration](https://teamcity.jetbrains.com/buildConfiguration/KotlinTools_KotlinxLincheck_Publish?branch=%3Cdefault%3E&buildTypeTab=overview&mode=builds). 
 Set `releaseVersion` property to `<version>` in the pop-up window. Make sure that the build succeeds.
 
-11. In [Sonatype](https://oss.sonatype.org/) admin interface close staging repository and release it.
+11. In [Sonatype](https://oss.sonatype.org/) admin interface, close the automatically created staging repository and release it.
 
-12. In [GitHub](https://github.com/Kotlin/kotlinx-lincheck/releases) interface:
+12. In [GitHub](https://github.com/JetBrains/lincheck/releases) interface:
     * Create a release named `lincheck-<version>`.
     * Write a release notes message following the old ones as example of style.
     
