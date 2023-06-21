@@ -36,7 +36,7 @@ class GeneratorSeedTest {
     }
 
     @Test(expected = LincheckAssertionError::class)
-    fun test() = ModelCheckingOptions().logLevel(LoggingLevel.INFO).check(this::class)
+    fun test() = ModelCheckingOptions().check(this::class)
 
 }
 
@@ -50,7 +50,7 @@ class MethodParameterGenerationTestWithBothParametersAnnotated {
         checkParameters(first, second)
 
     @Test(expected = IllegalStateException::class)
-    fun test() = ModelCheckingOptions().logLevel(LoggingLevel.INFO).check(this::class)
+    fun test() = ModelCheckingOptions().check(this::class)
 
 }
 
@@ -65,7 +65,7 @@ class MethodParameterGenerationTestWithFirstParameterAnnotated {
     fun operation(@Param(name = "key") first: Int, second: Int) = checkParameters(first, second)
 
     @Test(expected = IllegalStateException::class)
-    fun test() = ModelCheckingOptions().logLevel(LoggingLevel.INFO).check(this::class)
+    fun test() = ModelCheckingOptions().check(this::class)
 
 }
 
@@ -79,7 +79,7 @@ class MethodParameterGenerationTestWithSecondParameterAnnotated {
     fun operation(first: Int, @Param(name = "key") second: Int) = checkParameters(first, second)
 
     @Test(expected = IllegalStateException::class)
-    fun test() = ModelCheckingOptions().logLevel(LoggingLevel.INFO).check(this::class)
+    fun test() = ModelCheckingOptions().check(this::class)
 
 }
 
@@ -91,7 +91,7 @@ class MethodParameterGenerationTest {
     fun operation(first: Int, second: Int) = checkParameters(first, second)
 
     @Test(expected = IllegalStateException::class)
-    fun test() = ModelCheckingOptions().logLevel(LoggingLevel.INFO).check(this::class)
+    fun test() = ModelCheckingOptions().check(this::class)
 
 }
 
