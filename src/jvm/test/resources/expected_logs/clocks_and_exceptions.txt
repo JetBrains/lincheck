@@ -11,8 +11,7 @@ Post part:
 Values in "[..]" brackets indicate the number of completed operations
 in each of the parallel threads seen at the beginning of the current operation
 ---
-Number after exception name is used to match exception with it's 
-stacktrace in the exceptions section below the interleaving section
+The number next to an exception name helps you find its stack trace provided after the interleaving section
 ---
 
 = The following interleaving leads to the error =

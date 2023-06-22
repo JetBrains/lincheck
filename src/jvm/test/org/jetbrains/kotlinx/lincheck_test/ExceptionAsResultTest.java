@@ -1,5 +1,4 @@
 /*
- * #%L
  * Lincheck
  *
  * Copyright (C) 2019 - 2023 JetBrains s.r.o.

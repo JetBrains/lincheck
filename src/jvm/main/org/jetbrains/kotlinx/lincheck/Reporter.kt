@@ -348,8 +348,7 @@ private fun StringBuilder.appendIncorrectResultsFailure(
     if (exceptionStackTraces.isNotEmpty()) {
         hints.add(
             """
-                Number after exception name is used to match exception with it's 
-                stacktrace in the exceptions section below the interleaving section
+            The number next to an exception name helps you find its stack trace provided after the interleaving section
         """.trimIndent()
         )
     }
