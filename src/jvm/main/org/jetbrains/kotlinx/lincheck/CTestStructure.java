@@ -76,13 +76,15 @@ public class CTestStructure {
     }
 
     @SuppressWarnings("removal")
-    private static void readTestStructureFromClass(Class<?> clazz,
-                                                   Map<String, OperationGroup> groupConfigs,
-                                                   List<ActorGenerator> actorGenerators,
-                                                   Map<Class<?>, ParameterGenerator<?>> parameterGeneratorsMap,
-                                                   List<Method> validationFunctions,
-                                                   List<Method> stateRepresentations,
-                                                   RandomProvider randomProvider) {
+    private static void readTestStructureFromClass(
+            Class<?> clazz,
+           Map<String, OperationGroup> groupConfigs,
+           List<ActorGenerator> actorGenerators,
+           Map<Class<?>, ParameterGenerator<?>> parameterGeneratorsMap,
+           List<Method> validationFunctions,
+           List<Method> stateRepresentations,
+           RandomProvider randomProvider
+    ) {
         // Read named parameter paramgen (declared for class)
         Map<String, ParameterGenerator<?>> namedGens = createNamedGens(clazz, randomProvider);
         // Create map for default (not named) gens
@@ -151,16 +153,17 @@ public class CTestStructure {
 
     private static Map<String, ParameterGenerator<?>> createNamedGens(Class<?> clazz, RandomProvider randomProvider) {
         Map<String, ParameterGenerator<?>> namedGens = new HashMap<>();
-        // Traverse all operations to determine EnumGens types or throw if one named enum gen is associated with many types
+        // Traverse all operations to determine named EnumGens types
+        // or throw if one named enum gen is associated with many types
         Map<String, Class<? extends Enum<?>>> enumGeneratorNameToClassMap = collectNamedEnumGeneratorToClassMap(clazz);
         // Read named parameter paramgen (declared for class)
         for (Param paramAnn : clazz.getAnnotationsByType(Param.class)) {
+            // Throw exception if a user tried to declare EnumGen on the top of the class but without a name
             if (paramAnn.name().isEmpty()) {
                 throw new IllegalArgumentException("@Param name in class declaration cannot be empty");
             }
             if (enumGeneratorNameToClassMap.containsKey(paramAnn.name())) {
                 Class<? extends Enum<?>> enumClass = enumGeneratorNameToClassMap.get(paramAnn.name());
-
                 namedGens.put(paramAnn.name(), createEnumGenerator(paramAnn.conf(), randomProvider, enumClass));
             } else {
                 namedGens.put(paramAnn.name(), createGenerator(paramAnn, randomProvider));
@@ -169,15 +172,25 @@ public class CTestStructure {
         return namedGens;
     }
 
+    /**
+     * Traverse all class methods and find what enum class corresponds to all named EnumGen names.
+     * This step is required
+     * as for named enum generators we can extract information about enum class only from method parameters
+     * where this generator is used.
+     *
+     * @param clazz class to traverse
+     * @return map from enum generator name to its class
+     * @throws IllegalStateException if some named enum generator is associated with two different types
+     */
     private static Map<String, Class<? extends Enum<?>>> collectNamedEnumGeneratorToClassMap(Class<?> clazz) {
         Map<String, Class<? extends Enum<?>>> enumGeneratorNameToClassMap = new HashMap<>();
 
-        Arrays.stream(clazz.getDeclaredMethods())
-                .filter(method -> method.isAnnotationPresent(Operation.class))
-                .flatMap(method -> Arrays.stream(method.getParameters()))
-                .filter(parameter -> parameter.getType().isEnum() &&
-                                     parameter.isAnnotationPresent(Param.class) &&
-                                     !parameter.getAnnotationsByType(Param.class)[0].name().isEmpty())
+        Arrays.stream(clazz.getDeclaredMethods()) // get all methods of the class
+                .filter(method -> method.isAnnotationPresent(Operation.class)) // take methods, annotated as @Operation
+                .flatMap(method -> Arrays.stream(method.getParameters())) // get their parameters
+                .filter(parameter -> parameter.getType().isEnum() && // which are enums
+                                     parameter.isAnnotationPresent(Param.class) && // annotated with @Param
+                                     !parameter.getAnnotationsByType(Param.class)[0].name().isEmpty()) // and references to some named EnumGen
                 .forEach(parameter -> {
                     String paramGenName = parameter.getAnnotationsByType(Param.class)[0].name();
 
