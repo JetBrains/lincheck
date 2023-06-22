@@ -15,7 +15,7 @@ import org.jetbrains.kotlinx.lincheck.*;
 import org.jetbrains.kotlinx.lincheck.annotations.OpGroupConfig;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.annotations.Param;
-import org.jetbrains.kotlinx.lincheck.IntGen;
+import org.jetbrains.kotlinx.lincheck.paramgen.IntGen;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState;
 import org.junit.Test;
