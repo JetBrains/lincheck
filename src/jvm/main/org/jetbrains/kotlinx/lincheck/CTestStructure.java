@@ -171,14 +171,16 @@ public class CTestStructure {
     }
 
     /**
-     * Traverse all class methods and find what enum class corresponds to all named EnumGen names.
-     * This step is required
-     * as for named enum generators we can extract information about enum class only from method parameters
-     * where this generator is used.
+     * This method iterates over all methods in a given class, identifies those that are annotated with `@Operation`,
+     * and maps named enum generator names (found in method parameters annotated with `@Param`) to their respective enum classes.
+     * It's critical to note that each named enum generator should only be associated with one unique enum class.
+     * If the same enum generator name is associated with more than one type, an [IllegalStateException] is thrown.
      *
-     * @param clazz class to traverse
-     * @return map from enum generator name to its class
-     * @throws IllegalStateException if some named enum generator is associated with two different types
+     * @param clazz The class in which methods and parameters are to be inspected.
+     * @return A map pairing each named enum generator (as indicated by `@Param` annotation name field) with its associated enum class.
+     * The map keys are enum generator names, and the values are enum classes.
+     * @throws IllegalStateException if a named enum generator is found to be associated with more than one enum class,
+     *                               which violates the uniqueness principle of enum generator to enum class mapping.
      */
     private static Map<String, Class<? extends Enum<?>>> collectNamedEnumGeneratorToClassMap(Class<?> clazz) {
         Map<String, Class<? extends Enum<?>>> enumGeneratorNameToClassMap = new HashMap<>();
