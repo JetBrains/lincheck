@@ -52,7 +52,7 @@ class EnumGen<T : Enum<T>>(enumClass: Class<out T>, randomProvider: RandomProvid
         val allEnumValues = enumClass.enumConstants.toList()
 
         enumValues = if (configuration.isEmpty()) allEnumValues else {
-            configuration.replace("\\s", "").split(",").map { enumStr ->
+            configuration.replace("(\\s*),(\\s*)".toRegex(), ",").split(",").map { enumStr ->
                 allEnumValues.find { it.name == enumStr }
                     ?: throw IllegalArgumentException(
                         """

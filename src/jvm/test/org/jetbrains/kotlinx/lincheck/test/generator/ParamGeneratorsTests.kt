@@ -340,3 +340,21 @@ class MultipleTypesAssociatedWithNamedEnumParameterGeneratorTest {
 
 }
 
+/**
+ * Checks configuration works with enums with spaces in values names
+ */
+@Param(name = "type", gen = EnumGen::class, conf = "FIRST OPTION, SECOND OPTION")
+class EnumsWithWhitespacesInNameConfigurationTest {
+
+    @Operation
+    fun operation(@Param(name = "type") param: WeirdEnum) = 0
+    @Test
+    fun test() = ModelCheckingOptions().check(this::class)
+
+    enum class WeirdEnum {
+        `FIRST OPTION`,
+        `SECOND OPTION`,
+        `OTHER OPTION`
+    }
+}
+
