@@ -19,13 +19,9 @@ import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck.paramgen.StringGen
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.junit.Test
-import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.jetbrains.kotlinx.lincheck.test.verifier.linearizability.SpinLockBasedSet
-import org.junit.*
-import org.junit.Assert.assertNotEquals
-import org.junit.Assert.assertThrows
+import org.jetbrains.kotlinx.lincheck_test.verifier.linearizability.SpinLockBasedSet
+import org.junit.Assert.*
 import kotlin.math.pow
 
 /**
