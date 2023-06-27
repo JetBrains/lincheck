@@ -233,6 +233,10 @@ internal class CoroutineCancellationTracePoint(
     }
 }
 
+internal class SpinCycleStartTracePoint(iThread: Int, actorId: Int, callStackTrace: CallStackTrace): TracePoint(iThread, actorId, callStackTrace) {
+    override fun toStringImpl() =  "/* The following events repeat infinitely until thread switch */ "
+}
+
 /**
  * Removes package info in the stack trace element representation.
  */

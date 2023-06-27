@@ -26,8 +26,8 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
  *
  * @return elements count from the beginning of the list
  */
-internal fun <T> findMaxPrefixLengthWithNoCycleOnSuffix(elements: List<T>): Int {
-    if (elements.isEmpty() || elements.size == 1) return 0
+internal fun <T> findMaxPrefixLengthWithNoCycleOnSuffix(elements: List<T>): CycleInfo? {
+    if (elements.isEmpty() || elements.size == 1) return null
     val lastIndex = elements.lastIndex
     var targetCycleLength = elements.size
     var minLastPositionNotRelatedToCycle = elements.lastIndex
@@ -50,9 +50,14 @@ internal fun <T> findMaxPrefixLengthWithNoCycleOnSuffix(elements: List<T>): Int 
     }
 
     return if (targetCycleLength == elements.size) {
-        elements.size // cycle not found
-    } else minLastPositionNotRelatedToCycle + targetCycleLength + 1 // number of prefix elements with first cycle
+        null // cycle not found
+    } else CycleInfo(minLastPositionNotRelatedToCycle + 1, targetCycleLength) // number of prefix elements with first cycle
 }
+
+data class CycleInfo(
+    val executionsBeforeCycle: Int,
+    val cyclePeriod: Int
+)
 
 /**
  * @return the last index of the element doesn't belong to any suffix cycle iteration, or -1, if all elements belong to the cycle
@@ -76,10 +81,9 @@ private fun <T> findLastIndexNotRelatedToCycle(elements: List<T>, cycleLength: I
 /**
  * This class holds information about executions in exact thread and serves to find spin-cycles
  */
-internal data class InterleavingHistoryNode(
+internal class InterleavingHistoryNode(
     val threadId: Int,
     var executions: Int = 0,
-    var cycleOccurred: Boolean = false,
     /*
      * Hash code calculated by execution ids of this switch,
      * which is being used to find cycles in interleaving sequences.
@@ -89,46 +93,68 @@ internal data class InterleavingHistoryNode(
      * which are not part of the spin cycle.
      * For example, suppose we had 3 executions in thread with id 1, then 3 executions with id 2, and after that we ran into a spin cycle
      * with period 3. When we will be making a decision on how many context switches (in the trace collection phase) allow before halt,
-     * we would like to keep the first two sequences of execution, because they are not parts of the cycle.
+     * we would definitely like to keep the first two sequences of execution, because they are not parts of the cycle.
      * So, this field will give us such ability to separate executions.
      */
-    var executionLocationsHash: Int = 0 // no execution is performed in this thread for now
+    var executionHash: Int = 0,
+    val spinCyclePeriod: Int = 0
 ) {
+    val cycleOccurred: Boolean get() = spinCyclePeriod != 0
 
     init {
         require(executions >= 0)
     }
 
     /**
-     * @param executionIdentity location identification which will be used for [executionLocationsHash]
+     * @param executionIdentity location identification which will be used for [executionHash]
      */
     fun addExecution(executionIdentity: Int) {
         executions++
-        executionLocationsHash = executionLocationsHash xor executionIdentity
+        executionHash = executionHash xor executionIdentity
     }
 
-    /**
-     * @param prefixExecutionLocationsHash hash of locations before cycle
-     */
     fun asNodeCorrespondingToCycle(
-        executionsBeforeCycle: Int, prefixExecutionLocationsHash: Int
+        executionsBeforeCycle: Int,
+        cyclePeriod: Int,
+        cycleExecutionsHash: Int
     ): InterleavingHistoryNode {
         check(executions >= executionsBeforeCycle)
 
         return InterleavingHistoryNode(
             threadId = threadId,
-            executionLocationsHash = prefixExecutionLocationsHash,
             executions = executionsBeforeCycle,
-            cycleOccurred = true
+            spinCyclePeriod = cyclePeriod,
+            executionHash = cycleExecutionsHash
         )
     }
 
     fun copy() = InterleavingHistoryNode(
         threadId = threadId,
         executions = executions,
-        cycleOccurred = cycleOccurred,
-        executionLocationsHash = executionLocationsHash
+        executionHash = executionHash
     )
+
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is InterleavingHistoryNode) return false
+
+        if (threadId != other.threadId) return false
+        if (executionHash != other.executionHash) return false
+        return spinCyclePeriod == other.spinCyclePeriod
+    }
+
+    override fun hashCode(): Int {
+        var result = threadId
+        result = 31 * result + executionHash
+        result = 31 * result + spinCyclePeriod
+        return result
+    }
+
+    override fun toString(): String {
+        return "InterleavingHistoryNode(threadId=$threadId, executions=$executions, executionLocationsHash=$executionHash, cyclePeriod=$spinCyclePeriod)"
+    }
+
 }
 
 

@@ -11,13 +11,19 @@
 
 package org.jetbrains.kotlinx.lincheck.test.representation
 
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.test.guide.MSQueueBlocking
 import org.jetbrains.kotlinx.lincheck.test.util.runModelCheckingTestAndCheckOutput
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReferenceArray
+import kotlin.reflect.jvm.*
 
+/**
+ * Checks that spin-cycle repeated events are cut in case of obstruction freedom violation
+ */
 class ObstructionFreedomViolationEventsCutTest {
     private val q = MSQueueBlocking()
 
@@ -33,6 +39,9 @@ class ObstructionFreedomViolationEventsCutTest {
     }
 }
 
+/**
+ * Checks that spin-cycle repeated events are cut in case when spin cycle contains few actions
+ */
 class SpinlockEventsCutShortLengthTest : AbstractSpinLivelockTest() {
 
     private val sharedStateAny = AtomicBoolean(false)
@@ -45,6 +54,9 @@ class SpinlockEventsCutShortLengthTest : AbstractSpinLivelockTest() {
 }
 
 
+/**
+ * Checks that spin-cycle repeated events are cut in case when spin cycle contains few actions
+ */
 class SpinlockEventsCutMiddleLengthTest : AbstractSpinLivelockTest() {
 
     private val sharedStateAny = AtomicBoolean(false)
@@ -57,6 +69,10 @@ class SpinlockEventsCutMiddleLengthTest : AbstractSpinLivelockTest() {
     }
 }
 
+/**
+ * Checks that spin-cycle repeated events are cut in case
+ * when one thread runs in the infinite loop while others terminate
+ */
 class SpinlockEventsCutInfiniteLoopTest : AbstractSpinLivelockTest() {
 
     private val sharedStateAny = AtomicBoolean(false)
@@ -71,6 +87,9 @@ class SpinlockEventsCutInfiniteLoopTest : AbstractSpinLivelockTest() {
     }
 }
 
+/**
+ * Checks that spin-cycle repeated events are cut in case when spin cycle contains many actions
+ */
 class SpinlockEventsCutLongCycleActionsTest : AbstractSpinLivelockTest() {
 
     private val data = AtomicReferenceArray<Int>(7)
@@ -87,6 +106,9 @@ class SpinlockEventsCutLongCycleActionsTest : AbstractSpinLivelockTest() {
 
 }
 
+/**
+ * Checks that spin-cycle repeated events are cut in case when spin cycle contains many actions in nested cycle
+ */
 class SpinlockEventsCutWithInnerLoopActionsTest : AbstractSpinLivelockTest() {
 
     private val data = AtomicReferenceArray<Int>(10)
@@ -139,4 +161,80 @@ abstract class AbstractSpinLivelockTest {
     fun testWithModelCheckingStrategy() = runModelCheckingTestAndCheckOutput(outputFileName) {
         minimizeFailedScenario(false)
     }
+}
+
+/**
+ * Checks that spin-cycle repeated events are shortened
+ * when the reason of a failure is not deadlock or obstruction freedom violation (incorrect results failure)
+ */
+class SpinlockInIncorrectResultsWithClocksTest {
+
+    @Volatile
+    private var bStarted = false
+
+    @Operation
+    fun a() {
+    }
+
+    @Operation
+    fun b() {
+        bStarted = true
+    }
+
+    @Operation
+    fun c() {
+        while (!bStarted) {
+        } // wait until `a()` is completed
+    }
+
+    @Operation
+    fun d(): Int = 0 // cannot return 0, should fail
+
+    @Test
+    fun test() = runModelCheckingTestAndCheckOutput("spin_lock_in_incorrect_results_failure.txt") {
+        executionGenerator(ClocksTestScenarioGenerator::class.java)
+        iterations(1)
+        sequentialSpecification(ClocksTestSequential::class.java)
+        minimizeFailedScenario(false)
+    }
+
+    /**
+     * @param randomProvider is required by scenario generator contract
+     */
+    @Suppress("UNUSED_PARAMETER")
+    class ClocksTestScenarioGenerator(
+        testCfg: CTestConfiguration,
+        testStructure: CTestStructure,
+        randomProvider: RandomProvider
+    ) : ExecutionGenerator(testCfg, testStructure) {
+        override fun nextExecution() = ExecutionScenario(
+            emptyList(),
+            listOf(
+                listOf(
+                    Actor(method = SpinlockInIncorrectResultsWithClocksTest::a.javaMethod!!, arguments = emptyList()),
+                    Actor(method = SpinlockInIncorrectResultsWithClocksTest::b.javaMethod!!, arguments = emptyList())
+                ),
+                listOf(
+                    Actor(method = SpinlockInIncorrectResultsWithClocksTest::c.javaMethod!!, arguments = emptyList()),
+                    Actor(method = SpinlockInIncorrectResultsWithClocksTest::d.javaMethod!!, arguments = emptyList())
+                )
+            ),
+            emptyList()
+        )
+
+    }
+
+    class ClocksTestSequential {
+        private var x = 0
+
+        fun a() {
+            x = 1
+        }
+
+        fun b() {}
+        fun c() {}
+
+        fun d(): Int = x
+    }
+
 }

@@ -11,26 +11,35 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.strategy.*
 import java.util.*
 import kotlin.math.*
 
 @Synchronized // we should avoid concurrent executions to keep `objectNumeration` consistent
 internal fun StringBuilder.appendTrace(
-    scenario: ExecutionScenario,
+    failure: LincheckFailure,
     results: ExecutionResult?,
-    trace: Trace
 ) {
+    val trace = failure.trace ?: return
+    appendLine()
+    appendLine("= The following interleaving leads to the error =")
+    val scenario  = failure.scenario
     val startTraceGraphNode = constructTraceGraph(scenario, results, trace)
 
     appendln(PARALLEL_PART_TITLE)
     val traceRepresentation = traceGraphToRepresentationList(startTraceGraphNode, false)
     appendTraceRepresentation(scenario, traceRepresentation)
     appendln()
+    if (failure is DeadlockWithDumpFailure) appendLine(ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE)
 
     appendln()
     appendln(DETAILED_PARALLEL_PART_TITLE)
     val traceRepresentationVerbose = traceGraphToRepresentationList(startTraceGraphNode, true)
     appendTraceRepresentation(scenario, traceRepresentationVerbose)
+    if (failure is DeadlockWithDumpFailure) {
+        appendln()
+        appendLine(ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE)
+    }
 
     objectNumeration.clear() // clear the numeration at the end to avoid memory leaks
 }
@@ -333,3 +342,4 @@ private val objectNumeration = WeakHashMap<Class<Any>, MutableMap<Any, Int>>()
 
 const val DETAILED_PARALLEL_PART_TITLE = "Detailed parallel part trace:"
 const val PARALLEL_PART_TITLE = "Parallel part trace:"
+private const val  ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE = "All unfinished threads are in deadlock"

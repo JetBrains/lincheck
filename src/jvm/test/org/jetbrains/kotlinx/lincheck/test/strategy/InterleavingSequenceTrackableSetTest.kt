@@ -35,14 +35,14 @@ class InterleavingSequenceTrackableSetTest {
         addBranch(
             listOf(
                 node(0, 5),
-                node(1, 1, true)
+                node(1, 1, 1)
             )
         )
         addBranch(
             listOf(
                 node(0, 5),
-                node(1, 1, true),
-                node(2, 1, true)
+                node(1, 1, 1),
+                node(2, 1, 1)
             )
         )
         walkChainFromStart(
@@ -61,14 +61,14 @@ class InterleavingSequenceTrackableSetTest {
         addBranch(
             listOf(
                 node(1, 3),
-                node(0, 3, true)
+                node(0, 3, 1)
             )
         )
         addBranch(
             listOf(
                 node(1, 3),
                 node(0, 2),
-                node(1, 3, true)
+                node(1, 3, 1)
             )
         )
 
@@ -88,19 +88,19 @@ class InterleavingSequenceTrackableSetTest {
         addBranch(
             listOf(
                 node(1, 47),
-                node(0, 0, true)
+                node(0, 0, 1)
             )
         )
         addBranch(
             listOf(
                 node(1, 2),
-                node(0, 0, true),
+                node(0, 0, 1),
             )
         )
         addBranch(
             listOf(
                 node(1, 31),
-                node(0, 0, true),
+                node(0, 0, 1),
             )
         )
 
@@ -125,7 +125,7 @@ class InterleavingSequenceTrackableSetTest {
                 node(1, 4),
                 node(2, 3),
                 node(3, 4),
-                node(1, 0, true),
+                node(1, 0, 1),
             )
         )
         addBranch(
@@ -134,7 +134,7 @@ class InterleavingSequenceTrackableSetTest {
                 node(2, 3),
                 node(3, 4),
                 node(4, 3),
-                node(2, 0, true),
+                node(2, 0, 1),
             )
         )
 
@@ -162,7 +162,7 @@ class InterleavingSequenceTrackableSetTest {
                 node(1, 4),
                 node(2, 3),
                 node(3, 4),
-                node(1, 0, true),
+                node(1, 0, 1),
             )
         )
         addBranch(
@@ -171,7 +171,7 @@ class InterleavingSequenceTrackableSetTest {
                 node(2, 3),
                 node(3, 2),
                 node(4, 3),
-                node(2, 0, true),
+                node(2, 0, 1),
             )
         )
 
@@ -199,7 +199,7 @@ class InterleavingSequenceTrackableSetTest {
                 node(1, 4),
                 node(2, 3),
                 node(3, 2),
-                node(1, 0, true),
+                node(1, 0, 1),
             )
         )
         addBranch(
@@ -209,7 +209,7 @@ class InterleavingSequenceTrackableSetTest {
                 node(3, 2),
                 node(1, 0),
                 node(3, 3),
-                node(2, 0, true),
+                node(2, 0, 1),
             )
         )
 
@@ -238,7 +238,7 @@ class InterleavingSequenceTrackableSetTest {
                 node(1, 4),
                 node(2, 3),
                 node(3, 2),
-                node(1, 0, true),
+                node(1, 0, 1),
             )
         )
         resetCursor(1)
@@ -262,7 +262,7 @@ class InterleavingSequenceTrackableSetTest {
                 node(1, 4),
                 node(2, 3),
                 node(3, 2),
-                node(1, 0, true),
+                node(1, 0, 8),
             )
         )
 
@@ -287,7 +287,7 @@ class InterleavingSequenceTrackableSetTest {
                 node(1, 4),
                 node(2, 3),
                 node(3, 2),
-                node(1, 0, true),
+                node(1, 0, 3),
             )
         )
 
@@ -349,8 +349,8 @@ class InterleavingSequenceTrackableSetTest {
         assertEquals(cyclePresent, cursor.isInCycle)
     }
 
-    private fun node(threadId: Int, count: Int, isCycle: Boolean = false) =
-        InterleavingHistoryNode(threadId = threadId, executions = count, cycleOccurred = isCycle)
+    private fun node(threadId: Int, count: Int, spinCyclePeriod: Int = 0) =
+        InterleavingHistoryNode(threadId = threadId, executions = count, spinCyclePeriod = spinCyclePeriod)
 
     private fun addBranch(branch: List<InterleavingHistoryNode>) {
         set.addBranch(branch)
@@ -412,16 +412,15 @@ class CycleDetectionTests {
     )
 
     @Test
-    fun `should return all collection size when there is no cycle`() = assertPrefixAndFistCycleOccurrence(
-        elements = listOf(1, 2, 3, 4, 5),
-        expected = listOf(1, 2, 3, 4, 5)
-    )
+    fun `should return all collection size when there is no cycle`() {
+        val elements = listOf(1, 2, 3, 4, 5)
+        assertNull(findMaxPrefixLengthWithNoCycleOnSuffix(elements))
+    }
 
     private fun assertPrefixAndFistCycleOccurrence(elements: List<Int>, expected: List<Int>) {
-        val cycleLength = findMaxPrefixLengthWithNoCycleOnSuffix(elements)
-        val actualCycle = elements.take(cycleLength)
+        val cycleLength = findMaxPrefixLengthWithNoCycleOnSuffix(elements)!!
+        val actualCycle = elements.take(cycleLength.cyclePeriod + cycleLength.executionsBeforeCycle)
 
         assertEquals(expected, actualCycle)
     }
-
 }

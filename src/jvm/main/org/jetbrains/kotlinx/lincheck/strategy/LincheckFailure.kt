@@ -29,7 +29,7 @@ internal class IncorrectResultsFailure(
 
 internal class DeadlockWithDumpFailure(
     scenario: ExecutionScenario,
-    val threadDump: Map<Thread, Array<StackTraceElement>>,
+    val threadDump: Map<Thread, Array<StackTraceElement>>?,
     trace: Trace? = null
 ) : LincheckFailure(scenario, trace)
 
