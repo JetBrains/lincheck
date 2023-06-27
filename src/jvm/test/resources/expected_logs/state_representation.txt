@@ -6,7 +6,7 @@ STATE: 4
 
 = The following interleaving leads to the error =
 Parallel part trace:
-|                      | operation()                                                                                                 |
+|                      | operation(): 3                                                                                              |
 |                      |   counter.READ: AtomicInteger@1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:36) |
 |                      |   incrementAndGet(): 1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:36)          |
 |                      |   STATE: 1                                                                                                  |
@@ -21,13 +21,13 @@ Parallel part trace:
 |                      |   thread is finished                                                                                        |
 
 Detailed parallel part trace:
-|                                                                                                             | operation()                                                                                                 |
+|                                                                                                             | operation(): 3                                                                                              |
 |                                                                                                             |   counter.READ: AtomicInteger@1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:36) |
 |                                                                                                             |   incrementAndGet(): 1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:36)          |
 |                                                                                                             |   STATE: 1                                                                                                  |
 |                                                                                                             |   counter.READ: AtomicInteger@1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:37) |
 |                                                                                                             |   switch                                                                                                    |
-| operation()                                                                                                 |                                                                                                             |
+| operation(): 2                                                                                              |                                                                                                             |
 |   counter.READ: AtomicInteger@1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:36) |                                                                                                             |
 |   incrementAndGet(): 2 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:36)          |                                                                                                             |
 |   STATE: 2                                                                                                  |                                                                                                             |

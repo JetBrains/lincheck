@@ -4,7 +4,7 @@ Parallel part:
 
 = The following interleaving leads to the error =
 Parallel part trace:
-|                      | operation()                                                                                                         |
+|                      | operation(): 1                                                                                                      |
 |                      |   badMethod(): threw NotImplementedError at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:96) |
 |                      |   counter.READ: 0 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:98)                        |
 |                      |   counter.WRITE(1) at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:98)                       |
@@ -17,7 +17,7 @@ Parallel part trace:
 |                      |   thread is finished                                                                                                |
 
 Detailed parallel part trace:
-|                                                                                                                     | operation()                                                                                                         |
+|                                                                                                                     | operation(): 1                                                                                                      |
 |                                                                                                                     |   badMethod(): threw NotImplementedError at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:96) |
 |                                                                                                                     |     useless.READ: 0 at CaughtExceptionMethodReportingTest.badMethod(MethodReportingTest.kt:104)                     |
 |                                                                                                                     |     useless.WRITE(1) at CaughtExceptionMethodReportingTest.badMethod(MethodReportingTest.kt:104)                    |
@@ -25,7 +25,7 @@ Detailed parallel part trace:
 |                                                                                                                     |   counter.WRITE(1) at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:98)                       |
 |                                                                                                                     |   counter.READ: 1 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:99)                        |
 |                                                                                                                     |   switch                                                                                                            |
-| operation()                                                                                                         |                                                                                                                     |
+| operation(): 2                                                                                                      |                                                                                                                     |
 |   badMethod(): threw NotImplementedError at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:96) |                                                                                                                     |
 |     useless.READ: 1 at CaughtExceptionMethodReportingTest.badMethod(MethodReportingTest.kt:104)                     |                                                                                                                     |
 |     useless.WRITE(2) at CaughtExceptionMethodReportingTest.badMethod(MethodReportingTest.kt:104)                    |                                                                                                                     |
