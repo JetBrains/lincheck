@@ -20,6 +20,7 @@ import org.objectweb.asm.*
 import org.objectweb.asm.commons.*
 import java.io.*
 import java.lang.ref.*
+import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.util.*
 import kotlin.coroutines.*
@@ -82,10 +83,10 @@ private fun executeValidationFunction(instance: Any, validationFunction: Method)
         m.invoke(instance)
     } catch (e: Throwable) {
         // cut off lincheck-related and reflection-related stacktrace elements
+        val validationException = e.cause ?: return e
         val wrapperExceptionStackTraceLength = e.stackTrace.size
-        val validationException = e.cause ?: return null
 
-        if (validationException.stackTrace.size >= wrapperExceptionStackTraceLength) {
+        if (e is InvocationTargetException) {
             validationException.stackTrace = validationException.stackTrace.dropLast(wrapperExceptionStackTraceLength).toTypedArray()
         }
 
