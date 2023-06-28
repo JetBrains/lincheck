@@ -81,7 +81,15 @@ private fun executeValidationFunction(instance: Any, validationFunction: Method)
     try {
         m.invoke(instance)
     } catch (e: Throwable) {
-        return e.cause
+        // cut off lincheck-related and reflection-related stacktrace elements
+        val wrapperExceptionStackTraceLength = e.stackTrace.size
+        val validationException = e.cause ?: return null
+
+        if (validationException.stackTrace.size >= wrapperExceptionStackTraceLength) {
+            validationException.stackTrace = validationException.stackTrace.dropLast(wrapperExceptionStackTraceLength).toTypedArray()
+        }
+
+        return validationException
     }
     return null
 }

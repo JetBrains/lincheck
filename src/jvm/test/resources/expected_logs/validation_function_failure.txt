@@ -1,0 +1,19 @@
+= Validation function validateWithError has failed =
+Execution scenario (parallel part):
+| inc() |
+Execution scenario (post part):
+[inc(), inc(), inc(), inc()]
+
+java.lang.IllegalStateException: Validation works!
+	at org.jetbrains.kotlinx.lincheck.test.representation.ValidateFunctionTest.validateWithError(ValidateFunctionTest.kt:37)
+
+
+= The following interleaving leads to the error =
+Parallel part trace:
+| inc()                |
+|   thread is finished |
+
+Detailed parallel part trace:
+| inc()                                                                          |
+|   incrementAndGet(): 1 at ValidateFunctionTest.inc(ValidateFunctionTest.kt:23) |
+|   thread is finished                                                           |

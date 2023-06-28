@@ -212,6 +212,8 @@ private fun StringBuilder.appendIncorrectResultsFailure(failure: IncorrectResult
 private fun StringBuilder.appendValidationFailure(failure: ValidationFailure): StringBuilder {
     appendln("= Validation function ${failure.functionName} has failed =")
     appendExecutionScenario(failure.scenario)
+    appendln()
+    appendln()
     appendException(failure.exception)
     return this
 }
