@@ -57,30 +57,32 @@ object Cancelled : Result() {
 }
 
 /**
- * Type of result used if the actor invocation fails with the specified in {@link Operation#handleExceptionsAsResult()} exception [tClazz].
+ * Type of result used if the actor invocation fails with the specified in {@link Operation#handleExceptionsAsResult()} exception [tClazzFullName].
  */
 class ExceptionResult private constructor(
     /**
      * Exception is stored to print it's stackTrace in case of incorrect results
      */
     val throwable: Throwable,
+    override val wasSuspended: Boolean,
     /**
      * Normalized version of the exception class
      */
-    val tClazz: Class<out Throwable>,
-    override val wasSuspended: Boolean
+    tClazz: Class<out Throwable>,
 ) : Result() {
-    override fun toString() = wasSuspendedPrefix + tClazz.simpleName
+
+    val tClassCanonicalName: String = tClazz.canonicalName
+    override fun toString() = wasSuspendedPrefix + throwable::class.java.simpleName
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is ExceptionResult) return false
 
-        if (tClazz != other.tClazz) return false
+        if (tClassCanonicalName != other.tClassCanonicalName) return false
         return wasSuspended == other.wasSuspended
     }
 
     override fun hashCode(): Int {
-        var result = tClazz.hashCode()
+        var result = tClassCanonicalName.hashCode()
         result = 31 * result + wasSuspended.hashCode()
         return result
     }
@@ -90,7 +92,7 @@ class ExceptionResult private constructor(
         @Suppress("UNCHECKED_CAST")
         @JvmOverloads
         fun create(throwable: Throwable, wasSuspended: Boolean = false) =
-            ExceptionResult(throwable, throwable::class.java.normalize(), wasSuspended)
+            ExceptionResult(throwable, wasSuspended, throwable::class.java.normalize())
     }
 }
 

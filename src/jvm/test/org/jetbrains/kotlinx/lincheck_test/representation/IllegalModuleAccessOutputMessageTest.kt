@@ -41,6 +41,8 @@ class IllegalModuleAccessOutputMessageTest {
     @Test
     fun test() = runModelCheckingTestAndCheckOutput(
         expectedOutputFile = "illegal_module_access.txt",
+        // removing lines of pattern org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution(\d+)
+        // as its number may vary
         linesToRemoveRegex = TEST_EXECUTION_TRACE_ELEMENT_REGEX,
     )
 

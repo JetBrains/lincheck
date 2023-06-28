@@ -39,6 +39,8 @@ class InternalLincheckBugTest {
     @Test
     fun `should add stackTrace to output`() = runModelCheckingTestAndCheckOutput(
         expectedOutputFile = "internal_bug_report.txt",
+        // removing lines of pattern org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution(\d+)
+        // as its number may vary
         linesToRemoveRegex = TEST_EXECUTION_TRACE_ELEMENT_REGEX,
     ) {
         actorsPerThread(2)

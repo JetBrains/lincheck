@@ -190,7 +190,30 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
             appendLine()
             append("All threads are in deadlock")
         }
+    } else {
+        appendExceptionsStackTracesBlock(exceptionStackTraces)
     }
+    return this
+}
+
+internal fun StringBuilder.appendExceptionsStackTracesBlock(exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>) {
+    if (exceptionStackTraces.isNotEmpty()) {
+        appendln(EXCEPTIONS_TRACES_TITLE)
+        appendExceptionsStackTraces(exceptionStackTraces)
+        appendln()
+    }
+}
+
+internal fun StringBuilder.appendExceptionsStackTraces(exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): StringBuilder {
+    exceptionStackTraces.entries.sortedBy { (_, description) -> description.number }.forEach { (exception, description) ->
+        append("#${description.number}: ")
+
+        appendln(exception::class.java.canonicalName)
+        description.stackTrace.forEach { appendln("\tat $it") }
+
+        if (description.number < exceptionStackTraces.size) appendln()
+    }
+
     return this
 }
 
@@ -198,7 +221,7 @@ fun StringBuilder.appendInternalLincheckBugFailure(exception: Throwable) {
     appendln(
         """
         Wow! You've caught a bug in Lincheck.
-        We kindly ask to provide an issue here https://github.com/JetBrains/lincheck/issues,
+        We kindly ask to provide an issue here: https://github.com/JetBrains/lincheck/issues,
         attaching a stack trace printed below and the code that causes the error.
         
         Exception stacktrace:
@@ -392,3 +415,5 @@ private fun StringBuilder.appendException(t: Throwable) {
     t.printStackTrace(PrintWriter(sw))
     appendln(sw.toString())
 }
+
+private const val EXCEPTIONS_TRACES_TITLE = "Exception stack traces:"

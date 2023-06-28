@@ -63,7 +63,7 @@ class TraceReportingTest {
     }
 
     @Test
-    fun test() = runModelCheckingTestAndCheckOutput("trace_reporting.txt") {
+    fun test() = runModelCheckingTestAndCheckOutput("monitor_enter_exit_trace_reporting.txt") {
         actorsAfter(0)
         actorsBefore(0)
         actorsPerThread(1)

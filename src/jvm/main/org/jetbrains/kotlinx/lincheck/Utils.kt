@@ -19,6 +19,7 @@ import org.objectweb.asm.*
 import org.objectweb.asm.commons.*
 import java.io.*
 import java.lang.ref.*
+import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.util.*
 import kotlin.coroutines.*
@@ -48,14 +49,10 @@ internal fun executeActor(
         val res = m.invoke(instance, *args.toTypedArray())
         return if (m.returnType.isAssignableFrom(Void.TYPE)) VoidResult else createLincheckResult(res)
     } catch (invE: Throwable) {
-        /*
-        The actor Method is invoked using Reflection API,
-        so if some exception occurs, it will be wrapped with InvocationTargetException,
-        using its `cause` property.
-        But exception may be thrown not only by method invocation,
-        so in that case we have to store the exception itself.
-        */
-        return ExceptionResult.create(invE.cause ?: invE)
+        // If the exception is thrown not during the method invocation - fail immediately
+        if (invE !is InvocationTargetException) throw invE
+        // Exception thrown not during the method invocation should contain underlying exception
+        return ExceptionResult.create(invE.cause ?: throw invE)
     } catch (e: Exception) {
         e.catch(
             NoSuchMethodException::class.java,
@@ -354,7 +351,7 @@ internal const val ADD_OPENS_MESSAGE =
     "It seems that you use Java 9+ and the code uses Unsafe or similar constructions that are not accessible from unnamed modules.\n" +
             "Please add the following lines to your test running configuration:\n" +
             "--add-opens java.base/jdk.internal.misc=ALL-UNNAMED\n" +
-            "--add-export   s java.base/jdk.internal.util=ALL-UNNAMED\n" +
+            "--add-exports java.base/jdk.internal.util=ALL-UNNAMED\n" +
             "--add-exports java.base/sun.security.action=ALL-UNNAMED"
 
 /**

@@ -23,38 +23,32 @@ internal fun StringBuilder.appendTrace(
 ) {
     val startTraceGraphNode = constructTraceGraph(scenario, results, trace, exceptionStackTraces)
 
+    appendShortTrace(startTraceGraphNode, scenario)
+    appendExceptionsStackTracesBlock(exceptionStackTraces)
+    appendDetailedTrace(startTraceGraphNode, scenario)
+
+    objectNumeration.clear() // clear the numeration at the end to avoid memory leaks
+}
+
+private fun StringBuilder.appendDetailedTrace(
+    startTraceGraphNode: TraceNode?,
+    scenario: ExecutionScenario
+) {
+    appendln(DETAILED_PARALLEL_PART_TITLE)
+    val traceRepresentationVerbose = traceGraphToRepresentationList(startTraceGraphNode, true)
+    appendTraceRepresentation(scenario, traceRepresentationVerbose)
+}
+
+private fun StringBuilder.appendShortTrace(
+    startTraceGraphNode: TraceNode?,
+    scenario: ExecutionScenario
+) {
     appendln(PARALLEL_PART_TITLE)
     val traceRepresentation = traceGraphToRepresentationList(startTraceGraphNode, false)
     appendTraceRepresentation(scenario, traceRepresentation)
     appendln()
     appendln()
-
-    if (exceptionStackTraces.isNotEmpty()) {
-        appendln(EXCEPTIONS_TRACES_TITLE)
-        appendExceptionsStackTraces(exceptionStackTraces)
-        appendln()
-    }
-
-    appendln(DETAILED_PARALLEL_PART_TITLE)
-    val traceRepresentationVerbose = traceGraphToRepresentationList(startTraceGraphNode, true)
-    appendTraceRepresentation(scenario, traceRepresentationVerbose)
-
-    objectNumeration.clear() // clear the numeration at the end to avoid memory leaks
 }
-
-internal fun StringBuilder.appendExceptionsStackTraces(exceptionsDescription: Map<Throwable, ExceptionNumberAndStacktrace>): StringBuilder {
-    exceptionsDescription.entries.sortedBy { (_, description) -> description.number }.forEach { (exception, description) ->
-        append("#${description.number}: ")
-
-        appendln(exception::class.java.canonicalName)
-        description.stackTrace.forEach { appendln("\tat $it") }
-
-        if (description.number < exceptionsDescription.size) appendln()
-    }
-
-    return this
-}
-
 
 private fun StringBuilder.appendTraceRepresentation(
     scenario: ExecutionScenario,
@@ -363,4 +357,3 @@ private val objectNumeration = WeakHashMap<Class<Any>, MutableMap<Any, Int>>()
 
 const val DETAILED_PARALLEL_PART_TITLE = "Detailed parallel part trace:"
 const val PARALLEL_PART_TITLE = "Parallel part trace:"
-private const val EXCEPTIONS_TRACES_TITLE = "Exception stack traces:"
