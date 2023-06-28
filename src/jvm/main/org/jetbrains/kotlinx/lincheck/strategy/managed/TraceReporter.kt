@@ -128,7 +128,7 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
                     last = lastNode,
                     callDepth = 0,
                     actor = scenario.parallelExecution[iThread][nextActor],
-                    resultRepresentation = result?.let { resultRepresentation(result, exceptionStackTraces) }
+                    resultRepresentation = result?.let { actorNodeResultRepresentation(result, exceptionStackTraces) }
                 )
             }
             actorNodes[iThread][nextActor] = actorNode
@@ -313,17 +313,16 @@ private class ActorNode(
     override fun addRepresentationTo(
         traceRepresentation: MutableList<TraceEventRepresentation>,
         verboseTrace: Boolean
-    ): TraceNode? =
-        if (!shouldBeExpanded(verboseTrace)) {
-            val representationWithActor = "$actor" + (resultRepresentation?.let { ": $it" } ?: "")
-
-            traceRepresentation.add(TraceEventRepresentation(iThread, representationWithActor))
+    ): TraceNode? {
+        val actorRepresentation = "$actor" + if (resultRepresentation != null) ": $resultRepresentation" else ""
+        traceRepresentation.add(TraceEventRepresentation(iThread, actorRepresentation))
+        return if (!shouldBeExpanded(verboseTrace)) {
             lastState?.let { traceRepresentation.add(stateEventRepresentation(iThread, it)) }
             lastInternalEvent.next
         } else {
-            traceRepresentation.add(TraceEventRepresentation(iThread, "$actor"))
             next
         }
+    }
 }
 
 private class ActorResultNode(

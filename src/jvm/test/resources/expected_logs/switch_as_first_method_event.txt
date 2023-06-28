@@ -4,7 +4,7 @@ Parallel part:
 
 = The following interleaving leads to the error =
 Parallel part trace:
-|                      | incTwiceAndGet()                                                                                    |
+|                      | incTwiceAndGet(): 4                                                                                 |
 |                      |   incAndGet(): 1 at SwitchAsFirstMethodEventTest.incTwiceAndGet(SwitchAsFirstMethodEventTest.kt:41) |
 |                      |   switch                                                                                            |
 | incTwiceAndGet(): 3  |                                                                                                     |
@@ -14,12 +14,12 @@ Parallel part trace:
 |                      |   thread is finished                                                                                |
 
 Detailed parallel part trace:
-|                                                                                                                      | incTwiceAndGet()                                                                                                     |
+|                                                                                                                      | incTwiceAndGet(): 4                                                                                                  |
 |                                                                                                                      |   incAndGet(): 1 at SwitchAsFirstMethodEventTest.incTwiceAndGet(SwitchAsFirstMethodEventTest.kt:41)                  |
 |                                                                                                                      |     incAndGetImpl(): 1 at SwitchAsFirstMethodEventTest.incAndGet(SwitchAsFirstMethodEventTest.kt:45)                 |
 |                                                                                                                      |       counter.incrementAndGet(): 1 at SwitchAsFirstMethodEventTest.incAndGetImpl(SwitchAsFirstMethodEventTest.kt:47) |
 |                                                                                                                      |   switch                                                                                                             |
-| incTwiceAndGet()                                                                                                     |                                                                                                                      |
+| incTwiceAndGet(): 3                                                                                                  |                                                                                                                      |
 |   incAndGet(): 2 at SwitchAsFirstMethodEventTest.incTwiceAndGet(SwitchAsFirstMethodEventTest.kt:41)                  |                                                                                                                      |
 |     incAndGetImpl(): 2 at SwitchAsFirstMethodEventTest.incAndGet(SwitchAsFirstMethodEventTest.kt:45)                 |                                                                                                                      |
 |       counter.incrementAndGet(): 2 at SwitchAsFirstMethodEventTest.incAndGetImpl(SwitchAsFirstMethodEventTest.kt:47) |                                                                                                                      |

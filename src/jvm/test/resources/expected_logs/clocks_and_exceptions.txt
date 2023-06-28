@@ -16,12 +16,12 @@ The number next to an exception name helps you find its stack trace provided aft
 
 = The following interleaving leads to the error =
 Parallel part trace:
-| operation1(): void                                                                                                             |                                        |
+| operation1()                                                                                                                   |                                        |
 | operation1()                                                                                                                   |                                        |
 |   canEnterForbiddenSection.WRITE(true) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:27)  |                                        |
 |   switch                                                                                                                       |                                        |
 |                                                                                                                                | operation2(): IllegalStateException #1 |
-|                                                                                                                                | operation1(): void                     |
+|                                                                                                                                | operation1()                           |
 |                                                                                                                                |   thread is finished                   |
 |   canEnterForbiddenSection.WRITE(false) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:28) |                                        |
 |   result: void                                                                                                                 |                                        |
@@ -39,7 +39,7 @@ Detailed parallel part trace:
 | operation1()                                                                                                                   |                                                                                                                                |
 |   canEnterForbiddenSection.WRITE(true) at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:27)  |                                                                                                                                |
 |   switch                                                                                                                       |                                                                                                                                |
-|                                                                                                                                | operation2()                                                                                                                   |
+|                                                                                                                                | operation2(): IllegalStateException #1                                                                                         |
 |                                                                                                                                |   canEnterForbiddenSection.READ: true at ClocksWithExceptionsInOutputTest.operation2(ClocksWithExceptionsInOutputTest.kt:32)   |
 |                                                                                                                                |   result: IllegalStateException #1                                                                                             |
 |                                                                                                                                | operation1()                                                                                                                   |

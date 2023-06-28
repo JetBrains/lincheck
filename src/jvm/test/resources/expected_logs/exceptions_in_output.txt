@@ -8,7 +8,7 @@ The number next to an exception name helps you find its stack trace provided aft
 
 = The following interleaving leads to the error =
 Parallel part trace:
-| operation1()                                                                                               |                                        |
+| operation1(): IllegalStateException #1                                                                     |                                        |
 |   canEnterForbiddenSection.WRITE(true) at ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:24)  |                                        |
 |   switch                                                                                                   |                                        |
 |                                                                                                            | operation2(): IllegalStateException #2 |
@@ -25,10 +25,10 @@ Exception stack traces:
 	at org.jetbrains.kotlinx.lincheck_test.representation.ExceptionsInOutputTest.operation2(ExceptionsInOutputTest.kt:30)
 
 Detailed parallel part trace:
-| operation1()                                                                                               |                                                                                                          |
+| operation1(): IllegalStateException #1                                                                     |                                                                                                          |
 |   canEnterForbiddenSection.WRITE(true) at ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:24)  |                                                                                                          |
 |   switch                                                                                                   |                                                                                                          |
-|                                                                                                            | operation2()                                                                                             |
+|                                                                                                            | operation2(): IllegalStateException #2                                                                   |
 |                                                                                                            |   canEnterForbiddenSection.READ: true at ExceptionsInOutputTest.operation2(ExceptionsInOutputTest.kt:30) |
 |                                                                                                            |   result: IllegalStateException #2                                                                       |
 |                                                                                                            |   thread is finished                                                                                     |

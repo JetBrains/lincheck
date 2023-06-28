@@ -4,7 +4,7 @@ Parallel part:
 
 = The following interleaving leads to the error =
 Parallel part trace:
-|                      | operation()                                                                                                              |
+|                      | operation(): 0                                                                                                           |
 |                      |   outerClass1.READ: OuterDataClass@1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:34) |
 |                      |   outerClass2.READ: OuterDataClass@2 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:35) |
 |                      |   innerClass.READ: InnerClass@1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:36)      |
@@ -21,7 +21,7 @@ Parallel part trace:
 |                      |   thread is finished                                                                                                     |
 
 Detailed parallel part trace:
-|                                                                                                                          | operation()                                                                                                              |
+|                                                                                                                          | operation(): 0                                                                                                           |
 |                                                                                                                          |   outerClass1.READ: OuterDataClass@1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:34) |
 |                                                                                                                          |   outerClass2.READ: OuterDataClass@2 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:35) |
 |                                                                                                                          |   innerClass.READ: InnerClass@1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:36)      |
@@ -31,7 +31,7 @@ Detailed parallel part trace:
 |                                                                                                                          |   objectArray.READ: String[]@1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:40)       |
 |                                                                                                                          |   counter.READ: 0 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:41)                    |
 |                                                                                                                          |   switch                                                                                                                 |
-| operation()                                                                                                              |                                                                                                                          |
+| operation(): 0                                                                                                           |                                                                                                                          |
 |   outerClass1.READ: OuterDataClass@1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:34) |                                                                                                                          |
 |   outerClass2.READ: OuterDataClass@2 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:35) |                                                                                                                          |
 |   innerClass.READ: InnerClass@1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:36)      |                                                                                                                          |

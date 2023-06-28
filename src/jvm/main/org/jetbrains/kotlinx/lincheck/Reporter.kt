@@ -231,6 +231,17 @@ internal data class ExceptionNumberAndStacktrace(
     val stackTrace: List<StackTraceElement>
 )
 
+internal fun actorNodeResultRepresentation(result: Result, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): String? {
+    return when (result) {
+        is ExceptionResult -> {
+            val exceptionNumberRepresentation = exceptionStackTraces[result.throwable]?.let { " #${it.number}" } ?: ""
+            "$result$exceptionNumberRepresentation"
+        }
+        is VoidResult -> null // don't print
+        else -> result.toString()
+    }
+}
+
 internal fun resultRepresentation(result: Result, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): String {
     return when (result) {
         is ExceptionResult -> {

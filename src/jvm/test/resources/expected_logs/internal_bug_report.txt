@@ -6,6 +6,6 @@ Exception stacktrace:
 java.lang.IllegalStateException: Internal bug
 	at org.jetbrains.kotlinx.lincheck.util.InternalLincheckExceptionEmulator.throwException(InternalLincheckExceptionEmulator.kt:23)
 	at org.jetbrains.kotlinx.lincheck_test.representation.InternalLincheckBugTest.operation2(InternalLincheckBugTest.kt:36)
-	at org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution70.run(Unknown Source)
+	at org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution304.run(Unknown Source)
 	at org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.testThreadRunnable$lambda-4(FixedActiveThreadsExecutor.kt:125)
 	at java.base/java.lang.Thread.run(Thread.java:829)
