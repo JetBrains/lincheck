@@ -292,16 +292,16 @@ private class ActorNode(
     override fun addRepresentationTo(
         traceRepresentation: MutableList<TraceEventRepresentation>,
         verboseTrace: Boolean
-    ): TraceNode? =
-        if (!shouldBeExpanded(verboseTrace)) {
-            val representation = "$actor" + if (result != null) ": $result" else ""
-            traceRepresentation.add(TraceEventRepresentation(iThread, representation))
+    ): TraceNode? {
+        val representation = "$actor" + if (result != null && result != VoidResult) ": $result" else ""
+        traceRepresentation.add(TraceEventRepresentation(iThread, representation))
+        return if (!shouldBeExpanded(verboseTrace)) {
             lastState?.let { traceRepresentation.add(stateEventRepresentation(iThread, it)) }
             lastInternalEvent.next
         } else {
-            traceRepresentation.add(TraceEventRepresentation(iThread, "$actor"))
             next
         }
+    }
 }
 
 private class ActorResultNode(

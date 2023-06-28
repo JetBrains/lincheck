@@ -1,4 +1,4 @@
-= Obstruction-freedom is required but a lock has been found =
+= The algorithm should be non-blocking, but a lock is detected =
 Execution scenario (parallel part):
 | operation() | operation() |
 

@@ -49,7 +49,6 @@ public class CTestStructure {
      * Constructs {@link CTestStructure} for the specified test class.
      */
     public static CTestStructure getFromTestClass(Class<?> testClass) {
-        Map<String, ParameterGenerator<?>> namedGens = new HashMap<>();
         Map<String, OperationGroup> groupConfigs = new HashMap<>();
         List<ActorGenerator> actorGenerators = new ArrayList<>();
         List<Method> validationFunctions = new ArrayList<>();
@@ -59,7 +58,7 @@ public class CTestStructure {
         Map<Class<?>, ParameterGenerator<?>> parameterGeneratorsMap = new HashMap<>();
 
         while (clazz != null) {
-            readTestStructureFromClass(clazz, namedGens, groupConfigs, actorGenerators, parameterGeneratorsMap, validationFunctions, stateRepresentations, randomProvider);
+            readTestStructureFromClass(clazz, groupConfigs, actorGenerators, parameterGeneratorsMap, validationFunctions, stateRepresentations, randomProvider);
             clazz = clazz.getSuperclass();
         }
         if (stateRepresentations.size() > 1) {
@@ -76,21 +75,17 @@ public class CTestStructure {
         return new CTestStructure(actorGenerators, parameterGenerators, new ArrayList<>(groupConfigs.values()), validationFunctions, stateRepresentation, randomProvider);
     }
 
-    @SuppressWarnings("removal")
-    private static void readTestStructureFromClass(Class<?> clazz, Map<String, ParameterGenerator<?>> namedGens,
-                                                   Map<String, OperationGroup> groupConfigs,
-                                                   List<ActorGenerator> actorGenerators,
-                                                   Map<Class<?>, ParameterGenerator<?>> parameterGeneratorsMap,
-                                                   List<Method> validationFunctions,
-                                                   List<Method> stateRepresentations,
-                                                   RandomProvider randomProvider) {
-        // Read named parameter paramgen (declared for class)
-        for (Param paramAnn : clazz.getAnnotationsByType(Param.class)) {
-            if (paramAnn.name().isEmpty()) {
-                throw new IllegalArgumentException("@Param name in class declaration cannot be empty");
-            }
-            namedGens.put(paramAnn.name(), createGenerator(paramAnn, randomProvider));
-        }
+    private static void readTestStructureFromClass(
+            Class<?> clazz,
+           Map<String, OperationGroup> groupConfigs,
+           List<ActorGenerator> actorGenerators,
+           Map<Class<?>, ParameterGenerator<?>> parameterGeneratorsMap,
+           List<Method> validationFunctions,
+           List<Method> stateRepresentations,
+           RandomProvider randomProvider
+    ) {
+        // Read named parameter generators (declared for class)
+        Map<String, ParameterGenerator<?>> namedGens = createNamedGens(clazz, randomProvider);
         // Create map for default (not named) gens
         Map<Class<?>, ParameterGenerator<?>> defaultGens = createDefaultGenerators(randomProvider);
         // Read group configurations
@@ -98,7 +93,7 @@ public class CTestStructure {
             groupConfigs.put(opGroupConfigAnn.name(), new OperationGroup(opGroupConfigAnn.name(),
                     opGroupConfigAnn.nonParallel()));
         }
-        // Create actor paramgen
+        // Process class methods
         for (Method m : getDeclaredMethodSorted(clazz)) {
             // Operation
             if (m.isAnnotationPresent(Operation.class)) {
@@ -106,10 +101,9 @@ public class CTestStructure {
                 boolean isSuspendableMethod = isSuspendable(m);
                 // Check that params() in @Operation is empty or has the same size as the method
                 if (opAnn.params().length > 0 && opAnn.params().length != m.getParameterCount()) {
-                    throw new IllegalArgumentException("Invalid count of paramgen for " + m.toString()
-                            + " method in @Operation");
+                    throw new IllegalArgumentException("Invalid count of parameter generators for " + m);
                 }
-                // Construct list of parameter paramgen
+                // Construct a list of parameter generators
                 final List<ParameterGenerator<?>> gens = new ArrayList<>();
                 int nParameters = m.getParameterCount() - (isSuspendableMethod ? 1 : 0);
                 for (int i = 0; i < nParameters; i++) {
@@ -134,7 +128,7 @@ public class CTestStructure {
                     operationGroup.actors.add(actorGenerator);
                 }
                 String opNonParallelGroupName = opAnn.nonParallelGroup();
-                if (!opNonParallelGroupName.equals("")) { // is `nonParallelGroup` specified?
+                if (!opNonParallelGroupName.isEmpty()) { // is `nonParallelGroup` specified?
                     groupConfigs.computeIfAbsent(opNonParallelGroupName, name -> new OperationGroup(name, true));
                     groupConfigs.get(opNonParallelGroupName).actors.add(actorGenerator);
                 }
@@ -153,6 +147,65 @@ public class CTestStructure {
                 stateRepresentations.add(m);
             }
         }
+    }
+
+    private static Map<String, ParameterGenerator<?>> createNamedGens(Class<?> clazz, RandomProvider randomProvider) {
+        Map<String, ParameterGenerator<?>> namedGens = new HashMap<>();
+        // Traverse all operations to determine named EnumGens types
+        // or throw if one named enum gen is associated with many types
+        Map<String, Class<? extends Enum<?>>> enumGeneratorNameToClassMap = collectNamedEnumGeneratorToClassMap(clazz);
+        // Read named parameter generators (declared for class)
+        for (Param paramAnn : clazz.getAnnotationsByType(Param.class)) {
+            // Throw exception if a user tried to declare EnumGen on the top of the class but without a name
+            if (paramAnn.name().isEmpty()) {
+                throw new IllegalArgumentException("@Param name in class declaration cannot be empty");
+            }
+            if (enumGeneratorNameToClassMap.containsKey(paramAnn.name())) {
+                Class<? extends Enum<?>> enumClass = enumGeneratorNameToClassMap.get(paramAnn.name());
+                namedGens.put(paramAnn.name(), createEnumGenerator(paramAnn.conf(), randomProvider, enumClass));
+            } else {
+                namedGens.put(paramAnn.name(), createGenerator(paramAnn, randomProvider));
+            }
+        }
+        return namedGens;
+    }
+
+    /**
+     * This method iterates over all methods in a given class, identifies those that are annotated with `@Operation`,
+     * and maps named enum generator names (found in method parameters annotated with `@Param`) to their respective enum classes.
+     * It's critical to note that each named enum generator should only be associated with one unique enum class.
+     * If the same enum generator name is associated with more than one type, an [IllegalStateException] is thrown.
+     *
+     * @param clazz The class in which methods and parameters are to be inspected.
+     * @return A map pairing each named enum generator (as indicated by `@Param` annotation name field) with its associated enum class.
+     * The map keys are enum generator names, and the values are enum classes.
+     * @throws IllegalStateException if a named enum generator is found to be associated with more than one enum class,
+     *                               which violates the uniqueness principle of enum generator to enum class mapping.
+     */
+    private static Map<String, Class<? extends Enum<?>>> collectNamedEnumGeneratorToClassMap(Class<?> clazz) {
+        Map<String, Class<? extends Enum<?>>> enumGeneratorNameToClassMap = new HashMap<>();
+
+        Arrays.stream(clazz.getDeclaredMethods()) // get all methods of the class
+                .filter(method -> method.isAnnotationPresent(Operation.class)) // take methods, annotated as @Operation
+                .flatMap(method -> Arrays.stream(method.getParameters())) // get their parameters
+                .filter(parameter -> parameter.getType().isEnum() && // which are enums
+                                     parameter.isAnnotationPresent(Param.class) && // annotated with @Param
+                                     !parameter.getAnnotationsByType(Param.class)[0].name().isEmpty()) // and references to some named EnumGen
+                .forEach(parameter -> {
+                    String paramGenName = parameter.getAnnotationsByType(Param.class)[0].name();
+
+                    @SuppressWarnings("unchecked")
+                    Class<? extends Enum<?>> enumClass = (Class<? extends Enum<?>>) (parameter.getType());
+
+                    enumGeneratorNameToClassMap.merge(paramGenName, enumClass, (storedClass, currentClass) -> {
+                        if (storedClass != currentClass) {
+                            throw new IllegalStateException("Enum param gen with name " + paramGenName + " can't be associated with two different types: " + storedClass.getSimpleName() + " and " + currentClass.getSimpleName());
+                        }
+                        return storedClass;
+                    });
+                });
+
+        return enumGeneratorNameToClassMap;
     }
 
     /**
@@ -189,18 +242,31 @@ public class CTestStructure {
             ParameterGenerator<?> defaultGenerator = defaultGens.get(p.getType());
             if (defaultGenerator != null)
                 return defaultGenerator;
+            if (p.getType().isEnum()) {
+                @SuppressWarnings("unchecked")
+                EnumGen<?> generator = createEnumGenerator("", randomProvider, (Class<? extends Enum<?>>) p.getType());
+                defaultGens.put(p.getType(), generator);
+                return generator;
+            }
             // Cannot create default parameter generator, throw an exception
             throw new IllegalStateException("Generator for parameter \"" + p + "\" in method \""
                 + m.getName() + "\" should be specified.");
         }
-        // If the @Param annotation is presented check it's correctness firstly
+        // If the @Param annotation is presented check its correctness firstly
         if (!paramAnn.name().isEmpty() && !(paramAnn.gen() == DummyParameterGenerator.class))
             throw new IllegalStateException("@Param should have either name or gen with optionally configuration");
         // If @Param annotation specifies generator's name then return the specified generator
         if (!paramAnn.name().isEmpty())
             return checkAndGetNamedGenerator(namedGens, paramAnn.name());
         // Otherwise create new parameter generator
-        return createGenerator(paramAnn, randomProvider);
+        if (p.getType().isEnum()) {
+            @SuppressWarnings("unchecked")
+            Class<? extends Enum<?>> enumClass = (Class<? extends Enum<?>>) (p.getType());
+
+            return createEnumGenerator(paramAnn.conf(), randomProvider, enumClass);
+        } else {
+            return createGenerator(paramAnn, randomProvider);
+        }
     }
 
     private static ParameterGenerator<?> createGenerator(Param paramAnn, RandomProvider randomProvider) {
@@ -209,6 +275,11 @@ public class CTestStructure {
         } catch (Exception e) {
             throw new IllegalStateException("Cannot create parameter gen", e);
         }
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static EnumGen<?> createEnumGenerator(String configuration, RandomProvider randomProvider, Class<? extends Enum<?>> enumClass) {
+        return new EnumGen(enumClass, randomProvider, configuration);
     }
 
     private static Map<Class<?>, ParameterGenerator<?>> createDefaultGenerators(RandomProvider randomProvider) {
