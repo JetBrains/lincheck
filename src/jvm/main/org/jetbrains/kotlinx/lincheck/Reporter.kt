@@ -235,14 +235,6 @@ fun StringBuilder.appendInternalLincheckBugFailure(exception: Throwable) {
     append(exceptionRepresentation)
 }
 
-private sealed interface ExceptionsProcessingResult
-
-private data class InternalLincheckBugResult(val exception: Throwable) :
-    ExceptionsProcessingResult
-
-private data class ExceptionStackTracesResult(val exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>) :
-    ExceptionsProcessingResult
-
 internal data class ExceptionNumberAndStacktrace(
     /**
      * Serves to match exception in a scenario with its stackTrace
@@ -275,6 +267,28 @@ internal fun resultRepresentation(result: Result, exceptionStackTraces: Map<Thro
         else -> result.toString()
     }
 }
+
+/**
+ * Result of collecting exceptions into a map from throwable to its number and stacktrace
+ * to use this information to numerate them and print their stacktrace with number.
+ * @see collectExceptionStackTraces
+ */
+private sealed interface ExceptionsProcessingResult
+
+/**
+ * Corresponds to the case when we tried to collect exceptions map but found one,
+ * that was thrown from Lincheck internally.
+ * In that case, we just want to print that exception and don't care about other exceptions.
+ */
+private data class InternalLincheckBugResult(val exception: Throwable) :
+    ExceptionsProcessingResult
+
+/**
+ * Result of successful collection exceptions to map when no one of them was thrown from Lincheck.
+ */
+private data class ExceptionStackTracesResult(val exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>) :
+    ExceptionsProcessingResult
+
 
 /**
  * Collects stackTraces of exceptions thrown during execution
