@@ -1,4 +1,4 @@
-= Obstruction-freedom is required but an active lock has been found =
+= The algorithm should be non-blocking, but an active lock is detected =
 Execution scenario (parallel part):
 | operation() |
 
@@ -9,7 +9,6 @@ Parallel part trace:
 |   incrementManyTimes() at ObstructionFreedomActiveLockRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:37)              |
 |     get(): 101 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:41)             |
 |     incrementAndGet(): 102 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:44) |
-|     switch (reason: active lock detected)                                                                                                   |
 
 Detailed parallel part trace:
 | operation()                                                                                                                                 |
@@ -119,4 +118,3 @@ Detailed parallel part trace:
 |   incrementManyTimes() at ObstructionFreedomActiveLockRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:37)              |
 |     get(): 101 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:41)             |
 |     incrementAndGet(): 102 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:44) |
-|     switch (reason: active lock detected)                                                                                                   |

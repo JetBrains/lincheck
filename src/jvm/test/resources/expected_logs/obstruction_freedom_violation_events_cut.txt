@@ -1,36 +1,34 @@
-= Obstruction-freedom is required but an active lock has been found =
+= The algorithm should be non-blocking, but an active lock is detected =
 Execution scenario (parallel part):
 | enqueue(1) | enqueue(-1) |
 
 = The following interleaving leads to the error =
 Parallel part trace:
-|                                                                                                        | enqueue(-1)                                                                                           |
-|                                                                                                        |   enqueue(-1) at ObstructionFreedomViolationEventsCutTest.enqueue(SpinlockEventsCutTests.kt:31)       |
-|                                                                                                        |     <init>(-1,null,2,null) at MSQueueBlocking.enqueue(ObtructionFreedomViolationTest.kt:25)           |
-|                                                                                                        |     get(): Node@1 at MSQueueBlocking.enqueue(ObtructionFreedomViolationTest.kt:27)                    |
-|                                                                                                        |     compareAndSet(null,Node@2): true at MSQueueBlocking.enqueue(ObtructionFreedomViolationTest.kt:28) |
-|                                                                                                        |     switch                                                                                            |
-| enqueue(1)                                                                                             |                                                                                                       |
-|   enqueue(1) at ObstructionFreedomViolationEventsCutTest.enqueue(SpinlockEventsCutTests.kt:31)         |                                                                                                       |
-|     <init>(1,null,2,null) at MSQueueBlocking.enqueue(ObtructionFreedomViolationTest.kt:25)             |                                                                                                       |
-|     /* The following events repeat infinitely until thread switch */                                   |                                                                                                       |
-|     get(): Node@1 at MSQueueBlocking.enqueue(ObtructionFreedomViolationTest.kt:27)                     |                                                                                                       |
-|     compareAndSet(null,Node@3): false at MSQueueBlocking.enqueue(ObtructionFreedomViolationTest.kt:28) |                                                                                                       |
-|     switch (reason: active lock detected)                                                              |                                                                                                       |
+|                                                                                                         | enqueue(-1)                                                                                            |
+|                                                                                                         |   enqueue(-1) at ObstructionFreedomViolationEventsCutTest.enqueue(SpinlockEventsCutTests.kt:31)        |
+|                                                                                                         |     <init>(-1,null,2,null) at MSQueueBlocking.enqueue(ObstructionFreedomViolationTest.kt:25)           |
+|                                                                                                         |     get(): Node@1 at MSQueueBlocking.enqueue(ObstructionFreedomViolationTest.kt:27)                    |
+|                                                                                                         |     compareAndSet(null,Node@2): true at MSQueueBlocking.enqueue(ObstructionFreedomViolationTest.kt:28) |
+|                                                                                                         |     switch                                                                                             |
+| enqueue(1)                                                                                              |                                                                                                        |
+|   enqueue(1) at ObstructionFreedomViolationEventsCutTest.enqueue(SpinlockEventsCutTests.kt:31)          |                                                                                                        |
+|     <init>(1,null,2,null) at MSQueueBlocking.enqueue(ObstructionFreedomViolationTest.kt:25)             |                                                                                                        |
+|     /* The following events repeat infinitely until thread switch */                                    |                                                                                                        |
+|     get(): Node@1 at MSQueueBlocking.enqueue(ObstructionFreedomViolationTest.kt:27)                     |                                                                                                        |
+|     compareAndSet(null,Node@3): false at MSQueueBlocking.enqueue(ObstructionFreedomViolationTest.kt:28) |                                                                                                        |
 
 Detailed parallel part trace:
-|                                                                                                        | enqueue(-1)                                                                                           |
-|                                                                                                        |   enqueue(-1) at ObstructionFreedomViolationEventsCutTest.enqueue(SpinlockEventsCutTests.kt:31)       |
-|                                                                                                        |     <init>(-1,null,2,null) at MSQueueBlocking.enqueue(ObtructionFreedomViolationTest.kt:25)           |
-|                                                                                                        |       <init>(null) at MSQueueBlocking$Node.<init>(ObtructionFreedomViolationTest.kt:51)               |
-|                                                                                                        |     get(): Node@1 at MSQueueBlocking.enqueue(ObtructionFreedomViolationTest.kt:27)                    |
-|                                                                                                        |     compareAndSet(null,Node@2): true at MSQueueBlocking.enqueue(ObtructionFreedomViolationTest.kt:28) |
-|                                                                                                        |     switch                                                                                            |
-| enqueue(1)                                                                                             |                                                                                                       |
-|   enqueue(1) at ObstructionFreedomViolationEventsCutTest.enqueue(SpinlockEventsCutTests.kt:31)         |                                                                                                       |
-|     <init>(1,null,2,null) at MSQueueBlocking.enqueue(ObtructionFreedomViolationTest.kt:25)             |                                                                                                       |
-|       <init>(null) at MSQueueBlocking$Node.<init>(ObtructionFreedomViolationTest.kt:51)                |                                                                                                       |
-|     /* The following events repeat infinitely until thread switch */                                   |                                                                                                       |
-|     get(): Node@1 at MSQueueBlocking.enqueue(ObtructionFreedomViolationTest.kt:27)                     |                                                                                                       |
-|     compareAndSet(null,Node@3): false at MSQueueBlocking.enqueue(ObtructionFreedomViolationTest.kt:28) |                                                                                                       |
-|     switch (reason: active lock detected)                                                              |                                                                                                       |
+|                                                                                                         | enqueue(-1)                                                                                            |
+|                                                                                                         |   enqueue(-1) at ObstructionFreedomViolationEventsCutTest.enqueue(SpinlockEventsCutTests.kt:31)        |
+|                                                                                                         |     <init>(-1,null,2,null) at MSQueueBlocking.enqueue(ObstructionFreedomViolationTest.kt:25)           |
+|                                                                                                         |       <init>(null) at MSQueueBlocking$Node.<init>(ObstructionFreedomViolationTest.kt:51)               |
+|                                                                                                         |     get(): Node@1 at MSQueueBlocking.enqueue(ObstructionFreedomViolationTest.kt:27)                    |
+|                                                                                                         |     compareAndSet(null,Node@2): true at MSQueueBlocking.enqueue(ObstructionFreedomViolationTest.kt:28) |
+|                                                                                                         |     switch                                                                                             |
+| enqueue(1)                                                                                              |                                                                                                        |
+|   enqueue(1) at ObstructionFreedomViolationEventsCutTest.enqueue(SpinlockEventsCutTests.kt:31)          |                                                                                                        |
+|     <init>(1,null,2,null) at MSQueueBlocking.enqueue(ObstructionFreedomViolationTest.kt:25)             |                                                                                                        |
+|       <init>(null) at MSQueueBlocking$Node.<init>(ObstructionFreedomViolationTest.kt:51)                |                                                                                                        |
+|     /* The following events repeat infinitely until thread switch */                                    |                                                                                                        |
+|     get(): Node@1 at MSQueueBlocking.enqueue(ObstructionFreedomViolationTest.kt:27)                     |                                                                                                        |
+|     compareAndSet(null,Node@3): false at MSQueueBlocking.enqueue(ObstructionFreedomViolationTest.kt:28) |                                                                                                        |

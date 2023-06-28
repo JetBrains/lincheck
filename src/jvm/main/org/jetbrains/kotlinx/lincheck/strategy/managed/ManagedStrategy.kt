@@ -374,7 +374,10 @@ abstract class ManagedStrategy(
     private fun switchCurrentThreadDueToActiveLock(
         iThread: Int, cyclePeriod: Int
     ) {
-        traceCollector?.newActiveLockSwitch(iThread, cyclePeriod)
+        traceCollector?.let {
+            it.newActiveLockDetected(iThread, cyclePeriod)
+            it.newSwitch(iThread, SwitchReason.ACTIVE_LOCK)
+        }
         doSwitchCurrentThread(iThread, false)
         awaitTurn(iThread)
     }
@@ -720,7 +723,7 @@ abstract class ManagedStrategy(
             _trace += SwitchEventTracePoint(iThread, currentActorId[iThread], reason, callStackTrace[iThread].toList())
         }
 
-        fun newActiveLockSwitch(iThread: Int, cyclePeriod: Int) {
+        fun newActiveLockDetected(iThread: Int, cyclePeriod: Int) {
             val spinCycleStartPosition = _trace.size - cyclePeriod
             val spinCycleStartStackTrace =
                 if (spinCycleStartPosition <= _trace.lastIndex) _trace[spinCycleStartPosition].callStackTrace else emptyList()
@@ -728,13 +731,6 @@ abstract class ManagedStrategy(
                 iThread = iThread, actorId = currentActorId[iThread], callStackTrace = spinCycleStartStackTrace
             )
             _trace.add(spinCycleStartPosition, spinCycleStartTracePoint)
-
-            _trace += SwitchEventTracePoint(
-                iThread = iThread,
-                actorId = currentActorId[iThread],
-                reason = SwitchReason.ACTIVE_LOCK,
-                callStackTrace = callStackTrace[iThread].toList()
-            )
         }
 
         fun finishThread(iThread: Int) {
@@ -1048,13 +1044,11 @@ abstract class ManagedStrategy(
             // and have to fail at the end of the execution
             if (shouldSwitchThread && currentInterleavingNodeIndex == interleavingHistory.lastIndex && failDueToDeadlockInTheEnd) {
                 val cyclePeriod = interleavingHistory[currentInterleavingNodeIndex].spinCyclePeriod
-                // If we haven't found cycle in the last execution history node doesn't contain any spin-cycle
-                if (cyclePeriod == 0) {
-                    traceCollector?.newSwitch(currentThread, SwitchReason.ACTIVE_LOCK)
-                } else {
-                    traceCollector?.newActiveLockSwitch(currentThread, cyclePeriod)
+                if (cyclePeriod != 0) {
+                    traceCollector?.newActiveLockDetected(currentThread, cyclePeriod)
                 }
-                failIfObstructionFreedomIsRequired { ACTIVE_LOCK_OBSTRUCTION_FREEDOM_VIOLATION_MESSAGE }
+                failIfObstructionFreedomIsRequired { OBSTRUCTION_FREEDOM_SPINLOCK_VIOLATION_MESSAGE }
+                traceCollector?.newSwitch(currentThread, SwitchReason.ACTIVE_LOCK)
                 failDueToDeadlock()
             }
         }
