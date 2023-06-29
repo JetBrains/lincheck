@@ -1026,7 +1026,7 @@ abstract class ManagedStrategy(
             val shouldSwitchThread =
                 executionsPerformedInCurrentThread++ >= historyNode.spinCyclePeriod + historyNode.executions
             checkFailDueToDeadlock(shouldSwitchThread)
-            return shouldSwitchThread
+            return historyNode.cycleOccurred && shouldSwitchThread
         }
 
         /**
