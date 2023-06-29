@@ -7,11 +7,11 @@
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.jetbrains.kotlinx.lincheck.test.representation
+package org.jetbrains.kotlinx.lincheck_test.representation
 
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.test.util.*
+import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 import java.util.concurrent.atomic.*

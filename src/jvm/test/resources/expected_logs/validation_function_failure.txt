@@ -5,7 +5,7 @@ Execution scenario (post part):
 [inc(), inc(), inc(), inc()]
 
 java.lang.IllegalStateException: Validation works!
-	at org.jetbrains.kotlinx.lincheck.test.representation.ValidateFunctionTest.validateWithError(ValidateFunctionTest.kt:37)
+	at org.jetbrains.kotlinx.lincheck_test.representation.ValidateFunctionTest.validateWithError(ValidateFunctionTest.kt:37)
 
 
 = The following interleaving leads to the error =

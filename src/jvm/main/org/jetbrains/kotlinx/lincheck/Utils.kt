@@ -79,7 +79,13 @@ private fun executeValidationFunction(instance: Any, validationFunction: Method)
     try {
         m.invoke(instance)
     } catch (e: Throwable) {
-        // cut off lincheck-related and reflection-related stacktrace elements
+        /*
+        There are some exception types that can be thrown from this method, beside InvocationTargetException:
+        1. All Errors - the only correct way is to re-throw them
+        2. NullPointerExceptions - it's our fault if we supplied null instead of method or instance
+        3. IllegalArgumentException - it can appear if validation function was parameters, but we had to check it before
+        4.
+         */
         val validationException = e.cause ?: return e
         val wrapperExceptionStackTraceLength = e.stackTrace.size
 
