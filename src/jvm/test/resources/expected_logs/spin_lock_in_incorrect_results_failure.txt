@@ -1,10 +1,10 @@
 = Invalid execution results =
 Parallel part:
 | a(): void       | c(): void       |
-| b(): void [1,-] | d(): 0    [2,1] |
+| b(): void [1,0] | d(): 0    [2,1] |
 
 ---
-values in "[..]" brackets indicate the number of completed operations 
+Values in "[..]" brackets indicate the number of completed operations
 in each of the parallel threads seen at the beginning of the current operation
 ---
 

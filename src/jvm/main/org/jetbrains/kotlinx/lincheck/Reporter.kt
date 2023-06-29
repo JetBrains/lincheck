@@ -186,10 +186,6 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
         appendLine()
         appendLine("= The following interleaving leads to the error =")
         appendTrace(failure, results, failure.trace, exceptionStackTraces)
-        if (failure is DeadlockWithDumpFailure) {
-            appendLine()
-            append("All threads are in deadlock")
-        }
     } else {
         appendExceptionsStackTracesBlock(exceptionStackTraces)
     }
