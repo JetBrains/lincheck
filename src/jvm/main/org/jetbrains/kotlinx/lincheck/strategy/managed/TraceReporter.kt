@@ -11,42 +11,50 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.strategy.*
 import java.util.*
 import kotlin.math.*
 
 @Synchronized // we should avoid concurrent executions to keep `objectNumeration` consistent
 internal fun StringBuilder.appendTrace(
-    scenario: ExecutionScenario,
+    failure: LincheckFailure,
     results: ExecutionResult?,
     trace: Trace,
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
 ) {
-    val startTraceGraphNode = constructTraceGraph(scenario, results, trace, exceptionStackTraces)
+    val startTraceGraphNode = constructTraceGraph(failure.scenario, results, trace, exceptionStackTraces)
 
-    appendShortTrace(startTraceGraphNode, scenario)
+    appendShortTrace(startTraceGraphNode, failure)
     appendExceptionsStackTracesBlock(exceptionStackTraces)
-    appendDetailedTrace(startTraceGraphNode, scenario)
+    appendDetailedTrace(startTraceGraphNode, failure)
 
     objectNumeration.clear() // clear the numeration at the end to avoid memory leaks
 }
 
 private fun StringBuilder.appendDetailedTrace(
     startTraceGraphNode: TraceNode?,
-    scenario: ExecutionScenario
+    failure: LincheckFailure
 ) {
     appendln(DETAILED_PARALLEL_PART_TITLE)
     val traceRepresentationVerbose = traceGraphToRepresentationList(startTraceGraphNode, true)
-    appendTraceRepresentation(scenario, traceRepresentationVerbose)
+    appendTraceRepresentation(failure.scenario, traceRepresentationVerbose)
+    if (failure is DeadlockWithDumpFailure) {
+        appendln()
+        appendLine(ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE)
+    }
 }
 
 private fun StringBuilder.appendShortTrace(
     startTraceGraphNode: TraceNode?,
-    scenario: ExecutionScenario
+    failure: LincheckFailure
 ) {
     appendln(PARALLEL_PART_TITLE)
     val traceRepresentation = traceGraphToRepresentationList(startTraceGraphNode, false)
-    appendTraceRepresentation(scenario, traceRepresentation)
+    appendTraceRepresentation(failure.scenario, traceRepresentation)
     appendln()
+    if (failure is DeadlockWithDumpFailure) {
+        appendLine(ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE)
+    }
     appendln()
 }
 
@@ -357,3 +365,4 @@ private val objectNumeration = WeakHashMap<Class<Any>, MutableMap<Any, Int>>()
 
 const val DETAILED_PARALLEL_PART_TITLE = "Detailed parallel part trace:"
 const val PARALLEL_PART_TITLE = "Parallel part trace:"
+private const val ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE = "All unfinished threads are in deadlock"

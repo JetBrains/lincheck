@@ -14,8 +14,8 @@ package org.jetbrains.kotlinx.lincheck.test.representation
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.test.guide.MSQueueBlocking
-import org.jetbrains.kotlinx.lincheck.test.util.runModelCheckingTestAndCheckOutput
+import org.jetbrains.kotlinx.lincheck_test.guide.MSQueueBlocking
+import org.jetbrains.kotlinx.lincheck_test.util.runModelCheckingTestAndCheckOutput
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReferenceArray
