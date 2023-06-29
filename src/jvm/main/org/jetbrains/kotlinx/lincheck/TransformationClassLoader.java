@@ -77,7 +77,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
                ) ||
                className.startsWith("com.intellij.rt.coverage.") ||
                (className.startsWith("org.jetbrains.kotlinx.lincheck.") &&
-                   !className.startsWith("org.jetbrains.kotlinx.lincheck.test.") &&
+                   !className.startsWith("org.jetbrains.kotlinx.lincheck_test.") &&
                    !className.equals(ManagedStrategyStateHolder.class.getName())
                ) ||
                className.equals(kotlinx.coroutines.CancellableContinuation.class.getName()) ||
