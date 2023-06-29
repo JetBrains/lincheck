@@ -46,7 +46,7 @@ class SpinlockEventsCutShortLengthTest : AbstractSpinLivelockTest() {
 
     private val sharedStateAny = AtomicBoolean(false)
 
-    override val outputFileName: String get() = "spin_lock_events_cut.txt"
+    override val outputFileName: String get() = "spin_lock_events_cut_single_action_cycle.txt"
 
     override fun meaninglessActions() {
         sharedStateAny.get()
@@ -61,7 +61,7 @@ class SpinlockEventsCutMiddleLengthTest : AbstractSpinLivelockTest() {
 
     private val sharedStateAny = AtomicBoolean(false)
 
-    override val outputFileName: String get() = "spin_lock_events_cut_2.txt"
+    override val outputFileName: String get() = "spin_lock_events_cut_two_actions_cycle.txt"
 
     override fun meaninglessActions() {
         val x = sharedStateAny.get()
@@ -77,7 +77,7 @@ class SpinlockEventsCutInfiniteLoopTest : AbstractSpinLivelockTest() {
 
     private val sharedStateAny = AtomicBoolean(false)
 
-    override val outputFileName: String get() = "infinite_loop_events_cut.txt"
+    override val outputFileName: String get() = "infinite_spin_loop_events_cut.txt"
 
     override fun meaninglessActions() {
         while (true) {
@@ -93,7 +93,7 @@ class SpinlockEventsCutInfiniteLoopTest : AbstractSpinLivelockTest() {
 class SpinlockEventsCutLongCycleActionsTest : AbstractSpinLivelockTest() {
 
     private val data = AtomicReferenceArray<Int>(7)
-    override val outputFileName: String get() = "long_spin_cycle_events_cut.txt"
+    override val outputFileName: String get() = "spin_lock_events_cut_long_cycle.txt"
     override fun meaninglessActions() {
         data[0] = 0
         data[1] = 0
@@ -112,7 +112,7 @@ class SpinlockEventsCutLongCycleActionsTest : AbstractSpinLivelockTest() {
 class SpinlockEventsCutWithInnerLoopActionsTest : AbstractSpinLivelockTest() {
 
     private val data = AtomicReferenceArray<Int>(10)
-    override val outputFileName: String get() = "inner_loop_spin_cycle_events_cut.txt"
+    override val outputFileName: String get() = "spin_lock_events_cut_inner_loop.txt"
     override fun meaninglessActions() {
         for (i in 0 until data.length()) {
             data[i] = 0
