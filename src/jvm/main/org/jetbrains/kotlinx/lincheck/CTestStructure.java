@@ -113,9 +113,7 @@ public class CTestStructure {
                     parameterGeneratorsMap.putIfAbsent(parameter.getType(), parameterGenerator);
                     gens.add(parameterGenerator);
                 }
-                // Get list of handled exceptions if they are presented
-                List<Class<? extends Throwable>> handledExceptions = Arrays.asList(opAnn.handleExceptionsAsResult());
-                ActorGenerator actorGenerator = new ActorGenerator(m, gens, handledExceptions, opAnn.runOnce(),
+                ActorGenerator actorGenerator = new ActorGenerator(m, gens, opAnn.runOnce(),
                     opAnn.cancellableOnSuspension(), opAnn.allowExtraSuspension(), opAnn.blocking(), opAnn.causesBlocking(),
                     opAnn.promptCancellation());
                 actorGenerators.add(actorGenerator);

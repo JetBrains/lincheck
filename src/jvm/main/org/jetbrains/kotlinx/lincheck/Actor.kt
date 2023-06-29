@@ -22,7 +22,6 @@ import kotlin.reflect.jvm.*
 data class Actor @JvmOverloads constructor(
     val method: Method,
     val arguments: List<Any?>,
-    val handledExceptions: List<Class<out Throwable>> = emptyList(),
     val cancelOnSuspension: Boolean = false,
     val allowExtraSuspension: Boolean = false,
     val blocking: Boolean = false,
@@ -43,8 +42,6 @@ data class Actor @JvmOverloads constructor(
         (if (cancelOnSuspension) " + " else "") +
         (if (promptCancellation) "prompt_" else "") +
         (if (cancelOnSuspension) "cancel" else "")
-
-    val handlesExceptions = handledExceptions.isNotEmpty()
 }
 
 fun Method.isSuspendable(): Boolean = kotlinFunction?.isSuspend ?: false

@@ -49,7 +49,10 @@ public @interface Operation {
 
     /**
      * Handle the specified exceptions as a result of this operation invocation.
+     *
+     * @deprecated all exceptions now handled as possible results
      */
+    @Deprecated(forRemoval = true)
     Class<? extends Throwable>[] handleExceptionsAsResult() default {};
 
     /**

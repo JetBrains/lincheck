@@ -11,6 +11,8 @@ package org.jetbrains.kotlinx.lincheck.runner;
 
 import org.jetbrains.kotlinx.lincheck.Result;
 
+import static org.jetbrains.kotlinx.lincheck.UtilsKt.*;
+
 
 /**
  * Instance of this class represents the test execution for ONE thread. Several instances should be ran in parallel.
@@ -19,6 +21,7 @@ import org.jetbrains.kotlinx.lincheck.Result;
  *
  * <p> This class should be public for having access from generated ones.
  */
+@SuppressWarnings("unused")
 public abstract class TestThreadExecution implements Runnable {
     // The following fields are assigned in TestThreadExecutionGenerator
     protected Runner runner;
@@ -31,22 +34,24 @@ public abstract class TestThreadExecution implements Runnable {
     public volatile int curClock;
     public boolean useClocks;
 
+    // used in byte-code generation
     public void readClocks(int currentActor) {
         for (int i = 0; i < allThreadExecutions.length; i++) {
             clocks[currentActor][i] = allThreadExecutions[i].curClock;
         }
     }
 
+    // used in byte-code generation
     public void incClock() {
         curClock++;
     }
 
-    public void cleanup() throws Exception {
-        runner = null;
-        testInstance = null;
-        objArgs = null;
-        allThreadExecutions = null;
-        results = null;
-        clocks = null;
+    // used in byte-code generation
+    public void failOnExceptionIsUnexpected(int iThread, Throwable e) throws Throwable {
+        if (!exceptionCanBeValidExecutionResult(e)) {
+            runner.onFailure(iThread, e);
+            throw e;
+        }
     }
+
 }

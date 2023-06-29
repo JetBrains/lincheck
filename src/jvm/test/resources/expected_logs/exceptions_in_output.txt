@@ -1,0 +1,37 @@
+= Invalid execution results =
+Parallel part:
+| operation1(): IllegalStateException #1 | operation2(): IllegalStateException #2 |
+
+---
+The number next to an exception name helps you find its stack trace provided after the interleaving section
+---
+
+= The following interleaving leads to the error =
+Parallel part trace:
+| operation1(): IllegalStateException #1                                                                     |                                        |
+|   canEnterForbiddenSection.WRITE(true) at ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:24)  |                                        |
+|   switch                                                                                                   |                                        |
+|                                                                                                            | operation2(): IllegalStateException #2 |
+|                                                                                                            |   thread is finished                   |
+|   canEnterForbiddenSection.WRITE(false) at ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:25) |                                        |
+|   result: IllegalStateException #1                                                                         |                                        |
+|   thread is finished                                                                                       |                                        |
+
+Exception stack traces:
+#1: java.lang.IllegalStateException
+	at org.jetbrains.kotlinx.lincheck_test.representation.ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:26)
+
+#2: java.lang.IllegalStateException
+	at org.jetbrains.kotlinx.lincheck_test.representation.ExceptionsInOutputTest.operation2(ExceptionsInOutputTest.kt:30)
+
+Detailed parallel part trace:
+| operation1(): IllegalStateException #1                                                                     |                                                                                                          |
+|   canEnterForbiddenSection.WRITE(true) at ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:24)  |                                                                                                          |
+|   switch                                                                                                   |                                                                                                          |
+|                                                                                                            | operation2(): IllegalStateException #2                                                                   |
+|                                                                                                            |   canEnterForbiddenSection.READ: true at ExceptionsInOutputTest.operation2(ExceptionsInOutputTest.kt:30) |
+|                                                                                                            |   result: IllegalStateException #2                                                                       |
+|                                                                                                            |   thread is finished                                                                                     |
+|   canEnterForbiddenSection.WRITE(false) at ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:25) |                                                                                                          |
+|   result: IllegalStateException #1                                                                         |                                                                                                          |
+|   thread is finished                                                                                       |                                                                                                          |

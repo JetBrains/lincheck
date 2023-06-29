@@ -80,28 +80,53 @@ private class ActorWithResult(val actorRepresentation: String, val spacesAfterAc
                                     " ".repeat(spacesAfterResult) + clockRepresentation
 }
 
-private fun uniteActorsAndResultsLinear(actors: List<Actor>, results: List<Result>): List<ActorWithResult> {
+private fun uniteActorsAndResultsLinear(
+    actors: List<Actor>,
+    results: List<Result>,
+    exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
+): List<ActorWithResult> {
     require(actors.size == results.size) {
         "Different numbers of actors and matching results found (${actors.size} != ${results.size})"
     }
     return actors.indices.map {
-        ActorWithResult("${actors[it]}", 1, "${results[it]}", 0, "")
+        val result = results[it]
+        ActorWithResult(
+            actorRepresentation = "${actors[it]}",
+            spacesAfterActor = 1,
+            resultRepresentation = resultRepresentation(result, exceptionStackTraces),
+            spacesAfterResult = 0,
+            clockRepresentation = ""
+        )
     }
 }
 
-private fun uniteParallelActorsAndResults(actors: List<List<Actor>>, results: List<List<ResultWithClock>>): List<List<ActorWithResult>> {
+private fun uniteParallelActorsAndResults(
+    actors: List<List<Actor>>,
+    results: List<List<ResultWithClock>>,
+    exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
+): List<List<ActorWithResult>> {
     require(actors.size == results.size) {
         "Different numbers of threads and matching results found (${actors.size} != ${results.size})"
     }
-    return actors.mapIndexed { id, threadActors -> uniteActorsAndResultsAligned(threadActors, results[id]) }
+    return actors.mapIndexed { id, threadActors ->
+        uniteActorsAndResultsAligned(
+            threadActors,
+            results[id],
+            exceptionStackTraces
+        )
+    }
 }
 
-private fun uniteActorsAndResultsAligned(actors: List<Actor>, results: List<ResultWithClock>): List<ActorWithResult> {
+private fun uniteActorsAndResultsAligned(
+    actors: List<Actor>,
+    results: List<ResultWithClock>,
+    exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
+): List<ActorWithResult> {
     require(actors.size == results.size) {
         "Different numbers of actors and matching results found (${actors.size} != ${results.size})"
     }
     val actorRepresentations = actors.map { it.toString() }
-    val resultRepresentations = results.map { it.result.toString() }
+    val resultRepresentations = results.map { resultRepresentation(it.result, exceptionStackTraces) }
     val maxActorLength = actorRepresentations.map { it.length }.maxOrNull()!!
     val maxResultLength = resultRepresentations.map { it.length }.maxOrNull()!!
     return actors.indices.map { i ->
@@ -136,16 +161,165 @@ internal fun StringBuilder.appendExecutionScenario(scenario: ExecutionScenario):
 }
 
 internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilder {
+    val results: ExecutionResult? = (failure as? IncorrectResultsFailure)?.results
+    // If a result is present - collect exceptions stack traces to print them
+    val exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace> = results?.let {
+        when (val exceptionsProcessingResult = collectExceptionStackTraces(results)) {
+            // If some exception was thrown from the Lincheck itself, we ask for bug reporting
+            is InternalLincheckBugResult -> {
+                appendInternalLincheckBugFailure(exceptionsProcessingResult.exception)
+                return this
+            }
+
+            is ExceptionStackTracesResult -> exceptionsProcessingResult.exceptionStackTraces
+        }
+    } ?: emptyMap()
+
     when (failure) {
-        is IncorrectResultsFailure -> appendIncorrectResultsFailure(failure)
+        is IncorrectResultsFailure -> appendIncorrectResultsFailure(failure, exceptionStackTraces)
         is DeadlockWithDumpFailure -> appendDeadlockWithDumpFailure(failure)
         is UnexpectedExceptionFailure -> appendUnexpectedExceptionFailure(failure)
         is ValidationFailure -> appendValidationFailure(failure)
         is ObstructionFreedomViolationFailure -> appendObstructionFreedomViolationFailure(failure)
     }
-    val results = if (failure is IncorrectResultsFailure) failure.results else null
-    appendTrace(failure, results)
+    if (failure.trace != null) {
+        appendLine()
+        appendLine("= The following interleaving leads to the error =")
+        appendTrace(failure.scenario, results, failure.trace, exceptionStackTraces)
+        if (failure is DeadlockWithDumpFailure) {
+            appendLine()
+            append("All threads are in deadlock")
+        }
+    } else {
+        appendExceptionsStackTracesBlock(exceptionStackTraces)
+    }
     return this
+}
+
+internal fun StringBuilder.appendExceptionsStackTracesBlock(exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>) {
+    if (exceptionStackTraces.isNotEmpty()) {
+        appendln(EXCEPTIONS_TRACES_TITLE)
+        appendExceptionsStackTraces(exceptionStackTraces)
+        appendln()
+    }
+}
+
+internal fun StringBuilder.appendExceptionsStackTraces(exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): StringBuilder {
+    exceptionStackTraces.entries.sortedBy { (_, description) -> description.number }.forEach { (exception, description) ->
+        append("#${description.number}: ")
+
+        appendln(exception::class.java.canonicalName)
+        description.stackTrace.forEach { appendln("\tat $it") }
+
+        if (description.number < exceptionStackTraces.size) appendln()
+    }
+
+    return this
+}
+
+fun StringBuilder.appendInternalLincheckBugFailure(exception: Throwable) {
+    appendln(
+        """
+        Wow! You've caught a bug in Lincheck.
+        We kindly ask to provide an issue here: https://github.com/JetBrains/lincheck/issues,
+        attaching a stack trace printed below and the code that causes the error.
+        
+        Exception stacktrace:
+    """.trimIndent()
+    )
+
+    val exceptionRepresentation = StringWriter().use {
+        exception.printStackTrace(PrintWriter(it))
+        it.toString()
+    }
+    append(exceptionRepresentation)
+}
+
+internal data class ExceptionNumberAndStacktrace(
+    /**
+     * Serves to match exception in a scenario with its stackTrace
+     */
+    val number: Int,
+    /**
+     * Prepared for output stackTrace of this exception
+     */
+    val stackTrace: List<StackTraceElement>
+)
+
+internal fun actorNodeResultRepresentation(result: Result, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): String? {
+    return when (result) {
+        is ExceptionResult -> {
+            val exceptionNumberRepresentation = exceptionStackTraces[result.throwable]?.let { " #${it.number}" } ?: ""
+            "$result$exceptionNumberRepresentation"
+        }
+        is VoidResult -> null // don't print
+        else -> result.toString()
+    }
+}
+
+internal fun resultRepresentation(result: Result, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): String {
+    return when (result) {
+        is ExceptionResult -> {
+            val exceptionNumberRepresentation = exceptionStackTraces[result.throwable]?.let { " #${it.number}" } ?: ""
+            "$result$exceptionNumberRepresentation"
+        }
+
+        else -> result.toString()
+    }
+}
+
+/**
+ * Result of collecting exceptions into a map from throwable to its number and stacktrace
+ * to use this information to numerate them and print their stacktrace with number.
+ * @see collectExceptionStackTraces
+ */
+private sealed interface ExceptionsProcessingResult
+
+/**
+ * Corresponds to the case when we tried to collect exceptions map but found one,
+ * that was thrown from Lincheck internally.
+ * In that case, we just want to print that exception and don't care about other exceptions.
+ */
+private data class InternalLincheckBugResult(val exception: Throwable) :
+    ExceptionsProcessingResult
+
+/**
+ * Result of successful collection exceptions to map when no one of them was thrown from Lincheck.
+ */
+private data class ExceptionStackTracesResult(val exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>) :
+    ExceptionsProcessingResult
+
+
+/**
+ * Collects stackTraces of exceptions thrown during execution
+ *
+ * This method traverses over all execution results and collects exceptions.
+ * For each exception, it also filters stacktrace to cut off all Lincheck-related [StackTraceElement]s.
+ * If filtered stackTrace of some exception is empty, then this exception was thrown from Lincheck itself,
+ * in that case we return that exception as an internal bug to report it.
+ *
+ * @return exceptions stack traces map inside [ExceptionStackTracesResult] or [InternalLincheckBugResult]
+ * if some exception occurred due a bug in Lincheck itself
+ */
+private fun collectExceptionStackTraces(executionResult: ExecutionResult): ExceptionsProcessingResult {
+    val exceptionStackTraces = mutableMapOf<Throwable, ExceptionNumberAndStacktrace>()
+
+    (executionResult.initResults.asSequence()
+            + executionResult.parallelResults.asSequence().flatten()
+            + executionResult.postResults.asSequence())
+        .filterIsInstance<ExceptionResult>()
+        .forEachIndexed { index, exceptionResult ->
+            val exception = exceptionResult.throwable
+
+            val filteredStacktrace = exception.stackTrace.takeWhile { LINCHECK_PACKAGE_NAME !in it.className }
+            if (filteredStacktrace.isEmpty()) { // Exception in Lincheck itself
+                return InternalLincheckBugResult(exception)
+            }
+
+            exceptionStackTraces[exception] = ExceptionNumberAndStacktrace(index + 1, filteredStacktrace)
+        }
+
+    return ExceptionStackTracesResult(exceptionStackTraces)
 }
 
 private fun StringBuilder.appendUnexpectedExceptionFailure(failure: UnexpectedExceptionFailure): StringBuilder {
@@ -183,31 +357,73 @@ private fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockWithDum
     return this
 }
 
-private fun StringBuilder.appendIncorrectResultsFailure(failure: IncorrectResultsFailure): StringBuilder {
+private fun StringBuilder.appendIncorrectResultsFailure(
+    failure: IncorrectResultsFailure,
+    exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
+): StringBuilder {
     appendln("= Invalid execution results =")
     if (failure.scenario.initExecution.isNotEmpty()) {
         appendln("Init part:")
-        appendln(uniteActorsAndResultsLinear(failure.scenario.initExecution, failure.results.initResults))
+        appendln(
+            uniteActorsAndResultsLinear(
+                failure.scenario.initExecution,
+                failure.results.initResults,
+                exceptionStackTraces
+            )
+        )
     }
     if (failure.results.afterInitStateRepresentation != null)
         appendln("STATE: ${failure.results.afterInitStateRepresentation}")
     appendln("Parallel part:")
-    val parallelExecutionData = uniteParallelActorsAndResults(failure.scenario.parallelExecution, failure.results.parallelResultsWithClock)
+    val parallelExecutionData =
+        uniteParallelActorsAndResults(
+            failure.scenario.parallelExecution,
+            failure.results.parallelResultsWithClock,
+            exceptionStackTraces
+        )
     appendln(printInColumns(parallelExecutionData))
     if (failure.results.afterParallelStateRepresentation != null) {
         appendln("STATE: ${failure.results.afterParallelStateRepresentation}")
     }
     if (failure.scenario.postExecution.isNotEmpty()) {
         appendln("Post part:")
-        appendln(uniteActorsAndResultsLinear(failure.scenario.postExecution, failure.results.postResults))
+        appendln(
+            uniteActorsAndResultsLinear(
+                failure.scenario.postExecution,
+                failure.results.postResults,
+                exceptionStackTraces
+            )
+        )
     }
     if (failure.results.afterPostStateRepresentation != null && failure.scenario.postExecution.isNotEmpty()) {
         appendln("STATE: ${failure.results.afterPostStateRepresentation}")
     }
-    if (failure.results.parallelResultsWithClock.flatten().any { !it.clockOnStart.empty })
-        appendln("\n---\nvalues in \"[..]\" brackets indicate the number of completed operations \n" +
-            "in each of the parallel threads seen at the beginning of the current operation\n---")
+
+    val hints = mutableListOf<String>()
+    if (failure.results.parallelResultsWithClock.flatten().any { !it.clockOnStart.empty }) {
+        hints.add(
+            """
+                Values in "[..]" brackets indicate the number of completed operations
+                in each of the parallel threads seen at the beginning of the current operation
+            """.trimIndent()
+        )
+    }
+    if (exceptionStackTraces.isNotEmpty()) {
+        hints.add(
+            """
+            The number next to an exception name helps you find its stack trace provided after the interleaving section
+        """.trimIndent()
+        )
+    }
+    appendHints(hints)
+
     return this
+}
+
+private fun StringBuilder.appendHints(hints: List<String>) {
+    if (hints.isNotEmpty()) {
+        appendln(hints.joinToString(prefix = "\n---\n", separator = "\n---\n", postfix = "\n---"))
+    }
 }
 
 private fun StringBuilder.appendValidationFailure(failure: ValidationFailure): StringBuilder {
@@ -228,3 +444,5 @@ private fun StringBuilder.appendException(t: Throwable) {
     t.printStackTrace(PrintWriter(sw))
     appendln(sw.toString())
 }
+
+private const val EXCEPTIONS_TRACES_TITLE = "Exception stack traces:"
