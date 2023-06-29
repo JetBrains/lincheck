@@ -133,7 +133,7 @@ class LTS(sequentialSpecification: Class<*>) {
             this == transitionInfo.result ||
             this is ValueResult && transitionInfo.result is ValueResult && this.value == transitionInfo.result.value &&
                 (!wasSuspended && transitionInfo.result.wasSuspended || wasSuspended && allowExtraSuspension) ||
-            this is ExceptionResult && transitionInfo.result is ExceptionResult && this.tClazz == transitionInfo.result.tClazz &&
+            this is ExceptionResult && transitionInfo.result is ExceptionResult && this.tClassCanonicalName == transitionInfo.result.tClassCanonicalName &&
                 (!wasSuspended && transitionInfo.result.wasSuspended || wasSuspended && allowExtraSuspension) ||
             this == VoidResult && transitionInfo.result == SuspendedVoidResult ||
             this == SuspendedVoidResult && transitionInfo.result == VoidResult && allowExtraSuspension

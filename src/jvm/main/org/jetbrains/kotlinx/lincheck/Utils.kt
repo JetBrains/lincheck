@@ -14,7 +14,6 @@ import org.jetbrains.kotlinx.lincheck.CancellableContinuationHolder.storedLastCa
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyTransformer
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.*
@@ -50,12 +49,10 @@ internal fun executeActor(
         val res = m.invoke(instance, *args.toTypedArray())
         return if (m.returnType.isAssignableFrom(Void.TYPE)) VoidResult else createLincheckResult(res)
     } catch (invE: Throwable) {
-        val eClass = (invE.cause ?: invE).javaClass.normalize()
-        for (ec in actor.handledExceptions) {
-            if (ec.isAssignableFrom(eClass))
-                return ExceptionResult.create(eClass)
-        }
-        throw IllegalStateException("Invalid exception as a result of $actor", invE)
+        // If the exception is thrown not during the method invocation - fail immediately
+        if (invE !is InvocationTargetException) throw invE
+        // Exception thrown not during the method invocation should contain underlying exception
+        return ExceptionResult.create(invE.cause ?: throw invE)
     } catch (e: Exception) {
         e.catch(
             NoSuchMethodException::class.java,
@@ -136,7 +133,7 @@ private fun Class<out Any>.getMethod(name: String, parameterTypes: Array<Class<o
  */
 internal fun createLincheckResult(res: Any?, wasSuspended: Boolean = false) = when {
     (res != null && res.javaClass.isAssignableFrom(Void.TYPE)) || res is Unit -> if (wasSuspended) SuspendedVoidResult else VoidResult
-    res != null && res is Throwable -> ExceptionResult.create(res.javaClass, wasSuspended)
+    res != null && res is Throwable -> ExceptionResult.create(res, wasSuspended)
     res === COROUTINE_SUSPENDED -> Suspended
     res is kotlin.Result<Any?> -> res.toLinCheckResult(wasSuspended)
     else -> ValueResult(res.convertForLoader(LinChecker::class.java.classLoader), wasSuspended)
@@ -150,7 +147,7 @@ private fun kotlin.Result<Any?>.toLinCheckResult(wasSuspended: Boolean) =
             is Throwable -> ValueResult(value::class.java, wasSuspended)
             else -> ValueResult(value.convertForLoader(LinChecker::class.java.classLoader), wasSuspended)
         }
-    } else ExceptionResult.create(exceptionOrNull()!!.let { it::class.java }, wasSuspended)
+    } else ExceptionResult.create(exceptionOrNull()!!, wasSuspended)
 
 inline fun <R> Throwable.catch(vararg exceptions: Class<*>, block: () -> R): R {
     if (exceptions.any { this::class.java.isAssignableFrom(it) }) {
@@ -178,7 +175,8 @@ internal operator fun ExecutionResult.get(threadId: Int): List<Result> = when (t
     else -> parallelResultsWithClock[threadId - 1].map { it.result }
 }
 
-internal class StoreExceptionHandler : AbstractCoroutineContextElement(CoroutineExceptionHandler), CoroutineExceptionHandler {
+internal class StoreExceptionHandler : AbstractCoroutineContextElement(CoroutineExceptionHandler),
+    CoroutineExceptionHandler {
     var exception: Throwable? = null
 
     override fun handleException(context: CoroutineContext, exception: Throwable) {
@@ -207,7 +205,8 @@ internal fun <T> CancellableContinuation<T>.cancelByLincheck(promptCancellation:
 internal enum class CancellationResult { CANCELLED_BEFORE_RESUMPTION, CANCELLED_AFTER_RESUMPTION, CANCELLATION_FAILED }
 
 @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
-private val cancelCompletedResultMethod = DispatchedTask::class.declaredFunctions.find { it.name ==  "cancelCompletedResult" }!!.javaMethod!!
+private val cancelCompletedResultMethod =
+    DispatchedTask::class.declaredFunctions.find { it.name == "cancelCompletedResult" }!!.javaMethod!!
 
 /**
  * Returns `true` if the continuation was cancelled by [CancellableContinuation.cancel].
@@ -238,7 +237,6 @@ internal fun ExecutionScenario.convertForLoader(loader: ClassLoader) = Execution
             Actor(
                 method = a.method.convertForLoader(loader),
                 arguments = args,
-                handledExceptions = a.handledExceptions,
                 cancelOnSuspension = a.cancelOnSuspension,
                 allowExtraSuspension = a.allowExtraSuspension,
                 blocking = a.blocking,
@@ -339,14 +337,46 @@ internal fun getRemapperByTransformers(classTransformers: List<ClassVisitor>): R
 internal val String.canonicalClassName get() = this.replace('/', '.')
 internal val String.internalClassName get() = this.replace('.', '/')
 
-fun wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(e: Throwable): Throwable {
-    if (e.message?.contains("to unnamed module") ?: false) {
-        return RuntimeException(ADD_OPENS_MESSAGE, e)
-    }
-    return e
+internal fun exceptionCanBeValidExecutionResult(exception: Throwable): Boolean {
+    return exception !is ThreadDeath && // used to stop thread in FixedActiveThreadsExecutor by calling thread.stop method
+            exception !is InternalLincheckTestUnexpectedException &&
+            exception !is ForcibleExecutionFinishException &&
+            !isIllegalAccessOfUnsafeDueToJavaVersion(exception)
 }
 
-private val ADD_OPENS_MESSAGE = "It seems that you use Java 9+ and the code uses Unsafe or similar constructions that are not accessible from unnamed modules.\n" +
-    "Please add the following lines to your test running configuration:\n" +
-    "--add-opens java.base/jdk.internal.misc=ALL-UNNAMED\n" +
-    "--add-exports java.base/jdk.internal.util=ALL-UNNAMED"
+internal fun wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(throwable: Throwable): Throwable {
+    if (isIllegalAccessOfUnsafeDueToJavaVersion(throwable)) return RuntimeException(ADD_OPENS_MESSAGE, throwable)
+
+    return throwable
+}
+
+internal fun isIllegalAccessOfUnsafeDueToJavaVersion(exception: Throwable): Boolean {
+    return exception is IllegalAccessException && exception.message?.contains("to unnamed module") ?: false
+}
+
+
+internal const val ADD_OPENS_MESSAGE =
+    "It seems that you use Java 9+ and the code uses Unsafe or similar constructions that are not accessible from unnamed modules.\n" +
+            "Please add the following lines to your test running configuration:\n" +
+            "--add-opens java.base/jdk.internal.misc=ALL-UNNAMED\n" +
+            "--add-exports java.base/jdk.internal.util=ALL-UNNAMED\n" +
+            "--add-exports java.base/sun.security.action=ALL-UNNAMED"
+
+/**
+ * Utility exception for test purposes.
+ * When this exception is thrown by an operation, it will halt testing with [UnexpectedExceptionInvocationResult].
+ */
+internal object InternalLincheckTestUnexpectedException : Exception()
+
+internal fun stackTraceRepresentation(stackTrace: Array<StackTraceElement>): List<String> {
+    return transformStackTraceBackFromRemapped(stackTrace).map { it.toString() }.filter { line ->
+        "org.jetbrains.kotlinx.lincheck.strategy" !in line
+                && "org.jetbrains.kotlinx.lincheck.runner" !in line
+                && "org.jetbrains.kotlinx.lincheck.UtilsKt" !in line
+    }
+}
+internal fun transformStackTraceBackFromRemapped(stackTrace: Array<StackTraceElement>) = stackTrace.map {
+    StackTraceElement(it.className.removePrefix(TransformationClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME), it.methodName, it.fileName, it.lineNumber)
+}
+
+internal const val LINCHECK_PACKAGE_NAME = "org.jetbrains.kotlinx.lincheck."

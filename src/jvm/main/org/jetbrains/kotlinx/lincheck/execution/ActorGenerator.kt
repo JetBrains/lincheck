@@ -22,7 +22,6 @@ import java.util.Random
 class ActorGenerator(
     private val method: Method,
     private val parameterGenerators: List<ParameterGenerator<*>>,
-    private val handledExceptions: List<Class<out Throwable?>>,
     val useOnce: Boolean,
     cancellableOnSuspension: Boolean,
     private val allowExtraSuspension: Boolean,
@@ -42,7 +41,6 @@ class ActorGenerator(
         return Actor(
             method = method,
             arguments = parameters,
-            handledExceptions = handledExceptions,
             cancelOnSuspension = cancelOnSuspension,
             allowExtraSuspension = allowExtraSuspension,
             blocking = blocking,

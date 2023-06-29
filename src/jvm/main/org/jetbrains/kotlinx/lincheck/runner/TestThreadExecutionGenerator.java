@@ -41,7 +41,6 @@ public class TestThreadExecutionGenerator {
     private static final Type RUNNER_TYPE = getType(Runner.class);
     private static final Method RUNNER_ON_START_METHOD = new Method("onStart", VOID_TYPE, new Type[]{INT_TYPE});
     private static final Method RUNNER_ON_FINISH_METHOD = new Method("onFinish", VOID_TYPE, new Type[]{INT_TYPE});
-    private static final Method RUNNER_ON_FAILURE_METHOD = new Method("onFailure", Type.VOID_TYPE, new Type[]{Type.INT_TYPE, THROWABLE_TYPE});
     private static final Method RUNNER_ON_ACTOR_START = new Method("onActorStart", Type.VOID_TYPE, new Type[]{ Type.INT_TYPE });
 
     private static final Type TEST_THREAD_EXECUTION_TYPE = getType(TestThreadExecution.class);
@@ -67,7 +66,7 @@ public class TestThreadExecutionGenerator {
 
     private static final Type EXCEPTION_RESULT_TYPE = getType(ExceptionResult.class);
     private static final Type RESULT_KT_TYPE = getType(ResultKt.class);
-    private static final Method RESULT_KT_CREATE_EXCEPTION_RESULT_METHOD = new Method("createExceptionResult", EXCEPTION_RESULT_TYPE, new Type[] {CLASS_TYPE});
+    private static final Method RESULT_KT_CREATE_EXCEPTION_RESULT_METHOD = new Method("createExceptionResult", EXCEPTION_RESULT_TYPE, new Type[]{THROWABLE_TYPE});
 
     private static final Type RESULT_ARRAY_TYPE = getType(Result[].class);
 
@@ -77,6 +76,7 @@ public class TestThreadExecutionGenerator {
     private static final Method PARALLEL_THREADS_RUNNER_PROCESS_INVOCATION_RESULT_METHOD = new Method("processInvocationResult", RESULT_TYPE, new Type[]{ OBJECT_TYPE, INT_TYPE, INT_TYPE });
     private static final Method RUNNER_IS_PARALLEL_EXECUTION_COMPLETED_METHOD = new Method("isParallelExecutionCompleted", BOOLEAN_TYPE, new Type[]{});
 
+    private static final Method TEST_THREAD_EXECUTION_FAIL_ON_EXCEPTION_IF_UNEXPECTED = new Method("failOnExceptionIsUnexpected", VOID_TYPE, new Type[]{INT_TYPE, THROWABLE_TYPE});
     private static int generatedClassNumber = 0;
 
     static {
@@ -173,17 +173,10 @@ public class TestThreadExecutionGenerator {
             }
             Actor actor = actors.get(i);
             // Start of try-catch block for exceptions which this actor should handle
-            Label handledExceptionHandler = null;
+            Label exceptionHandler = mv.newLabel();
             Label actorCatchBlockStart = mv.newLabel();
             Label actorCatchBlockEnd = mv.newLabel();
-            if (actor.getHandlesExceptions()) {
-                handledExceptionHandler = mv.newLabel();
-                for (Class<? extends Throwable> ec : actor.getHandledExceptions())
-                    mv.visitTryCatchBlock(actorCatchBlockStart, actorCatchBlockEnd, handledExceptionHandler, getType(ec).getInternalName());
-            }
-            // Catch those exceptions that has not been caught yet
-            Label unexpectedExceptionHandler = mv.newLabel();
-            mv.visitTryCatchBlock(actorCatchBlockStart, actorCatchBlockEnd, unexpectedExceptionHandler, THROWABLE_TYPE.getInternalName());
+            mv.visitTryCatchBlock(actorCatchBlockStart, actorCatchBlockEnd, exceptionHandler, THROWABLE_TYPE.getInternalName());
             mv.visitLabel(actorCatchBlockStart);
             // onActorStart call
             mv.loadThis();
@@ -238,35 +231,28 @@ public class TestThreadExecutionGenerator {
             mv.visitLabel(actorCatchBlockEnd);
             Label skipHandlers = mv.newLabel();
             mv.goTo(skipHandlers);
+            // Exception handler
+            mv.visitLabel(exceptionHandler);
 
-            // Handle exceptions that are valid results
-            if (actor.getHandlesExceptions()) {
-                // Handled exception handler
-                mv.visitLabel(handledExceptionHandler);
-                if (scenarioContainsSuspendableActors) {
-                    storeExceptionResultFromSuspendableThrowable(mv, resLocal, iLocal, iThread, i);
-                } else {
-                    storeExceptionResultFromThrowable(mv, resLocal, iLocal);
-                }
+            int eLocal = mv.newLocal(THROWABLE_TYPE);
+            mv.storeLocal(eLocal);
+
+            mv.loadThis();
+            mv.push(iThread);
+            mv.loadLocal(eLocal);
+            // Fail if this exception is not a valid execution result
+            mv.invokeVirtual(TEST_THREAD_EXECUTION_TYPE, TEST_THREAD_EXECUTION_FAIL_ON_EXCEPTION_IF_UNEXPECTED);
+
+            mv.loadLocal(eLocal);
+
+            if (scenarioContainsSuspendableActors) {
+                storeExceptionResultFromSuspendableThrowable(mv, resLocal, iLocal, iThread, i);
+            } else {
+                storeExceptionResultFromThrowable(mv, resLocal, iLocal);
             }
             // End of try-catch block for all other exceptions
             mv.goTo(skipHandlers);
-
-            // Unexpected exception handler
-            mv.visitLabel(unexpectedExceptionHandler);
-            // Call onFailure method
-            mv.dup();
-            int eLocal = mv.newLocal(THROWABLE_TYPE);
-            mv.storeLocal(eLocal);
-            mv.loadThis();
-            mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
-            mv.push(iThread);
-            mv.loadLocal(eLocal);
-            mv.invokeVirtual(RUNNER_TYPE, RUNNER_ON_FAILURE_METHOD);
-            // Just throw the exception further
-            mv.throwException();
             mv.visitLabel(skipHandlers);
-
             // Increment the clock
             mv.loadThis();
             mv.invokeVirtual(TEST_THREAD_EXECUTION_TYPE, TEST_THREAD_EXECUTION_INC_CLOCK);
@@ -292,7 +278,7 @@ public class TestThreadExecutionGenerator {
         mv.invokeVirtual(RUNNER_TYPE, RUNNER_ON_FINISH_METHOD);
         // Complete the method
         mv.visitInsn(RETURN);
-        mv.visitMaxs(2, 2);
+        mv.visitMaxs(3, 4);
         mv.visitEnd();
     }
 
@@ -323,9 +309,9 @@ public class TestThreadExecutionGenerator {
         }
     }
 
+    // STACK: throwable
     private static void storeExceptionResultFromThrowable(GeneratorAdapter mv, int resLocal, int iLocal) {
-        mv.invokeVirtual(OBJECT_TYPE, OBJECT_GET_CLASS);
-        int eLocal = mv.newLocal(CLASS_TYPE);
+        int eLocal = mv.newLocal(THROWABLE_TYPE);
         mv.storeLocal(eLocal);
         mv.loadLocal(resLocal);
         mv.loadLocal(iLocal);
@@ -336,6 +322,7 @@ public class TestThreadExecutionGenerator {
         mv.arrayStore(RESULT_TYPE);
     }
 
+    // STACK: throwable
     private static void storeExceptionResultFromSuspendableThrowable(GeneratorAdapter mv, int resLocal, int iLocal, int iThread, int actorId) {
         int eLocal = mv.newLocal(THROWABLE_TYPE);
         mv.storeLocal(eLocal);
