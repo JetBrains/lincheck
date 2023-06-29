@@ -317,6 +317,7 @@ internal open class ParallelThreadsRunner(
 
     override fun close() {
         super.close()
+        testThreadExecutions.forEach { it.cleanup() }
         executor.close()
     }
 }

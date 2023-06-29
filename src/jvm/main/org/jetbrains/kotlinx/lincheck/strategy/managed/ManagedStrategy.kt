@@ -466,7 +466,7 @@ abstract class ManagedStrategy(
         if (inIgnoredSection(iThread)) return false
         newSwitchPoint(iThread, codeLocation, tracePoint)
         // Try to acquire the monitor
-        if (!monitorTracker.acquireMonitor(iThread, monitor)) {
+        while (!monitorTracker.acquireMonitor(iThread, monitor)) {
             failIfObstructionFreedomIsRequired {
                 OBSTRUCTION_FREEDOM_LOCK_VIOLATION_MESSAGE
             }

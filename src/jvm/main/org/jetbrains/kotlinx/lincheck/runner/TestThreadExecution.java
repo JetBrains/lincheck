@@ -40,4 +40,13 @@ public abstract class TestThreadExecution implements Runnable {
     public void incClock() {
         curClock++;
     }
+
+    public void cleanup() throws Exception {
+        runner = null;
+        testInstance = null;
+        objArgs = null;
+        allThreadExecutions = null;
+        results = null;
+        clocks = null;
+    }
 }
