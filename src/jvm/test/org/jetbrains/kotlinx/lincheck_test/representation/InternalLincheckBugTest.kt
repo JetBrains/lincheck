@@ -11,6 +11,8 @@
 package org.jetbrains.kotlinx.lincheck_test.representation
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.util.InternalLincheckExceptionEmulator.throwException
 import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.junit.Test
@@ -37,12 +39,12 @@ class InternalLincheckBugTest {
     }
 
     @Test
-    fun `should add stackTrace to output`() = runModelCheckingTestAndCheckOutput(
-        expectedOutputFile = "internal_bug_report.txt",
-        // removing lines of pattern org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution(\d+)
-        // as its number may vary
-        linesToRemoveRegex = TEST_EXECUTION_TRACE_ELEMENT_REGEX,
-    ) {
+    fun `should add stackTrace to output`() = ModelCheckingOptions().apply {
         actorsPerThread(2)
     }
+        .checkImpl(this::class.java)
+        .checkLincheckOutput("internal_bug_report.txt",
+            linesToRemoveRegex = TEST_EXECUTION_TRACE_ELEMENT_REGEX,
+        )
+
 }

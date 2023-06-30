@@ -108,20 +108,26 @@ When running `modelCheckingTest(),` Lincheck not only detects a bug but also pro
 
 ```text
 = Invalid execution results =
-Init part:
-[addLast(4): void]
-Parallel part:
-| pollFirst(): 4 | addFirst(-4): void       |
-|                | peekLast():   4    [-,1] |
+| -------------------------------------- |
+|     Thread 1     |      Thread 2       |
+| -------------------------------------- |
+| addLast(4): void |                     |
+| -------------------------------------- |
+| pollFirst(): 4   | addFirst(-4): void  |
+|                  | peekLast(): 4 [-,1] |
+| -------------------------------------- |
+
 ---
-values in "[..]" brackets indicate the number of completed operations 
+All operations above the horizontal line | ----- | happen before those below the line
+---
+Values in "[..]" brackets indicate the number of completed operations
 in each of the parallel threads seen at the beginning of the current operation
 ---
 
-= The following interleaving leads to the error =
-Parallel part trace:
+The following interleaving leads to the error:
+| addLast(4): void                                                                                          |                      |
 | pollFirst()                                                                                               |                      |
-|   pollFirst(): 4 at ConcurrentDequeTest.pollFirst(ConcurrentDequeTest.kt:39)                              |                      |
+|   pollFirst(): 4 at ConcurrentLinkedDequeTest.pollFirst(ConcurrentLinkedDequeTest.kt:29)                  |                      |
 |     first(): Node@1 at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:915)                    |                      |
 |     item.READ: null at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:917)                    |                      |
 |     next.READ: Node@2 at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:925)                  |                      |
@@ -130,11 +136,9 @@ Parallel part trace:
 |     switch                                                                                                |                      |
 |                                                                                                           | addFirst(-4): void   |
 |                                                                                                           | peekLast(): 4        |
-|                                                                                                           |   thread is finished |
 |     compareAndSet(Node@2,4,null): true at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:920) |                      |
 |     unlink(Node@2) at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:921)                     |                      |
 |   result: 4                                                                                               |                      |
-|   thread is finished                                                                                      |                      |
 ```
 
 ## Contributing 

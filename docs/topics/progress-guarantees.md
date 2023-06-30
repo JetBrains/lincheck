@@ -24,7 +24,7 @@ class ConcurrentHashMapTest {
     private val map = ConcurrentHashMap<Int, Int>()
 
     @Operation
-    public fun put(key: Int, value: Int) = map.put(key, value)
+    fun put(key: Int, value: Int) = map.put(key, value)
 
     @Test
     fun modelCheckingTest() = ModelCheckingOptions()
@@ -41,13 +41,22 @@ Run the `modelCheckingTest()`. You should get the following result:
 
 ```text
 = Obstruction-freedom is required but a lock has been found =
-Execution scenario (init part):
-[put(1, -1)]
-Execution scenario (parallel part):
+| ---------------------- |
+|  Thread 1  | Thread 2  |
+| ---------------------- |
+| put(1, -1) |           |
+| ---------------------- |
 | put(2, -2) | put(3, 2) |
+| ---------------------- |
 
-= The following interleaving leads to the error =
-Parallel part trace:
+---
+All operations above the horizontal line | ----- | happen before those below the line
+---
+
+The following interleaving leads to the error:
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                         Thread 1                                         |                                         Thread 2                                         |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                                          | put(3, 2)                                                                                |
 |                                                                                          |   put(3,2) at ConcurrentHashMapTest.put(ConcurrentMapTest.kt:11)                         |
 |                                                                                          |     putVal(3,2,false) at ConcurrentHashMap.put(ConcurrentHashMap.java:1006)              |
@@ -63,6 +72,7 @@ Parallel part trace:
 |       table.READ: Node[]@1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1014)      |                                                                                          |
 |       tabAt(Node[]@1,0): Node@1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1018) |                                                                                          |
 |       MONITORENTER at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1031)              |                                                                                          |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 ```
 
 Now let's add a test for the non-blocking `ConcurrentSkipListMap<K, V>`, expecting the test to pass successfully:
@@ -72,7 +82,7 @@ class ConcurrentSkipListMapTest {
     private val map = ConcurrentSkipListMap<Int, Int>()
 
     @Operation
-    public fun put(key: Int, value: Int) = map.put(key, value)
+    fun put(key: Int, value: Int) = map.put(key, value)
 
     @Test
     fun modelCheckingTest() = ModelCheckingOptions()

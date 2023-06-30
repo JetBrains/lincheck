@@ -1,35 +1,41 @@
 = Invalid execution results =
-Parallel part:
+| ----------------------------------------- |
+|      Thread 1       |      Thread 2       |
+| ----------------------------------------- |
 | incTwiceAndGet(): 3 | incTwiceAndGet(): 4 |
+| ----------------------------------------- |
 
-= The following interleaving leads to the error =
-Parallel part trace:
-|                      | incTwiceAndGet(): 4                                                                                 |
-|                      |   incAndGet(): 1 at SwitchAsFirstMethodEventTest.incTwiceAndGet(SwitchAsFirstMethodEventTest.kt:41) |
-|                      |   switch                                                                                            |
-| incTwiceAndGet(): 3  |                                                                                                     |
-|   thread is finished |                                                                                                     |
-|                      |   incAndGet(): 4 at SwitchAsFirstMethodEventTest.incTwiceAndGet(SwitchAsFirstMethodEventTest.kt:42) |
-|                      |   result: 4                                                                                         |
-|                      |   thread is finished                                                                                |
+The following interleaving leads to the error:
+| ------------------------------------------------------------------------------------------------------------------------- |
+|      Thread 1       |                                              Thread 2                                               |
+| ------------------------------------------------------------------------------------------------------------------------- |
+|                     | incTwiceAndGet(): 4                                                                                 |
+|                     |   incAndGet(): 1 at SwitchAsFirstMethodEventTest.incTwiceAndGet(SwitchAsFirstMethodEventTest.kt:43) |
+|                     |   switch                                                                                            |
+| incTwiceAndGet(): 3 |                                                                                                     |
+|                     |   incAndGet(): 4 at SwitchAsFirstMethodEventTest.incTwiceAndGet(SwitchAsFirstMethodEventTest.kt:44) |
+|                     |   result: 4                                                                                         |
+| ------------------------------------------------------------------------------------------------------------------------- |
 
-Detailed parallel part trace:
+Detailed trace:
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                       Thread 1                                                       |                                                       Thread 2                                                       |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                                                                      | incTwiceAndGet(): 4                                                                                                  |
-|                                                                                                                      |   incAndGet(): 1 at SwitchAsFirstMethodEventTest.incTwiceAndGet(SwitchAsFirstMethodEventTest.kt:41)                  |
-|                                                                                                                      |     incAndGetImpl(): 1 at SwitchAsFirstMethodEventTest.incAndGet(SwitchAsFirstMethodEventTest.kt:45)                 |
-|                                                                                                                      |       counter.incrementAndGet(): 1 at SwitchAsFirstMethodEventTest.incAndGetImpl(SwitchAsFirstMethodEventTest.kt:47) |
+|                                                                                                                      |   incAndGet(): 1 at SwitchAsFirstMethodEventTest.incTwiceAndGet(SwitchAsFirstMethodEventTest.kt:43)                  |
+|                                                                                                                      |     incAndGetImpl(): 1 at SwitchAsFirstMethodEventTest.incAndGet(SwitchAsFirstMethodEventTest.kt:47)                 |
+|                                                                                                                      |       counter.incrementAndGet(): 1 at SwitchAsFirstMethodEventTest.incAndGetImpl(SwitchAsFirstMethodEventTest.kt:49) |
 |                                                                                                                      |   switch                                                                                                             |
 | incTwiceAndGet(): 3                                                                                                  |                                                                                                                      |
-|   incAndGet(): 2 at SwitchAsFirstMethodEventTest.incTwiceAndGet(SwitchAsFirstMethodEventTest.kt:41)                  |                                                                                                                      |
-|     incAndGetImpl(): 2 at SwitchAsFirstMethodEventTest.incAndGet(SwitchAsFirstMethodEventTest.kt:45)                 |                                                                                                                      |
-|       counter.incrementAndGet(): 2 at SwitchAsFirstMethodEventTest.incAndGetImpl(SwitchAsFirstMethodEventTest.kt:47) |                                                                                                                      |
-|   incAndGet(): 3 at SwitchAsFirstMethodEventTest.incTwiceAndGet(SwitchAsFirstMethodEventTest.kt:42)                  |                                                                                                                      |
-|     incAndGetImpl(): 3 at SwitchAsFirstMethodEventTest.incAndGet(SwitchAsFirstMethodEventTest.kt:45)                 |                                                                                                                      |
-|       counter.incrementAndGet(): 3 at SwitchAsFirstMethodEventTest.incAndGetImpl(SwitchAsFirstMethodEventTest.kt:47) |                                                                                                                      |
+|   incAndGet(): 2 at SwitchAsFirstMethodEventTest.incTwiceAndGet(SwitchAsFirstMethodEventTest.kt:43)                  |                                                                                                                      |
+|     incAndGetImpl(): 2 at SwitchAsFirstMethodEventTest.incAndGet(SwitchAsFirstMethodEventTest.kt:47)                 |                                                                                                                      |
+|       counter.incrementAndGet(): 2 at SwitchAsFirstMethodEventTest.incAndGetImpl(SwitchAsFirstMethodEventTest.kt:49) |                                                                                                                      |
+|   incAndGet(): 3 at SwitchAsFirstMethodEventTest.incTwiceAndGet(SwitchAsFirstMethodEventTest.kt:44)                  |                                                                                                                      |
+|     incAndGetImpl(): 3 at SwitchAsFirstMethodEventTest.incAndGet(SwitchAsFirstMethodEventTest.kt:47)                 |                                                                                                                      |
+|       counter.incrementAndGet(): 3 at SwitchAsFirstMethodEventTest.incAndGetImpl(SwitchAsFirstMethodEventTest.kt:49) |                                                                                                                      |
 |   result: 3                                                                                                          |                                                                                                                      |
-|   thread is finished                                                                                                 |                                                                                                                      |
-|                                                                                                                      |   incAndGet(): 4 at SwitchAsFirstMethodEventTest.incTwiceAndGet(SwitchAsFirstMethodEventTest.kt:42)                  |
-|                                                                                                                      |     incAndGetImpl(): 4 at SwitchAsFirstMethodEventTest.incAndGet(SwitchAsFirstMethodEventTest.kt:45)                 |
-|                                                                                                                      |       counter.incrementAndGet(): 4 at SwitchAsFirstMethodEventTest.incAndGetImpl(SwitchAsFirstMethodEventTest.kt:47) |
+|                                                                                                                      |   incAndGet(): 4 at SwitchAsFirstMethodEventTest.incTwiceAndGet(SwitchAsFirstMethodEventTest.kt:44)                  |
+|                                                                                                                      |     incAndGetImpl(): 4 at SwitchAsFirstMethodEventTest.incAndGet(SwitchAsFirstMethodEventTest.kt:47)                 |
+|                                                                                                                      |       counter.incrementAndGet(): 4 at SwitchAsFirstMethodEventTest.incAndGetImpl(SwitchAsFirstMethodEventTest.kt:49) |
 |                                                                                                                      |   result: 4                                                                                                          |
-|                                                                                                                      |   thread is finished                                                                                                 |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

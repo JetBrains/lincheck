@@ -16,8 +16,7 @@ import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
-import org.jetbrains.kotlinx.lincheck_test.*
-import org.jetbrains.kotlinx.lincheck_test.util.runModelCheckingTestAndCheckOutput
+import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 import java.lang.IllegalStateException
@@ -41,12 +40,14 @@ open class ModelCheckingStateReportingTest {
     fun stateRepresentation() = counter.toString()
 
     @Test
-    fun test() = runModelCheckingTestAndCheckOutput( "state_representation.txt") {
+    fun test() = ModelCheckingOptions().apply {
         actorsPerThread(1)
         actorsBefore(0)
         actorsAfter(0)
         requireStateEquivalenceImplCheck(false)
     }
+        .checkImpl(this::class.java)
+        .checkLincheckOutput("state_representation.txt")
 }
 
 /**

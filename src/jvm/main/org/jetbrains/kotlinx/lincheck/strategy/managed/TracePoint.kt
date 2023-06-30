@@ -67,10 +67,6 @@ internal class StateRepresentationTracePoint(
     override fun toStringImpl(): String = "STATE: $stateRepresentation"
 }
 
-internal class FinishThreadTracePoint(iThread: Int) : TracePoint(iThread, Int.MAX_VALUE, emptyList()) {
-    override fun toStringImpl(): String = "thread is finished"
-}
-
 internal class ReadTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,

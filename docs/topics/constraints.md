@@ -70,17 +70,27 @@ Here is an example of the scenario generated for this test:
 
 ```text
 = Iteration 15 / 100 =
-Execution scenario (init part):
-[offer(1), offer(4), peek(), peek(), offer(-6)]
-Execution scenario (parallel part):
-| poll()   | offer(6)  |
-| poll()   | offer(-1) |
-| peek()   | offer(-8) |
-| offer(7) | offer(-5) |
-| peek()   | offer(3)  |
-Execution scenario (post part):
-[poll(), offer(-6), peek(), peek(), peek()]
-
+| --------------------- |
+| Thread 1  | Thread 2  |
+| --------------------- |
+| poll()    |           |
+| poll()    |           |
+| peek()    |           |
+| peek()    |           |
+| peek()    |           |
+| --------------------- |
+| offer(-1) | offer(0)  |
+| offer(0)  | offer(-1) |
+| peek()    | offer(-1) |
+| offer(1)  | offer(1)  |
+| peek()    | offer(1)  |
+| --------------------- |
+| peek()    |           |
+| offer(-2) |           |
+| offer(-2) |           |
+| offer(2)  |           |
+| offer(-2) |           |
+| --------------------- |
 ```
 
 Note that all consuming `poll()` and `peek()` invocations are performed from a single thread, thus satisfying the

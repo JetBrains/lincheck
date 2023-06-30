@@ -13,5 +13,5 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import java.lang.AssertionError
 
 class LincheckAssertionError(
-    failure: LincheckFailure
+    val failure: LincheckFailure
 ) : AssertionError("\n" + failure)
