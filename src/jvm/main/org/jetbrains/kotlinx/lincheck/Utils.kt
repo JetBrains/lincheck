@@ -18,6 +18,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.*
 import java.io.*
+import java.lang.Error
 import java.lang.ref.*
 import java.lang.reflect.*
 import java.lang.reflect.Method
@@ -76,8 +77,25 @@ private fun executeValidationFunction(instance: Any, validationFunction: Method)
     val m = getMethod(instance, validationFunction)
     try {
         m.invoke(instance)
-    } catch (e: Throwable) {
-        return e.cause
+    } catch (e: Exception) { // We don't catch any Errors - the only correct way is to re-throw them
+        // There are some exception types that can be thrown from this method:
+        return when (e) {
+            // It's our fault if we supplied null instead of method or instance
+            is NullPointerException -> LincheckInternalBugException(e)
+            // It's our fault as it can appear if this validation function has parameters, but we had to check it before
+            is IllegalArgumentException -> LincheckInternalBugException(e)
+            // Something wrong with access to some classes, just report it
+            is IllegalAccessException -> e
+            // Regular validation function exception
+            is InvocationTargetException -> {
+                val validationException = e.targetException
+                val wrapperExceptionStackTraceLength = e.stackTrace.size
+                // drop stacktrace related to Lincheck call, keeping only stacktrace starting from validation function call
+                validationException.stackTrace = validationException.stackTrace.dropLast(wrapperExceptionStackTraceLength).toTypedArray()
+                validationException
+            }
+            else -> LincheckInternalBugException(e)
+        }
     }
     return null
 }
@@ -355,5 +373,21 @@ internal const val ADD_OPENS_MESSAGE =
  */
 @Suppress("JavaIoSerializableObjectMustHaveReadResolve")
 internal object InternalLincheckTestUnexpectedException : Exception()
+
+/**
+ * Thrown in case when `cause` exception is unexpected by Lincheck internal logic.
+ */
+internal class LincheckInternalBugException(cause: Throwable): Exception(cause)
+
+internal fun stackTraceRepresentation(stackTrace: Array<StackTraceElement>): List<String> {
+    return transformStackTraceBackFromRemapped(stackTrace).map { it.toString() }.filter { line ->
+        "org.jetbrains.kotlinx.lincheck.strategy" !in line
+                && "org.jetbrains.kotlinx.lincheck.runner" !in line
+                && "org.jetbrains.kotlinx.lincheck.UtilsKt" !in line
+    }
+}
+internal fun transformStackTraceBackFromRemapped(stackTrace: Array<StackTraceElement>) = stackTrace.map {
+    StackTraceElement(it.className.removePrefix(TransformationClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME), it.methodName, it.fileName, it.lineNumber)
+}
 
 internal const val LINCHECK_PACKAGE_NAME = "org.jetbrains.kotlinx.lincheck."

@@ -179,7 +179,10 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
         is IncorrectResultsFailure -> appendIncorrectResultsFailure(failure, exceptionStackTraces)
         is DeadlockWithDumpFailure -> appendDeadlockWithDumpFailure(failure)
         is UnexpectedExceptionFailure -> appendUnexpectedExceptionFailure(failure)
-        is ValidationFailure -> appendValidationFailure(failure)
+        is ValidationFailure -> when (failure.exception) {
+            is LincheckInternalBugException -> appendInternalLincheckBugFailure(failure.exception)
+            else ->  appendValidationFailure(failure)
+        }
         is ObstructionFreedomViolationFailure -> appendObstructionFreedomViolationFailure(failure)
     }
     if (failure.trace != null) {
@@ -430,6 +433,8 @@ private fun StringBuilder.appendHints(hints: List<String>) {
 private fun StringBuilder.appendValidationFailure(failure: ValidationFailure): StringBuilder {
     appendln("= Validation function ${failure.functionName} has failed =")
     appendExecutionScenario(failure.scenario)
+    appendln()
+    appendln()
     appendException(failure.exception)
     return this
 }
