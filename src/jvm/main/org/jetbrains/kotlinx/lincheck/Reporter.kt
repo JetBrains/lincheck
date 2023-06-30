@@ -179,7 +179,10 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
         is IncorrectResultsFailure -> appendIncorrectResultsFailure(failure, exceptionStackTraces)
         is DeadlockWithDumpFailure -> appendDeadlockWithDumpFailure(failure)
         is UnexpectedExceptionFailure -> appendUnexpectedExceptionFailure(failure)
-        is ValidationFailure -> appendValidationFailure(failure)
+        is ValidationFailure -> when (failure.exception) {
+            is LincheckInternalBugException -> appendInternalLincheckBugFailure(failure.exception)
+            else ->  appendValidationFailure(failure)
+        }
         is ObstructionFreedomViolationFailure -> appendObstructionFreedomViolationFailure(failure)
     }
     if (failure.trace != null) {

@@ -18,6 +18,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.*
 import java.io.*
+import java.lang.Error
 import java.lang.ref.*
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
@@ -78,22 +79,25 @@ private fun executeValidationFunction(instance: Any, validationFunction: Method)
     val m = getMethod(instance, validationFunction)
     try {
         m.invoke(instance)
-    } catch (e: Throwable) {
-        /*
-        There are some exception types that can be thrown from this method, beside InvocationTargetException:
-        1. All Errors - the only correct way is to re-throw them
-        2. NullPointerExceptions - it's our fault if we supplied null instead of method or instance
-        3. IllegalArgumentException - it can appear if validation function was parameters, but we had to check it before
-        4.
-         */
-        val validationException = e.cause ?: return e
-        val wrapperExceptionStackTraceLength = e.stackTrace.size
-
-        if (e is InvocationTargetException) {
-            validationException.stackTrace = validationException.stackTrace.dropLast(wrapperExceptionStackTraceLength).toTypedArray()
+    } catch (e: Exception) { // We don't catch any Errors - the only correct way is to re-throw them
+        // There are some exception types that can be thrown from this method:
+        return when (e) {
+            // It's our fault if we supplied null instead of method or instance
+            is NullPointerException -> LincheckInternalBugException(e)
+            // It's our fault as it can appear if this validation function has parameters, but we had to check it before
+            is IllegalArgumentException -> LincheckInternalBugException(e)
+            // Something wrong with access to some classes, just report it
+            is IllegalAccessException -> e
+            // Regular validation function exception
+            is InvocationTargetException -> {
+                val validationException = e.targetException
+                val wrapperExceptionStackTraceLength = e.stackTrace.size
+                // drop stacktrace related to Lincheck call, keeping only stacktrace starting from validation function call
+                validationException.stackTrace = validationException.stackTrace.dropLast(wrapperExceptionStackTraceLength).toTypedArray()
+                validationException
+            }
+            else -> LincheckInternalBugException(e)
         }
-
-        return validationException
     }
     return null
 }
@@ -373,6 +377,11 @@ internal const val ADD_OPENS_MESSAGE =
  * When this exception is thrown by an operation, it will halt testing with [UnexpectedExceptionInvocationResult].
  */
 internal object InternalLincheckTestUnexpectedException : Exception()
+
+/**
+ * Thrown in case when `cause` exception is unexpected by Lincheck internal logic.
+ */
+internal class LincheckInternalBugException(cause: Throwable): Exception(cause)
 
 internal fun stackTraceRepresentation(stackTrace: Array<StackTraceElement>): List<String> {
     return transformStackTraceBackFromRemapped(stackTrace).map { it.toString() }.filter { line ->
