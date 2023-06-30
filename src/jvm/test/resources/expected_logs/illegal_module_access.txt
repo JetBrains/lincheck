@@ -7,9 +7,9 @@ Please add the following lines to your test running configuration:
 --add-opens java.base/jdk.internal.misc=ALL-UNNAMED
 --add-exports java.base/jdk.internal.util=ALL-UNNAMED
 --add-exports java.base/sun.security.action=ALL-UNNAMED
-	at org.jetbrains.kotlinx.lincheck.UtilsKt.wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(Utils.kt:358)
-	at org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy.onFailure(ManagedStrategy.kt:322)
-	at org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyRunner.onFailure(ManagedStrategy.kt:736)
+	at org.jetbrains.kotlinx.lincheck.UtilsKt.wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(Utils.kt:352)
+	at org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy.onFailure(ManagedStrategy.kt:329)
+	at org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyRunner.onFailure(ManagedStrategy.kt:1069)
 	at org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution.failOnExceptionIsUnexpected(TestThreadExecution.java:52)
 	at org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution229.run(Unknown Source)
 	at org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.testThreadRunnable$lambda-4(FixedActiveThreadsExecutor.kt:129)

@@ -18,7 +18,6 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.*
 import java.io.*
-import java.lang.Error
 import java.lang.ref.*
 import java.lang.reflect.*
 import java.lang.reflect.Method
