@@ -327,7 +327,12 @@ private fun StringBuilder.appendUnexpectedExceptionFailure(failure: UnexpectedEx
 }
 
 private fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockWithDumpFailure): StringBuilder {
-    appendLine("= The execution has hung, see the thread dump =")
+    val titleMessage = if (failure.threadDump != null)  {
+        "= The execution has hung, see the thread dump ="
+    } else {
+        "= The execution has hung ="
+    }
+    appendLine(titleMessage)
     appendExecutionScenario(failure.scenario)
     appendLine()
     // We don't save thread dump in model checking mode, for now it is present only in stress testing

@@ -29,6 +29,7 @@ internal class IncorrectResultsFailure(
 
 internal class DeadlockWithDumpFailure(
     scenario: ExecutionScenario,
+    // Thread dump is not present in case of model checking
     val threadDump: Map<Thread, Array<StackTraceElement>>?,
     trace: Trace? = null
 ) : LincheckFailure(scenario, trace)
