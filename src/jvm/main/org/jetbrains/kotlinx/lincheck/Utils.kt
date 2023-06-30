@@ -10,7 +10,6 @@
 package org.jetbrains.kotlinx.lincheck
 
 import kotlinx.coroutines.*
-import org.jetbrains.kotlinx.lincheck.CancellableContinuationHolder.storedLastCancellableCont
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
@@ -18,7 +17,6 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.*
 import java.io.*
-import java.lang.Error
 import java.lang.ref.*
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
@@ -51,9 +49,13 @@ internal fun executeActor(
         return if (m.returnType.isAssignableFrom(Void.TYPE)) VoidResult else createLincheckResult(res)
     } catch (invE: Throwable) {
         // If the exception is thrown not during the method invocation - fail immediately
-        if (invE !is InvocationTargetException) throw invE
+        if (invE !is InvocationTargetException)
+            throw invE
         // Exception thrown not during the method invocation should contain underlying exception
-        return ExceptionResult.create(invE.cause ?: throw invE)
+        return ExceptionResult.create(
+            invE.cause?.takeIf { exceptionCanBeValidExecutionResult(it) }
+                ?: throw invE
+        )
     } catch (e: Exception) {
         e.catch(
             NoSuchMethodException::class.java,
@@ -165,28 +167,10 @@ inline fun <R> Throwable.catch(vararg exceptions: Class<*>, block: () -> R): R {
     } else throw this
 }
 
-/**
- * Returns scenario for the specified thread. Note that initial and post parts
- * are represented as threads with ids `0` and `threads + 1` respectively.
- */
-internal operator fun ExecutionScenario.get(threadId: Int): List<Actor> = when (threadId) {
-    0 -> initExecution
-    threads + 1 -> postExecution
-    else -> parallelExecution[threadId - 1]
-}
-
-/**
- * Returns results for the specified thread. Note that initial and post parts
- * are represented as threads with ids `0` and `threads + 1` respectively.
- */
-internal operator fun ExecutionResult.get(threadId: Int): List<Result> = when (threadId) {
-    0 -> initResults
-    parallelResultsWithClock.size + 1 -> postResults
-    else -> parallelResultsWithClock[threadId - 1].map { it.result }
-}
-
-internal class StoreExceptionHandler : AbstractCoroutineContextElement(CoroutineExceptionHandler),
-    CoroutineExceptionHandler {
+internal class StoreExceptionHandler :
+    AbstractCoroutineContextElement(CoroutineExceptionHandler),
+    CoroutineExceptionHandler
+{
     var exception: Throwable? = null
 
     override fun handleException(context: CoroutineContext, exception: Throwable) {
@@ -234,7 +218,7 @@ fun storeCancellableContinuation(cont: CancellableContinuation<*>) {
     if (t is FixedActiveThreadsExecutor.TestThread) {
         t.cont = cont
     } else {
-        storedLastCancellableCont = cont
+        CancellableContinuationHolder.storedLastCancellableCont = cont
     }
 }
 
@@ -279,7 +263,8 @@ private fun Method.convertForLoader(loader: ClassLoader): Method {
     return clazz.getDeclaredMethod(name, *parameterTypes.toTypedArray())
 }
 
-private fun Class<*>.convertForLoader(loader: TransformationClassLoader): Class<*> = if (isPrimitive) this else loader.loadClass(loader.remapClassName(name))
+private fun Class<*>.convertForLoader(loader: TransformationClassLoader): Class<*> =
+    if (isPrimitive) this else loader.loadClass(loader.remapClassName(name))
 
 private fun ResultWithClock.convertForLoader(loader: ClassLoader): ResultWithClock =
         ResultWithClock(result.convertForLoader(loader), clockOnStart)
@@ -390,6 +375,7 @@ internal fun stackTraceRepresentation(stackTrace: Array<StackTraceElement>): Lis
                 && "org.jetbrains.kotlinx.lincheck.UtilsKt" !in line
     }
 }
+
 internal fun transformStackTraceBackFromRemapped(stackTrace: Array<StackTraceElement>) = stackTrace.map {
     StackTraceElement(it.className.removePrefix(TransformationClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME), it.methodName, it.fileName, it.lineNumber)
 }

@@ -11,7 +11,9 @@
 package org.jetbrains.kotlinx.lincheck_test.representation
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck_test.util.runModelCheckingTestAndCheckOutput
+import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.junit.Test
 
 @Suppress("UNUSED")
@@ -30,7 +32,10 @@ class ExceptionsInOutputTest {
     fun operation2() = check(!canEnterForbiddenSection) { "Violating exception" }
 
     @Test
-    fun `should add stackTrace to output`() = runModelCheckingTestAndCheckOutput("exceptions_in_output.txt") {
+    fun `should add stackTrace to output`() = ModelCheckingOptions().apply {
         actorsBefore(2)
     }
+        .checkImpl(this::class.java)
+        .checkLincheckOutput("exceptions_in_output.txt")
+
 }

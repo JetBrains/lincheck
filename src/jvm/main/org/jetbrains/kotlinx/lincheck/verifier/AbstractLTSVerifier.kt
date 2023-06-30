@@ -60,21 +60,20 @@ abstract class VerifierContext(
      */
     val state: LTS.State,
     /**
-     * Number of executed actors in each thread. Note that initial and post parts
-     * are represented as threads with ids `0` and `threads + 1` respectively.
+     * Number of executed actors in each thread.
      */
-    protected val executed: IntArray = IntArray(scenario.threads + 2),
+    protected val executed: IntArray = IntArray(scenario.nThreads),
     /**
      * For every scenario thread stores whether it is suspended or not.
      */
-    protected val suspended: BooleanArray = BooleanArray(scenario.threads + 2),
+    protected val suspended: BooleanArray = BooleanArray(scenario.nThreads),
     /**
      * For every thread it stores a ticket assigned to the last executed actor by [LTS].
      * A ticket is assigned from the range (0 .. threads) to an actor that suspends it's execution,
      * after being resumed the actor is invoked with this ticket to complete it's execution.
      * If an actor does not suspend, the assigned ticket equals [NO_TICKET].
      */
-    protected val tickets: IntArray = IntArray(scenario.threads + 2) { NO_TICKET }
+    protected val tickets: IntArray = IntArray(scenario.nThreads) { NO_TICKET }
 ) {
     /**
      * Counts next possible states and the corresponding contexts if the specified thread is executed.
@@ -84,32 +83,25 @@ abstract class VerifierContext(
     /**
      * Returns `true` if all actors in the specified thread are executed.
      */
-    fun isCompleted(threadId: Int) = executed[threadId] == scenario[threadId].size
-
-    /**
-     * Returns `true` if the initial part is completed.
-     */
-    val initCompleted: Boolean get() = isCompleted(0)
-
-    /**
-     * Returns `true` if all actors from the parallel scenario part are executed.
-     */
-    val parallelCompleted: Boolean get() = completedThreads(1..scenario.threads) == scenario.threads
+    fun isCompleted(threadId: Int) =
+        executed[threadId] == scenario.threads[threadId].size
 
     /**
      * Returns `true` if all threads completed their execution.
      */
-    val completed: Boolean get() = completedThreads + suspendedThreads == scenario.threads + 2
+    val completed: Boolean get() =
+        completedThreads + suspendedThreads == scenario.nThreads
 
     /**
      * Range for all threads
      */
-    val threads: IntRange get() = 0..(scenario.threads + 1)
+    val threads: IntRange get() = 0 until scenario.nThreads
 
     /**
      * The number of threads that expectedly suspended their execution.
      */
-    private val suspendedThreads: Int get() = threads.count { t -> suspended[t] && results[t][executed[t]] === Suspended }
+    private val suspendedThreads: Int get() =
+        threads.count { t -> suspended[t] && results.threadsResultsWithClock[t][executed[t]].result === Suspended }
 
     /**
      * Returns the number of completed threads from the specified range.

@@ -91,8 +91,11 @@ When creating a project, use the Gradle build system.
 
    ```text
    = Invalid execution results =
-   Parallel part:
+   | ------------------- |
+   | Thread 1 | Thread 2 |
+   | ------------------- |
    | inc(): 1 | inc(): 1 |
+   | ------------------- |
    ```
 
    Here, Lincheck found an execution that violates the counter atomicity – two concurrent increments ended
@@ -139,21 +142,25 @@ The updated `BasicCounterTest` class will look like this:
 
    ```text
    = Invalid execution results =
-   Parallel part:
+   | ------------------- |
+   | Thread 1 | Thread 2 |
+   | ------------------- |
    | inc(): 1 | inc(): 1 |
+   | ------------------- |
    
-   = The following interleaving leads to the error =
-   Parallel part trace:
-   |                      | inc()                                                      |
-   |                      |   inc(): 1 at BasicCounterTest.inc(BasicCounterTest.kt:18) |
-   |                      |     value.READ: 0 at Counter.inc(BasicCounterTest.kt:10)   |
-   |                      |     switch                                                 |
-   | inc(): 1             |                                                            |
-   |   thread is finished |                                                            |
-   |                      |     value.WRITE(1) at Counter.inc(BasicCounterTest.kt:10)  |
-   |                      |     value.READ: 1 at Counter.inc(BasicCounterTest.kt:10)   |
-   |                      |   result: 1                                                |
-   |                      |   thread is finished                                       |
+   The following interleaving leads to the error:
+   | --------------------------------------------------------------------- |
+   | Thread 1 |                          Thread  2                         |
+   | --------------------------------------------------------------------- |
+   |          | inc()                                                      |
+   |          |   inc(): 1 at BasicCounterTest.inc(BasicCounterTest.kt:18) |
+   |          |     value.READ: 0 at Counter.inc(BasicCounterTest.kt:10)   |
+   |          |     switch                                                 |
+   | inc(): 1 |                                                            |
+   |          |     value.WRITE(1) at Counter.inc(BasicCounterTest.kt:10)  |
+   |          |     value.READ: 1 at Counter.inc(BasicCounterTest.kt:10)   |
+   |          |   result: 1                                                |
+   | --------------------------------------------------------------------- |
    ```
 
    According to the trace, the following events have occurred:
@@ -209,19 +216,26 @@ Run `modelCheckingTest()`. The test will fail with the following output:
 
 ```text
 = Invalid execution results =
-Init part:
-[addLast(22): void]
-Parallel part:
-| pollFirst(): 22 | addFirst(8): void       |
-|                 | peekLast():  22   [-,1] |
+| ---------------------------------------- |
+|      Thread 1     |       Thread 2       |
+| ---------------------------------------- |
+| addLast(22): void |                      |
+| ---------------------------------------- |
+| pollFirst(): 22   | addFirst(8): void    |
+|                   | peekLast(): 22 [-,1] |
+| ---------------------------------------- |
 
 ---
-values in "[..]" brackets indicate the number of completed operations 
+All operations above the horizontal line | ----- | happen before those below the line
+---
+Values in "[..]" brackets indicate the number of completed operations
 in each of the parallel threads seen at the beginning of the current operation
 ---
 
-= The following interleaving leads to the error =
-Parallel part trace:
+The following interleaving leads to the error:
+| --------------------------------------------------------------------------------------------------------------------------------- |
+|                                                Thread 1                                                    |       Thread 2       |
+| --------------------------------------------------------------------------------------------------------------------------------- |
 | pollFirst()                                                                                                |                      |
 |   pollFirst(): 22 at ConcurrentDequeTest.pollFirst(ConcurrentDequeTest.kt:17)                              |                      |
 |     first(): Node@1 at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:915)                     |                      |
@@ -232,11 +246,10 @@ Parallel part trace:
 |     switch                                                                                                 |                      |
 |                                                                                                            | addFirst(8): void    |
 |                                                                                                            | peekLast(): 22       |
-|                                                                                                            |   thread is finished |
 |     compareAndSet(Node@2,22,null): true at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:920) |                      |
 |     unlink(Node@2) at ConcurrentLinkedDeque.pollFirst(ConcurrentLinkedDeque.java:921)                      |                      |
 |   result: 22                                                                                               |                      |
-|   thread is finished                                                                                       |                      |
+| --------------------------------------------------------------------------------------------------------------------------------- |
 ```
 
 > [Get the full code](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/ConcurrentLinkedDequeTest.kt).

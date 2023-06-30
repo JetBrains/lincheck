@@ -12,7 +12,6 @@ package org.jetbrains.kotlinx.lincheck.verifier
 
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.CancellableContinuationHolder.storedLastCancellableCont
 import org.jetbrains.kotlinx.lincheck.verifier.LTS.*
 import org.jetbrains.kotlinx.lincheck.verifier.OperationType.*
 import java.util.*
@@ -196,7 +195,7 @@ class LTS(sequentialSpecification: Class<*>) {
         continuationsMap: MutableMap<Operation, CancellableContinuation<*>>
     ): Result {
         val prevResumedTickets = resumedOperations.keys.toMutableList()
-        storedLastCancellableCont = null
+        CancellableContinuationHolder.storedLastCancellableCont = null
         val res = when (type) {
             REQUEST -> executeActor(externalState, actor, Completion(ticket, actor, resumedOperations))
             FOLLOW_UP -> {
@@ -223,8 +222,8 @@ class LTS(sequentialSpecification: Class<*>) {
             }
         }
         if (res === Suspended) {
-            val cont = storedLastCancellableCont
-            storedLastCancellableCont = null
+            val cont = CancellableContinuationHolder.storedLastCancellableCont
+            CancellableContinuationHolder.storedLastCancellableCont = null
             if (cont !== null) continuationsMap[this] = cont
             // Operation suspended it's execution.
             suspendedOperations.add(this)

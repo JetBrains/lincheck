@@ -11,32 +11,24 @@
 package org.jetbrains.kotlinx.lincheck_test.util
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.verifier.LTS
 import org.junit.Assert.*
 
 /**
- * Runs lincheck test in model checking mode.
+ * Checks that failure output matches the expected one stored in a file.
  *
- * Implemented as an extension to Any to avoid passing test class as an argument.
- *
- * @receiver The test instance, its class will be passed to [checkImpl] as testClass.
- * @param expectedOutputFile file name from resources/expected_logs, the expected lincheck output
+ * @receiver checked failure.
+ * @param expectedOutputFile name of file stored in resources/expected_logs, storing the expected lincheck output.
  * @param linesToRemoveRegex regex to filter expected and actual output to remove test suite-dependent lines
- * @param testConfiguration options configuration action
  */
-internal fun Any.runModelCheckingTestAndCheckOutput(
-    expectedOutputFile: String,
-    linesToRemoveRegex: Regex? = null,
-    testConfiguration: ModelCheckingOptions.() -> Unit = {},
-) {
-    val modelCheckingOptions = ModelCheckingOptions()
-    testConfiguration(modelCheckingOptions)
-    val failure = modelCheckingOptions.checkImpl(this::class.java)
+internal fun LincheckFailure?.checkLincheckOutput(expectedOutputFile: String, linesToRemoveRegex: Regex? = null) {
+    // val modelCheckingOptions = ModelCheckingOptions()
+    // testConfiguration(modelCheckingOptions)
+    // val failure = modelCheckingOptions.checkImpl(this::class.java)
+    check(this != null) { "The test should fail" }
 
-    check(failure != null) { "The test should fail" }
-
-    val actualOutput = StringBuilder().appendFailure(failure).toString()
+    val actualOutput = StringBuilder().appendFailure(this).toString()
     val actualOutputLines = actualOutput.getLines(linesToRemoveRegex)
     val expectedOutput = getExpectedLogFromResources(expectedOutputFile)
     val expectedOutputLines = expectedOutput.getLines(linesToRemoveRegex)
@@ -100,5 +92,16 @@ internal fun getExpectedLogFromResources(testFileName: String): String {
     return expectedLogResource.reader().readText()
 }
 
-internal val TEST_EXECUTION_TRACE_ELEMENT_REGEX =
-    "(\\W*)at org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution(\\d+)\\.run\\(Unknown Source\\)".toRegex()
+// removing the following lines from the trace (because they may vary):
+// - pattern `org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution(\d+)` (the number of thread may vary)
+// - everything from `java.base/` (because code locations may vary between different versions of JVM)
+internal val TEST_EXECUTION_TRACE_ELEMENT_REGEX = listOf(
+    "(\\W*)at org\\.jetbrains\\.kotlinx\\.lincheck\\.runner\\.TestThreadExecution(\\d+)\\.run\\(Unknown Source\\)",
+    "(\\W*)at java.base\\/(.*)"
+).joinToString(separator = ")|(", prefix = "(", postfix = ")").toRegex()
+
+fun checkTraceHasNoLincheckEvents(trace: String) {
+    val testPackageOccurrences = trace.split("org.jetbrains.kotlinx.lincheck_test.").size - 1
+    val lincheckPackageOccurrences = trace.split("org.jetbrains.kotlinx.lincheck.").size - 1
+    check(testPackageOccurrences == lincheckPackageOccurrences) { "Internal Lincheck events were found in the trace" }
+}

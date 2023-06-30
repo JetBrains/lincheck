@@ -13,10 +13,9 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.jetbrains.kotlinx.lincheck_test.*
-
-import org.jetbrains.kotlinx.lincheck_test.util.runModelCheckingTestAndCheckOutput
 import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.jetbrains.kotlinx.lincheck_test.util.*
+
 import org.junit.*
 import java.lang.StringBuilder
 
@@ -108,10 +107,12 @@ class CaughtExceptionMethodReportingTest : VerifierState() {
     override fun extractState(): Any = counter
 
     @Test
-    fun test() = runModelCheckingTestAndCheckOutput("method_reporting.txt") {
+    fun test() = ModelCheckingOptions().apply {
         actorsPerThread(1)
         actorsBefore(0)
         actorsAfter(0)
     }
+        .checkImpl(this::class.java)
+        .checkLincheckOutput("method_reporting.txt")
 
 }
