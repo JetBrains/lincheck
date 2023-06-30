@@ -48,7 +48,7 @@ class ObstructionFreedomActiveLockRepresentationTest : VerifierState() {
     override fun extractState(): Any = counter.get()
 
     @Test
-    fun test() = runModelCheckingTestAndCheckOutput("obstruction_freedom_violation_representation_with_no_cycle.txt") {
+    fun test() = runModelCheckingTestAndCheckOutput("obstruction_freedom_violation_with_no_detected_cycle.txt") {
         actorsPerThread(1)
         actorsBefore(0)
         actorsAfter(0)

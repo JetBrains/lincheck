@@ -79,7 +79,7 @@ internal class ObstructionFreedomViolationExecutionAbortTracePoint(
     actorId: Int,
     callStackTrace: CallStackTrace
 ): TracePoint(iThread, actorId, callStackTrace) {
-    override fun toStringImpl(): String = "An active lock was detected"
+    override fun toStringImpl(): String = "// An active lock was detected"
 }
 
 internal class ReadTracePoint(

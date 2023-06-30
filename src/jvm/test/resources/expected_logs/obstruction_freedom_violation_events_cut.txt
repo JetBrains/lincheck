@@ -16,7 +16,7 @@ Parallel part trace:
 |     // The following events repeat infinitely                                                           |                                                                                                        |
 |     get(): Node@1 at MSQueueBlocking.enqueue(ObstructionFreedomViolationTest.kt:27)                     |                                                                                                        |
 |     compareAndSet(null,Node@3): false at MSQueueBlocking.enqueue(ObstructionFreedomViolationTest.kt:28) |                                                                                                        |
-|     An active lock was detected                                                                         |                                                                                                        |
+|     // An active lock was detected                                                                      |                                                                                                        |
 
 Detailed parallel part trace:
 |                                                                                                         | enqueue(-1)                                                                                            |
@@ -33,4 +33,4 @@ Detailed parallel part trace:
 |     // The following events repeat infinitely                                                           |                                                                                                        |
 |     get(): Node@1 at MSQueueBlocking.enqueue(ObstructionFreedomViolationTest.kt:27)                     |                                                                                                        |
 |     compareAndSet(null,Node@3): false at MSQueueBlocking.enqueue(ObstructionFreedomViolationTest.kt:28) |                                                                                                        |
-|     An active lock was detected                                                                         |                                                                                                        |
+|     // An active lock was detected                                                                      |                                                                                                        |
