@@ -12,7 +12,7 @@ Please add the following lines to your test running configuration:
 	at org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyRunner.onFailure(ManagedStrategy.kt:736)
 	at org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution.failOnExceptionIsUnexpected(TestThreadExecution.java:52)
 	at org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution229.run(Unknown Source)
-	at org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.testThreadRunnable$lambda-4(FixedActiveThreadsExecutor.kt:125)
+	at org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.testThreadRunnable$lambda-4(FixedActiveThreadsExecutor.kt:129)
 	at java.base/java.lang.Thread.run(Thread.java:829)
 Caused by: java.lang.IllegalAccessException: module java.base does not "opens java.io" to unnamed module
 	at org.jetbrains.kotlinx.lincheck_test.representation.IllegalModuleAccessOutputMessageTest$operation$1.invoke(IllegalModuleAccessOutputMessageTest.kt:37)
