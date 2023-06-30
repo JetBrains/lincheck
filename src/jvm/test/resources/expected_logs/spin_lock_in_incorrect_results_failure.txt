@@ -11,7 +11,7 @@ in each of the parallel threads seen at the beginning of the current operation
 = The following interleaving leads to the error =
 Parallel part trace:
 |                      | c()                                                                                                 |
-|                      |   /* The following events repeat infinitely until thread switch */                                  |
+|                      |   // The following events repeat infinitely                                                         |
 |                      |   bStarted.READ: false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:186) |
 |                      |   switch (reason: active lock detected)                                                             |
 | a()                  |                                                                                                     |
@@ -24,7 +24,7 @@ Parallel part trace:
 
 Detailed parallel part trace:
 |                                                                                                     | c()                                                                                                 |
-|                                                                                                     |   /* The following events repeat infinitely until thread switch */                                  |
+|                                                                                                     |   // The following events repeat infinitely                                                         |
 |                                                                                                     |   bStarted.READ: false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:186) |
 |                                                                                                     |   switch (reason: active lock detected)                                                             |
 | a()                                                                                                 |                                                                                                     |

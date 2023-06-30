@@ -9,7 +9,7 @@ Please add the following lines to your test running configuration:
 --add-exports java.base/sun.security.action=ALL-UNNAMED
 	at org.jetbrains.kotlinx.lincheck.UtilsKt.wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(Utils.kt:340)
 	at org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy.onFailure(ManagedStrategy.kt:330)
-	at org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyRunner.onFailure(ManagedStrategy.kt:1077)
+	at org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyRunner.onFailure(ManagedStrategy.kt:1085)
 	at org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution.failOnExceptionIsUnexpected(TestThreadExecution.java:52)
 	at org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution229.run(Unknown Source)
 	at org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.testThreadRunnable$lambda-4(FixedActiveThreadsExecutor.kt:129)

@@ -1,4 +1,4 @@
-= The execution has hung, see the thread dump =
+= The execution has hung =
 Execution scenario (init part):
 [one(), one(), one(), one(), two()]
 Execution scenario (parallel part):
@@ -21,11 +21,11 @@ Parallel part trace:
 |                                                                                                   |   switch                                                                                          |
 | two()                                                                                             |                                                                                                   |
 |   compareAndSet(false,true): true at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:146)  |                                                                                                   |
-|   /* The following events repeat infinitely until thread switch */                                |                                                                                                   |
+|   // The following events repeat infinitely                                                       |                                                                                                   |
 |   compareAndSet(false,true): false at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:149) |                                                                                                   |
 |   meaninglessActions() at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:150)             |                                                                                                   |
 |   switch (reason: active lock detected)                                                           |                                                                                                   |
-|                                                                                                   |   /* The following events repeat infinitely until thread switch */                                |
+|                                                                                                   |   // The following events repeat infinitely                                                       |
 |                                                                                                   |   compareAndSet(false,true): false at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:135) |
 |                                                                                                   |   meaninglessActions() at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:136)             |
 |                                                                                                   |   switch (reason: active lock detected)                                                           |
@@ -57,7 +57,7 @@ Detailed parallel part trace:
 |                                                                                                         |   switch                                                                                                |
 | two()                                                                                                   |                                                                                                         |
 |   compareAndSet(false,true): true at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:146)        |                                                                                                         |
-|   /* The following events repeat infinitely until thread switch */                                      |                                                                                                         |
+|   // The following events repeat infinitely                                                             |                                                                                                         |
 |   compareAndSet(false,true): false at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:149)       |                                                                                                         |
 |   meaninglessActions() at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:150)                   |                                                                                                         |
 |     set(0,0) at SpinlockEventsCutLongCycleActionsTest.meaninglessActions(SpinlockEventsCutTests.kt:98)  |                                                                                                         |
@@ -68,7 +68,7 @@ Detailed parallel part trace:
 |     set(5,0) at SpinlockEventsCutLongCycleActionsTest.meaninglessActions(SpinlockEventsCutTests.kt:103) |                                                                                                         |
 |     set(6,0) at SpinlockEventsCutLongCycleActionsTest.meaninglessActions(SpinlockEventsCutTests.kt:104) |                                                                                                         |
 |   switch (reason: active lock detected)                                                                 |                                                                                                         |
-|                                                                                                         |   /* The following events repeat infinitely until thread switch */                                      |
+|                                                                                                         |   // The following events repeat infinitely                                                             |
 |                                                                                                         |   compareAndSet(false,true): false at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:135)       |
 |                                                                                                         |   meaninglessActions() at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:136)                   |
 |                                                                                                         |     set(0,0) at SpinlockEventsCutLongCycleActionsTest.meaninglessActions(SpinlockEventsCutTests.kt:98)  |

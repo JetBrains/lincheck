@@ -749,6 +749,10 @@ abstract class ManagedStrategy(
             _trace += StateRepresentationTracePoint(iThread, currentActorId[iThread], stateRepresentation, callStackTrace)
 
         }
+
+        fun passObstructionFreedomViolationTracePoint(iThread: Int) {
+            _trace += ObstructionFreedomViolationExecutionAbortTracePoint(iThread, currentActorId[iThread], _trace.last().callStackTrace)
+        }
     }
 
     /**
@@ -1047,7 +1051,10 @@ abstract class ManagedStrategy(
                 if (cyclePeriod != 0) {
                     traceCollector?.newActiveLockDetected(currentThread, cyclePeriod)
                 }
-                failIfObstructionFreedomIsRequired { OBSTRUCTION_FREEDOM_SPINLOCK_VIOLATION_MESSAGE }
+                failIfObstructionFreedomIsRequired {
+                    traceCollector?.passObstructionFreedomViolationTracePoint(currentThread)
+                    OBSTRUCTION_FREEDOM_SPINLOCK_VIOLATION_MESSAGE
+                }
                 traceCollector?.newSwitch(currentThread, SwitchReason.ACTIVE_LOCK)
                 failDueToDeadlock()
             }
