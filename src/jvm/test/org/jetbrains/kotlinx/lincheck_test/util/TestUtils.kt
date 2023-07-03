@@ -51,36 +51,6 @@ private val TEST_EXECUTION_TRACE_ELEMENT_REGEX = listOf(
 
 private val LINE_NUMBER_REGEX = Regex(":(\\d+)\\)")
 
-private fun assertValuesEqualsAndPrintAllOutputsIfFailed(
-    expectedValue: Any,
-    actualValue: Any,
-    expectedOutput: String,
-    actualOutput: String,
-    messageSupplier: () -> String
-) {
-    if (expectedValue != actualValue) {
-        fail(
-            // Multiline string is not used here as to .trimIndent function considers lincheck indents and makes ugly output
-            buildString {
-                appendLine(messageSupplier())
-
-                appendLine()
-                appendLine("Expected:")
-                appendLine(expectedValue)
-                appendLine("Actual:")
-                appendLine(actualValue)
-
-                appendLine()
-                appendLine("Expected full output:")
-                appendLine(expectedOutput)
-                appendLine()
-                appendLine("Actual full output:")
-                appendLine(actualOutput)
-            }
-        )
-    }
-}
-
 internal fun getExpectedLogFromResources(testFileName: String): String {
     val resourceName = "expected_logs/$testFileName"
     val expectedLogResource = LTS::class.java.classLoader.getResourceAsStream(resourceName)
