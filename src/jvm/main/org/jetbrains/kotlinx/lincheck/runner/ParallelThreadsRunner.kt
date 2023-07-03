@@ -207,7 +207,11 @@ internal open class ParallelThreadsRunner(
                 suspensionPointResults[iThread][actorId] = NoResult
                 return Suspended
             }
-            if (i++ % SPINNING_LOOP_ITERATIONS_BEFORE_YIELD == 0) Thread.yield()
+            // Do not call `yield()` until necessary. However, if the number of threads
+            // exceed the number of cores, it is better to call `yield` immediately to avoid starvation.
+            if (i++ % SPINNING_LOOP_ITERATIONS_BEFORE_YIELD == 0 || executor.numberOfThreadsExceedAvailableProcessors){
+                Thread.yield()
+            }
         }
         // Coroutine will be resumed. Call method so that strategy can learn it.
         afterCoroutineResumed(iThread)

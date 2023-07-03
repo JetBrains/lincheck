@@ -49,6 +49,8 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
         TestThread(iThread, runnerHash, testThreadRunnable(iThread)).also { it.start() }
     }
 
+    val numberOfThreadsExceedAvailableProcessors = Runtime.getRuntime().availableProcessors() < threads.size
+
     /**
      * Submits the specified set of [tasks] to this executor
      * and waits until all of them are completed.
@@ -181,7 +183,13 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
     }
 
     private inline fun spinWait(getter: () -> Any?): Any? {
-        repeat(SPINNING_LOOP_ITERATIONS_BEFORE_PARK) {
+        // Park immediately when the number of threads exceed the number of cores to avoid starvation.
+        val spinningLoopIterations = if (numberOfThreadsExceedAvailableProcessors) {
+            1
+        } else {
+            SPINNING_LOOP_ITERATIONS_BEFORE_PARK
+        }
+        repeat(spinningLoopIterations) {
             getter()?.let {
                 return it
             }
