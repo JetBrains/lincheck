@@ -88,31 +88,43 @@ For this, configure the generator for a `key: Int` parameter:
 
    ```text
    = Invalid execution results =
-   Parallel part:
+   | ---------------------------------- |
+   |    Thread 1     |     Thread 2     |
+   | ---------------------------------- |
    | add(2, 0): void | add(2, -1): void |
-   Post part:
-   [get(2): [0]]
+   | ---------------------------------- |
+   | get(2): [0]     |                  |
+   | ---------------------------------- |
    ```
+   
 6. Finally, run `modelCheckingTest()`. It fails with the following output:
 
    ```text
    = Invalid execution results =
-   Parallel part:
+   | ---------------------------------- |
+   |    Thread 1     |     Thread 2     |
+   | ---------------------------------- |
    | add(2, 0): void | add(2, -1): void |
-   Post part:
-   [get(2): [-1]]
+   | ---------------------------------- |
+   | get(2): [-1]    |                  |
+   | ---------------------------------- |
    
-   = The following interleaving leads to the error =
-   Parallel part trace:
-   |                      | add(2, -1)                                           |
-   |                      |   add(2,-1) at MultiMapTest.add(MultiMap.kt:31)      |
-   |                      |     get(2): null at MultiMap.add(MultiMap.kt:15)     |
-   |                      |     switch                                           |
-   | add(2, 0): void      |                                                      |
-   |   thread is finished |                                                      |
-   |                      |     put(2,[-1]): [0] at MultiMap.add(MultiMap.kt:17) |
-   |                      |   result: void                                       |
-   |                      |   thread is finished                                 |
+   ---
+   All operations above the horizontal line | ----- | happen before those below the line
+   ---
+
+   The following interleaving leads to the error:
+   | ---------------------------------------------------------------------- |
+   |    Thread 1     |                       Thread 2                       |
+   | ---------------------------------------------------------------------- |
+   |                 | add(2, -1)                                           |
+   |                 |   add(2,-1) at MultiMapTest.add(MultiMap.kt:31)      |
+   |                 |     get(2): null at MultiMap.add(MultiMap.kt:15)     |
+   |                 |     switch                                           |
+   | add(2, 0): void |                                                      |
+   |                 |     put(2,[-1]): [0] at MultiMap.add(MultiMap.kt:17) |
+   |                 |   result: void                                       |
+   | ---------------------------------------------------------------------- |
    ```
 
 Due to the small range of keys, Lincheck quickly reveals the race: when two values are being added concurrently by the same key, 

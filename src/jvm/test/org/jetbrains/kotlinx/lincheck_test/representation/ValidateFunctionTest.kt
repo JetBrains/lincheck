@@ -11,6 +11,8 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
@@ -38,11 +40,13 @@ class ValidateFunctionTest : VerifierState() {
     }
 
     @Test
-    fun test() = runModelCheckingTestAndCheckOutput("validation_function_failure.txt") {
+    fun test() = ModelCheckingOptions().apply {
         iterations(1)
         invocationsPerIteration(1)
         actorsBefore(3)
         actorsAfter(10)
     }
+        .checkImpl(this::class.java)
+        .checkLincheckOutput("validation_function_failure.txt")
 
 }

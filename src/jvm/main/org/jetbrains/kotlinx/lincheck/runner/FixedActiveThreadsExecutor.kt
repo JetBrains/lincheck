@@ -21,8 +21,8 @@ import java.util.concurrent.locks.*
 /**
  * This executor maintains the specified number of threads and is used by
  * [ParallelThreadsRunner] to execute [ExecutionScenario]-s. The main feature
- * is that this executor keeps the re-using threads "hot" (active) as long as
- * possible, so that they should not be parked and unparked between invocations.
+ * is that this executor keeps the re-using threads "hot" (active) as long as possible,
+ * so that they should not be parked and unparked between invocations.
  */
 internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash: Int) : Closeable {
     /**
@@ -52,36 +52,54 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
     /**
      * Submits the specified set of [tasks] to this executor
      * and waits until all of them are completed.
-     * The number of tasks should be equal to [nThreads].
      *
-     * @throws TimeoutException if more than [timeoutMs] is passed.
+     * @param tasks array of tasks to perform. Tasks should be given as instances of [TestThreadExecution] class.
+     *   Each [TestThreadExecution] object should specify [TestThreadExecution.iThread] field ---
+     *   it determines the index of the thread on which the task will be executed.
+     *   These indices should be unique and each index should be within the range of threads allocated to this executor.
+     * @param timeoutNano the timeout in nanoseconds to perform submitted tasks.
+     * @return The time in milliseconds spent on waiting for the tasks to complete.
+     * @throws TimeoutException if more than [timeoutNano] is passed.
      * @throws ExecutionException if an unexpected exception is thrown during the execution.
      */
-    fun submitAndAwait(tasks: Array<out Runnable>, timeoutMs: Long) {
-        require(tasks.size == nThreads)
+    fun submitAndAwait(tasks: Array<out TestThreadExecution>, timeoutNano: Long): Long {
+        require(tasks.all { it.iThread in 0 until nThreads}) {
+            "Submitted tasks contain thread index outside of current executor bounds."
+        }
+        require(tasks.distinctBy { it.iThread }.size == tasks.size) {
+            "Submitted tasks have duplicate thread indices."
+        }
         submitTasks(tasks)
-        await(timeoutMs)
+        return await(tasks, timeoutNano)
     }
 
-    private fun submitTasks(tasks: Array<out Any>) {
-        for (i in 0 until nThreads) {
-            results[i].value = null
-            submitTask(i, tasks[i])
+    private fun submitTasks(tasks: Array<out TestThreadExecution>) {
+        for (task in tasks) {
+            val i = task.iThread
+            submitTask(i, task)
         }
     }
 
+    private fun shutdown() {
+        // submit the shutdown tasks
+        for (i in 0 until nThreads)
+            submitTask(i, SHUTDOWN)
+    }
+
     private fun submitTask(iThread: Int, task: Any) {
+        results[iThread].value = null
         val old = tasks[iThread].getAndSet(task)
         if (old is TestThread) {
             LockSupport.unpark(old)
         }
     }
 
-    private fun await(timeoutMs: Long) {
-        val deadline = System.currentTimeMillis() + timeoutMs
+    private fun await(tasks: Array<out TestThreadExecution>, timeoutNano: Long): Long {
+        val startTime = System.nanoTime()
+        val deadline = startTime + timeoutNano
         var exception: Throwable? = null
-        for (iThread in 0 until nThreads) {
-            val e = awaitTask(iThread, deadline)
+        for (task in tasks) {
+            val e = awaitTask(task.iThread, deadline)
             if (e != null) {
                 if (exception == null) {
                     exception = e
@@ -91,6 +109,7 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
             }
         }
         exception?.let { throw ExecutionException(it) }
+        return System.nanoTime() - startTime
     }
 
     private fun awaitTask(iThread: Int, deadline: Long): Throwable? {
@@ -106,14 +125,14 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
         }
         // Park with timeout until the result is set or the timeout is passed.
         val currentThread = Thread.currentThread()
-        if (results[iThread].compareAndSet(null, Thread.currentThread())) {
+        if (results[iThread].compareAndSet(null, currentThread)) {
             while (results[iThread].value === currentThread) {
-                val timeLeft = deadline - System.currentTimeMillis()
+                val timeLeft = deadline - System.nanoTime()
                 if (timeLeft <= 0) {
                     hangDetected = true
                     throw TimeoutException()
                 }
-                LockSupport.parkNanos(timeLeft * 1_000_000)
+                LockSupport.parkNanos(timeLeft)
             }
         }
         return results[iThread].value!!
@@ -122,13 +141,15 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
     private fun testThreadRunnable(iThread: Int) = Runnable {
         loop@ while (true) {
             val task = getTask(iThread)
-            if (task == SHUTDOWN) return@Runnable
+            if (task === SHUTDOWN) return@Runnable
             tasks[iThread].value = null // reset task
-            val runnable = task as Runnable
+            val threadExecution = task as TestThreadExecution
+            check(threadExecution.iThread == iThread)
             try {
-                runnable.run()
-            } catch (e: Throwable) {
-                setResult(iThread, wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(e))
+                threadExecution.run()
+            } catch(e: Throwable) {
+                val wrapped = wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(e)
+                setResult(iThread, wrapped)
                 continue@loop
             }
             setResult(iThread, DONE)
@@ -169,17 +190,19 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
     }
 
     override fun close() {
-        // submit the shutdown task.
-        submitTasks(Array(nThreads) { SHUTDOWN })
+        shutdown()
         if (hangDetected) {
-            for (t in threads) t.stop()
+            for (thread in threads)
+                thread.stop()
         }
     }
 
-    class TestThread(val iThread: Int, val runnerHash: Int, r: Runnable) :
-        Thread(r, "FixedActiveThreadsExecutor@$runnerHash-$iThread") {
+    class TestThread(val iThread: Int, val runnerHash: Int, runnable: Runnable) :
+        Thread(runnable, "FixedActiveThreadsExecutor@$runnerHash-$iThread")
+    {
         var cont: CancellableContinuation<*>? = null
     }
+
 }
 
 private const val SPINNING_LOOP_ITERATIONS_BEFORE_PARK = 1000_000

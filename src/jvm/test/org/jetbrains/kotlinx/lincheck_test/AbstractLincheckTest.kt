@@ -11,10 +11,10 @@ package org.jetbrains.kotlinx.lincheck_test
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.junit.*
 import kotlin.reflect.*
 
@@ -64,9 +64,3 @@ abstract class AbstractLincheckTest(
 }
 
 private const val TIMEOUT = 100_000L
-
-fun checkTraceHasNoLincheckEvents(trace: String) {
-    val testPackageOccurrences = trace.split("org.jetbrains.kotlinx.lincheck_test.").size - 1
-    val lincheckPackageOccurrences = trace.split("org.jetbrains.kotlinx.lincheck.").size - 1
-    check(testPackageOccurrences == lincheckPackageOccurrences) { "Internal Lincheck events were found in the trace" }
-}

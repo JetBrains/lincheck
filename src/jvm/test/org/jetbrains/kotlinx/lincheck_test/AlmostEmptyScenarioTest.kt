@@ -10,6 +10,7 @@
 package org.jetbrains.kotlinx.lincheck_test
 
 import org.jetbrains.kotlinx.lincheck.LinChecker
+import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
 import org.junit.Assert.*
@@ -28,13 +29,15 @@ class AlmostEmptyScenarioTest {
     fun test() {
         try {
             LinChecker.check(AlmostEmptyScenarioTest::class.java)
-            fail("Should fail with AssertionError")
-        } catch (e: AssertionError) {
-            val m = e.message!!
-            assertFalse("Empty init/post parts should not be printed", m.contains(Regex("\\\\[\\s*\\\\]")))
-            assertFalse("Empty init/post parts should not be printed", m.contains(Regex("Init")))
-            assertFalse("Empty init/post parts should not be printed", m.contains(Regex("Post")))
-            assertFalse("Empty threads should not be printed", m.contains(Regex("\\|\\s*\\|")))
+            fail("Should fail with LincheckAssertionError")
+        } catch (e: LincheckAssertionError) {
+            val failedScenario = e.failure.scenario
+            assertTrue("The init part should be empty", failedScenario.initExecution.isEmpty())
+            assertTrue("The post part should be empty", failedScenario.postExecution.isEmpty())
+            assertEquals("The error should be reproduced with one thread",
+                1, failedScenario.parallelExecution.size)
+            assertEquals("The error should be reproduced with one operation",
+                1, failedScenario.parallelExecution[0].size)
         }
     }
 }

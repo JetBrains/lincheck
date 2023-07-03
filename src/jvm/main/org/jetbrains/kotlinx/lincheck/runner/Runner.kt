@@ -10,12 +10,12 @@
 package org.jetbrains.kotlinx.lincheck.runner
 
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.objectweb.asm.*
+import java.io.*
 import java.lang.reflect.*
 import java.util.concurrent.atomic.*
-import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
-import java.io.*
 
 /**
  * Runner determines how to run your concurrent test. In order to support techniques
@@ -130,6 +130,10 @@ abstract class Runner protected constructor(
         strategy.onActorStart(iThread)
     }
 
+    fun beforePart(part: ExecutionPart) {
+        strategy.beforePart(part)
+    }
+
     /**
      * Closes the resources used in this runner.
      */
@@ -140,5 +144,9 @@ abstract class Runner protected constructor(
      * Used by generated code.
      */
     val isParallelExecutionCompleted: Boolean
-        get() = completedOrSuspendedThreads.get() == scenario.threads
+        get() = completedOrSuspendedThreads.get() == scenario.nThreads
+}
+
+enum class ExecutionPart {
+    INIT, PARALLEL, POST
 }

@@ -1,37 +1,43 @@
 = Invalid execution results =
-Parallel part:
+| ------------------------------------------------------------------------------- |
+|                Thread 1                |                Thread 2                |
+| ------------------------------------------------------------------------------- |
 | operation1(): IllegalStateException #1 | operation2(): IllegalStateException #2 |
+| ------------------------------------------------------------------------------- |
 
 ---
 The number next to an exception name helps you find its stack trace provided after the interleaving section
 ---
 
-= The following interleaving leads to the error =
-Parallel part trace:
+The following interleaving leads to the error:
+| --------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                  Thread 1                                                  |                Thread 2                |
+| --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | operation1(): IllegalStateException #1                                                                     |                                        |
-|   canEnterForbiddenSection.WRITE(true) at ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:24)  |                                        |
+|   canEnterForbiddenSection.WRITE(true) at ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:26)  |                                        |
 |   switch                                                                                                   |                                        |
 |                                                                                                            | operation2(): IllegalStateException #2 |
-|                                                                                                            |   thread is finished                   |
-|   canEnterForbiddenSection.WRITE(false) at ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:25) |                                        |
+|   canEnterForbiddenSection.WRITE(false) at ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:27) |                                        |
 |   result: IllegalStateException #1                                                                         |                                        |
-|   thread is finished                                                                                       |                                        |
+| --------------------------------------------------------------------------------------------------------------------------------------------------- |
 
 Exception stack traces:
 #1: java.lang.IllegalStateException
-	at org.jetbrains.kotlinx.lincheck_test.representation.ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:26)
+	at org.jetbrains.kotlinx.lincheck_test.representation.ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:28)
 
 #2: java.lang.IllegalStateException
-	at org.jetbrains.kotlinx.lincheck_test.representation.ExceptionsInOutputTest.operation2(ExceptionsInOutputTest.kt:30)
+	at org.jetbrains.kotlinx.lincheck_test.representation.ExceptionsInOutputTest.operation2(ExceptionsInOutputTest.kt:32)
 
-Detailed parallel part trace:
+Detailed trace:
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                  Thread 1                                                  |                                                 Thread 2                                                 |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | operation1(): IllegalStateException #1                                                                     |                                                                                                          |
-|   canEnterForbiddenSection.WRITE(true) at ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:24)  |                                                                                                          |
+|   canEnterForbiddenSection.WRITE(true) at ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:26)  |                                                                                                          |
 |   switch                                                                                                   |                                                                                                          |
 |                                                                                                            | operation2(): IllegalStateException #2                                                                   |
-|                                                                                                            |   canEnterForbiddenSection.READ: true at ExceptionsInOutputTest.operation2(ExceptionsInOutputTest.kt:30) |
+|                                                                                                            |   canEnterForbiddenSection.READ: true at ExceptionsInOutputTest.operation2(ExceptionsInOutputTest.kt:32) |
 |                                                                                                            |   result: IllegalStateException #2                                                                       |
-|                                                                                                            |   thread is finished                                                                                     |
-|   canEnterForbiddenSection.WRITE(false) at ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:25) |                                                                                                          |
+|   canEnterForbiddenSection.WRITE(false) at ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:27) |                                                                                                          |
 |   result: IllegalStateException #1                                                                         |                                                                                                          |
-|   thread is finished                                                                                       |                                                                                                          |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

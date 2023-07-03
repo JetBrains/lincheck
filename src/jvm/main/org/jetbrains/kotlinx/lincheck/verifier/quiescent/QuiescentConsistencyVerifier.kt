@@ -29,14 +29,14 @@ class QuiescentConsistencyVerifier(sequentialSpecification: Class<*>) : Verifier
 
     override fun verifyResults(scenario: ExecutionScenario, results: ExecutionResult): Boolean {
         val convertedScenario = scenario.converted
-        val convertedResults = results.convert(scenario, convertedScenario.threads)
+        val convertedResults = results.convert(scenario, convertedScenario.nThreads)
         checkScenarioAndResultsAreSimilarlyConverted(convertedScenario, convertedResults)
         return linearizabilityVerifier.verifyResults(convertedScenario, convertedResults)
     }
 
     private val ExecutionScenario.converted: ExecutionScenario get() = scenarioMapping.computeIfAbsent(this) {
         val parallelExecutionConverted = ArrayList<MutableList<Actor>>()
-        repeat(threads) {
+        repeat(nThreads) {
             parallelExecutionConverted.add(ArrayList())
         }
         parallelExecution.forEachIndexed { t, threadActors ->
@@ -53,11 +53,11 @@ class QuiescentConsistencyVerifier(sequentialSpecification: Class<*>) : Verifier
 
     private fun ExecutionResult.convert(originalScenario: ExecutionScenario, newThreads: Int): ExecutionResult {
         val parallelResults = ArrayList<MutableList<ResultWithClock>>()
-        repeat(originalScenario.threads) {
+        repeat(originalScenario.nThreads) {
             parallelResults.add(ArrayList())
         }
-        val clocks = Array(originalScenario.threads) { ArrayList<IntArray>() }
-        val clockMapping = Array(originalScenario.threads) { ArrayList<Int>() }
+        val clocks = Array(originalScenario.nThreads) { ArrayList<IntArray>() }
+        val clockMapping = Array(originalScenario.nThreads) { ArrayList<Int>() }
         clockMapping.forEach { it.add(-1) }
         originalScenario.parallelExecution.forEachIndexed { t, threadActors ->
             threadActors.forEachIndexed { i, a ->
@@ -75,7 +75,7 @@ class QuiescentConsistencyVerifier(sequentialSpecification: Class<*>) : Verifier
         }
         clocks.forEachIndexed { t, threadClocks ->
             threadClocks.forEachIndexed { i, c ->
-                for (j in 0 until originalScenario.threads) {
+                for (j in 0 until originalScenario.nThreads) {
                     val old = parallelResultsWithClock[t][i].clockOnStart[j]
                     c[j] = if (old == -1) -1 else clockMapping[j][old]
                 }
@@ -94,7 +94,7 @@ class QuiescentConsistencyVerifier(sequentialSpecification: Class<*>) : Verifier
         check(scenario.parallelExecution.size == results.parallelResultsWithClock.size) {
             "Transformed scenario and results have different number of parallel threads"
         }
-        for (t in 0 until scenario.threads) {
+        for (t in 0 until scenario.nThreads) {
             check(scenario.parallelExecution[t].size == results.parallelResultsWithClock[t].size) {
                 "Transformed scenario and resutls have different number of operations in thread $t"
             }

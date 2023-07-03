@@ -40,15 +40,11 @@ class LinearizabilityContext : VerifierContext {
         // in accordance with the rule that all actors from init part should be
         // executed at first, after that all actors from parallel part, and
         // all actors from post part should be executed at last.
-        val legal = when (threadId) {
-            0 -> true // INIT: we already checked that there is an unprocessed actorWithToken
-            in 1..scenario.threads -> isCompleted(0) && hblegal(threadId) // PARALLEL
-            else -> initCompleted && parallelCompleted // POST
-        }
-        if (!legal) return null
+        if (!hblegal(threadId))
+            return null
         val actorId = executed[threadId]
-        val actor = scenario[threadId][actorId]
-        val expectedResult = results[threadId][actorId]
+        val actor = scenario.threads[threadId][actorId]
+        val expectedResult = results.threadsResults[threadId][actorId]
         // Check whether the operation has been suspended and should be followed by cancellation
         val ticket = tickets[threadId]
         val promptCancel = actor.promptCancellation && ticket != NO_TICKET && expectedResult === Cancelled
@@ -65,9 +61,9 @@ class LinearizabilityContext : VerifierContext {
     // checks whether the transition does not violate the happens-before relation constructed on the clocks
     private fun hblegal(threadId: Int): Boolean {
         val actorId = executed[threadId]
-        val clocks = results.parallelResultsWithClock[threadId - 1][actorId].clockOnStart
-        for (i in 1..scenario.threads) {
-            if (executed[i] < clocks[i - 1]) return false
+        val clocks = results.threadsResultsWithClock[threadId][actorId].clockOnStart
+        for (i in 0 until scenario.nThreads) {
+            if (executed[i] < clocks[i]) return false
         }
         return true
     }

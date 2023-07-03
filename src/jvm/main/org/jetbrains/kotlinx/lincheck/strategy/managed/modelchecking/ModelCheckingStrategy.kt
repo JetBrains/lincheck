@@ -10,6 +10,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
@@ -87,7 +88,21 @@ internal class ModelCheckingStrategy(
         super.initializeInvocation()
     }
 
-    override fun chooseThread(iThread: Int): Int = currentInterleaving.chooseThread(iThread)
+    override fun beforePart(part: ExecutionPart) {
+        currentThread = when (part) {
+            ExecutionPart.INIT -> 0
+            ExecutionPart.PARALLEL -> currentInterleaving.chooseThread(0)
+            ExecutionPart.POST -> 0
+        }
+    }
+
+    override fun chooseThread(iThread: Int): Int =
+        currentInterleaving.chooseThread(iThread).also {
+           check(it in switchableThreads(iThread)) { """
+               Trying to switch the execution to thread $it,
+               but only the following threads are eligible to switch: ${switchableThreads(iThread)}
+           """.trimIndent() }
+        }
 
     /**
      * An abstract node with an execution choice in the interleaving tree.
@@ -232,9 +247,7 @@ internal class ModelCheckingStrategy(
         fun chooseThread(iThread: Int): Int =
             if (nextThreadToSwitch.hasNext()) {
                 // Use the predefined choice.
-                val result = nextThreadToSwitch.next()
-                check(result in switchableThreads(iThread))
-                result
+                nextThreadToSwitch.next()
             } else {
                 // There is no predefined choice.
                 // This can happen if there were forced thread switches after the last predefined one

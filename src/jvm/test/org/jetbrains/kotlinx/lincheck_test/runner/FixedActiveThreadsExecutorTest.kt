@@ -17,10 +17,10 @@ class FixedActiveThreadsExecutorTest {
     @Test
     fun testSubmit() = FixedActiveThreadsExecutor(2, 0).use { executor ->
         val executed = arrayOf(false, false)
-        val tasks = Array<TestThreadExecution>(2) {
-            object : TestThreadExecution() {
+        val tasks = Array<TestThreadExecution>(2) { iThread ->
+            object : TestThreadExecution(iThread) {
                 override fun run() {
-                    executed[it] = true
+                    executed[iThread] = true
                 }
             }
         }
@@ -31,10 +31,10 @@ class FixedActiveThreadsExecutorTest {
     @Test
     fun testResubmit() = FixedActiveThreadsExecutor(2, 0).use { executor ->
         val executed = arrayOf(false, false)
-        val tasks = Array<TestThreadExecution>(2) {
-            object : TestThreadExecution() {
+        val tasks = Array<TestThreadExecution>(2) { iThread ->
+            object : TestThreadExecution(iThread) {
                 override fun run() {
-                    executed[it] = true
+                    executed[iThread] = true
                 }
             }
         }
@@ -47,7 +47,11 @@ class FixedActiveThreadsExecutorTest {
     @Test(timeout = 100_000)
     fun testSubmitTimeout() = FixedActiveThreadsExecutor(2, 0).use { executor ->
         val tasks = Array<TestThreadExecution>(2) { iThread ->
-            object : TestThreadExecution() {
+            object : TestThreadExecution(iThread) {
+                init {
+                    this.iThread = iThread
+                }
+
                 override fun run() {
                     if (iThread == 1)
                         while (true);

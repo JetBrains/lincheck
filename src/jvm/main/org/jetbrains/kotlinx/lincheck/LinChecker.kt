@@ -101,35 +101,14 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
 
     private fun ExecutionScenario.tryMinimize(testCfg: CTestConfiguration): LincheckFailure? {
         // Reversed indices to avoid conflicts with in-loop removals
-        for (i in parallelExecution.indices.reversed()) {
-            for (j in parallelExecution[i].indices.reversed()) {
-                val failure = tryMinimize(i + 1, j, testCfg)
-                if (failure != null) return failure
+        for (i in threads.indices.reversed()) {
+            for (j in threads[i].indices.reversed()) {
+                tryMinimize(i, j)
+                    ?.run(testCfg, testCfg.createVerifier())
+                    ?.let { return it }
             }
         }
-        for (j in initExecution.indices.reversed()) {
-            val failure = tryMinimize(0, j, testCfg)
-            if (failure != null) return failure
-        }
-        for (j in postExecution.indices.reversed()) {
-            val failure = tryMinimize(threads + 1, j, testCfg)
-            if (failure != null) return failure
-        }
         return null
-    }
-
-    private fun ExecutionScenario.tryMinimize(threadId: Int, position: Int, testCfg: CTestConfiguration): LincheckFailure? {
-        val newScenario = this.copy()
-        val actors = newScenario[threadId] as MutableList<Actor>
-        actors.removeAt(position)
-        if (actors.isEmpty() && threadId != 0 && threadId != newScenario.threads + 1) {
-            // Also remove the empty thread
-            newScenario.parallelExecution.removeAt(threadId - 1)
-        }
-        return if (newScenario.isValid) {
-            val verifier = testCfg.createVerifier()
-            newScenario.run(testCfg, verifier)
-        } else null
     }
 
     private fun ExecutionScenario.run(testCfg: CTestConfiguration, verifier: Verifier): LincheckFailure? =
@@ -140,38 +119,6 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             stateRepresentationMethod = testStructure.stateRepresentation,
             verifier = verifier
         ).run()
-
-    private fun ExecutionScenario.copy() = ExecutionScenario(
-        ArrayList(initExecution),
-        parallelExecution.map { ArrayList(it) },
-        ArrayList(postExecution)
-    )
-
-    private val ExecutionScenario.isValid: Boolean
-        get() = !isParallelPartEmpty &&
-                (!hasSuspendableActors() || (!hasSuspendableActorsInInitPart && !hasPostPartAndSuspendableActors))
-
-    private fun ExecutionScenario.validate() {
-        require(!isParallelPartEmpty) {
-            "The generated scenario has empty parallel part"
-        }
-        if (hasSuspendableActors()) {
-            require(!hasSuspendableActorsInInitPart) {
-                "The generated scenario for the test class with suspendable methods contains suspendable actors in initial part"
-            }
-            require(!hasPostPartAndSuspendableActors) {
-                "The generated scenario  for the test class with suspendable methods has non-empty post part"
-            }
-        }
-    }
-
-    private val ExecutionScenario.hasSuspendableActorsInInitPart get() =
-        initExecution.stream().anyMatch(Actor::isSuspendable)
-    private val ExecutionScenario.hasPostPartAndSuspendableActors get() =
-        (parallelExecution.stream().anyMatch { actors -> actors.stream().anyMatch { it.isSuspendable } } && postExecution.size > 0)
-    private val ExecutionScenario.isParallelPartEmpty get() =
-        parallelExecution.map { it.size }.sum() == 0
-
 
     private fun CTestConfiguration.createVerifier() =
         verifierClass.getConstructor(Class::class.java).newInstance(sequentialSpecification)

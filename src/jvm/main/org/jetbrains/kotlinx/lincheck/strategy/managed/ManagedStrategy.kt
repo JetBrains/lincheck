@@ -39,10 +39,10 @@ abstract class ManagedStrategy(
     private val testCfg: ManagedCTestConfiguration
 ) : Strategy(scenario), Closeable {
     // The number of parallel threads.
-    protected val nThreads: Int = scenario.parallelExecution.size
+    protected val nThreads: Int = scenario.nThreads
     // Runner for scenario invocations,
     // can be replaced with a new one for trace construction.
-    private var runner: Runner
+    private var runner: ManagedStrategyRunner
     // Shares location ids between class transformers in order
     // to keep them different in different code locations.
     private val codeLocationIdProvider = CodeLocationIdProvider()
@@ -104,7 +104,7 @@ abstract class ManagedStrategy(
         }
     }
 
-    private fun createRunner(): Runner =
+    private fun createRunner(): ManagedStrategyRunner =
         ManagedStrategyRunner(this, testClass, validationFunctions, stateRepresentationFunction, testCfg.timeoutMs, UseClocks.ALWAYS)
 
     override fun createTransformer(cv: ClassVisitor): ClassVisitor = ManagedStrategyTransformer(
@@ -243,12 +243,12 @@ abstract class ManagedStrategy(
     }
 
     private val curActorIsBlocking: Boolean
-        get() = scenario.parallelExecution[currentThread][currentActorId[currentThread]].blocking
+        get() = scenario.threads[currentThread][currentActorId[currentThread]].blocking
 
     private val concurrentActorCausesBlocking: Boolean
         get() = currentActorId.mapIndexed { iThread, actorId ->
                     if (iThread != currentThread && !finished[iThread])
-                        scenario.parallelExecution[iThread][actorId]
+                        scenario.threads[iThread][actorId]
                     else null
                 }.filterNotNull().any { it.causesBlocking }
 
@@ -310,9 +310,10 @@ abstract class ManagedStrategy(
     open fun onFinish(iThread: Int) {
         awaitTurn(iThread)
         finished[iThread] = true
-        traceCollector?.finishThread(iThread)
         loopDetector.onThreadFinish(iThread)
         doSwitchCurrentThread(iThread = iThread, mustSwitch = true)
+        // delay thread finish trace point for 1st thread if there exists post part
+        doSwitchCurrentThread(iThread, true)
     }
 
     /**
@@ -412,7 +413,10 @@ abstract class ManagedStrategy(
     /**
      * Threads to which an execution can be switched from thread [iThread].
      */
-    protected fun switchableThreads(iThread: Int) = (0 until nThreads).filter { it != iThread && isActive(it) }
+    protected fun switchableThreads(iThread: Int) =
+        if (runner.currentExecutionPart == ExecutionPart.PARALLEL)
+            (0 until nThreads).filter { it != iThread && isActive(it) }
+        else listOf()
 
     private fun isTestThread(iThread: Int) = iThread < nThreads
 
@@ -421,7 +425,10 @@ abstract class ManagedStrategy(
      * Additionally, after [ForcibleExecutionFinishException] everything is ignored.
      */
     private fun inIgnoredSection(iThread: Int): Boolean =
-        !isTestThread(iThread) || ignoredSectionDepth[iThread] > 0 || suddenInvocationResult != null
+        !isTestThread(iThread) ||
+            ignoredSectionDepth[iThread] > 0 ||
+            suddenInvocationResult != null
+
 
     // == LISTENING METHODS ==
 
@@ -677,8 +684,7 @@ abstract class ManagedStrategy(
 
     private fun <T : TracePoint> doCreateTracePoint(constructor: (iThread: Int, actorId: Int, CallStackTrace) -> T): T {
         val iThread = currentThreadNumber()
-        // use any actor id for non-test threads
-        val actorId = if (!isTestThread(iThread)) Int.MIN_VALUE else currentActorId[iThread]
+        val actorId = currentActorId.getOrElse(iThread) { Int.MIN_VALUE }
         return constructor(iThread, actorId, callStackTrace.getOrNull(iThread)?.toList() ?: emptyList())
     }
 

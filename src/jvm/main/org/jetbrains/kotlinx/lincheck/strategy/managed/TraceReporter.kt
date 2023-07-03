@@ -11,67 +11,56 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.strategy.*
 import java.util.*
 import kotlin.math.*
 
 @Synchronized // we should avoid concurrent executions to keep `objectNumeration` consistent
 internal fun StringBuilder.appendTrace(
-    failure: LincheckFailure,
+    scenario: ExecutionScenario,
     results: ExecutionResult?,
     trace: Trace,
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
 ) {
-    val startTraceGraphNode = constructTraceGraph(failure.scenario, results, trace, exceptionStackTraces)
+    val startTraceGraphNode = constructTraceGraph(scenario, results, trace, exceptionStackTraces)
 
-    appendShortTrace(startTraceGraphNode, failure)
+    appendShortTrace(startTraceGraphNode, scenario)
     appendExceptionsStackTracesBlock(exceptionStackTraces)
-    appendDetailedTrace(startTraceGraphNode, failure)
+    appendDetailedTrace(startTraceGraphNode, scenario)
 
     objectNumeration.clear() // clear the numeration at the end to avoid memory leaks
 }
 
-private fun StringBuilder.appendDetailedTrace(
-    startTraceGraphNode: TraceNode?,
-    failure: LincheckFailure
-) {
-    appendln(DETAILED_PARALLEL_PART_TITLE)
-    val traceRepresentationVerbose = traceGraphToRepresentationList(startTraceGraphNode, true)
-    appendTraceRepresentation(failure.scenario, traceRepresentationVerbose)
-    if (failure is DeadlockWithDumpFailure) {
-        appendln()
-        appendLine(ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE)
-    }
-}
-
 private fun StringBuilder.appendShortTrace(
     startTraceGraphNode: TraceNode?,
-    failure: LincheckFailure
+    scenario: ExecutionScenario
 ) {
-    appendln(PARALLEL_PART_TITLE)
     val traceRepresentation = traceGraphToRepresentationList(startTraceGraphNode, false)
-    appendTraceRepresentation(failure.scenario, traceRepresentation)
-    appendln()
-    if (failure is DeadlockWithDumpFailure) {
-        appendLine(ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE)
-    }
-    appendln()
+    appendLine(TRACE_TITLE)
+    appendTraceRepresentation(scenario, traceRepresentation)
+    appendLine()
+}
+
+private fun StringBuilder.appendDetailedTrace(
+    startTraceGraphNode: TraceNode?,
+    scenario: ExecutionScenario
+) {
+    appendLine(DETAILED_TRACE_TITLE)
+    val traceRepresentationVerbose = traceGraphToRepresentationList(startTraceGraphNode, true)
+    appendTraceRepresentation(scenario, traceRepresentationVerbose)
 }
 
 private fun StringBuilder.appendTraceRepresentation(
     scenario: ExecutionScenario,
     traceRepresentation: List<TraceEventRepresentation>
 ) {
-    val traceRepresentationSplitted = splitToColumns(scenario.threads, traceRepresentation)
-    append(printInColumnsCustom(traceRepresentationSplitted) {
-        StringBuilder().apply {
-            for (i in it.indices) {
-                append(if (i == 0) "| " else " | ")
-                append(it[i])
-            }
-            append(" |")
-        }.toString()
-    })
+    val traceRepresentationSplitted = splitToColumns(scenario.nThreads, traceRepresentation)
+    with(ExecutionLayout(listOf(), traceRepresentationSplitted, listOf())) {
+        appendSeparatorLine()
+        appendHeader()
+        appendSeparatorLine()
+        appendColumns(traceRepresentationSplitted)
+        appendSeparatorLine()
+    }
 }
 
 /**
@@ -103,13 +92,15 @@ private fun splitToColumns(nThreads: Int, traceRepresentation: List<TraceEventRe
 private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionResult?, trace: Trace, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): TraceNode? {
     val tracePoints = trace.trace
     // last events that were executed for each thread. It is either thread finish events or events before crash
-    val lastExecutedEvents = IntArray(scenario.threads) { iThread ->
+    val lastExecutedEvents = IntArray(scenario.nThreads) { iThread ->
         tracePoints.mapIndexed { i, e -> Pair(i, e) }.lastOrNull { it.second.iThread == iThread }?.first ?: -1
     }
     // last actor that was handled for each thread
-    val lastHandledActor = IntArray(scenario.threads) { -1 }
+    val lastHandledActor = IntArray(scenario.nThreads) { -1 }
     // actor nodes for each actor in each thread
-    val actorNodes = Array(scenario.threads) { Array<ActorNode?>(scenario.parallelExecution[it].size) { null } }
+    val actorNodes = Array(scenario.nThreads) { i ->
+        Array<ActorNode?>(scenario.threads[i].size) { null }
+    }
     // call nodes for each method call
     val callNodes = mutableMapOf<Int, CallNode>()
     // all trace nodes in order corresponding to `tracePoints`
@@ -120,7 +111,7 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
         val iThread = event.iThread
         val actorId = event.actorId
         // add all actors that started since the last event
-        while (lastHandledActor[iThread] < min(actorId, scenario.parallelExecution[iThread].lastIndex)) {
+        while (lastHandledActor[iThread] < min(actorId, scenario.threads[iThread].lastIndex)) {
             val nextActor = ++lastHandledActor[iThread]
             // create new actor node actor
             val actorNode = traceGraphNodes.createAndAppend { lastNode ->
@@ -129,7 +120,7 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
                     iThread = iThread,
                     last = lastNode,
                     callDepth = 0,
-                    actor = scenario.parallelExecution[iThread][nextActor],
+                    actor = scenario.threads[iThread][nextActor],
                     resultRepresentation = result?.let { actorNodeResultRepresentation(result, exceptionStackTraces) }
                 )
             }
@@ -137,36 +128,27 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
             traceGraphNodes.add(actorNode)
         }
         // add the event
-        when (event) {
-            // simpler code for FinishEvent, because it does not have actorId or callStackTrace
-            is FinishThreadTracePoint -> traceGraphNodes.createAndAppend { lastNode ->
-                TraceLeafEvent(iThread, lastNode, 1, event)
-            }
-
-            else -> {
-                var innerNode: TraceInnerNode = actorNodes[iThread][actorId]!!
-                for (call in event.callStackTrace) {
-                    val callId = call.identifier
-                    // Switch events that happen as a first event of the method are lifted out of the method in the trace
-                    if (!callNodes.containsKey(callId) && event is SwitchEventTracePoint) break
-                    val callNode = callNodes.computeIfAbsent(callId) {
-                        // create a new call node if needed
-                        val result = traceGraphNodes.createAndAppend { lastNode ->
-                            CallNode(iThread, lastNode, innerNode.callDepth + 1, call.call)
-                        }
-                        // make it a child of the previous node
-                        innerNode.addInternalEvent(result)
-                        result
-                    }
-                    innerNode = callNode
+        var innerNode: TraceInnerNode = actorNodes[iThread][actorId]!!
+        for (call in event.callStackTrace) {
+            val callId = call.identifier
+            // Switch events that happen as a first event of the method are lifted out of the method in the trace
+            if (!callNodes.containsKey(callId) && event is SwitchEventTracePoint) break
+            val callNode = callNodes.computeIfAbsent(callId) {
+                // create a new call node if needed
+                val result = traceGraphNodes.createAndAppend { lastNode ->
+                    CallNode(iThread, lastNode, innerNode.callDepth + 1, call.call)
                 }
-                val isLastExecutedEvent = eventId == lastExecutedEvents[iThread]
-                val node = traceGraphNodes.createAndAppend { lastNode ->
-                    TraceLeafEvent(iThread, lastNode, innerNode.callDepth + 1, event, isLastExecutedEvent)
-                }
-                innerNode.addInternalEvent(node)
+                // make it a child of the previous node
+                innerNode.addInternalEvent(result)
+                result
             }
+            innerNode = callNode
         }
+        val isLastExecutedEvent = eventId == lastExecutedEvents[iThread]
+        val node = traceGraphNodes.createAndAppend { lastNode ->
+            TraceLeafEvent(iThread, lastNode, innerNode.callDepth + 1, event, isLastExecutedEvent)
+        }
+        innerNode.addInternalEvent(node)
     }
     // add an ActorResultNode to each actor, because did not know where actor ends before
     for (iThread in actorNodes.indices)
@@ -186,7 +168,7 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
 }
 
 private operator fun ExecutionResult?.get(iThread: Int, actorId: Int): Result? =
-    if (this == null) null else this.parallelResults[iThread][actorId]
+    this?.threadsResults?.get(iThread)?.get(actorId)
 
 /**
  * Create a new trace node and add it to the end of the list.
@@ -245,11 +227,19 @@ private class TraceLeafEvent(
     private val event: TracePoint,
     private val lastExecutedEvent: Boolean = false
 ) : TraceNode(iThread, last, callDepth) {
+
     override val lastState: String? =
         if (event is StateRepresentationTracePoint) event.stateRepresentation else null
+
     override val lastInternalEvent: TraceNode = this
+
+    private val TracePoint.isBlocking: Boolean get() = when (this) {
+        is MonitorEnterTracePoint, is WaitTracePoint, is ParkTracePoint -> true
+        else -> false
+    }
+
     override fun shouldBeExpanded(verboseTrace: Boolean): Boolean {
-        return lastExecutedEvent || event is SwitchEventTracePoint || verboseTrace
+        return (lastExecutedEvent && event.isBlocking) || event is SwitchEventTracePoint || verboseTrace
     }
 
     override fun addRepresentationTo(
@@ -269,9 +259,10 @@ private abstract class TraceInnerNode(iThread: Int, last: TraceNode?, callDepth:
     override val lastInternalEvent: TraceNode
         get() = if (internalEvents.isEmpty()) this else internalEvents.last().lastInternalEvent
 
-    override fun shouldBeExpanded(verboseTrace: Boolean): Boolean {
-        return internalEvents.any { it.shouldBeExpanded(verboseTrace) }
-    }
+    override fun shouldBeExpanded(verboseTrace: Boolean) =
+        internalEvents.any {
+            it.shouldBeExpanded(verboseTrace)
+        }
 
     private val internalEvents = mutableListOf<TraceNode>()
 
@@ -363,6 +354,5 @@ internal fun getObjectNumber(clazz: Class<Any>, obj: Any): Int = objectNumeratio
 
 private val objectNumeration = WeakHashMap<Class<Any>, MutableMap<Any, Int>>()
 
-const val DETAILED_PARALLEL_PART_TITLE = "Detailed parallel part trace:"
-const val PARALLEL_PART_TITLE = "Parallel part trace:"
-private const val ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE = "All unfinished threads are in deadlock"
+const val TRACE_TITLE = "The following interleaving leads to the error:"
+const val DETAILED_TRACE_TITLE = "Detailed trace:"

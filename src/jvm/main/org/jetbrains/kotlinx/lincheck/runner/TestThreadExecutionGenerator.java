@@ -33,7 +33,6 @@ public class TestThreadExecutionGenerator {
 
     private static final Type CLASS_TYPE = getType(Class.class);
     private static final Type OBJECT_TYPE = getType(Object.class);
-    private static final Method OBJECT_GET_CLASS = new Method("getClass", CLASS_TYPE, NO_ARGS);
     private static final Type OBJECT_ARRAY_TYPE = getType(Object[].class);
     private static final Type THROWABLE_TYPE = getType(Throwable.class);
     private static final Method EMPTY_CONSTRUCTOR = new Method("<init>", VOID_TYPE, NO_ARGS);
@@ -101,6 +100,7 @@ public class TestThreadExecutionGenerator {
                 generateClass(internalClassName, getType(runner.getTestClass()), iThread, actors, objArgs, completions, scenarioContainsSuspendableActors));
         try {
             TestThreadExecution execution = clz.newInstance();
+            execution.iThread = iThread;
             execution.runner = runner;
             execution.objArgs = objArgs.toArray();
             return execution;
