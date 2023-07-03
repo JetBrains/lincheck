@@ -834,6 +834,9 @@ abstract class ManagedStrategy(
                 findMaxPrefixLengthWithNoCycleOnSuffix(currentInterleavingHistory)?.let { it.executionsBeforeCycle + it.cyclePeriod }
                     ?: currentInterleavingHistory.size
             val spinCycleInterleavingHistory = currentInterleavingHistory.take(contextSwitchesBeforeHalt)
+            // Remove references to interleaving tree
+            interleavingsLeadToSpinLockSet.clear()
+            loopTrackingCursor.clear()
 
             replayModeLoopDetectorHelper = ReplayModeLoopDetectorHelper(
                 interleavingHistory = spinCycleInterleavingHistory,
@@ -1000,6 +1003,9 @@ abstract class ManagedStrategy(
         private val threadsRan = hashSetOf<Int>()
 
         fun initialize(startThread: Int) {
+            currentInterleavingNodeIndex = 0
+            executionsPerformedInCurrentThread = 0
+            threadsRan.clear()
             threadsRan.add(startThread)
         }
 

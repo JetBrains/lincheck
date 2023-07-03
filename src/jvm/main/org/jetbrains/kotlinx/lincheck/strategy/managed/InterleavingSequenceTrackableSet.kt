@@ -473,6 +473,18 @@ internal class InterleavingSequenceTrackableSet {
         private fun invalidate() {
             currentNode = null
         }
+
+        /**
+         * Used to delete interleaving tree node reference when we do replays of interleaving in Plugin
+         */
+        fun clear() = invalidate()
+    }
+
+    /**
+     * Used to delete interleaving tree references when we do replays of interleaving in Plugin
+     */
+    fun clear() {
+        rootTransitions.clear()
     }
 
 }
