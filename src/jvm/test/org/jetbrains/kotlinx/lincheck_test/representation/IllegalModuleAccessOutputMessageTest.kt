@@ -11,12 +11,12 @@
 package org.jetbrains.kotlinx.lincheck_test.representation
 
 import kotlinx.atomicfu.*
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.checkImpl
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.annotations.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.util.InternalLincheckExceptionEmulator.throwException
 import org.jetbrains.kotlinx.lincheck_test.util.*
-import org.junit.Test
+import org.junit.*
 
 /**
  * This test checks that hint about classes not accessible from unnamed modules
@@ -43,8 +43,5 @@ class IllegalModuleAccessOutputMessageTest {
     @Test
     fun test() = ModelCheckingOptions()
         .checkImpl(this::class.java)
-        .checkLincheckOutput("illegal_module_access.txt",
-            linesToRemoveRegex = TEST_EXECUTION_TRACE_ELEMENT_REGEX
-        )
-
+        .checkLincheckOutput("illegal_module_access.txt")
 }

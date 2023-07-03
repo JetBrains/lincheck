@@ -10,12 +10,12 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.checkImpl
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.annotations.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.util.InternalLincheckExceptionEmulator.throwException
 import org.jetbrains.kotlinx.lincheck_test.util.*
-import org.junit.Test
+import org.junit.*
 
 /**
  * This test checks that if exception is thrown from the Lincheck itself, it will be reported properly.
@@ -43,8 +43,5 @@ class InternalLincheckBugTest {
         actorsPerThread(2)
     }
         .checkImpl(this::class.java)
-        .checkLincheckOutput("internal_bug_report.txt",
-            linesToRemoveRegex = TEST_EXECUTION_TRACE_ELEMENT_REGEX,
-        )
-
+        .checkLincheckOutput("internal_bug_report.txt")
 }
