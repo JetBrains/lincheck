@@ -14,8 +14,9 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.guide.MSQueueBlocking
-import org.jetbrains.kotlinx.lincheck_test.util.runModelCheckingTestAndCheckOutput
+import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReferenceArray
@@ -34,9 +35,11 @@ class ObstructionFreedomViolationEventsCutTest {
     fun dequeue(): Int? = q.dequeue()
 
     @Test
-    fun runModelCheckingTest() = runModelCheckingTestAndCheckOutput("obstruction_freedom_violation_events_cut.txt") {
-        checkObstructionFreedom(true)
-    }
+    fun runModelCheckingTest() = ModelCheckingOptions()
+        .checkObstructionFreedom(true)
+        .checkImpl(this::class.java)
+        .checkLincheckOutput("obstruction_freedom_violation_events_cut.txt")
+
 }
 
 /**
@@ -158,9 +161,10 @@ abstract class AbstractSpinLivelockTest {
     abstract fun meaninglessActions()
 
     @Test
-    fun testWithModelCheckingStrategy() = runModelCheckingTestAndCheckOutput(outputFileName) {
-        minimizeFailedScenario(false)
-    }
+    fun testWithModelCheckingStrategy() = ModelCheckingOptions()
+        .minimizeFailedScenario(false)
+        .checkImpl(this::class.java)
+        .checkLincheckOutput(outputFileName)
 }
 
 /**
@@ -191,12 +195,14 @@ class SpinlockInIncorrectResultsWithClocksTest {
     fun d(): Int = 0 // cannot return 0, should fail
 
     @Test
-    fun test() = runModelCheckingTestAndCheckOutput("spin_lock_in_incorrect_results_failure.txt") {
-        executionGenerator(ClocksTestScenarioGenerator::class.java)
-        iterations(1)
-        sequentialSpecification(ClocksTestSequential::class.java)
-        minimizeFailedScenario(false)
-    }
+    fun test() = ModelCheckingOptions()
+        .executionGenerator(ClocksTestScenarioGenerator::class.java)
+        .iterations(1)
+        .sequentialSpecification(ClocksTestSequential::class.java)
+        .minimizeFailedScenario(false)
+        .checkImpl(this::class.java)
+        .checkLincheckOutput("spin_lock_in_incorrect_results_failure.txt")
+
 
     /**
      * @param randomProvider is required by scenario generator contract

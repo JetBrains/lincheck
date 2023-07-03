@@ -90,6 +90,8 @@ abstract class ManagedStrategy(
     // used on resumption, and the trace point before and after the suspension
     // correspond to the same method call in the trace.
     private val suspendedFunctionsStack = Array(nThreads) { mutableListOf<Int>() }
+    // Current execution part
+    protected lateinit var executionPart: ExecutionPart
 
     init {
         runner = createRunner()
@@ -311,8 +313,6 @@ abstract class ManagedStrategy(
         awaitTurn(iThread)
         finished[iThread] = true
         loopDetector.onThreadFinish(iThread)
-        doSwitchCurrentThread(iThread = iThread, mustSwitch = true)
-        // delay thread finish trace point for 1st thread if there exists post part
         doSwitchCurrentThread(iThread, true)
     }
 
@@ -827,6 +827,8 @@ abstract class ManagedStrategy(
 
         private var totalExecutionsCount = 0
 
+        private val firstThreadSet: Boolean get() = lastExecutedThread != -1
+
         /**
          * Delegate helper, active in replay (trace collection) mode.
          * It just tracks executions and switches and helps to halt execution or switch in case of spin-lock early.
@@ -896,21 +898,6 @@ abstract class ManagedStrategy(
             onNextExecutionPoint(executionIdentity = -iThread)
         }
 
-        /**
-         * Is called before each interleaving processing
-         */
-        fun initialize(iThread: Int) {
-            lastExecutedThread = iThread // certain last thread
-            currentThreadCodeLocationVisitCountMap.clear()
-            currentThreadCodeLocationsHistory.clear()
-            totalExecutionsCount = 0
-
-            loopTrackingCursor.reset(iThread)
-            currentInterleavingHistory.clear()
-            currentInterleavingHistory.add(InterleavingHistoryNode(threadId = iThread))
-            replayModeLoopDetectorHelper?.initialize(iThread)
-        }
-
         private fun onNextThreadSwitchPoint(nextThread: Int) {
             if (currentInterleavingHistory.isNotEmpty() && currentInterleavingHistory.last().threadId == nextThread) {
                 return
@@ -969,6 +956,37 @@ abstract class ManagedStrategy(
             currentInterleavingHistory[currentInterleavingHistory.lastIndex] = cycleStateLastNode
             interleavingsLeadToSpinLockSet.addBranch(currentInterleavingHistory)
         }
+
+        /**
+         * Is called before each interleaving part processing
+         */
+        fun beforePart(nextThread: Int) {
+            if (!firstThreadSet) {
+                setFirstThread(nextThread)
+            } else if (lastExecutedThread != nextThread) {
+                onThreadSwitch(nextThread)
+            }
+        }
+
+        /**
+         * Is called before each interleaving processing
+         */
+        fun initialize() {
+            lastExecutedThread = -1
+        }
+
+        private fun setFirstThread(iThread: Int) {
+            lastExecutedThread = iThread // certain last thread
+            currentThreadCodeLocationVisitCountMap.clear()
+            currentThreadCodeLocationsHistory.clear()
+            totalExecutionsCount = 0
+
+            loopTrackingCursor.reset(iThread)
+            currentInterleavingHistory.clear()
+            currentInterleavingHistory.add(InterleavingHistoryNode(threadId = iThread))
+            replayModeLoopDetectorHelper?.initialize(iThread)
+        }
+
     }
 
     /**
@@ -1012,7 +1030,9 @@ abstract class ManagedStrategy(
             currentInterleavingNodeIndex = 0
             executionsPerformedInCurrentThread = 0
             threadsRan.clear()
-            threadsRan.add(startThread)
+            if (executionPart == ExecutionPart.PARALLEL) {
+                threadsRan.add(startThread) // newSwitchPoint method is not called before methods in INIT and POST parts
+            }
         }
 
         /**
@@ -1036,7 +1056,11 @@ abstract class ManagedStrategy(
         fun onNextSwitch(nextThread: Int) {
             currentInterleavingNodeIndex++
             // See threadsRan field description to understand the following initialization logic
-            executionsPerformedInCurrentThread = if (threadsRan.add(nextThread)) 0 else 1
+            executionsPerformedInCurrentThread = if (executionPart != ExecutionPart.PARALLEL) {
+                0 // newSwitchPoint method is not called before methods in INIT and POST parts
+            } else {
+                if (executionPart != ExecutionPart.PARALLEL || threadsRan.add(nextThread)) 0 else 1
+            }
         }
 
         private fun checkFailDueToDeadlock(shouldSwitchThread: Boolean) {

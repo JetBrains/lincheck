@@ -48,13 +48,15 @@ class ObstructionFreedomActiveLockRepresentationTest : VerifierState() {
     override fun extractState(): Any = counter.get()
 
     @Test
-    fun test() = runModelCheckingTestAndCheckOutput("obstruction_freedom_violation_with_no_detected_cycle.txt") {
-        actorsPerThread(1)
-        actorsBefore(0)
-        actorsAfter(0)
-        threads(1)
-        checkObstructionFreedom(true)
-    }
+    fun test() = ModelCheckingOptions()
+        .actorsPerThread(1)
+        .actorsBefore(0)
+        .actorsAfter(0)
+        .threads(1)
+        .checkObstructionFreedom(true)
+        .checkImpl(this::class.java)
+        .checkLincheckOutput("obstruction_freedom_violation_with_no_detected_cycle.txt")
+
 }
 
 /**
