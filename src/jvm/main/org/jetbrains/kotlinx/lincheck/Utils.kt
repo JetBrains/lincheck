@@ -18,13 +18,11 @@ import org.objectweb.asm.*
 import org.objectweb.asm.commons.*
 import java.io.*
 import java.lang.ref.*
-import java.lang.reflect.InvocationTargetException
+import java.lang.reflect.*
 import java.lang.reflect.Method
 import java.util.*
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
-import kotlin.reflect.full.*
-import kotlin.reflect.jvm.*
 
 
 fun chooseSequentialSpecification(sequentialSpecificationByUser: Class<*>?, testClass: Class<*>): Class<*> =
@@ -104,6 +102,7 @@ private fun executeValidationFunction(instance: Any, validationFunction: Method)
     return null
 }
 
+@Suppress("UNCHECKED_CAST")
 internal fun <T> Class<T>.normalize() = LinChecker::class.java.classLoader.loadClass(name) as Class<T>
 
 private val methodsCache = WeakHashMap<Class<*>, WeakHashMap<Method, WeakReference<Method>>>()
@@ -198,10 +197,6 @@ internal fun <T> CancellableContinuation<T>.cancelByLincheck(promptCancellation:
 
 internal enum class CancellationResult { CANCELLED_BEFORE_RESUMPTION, CANCELLED_AFTER_RESUMPTION, CANCELLATION_FAILED }
 
-@Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
-private val cancelCompletedResultMethod =
-    DispatchedTask::class.declaredFunctions.find { it.name == "cancelCompletedResult" }!!.javaMethod!!
-
 /**
  * Returns `true` if the continuation was cancelled by [CancellableContinuation.cancel].
  */
@@ -280,7 +275,7 @@ private fun Result.convertForLoader(loader: ClassLoader): Result = when (this) {
  * Non-primitive values need to be [Serializable] for this to succeed.
  */
 internal fun Any?.convertForLoader(loader: ClassLoader) = when {
-    this == null -> this
+    this == null -> null
     this::class.java.classLoader == null -> this // primitive class, no need to convert
     this::class.java.classLoader == loader -> this // already in this loader
     loader is TransformationClassLoader && !loader.shouldBeTransformed(this.javaClass) -> this
@@ -361,6 +356,7 @@ internal const val ADD_OPENS_MESSAGE =
  * Utility exception for test purposes.
  * When this exception is thrown by an operation, it will halt testing with [UnexpectedExceptionInvocationResult].
  */
+@Suppress("JavaIoSerializableObjectMustHaveReadResolve")
 internal object InternalLincheckTestUnexpectedException : Exception()
 
 /**

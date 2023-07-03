@@ -11,42 +11,50 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.strategy.DeadlockWithDumpFailure
+import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import java.util.*
 import kotlin.math.*
 
 @Synchronized // we should avoid concurrent executions to keep `objectNumeration` consistent
 internal fun StringBuilder.appendTrace(
-    scenario: ExecutionScenario,
+    failure: LincheckFailure,
     results: ExecutionResult?,
     trace: Trace,
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
 ) {
-    val startTraceGraphNode = constructTraceGraph(scenario, results, trace, exceptionStackTraces)
+    val startTraceGraphNode = constructTraceGraph(failure.scenario, results, trace, exceptionStackTraces)
 
-    appendShortTrace(startTraceGraphNode, scenario)
+    appendShortTrace(startTraceGraphNode, failure)
     appendExceptionsStackTracesBlock(exceptionStackTraces)
-    appendDetailedTrace(startTraceGraphNode, scenario)
+    appendDetailedTrace(startTraceGraphNode, failure)
 
     objectNumeration.clear() // clear the numeration at the end to avoid memory leaks
 }
 
 private fun StringBuilder.appendShortTrace(
     startTraceGraphNode: TraceNode?,
-    scenario: ExecutionScenario
+    failure: LincheckFailure
 ) {
     val traceRepresentation = traceGraphToRepresentationList(startTraceGraphNode, false)
     appendLine(TRACE_TITLE)
-    appendTraceRepresentation(scenario, traceRepresentation)
+    appendTraceRepresentation(failure.scenario, traceRepresentation)
+    if (failure is DeadlockWithDumpFailure) {
+        appendLine(ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE)
+    }
     appendLine()
 }
 
 private fun StringBuilder.appendDetailedTrace(
     startTraceGraphNode: TraceNode?,
-    scenario: ExecutionScenario
+    failure: LincheckFailure
 ) {
     appendLine(DETAILED_TRACE_TITLE)
     val traceRepresentationVerbose = traceGraphToRepresentationList(startTraceGraphNode, true)
-    appendTraceRepresentation(scenario, traceRepresentationVerbose)
+    appendTraceRepresentation(failure.scenario, traceRepresentationVerbose)
+    if (failure is DeadlockWithDumpFailure) {
+        appendLine(ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE)
+    }
 }
 
 private fun StringBuilder.appendTraceRepresentation(
@@ -239,7 +247,10 @@ private class TraceLeafEvent(
     }
 
     override fun shouldBeExpanded(verboseTrace: Boolean): Boolean {
-        return (lastExecutedEvent && event.isBlocking) || event is SwitchEventTracePoint || verboseTrace
+        return (lastExecutedEvent && event.isBlocking)
+                || event is SwitchEventTracePoint
+                || event is ObstructionFreedomViolationExecutionAbortTracePoint
+                || verboseTrace
     }
 
     override fun addRepresentationTo(
@@ -356,3 +367,4 @@ private val objectNumeration = WeakHashMap<Class<Any>, MutableMap<Any, Int>>()
 
 const val TRACE_TITLE = "The following interleaving leads to the error:"
 const val DETAILED_TRACE_TITLE = "Detailed trace:"
+private const val ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE = "All unfinished threads are in deadlock"

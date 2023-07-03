@@ -89,11 +89,14 @@ internal class ModelCheckingStrategy(
     }
 
     override fun beforePart(part: ExecutionPart) {
-        currentThread = when (part) {
+        val nextThread = when (part) {
             ExecutionPart.INIT -> 0
             ExecutionPart.PARALLEL -> currentInterleaving.chooseThread(0)
             ExecutionPart.POST -> 0
         }
+        executionPart = part
+        loopDetector.beforePart(nextThread)
+        currentThread = nextThread
     }
 
     override fun chooseThread(iThread: Int): Int =
@@ -231,6 +234,7 @@ internal class ModelCheckingStrategy(
             executionPosition = -1 // the first execution position will be zero
             interleavingFinishingRandom = Random(2) // random with a constant seed
             nextThreadToSwitch = threadSwitchChoices.iterator()
+            loopDetector.initialize()
             lastNotInitializedNodeChoices = null
             lastNotInitializedNode?.let {
                 // Create a mutable list for the initialization of the not initialized node choices.

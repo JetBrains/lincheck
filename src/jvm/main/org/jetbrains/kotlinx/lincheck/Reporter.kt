@@ -375,11 +375,7 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
     }
     if (failure.trace != null) {
         appendLine()
-        appendTrace(failure.scenario, results, failure.trace, exceptionStackTraces)
-        if (failure is DeadlockWithDumpFailure) {
-            appendLine()
-            appendLine("All threads are in deadlock")
-        }
+        appendTrace(failure, results, failure.trace, exceptionStackTraces)
     } else {
         appendExceptionsStackTracesBlock(exceptionStackTraces)
     }
@@ -523,10 +519,26 @@ private fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockWithDum
     appendLine("= The execution has hung, see the thread dump =")
     appendExecutionScenario(failure.scenario)
     appendLine()
-    for ((t, stackTrace) in failure.threadDump) {
-        val threadNumber = if (t is FixedActiveThreadsExecutor.TestThread) t.iThread.toString() else "?"
-        appendLine("Thread-$threadNumber:")
-        stackTraceRepresentation(stackTrace).forEach { appendLine("\t$it") }
+    // We don't save thread dump in model checking mode, for now it is present only in stress testing
+    failure.threadDump?.let { threadDump ->
+        // Sort threads to produce same output for the same results
+        for ((t, stackTrace) in threadDump.entries.sortedBy { it.key.id }) {
+            val threadNumber = if (t is FixedActiveThreadsExecutor.TestThread) t.iThread.toString() else "?"
+            appendLine("Thread-$threadNumber:")
+            stackTrace.map {
+                StackTraceElement(
+                    /* declaringClass = */ it.className.removePrefix(TransformationClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME),
+                    /* methodName = */ it.methodName,
+                    /* fileName = */ it.fileName,
+                    /* lineNumber = */ it.lineNumber
+                )
+            }.map { it.toString() }
+                .filter { stackTraceElementLine -> // Remove all stack trace elements related to lincheck
+                    "org.jetbrains.kotlinx.lincheck.strategy" !in stackTraceElementLine
+                            && "org.jetbrains.kotlinx.lincheck.runner" !in stackTraceElementLine
+                            && "org.jetbrains.kotlinx.lincheck.UtilsKt" !in stackTraceElementLine
+                }.forEach { appendLine("\t$it") }
+        }
     }
     return this
 }

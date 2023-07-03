@@ -48,19 +48,15 @@ class ObstructionFreedomActiveLockRepresentationTest : VerifierState() {
     override fun extractState(): Any = counter.get()
 
     @Test
-    fun test() {
-        val options = ModelCheckingOptions()
-            .actorsPerThread(1)
-            .actorsBefore(0)
-            .actorsAfter(0)
-            .threads(1)
-            .checkObstructionFreedom(true)
-        val failure = options.checkImpl(this::class.java)
-        check(failure != null) { "the test should fail" }
-        val log = StringBuilder().appendFailure(failure).toString()
-        check("incrementAndGet" in log) { "The cause of the error should be reported" }
-        checkTraceHasNoLincheckEvents(log)
-    }
+    fun test() = ModelCheckingOptions()
+        .actorsPerThread(1)
+        .actorsBefore(0)
+        .actorsAfter(0)
+        .threads(1)
+        .checkObstructionFreedom(true)
+        .checkImpl(this::class.java)
+        .checkLincheckOutput("obstruction_freedom_violation_with_no_detected_cycle.txt")
+
 }
 
 /**

@@ -67,6 +67,21 @@ internal class StateRepresentationTracePoint(
     override fun toStringImpl(): String = "STATE: $stateRepresentation"
 }
 
+internal class FinishThreadTracePoint(iThread: Int) : TracePoint(iThread, Int.MAX_VALUE, emptyList()) {
+    override fun toStringImpl(): String = "thread is finished"
+}
+
+/**
+ * This TracePoint is added only at the end of an execution when obstruction freedom is violated
+ */
+internal class ObstructionFreedomViolationExecutionAbortTracePoint(
+    iThread: Int,
+    actorId: Int,
+    callStackTrace: CallStackTrace
+): TracePoint(iThread, actorId, callStackTrace) {
+    override fun toStringImpl(): String = "/* An active lock was detected */"
+}
+
 internal class ReadTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
@@ -227,6 +242,10 @@ internal class CoroutineCancellationTracePoint(
             CANCELLATION_FAILED -> "CANCELLATION ATTEMPT FAILED"
         }
     }
+}
+
+internal class SpinCycleStartTracePoint(iThread: Int, actorId: Int, callStackTrace: CallStackTrace): TracePoint(iThread, actorId, callStackTrace) {
+    override fun toStringImpl() =  "/* The following events repeat infinitely: */"
 }
 
 /**
