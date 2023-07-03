@@ -247,7 +247,10 @@ private class TraceLeafEvent(
     }
 
     override fun shouldBeExpanded(verboseTrace: Boolean): Boolean {
-        return (lastExecutedEvent && event.isBlocking) || event is SwitchEventTracePoint || verboseTrace
+        return (lastExecutedEvent && event.isBlocking)
+                || event is SwitchEventTracePoint
+                || event is ObstructionFreedomViolationExecutionAbortTracePoint
+                || verboseTrace
     }
 
     override fun addRepresentationTo(
