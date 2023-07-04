@@ -117,4 +117,30 @@ class TraceReportingTest {
         failure.checkLincheckOutput("trace_reporting_init_post_parts.txt")
         checkTraceHasNoLincheckEvents(failure.toString())
     }
+
+    @Operation
+    fun notImplemented() {
+        TODO()
+    }
+
+    @Test
+    fun testEmptyTrace() {
+        val failure = ModelCheckingOptions()
+            .iterations(0)
+            .addCustomScenario {
+                parallel {
+                    thread {
+                        actor(::notImplemented)
+                    }
+                }
+            }
+            .sequentialSpecification(EmptySequentialImplementation::class.java)
+            .checkImpl(this::class.java)
+        failure.checkLincheckOutput("trace_reporting_empty.txt")
+    }
+
+    class EmptySequentialImplementation {
+        fun notImplemented() {}
+    }
+
 }
