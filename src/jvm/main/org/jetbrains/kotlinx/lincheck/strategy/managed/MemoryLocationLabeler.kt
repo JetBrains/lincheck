@@ -81,6 +81,14 @@ internal class MemoryLocationLabeler {
         return ObjectFieldMemoryLocation(strategy, obj, className, fieldName)
     }
 
+    fun getAtomicReflectionName(reflection: Any): String {
+        val descriptor = lookupAtomicReflectionDescriptor(reflection)
+        return when (descriptor) {
+            is AtomicReflectionFieldAccessDescriptor -> descriptor.fieldName
+            is AtomicReflectionArrayAccessDescriptor -> "" // TODO: what name we should put here?
+        }
+    }
+
     fun registerAtomicFieldReflection(strategy: ManagedStrategy, reflection: Any, clazz: Class<*>, fieldName: String) {
         val className = normalizeClassName(strategy, clazz.name)
         val descriptor = AtomicReflectionFieldAccessDescriptor(className, fieldName)

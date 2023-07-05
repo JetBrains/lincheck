@@ -84,10 +84,6 @@ internal class ManagedStrategyTransformer(
         // static initialization transformer
         mv = ClassInitializationTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         // atomics transformers has to be put here for some reason
-        // TODO: investigate what is wrong with order of transformations here
-        if (constructTraceRepresentation) {
-            mv = AFUTrackingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        }
         // TODO: put AtomicPrimitiveAccessMethodTransformer near other memory access transformers
         mv = AtomicPrimitiveAccessMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         // methods logging transformers
@@ -1064,15 +1060,14 @@ internal class ManagedStrategyTransformer(
             val params = storeParameters(desc)
             copyLocal(afuLocal)
             // return parameters to the stack
-            for (param in params)
-                loadLocal(param)
+            loadLocals(params)
             // initialize MethodCallCodePoint owner name
             loadLocal(tracePointLocal)
             checkCast(METHOD_TRACE_POINT_TYPE)
             // get afu name
-            loadObjectManager()
+            loadMemoryLocationLabeler()
             loadLocal(afuLocal)
-            invokeVirtual(OBJECT_MANAGER_TYPE, GET_OBJECT_NAME)
+            invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, GET_ATOMIC_REFLECTION_NAME)
             invokeVirtual(METHOD_TRACE_POINT_TYPE, INITIALIZE_OWNER_NAME_METHOD)
         }
 
@@ -2095,6 +2090,7 @@ private val LABEL_ATOMIC_PRIMITIVE = Method.getMethod(MemoryLocationLabeler::lab
 private val LABEL_ATOMIC_REFLECTION_FIELD_ACCESS = Method.getMethod(MemoryLocationLabeler::labelAtomicReflectionFieldAccess.javaMethod)
 private val LABEL_ATOMIC_REFLECTION_ARRAY_ACCESS = Method.getMethod(MemoryLocationLabeler::labelAtomicReflectionArrayAccess.javaMethod)
 private val LABEL_UNSAFE_FIELD_ACCESS = Method.getMethod(MemoryLocationLabeler::labelUnsafeAccess.javaMethod)
+private val GET_ATOMIC_REFLECTION_NAME = Method.getMethod(MemoryLocationLabeler::getAtomicReflectionName.javaMethod)
 private val REGISTER_ATOMIC_FIELD_REFLECTION = Method.getMethod(MemoryLocationLabeler::registerAtomicFieldReflection.javaMethod)
 private val REGISTER_ATOMIC_ARRAY_REFLECTION = Method.getMethod(MemoryLocationLabeler::registerAtomicArrayReflection.javaMethod)
 private val REGISTER_UNSAFE_FIELD_OFFSET_BY_NAME = Method.getMethod(MemoryLocationLabeler::registerUnsafeFieldOffsetByName.javaMethod)
