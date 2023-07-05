@@ -105,6 +105,8 @@ internal class ManagedStrategyTransformer(
             sv.analyzer = aa
             aa
         }
+        // object allocation transformer
+        mv = ObjectAllocationTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         // special methods intercepting transformers
         mv = HashCodeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = TimeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
@@ -1681,6 +1683,60 @@ internal class ManagedStrategyTransformer(
         }
     }
 
+    private inner class ObjectAllocationTransformer(methodName: String, mv: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, mv) {
+
+        override fun visitMethodInsn(opcode: Int, owner: String, name: String, descriptor: String, isInterface: Boolean) = adapter.run {
+            // for single object allocation we cannot simply instrument `NEW` instruction,
+            // because if we will try to intercept the object reference at this stage,
+            // it will point to an uninitialized object;
+            // thus we intercept object allocation event after the initializing constructor call.
+            val isObjectInit = opcode == INVOKESPECIAL && name == "<init>" && owner == "java/lang/Object"
+            if (!isObjectInit) {
+                super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+                return
+            }
+            val objLocal = newLocal(OBJECT_TYPE).also { copyLocal(it) }
+            super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+            invokeOnObjectAllocation(objLocal)
+        }
+
+        override fun visitTypeInsn(opcode: Int, type: String?) = adapter.run {
+            super.visitTypeInsn(opcode, type)
+            if (opcode == ANEWARRAY) {
+                check(type != null)
+                val objType = Type.getObjectType(type).getArrayType()
+                invokeOnObjectAllocation(objType)
+            }
+        }
+
+        override fun visitIntInsn(opcode: Int, operand: Int) = adapter.run {
+            super.visitIntInsn(opcode, operand)
+            if (opcode == NEWARRAY) {
+                val objType = getTypeByOperandOpcode(operand).getArrayType()
+                invokeOnObjectAllocation(objType)
+            }
+        }
+
+        override fun visitMultiANewArrayInsn(descriptor: String?, numDimensions: Int) {
+            super.visitMultiANewArrayInsn(descriptor, numDimensions)
+            val objType = Type.getType(descriptor).getArrayType(numDimensions)
+            invokeOnObjectAllocation(objType)
+        }
+
+        private fun invokeOnObjectAllocation(objType: Type) = adapter.run {
+            val objLocal = newLocal(objType).also { copyLocal(it) }
+            invokeOnObjectAllocation(objLocal)
+        }
+
+        private fun invokeOnObjectAllocation(objLocal: Int) = adapter.run {
+            loadStrategy()
+            loadCurrentThreadNumber()
+            loadLocal(objLocal)
+            invokeVirtual(MANAGED_STRATEGY_TYPE, ON_OBJECT_ALLOCATION_METHOD)
+        }
+
+    }
+
     /**
      * Track local objects for odd switch points elimination.
      * A local object is an object that can be possible viewed only from one thread.
@@ -2043,6 +2099,7 @@ private val UNPARK_TRACE_POINT_TYPE = Type.getType(UnparkTracePoint::class.java)
 private val UTILS_KT_TYPE = Type.getType("Lorg/jetbrains/kotlinx/lincheck/UtilsKt;")
 
 private val CURRENT_THREAD_NUMBER_METHOD = Method.getMethod(ManagedStrategy::currentThreadNumber.javaMethod)
+private val ON_OBJECT_ALLOCATION_METHOD = Method.getMethod(ManagedStrategy::onObjectAllocation.javaMethod)
 private val BEFORE_SHARED_VARIABLE_READ_METHOD = Method.getMethod(ManagedStrategy::beforeSharedVariableRead.javaMethod)
 private val BEFORE_SHARED_VARIABLE_WRITE_METHOD = Method.getMethod(ManagedStrategy::beforeSharedVariableWrite.javaMethod)
 private val ON_SHARED_VARIABLE_READ_METHOD = Method.getMethod(ManagedStrategy::onSharedVariableRead.javaMethod)
@@ -2396,7 +2453,6 @@ internal object UnsafeHolder {
 
 private fun Type.isPrimitive() = sort in Type.BOOLEAN..Type.DOUBLE
 
-
 private val BOXED_BYTE_TYPE = Type.getObjectType("java/lang/Byte")
 private val BOXED_BOOLEAN_TYPE = Type.getObjectType("java/lang/Boolean")
 private val BOXED_SHORT_TYPE = Type.getObjectType("java/lang/Short")
@@ -2405,6 +2461,23 @@ private val BOXED_INTEGER_TYPE = Type.getObjectType("java/lang/Integer")
 private val BOXED_FLOAT_TYPE = Type.getObjectType("java/lang/Float")
 private val BOXED_LONG_TYPE = Type.getObjectType("java/lang/Long")
 private val BOXED_DOUBLE_TYPE = Type.getObjectType("java/lang/Double")
+
+private fun getTypeByOperandOpcode(operand: Int) = when (operand) {
+    T_BOOLEAN   -> Type.BOOLEAN_TYPE
+    T_CHAR      -> Type.CHAR_TYPE
+    T_BYTE      -> Type.BYTE_TYPE
+    T_SHORT     -> Type.SHORT_TYPE
+    T_INT       -> Type.INT_TYPE
+    T_LONG      -> Type.LONG_TYPE
+    T_FLOAT     -> Type.FLOAT_TYPE
+    T_DOUBLE    -> Type.DOUBLE_TYPE
+    else        -> throw IllegalArgumentException()
+}
+
+private fun Type.getArrayType(numDimensions: Int = 1): Type {
+    require(numDimensions >= 1)
+    return Type.getType("[".repeat(numDimensions) + descriptor)
+}
 
 private fun Type.getBoxedType(): Type {
     return when (sort) {

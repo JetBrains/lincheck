@@ -454,6 +454,10 @@ abstract class ManagedStrategy(
 
     // == LISTENING METHODS ==
 
+    internal fun onObjectAllocation(iThread: Int, obj: Any) {
+
+    }
+
     /**
      * This method is executed before a shared variable read operation.
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
