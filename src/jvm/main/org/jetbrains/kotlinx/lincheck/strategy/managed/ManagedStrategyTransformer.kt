@@ -98,7 +98,6 @@ internal class ManagedStrategyTransformer(
         mv = WaitNotifyTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = ParkUnparkTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         // memory access transformers
-        mv = LocalObjectManagingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = UnsafeTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = run {
             val sv = SharedVariableAccessMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
