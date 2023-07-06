@@ -676,6 +676,11 @@ class EventStructure(
         return responseEvent
     }
 
+    fun addObjectAllocationEvent(iThread: Int, value: OpaqueValue): Event {
+        val label = ObjectAllocationLabel(value)
+        return addSendEvent(iThread, label)
+    }
+
     fun addWriteEvent(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?,
                       isExclusive: Boolean = false): Event {
         val label = WriteAccessLabel(

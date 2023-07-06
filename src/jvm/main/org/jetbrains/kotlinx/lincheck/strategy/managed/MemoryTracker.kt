@@ -28,6 +28,8 @@ import kotlin.reflect.KClass
  */
 abstract class MemoryTracker {
 
+    abstract fun objectAllocation(iThread: Int, value: OpaqueValue)
+
     abstract fun writeValue(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?)
 
     abstract fun readValue(iThread: Int, location: MemoryLocation, kClass: KClass<*>): OpaqueValue?
@@ -59,6 +61,8 @@ internal class PlainMemoryTracker(
     val memoryInitializer: MemoryInitializer
 ) : MemoryTracker() {
     private val memory = HashMap<MemoryLocation, OpaqueValue>()
+
+    override fun objectAllocation(iThread: Int, value: OpaqueValue) {}
 
     override fun writeValue(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?) =
         memory.set(location, value ?: NULL)

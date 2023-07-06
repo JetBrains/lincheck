@@ -269,6 +269,10 @@ class EventStructureStrategy(
 
 private class EventStructureMemoryTracker(private val eventStructure: EventStructure): MemoryTracker() {
 
+    override fun objectAllocation(iThread: Int, value: OpaqueValue) {
+        eventStructure.addObjectAllocationEvent(iThread, value)
+    }
+
     override fun writeValue(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?) {
         eventStructure.addWriteEvent(iThread, location, kClass, value)
     }

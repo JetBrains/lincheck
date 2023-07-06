@@ -193,8 +193,9 @@ private val ThreadSynchronizationAlgebra = object : SynchronizationAlgebra {
 private val MemoryAccessSynchronizationAlgebra = object : SynchronizationAlgebra {
 
     override fun syncType(label: EventLabel): SynchronizationType? = when(label) {
-        is MemoryAccessLabel -> SynchronizationType.Binary
-        else                 -> null
+        is MemoryAccessLabel        -> SynchronizationType.Binary
+        is ObjectAllocationLabel    -> SynchronizationType.Binary
+        else                        -> null
     }
 
     override fun synchronize(label: EventLabel, other: EventLabel): EventLabel? = when {
@@ -214,8 +215,9 @@ private val MemoryAccessSynchronizationAlgebra = object : SynchronizationAlgebra
 private val MutexSynchronizationAlgebra = object : SynchronizationAlgebra {
 
     override fun syncType(label: EventLabel): SynchronizationType? = when(label) {
-        is MutexLabel   -> SynchronizationType.Binary
-        else            -> null
+        is MutexLabel               -> SynchronizationType.Binary
+        is ObjectAllocationLabel    -> SynchronizationType.Binary
+        else                        -> null
     }
 
     override fun synchronize(label: EventLabel, other: EventLabel): EventLabel? = when {
@@ -262,11 +264,14 @@ val AtomicSynchronizationAlgebra = CommutativeSynchronizationAlgebra(object : Sy
     // TODO: generalize this construction to arbitrary list of disjoint algebras (?)
 
     override fun syncType(label: EventLabel): SynchronizationType? = when(label) {
-        is ThreadEventLabel     -> ThreadSynchronizationAlgebra.syncType(label)
-        is MemoryAccessLabel    -> MemoryAccessSynchronizationAlgebra.syncType(label)
-        is MutexLabel           -> MutexSynchronizationAlgebra.syncType(label)
-        is ParkingEventLabel    -> ParkingSynchronizationAlgebra.syncType(label)
-        else                    -> null
+        is ThreadEventLabel         -> ThreadSynchronizationAlgebra.syncType(label)
+        is MemoryAccessLabel        -> MemoryAccessSynchronizationAlgebra.syncType(label)
+        is MutexLabel               -> MutexSynchronizationAlgebra.syncType(label)
+        is ParkingEventLabel        -> ParkingSynchronizationAlgebra.syncType(label)
+        // special treatment of ObjectAllocationLabel, because it can contribute to several sub-algebras
+        // TODO: handle such cases uniformly --- check that all algebras are either disjoint or agree with each other
+        is ObjectAllocationLabel    -> SynchronizationType.Binary
+        else                        -> null
     }
 
     override fun synchronize(label: EventLabel, other: EventLabel): EventLabel? = when (other) {
@@ -309,8 +314,8 @@ private val ReceiveAggregationAlgebra = object : SynchronizationAlgebra {
 private val MemoryAccessAggregationAlgebra = object : SynchronizationAlgebra {
 
     override fun syncType(label: EventLabel): SynchronizationType? = when(label) {
-        is MemoryAccessLabel -> SynchronizationType.Binary
-        else                 -> null
+        is MemoryAccessLabel        -> SynchronizationType.Binary
+        else                        -> null
     }
 
     override fun synchronize(label: EventLabel, other: EventLabel): EventLabel? = when {

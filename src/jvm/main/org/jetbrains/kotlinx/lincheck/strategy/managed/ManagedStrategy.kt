@@ -455,7 +455,8 @@ abstract class ManagedStrategy(
     // == LISTENING METHODS ==
 
     internal fun onObjectAllocation(iThread: Int, obj: Any) {
-
+        if (inIgnoredSection(iThread)) return
+        memoryTracker.objectAllocation(iThread, obj.opaque())
     }
 
     /**

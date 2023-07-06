@@ -82,6 +82,7 @@ sealed class EventLabel(
             is ThreadFinishLabel            -> LabelType.ThreadFinish
             is ThreadForkLabel              -> LabelType.ThreadFork
             is ThreadJoinLabel              -> LabelType.ThreadJoin
+            is ObjectAllocationLabel        -> LabelType.ObjectAllocation
             is ReadAccessLabel              -> LabelType.ReadAccess
             is WriteAccessLabel             -> LabelType.WriteAccess
             is ReadModifyWriteAccessLabel   -> LabelType.ReadModifyWriteAccess
@@ -231,6 +232,7 @@ enum class LabelType {
     ThreadFinish,
     ThreadFork,
     ThreadJoin,
+    ObjectAllocation,
     ReadAccess,
     WriteAccess,
     ReadModifyWriteAccess,
@@ -496,6 +498,42 @@ fun EventLabel.asThreadEventLabel(): ThreadEventLabel? = when (this) {
     is ThreadEventLabel -> this
     is InitializationLabel -> asThreadForkLabel()
     else -> null
+}
+
+data class ObjectAllocationLabel(
+    private var _obj: OpaqueValue
+) : EventLabel(kind = LabelKind.Send) {
+
+    val obj: OpaqueValue
+        get() = _obj
+
+    /**
+     * Replays this object allocation label using another allocation label given as argument.
+     * Replaying can substitute the allocated object.
+     *
+     * @see EventLabel.replay
+     */
+    override fun replay(label: EventLabel, remapping: Remapping) {
+        // TODO: check type of objects?
+        check(label is ObjectAllocationLabel) {
+            "Event label $this cannot be replayed by $label"
+        }
+        remapping[obj.unwrap()] = label.obj.unwrap()
+        _obj = label._obj
+    }
+
+    /**
+     * Remaps memory location and value according to given [remapping].
+     *
+     * @see EventLabel.replay
+     */
+    override fun remap(remapping: Remapping) {
+        remapping[obj]?.also { _obj = it.opaque() }
+    }
+
+    override fun toString(): String =
+        "Alloc($obj)"
+
 }
 
 /**
