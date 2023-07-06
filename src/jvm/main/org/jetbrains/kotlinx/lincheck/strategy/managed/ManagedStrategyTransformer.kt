@@ -1689,15 +1689,32 @@ internal class ManagedStrategyTransformer(
             // for single object allocation we cannot simply instrument `NEW` instruction,
             // because if we will try to intercept the object reference at this stage,
             // it will point to an uninitialized object;
-            // thus we intercept object allocation event after the initializing constructor call.
-            val isObjectInit = opcode == INVOKESPECIAL && name == "<init>" && owner == "java/lang/Object"
+            // thus we intercept object allocation event after the initializing constructor call;
+            //
+            // NOTE: we cannot intercept only Object::<init> invocations --- this is because we do not instrument
+            //   all the classes (e.g. we skip some java.* classes like java.lang.Number);
+            //   because of inheritance, some class may call Parent::<init>, but not Object::<init> ---
+            //   if Parent::<init> is not instrumented we will miss the object allocation;
+            //   thus we instrument all <init> invocations,
+            //   BUT this leads to another issue arises ---
+            //   because of inheritance several invocations of <init> can happen for the same object
+            //   (i.e. a chain of `super.constructor()` calls);
+            //   to handle this we have two separate ManagedStrategy hooks: `onObjectInitialization` and `onObjectAllocation`;
+            //   `onObjectInitialization` is just a wrapper around `onObjectAllocation`
+            //   that keep track of already allocated objects and ensures that `onObjectAllocation`
+            //   is called once for each object
+            // TODO: think about better solution!
+            // TODO: can we overcome the problem by checking if `superClass` is in the list of non-instrumented classes?
+            val isObjectInit = opcode == INVOKESPECIAL && name == "<init>" // && owner == "java/lang/Object"
             if (!isObjectInit) {
                 super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
                 return
             }
-            val objLocal = newLocal(OBJECT_TYPE).also { copyLocal(it) }
+            // TODO: does not work because custom constructor might have additional arguments (?) ---
+            //   handle this by considering descriptor
+            val objLocal = newLocal(Type.getObjectType(owner)).also { dup(); storeLocal(it) }
             super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
-            invokeOnObjectAllocation(objLocal)
+            invokeOnObjectInitialization(objLocal)
         }
 
         override fun visitTypeInsn(opcode: Int, type: String?) = adapter.run {
@@ -1725,14 +1742,17 @@ internal class ManagedStrategyTransformer(
 
         private fun invokeOnObjectAllocation(objType: Type) = adapter.run {
             val objLocal = newLocal(objType).also { copyLocal(it) }
-            invokeOnObjectAllocation(objLocal)
-        }
-
-        private fun invokeOnObjectAllocation(objLocal: Int) = adapter.run {
             loadStrategy()
             loadCurrentThreadNumber()
             loadLocal(objLocal)
             invokeVirtual(MANAGED_STRATEGY_TYPE, ON_OBJECT_ALLOCATION_METHOD)
+        }
+
+        private fun invokeOnObjectInitialization(objLocal: Int) = adapter.run {
+            loadStrategy()
+            loadCurrentThreadNumber()
+            loadLocal(objLocal)
+            invokeVirtual(MANAGED_STRATEGY_TYPE, ON_OBJECT_INITIALIZATION_METHOD)
         }
 
     }
@@ -2100,6 +2120,7 @@ private val UTILS_KT_TYPE = Type.getType("Lorg/jetbrains/kotlinx/lincheck/UtilsK
 
 private val CURRENT_THREAD_NUMBER_METHOD = Method.getMethod(ManagedStrategy::currentThreadNumber.javaMethod)
 private val ON_OBJECT_ALLOCATION_METHOD = Method.getMethod(ManagedStrategy::onObjectAllocation.javaMethod)
+private val ON_OBJECT_INITIALIZATION_METHOD = Method.getMethod(ManagedStrategy::onObjectInitialization.javaMethod)
 private val BEFORE_SHARED_VARIABLE_READ_METHOD = Method.getMethod(ManagedStrategy::beforeSharedVariableRead.javaMethod)
 private val BEFORE_SHARED_VARIABLE_WRITE_METHOD = Method.getMethod(ManagedStrategy::beforeSharedVariableWrite.javaMethod)
 private val ON_SHARED_VARIABLE_READ_METHOD = Method.getMethod(ManagedStrategy::onSharedVariableRead.javaMethod)

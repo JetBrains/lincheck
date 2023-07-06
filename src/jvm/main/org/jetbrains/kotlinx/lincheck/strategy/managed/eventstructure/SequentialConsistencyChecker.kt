@@ -75,6 +75,7 @@ class SequentialConsistencyChecker(
         // maps unlock (or notify) event to its single matching lock (or wait) event;
         // if lock synchronizes-from initialization event,
         // then instead maps lock object itself to its first lock event
+        // TODO: generalize and refactor!
         val mapping = mutableMapOf<Any, Event>()
         for (event in execution) {
             if (event.label !is MutexLabel || !event.label.isResponse)
@@ -83,7 +84,10 @@ class SequentialConsistencyChecker(
                 continue
             if (event.label is WaitLabel && (event.notifiedBy.label as NotifyLabel).isBroadcast)
                 continue
-            val key: Any = if (event.syncFrom.label !is InitializationLabel) event.syncFrom else event.label.mutex
+            val key: Any = when (event.syncFrom.label) {
+                is LockLabel, is WaitLabel -> event.syncFrom
+                else -> event.label.mutex
+            }
             if (mapping.put(key, event) != null) {
                 return SequentialConsistencyViolation(
                     phase = SequentialConsistencyCheckPhase.PRELIMINARY
@@ -142,7 +146,8 @@ private data class SequentialConsistencyReplayer(
 
             event.label is ReadAccessLabel && event.label.isResponse ->
                 this.takeIf {
-                    if (event.readsFrom.label !is InitializationLabel)
+                    // TODO: do we really need this `if` here?
+                    if (event.readsFrom.label is WriteAccessLabel)
                          memoryView[event.label.location] == event.readsFrom
                     else memoryView[event.label.location] == null
                 }
@@ -357,10 +362,13 @@ private class WritesBeforeRelation(
 
     private fun initializeWritesBeforeOrder() {
         var initEvent: Event? = null
+        val allocEvents = mutableListOf<Event>()
         // TODO: refactor once per-kind indexing of events will be implemented
         for (event in execution) {
             if (event.label is InitializationLabel)
                 initEvent = event
+            if (event.label is ObjectAllocationLabel)
+                allocEvents.add(event)
             if (event.label !is MemoryAccessLabel)
                 continue
             if (event.label.isRead && event.label.isResponse) {
@@ -375,7 +383,9 @@ private class WritesBeforeRelation(
             }
         }
         for ((memId, writes) in writesMap) {
-            writes.add(initEvent!!)
+            if (initEvent!!.label.asWriteAccessLabel(memId) != null)
+                writes.add(initEvent)
+            writes.addAll(allocEvents.filter { it.label.asWriteAccessLabel(memId) != null })
             relations[memId] = RelationMatrix(writes, buildIndexer(writes)) { x, y ->
                 causalityOrder.lessThan(x, y)
             }
@@ -388,9 +398,9 @@ private class WritesBeforeRelation(
             if (event.label !is WriteAccessLabel || !event.label.isExclusive)
                 continue
             val readFrom = event.exclusiveReadPart.readsFrom
-            val chain = if (readFrom.label !is InitializationLabel)
+            val chain = if (readFrom.label is WriteAccessLabel)
                     chainsMap.computeIfAbsent(readFrom) {
-                        check(!(readFrom.label as WriteAccessLabel).isExclusive)
+                        check(readFrom.label.isExclusive)
                         mutableListOf(readFrom)
                     }
                 else mutableListOf(readFrom)

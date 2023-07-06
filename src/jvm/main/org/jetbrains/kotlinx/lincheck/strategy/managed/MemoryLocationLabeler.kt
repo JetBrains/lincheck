@@ -26,8 +26,7 @@ import java.util.*
 import java.util.concurrent.atomic.*
 
 interface MemoryLocation {
-    // TODO: rename?
-    val recipient: Any?
+    val obj: Any
 
     val isAtomic: Boolean
 
@@ -179,7 +178,7 @@ internal class StaticFieldMemoryLocation(
     val fieldName: String
 ) : MemoryLocation {
 
-    override val recipient = null
+    override val obj: Any = STATIC_OBJECT
 
     override val isAtomic = false
 
@@ -214,6 +213,9 @@ internal class StaticFieldMemoryLocation(
 
 }
 
+// TODO: override `toString` ?
+internal val STATIC_OBJECT = Any()
+
 internal class ObjectFieldMemoryLocation(
     private val strategy: ManagedStrategy,
     private var _obj: Any,
@@ -222,46 +224,45 @@ internal class ObjectFieldMemoryLocation(
     override val isAtomic: Boolean = false
 ) : MemoryLocation {
 
-    val obj: Any get() = _obj
-
-    override val recipient get() = obj
+    override val obj: Any
+        get() = _obj
 
     private val field by lazy {
-        val clazz = getClass(strategy, obj, className = className)
+        val clazz = getClass(strategy, this.obj, className = className)
         getField(clazz, className, fieldName)
             .apply { isAccessible = true }
     }
 
-    override fun read(): Any? = field.get(obj)
+    override fun read(): Any? = field.get(this.obj)
 
     override fun write(value: Any?) {
-        field.set(obj, value)
+        field.set(this.obj, value)
     }
 
     override fun replay(location: MemoryLocation, remapping: Remapping) {
         check(location is ObjectFieldMemoryLocation &&
-            obj::class == location.obj::class &&
+            this.obj::class == location.obj::class &&
             className == location.className &&
             fieldName == location.fieldName) {
             "Memory location $this cannot be replayed by ${location}."
         }
-        remapping[obj] = location.obj
+        remapping[this.obj] = location.obj
         _obj = location.obj
     }
 
     override fun remap(remapping: Remapping) {
-        remapping[obj]?.also { _obj = it }
+        remapping[this.obj]?.also { _obj = it }
     }
 
     override fun equals(other: Any?): Boolean =
-        other is ObjectFieldMemoryLocation && (obj === other.obj && className == other.className && fieldName == other.fieldName)
+        other is ObjectFieldMemoryLocation && (this.obj === other.obj && className == other.className && fieldName == other.fieldName)
 
     override fun hashCode(): Int =
-        Objects.hash(System.identityHashCode(obj), fieldName)
+        Objects.hash(System.identityHashCode(this.obj), fieldName)
 
     override fun toString(): String =
         // TODO: also print className if it does not match actual name of the obj's class
-        "${opaqueString(obj)}::$fieldName"
+        "${opaqueString(this.obj)}::$fieldName"
 
 }
 
@@ -290,7 +291,7 @@ internal class ArrayElementMemoryLocation(
 
     val array: Any get() = _array
 
-    override val recipient get() = array
+    override val obj: Any get() = array
 
     override val isAtomic: Boolean = when (array) {
         is AtomicIntegerArray,
@@ -379,7 +380,7 @@ internal class AtomicPrimitiveMemoryLocation(
 
     val primitive: Any get() = _primitive
 
-    override val recipient get() = primitive
+    override val obj: Any get() = primitive
 
     override val isAtomic = true
 

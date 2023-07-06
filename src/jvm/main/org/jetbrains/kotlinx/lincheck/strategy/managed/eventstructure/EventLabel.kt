@@ -259,40 +259,30 @@ enum class LabelType {
  * Init \+ Read^{req}(x) = Read^{rsp}(x, 0)
  * ```
  */
+// TODO: now that we have ObjectAllocationLabel we can get rid of it?
 class InitializationLabel(
-    val mainThreadID: ThreadID,
-    val memoryInitializer: MemoryInitializer
+    mainThreadID: ThreadID,
+    memoryInitializer: MemoryInitializer
 ) : EventLabel(LabelKind.Send) {
     // TODO: can barrier-synchronizing events also utilize InitializationLabel?
 
-    private val initialValues = WeakHashMap<MemoryLocation, OpaqueValue>()
+    private val threadForkLabel =
+        ThreadForkLabel(setOf(mainThreadID))
 
-    val initializedMemoryLocations: Set<MemoryLocation> =
-        initialValues.keys
+    private val staticAllocationLabel =
+        ObjectAllocationLabel(STATIC_OBJECT.opaque(), memoryInitializer)
 
-    fun initialValue(location: MemoryLocation): OpaqueValue? =
-        initialValues
-            .computeIfAbsent(location) { memoryInitializer(it) ?: NULL }
-            .takeIf { it != NULL }
+    fun asThreadForkLabel() = threadForkLabel
 
-    fun asThreadForkLabel() = ThreadForkLabel(setOf(mainThreadID))
+    fun asObjectAllocationLabel() = staticAllocationLabel
 
-    fun asWriteAccessLabel(location: MemoryLocation) = WriteAccessLabel(
-        location = location,
-        _value = initialValue(location),
-        isExclusive = false,
-    )
+    fun asWriteAccessLabel(location: MemoryLocation) =
+        asObjectAllocationLabel().asWriteAccessLabel(location)
 
-    fun asUnlockLabel(mutex: OpaqueValue) = UnlockLabel(
-        mutex_ = mutex,
-        isInitUnlock = true,
-    )
+    fun asUnlockLabel(mutex: OpaqueValue) =
+        asObjectAllocationLabel().asUnlockLabel(mutex)
 
     override fun toString(): String = "Init"
-
-    companion object {
-        private val NULL : OpaqueValue = Any().opaque()
-    }
 
 }
 
@@ -501,11 +491,42 @@ fun EventLabel.asThreadEventLabel(): ThreadEventLabel? = when (this) {
 }
 
 data class ObjectAllocationLabel(
-    private var _obj: OpaqueValue
+    private var _obj: OpaqueValue,
+    val memoryInitializer: MemoryInitializer,
 ) : EventLabel(kind = LabelKind.Send) {
 
     val obj: OpaqueValue
         get() = _obj
+
+    // TODO: reset on replay!
+    private val initialValues = HashMap<MemoryLocation, OpaqueValue>()
+
+    private fun initialValue(location: MemoryLocation): OpaqueValue? {
+        require(location.obj === obj.unwrap())
+        return initialValues
+            .computeIfAbsent(location) {
+                memoryInitializer(it) ?: NULL
+            }
+            .takeIf { it != NULL }
+    }
+
+    fun asWriteAccessLabel(location: MemoryLocation) =
+        if (location.obj === obj.unwrap())
+            WriteAccessLabel(
+                location = location,
+                _value = initialValue(location),
+                isExclusive = false,
+            )
+        else null
+
+    private val unlockLabel = UnlockLabel(
+        mutex_ = obj,
+        isInitUnlock = true
+    )
+
+    // TODO: should we relax the constraint for STATIC_OBJECT ?
+    fun asUnlockLabel(mutex: OpaqueValue) =
+        unlockLabel.takeIf { it.mutex == mutex }
 
     /**
      * Replays this object allocation label using another allocation label given as argument.
@@ -533,6 +554,10 @@ data class ObjectAllocationLabel(
 
     override fun toString(): String =
         "Alloc($obj)"
+
+    companion object {
+        private val NULL : OpaqueValue = Any().opaque()
+    }
 
 }
 
@@ -590,10 +615,10 @@ sealed class MemoryAccessLabel(
         get() = (accessKind == MemoryAccessKind.Write || accessKind == MemoryAccessKind.ReadModifyWrite)
 
     /**
-     * Recipient of a memory access label is equal to its memory location's recipient.
+     * Recipient of a memory access label is equal to its memory location's object.
      */
     override val recipient: Any?
-        get() = location.recipient
+        get() = location.obj
 
     /**
      * Index of a memory access label is equal to accessed memory location.
@@ -894,12 +919,14 @@ fun WriteAccessLabel.isValidWritePart(label: ReadModifyWriteAccessLabel): Boolea
 
 fun EventLabel.asWriteAccessLabel(location: MemoryLocation): WriteAccessLabel? = when (this) {
     is WriteAccessLabel -> this.takeIf { it.location == location }
+    is ObjectAllocationLabel -> asWriteAccessLabel(location)
     is InitializationLabel -> asWriteAccessLabel(location)
     else -> null
 }
 
 fun EventLabel.asMemoryAccessLabel(location: MemoryLocation): MemoryAccessLabel? = when (this) {
     is MemoryAccessLabel -> this.takeIf { it.location == location }
+    is ObjectAllocationLabel -> asWriteAccessLabel(location)
     is InitializationLabel -> asWriteAccessLabel(location)
     else -> null
 }
@@ -1173,6 +1200,7 @@ data class NotifyLabel(
 
 fun EventLabel.asUnlockLabel(mutex: OpaqueValue): UnlockLabel? = when (this) {
     is UnlockLabel -> this.takeIf { it.mutex == mutex }
+    is ObjectAllocationLabel -> asUnlockLabel(mutex)
     is InitializationLabel -> asUnlockLabel(mutex)
     else -> null
 }

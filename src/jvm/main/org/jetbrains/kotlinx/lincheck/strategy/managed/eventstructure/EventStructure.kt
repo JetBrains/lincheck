@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.utils.*
+import java.util.*
 import kotlin.reflect.KClass
 
 class EventStructure(
@@ -677,7 +678,7 @@ class EventStructure(
     }
 
     fun addObjectAllocationEvent(iThread: Int, value: OpaqueValue): Event {
-        val label = ObjectAllocationLabel(value)
+        val label = ObjectAllocationLabel(value, memoryInitializer)
         return addSendEvent(iThread, label)
     }
 
