@@ -1710,9 +1710,18 @@ internal class ManagedStrategyTransformer(
                 super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
                 return
             }
+            val objType = Type.getObjectType(owner)
+            val objLocal: Int
+            if (owner == "java/lang/Object") {
+                objLocal = newLocal(objType).also { copyLocal(it) }
+            } else {
+                val constructorType = Type.getType(descriptor)
+                val params = storeParameters(constructorType.argumentTypes)
+                objLocal = newLocal(objType).also { copyLocal(it) }
+                params.forEach { loadLocal(it) }
+            }
             // TODO: does not work because custom constructor might have additional arguments (?) ---
             //   handle this by considering descriptor
-            val objLocal = newLocal(Type.getObjectType(owner)).also { dup(); storeLocal(it) }
             super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
             invokeOnObjectInitialization(objLocal)
         }
@@ -2193,7 +2202,8 @@ private fun GeneratorAdapter.storeParameters(paramTypes: Array<Type>): IntArray 
     return locals
 }
 
-private fun GeneratorAdapter.storeParameters(methodDescriptor: String) = storeParameters(Type.getArgumentTypes(methodDescriptor))
+private fun GeneratorAdapter.storeParameters(methodDescriptor: String) =
+    storeParameters(Type.getArgumentTypes(methodDescriptor))
 
 private fun GeneratorAdapter.unboxOrCast(type: Type) {
     // Get rid of boxes
