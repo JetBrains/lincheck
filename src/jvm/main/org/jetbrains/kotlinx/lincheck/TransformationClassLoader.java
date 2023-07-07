@@ -77,24 +77,10 @@ public class TransformationClassLoader extends ExecutionClassLoader {
      * Returns `true` if the specified class should not be transformed.
      */
     private static boolean doNotTransform(String className) {
-        if (className.startsWith(REMAPPED_PACKAGE_CANONICAL_NAME)) return false;
-        if (ManagedStrategyTransformerKt.isImpossibleToTransformApiClass(className)) return true;
-        return className.startsWith("sun.") ||
-               className.startsWith("java.") ||
-               className.startsWith("jdk.internal.") ||
-               (className.startsWith("kotlin.") &&
-                   !className.startsWith("kotlin.collections.") && // transform kotlin collections
-                   !(className.startsWith("kotlin.jvm.internal.Array") && className.contains("Iterator")) && // transform kotlin iterator classes
-                   !className.startsWith("kotlin.ranges.") // transform kotlin ranges
-               ) ||
-               className.startsWith("com.intellij.rt.coverage.") ||
-               (className.startsWith("org.jetbrains.kotlinx.lincheck.") &&
-                   !className.startsWith("org.jetbrains.kotlinx.lincheck.test.") &&
-                   !className.equals(ManagedStrategyStateHolder.class.getName())
-               ) ||
-               className.equals(kotlinx.coroutines.CancellableContinuation.class.getName()) ||
-               className.equals(kotlinx.coroutines.CoroutineExceptionHandler.class.getName()) ||
-               className.equals(kotlinx.coroutines.CoroutineDispatcher.class.getName());
+        return !className.startsWith(REMAPPED_PACKAGE_CANONICAL_NAME) && (
+            ManagedStrategyTransformerKt.isImpossibleToTransformApiClass(className) ||
+            ManagedStrategyTransformerKt.isIgnoredClass(className)
+        );
     }
 
     /**

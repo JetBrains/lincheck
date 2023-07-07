@@ -115,8 +115,6 @@ abstract class ManagedStrategy(
     // correspond to the same method call in the trace.
     private val suspendedFunctionsStack = Array(nThreads) { mutableListOf<Int>() }
 
-    private val allocatedObjects = Collections.newSetFromMap(IdentityHashMap<Any, Boolean>())
-
     protected val memoryInitializer: MemoryInitializer = { location ->
         runUntracking(currentThreadNumber()) { location.read() }?.opaque()
     }
@@ -193,7 +191,6 @@ abstract class ManagedStrategy(
         memoryTracker.reset()
         monitorTracker.reset()
         parkingTracker.reset()
-        allocatedObjects.clear()
         traceCollector = if (collectTrace) TraceCollector() else null
         suddenInvocationResult = null
         ignoredSectionDepth.fill(0)
@@ -457,21 +454,9 @@ abstract class ManagedStrategy(
 
     // == LISTENING METHODS ==
 
-
-    internal fun onObjectInitialization(iThread: Int, obj: Any?) {
-        // this method is required as a workaround for current instrumentation implementation,
-        // see the corresponding comment in ObjectAllocationTransformer::visitMethodInsn
-        if (!shouldTrackMemory(iThread))
-            return
-        if (obj !in allocatedObjects)
-            onObjectAllocation(iThread, obj!!)
-    }
-
     internal fun onObjectAllocation(iThread: Int, obj: Any) {
         if (!shouldTrackMemory(iThread))
             return
-        check(obj !in allocatedObjects)
-        allocatedObjects.add(obj)
         memoryTracker.objectAllocation(iThread, obj.opaque())
     }
 

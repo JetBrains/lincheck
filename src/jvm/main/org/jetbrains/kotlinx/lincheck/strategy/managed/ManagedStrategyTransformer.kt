@@ -21,6 +21,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.*
 import org.objectweb.asm.*
@@ -1690,22 +1691,14 @@ internal class ManagedStrategyTransformer(
             // because if we will try to intercept the object reference at this stage,
             // it will point to an uninitialized object;
             // thus we intercept object allocation event after the initializing constructor call;
-            //
-            // NOTE: we cannot intercept only Object::<init> invocations --- this is because we do not instrument
-            //   all the classes (e.g. we skip some java.* classes like java.lang.Number);
-            //   because of inheritance, some class may call Parent::<init>, but not Object::<init> ---
-            //   if Parent::<init> is not instrumented we will miss the object allocation;
-            //   thus we instrument all <init> invocations,
-            //   BUT this leads to another issue arises ---
-            //   because of inheritance several invocations of <init> can happen for the same object
-            //   (i.e. a chain of `super.constructor()` calls);
-            //   to handle this we have two separate ManagedStrategy hooks: `onObjectInitialization` and `onObjectAllocation`;
-            //   `onObjectInitialization` is just a wrapper around `onObjectAllocation`
-            //   that keep track of already allocated objects and ensures that `onObjectAllocation`
-            //   is called once for each object
-            // TODO: think about better solution!
-            // TODO: can we overcome the problem by checking if `superClass` is in the list of non-instrumented classes?
-            val isObjectInit = opcode == INVOKESPECIAL && name == "<init>" // && owner == "java/lang/Object"
+            val isObjectInit = (opcode == INVOKESPECIAL && name == "<init>" && (
+                // we cannot intercept only the Object::<init> invocations ---
+                // this is because we ignore and do not instrument some classes;
+                // because of inheritance, some class may call Parent::<init>, but not Object::<init> ---
+                // if Parent::<init> is not instrumented we will miss the object allocation;
+                // we handle such cases by checking if `owner` is non-instrumented class
+                (owner == "java/lang/Object") || isIgnoredClass(owner.canonicalClassName)
+            ))
             if (!isObjectInit) {
                 super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
                 return
@@ -1713,6 +1706,7 @@ internal class ManagedStrategyTransformer(
             val objType = Type.getObjectType(owner)
             val objLocal: Int
             if (owner == "java/lang/Object") {
+                // handle common case separately
                 objLocal = newLocal(objType).also { copyLocal(it) }
             } else {
                 val constructorType = Type.getType(descriptor)
@@ -1720,10 +1714,8 @@ internal class ManagedStrategyTransformer(
                 objLocal = newLocal(objType).also { copyLocal(it) }
                 params.forEach { loadLocal(it) }
             }
-            // TODO: does not work because custom constructor might have additional arguments (?) ---
-            //   handle this by considering descriptor
             super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
-            invokeOnObjectInitialization(objLocal)
+            invokeOnObjectAllocation(objLocal)
         }
 
         override fun visitTypeInsn(opcode: Int, type: String?) = adapter.run {
@@ -1751,17 +1743,14 @@ internal class ManagedStrategyTransformer(
 
         private fun invokeOnObjectAllocation(objType: Type) = adapter.run {
             val objLocal = newLocal(objType).also { copyLocal(it) }
+            invokeOnObjectAllocation(objLocal)
+        }
+
+        private fun invokeOnObjectAllocation(objLocal: Int) = adapter.run {
             loadStrategy()
             loadCurrentThreadNumber()
             loadLocal(objLocal)
             invokeVirtual(MANAGED_STRATEGY_TYPE, ON_OBJECT_ALLOCATION_METHOD)
-        }
-
-        private fun invokeOnObjectInitialization(objLocal: Int) = adapter.run {
-            loadStrategy()
-            loadCurrentThreadNumber()
-            loadLocal(objLocal)
-            invokeVirtual(MANAGED_STRATEGY_TYPE, ON_OBJECT_INITIALIZATION_METHOD)
         }
 
     }
@@ -2129,7 +2118,6 @@ private val UTILS_KT_TYPE = Type.getType("Lorg/jetbrains/kotlinx/lincheck/UtilsK
 
 private val CURRENT_THREAD_NUMBER_METHOD = Method.getMethod(ManagedStrategy::currentThreadNumber.javaMethod)
 private val ON_OBJECT_ALLOCATION_METHOD = Method.getMethod(ManagedStrategy::onObjectAllocation.javaMethod)
-private val ON_OBJECT_INITIALIZATION_METHOD = Method.getMethod(ManagedStrategy::onObjectInitialization.javaMethod)
 private val BEFORE_SHARED_VARIABLE_READ_METHOD = Method.getMethod(ManagedStrategy::beforeSharedVariableRead.javaMethod)
 private val BEFORE_SHARED_VARIABLE_WRITE_METHOD = Method.getMethod(ManagedStrategy::beforeSharedVariableWrite.javaMethod)
 private val ON_SHARED_VARIABLE_READ_METHOD = Method.getMethod(ManagedStrategy::onSharedVariableRead.javaMethod)
@@ -2454,9 +2442,30 @@ private fun String.isUnsafe() = this == "sun/misc/Unsafe" || this == "jdk/intern
  */
 internal fun isImpossibleToTransformApiClass(className: String) =
     className == "sun.misc.Unsafe" ||
-        className == "jdk.internal.misc.Unsafe" ||
-        className == "java.lang.invoke.VarHandle" ||
-        className.startsWith("java.util.concurrent.atomic.Atomic") && className.endsWith("FieldUpdater")
+    className == "jdk.internal.misc.Unsafe" ||
+    className == "java.lang.invoke.VarHandle" ||
+    className.startsWith("java.util.concurrent.atomic.Atomic") && className.endsWith("FieldUpdater")
+
+internal fun isIgnoredClass(className: String) =
+    className.startsWith("sun.") ||
+    className.startsWith("java.") ||
+    className.startsWith("jdk.internal.") ||
+    (className.startsWith("kotlin.") &&
+        // transform kotlin collections
+        !className.startsWith("kotlin.collections.") &&
+        // transform kotlin iterator classes
+        !(className.startsWith("kotlin.jvm.internal.Array") && className.contains("Iterator")) &&
+        // transform kotlin ranges
+        !className.startsWith("kotlin.ranges.")
+    ) ||
+    className.startsWith("com.intellij.rt.coverage.") ||
+    (className.startsWith("org.jetbrains.kotlinx.lincheck.") &&
+        !className.startsWith("org.jetbrains.kotlinx.lincheck.test.") &&
+        className != ManagedStrategyStateHolder::class.java.name
+    ) ||
+    className == CancellableContinuation::class.java.name ||
+    className == CoroutineExceptionHandler::class.java.name ||
+    className == CoroutineDispatcher::class.java.name;
 
 /**
  * This class is used for getting the [sun.misc.Unsafe] or [jdk.internal.misc.Unsafe] instance.
