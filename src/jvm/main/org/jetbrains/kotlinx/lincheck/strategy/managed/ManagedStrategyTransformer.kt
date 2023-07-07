@@ -97,6 +97,8 @@ internal class ManagedStrategyTransformer(
         }
         mv = WaitNotifyTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = ParkUnparkTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+        // object allocation transformer
+        mv = ObjectAllocationTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         // memory access transformers
         mv = UnsafeTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = run {
@@ -105,8 +107,6 @@ internal class ManagedStrategyTransformer(
             sv.analyzer = aa
             aa
         }
-        // object allocation transformer
-        mv = ObjectAllocationTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         // special methods intercepting transformers
         mv = HashCodeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = TimeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
