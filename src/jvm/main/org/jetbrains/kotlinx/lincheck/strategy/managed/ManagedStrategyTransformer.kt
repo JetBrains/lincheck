@@ -1699,7 +1699,7 @@ internal class ManagedStrategyTransformer(
                 // we handle such cases by checking if `owner` is non-instrumented class
                 (owner == "java/lang/Object") || isIgnoredClass(owner.canonicalClassName)
             ))
-            if (!isObjectInit) {
+            if (!isObjectInit || isIgnoredClass(className.canonicalClassName)) {
                 super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
                 return
             }
