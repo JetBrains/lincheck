@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.implies
+import java.util.IdentityHashMap
 import java.util.WeakHashMap
 import kotlin.reflect.KClass
 
@@ -261,26 +262,29 @@ enum class LabelType {
  */
 // TODO: now that we have ObjectAllocationLabel we can get rid of it?
 class InitializationLabel(
-    mainThreadID: ThreadID,
-    memoryInitializer: MemoryInitializer
+    val mainThreadID: ThreadID,
+    val memoryInitializer: MemoryInitializer,
+    val isExternalObject: (Any) -> Boolean,
 ) : EventLabel(LabelKind.Send) {
-    // TODO: can barrier-synchronizing events also utilize InitializationLabel?
 
-    private val threadForkLabel =
+    private val objectsAllocations =
+        IdentityHashMap<Any, ObjectAllocationLabel>()
+
+    fun asThreadForkLabel() =
         ThreadForkLabel(setOf(mainThreadID))
 
-    private val staticAllocationLabel =
-        ObjectAllocationLabel(STATIC_OBJECT.opaque(), memoryInitializer)
-
-    fun asThreadForkLabel() = threadForkLabel
-
-    fun asObjectAllocationLabel() = staticAllocationLabel
+    fun asObjectAllocationLabel(obj: Any): ObjectAllocationLabel? =
+        if (isExternalObject(obj))
+            objectsAllocations.computeIfAbsent(obj) {
+                ObjectAllocationLabel(obj.opaque(), memoryInitializer)
+            }
+        else null
 
     fun asWriteAccessLabel(location: MemoryLocation) =
-        asObjectAllocationLabel().asWriteAccessLabel(location)
+        asObjectAllocationLabel(location.obj)?.asWriteAccessLabel(location)
 
     fun asUnlockLabel(mutex: OpaqueValue) =
-        asObjectAllocationLabel().asUnlockLabel(mutex)
+        asObjectAllocationLabel(mutex.unwrap())?.asUnlockLabel(mutex)
 
     override fun toString(): String = "Init"
 
@@ -519,12 +523,6 @@ data class ObjectAllocationLabel(
             )
         else null
 
-    private val unlockLabel = UnlockLabel(
-        mutex_ = obj,
-        isInitUnlock = true
-    )
-
-    // TODO: should we relax the constraint for STATIC_OBJECT ?
     fun asUnlockLabel(mutex: OpaqueValue) =
         if (mutex == obj) UnlockLabel(mutex_ = obj, isInitUnlock = true) else null
 
@@ -559,6 +557,12 @@ data class ObjectAllocationLabel(
         private val NULL : OpaqueValue = Any().opaque()
     }
 
+}
+
+fun EventLabel.asObjectAllocationLabel(obj: OpaqueValue): ObjectAllocationLabel? = when (this) {
+    is ObjectAllocationLabel -> takeIf { it.obj == obj }
+    is InitializationLabel -> asObjectAllocationLabel(obj.unwrap())
+    else -> null
 }
 
 /**

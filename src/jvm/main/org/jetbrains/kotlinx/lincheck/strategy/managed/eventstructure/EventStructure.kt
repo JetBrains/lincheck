@@ -71,6 +71,9 @@ class EventStructure(
 
     private var detectedInconsistency: Inconsistency? = null
 
+    // TODO: move to EventIndexer once it will be implemented
+    private val allocationEvents = IdentityHashMap<Any, Event>()
+
     /*
      * Map from blocked dangling events to their responses.
      * If event is blocked but the corresponding response has not yet arrived then it is mapped to null.
@@ -159,6 +162,7 @@ class EventStructure(
         }
         currentRemapping.reset()
         danglingEvents.clear()
+        allocationEvents.clear()
         delayedConsistencyCheckBuffer.clear()
         detectedInconsistency = null
     }
@@ -371,6 +375,9 @@ class EventStructure(
         if (synchronize && !inReplayPhase()) {
             addSynchronizedEvents(event)
         }
+        if (event.label is ObjectAllocationLabel) {
+            allocationEvents.put(event.label.obj.unwrap(), event).ensureNull()
+        }
         // TODO: set suddenInvocationResult instead
         if (detectedInconsistency == null) {
             detectedInconsistency = checkConsistencyIncrementally(event, isReplayedEvent && event != currentExplorationRoot)
@@ -504,7 +511,9 @@ class EventStructure(
         // we do not mark root event as visited purposefully;
         // this is just a trick to make first call to `startNextExploration`
         // to pick the root event as the next event to explore from.
-        val label = InitializationLabel(mainThreadId, memoryInitializer)
+        val label = InitializationLabel(mainThreadId, memoryInitializer) { obj ->
+            obj !in allocationEvents
+        }
         return addEvent(initThreadId, label, parent = null, dependencies = emptyList())!!.also {
             addEventToCurrentExecution(it, visit = false)
         }
