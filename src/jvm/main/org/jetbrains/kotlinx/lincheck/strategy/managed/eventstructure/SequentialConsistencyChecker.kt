@@ -85,7 +85,7 @@ class SequentialConsistencyChecker(
             if (event.label is WaitLabel && (event.notifiedBy.label as NotifyLabel).isBroadcast)
                 continue
             val key: Any = when (event.syncFrom.label) {
-                is LockLabel, is WaitLabel -> event.syncFrom
+                is UnlockLabel, is NotifyLabel -> event.syncFrom
                 else -> event.label.mutex
             }
             if (mapping.put(key, event) != null) {

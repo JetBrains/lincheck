@@ -526,7 +526,7 @@ data class ObjectAllocationLabel(
 
     // TODO: should we relax the constraint for STATIC_OBJECT ?
     fun asUnlockLabel(mutex: OpaqueValue) =
-        unlockLabel.takeIf { it.mutex == mutex }
+        if (mutex == obj) UnlockLabel(mutex_ = obj, isInitUnlock = true) else null
 
     /**
      * Replays this object allocation label using another allocation label given as argument.
