@@ -52,3 +52,19 @@ Detailed trace:
 |                                                                                           |       MONITOREXIT at TraceReportingTest.resetFlag(TraceReportingTest.kt:55)                           |
 |                                                                                           |   result: void                                                                                        |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+
+
+= To reproduce exactly this test execution with the same scenarios, you can add this setting in your testing options configuration =
+.withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6LTE0Mjc3OTA0ODMyNTUxOTg3MDl9")
+
+= You can add this scenario as a custom test. Insert this code in your testing options configuration =
+.addCustomScenario {
+	parallel {
+		thread {
+			actor(::foo)
+		}
+		thread {
+			actor(::bar)
+		}
+	}
+}

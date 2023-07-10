@@ -37,6 +37,7 @@ class ObstructionFreedomViolationEventsCutTest {
     @Test
     fun runModelCheckingTest() = ModelCheckingOptions()
         .checkObstructionFreedom(true)
+        .withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6LTI2MDE0OTkxMTkwNzQzNzI3NDV9")
         .checkImpl(this::class.java)
         .checkLincheckOutput("obstruction_freedom_violation_events_cut.txt")
 
@@ -50,6 +51,7 @@ class SpinlockEventsCutShortLengthTest : AbstractSpinLivelockTest() {
     private val sharedStateAny = AtomicBoolean(false)
 
     override val outputFileName: String get() = "spin_lock_events_cut_single_action_cycle.txt"
+    override val reproduceSettingsLine: String get() = "eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6LTE0OTE3MTA4ODEyNzAzMzU4MzZ9"
 
     override fun meaninglessActions() {
         sharedStateAny.get()
@@ -65,6 +67,7 @@ class SpinlockEventsCutMiddleLengthTest : AbstractSpinLivelockTest() {
     private val sharedStateAny = AtomicBoolean(false)
 
     override val outputFileName: String get() = "spin_lock_events_cut_two_actions_cycle.txt"
+    override val reproduceSettingsLine: String get() = "eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6LTE2ODk5ODU2OTkxNDU4NTA2Nn0="
 
     override fun meaninglessActions() {
         val x = sharedStateAny.get()
@@ -81,6 +84,7 @@ class SpinlockEventsCutInfiniteLoopTest : AbstractSpinLivelockTest() {
     private val sharedStateAny = AtomicBoolean(false)
 
     override val outputFileName: String get() = "infinite_spin_loop_events_cut.txt"
+    override val reproduceSettingsLine: String get() = "eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6LTc5NjQ0NjMxNTExMTczMjc5NX0="
 
     override fun meaninglessActions() {
         while (true) {
@@ -97,6 +101,7 @@ class SpinlockEventsCutLongCycleActionsTest : AbstractSpinLivelockTest() {
 
     private val data = AtomicReferenceArray<Int>(7)
     override val outputFileName: String get() = "spin_lock_events_cut_long_cycle.txt"
+    override val reproduceSettingsLine: String get() = "eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6LTMwNzcwMDMxMzYxMDM0MTA0MTF9"
     override fun meaninglessActions() {
         data[0] = 0
         data[1] = 0
@@ -116,6 +121,7 @@ class SpinlockEventsCutWithInnerLoopActionsTest : AbstractSpinLivelockTest() {
 
     private val data = AtomicReferenceArray<Int>(10)
     override val outputFileName: String get() = "spin_lock_events_cut_inner_loop.txt"
+    override val reproduceSettingsLine: String get() = "eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6LTQ5ODM1MzAyNDgxODMzNTgzOTd9"
     override fun meaninglessActions() {
         for (i in 0 until data.length()) {
             data[i] = 0
@@ -129,6 +135,7 @@ abstract class AbstractSpinLivelockTest {
     private val sharedState2 = AtomicBoolean(false)
 
     abstract val outputFileName: String
+    abstract val reproduceSettingsLine: String
 
     @Operation
     fun one(): Int {
@@ -163,6 +170,7 @@ abstract class AbstractSpinLivelockTest {
     @Test
     fun testWithModelCheckingStrategy() = ModelCheckingOptions()
         .minimizeFailedScenario(false)
+        .withReproduceSettings(reproduceSettingsLine)
         .checkImpl(this::class.java)
         .checkLincheckOutput(outputFileName)
 }
@@ -200,6 +208,7 @@ class SpinlockInIncorrectResultsWithClocksTest {
         .iterations(1)
         .sequentialSpecification(ClocksTestSequential::class.java)
         .minimizeFailedScenario(false)
+        .withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6LTc5NTMwMzMwODA2NzkwMDg0ODB9")
         .checkImpl(this::class.java)
         .checkLincheckOutput("spin_lock_in_incorrect_results_failure.txt")
 

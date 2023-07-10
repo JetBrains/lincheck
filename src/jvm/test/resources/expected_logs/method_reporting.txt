@@ -44,3 +44,19 @@ Detailed trace:
 |                                                                                                                     |   counter.WRITE(2) at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:98)                       |
 |                                                                                                                     |   result: 1                                                                                                         |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+
+
+= To reproduce exactly this test execution with the same scenarios, you can add this setting in your testing options configuration =
+.withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6LTIyNDY5NzM5MjQ0MDc1MDAwMH0=")
+
+= You can add this scenario as a custom test. Insert this code in your testing options configuration =
+.addCustomScenario {
+	parallel {
+		thread {
+			actor(::operation)
+		}
+		thread {
+			actor(::operation)
+		}
+	}
+}

@@ -52,3 +52,19 @@ Detailed trace:
 |                                                                                                                          |   counter.WRITE(1) at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:43)                   |
 |                                                                                                                          |   result: 0                                                                                                              |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+
+
+= To reproduce exactly this test execution with the same scenarios, you can add this setting in your testing options configuration =
+.withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6LTI1ODcxMDgyNTE4MTAwNDUxODh9")
+
+= You can add this scenario as a custom test. Insert this code in your testing options configuration =
+.addCustomScenario {
+	parallel {
+		thread {
+			actor(::operation)
+		}
+		thread {
+			actor(::operation)
+		}
+	}
+}

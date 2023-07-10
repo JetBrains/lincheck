@@ -29,6 +29,8 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     protected var sequentialSpecification: Class<*>? = null
     protected var timeoutMs: Long = CTestConfiguration.DEFAULT_TIMEOUT_MS
     protected var customScenarios: MutableList<ExecutionScenario> = mutableListOf()
+    var reproduceSettings: ReproduceSettings? = null
+        private set
 
     /**
      * Number of different test scenarios to be executed
@@ -151,6 +153,13 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
      */
     fun addCustomScenario(scenarioBuilder: DSLScenarioBuilder.() -> Unit) =
         addCustomScenario(scenario { scenarioBuilder() })
+
+    /**
+     * Used to fixate run options to reproduce certain scenario results
+     */
+    fun withReproduceSettings(configuration: String): OPT = applyAndCast {
+        reproduceSettings = ConfigurationStringEncoder.decodeReproduceSettings(configuration)
+    }
 
     /**
      * Internal, DO NOT USE.

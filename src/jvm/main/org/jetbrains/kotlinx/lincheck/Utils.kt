@@ -23,6 +23,7 @@ import java.lang.reflect.Method
 import java.util.*
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
 
 
 fun chooseSequentialSpecification(sequentialSpecificationByUser: Class<*>?, testClass: Class<*>): Class<*> =
@@ -364,16 +365,22 @@ internal object InternalLincheckTestUnexpectedException : Exception()
  */
 internal class LincheckInternalBugException(cause: Throwable): Exception(cause)
 
-internal fun stackTraceRepresentation(stackTrace: Array<StackTraceElement>): List<String> {
-    return transformStackTraceBackFromRemapped(stackTrace).map { it.toString() }.filter { line ->
-        "org.jetbrains.kotlinx.lincheck.strategy" !in line
-                && "org.jetbrains.kotlinx.lincheck.runner" !in line
-                && "org.jetbrains.kotlinx.lincheck.UtilsKt" !in line
-    }
-}
-
-internal fun transformStackTraceBackFromRemapped(stackTrace: Array<StackTraceElement>) = stackTrace.map {
-    StackTraceElement(it.className.removePrefix(TransformationClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME), it.methodName, it.fileName, it.lineNumber)
-}
-
 internal const val LINCHECK_PACKAGE_NAME = "org.jetbrains.kotlinx.lincheck."
+
+internal fun actor(method: Method, arguments: List<Any?>): Actor {
+    val operationAnnotation = method.getDeclaredAnnotation(Operation::class.java) ?: return Actor(
+        method = method,
+        arguments = arguments,
+        cancelOnSuspension = method.isSuspendable()
+    )
+
+    return Actor(
+        method = method,
+        arguments = arguments,
+        causesBlocking = operationAnnotation.causesBlocking,
+        blocking = operationAnnotation.blocking,
+        promptCancellation = operationAnnotation.promptCancellation,
+        allowExtraSuspension = operationAnnotation.allowExtraSuspension,
+        cancelOnSuspension = method.isSuspendable() && operationAnnotation.cancellableOnSuspension,
+    )
+}

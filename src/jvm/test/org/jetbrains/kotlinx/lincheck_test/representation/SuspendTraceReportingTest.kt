@@ -50,6 +50,7 @@ class SuspendTraceReportingTest : VerifierState() {
         actorsPerThread(1)
         actorsBefore(0)
         actorsAfter(0)
+        withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6NjEzMTQ5MTk1MzA1OTg4ODY1M30=")
     }
         .checkImpl(this::class.java)
         .checkLincheckOutput("suspend_trace_reporting.txt")

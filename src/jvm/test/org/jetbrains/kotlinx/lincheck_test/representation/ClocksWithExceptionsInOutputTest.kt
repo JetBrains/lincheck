@@ -37,6 +37,7 @@ class ClocksWithExceptionsInOutputTest {
     fun `should add stackTrace to output`() = ModelCheckingOptions().apply {
         actorsPerThread(2)
         minimizeFailedScenario(false)
+        withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6MjUyNTQyNjk2NzcxNzY1NDQ0N30=")
     }
         .checkImpl(this::class.java)
         .checkLincheckOutput("clocks_and_exceptions.txt")

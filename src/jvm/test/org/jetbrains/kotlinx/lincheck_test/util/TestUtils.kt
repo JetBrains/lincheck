@@ -14,6 +14,9 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.Assert.*
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import java.lang.reflect.Method
 
 /**
  * Checks that failure output matches the expected one stored in a file.
@@ -63,4 +66,52 @@ fun checkTraceHasNoLincheckEvents(trace: String) {
     val testPackageOccurrences = trace.split("org.jetbrains.kotlinx.lincheck_test.").size - 1
     val lincheckPackageOccurrences = trace.split("org.jetbrains.kotlinx.lincheck.").size - 1
     check(testPackageOccurrences == lincheckPackageOccurrences) { "Internal Lincheck events were found in the trace" }
+}
+
+internal fun assertScenariosEquals(expected: ExecutionScenario, actual: ExecutionScenario) {
+    assertActorsSequenceEquals(expected.initExecution, actual.initExecution)
+
+    assertEquals(expected.parallelExecution.size, actual.parallelExecution.size)
+    expected.parallelExecution.zip(actual.parallelExecution).forEach { (expectedThreadActors, actualThreadActors) ->
+        assertActorsSequenceEquals(expectedThreadActors, actualThreadActors)
+    }
+
+    assertActorsSequenceEquals(expected.postExecution, actual.postExecution)
+}
+
+private fun assertActorsSequenceEquals(expected: List<Actor>, actual: List<Actor>) {
+    assertEquals(expected.size, actual.size)
+
+    expected.zip(actual).forEach { (expectedActor, actualActor) ->
+        assertActorsEquals(expectedActor, actualActor)
+    }
+}
+
+private fun assertActorsEquals(expected: Actor, actual: Actor) {
+    assertEquals(expected, actual)
+
+    val operationAnnotation = expected.method.getAnnotation(Operation::class.java) ?: return
+
+    assertEquals(operationAnnotation.cancellableOnSuspension, actual.cancelOnSuspension)
+    assertEquals(operationAnnotation.allowExtraSuspension, actual.allowExtraSuspension)
+    assertEquals(operationAnnotation.blocking, actual.blocking)
+    assertEquals(operationAnnotation.causesBlocking, actual.causesBlocking)
+    assertEquals(operationAnnotation.promptCancellation, actual.promptCancellation)
+}
+
+/**
+ * Convenient method to call from Kotlin to avoid passing class object directly
+ */
+internal fun Any.getMethod(methodName: String, parameterCount: Int) =
+    getMethod(this::class.java, methodName, parameterCount)
+
+/**
+ * Convenient method to call from Kotlin to avoid passing class object directly
+ */
+internal fun Any.getSuspendMethod(methodName: String, parameterCount: Int) =
+    getMethod(this::class.java, methodName, parameterCount + 1) // + 1 because of continuation parameter
+
+internal fun getMethod(clazz: Class<*>, methodName: String, parameterCount: Int): Method {
+    return clazz.declaredMethods.find { it.name == methodName && it.parameterCount == parameterCount }
+        ?: error("Method with name $methodName and parameterCount: $parameterCount not found")
 }

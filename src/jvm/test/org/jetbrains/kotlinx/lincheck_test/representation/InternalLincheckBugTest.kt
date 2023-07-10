@@ -41,6 +41,7 @@ class InternalLincheckBugTest {
     @Test
     fun `should add stackTrace to output`() = ModelCheckingOptions().apply {
         actorsPerThread(2)
+        withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6NzUxNDAzODQ5NzM2MTgwNTMwOX0=")
     }
         .checkImpl(this::class.java)
         .checkLincheckOutput("internal_bug_report.txt")

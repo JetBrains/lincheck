@@ -12,15 +12,25 @@ package org.jetbrains.kotlinx.lincheck
 
 import java.util.Random
 
-private const val SEED_GENERATOR_SEED = 0L
-
 /**
  * Used to provide [Random] with different seeds to parameters generators and method generator
  * Is being created every time on each test to make an execution deterministic.
  */
 class RandomProvider {
+    /**
+     * This field is exposed to provide it as information to reproduce the failure
+     */
+    val seedGeneratorSeed: Long
+    private val seedGenerator: Random = Random()
 
-    private val seedGenerator = Random(SEED_GENERATOR_SEED)
+    constructor() {
+        seedGeneratorSeed = seedGenerator.nextLong()
+        seedGenerator.setSeed(seedGeneratorSeed)
+    }
 
+    constructor(seedGeneratorSeed: Long) {
+        this.seedGeneratorSeed = seedGeneratorSeed
+        seedGenerator.setSeed(seedGeneratorSeed)
+    }
     fun createRandom(): Random = Random(seedGenerator.nextLong())
 }
