@@ -53,11 +53,11 @@ class ExceptionInInitPartTest : AbstractLincheckTest(IncorrectResultsFailure::cl
 
     val scenario = scenario {
         initial {
-            actor(ExceptionInInitPartTest::exception)
+            actor(::exception)
         }
         parallel {
             thread {
-                actor(ExceptionInInitPartTest::idle)
+                actor(::idle)
             }
         }
     }
@@ -84,11 +84,11 @@ class ExceptionInPostPartTest : AbstractLincheckTest(IncorrectResultsFailure::cl
     val scenario = scenario {
         parallel {
             thread {
-                actor(ExceptionInPostPartTest::idle)
+                actor(::idle)
             }
         }
         post {
-            actor(ExceptionInPostPartTest::exception)
+            actor(::exception)
         }
     }
 

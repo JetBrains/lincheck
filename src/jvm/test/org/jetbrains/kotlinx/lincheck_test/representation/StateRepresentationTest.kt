@@ -45,6 +45,7 @@ open class ModelCheckingStateReportingTest {
         actorsBefore(0)
         actorsAfter(0)
         requireStateEquivalenceImplCheck(false)
+        withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6NDQ5ODM4NDAwMzMwODU3NDYyNn0=")
     }
         .checkImpl(this::class.java)
         .checkLincheckOutput("state_representation.txt")

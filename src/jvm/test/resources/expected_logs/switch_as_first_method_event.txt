@@ -39,3 +39,19 @@ Detailed trace:
 |                                                                                                                      |       counter.incrementAndGet(): 4 at SwitchAsFirstMethodEventTest.incAndGetImpl(SwitchAsFirstMethodEventTest.kt:49) |
 |                                                                                                                      |   result: 4                                                                                                          |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+
+
+= To reproduce exactly this test execution with the same scenarios, you can add this setting in your testing options configuration =
+.withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6LTc5NjU0MTUxNTc0Mjk4NDA5NzF9")
+
+= You can add this scenario as a custom test. Insert this code in your testing options configuration =
+.addCustomScenario {
+	parallel {
+		thread {
+			actor(::incTwiceAndGet)
+		}
+		thread {
+			actor(::incTwiceAndGet)
+		}
+	}
+}

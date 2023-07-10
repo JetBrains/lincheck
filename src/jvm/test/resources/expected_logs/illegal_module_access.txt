@@ -1,8 +1,8 @@
 = The execution failed with an unexpected exception =
 | ------------------------------ |
-|     Thread 1     |  Thread 2   |
+|  Thread 1   |     Thread 2     |
 | ------------------------------ |
-| incrementTwice() | operation() |
+| operation() | incrementTwice() |
 | ------------------------------ |
 
 java.lang.RuntimeException: It seems that you use Java 9+ and the code uses Unsafe or similar constructions that are not accessible from unnamed modules.
@@ -10,12 +10,12 @@ Please add the following lines to your test running configuration:
 --add-opens java.base/jdk.internal.misc=ALL-UNNAMED
 --add-exports java.base/jdk.internal.util=ALL-UNNAMED
 --add-exports java.base/sun.security.action=ALL-UNNAMED
-	at org.jetbrains.kotlinx.lincheck.UtilsKt.wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(Utils.kt:338)
-	at org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy.onFailure(ManagedStrategy.kt:330)
-	at org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyRunner.onFailure(ManagedStrategy.kt:1105)
+	at org.jetbrains.kotlinx.lincheck.UtilsKt.wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(Utils.kt:339)
+	at org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy.onFailure(ManagedStrategy.kt:331)
+	at org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyRunner.onFailure(ManagedStrategy.kt:1106)
 	at org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution.failOnExceptionIsUnexpected(TestThreadExecution.java:59)
-	at org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution226.run(Unknown Source)
-	at org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.testThreadRunnable$lambda-8(FixedActiveThreadsExecutor.kt:149)
+	at org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution221.run(Unknown Source)
+	at org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.testThreadRunnable$lambda-8(FixedActiveThreadsExecutor.kt:151)
 	at java.base/java.lang.Thread.run(Thread.java:833)
 Caused by: java.lang.IllegalAccessException: module java.base does not "opens java.io" to unnamed module
 	at org.jetbrains.kotlinx.lincheck_test.representation.IllegalModuleAccessOutputMessageTest$operation$1.invoke(IllegalModuleAccessOutputMessageTest.kt:39)
@@ -27,21 +27,37 @@ Caused by: java.lang.IllegalAccessException: module java.base does not "opens ja
 
 The following interleaving leads to the error:
 | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                             Thread 1                                                              |  Thread 2   |
+|  Thread 1   |                                                             Thread 2                                                              |
 | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| incrementTwice()                                                                                                                  |             |
-|   counter.incrementAndGet(): 1 at IllegalModuleAccessOutputMessageTest.incrementTwice(IllegalModuleAccessOutputMessageTest.kt:32) |             |
-|   switch                                                                                                                          |             |
-|                                                                                                                                   | operation() |
+|             | incrementTwice()                                                                                                                  |
+|             |   counter.incrementAndGet(): 1 at IllegalModuleAccessOutputMessageTest.incrementTwice(IllegalModuleAccessOutputMessageTest.kt:32) |
+|             |   switch                                                                                                                          |
+| operation() |                                                                                                                                   |
 | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 
 Detailed trace:
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                             Thread 1                                                              |                                                    Thread 2                                                     |
+|                                                    Thread 1                                                     |                                                             Thread 2                                                              |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| incrementTwice()                                                                                                                  |                                                                                                                 |
-|   counter.incrementAndGet(): 1 at IllegalModuleAccessOutputMessageTest.incrementTwice(IllegalModuleAccessOutputMessageTest.kt:32) |                                                                                                                 |
-|   switch                                                                                                                          |                                                                                                                 |
-|                                                                                                                                   | operation()                                                                                                     |
-|                                                                                                                                   |   counter.READ: 1 at IllegalModuleAccessOutputMessageTest.operation(IllegalModuleAccessOutputMessageTest.kt:38) |
+|                                                                                                                 | incrementTwice()                                                                                                                  |
+|                                                                                                                 |   counter.incrementAndGet(): 1 at IllegalModuleAccessOutputMessageTest.incrementTwice(IllegalModuleAccessOutputMessageTest.kt:32) |
+|                                                                                                                 |   switch                                                                                                                          |
+| operation()                                                                                                     |                                                                                                                                   |
+|   counter.READ: 1 at IllegalModuleAccessOutputMessageTest.operation(IllegalModuleAccessOutputMessageTest.kt:38) |                                                                                                                                   |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+
+
+= To reproduce exactly this test execution with the same scenarios, you can add this setting in your testing options configuration =
+.withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6LTY0MTY2NDY1Mjk1OTQzNzkzNzl9")
+
+= You can add this scenario as a custom test. Insert this code in your testing options configuration =
+.addCustomScenario {
+	parallel {
+		thread {
+			actor(::operation)
+		}
+		thread {
+			actor(::incrementTwice)
+		}
+	}
+}

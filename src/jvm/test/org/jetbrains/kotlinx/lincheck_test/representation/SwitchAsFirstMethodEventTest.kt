@@ -53,6 +53,7 @@ class SwitchAsFirstMethodEventTest {
         actorsPerThread(1)
         actorsBefore(0)
         actorsAfter(0)
+        withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6LTc5NjU0MTUxNTc0Mjk4NDA5NzF9")
     }
         .checkImpl(this::class.java)
         .checkLincheckOutput("switch_as_first_method_event.txt")

@@ -19,9 +19,10 @@ import kotlin.reflect.*
  * This class runs concurrent tests.
  */
 class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
-    private val testStructure = CTestStructure.getFromTestClass(testClass)
+    private val testStructure = CTestStructure.getFromTestClass(testClass, options)
     private val testConfigurations: List<CTestConfiguration>
     private val reporter: Reporter
+    private val reproduceSettingsFactory = ReproduceSettingsFactory(testStructure.randomProvider.seedGeneratorSeed)
 
     init {
         val logLevel = options?.logLevel ?: testClass.getAnnotation(LogLevel::class.java)?.value ?: DEFAULT_LOG_LEVEL
@@ -117,7 +118,8 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             scenario = this,
             validationFunctions = testStructure.validationFunctions,
             stateRepresentationMethod = testStructure.stateRepresentation,
-            verifier = verifier
+            verifier = verifier,
+            reproduceSettingsFactory = reproduceSettingsFactory
         ).run()
 
     private fun CTestConfiguration.createVerifier() =

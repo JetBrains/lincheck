@@ -57,3 +57,24 @@ Detailed trace:
 |   validateInvoked.WRITE(5) at ValidateFunctionTest.validateWithError(ValidateFunctionTest.kt:38) |
 |   validateInvoked.READ: 5 at ValidateFunctionTest.validateWithError(ValidateFunctionTest.kt:39)  |
 | ------------------------------------------------------------------------------------------------ |
+
+
+= To reproduce exactly this test execution with the same scenarios, you can add this setting in your testing options configuration =
+.withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6LTQ1NjkxMTY2MzQ1OTkxNDk3ODR9")
+
+= You can add this scenario as a custom test. Insert this code in your testing options configuration =
+.addCustomScenario {
+	initial {
+		actor(::inc)
+		actor(::inc)
+		actor(::inc)
+	}
+	parallel {
+		thread {
+			actor(::inc)
+		}
+	}
+	post {
+		actor(::inc)
+	}
+}

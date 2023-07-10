@@ -45,6 +45,7 @@ class ValidateFunctionTest : VerifierState() {
         invocationsPerIteration(1)
         actorsBefore(3)
         actorsAfter(10)
+        withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6LTQ1NjkxMTY2MzQ1OTkxNDk3ODR9")
     }
         .checkImpl(this::class.java)
         .checkLincheckOutput("validation_function_failure.txt")

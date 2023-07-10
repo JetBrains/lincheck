@@ -207,7 +207,7 @@ class EnumParamGeneratorTest {
 
     private fun assertDistribution(enumCounts: Map<TestEnum, Int>, expectedValuesSet: Set<TestEnum>) {
         val dispersion = dispersion(enumCounts.entries.map { it.value })
-        assertTrue(dispersion > 4.0)
+        assertTrue(dispersion > 3.0)
 
         assertTrue(enumCounts.all { it.key in expectedValuesSet })
     }

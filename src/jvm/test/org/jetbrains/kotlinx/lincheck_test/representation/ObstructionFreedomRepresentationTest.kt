@@ -54,6 +54,7 @@ class ObstructionFreedomActiveLockRepresentationTest : VerifierState() {
         .actorsAfter(0)
         .threads(1)
         .checkObstructionFreedom(true)
+        .withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6NTY5NDE2MDUyODk3ODQ3ODA3fQ==")
         .checkImpl(this::class.java)
         .checkLincheckOutput("obstruction_freedom_violation_with_no_detected_cycle.txt")
 
@@ -78,6 +79,7 @@ class ObstructionFreedomSynchronizedRepresentationTest : VerifierState() {
         actorsAfter(0)
         threads(2)
         checkObstructionFreedom(true)
+        withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6NzIxNDI3NjM3NjQzMDY5NjgyMH0=")
     }
         .checkImpl(this::class.java)
         .checkLincheckOutput("obstruction_freedom_synchronized.txt")

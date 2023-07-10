@@ -40,3 +40,21 @@ Detailed trace:
 |                                                                                                     |   bStarted.READ: true at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:190)  |
 |                                                                                                     |   result: void                                                                                      |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+
+
+= To reproduce exactly this test execution with the same scenarios, you can add this setting in your testing options configuration =
+.withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6LTc5NTMwMzMwODA2NzkwMDg0ODB9")
+
+= You can add this scenario as a custom test. Insert this code in your testing options configuration =
+.addCustomScenario {
+	parallel {
+		thread {
+			actor(::a)
+			actor(::b)
+		}
+		thread {
+			actor(::c)
+			actor(::d)
+		}
+	}
+}

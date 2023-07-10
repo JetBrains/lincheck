@@ -48,6 +48,7 @@ class CapturedValueRepresentationTest : VerifierState() {
         actorsAfter(0)
         actorsBefore(0)
         actorsPerThread(1)
+        withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6LTI1ODcxMDgyNTE4MTAwNDUxODh9")
     }
         .checkImpl(this::class.java)
         .checkLincheckOutput("captured_value.txt")

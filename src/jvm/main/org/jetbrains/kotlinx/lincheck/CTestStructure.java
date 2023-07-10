@@ -10,6 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.jetbrains.kotlinx.lincheck.annotations.*;
 import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.paramgen.*;
@@ -48,13 +50,13 @@ public class CTestStructure {
     /**
      * Constructs {@link CTestStructure} for the specified test class.
      */
-    public static CTestStructure getFromTestClass(Class<?> testClass) {
+    public static CTestStructure getFromTestClass(Class<?> testClass, Options<?, ?> options) {
         Map<String, OperationGroup> groupConfigs = new HashMap<>();
         List<ActorGenerator> actorGenerators = new ArrayList<>();
         List<Method> validationFunctions = new ArrayList<>();
         List<Method> stateRepresentations = new ArrayList<>();
         Class<?> clazz = testClass;
-        RandomProvider randomProvider = new RandomProvider();
+        RandomProvider randomProvider = createRandomProvider(options);
         Map<Class<?>, ParameterGenerator<?>> parameterGeneratorsMap = new HashMap<>();
 
         while (clazz != null) {
@@ -265,6 +267,15 @@ public class CTestStructure {
         } else {
             return createGenerator(paramAnn, randomProvider);
         }
+    }
+
+    @NotNull
+    private static RandomProvider createRandomProvider(@Nullable Options<?, ?> options) {
+        if (options == null || options.getReproduceSettings() == null) {
+            return new RandomProvider();
+        }
+
+        return new RandomProvider(options.getReproduceSettings().getRandomSeedGeneratorSeed());
     }
 
     private static ParameterGenerator<?> createGenerator(Param paramAnn, RandomProvider randomProvider) {

@@ -48,3 +48,19 @@ Detailed trace:
 |                                                                                                             |   STATE: 4                                                                                                  |
 |                                                                                                             |   result: 3                                                                                                 |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+
+
+= To reproduce exactly this test execution with the same scenarios, you can add this setting in your testing options configuration =
+.withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6NDQ5ODM4NDAwMzMwODU3NDYyNn0=")
+
+= You can add this scenario as a custom test. Insert this code in your testing options configuration =
+.addCustomScenario {
+	parallel {
+		thread {
+			actor(::operation)
+		}
+		thread {
+			actor(::operation)
+		}
+	}
+}

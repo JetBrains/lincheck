@@ -41,3 +41,19 @@ Detailed trace:
 |   canEnterForbiddenSection.WRITE(false) at ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:27) |                                                                                                          |
 |   result: IllegalStateException #1                                                                         |                                                                                                          |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+
+
+= To reproduce exactly this test execution with the same scenarios, you can add this setting in your testing options configuration =
+.withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6LTYyODkwNTAyMjA3ODc0NTk0ODV9")
+
+= You can add this scenario as a custom test. Insert this code in your testing options configuration =
+.addCustomScenario {
+	parallel {
+		thread {
+			actor(::operation1)
+		}
+		thread {
+			actor(::operation2)
+		}
+	}
+}

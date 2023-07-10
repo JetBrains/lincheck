@@ -34,6 +34,7 @@ class ExceptionsInOutputTest {
     @Test
     fun `should add stackTrace to output`() = ModelCheckingOptions().apply {
         actorsBefore(2)
+        withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6LTYyODkwNTAyMjA3ODc0NTk0ODV9")
     }
         .checkImpl(this::class.java)
         .checkLincheckOutput("exceptions_in_output.txt")

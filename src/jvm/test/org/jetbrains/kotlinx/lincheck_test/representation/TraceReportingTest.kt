@@ -75,7 +75,9 @@ class TraceReportingTest {
                     }
                 }
             }
-        }.checkImpl(this::class.java)
+        }
+            .withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6LTE0Mjc3OTA0ODMyNTUxOTg3MDl9")
+            .checkImpl(this::class.java)
         failure.checkLincheckOutput("trace_reporting.txt")
         checkTraceHasNoLincheckEvents(failure.toString())
     }
@@ -113,6 +115,7 @@ class TraceReportingTest {
                     actor(::enterPost)
                 }
             }
+            .withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6LTM1Mjg2NzE4OTI5MDEzMTU3NzV9")
             .checkImpl(this::class.java)
         failure.checkLincheckOutput("trace_reporting_init_post_parts.txt")
         checkTraceHasNoLincheckEvents(failure.toString())

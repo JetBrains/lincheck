@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck
 
+import org.jetbrains.kotlinx.lincheck.ConfigurationStringEncoder.encodeToConfigurationString
 import org.jetbrains.kotlinx.lincheck.LoggingLevel.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
@@ -355,7 +356,7 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
         when (val exceptionsProcessingResult = collectExceptionStackTraces(results)) {
             // If some exception was thrown from the Lincheck itself, we ask for bug reporting
             is InternalLincheckBugResult -> {
-                appendInternalLincheckBugFailure(exceptionsProcessingResult.exception)
+                appendInternalLincheckBugFailure(exceptionsProcessingResult.exception, failure.reproduceSettings)
                 return this
             }
 
@@ -368,8 +369,12 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
         is DeadlockWithDumpFailure -> appendDeadlockWithDumpFailure(failure)
         is UnexpectedExceptionFailure -> appendUnexpectedExceptionFailure(failure)
         is ValidationFailure -> when (failure.exception) {
-            is LincheckInternalBugException -> appendInternalLincheckBugFailure(failure.exception)
-            else ->  appendValidationFailure(failure)
+            is LincheckInternalBugException -> appendInternalLincheckBugFailure(
+                failure.exception,
+                failure.reproduceSettings
+            )
+
+            else -> appendValidationFailure(failure)
         }
         is ObstructionFreedomViolationFailure -> appendObstructionFreedomViolationFailure(failure)
     }
@@ -378,6 +383,16 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
         appendTrace(failure, results, failure.trace, exceptionStackTraces)
     } else {
         appendExceptionsStackTracesBlock(exceptionStackTraces)
+    }
+    appendLine()
+    appendLine()
+    appendLine("= To reproduce exactly this test execution with the same scenarios, you can add this setting in your testing options configuration =")
+    append(".withReproduceSettings(\"${encodeToConfigurationString(failure.reproduceSettings)}\")")
+    determineTestLanguage(Thread.currentThread().stackTrace)?.let { testLanguage ->
+        appendLine()
+        appendLine()
+        appendLine("= You can add this scenario as a custom test. Insert this code in your testing options configuration =")
+        append(generateAddCustomScenarioBlock(failure.scenario, testLanguage))
     }
     return this
 }
@@ -403,12 +418,14 @@ internal fun StringBuilder.appendExceptionsStackTraces(exceptionStackTraces: Map
     return this
 }
 
-fun StringBuilder.appendInternalLincheckBugFailure(exception: Throwable) {
+fun StringBuilder.appendInternalLincheckBugFailure(exception: Throwable, reproduceSettings: ReproduceSettings) {
     appendLine(
         """
         Wow! You've caught a bug in Lincheck.
         We kindly ask to provide an issue here: https://github.com/JetBrains/lincheck/issues,
-        attaching a stack trace printed below and the code that causes the error.
+        attaching a stack trace printed below, reproduce settings line and the code that causes the error.
+        
+        Reproduce settings line: ${encodeToConfigurationString(reproduceSettings)}
         
         Exception stacktrace:
     """.trimIndent()

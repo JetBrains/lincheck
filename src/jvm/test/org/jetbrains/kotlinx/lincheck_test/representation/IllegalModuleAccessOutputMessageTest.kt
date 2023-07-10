@@ -42,6 +42,7 @@ class IllegalModuleAccessOutputMessageTest {
 
     @Test
     fun test() = ModelCheckingOptions()
+        .withReproduceSettings("eyJyYW5kb21TZWVkR2VuZXJhdG9yU2VlZCI6LTY0MTY2NDY1Mjk1OTQzNzkzNzl9")
         .checkImpl(this::class.java)
         .checkLincheckOutput("illegal_module_access.txt")
 }

@@ -9,6 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.stress
 
+import org.jetbrains.kotlinx.lincheck.ReproduceSettingsFactory
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -21,7 +22,8 @@ class StressStrategy(
     scenario: ExecutionScenario,
     validationFunctions: List<Method>,
     stateRepresentationFunction: Method?,
-    private val verifier: Verifier
+    private val verifier: Verifier,
+    private val reproduceSettingsFactory: ReproduceSettingsFactory
 ) : Strategy(scenario) {
     private val invocations = testCfg.invocationsPerIteration
     private val runner: Runner
@@ -50,9 +52,9 @@ class StressStrategy(
                 when (val ir = runner.run()) {
                     is CompletedInvocationResult -> {
                         if (!verifier.verifyResults(scenario, ir.results))
-                            return IncorrectResultsFailure(scenario, ir.results)
+                            return IncorrectResultsFailure(scenario, ir.results, reproduceSettingsFactory.createReproduceSettings())
                     }
-                    else -> return ir.toLincheckFailure(scenario)
+                    else -> return ir.toLincheckFailure(scenario, reproduceSettingsFactory.createReproduceSettings())
                 }
             }
             return null
