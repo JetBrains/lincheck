@@ -743,10 +743,6 @@ abstract class ManagedStrategy(
             _trace.add(spinCycleStartPosition, spinCycleStartTracePoint)
         }
 
-        fun finishThread(iThread: Int) {
-            _trace += FinishThreadTracePoint(iThread)
-        }
-
         fun passCodeLocation(tracePoint: TracePoint?) {
             // tracePoint can be null here if trace is not available, e.g. in case of suspension
             if (tracePoint != null) _trace += tracePoint

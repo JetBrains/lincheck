@@ -17,6 +17,7 @@ import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.*
 import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner.Completion.*
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.objectweb.asm.*
 import java.lang.reflect.*
 import java.util.concurrent.*
@@ -314,16 +315,18 @@ internal open class ParallelThreadsRunner(
             scenario.initExecution.mapIndexed { i, actor ->
                 onActorStart(INIT_THREAD_ID)
                 results[i] = executeActor(testInstance, actor)
-                executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
-                    validationFailure = ValidationFailureInvocationResult(
-                        ExecutionScenario(
-                            scenario.initExecution.subList(0, i + 1),
-                            emptyList(),
-                            emptyList()
-                        ),
-                        functionName,
-                        exception
-                    )
+                executeInIgnoredSection(INIT_THREAD_ID) {
+                    executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
+                        validationFailure = ValidationFailureInvocationResult(
+                            ExecutionScenario(
+                                scenario.initExecution.subList(0, i + 1),
+                                emptyList(),
+                                emptyList()
+                            ),
+                            functionName,
+                            exception
+                        )
+                    }
                 }
             }
             stateRepresentation = constructStateRepresentation()
@@ -351,16 +354,18 @@ internal open class ParallelThreadsRunner(
 
         override fun run() {
             // (1): execute validation functions and construct state representation after parallel part
-            executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
-                validationFailure = ValidationFailureInvocationResult(
-                    ExecutionScenario(
-                        scenario.initExecution,
-                        scenario.parallelExecution,
-                        emptyList()
-                    ),
-                    functionName,
-                    exception
-                )
+            executeInIgnoredSection(POST_THREAD_ID) {
+                executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
+                    validationFailure = ValidationFailureInvocationResult(
+                        ExecutionScenario(
+                            scenario.initExecution,
+                            scenario.parallelExecution,
+                            emptyList()
+                        ),
+                        functionName,
+                        exception
+                    )
+                }
             }
             afterParallelStateRepresentation = constructStateRepresentation()
             if (validationFailure != null)
@@ -379,16 +384,18 @@ internal open class ParallelThreadsRunner(
                         suspended = it === Suspended
                     }
                 }
-                executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
-                    validationFailure = ValidationFailureInvocationResult(
-                        ExecutionScenario(
-                            scenario.initExecution,
-                            scenario.parallelExecution,
-                            scenario.postExecution.subList(0, i + 1)
-                        ),
-                        functionName,
-                        exception
-                    )
+                executeInIgnoredSection(POST_THREAD_ID) {
+                    executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
+                        validationFailure = ValidationFailureInvocationResult(
+                            ExecutionScenario(
+                                scenario.initExecution,
+                                scenario.parallelExecution,
+                                scenario.postExecution.subList(0, i + 1)
+                            ),
+                            functionName,
+                            exception
+                        )
+                    }
                 }
             }
             afterPostStateRepresentation = constructStateRepresentation()
@@ -445,6 +452,17 @@ internal open class ParallelThreadsRunner(
     override fun close() {
         super.close()
         executor.close()
+    }
+
+    private inline fun executeInIgnoredSection(iThread: Int, action: () -> Unit) {
+        if (strategy is ManagedStrategy) {
+            strategy.enterIgnoredSection(iThread)
+            action()
+            strategy.leaveIgnoredSection(iThread)
+        }
+        else {
+            action()
+        }
     }
 }
 
