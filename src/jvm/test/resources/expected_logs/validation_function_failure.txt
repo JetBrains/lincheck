@@ -28,32 +28,17 @@ The following interleaving leads to the error:
 | -------- |
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------ |
-|                                             Thread 1                                             |
-| ------------------------------------------------------------------------------------------------ |
-| inc()                                                                                            |
-|   incrementAndGet(): 1 at ValidateFunctionTest.inc(ValidateFunctionTest.kt:25)                   |
-|   validateInvoked.READ: 0 at ValidateFunctionTest.validateWithError(ValidateFunctionTest.kt:38)  |
-|   validateInvoked.WRITE(1) at ValidateFunctionTest.validateWithError(ValidateFunctionTest.kt:38) |
-|   validateInvoked.READ: 1 at ValidateFunctionTest.validateWithError(ValidateFunctionTest.kt:39)  |
-| inc()                                                                                            |
-|   incrementAndGet(): 2 at ValidateFunctionTest.inc(ValidateFunctionTest.kt:25)                   |
-|   validateInvoked.READ: 1 at ValidateFunctionTest.validateWithError(ValidateFunctionTest.kt:38)  |
-|   validateInvoked.WRITE(2) at ValidateFunctionTest.validateWithError(ValidateFunctionTest.kt:38) |
-|   validateInvoked.READ: 2 at ValidateFunctionTest.validateWithError(ValidateFunctionTest.kt:39)  |
-| inc()                                                                                            |
-|   incrementAndGet(): 3 at ValidateFunctionTest.inc(ValidateFunctionTest.kt:25)                   |
-|   validateInvoked.READ: 2 at ValidateFunctionTest.validateWithError(ValidateFunctionTest.kt:38)  |
-|   validateInvoked.WRITE(3) at ValidateFunctionTest.validateWithError(ValidateFunctionTest.kt:38) |
-|   validateInvoked.READ: 3 at ValidateFunctionTest.validateWithError(ValidateFunctionTest.kt:39)  |
-| inc()                                                                                            |
-|   incrementAndGet(): 4 at ValidateFunctionTest.inc(ValidateFunctionTest.kt:25)                   |
-|   validateInvoked.READ: 3 at ValidateFunctionTest.validateWithError(ValidateFunctionTest.kt:38)  |
-|   validateInvoked.WRITE(4) at ValidateFunctionTest.validateWithError(ValidateFunctionTest.kt:38) |
-|   validateInvoked.READ: 4 at ValidateFunctionTest.validateWithError(ValidateFunctionTest.kt:39)  |
-| inc()                                                                                            |
-|   incrementAndGet(): 5 at ValidateFunctionTest.inc(ValidateFunctionTest.kt:25)                   |
-|   validateInvoked.READ: 4 at ValidateFunctionTest.validateWithError(ValidateFunctionTest.kt:38)  |
-|   validateInvoked.WRITE(5) at ValidateFunctionTest.validateWithError(ValidateFunctionTest.kt:38) |
-|   validateInvoked.READ: 5 at ValidateFunctionTest.validateWithError(ValidateFunctionTest.kt:39)  |
-| ------------------------------------------------------------------------------------------------ |
+| ------------------------------------------------------------------------------ |
+|                                    Thread 1                                    |
+| ------------------------------------------------------------------------------ |
+| inc()                                                                          |
+|   incrementAndGet(): 1 at ValidateFunctionTest.inc(ValidateFunctionTest.kt:25) |
+| inc()                                                                          |
+|   incrementAndGet(): 2 at ValidateFunctionTest.inc(ValidateFunctionTest.kt:25) |
+| inc()                                                                          |
+|   incrementAndGet(): 3 at ValidateFunctionTest.inc(ValidateFunctionTest.kt:25) |
+| inc()                                                                          |
+|   incrementAndGet(): 4 at ValidateFunctionTest.inc(ValidateFunctionTest.kt:25) |
+| inc()                                                                          |
+|   incrementAndGet(): 5 at ValidateFunctionTest.inc(ValidateFunctionTest.kt:25) |
+| ------------------------------------------------------------------------------ |
