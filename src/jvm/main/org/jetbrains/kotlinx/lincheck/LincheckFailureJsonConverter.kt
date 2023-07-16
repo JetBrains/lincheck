@@ -29,6 +29,7 @@ object LincheckFailureJsonConverter {
 
     private val json = Json {
         prettyPrint = true
+        explicitNulls = false
     }
 
     @Synchronized
@@ -143,13 +144,13 @@ object LincheckFailureJsonConverter {
     ): TraceJson {
         val startTraceGraphNode = constructTraceGraph(failure.scenario, results, trace, exceptionStackTraces)
 
-        val shortTrace = traceGraphToRepresentationJsonList(startTraceGraphNode, false)
-        val detailedTrace = traceGraphToRepresentationJsonList(startTraceGraphNode, true)
-
-        return TraceJson(shortTrace, detailedTrace)
+        return TraceJson(
+            shortTrace = traceGraphToRepresentationJsonList(startTraceGraphNode, false),
+            detailedTrace = traceGraphToRepresentationJsonList(startTraceGraphNode, true)
+        )
     }
 
-    fun traceGraphToRepresentationJsonList(
+    private fun traceGraphToRepresentationJsonList(
         startNode: TraceNode?,
         verboseTrace: Boolean
     ): List<InterleavingTraceJsonNode> {

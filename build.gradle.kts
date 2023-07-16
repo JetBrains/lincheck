@@ -46,6 +46,7 @@ kotlin {
             val asmVersion: String by project
             val reflectionsVersion: String by project
             val kotlinxSerialisationJsonVersion: String by project
+            val arkenvVersion: String by project
             dependencies {
                 api("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
                 api("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion")
@@ -55,6 +56,9 @@ kotlin {
                 api("org.ow2.asm:asm-util:$asmVersion")
                 api("org.reflections:reflections:$reflectionsVersion")
                 api("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerialisationJsonVersion")
+                api("com.apurebase:arkenv:$arkenvVersion")
+                implementation("commons-io:commons-io:2.13.0")
+
             }
         }
 
@@ -156,3 +160,23 @@ fun XmlProvider.removeAllLicencesExceptOne(licenceName: String) {
         }
     }
 }
+
+tasks.withType<ProcessResources>() {
+    exclude("*")
+}
+
+
+tasks.withType<Jar>() {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    manifest {
+        attributes["Main-Class"] = "org.jetbrains.kotlinx.gpt.GPTRunnerKt"
+    }
+
+    dependsOn(configurations.runtimeClasspath)
+    from({
+        configurations.runtimeClasspath.get().filter { it.name.endsWith("jar") }.map { zipTree(it) }
+    })
+}
+
+
