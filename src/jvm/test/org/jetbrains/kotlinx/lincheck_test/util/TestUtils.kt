@@ -22,7 +22,10 @@ import org.junit.Assert.*
  */
 internal fun LincheckFailure?.checkLincheckOutput(expectedOutputFile: String) {
     check(this != null) { "The test should fail" }
-
+    println("JSON OUTPUT:")
+    println()
+    println(this.toJson())
+    println()
     val actualOutput = StringBuilder().appendFailure(this).toString()
     val expectedOutput = getExpectedLogFromResources(expectedOutputFile)
 

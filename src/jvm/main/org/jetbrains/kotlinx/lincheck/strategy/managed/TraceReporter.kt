@@ -97,7 +97,7 @@ private fun splitToColumns(nThreads: Int, traceRepresentation: List<TraceEventRe
  * `next` edges form a single-directed list in which the order of events is the same as in [trace].
  * `internalEvents` edges form a directed forest.
  */
-private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionResult?, trace: Trace, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): TraceNode? {
+internal fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionResult?, trace: Trace, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): TraceNode? {
     val tracePoints = trace.trace
     // last events that were executed for each thread. It is either thread finish events or events before crash
     val lastExecutedEvents = IntArray(scenario.nThreads) { iThread ->
@@ -196,7 +196,7 @@ private fun traceGraphToRepresentationList(
     return traceRepresentation
 }
 
-private sealed class TraceNode(
+sealed class TraceNode(
     protected val iThread: Int,
     last: TraceNode?,
     val callDepth: Int // for tree indentation
@@ -356,7 +356,7 @@ private fun TraceNode.traceIndentation() = TRACE_INDENTATION.repeat(callDepth)
 private fun TraceNode.stateEventRepresentation(iThread: Int, stateRepresentation: String) =
     TraceEventRepresentation(iThread, traceIndentation() + "STATE: $stateRepresentation")
 
-private class TraceEventRepresentation(val iThread: Int, val representation: String)
+class TraceEventRepresentation(val iThread: Int, val representation: String)
 
 // Should be called only during `appendTrace` invocation
 internal fun getObjectNumber(clazz: Class<Any>, obj: Any): Int = objectNumeration

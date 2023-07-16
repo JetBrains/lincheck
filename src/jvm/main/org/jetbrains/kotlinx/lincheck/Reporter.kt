@@ -232,7 +232,7 @@ internal fun StringBuilder.appendExecutionScenario(scenario: ExecutionScenario):
     return this
 }
 
-private data class ActorWithResult(
+data class ActorWithResult(
     val actor: Actor,
     val result: Result,
     val clock: HBClock? = null,
@@ -257,7 +257,7 @@ private data class ActorWithResult(
 internal fun Result.exceptionInfo(exceptionMap: Map<Throwable, ExceptionNumberAndStacktrace>): ExceptionNumberAndStacktrace? =
     (this as? ExceptionResult)?.let { exceptionMap[it.throwable] }
 
-private fun<T, U> requireEqualSize(x: List<T>, y: List<U>, lazyMessage: () -> String) {
+fun<T, U> requireEqualSize(x: List<T>, y: List<U>, lazyMessage: () -> String) {
     require(x.size == y.size) { "${lazyMessage()} (${x.size} != ${y.size})" }
 }
 
@@ -421,7 +421,7 @@ fun StringBuilder.appendInternalLincheckBugFailure(exception: Throwable) {
     append(exceptionRepresentation)
 }
 
-internal data class ExceptionNumberAndStacktrace(
+data class ExceptionNumberAndStacktrace(
     /**
      * Serves to match exception in a scenario with its stackTrace
      */
@@ -458,20 +458,20 @@ internal fun actorNodeResultRepresentation(result: Result, exceptionStackTraces:
  * to use this information to numerate them and print their stacktrace with number.
  * @see collectExceptionStackTraces
  */
-private sealed interface ExceptionsProcessingResult
+sealed interface ExceptionsProcessingResult
 
 /**
  * Corresponds to the case when we tried to collect exceptions map but found one,
  * that was thrown from Lincheck internally.
  * In that case, we just want to print that exception and don't care about other exceptions.
  */
-private data class InternalLincheckBugResult(val exception: Throwable) :
+data class InternalLincheckBugResult(val exception: Throwable) :
     ExceptionsProcessingResult
 
 /**
  * Result of successful collection exceptions to map when no one of them was thrown from Lincheck.
  */
-private data class ExceptionStackTracesResult(val exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>) :
+data class ExceptionStackTracesResult(val exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>) :
     ExceptionsProcessingResult
 
 
@@ -486,7 +486,7 @@ private data class ExceptionStackTracesResult(val exceptionStackTraces: Map<Thro
  * @return exceptions stack traces map inside [ExceptionStackTracesResult] or [InternalLincheckBugResult]
  * if some exception occurred due a bug in Lincheck itself
  */
-private fun collectExceptionStackTraces(executionResult: ExecutionResult): ExceptionsProcessingResult {
+fun collectExceptionStackTraces(executionResult: ExecutionResult): ExceptionsProcessingResult {
     val exceptionStackTraces = mutableMapOf<Throwable, ExceptionNumberAndStacktrace>()
 
     (executionResult.initResults.asSequence()
