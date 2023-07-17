@@ -599,7 +599,7 @@ abstract class ManagedStrategy(
      * These sections are determined by Strategy.ignoredEntryPoints()
      * @param iThread number of invoking thread
      */
-    internal fun enterIgnoredSection(iThread: Int) {
+    internal fun enterIgnoredSection(iThread: Int = currentThread) {
         if (isTestThread(iThread))
             ignoredSectionDepth[iThread]++
     }
@@ -609,7 +609,7 @@ abstract class ManagedStrategy(
      * after each ignored section end.
      * @param iThread number of invoking thread
      */
-    internal fun leaveIgnoredSection(iThread: Int) {
+    internal fun leaveIgnoredSection(iThread: Int = currentThread) {
         if (isTestThread(iThread))
             ignoredSectionDepth[iThread]--
     }
