@@ -293,7 +293,8 @@ internal class AdaptivePlanner(
         var remainingIterations = solveQuadraticEquation(
             a = ratio,
             b = 2 * ratio * performedIterations,
-            c = ratio * performedIterations * performedIterations - (performedInvocations + remainingInvocations)
+            c = ratio * performedIterations * performedIterations - (performedInvocations + remainingInvocations),
+            default = 0.0
         ).let { floor(it).toInt() }.coerceAtLeast(0)
         // derive invocations per iteration bound
         invocationsBound = if (remainingIterations > 0) {
@@ -339,13 +340,14 @@ internal class AdaptivePlanner(
         iterationsBound = performedIterations + remainingIterations
     }
 
-    private fun solveQuadraticEquation(a: Double, b: Double, c: Double): Double {
+    private fun solveQuadraticEquation(a: Double, b: Double, c: Double, default: Double): Double {
         val d = (b * b - 4 * a * c)
-        check(d >= 0)
-        return max(
-            (-b + sqrt(d)) / (2 * a),
-            (-b - sqrt(d)) / (2 * a),
-        )
+        return if (d >= 0)
+            max(
+                (-b + sqrt(d)) / (2 * a),
+                (-b - sqrt(d)) / (2 * a),
+            )
+        else default
     }
 
     companion object {
