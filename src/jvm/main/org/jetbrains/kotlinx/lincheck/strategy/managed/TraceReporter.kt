@@ -123,17 +123,16 @@ internal fun constructTraceGraph(scenario: ExecutionScenario, results: Execution
             val nextActor = ++lastHandledActor[iThread]
             // create new actor node actor
             val actorNode = traceGraphNodes.createAndAppend { lastNode ->
-                val result = results[iThread, nextActor]
                 ActorNode(
                     iThread = iThread,
                     last = lastNode,
                     callDepth = 0,
                     actor = scenario.threads[iThread][nextActor],
-                    resultRepresentation = result?.let { actorNodeResultRepresentation(result, exceptionStackTraces) }
+                    resultRepresentation = results[iThread, nextActor]
+                        ?.let { actorNodeResultRepresentation(it, exceptionStackTraces) }
                 )
             }
             actorNodes[iThread][nextActor] = actorNode
-            traceGraphNodes.add(actorNode)
         }
         // add the event
         var innerNode: TraceInnerNode = actorNodes[iThread][actorId]!!
@@ -159,19 +158,36 @@ internal fun constructTraceGraph(scenario: ExecutionScenario, results: Execution
         innerNode.addInternalEvent(node)
     }
     // add an ActorResultNode to each actor, because did not know where actor ends before
-    for (iThread in actorNodes.indices)
+    for (iThread in actorNodes.indices) {
         for (actorId in actorNodes[iThread].indices) {
-            actorNodes[iThread][actorId]?.let {
-                // insert an ActorResultNode between the last actor event and the next event after it
-                val lastEvent = it.lastInternalEvent
-                val lastEventNext = lastEvent.next
-                val result = results[iThread, actorId]
-                val resultRepresentation = result?.let { resultRepresentation(result, exceptionStackTraces) }
-                val resultNode = ActorResultNode(iThread, lastEvent, it.callDepth + 1, resultRepresentation)
-                it.addInternalEvent(resultNode)
-                resultNode.next = lastEventNext
+            var actorNode = actorNodes[iThread][actorId]
+            val actorResult = results[iThread, actorId]
+            // in case of empty trace, we want to show at least the actor nodes themselves;
+            // however, no actor nodes will be created by the code above, so we need to create them explicitly here.
+            if (actorNode == null && actorResult != null) {
+                val lastNode = actorNodes[iThread].getOrNull(actorId - 1)?.lastInternalEvent
+                actorNode = ActorNode(
+                    iThread = iThread,
+                    last = lastNode,
+                    callDepth = 0,
+                    actor = scenario.threads[iThread][actorId],
+                    resultRepresentation = actorNodeResultRepresentation(actorResult, exceptionStackTraces)
+                )
+                actorNodes[iThread][actorId] = actorNode
+                traceGraphNodes.add(actorNode)
             }
+            if (actorNode == null)
+                continue
+            // insert an ActorResultNode between the last actor event and the next event after it
+            val lastEvent = actorNode.lastInternalEvent
+            val lastEventNext = lastEvent.next
+            val result = results[iThread, actorId]
+            val resultRepresentation = result?.let { resultRepresentation(result, exceptionStackTraces) }
+            val resultNode = ActorResultNode(iThread, lastEvent, actorNode.callDepth + 1, resultRepresentation)
+            actorNode.addInternalEvent(resultNode)
+            resultNode.next = lastEventNext
         }
+    }
     return traceGraphNodes.firstOrNull()
 }
 

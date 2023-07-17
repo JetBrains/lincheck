@@ -394,7 +394,7 @@ internal fun StringBuilder.appendExceptionsStackTraces(exceptionStackTraces: Map
     exceptionStackTraces.entries.sortedBy { (_, description) -> description.number }.forEach { (exception, description) ->
         append("#${description.number}: ")
 
-        appendLine(exception::class.java.canonicalName)
+        appendLine(exception::class.java.canonicalName + ": " + exception.message)
         description.stackTrace.forEach { appendLine("\tat $it") }
 
         if (description.number < exceptionStackTraces.size) appendLine()

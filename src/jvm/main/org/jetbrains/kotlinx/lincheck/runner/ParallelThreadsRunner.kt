@@ -315,7 +315,7 @@ internal open class ParallelThreadsRunner(
             scenario.initExecution.mapIndexed { i, actor ->
                 onActorStart(INIT_THREAD_ID)
                 results[i] = executeActor(testInstance, actor)
-                executeInIgnoredSection(INIT_THREAD_ID) {
+                executeInIgnoredSection {
                     executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
                         validationFailure = ValidationFailureInvocationResult(
                             ExecutionScenario(
@@ -354,7 +354,7 @@ internal open class ParallelThreadsRunner(
 
         override fun run() {
             // (1): execute validation functions and construct state representation after parallel part
-            executeInIgnoredSection(POST_THREAD_ID) {
+            executeInIgnoredSection {
                 executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
                     validationFailure = ValidationFailureInvocationResult(
                         ExecutionScenario(
@@ -384,7 +384,7 @@ internal open class ParallelThreadsRunner(
                         suspended = it === Suspended
                     }
                 }
-                executeInIgnoredSection(POST_THREAD_ID) {
+                executeInIgnoredSection {
                     executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
                         validationFailure = ValidationFailureInvocationResult(
                             ExecutionScenario(
@@ -454,11 +454,11 @@ internal open class ParallelThreadsRunner(
         executor.close()
     }
 
-    private inline fun executeInIgnoredSection(iThread: Int, action: () -> Unit) {
+    private inline fun executeInIgnoredSection(action: () -> Unit) {
         if (strategy is ManagedStrategy) {
-            strategy.enterIgnoredSection(iThread)
+            strategy.enterIgnoredSection()
             action()
-            strategy.leaveIgnoredSection(iThread)
+            strategy.leaveIgnoredSection()
         }
         else {
             action()

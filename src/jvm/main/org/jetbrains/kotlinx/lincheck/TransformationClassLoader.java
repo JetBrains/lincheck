@@ -80,6 +80,8 @@ public class TransformationClassLoader extends ExecutionClassLoader {
                    !className.startsWith("org.jetbrains.kotlinx.lincheck_test.") &&
                    !className.equals(ManagedStrategyStateHolder.class.getName())
                ) ||
+               className.equals(kotlinx.coroutines.DebugKt.class.getName()) ||
+               className.equals(kotlinx.coroutines.CoroutineContextKt.class.getName()) ||
                className.equals(kotlinx.coroutines.CancellableContinuation.class.getName()) ||
                className.equals(kotlinx.coroutines.CoroutineExceptionHandler.class.getName()) ||
                className.equals(kotlinx.coroutines.CoroutineDispatcher.class.getName());

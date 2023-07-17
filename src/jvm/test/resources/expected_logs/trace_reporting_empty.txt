@@ -1,0 +1,28 @@
+= Invalid execution results =
+| ---------------------------------------- |
+|                 Thread 1                 |
+| ---------------------------------------- |
+| notImplemented(): NotImplementedError #1 |
+| ---------------------------------------- |
+
+---
+The number next to an exception name helps you find its stack trace provided after the interleaving section
+---
+
+The following interleaving leads to the error:
+| ---------------------------------------- |
+|                 Thread 1                 |
+| ---------------------------------------- |
+| notImplemented(): NotImplementedError #1 |
+| ---------------------------------------- |
+
+Exception stack traces:
+#1: kotlin.NotImplementedError: An operation is not implemented.
+	at org.jetbrains.kotlinx.lincheck_test.representation.TraceReportingTest.notImplemented(TraceReportingTest.kt:123)
+
+Detailed trace:
+| ---------------------------------------- |
+|                 Thread 1                 |
+| ---------------------------------------- |
+| notImplemented(): NotImplementedError #1 |
+| ---------------------------------------- |

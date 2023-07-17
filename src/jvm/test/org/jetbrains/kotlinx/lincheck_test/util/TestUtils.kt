@@ -30,7 +30,7 @@ internal fun LincheckFailure?.checkLincheckOutput(expectedOutputFile: String) {
     val expectedOutput = getExpectedLogFromResources(expectedOutputFile)
 
     if (actualOutput.filtered != expectedOutput.filtered) {
-        assertEquals(actualOutput, expectedOutput)
+        assertEquals(expectedOutput, actualOutput)
     }
 }
 

@@ -23,6 +23,7 @@ The following interleaving leads to the error:
 | b()      |                                                                                                     |
 |          |   bStarted.READ: true at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:190)  |
 |          |   result: void                                                                                      |
+|          | d(): 0                                                                                              |
 | -------------------------------------------------------------------------------------------------------------- |
 
 Detailed trace:
@@ -39,4 +40,5 @@ Detailed trace:
 |   result: void                                                                                      |                                                                                                     |
 |                                                                                                     |   bStarted.READ: true at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:190)  |
 |                                                                                                     |   result: void                                                                                      |
+|                                                                                                     | d(): 0                                                                                              |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

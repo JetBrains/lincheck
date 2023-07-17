@@ -52,7 +52,7 @@ The following interleaving leads to the error:
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 
 Exception stack traces:
-#1: java.lang.IllegalStateException
+#1: java.lang.IllegalStateException: Violating exception
 	at org.jetbrains.kotlinx.lincheck_test.representation.ClocksWithExceptionsInOutputTest.operation2(ClocksWithExceptionsInOutputTest.kt:34)
 
 Detailed trace:
