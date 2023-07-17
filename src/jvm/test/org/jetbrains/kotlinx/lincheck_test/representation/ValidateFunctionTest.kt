@@ -9,10 +9,9 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.representation
 
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.checkImpl
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
@@ -40,11 +39,21 @@ class ValidateFunctionTest : VerifierState() {
     }
 
     @Test
-    fun test() = ModelCheckingOptions().apply {
-        iterations(1)
-        invocationsPerIteration(1)
-        actorsBefore(3)
-        actorsAfter(10)
+    fun test() = LincheckOptions {
+        this as LincheckOptionsImpl
+        mode = LincheckMode.ModelChecking
+        addCustomScenario {
+            parallel {
+                thread {
+                    actor(::inc)
+                    actor(::inc)
+                    actor(::inc)
+                    actor(::inc)
+                    actor(::inc)
+                }
+            }
+        }
+        generateRandomScenarios = false
     }
         .checkImpl(this::class.java)
         .checkLincheckOutput("validation_function_failure.txt")

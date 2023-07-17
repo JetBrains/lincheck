@@ -15,6 +15,7 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.objectweb.asm.ClassVisitor
+import java.io.Closeable
 
 /**
  * Implementation of this class describes how to run the generated execution.

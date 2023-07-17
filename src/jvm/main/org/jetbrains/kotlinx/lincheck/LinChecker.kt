@@ -77,44 +77,18 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
             reporter.logIteration(iteration = i + 1 + customScenarios.size, scenario = scenario)
             val failure = scenario.run(this, verifier)
             if (failure != null) {
-                val minimizedFailedIteration = if (minimizeFailedScenario)
-                    failure.minimize(reporter) {
+                val minimizedFailedIteration = if (minimizeFailedScenario) {
+                    reporter.logScenarioMinimization(scenario)
+                    failure.minimize {
                         it.run(this, createVerifier())
                     }
-               else
+                } else
                     failure
                 reporter.logFailedIteration(minimizedFailedIteration)
                 return minimizedFailedIteration
             }
             // Reset the parameter generator ranges to start with the same initial bounds on each scenario generation.
             testStructure.parameterGenerators.forEach { it.reset() }
-        }
-        return null
-    }
-
-    // Tries to minimize the specified failing scenario to make the error easier to understand.
-    // The algorithm is greedy: it tries to remove one actor from the scenario and checks
-    // whether a test with the modified one fails with error as well. If it fails,
-    // then the scenario has been successfully minimized, and the algorithm tries to minimize it again, recursively.
-    // Otherwise, if no actor can be removed so that the generated test fails, the minimization is completed.
-    // Thus, the algorithm works in the linear time of the total number of actors.
-    private fun LincheckFailure.minimize(testCfg: CTestConfiguration): LincheckFailure {
-        reporter.logScenarioMinimization(scenario)
-        var minimizedFailure = this
-        while (true) {
-            minimizedFailure = minimizedFailure.scenario.tryMinimize(testCfg) ?: break
-        }
-        return minimizedFailure
-    }
-
-    private fun ExecutionScenario.tryMinimize(testCfg: CTestConfiguration): LincheckFailure? {
-        // Reversed indices to avoid conflicts with in-loop removals
-        for (i in threads.indices.reversed()) {
-            for (j in threads[i].indices.reversed()) {
-                tryMinimize(i, j)
-                    ?.run(testCfg, testCfg.createVerifier())
-                    ?.let { return it }
-            }
         }
         return null
     }
@@ -184,3 +158,29 @@ fun <O : Options<O, *>> O.check(testClass: KClass<*>) = this.check(testClass.jav
 
 @Suppress("DEPRECATION_ERROR")
 internal fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>) = LinChecker(testClass, this).checkImpl()
+
+// Tries to minimize the specified failing scenario to make the error easier to understand.
+// The algorithm is greedy: it tries to remove one actor from the scenario and checks
+// whether a test with the modified one fails with error as well. If it fails,
+// then the scenario has been successfully minimized, and the algorithm tries to minimize it again, recursively.
+// Otherwise, if no actor can be removed so that the generated test fails, the minimization is completed.
+// Thus, the algorithm works in the linear time of the total number of actors.
+internal fun LincheckFailure.minimize(checkScenario: (ExecutionScenario) -> LincheckFailure?): LincheckFailure {
+    var minimizedFailure = this
+    while (true) {
+        minimizedFailure = minimizedFailure.scenario.tryMinimize(checkScenario) ?: break
+    }
+    return minimizedFailure
+}
+
+private fun ExecutionScenario.tryMinimize(checkScenario: (ExecutionScenario) -> LincheckFailure?): LincheckFailure? {
+    // Reversed indices to avoid conflicts with in-loop removals
+    for (i in threads.indices.reversed()) {
+        for (j in threads[i].indices.reversed()) {
+            tryMinimize(i, j)
+                ?.run(checkScenario)
+                ?.let { return it }
+        }
+    }
+    return null
+}

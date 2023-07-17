@@ -30,8 +30,5 @@ class MPSCQueueTest {
     public fun peek(): Int? = queue.peek()
 
     @Test
-    fun stressTest() = StressOptions().check(this::class)
-
-    @Test
-    fun modelCheckingTest() = ModelCheckingOptions().check(this::class)
+    fun lincheckTest() = LincheckOptions().check(this::class)
 }

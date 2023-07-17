@@ -27,9 +27,9 @@ class ConcurrentLinkedQueueTest {
     fun poll(): Int? = s.poll()
 
     @Test
-    fun stressTest() = StressOptions()
-        .sequentialSpecification(SequentialQueue::class.java)
-        .check(this::class)
+    fun lincheckTest() = LincheckOptions {
+        sequentialImplementation = SequentialQueue::class.java
+    }.check(this::class)
 }
 
 class SequentialQueue {

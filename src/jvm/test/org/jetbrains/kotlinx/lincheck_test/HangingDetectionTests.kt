@@ -31,11 +31,10 @@ class HangingInParallelPartTest : AbstractLincheckTest(DeadlockWithDumpFailure::
         }
     }
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun LincheckOptionsImpl.customize() {
         addCustomScenario(scenario)
-        iterations(0)
-        minimizeFailedScenario(false)
-        invocationTimeout(100)
+        generateRandomScenarios = false
+        invocationTimeoutMs = 100
     }
 
 }
@@ -61,11 +60,10 @@ class HangingInInitPartTest : AbstractLincheckTest(DeadlockWithDumpFailure::clas
         }
     }
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun LincheckOptionsImpl.customize() {
         addCustomScenario(scenario)
-        iterations(0)
-        minimizeFailedScenario(false)
-        invocationTimeout(100)
+        generateRandomScenarios = false
+        invocationTimeoutMs = 100
     }
 
 }
@@ -91,11 +89,10 @@ class HangingInPostPartTest : AbstractLincheckTest(DeadlockWithDumpFailure::clas
         }
     }
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun LincheckOptionsImpl.customize() {
         addCustomScenario(scenario)
-        iterations(0)
-        minimizeFailedScenario(false)
-        invocationTimeout(100)
+        generateRandomScenarios = false
+        invocationTimeoutMs = 100
     }
 
 }

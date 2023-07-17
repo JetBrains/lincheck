@@ -14,7 +14,6 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.guide.MSQueueBlocking
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
 import org.junit.Test
@@ -35,8 +34,11 @@ class ObstructionFreedomViolationEventsCutTest {
     fun dequeue(): Int? = q.dequeue()
 
     @Test
-    fun runModelCheckingTest() = ModelCheckingOptions()
-        .checkObstructionFreedom(true)
+    fun runModelCheckingTest() = LincheckOptions {
+        this as LincheckOptionsImpl
+        mode = LincheckMode.ModelChecking
+        checkObstructionFreedom = true
+    }
         .checkImpl(this::class.java)
         .checkLincheckOutput("obstruction_freedom_violation_events_cut.txt")
 
@@ -161,8 +163,11 @@ abstract class AbstractSpinLivelockTest {
     abstract fun meaninglessActions()
 
     @Test
-    fun testWithModelCheckingStrategy() = ModelCheckingOptions()
-        .minimizeFailedScenario(false)
+    fun testWithModelCheckingStrategy() = LincheckOptions {
+        this as LincheckOptionsImpl
+        mode = LincheckMode.ModelChecking
+        minimizeFailedScenario = false
+    }
         .checkImpl(this::class.java)
         .checkLincheckOutput(outputFileName)
 }
@@ -195,40 +200,26 @@ class SpinlockInIncorrectResultsWithClocksTest {
     fun d(): Int = 0 // cannot return 0, should fail
 
     @Test
-    fun test() = ModelCheckingOptions()
-        .executionGenerator(ClocksTestScenarioGenerator::class.java)
-        .iterations(1)
-        .sequentialSpecification(ClocksTestSequential::class.java)
-        .minimizeFailedScenario(false)
+    fun test() = LincheckOptions {
+        this as LincheckOptionsImpl
+        addCustomScenario {
+            parallel {
+                thread {
+                    actor(::a)
+                    actor(::b)
+                }
+                thread {
+                    actor(::c)
+                    actor(::d)
+                }
+            }
+        }
+        mode = LincheckMode.ModelChecking
+        generateRandomScenarios = false
+        sequentialImplementation = ClocksTestSequential::class.java
+    }
         .checkImpl(this::class.java)
         .checkLincheckOutput("spin_lock_in_incorrect_results_failure.txt")
-
-
-    /**
-     * @param randomProvider is required by scenario generator contract
-     */
-    @Suppress("UNUSED_PARAMETER")
-    class ClocksTestScenarioGenerator(
-        testCfg: CTestConfiguration,
-        testStructure: CTestStructure,
-        randomProvider: RandomProvider
-    ) : ExecutionGenerator(testCfg, testStructure) {
-        override fun nextExecution() = ExecutionScenario(
-            emptyList(),
-            listOf(
-                listOf(
-                    Actor(method = SpinlockInIncorrectResultsWithClocksTest::a.javaMethod!!, arguments = emptyList()),
-                    Actor(method = SpinlockInIncorrectResultsWithClocksTest::b.javaMethod!!, arguments = emptyList())
-                ),
-                listOf(
-                    Actor(method = SpinlockInIncorrectResultsWithClocksTest::c.javaMethod!!, arguments = emptyList()),
-                    Actor(method = SpinlockInIncorrectResultsWithClocksTest::d.javaMethod!!, arguments = emptyList())
-                )
-            ),
-            emptyList()
-        )
-
-    }
 
     class ClocksTestSequential {
         private var x = 0

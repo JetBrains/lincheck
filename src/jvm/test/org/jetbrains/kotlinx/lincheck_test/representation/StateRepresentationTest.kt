@@ -40,6 +40,7 @@ open class ModelCheckingStateReportingTest {
     fun stateRepresentation() = counter.toString()
 
     @Test
+    @Suppress("DEPRECATION_ERROR")
     fun test() = ModelCheckingOptions().apply {
         actorsPerThread(1)
         actorsBefore(0)

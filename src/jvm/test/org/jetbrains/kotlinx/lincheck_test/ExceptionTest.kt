@@ -32,11 +32,10 @@ class ExceptionInParallelPartTest : AbstractLincheckTest(IncorrectResultsFailure
         }
     }
 
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(0)
+    override fun LincheckOptionsImpl.customize() {
         addCustomScenario(scenario)
-        minimizeFailedScenario(false)
-        sequentialSpecification(ExceptionTestSequentialImplementation::class.java)
+        generateRandomScenarios = false
+        sequentialImplementation = ExceptionTestSequentialImplementation::class.java
     }
 
 }
@@ -62,11 +61,10 @@ class ExceptionInInitPartTest : AbstractLincheckTest(IncorrectResultsFailure::cl
         }
     }
 
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(0)
+    override fun LincheckOptionsImpl.customize() {
         addCustomScenario(scenario)
-        minimizeFailedScenario(false)
-        sequentialSpecification(ExceptionTestSequentialImplementation::class.java)
+        generateRandomScenarios = false
+        sequentialImplementation = ExceptionTestSequentialImplementation::class.java
     }
 
 }
@@ -92,11 +90,10 @@ class ExceptionInPostPartTest : AbstractLincheckTest(IncorrectResultsFailure::cl
         }
     }
 
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(0)
+    override fun LincheckOptionsImpl.customize() {
         addCustomScenario(scenario)
-        minimizeFailedScenario(false)
-        sequentialSpecification(ExceptionTestSequentialImplementation::class.java)
+        generateRandomScenarios = false
+        sequentialImplementation = ExceptionTestSequentialImplementation::class.java
     }
 
 }

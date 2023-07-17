@@ -93,11 +93,6 @@ internal class ModelCheckingStrategy(
         return currentInterleaving.isSwitchPosition()
     }
 
-    override fun initializeInvocation() {
-        currentInterleaving.initialize()
-        super.initializeInvocation()
-    }
-
     override fun beforePart(part: ExecutionPart) {
         val nextThread = when (part) {
             ExecutionPart.INIT -> 0

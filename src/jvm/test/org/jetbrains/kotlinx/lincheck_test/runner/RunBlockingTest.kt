@@ -32,8 +32,5 @@ class RunBlockingTest : AbstractLincheckTest() {
 
     override fun extractState() = Unit
 
-    override fun <O : Options<O, *>> O.customize() {
-        minimizeFailedScenario(false)
-        iterations(1)
-    }
+    override val testPlanningConstraints = false
 }

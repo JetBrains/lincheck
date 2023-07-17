@@ -9,8 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.transformation
 
-import org.jetbrains.kotlinx.lincheck.InternalLincheckTestUnexpectedException
-import org.jetbrains.kotlinx.lincheck.Options
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
@@ -19,11 +18,13 @@ class ExpectedTransformedExceptionTest : AbstractLincheckTest() {
     @Operation
     fun operation(): Unit = throw CustomException()
 
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(1)
+    override fun LincheckOptionsImpl.customize() {
+        testingTimeInSeconds = 1
     }
 
     override fun extractState(): Any = 0 // constant state
+
+    override val testPlanningConstraints: Boolean = false
 }
 
 class UnexpectedTransformedExceptionTest : AbstractLincheckTest(UnexpectedExceptionFailure::class) {
@@ -39,7 +40,13 @@ class UnexpectedTransformedExceptionTest : AbstractLincheckTest(UnexpectedExcept
         return 0
     }
 
+    override fun LincheckOptionsImpl.customize() {
+        testingTimeInSeconds = 1
+    }
+
     override fun extractState(): Any = 0 // constant state
+
+    override val testPlanningConstraints: Boolean = false
 }
 
 internal class CustomException : Throwable()

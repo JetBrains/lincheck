@@ -282,7 +282,8 @@ internal data class LincheckOptionsImpl(
             } ?: return@trackRun (null to statisticsTracker)
             // TODO: implement a minimization planner?
             if (minimizeFailedScenario) {
-                failure = failure.minimize(reporterManager.reporter) {
+                reporterManager.reporter.logScenarioMinimization(failure.scenario)
+                failure = failure.minimize {
                     it.run(
                         mode, testClass, testStructure,
                         createVerifier(testClass),

@@ -63,8 +63,8 @@ class TraceReportingTest {
 
     @Test
     fun test() {
-        val failure = ModelCheckingOptions().apply {
-            iterations(0)
+        val failure = LincheckOptions {
+            this as LincheckOptionsImpl
             addCustomScenario {
                 parallel {
                     thread {
@@ -75,6 +75,8 @@ class TraceReportingTest {
                     }
                 }
             }
+            mode = LincheckMode.ModelChecking
+            generateRandomScenarios = false
         }.checkImpl(this::class.java)
         failure.checkLincheckOutput("trace_reporting.txt")
         checkTraceHasNoLincheckEvents(failure.toString())
@@ -95,9 +97,9 @@ class TraceReportingTest {
 
     @Test
     fun testInitPostParts() {
-        val failure = ModelCheckingOptions()
-            .iterations(0)
-            .addCustomScenario {
+        val failure = LincheckOptions {
+            this as LincheckOptionsImpl
+            addCustomScenario {
                 initial {
                     actor(::enterInit)
                 }
@@ -113,7 +115,9 @@ class TraceReportingTest {
                     actor(::enterPost)
                 }
             }
-            .checkImpl(this::class.java)
+            mode = LincheckMode.ModelChecking
+            generateRandomScenarios = false
+        }.checkImpl(this::class.java)
         failure.checkLincheckOutput("trace_reporting_init_post_parts.txt")
         checkTraceHasNoLincheckEvents(failure.toString())
     }
@@ -125,17 +129,19 @@ class TraceReportingTest {
 
     @Test
     fun testEmptyTrace() {
-        val failure = ModelCheckingOptions()
-            .iterations(0)
-            .addCustomScenario {
+        val failure = LincheckOptions {
+            this as LincheckOptionsImpl
+            addCustomScenario {
                 parallel {
                     thread {
                         actor(::notImplemented)
                     }
                 }
             }
-            .sequentialSpecification(EmptySequentialImplementation::class.java)
-            .checkImpl(this::class.java)
+            mode = LincheckMode.ModelChecking
+            generateRandomScenarios = false
+            sequentialImplementation = EmptySequentialImplementation::class.java
+        }.checkImpl(this::class.java)
         failure.checkLincheckOutput("trace_reporting_empty.txt")
     }
 

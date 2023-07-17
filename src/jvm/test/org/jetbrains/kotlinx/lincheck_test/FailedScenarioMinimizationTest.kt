@@ -27,12 +27,18 @@ class FailedScenarioMinimizationTest: VerifierState() {
 
     @Test
     fun testWithoutMinimization() {
-        val options = StressOptions()
-            .actorsPerThread(10)
-            .invocationsPerIteration(1_000)
-            .minimizeFailedScenario(false)
+        val options = LincheckOptions {
+            this as LincheckOptionsImpl
+            mode = LincheckMode.Stress
+            minThreads = 10
+            maxThreads = 10
+            minOperationsInThread = 10
+            maxOperationsInThread = 10
+            minimizeFailedScenario = false
+            tryReproduceTrace = false
+        }
         try {
-            LinChecker.check(FailedScenarioMinimizationTest::class.java, options)
+            options.check(FailedScenarioMinimizationTest::class.java)
             fail("Should fail with LincheckAssertionError")
         } catch (e: LincheckAssertionError) {
             val failedScenario = e.failure.scenario
@@ -46,11 +52,17 @@ class FailedScenarioMinimizationTest: VerifierState() {
 
     @Test
     fun testWithMinimization() {
-        val options = StressOptions()
-            .actorsPerThread(10)
-            .invocationsPerIteration(1_000)
+        val options = LincheckOptions {
+            this as LincheckOptionsImpl
+            mode = LincheckMode.Stress
+            minThreads = 10
+            maxThreads = 10
+            minOperationsInThread = 10
+            maxOperationsInThread = 10
+            tryReproduceTrace = false
+        }
         try {
-            LinChecker.check(FailedScenarioMinimizationTest::class.java, options)
+            options.check(FailedScenarioMinimizationTest::class.java)
             fail("Should fail with LincheckAssertionError")
         } catch (e: LincheckAssertionError) {
             val failedScenario = e.failure.scenario
