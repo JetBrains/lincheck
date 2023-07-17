@@ -22,10 +22,10 @@ The following interleaving leads to the error:
 | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 
 Exception stack traces:
-#1: java.lang.IllegalStateException
+#1: java.lang.IllegalStateException: Legal exception
 	at org.jetbrains.kotlinx.lincheck_test.representation.ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:28)
 
-#2: java.lang.IllegalStateException
+#2: java.lang.IllegalStateException: Violating exception
 	at org.jetbrains.kotlinx.lincheck_test.representation.ExceptionsInOutputTest.operation2(ExceptionsInOutputTest.kt:32)
 
 Detailed trace:
