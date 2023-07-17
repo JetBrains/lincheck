@@ -10,12 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.LincheckMode
-import org.jetbrains.kotlinx.lincheck.LincheckOptions
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.LincheckOptionsImpl
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.checkImpl
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.junit.Test
 
@@ -39,10 +36,20 @@ class ClocksWithExceptionsInOutputTest {
     @Test
     fun `should add stackTrace to output`() = LincheckOptions {
         this as LincheckOptionsImpl
-        maxThreads = 2
-        maxOperationsInThread = 2
-        minimizeFailedScenario = false
         mode = LincheckMode.ModelChecking
+        addCustomScenario {
+            parallel {
+                thread {
+                    actor(::operation1)
+                    actor(::operation1)
+                }
+                thread {
+                    actor(::operation2)
+                }
+            }
+        }
+        generateRandomScenarios = false
+        minimizeFailedScenario = false
     }
         .checkImpl(this::class.java)
         .checkLincheckOutput("clocks_and_exceptions.txt")

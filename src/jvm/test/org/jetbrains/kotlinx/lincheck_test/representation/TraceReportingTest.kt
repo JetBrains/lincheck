@@ -11,7 +11,6 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.junit.*
 
@@ -65,6 +64,7 @@ class TraceReportingTest {
     fun test() {
         val failure = LincheckOptions {
             this as LincheckOptionsImpl
+            mode = LincheckMode.ModelChecking
             addCustomScenario {
                 parallel {
                     thread {
@@ -75,7 +75,6 @@ class TraceReportingTest {
                     }
                 }
             }
-            mode = LincheckMode.ModelChecking
             generateRandomScenarios = false
         }.checkImpl(this::class.java)
         failure.checkLincheckOutput("trace_reporting.txt")
@@ -99,6 +98,7 @@ class TraceReportingTest {
     fun testInitPostParts() {
         val failure = LincheckOptions {
             this as LincheckOptionsImpl
+            mode = LincheckMode.ModelChecking
             addCustomScenario {
                 initial {
                     actor(::enterInit)
@@ -115,8 +115,8 @@ class TraceReportingTest {
                     actor(::enterPost)
                 }
             }
-            mode = LincheckMode.ModelChecking
             generateRandomScenarios = false
+            minimizeFailedScenario = false
         }.checkImpl(this::class.java)
         failure.checkLincheckOutput("trace_reporting_init_post_parts.txt")
         checkTraceHasNoLincheckEvents(failure.toString())
@@ -131,6 +131,7 @@ class TraceReportingTest {
     fun testEmptyTrace() {
         val failure = LincheckOptions {
             this as LincheckOptionsImpl
+            mode = LincheckMode.ModelChecking
             addCustomScenario {
                 parallel {
                     thread {
@@ -138,7 +139,6 @@ class TraceReportingTest {
                     }
                 }
             }
-            mode = LincheckMode.ModelChecking
             generateRandomScenarios = false
             sequentialImplementation = EmptySequentialImplementation::class.java
         }.checkImpl(this::class.java)

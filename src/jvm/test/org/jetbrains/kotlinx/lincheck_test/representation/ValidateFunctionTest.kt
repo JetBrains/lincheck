@@ -43,14 +43,18 @@ class ValidateFunctionTest : VerifierState() {
         this as LincheckOptionsImpl
         mode = LincheckMode.ModelChecking
         addCustomScenario {
+            initial {
+                actor(::inc)
+                actor(::inc)
+                actor(::inc)
+            }
             parallel {
                 thread {
                     actor(::inc)
-                    actor(::inc)
-                    actor(::inc)
-                    actor(::inc)
-                    actor(::inc)
                 }
+            }
+            post {
+                actor(::inc)
             }
         }
         generateRandomScenarios = false

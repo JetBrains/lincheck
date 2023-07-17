@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck_test
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.verifier.EpsilonVerifier
 
 class HangingInParallelPartTest : AbstractLincheckTest(DeadlockWithDumpFailure::class) {
 
@@ -20,19 +21,17 @@ class HangingInParallelPartTest : AbstractLincheckTest(DeadlockWithDumpFailure::
         while (true) {}
     }
 
-    val scenario = scenario {
-        parallel {
-            thread {
-                actor(::hang)
-            }
-            thread {
-                actor(::hang)
+    override fun LincheckOptionsImpl.customize() {
+        addCustomScenario {
+            parallel {
+                thread {
+                    actor(::hang)
+                }
+                thread {
+                    actor(::hang)
+                }
             }
         }
-    }
-
-    override fun LincheckOptionsImpl.customize() {
-        addCustomScenario(scenario)
         generateRandomScenarios = false
         invocationTimeoutMs = 100
     }
@@ -49,19 +48,17 @@ class HangingInInitPartTest : AbstractLincheckTest(DeadlockWithDumpFailure::clas
     @Operation
     fun idle() {}
 
-    val scenario = scenario {
-        initial {
-            actor(::hang)
-        }
-        parallel {
-            thread {
-                actor(::idle)
+    override fun LincheckOptionsImpl.customize() {
+        addCustomScenario {
+            initial {
+                actor(::hang)
+            }
+            parallel {
+                thread {
+                    actor(::idle)
+                }
             }
         }
-    }
-
-    override fun LincheckOptionsImpl.customize() {
-        addCustomScenario(scenario)
         generateRandomScenarios = false
         invocationTimeoutMs = 100
     }
@@ -78,21 +75,21 @@ class HangingInPostPartTest : AbstractLincheckTest(DeadlockWithDumpFailure::clas
     @Operation
     fun idle() {}
 
-    val scenario = scenario {
-        parallel {
-            thread {
-                actor(::idle)
+    override fun LincheckOptionsImpl.customize() {
+        addCustomScenario {
+            parallel {
+                thread {
+                    actor(::idle)
+                }
+            }
+            post {
+                actor(::hang)
             }
         }
-        post {
-            actor(::hang)
-        }
-    }
-
-    override fun LincheckOptionsImpl.customize() {
-        addCustomScenario(scenario)
         generateRandomScenarios = false
         invocationTimeoutMs = 100
     }
+
+    override fun extractState(): Any = System.identityHashCode(this)
 
 }

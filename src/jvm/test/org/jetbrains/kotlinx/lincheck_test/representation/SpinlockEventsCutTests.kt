@@ -38,6 +38,17 @@ class ObstructionFreedomViolationEventsCutTest {
         this as LincheckOptionsImpl
         mode = LincheckMode.ModelChecking
         checkObstructionFreedom = true
+        addCustomScenario {
+            parallel {
+                thread {
+                    actor(::enqueue, 1)
+                }
+                thread {
+                    actor(::enqueue, -1)
+                }
+            }
+        }
+        generateRandomScenarios = false
     }
         .checkImpl(this::class.java)
         .checkLincheckOutput("obstruction_freedom_violation_events_cut.txt")
@@ -166,6 +177,9 @@ abstract class AbstractSpinLivelockTest {
     fun testWithModelCheckingStrategy() = LincheckOptions {
         this as LincheckOptionsImpl
         mode = LincheckMode.ModelChecking
+        maxThreads = 2
+        minOperationsInThread = 5
+        maxOperationsInThread = 5
         minimizeFailedScenario = false
     }
         .checkImpl(this::class.java)
@@ -202,6 +216,7 @@ class SpinlockInIncorrectResultsWithClocksTest {
     @Test
     fun test() = LincheckOptions {
         this as LincheckOptionsImpl
+        mode = LincheckMode.ModelChecking
         addCustomScenario {
             parallel {
                 thread {
@@ -214,8 +229,8 @@ class SpinlockInIncorrectResultsWithClocksTest {
                 }
             }
         }
-        mode = LincheckMode.ModelChecking
         generateRandomScenarios = false
+        minimizeFailedScenario = false
         sequentialImplementation = ClocksTestSequential::class.java
     }
         .checkImpl(this::class.java)

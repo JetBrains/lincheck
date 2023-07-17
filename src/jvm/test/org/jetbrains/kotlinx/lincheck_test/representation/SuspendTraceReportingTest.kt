@@ -48,18 +48,11 @@ class SuspendTraceReportingTest : VerifierState() {
     @Test
     fun test() = LincheckOptions {
         this as LincheckOptionsImpl
-        addCustomScenario {
-            parallel {
-                thread {
-                    actor(::bar)
-                }
-                thread {
-                    actor(::foo)
-                }
-            }
-        }
         mode = LincheckMode.ModelChecking
-        generateRandomScenarios = false
+        maxThreads = 2
+        maxOperationsInThread = 1
+        generateBeforeAndAfterParts = false
+        testingTimeInSeconds = 10
     }
         .checkImpl(this::class.java)
         .checkLincheckOutput("suspend_trace_reporting.txt")
