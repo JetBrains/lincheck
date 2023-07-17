@@ -34,6 +34,8 @@ class AllowExtraSuspensionCorrectTest : AbstractLincheckTest() {
     override fun LincheckOptionsImpl.customize() {
         sequentialImplementation = CounterSequential::class.java
     }
+
+    override val testPlanningConstraints: Boolean = false
 }
 
 class AllowExtraSuspensionIncorrectTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
@@ -51,6 +53,8 @@ class AllowExtraSuspensionIncorrectTest : AbstractLincheckTest(IncorrectResultsF
     override fun LincheckOptionsImpl.customize() {
         sequentialImplementation = CounterSequential::class.java
     }
+
+    override val testPlanningConstraints: Boolean = false
 }
 
 // One of the operations should always succeed without suspension

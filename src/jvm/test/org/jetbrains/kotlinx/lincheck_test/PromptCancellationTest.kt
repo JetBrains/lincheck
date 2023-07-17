@@ -68,6 +68,8 @@ abstract class AbstractPromptCancellationTest(
             sequentialImplementation = it.java
         }
     }
+
+    override val testPlanningConstraints: Boolean = false
 }
 
 class CorrectPromptCancellationTest : AbstractPromptCancellationTest()
