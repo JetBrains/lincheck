@@ -24,81 +24,58 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 
 interface Statistics {
-
     /**
      * Total amount of time already spent on testing.
      */
     val runningTimeNano: Long
-
     /**
-     * An array keeping running time of all iterations.
-     * TODO: refactor to function returning time of i-th iteration
+     * A list of iteration statistics.
      */
-    val iterationsRunningTimeNano: List<Long>
+    val iterationsStatistics: List<IterationStatistics>
+}
 
-    /**
-     * Array keeping number of invocations executed for each iteration
-     * TODO: refactor to function returning count of i-th iteration
-     */
-    val iterationsInvocationsCount: List<Int>
-
-    companion object {
-        val empty = object : Statistics {
-            override val runningTimeNano: Long = 0
-            override val iterationsRunningTimeNano: List<Long> = listOf()
-            override val iterationsInvocationsCount: List<Int> = listOf()
-        }
-    }
-
+interface IterationStatistics {
+    val runningTimeNano: Long
+    val invocationsCount: Int
 }
 
 /**
  * Number of performed iterations, that is run scenarios.
  */
-val Statistics.iterations: Int
-    get() = iterationsRunningTimeNano.size
+val Statistics.iterationsCount: Int
+    get() = iterationsStatistics.size
+
+/**
+ * Total number of performed invocations.
+ */
+val Statistics.totalInvocationsCount: Int
+    get() = iterationsStatistics.sumOf { it.invocationsCount }
 
 /**
  * Average number of invocations performed by iteration.
  */
 val Statistics.averageInvocations: Double
-    get() = iterationsInvocationsCount.average()
-
-operator fun Statistics.plus(statistics: Statistics) = object : Statistics {
-    override val runningTimeNano: Long =
-        this@plus.runningTimeNano + statistics.runningTimeNano
-
-    override val iterationsRunningTimeNano: List<Long> =
-        this@plus.iterationsRunningTimeNano + statistics.iterationsRunningTimeNano
-
-    override val iterationsInvocationsCount: List<Int> =
-        this@plus.iterationsInvocationsCount + statistics.iterationsInvocationsCount
-}
+    get() = iterationsStatistics.map { it.invocationsCount }.average()
 
 /**
- * Average number of invocations per iteration after performing given [iteration].
+ * Average invocation time on given iteration.
  */
-fun Statistics.averageInvocationsCount(iteration: Int): Double =
-    iterationsInvocationsCount.take(iteration).average()
-
-/**
- * Average invocation time on given [iteration].
- */
-fun Statistics.averageInvocationTimeNano(iteration: Int): Double =
-    iterationsRunningTimeNano[iteration] / iterationsInvocationsCount[iteration].toDouble()
+val IterationStatistics.averageInvocationTimeNano
+    get() = runningTimeNano.toDouble() / invocationsCount
 
 internal class StatisticsTracker : Statistics, RunTracker {
 
     override var runningTimeNano: Long = 0
         private set
 
-    override val iterationsRunningTimeNano: List<Long>
-        get() = _iterationsRunningTimeNano
-    private val _iterationsRunningTimeNano = mutableListOf<Long>()
+    override val iterationsStatistics: List<IterationStatistics>
+        get() = _iterationsStatistics
+    private val _iterationsStatistics = mutableListOf<IterationStatisticsTracker>()
 
-    override val iterationsInvocationsCount: List<Int>
-        get() = _iterationsInvocationCount
-    private val _iterationsInvocationCount = mutableListOf<Int>()
+    private class IterationStatisticsTracker : IterationStatistics {
+        override var runningTimeNano: Long = 0
+        override var invocationsCount: Int = 0
+    }
 
     /**
      * Current iteration number.
@@ -116,19 +93,18 @@ internal class StatisticsTracker : Statistics, RunTracker {
      * Running time of current iteration.
      */
     val currentIterationRunningTimeNano: Long
-        get() = iterationsRunningTimeNano[iteration]
+        get() = iterationsStatistics[iteration].runningTimeNano
 
     /**
      * Number of invocations in current iteration.
      */
     val currentIterationInvocationsCount: Int
-        get() = iterationsInvocationsCount[iteration]
+        get() = iterationsStatistics[iteration].invocationsCount
 
     override fun iterationStart(iteration: Int, scenario: ExecutionScenario) {
         check(iteration == this.iteration + 1)
         ++this.iteration
-        _iterationsRunningTimeNano.add(0)
-        _iterationsInvocationCount.add(0)
+        _iterationsStatistics.add(IterationStatisticsTracker())
     }
 
     override fun iterationEnd(iteration: Int, failure: LincheckFailure?) {
@@ -147,8 +123,9 @@ internal class StatisticsTracker : Statistics, RunTracker {
         val invocationTimeNano = System.nanoTime() - lastInvocationStartTimeNano
         check(invocationTimeNano >= 0)
         runningTimeNano += invocationTimeNano
-        _iterationsInvocationCount[iteration] += 1
-        _iterationsRunningTimeNano[iteration] += invocationTimeNano
+        _iterationsStatistics[iteration].runningTimeNano += invocationTimeNano
+        _iterationsStatistics[iteration].invocationsCount += 1
     }
 
 }
+

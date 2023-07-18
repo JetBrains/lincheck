@@ -216,12 +216,17 @@ internal class AdaptivePlanner(
         check(iteration == statisticsTracker.iteration + 1)
         if (iteration >= WARM_UP_ITERATIONS.coerceAtLeast(1) /* && iteration % BOUNDS_ADJUSTMENT_INTERVAL == 0 */) {
             adjustBounds(
+                // set number of completed iterations
                 performedIterations = statisticsTracker.iteration + 1,
-                performedInvocations = statisticsTracker.iterationsInvocationsCount.sum() - warmUpInvocations,
+                // total number of performed invocations, excluding warm-up invocations
+                performedInvocations = statisticsTracker.totalInvocationsCount - warmUpInvocations,
+                // remaining time; we estimate warm-up time as a warm-up time spent on previous iteration
                 remainingTimeNano = remainingTimeNano - currentIterationWarmUpTimeNano,
+                // as an estimated average invocation time we took average invocation time on previous iteration,
+                // excluding time spent on warm-up invocations
                 averageInvocationTimeNano = with(statisticsTracker) {
-                    (iterationsRunningTimeNano[this.iteration] - currentIterationWarmUpTimeNano) /
-                            iterationsInvocationsCount[this.iteration].toDouble()
+                    (iterationsStatistics[this.iteration].runningTimeNano - currentIterationWarmUpTimeNano) /
+                            iterationsStatistics[this.iteration].invocationsCount.toDouble()
                 },
             )
         }

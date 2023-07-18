@@ -78,10 +78,9 @@ abstract class AbstractLincheckTest(
         }
         // check invocations to iterations ratio (per each strategy run)
         for ((runName, statistics) in runStatistics.entries) {
-            val plannedIterations = statistics.iterationsInvocationsCount
-            if (plannedIterations.isEmpty())
+            if (statistics.iterationsStatistics.isEmpty())
                 return
-            val invocationsRatio = plannedIterations.average() / plannedIterations.size
+            val invocationsRatio = statistics.averageInvocations / statistics.iterationsCount
             val expectedRatio = AdaptivePlanner.INVOCATIONS_TO_ITERATIONS_RATIO.toDouble()
             val ratioError = 0.25
             assert(abs(invocationsRatio - expectedRatio) < expectedRatio * ratioError) { """
