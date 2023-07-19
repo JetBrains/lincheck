@@ -178,7 +178,7 @@ internal class AdaptivePlanner(
      * Admissible time delay (in nano-seconds) for last iteration to finish,
      * even if it exceeds [remainingTimeNano].
      */
-    private val admissibleDelayTimeNano = TIME_ERROR_MARGIN_NANO / 2
+    private val admissibleErrorTimeNano = TIME_ERROR_MARGIN_NANO / 2
 
     /**
      * Bound on the number of iterations.
@@ -241,7 +241,7 @@ internal class AdaptivePlanner(
         if (invocation == WARM_UP_INVOCATIONS_COUNT) {
             statisticsTracker.iterationWarmUpEnd(statisticsTracker.iteration)
         }
-        if (statisticsTracker.totalRunningTimeNano > testingTimeNano + admissibleDelayTimeNano) {
+        if (statisticsTracker.totalRunningTimeNano > testingTimeNano + admissibleErrorTimeNano) {
             return false
         }
         if (invocation < WARM_UP_INVOCATIONS_COUNT) {
@@ -298,14 +298,16 @@ internal class AdaptivePlanner(
             c = ratio * performedIterations * performedIterations - (performedInvocations + remainingInvocations),
             default = 0.0
         ).let { round(it).toInt() }.coerceAtLeast(0)
-        // derive invocations per iteration bound
-        invocationsBound = if (remainingIterations > 0) {
-            round(remainingInvocations / remainingIterations)
+
+        // if there are some iterations left, derive invocations per iteration bound by
+        // dividing total remaining invocations number to the number of remaining iterations
+        if (remainingIterations > 0) {
+            invocationsBound = round(remainingInvocations / remainingIterations)
                 .toInt()
                 .roundUpTo(INVOCATIONS_FACTOR)
                 .coerceAtLeast(invocationsLowerBound)
                 .coerceAtMost(invocationsUpperBound)
-        } else invocationsLowerBound
+        }
 
         // if there is no remaining iterations, but there is still some time left
         // (more time than admissible error),
@@ -313,13 +315,15 @@ internal class AdaptivePlanner(
         // in case of overdue it will be just aborted when the time is up;
         // this additional iteration helps us to prevent the case when we finish earlier and
         // do not use all allocated testing time;
+        // we allocate all remaining invocations to this last iteration;
         // however, because in some rare cases even single invocation can take significant time
         // and thus surpass the deadline, we still perform additional check
         // to see if there enough time to perform at least xx% of additional invocations compared
         // to the planned invocations bound.
         if (remainingIterations == 0 &&
-            remainingTimeNano > admissibleDelayTimeNano &&
-            averageInvocationTimeNano * (0.2 * invocationsBound) < remainingTimeNano) {
+            remainingTimeNano > admissibleErrorTimeNano &&
+            averageInvocationTimeNano * (0.2 * remainingInvocations) < remainingTimeNano) {
+            invocationsBound = remainingInvocations.toInt()
             remainingIterations += 1
         }
 
@@ -327,8 +331,9 @@ internal class AdaptivePlanner(
         iterationsBound = performedIterations + remainingIterations
 
         // calculate upper bound on running time for the next iteration
-        currentIterationUpperTimeNano =
-            round((remainingTimeNano * PLANNED_ITERATION_TIME_ERROR_FACTOR) / remainingIterations).toLong()
+        currentIterationUpperTimeNano = if (remainingIterations > 0)
+                round((remainingTimeNano * PLANNED_ITERATION_TIME_ERROR_FACTOR) / remainingIterations).toLong()
+            else 0L
     }
 
     private fun solveQuadraticEquation(a: Double, b: Double, c: Double, default: Double): Double {
