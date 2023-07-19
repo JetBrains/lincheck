@@ -181,30 +181,32 @@ internal class AdaptivePlanner(
     private val admissibleDelayTimeNano = TIME_ERROR_MARGIN_NANO / 2
 
     /**
-     * Upper bound on the number of iterations.
+     * Bound on the number of iterations.
      * Adjusted automatically after each iteration.
      */
     private var iterationsBound = INITIAL_ITERATIONS_BOUND
 
     /**
-     * Upper bound on the number of invocations per iteration.
-     * Adjusted automatically during each iteration.
+     * Bound on the number of invocations allocated to current iteration.
+     * Adjusted automatically after each iteration.
      */
     private var invocationsBound = INITIAL_INVOCATIONS_BOUND
 
     /**
-     * Lower bound of invocations allocated by iteration
+     * Lower bound of invocations allocated per iteration.
      */
     private val invocationsLowerBound = INVOCATIONS_LOWER_BOUND
 
     /**
-     * Upper bound of invocations allocated by iteration
+     * Upper bound of invocations allocated per iteration.
      */
     private val invocationsUpperBound = when (mode) {
         LincheckMode.Stress         -> STRESS_INVOCATIONS_UPPER_BOUND
         LincheckMode.ModelChecking  -> MODEL_CHECKING_INVOCATIONS_UPPER_BOUND
         else -> throw IllegalArgumentException()
     }
+
+    private var currentIterationPlannedTimeNano = -1L
 
     private var warmUpInvocations = 0
 
@@ -214,7 +216,7 @@ internal class AdaptivePlanner(
 
     override fun shouldDoNextIteration(iteration: Int): Boolean {
         check(iteration == statisticsTracker.iteration + 1)
-        if (iteration >= WARM_UP_ITERATIONS.coerceAtLeast(1) /* && iteration % BOUNDS_ADJUSTMENT_INTERVAL == 0 */) {
+        if (iteration >= WARM_UP_ITERATIONS.coerceAtLeast(1)) {
             adjustBounds(
                 // set number of completed iterations
                 performedIterations = statisticsTracker.iteration + 1,
@@ -223,10 +225,16 @@ internal class AdaptivePlanner(
                 // remaining time; we estimate warm-up time as a warm-up time spent on previous iteration
                 remainingTimeNano = remainingTimeNano - currentIterationWarmUpTimeNano,
                 // as an estimated average invocation time we took average invocation time on previous iteration,
-                // excluding time spent on warm-up invocations
+                // excluding warm-up invocations
                 averageInvocationTimeNano = with(statisticsTracker) {
-                    (iterationsStatistics[this.iteration].runningTimeNano - currentIterationWarmUpTimeNano) /
-                            iterationsStatistics[this.iteration].invocationsCount.toDouble()
+                    val runningTimeNano = iterationsStatistics[this.iteration].runningTimeNano - currentIterationWarmUpTimeNano
+                    val invocationsCount = iterationsStatistics[this.iteration].invocationsCount - currentIterationWarmUpInvocations
+                    return@with if (runningTimeNano != 0L && invocationsCount != 0)
+                        runningTimeNano.toDouble() / invocationsCount
+                    else
+                        // in case when no iterations, except warm-up iterations, were performed,
+                        // take average time on warm-up invocations
+                        iterationsStatistics[this.iteration].averageInvocationTimeNano
                 },
             )
         }
@@ -246,6 +254,11 @@ internal class AdaptivePlanner(
                 currentIterationWarmUpTimeNano += statisticsTracker.currentIterationRunningTimeNano
             }
             return true
+        }
+        val errorFactor = PLANNED_ITERATION_TIME_ERROR_FACTOR
+        if (currentIterationPlannedTimeNano > 0 &&
+            statisticsTracker.currentIterationRunningTimeNano > currentIterationPlannedTimeNano * errorFactor) {
+            return false
         }
         return (invocation < invocationsBound + currentIterationWarmUpInvocations)
     }
@@ -343,6 +356,9 @@ internal class AdaptivePlanner(
 
         // finally, set the iterations bound
         iterationsBound = performedIterations + remainingIterations
+
+        // calculate planned time for the next iteration
+        currentIterationPlannedTimeNano = round(remainingTimeNano.toDouble() / remainingIterations).toLong()
     }
 
     private fun solveQuadraticEquation(a: Double, b: Double, c: Double, default: Double): Double {
@@ -362,11 +378,10 @@ internal class AdaptivePlanner(
         // number of iterations added/subtracted when we over- or under-perform the plan
         private const val ITERATIONS_DELTA = 5
 
-        // number of additional invocations added as the last additional iteration when we over perform
-        private const val INVOCATIONS_DELTA = 1
-
         // initial number of invocations
         private const val INITIAL_INVOCATIONS_BOUND = 500
+
+        internal const val WARM_UP_ITERATIONS = 1
 
         // number of warm-up invocations
         private const val WARM_UP_INVOCATIONS_COUNT = 10
@@ -377,11 +392,11 @@ internal class AdaptivePlanner(
 
         internal const val INVOCATIONS_TO_ITERATIONS_RATIO = 100
 
-        internal const val WARM_UP_ITERATIONS = 1
-
         internal const val INVOCATIONS_LOWER_BOUND = 100
         internal const val STRESS_INVOCATIONS_UPPER_BOUND = 1_000_000
         internal const val MODEL_CHECKING_INVOCATIONS_UPPER_BOUND = 20_000
+
+        private const val PLANNED_ITERATION_TIME_ERROR_FACTOR = 2.0
 
         // error up to 1 sec --- we can try to decrease the error in the future
         internal const val TIME_ERROR_MARGIN_NANO = 1_000_000_000
