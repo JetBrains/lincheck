@@ -233,8 +233,8 @@ internal class AdaptivePlanner(
                         runningTimeNano.toDouble() / invocationsCount
                     else
                         // in case when no iterations, except warm-up iterations, were performed,
-                        // take average time on warm-up invocations
-                        iterationsStatistics[this.iteration].averageInvocationTimeNano
+                        // take average time on all iterations as an estimate
+                        averageInvocationTimeNano
                 },
             )
         }
@@ -302,7 +302,6 @@ internal class AdaptivePlanner(
         require(averageInvocationTimeNano > 0)
         if (remainingTimeNano <= 0)
             return
-        val averageInvocationsCount = performedInvocations.toDouble() / performedIterations
         // estimate number of remaining invocations
         val remainingInvocations = floor(remainingTimeNano / averageInvocationTimeNano)
         // shorter name for invocations to iterations ratio constant
