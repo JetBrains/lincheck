@@ -34,13 +34,16 @@ interface RunTracker {
     fun invocationEnd(invocation: Int, failure: LincheckFailure? = null) {}
 }
 
-inline fun RunTracker?.trackRun(name: String, options: LincheckOptions,
-                                block: () -> Pair<LincheckFailure?, Statistics>): LincheckFailure? {
+inline fun RunTracker?.trackRun(
+    name: String,
+    options: LincheckOptions,
+    block: () -> Pair<LincheckFailure?, Statistics>
+): Pair<LincheckFailure?, Statistics> {
     this?.runStart(name, options)
     try {
         val (failure, statistics) = block()
         this?.runEnd(name, failure, statistics)
-        return failure
+        return (failure to statistics)
     } catch (exception: Throwable) {
         // TODO: once https://github.com/JetBrains/lincheck/issues/170 is implemented,
         //   we can put `check(false)` here instead

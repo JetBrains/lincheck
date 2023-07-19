@@ -203,9 +203,9 @@ internal data class LincheckOptionsImpl(
                 generateRandomScenarios = false,
                 tryReproduceTrace = (mode == LincheckMode.Hybrid)
             )
-            stressOptions.runImpl(testClass, testStructure, tracker)?.let {
-                return it
-            }
+            val (failure, _) = stressOptions.runImpl(testClass, testStructure, tracker)
+            if (failure != null)
+                return failure
         }
         if (shouldRunModelCheckingStrategy) {
             val modelCheckingOptions = copy(
@@ -213,14 +213,16 @@ internal data class LincheckOptionsImpl(
                 generateRandomScenarios = false,
                 tryReproduceTrace = true
             )
-            modelCheckingOptions.runImpl(testClass, testStructure, tracker)?.let {
-                return it
-            }
+            val (failure, _) = modelCheckingOptions.runImpl(testClass, testStructure, tracker)
+            if (failure != null)
+                return failure
         }
         return null
     }
 
     private fun runRandomScenarios(testClass: Class<*>, testStructure: CTestStructure, tracker: RunTracker?): LincheckFailure? {
+        var stressTestingTimeMs = this.stressTestingTimeMs
+        var modelCheckingTimeMs = this.modelCheckingTimeMs
         if (shouldRunStressStrategy) {
             val stressOptions = copy(
                 mode = LincheckMode.Stress,
@@ -228,9 +230,10 @@ internal data class LincheckOptionsImpl(
                 customScenariosOptions = mutableListOf(),
                 tryReproduceTrace = (mode == LincheckMode.Hybrid)
             )
-            stressOptions.runImpl(testClass, testStructure, tracker)?.let {
-                return it
-            }
+            val (failure, statistics) = stressOptions.runImpl(testClass, testStructure, tracker)
+            if (failure != null)
+                return failure
+            modelCheckingTimeMs = testingTimeMs - (statistics.totalRunningTimeNano / 1_000_000)
         }
         if (shouldRunModelCheckingStrategy) {
             val modelCheckingOptions = copy(
@@ -239,9 +242,9 @@ internal data class LincheckOptionsImpl(
                 customScenariosOptions = mutableListOf(),
                 tryReproduceTrace = true
             )
-            modelCheckingOptions.runImpl(testClass, testStructure, tracker)?.let {
-                return it
-            }
+            val (failure, _) = modelCheckingOptions.runImpl(testClass, testStructure, tracker)
+            if (failure != null)
+                return failure
         }
         return null
     }
@@ -256,7 +259,11 @@ internal data class LincheckOptionsImpl(
         return "${testClass.name}-${scenariosKind}-${mode}-${abs(hashCode())}"
     }
 
-    private fun runImpl(testClass: Class<*>, testStructure: CTestStructure, customTracker: RunTracker? = null): LincheckFailure? {
+    private fun runImpl(
+        testClass: Class<*>,
+        testStructure: CTestStructure,
+        customTracker: RunTracker? = null
+    ): Pair<LincheckFailure?, Statistics> {
         check(mode in listOf(LincheckMode.Stress, LincheckMode.ModelChecking))
         check(shouldRunCustomScenarios xor shouldRunRandomScenarios)
         return customTracker.trackRun(getRunName(testClass), this) {
