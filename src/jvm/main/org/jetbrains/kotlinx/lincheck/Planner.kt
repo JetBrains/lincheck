@@ -318,11 +318,10 @@ internal class AdaptivePlanner(
         // we allocate all remaining invocations to this last iteration;
         // however, because in some rare cases even single invocation can take significant time
         // and thus surpass the deadline, we still perform additional check
-        // to see if there enough time to perform at least xx% of additional invocations compared
-        // to the planned invocations bound.
+        // to see if there enough time to perform at least X of additional invocations.
         if (remainingIterations == 0 &&
             remainingTimeNano > admissibleErrorTimeNano &&
-            averageInvocationTimeNano * (0.2 * remainingInvocations) < remainingTimeNano) {
+            averageInvocationTimeNano * invocationsLowerBound < remainingTimeNano) {
             invocationsBound = remainingInvocations.toInt()
             remainingIterations += 1
         }
