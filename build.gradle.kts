@@ -93,7 +93,7 @@ tasks {
     withType<Test> {
         maxParallelForks = 1
         jvmArgs(
-            "-Xmx1G",
+            "-Xmx2G",
             "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
             "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED",
             "--add-exports", "java.base/sun.security.action=ALL-UNNAMED"
