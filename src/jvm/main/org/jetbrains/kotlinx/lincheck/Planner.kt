@@ -227,8 +227,10 @@ internal class AdaptivePlanner(
                 // as an estimated average invocation time we took average invocation time on previous iteration,
                 // excluding warm-up invocations
                 averageInvocationTimeNano = with(statisticsTracker) {
-                    val runningTimeNano = iterationsStatistics[this.iteration].runningTimeNano - currentIterationWarmUpTimeNano
-                    val invocationsCount = iterationsStatistics[this.iteration].invocationsCount - currentIterationWarmUpInvocations
+                    val runningTimeNano =
+                        (iterationsStatistics[this.iteration].runningTimeNano - currentIterationWarmUpTimeNano).coerceAtLeast(0)
+                    val invocationsCount =
+                        (iterationsStatistics[this.iteration].invocationsCount - currentIterationWarmUpInvocations).coerceAtLeast(0)
                     return@with if (runningTimeNano != 0L && invocationsCount != 0)
                         runningTimeNano.toDouble() / invocationsCount
                     else
