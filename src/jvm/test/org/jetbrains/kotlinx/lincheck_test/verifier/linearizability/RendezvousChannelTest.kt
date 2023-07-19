@@ -35,6 +35,9 @@ class RendezvousChannelTest : AbstractLincheckTest() {
     fun close() = ch.close()
 
     override fun LincheckOptionsImpl.customize() {
+        // increase testing time because currently RendezvousChannelTest performs poorly,
+        // thus often leading to a small number of iterations
+        testingTimeInSeconds = 30
         sequentialImplementation = SequentialRendezvousIntChannel::class.java
     }
 }

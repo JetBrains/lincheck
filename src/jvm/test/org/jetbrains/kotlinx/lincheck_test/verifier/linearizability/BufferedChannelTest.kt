@@ -34,6 +34,9 @@ class BufferedChannelTest : AbstractLincheckTest() {
     fun offer(@Param(name = "value") value: Int) = c.trySend(value).isSuccess
 
     override fun LincheckOptionsImpl.customize() {
+        // increase testing time because currently BufferedChannelTest performs poorly,
+        // thus often leading to a small number of iterations
+        testingTimeInSeconds = 30
         sequentialImplementation = SequentiaBuffered2IntChannel::class.java
     }
 }
