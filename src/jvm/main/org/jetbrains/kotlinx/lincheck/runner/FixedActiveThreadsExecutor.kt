@@ -36,13 +36,6 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
     private val results = atomicArrayOfNulls<Any>(nThreads)
 
     /**
-     * This flag is set to `true` when [await] detects a hang.
-     * In this case, when this executor is closed, [Thread.stop]
-     * is called on all the internal threads.
-     */
-    private var hangDetected = false
-
-    /**
      * Threads used in this runner.
      */
     val threads = Array(nThreads) { iThread ->
@@ -80,12 +73,6 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
             val i = task.iThread
             submitTask(i, task)
         }
-    }
-
-    private fun shutdown() {
-        // submit the shutdown tasks
-        for (i in 0 until nThreads)
-            submitTask(i, SHUTDOWN)
     }
 
     private fun submitTask(iThread: Int, task: Any) {
@@ -131,7 +118,6 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
             while (results[iThread].value === currentThread) {
                 val timeLeft = deadline - System.nanoTime()
                 if (timeLeft <= 0) {
-                    hangDetected = true
                     throw TimeoutException()
                 }
                 LockSupport.parkNanos(timeLeft)
@@ -198,10 +184,9 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
     }
 
     override fun close() {
-        shutdown()
-        if (hangDetected) {
-            for (thread in threads)
-                thread.stop()
+        // submit the shutdown tasks
+        for (i in 0 until nThreads) {
+            submitTask(i, SHUTDOWN)
         }
     }
 
