@@ -41,7 +41,10 @@ class GeneratorSeedTest {
     }
 
     @Test(expected = LincheckAssertionError::class)
-    fun test() = LincheckOptions().check(this::class)
+    fun test() = LincheckOptions {
+        this as LincheckOptionsImpl
+        mode = LincheckMode.ModelChecking
+    }.check(this::class)
 
 }
 
@@ -55,7 +58,10 @@ class MethodParameterGenerationTestWithBothParametersAnnotated {
         throwInternalExceptionIfParamsNotEquals(first, second)
 
     @Test(expected = LincheckAssertionError::class)
-    fun test() = LincheckOptions().check(this::class)
+    fun test() = LincheckOptions {
+        this as LincheckOptionsImpl
+        mode = LincheckMode.ModelChecking
+    }.check(this::class)
 
 }
 
@@ -70,7 +76,10 @@ class MethodParameterGenerationTestWithFirstParameterAnnotated {
     fun operation(@Param(name = "key") first: Int, second: Int) = throwInternalExceptionIfParamsNotEquals(first, second)
 
     @Test(expected = LincheckAssertionError::class)
-    fun test() = LincheckOptions().check(this::class)
+    fun test() = LincheckOptions {
+        this as LincheckOptionsImpl
+        mode = LincheckMode.ModelChecking
+    }.check(this::class)
 
 }
 
@@ -84,7 +93,10 @@ class MethodParameterGenerationTestWithSecondParameterAnnotated {
     fun operation(first: Int, @Param(name = "key") second: Int) = throwInternalExceptionIfParamsNotEquals(first, second)
 
     @Test(expected = LincheckAssertionError::class)
-    fun test() = LincheckOptions().check(this::class)
+    fun test() = LincheckOptions {
+        this as LincheckOptionsImpl
+        mode = LincheckMode.ModelChecking
+    }.check(this::class)
 
 }
 
@@ -96,7 +108,10 @@ class MethodParameterGenerationTest {
     fun operation(first: Int, second: Int) = throwInternalExceptionIfParamsNotEquals(first, second)
 
     @Test(expected = LincheckAssertionError::class)
-    fun test() = LincheckOptions().check(this::class)
+    fun test() = LincheckOptions {
+        this as LincheckOptionsImpl
+        mode = LincheckMode.ModelChecking
+    }.check(this::class)
 
 }
 
@@ -146,7 +161,9 @@ class ParamGeneratorResetBetweenScenariosTest {
 
     @Test
     fun test() {
-        LincheckOptions() {
+        LincheckOptions {
+            this as LincheckOptionsImpl
+            mode = LincheckMode.ModelChecking
             maxThreads = 2
             maxOperationsInThread = 5
         }.check(this::class)
@@ -240,6 +257,7 @@ class NamedEnumParamGeneratorTest {
     @Test(expected = LincheckAssertionError::class)
     fun test() = LincheckOptions {
         this as LincheckOptionsImpl
+        mode = LincheckMode.ModelChecking
         checkObstructionFreedom = true
         minimizeFailedScenario = false
     }.check(this::class)
@@ -270,6 +288,7 @@ class UnnamedEnumParamGeneratorTest() {
     @Test(expected = LincheckAssertionError::class)
     fun test() = LincheckOptions {
         this as LincheckOptionsImpl
+        mode = LincheckMode.ModelChecking
         checkObstructionFreedom = true
         minimizeFailedScenario = false
     }.check(this::class)
@@ -295,6 +314,7 @@ class EnumParamWithoutAnnotationGeneratorTest: BaseEnumSetTest() {
     @Test(expected = LincheckAssertionError::class)
     fun test() = LincheckOptions {
         this as LincheckOptionsImpl
+        mode = LincheckMode.ModelChecking
         checkObstructionFreedom = true
         minimizeFailedScenario = false
     }.check(this::class)
@@ -352,7 +372,10 @@ class EnumsWithWhitespacesInNameConfigurationTest {
     @Operation
     fun operation(@Param(name = "type") param: WeirdEnum) = 0
     @Test
-    fun test() = LincheckOptions().check(this::class)
+    fun test() = LincheckOptions {
+        this as LincheckOptionsImpl
+        mode = LincheckMode.ModelChecking
+    }.check(this::class)
 
     enum class WeirdEnum {
         `FIRST OPTION`,
