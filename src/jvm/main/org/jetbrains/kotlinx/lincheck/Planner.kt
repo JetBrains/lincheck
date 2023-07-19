@@ -284,9 +284,7 @@ internal class AdaptivePlanner(
         averageInvocationTimeNano: Double,
         remainingTimeNano: Long
     ) {
-        require(averageInvocationTimeNano > 0) {
-            "hehn't"
-        }
+        require(averageInvocationTimeNano > 0)
         if (remainingTimeNano <= 0)
             return
         // estimate number of remaining invocations
@@ -299,7 +297,7 @@ internal class AdaptivePlanner(
             b = 2 * ratio * performedIterations,
             c = ratio * performedIterations * performedIterations - (performedInvocations + remainingInvocations),
             default = 0.0
-        ).let { floor(it).toInt() }.coerceAtLeast(0)
+        ).let { round(it).toInt() }.coerceAtLeast(0)
         // derive invocations per iteration bound
         invocationsBound = if (remainingIterations > 0) {
             round(remainingInvocations / remainingIterations)
@@ -308,21 +306,6 @@ internal class AdaptivePlanner(
                 .coerceAtLeast(invocationsLowerBound)
                 .coerceAtMost(invocationsUpperBound)
         } else invocationsLowerBound
-
-        // adjust the remaining iterations bounds to fit into deadline
-        val iterationTimeEstimateNano = invocationsBound * averageInvocationTimeNano
-        val remainingTimeEstimateNano = remainingIterations * iterationTimeEstimateNano
-        val timeDiffNano = abs(remainingTimeEstimateNano - remainingTimeNano)
-        val iterationsDiff = ceil(timeDiffNano / iterationTimeEstimateNano).toInt()
-        // if we over-perform or under-perform by a number of K iterations,
-        // then we increase/decrease remaining iterations bound
-        if (iterationsDiff >= ITERATIONS_DELTA) {
-            if (remainingTimeEstimateNano < remainingTimeNano)
-                remainingIterations += iterationsDiff
-            else
-                remainingIterations -= iterationsDiff
-        }
-        remainingIterations = remainingIterations.coerceAtLeast(0)
 
         // if there is no remaining iterations, but there is still some time left
         // (more time than admissible error),
