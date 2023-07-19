@@ -96,7 +96,7 @@ val Statistics.averageInvocationsCount: Double
  * The average invocation time (across all iterations) in nanoseconds.
  */
 val Statistics.averageInvocationTimeNano
-    get() = runningTimeNano.toDouble() / totalInvocationsCount
+    get() = runningTimeNano.toDouble() / invocationsCount
 
 /**
  * Total running time of this iteration in nanoseconds, including warm-up time.

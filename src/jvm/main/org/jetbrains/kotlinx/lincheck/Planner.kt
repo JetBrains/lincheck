@@ -225,8 +225,8 @@ internal class AdaptivePlanner(
                         averageInvocationTimeNano
                     else
                         // in case when no iterations, except warm-up iterations, were performed,
-                        // take average time on all iterations as an estimate
-                        statisticsTracker.averageInvocationTimeNano
+                        // take average time on all iterations (including warm-up) as an estimate
+                        statisticsTracker.totalRunningTimeNano.toDouble() / statisticsTracker.totalInvocationsCount
                 },
             )
         }
@@ -284,7 +284,9 @@ internal class AdaptivePlanner(
         averageInvocationTimeNano: Double,
         remainingTimeNano: Long
     ) {
-        require(averageInvocationTimeNano > 0)
+        require(averageInvocationTimeNano > 0) {
+            "hehn't"
+        }
         if (remainingTimeNano <= 0)
             return
         // estimate number of remaining invocations
