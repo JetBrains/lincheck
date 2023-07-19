@@ -6,16 +6,15 @@
 | ----------- |
 
 The following interleaving leads to the error:
-| ------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                  Thread 1                                                                   |
-| ------------------------------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                                                 |
-|   incrementManyTimes() at ObstructionFreedomActiveLockRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:34)              |
-|   incrementManyTimes() at ObstructionFreedomActiveLockRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:37)              |
-|     get(): 101 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:41)             |
-|     incrementAndGet(): 102 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:44) |
-|     /* An active lock was detected */                                                                                                       |
-| ------------------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------------------------------------------------- |
+|                                                            Thread 1                                                             |
+| ------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                     |
+|   incrementManyTimes() at ObstructionFreedomActiveLockRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:34)  |
+|   incrementManyTimes() at ObstructionFreedomActiveLockRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:37)  |
+|     get(): 101 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:41) |
+|     /* An active lock was detected */                                                                                           |
+| ------------------------------------------------------------------------------------------------------------------------------- |
 
 Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -127,6 +126,5 @@ Detailed trace:
 |     incrementAndGet(): 101 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:44) |
 |   incrementManyTimes() at ObstructionFreedomActiveLockRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:37)              |
 |     get(): 101 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:41)             |
-|     incrementAndGet(): 102 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:44) |
 |     /* An active lock was detected */                                                                                                       |
 | ------------------------------------------------------------------------------------------------------------------------------------------- |
