@@ -67,7 +67,7 @@ abstract class AbstractLincheckTest(
         // we expect test to run only custom or only random scenarios
         check(customScenariosOptions.size == 0)
         val randomTestingTimeNano = testingTimeInSeconds * 1_000_000_000
-        val runningTimeNano = runStatistics.values.sumOf { it.runningTimeNano }
+        val runningTimeNano = runStatistics.values.sumOf { it.totalRunningTimeNano }
         val timeDeltaNano = AdaptivePlanner.TIME_ERROR_MARGIN_NANO
         // check that the actual running time is close to specified time
         assert(abs(randomTestingTimeNano - runningTimeNano) < timeDeltaNano) { """
@@ -80,7 +80,7 @@ abstract class AbstractLincheckTest(
         for ((runName, statistics) in runStatistics.entries) {
             if (statistics.iterationsStatistics.isEmpty())
                 return
-            val invocationsRatio = statistics.averageInvocations / statistics.iterationsCount
+            val invocationsRatio = statistics.averageInvocationsCount / statistics.iterationsCount
             val expectedRatio = AdaptivePlanner.INVOCATIONS_TO_ITERATIONS_RATIO.toDouble()
             val ratioError = 0.25
             assert(abs(invocationsRatio - expectedRatio) < expectedRatio * ratioError) { """

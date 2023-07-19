@@ -330,8 +330,8 @@ internal data class LincheckOptionsImpl(
         override fun iterationEnd(iteration: Int, failure: LincheckFailure?) {
             statistics?.apply {
                 reporter.logIterationStatistics(
-                    invocations = iterationsStatistics[iteration].invocationsCount,
-                    runningTimeNano = iterationsStatistics[iteration].runningTimeNano,
+                    invocations = iterationsStatistics[iteration].totalInvocationsCount,
+                    runningTimeNano = iterationsStatistics[iteration].totalRunningTimeNano,
                     remainingTimeNano = (planner.iterationsPlanner as? AdaptivePlanner)?.remainingTimeNano
                 )
             }

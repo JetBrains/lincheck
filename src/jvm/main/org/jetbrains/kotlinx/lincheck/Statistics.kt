@@ -25,7 +25,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 
 interface Statistics {
     /**
-     * Total amount of time already spent on testing.
+     * Total running time in nanoseconds, excluding warm-up time.
      */
     val runningTimeNano: Long
     /**
@@ -35,26 +35,61 @@ interface Statistics {
 }
 
 interface IterationStatistics {
+    /**
+     * Running time of this iteration in nanoseconds, excluding warm-up time.
+     */
     val runningTimeNano: Long
+
+    /**
+     * Warm-up time of this iteration in nanoseconds.
+     */
+    val warmUpTimeNano: Long
+
+    /**
+     * Number of invocations performed on this iteration, excluding warm-up invocations.
+     */
     val invocationsCount: Int
+
+    /**
+     * Number of warm-up invocations performed on this iteration.
+     */
+    val warmUpInvocationsCount: Int
 }
 
 /**
- * Number of performed iterations, that is run scenarios.
+ * Number of performed iterations.
  */
 val Statistics.iterationsCount: Int
     get() = iterationsStatistics.size
 
 /**
- * Total number of performed invocations.
+ * Total running time, including warm-up time.
+ */
+val Statistics.totalRunningTimeNano: Long
+    get() = runningTimeNano + warmUpTimeNano
+
+/**
+ * Total warm-up time in nanoseconds, spent on all iterations.
+ */
+val Statistics.warmUpTimeNano: Long
+    get() = iterationsStatistics.sumOf { it.warmUpTimeNano }
+
+/**
+ * Number of invocations performed on all iterations.
+ */
+val Statistics.invocationsCount: Int
+    get() = iterationsStatistics.sumOf { it.invocationsCount }
+
+/**
+ * Total number of performed invocations, including warm-up invocations
  */
 val Statistics.totalInvocationsCount: Int
-    get() = iterationsStatistics.sumOf { it.invocationsCount }
+    get() = iterationsStatistics.sumOf { it.totalInvocationsCount }
 
 /**
  * Average number of invocations performed by iteration.
  */
-val Statistics.averageInvocations: Double
+val Statistics.averageInvocationsCount: Double
     get() = iterationsStatistics.map { it.invocationsCount }.average()
 
 /**
@@ -62,6 +97,18 @@ val Statistics.averageInvocations: Double
  */
 val Statistics.averageInvocationTimeNano
     get() = runningTimeNano.toDouble() / totalInvocationsCount
+
+/**
+ * Total running time of this iteration in nanoseconds, including warm-up time.
+ */
+val IterationStatistics.totalRunningTimeNano: Long
+    get() = runningTimeNano + warmUpTimeNano
+
+/**
+ * Total number of invocations performed on this iteration, including warm-up invocations.
+ */
+val IterationStatistics.totalInvocationsCount: Int
+    get() = invocationsCount + warmUpInvocationsCount
 
 /**
  * Average invocation time on given iteration.
@@ -80,7 +127,9 @@ internal class StatisticsTracker : Statistics, RunTracker {
 
     private class IterationStatisticsTracker : IterationStatistics {
         override var runningTimeNano: Long = 0
+        override var warmUpTimeNano: Long = 0
         override var invocationsCount: Int = 0
+        override var warmUpInvocationsCount: Int = 0
     }
 
     /**
@@ -107,10 +156,17 @@ internal class StatisticsTracker : Statistics, RunTracker {
     val currentIterationInvocationsCount: Int
         get() = iterationsStatistics[iteration].invocationsCount
 
+    val currentIterationWarmUpInvocationsCount: Int
+        get() = iterationsStatistics[iteration].warmUpInvocationsCount
+
+    // flag indicating that next invocations should be considered warm-up
+    private var warmUpFlag: Boolean = false
+
     override fun iterationStart(iteration: Int, scenario: ExecutionScenario) {
         check(iteration == this.iteration + 1)
         ++this.iteration
         _iterationsStatistics.add(IterationStatisticsTracker())
+        warmUpFlag = false
     }
 
     override fun iterationEnd(iteration: Int, failure: LincheckFailure?) {
@@ -128,9 +184,25 @@ internal class StatisticsTracker : Statistics, RunTracker {
     override fun invocationEnd(invocation: Int, failure: LincheckFailure?) {
         val invocationTimeNano = System.nanoTime() - lastInvocationStartTimeNano
         check(invocationTimeNano >= 0)
-        runningTimeNano += invocationTimeNano
-        _iterationsStatistics[iteration].runningTimeNano += invocationTimeNano
-        _iterationsStatistics[iteration].invocationsCount += 1
+        if (warmUpFlag) {
+            _iterationsStatistics[iteration].warmUpTimeNano += invocationTimeNano
+            _iterationsStatistics[iteration].warmUpInvocationsCount += 1
+        } else {
+            _iterationsStatistics[iteration].runningTimeNano += invocationTimeNano
+            _iterationsStatistics[iteration].invocationsCount += 1
+            runningTimeNano += invocationTimeNano
+        }
+    }
+
+    fun iterationWarmUpStart(iteration: Int) {
+        check(iteration == this.iteration)
+        check(iterationsStatistics[this.iteration].warmUpTimeNano == 0L)
+        warmUpFlag = true
+    }
+
+    fun iterationWarmUpEnd(iteration: Int) {
+        check(iteration == this.iteration)
+        warmUpFlag = false
     }
 
 }

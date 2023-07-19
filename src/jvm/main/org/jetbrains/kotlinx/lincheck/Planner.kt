@@ -165,14 +165,14 @@ internal class AdaptivePlanner(
      * Remaining amount of time for testing.
      */
     val remainingTimeNano: Long
-        get() = (testingTimeNano - statisticsTracker.runningTimeNano).coerceAtLeast(0)
+        get() = (testingTimeNano - statisticsTracker.totalRunningTimeNano).coerceAtLeast(0)
 
     /**
      * Testing progress: floating-point number in range [0.0 .. 1.0],
      * representing a fraction of spent testing time.
      */
     val testingProgress: Double
-        get() = (statisticsTracker.runningTimeNano / testingTimeNano.toDouble()).coerceAtMost(1.0)
+        get() = (statisticsTracker.totalRunningTimeNano / testingTimeNano.toDouble()).coerceAtMost(1.0)
 
     /**
      * Admissible time delay (in nano-seconds) for last iteration to finish,
@@ -206,13 +206,7 @@ internal class AdaptivePlanner(
         else -> throw IllegalArgumentException()
     }
 
-    private var currentIterationPlannedTimeNano = -1L
-
-    private var warmUpInvocations = 0
-
-    private var currentIterationWarmUpInvocations = 0
-
-    private var currentIterationWarmUpTimeNano = 0L
+    private var currentIterationUpperTimeNano = Long.MAX_VALUE
 
     override fun shouldDoNextIteration(iteration: Int): Boolean {
         check(iteration == statisticsTracker.iteration + 1)
@@ -221,53 +215,42 @@ internal class AdaptivePlanner(
                 // set number of completed iterations
                 performedIterations = statisticsTracker.iteration + 1,
                 // total number of performed invocations, excluding warm-up invocations
-                performedInvocations = statisticsTracker.totalInvocationsCount - warmUpInvocations,
-                // remaining time; we estimate warm-up time as a warm-up time spent on previous iteration
-                remainingTimeNano = remainingTimeNano - currentIterationWarmUpTimeNano,
+                performedInvocations = statisticsTracker.invocationsCount,
+                // remaining time; for simplicity we do not estimate and subtract warm-up time
+                remainingTimeNano = remainingTimeNano,
                 // as an estimated average invocation time we took average invocation time on previous iteration,
                 // excluding warm-up invocations
-                averageInvocationTimeNano = with(statisticsTracker) {
-                    val runningTimeNano =
-                        (iterationsStatistics[this.iteration].runningTimeNano - currentIterationWarmUpTimeNano).coerceAtLeast(0)
-                    val invocationsCount =
-                        (iterationsStatistics[this.iteration].invocationsCount - currentIterationWarmUpInvocations).coerceAtLeast(0)
-                    return@with if (runningTimeNano != 0L && invocationsCount != 0)
-                        runningTimeNano.toDouble() / invocationsCount
+                averageInvocationTimeNano = with(statisticsTracker.iterationsStatistics[statisticsTracker.iteration]) {
+                    if (invocationsCount > 0)
+                        averageInvocationTimeNano
                     else
                         // in case when no iterations, except warm-up iterations, were performed,
                         // take average time on all iterations as an estimate
-                        averageInvocationTimeNano
+                        statisticsTracker.averageInvocationTimeNano
                 },
             )
         }
-        resetCurrentIterationInternalStatistics()
         return (iteration < iterationsBound) && (remainingTimeNano > 0)
     }
 
     override fun shouldDoNextInvocation(invocation: Int): Boolean {
         check(invocation == statisticsTracker.invocation + 1)
-        if (statisticsTracker.runningTimeNano > testingTimeNano + admissibleDelayTimeNano) {
+        if (invocation == 0) {
+            statisticsTracker.iterationWarmUpStart(statisticsTracker.iteration)
+        }
+        if (invocation == WARM_UP_INVOCATIONS_COUNT) {
+            statisticsTracker.iterationWarmUpEnd(statisticsTracker.iteration)
+        }
+        if (statisticsTracker.totalRunningTimeNano > testingTimeNano + admissibleDelayTimeNano) {
             return false
         }
-        if (currentIterationWarmUpInvocations < WARM_UP_INVOCATIONS_COUNT) {
-            warmUpInvocations++
-            currentIterationWarmUpInvocations++
-            if (currentIterationWarmUpInvocations == WARM_UP_INVOCATIONS_COUNT) {
-                currentIterationWarmUpTimeNano += statisticsTracker.currentIterationRunningTimeNano
-            }
+        if (invocation < WARM_UP_INVOCATIONS_COUNT) {
             return true
         }
-        val errorFactor = PLANNED_ITERATION_TIME_ERROR_FACTOR
-        if (currentIterationPlannedTimeNano > 0 &&
-            statisticsTracker.currentIterationRunningTimeNano > currentIterationPlannedTimeNano * errorFactor) {
+        if (statisticsTracker.currentIterationRunningTimeNano > currentIterationUpperTimeNano) {
             return false
         }
-        return (invocation < invocationsBound + currentIterationWarmUpInvocations)
-    }
-
-    private fun resetCurrentIterationInternalStatistics() {
-        currentIterationWarmUpInvocations = 0
-        currentIterationWarmUpTimeNano = 0L
+        return (invocation < invocationsBound + statisticsTracker.currentIterationWarmUpInvocationsCount)
     }
 
     /*
@@ -358,8 +341,9 @@ internal class AdaptivePlanner(
         // finally, set the iterations bound
         iterationsBound = performedIterations + remainingIterations
 
-        // calculate planned time for the next iteration
-        currentIterationPlannedTimeNano = round(remainingTimeNano.toDouble() / remainingIterations).toLong()
+        // calculate upper bound on running time for the next iteration
+        currentIterationUpperTimeNano =
+            round((remainingTimeNano * PLANNED_ITERATION_TIME_ERROR_FACTOR) / remainingIterations).toLong()
     }
 
     private fun solveQuadraticEquation(a: Double, b: Double, c: Double, default: Double): Double {
