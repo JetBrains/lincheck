@@ -164,6 +164,7 @@ fun ExecutionScenario.tryMinimize(threadId: Int, actorId: Int): ExecutionScenari
 /**
  * Splits the list of threads into init, post, and parallel parts, constructing the [ExecutionScenario] as a result.
  * The init and post parts are assumed to be placed in the 1st thread.
+ * If there is only one thread, then the scenario is not split into init/post parts, only parallel part is left.
  *
  * @param initPartSize the size of the initial part of the execution.
  * @param postPartSize the size of the post part of the execution.
@@ -172,6 +173,8 @@ fun ExecutionScenario.tryMinimize(threadId: Int, actorId: Int): ExecutionScenari
 private fun List<List<Actor>>.splitIntoParts(initPartSize: Int, postPartSize: Int): ExecutionScenario {
     if (isEmpty())
         return ExecutionScenario(listOf(), listOf(), listOf())
+    if (size == 1)
+        return ExecutionScenario(listOf(), this, listOf())
     val firstThreadSize = get(0).size
     val initExecution = get(0).subList(0, initPartSize)
     val postExecution = get(0).subList(firstThreadSize - postPartSize, firstThreadSize)
