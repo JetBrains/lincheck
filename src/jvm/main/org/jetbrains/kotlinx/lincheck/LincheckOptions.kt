@@ -422,7 +422,7 @@ internal class CustomScenarioOptions(
 
 private const val DEFAULT_TESTING_TIME_MS = 5000L
 private const val DEFAULT_MIN_THREADS = 2
-private const val DEFAULT_MAX_THREADS = 4
+private const val DEFAULT_MAX_THREADS = 3
 private const val DEFAULT_MIN_OPERATIONS = 2
 private const val DEFAULT_MAX_OPERATIONS = 5
 

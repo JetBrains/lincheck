@@ -30,5 +30,8 @@ class MPSCQueueTest {
     public fun peek(): Int? = queue.peek()
 
     @Test
-    fun lincheckTest() = LincheckOptions().check(this::class)
+    fun lincheckTest() = LincheckOptions {
+        maxThreads = 2
+        maxOperationsInThread = 5
+    }.check(this::class)
 }

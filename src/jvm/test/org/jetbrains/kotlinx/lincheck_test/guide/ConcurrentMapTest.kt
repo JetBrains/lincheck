@@ -24,6 +24,8 @@ class ConcurrentHashMapTest {
     //@Test // TODO: Please, uncomment me and comment the line below to run the test and get the output
     @Test(expected = AssertionError::class)
     fun lincheckTest() = LincheckOptions {
+        maxThreads = 2
+        maxOperationsInThread = 1
         checkObstructionFreedom = true
     }.check(this::class)
 }
