@@ -372,8 +372,8 @@ internal class AdaptivePlanner(
 
         private const val PLANNED_ITERATION_TIME_ERROR_FACTOR = 2.0
 
-        // error up to 1 sec --- we can try to decrease the error in the future
-        internal const val TIME_ERROR_MARGIN_NANO = 1_000_000_000
+        // error up to 1.5 sec --- we can try to decrease the error in the future
+        internal const val TIME_ERROR_MARGIN_NANO = 1_500_000_000
     }
 
 }

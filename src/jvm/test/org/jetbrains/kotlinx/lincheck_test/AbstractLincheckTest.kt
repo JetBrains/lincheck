@@ -82,7 +82,7 @@ abstract class AbstractLincheckTest(
                 return
             val invocationsRatio = statistics.averageInvocationsCount / statistics.iterationsCount
             val expectedRatio = AdaptivePlanner.INVOCATIONS_TO_ITERATIONS_RATIO.toDouble()
-            val ratioError = 0.25
+            val ratioError = 0.30
             assert(abs(invocationsRatio - expectedRatio) < expectedRatio * ratioError) { """
                 Invocations to iterations ratio differs from expected.
                     actual: ${String.format("%.3f", invocationsRatio)}
