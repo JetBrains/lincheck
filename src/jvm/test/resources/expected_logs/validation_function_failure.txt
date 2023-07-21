@@ -3,8 +3,6 @@
 | Thread 1 |
 | -------- |
 | inc()    |
-| inc()    |
-| inc()    |
 | -------- |
 | inc()    |
 | -------- |
@@ -23,8 +21,6 @@ The following interleaving leads to the error:
 | inc()    |
 | inc()    |
 | inc()    |
-| inc()    |
-| inc()    |
 | -------- |
 
 Detailed trace:
@@ -37,8 +33,4 @@ Detailed trace:
 |   incrementAndGet(): 2 at ValidateFunctionTest.inc(ValidateFunctionTest.kt:25) |
 | inc()                                                                          |
 |   incrementAndGet(): 3 at ValidateFunctionTest.inc(ValidateFunctionTest.kt:25) |
-| inc()                                                                          |
-|   incrementAndGet(): 4 at ValidateFunctionTest.inc(ValidateFunctionTest.kt:25) |
-| inc()                                                                          |
-|   incrementAndGet(): 5 at ValidateFunctionTest.inc(ValidateFunctionTest.kt:25) |
 | ------------------------------------------------------------------------------ |

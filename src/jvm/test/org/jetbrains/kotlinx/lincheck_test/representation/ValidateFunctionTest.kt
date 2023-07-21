@@ -27,24 +27,32 @@ class ValidateFunctionTest : VerifierState() {
     override fun extractState() = c.get()
 
     @Validate
-    fun validateNoError() {
-    }
+    fun validateNoError() {}
 
     var validateInvoked: Int = 0
 
-    // This function fails on the 5ht invocation
+    // This function fails on the 3rd invocation
     @Validate
     fun validateWithError() {
         validateInvoked++
-        if (validateInvoked == 5) error("Validation works!")
+        if (validateInvoked == 3) error("Validation works!")
     }
 
     @Test
     fun test() = ModelCheckingOptions().apply {
-        iterations(1)
-        invocationsPerIteration(1)
-        actorsBefore(3)
-        actorsAfter(10)
+        addCustomScenario {
+            initial {
+                actor(::inc)
+            }
+            parallel {
+                thread {
+                    actor(::inc)
+                }
+            }
+            post {
+                actor(::inc)
+            }
+        }
     }
         .checkImpl(this::class.java)
         .checkLincheckOutput("validation_function_failure.txt")
