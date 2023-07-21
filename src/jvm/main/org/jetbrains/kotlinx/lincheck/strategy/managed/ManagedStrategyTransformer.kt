@@ -353,7 +353,11 @@ internal class ManagedStrategyTransformer(
                     }
                     invokeMakeStateRepresentation()
                 }
-                null -> adapter.visitMethodInsn(opcode, owner, name, desc, itf)
+                null -> {
+                    invokeBeforeRegularMethod()
+                    adapter.visitMethodInsn(opcode, owner, name, desc, itf)
+                    invokeAfterRegularMethod()
+                }
             }
         }
 
@@ -372,6 +376,14 @@ internal class ManagedStrategyTransformer(
             loadCurrentThreadNumber()
             adapter.push(codeLocationIdProvider.lastId) // re-use previous code location
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_ATOMIC_METHOD_CALL_METHOD)
+        }
+
+        private fun invokeBeforeRegularMethod() {
+
+        }
+
+        private fun invokeAfterRegularMethod() {
+
         }
     }
 

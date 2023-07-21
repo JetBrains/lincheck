@@ -669,9 +669,12 @@ abstract class ManagedStrategy(
      * @param iThread number of invoking thread
      */
     @Suppress("UNUSED_PARAMETER")
-    internal fun beforeMethodCall(iThread: Int, codeLocation: Int, tracePoint: MethodCallTracePoint) {
-        if (isTestThread(iThread) && !inIgnoredSection(iThread)) {
-            check(collectTrace) { "This method should be called only when logging is enabled" }
+    internal fun beforeMethodCall(iThread: Int, codeLocation: Int, tracePoint: MethodCallTracePoint?) {
+        if (!isTestThread(iThread) || inIgnoredSection(iThread)) return
+        loopDetector.beforeNextMethodCall(iThread, codeLocation)
+
+        if (collectTrace) {
+            tracePoint ?: error("Method call tracePoint shouldn't be null during trace collection")
             val callStackTrace = callStackTrace[iThread]
             val suspendedMethodStack = suspendedFunctionsStack[iThread]
             val methodId = if (suspendedMethodStack.isNotEmpty()) {
@@ -694,9 +697,12 @@ abstract class ManagedStrategy(
      * @param iThread number of invoking thread
      * @param tracePoint the corresponding trace point for the invocation
      */
-    internal fun afterMethodCall(iThread: Int, tracePoint: MethodCallTracePoint) {
-        if (isTestThread(iThread) && !inIgnoredSection(iThread)) {
-            check(collectTrace) { "This method should be called only when logging is enabled" }
+    internal fun afterMethodCall(iThread: Int, tracePoint: MethodCallTracePoint?) {
+        if (!isTestThread(iThread) || inIgnoredSection(iThread)) return
+        loopDetector.afterMethodCall(iThread)
+
+        if (collectTrace) {
+            tracePoint ?: error("Method call tracePoint shouldn't be null during trace collection")
             val callStackTrace = callStackTrace[iThread]
             if (tracePoint.wasSuspended) {
                 // if a method call is suspended, save its identifier to reuse for continuation resuming
@@ -894,6 +900,8 @@ abstract class ManagedStrategy(
         val isSpinLockSwitch: Boolean
             get() = replayModeLoopDetectorHelper?.isActiveLockNode ?: error("Loop detector is not in replay mode")
 
+        private val threadsCallDepth: IntArray = IntArray(nThreads) { 0 }
+
         fun enableReplayMode(failDueToDeadlockInTheEnd: Boolean) {
             val contextSwitchesBeforeHalt =
                 findMaxPrefixLengthWithNoCycleOnSuffix(currentInterleavingHistory)?.let { it.executionsBeforeCycle + it.cyclePeriod }
@@ -924,7 +932,6 @@ abstract class ManagedStrategy(
             // Increment the number of times the specified code location is visited.
             val count = currentThreadCodeLocationVisitCountMap.getOrDefault(codeLocation, 0) + 1
             currentThreadCodeLocationVisitCountMap[codeLocation] = count
-            currentThreadCodeLocationsHistory += codeLocation
             val detectedEarly = loopTrackingCursor.isInCycle
             // Check whether the count exceeds the maximum number of repetitions for loop/hang detection.
             val detectedFirstTime = count > hangingDetectionThreshold
@@ -978,6 +985,7 @@ abstract class ManagedStrategy(
         }
 
         fun onNextExecutionPoint(executionIdentity: Int) {
+            currentThreadCodeLocationsHistory += executionIdentity
             val lastInterleavingHistoryNode = currentInterleavingHistory.last()
             if (lastInterleavingHistoryNode.cycleOccurred) {
                 return /* If we already ran into cycle and haven't switched than no need to track executions */
@@ -1058,6 +1066,14 @@ abstract class ManagedStrategy(
             replayModeLoopDetectorHelper?.initialize(iThread)
         }
 
+        fun beforeNextMethodCall(iThread: Int, codeLocation: Int) {
+            threadsCallDepth[iThread]++
+            onNextExecutionPoint(codeLocation)
+        }
+
+        fun afterMethodCall(iThread: Int) {
+            threadsCallDepth[iThread]--
+        }
     }
 
     /**
