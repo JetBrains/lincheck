@@ -25,12 +25,11 @@ import org.junit.Test
  * This test is created to verify this [bug](https://github.com/JetBrains/lincheck/issues/209) is resolved.
  * The problem was that we ran in infinite spin-lock in trace collection mode due to incorrect Loop detector work.
  */
-@Param(name = "element", gen = IntGen::class, conf = "0:3")
 class BoundedQueueTest {
     private val queue = QueueAdaptor<Int>()
 
     @Operation
-    fun enqueue(@Param(name = "element") element: Int) = queue.enqueue(element)
+    fun enqueue(element: Int) = queue.enqueue(element)
 
     @Operation
     fun dequeue() = queue.dequeue() != null
@@ -38,15 +37,30 @@ class BoundedQueueTest {
     @Test
     fun modelCheckingTest() =
         ModelCheckingOptions()
-            .iterations(100)
-            .invocationsPerIteration(5_000)
-            .actorsBefore(2)
-            .threads(3)
-            .actorsPerThread(2)
-            .actorsAfter(2)
-            .checkObstructionFreedom(false)
-            .minimizeFailedScenario(false)
-            .sequentialSpecification(BoundedIntQueueSequential::class.java)
+            .addCustomScenario {
+                initial {
+                    actor(BoundedQueueTest::enqueue, 1)
+                    actor(BoundedQueueTest::dequeue)
+                }
+                parallel {
+                    thread {
+                        actor(BoundedQueueTest::dequeue)
+                        actor(BoundedQueueTest::enqueue, 1)
+                    }
+                    thread {
+                        actor(BoundedQueueTest::enqueue, 1)
+                        actor(BoundedQueueTest::dequeue)
+                    }
+                    thread {
+                        actor(BoundedQueueTest::enqueue, 2)
+                        actor(BoundedQueueTest::enqueue, 1)
+                    }
+                }
+                post {
+                    actor(BoundedQueueTest::dequeue)
+                    actor(BoundedQueueTest::dequeue)
+                }
+            }
             .checkImpl(this::class.java)
             .checkLincheckOutput("bounded_queue_incorrect_results.txt")
 

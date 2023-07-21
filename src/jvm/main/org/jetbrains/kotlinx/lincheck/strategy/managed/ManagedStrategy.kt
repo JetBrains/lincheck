@@ -278,8 +278,26 @@ abstract class ManagedStrategy(
         check(iThread == currentThread)
 
         if (loopDetector.replayModeEnabled) {
+            /*
+             When replaying executions it's important to repeat the same executions and switches,
+             that were recorded to loopDetector history during the last execution.
+             For example, let's consider that interleaving say us to switch from thread 1 to thread 2
+             at the execution position 200. But after execution 10 spin cycle with period 2 occurred,
+             so we will switch from the spin cycle, so when we leave this cycle due to the switch for the first time
+             interleaving execution counter may be near 200 and the strategy switch will happen soon. But on the replay run,
+             we will switch from thread 1 early, after 12 operations, but no strategy switch will be performed
+             for the next 200-12 operations. This leads to the results of another execution, compared to the
+             original failure results.
+             To avoid this bug when we're replaying some executions, we have to follow only loopDetector history during
+             the last execution. In the considered example, we will retain that we will switch soon after
+             the spin cycle in thread 1, so no bug will appear.
+             */
             newSwitchPointInReplayMode(iThread, codeLocation, tracePoint)
         } else {
+            /*
+            In the regular mode we just have listen both interleaving and loopDetector to determine should we
+            switch current thread or not.
+             */
             newSwitchPointRegular(iThread, codeLocation, tracePoint)
         }
         traceCollector?.passCodeLocation(tracePoint)
@@ -312,20 +330,6 @@ abstract class ManagedStrategy(
         }
     }
 
-    /**
-     * When replaying executions it's important to repeat exactly the same executions and switches,
-     * that was recorded to [loopDetector] history during last execution.
-     * For example, let's consider that interleaving say us to switch from thread 1 to thread 2
-     * at the execution position 200. But after execution 10 spin cycle with period 2 occurred,
-     * so we will switch fom spin cycle, so when we leave this cycle due to switch for the first time
-     * interleaving executions counter may be near to 200 and strategy switch will happen soon.
-     * But on replay run we will switch from thread 1 early, after 12 operations, but no strategy switch will be
-     * performed for the next 200-12 operations. This leads to another executions results, comparing to the original
-     * failure results.
-     * To avoid this bug when we're replaying some executions, we have to fallow only [loopDetector] history
-     * during last execution. In considered example, we will retain that we will switch soon after spin cycle in thread
-     * 1, so no bug will appear.
-     */
     private fun newSwitchPointInReplayMode(iThread: Int, codeLocation: Int, tracePoint: TracePoint?) {
         if (loopDetector.visitCodeLocation(iThread, codeLocation)) {
             if (loopDetector.isSpinLockSwitch) {
