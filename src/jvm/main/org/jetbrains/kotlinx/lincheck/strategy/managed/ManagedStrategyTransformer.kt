@@ -409,15 +409,17 @@ internal class ManagedStrategyTransformer(
                     }
                     loadStrategy()
                     loadCurrentThreadNumber()
-                    adapter.push(codeLocationIdProvider.newId())
+                    val id = codeLocationIdProvider.newId()
+                    adapter.push(id)
 
+                    println("Check: $methodName -> owner = $owner, name = $name")
                     adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_REGULAR_METHOD_CALL)
 
                     adapter.visitMethodInsn(opcode, owner, name, desc, itf)
 
                     loadStrategy()
                     loadCurrentThreadNumber()
-                    adapter.push(codeLocationIdProvider.lastId)
+                    adapter.push(id)
                     adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, AFTER_REGULAR_METHOD_CALL)
                 }
             }

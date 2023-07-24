@@ -15,13 +15,11 @@ import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.objectweb.asm.*
 import java.io.*
 import java.lang.reflect.*
 import java.util.*
-import kotlin.collections.ArrayList
 import kotlin.collections.set
 
 /**
@@ -890,7 +888,6 @@ abstract class ManagedStrategy(
         }
     }
 
-    val invocations get() = (this as ModelCheckingStrategy).usedInvocations
 
     /**
      * The LoopDetector class identifies loops, active locks, and live locks by monitoring the frequency of visits to the same code location.
@@ -1488,3 +1485,4 @@ private const val OBSTRUCTION_FREEDOM_LOCK_VIOLATION_MESSAGE =
 
 private const val OBSTRUCTION_FREEDOM_WAIT_VIOLATION_MESSAGE =
     "The algorithm should be non-blocking, but a wait call is detected"
+
