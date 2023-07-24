@@ -488,9 +488,6 @@ internal class ManagedStrategyTransformer(
                     visitMethodInsn(opcode, owner, name, desc, itf)
                     return
                 }
-                if (methodName == "decrementAndGet") {
-                    Unit
-                }
                 val callStart = newLabel()
                 val callEnd = newLabel()
                 val exceptionHandler = newLabel()
