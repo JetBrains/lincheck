@@ -10,24 +10,49 @@
 
 package org.jetbrains.kotlinx.gpt.structure
 
+import dayZ.FAABasedQueue
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 
+@Param(name = "element", gen = IntGen::class, conf = "0:3")
 class GptTest {
-
-    val counter = Counter()
+    private val queue = FAABasedQueue<Int>()
+    @Operation
+    fun enqueue(@Param(name = "element") element: Int) = queue.enqueue(element)
 
     @Operation
-    fun incrementAndGet() = counter.incrementAndGet()
-
-    @Operation
-    fun get() = counter.get()
+    fun dequeue() = queue.dequeue()
 
 }
 
 fun modelCheckingFailure(): LincheckFailure? {
     return ModelCheckingOptions()
+        .iterations(100)
+        .invocationsPerIteration(5_000)
+        .actorsBefore(2)
+        .threads(3)
+        .actorsPerThread(2)
+        .actorsAfter(2)
+        .checkObstructionFreedom(true)
+        .sequentialSpecification(IntQueueSequential::class.java)
         .checkImpl(GptTest::class.java)
+}
+
+class IntQueueSequential {
+    private val q = ArrayList<Int>()
+
+    fun enqueue(element: Int) {
+        q.add(element)
+    }
+
+    fun dequeue() = q.removeFirstOrNull()
+    fun remove(element: Int) = q.remove(element)
+}
+
+fun main() {
+    println(modelCheckingFailure())
 }
