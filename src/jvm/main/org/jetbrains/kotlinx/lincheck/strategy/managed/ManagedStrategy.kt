@@ -295,8 +295,9 @@ abstract class ManagedStrategy(
             newSwitchPointInReplayMode(iThread, codeLocation, tracePoint)
         } else {
             /*
-            In the regular mode we just have listen both interleaving and loopDetector to determine should we
-            switch current thread or not.
+            In the regular mode we use loop detector only to determine should we
+            switch current thread or not due to new or early detection of spin locks. Regular switches appears
+            according to the current interleaving.
              */
             newSwitchPointRegular(iThread, codeLocation, tracePoint)
         }
@@ -860,10 +861,10 @@ abstract class ManagedStrategy(
         private val currentInterleavingHistory = ArrayList<InterleavingHistoryNode>()
 
         /**
-         * When we're back to some thread, newSwitchPoint won't be called before the fist
-         * in current thread part as it was called before switch.
-         * So when we return to thread that already was running, we have to start from 1 its executions counter.
-         * This set helps us to determine if some thread is running for the first time in an execution or not.
+         * When we're back to some thread, newSwitchPoint won't be called before the first event in the current
+         * thread part as it was called before the switch. So when we return to a thread that already was running,
+         * we have to start from 1 its executions counter. This set helps us to determine if some thread is running
+         * for the first time in an execution or not.
          */
         private val threadsRan: MutableSet<Int> = hashSetOf()
 
