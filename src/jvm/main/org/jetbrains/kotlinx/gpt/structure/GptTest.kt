@@ -10,7 +10,6 @@
 
 package org.jetbrains.kotlinx.gpt.structure
 
-import dayZ.FAABasedQueue
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.checkImpl
