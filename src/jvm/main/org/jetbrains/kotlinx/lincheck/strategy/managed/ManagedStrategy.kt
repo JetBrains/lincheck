@@ -15,11 +15,13 @@ import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.objectweb.asm.*
 import java.io.*
 import java.lang.reflect.*
 import java.util.*
+import kotlin.collections.ArrayList
 import kotlin.collections.set
 
 /**
@@ -40,9 +42,11 @@ abstract class ManagedStrategy(
 ) : Strategy(scenario), Closeable {
     // The number of parallel threads.
     protected val nThreads: Int = scenario.nThreads
+
     // Runner for scenario invocations,
     // can be replaced with a new one for trace construction.
     private var runner: ManagedStrategyRunner
+
     // Shares location ids between class transformers in order
     // to keep them different in different code locations.
     private val codeLocationIdProvider = CodeLocationIdProvider()
@@ -52,14 +56,19 @@ abstract class ManagedStrategy(
     // Which thread is allowed to perform operations?
     @Volatile
     protected var currentThread: Int = 0
+
     // Which threads finished all the operations?
     private val finished = BooleanArray(nThreads) { false }
+
     // Which threads are suspended?
     private val isSuspended = BooleanArray(nThreads) { false }
+
     // Current actor id for each thread.
     protected val currentActorId = IntArray(nThreads)
+
     // Ihe number of entered but not left (yet) blocks that should be ignored by the strategy analysis for each thread.
     private val ignoredSectionDepth = IntArray(nThreads) { 0 }
+
     // Detector of loops or hangs (i.e. active locks).
     protected val loopDetector: LoopDetector = LoopDetector(testCfg.hangingDetectionThreshold)
 
@@ -74,22 +83,29 @@ abstract class ManagedStrategy(
 
     // Whether an additional information requires for the trace construction should be collected.
     private var collectTrace = false
+
     // Whether state representations (see `@StateRepresentation`) should be collected after interleaving events.
     private val collectStateRepresentation get() = collectTrace && stateRepresentationFunction != null
+
     // Trace point constructors, where `tracePointConstructors[id]`
     // stores a constructor for the corresponding code location.
     private val tracePointConstructors: MutableList<TracePointConstructor> = ArrayList()
+
     // Collector of all events in the execution such as thread switches.
     private var traceCollector: TraceCollector? = null // null when `collectTrace` is false
+
     // Stores the currently executing methods call stack for each thread.
     private val callStackTrace = Array(nThreads) { mutableListOf<CallStackTraceElement>() }
+
     // Stores the global number of method calls.
     private var methodCallNumber = 0
+
     // In case of suspension, the call stack of the corresponding `suspend`
     // methods is stored here, so that the same method call identifiers are
     // used on resumption, and the trace point before and after the suspension
     // correspond to the same method call in the trace.
     private val suspendedFunctionsStack = Array(nThreads) { mutableListOf<Int>() }
+
     // Current execution part
     protected lateinit var executionPart: ExecutionPart
 
@@ -107,7 +123,14 @@ abstract class ManagedStrategy(
     }
 
     private fun createRunner(): ManagedStrategyRunner =
-        ManagedStrategyRunner(this, testClass, validationFunctions, stateRepresentationFunction, testCfg.timeoutMs, UseClocks.ALWAYS)
+        ManagedStrategyRunner(
+            this,
+            testClass,
+            validationFunctions,
+            stateRepresentationFunction,
+            testCfg.timeoutMs,
+            UseClocks.ALWAYS
+        )
 
     override fun createTransformer(cv: ClassVisitor): ClassVisitor = ManagedStrategyTransformer(
         cv = cv,
@@ -177,6 +200,7 @@ abstract class ManagedStrategy(
             if (verifier.verifyResults(scenario, result.results)) null
             else IncorrectResultsFailure(scenario, result.results, collectTrace(result))
         }
+
         else -> result.toLincheckFailure(scenario, collectTrace(result))
     }
 
@@ -212,7 +236,8 @@ abstract class ManagedStrategy(
 
         val loggedResults = runInvocation()
         val sameResultTypes = loggedResults.javaClass == failingResult.javaClass
-        val sameResults = loggedResults !is CompletedInvocationResult || failingResult !is CompletedInvocationResult || loggedResults.results == failingResult.results
+        val sameResults =
+            loggedResults !is CompletedInvocationResult || failingResult !is CompletedInvocationResult || loggedResults.results == failingResult.results
         check(sameResultTypes && sameResults) {
             StringBuilder().apply {
                 appendln("Non-determinism found. Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc).")
@@ -232,7 +257,7 @@ abstract class ManagedStrategy(
         initializeInvocation()
         val result = runner.run()
         // Has strategy already determined the invocation result?
-        suddenInvocationResult?.let { return it  }
+        suddenInvocationResult?.let { return it }
         return result
     }
 
@@ -249,10 +274,10 @@ abstract class ManagedStrategy(
 
     private val concurrentActorCausesBlocking: Boolean
         get() = currentActorId.mapIndexed { iThread, actorId ->
-                    if (iThread != currentThread && !finished[iThread])
-                        scenario.threads[iThread][actorId]
-                    else null
-                }.filterNotNull().any { it.causesBlocking }
+            if (iThread != currentThread && !finished[iThread])
+                scenario.threads[iThread][actorId]
+            else null
+        }.filterNotNull().any { it.causesBlocking }
 
     private fun failDueToDeadlock(): Nothing {
         suddenInvocationResult = DeadlockInvocationResult()
@@ -276,7 +301,9 @@ abstract class ManagedStrategy(
         if (!isTestThread(iThread)) return // can switch only test threads
         if (inIgnoredSection(iThread)) return // cannot suspend in ignored sections
         check(iThread == currentThread)
-
+        isDebugIteration {
+            Unit
+        }
         if (loopDetector.replayModeEnabled) {
             /*
              When replaying executions it's important to repeat the same executions and switches,
@@ -298,32 +325,34 @@ abstract class ManagedStrategy(
             In the regular mode we just have listen both interleaving and loopDetector to determine should we
             switch current thread or not.
              */
-            newSwitchPointRegular(iThread, codeLocation, tracePoint)
+            newSwitchPointRegular(iThread, codeLocation)
         }
-        traceCollector?.passCodeLocation(tracePoint)
         // continue the operation
     }
 
     private fun newSwitchPointRegular(
         iThread: Int,
         codeLocation: Int,
-        tracePoint: TracePoint?
     ) {
+        isDebugIteration {
+            Unit
+        }
         val spinLockDetected = loopDetector.visitCodeLocation(iThread, codeLocation)
-
         if (spinLockDetected) {
             failIfObstructionFreedomIsRequired {
                 // Log the last event that caused obstruction freedom violation
-                traceCollector?.passCodeLocation(tracePoint)
                 OBSTRUCTION_FREEDOM_SPINLOCK_VIOLATION_MESSAGE
             }
         }
         val shouldSwitchDueToStrategy = shouldSwitch(iThread)
         if (shouldSwitchDueToStrategy or spinLockDetected) {
-            if (spinLockDetected) {
+            val switchHappened = if (spinLockDetected) {
                 switchCurrentThreadDueToActiveLock(iThread, loopDetector.replayModeCurrentCyclePeriod)
             } else {
                 switchCurrentThread(iThread, SwitchReason.STRATEGY_SWITCH)
+            }
+            if (!switchHappened) {
+                loopDetector.onNextExecutionPoint(codeLocation)
             }
         } else {
             loopDetector.onNextExecutionPoint(codeLocation)
@@ -331,7 +360,8 @@ abstract class ManagedStrategy(
     }
 
     private fun newSwitchPointInReplayMode(iThread: Int, codeLocation: Int, tracePoint: TracePoint?) {
-        if (loopDetector.visitCodeLocation(iThread, codeLocation)) {
+        val shouldSwitch = loopDetector.visitCodeLocation(iThread, codeLocation)
+        if (shouldSwitch) {
             if (loopDetector.isSpinLockSwitch) {
                 failIfObstructionFreedomIsRequired {
                     // Log the last event that caused obstruction freedom violation
@@ -343,6 +373,7 @@ abstract class ManagedStrategy(
                 switchCurrentThread(iThread, SwitchReason.STRATEGY_SWITCH)
             }
         }
+        traceCollector!!.passCodeLocation(tracePoint)
     }
 
     /**
@@ -390,8 +421,8 @@ abstract class ManagedStrategy(
      */
     private fun isActive(iThread: Int): Boolean =
         !finished[iThread] &&
-        !monitorTracker.isWaiting(iThread) &&
-        !(isSuspended[iThread] && !runner.isCoroutineResumed(iThread, currentActorId[iThread]))
+                !monitorTracker.isWaiting(iThread) &&
+                !(isSuspended[iThread] && !runner.isCoroutineResumed(iThread, currentActorId[iThread]))
 
     /**
      * Waits until the specified thread can continue
@@ -410,10 +441,16 @@ abstract class ManagedStrategy(
     /**
      * A regular context thread switch to another thread.
      */
-    private fun switchCurrentThread(iThread: Int, reason: SwitchReason = SwitchReason.STRATEGY_SWITCH, mustSwitch: Boolean = false) {
+    private fun switchCurrentThread(
+        iThread: Int,
+        reason: SwitchReason = SwitchReason.STRATEGY_SWITCH,
+        mustSwitch: Boolean = false
+    ): Boolean {
         traceCollector?.newSwitch(iThread, reason)
-        doSwitchCurrentThread(iThread, mustSwitch)
+        val switchHappened = doSwitchCurrentThread(iThread, mustSwitch)
         awaitTurn(iThread)
+
+        return switchHappened
     }
 
     /**
@@ -421,16 +458,18 @@ abstract class ManagedStrategy(
      */
     private fun switchCurrentThreadDueToActiveLock(
         iThread: Int, cyclePeriod: Int
-    ) {
-        traceCollector?.let {
-            it.newActiveLockDetected(iThread, cyclePeriod)
-            it.newSwitch(iThread, SwitchReason.ACTIVE_LOCK)
-        }
-        doSwitchCurrentThread(iThread, false)
+    ): Boolean {
+        traceCollector?.newSwitch(iThread, SwitchReason.ACTIVE_LOCK)
+        val switchHappened = doSwitchCurrentThread(iThread, false)
         awaitTurn(iThread)
+
+        return switchHappened
     }
 
-    private fun doSwitchCurrentThread(iThread: Int, mustSwitch: Boolean = false) {
+    /**
+     * @return switch succeed or not
+     */
+    private fun doSwitchCurrentThread(iThread: Int, mustSwitch: Boolean = false): Boolean {
         onNewSwitch(iThread, mustSwitch)
         val switchableThreads = switchableThreads(iThread)
         if (switchableThreads.isEmpty()) {
@@ -446,10 +485,12 @@ abstract class ManagedStrategy(
                 }
                 setCurrentThread(nextThread)
             }
-            return // ignore switch, because there is no one to switch to
+            return false// ignore switch, because there is no one to switch to
         }
         val nextThread = chooseThread(iThread)
         setCurrentThread(nextThread)
+
+        return nextThread != iThread
     }
 
     @JvmName("setNextThread")
@@ -474,8 +515,8 @@ abstract class ManagedStrategy(
      */
     private fun inIgnoredSection(iThread: Int): Boolean =
         !isTestThread(iThread) ||
-            ignoredSectionDepth[iThread] > 0 ||
-            suddenInvocationResult != null
+                ignoredSectionDepth[iThread] > 0 ||
+                suddenInvocationResult != null
 
 
     // == LISTENING METHODS ==
@@ -515,7 +556,12 @@ abstract class ManagedStrategy(
      * @param codeLocation the byte-code location identifier of this operation.
      * @return whether lock should be actually acquired
      */
-    internal fun beforeLockAcquire(iThread: Int, codeLocation: Int, tracePoint: MonitorEnterTracePoint?, monitor: Any): Boolean {
+    internal fun beforeLockAcquire(
+        iThread: Int,
+        codeLocation: Int,
+        tracePoint: MonitorEnterTracePoint?,
+        monitor: Any
+    ): Boolean {
         if (!isTestThread(iThread)) return true
         if (inIgnoredSection(iThread)) return false
         newSwitchPoint(iThread, codeLocation, tracePoint)
@@ -536,7 +582,12 @@ abstract class ManagedStrategy(
      * @param codeLocation the byte-code location identifier of this operation.
      * @return whether lock should be actually released
      */
-    internal fun beforeLockRelease(iThread: Int, codeLocation: Int, tracePoint: MonitorExitTracePoint?, monitor: Any): Boolean {
+    internal fun beforeLockRelease(
+        iThread: Int,
+        codeLocation: Int,
+        tracePoint: MonitorExitTracePoint?,
+        monitor: Any
+    ): Boolean {
         if (!isTestThread(iThread)) return true
         if (inIgnoredSection(iThread)) return false
         monitorTracker.releaseMonitor(monitor)
@@ -551,7 +602,12 @@ abstract class ManagedStrategy(
      * @return whether park should be executed
      */
     @Suppress("UNUSED_PARAMETER")
-    internal fun beforePark(iThread: Int, codeLocation: Int, tracePoint: ParkTracePoint?, withTimeout: Boolean): Boolean {
+    internal fun beforePark(
+        iThread: Int,
+        codeLocation: Int,
+        tracePoint: ParkTracePoint?,
+        withTimeout: Boolean
+    ): Boolean {
         newSwitchPoint(iThread, codeLocation, tracePoint)
         return false
     }
@@ -572,7 +628,13 @@ abstract class ManagedStrategy(
      * @param withTimeout `true` if is invoked with timeout, `false` otherwise.
      * @return whether `Object.wait` should be executed
      */
-    internal fun beforeWait(iThread: Int, codeLocation: Int, tracePoint: WaitTracePoint?, monitor: Any, withTimeout: Boolean): Boolean {
+    internal fun beforeWait(
+        iThread: Int,
+        codeLocation: Int,
+        tracePoint: WaitTracePoint?,
+        monitor: Any,
+        withTimeout: Boolean
+    ): Boolean {
         if (!isTestThread(iThread)) return true
         if (inIgnoredSection(iThread)) return false
         newSwitchPoint(iThread, codeLocation, tracePoint)
@@ -592,7 +654,13 @@ abstract class ManagedStrategy(
      * @param codeLocation the byte-code location identifier of this operation.
      * @return whether `Object.notify` should be executed
      */
-    internal fun beforeNotify(iThread: Int, codeLocation: Int, tracePoint: NotifyTracePoint?, monitor: Any, notifyAll: Boolean): Boolean {
+    internal fun beforeNotify(
+        iThread: Int,
+        codeLocation: Int,
+        tracePoint: NotifyTracePoint?,
+        monitor: Any,
+        notifyAll: Boolean
+    ): Boolean {
         if (!isTestThread(iThread)) return true
         if (notifyAll)
             monitorTracker.notifyAll(monitor)
@@ -662,6 +730,22 @@ abstract class ManagedStrategy(
             ignoredSectionDepth[iThread]--
     }
 
+    internal fun beforeRegularMethodCall(iThread: Int, codeLocation: Int) {
+        if (!isTestThread(iThread) || inIgnoredSection(iThread)) return
+        isDebugIteration {
+            Unit
+        }
+        loopDetector.beforeNextMethodCall(iThread, codeLocation)
+    }
+
+    internal fun afterRegularMethodCall(iThread: Int, codeLocation: Int) {
+        if (!isTestThread(iThread) || inIgnoredSection(iThread)) return
+        isDebugIteration {
+            Unit
+        }
+        loopDetector.afterMethodCall(iThread, codeLocation)
+    }
+
     /**
      * This method is invoked by a test thread
      * before each method invocation.
@@ -671,8 +755,9 @@ abstract class ManagedStrategy(
     @Suppress("UNUSED_PARAMETER")
     internal fun beforeMethodCall(iThread: Int, codeLocation: Int, tracePoint: MethodCallTracePoint?) {
         if (!isTestThread(iThread) || inIgnoredSection(iThread)) return
-        loopDetector.beforeNextMethodCall(iThread, codeLocation)
-
+        isDebugIteration {
+            Unit
+        }
         if (collectTrace) {
             tracePoint ?: error("Method call tracePoint shouldn't be null during trace collection")
             val callStackTrace = callStackTrace[iThread]
@@ -688,6 +773,8 @@ abstract class ManagedStrategy(
             }
             // code location of the new method call is currently the last
             callStackTrace.add(CallStackTraceElement(tracePoint, methodId))
+        } else {
+            error("Not expected to call")
         }
     }
 
@@ -699,8 +786,6 @@ abstract class ManagedStrategy(
      */
     internal fun afterMethodCall(iThread: Int, tracePoint: MethodCallTracePoint?) {
         if (!isTestThread(iThread) || inIgnoredSection(iThread)) return
-        loopDetector.afterMethodCall(iThread)
-
         if (collectTrace) {
             tracePoint ?: error("Method call tracePoint shouldn't be null during trace collection")
             val callStackTrace = callStackTrace[iThread]
@@ -782,36 +867,49 @@ abstract class ManagedStrategy(
             _trace += SwitchEventTracePoint(iThread, currentActorId[iThread], reason, callStackTrace[iThread].toList())
         }
 
-        fun newActiveLockDetected(iThread: Int, cyclePeriod: Int) {
-            val spinCycleStartPosition = _trace.size - cyclePeriod
-            val spinCycleStartStackTrace = if (spinCycleStartPosition <= _trace.lastIndex) {
-                _trace[spinCycleStartPosition].callStackTrace
-            } else {
-                emptyList()
-            }
-            val spinCycleStartTracePoint = SpinCycleStartTracePoint(
-                iThread = iThread,
-                actorId = currentActorId[iThread],
-                callStackTrace = spinCycleStartStackTrace
-            )
-            _trace.add(spinCycleStartPosition, spinCycleStartTracePoint)
-        }
-
         fun passCodeLocation(tracePoint: TracePoint?) {
             // tracePoint can be null here if trace is not available, e.g. in case of suspension
-            if (tracePoint != null) _trace += tracePoint
+            tracePoint ?: return
+            if (loopDetector.shouldInsertSpinCycleStartPoint) {
+                loopDetector.replayModeEnabled
+                val spinCycleStartTracePoint = SpinCycleStartTracePoint(
+                    iThread = tracePoint.iThread,
+                    actorId = currentActorId[tracePoint.iThread],
+                    callStackTrace = tracePoint.callStackTrace,
+                    isRecursive = loopDetector.isRecursiveSpinLock
+                )
+                _trace.add(spinCycleStartTracePoint)
+            }
+            _trace += tracePoint
         }
 
         fun addStateRepresentation(iThread: Int) {
             val stateRepresentation = runner.constructStateRepresentation()!!
             // use call stack trace of the previous trace point
             val callStackTrace = _trace.last().callStackTrace.toList()
-            _trace += StateRepresentationTracePoint(iThread, currentActorId[iThread], stateRepresentation, callStackTrace)
+            _trace += StateRepresentationTracePoint(
+                iThread,
+                currentActorId[iThread],
+                stateRepresentation,
+                callStackTrace
+            )
 
         }
 
         fun passObstructionFreedomViolationTracePoint(iThread: Int) {
-            _trace += ObstructionFreedomViolationExecutionAbortTracePoint(iThread, currentActorId[iThread], _trace.last().callStackTrace)
+            _trace += ObstructionFreedomViolationExecutionAbortTracePoint(
+                iThread,
+                currentActorId[iThread],
+                _trace.last().callStackTrace
+            )
+        }
+    }
+
+    val invocations get() = (this as ModelCheckingStrategy).usedInvocations
+
+    internal inline fun isDebugIteration(action: () -> Unit) {
+        if (scenariosCount.get() == 1 && invocations == 6 && loopDetector.replayModeEnabled == true) {
+            action()
         }
     }
 
@@ -848,6 +946,8 @@ abstract class ManagedStrategy(
      * Note: An example of this behavior is detailed in the comments of the code itself.
      */
     inner class LoopDetector(private val hangingDetectionThreshold: Int) {
+        val isRecursiveSpinLock: Boolean get() = replayModeLoopDetectorHelper!!.isRecursive
+        val shouldInsertSpinCycleStartPoint: Boolean get() = replayModeLoopDetectorHelper!!.shouldInsertSpinCycleStartPoint
         private var lastExecutedThread = -1// no last thread
 
         /**
@@ -891,7 +991,7 @@ abstract class ManagedStrategy(
          * Delegate helper, active in replay (trace collection) mode.
          * It just tracks executions and switches and helps to halt execution or switch in case of spin-lock early.
          */
-        private var replayModeLoopDetectorHelper: ReplayModeLoopDetectorHelper? = null
+        var replayModeLoopDetectorHelper: ReplayModeLoopDetectorHelper? = null
 
         val replayModeCurrentCyclePeriod: Int get() = replayModeLoopDetectorHelper?.currentCyclePeriod ?: 0
 
@@ -900,7 +1000,7 @@ abstract class ManagedStrategy(
         val isSpinLockSwitch: Boolean
             get() = replayModeLoopDetectorHelper?.isActiveLockNode ?: error("Loop detector is not in replay mode")
 
-        private val threadsCallDepth: IntArray = IntArray(nThreads) { 0 }
+        val threadsCallDepth: IntArray = IntArray(nThreads) { 0 }
 
         fun enableReplayMode(failDueToDeadlockInTheEnd: Boolean) {
             val contextSwitchesBeforeHalt =
@@ -935,21 +1035,22 @@ abstract class ManagedStrategy(
             val detectedEarly = loopTrackingCursor.isInCycle
             // Check whether the count exceeds the maximum number of repetitions for loop/hang detection.
             val detectedFirstTime = count > hangingDetectionThreshold
-            if (detectedFirstTime && !detectedEarly) {
-                registerCycle()
-            }
-            if (!detectedFirstTime && detectedEarly) {
+            if (detectedEarly) {
                 totalExecutionsCount += hangingDetectionThreshold
             }
             // Enormous operations count considered as total spin lock
             if (totalExecutionsCount > ManagedCTestConfiguration.LIVELOCK_EVENTS_THRESHOLD) {
-                registerCycle()
+                registerCycle(iThread)
                 failDueToDeadlock()
+            }
+            if (detectedFirstTime && !detectedEarly) {
+                registerCycle(iThread)
             }
             return detectedFirstTime || detectedEarly
         }
 
         fun onThreadSwitch(iThread: Int) {
+            threadsCallDepth[iThread] = 0
             lastExecutedThread = iThread
             currentThreadCodeLocationVisitCountMap.clear()
             currentThreadCodeLocationsHistory.clear()
@@ -985,6 +1086,9 @@ abstract class ManagedStrategy(
         }
 
         fun onNextExecutionPoint(executionIdentity: Int) {
+            isDebugIteration {
+                Unit
+            }
             currentThreadCodeLocationsHistory += executionIdentity
             val lastInterleavingHistoryNode = currentInterleavingHistory.last()
             if (lastInterleavingHistoryNode.cycleOccurred) {
@@ -995,7 +1099,7 @@ abstract class ManagedStrategy(
             replayModeLoopDetectorHelper?.onNextExecution()
         }
 
-        private fun registerCycle() {
+        private fun registerCycle(iThread: Int) {
             val cycleInfo = findMaxPrefixLengthWithNoCycleOnSuffix(currentThreadCodeLocationsHistory) ?: return
             /*
             For nodes, correspond to cycles we re-calculate hash using only code locations related to the cycle,
@@ -1020,6 +1124,10 @@ abstract class ManagedStrategy(
             so we need to [threadId = 1, executions = 5] execution part to have a hash equals to next cycle nodes,
             because we will take only thread executions before cycle and the first cycle iteration.
              */
+            val cycleRepetitionsCount =
+                (currentThreadCodeLocationsHistory.size - cycleInfo.executionsBeforeCycle) / cycleInfo.cyclePeriod
+            val isRecursiveSpinLock = threadsCallDepth[iThread] >= cycleRepetitionsCount
+
             var cycleExecutionLocationsHash = currentThreadCodeLocationsHistory[cycleInfo.executionsBeforeCycle]
             for (i in cycleInfo.executionsBeforeCycle + 1 until cycleInfo.executionsBeforeCycle + cycleInfo.cyclePeriod) {
                 cycleExecutionLocationsHash = cycleExecutionLocationsHash xor currentThreadCodeLocationsHistory[i]
@@ -1028,7 +1136,8 @@ abstract class ManagedStrategy(
             val cycleStateLastNode = currentInterleavingHistory.last().asNodeCorrespondingToCycle(
                 executionsBeforeCycle = cycleInfo.executionsBeforeCycle,
                 cyclePeriod = cycleInfo.cyclePeriod,
-                cycleExecutionsHash = cycleExecutionLocationsHash
+                cycleExecutionsHash = cycleExecutionLocationsHash,
+                isRecursiveSpinLock = isRecursiveSpinLock
             )
 
             currentInterleavingHistory[currentInterleavingHistory.lastIndex] = cycleStateLastNode
@@ -1071,21 +1180,40 @@ abstract class ManagedStrategy(
             onNextExecutionPoint(codeLocation)
         }
 
-        fun afterMethodCall(iThread: Int) {
-            threadsCallDepth[iThread]--
+        fun afterMethodCall(iThread: Int, codeLocation: Int) {
+            val callDepth = threadsCallDepth[iThread]
+            if (callDepth != 0) {
+                threadsCallDepth[iThread]--
+            }
+            onNextExecutionPoint(codeLocation)
         }
     }
 
     /**
      * Helper class to halt execution on replay (trace collection phase) and to switch thread early on spin-cycles
      */
-    private inner class ReplayModeLoopDetectorHelper(
-        private val interleavingHistory: List<InterleavingHistoryNode>,
+    inner class ReplayModeLoopDetectorHelper(
+        val interleavingHistory: List<InterleavingHistoryNode>,
         /**
          * Should we fail with deadlock failure when all events in the current interleaving are completed
          */
         private val failDueToDeadlockInTheEnd: Boolean,
     ) {
+        val isRecursive: Boolean get() = currentNode.isRecursiveSpinLock
+
+        private var spinCycleStartPointAddedToTrace: Boolean = false
+
+        val shouldInsertSpinCycleStartPoint: Boolean
+            get() {
+                if (!isActiveLockNode) return false
+                if (spinCycleStartPointAddedToTrace) return false
+                if (executionsPerformedInCurrentThread <= interleavingHistory[currentInterleavingNodeIndex].executions) return false
+
+                spinCycleStartPointAddedToTrace = true
+
+                return true
+            }
+
         val isActiveLockNode: Boolean get() = interleavingHistory[currentInterleavingNodeIndex].spinCyclePeriod != 0
 
         /**
@@ -1093,9 +1221,9 @@ abstract class ManagedStrategy(
          */
         val currentCyclePeriod: Int get() = interleavingHistory[currentInterleavingNodeIndex].spinCyclePeriod
 
-        private var currentInterleavingNodeIndex = 0
+        var currentInterleavingNodeIndex = 0
 
-        private var executionsPerformedInCurrentThread = 0
+        var executionsPerformedInCurrentThread = 0
 
         /**
          * A set of thread, executed at least once during this interleaving.
@@ -1115,7 +1243,10 @@ abstract class ManagedStrategy(
          */
         private val threadsRan = hashSetOf<Int>()
 
+        val currentNode: InterleavingHistoryNode get() = interleavingHistory[currentInterleavingNodeIndex]
+
         fun initialize(startThread: Int) {
+            spinCycleStartPointAddedToTrace = false
             currentInterleavingNodeIndex = 0
             executionsPerformedInCurrentThread = 0
             threadsRan.clear()
@@ -1131,10 +1262,9 @@ abstract class ManagedStrategy(
          */
         fun onNextExecution(): Boolean {
             require(currentInterleavingNodeIndex <= interleavingHistory.lastIndex) { "Internal error" }
-            val historyNode = interleavingHistory[currentInterleavingNodeIndex]
             // switch current thread after we executed operations before spin cycle and cycle iteration to show it
             val shouldSwitchThread =
-                executionsPerformedInCurrentThread++ >= historyNode.spinCyclePeriod + historyNode.executions
+                executionsPerformedInCurrentThread++ >= currentNode.spinCyclePeriod + currentNode.executions
             checkFailDueToDeadlock(shouldSwitchThread)
             return shouldSwitchThread
         }
@@ -1143,6 +1273,10 @@ abstract class ManagedStrategy(
          * Called before next thread switch
          */
         fun onNextSwitch(threadRunningFirstTime: Boolean) {
+            isDebugIteration {
+                Unit
+            }
+            spinCycleStartPointAddedToTrace = false
             currentInterleavingNodeIndex++
             // See threadsRan field description to understand the following initialization logic
             executionsPerformedInCurrentThread = if (threadRunningFirstTime) 0 else 1
@@ -1153,10 +1287,6 @@ abstract class ManagedStrategy(
             // this cycle node is the last node in the replayed interleaving
             // and have to fail at the end of the execution
             if (shouldSwitchThread && currentInterleavingNodeIndex == interleavingHistory.lastIndex && failDueToDeadlockInTheEnd) {
-                val cyclePeriod = interleavingHistory[currentInterleavingNodeIndex].spinCyclePeriod
-                if (cyclePeriod != 0) {
-                    traceCollector?.newActiveLockDetected(currentThread, cyclePeriod)
-                }
                 failIfObstructionFreedomIsRequired {
                     traceCollector?.passObstructionFreedomViolationTracePoint(currentThread)
                     OBSTRUCTION_FREEDOM_SPINLOCK_VIOLATION_MESSAGE
@@ -1175,7 +1305,14 @@ abstract class ManagedStrategy(
 private class ManagedStrategyRunner(
     private val managedStrategy: ManagedStrategy, testClass: Class<*>, validationFunctions: List<Method>,
     stateRepresentationMethod: Method?, timeoutMs: Long, useClocks: UseClocks
-) : ParallelThreadsRunner(managedStrategy, testClass, validationFunctions, stateRepresentationMethod, timeoutMs, useClocks) {
+) : ParallelThreadsRunner(
+    managedStrategy,
+    testClass,
+    validationFunctions,
+    stateRepresentationMethod,
+    timeoutMs,
+    useClocks
+) {
     override fun onStart(iThread: Int) {
         super.onStart(iThread)
         managedStrategy.onStart(iThread)
@@ -1215,7 +1352,10 @@ private class ManagedStrategyRunner(
         return stateRepresentation
     }
 
-    override fun <T> cancelByLincheck(cont: CancellableContinuation<T>, promptCancellation: Boolean): CancellationResult {
+    override fun <T> cancelByLincheck(
+        cont: CancellableContinuation<T>,
+        promptCancellation: Boolean
+    ): CancellationResult {
         // Create a cancellation trace point before `cancel`, so that cancellation trace point
         // precede the events in `onCancellation` handler.
         val cancellationTracePoint = managedStrategy.createAndLogCancellationTracePoint()
@@ -1228,7 +1368,7 @@ private class ManagedStrategyRunner(
             if (cancellationResult != CANCELLATION_FAILED)
                 managedStrategy.afterCoroutineCancelled(managedStrategy.currentThreadNumber())
             return cancellationResult
-        } catch(e: Throwable) {
+        } catch (e: Throwable) {
             cancellationTracePoint?.initializeException(e)
             throw e // throw further
         }
@@ -1243,10 +1383,12 @@ private class MonitorTracker(nThreads: Int) {
     // Maintains a set of acquired monitors with an information on which thread
     // performed the acquisition and the reentrancy depth.
     private val acquiredMonitors = IdentityHashMap<Any, MonitorAcquiringInfo>()
+
     // Maintains a set of monitors on which each thread is waiting.
     // Note, that a thread can wait on a free monitor if it is waiting for a `notify` call.
     // Stores `null` if thread is not waiting on any monitor.
     private val waitingMonitor = Array<MonitorAcquiringInfo?>(nThreads) { null }
+
     // Stores `true` for the threads which are waiting for a
     // `notify` call on the monitor stored in `acquiringMonitor`.
     private val waitForNotify = BooleanArray(nThreads) { false }
@@ -1360,7 +1502,8 @@ internal object ForcibleExecutionFinishException : RuntimeException() {
     override fun fillInStackTrace() = this
 }
 
-private const val COROUTINE_SUSPENSION_CODE_LOCATION = -1 // currently the exact place of coroutine suspension is not known
+private const val COROUTINE_SUSPENSION_CODE_LOCATION =
+    -1 // currently the exact place of coroutine suspension is not known
 
 private const val SPINNING_LOOP_ITERATIONS_BEFORE_YIELD = 100_000
 

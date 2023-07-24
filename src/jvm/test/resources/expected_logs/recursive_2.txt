@@ -1,0 +1,175 @@
+
+
+= The execution has hung, see the thread dump =
+| ---------------------------- |
+| Thread 1  |     Thread 2     |
+| ---------------------------- |
+| trigger() | causesSpinLock() |
+| ---------------------------- |
+
+
+The following interleaving leads to the error:
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                      Thread 1                                       |                                                         Thread 2                                                          |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| trigger()                                                                           |                                                                                                                           |
+|   incrementAndGet(): 1 at RecursiveSpiLockTest.trigger(FaaQueueSpinLockTest.kt:271) |                                                                                                                           |
+|   switch                                                                            |                                                                                                                           |
+|                                                                                     | causesSpinLock()                                                                                                          |
+|                                                                                     |   get(): 1 at RecursiveSpiLockTest.causesSpinLock(FaaQueueSpinLockTest.kt:277)                                            |
+|                                                                                     |   deadSpinCycleRecursive() at RecursiveSpiLockTest.causesSpinLock(FaaQueueSpinLockTest.kt:278)                            |
+|                                                                                     |     /* The following events recursively repeat infinitely: */                                                                         |
+|                                                                                     |     getSharedVariable(): false at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)                |
+|                                                                                     |     compareAndSet(false,true): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)           |
+|                                                                                     |     getSharedVariable(): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)                 |
+|                                                                                     |     compareAndSet(true,false): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)           |
+|                                                                                     |     getSharedVariable(): false at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)                |
+|                                                                                     |     compareAndSet(false,true): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)           |
+|                                                                                     |     getSharedVariable(): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)                 |
+|                                                                                     |     compareAndSet(true,false): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)           |
+|                                                                                     |     deadSpinCycleRecursive() at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:287)                  |
+|                                                                                     |       getSharedVariable(): false at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)              |
+|                                                                                     |       compareAndSet(false,true): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)         |
+|                                                                                     |       getSharedVariable(): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)               |
+|                                                                                     |       compareAndSet(true,false): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)         |
+|                                                                                     |       getSharedVariable(): false at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)              |
+|                                                                                     |       compareAndSet(false,true): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)         |
+|                                                                                     |       getSharedVariable(): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)               |
+|                                                                                     |       compareAndSet(true,false): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)         |
+|                                                                                     |       deadSpinCycleRecursive() at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:287)                |
+|                                                                                     |         getSharedVariable(): false at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)            |
+|                                                                                     |         compareAndSet(false,true): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)       |
+|                                                                                     |         getSharedVariable(): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)             |
+|                                                                                     |         compareAndSet(true,false): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)       |
+|                                                                                     |         getSharedVariable(): false at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)            |
+|                                                                                     |         compareAndSet(false,true): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)       |
+|                                                                                     |         getSharedVariable(): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)             |
+|                                                                                     |         compareAndSet(true,false): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)       |
+|                                                                                     |         switch (reason: active recursive lock detected)                                                                             |
+|   decrementAndGet(): 0 at RecursiveSpiLockTest.trigger(FaaQueueSpinLockTest.kt:272) |                                                                                                                           |
+|                                                                                     |         deadSpinCycleRecursive() at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:287)              |
+|                                                                                     |           /* The following events repeat infinitely: */                                                                   |
+|                                                                                     |           getSharedVariable(): false at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)          |
+|                                                                                     |           compareAndSet(false,true): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)     |
+|                                                                                     |           getSharedVariable(): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)           |
+|                                                                                     |           compareAndSet(true,false): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)     |
+|                                                                                     |           getSharedVariable(): false at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)          |
+|                                                                                     |           compareAndSet(false,true): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)     |
+|                                                                                     |           getSharedVariable(): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)           |
+|                                                                                     |           compareAndSet(true,false): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)     |
+|                                                                                     |           deadSpinCycleRecursive() at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:287)            |
+|                                                                                     |             getSharedVariable(): false at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)        |
+|                                                                                     |             compareAndSet(false,true): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)   |
+|                                                                                     |             getSharedVariable(): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)         |
+|                                                                                     |             compareAndSet(true,false): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)   |
+|                                                                                     |             getSharedVariable(): false at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)        |
+|                                                                                     |             compareAndSet(false,true): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)   |
+|                                                                                     |             getSharedVariable(): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)         |
+|                                                                                     |             compareAndSet(true,false): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)   |
+|                                                                                     |             deadSpinCycleRecursive() at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:287)          |
+|                                                                                     |               getSharedVariable(): false at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)      |
+|                                                                                     |               compareAndSet(false,true): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285) |
+|                                                                                     |               getSharedVariable(): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)       |
+|                                                                                     |               compareAndSet(true,false): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285) |
+|                                                                                     |               getSharedVariable(): false at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)      |
+|                                                                                     |               compareAndSet(false,true): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285) |
+|                                                                                     |               getSharedVariable(): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)       |
+|                                                                                     |               compareAndSet(true,false): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285) |
+|                                                                                     |               switch (reason: active lock detected)                                                                       |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+All unfinished threads are in deadlock
+
+Detailed trace:
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                      Thread 1                                       |                                                         Thread 2                                                          |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| trigger()                                                                           |                                                                                                                           |
+|   incrementAndGet(): 1 at RecursiveSpiLockTest.trigger(FaaQueueSpinLockTest.kt:271) |                                                                                                                           |
+|   switch                                                                            |                                                                                                                           |
+|                                                                                     | causesSpinLock()                                                                                                          |
+|                                                                                     |   get(): 1 at RecursiveSpiLockTest.causesSpinLock(FaaQueueSpinLockTest.kt:277)                                            |
+|                                                                                     |   deadSpinCycleRecursive() at RecursiveSpiLockTest.causesSpinLock(FaaQueueSpinLockTest.kt:278)                            |
+|                                                                                     |     /* The following events repeat infinitely: */                                                                         |
+|                                                                                     |     getSharedVariable(): false at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)                |
+|                                                                                     |       get(): false at RecursiveSpiLockTest.getSharedVariable(FaaQueueSpinLockTest.kt:290)                                 |
+|                                                                                     |     compareAndSet(false,true): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)           |
+|                                                                                     |     getSharedVariable(): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)                 |
+|                                                                                     |       get(): true at RecursiveSpiLockTest.getSharedVariable(FaaQueueSpinLockTest.kt:290)                                  |
+|                                                                                     |     compareAndSet(true,false): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)           |
+|                                                                                     |     getSharedVariable(): false at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)                |
+|                                                                                     |       get(): false at RecursiveSpiLockTest.getSharedVariable(FaaQueueSpinLockTest.kt:290)                                 |
+|                                                                                     |     compareAndSet(false,true): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)           |
+|                                                                                     |     getSharedVariable(): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)                 |
+|                                                                                     |       get(): true at RecursiveSpiLockTest.getSharedVariable(FaaQueueSpinLockTest.kt:290)                                  |
+|                                                                                     |     compareAndSet(true,false): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)           |
+|                                                                                     |     deadSpinCycleRecursive() at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:287)                  |
+|                                                                                     |       getSharedVariable(): false at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)              |
+|                                                                                     |         get(): false at RecursiveSpiLockTest.getSharedVariable(FaaQueueSpinLockTest.kt:290)                               |
+|                                                                                     |       compareAndSet(false,true): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)         |
+|                                                                                     |       getSharedVariable(): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)               |
+|                                                                                     |         get(): true at RecursiveSpiLockTest.getSharedVariable(FaaQueueSpinLockTest.kt:290)                                |
+|                                                                                     |       compareAndSet(true,false): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)         |
+|                                                                                     |       getSharedVariable(): false at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)              |
+|                                                                                     |         get(): false at RecursiveSpiLockTest.getSharedVariable(FaaQueueSpinLockTest.kt:290)                               |
+|                                                                                     |       compareAndSet(false,true): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)         |
+|                                                                                     |       getSharedVariable(): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)               |
+|                                                                                     |         get(): true at RecursiveSpiLockTest.getSharedVariable(FaaQueueSpinLockTest.kt:290)                                |
+|                                                                                     |       compareAndSet(true,false): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)         |
+|                                                                                     |       deadSpinCycleRecursive() at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:287)                |
+|                                                                                     |         getSharedVariable(): false at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)            |
+|                                                                                     |           get(): false at RecursiveSpiLockTest.getSharedVariable(FaaQueueSpinLockTest.kt:290)                             |
+|                                                                                     |         compareAndSet(false,true): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)       |
+|                                                                                     |         getSharedVariable(): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)             |
+|                                                                                     |           get(): true at RecursiveSpiLockTest.getSharedVariable(FaaQueueSpinLockTest.kt:290)                              |
+|                                                                                     |         compareAndSet(true,false): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)       |
+|                                                                                     |         getSharedVariable(): false at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)            |
+|                                                                                     |           get(): false at RecursiveSpiLockTest.getSharedVariable(FaaQueueSpinLockTest.kt:290)                             |
+|                                                                                     |         compareAndSet(false,true): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)       |
+|                                                                                     |         getSharedVariable(): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)             |
+|                                                                                     |           get(): true at RecursiveSpiLockTest.getSharedVariable(FaaQueueSpinLockTest.kt:290)                              |
+|                                                                                     |         compareAndSet(true,false): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)       |
+|                                                                                     |         switch (reason: active lock detected)                                                                             |
+|   decrementAndGet(): 0 at RecursiveSpiLockTest.trigger(FaaQueueSpinLockTest.kt:272) |                                                                                                                           |
+|                                                                                     |         deadSpinCycleRecursive() at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:287)              |
+|                                                                                     |           /* The following events repeat infinitely: */                                                                   |
+|                                                                                     |           getSharedVariable(): false at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)          |
+|                                                                                     |             get(): false at RecursiveSpiLockTest.getSharedVariable(FaaQueueSpinLockTest.kt:290)                           |
+|                                                                                     |           compareAndSet(false,true): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)     |
+|                                                                                     |           getSharedVariable(): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)           |
+|                                                                                     |             get(): true at RecursiveSpiLockTest.getSharedVariable(FaaQueueSpinLockTest.kt:290)                            |
+|                                                                                     |           compareAndSet(true,false): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)     |
+|                                                                                     |           getSharedVariable(): false at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)          |
+|                                                                                     |             get(): false at RecursiveSpiLockTest.getSharedVariable(FaaQueueSpinLockTest.kt:290)                           |
+|                                                                                     |           compareAndSet(false,true): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)     |
+|                                                                                     |           getSharedVariable(): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)           |
+|                                                                                     |             get(): true at RecursiveSpiLockTest.getSharedVariable(FaaQueueSpinLockTest.kt:290)                            |
+|                                                                                     |           compareAndSet(true,false): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)     |
+|                                                                                     |           deadSpinCycleRecursive() at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:287)            |
+|                                                                                     |             getSharedVariable(): false at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)        |
+|                                                                                     |               get(): false at RecursiveSpiLockTest.getSharedVariable(FaaQueueSpinLockTest.kt:290)                         |
+|                                                                                     |             compareAndSet(false,true): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)   |
+|                                                                                     |             getSharedVariable(): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)         |
+|                                                                                     |               get(): true at RecursiveSpiLockTest.getSharedVariable(FaaQueueSpinLockTest.kt:290)                          |
+|                                                                                     |             compareAndSet(true,false): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)   |
+|                                                                                     |             getSharedVariable(): false at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)        |
+|                                                                                     |               get(): false at RecursiveSpiLockTest.getSharedVariable(FaaQueueSpinLockTest.kt:290)                         |
+|                                                                                     |             compareAndSet(false,true): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)   |
+|                                                                                     |             getSharedVariable(): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)         |
+|                                                                                     |               get(): true at RecursiveSpiLockTest.getSharedVariable(FaaQueueSpinLockTest.kt:290)                          |
+|                                                                                     |             compareAndSet(true,false): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)   |
+|                                                                                     |             deadSpinCycleRecursive() at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:287)          |
+|                                                                                     |               getSharedVariable(): false at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)      |
+|                                                                                     |                 get(): false at RecursiveSpiLockTest.getSharedVariable(FaaQueueSpinLockTest.kt:290)                       |
+|                                                                                     |               compareAndSet(false,true): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285) |
+|                                                                                     |               getSharedVariable(): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)       |
+|                                                                                     |                 get(): true at RecursiveSpiLockTest.getSharedVariable(FaaQueueSpinLockTest.kt:290)                        |
+|                                                                                     |               compareAndSet(true,false): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285) |
+|                                                                                     |               getSharedVariable(): false at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)      |
+|                                                                                     |                 get(): false at RecursiveSpiLockTest.getSharedVariable(FaaQueueSpinLockTest.kt:290)                       |
+|                                                                                     |               compareAndSet(false,true): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285) |
+|                                                                                     |               getSharedVariable(): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)       |
+|                                                                                     |                 get(): true at RecursiveSpiLockTest.getSharedVariable(FaaQueueSpinLockTest.kt:290)                        |
+|                                                                                     |               compareAndSet(true,false): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285) |
+|                                                                                     |               switch (reason: active lock detected)                                                                       |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+All unfinished threads are in deadlock

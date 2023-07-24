@@ -74,7 +74,7 @@ internal class ObstructionFreedomViolationExecutionAbortTracePoint(
     iThread: Int,
     actorId: Int,
     callStackTrace: CallStackTrace
-): TracePoint(iThread, actorId, callStackTrace) {
+) : TracePoint(iThread, actorId, callStackTrace) {
     override fun toStringImpl(): String = "/* An active lock was detected */"
 }
 
@@ -107,7 +107,7 @@ internal class WriteTracePoint(
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
     private var value: Any? = null
 
-    override fun toStringImpl(): String  = StringBuilder().apply {
+    override fun toStringImpl(): String = StringBuilder().apply {
         if (fieldName != null)
             append("$fieldName.")
         append("WRITE(")
@@ -163,6 +163,7 @@ internal class MethodCallTracePoint(
         this.ownerName = ownerName
     }
 }
+
 private val NO_VALUE = Any()
 
 internal class MonitorEnterTracePoint(
@@ -240,8 +241,13 @@ internal class CoroutineCancellationTracePoint(
     }
 }
 
-internal class SpinCycleStartTracePoint(iThread: Int, actorId: Int, callStackTrace: CallStackTrace): TracePoint(iThread, actorId, callStackTrace) {
-    override fun toStringImpl() =  "/* The following events repeat infinitely: */"
+internal class SpinCycleStartTracePoint(
+    iThread: Int,
+    actorId: Int,
+    callStackTrace: CallStackTrace,
+    val isRecursive: Boolean
+) : TracePoint(iThread, actorId, callStackTrace) {
+    override fun toStringImpl() = "/* The following events ${if (isRecursive) "recursively " else ""}repeat infinitely: */"
 }
 
 /**
@@ -291,23 +297,24 @@ internal enum class SwitchReason(private val reason: String) {
 internal class CallStackTraceElement(val call: MethodCallTracePoint, val identifier: Int)
 
 @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
-private val Class<out Any>?.isImmutableWithNiceToString get() = this?.canonicalName in
-    listOf(
-        java.lang.Integer::class.java,
-        java.lang.Long::class.java,
-        java.lang.Short::class.java,
-        java.lang.Double::class.java,
-        java.lang.Float::class.java,
-        java.lang.Character::class.java,
-        java.lang.Byte::class.java,
-        java.lang.Boolean::class.java,
-        java.lang.String::class.java,
-        BigInteger::class.java,
-        BigDecimal::class.java,
-        kotlinx.coroutines.internal.Symbol::class.java,
-    ).map { it.canonicalName } +
-    listOf(
-        REMAPPED_PACKAGE_CANONICAL_NAME + "java.util.Collections.SingletonList",
-        REMAPPED_PACKAGE_CANONICAL_NAME + "java.util.Collections.SingletonMap",
-        REMAPPED_PACKAGE_CANONICAL_NAME + "java.util.Collections.SingletonSet"
-    )
+private val Class<out Any>?.isImmutableWithNiceToString
+    get() = this?.canonicalName in
+            listOf(
+                java.lang.Integer::class.java,
+                java.lang.Long::class.java,
+                java.lang.Short::class.java,
+                java.lang.Double::class.java,
+                java.lang.Float::class.java,
+                java.lang.Character::class.java,
+                java.lang.Byte::class.java,
+                java.lang.Boolean::class.java,
+                java.lang.String::class.java,
+                BigInteger::class.java,
+                BigDecimal::class.java,
+                kotlinx.coroutines.internal.Symbol::class.java,
+            ).map { it.canonicalName } +
+            listOf(
+                REMAPPED_PACKAGE_CANONICAL_NAME + "java.util.Collections.SingletonList",
+                REMAPPED_PACKAGE_CANONICAL_NAME + "java.util.Collections.SingletonMap",
+                REMAPPED_PACKAGE_CANONICAL_NAME + "java.util.Collections.SingletonSet"
+            )

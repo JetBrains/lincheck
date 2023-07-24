@@ -38,7 +38,19 @@ internal class ManagedStrategyTransformer(
     private var classVersion = 0
     private var fileName: String? = null
 
-    override fun visit(version: Int, access: Int, name: String, signature: String?, superName: String, interfaces: Array<String>) {
+    var suppressedBoxCalls = 0
+    val trackRegularMethodCall: Boolean get() = suppressedBoxCalls == 0
+
+    private val isSuspendStateMachine by lazy { isSuspendStateMachine(className) }
+
+    override fun visit(
+        version: Int,
+        access: Int,
+        name: String,
+        signature: String?,
+        superName: String,
+        interfaces: Array<String>
+    ) {
         className = name
         classVersion = version
         super.visit(version, access, name, signature, superName, interfaces)
@@ -49,7 +61,13 @@ internal class ManagedStrategyTransformer(
         super.visitSource(source, debug)
     }
 
-    override fun visitMethod(access: Int, mname: String, desc: String, signature: String?, exceptions: Array<String>?): MethodVisitor {
+    override fun visitMethod(
+        access: Int,
+        mname: String,
+        desc: String,
+        signature: String?,
+        exceptions: Array<String>?
+    ): MethodVisitor {
         // do not transform strategy methods
         if (isStrategyMethod(className)) return super.visitMethod(access, mname, desc, signature, exceptions)
         var access = access
@@ -68,7 +86,12 @@ internal class ManagedStrategyTransformer(
         mv = SynchronizedBlockTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         if (isSynchronized) {
             // synchronized method is replaced with synchronized lock
-            mv = SynchronizedBlockAddingTransformer(mname, GeneratorAdapter(mv, access, mname, desc), access, classVersion)
+            mv = SynchronizedBlockAddingTransformer(
+                mname,
+                GeneratorAdapter(mv, access, mname, desc),
+                access,
+                classVersion
+            )
         }
         mv = ClassInitializationTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         if (constructTraceRepresentation) mv = AFUTrackingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
@@ -87,25 +110,25 @@ internal class ManagedStrategyTransformer(
     }
 
 
-
     /**
      * Generates body of a native method VMSupportsCS8.
      * Native methods in java.util can not be transformed properly, so should be replaced with stubs
      */
     private class VMSupportsCS8MethodGenerator(val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, null) {
         override fun visitEnd() = adapter.run {
-                visitCode()
-                push(true) // suppose that we always have CAS for Long
-                returnValue()
-                visitMaxs(1, 0)
-                visitEnd()
-            }
+            visitCode()
+            push(true) // suppose that we always have CAS for Long
+            returnValue()
+            visitMaxs(1, 0)
+            visitEnd()
+        }
     }
 
     /**
      * Adds invocations of ManagedStrategy methods before reads and writes of shared variables
      */
-    private inner class SharedVariableAccessMethodTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
+    private inner class SharedVariableAccessMethodTransformer(methodName: String, adapter: GeneratorAdapter) :
+        ManagedStrategyMethodVisitor(methodName, adapter) {
         override fun visitFieldInsn(opcode: Int, owner: String, name: String, desc: String) = adapter.run {
             if (isFinalField(owner, name) || isSuspendStateMachine(owner)) {
                 super.visitFieldInsn(opcode, owner, name, desc)
@@ -119,6 +142,7 @@ internal class ManagedStrategyTransformer(
                     super.visitFieldInsn(opcode, owner, name, desc)
                     captureReadValue(desc, tracePointLocal)
                 }
+
                 GETFIELD -> {
                     val isLocalObject = newLocal(Type.BOOLEAN_TYPE)
                     val skipCodeLocationBefore = newLabel()
@@ -140,11 +164,13 @@ internal class ManagedStrategyTransformer(
                     captureReadValue(desc, tracePointLocal)
                     visitLabel(skipCodeLocationAfter)
                 }
+
                 PUTSTATIC -> {
                     beforeSharedVariableWrite(name, desc)
                     super.visitFieldInsn(opcode, owner, name, desc)
                     invokeMakeStateRepresentation()
                 }
+
                 PUTFIELD -> {
                     val isLocalObject = newLocal(Type.BOOLEAN_TYPE)
                     val skipCodeLocationBefore = newLabel()
@@ -165,6 +191,7 @@ internal class ManagedStrategyTransformer(
                     invokeMakeStateRepresentation()
                     visitLabel(skipCodeLocationAfter)
                 }
+
                 else -> throw IllegalArgumentException("Unknown field opcode")
             }
         }
@@ -192,6 +219,7 @@ internal class ManagedStrategyTransformer(
                     captureReadValue(getArrayLoadType(opcode).descriptor, tracePointLocal)
                     visitLabel(skipCodeLocationAfter)
                 }
+
                 AASTORE, IASTORE, FASTORE, BASTORE, CASTORE, SASTORE, LASTORE, DASTORE -> {
                     val isLocalObject = newLocal(Type.BOOLEAN_TYPE)
                     val skipCodeLocationBefore = adapter.newLabel()
@@ -212,6 +240,7 @@ internal class ManagedStrategyTransformer(
                     invokeMakeStateRepresentation()
                     visitLabel(skipCodeLocationAfter)
                 }
+
                 else -> super.visitInsn(opcode)
             }
         }
@@ -252,7 +281,7 @@ internal class ManagedStrategyTransformer(
             loadLocal(tracePointLocal!!)
             checkCast(READ_TRACE_POINT_TYPE)
             loadLocal(readValue)
-            box(valueType)
+            boxValue(valueType)
             invokeVirtual(READ_TRACE_POINT_TYPE, INITIALIZE_READ_VALUE_METHOD)
         }
 
@@ -273,7 +302,7 @@ internal class ManagedStrategyTransformer(
             loadLocal(tracePointLocal!!)
             checkCast(WRITE_TRACE_POINT_TYPE)
             loadLocal(storedValue)
-            box(valueType)
+            boxValue(valueType)
             invokeVirtual(WRITE_TRACE_POINT_TYPE, INITIALIZE_WRITTEN_VALUE_METHOD)
         }
 
@@ -302,15 +331,28 @@ internal class ManagedStrategyTransformer(
         }
 
         private fun invokeBeforeSharedVariableRead(fieldName: String? = null, tracePointLocal: Int?) =
-            invokeBeforeSharedVariableReadOrWrite(BEFORE_SHARED_VARIABLE_READ_METHOD, tracePointLocal, READ_TRACE_POINT_TYPE) { iThread, actorId, callStackTrace, ste -> ReadTracePoint(iThread, actorId, callStackTrace, fieldName, ste)
+            invokeBeforeSharedVariableReadOrWrite(
+                BEFORE_SHARED_VARIABLE_READ_METHOD,
+                tracePointLocal,
+                READ_TRACE_POINT_TYPE
+            ) { iThread, actorId, callStackTrace, ste ->
+                ReadTracePoint(iThread, actorId, callStackTrace, fieldName, ste)
             }
 
         private fun invokeBeforeSharedVariableWrite(fieldName: String? = null, tracePointLocal: Int?) =
-            invokeBeforeSharedVariableReadOrWrite(BEFORE_SHARED_VARIABLE_WRITE_METHOD, tracePointLocal, WRITE_TRACE_POINT_TYPE) { iThread, actorId, callStackTrace, ste -> WriteTracePoint(iThread, actorId, callStackTrace, fieldName, ste)
+            invokeBeforeSharedVariableReadOrWrite(
+                BEFORE_SHARED_VARIABLE_WRITE_METHOD,
+                tracePointLocal,
+                WRITE_TRACE_POINT_TYPE
+            ) { iThread, actorId, callStackTrace, ste ->
+                WriteTracePoint(iThread, actorId, callStackTrace, fieldName, ste)
             }
 
         private fun invokeBeforeSharedVariableReadOrWrite(
-            method: Method, tracePointLocal: Int?, tracePointType: Type, codeLocationConstructor: CodeLocationTracePointConstructor
+            method: Method,
+            tracePointLocal: Int?,
+            tracePointType: Type,
+            codeLocationConstructor: CodeLocationTracePointConstructor
         ) {
             loadStrategy()
             loadCurrentThreadNumber()
@@ -338,7 +380,8 @@ internal class ManagedStrategyTransformer(
      * CallStackTraceTransformer should be an earlier transformer than this transformer, because
      * this transformer reuse code locations created by CallStackTraceTransformer.
      */
-    private inner class ManagedStrategyGuaranteeTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
+    private inner class ManagedStrategyGuaranteeTransformer(methodName: String, adapter: GeneratorAdapter) :
+        ManagedStrategyMethodVisitor(methodName, adapter) {
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
             when (classifyGuaranteeType(owner, name)) {
                 ManagedGuaranteeType.IGNORE -> {
@@ -346,6 +389,7 @@ internal class ManagedStrategyTransformer(
                         adapter.visitMethodInsn(opcode, owner, name, desc, itf)
                     }
                 }
+
                 ManagedGuaranteeType.TREAT_AS_ATOMIC -> {
                     invokeBeforeAtomicMethodCall()
                     runInIgnoredSection {
@@ -353,10 +397,33 @@ internal class ManagedStrategyTransformer(
                     }
                     invokeMakeStateRepresentation()
                 }
+
                 null -> {
-                    invokeBeforeRegularMethod()
+                    if (!trackRegularMethodCall || isSuspendStateMachine || isStrategyMethod(owner) || isInternalCoroutineCall(
+                            owner,
+                            name
+                        )
+                    ) {
+                        adapter.visitMethodInsn(opcode, owner, name, desc, itf)
+                        return
+                    }
+                    loadStrategy()
+                    loadCurrentThreadNumber()
+                    adapter.push(codeLocationIdProvider.newId())
+
+                    adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_REGULAR_METHOD_CALL)
+
+//                    if (constructTraceRepresentation) {
+//                        val x = methodName
+//                        println("class: $className, methodName: $methodName, name = $name, owner = $owner")
+//                        Unit
+//                    }
                     adapter.visitMethodInsn(opcode, owner, name, desc, itf)
-                    invokeAfterRegularMethod()
+
+                    loadStrategy()
+                    loadCurrentThreadNumber()
+                    adapter.push(codeLocationIdProvider.lastId)
+                    adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, AFTER_REGULAR_METHOD_CALL)
                 }
             }
         }
@@ -377,14 +444,6 @@ internal class ManagedStrategyTransformer(
             adapter.push(codeLocationIdProvider.lastId) // re-use previous code location
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_ATOMIC_METHOD_CALL_METHOD)
         }
-
-        private fun invokeBeforeRegularMethod() {
-
-        }
-
-        private fun invokeAfterRegularMethod() {
-
-        }
     }
 
     /**
@@ -392,7 +451,8 @@ internal class ManagedStrategyTransformer(
      * SharedVariableAccessMethodTransformer should be earlier than this transformer not to create switch points before
      * beforeIgnoredSectionEntering invocations.
      */
-    private inner class ClassInitializationTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter)  {
+    private inner class ClassInitializationTransformer(methodName: String, adapter: GeneratorAdapter) :
+        ManagedStrategyMethodVisitor(methodName, adapter) {
         private val isClinit = methodName == "<clinit>"
 
         override fun visitCode() {
@@ -405,58 +465,70 @@ internal class ManagedStrategyTransformer(
             if (isClinit) {
                 when (opcode) {
                     ARETURN, DRETURN, FRETURN, IRETURN, LRETURN, RETURN -> invokeAfterIgnoredSectionLeaving()
-                    else -> { }
+                    else -> {}
                 }
             }
             mv.visitInsn(opcode)
         }
     }
 
+    private fun isInternalCoroutineCall(owner: String, name: String) =
+        owner == "kotlin/coroutines/intrinsics/IntrinsicsKt" && name == "getCOROUTINE_SUSPENDED"
+
     /**
      * Adds strategy method invocations before and after method calls.
      */
-    private inner class CallStackTraceLoggingTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
-        private val isSuspendStateMachine by lazy { isSuspendStateMachine(className) }
+    private inner class CallStackTraceLoggingTransformer(methodName: String, adapter: GeneratorAdapter) :
+        ManagedStrategyMethodVisitor(methodName, adapter) {
+        override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) =
+            adapter.run {
+                if (isSuspendStateMachine || isStrategyMethod(owner) || isInternalCoroutineCall(owner, name)) {
+                    visitMethodInsn(opcode, owner, name, desc, itf)
+                    return
+                }
+                if (!constructTraceRepresentation) {
+                    // just increase code location id to keep ids consistent with the ones
+                    // when `constructTraceRepresentation` is disabled
+                    codeLocationIdProvider.newId()
+                    visitMethodInsn(opcode, owner, name, desc, itf)
+                    return
+                }
+                if (methodName == "decrementAndGet") {
+                    Unit
+                }
+                val callStart = newLabel()
+                val callEnd = newLabel()
+                val exceptionHandler = newLabel()
+                val skipHandler = newLabel()
 
-        override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
-            if (isSuspendStateMachine || isStrategyMethod(owner) || isInternalCoroutineCall(owner, name)) {
+                val tracePointLocal = newTracePointLocal()!!
+                beforeMethodCall(opcode, owner, name, desc, tracePointLocal)
+                if (name != "<init>") {
+                    // just hope that constructors do not throw exceptions.
+                    // we can not handle this case, because uninitialized values are not allowed by jvm
+                    visitTryCatchBlock(callStart, callEnd, exceptionHandler, null)
+                }
+                visitLabel(callStart)
                 visitMethodInsn(opcode, owner, name, desc, itf)
-                return
-            }
-            if (!constructTraceRepresentation) {
-                // just increase code location id to keep ids consistent with the ones
-                // when `constructTraceRepresentation` is disabled
-                codeLocationIdProvider.newId()
-                visitMethodInsn(opcode, owner, name, desc, itf)
-                return
-            }
-            val callStart = newLabel()
-            val callEnd = newLabel()
-            val exceptionHandler = newLabel()
-            val skipHandler = newLabel()
+                visitLabel(callEnd)
+                afterMethodCall(Method(name, desc).returnType, tracePointLocal)
 
-            val tracePointLocal = newTracePointLocal()!!
-            beforeMethodCall(opcode, owner, name, desc, tracePointLocal)
-            if (name != "<init>") {
-                // just hope that constructors do not throw exceptions.
-                // we can not handle this case, because uninitialized values are not allowed by jvm
-                visitTryCatchBlock(callStart, callEnd, exceptionHandler, null)
+                goTo(skipHandler)
+                visitLabel(exceptionHandler)
+                onException(tracePointLocal)
+                invokeAfterMethodCall(tracePointLocal) // notify strategy that the method finished
+                throwException() // throw the exception further
+                visitLabel(skipHandler)
             }
-            visitLabel(callStart)
-            visitMethodInsn(opcode, owner, name, desc, itf)
-            visitLabel(callEnd)
-            afterMethodCall(Method(name, desc).returnType, tracePointLocal)
-
-            goTo(skipHandler)
-            visitLabel(exceptionHandler)
-            onException(tracePointLocal)
-            invokeAfterMethodCall(tracePointLocal) // notify strategy that the method finished
-            throwException() // throw the exception further
-            visitLabel(skipHandler)
-        }
 
         // STACK: param_1 param_2 ... param_n
-        private fun beforeMethodCall(opcode: Int, owner: String, methodName: String, desc: String, tracePointLocal: Int) {
+        private fun beforeMethodCall(
+            opcode: Int,
+            owner: String,
+            methodName: String,
+            desc: String,
+            tracePointLocal: Int
+        ) {
             invokeBeforeMethodCall(methodName, tracePointLocal)
             captureParameters(opcode, owner, methodName, desc, tracePointLocal)
             captureOwnerName(opcode, owner, methodName, desc, tracePointLocal)
@@ -471,7 +543,7 @@ internal class ManagedStrategyTransformer(
                 loadLocal(tracePointLocal)
                 checkCast(METHOD_TRACE_POINT_TYPE)
                 loadLocal(returnedValue)
-                box(returnType)
+                boxValue(returnType)
                 invokeVirtual(METHOD_TRACE_POINT_TYPE, INITIALIZE_RETURNED_VALUE_METHOD)
             }
             invokeAfterMethodCall(tracePointLocal)
@@ -489,7 +561,13 @@ internal class ManagedStrategyTransformer(
         }
 
         // STACK: param_1 param_2 ... param_n
-        private fun captureParameters(opcode: Int, owner: String, methodName: String, desc: String, tracePointLocal: Int) = adapter.run {
+        private fun captureParameters(
+            opcode: Int,
+            owner: String,
+            methodName: String,
+            desc: String,
+            tracePointLocal: Int
+        ) = adapter.run {
             val paramTypes = Type.getArgumentTypes(desc)
             if (paramTypes.isEmpty()) return // nothing to capture
             val params = copyParameters(paramTypes)
@@ -499,12 +577,18 @@ internal class ManagedStrategyTransformer(
             } else {
                 0
             }
-            val lastLoggedParameter = if (paramTypes.last().internalName == "kotlin/coroutines/Continuation" && isSuspend(owner, methodName, desc)) {
-                // do not log the last continuation in suspend functions
-                paramTypes.size - 1
-            } else {
-                paramTypes.size
-            }
+            val lastLoggedParameter =
+                if (paramTypes.last().internalName == "kotlin/coroutines/Continuation" && isSuspend(
+                        owner,
+                        methodName,
+                        desc
+                    )
+                ) {
+                    // do not log the last continuation in suspend functions
+                    paramTypes.size - 1
+                } else {
+                    paramTypes.size
+                }
             // create array of parameters
             push(lastLoggedParameter - firstLoggedParameter) // size of the array
             visitTypeInsn(ANEWARRAY, OBJECT_TYPE.internalName)
@@ -514,7 +598,7 @@ internal class ManagedStrategyTransformer(
                 loadLocal(parameterValuesLocal)
                 push(i - firstLoggedParameter)
                 loadLocal(params[i])
-                box(paramTypes[i]) // in case it is a primitive type
+                boxValue(paramTypes[i]) // in case it is a primitive type
                 arrayStore(OBJECT_TYPE)
             }
             // initialize MethodCallCodePoint parameter values
@@ -525,7 +609,13 @@ internal class ManagedStrategyTransformer(
         }
 
         // STACK: owner param_1 param_2 ... param_n
-        private fun captureOwnerName(opcode: Int, owner: String, methodName: String, desc: String, tracePointLocal: Int) = adapter.run {
+        private fun captureOwnerName(
+            opcode: Int,
+            owner: String,
+            methodName: String,
+            desc: String,
+            tracePointLocal: Int
+        ) = adapter.run {
             if (!isAFUMethodCall(opcode, owner, methodName, desc)) {
                 // currently object name labels are used only for AFUs
                 return
@@ -550,7 +640,10 @@ internal class ManagedStrategyTransformer(
         private fun invokeBeforeMethodCall(methodName: String, tracePointLocal: Int) {
             loadStrategy()
             loadCurrentThreadNumber()
-            loadNewCodeLocationAndTracePoint(tracePointLocal, METHOD_TRACE_POINT_TYPE) { iThread, actorId, callStackTrace, ste ->
+            loadNewCodeLocationAndTracePoint(
+                tracePointLocal,
+                METHOD_TRACE_POINT_TYPE
+            ) { iThread, actorId, callStackTrace, ste ->
                 MethodCallTracePoint(iThread, actorId, callStackTrace, methodName, ste)
             }
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_METHOD_CALL_METHOD)
@@ -563,8 +656,6 @@ internal class ManagedStrategyTransformer(
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, AFTER_METHOD_CALL_METHOD)
         }
 
-        private fun isInternalCoroutineCall(owner: String, name: String) =
-            owner == "kotlin/coroutines/intrinsics/IntrinsicsKt" && name == "getCOROUTINE_SUSPENDED"
     }
 
     /**
@@ -589,24 +680,27 @@ internal class ManagedStrategyTransformer(
      * CallStackTraceTransformer should be an earlier transformer than this transformer, because
      * this transformer reuse code locations created by CallStackTraceTransformer.
      */
-    private inner class AFUTrackingTransformer(methodName: String, mv: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, mv) {
-        override fun visitMethodInsn(opcode: Int, owner: String, mname: String, desc: String, isInterface: Boolean) = adapter.run {
-            val isAFUCreation = opcode == INVOKESTATIC && mname == "newUpdater" && isAFU(owner)
-            when {
-                isAFUCreation -> {
-                    val nameLocal = newLocal(STRING_TYPE)
-                    copyLocal(nameLocal) // name is the last parameter
-                    visitMethodInsn(opcode, owner, mname, desc, isInterface)
-                    val afuLocal = newLocal(Type.getType("L$owner;"))
-                    copyLocal(afuLocal) // copy AFU
-                    loadObjectManager()
-                    loadLocal(afuLocal)
-                    loadLocal(nameLocal)
-                    invokeVirtual(OBJECT_MANAGER_TYPE, SET_OBJECT_NAME)
+    private inner class AFUTrackingTransformer(methodName: String, mv: GeneratorAdapter) :
+        ManagedStrategyMethodVisitor(methodName, mv) {
+        override fun visitMethodInsn(opcode: Int, owner: String, mname: String, desc: String, isInterface: Boolean) =
+            adapter.run {
+                val isAFUCreation = opcode == INVOKESTATIC && mname == "newUpdater" && isAFU(owner)
+                when {
+                    isAFUCreation -> {
+                        val nameLocal = newLocal(STRING_TYPE)
+                        copyLocal(nameLocal) // name is the last parameter
+                        visitMethodInsn(opcode, owner, mname, desc, isInterface)
+                        val afuLocal = newLocal(Type.getType("L$owner;"))
+                        copyLocal(afuLocal) // copy AFU
+                        loadObjectManager()
+                        loadLocal(afuLocal)
+                        loadLocal(nameLocal)
+                        invokeVirtual(OBJECT_MANAGER_TYPE, SET_OBJECT_NAME)
+                    }
+
+                    else -> visitMethodInsn(opcode, owner, mname, desc, isInterface)
                 }
-                else -> visitMethodInsn(opcode, owner, mname, desc, isInterface)
             }
-        }
     }
 
     /**
@@ -663,7 +757,8 @@ internal class ManagedStrategyTransformer(
             val isThreadLocalRandomMethod = owner == "java/util/concurrent/ThreadLocalRandom"
             val isStriped64Method = owner == "java/util/concurrent/atomic/Striped64"
             if (isThreadLocalRandomMethod && (name == "nextSecondarySeed" || name == "getProbe") ||
-                isStriped64Method && name == "getProbe") {
+                isStriped64Method && name == "getProbe"
+            ) {
                 loadRandom()
                 adapter.invokeVirtual(RANDOM_TYPE, NEXT_INT_METHOD)
                 return
@@ -681,12 +776,13 @@ internal class ManagedStrategyTransformer(
             adapter.getStatic(MANAGED_STATE_HOLDER_TYPE, ManagedStrategyStateHolder::random.name, RANDOM_TYPE)
         }
 
-        private fun extendsRandom(className: String) = java.util.Random::class.java.isAssignableFrom(Class.forName(className))
+        private fun extendsRandom(className: String) =
+            java.util.Random::class.java.isAssignableFrom(Class.forName(className))
 
         private fun isRandomMethod(methodName: String, desc: String): Boolean = randomMethods.any {
-                val method = Method.getMethod(it)
-                method.name == methodName && method.descriptor == desc
-            }
+            val method = Method.getMethod(it)
+            method.name == methodName && method.descriptor == desc
+        }
     }
 
     /**
@@ -702,7 +798,8 @@ internal class ManagedStrategyTransformer(
     /**
      * Adds invocations of ManagedStrategy methods before monitorenter and monitorexit instructions
      */
-    private inner class SynchronizedBlockTransformer(methodName: String, mv: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, mv) {
+    private inner class SynchronizedBlockTransformer(methodName: String, mv: GeneratorAdapter) :
+        ManagedStrategyMethodVisitor(methodName, mv) {
         override fun visitInsn(opcode: Int) = adapter.run {
             when (opcode) {
                 MONITORENTER -> {
@@ -718,6 +815,7 @@ internal class ManagedStrategyTransformer(
                     pop()
                     visitLabel(opEnd)
                 }
+
                 MONITOREXIT -> {
                     val opEnd = newLabel()
                     val skipMonitorExit: Label = newLabel()
@@ -731,22 +829,35 @@ internal class ManagedStrategyTransformer(
                     pop()
                     visitLabel(opEnd)
                 }
+
                 else -> visitInsn(opcode)
             }
         }
 
         // STACK: monitor
         private fun invokeBeforeLockAcquire() {
-            invokeBeforeLockAcquireOrRelease(BEFORE_LOCK_ACQUIRE_METHOD, ::MonitorEnterTracePoint, MONITORENTER_TRACE_POINT_TYPE)
+            invokeBeforeLockAcquireOrRelease(
+                BEFORE_LOCK_ACQUIRE_METHOD,
+                ::MonitorEnterTracePoint,
+                MONITORENTER_TRACE_POINT_TYPE
+            )
         }
 
         // STACK: monitor
         private fun invokeBeforeLockRelease() {
-            invokeBeforeLockAcquireOrRelease(BEFORE_LOCK_RELEASE_METHOD, ::MonitorExitTracePoint, MONITOREXIT_TRACE_POINT_TYPE)
+            invokeBeforeLockAcquireOrRelease(
+                BEFORE_LOCK_RELEASE_METHOD,
+                ::MonitorExitTracePoint,
+                MONITOREXIT_TRACE_POINT_TYPE
+            )
         }
 
         // STACK: monitor
-        private fun invokeBeforeLockAcquireOrRelease(method: Method, codeLocationConstructor: CodeLocationTracePointConstructor, tracePointType: Type) {
+        private fun invokeBeforeLockAcquireOrRelease(
+            method: Method,
+            codeLocationConstructor: CodeLocationTracePointConstructor,
+            tracePointType: Type
+        ) {
             val monitorLocal: Int = adapter.newLocal(OBJECT_TYPE)
             adapter.storeLocal(monitorLocal)
             loadStrategy()
@@ -760,7 +871,12 @@ internal class ManagedStrategyTransformer(
     /**
      * Replace "method(...) {...}" with "method(...) {synchronized(this) {...} }"
      */
-    private inner class SynchronizedBlockAddingTransformer(methodName: String, mv: GeneratorAdapter, access: Int, private val classVersion: Int) : ManagedStrategyMethodVisitor(methodName, mv) {
+    private inner class SynchronizedBlockAddingTransformer(
+        methodName: String,
+        mv: GeneratorAdapter,
+        access: Int,
+        private val classVersion: Int
+    ) : ManagedStrategyMethodVisitor(methodName, mv) {
         private val isStatic: Boolean = access and ACC_STATIC != 0
         private val tryLabel = Label()
         private val catchLabel = Label()
@@ -789,6 +905,7 @@ internal class ManagedStrategyTransformer(
                     loadSynchronizedMethodMonitorOwner()
                     adapter.monitorExit()
                 }
+
                 else -> {
                 }
             }
@@ -813,57 +930,60 @@ internal class ManagedStrategyTransformer(
     /**
      * Adds invocations of ManagedStrategy methods before wait and after notify calls
      */
-    private inner class WaitNotifyTransformer(methodName: String, mv: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, mv) {
-        override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
-            var skipWaitOrNotify = newLabel()
-            val isWait = isWait(opcode, name, desc)
-            val isNotify = isNotify(opcode, name, desc)
-            if (isWait) {
-                skipWaitOrNotify = newLabel()
-                val withTimeout = desc != "()V"
-                var lastArgument = 0
-                var firstArgument = 0
-                when (desc) {
-                    "(J)V" -> {
-                        firstArgument = newLocal(Type.LONG_TYPE)
-                        storeLocal(firstArgument)
+    private inner class WaitNotifyTransformer(methodName: String, mv: GeneratorAdapter) :
+        ManagedStrategyMethodVisitor(methodName, mv) {
+        override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) =
+            adapter.run {
+                var skipWaitOrNotify = newLabel()
+                val isWait = isWait(opcode, name, desc)
+                val isNotify = isNotify(opcode, name, desc)
+                if (isWait) {
+                    skipWaitOrNotify = newLabel()
+                    val withTimeout = desc != "()V"
+                    var lastArgument = 0
+                    var firstArgument = 0
+                    when (desc) {
+                        "(J)V" -> {
+                            firstArgument = newLocal(Type.LONG_TYPE)
+                            storeLocal(firstArgument)
+                        }
+
+                        "(JI)V" -> {
+                            lastArgument = newLocal(Type.INT_TYPE)
+                            storeLocal(lastArgument)
+                            firstArgument = newLocal(Type.LONG_TYPE)
+                            storeLocal(firstArgument)
+                        }
                     }
-                    "(JI)V" -> {
-                        lastArgument = newLocal(Type.INT_TYPE)
-                        storeLocal(lastArgument)
-                        firstArgument = newLocal(Type.LONG_TYPE)
-                        storeLocal(firstArgument)
+                    dup() // copy monitor
+                    invokeBeforeWait(withTimeout)
+                    val beforeWait: Label = newLabel()
+                    ifZCmp(GeneratorAdapter.GT, beforeWait)
+                    pop() // pop monitor
+                    goTo(skipWaitOrNotify)
+                    visitLabel(beforeWait)
+                    // restore popped arguments
+                    when (desc) {
+                        "(J)V" -> loadLocal(firstArgument)
+                        "(JI)V" -> {
+                            loadLocal(firstArgument)
+                            loadLocal(lastArgument)
+                        }
                     }
                 }
-                dup() // copy monitor
-                invokeBeforeWait(withTimeout)
-                val beforeWait: Label = newLabel()
-                ifZCmp(GeneratorAdapter.GT, beforeWait)
-                pop() // pop monitor
-                goTo(skipWaitOrNotify)
-                visitLabel(beforeWait)
-                // restore popped arguments
-                when (desc) {
-                    "(J)V" -> loadLocal(firstArgument)
-                    "(JI)V" -> {
-                         loadLocal(firstArgument)
-                         loadLocal(lastArgument)
-                     }
+                if (isNotify) {
+                    val notifyAll = name == "notifyAll"
+                    dup() // copy monitor
+                    invokeBeforeNotify(notifyAll)
+                    val beforeNotify = newLabel()
+                    ifZCmp(GeneratorAdapter.GT, beforeNotify)
+                    pop() // pop monitor
+                    goTo(skipWaitOrNotify)
+                    visitLabel(beforeNotify)
                 }
+                visitMethodInsn(opcode, owner, name, desc, itf)
+                visitLabel(skipWaitOrNotify)
             }
-            if (isNotify) {
-                val notifyAll = name == "notifyAll"
-                dup() // copy monitor
-                invokeBeforeNotify(notifyAll)
-                val beforeNotify = newLabel()
-                ifZCmp(GeneratorAdapter.GT, beforeNotify)
-                pop() // pop monitor
-                goTo(skipWaitOrNotify)
-                visitLabel(beforeNotify)
-            }
-            visitMethodInsn(opcode, owner, name, desc, itf)
-            visitLabel(skipWaitOrNotify)
-        }
 
         private fun isWait(opcode: Int, name: String, desc: String): Boolean {
             if (opcode == INVOKEVIRTUAL && name == "wait") {
@@ -891,7 +1011,12 @@ internal class ManagedStrategyTransformer(
         }
 
         // STACK: monitor
-        private fun invokeOnWaitOrNotify(method: Method, flag: Boolean, codeLocationConstructor: CodeLocationTracePointConstructor, tracePointType: Type) {
+        private fun invokeOnWaitOrNotify(
+            method: Method,
+            flag: Boolean,
+            codeLocationConstructor: CodeLocationTracePointConstructor,
+            tracePointType: Type
+        ) {
             val monitorLocal: Int = adapter.newLocal(OBJECT_TYPE)
             adapter.storeLocal(monitorLocal)
             loadStrategy()
@@ -906,47 +1031,49 @@ internal class ManagedStrategyTransformer(
     /**
      * Adds invocations of ManagedStrategy methods before park and after unpark calls
      */
-    private inner class ParkUnparkTransformer(methodName: String, mv: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, mv) {
-        override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
-            val beforePark: Label = newLabel()
-            val afterPark: Label = newLabel()
-            val isPark = owner.isUnsafe() && name == "park"
-            if (isPark) {
-                val withoutTimeoutBranch: Label = newLabel()
-                val invokeBeforeParkEnd: Label = newLabel()
-                dup2()
-                push(0L)
-                ifCmp(Type.LONG_TYPE, GeneratorAdapter.EQ, withoutTimeoutBranch)
-                push(true)
-                invokeBeforePark()
-                goTo(invokeBeforeParkEnd)
-                visitLabel(withoutTimeoutBranch)
-                push(false)
-                invokeBeforePark()
-                visitLabel(invokeBeforeParkEnd)
-                // check whether should really park 
-                ifZCmp(GeneratorAdapter.GT, beforePark) // park if returned true
-                // delete park params
-                pop2() // time
-                pop() // isAbsolute
-                pop() // Unsafe
-                goTo(afterPark)
+    private inner class ParkUnparkTransformer(methodName: String, mv: GeneratorAdapter) :
+        ManagedStrategyMethodVisitor(methodName, mv) {
+        override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) =
+            adapter.run {
+                val beforePark: Label = newLabel()
+                val afterPark: Label = newLabel()
+                val isPark = owner.isUnsafe() && name == "park"
+                if (isPark) {
+                    val withoutTimeoutBranch: Label = newLabel()
+                    val invokeBeforeParkEnd: Label = newLabel()
+                    dup2()
+                    push(0L)
+                    ifCmp(Type.LONG_TYPE, GeneratorAdapter.EQ, withoutTimeoutBranch)
+                    push(true)
+                    invokeBeforePark()
+                    goTo(invokeBeforeParkEnd)
+                    visitLabel(withoutTimeoutBranch)
+                    push(false)
+                    invokeBeforePark()
+                    visitLabel(invokeBeforeParkEnd)
+                    // check whether should really park
+                    ifZCmp(GeneratorAdapter.GT, beforePark) // park if returned true
+                    // delete park params
+                    pop2() // time
+                    pop() // isAbsolute
+                    pop() // Unsafe
+                    goTo(afterPark)
+                }
+                visitLabel(beforePark)
+                val isUnpark = owner.isUnsafe() && name == "unpark"
+                var threadLocal = 0
+                if (isUnpark) {
+                    dup()
+                    threadLocal = newLocal(OBJECT_TYPE)
+                    storeLocal(threadLocal)
+                }
+                visitMethodInsn(opcode, owner, name, desc, itf)
+                visitLabel(afterPark)
+                if (isUnpark) {
+                    loadLocal(threadLocal)
+                    invokeAfterUnpark()
+                }
             }
-            visitLabel(beforePark)
-            val isUnpark = owner.isUnsafe() && name == "unpark"
-            var threadLocal = 0
-            if (isUnpark) {
-                dup()
-                threadLocal = newLocal(OBJECT_TYPE)
-                storeLocal(threadLocal)
-            }
-            visitMethodInsn(opcode, owner, name, desc, itf)
-            visitLabel(afterPark)
-            if (isUnpark) {
-                loadLocal(threadLocal)
-                invokeAfterUnpark()
-            }
-        }
 
         // STACK: withTimeout
         private fun invokeBeforePark() {
@@ -975,13 +1102,21 @@ internal class ManagedStrategyTransformer(
      * Track local objects for odd switch points elimination.
      * A local object is an object that can be possible viewed only from one thread.
      */
-    private inner class LocalObjectManagingTransformer(methodName: String, mv: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, mv) {
-        override fun visitMethodInsn(opcode: Int, owner: String, name: String, descriptor: String, isInterface: Boolean) {
+    private inner class LocalObjectManagingTransformer(methodName: String, mv: GeneratorAdapter) :
+        ManagedStrategyMethodVisitor(methodName, mv) {
+        override fun visitMethodInsn(
+            opcode: Int,
+            owner: String,
+            name: String,
+            descriptor: String,
+            isInterface: Boolean
+        ) {
             val isObjectCreation = opcode == INVOKESPECIAL && name == "<init>" && owner == "java/lang/Object"
             val isImpossibleToTransformPrimitive = isImpossibleToTransformApiClass(owner.canonicalClassName)
             val lowerCaseName = name.toLowerCase(Locale.US)
             val isPrimitiveWrite = isImpossibleToTransformPrimitive && WRITE_KEYWORDS.any { it in lowerCaseName }
-            val isObjectPrimitiveWrite = isPrimitiveWrite && Type.getArgumentTypes(descriptor).lastOrNull()?.descriptor?.isNotPrimitiveType() ?: false
+            val isObjectPrimitiveWrite = isPrimitiveWrite && Type.getArgumentTypes(descriptor)
+                .lastOrNull()?.descriptor?.isNotPrimitiveType() ?: false
 
             when {
                 isObjectCreation -> {
@@ -989,6 +1124,7 @@ internal class ManagedStrategyTransformer(
                     adapter.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
                     invokeOnNewLocalObject()
                 }
+
                 isObjectPrimitiveWrite -> {
                     // the exact list of methods that should be matched here:
                     // Unsafe.put[Ordered]?Object[Volatile]?
@@ -1009,6 +1145,7 @@ internal class ManagedStrategyTransformer(
                     adapter.loadLocal(params.last())
                     invokeAddDependency()
                 }
+
                 else -> adapter.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
             }
         }
@@ -1038,6 +1175,7 @@ internal class ManagedStrategyTransformer(
                         adapter.dup()
                         invokeDeleteLocalObject()
                     }
+
                     PUTFIELD -> {
                         // we cannot invoke this method for final field, because an object may uninitialized yet
                         // will add dependency for final fields after <init> ends instead
@@ -1065,6 +1203,7 @@ internal class ManagedStrategyTransformer(
                     invokeAddDependency() // array, index
                     loadLocal(value) // array, index, value
                 }
+
                 RETURN -> if (methodName == "<init>") {
                     // handle all final field added dependencies
                     val ownerType = Type.getObjectType(className)
@@ -1124,8 +1263,16 @@ internal class ManagedStrategyTransformer(
         }
     }
 
-    private open inner class ManagedStrategyMethodVisitor(protected val methodName: String, val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, adapter) {
+    private open inner class ManagedStrategyMethodVisitor(
+        protected val methodName: String,
+        val adapter: GeneratorAdapter
+    ) : MethodVisitor(ASM_API, adapter) {
         private var lineNumber = 0
+        protected fun boxValue(type: Type) {
+            suppressedBoxCalls++
+            adapter.box(type)
+            suppressedBoxCalls--
+        }
 
         protected fun invokeBeforeIgnoredSectionEntering() {
             loadStrategy()
@@ -1148,11 +1295,19 @@ internal class ManagedStrategyTransformer(
         }
 
         protected fun loadStrategy() {
-            adapter.getStatic(MANAGED_STATE_HOLDER_TYPE, ManagedStrategyStateHolder::strategy.name, MANAGED_STRATEGY_TYPE)
+            adapter.getStatic(
+                MANAGED_STATE_HOLDER_TYPE,
+                ManagedStrategyStateHolder::strategy.name,
+                MANAGED_STRATEGY_TYPE
+            )
         }
 
         protected fun loadObjectManager() {
-            adapter.getStatic(MANAGED_STATE_HOLDER_TYPE, ManagedStrategyStateHolder::objectManager.name, OBJECT_MANAGER_TYPE)
+            adapter.getStatic(
+                MANAGED_STATE_HOLDER_TYPE,
+                ManagedStrategyStateHolder::objectManager.name,
+                OBJECT_MANAGER_TYPE
+            )
         }
 
         protected fun loadCurrentThreadNumber() {
@@ -1161,7 +1316,11 @@ internal class ManagedStrategyTransformer(
         }
 
         // STACK: (empty) -> code location, trace point
-        protected fun loadNewCodeLocationAndTracePoint(tracePointLocal: Int?, tracePointType: Type, codeLocationConstructor: CodeLocationTracePointConstructor) {
+        protected fun loadNewCodeLocationAndTracePoint(
+            tracePointLocal: Int?,
+            tracePointType: Type,
+            codeLocationConstructor: CodeLocationTracePointConstructor
+        ) {
             // push the codeLocation on stack
             adapter.push(codeLocationIdProvider.newId())
             // push the corresponding trace point
@@ -1249,6 +1408,7 @@ internal class ManagedStrategyTransformer(
 internal class CodeLocationIdProvider {
     var lastId = -1 // the first id will be zero
         private set
+
     fun newId() = ++lastId
 }
 
@@ -1315,17 +1475,20 @@ private val UNPARK_TRACE_POINT_TYPE = Type.getType(UnparkTracePoint::class.java)
 
 private val CURRENT_THREAD_NUMBER_METHOD = Method.getMethod(ManagedStrategy::currentThreadNumber.javaMethod)
 private val BEFORE_SHARED_VARIABLE_READ_METHOD = Method.getMethod(ManagedStrategy::beforeSharedVariableRead.javaMethod)
-private val BEFORE_SHARED_VARIABLE_WRITE_METHOD = Method.getMethod(ManagedStrategy::beforeSharedVariableWrite.javaMethod)
+private val BEFORE_SHARED_VARIABLE_WRITE_METHOD =
+    Method.getMethod(ManagedStrategy::beforeSharedVariableWrite.javaMethod)
 private val BEFORE_LOCK_ACQUIRE_METHOD = Method.getMethod(ManagedStrategy::beforeLockAcquire.javaMethod)
 private val BEFORE_LOCK_RELEASE_METHOD = Method.getMethod(ManagedStrategy::beforeLockRelease.javaMethod)
 private val BEFORE_WAIT_METHOD = Method.getMethod(ManagedStrategy::beforeWait.javaMethod)
 private val BEFORE_NOTIFY_METHOD = Method.getMethod(ManagedStrategy::beforeNotify.javaMethod)
 private val BEFORE_PARK_METHOD = Method.getMethod(ManagedStrategy::beforePark.javaMethod)
+private val BEFORE_REGULAR_METHOD_CALL = Method.getMethod(ManagedStrategy::beforeRegularMethodCall.javaMethod)
 private val AFTER_UNPARK_METHOD = Method.getMethod(ManagedStrategy::afterUnpark.javaMethod)
 private val ENTER_IGNORED_SECTION_METHOD = Method.getMethod(ManagedStrategy::enterIgnoredSection.javaMethod)
 private val LEAVE_IGNORED_SECTION_METHOD = Method.getMethod(ManagedStrategy::leaveIgnoredSection.javaMethod)
 private val BEFORE_METHOD_CALL_METHOD = Method.getMethod(ManagedStrategy::beforeMethodCall.javaMethod)
 private val AFTER_METHOD_CALL_METHOD = Method.getMethod(ManagedStrategy::afterMethodCall.javaMethod)
+private val AFTER_REGULAR_METHOD_CALL = Method.getMethod(ManagedStrategy::afterRegularMethodCall.javaMethod)
 private val MAKE_STATE_REPRESENTATION_METHOD = Method.getMethod(ManagedStrategy::addStateRepresentation.javaMethod)
 private val BEFORE_ATOMIC_METHOD_CALL_METHOD = Method.getMethod(ManagedStrategy::beforeAtomicMethodCall.javaMethod)
 private val CREATE_TRACE_POINT_METHOD = Method.getMethod(ManagedStrategy::createTracePoint.javaMethod)
@@ -1336,11 +1499,14 @@ private val ADD_DEPENDENCY_METHOD = Method.getMethod(ObjectManager::addDependenc
 private val SET_OBJECT_NAME = Method.getMethod(ObjectManager::setObjectName.javaMethod)
 private val GET_OBJECT_NAME = Method.getMethod(ObjectManager::getObjectName.javaMethod)
 private val GET_UNSAFE_METHOD = Method.getMethod(UnsafeHolder::getUnsafe.javaMethod)
-private val CLASS_FOR_NAME_METHOD = Method("forName", CLASS_TYPE, arrayOf(STRING_TYPE)) // manual, because there are several forName methods
+private val CLASS_FOR_NAME_METHOD =
+    Method("forName", CLASS_TYPE, arrayOf(STRING_TYPE)) // manual, because there are several forName methods
 private val INITIALIZE_WRITTEN_VALUE_METHOD = Method.getMethod(WriteTracePoint::initializeWrittenValue.javaMethod)
 private val INITIALIZE_READ_VALUE_METHOD = Method.getMethod(ReadTracePoint::initializeReadValue.javaMethod)
-private val INITIALIZE_RETURNED_VALUE_METHOD = Method.getMethod(MethodCallTracePoint::initializeReturnedValue.javaMethod)
-private val INITIALIZE_THROWN_EXCEPTION_METHOD = Method.getMethod(MethodCallTracePoint::initializeThrownException.javaMethod)
+private val INITIALIZE_RETURNED_VALUE_METHOD =
+    Method.getMethod(MethodCallTracePoint::initializeReturnedValue.javaMethod)
+private val INITIALIZE_THROWN_EXCEPTION_METHOD =
+    Method.getMethod(MethodCallTracePoint::initializeThrownException.javaMethod)
 private val INITIALIZE_PARAMETERS_METHOD = Method.getMethod(MethodCallTracePoint::initializeParameters.javaMethod)
 private val INITIALIZE_OWNER_NAME_METHOD = Method.getMethod(MethodCallTracePoint::initializeOwnerName.javaMethod)
 private val NEXT_INT_METHOD = Method("nextInt", Type.INT_TYPE, emptyArray<Type>())
@@ -1362,7 +1528,8 @@ private fun GeneratorAdapter.storeParameters(paramTypes: Array<Type>): IntArray 
     return locals
 }
 
-private fun GeneratorAdapter.storeParameters(methodDescriptor: String) = storeParameters(Type.getArgumentTypes(methodDescriptor))
+private fun GeneratorAdapter.storeParameters(methodDescriptor: String) =
+    storeParameters(Type.getArgumentTypes(methodDescriptor))
 
 /**
  * Returns array of locals containing given parameters.
@@ -1375,7 +1542,8 @@ private fun GeneratorAdapter.copyParameters(paramTypes: Array<Type>): IntArray {
     return locals
 }
 
-private fun GeneratorAdapter.copyParameters(methodDescriptor: String): IntArray = copyParameters(Type.getArgumentTypes(methodDescriptor))
+private fun GeneratorAdapter.copyParameters(methodDescriptor: String): IntArray =
+    copyParameters(Type.getArgumentTypes(methodDescriptor))
 
 private fun GeneratorAdapter.loadLocals(locals: IntArray) {
     for (local in locals)
@@ -1458,7 +1626,8 @@ private fun isSuspendStateMachine(internalClassName: String): Boolean {
 
 private fun isStrategyMethod(className: String) = className.startsWith("org/jetbrains/kotlinx/lincheck/strategy")
 
-private fun isAFU(owner: String) = owner.startsWith("java/util/concurrent/atomic/Atomic") && owner.endsWith("FieldUpdater")
+private fun isAFU(owner: String) =
+    owner.startsWith("java/util/concurrent/atomic/Atomic") && owner.endsWith("FieldUpdater")
 
 // returns true only the method is declared in this class and is not inherited
 private fun isClassMethod(owner: String, methodName: String, desc: String): Boolean =
@@ -1477,9 +1646,9 @@ private fun String.isUnsafe() = this == "sun/misc/Unsafe" || this == "jdk/intern
  */
 internal fun isImpossibleToTransformApiClass(className: String) =
     className == "sun.misc.Unsafe" ||
-        className == "jdk.internal.misc.Unsafe" ||
-        className == "java.lang.invoke.VarHandle" ||
-        className.startsWith("java.util.concurrent.atomic.Atomic") && className.endsWith("FieldUpdater")
+            className == "jdk.internal.misc.Unsafe" ||
+            className == "java.lang.invoke.VarHandle" ||
+            className.startsWith("java.util.concurrent.atomic.Atomic") && className.endsWith("FieldUpdater")
 
 /**
  * This class is used for getting the [sun.misc.Unsafe] or [jdk.internal.misc.Unsafe] instance.

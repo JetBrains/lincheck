@@ -81,7 +81,7 @@ private fun <T> findLastIndexNotRelatedToCycle(elements: List<T>, cycleLength: I
 /**
  * This class holds information about executions in exact thread and serves to find spin-cycles
  */
-internal class InterleavingHistoryNode(
+class InterleavingHistoryNode(
     val threadId: Int,
     var executions: Int = 0,
     /*
@@ -97,7 +97,8 @@ internal class InterleavingHistoryNode(
      * So, this field will give us such ability to separate executions.
      */
     var executionHash: Int = 0,
-    val spinCyclePeriod: Int = 0
+    val spinCyclePeriod: Int = 0,
+    val isRecursiveSpinLock: Boolean = false
 ) {
     val cycleOccurred: Boolean get() = spinCyclePeriod != 0
 
@@ -116,7 +117,8 @@ internal class InterleavingHistoryNode(
     fun asNodeCorrespondingToCycle(
         executionsBeforeCycle: Int,
         cyclePeriod: Int,
-        cycleExecutionsHash: Int
+        cycleExecutionsHash: Int,
+        isRecursiveSpinLock: Boolean
     ): InterleavingHistoryNode {
         check(executions >= executionsBeforeCycle)
 
@@ -124,14 +126,15 @@ internal class InterleavingHistoryNode(
             threadId = threadId,
             executions = executionsBeforeCycle,
             spinCyclePeriod = cyclePeriod,
-            executionHash = cycleExecutionsHash
+            executionHash = cycleExecutionsHash,
+            isRecursiveSpinLock = isRecursiveSpinLock
         )
     }
 
     fun copy() = InterleavingHistoryNode(
         threadId = threadId,
         executions = executions,
-        executionHash = executionHash
+        executionHash = executionHash,
     )
 
 

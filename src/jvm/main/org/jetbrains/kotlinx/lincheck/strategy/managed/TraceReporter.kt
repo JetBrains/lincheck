@@ -118,6 +118,23 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
         val event = tracePoints[eventId]
         val iThread = event.iThread
         val actorId = event.actorId
+        val callStackTrace = if (event !is SpinCycleStartTracePoint) {
+            event.callStackTrace
+        } else {
+            var stackTrace: MutableList<CallStackTraceElement> = event.callStackTrace.toMutableList()
+            for (spinCycleEventId in eventId + 1 until tracePoints.size) {
+                val spinCycleEvent = tracePoints[spinCycleEventId]
+                if (spinCycleEvent is SwitchEventTracePoint) break
+
+                if (spinCycleEvent.callStackTrace.size < stackTrace.size) {
+                    stackTrace = spinCycleEvent.callStackTrace.toMutableList()
+                }
+            }
+            if (event.isRecursive) {
+                stackTrace.removeLast() // as it is a recursive call
+            }
+            stackTrace
+        }
         // add all actors that started since the last event
         while (lastHandledActor[iThread] < min(actorId, scenario.threads[iThread].lastIndex)) {
             val nextActor = ++lastHandledActor[iThread]
@@ -136,7 +153,7 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
         }
         // add the event
         var innerNode: TraceInnerNode = actorNodes[iThread][actorId]!!
-        for (call in event.callStackTrace) {
+        for (call in callStackTrace) {
             val callId = call.identifier
             // Switch events that happen as a first event of the method are lifted out of the method in the trace
             if (!callNodes.containsKey(callId) && event is SwitchEventTracePoint) break

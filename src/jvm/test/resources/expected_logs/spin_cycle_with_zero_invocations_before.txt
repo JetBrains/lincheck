@@ -1,0 +1,53 @@
+= The execution has hung, see the thread dump =
+| ---------------------------- |
+| Thread 1  |     Thread 2     |
+| ---------------------------- |
+| trigger() | causesSpinLock() |
+| ---------------------------- |
+
+
+The following interleaving leads to the error:
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|                                                   Thread 1                                                    |                                                             Thread 2                                                             |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| trigger()                                                                                                     |                                                                                                                                  |
+|   incrementAndGet(): 1 at SpinCycleFirstExecutionIsFirstInMethodCallTest.trigger(FaaQueueSpinLockTest.kt:229) |                                                                                                                                  |
+|   switch                                                                                                      |                                                                                                                                  |
+|                                                                                                               | causesSpinLock()                                                                                                                 |
+|                                                                                                               |   get(): 1 at SpinCycleFirstExecutionIsFirstInMethodCallTest.causesSpinLock(FaaQueueSpinLockTest.kt:235)                         |
+|                                                                                                               |   deadSpinCycle() at SpinCycleFirstExecutionIsFirstInMethodCallTest.causesSpinLock(FaaQueueSpinLockTest.kt:236)                  |
+|                                                                                                               |     /* The following events repeat infinitely: */                                                                                |
+|                                                                                                               |     getSharedVariable(): false at SpinCycleFirstExecutionIsFirstInMethodCallTest.deadSpinCycle(FaaQueueSpinLockTest.kt:242)      |
+|                                                                                                               |     compareAndSet(false,true): true at SpinCycleFirstExecutionIsFirstInMethodCallTest.deadSpinCycle(FaaQueueSpinLockTest.kt:243) |
+|                                                                                                               |     switch (reason: active lock detected)                                                                                        |
+|   decrementAndGet(): 0 at SpinCycleFirstExecutionIsFirstInMethodCallTest.trigger(FaaQueueSpinLockTest.kt:230) |                                                                                                                                  |
+|                                                                                                               |     /* The following events repeat infinitely: */                                                                                |
+|                                                                                                               |     getSharedVariable(): true at SpinCycleFirstExecutionIsFirstInMethodCallTest.deadSpinCycle(FaaQueueSpinLockTest.kt:242)       |
+|                                                                                                               |     compareAndSet(true,false): true at SpinCycleFirstExecutionIsFirstInMethodCallTest.deadSpinCycle(FaaQueueSpinLockTest.kt:243) |
+|                                                                                                               |     switch (reason: active lock detected)                                                                                        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+All unfinished threads are in deadlock
+
+Detailed trace:
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|                                                   Thread 1                                                    |                                                             Thread 2                                                             |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| trigger()                                                                                                     |                                                                                                                                  |
+|   incrementAndGet(): 1 at SpinCycleFirstExecutionIsFirstInMethodCallTest.trigger(FaaQueueSpinLockTest.kt:229) |                                                                                                                                  |
+|   switch                                                                                                      |                                                                                                                                  |
+|                                                                                                               | causesSpinLock()                                                                                                                 |
+|                                                                                                               |   get(): 1 at SpinCycleFirstExecutionIsFirstInMethodCallTest.causesSpinLock(FaaQueueSpinLockTest.kt:235)                         |
+|                                                                                                               |   deadSpinCycle() at SpinCycleFirstExecutionIsFirstInMethodCallTest.causesSpinLock(FaaQueueSpinLockTest.kt:236)                  |
+|                                                                                                               |     /* The following events repeat infinitely: */                                                                                |
+|                                                                                                               |     getSharedVariable(): false at SpinCycleFirstExecutionIsFirstInMethodCallTest.deadSpinCycle(FaaQueueSpinLockTest.kt:242)      |
+|                                                                                                               |       get(): false at SpinCycleFirstExecutionIsFirstInMethodCallTest.getSharedVariable(FaaQueueSpinLockTest.kt:247)              |
+|                                                                                                               |     compareAndSet(false,true): true at SpinCycleFirstExecutionIsFirstInMethodCallTest.deadSpinCycle(FaaQueueSpinLockTest.kt:243) |
+|                                                                                                               |     switch (reason: active lock detected)                                                                                        |
+|   decrementAndGet(): 0 at SpinCycleFirstExecutionIsFirstInMethodCallTest.trigger(FaaQueueSpinLockTest.kt:230) |                                                                                                                                  |
+|                                                                                                               |     /* The following events repeat infinitely: */                                                                                |
+|                                                                                                               |     getSharedVariable(): true at SpinCycleFirstExecutionIsFirstInMethodCallTest.deadSpinCycle(FaaQueueSpinLockTest.kt:242)       |
+|                                                                                                               |       get(): true at SpinCycleFirstExecutionIsFirstInMethodCallTest.getSharedVariable(FaaQueueSpinLockTest.kt:247)               |
+|                                                                                                               |     compareAndSet(true,false): true at SpinCycleFirstExecutionIsFirstInMethodCallTest.deadSpinCycle(FaaQueueSpinLockTest.kt:243) |
+|                                                                                                               |     switch (reason: active lock detected)                                                                                        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+All unfinished threads are in deadlock
