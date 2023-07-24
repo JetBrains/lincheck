@@ -1,0 +1,57 @@
+= The execution has hung, see the thread dump =
+| --------------------------- |
+| Thread 1  |    Thread 2     |
+| --------------------------- |
+| trigger() | dumbOperation() |
+| --------------------------- |
+
+
+The following interleaving leads to the error:
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|                                           Thread 1                                           |                                                Thread 2                                                 |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|   trigger()                                                                                  |                                                                                                         |
+|     incrementAndGet(): 1 at StupidRecursiveSpinLockTest.trigger(FaaQueueSpinLockTest.kt:327) |                                                                                                         |
+|     switch                                                                                   |                                                                                                         |
+|                                                                                              |   dumbOperation()                                                                                       |
+|                                                                                              |     get(): 1 at StupidRecursiveSpinLockTest.dumbOperation(FaaQueueSpinLockTest.kt:313)                  |
+|                                                                                              |     /* The following events recursively repeat infinitely: */                                           |
+|                                                                                              | ┌—> recursiveDeadlock() at StupidRecursiveSpinLockTest.dumbOperation(FaaQueueSpinLockTest.kt:314)       |
+|                                                                                              | |     get(): false at StupidRecursiveSpinLockTest.recursiveDeadlock(FaaQueueSpinLockTest.kt:320)        |
+|                                                                                              | |     set(true) at StupidRecursiveSpinLockTest.recursiveDeadlock(FaaQueueSpinLockTest.kt:321)           |
+|                                                                                              | └—————/* The next call would cause infinite recursion spin-lock, switch to avoid it */                  |
+|                                                                                              |       switch (reason: active recursive lock detected)                                                   |
+|     decrementAndGet(): 0 at StupidRecursiveSpinLockTest.trigger(FaaQueueSpinLockTest.kt:328) |                                                                                                         |
+|                                                                                              |       /* The following events recursively repeat infinitely: */                                         |
+|                                                                                              |   ┌—> recursiveDeadlock() at StupidRecursiveSpinLockTest.recursiveDeadlock(FaaQueueSpinLockTest.kt:322) |
+|                                                                                              |   |     get(): true at StupidRecursiveSpinLockTest.recursiveDeadlock(FaaQueueSpinLockTest.kt:320)       |
+|                                                                                              |   |     set(false) at StupidRecursiveSpinLockTest.recursiveDeadlock(FaaQueueSpinLockTest.kt:321)        |
+|                                                                                              |   └—————/* The next call would cause infinite recursion spin-lock, switch to avoid it */                |
+|                                                                                              |         switch (reason: active recursive lock detected)                                                 |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+All unfinished threads are in deadlock
+
+Detailed trace:
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|                                           Thread 1                                           |                                                Thread 2                                                 |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|   trigger()                                                                                  |                                                                                                         |
+|     incrementAndGet(): 1 at StupidRecursiveSpinLockTest.trigger(FaaQueueSpinLockTest.kt:327) |                                                                                                         |
+|     switch                                                                                   |                                                                                                         |
+|                                                                                              |   dumbOperation()                                                                                       |
+|                                                                                              |     get(): 1 at StupidRecursiveSpinLockTest.dumbOperation(FaaQueueSpinLockTest.kt:313)                  |
+|                                                                                              |     /* The following events recursively repeat infinitely: */                                           |
+|                                                                                              | ┌—> recursiveDeadlock() at StupidRecursiveSpinLockTest.dumbOperation(FaaQueueSpinLockTest.kt:314)       |
+|                                                                                              | |     get(): false at StupidRecursiveSpinLockTest.recursiveDeadlock(FaaQueueSpinLockTest.kt:320)        |
+|                                                                                              | |     set(true) at StupidRecursiveSpinLockTest.recursiveDeadlock(FaaQueueSpinLockTest.kt:321)           |
+|                                                                                              | └—————/* The next call would cause infinite recursion spin-lock, switch to avoid it */                  |
+|                                                                                              |       switch (reason: active recursive lock detected)                                                   |
+|     decrementAndGet(): 0 at StupidRecursiveSpinLockTest.trigger(FaaQueueSpinLockTest.kt:328) |                                                                                                         |
+|                                                                                              |       /* The following events recursively repeat infinitely: */                                         |
+|                                                                                              |   ┌—> recursiveDeadlock() at StupidRecursiveSpinLockTest.recursiveDeadlock(FaaQueueSpinLockTest.kt:322) |
+|                                                                                              |   |     get(): true at StupidRecursiveSpinLockTest.recursiveDeadlock(FaaQueueSpinLockTest.kt:320)       |
+|                                                                                              |   |     set(false) at StupidRecursiveSpinLockTest.recursiveDeadlock(FaaQueueSpinLockTest.kt:321)        |
+|                                                                                              |   └—————/* The next call would cause infinite recursion spin-lock, switch to avoid it */                |
+|                                                                                              |         switch (reason: active recursive lock detected)                                                 |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+All unfinished threads are in deadlock

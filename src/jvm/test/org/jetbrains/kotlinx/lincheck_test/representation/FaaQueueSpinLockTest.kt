@@ -25,7 +25,6 @@ import kotlinx.atomicfu.atomic
 import kotlinx.atomicfu.atomicArrayOfNulls
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
-import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
@@ -261,7 +260,7 @@ class SpinCycleFirstExecutionIsFirstInMethodCallTest {
         .checkLincheckOutput("spin_cycle_with_zero_invocations_before.txt")
 }
 
-class RecursiveSpiLockTest {
+class RecursiveSpinLockTest {
 
     val counter = AtomicInteger(0)
     private val someUselessSharedState = AtomicBoolean(false)
@@ -300,5 +299,43 @@ class RecursiveSpiLockTest {
         .minimizeFailedScenario(false)
         .checkImpl(this::class.java)
         .checkLincheckOutput("spin_lock_recursion_single_thread.txt")
+
+}
+
+class StupidRecursiveSpinLockTest {
+
+    val c = AtomicInteger(0)
+    val s = AtomicBoolean(false)
+
+    @Operation
+    fun dumbOperation() {
+        if (c.get() != 0) {
+            recursiveDeadlock()
+        }
+    }
+
+    @Operation
+    fun recursiveDeadlock() {
+        val x = s.get()
+        s.set(!x)
+        recursiveDeadlock()
+    }
+
+    @Operation
+    fun trigger() {
+        c.incrementAndGet()
+        c.decrementAndGet()
+    }
+
+    @Test
+    fun test() = ModelCheckingOptions()
+        .addCustomScenario {
+            parallel {
+                thread { actor(StupidRecursiveSpinLockTest::trigger) }
+                thread { actor(StupidRecursiveSpinLockTest::dumbOperation) }
+            }
+        }
+        .checkImpl(this::class.java)
+        .checkLincheckOutput("dumb_recursive_spin_lock.txt")
 
 }

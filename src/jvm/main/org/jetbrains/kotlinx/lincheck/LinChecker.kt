@@ -71,7 +71,6 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             if ((i + 1) % VERIFIER_REFRESH_CYCLE == 0)
                 verifier = createVerifier()
             val scenario = exGen.nextExecution()
-            scenariosCount.incrementAndGet()
             scenario.validate()
             reporter.logIteration(i + 1 + customScenarios.size, iterations, scenario)
             val failure = scenario.run(this, verifier)
@@ -170,5 +169,3 @@ fun <O : Options<O, *>> O.check(testClass: Class<*>) = LinChecker.check(testClas
 fun <O : Options<O, *>> O.check(testClass: KClass<*>) = this.check(testClass.java)
 
 internal fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>) = LinChecker(testClass, this).checkImpl()
-
-val scenariosCount = AtomicInteger(0)

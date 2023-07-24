@@ -413,11 +413,6 @@ internal class ManagedStrategyTransformer(
 
                     adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_REGULAR_METHOD_CALL)
 
-//                    if (constructTraceRepresentation) {
-//                        val x = methodName
-//                        println("class: $className, methodName: $methodName, name = $name, owner = $owner")
-//                        Unit
-//                    }
                     adapter.visitMethodInsn(opcode, owner, name, desc, itf)
 
                     loadStrategy()

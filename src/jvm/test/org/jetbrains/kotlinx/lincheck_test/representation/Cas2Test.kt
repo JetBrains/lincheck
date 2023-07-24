@@ -27,12 +27,6 @@ import org.junit.Test
 class AtomicArrayWithCAS2Test {
     private val array = AtomicArrayWithCAS2(ARRAY_SIZE, 0)
 
-//    @Operation(params = ["index"])
-//    fun get(index: Int) = array.get(index)
-//
-//    @Operation(params = ["index", "value", "value"])
-//    fun cas(index: Int, expected: Int, update: Int) = array.cas(index, expected, update)
-
     @Operation(params = ["index", "value", "value", "index", "value", "value"])
     fun cas2_0(
         index1: Int, expected1: Int, update1: Int,
@@ -57,11 +51,6 @@ class AtomicArrayWithCAS2Test {
             }
             .iterations(500)
             .invocationsPerIteration(1000)
-            .actorsBefore(2)
-            .threads(3)
-            .actorsPerThread(2)
-            .actorsAfter(2)
-            .checkObstructionFreedom(false)
             .sequentialSpecification(IntAtomicArraySequential::class.java)
             .checkImpl(this::class.java)
             .checkLincheckOutput("cas2.txt")

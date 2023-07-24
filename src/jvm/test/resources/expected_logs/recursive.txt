@@ -25,7 +25,7 @@ The following interleaving leads to the error:
 |                                                                                     |     compareAndSet(false,true): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)   |
 |                                                                                     |     getSharedVariable(): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:284)         |
 |                                                                                     |     compareAndSet(true,false): true at RecursiveSpiLockTest.deadSpinCycleRecursive(FaaQueueSpinLockTest.kt:285)   |
-|                                                                                     |     /* The following call would cause infinite recursion spin-lock, switch to avoid it */                                   |
+|                                                                                     |     /* The following call e */                                   |
 |                                                                                     |     deadSpinCycleRecursive() at RecursiveSpiLockTest.causesSpinLock(FaaQueueSpinLockTest.kt:278)                  |
 |                                                                                     |     switch (reason: active recursive lock detected)                                                                         |
 |   decrementAndGet(): 0 at RecursiveSpiLockTest.trigger(FaaQueueSpinLockTest.kt:272) |                                                                                                                   |

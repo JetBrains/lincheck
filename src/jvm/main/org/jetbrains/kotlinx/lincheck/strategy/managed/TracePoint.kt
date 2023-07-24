@@ -282,6 +282,7 @@ internal enum class SwitchReason(private val reason: String) {
     MONITOR_WAIT("wait on monitor"),
     LOCK_WAIT("lock is already acquired"),
     ACTIVE_LOCK("active lock detected"),
+    ACTIVE_RECURSIVE_LOCK("active recursive lock detected"),
     SUSPENDED("coroutine is suspended"),
     STRATEGY_SWITCH("");
 
