@@ -310,6 +310,7 @@ abstract class ManagedStrategy(
         codeLocation: Int,
         tracePoint: TracePoint?
     ) {
+        val shouldSwitchDueToStrategy = shouldSwitch(iThread)
         val spinLockDetected = loopDetector.visitCodeLocation(iThread, codeLocation)
 
         if (spinLockDetected) {
@@ -319,7 +320,6 @@ abstract class ManagedStrategy(
                 OBSTRUCTION_FREEDOM_SPINLOCK_VIOLATION_MESSAGE
             }
         }
-        val shouldSwitchDueToStrategy = shouldSwitch(iThread)
         if (shouldSwitchDueToStrategy or spinLockDetected) {
             if (spinLockDetected) {
                 switchCurrentThreadDueToActiveLock(iThread, loopDetector.replayModeCurrentCyclePeriod)
@@ -811,6 +811,13 @@ abstract class ManagedStrategy(
     }
 
     /**
+     * Is called when spin cycle was found.
+     *
+     * @param executionsPerformedInCycle the count of executions was performed in this cycle
+     */
+    abstract fun onNewSpinCycleRegistered(executionsPerformedInCycle: Int)
+
+    /**
      * The LoopDetector class identifies loops, active locks, and live locks by monitoring the frequency of visits to the same code location.
      * It operates under a specific scenario constraint due to its reliance on cache information about loops,
      * determined by thread executions and switches, which is only reusable in a single scenario.
@@ -1013,6 +1020,7 @@ abstract class ManagedStrategy(
             so we need to [threadId = 1, executions = 5] execution part to have a hash equals to next cycle nodes,
             because we will take only thread executions before cycle and the first cycle iteration.
              */
+            onNewSpinCycleRegistered(currentThreadCodeLocationsHistory.size - cycleInfo.executionsBeforeCycle)
             var cycleExecutionLocationsHash = currentThreadCodeLocationsHistory[cycleInfo.executionsBeforeCycle]
             for (i in cycleInfo.executionsBeforeCycle + 1 until cycleInfo.executionsBeforeCycle + cycleInfo.cyclePeriod) {
                 cycleExecutionLocationsHash = cycleExecutionLocationsHash xor currentThreadCodeLocationsHistory[i]

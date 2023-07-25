@@ -14,9 +14,7 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 
 import kotlinx.atomicfu.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.checkImpl
-import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
 import org.junit.Test
@@ -35,46 +33,12 @@ class BoundedQueueTest {
     fun dequeue() = queue.dequeue() != null
 
     @Test
-    fun modelCheckingTest() =
-        ModelCheckingOptions()
-            .addCustomScenario {
-                initial {
-                    actor(BoundedQueueTest::enqueue, 1)
-                    actor(BoundedQueueTest::dequeue)
-                }
-                parallel {
-                    thread {
-                        actor(BoundedQueueTest::dequeue)
-                        actor(BoundedQueueTest::enqueue, 1)
-                    }
-                    thread {
-                        actor(BoundedQueueTest::enqueue, 1)
-                        actor(BoundedQueueTest::dequeue)
-                    }
-                    thread {
-                        actor(BoundedQueueTest::enqueue, 2)
-                        actor(BoundedQueueTest::enqueue, 1)
-                    }
-                }
-                post {
-                    actor(BoundedQueueTest::dequeue)
-                    actor(BoundedQueueTest::dequeue)
-                }
-            }
-            .checkImpl(this::class.java)
-            .checkLincheckOutput("bounded_queue_incorrect_results.txt")
-
-}
-
-@Suppress("unused")
-class BoundedIntQueueSequential {
-    private val q = ArrayList<Int>()
-
-    fun enqueue(element: Int) {
-        q.add(element)
-    }
-
-    fun dequeue() = q.removeFirstOrNull() != null
+    fun modelCheckingTest() = ModelCheckingOptions()
+        .iterations(1_000)
+        .invocationsPerIteration(2_000)
+        .minimizeFailedScenario(true)
+        .checkImpl(this::class.java)
+        .checkLincheckOutput("bounded_queue_incorrect_results.txt")
 }
 
 class QueueAdaptor<T> {
@@ -111,7 +75,10 @@ class QueueAdaptor<T> {
 
 private const val CAPACITY = 10
 
-// Based on https://www.1024cores.net/home/lock-free-algorithms/queues/bounded-mpmc-queue
+/**
+ * Broken BoundedQueue implementation to check that bug can be found in the model checking mode.
+ * Based on https://www.1024cores.net/home/lock-free-algorithms/queues/bounded-mpmc-queue
+ */
 class BoundedQueue<E> {
     private val buffer = Array(CAPACITY) {
         Cell(it.toLong(), null)
@@ -131,8 +98,6 @@ class BoundedQueue<E> {
                     cell.sequence.value = pos + 1
                     return
                 }
-            } else if (dif < 0) {
-                error("Can't get here in the test")
             } else {
                 pos = enqueuePos.value
             }
