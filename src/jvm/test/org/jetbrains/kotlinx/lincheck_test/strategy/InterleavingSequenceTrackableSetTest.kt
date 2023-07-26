@@ -10,7 +10,7 @@
 
 @file:Suppress("SameParameterValue")
 
-package org.jetbrains.kotlinx.lincheck.test.strategy
+package org.jetbrains.kotlinx.lincheck_test.strategy
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.InterleavingSequenceTrackableSet
 import org.jetbrains.kotlinx.lincheck.strategy.managed.InterleavingHistoryNode
@@ -42,17 +42,17 @@ class InterleavingSequenceTrackableSetTest {
             listOf(
                 node(0, 5),
                 node(1, 1, 1),
-                node(2, 1, 1)
+                node(2, 1, 3)
             )
         )
         walkChainFromStart(
             steps(0, 5),
-            steps(1, 1, true)
+            steps(1, 2, true)
         )
         walkChainFromStart(
             steps(0, 5),
-            steps(1, 1, true),
-            steps(2, 1, true)
+            steps(1, 2, true),
+            steps(2, 4, true)
         )
     }
 
@@ -74,12 +74,12 @@ class InterleavingSequenceTrackableSetTest {
 
         walkChainFromStart(
             steps(1, 3),
-            steps(0, 3, true)
+            steps(0, 4, true)
         )
         walkChainFromStart(
             steps(1, 3),
             steps(0, 2),
-            steps(1, 3, true)
+            steps(1, 4, true)
         )
     }
 
@@ -94,27 +94,27 @@ class InterleavingSequenceTrackableSetTest {
         addBranch(
             listOf(
                 node(1, 2),
-                node(0, 0, 1),
+                node(0, 0, 2),
             )
         )
         addBranch(
             listOf(
                 node(1, 31),
-                node(0, 0, 1),
+                node(0, 0, 3),
             )
         )
 
         walkChainFromStart(
             steps(1, 47),
-            steps(0, 0, true)
+            steps(0, 1, true)
         )
         walkChainFromStart(
             steps(1, 2),
-            steps(0, 0, true)
+            steps(0, 2, true)
         )
         walkChainFromStart(
             steps(1, 31),
-            steps(0, 0, true)
+            steps(0, 3, true)
         )
     }
 
@@ -134,7 +134,7 @@ class InterleavingSequenceTrackableSetTest {
                 node(2, 3),
                 node(3, 4),
                 node(4, 3),
-                node(2, 0, 1),
+                node(2, 0, 4),
             )
         )
 
@@ -143,7 +143,7 @@ class InterleavingSequenceTrackableSetTest {
             steps(1, 4),
             steps(2, 3),
             steps(3, 4),
-            steps(1, 0, true)
+            steps(1, 1, true)
         )
 
         walkChainFromStart(
@@ -151,7 +151,7 @@ class InterleavingSequenceTrackableSetTest {
             steps(2, 3),
             steps(3, 4),
             steps(4, 3),
-            steps(2, 0, true),
+            steps(2, 4, true),
         )
     }
 
@@ -180,7 +180,7 @@ class InterleavingSequenceTrackableSetTest {
             steps(1, 4),
             steps(2, 3),
             steps(3, 4),
-            steps(1, 0, true)
+            steps(1, 1, true)
         )
 
         walkChainFromStart(
@@ -188,7 +188,7 @@ class InterleavingSequenceTrackableSetTest {
             steps(2, 3),
             steps(3, 2),
             steps(4, 3),
-            steps(2, 0, true),
+            steps(2, 1, true),
         )
     }
 
@@ -207,7 +207,7 @@ class InterleavingSequenceTrackableSetTest {
                 node(1, 4),
                 node(2, 3),
                 node(3, 2),
-                node(1, 0),
+                node(1, 1),
                 node(3, 3),
                 node(2, 0, 1),
             )
@@ -218,16 +218,16 @@ class InterleavingSequenceTrackableSetTest {
             steps(1, 4),
             steps(2, 3),
             steps(3, 2),
-            steps(1, 0, true)
+            steps(1, 1, true)
         )
 
         walkChainFromStart(
             steps(1, 4),
             steps(2, 3),
             steps(3, 2),
-            steps(1, 0, true),
+            steps(1, 1, true),
             steps(3, 3),
-            steps(2, 0, true),
+            steps(2, 1, true),
         )
     }
 
@@ -238,7 +238,7 @@ class InterleavingSequenceTrackableSetTest {
                 node(1, 4),
                 node(2, 3),
                 node(3, 2),
-                node(1, 0, 1),
+                node(1, 5, 1),
             )
         )
         resetCursor(1)
@@ -248,7 +248,7 @@ class InterleavingSequenceTrackableSetTest {
             steps(1, 4),
             steps(2, 3),
             steps(3, 2),
-            steps(1, 0, true)
+            steps(1, 6, true)
         )
 
         repeat(10) { onNewExecutionAndAssertCycle(true) }

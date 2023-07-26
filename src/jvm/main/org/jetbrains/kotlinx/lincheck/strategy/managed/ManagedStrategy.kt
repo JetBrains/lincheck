@@ -279,7 +279,7 @@ abstract class ManagedStrategy(
 
         if (loopDetector.replayModeEnabled) {
             /*
-             When replaying executions it's important to repeat the same executions and switches,
+             When replaying executions, it's important to repeat the same executions and switches,
              that were recorded to loopDetector history during the last execution.
              For example, let's consider that interleaving say us to switch from thread 1 to thread 2
              at the execution position 200. But after execution 10 spin cycle with period 2 occurred,
@@ -295,11 +295,11 @@ abstract class ManagedStrategy(
             newSwitchPointInReplayMode(iThread, codeLocation, tracePoint)
         } else {
             /*
-            In the regular mode we use loop detector only to determine should we
+            In the regular mode, we use loop detector only to determine should we
             switch current thread or not due to new or early detection of spin locks. Regular switches appears
             according to the current interleaving.
              */
-            newSwitchPointRegular(iThread, codeLocation, tracePoint)
+            newSwitchPointRegular(iThread, codeLocation)
         }
         traceCollector?.passCodeLocation(tracePoint)
         // continue the operation
@@ -307,16 +307,13 @@ abstract class ManagedStrategy(
 
     private fun newSwitchPointRegular(
         iThread: Int,
-        codeLocation: Int,
-        tracePoint: TracePoint?
+        codeLocation: Int
     ) {
         val shouldSwitchDueToStrategy = shouldSwitch(iThread)
         val spinLockDetected = loopDetector.visitCodeLocation(iThread, codeLocation)
 
         if (spinLockDetected) {
             failIfObstructionFreedomIsRequired {
-                // Log the last event that caused obstruction freedom violation
-                traceCollector?.passCodeLocation(tracePoint)
                 OBSTRUCTION_FREEDOM_SPINLOCK_VIOLATION_MESSAGE
             }
         }
@@ -873,7 +870,7 @@ abstract class ManagedStrategy(
          * we have to start from 1 its executions counter. This set helps us to determine if some thread is running
          * for the first time in an execution or not.
          */
-        private val threadsRan: MutableSet<Int> = hashSetOf()
+        private val threadsRan: BooleanArray = BooleanArray(nThreads) { false }
 
         /**
          * Set of interleaving event sequences lead to loops. (A set of previously detected hangs)
@@ -922,6 +919,7 @@ abstract class ManagedStrategy(
          * `false` otherwise.
          */
         fun visitCodeLocation(iThread: Int, codeLocation: Int): Boolean {
+            threadsRan[iThread] = true
             replayModeLoopDetectorHelper?.let { return it.onNextExecution() }
             // Increase the total number of happened operations for live-lock detection
             totalExecutionsCount++
@@ -968,7 +966,7 @@ abstract class ManagedStrategy(
                 in current thread part as it was called before switch.
                 So, we're tracking that to maintain the number of performed operations correctly.
              */
-            val threadRunningFirstTime = threadsRan.add(nextThread)
+            val threadRunningFirstTime = !threadsRan[nextThread]
             if (currentInterleavingHistory.isNotEmpty() && currentInterleavingHistory.last().threadId == nextThread) {
                 return
             }
@@ -1020,7 +1018,7 @@ abstract class ManagedStrategy(
             so we need to [threadId = 1, executions = 5] execution part to have a hash equals to next cycle nodes,
             because we will take only thread executions before cycle and the first cycle iteration.
              */
-            onNewSpinCycleRegistered(executionsBeforeCycle = cycleInfo.executionsBeforeCycle)
+            onNewSpinCycleRegistered(executionsBeforeCycle = cycleInfo.executionsBeforeCycle + cycleInfo.cyclePeriod)
             var cycleExecutionLocationsHash = currentThreadCodeLocationsHistory[cycleInfo.executionsBeforeCycle]
             for (i in cycleInfo.executionsBeforeCycle + 1 until cycleInfo.executionsBeforeCycle + cycleInfo.cyclePeriod) {
                 cycleExecutionLocationsHash = cycleExecutionLocationsHash xor currentThreadCodeLocationsHistory[i]
@@ -1040,7 +1038,7 @@ abstract class ManagedStrategy(
          * Is called before each interleaving part processing
          */
         fun beforePart(nextThread: Int) {
-            threadsRan.clear()
+            clearRanThreads()
             if (!firstThreadSet) {
                 setFirstThread(nextThread)
             } else if (lastExecutedThread != nextThread) {
@@ -1053,6 +1051,12 @@ abstract class ManagedStrategy(
          */
         fun initialize() {
             lastExecutedThread = -1
+            clearRanThreads()
+        }
+        private fun clearRanThreads() {
+            for (i in 0 until nThreads) {
+                threadsRan[i] = false
+            }
         }
 
         private fun setFirstThread(iThread: Int) {
@@ -1112,9 +1116,6 @@ abstract class ManagedStrategy(
             currentInterleavingNodeIndex = 0
             executionsPerformedInCurrentThread = 0
             threadsRan.clear()
-            if (executionPart == ExecutionPart.PARALLEL) {
-                threadsRan.add(startThread) // newSwitchPoint method is not called before methods in INIT and POST parts
-            }
         }
 
         /**

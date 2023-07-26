@@ -234,7 +234,7 @@ internal class InterleavingSequenceTrackableSet {
         fun mergeBranch(newChain: List<InterleavingHistoryNode>, startIndex: Int, executionsCountedEarlier: Int) {
             if (startIndex > newChain.lastIndex) return
             val firstNewNode = newChain[startIndex]
-            val firstNewNodeExecutions = firstNewNode.executions - executionsCountedEarlier
+            val firstNewNodeExecutions = (firstNewNode.executions + firstNewNode.spinCyclePeriod) - executionsCountedEarlier
             check(firstNewNode.threadId == threadId)
 
             when {
@@ -302,10 +302,11 @@ internal class InterleavingSequenceTrackableSet {
         require(startIndex <= chain.lastIndex)
 
         val first = chain[startIndex]
+        val firstExecutions = first.executions + first.spinCyclePeriod
 
         val root = InterleavingSequenceSetNode(
             threadId = first.threadId,
-            executions = first.executions - executionsCountedEarlier,
+            executions = firstExecutions - executionsCountedEarlier,
             cycleOccurred = first.cycleOccurred,
         )
         var current = root
@@ -314,7 +315,7 @@ internal class InterleavingSequenceTrackableSet {
             val next = chain[i]
             val nextNode = InterleavingSequenceSetNode(
                 threadId = next.threadId,
-                executions = next.executions,
+                executions = next.executions + next.spinCyclePeriod,
                 cycleOccurred = next.cycleOccurred,
             )
             current.addTransition(next.threadId, nextNode)
@@ -414,7 +415,7 @@ internal class InterleavingSequenceTrackableSet {
          * because after we ran into the cycle, it doesn't matter how many actions we will do - we will anyway stay in that cycle
          */
         fun onNextExecutionPoint(): Unit = ifValid { node ->
-            // If we get into a cycle than no matter how many executions we will perform in the current thread -
+            // If we get into a cycle, then no matter how many executions we will perform in the current thread -
             // we still will be in a cycle
             if (node.cycleOccurred && executionsCount == node.executions) {
                 return
