@@ -88,8 +88,8 @@ internal class ModelCheckingStrategy(
         super.initializeInvocation()
     }
 
-    override fun onNewSpinCycleRegistered(executionsPerformedInCycle: Int) {
-        currentInterleaving.cutSpinLockEvents(executionsPerformedInCycle)
+    override fun onNewSpinCycleRegistered(executionsBeforeCycle: Int) {
+        currentInterleaving.cutSpinLockEvents(executionsBeforeCycle)
     }
 
     override fun beforePart(part: ExecutionPart) {
@@ -278,12 +278,12 @@ internal class ModelCheckingStrategy(
             }
         }
 
-        fun cutSpinLockEvents(countToCut: Int) {
+        fun cutSpinLockEvents(executionsBeforeCycle: Int) {
             lastNotInitializedNodeChoices?.let { list ->
-                check(countToCut <= list.size) { "Internal error during spin lock detection" }
+                check(executionsBeforeCycle <= list.size) { "Internal error during spin lock detection" }
                 // Batch-remove countToCut elements from the end
-                list.subList(list.size - countToCut, list.size).clear()
-                executionPosition -= countToCut
+                list.subList(executionsBeforeCycle, list.size).clear()
+                executionPosition -= executionsBeforeCycle
                 // executionPosition is initialized with -1, see field declaration doc
                 check(executionPosition + 1 >= 0) { "Internal error during spin lock detection" }
             }

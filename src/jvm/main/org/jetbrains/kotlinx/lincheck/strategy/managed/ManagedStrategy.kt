@@ -813,9 +813,9 @@ abstract class ManagedStrategy(
     /**
      * Is called when spin cycle was found.
      *
-     * @param executionsPerformedInCycle the count of executions was performed in this cycle
+     * @param executionsBeforeCycle the count of executions in current thread before cycle
      */
-    abstract fun onNewSpinCycleRegistered(executionsPerformedInCycle: Int)
+    abstract fun onNewSpinCycleRegistered(executionsBeforeCycle: Int)
 
     /**
      * The LoopDetector class identifies loops, active locks, and live locks by monitoring the frequency of visits to the same code location.
@@ -1020,7 +1020,7 @@ abstract class ManagedStrategy(
             so we need to [threadId = 1, executions = 5] execution part to have a hash equals to next cycle nodes,
             because we will take only thread executions before cycle and the first cycle iteration.
              */
-            onNewSpinCycleRegistered(currentThreadCodeLocationsHistory.size - cycleInfo.executionsBeforeCycle)
+            onNewSpinCycleRegistered(executionsBeforeCycle = cycleInfo.executionsBeforeCycle)
             var cycleExecutionLocationsHash = currentThreadCodeLocationsHistory[cycleInfo.executionsBeforeCycle]
             for (i in cycleInfo.executionsBeforeCycle + 1 until cycleInfo.executionsBeforeCycle + cycleInfo.cyclePeriod) {
                 cycleExecutionLocationsHash = cycleExecutionLocationsHash xor currentThreadCodeLocationsHistory[i]
