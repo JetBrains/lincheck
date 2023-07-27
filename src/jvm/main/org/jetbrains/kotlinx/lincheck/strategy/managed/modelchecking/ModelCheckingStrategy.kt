@@ -88,6 +88,10 @@ internal class ModelCheckingStrategy(
         super.initializeInvocation()
     }
 
+    override fun onNewSpinCycleRegistered(executionsBeforeCycle: Int) {
+        currentInterleaving.cutSpinLockEvents(executionsBeforeCycle)
+    }
+
     override fun beforePart(part: ExecutionPart) {
         val nextThread = when (part) {
             ExecutionPart.INIT -> 0
@@ -254,7 +258,8 @@ internal class ModelCheckingStrategy(
                 // This can happen if there were forced thread switches after the last predefined one
                 // (e.g., thread end, coroutine suspension, acquiring an already acquired lock or monitor.wait).
                 // We use a deterministic random here to choose the next thread.
-                lastNotInitializedNodeChoices = null // end of execution position choosing initialization because of new switch
+                lastNotInitializedNodeChoices =
+                    null // end of execution position choosing initialization because of new switch
                 switchableThreads(iThread).random(interleavingFinishingRandom)
             }
 
@@ -270,6 +275,17 @@ internal class ModelCheckingStrategy(
             if (executionPosition > switchPositions.lastOrNull() ?: -1) {
                 // Add a new thread choosing node corresponding to the switch at the current execution position.
                 lastNotInitializedNodeChoices?.add(Choice(ThreadChoosingNode(switchableThreads(iThread)), executionPosition))
+            }
+        }
+
+        fun cutSpinLockEvents(executionsBeforeCycle: Int) {
+            lastNotInitializedNodeChoices?.let { list ->
+                check(executionsBeforeCycle <= list.size) { "Internal error during spin lock detection" }
+                // Batch-remove countToCut elements from the end
+                list.subList(executionsBeforeCycle, list.size).clear()
+                executionPosition -= executionsBeforeCycle
+                // executionPosition is initialized with -1, see field declaration doc
+                check(executionPosition + 1 >= 0) { "Internal error during spin lock detection" }
             }
         }
     }
