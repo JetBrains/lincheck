@@ -55,12 +55,19 @@ internal class ModelCheckingStrategy(
     private lateinit var currentInterleaving: Interleaving
 
     override fun runImpl(): LincheckFailure? {
+        currentInterleaving = root.nextInterleaving() ?: return null
         while (usedInvocations < maxInvocations) {
-            // get new unexplored interleaving
-            currentInterleaving = root.nextInterleaving() ?: break
             usedInvocations++
             // run invocation and check its results
-            checkResult(runInvocation())?.let { return it }
+            val invocationResult = runInvocation()
+            if (suddenInvocationResult is SpinCycleFoundAndReplayRequired) {
+                usedInvocations--
+                currentInterleaving.rollbackAfterSpinCycleFound()
+                continue
+            }
+            checkResult(invocationResult)?.let { return it }
+            // get new unexplored interleaving
+            currentInterleaving = root.nextInterleaving() ?: break
         }
         return null
     }
@@ -86,10 +93,6 @@ internal class ModelCheckingStrategy(
     override fun initializeInvocation() {
         currentInterleaving.initialize()
         super.initializeInvocation()
-    }
-
-    override fun onNewSpinCycleRegistered(executionsBeforeCycle: Int) {
-        currentInterleaving.cutSpinLockEvents(executionsBeforeCycle)
     }
 
     override fun beforePart(part: ExecutionPart) {
@@ -249,6 +252,10 @@ internal class ModelCheckingStrategy(
             }
         }
 
+        fun rollbackAfterSpinCycleFound() {
+            lastNotInitializedNodeChoices?.clear()
+        }
+
         fun chooseThread(iThread: Int): Int =
             if (nextThreadToSwitch.hasNext()) {
                 // Use the predefined choice.
@@ -275,17 +282,6 @@ internal class ModelCheckingStrategy(
             if (executionPosition > switchPositions.lastOrNull() ?: -1) {
                 // Add a new thread choosing node corresponding to the switch at the current execution position.
                 lastNotInitializedNodeChoices?.add(Choice(ThreadChoosingNode(switchableThreads(iThread)), executionPosition))
-            }
-        }
-
-        fun cutSpinLockEvents(executionsBeforeCycle: Int) {
-            lastNotInitializedNodeChoices?.let { list ->
-                check(executionsBeforeCycle <= list.size) { "Internal error during spin lock detection" }
-                // Batch-remove countToCut elements from the end
-                list.subList(executionsBeforeCycle, list.size).clear()
-                executionPosition -= executionsBeforeCycle
-                // executionPosition is initialized with -1, see field declaration doc
-                check(executionPosition + 1 >= 0) { "Internal error during spin lock detection" }
             }
         }
     }

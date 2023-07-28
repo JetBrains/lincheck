@@ -55,3 +55,8 @@ class ValidationFailureInvocationResult(
 class ObstructionFreedomViolationInvocationResult(
     val reason: String
 ) : InvocationResult()
+
+/**
+ * Indicates that spin-cycle has been found for the first time and replay of current interleaving is required.
+ */
+object SpinCycleFoundAndReplayRequired: InvocationResult()
