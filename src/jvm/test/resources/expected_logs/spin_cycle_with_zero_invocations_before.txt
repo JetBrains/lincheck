@@ -1,0 +1,57 @@
+= The execution has hung, see the thread dump =
+| ---------------------------- |
+| Thread 1  |     Thread 2     |
+| ---------------------------- |
+| trigger() | causesSpinLock() |
+| ---------------------------- |
+
+
+The following interleaving leads to the error:
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                    Thread 1                                                     |                                                              Thread 2                                                              |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| trigger()                                                                                                       |                                                                                                                                    |
+|   incrementAndGet(): 1 at SpinCycleFirstExecutionIsFirstInMethodCallTest.trigger(RecursiveSpinLocksTests.kt:38) |                                                                                                                                    |
+|   switch                                                                                                        |                                                                                                                                    |
+|                                                                                                                 | causesSpinLock()                                                                                                                   |
+|                                                                                                                 |   get(): 1 at SpinCycleFirstExecutionIsFirstInMethodCallTest.causesSpinLock(RecursiveSpinLocksTests.kt:44)                         |
+|                                                                                                                 |   deadSpinCycle() at SpinCycleFirstExecutionIsFirstInMethodCallTest.causesSpinLock(RecursiveSpinLocksTests.kt:45)                  |
+|                                                                                                                 |     /* The following events repeat infinitely: */                                                                                  |
+|                                                                                                                 | ┌╶> getSharedVariable(): false at SpinCycleFirstExecutionIsFirstInMethodCallTest.deadSpinCycle(RecursiveSpinLocksTests.kt:51)      |
+|                                                                                                                 | |   compareAndSet(false,true): true at SpinCycleFirstExecutionIsFirstInMethodCallTest.deadSpinCycle(RecursiveSpinLocksTests.kt:52) |
+|                                                                                                                 | └╶╶╶/* The next call would cause infinite spin-cycle, switch to avoid it */                                                        |
+|                                                                                                                 |     switch (reason: active lock detected)                                                                                          |
+|   decrementAndGet(): 0 at SpinCycleFirstExecutionIsFirstInMethodCallTest.trigger(RecursiveSpinLocksTests.kt:39) |                                                                                                                                    |
+|                                                                                                                 |     /* The following events repeat infinitely: */                                                                                  |
+|                                                                                                                 | ┌╶> getSharedVariable(): true at SpinCycleFirstExecutionIsFirstInMethodCallTest.deadSpinCycle(RecursiveSpinLocksTests.kt:51)       |
+|                                                                                                                 | |   compareAndSet(true,false): true at SpinCycleFirstExecutionIsFirstInMethodCallTest.deadSpinCycle(RecursiveSpinLocksTests.kt:52) |
+|                                                                                                                 | └╶╶╶/* The next call would cause infinite spin-cycle, switch to avoid it */                                                        |
+|                                                                                                                 |     switch (reason: active lock detected)                                                                                          |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+All unfinished threads are in deadlock
+
+Detailed trace:
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                    Thread 1                                                     |                                                              Thread 2                                                              |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| trigger()                                                                                                       |                                                                                                                                    |
+|   incrementAndGet(): 1 at SpinCycleFirstExecutionIsFirstInMethodCallTest.trigger(RecursiveSpinLocksTests.kt:38) |                                                                                                                                    |
+|   switch                                                                                                        |                                                                                                                                    |
+|                                                                                                                 | causesSpinLock()                                                                                                                   |
+|                                                                                                                 |   get(): 1 at SpinCycleFirstExecutionIsFirstInMethodCallTest.causesSpinLock(RecursiveSpinLocksTests.kt:44)                         |
+|                                                                                                                 |   deadSpinCycle() at SpinCycleFirstExecutionIsFirstInMethodCallTest.causesSpinLock(RecursiveSpinLocksTests.kt:45)                  |
+|                                                                                                                 |     /* The following events repeat infinitely: */                                                                                  |
+|                                                                                                                 | ┌╶> getSharedVariable(): false at SpinCycleFirstExecutionIsFirstInMethodCallTest.deadSpinCycle(RecursiveSpinLocksTests.kt:51)      |
+|                                                                                                                 | |     get(): false at SpinCycleFirstExecutionIsFirstInMethodCallTest.getSharedVariable(RecursiveSpinLocksTests.kt:56)              |
+|                                                                                                                 | |   compareAndSet(false,true): true at SpinCycleFirstExecutionIsFirstInMethodCallTest.deadSpinCycle(RecursiveSpinLocksTests.kt:52) |
+|                                                                                                                 | └╶╶╶/* The next call would cause infinite spin-cycle, switch to avoid it */                                                        |
+|                                                                                                                 |     switch (reason: active lock detected)                                                                                          |
+|   decrementAndGet(): 0 at SpinCycleFirstExecutionIsFirstInMethodCallTest.trigger(RecursiveSpinLocksTests.kt:39) |                                                                                                                                    |
+|                                                                                                                 |     /* The following events repeat infinitely: */                                                                                  |
+|                                                                                                                 | ┌╶> getSharedVariable(): true at SpinCycleFirstExecutionIsFirstInMethodCallTest.deadSpinCycle(RecursiveSpinLocksTests.kt:51)       |
+|                                                                                                                 | |     get(): true at SpinCycleFirstExecutionIsFirstInMethodCallTest.getSharedVariable(RecursiveSpinLocksTests.kt:56)               |
+|                                                                                                                 | |   compareAndSet(true,false): true at SpinCycleFirstExecutionIsFirstInMethodCallTest.deadSpinCycle(RecursiveSpinLocksTests.kt:52) |
+|                                                                                                                 | └╶╶╶/* The next call would cause infinite spin-cycle, switch to avoid it */                                                        |
+|                                                                                                                 |     switch (reason: active lock detected)                                                                                          |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+All unfinished threads are in deadlock

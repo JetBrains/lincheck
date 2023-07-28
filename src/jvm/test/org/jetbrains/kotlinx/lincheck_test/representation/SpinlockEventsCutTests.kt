@@ -11,6 +11,8 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
+import kotlinx.atomicfu.atomic
+import kotlinx.atomicfu.atomicArrayOfNulls
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.*
@@ -18,7 +20,9 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelChecki
 import org.jetbrains.kotlinx.lincheck_test.guide.MSQueueBlocking
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
 import org.junit.Test
+import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReferenceArray
 import kotlin.reflect.jvm.*
 
@@ -242,5 +246,191 @@ class SpinlockInIncorrectResultsWithClocksTest {
 
         fun d(): Int = x
     }
+
+}
+
+/**
+ * This test is created to verify this [bug](https://github.com/JetBrains/lincheck/issues/219) is resolved.
+ */
+class FaaQueueSpinLockTest {
+
+    private val queue = FlatCombiningQueue<Int>()
+
+    @Operation
+    fun enqueue(element: Int) = queue.enqueue(element)
+
+    @Operation
+    fun dequeue() = queue.dequeue()
+
+    @Test
+    fun modelCheckingTest() {
+        ModelCheckingOptions()
+            .addCustomScenario {
+                initial {
+                    actor(FaaQueueSpinLockTest::enqueue, 1)
+                    actor(FaaQueueSpinLockTest::enqueue, 1)
+                }
+                parallel {
+                    thread {
+                        actor(FaaQueueSpinLockTest::enqueue, 1)
+                        actor(FaaQueueSpinLockTest::dequeue)
+                    }
+                    thread {
+                        actor(FaaQueueSpinLockTest::dequeue)
+                        actor(FaaQueueSpinLockTest::dequeue)
+                    }
+                    thread {
+                        actor(FaaQueueSpinLockTest::dequeue)
+                        actor(FaaQueueSpinLockTest::enqueue, 1)
+                    }
+                }
+                post {
+                    actor(FaaQueueSpinLockTest::enqueue, 1)
+                    actor(FaaQueueSpinLockTest::dequeue)
+                }
+            }
+            .minimizeFailedScenario(false)
+            .sequentialSpecification(FaaIntQueueSequential::class.java)
+            .checkImpl(this::class.java)
+            .checkLincheckOutput("faa_queue_spin_lock.txt")
+    }
+
+}
+
+class FlatCombiningQueue<E> {
+    private val queue = ArrayDeque<E>() // sequential queue
+    private val combinerLock = atomic(false) // unlocked initially
+    private val tasksForCombiner = atomicArrayOfNulls<Any?>(TASKS_FOR_COMBINER_SIZE)
+
+    private fun tryLock() = combinerLock.compareAndSet(false, true)
+    private fun unlock() = check(combinerLock.compareAndSet(true, false))
+
+    fun enqueue(element: E) {
+        var index = randomCellIndex() // code locations: 59, 60, 61
+        while (true) {
+            if (tasksForCombiner[index].compareAndSet(null, element)) break // code locations: 17, 18
+            index = randomCellIndex() // code locations: 59, 60, 61
+        }
+
+        while (!tryLock()) {
+            val value = tasksForCombiner[index].value
+            if (value is Result<*>) {
+                tasksForCombiner[index].value = null
+                return
+            }
+        }
+        help()
+        unlock()
+        tasksForCombiner[index].value as Result<*>
+        tasksForCombiner[index].value = null
+        return
+    }
+
+    fun dequeue(): E? {
+        var index = randomCellIndex()
+        while (true) {
+            if (tasksForCombiner[index].compareAndSet(null, Dequeue)) break
+            index = randomCellIndex()
+        }
+
+        while (!tryLock()) {
+            val value = tasksForCombiner[index].value
+            if (value is Result<*>) {
+                tasksForCombiner[index].value = null
+                return value.value as? E
+            }
+        }
+        help()
+        unlock()
+
+        val value = tasksForCombiner[index].value as Result<*>
+//         Uncomment the line below to get correct implementation
+//        tasksForCombiner[index].value = null
+        return value.value as? E
+    }
+
+
+    private fun help() {
+        repeat(TASKS_FOR_COMBINER_SIZE) {
+            val task = tasksForCombiner[it].value ?: return@repeat
+            if (task is Result<*>) return@repeat
+            if (task === Dequeue) {
+                tasksForCombiner[it].value = Result(queue.removeFirstOrNull())
+            } else {
+                queue.add(task as E)
+                tasksForCombiner[it].value = Result(Unit)
+            }
+        }
+    }
+
+    private fun randomCellIndex(): Int =
+        ThreadLocalRandom.current().nextInt(tasksForCombiner.size)
+}
+
+private const val TASKS_FOR_COMBINER_SIZE = 3 // Do not change this constant!
+
+private object Dequeue
+
+private class Result<V>(
+    val value: V
+)
+
+class FaaIntQueueSequential {
+    private val q = ArrayList<Int>()
+
+    fun enqueue(element: Int) {
+        q.add(element)
+    }
+
+    fun dequeue() = q.removeFirstOrNull()
+    fun remove(element: Int) = q.remove(element)
+}
+
+
+class ManyNestedFunctionsBeforeAndInsideSpinCycleTest {
+
+    private val counter = AtomicInteger(0)
+    private val sharedData = AtomicInteger(0)
+
+    @Operation
+    fun causesSpinLock() {
+        counter.incrementAndGet()
+        counter.decrementAndGet()
+    }
+
+    @Operation
+    fun spinLockOperation() {
+        if (counter.get() != 0) {
+            a()
+        }
+    }
+
+    private fun a() = b()
+
+    private fun b() = c()
+
+    private fun c() {
+        while (true) {
+            d()
+        }
+    }
+
+    private fun d() = e()
+
+    private fun e() {
+        sharedData.compareAndSet(2, 1)
+    }
+
+    @Test
+    fun test() = ModelCheckingOptions()
+        .addCustomScenario {
+            parallel {
+                thread { actor(ManyNestedFunctionsBeforeAndInsideSpinCycleTest::causesSpinLock) }
+                thread { actor(ManyNestedFunctionsBeforeAndInsideSpinCycleTest::spinLockOperation) }
+            }
+        }
+        .minimizeFailedScenario(false)
+        .checkImpl(this::class.java)
+        .checkLincheckOutput("nested_calls_spin_lock.txt")
 
 }
