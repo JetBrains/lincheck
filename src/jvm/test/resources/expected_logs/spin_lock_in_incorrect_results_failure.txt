@@ -12,33 +12,33 @@ in each of the parallel threads seen at the beginning of the current operation
 ---
 
 The following interleaving leads to the error:
-| -------------------------------------------------------------------------------------------------------------- |
-| Thread 1 |                                              Thread 2                                               |
-| -------------------------------------------------------------------------------------------------------------- |
-|          | c()                                                                                                 |
-|          |   /* The following events repeat infinitely: */                                                     |
-|          |   bStarted.READ: false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:190) |
-|          |   switch (reason: active lock detected)                                                             |
-| a()      |                                                                                                     |
-| b()      |                                                                                                     |
-|          |   bStarted.READ: true at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:190)  |
-|          |   result: void                                                                                      |
-|          | d(): 0                                                                                              |
-| -------------------------------------------------------------------------------------------------------------- |
+| ---------------------------------------------------------------------------------------------------------------- |
+| Thread 1 |                                               Thread 2                                                |
+| ---------------------------------------------------------------------------------------------------------------- |
+|          | c()                                                                                                   |
+|          |     /* The following events repeat infinitely: */                                                     |
+|          | ┌╶> bStarted.READ: false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:197) |
+|          | └╶╶ switch (reason: active lock detected)                                                             |
+| a()      |                                                                                                       |
+| b()      |                                                                                                       |
+|          |     bStarted.READ: true at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:197)  |
+|          |     result: void                                                                                      |
+|          | d(): 0                                                                                                |
+| ---------------------------------------------------------------------------------------------------------------- |
 
 Detailed trace:
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                              Thread 1                                               |                                              Thread 2                                               |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                                     | c()                                                                                                 |
-|                                                                                                     |   /* The following events repeat infinitely: */                                                     |
-|                                                                                                     |   bStarted.READ: false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:190) |
-|                                                                                                     |   switch (reason: active lock detected)                                                             |
-| a()                                                                                                 |                                                                                                     |
-| b()                                                                                                 |                                                                                                     |
-|   bStarted.WRITE(true) at SpinlockInIncorrectResultsWithClocksTest.b(SpinlockEventsCutTests.kt:185) |                                                                                                     |
-|   result: void                                                                                      |                                                                                                     |
-|                                                                                                     |   bStarted.READ: true at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:190)  |
-|                                                                                                     |   result: void                                                                                      |
-|                                                                                                     | d(): 0                                                                                              |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                              Thread 1                                               |                                               Thread 2                                                |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                     | c()                                                                                                   |
+|                                                                                                     |     /* The following events repeat infinitely: */                                                     |
+|                                                                                                     | ┌╶> bStarted.READ: false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:197) |
+|                                                                                                     | └╶╶ switch (reason: active lock detected)                                                             |
+| a()                                                                                                 |                                                                                                       |
+| b()                                                                                                 |                                                                                                       |
+|   bStarted.WRITE(true) at SpinlockInIncorrectResultsWithClocksTest.b(SpinlockEventsCutTests.kt:192) |                                                                                                       |
+|   result: void                                                                                      |                                                                                                       |
+|                                                                                                     |     bStarted.READ: true at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:197)  |
+|                                                                                                     |     result: void                                                                                      |
+|                                                                                                     | d(): 0                                                                                                |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

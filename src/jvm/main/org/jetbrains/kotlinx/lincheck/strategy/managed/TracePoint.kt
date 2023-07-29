@@ -241,6 +241,8 @@ internal class CoroutineCancellationTracePoint(
 }
 
 internal class SpinCycleStartTracePoint(iThread: Int, actorId: Int, callStackTrace: CallStackTrace): TracePoint(iThread, actorId, callStackTrace) {
+
+    var spinCycleStartDepth: Int = callStackTrace.size
     override fun toStringImpl() =  "/* The following events repeat infinitely: */"
 }
 
@@ -276,6 +278,7 @@ internal enum class SwitchReason(private val reason: String) {
     MONITOR_WAIT("wait on monitor"),
     LOCK_WAIT("lock is already acquired"),
     ACTIVE_LOCK("active lock detected"),
+    ACTIVE_LOCK_RECURSIVE("active recursive lock detected"),
     SUSPENDED("coroutine is suspended"),
     STRATEGY_SWITCH("");
 

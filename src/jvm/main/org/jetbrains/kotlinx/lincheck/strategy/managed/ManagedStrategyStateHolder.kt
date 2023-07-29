@@ -9,8 +9,6 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import org.jetbrains.kotlinx.lincheck.*
-import java.lang.reflect.*
 import java.util.*
 
 /**

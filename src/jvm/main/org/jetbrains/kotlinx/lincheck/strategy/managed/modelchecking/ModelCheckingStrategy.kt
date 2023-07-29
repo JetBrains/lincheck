@@ -43,7 +43,7 @@ internal class ModelCheckingStrategy(
     // The number of invocations that the strategy is eligible to use to search for an incorrect execution.
     private val maxInvocations = testCfg.invocationsPerIteration
     // The number of already used invocations.
-    private var usedInvocations = 0
+    var usedInvocations = 0
     // The maximum number of thread switch choices that strategy should perform
     // (increases when all the interleavings with the current depth are studied).
     private var maxNumberOfSwitches = 0
@@ -57,14 +57,20 @@ internal class ModelCheckingStrategy(
     override fun runImpl(): LincheckFailure? {
         currentInterleaving = root.nextInterleaving() ?: return null
         while (usedInvocations < maxInvocations) {
-            usedInvocations++
             // run invocation and check its results
             val invocationResult = runInvocation()
-            if (suddenInvocationResult is SpinCycleFoundAndReplayRequired) {
-                usedInvocations--
+            if (suddenInvocationResult is SpinCycleFoundForTheFirstTimeAndReplayRequired) {
                 currentInterleaving.rollbackAfterSpinCycleFound()
+                setAdditionalEventsTracking(true)
                 continue
             }
+            if (suddenInvocationResult is SpinCyclePeriodMeasuredAndExecutionCanBeContinued) {
+                currentInterleaving.rollbackAfterSpinCycleFound()
+                setAdditionalEventsTracking(false)
+                continue
+            }
+            setAdditionalEventsTracking(false)
+            usedInvocations++
             checkResult(invocationResult)?.let { return it }
             // get new unexplored interleaving
             currentInterleaving = root.nextInterleaving() ?: break
@@ -230,8 +236,9 @@ internal class ModelCheckingStrategy(
     private inner class Interleaving(
         private val switchPositions: List<Int>,
         private val threadSwitchChoices: List<Int>,
-        private var lastNotInitializedNode: SwitchChoosingNode?
+        private val initialLastNotInitializedNode: SwitchChoosingNode?
     ) {
+        private var lastNotInitializedNode: SwitchChoosingNode? = initialLastNotInitializedNode
         private lateinit var interleavingFinishingRandom: Random
         private lateinit var nextThreadToSwitch: Iterator<Int>
         private var lastNotInitializedNodeChoices: MutableList<Choice>? = null
@@ -253,6 +260,7 @@ internal class ModelCheckingStrategy(
         }
 
         fun rollbackAfterSpinCycleFound() {
+            lastNotInitializedNode = initialLastNotInitializedNode
             lastNotInitializedNodeChoices?.clear()
         }
 

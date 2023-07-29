@@ -113,6 +113,7 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
     val callNodes = mutableMapOf<Int, CallNode>()
     // all trace nodes in order corresponding to `tracePoints`
     val traceGraphNodes = mutableListOf<TraceNode>()
+    val indentationFactory = IndentationFactory(scenario.nThreads)
 
     for (eventId in tracePoints.indices) {
         val event = tracePoints[eventId]
@@ -124,6 +125,7 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
             // create new actor node actor
             val actorNode = traceGraphNodes.createAndAppend { lastNode ->
                 ActorNode(
+                    indentationFactory = indentationFactory,
                     iThread = iThread,
                     last = lastNode,
                     callDepth = 0,
@@ -136,14 +138,15 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
         }
         // add the event
         var innerNode: TraceInnerNode = actorNodes[iThread][actorId]!!
-        for (call in event.callStackTrace) {
+        val callStackTrace = if (event !is SpinCycleStartTracePoint) event.callStackTrace else event.callStackTrace.take(event.spinCycleStartDepth)
+        for (call in callStackTrace) {
             val callId = call.identifier
             // Switch events that happen as a first event of the method are lifted out of the method in the trace
             if (!callNodes.containsKey(callId) && event is SwitchEventTracePoint) break
             val callNode = callNodes.computeIfAbsent(callId) {
                 // create a new call node if needed
                 val result = traceGraphNodes.createAndAppend { lastNode ->
-                    CallNode(iThread, lastNode, innerNode.callDepth + 1, call.call)
+                    CallNode(indentationFactory, iThread, lastNode, innerNode.callDepth + 1, call.call)
                 }
                 // make it a child of the previous node
                 innerNode.addInternalEvent(result)
@@ -153,7 +156,10 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
         }
         val isLastExecutedEvent = eventId == lastExecutedEvents[iThread]
         val node = traceGraphNodes.createAndAppend { lastNode ->
-            TraceLeafEvent(iThread, lastNode, innerNode.callDepth + 1, event, isLastExecutedEvent)
+            TraceLeafEvent(indentationFactory, iThread, lastNode, innerNode.callDepth + 1, event, isLastExecutedEvent)
+        }
+        if (event is SpinCycleStartTracePoint) {
+            indentationFactory.calculateExtraIndents(node.callDepth, node.iThread)
         }
         innerNode.addInternalEvent(node)
     }
@@ -167,6 +173,7 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
             if (actorNode == null && actorResult != null) {
                 val lastNode = actorNodes[iThread].getOrNull(actorId - 1)?.lastInternalEvent
                 actorNode = ActorNode(
+                    indentationFactory = indentationFactory,
                     iThread = iThread,
                     last = lastNode,
                     callDepth = 0,
@@ -183,7 +190,7 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
             val lastEventNext = lastEvent.next
             val result = results[iThread, actorId]
             val resultRepresentation = result?.let { resultRepresentation(result, exceptionStackTraces) }
-            val resultNode = ActorResultNode(iThread, lastEvent, actorNode.callDepth + 1, resultRepresentation)
+            val resultNode = ActorResultNode(indentationFactory, iThread, lastEvent, actorNode.callDepth + 1, resultRepresentation)
             actorNode.addInternalEvent(resultNode)
             resultNode.next = lastEventNext
         }
@@ -212,8 +219,61 @@ private fun traceGraphToRepresentationList(
     return traceRepresentation
 }
 
+private class IndentationFactory(nThreads: Int) {
+
+    private var extraIndentPrefix = IntArray(nThreads)
+
+    private var arrowDepth: Int = -1
+    private var nextNodeIsArrowStart = false
+
+    fun calculateExtraIndents(callDepth: Int, iThread: Int) {
+        if (callDepth == 1) {
+            extraIndentPrefix[iThread] = 1
+        }
+    }
+
+    fun nextIndentation(node: TraceNode): String {
+        if (nextNodeIsArrowStart) {
+            nextNodeIsArrowStart = false
+            return indentationWithArrowStart(node)
+        }
+        if (node is TraceLeafEvent) {
+            if (node.event is SwitchEventTracePoint || node.event is ObstructionFreedomViolationExecutionAbortTracePoint) {
+                return if (arrowDepth != -1) {
+                    indentationWithArrowEnd(node).also { arrowDepth = -1 }
+                } else {
+                    defaultIndentation(node)
+                }
+            }
+            if (node.event is SpinCycleStartTracePoint) {
+                arrowDepth = node.callDepth
+                nextNodeIsArrowStart = true
+                return defaultIndentation(node)
+            }
+        }
+        return if (arrowDepth != -1) indentionWithArrowBody(node) else defaultIndentation(node)
+    }
+
+    private fun defaultIndentation(node: TraceNode) =
+        TRACE_INDENTATION.repeat(extraIndentPrefix[node.iThread] + node.callDepth)
+
+
+    private fun indentationWithArrowStart(node: TraceNode): String {
+        return TRACE_INDENTATION.repeat(node.callDepth - 2 + extraIndentPrefix[node.iThread]) + "┌╶" + "> "
+    }
+
+    private fun indentionWithArrowBody(node: TraceNode): String {
+        return TRACE_INDENTATION.repeat(arrowDepth - 2 + extraIndentPrefix[node.iThread]) + "| " + TRACE_INDENTATION.repeat(node.callDepth - arrowDepth + 1)
+    }
+
+    private fun indentationWithArrowEnd(node: TraceNode): String {
+        return TRACE_INDENTATION.repeat(max(0, arrowDepth - 2 + extraIndentPrefix[node.iThread])) + "└╶" + "╶╶".repeat(max(0, node.callDepth - arrowDepth)) + "╶ "
+    }
+}
+
 private sealed class TraceNode(
-    protected val iThread: Int,
+    val indentationFactory: IndentationFactory,
+    val iThread: Int,
     last: TraceNode?,
     val callDepth: Int // for tree indentation
 ) {
@@ -245,12 +305,13 @@ private sealed class TraceNode(
 }
 
 private class TraceLeafEvent(
+    indentationFactory: IndentationFactory,
     iThread: Int,
     last: TraceNode?,
     callDepth: Int,
-    private val event: TracePoint,
+    val event: TracePoint,
     private val lastExecutedEvent: Boolean = false
-) : TraceNode(iThread, last, callDepth) {
+) : TraceNode(indentationFactory, iThread, last, callDepth) {
 
     override val lastState: String? =
         if (event is StateRepresentationTracePoint) event.stateRepresentation else null
@@ -273,14 +334,14 @@ private class TraceLeafEvent(
         traceRepresentation: MutableList<TraceEventRepresentation>,
         verboseTrace: Boolean
     ): TraceNode? {
-        val representation = traceIndentation() + event.toString()
+        val representation = indentationFactory.nextIndentation(this) + event.toString()
         traceRepresentation.add(TraceEventRepresentation(iThread, representation))
         return next
     }
 }
 
-private abstract class TraceInnerNode(iThread: Int, last: TraceNode?, callDepth: Int) :
-    TraceNode(iThread, last, callDepth) {
+private abstract class TraceInnerNode(indentationFactory: IndentationFactory, iThread: Int, last: TraceNode?, callDepth: Int) :
+    TraceNode(indentationFactory, iThread, last, callDepth) {
     override val lastState: String?
         get() = internalEvents.map { it.lastState }.lastOrNull { it != null }
     override val lastInternalEvent: TraceNode
@@ -299,11 +360,12 @@ private abstract class TraceInnerNode(iThread: Int, last: TraceNode?, callDepth:
 }
 
 private class CallNode(
+    indentationFactory: IndentationFactory,
     iThread: Int,
     last: TraceNode?,
     callDepth: Int,
     private val call: MethodCallTracePoint
-) : TraceInnerNode(iThread, last, callDepth) {
+) : TraceInnerNode(indentationFactory, iThread, last, callDepth) {
     // suspended method contents should be reported
     override fun shouldBeExpanded(verboseTrace: Boolean): Boolean {
         return call.wasSuspended || super.shouldBeExpanded(verboseTrace)
@@ -314,22 +376,23 @@ private class CallNode(
         verboseTrace: Boolean
     ): TraceNode? =
         if (!shouldBeExpanded(verboseTrace)) {
-            traceRepresentation.add(TraceEventRepresentation(iThread, traceIndentation() + "$call"))
+            traceRepresentation.add(TraceEventRepresentation(iThread, indentationFactory.nextIndentation(this) + "$call"))
             lastState?.let { traceRepresentation.add(stateEventRepresentation(iThread, it)) }
             lastInternalEvent.next
         } else {
-            traceRepresentation.add(TraceEventRepresentation(iThread, traceIndentation() + "$call"))
+            traceRepresentation.add(TraceEventRepresentation(iThread, indentationFactory.nextIndentation(this) + "$call"))
             next
         }
 }
 
 private class ActorNode(
+    indentationFactory: IndentationFactory,
     iThread: Int,
     last: TraceNode?,
     callDepth: Int,
     private val actor: Actor,
     private val resultRepresentation: String?
-) : TraceInnerNode(iThread, last, callDepth) {
+) : TraceInnerNode(indentationFactory, iThread, last, callDepth) {
     override fun addRepresentationTo(
         traceRepresentation: MutableList<TraceEventRepresentation>,
         verboseTrace: Boolean
@@ -346,11 +409,12 @@ private class ActorNode(
 }
 
 private class ActorResultNode(
+    indentationFactory: IndentationFactory,
     iThread: Int,
     last: TraceNode?,
     callDepth: Int,
     private val resultRepresentation: String?
-) : TraceNode(iThread, last, callDepth) {
+) : TraceNode(indentationFactory, iThread, last, callDepth) {
     override val lastState: String? = null
     override val lastInternalEvent: TraceNode = this
     override fun shouldBeExpanded(verboseTrace: Boolean): Boolean = false
@@ -360,17 +424,15 @@ private class ActorResultNode(
         verboseTrace: Boolean
     ): TraceNode? {
         if (resultRepresentation != null)
-            traceRepresentation.add(TraceEventRepresentation(iThread, traceIndentation() + "result: $resultRepresentation"))
+            traceRepresentation.add(TraceEventRepresentation(iThread, indentationFactory.nextIndentation(this) + "result: $resultRepresentation"))
         return next
     }
 }
 
 private const val TRACE_INDENTATION = "  "
 
-private fun TraceNode.traceIndentation() = TRACE_INDENTATION.repeat(callDepth)
-
 private fun TraceNode.stateEventRepresentation(iThread: Int, stateRepresentation: String) =
-    TraceEventRepresentation(iThread, traceIndentation() + "STATE: $stateRepresentation")
+    TraceEventRepresentation(iThread, indentationFactory.nextIndentation(this) + "STATE: $stateRepresentation")
 
 private class TraceEventRepresentation(val iThread: Int, val representation: String)
 
