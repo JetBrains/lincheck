@@ -51,7 +51,10 @@ internal fun <T> findMaxPrefixLengthWithNoCycleOnSuffix(elements: List<T>): Cycl
 
     return if (targetCycleLength == elements.size) {
         null // cycle not found
-    } else CycleInfo(minLastPositionNotRelatedToCycle + 1, targetCycleLength) // number of prefix elements with first cycle
+    } else CycleInfo(
+        minLastPositionNotRelatedToCycle + 1,
+        targetCycleLength
+    ) // number of prefix elements with first cycle
 }
 
 data class CycleInfo(
@@ -83,6 +86,9 @@ private fun <T> findLastIndexNotRelatedToCycle(elements: List<T>, cycleLength: I
  */
 internal class InterleavingHistoryNode(
     val threadId: Int,
+    /**
+     * Sum of executions before cycle and the cycle period
+     */
     var executions: Int = 0,
     /**
      * Hash code calculated by execution ids of this switch,
@@ -100,7 +106,8 @@ internal class InterleavingHistoryNode(
     /**
      * This field is updated when execution is replayed and we meet a sequence that previously led to a cycle.
      */
-    var spinCyclePeriod: Int = 0
+    var spinCyclePeriod: Int = 0,
+    var executionsBeforeSpinCycleWithAdditionalEvents: Int,
 ) {
     val cycleOccurred: Boolean get() = spinCyclePeriod != 0
 
@@ -119,22 +126,26 @@ internal class InterleavingHistoryNode(
     fun asNodeCorrespondingToCycle(
         executionsBeforeCycle: Int,
         cyclePeriod: Int,
-        cycleExecutionsHash: Int
+        executionsBeforeSpinCycleWithAdditionalEvents: Int,
+        cycleExecutionsHash: Int,
     ): InterleavingHistoryNode {
-        check(executions >= executionsBeforeCycle)
+        check(executions >= executionsBeforeCycle) { "?" }
 
         return InterleavingHistoryNode(
             threadId = threadId,
             executions = executionsBeforeCycle,
             spinCyclePeriod = cyclePeriod,
-            executionHash = cycleExecutionsHash
+            executionHash = cycleExecutionsHash,
+            executionsBeforeSpinCycleWithAdditionalEvents = executionsBeforeSpinCycleWithAdditionalEvents,
         )
     }
 
     fun copy() = InterleavingHistoryNode(
         threadId = threadId,
         executions = executions,
-        executionHash = executionHash
+        executionHash = executionHash,
+        spinCyclePeriod = spinCyclePeriod,
+        executionsBeforeSpinCycleWithAdditionalEvents = executionsBeforeSpinCycleWithAdditionalEvents,
     )
 
 
@@ -219,6 +230,10 @@ internal class InterleavingSequenceTrackableSet {
          * Only present when this node corresponds to cycle, i.e. [cycleOccurred] != 0
          */
         val cycleLocationsHash: Int,
+        /**
+         * Only present when this node corresponds to cycle, i.e. [cycleOccurred] != 0
+         */
+        val executionsBeforeSpinCycleWithAdditionalEvents: Int,
         private var transitions: MutableMap<Int, InterleavingSequenceSetNode>? = null
     ) {
 
@@ -241,7 +256,8 @@ internal class InterleavingSequenceTrackableSet {
         fun mergeBranch(newChain: List<InterleavingHistoryNode>, startIndex: Int, executionsCountedEarlier: Int) {
             if (startIndex > newChain.lastIndex) return
             val firstNewNode = newChain[startIndex]
-            val firstNewNodeExecutions = (firstNewNode.executions + firstNewNode.spinCyclePeriod) - executionsCountedEarlier
+            val firstNewNodeExecutions =
+                (firstNewNode.executions + firstNewNode.spinCyclePeriod) - executionsCountedEarlier
             check(firstNewNode.threadId == threadId)
 
             when {
@@ -263,7 +279,8 @@ internal class InterleavingSequenceTrackableSet {
                         transitions = transitions,
                         cyclePeriod = cyclePeriod,
                         cycleOccurred = cycleOccurred,
-                        cycleLocationsHash = cycleLocationsHash
+                        cycleLocationsHash = cycleLocationsHash,
+                        executionsBeforeSpinCycleWithAdditionalEvents = executionsBeforeSpinCycleWithAdditionalEvents
                     )
                     executions = firstNewNodeExecutions
                     cyclePeriod = firstNewNode.spinCyclePeriod
@@ -320,6 +337,7 @@ internal class InterleavingSequenceTrackableSet {
             cyclePeriod = first.spinCyclePeriod,
             cycleLocationsHash = first.executionHash,
             cycleOccurred = startIndex == chain.lastIndex,
+            executionsBeforeSpinCycleWithAdditionalEvents = first.executionsBeforeSpinCycleWithAdditionalEvents
         )
         var current = root
 
@@ -329,8 +347,9 @@ internal class InterleavingSequenceTrackableSet {
                 threadId = next.threadId,
                 executions = next.executions + next.spinCyclePeriod,
                 cyclePeriod = next.spinCyclePeriod,
-                cycleLocationsHash = first.executionHash,
-                cycleOccurred = i == chain.lastIndex
+                cycleLocationsHash = next.executionHash,
+                cycleOccurred = i == chain.lastIndex,
+                executionsBeforeSpinCycleWithAdditionalEvents = next.executionsBeforeSpinCycleWithAdditionalEvents
             )
             current.addTransition(next.threadId, nextNode)
             current = nextNode
@@ -396,6 +415,7 @@ internal class InterleavingSequenceTrackableSet {
         Otherwise, if the next thread id is, for example, 5, then the cursor will become invalid and
         `isInCycle` property will return false and won't react on any events until the next cursor `reset` or `setTo` methods calls.
          */
+
         /**
          * Excepted to call only if [isInCycle] returned `true`
          */
@@ -423,6 +443,8 @@ internal class InterleavingSequenceTrackableSet {
             get() = currentNode?.let {
                 it.cycleOccurred && executionsCount == it.executions
             } ?: false
+
+        val executionsBeforeSpinCycleWithAdditionalEvents: Int get() = currentNode!!.executionsBeforeSpinCycleWithAdditionalEvents
 
         /**
          * Resets cursor to the leaf of the new added cycle

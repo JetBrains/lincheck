@@ -1,0 +1,55 @@
+= The execution has hung, see the thread dump =
+| -------------------------------------- |
+|     Thread 1     |      Thread 2       |
+| -------------------------------------- |
+| causesSpinLock() | spinLockOperation() |
+| -------------------------------------- |
+
+
+The following interleaving leads to the error:
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                        Thread 1                                                         |                                                    Thread 2                                                    |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| causesSpinLock()                                                                                                        |                                                                                                                |
+|   incrementAndGet(): 1 at ManyNestedFunctionsBeforeAndInsideSpinCycleTest.causesSpinLock(SpinlockEventsCutTests.kt:302) |                                                                                                                |
+|   switch                                                                                                                |                                                                                                                |
+|                                                                                                                         | spinLockOperation()                                                                                            |
+|                                                                                                                         |   get(): 1 at ManyNestedFunctionsBeforeAndInsideSpinCycleTest.spinLockOperation(SpinlockEventsCutTests.kt:308) |
+|                                                                                                                         |   a() at ManyNestedFunctionsBeforeAndInsideSpinCycleTest.spinLockOperation(SpinlockEventsCutTests.kt:309)      |
+|                                                                                                                         |     b() at ManyNestedFunctionsBeforeAndInsideSpinCycleTest.a(SpinlockEventsCutTests.kt:313)                    |
+|                                                                                                                         |       c() at ManyNestedFunctionsBeforeAndInsideSpinCycleTest.b(SpinlockEventsCutTests.kt:315)                  |
+|                                                                                                                         |         /* The following events repeat infinitely: */                                                          |
+|                                                                                                                         |     ┌╶> d() at ManyNestedFunctionsBeforeAndInsideSpinCycleTest.c(SpinlockEventsCutTests.kt:319)                |
+|                                                                                                                         |     └╶╶ switch (reason: active lock detected)                                                                  |
+|   decrementAndGet(): 0 at ManyNestedFunctionsBeforeAndInsideSpinCycleTest.causesSpinLock(SpinlockEventsCutTests.kt:303) |                                                                                                                |
+|                                                                                                                         |         /* The following events repeat infinitely: */                                                          |
+|                                                                                                                         |     ┌╶> d() at ManyNestedFunctionsBeforeAndInsideSpinCycleTest.c(SpinlockEventsCutTests.kt:319)                |
+|                                                                                                                         |     └╶╶ switch (reason: active lock detected)                                                                  |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+All unfinished threads are in deadlock
+
+Detailed trace:
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                        Thread 1                                                         |                                                         Thread 2                                                          |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| causesSpinLock()                                                                                                        |                                                                                                                           |
+|   incrementAndGet(): 1 at ManyNestedFunctionsBeforeAndInsideSpinCycleTest.causesSpinLock(SpinlockEventsCutTests.kt:302) |                                                                                                                           |
+|   switch                                                                                                                |                                                                                                                           |
+|                                                                                                                         | spinLockOperation()                                                                                                       |
+|                                                                                                                         |   get(): 1 at ManyNestedFunctionsBeforeAndInsideSpinCycleTest.spinLockOperation(SpinlockEventsCutTests.kt:308)            |
+|                                                                                                                         |   a() at ManyNestedFunctionsBeforeAndInsideSpinCycleTest.spinLockOperation(SpinlockEventsCutTests.kt:309)                 |
+|                                                                                                                         |     b() at ManyNestedFunctionsBeforeAndInsideSpinCycleTest.a(SpinlockEventsCutTests.kt:313)                               |
+|                                                                                                                         |       c() at ManyNestedFunctionsBeforeAndInsideSpinCycleTest.b(SpinlockEventsCutTests.kt:315)                             |
+|                                                                                                                         |         /* The following events repeat infinitely: */                                                                     |
+|                                                                                                                         |     ┌╶> d() at ManyNestedFunctionsBeforeAndInsideSpinCycleTest.c(SpinlockEventsCutTests.kt:319)                           |
+|                                                                                                                         |     |     e() at ManyNestedFunctionsBeforeAndInsideSpinCycleTest.d(SpinlockEventsCutTests.kt:323)                         |
+|                                                                                                                         |     |       compareAndSet(2,1): false at ManyNestedFunctionsBeforeAndInsideSpinCycleTest.e(SpinlockEventsCutTests.kt:326) |
+|                                                                                                                         |     └╶╶ switch (reason: active lock detected)                                                                             |
+|   decrementAndGet(): 0 at ManyNestedFunctionsBeforeAndInsideSpinCycleTest.causesSpinLock(SpinlockEventsCutTests.kt:303) |                                                                                                                           |
+|                                                                                                                         |         /* The following events repeat infinitely: */                                                                     |
+|                                                                                                                         |     ┌╶> d() at ManyNestedFunctionsBeforeAndInsideSpinCycleTest.c(SpinlockEventsCutTests.kt:319)                           |
+|                                                                                                                         |     |     e() at ManyNestedFunctionsBeforeAndInsideSpinCycleTest.d(SpinlockEventsCutTests.kt:323)                         |
+|                                                                                                                         |     |       compareAndSet(2,1): false at ManyNestedFunctionsBeforeAndInsideSpinCycleTest.e(SpinlockEventsCutTests.kt:326) |
+|                                                                                                                         |     └╶╶ switch (reason: active lock detected)                                                                             |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+All unfinished threads are in deadlock

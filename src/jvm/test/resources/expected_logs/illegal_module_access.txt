@@ -11,12 +11,12 @@ Please add the following lines to your test running configuration:
 --add-exports java.base/jdk.internal.util=ALL-UNNAMED
 --add-exports java.base/sun.security.action=ALL-UNNAMED
 	at org.jetbrains.kotlinx.lincheck.UtilsKt.wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(Utils.kt:338)
-	at org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy.onFailure(ManagedStrategy.kt:330)
-	at org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyRunner.onFailure(ManagedStrategy.kt:1105)
+	at org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy.onFailure(ManagedStrategy.kt:433)
+	at org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyRunner.onFailure(ManagedStrategy.kt:1435)
 	at org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution.failOnExceptionIsUnexpected(TestThreadExecution.java:59)
-	at org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution226.run(Unknown Source)
-	at org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.testThreadRunnable$lambda-8(FixedActiveThreadsExecutor.kt:149)
-	at java.base/java.lang.Thread.run(Thread.java:833)
+	at org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution223.run(Unknown Source)
+	at org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.testThreadRunnable$lambda-8(FixedActiveThreadsExecutor.kt:151)
+	at java.base/java.lang.Thread.run(Thread.java:829)
 Caused by: java.lang.IllegalAccessException: module java.base does not "opens java.io" to unnamed module
 	at org.jetbrains.kotlinx.lincheck_test.representation.IllegalModuleAccessOutputMessageTest$operation$1.invoke(IllegalModuleAccessOutputMessageTest.kt:39)
 	at org.jetbrains.kotlinx.lincheck_test.representation.IllegalModuleAccessOutputMessageTest$operation$1.invoke(IllegalModuleAccessOutputMessageTest.kt:39)

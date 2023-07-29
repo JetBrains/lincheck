@@ -163,6 +163,12 @@ abstract class AbstractSpinLivelockTest {
 
     @Test
     fun testWithModelCheckingStrategy() = ModelCheckingOptions()
+        .addCustomScenario {
+            parallel {
+                thread { actor(AbstractSpinLivelockTest::one) }
+                thread { actor(AbstractSpinLivelockTest::two) }
+            }
+        }
         .minimizeFailedScenario(false)
         .checkImpl(this::class.java)
         .checkLincheckOutput(outputFileName)
@@ -284,4 +290,279 @@ class SpinCycleWithSideEffectsTest {
         .iterations(100)
         .check(this::class)
 
+}
+
+/**
+ * Checks spin cycle start label is placed correctly when many nested calls are before and inside spin cycle.
+ */
+class ManyNestedFunctionsBeforeAndInsideSpinCycleTest {
+
+    private val counter = AtomicInteger(0)
+    private val sharedData = AtomicInteger(0)
+
+    @Operation
+    fun causesSpinLock() {
+        counter.incrementAndGet()
+        counter.decrementAndGet()
+    }
+
+    @Operation
+    fun spinLockOperation() {
+        if (counter.get() != 0) {
+            a()
+        }
+    }
+
+    private fun a() = b()
+
+    private fun b() = c()
+
+    private fun c() {
+        while (true) {
+            d()
+        }
+    }
+
+    private fun d() = e()
+
+    private fun e() {
+        sharedData.compareAndSet(2, 1)
+    }
+
+    @Test
+    fun test() = ModelCheckingOptions()
+        .addCustomScenario {
+            parallel {
+                thread { actor(ManyNestedFunctionsBeforeAndInsideSpinCycleTest::causesSpinLock) }
+                thread { actor(ManyNestedFunctionsBeforeAndInsideSpinCycleTest::spinLockOperation) }
+            }
+        }
+        .minimizeFailedScenario(false)
+        .checkImpl(this::class.java)
+        .checkLincheckOutput("nested_calls_spin_lock.txt")
+
+}
+
+/**
+ * This test is created to verify this [bug](https://github.com/JetBrains/lincheck/issues/218) is resolved.
+ * Checks that if spin cycle starts right after the method call, then spin cycle start event will be placed correctly.
+ */
+class SpinCycleFirstExecutionIsFirstInMethodCallTest {
+
+    val counter = AtomicInteger(0)
+    private val someUselessSharedState = AtomicBoolean(false)
+
+    @Operation
+    fun trigger() {
+        counter.incrementAndGet()
+        counter.decrementAndGet()
+    }
+
+    @Operation
+    fun causesSpinLock() {
+        if (counter.get() != 0) {
+            deadSpinCycle()
+        }
+    }
+
+    private fun deadSpinCycle() {
+        do {
+            val value = getSharedVariable()
+            someUselessSharedState.compareAndSet(value, !value)
+        } while (true)
+    }
+
+    private fun getSharedVariable(): Boolean = someUselessSharedState.get()
+
+
+    @Test
+    fun test() = ModelCheckingOptions()
+        .addCustomScenario {
+            parallel {
+                thread { actor(SpinCycleFirstExecutionIsFirstInMethodCallTest::trigger) }
+                thread { actor(SpinCycleFirstExecutionIsFirstInMethodCallTest::causesSpinLock) }
+            }
+        }
+        .minimizeFailedScenario(false)
+        .checkImpl(this::class.java)
+        .checkLincheckOutput("spin_cycle_with_zero_invocations_before.txt")
+}
+
+/**
+ * Checks that a correct spin cycle period is found when two calls inside a spin cycle differ only by their receivers.
+ */
+class SpinCycleWithPeriodTwiceBiggerBySwitchingReceiversTest {
+
+    private val counter = AtomicInteger(0)
+    private val sharedData = AtomicInteger(0)
+
+    @Operation
+    fun spinLockCause() {
+        counter.incrementAndGet()
+        counter.decrementAndGet()
+    }
+
+    @Operation
+    fun spinLock() {
+        if (counter.get() != 0) {
+            spinLockActions()
+        }
+    }
+
+
+    private fun spinLockActions() {
+        val descriptors = Array(2) { Descriptor() }
+        while (true) {
+            repeat(2) {
+                descriptors[it].check()
+            }
+        }
+    }
+
+    inner class Descriptor {
+        fun check() {
+            sharedData.compareAndSet(2, 1)
+        }
+    }
+
+    @Test
+    fun test() = ModelCheckingOptions()
+        .addCustomScenario {
+            parallel {
+                thread { actor(SpinCycleWithPeriodTwiceBiggerBySwitchingReceiversTest::spinLockCause) }
+                thread { actor(SpinCycleWithPeriodTwiceBiggerBySwitchingReceiversTest::spinLock) }
+            }
+        }
+        .checkImpl(this::class.java)
+        .checkLincheckOutput("spin_cycle_twice_bigger_because_of_switching_receivers.txt")
+}
+
+/**
+ * Checks that a correct spin cycle period is found when two calls inside a spin cycle differ only by their parameters.
+ */
+class SpinCycleWithPeriodTwiceBiggerBySwitchingParametersTest {
+
+    private val counter = AtomicInteger(0)
+    private val sharedData = AtomicInteger(0)
+
+    @Operation
+    fun spinLockCause() {
+        counter.incrementAndGet()
+        counter.decrementAndGet()
+    }
+
+    @Operation
+    fun spinLock() {
+        if (counter.get() != 0) {
+            spinLockActions()
+        }
+    }
+
+
+    private fun spinLockActions() {
+        while (true) {
+            repeat(2) { someCall(it) }
+        }
+    }
+
+    private fun someCall(number: Int) {
+        sharedData.compareAndSet(3, number)
+    }
+
+    @Test
+    fun test() = ModelCheckingOptions()
+        .addCustomScenario {
+            parallel {
+                thread { actor(SpinCycleWithPeriodTwiceBiggerBySwitchingParametersTest::spinLockCause) }
+                thread { actor(SpinCycleWithPeriodTwiceBiggerBySwitchingParametersTest::spinLock) }
+            }
+        }
+        .checkImpl(this::class.java)
+        .checkLincheckOutput("spin_cycle_twice_bigger_because_of_switching_parameters.txt")
+}
+
+/**
+ * Verify that if spin cycle can't be found by considering switch points and method parameters,
+ * Lincheck should try to find it without considering parameters.
+ */
+class SpinLockPeriodCanNotBeFoundOnlyWithParametersTest {
+    private val counter = AtomicInteger(0)
+    private val sharedData = AtomicInteger(0)
+
+    @Operation
+    fun spinLockCause() {
+        counter.incrementAndGet()
+        counter.decrementAndGet()
+    }
+
+    @Operation
+    fun spinLock() {
+        if (counter.get() != 0) {
+            spinLockActions()
+        }
+    }
+
+
+    private fun spinLockActions() {
+        var counter = 0
+        while (true) {
+            someCall(counter++)
+        }
+    }
+
+    private fun someCall(number: Int) {
+        sharedData.compareAndSet(3, number)
+    }
+
+    @Test
+    fun test() = ModelCheckingOptions()
+        .addCustomScenario {
+            parallel {
+                thread { actor(SpinLockPeriodCanNotBeFoundOnlyWithParametersTest::spinLockCause) }
+                thread { actor(SpinLockPeriodCanNotBeFoundOnlyWithParametersTest::spinLock) }
+            }
+        }
+        .checkImpl(this::class.java)
+        .checkLincheckOutput("spin_cycle_with_different_parameters.txt")
+}
+
+
+/**
+ * Checks that a correct spin cycle period is found when two atomic calls inside a spin cycle differ only by their parameters.
+ */
+class SpinCycleWithPeriodTwiceBiggerBySwitchingAtomicMethodParametersTest {
+
+    private val counter = AtomicInteger(0)
+    private val sharedData = AtomicInteger(0)
+
+    @Operation
+    fun spinLockCause() {
+        counter.incrementAndGet()
+        counter.decrementAndGet()
+    }
+
+    @Operation
+    fun spinLock() {
+        if (counter.get() != 0) {
+            spinLockActions()
+        }
+    }
+
+
+    private fun spinLockActions() {
+        while (true) {
+            repeat(2) { sharedData.compareAndSet(3, it) }
+        }
+    }
+
+    @Test
+    fun test() = ModelCheckingOptions()
+        .addCustomScenario {
+            parallel {
+                thread { actor(SpinCycleWithPeriodTwiceBiggerBySwitchingAtomicMethodParametersTest::spinLockCause) }
+                thread { actor(SpinCycleWithPeriodTwiceBiggerBySwitchingAtomicMethodParametersTest::spinLock) }
+            }
+        }
+        .checkImpl(this::class.java)
+        .checkLincheckOutput("spin_cycle_twice_bigger_because_of_atomic_method_parameters.txt")
 }

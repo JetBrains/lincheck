@@ -11,6 +11,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.RestrictedMethodsToInterceptNamesHolder.regularMethodInterceptionForbidden
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
@@ -37,6 +38,8 @@ internal class ManagedStrategyTransformer(
     private lateinit var className: String
     private var classVersion = 0
     private var fileName: String? = null
+
+    private val isSuspendStateMachine by lazy { isSuspendStateMachine(className) }
 
     override fun visit(version: Int, access: Int, name: String, signature: String?, superName: String, interfaces: Array<String>) {
         className = name
@@ -73,6 +76,7 @@ internal class ManagedStrategyTransformer(
         mv = ClassInitializationTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         if (constructTraceRepresentation) mv = AFUTrackingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = ManagedStrategyGuaranteeTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+        mv = MethodCallsWithArgumentTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = CallStackTraceLoggingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = HashCodeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = UnsafeTransformer(GeneratorAdapter(mv, access, mname, desc))
@@ -370,7 +374,7 @@ internal class ManagedStrategyTransformer(
         private fun invokeBeforeAtomicMethodCall() {
             loadStrategy()
             loadCurrentThreadNumber()
-            adapter.push(codeLocationIdProvider.lastId) // re-use previous code location
+            adapter.push(codeLocationIdProvider.newId())
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_ATOMIC_METHOD_CALL_METHOD)
         }
     }
@@ -401,10 +405,279 @@ internal class ManagedStrategyTransformer(
     }
 
     /**
+     * Adds [ManagedStrategy.beforeMethodCallWithArguments] and [ManagedStrategy.afterMethodCallWithArguments] methods invocations,
+     * if [TrackMethodsFlagHolder.trackingEnabled] is enabled.
+     * This information is used to detect a spin lock period, considering arguments and receivers.
+     */
+    private inner class MethodCallsWithArgumentTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
+        override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
+            if (name == "<init>" ||
+                isSuspendStateMachine ||
+                isStrategyMethod(owner) ||
+                isInternalCoroutineCall(owner, name) ||
+                regularMethodInterceptionForbidden(owner, name)
+            ) {
+                adapter.visitMethodInsn(opcode, owner, name, desc, itf)
+                return
+            }
+            val methodCallCodeLocation = codeLocationIdProvider.newMethodCallId()
+            val endLabel = adapter.newLabel()
+            val interceptionLabel = adapter.newLabel()
+
+            adapter.getStatic(TRACKING_FLAG_HOLDER_TYPE, "trackingEnabled", Type.BOOLEAN_TYPE)
+            adapter.visitJumpInsn(IFNE, interceptionLabel)
+
+            adapter.visitMethodInsn(opcode, owner, name, desc, itf)
+            adapter.goTo(endLabel)
+            visitLabel(interceptionLabel)
+            invokeBeforeRegularMethodCall(methodCallCodeLocation, opcode, owner, name, desc)
+
+            val callStart = adapter.newLabel()
+            val callEnd = adapter.newLabel()
+            val exceptionHandler = adapter.newLabel()
+
+            adapter.visitTryCatchBlock(callStart, callEnd, exceptionHandler, null)
+            // try {
+            adapter.visitLabel(callStart)
+            adapter.visitMethodInsn(opcode, owner, name, desc, itf)
+            adapter.visitLabel(callEnd)
+            invokeAfterRegularMethodCall(methodCallCodeLocation)
+            adapter.goTo(endLabel)
+            // } catch {
+            adapter.visitLabel(exceptionHandler)
+            invokeAfterRegularMethodCall(methodCallCodeLocation)
+            adapter.throwException()
+            // }
+            adapter.visitLabel(endLabel)
+        }
+
+        private fun invokeAfterRegularMethodCall(methodCallCodeLocation: Int) {
+            loadStrategy()
+            loadCurrentThreadNumber()
+            adapter.push(methodCallCodeLocation)
+            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, AFTER_REGULAR_METHOD_CALL)
+        }
+
+        private fun invokeBeforeRegularMethodCall(
+            methodCallCodeLocation: Int,
+            opcode: Int,
+            owner: String,
+            name: String,
+            desc: String
+        ) {
+            // array: [ owner_if_exists, param_1_int_view, param_2_int_view, ..., param_n_int_view ]
+            val parametersIntValues = captureOwnerAndParametersBeforeRegularMethodCall(opcode, owner, name, desc)
+            loadStrategy()
+            loadCurrentThreadNumber()
+            adapter.push(methodCallCodeLocation)
+            // if this method is static and has no arguments
+            if (parametersIntValues == -1) {
+                adapter.push(null as Type?)
+            } else {
+                adapter.loadLocal(parametersIntValues)
+            }
+            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_REGULAR_METHOD_CALL)
+        }
+
+        private fun captureOwnerAndParametersBeforeRegularMethodCall(
+            opcode: Int,
+            owner: String,
+            methodName: String,
+            desc: String
+        ): Int {
+            val paramTypes = Type.getArgumentTypes(desc)
+            val isStatic = opcode and ACC_STATIC != 0
+            if (isStatic && paramTypes.isEmpty()) return -1  // nothing to capture
+            val ownerIfExistsAndParams = adapter.copyParametersAndReceiverIfNotStatic(isStatic, paramTypes)
+            val firstLoggedParameter = if (paramTypes.isEmpty()) 0 else
+                if (isAFUMethodCall(opcode, owner, methodName, desc)) {
+                    // do not log the first object in AFU methods
+                    1
+                } else {
+                    0
+                }
+            val lastLoggedParameter = if (paramTypes.isEmpty()) 0 else
+                if (paramTypes.last().internalName == "kotlin/coroutines/Continuation" && isSuspend(
+                        owner,
+                        methodName,
+                        desc
+                    )
+                ) {
+                    // do not log the last continuation in suspend functions
+                    paramTypes.size - 1
+                } else {
+                    paramTypes.size
+                }
+            // If the method is not static - receiver int view goes first in the representation array
+            val parametersStartIndexInArray = if (isStatic) 0 else 1
+            adapter.push(lastLoggedParameter - firstLoggedParameter + parametersStartIndexInArray)
+            // Create an array of parameters
+            visitIntInsn(NEWARRAY, T_INT)
+            val parameterValuesLocal = adapter.newLocal(INT_ARRAY_TYPE)
+            adapter.storeLocal(parameterValuesLocal)
+
+            // Add to array int representation of receiver if method is not static
+            if (!isStatic) {
+                adapter.loadLocal(parameterValuesLocal)
+                adapter.push(0)
+                adapter.loadLocal(ownerIfExistsAndParams[0])
+                adapter.invokeStatic(SYSTEM_TYPE, SYSTEM_IDENTITY_HASHCODE_METHOD)
+                adapter.arrayStore(Type.INT_TYPE)
+            }
+
+            for (i in firstLoggedParameter until lastLoggedParameter) {
+                adapter.loadLocal(parameterValuesLocal)
+                adapter.push(i - firstLoggedParameter + parametersStartIndexInArray)
+
+                val paramType = paramTypes[i]
+                val paramLocal = ownerIfExistsAndParams[i + parametersStartIndexInArray]
+                pushParamToIntIdentity(paramLocal, paramType)
+
+                adapter.arrayStore(Type.INT_TYPE)
+            }
+            return parameterValuesLocal
+        }
+
+        /**
+         * Puts on the stack int view of this parameter or receiver.
+         */
+        private fun pushParamToIntIdentity(local: Int, localType: Type) {
+            // Process all primitive types
+            when (localType.sort) {
+                Type.INT, Type.BOOLEAN, Type.SHORT, Type.BYTE, Type.CHAR -> { // Type.BOOLEAN, Type.SHORT, Type.BYTE, Type.CHAR
+                    adapter.loadLocal(local)
+                    return
+                }
+
+                Type.DOUBLE -> {
+                    adapter.loadLocal(local)
+                    adapter.visitMethodInsn(INVOKESTATIC, "java/lang/Double", "hashCode", "(D)I", false)
+                    return
+                }
+
+                Type.FLOAT -> {
+                    adapter.loadLocal(local)
+                    adapter.visitMethodInsn(INVOKESTATIC, "java/lang/Float", "hashCode", "(F)I", false)
+                    return
+                }
+
+                Type.LONG -> {
+                    adapter.loadLocal(local)
+                    adapter.visitInsn(L2I)
+                    return
+                }
+            }
+
+            // Process null
+            val end = adapter.newLabel()
+            val nullBranch = adapter.newLabel()
+            adapter.loadLocal(local)
+            adapter.ifNull(nullBranch)
+            adapter.visitLabel(nullBranch)
+            adapter.push(0)
+            adapter.goTo(end)
+
+            // Process all wrapper types
+            when (localType.internalName) {
+                INT_WRAPPER_TYPE_NAME -> {
+                    adapter.loadLocal(local)
+                    adapter.unbox(Type.INT_TYPE)
+                }
+
+                BOOLEAN_WRAPPER_TYPE_NAME -> {
+                    adapter.visitVarInsn(ALOAD, local)
+                    adapter.unbox(Type.BOOLEAN_TYPE)
+                    val labelTrue = Label()
+                    adapter.visitJumpInsn(IFNE, labelTrue) // If value is true, jump
+                    // Value is false
+                    adapter.visitInsn(ICONST_0) // Load 0
+                    val labelEnd = Label()
+                    adapter.visitJumpInsn(GOTO, labelEnd) // Go to end
+                    // Value is true
+                    adapter.visitLabel(labelTrue)
+                    adapter.visitInsn(ICONST_1) // Load 1
+                    adapter.visitLabel(labelEnd)
+                }
+
+                CHAR_WRAPPER_TYPE_NAME -> {
+                    adapter.loadLocal(local)
+                    adapter.unbox(Type.BOOLEAN_TYPE)
+                }
+
+                SHORT_WRAPPER_TYPE_NAME -> {
+                    adapter.loadLocal(local)
+                    adapter.unbox(Type.SHORT_TYPE)
+                }
+
+                BYTE_WRAPPER_TYPE_NAME -> {
+                    adapter.loadLocal(local)
+                    adapter.unbox(Type.BYTE_TYPE)
+                }
+
+                LONG_WRAPPER_TYPE_NAME -> {
+                    adapter.loadLocal(local)
+                    adapter.unbox(Type.LONG_TYPE)
+                    adapter.visitInsn(L2I)
+                }
+
+                FLOAT_WRAPPER_TYPE_NAME -> {
+                    adapter.loadLocal(local)
+                    adapter.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Float", "hashCode", "()I", false)
+                }
+
+                DOUBLE_WRAPPER_TYPE_NAME -> {
+                    adapter.loadLocal(local)
+                    adapter.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Double", "hashCode", "()I", false)
+                }
+
+                else -> {
+                    // If this is an Object and not a wrapper, then call System.identityHashCode method
+                    adapter.loadLocal(local)
+                    adapter.invokeStatic(SYSTEM_TYPE, SYSTEM_IDENTITY_HASHCODE_METHOD)
+                }
+            }
+            adapter.visitLabel(end)
+        }
+
+        /**
+         * Returns an array of locals containing receiver given parameters.
+         *
+         * STACK: owner (if not static) param_1 param_2 ... param_n
+         * RESULT STACK: owner (if not static) param_1 param_2 ... param_n (the stack is not changed)
+         */
+        private fun GeneratorAdapter.copyParametersAndReceiverIfNotStatic(isStatic: Boolean, paramTypes: Array<Type>): IntArray {
+            val locals = storeParametersAndReceiverIfExists(isStatic, paramTypes)
+            loadLocals(locals)
+            return locals
+        }
+        /**
+         * Returns an array of locals containing given parameters.
+         * STACK: receiver (if not static) param_1 param_2 ... param_n
+         * RESULT STACK: (empty)
+         */
+        private fun GeneratorAdapter.storeParametersAndReceiverIfExists(isStatic: Boolean, paramTypes: Array<Type>): IntArray {
+            val startPosition = if (isStatic) 0 else 1
+            val size = paramTypes.size + startPosition
+            val locals = IntArray(size)
+            // store all arguments
+            for (i in paramTypes.indices.reversed()) {
+                locals[i + startPosition] = newLocal(paramTypes[i])
+                storeLocal(locals[i + startPosition], paramTypes[i])
+            }
+            // store owner
+            if (!isStatic) {
+                locals[0] = newLocal(OBJECT_TYPE)
+                storeLocal(locals[0], OBJECT_TYPE)
+            }
+            return locals
+        }
+
+    }
+
+    /**
      * Adds strategy method invocations before and after method calls.
      */
     private inner class CallStackTraceLoggingTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
-        private val isSuspendStateMachine by lazy { isSuspendStateMachine(className) }
 
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
             if (isSuspendStateMachine || isStrategyMethod(owner) || isInternalCoroutineCall(owner, name)) {
@@ -550,9 +823,6 @@ internal class ManagedStrategyTransformer(
             adapter.loadLocal(tracePointLocal)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, AFTER_METHOD_CALL_METHOD)
         }
-
-        private fun isInternalCoroutineCall(owner: String, name: String) =
-            owner == "kotlin/coroutines/intrinsics/IntrinsicsKt" && name == "getCOROUTINE_SUSPENDED"
     }
 
     /**
@@ -834,9 +1104,9 @@ internal class ManagedStrategyTransformer(
                 when (desc) {
                     "(J)V" -> loadLocal(firstArgument)
                     "(JI)V" -> {
-                         loadLocal(firstArgument)
-                         loadLocal(lastArgument)
-                     }
+                            loadLocal(firstArgument)
+                            loadLocal(lastArgument)
+                        }
                 }
             }
             if (isNotify) {
@@ -912,7 +1182,7 @@ internal class ManagedStrategyTransformer(
                 push(false)
                 invokeBeforePark()
                 visitLabel(invokeBeforeParkEnd)
-                // check whether should really park 
+                // check whether should really park
                 ifZCmp(GeneratorAdapter.GT, beforePark) // park if returned true
                 // delete park params
                 pop2() // time
@@ -1229,15 +1499,37 @@ internal class ManagedStrategyTransformer(
             super.visitLineNumber(line, start)
         }
     }
+
+    private fun isInternalCoroutineCall(owner: String, name: String) =
+        owner == "kotlin/coroutines/intrinsics/IntrinsicsKt" && name == "getCOROUTINE_SUSPENDED"
 }
 
 /**
- * The counter that helps to assign gradually increasing disjoint ids to different code locations
+ * The counter that helps to assign gradually increasing disjoint ids to different code locations.
+ * Code locations are used to distinguish between potential switch point and method enter/exit points,
+ * that are used for spin cycle period detection.
  */
 internal class CodeLocationIdProvider {
-    var lastId = -1 // the first id will be zero
-        private set
-    fun newId() = ++lastId
+
+    private var lastPotentialSwitchPointId = LEAST_CODE_LOCATION_ID - 2 // the first id will be 100
+
+    private var lastMethodCallId = LEAST_CODE_LOCATION_ID - 1 // the first regular method call id will be 101
+
+    fun newId(): Int {
+        lastPotentialSwitchPointId += 2
+        return lastPotentialSwitchPointId
+    }
+    fun newMethodCallId(): Int {
+        lastMethodCallId += 2
+        return lastMethodCallId
+    }
+
+    companion object {
+        /**
+         * First [LEAST_CODE_LOCATION_ID] code locations are reserved for threads finish point.
+         */
+        const val LEAST_CODE_LOCATION_ID = 100
+    }
 }
 
 // By default `java.util` interfaces are not transformed, while classes are.
@@ -1301,6 +1593,7 @@ private val NOTIFY_TRACE_POINT_TYPE = Type.getType(NotifyTracePoint::class.java)
 private val PARK_TRACE_POINT_TYPE = Type.getType(ParkTracePoint::class.java)
 private val UNPARK_TRACE_POINT_TYPE = Type.getType(UnparkTracePoint::class.java)
 
+private val SYSTEM_IDENTITY_HASHCODE_METHOD = Method.getMethod(System::identityHashCode.javaMethod)
 private val CURRENT_THREAD_NUMBER_METHOD = Method.getMethod(ManagedStrategy::currentThreadNumber.javaMethod)
 private val BEFORE_SHARED_VARIABLE_READ_METHOD = Method.getMethod(ManagedStrategy::beforeSharedVariableRead.javaMethod)
 private val BEFORE_SHARED_VARIABLE_WRITE_METHOD = Method.getMethod(ManagedStrategy::beforeSharedVariableWrite.javaMethod)
@@ -1332,8 +1625,30 @@ private val INITIALIZE_THROWN_EXCEPTION_METHOD = Method.getMethod(MethodCallTrac
 private val INITIALIZE_PARAMETERS_METHOD = Method.getMethod(MethodCallTracePoint::initializeParameters.javaMethod)
 private val INITIALIZE_OWNER_NAME_METHOD = Method.getMethod(MethodCallTracePoint::initializeOwnerName.javaMethod)
 private val NEXT_INT_METHOD = Method("nextInt", Type.INT_TYPE, emptyArray<Type>())
+private val BEFORE_REGULAR_METHOD_CALL = Method.getMethod(ManagedStrategy::beforeMethodCallWithArguments.javaMethod)
+private val AFTER_REGULAR_METHOD_CALL = Method.getMethod(ManagedStrategy::afterMethodCallWithArguments.javaMethod)
 
+private val INT_WRAPPER_TYPE = Type.getType(java.lang.Integer::class.java)
+private val INT_WRAPPER_TYPE_NAME = INT_WRAPPER_TYPE.internalName
+private val SHORT_WRAPPER_TYPE = Type.getType(java.lang.Short::class.java)
+private val SHORT_WRAPPER_TYPE_NAME = SHORT_WRAPPER_TYPE.internalName
+private val CHAR_WRAPPER_TYPE = Type.getType(java.lang.Character::class.java)
+private val CHAR_WRAPPER_TYPE_NAME = CHAR_WRAPPER_TYPE.internalName
+private val BYTE_WRAPPER_TYPE = Type.getType(java.lang.Byte::class.java)
+private val BYTE_WRAPPER_TYPE_NAME = BYTE_WRAPPER_TYPE.internalName
+private val BOOLEAN_WRAPPER_TYPE = Type.getType(java.lang.Boolean::class.java)
+private val BOOLEAN_WRAPPER_TYPE_NAME = BOOLEAN_WRAPPER_TYPE.internalName
+private val DOUBLE_WRAPPER_TYPE = Type.getType(java.lang.Double::class.java)
+private val DOUBLE_WRAPPER_TYPE_NAME = DOUBLE_WRAPPER_TYPE.internalName
+private val FLOAT_WRAPPER_TYPE = Type.getType(java.lang.Float::class.java)
+private val FLOAT_WRAPPER_TYPE_NAME = FLOAT_WRAPPER_TYPE.internalName
+private val LONG_WRAPPER_TYPE = Type.getType(java.lang.Long::class.java)
+private val LONG_WRAPPER_TYPE_NAME = LONG_WRAPPER_TYPE.internalName
+
+private val SYSTEM_TYPE = Type.getType(System::class.java)
+private val INT_ARRAY_TYPE = Type.getType("[I")
 private val WRITE_KEYWORDS = listOf("set", "put", "swap", "exchange")
+private val TRACKING_FLAG_HOLDER_TYPE = Type.getType(TrackMethodsFlagHolder::class.java)
 
 /**
  * Returns array of locals containing given parameters.
@@ -1491,4 +1806,58 @@ internal object UnsafeHolder {
         }
         return theUnsafe!!
     }
+}
+
+
+/**
+ * Provides an ability to determine should we instrument and track enter/exit and parameters of some method or not.
+ */
+internal object RestrictedMethodsToInterceptNamesHolder {
+
+    @JvmStatic
+    @Suppress("UNCHECKED_CAST")
+    fun regularMethodInterceptionForbidden(owner: String, methodName: String): Boolean {
+        val options = forbiddenToInstrumentMethods[owner] ?: return false
+        if (options === AllMethodsRestrictedToIntercept) return true
+
+        return methodName in (options as Set<String>)
+    }
+
+    @JvmStatic
+    private val forbiddenToInstrumentMethods: Map<String, Any> = hashMapOf(
+        "kotlin/jvm/internal/Intrinsics" to hashSetOf("checkNotNullParameter"),
+        "java/util/Iterator" to hashSetOf("hasNext", "next", "remove"),
+        "java/util/Objects" to hashSetOf("requireNonNull"),
+        "java/lang/Object" to hashSetOf("equals",  "getClass", "toString"),
+
+        "jdk/internal/util/ArraysSupport" to hashSetOf("mismatch"),
+        "kotlin/jvm/functions/Function1" to hashSetOf("invoke"),
+        "java/lang/invoke/MethodHandles\$Lookup" to hashSetOf("findVarHandle"),
+        "java/lang/System" to hashSetOf("arraycopy"),
+        "java/util/DualPivotQuicksort" to hashSetOf("sort"),
+        "java/lang/Comparable" to hashSetOf("compareTo"),
+        "org/jetbrains/kotlinx/lincheck/LinCheckerKt" to hashSetOf("check"),
+        "java/util/ArrayList" to hashSetOf( "add"),
+        "java/util/Comparator" to hashSetOf("compare"),
+        "kotlin/collections/IntIterator" to hashSetOf("nextInt", "hasNext"),
+
+        "kotlin/jvm/internal/Reflection" to AllMethodsRestrictedToIntercept,
+        "java/util/Random" to AllMethodsRestrictedToIntercept,
+        "java/lang/StringBuilder" to AllMethodsRestrictedToIntercept,
+        "java/util/Arrays" to AllMethodsRestrictedToIntercept,
+        "kotlin/collections/ArraysKt" to AllMethodsRestrictedToIntercept,
+        "java/lang/Math" to AllMethodsRestrictedToIntercept,
+        "kotlin/ranges/ClosedRange" to AllMethodsRestrictedToIntercept,
+        "kotlin/ranges/IntRange" to AllMethodsRestrictedToIntercept,
+
+        "java/lang/Byte" to AllMethodsRestrictedToIntercept,
+        "java/lang/Short" to AllMethodsRestrictedToIntercept,
+        "java/lang/Double" to AllMethodsRestrictedToIntercept,
+        "java/lang/Float" to AllMethodsRestrictedToIntercept,
+        "java/lang/Long" to AllMethodsRestrictedToIntercept,
+        "java/lang/Integer" to AllMethodsRestrictedToIntercept,
+    )
+
+    private object AllMethodsRestrictedToIntercept
+
 }
