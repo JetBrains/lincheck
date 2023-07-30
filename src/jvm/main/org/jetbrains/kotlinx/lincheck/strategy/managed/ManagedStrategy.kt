@@ -927,6 +927,8 @@ abstract class ManagedStrategy(
             currentThreadCodeLocationsHistory += codeLocation
             val detectedFirstTime = count > hangingDetectionThreshold
             val detectedEarly = loopTrackingCursor.isInCycle
+            // DetectedFirstTime and detectedEarly can both sometimes be true
+            // when we can't find a cycle period and can't switch to another thread.
             // Check whether the count exceeds the maximum number of repetitions for loop/hang detection.
             if (detectedFirstTime && !detectedEarly) {
                 registerCycle()
