@@ -19,6 +19,7 @@ import org.jetbrains.kotlinx.lincheck_test.guide.MSQueueBlocking
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReferenceArray
 import kotlin.reflect.jvm.*
 
@@ -242,5 +243,45 @@ class SpinlockInIncorrectResultsWithClocksTest {
 
         fun d(): Int = x
     }
+
+}
+
+/**
+ * Checks that after a spin-cycle found execution is halted and interleaving is replayed to avoid side effects
+ * caused by the multiple executions of the cycle.
+ *
+ * Test should not fail.
+ */
+class SpinCycleWithSideEffectsTest {
+
+    private val counter = AtomicInteger(0)
+
+    private val shouldNotBeVeryBig = AtomicInteger(0)
+
+    @Operation
+    fun spinLockCause() {
+        counter.incrementAndGet()
+        counter.decrementAndGet()
+        check(shouldNotBeVeryBig.get() < 50)
+    }
+
+    @Operation
+    fun spinLock() {
+        while (counter.get() != 0) {
+            shouldNotBeVeryBig.incrementAndGet()
+        }
+    }
+
+    @Test
+    fun test() = ModelCheckingOptions()
+        .addCustomScenario {
+            parallel {
+                thread { actor(SpinCycleWithSideEffectsTest::spinLockCause) }
+                thread { actor(SpinCycleWithSideEffectsTest::spinLock) }
+            }
+        }
+        .invocationsPerIteration(100)
+        .iterations(100)
+        .check(this::class)
 
 }

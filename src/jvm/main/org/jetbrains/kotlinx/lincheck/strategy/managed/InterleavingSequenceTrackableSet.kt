@@ -84,7 +84,7 @@ private fun <T> findLastIndexNotRelatedToCycle(elements: List<T>, cycleLength: I
 internal class InterleavingHistoryNode(
     val threadId: Int,
     var executions: Int = 0,
-    /*
+    /**
      * Hash code calculated by execution ids of this switch,
      * which is being used to find cycles in interleaving sequences.
      * It is required as we want to distinguish two execution sequences of the same count in the same thread,
@@ -97,7 +97,10 @@ internal class InterleavingHistoryNode(
      * So, this field will give us such ability to separate executions.
      */
     var executionHash: Int = 0,
-    val spinCyclePeriod: Int = 0
+    /**
+     * This field is updated when execution is replayed and we meet a sequence that previously led to a cycle.
+     */
+    var spinCyclePeriod: Int = 0
 ) {
     val cycleOccurred: Boolean get() = spinCyclePeriod != 0
 
@@ -192,7 +195,6 @@ internal class InterleavingSequenceTrackableSet {
      */
     fun addBranch(chain: List<InterleavingHistoryNode>) {
         require(chain.isNotEmpty()) { "Internal error: Cycle chain can't be empty" }
-        require(chain.last().cycleOccurred) { "Internal error: Chain must represent a sequence of events that leads to cycle" }
 
         val firstElement = chain.first().threadId
         // If we already have a chain with that threadId - merge it
@@ -211,7 +213,12 @@ internal class InterleavingSequenceTrackableSet {
     internal inner class InterleavingSequenceSetNode(
         val threadId: Int,
         var executions: Int = 0,
-        var cycleOccurred: Boolean = false,
+        var cyclePeriod: Int,
+        var cycleOccurred: Boolean,
+        /**
+         * Only present when this node corresponds to cycle, i.e. [cycleOccurred] != 0
+         */
+        val cycleLocationsHash: Int,
         private var transitions: MutableMap<Int, InterleavingSequenceSetNode>? = null
     ) {
 
@@ -253,10 +260,13 @@ internal class InterleavingSequenceTrackableSet {
                     val nextNode = InterleavingSequenceSetNode(
                         threadId = threadId,
                         executions = deltaExecutions,
+                        transitions = transitions,
+                        cyclePeriod = cyclePeriod,
                         cycleOccurred = cycleOccurred,
-                        transitions = transitions
+                        cycleLocationsHash = cycleLocationsHash
                     )
                     executions = firstNewNodeExecutions
+                    cyclePeriod = firstNewNode.spinCyclePeriod
                     cycleOccurred = firstNewNode.cycleOccurred
 
                     val (newChainRoot, newChainLeaf) = wrapChain(newChain, startIndex + 1)
@@ -307,7 +317,9 @@ internal class InterleavingSequenceTrackableSet {
         val root = InterleavingSequenceSetNode(
             threadId = first.threadId,
             executions = firstExecutions - executionsCountedEarlier,
-            cycleOccurred = first.cycleOccurred,
+            cyclePeriod = first.spinCyclePeriod,
+            cycleLocationsHash = first.executionHash,
+            cycleOccurred = startIndex == chain.lastIndex,
         )
         var current = root
 
@@ -316,7 +328,9 @@ internal class InterleavingSequenceTrackableSet {
             val nextNode = InterleavingSequenceSetNode(
                 threadId = next.threadId,
                 executions = next.executions + next.spinCyclePeriod,
-                cycleOccurred = next.cycleOccurred,
+                cyclePeriod = next.spinCyclePeriod,
+                cycleLocationsHash = first.executionHash,
+                cycleOccurred = i == chain.lastIndex
             )
             current.addTransition(next.threadId, nextNode)
             current = nextNode
@@ -382,11 +396,20 @@ internal class InterleavingSequenceTrackableSet {
         Otherwise, if the next thread id is, for example, 5, then the cursor will become invalid and
         `isInCycle` property will return false and won't react on any events until the next cursor `reset` or `setTo` methods calls.
          */
+        /**
+         * Excepted to call only if [isInCycle] returned `true`
+         */
+        val cycleLocationsHash: Int get() = currentNode!!.cycleLocationsHash
 
         /**
          *  Chain node where the cursor is currently located
          */
         private var currentNode: InterleavingSequenceSetNode? = null
+
+        /**
+         * A cycle period of the current node
+         */
+        val cyclePeriod: Int get() = currentNode!!.cyclePeriod
 
         /**
          * Number of executions in the current thread
@@ -411,8 +434,8 @@ internal class InterleavingSequenceTrackableSet {
 
         /**
          * This method is called after every execution in the current thread.
-         * Its worth noting that any new executions occurred when the cursor is in the cycle node will be ignored,
-         * because after we ran into the cycle, it doesn't matter how many actions we will do - we will anyway stay in that cycle
+         * It's worth noting that any new executions occurred when the cursor is in the cycle node will be ignored,
+         * because after we run into the cycle, it doesn't matter how many actions we will do - we will anyway stay in that cycle
          */
         fun onNextExecutionPoint(): Unit = ifValid { node ->
             // If we get into a cycle, then no matter how many executions we will perform in the current thread -
@@ -486,6 +509,40 @@ internal class InterleavingSequenceTrackableSet {
      */
     fun clear() {
         rootTransitions.clear()
+    }
+
+    /**
+     * Useful utility method for debug.
+     * @param steps thread-executions pairs
+     */
+    @Suppress("unused")
+    fun hashPath(vararg steps: Pair<Int, Int>): Boolean {
+        val r = rootTransitions[steps.first().first] ?: return false
+        return hasPath(r, 0, 0, steps.toList())
+    }
+
+    private fun hasPath(
+        node: InterleavingSequenceSetNode,
+        index: Int,
+        subtract: Int,
+        path: List<Pair<Int, Int>>
+    ): Boolean {
+        val iThread = path[index].first
+        val executions = path[index].second - subtract
+
+        if (executions > node.executions) {
+            val next = node.transition(iThread) ?: return false
+            return hasPath(next, index, subtract + node.executions, path)
+        }
+        if (executions < node.executions) {
+            return false
+        }
+        if (index == path.lastIndex) {
+            return node.cycleOccurred
+        }
+
+        val next = node.transition(path[index + 1].first) ?: return false
+        return hasPath(next, index + 1, 0, path)
     }
 
 }

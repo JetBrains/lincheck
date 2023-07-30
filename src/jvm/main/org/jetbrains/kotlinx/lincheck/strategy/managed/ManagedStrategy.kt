@@ -323,6 +323,7 @@ abstract class ManagedStrategy(
             } else {
                 switchCurrentThread(iThread, SwitchReason.STRATEGY_SWITCH)
             }
+            loopDetector.initializeFirstCodeLocationAfterSwitch(codeLocation)
         } else {
             loopDetector.onNextExecutionPoint(codeLocation)
         }
@@ -808,13 +809,6 @@ abstract class ManagedStrategy(
     }
 
     /**
-     * Is called when spin cycle was found.
-     *
-     * @param executionsBeforeCycle the count of executions in current thread before cycle
-     */
-    abstract fun onNewSpinCycleRegistered(executionsBeforeCycle: Int)
-
-    /**
      * The LoopDetector class identifies loops, active locks, and live locks by monitoring the frequency of visits to the same code location.
      * It operates under a specific scenario constraint due to its reliance on cache information about loops,
      * determined by thread executions and switches, which is only reusable in a single scenario.
@@ -931,19 +925,37 @@ abstract class ManagedStrategy(
             val count = currentThreadCodeLocationVisitCountMap.getOrDefault(codeLocation, 0) + 1
             currentThreadCodeLocationVisitCountMap[codeLocation] = count
             currentThreadCodeLocationsHistory += codeLocation
-            val detectedEarly = loopTrackingCursor.isInCycle
-            // Check whether the count exceeds the maximum number of repetitions for loop/hang detection.
             val detectedFirstTime = count > hangingDetectionThreshold
+            val detectedEarly = loopTrackingCursor.isInCycle
+            // DetectedFirstTime and detectedEarly can both sometimes be true
+            // when we can't find a cycle period and can't switch to another thread.
+            // Check whether the count exceeds the maximum number of repetitions for loop/hang detection.
             if (detectedFirstTime && !detectedEarly) {
                 registerCycle()
+                // Enormous operations count considered as total spin lock
+                if (totalExecutionsCount > ManagedCTestConfiguration.LIVELOCK_EVENTS_THRESHOLD) {
+                    failDueToDeadlock()
+                }
+                // Replay current interleaving to avoid side effects caused by multiple cycle executions
+                suddenInvocationResult = SpinCycleFoundAndReplayRequired
+                throw ForcibleExecutionFinishException
             }
             if (!detectedFirstTime && detectedEarly) {
                 totalExecutionsCount += hangingDetectionThreshold
-            }
-            // Enormous operations count considered as total spin lock
-            if (totalExecutionsCount > ManagedCTestConfiguration.LIVELOCK_EVENTS_THRESHOLD) {
-                registerCycle()
-                failDueToDeadlock()
+                val lastNode = currentInterleavingHistory.last()
+                // spinCyclePeriod may be not 0 only we tried to switch
+                // from the current thread but no available threads were available to switch
+                if (lastNode.spinCyclePeriod == 0) {
+                    // transform current node to the state corresponding to early found cycle
+                    val cyclePeriod = loopTrackingCursor.cyclePeriod
+                    lastNode.executions -= cyclePeriod
+                    lastNode.spinCyclePeriod = cyclePeriod
+                    lastNode.executionHash = loopTrackingCursor.cycleLocationsHash
+                }
+                // Enormous operations count considered as total spin lock
+                if (totalExecutionsCount > ManagedCTestConfiguration.LIVELOCK_EVENTS_THRESHOLD) {
+                    failDueToDeadlock()
+                }
             }
             return detectedFirstTime || detectedEarly
         }
@@ -983,6 +995,14 @@ abstract class ManagedStrategy(
             replayModeLoopDetectorHelper?.onNextSwitch(threadRunningFirstTime)
         }
 
+        /**
+         * Is called after switch back to a thread
+         */
+        fun initializeFirstCodeLocationAfterSwitch(codeLocation: Int) {
+            val lastInterleavingHistoryNode = currentInterleavingHistory.last()
+            lastInterleavingHistoryNode.executionHash = lastInterleavingHistoryNode.executionHash xor codeLocation
+        }
+
         fun onNextExecutionPoint(executionIdentity: Int) {
             val lastInterleavingHistoryNode = currentInterleavingHistory.last()
             if (lastInterleavingHistoryNode.cycleOccurred) {
@@ -994,12 +1014,24 @@ abstract class ManagedStrategy(
         }
 
         private fun registerCycle() {
-            val cycleInfo = findMaxPrefixLengthWithNoCycleOnSuffix(currentThreadCodeLocationsHistory) ?: return
+            val cycleInfo = findMaxPrefixLengthWithNoCycleOnSuffix(currentThreadCodeLocationsHistory)
+            if (cycleInfo == null) {
+                val lastNode = currentInterleavingHistory.last()
+                val cycleStateLastNode = lastNode.asNodeCorrespondingToCycle(
+                    executionsBeforeCycle = currentThreadCodeLocationsHistory.size - 1,
+                    cyclePeriod = 0,
+                    cycleExecutionsHash = lastNode.executionHash // corresponds to a cycle
+                )
+
+                currentInterleavingHistory[currentInterleavingHistory.lastIndex] = cycleStateLastNode
+                interleavingsLeadToSpinLockSet.addBranch(currentInterleavingHistory)
+                return
+            }
             /*
             For nodes, correspond to cycles we re-calculate hash using only code locations related to the cycle,
             because if we run into a DeadLock,
             it's enough to show events before the cycle and first cycle iteration in the current thread.
-            For example:
+            For example,
             [threadId = 0, executions = 10],
             [threadId = 1, executions = 5], // 2 executions before cycle and then cycle of 3 executions begins
             [threadId = 0, executions = 3],
@@ -1009,16 +1041,15 @@ abstract class ManagedStrategy(
             [threadId = 1, executions = 3],
             [threadId = 0, executions = 3]
 
-            In this situation we have a spin cycle:[threadId = 1, executions = 3], [threadId = 0, executions = 3].
+            In this situation, we have a spin cycle:[threadId = 1, executions = 3], [threadId = 0, executions = 3].
             We want to cut off events suffix to get:
             [threadId = 0, executions = 10],
-            [threadId = 1, executions = 5], // 2 executions before cycle and then cycle begins
+            [threadId = 1, executions = 5], // 2 executions before cycle, and then cycle begins
             [threadId = 0, executions = 3],
 
-            so we need to [threadId = 1, executions = 5] execution part to have a hash equals to next cycle nodes,
+            So we need to [threadId = 1, executions = 5] execution part to have a hash equals to next cycle nodes,
             because we will take only thread executions before cycle and the first cycle iteration.
              */
-            onNewSpinCycleRegistered(executionsBeforeCycle = cycleInfo.executionsBeforeCycle + cycleInfo.cyclePeriod)
             var cycleExecutionLocationsHash = currentThreadCodeLocationsHistory[cycleInfo.executionsBeforeCycle]
             for (i in cycleInfo.executionsBeforeCycle + 1 until cycleInfo.executionsBeforeCycle + cycleInfo.cyclePeriod) {
                 cycleExecutionLocationsHash = cycleExecutionLocationsHash xor currentThreadCodeLocationsHistory[i]
@@ -1027,7 +1058,7 @@ abstract class ManagedStrategy(
             val cycleStateLastNode = currentInterleavingHistory.last().asNodeCorrespondingToCycle(
                 executionsBeforeCycle = cycleInfo.executionsBeforeCycle,
                 cyclePeriod = cycleInfo.cyclePeriod,
-                cycleExecutionsHash = cycleExecutionLocationsHash
+                cycleExecutionsHash = cycleExecutionLocationsHash // corresponds to a cycle
             )
 
             currentInterleavingHistory[currentInterleavingHistory.lastIndex] = cycleStateLastNode
@@ -1053,6 +1084,7 @@ abstract class ManagedStrategy(
             lastExecutedThread = -1
             clearRanThreads()
         }
+
         private fun clearRanThreads() {
             for (i in 0 until nThreads) {
                 threadsRan[i] = false
@@ -1068,7 +1100,7 @@ abstract class ManagedStrategy(
             loopTrackingCursor.reset(iThread)
             currentInterleavingHistory.clear()
             currentInterleavingHistory.add(InterleavingHistoryNode(threadId = iThread))
-            replayModeLoopDetectorHelper?.initialize(iThread)
+            replayModeLoopDetectorHelper?.initialize()
         }
 
     }
@@ -1112,7 +1144,7 @@ abstract class ManagedStrategy(
          */
         private val threadsRan = hashSetOf<Int>()
 
-        fun initialize(startThread: Int) {
+        fun initialize() {
             currentInterleavingNodeIndex = 0
             executionsPerformedInCurrentThread = 0
             threadsRan.clear()
