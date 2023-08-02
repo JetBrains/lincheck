@@ -27,7 +27,7 @@ data class Trace(val trace: List<TracePoint>)
  * [callStackTrace] helps to understand whether two events
  * happened in the same, nested, or disjoint methods.
  */
-sealed class TracePoint(val iThread: Int, val actorId: Int, internal val callStackTrace: CallStackTrace) {
+sealed class TracePoint(val iThread: Int, val actorId: Int, internal var callStackTrace: CallStackTrace) {
     protected abstract fun toStringImpl(): String
     override fun toString(): String = toStringImpl()
 }
@@ -241,8 +241,6 @@ internal class CoroutineCancellationTracePoint(
 }
 
 internal class SpinCycleStartTracePoint(iThread: Int, actorId: Int, callStackTrace: CallStackTrace): TracePoint(iThread, actorId, callStackTrace) {
-
-    var spinCycleStartDepth: Int = callStackTrace.size
     override fun toStringImpl() =  "/* The following events repeat infinitely: */"
 }
 

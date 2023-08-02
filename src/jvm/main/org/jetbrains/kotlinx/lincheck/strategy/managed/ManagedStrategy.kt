@@ -824,7 +824,7 @@ abstract class ManagedStrategy(
         fun newSwitch(iThread: Int, reason: SwitchReason) {
             if (reason == SwitchReason.ACTIVE_LOCK_RECURSIVE) {
                 val startNode = spinCycleStartNode!!
-                startNode.spinCycleStartDepth--
+                startNode.callStackTrace = startNode.callStackTrace.dropLast(1)
             }
             spinCycleStartNode = null
             _trace += SwitchEventTracePoint(iThread, currentActorId[iThread], reason, callStackTrace[iThread].toList())
@@ -867,8 +867,11 @@ abstract class ManagedStrategy(
                 return
             }
             spinCycleStartNode?.let { startNode ->
-                val depth = if (beforeMethodCall) callStackTrace[iThread].size - 1 else callStackTrace[iThread].size
-                startNode.spinCycleStartDepth = min(startNode.spinCycleStartDepth, depth)
+                val updatedSpinCycleStartDepth = if (beforeMethodCall) callStackTrace[iThread].size - 1 else callStackTrace[iThread].size
+                val currentSpinCycleStartDepth = startNode.callStackTrace.size
+                if (updatedSpinCycleStartDepth < currentSpinCycleStartDepth) {
+                    startNode.callStackTrace = startNode.callStackTrace.take(updatedSpinCycleStartDepth)
+                }
             }
         }
     }

@@ -138,7 +138,7 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
         }
         // add the event
         var innerNode: TraceInnerNode = actorNodes[iThread][actorId]!!
-        val callStackTrace = if (event !is SpinCycleStartTracePoint) event.callStackTrace else event.callStackTrace.take(event.spinCycleStartDepth)
+        val callStackTrace = event.callStackTrace
         for (call in callStackTrace) {
             val callId = call.identifier
             // Switch events that happen as a first event of the method are lifted out of the method in the trace
