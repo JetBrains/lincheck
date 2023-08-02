@@ -76,10 +76,8 @@ abstract class ManagedStrategy(
     // == TRACE CONSTRUCTION FIELDS ==
     // Whether an additional information requires for the trace construction should be collected.
     private var collectTrace = false
-
     // Whether state representations (see `@StateRepresentation`) should be collected after interleaving events.
     private val collectStateRepresentation get() = collectTrace && stateRepresentationFunction != null
-
     // Trace point constructors, where `tracePointConstructors[id]`
     // stores a constructor for the corresponding code location.
     private val tracePointConstructors: MutableList<TracePointConstructor> = ArrayList()
@@ -233,8 +231,7 @@ abstract class ManagedStrategy(
         setAdditionalEventsTracking(true)
         val loggedResults = runInvocation()
         val sameResultTypes = loggedResults.javaClass == failingResult.javaClass
-        val sameResults =
-            loggedResults !is CompletedInvocationResult || failingResult !is CompletedInvocationResult || loggedResults.results == failingResult.results
+        val sameResults = loggedResults !is CompletedInvocationResult || failingResult !is CompletedInvocationResult || loggedResults.results == failingResult.results
         check(sameResultTypes && sameResults) {
             StringBuilder().apply {
                 appendln("Non-determinism found. Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc).")
@@ -423,8 +420,8 @@ abstract class ManagedStrategy(
      */
     private fun isActive(iThread: Int): Boolean =
         !finished[iThread] &&
-                !monitorTracker.isWaiting(iThread) &&
-                !(isSuspended[iThread] && !runner.isCoroutineResumed(iThread, currentActorId[iThread]))
+        !monitorTracker.isWaiting(iThread) &&
+        !(isSuspended[iThread] && !runner.isCoroutineResumed(iThread, currentActorId[iThread]))
 
     /**
      * Waits until the specified thread can continue
@@ -443,11 +440,7 @@ abstract class ManagedStrategy(
     /**
      * A regular context thread switch to another thread.
      */
-    private fun switchCurrentThread(
-        iThread: Int,
-        reason: SwitchReason = SwitchReason.STRATEGY_SWITCH,
-        mustSwitch: Boolean = false
-    ) {
+    private fun switchCurrentThread(iThread: Int, reason: SwitchReason = SwitchReason.STRATEGY_SWITCH, mustSwitch: Boolean = false) {
         traceCollector?.newSwitch(iThread, reason)
         doSwitchCurrentThread(iThread, mustSwitch)
         awaitTurn(iThread)
@@ -529,8 +522,8 @@ abstract class ManagedStrategy(
      */
     private fun inIgnoredSection(iThread: Int): Boolean =
         !isTestThread(iThread) ||
-                ignoredSectionDepth[iThread] > 0 ||
-                suddenInvocationResult != null
+            ignoredSectionDepth[iThread] > 0 ||
+            suddenInvocationResult != null
 
 
     // == LISTENING METHODS ==
@@ -570,12 +563,7 @@ abstract class ManagedStrategy(
      * @param codeLocation the byte-code location identifier of this operation.
      * @return whether lock should be actually acquired
      */
-    internal fun beforeLockAcquire(
-        iThread: Int,
-        codeLocation: Int,
-        tracePoint: MonitorEnterTracePoint?,
-        monitor: Any
-    ): Boolean {
+    internal fun beforeLockAcquire(iThread: Int, codeLocation: Int, tracePoint: MonitorEnterTracePoint?, monitor: Any): Boolean {
         if (!isTestThread(iThread)) return true
         if (inIgnoredSection(iThread)) return false
         newSwitchPoint(iThread, codeLocation, tracePoint)
@@ -596,12 +584,7 @@ abstract class ManagedStrategy(
      * @param codeLocation the byte-code location identifier of this operation.
      * @return whether lock should be actually released
      */
-    internal fun beforeLockRelease(
-        iThread: Int,
-        codeLocation: Int,
-        tracePoint: MonitorExitTracePoint?,
-        monitor: Any
-    ): Boolean {
+    internal fun beforeLockRelease(iThread: Int, codeLocation: Int, tracePoint: MonitorExitTracePoint?, monitor: Any): Boolean {
         if (!isTestThread(iThread)) return true
         if (inIgnoredSection(iThread)) return false
         monitorTracker.releaseMonitor(monitor)
@@ -616,12 +599,7 @@ abstract class ManagedStrategy(
      * @return whether park should be executed
      */
     @Suppress("UNUSED_PARAMETER")
-    internal fun beforePark(
-        iThread: Int,
-        codeLocation: Int,
-        tracePoint: ParkTracePoint?,
-        withTimeout: Boolean
-    ): Boolean {
+    internal fun beforePark(iThread: Int, codeLocation: Int, tracePoint: ParkTracePoint?, withTimeout: Boolean): Boolean {
         newSwitchPoint(iThread, codeLocation, tracePoint)
         return false
     }
@@ -642,13 +620,7 @@ abstract class ManagedStrategy(
      * @param withTimeout `true` if is invoked with timeout, `false` otherwise.
      * @return whether `Object.wait` should be executed
      */
-    internal fun beforeWait(
-        iThread: Int,
-        codeLocation: Int,
-        tracePoint: WaitTracePoint?,
-        monitor: Any,
-        withTimeout: Boolean
-    ): Boolean {
+    internal fun beforeWait(iThread: Int, codeLocation: Int, tracePoint: WaitTracePoint?, monitor: Any, withTimeout: Boolean): Boolean {
         if (!isTestThread(iThread)) return true
         if (inIgnoredSection(iThread)) return false
         newSwitchPoint(iThread, codeLocation, tracePoint)
@@ -668,13 +640,7 @@ abstract class ManagedStrategy(
      * @param codeLocation the byte-code location identifier of this operation.
      * @return whether `Object.notify` should be executed
      */
-    internal fun beforeNotify(
-        iThread: Int,
-        codeLocation: Int,
-        tracePoint: NotifyTracePoint?,
-        monitor: Any,
-        notifyAll: Boolean
-    ): Boolean {
+    internal fun beforeNotify(iThread: Int, codeLocation: Int, tracePoint: NotifyTracePoint?, monitor: Any, notifyAll: Boolean): Boolean {
         if (!isTestThread(iThread)) return true
         if (notifyAll)
             monitorTracker.notifyAll(monitor)
@@ -1399,14 +1365,7 @@ abstract class ManagedStrategy(
 private class ManagedStrategyRunner(
     private val managedStrategy: ManagedStrategy, testClass: Class<*>, validationFunctions: List<Method>,
     stateRepresentationMethod: Method?, timeoutMs: Long, useClocks: UseClocks
-) : ParallelThreadsRunner(
-    managedStrategy,
-    testClass,
-    validationFunctions,
-    stateRepresentationMethod,
-    timeoutMs,
-    useClocks
-) {
+) : ParallelThreadsRunner(managedStrategy, testClass, validationFunctions, stateRepresentationMethod, timeoutMs, useClocks) {
     override fun onStart(iThread: Int) {
         super.onStart(iThread)
         managedStrategy.onStart(iThread)
@@ -1446,10 +1405,7 @@ private class ManagedStrategyRunner(
         return stateRepresentation
     }
 
-    override fun <T> cancelByLincheck(
-        cont: CancellableContinuation<T>,
-        promptCancellation: Boolean
-    ): CancellationResult {
+    override fun <T> cancelByLincheck(cont: CancellableContinuation<T>, promptCancellation: Boolean): CancellationResult {
         // Create a cancellation trace point before `cancel`, so that cancellation trace point
         // precede the events in `onCancellation` handler.
         val cancellationTracePoint = managedStrategy.createAndLogCancellationTracePoint()
@@ -1462,7 +1418,7 @@ private class ManagedStrategyRunner(
             if (cancellationResult != CANCELLATION_FAILED)
                 managedStrategy.afterCoroutineCancelled(managedStrategy.currentThreadNumber())
             return cancellationResult
-        } catch (e: Throwable) {
+        } catch(e: Throwable) {
             cancellationTracePoint?.initializeException(e)
             throw e // throw further
         }
@@ -1477,12 +1433,10 @@ private class MonitorTracker(nThreads: Int) {
     // Maintains a set of acquired monitors with an information on which thread
     // performed the acquisition and the reentrancy depth.
     private val acquiredMonitors = IdentityHashMap<Any, MonitorAcquiringInfo>()
-
     // Maintains a set of monitors on which each thread is waiting.
     // Note, that a thread can wait on a free monitor if it is waiting for a `notify` call.
     // Stores `null` if thread is not waiting on any monitor.
     private val waitingMonitor = Array<MonitorAcquiringInfo?>(nThreads) { null }
-
     // Stores `true` for the threads which are waiting for a
     // `notify` call on the monitor stored in `acquiringMonitor`.
     private val waitForNotify = BooleanArray(nThreads) { false }
@@ -1596,8 +1550,7 @@ internal object ForcibleExecutionFinishException : RuntimeException() {
     override fun fillInStackTrace() = this
 }
 
-private const val COROUTINE_SUSPENSION_CODE_LOCATION =
-    -1 // currently the exact place of coroutine suspension is not known
+private const val COROUTINE_SUSPENSION_CODE_LOCATION = -1 // currently the exact place of coroutine suspension is not known
 
 private const val SPINNING_LOOP_ITERATIONS_BEFORE_YIELD = 100_000
 
