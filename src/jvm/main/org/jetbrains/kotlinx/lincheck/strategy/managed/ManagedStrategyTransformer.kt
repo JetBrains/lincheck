@@ -11,7 +11,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.RestrictedMethodsHolder.regularMethodInterceptionForbidden
+import org.jetbrains.kotlinx.lincheck.strategy.managed.RestrictedMethodsToInterceptNamesHolder.regularMethodInterceptionForbidden
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
@@ -1808,46 +1808,56 @@ internal object UnsafeHolder {
     }
 }
 
-internal object RestrictedMethodsHolder {
+
+/**
+ * Provides an ability to determine should we instrument and track enter/exit and parameters of some method or not.
+ */
+internal object RestrictedMethodsToInterceptNamesHolder {
 
     @JvmStatic
+    @Suppress("UNCHECKED_CAST")
     fun regularMethodInterceptionForbidden(owner: String, methodName: String): Boolean {
-        val set = forbiddenToInstrumentMethods[owner] ?: return false
-        return methodName in set
+        val options = forbiddenToInstrumentMethods[owner] ?: return false
+        if (options === AllMethodsRestrictedToIntercept) return true
+
+        return methodName in (options as Set<String>)
     }
 
     @JvmStatic
-    private val forbiddenToInstrumentMethods: Map<String, Set<String>> = hashMapOf(
+    private val forbiddenToInstrumentMethods: Map<String, Any> = hashMapOf(
         "kotlin/jvm/internal/Intrinsics" to hashSetOf("checkNotNullParameter"),
-        "java/lang/StringBuilder" to hashSetOf("append",  "toString"),
         "java/util/Iterator" to hashSetOf("hasNext", "next", "remove"),
-        "java/util/Arrays" to hashSetOf("rangeCheck", "copyOf", "binarySearch0"),
-        "java/lang/Math" to hashSetOf("min"),
         "java/util/Objects" to hashSetOf("requireNonNull"),
         "java/lang/Object" to hashSetOf("equals",  "getClass", "toString"),
+
         "jdk/internal/util/ArraysSupport" to hashSetOf("mismatch"),
         "kotlin/jvm/functions/Function1" to hashSetOf("invoke"),
-        "java/lang/Integer" to hashSetOf("valueOf"),
         "java/lang/invoke/MethodHandles\$Lookup" to hashSetOf("findVarHandle"),
-        "kotlin/ranges/ClosedRange" to hashSetOf("contains"),
-        "kotlin/ranges/IntRange" to hashSetOf( "iterator"),
         "java/lang/System" to hashSetOf("arraycopy"),
         "java/util/DualPivotQuicksort" to hashSetOf("sort"),
-        "java/util/AbstractMap" to hashSetOf("entrySet"),
-        "kotlin/collections/ArraysKt" to hashSetOf("getLastIndex"),
-        "kotlin/jvm/internal/Reflection" to hashSetOf("getOrCreateKotlinClass"),
         "java/lang/Comparable" to hashSetOf("compareTo"),
-        "java/lang/Long" to hashSetOf("valueOf"),
-        "java/util/Random" to hashSetOf("nextInt"),
         "org/jetbrains/kotlinx/lincheck/LinCheckerKt" to hashSetOf("check"),
         "java/util/ArrayList" to hashSetOf( "add"),
         "java/util/Comparator" to hashSetOf("compare"),
-        "java/util/Collection" to hashSetOf("iterator"),
-        "java/lang/Double" to hashSetOf("valueOf"),
-        "java/lang/Float" to hashSetOf("valueOf"),
         "kotlin/collections/IntIterator" to hashSetOf("nextInt", "hasNext"),
-        "java/lang/Byte" to hashSetOf("valueOf"),
-        "java/lang/Short" to hashSetOf("valueOf"),
+
+        "kotlin/jvm/internal/Reflection" to AllMethodsRestrictedToIntercept,
+        "java/util/Random" to AllMethodsRestrictedToIntercept,
+        "java/lang/StringBuilder" to AllMethodsRestrictedToIntercept,
+        "java/util/Arrays" to AllMethodsRestrictedToIntercept,
+        "kotlin/collections/ArraysKt" to AllMethodsRestrictedToIntercept,
+        "java/lang/Math" to AllMethodsRestrictedToIntercept,
+        "kotlin/ranges/ClosedRange" to AllMethodsRestrictedToIntercept,
+        "kotlin/ranges/IntRange" to AllMethodsRestrictedToIntercept,
+
+        "java/lang/Byte" to AllMethodsRestrictedToIntercept,
+        "java/lang/Short" to AllMethodsRestrictedToIntercept,
+        "java/lang/Double" to AllMethodsRestrictedToIntercept,
+        "java/lang/Float" to AllMethodsRestrictedToIntercept,
+        "java/lang/Long" to AllMethodsRestrictedToIntercept,
+        "java/lang/Integer" to AllMethodsRestrictedToIntercept,
     )
+
+    private object AllMethodsRestrictedToIntercept
 
 }
