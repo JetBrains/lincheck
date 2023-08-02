@@ -8,8 +8,8 @@
 | operation2(): void       |                                              |
 | operation2(): void       |                                              |
 | ----------------------------------------------------------------------- |
-| operation1(): void       | operation2(): IllegalStateException #1 [1,0] |
-| operation1(): void [1,0] | operation1(): void [1,1]                     |
+| operation1(): void [5,0] | operation2(): IllegalStateException #1 [6,0] |
+| operation1(): void [6,0] | operation1(): void [6,1]                     |
 | ----------------------------------------------------------------------- |
 | operation1(): void       |                                              |
 | operation1(): void       |                                              |
