@@ -128,7 +128,6 @@ internal class InterleavingHistoryNode(
         cyclePeriod: Int,
         executionsBeforeSpinCycleWithAdditionalEvents: Int,
         cycleExecutionsHash: Int,
-        periodUnknown: Boolean
     ): InterleavingHistoryNode {
         check(executions >= executionsBeforeCycle) { "?" }
 

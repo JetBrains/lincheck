@@ -420,7 +420,7 @@ internal class ManagedStrategyTransformer(
                 adapter.visitMethodInsn(opcode, owner, name, desc, itf)
                 return
             }
-            val methodCallCodeLocation = codeLocationIdProvider.newRegularMethodCallId()
+            val methodCallCodeLocation = codeLocationIdProvider.newMethodCallId()
             val endLabel = adapter.newLabel()
             val interceptionLabel = adapter.newLabel()
 
@@ -1505,21 +1505,30 @@ internal class ManagedStrategyTransformer(
 }
 
 /**
- * The counter that helps to assign gradually increasing disjoint ids to different code locations
+ * The counter that helps to assign gradually increasing disjoint ids to different code locations.
+ * Code locations are used to distinguish between potential switch point and method enter/exit points,
+ * that are used for spin cycle period detection.
  */
 internal class CodeLocationIdProvider {
-    var lastId = 0 // the first id will be 2
-        private set
 
-    var lastRegularMethodCallId = -1 // the first regular method call id will be 1
-        private set
+    private var lastPotentialSwitchPointId = LEAST_CODE_LOCATION_ID - 2 // the first id will be 100
+
+    private var lastMethodCallId = LEAST_CODE_LOCATION_ID - 1 // the first regular method call id will be 101
+
     fun newId(): Int {
-        lastId += 2
-        return lastId
+        lastPotentialSwitchPointId += 2
+        return lastPotentialSwitchPointId
     }
-    fun newRegularMethodCallId(): Int {
-        lastRegularMethodCallId += 2
-        return lastRegularMethodCallId
+    fun newMethodCallId(): Int {
+        lastMethodCallId += 2
+        return lastMethodCallId
+    }
+
+    companion object {
+        /**
+         * First [LEAST_CODE_LOCATION_ID] code locations are reserved for threads finish point.
+         */
+        const val LEAST_CODE_LOCATION_ID = 100
     }
 }
 

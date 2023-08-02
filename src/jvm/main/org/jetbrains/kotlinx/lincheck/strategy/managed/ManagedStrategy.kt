@@ -16,6 +16,7 @@ import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.CodeLocationIdProvider.Companion.LEAST_CODE_LOCATION_ID
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.objectweb.asm.*
 import java.io.*
@@ -23,7 +24,6 @@ import java.lang.reflect.*
 import java.util.*
 import kotlin.collections.set
 import kotlin.math.abs
-import kotlin.math.min
 
 /**
  * This is an abstraction for all managed strategies, which encapsulated
@@ -291,10 +291,10 @@ abstract class ManagedStrategy(
 
         if (loopDetector.replayModeEnabled) {
             /*
-             When replaying executions, it's important to repeat the same executions and switches,
+             When replaying executions, it's important to repeat the same executions and switches
              that were recorded to loopDetector history during the last execution.
              For example, let's consider that interleaving say us to switch from thread 1 to thread 2
-             at the execution position 200. But after execution 10 spin cycle with period 2 occurred,
+             at execution position 200. But after execution 10 spin cycles with period 2 occurred,
              so we will switch from the spin cycle, so when we leave this cycle due to the switch for the first time
              interleaving execution counter may be near 200 and the strategy switch will happen soon. But on the replay run,
              we will switch from thread 1 early, after 12 operations, but no strategy switch will be performed
@@ -308,7 +308,7 @@ abstract class ManagedStrategy(
         } else {
             /*
             In the regular mode, we use loop detector only to determine should we
-            switch current thread or not due to new or early detection of spin locks. Regular switches appears
+            switch current thread or not due to new or early detection of spin locks. Regular switches appears,
             according to the current interleaving.
              */
             newSwitchPointRegular(iThread, codeLocation)
@@ -998,7 +998,7 @@ abstract class ManagedStrategy(
             codeLocationsMap.put(codeLocation, ++count)
             val detectedFirstTime = count > hangingDetectionThreshold
             val detectedEarly = loopTrackingCursor.isInCycle
-            // Check whether the count exceeds the maximum number of repetitions for loop/hang detection.
+            // If cycle is detected for the first time
             if (detectedFirstTime && !detectedEarly) {
                 if (additionalEventsTrackingEnabled()) {
                     registerCycle()
@@ -1048,7 +1048,7 @@ abstract class ManagedStrategy(
 
         fun onThreadFinish(iThread: Int) {
             check(iThread == lastExecutedThread)
-            onNextExecutionPoint(executionIdentity = -(iThread + 1), isThreadFinishPoint = true)
+            onNextExecutionPoint(executionIdentity = iThread + 1, isThreadFinishPoint = true)
         }
 
         private fun onNextThreadSwitchPoint(nextThread: Int) {
@@ -1086,6 +1086,7 @@ abstract class ManagedStrategy(
 
         fun onNextExecutionPoint(executionIdentity: Int, isThreadFinishPoint: Boolean = false) {
             currentThreadCodeLocationsHistory += executionIdentity
+            // Helper execution such methods enter/exit or thread finish are used only in case of spin-cycle detection replay
             if (!isThreadFinishPoint && !isSwitchPointCodeLocation(executionIdentity)) return
 
             val lastInterleavingHistoryNode = currentInterleavingHistory.last()
@@ -1097,41 +1098,32 @@ abstract class ManagedStrategy(
             replayModeLoopDetectorHelper?.onNextExecution()
         }
 
+        /**
+         * Calculates a spin cycle period and saves information about it.
+         *
+         * This method is invoked inly on replay mode when additional execution points
+         * (method enter/exit, receivers and parameters) are collected.
+         */
         private fun registerCycle() {
+            // First, try to find a cycle in a execution points sequence with parameters and receivers
             var locationsHistory: List<Int> = currentThreadCodeLocationsHistory
             var cycleInfo = findMaxPrefixLengthWithNoCycleOnSuffix(locationsHistory)
-            var cycleRepetitions: Int
-            if (cycleInfo != null) {
-                cycleRepetitions =
-                    (currentThreadCodeLocationsHistory.size - cycleInfo.executionsBeforeCycle) / cycleInfo.cyclePeriod
-                if (cycleRepetitions * cycleInfo.cyclePeriod < hangingDetectionThreshold) {
-                    // cycle not found
-                    cycleInfo = null
-                }
-            }
-            var failedToFindWithParameters = false
-            if (cycleInfo == null) { // failed to find with params
-                failedToFindWithParameters = true
-                locationsHistory =
-                    currentThreadCodeLocationsHistory.filter { isSwitchPointOrMethodCallCodeLocation(it) }
+            var failedToFindCycleWithParameters = false
+            // If we can't find a cycle with parameters and receivers
+            if (cycleInfo == null) {
+                failedToFindCycleWithParameters = true
+                // filter code IDs history to retain only potential switch point and try again to find a cycle
+                locationsHistory = currentThreadCodeLocationsHistory.filter { isSwitchPointOrMethodCallCodeLocation(it) }
                 cycleInfo = findMaxPrefixLengthWithNoCycleOnSuffix(locationsHistory)
-                if (cycleInfo != null) {
-                    cycleRepetitions =
-                        (currentThreadCodeLocationsHistory.size - cycleInfo.executionsBeforeCycle) / cycleInfo.cyclePeriod
-                    if (cycleRepetitions * cycleInfo.cyclePeriod < hangingDetectionThreshold) {
-                        // cycle not found
-                        cycleInfo = null
-                    }
-                }
-
+                // If we can't find a cycle even without parameters and receivers
                 if (cycleInfo == null) {
                     val lastNode = currentInterleavingHistory.last()
                     val cycleStateLastNode = lastNode.asNodeCorrespondingToCycle(
+                        // We have to store how many potential switch points exist before cycle, so we have to count them
                         executionsBeforeCycle = locationsHistory.count { isSwitchPointCodeLocation(it) },
                         cyclePeriod = 0,
                         executionsBeforeSpinCycleWithAdditionalEvents = currentThreadCodeLocationsHistory.size,
                         cycleExecutionsHash = lastNode.executionHash, // corresponds to a cycle
-                        periodUnknown = true
                     )
 
                     currentInterleavingHistory[currentInterleavingHistory.lastIndex] = cycleStateLastNode
@@ -1139,7 +1131,6 @@ abstract class ManagedStrategy(
                     return
                 }
             }
-
             /*
             For nodes, correspond to cycles we re-calculate hash using only code locations related to the cycle,
             because if we run into a DeadLock,
@@ -1158,15 +1149,15 @@ abstract class ManagedStrategy(
             We want to cut off events suffix to get:
             [threadId = 0, executions = 10],
             [threadId = 1, executions = 5], // 2 executions before cycle, and then cycle begins
-            [threadId = 0, executions = 3],
+            [threadId = 0, executions = 3]
 
             So we need to [threadId = 1, executions = 5] execution part to have a hash equals to next cycle nodes,
             because we will take only thread executions before cycle and the first cycle iteration.
              */
-            var beforeCycleSwitchPointCount = 0
-            var cyclePeriodSwitchPoint = 0
             var cycleExecutionLocationsHash = 0
 
+            // Potential switch points before cycle start
+            var beforeCycleSwitchPointCount = 0
             for (i in 0 until cycleInfo.executionsBeforeCycle) {
                 val codeLocationIdentity = locationsHistory[i]
                 if (isSwitchPointCodeLocation(codeLocationIdentity)) {
@@ -1174,6 +1165,8 @@ abstract class ManagedStrategy(
                 }
             }
 
+            // Potential switch point count in a cycle period
+            var cyclePeriodSwitchPoint = 0
             for (i in cycleInfo.executionsBeforeCycle until cycleInfo.executionsBeforeCycle + cycleInfo.cyclePeriod) {
                 val codeLocationIdentity = locationsHistory[i]
                 if (isSwitchPointCodeLocation(codeLocationIdentity)) {
@@ -1183,7 +1176,7 @@ abstract class ManagedStrategy(
             }
 
             var executionsBeforeSpinCycleWithAdditionalEvents = cycleInfo.executionsBeforeCycle
-            if (failedToFindWithParameters) {
+            if (failedToFindCycleWithParameters) {
                 executionsBeforeSpinCycleWithAdditionalEvents = 0
                 var executionsBeforeCycleWithoutEventsCounter = 0
                 for (i in 0 until currentThreadCodeLocationsHistory.size) {
@@ -1199,9 +1192,8 @@ abstract class ManagedStrategy(
             val cycleStateLastNode = currentInterleavingHistory.last().asNodeCorrespondingToCycle(
                 executionsBeforeCycle = beforeCycleSwitchPointCount,
                 cyclePeriod = cyclePeriodSwitchPoint,
-                cycleExecutionsHash = cycleExecutionLocationsHash, // corresponds to a cycle
+                cycleExecutionsHash = cycleExecutionLocationsHash,
                 executionsBeforeSpinCycleWithAdditionalEvents = executionsBeforeSpinCycleWithAdditionalEvents,
-                periodUnknown = false
             )
 
             currentInterleavingHistory[currentInterleavingHistory.lastIndex] = cycleStateLastNode
@@ -1209,9 +1201,9 @@ abstract class ManagedStrategy(
         }
 
         private fun isSwitchPointCodeLocation(codeLocationIdentity: Int) =
-            codeLocationIdentity > 0 && codeLocationIdentity and 1 == 0
+            codeLocationIdentity > LEAST_CODE_LOCATION_ID && codeLocationIdentity and 1 == 0
 
-        private fun isSwitchPointOrMethodCallCodeLocation(codeLocationIdentity: Int) = codeLocationIdentity > 0
+        private fun isSwitchPointOrMethodCallCodeLocation(codeLocationIdentity: Int) = codeLocationIdentity > LEAST_CODE_LOCATION_ID
 
         /**
          * Is called before each interleaving part processing
