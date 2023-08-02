@@ -12,5 +12,9 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed;
 
 public class TrackMethodsFlagHolder {
 
+    /**
+     * If set to true, then all methods enter and exit, as well as their arguments and receivers
+     * are tracked by {@link ManagedStrategy}.
+     */
     public static boolean trackingEnabled = false;
 }

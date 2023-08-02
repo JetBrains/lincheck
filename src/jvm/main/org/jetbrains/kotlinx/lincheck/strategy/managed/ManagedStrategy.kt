@@ -43,11 +43,9 @@ abstract class ManagedStrategy(
 ) : Strategy(scenario), Closeable {
     // The number of parallel threads.
     protected val nThreads: Int = scenario.nThreads
-
     // Runner for scenario invocations,
     // can be replaced with a new one for trace construction.
     private var runner: ManagedStrategyRunner
-
     // Shares location ids between class transformers in order
     // to keep them different in different code locations.
     private val codeLocationIdProvider = CodeLocationIdProvider()
@@ -57,19 +55,14 @@ abstract class ManagedStrategy(
     // Which thread is allowed to perform operations?
     @Volatile
     protected var currentThread: Int = 0
-
     // Which threads finished all the operations?
     private val finished = BooleanArray(nThreads) { false }
-
     // Which threads are suspended?
     private val isSuspended = BooleanArray(nThreads) { false }
-
     // Current actor id for each thread.
     protected val currentActorId = IntArray(nThreads)
-
     // Ihe number of entered but not left (yet) blocks that should be ignored by the strategy analysis for each thread.
     private val ignoredSectionDepth = IntArray(nThreads) { 0 }
-
     // Detector of loops or hangs (i.e. active locks).
     protected val loopDetector: LoopDetector = LoopDetector(testCfg.hangingDetectionThreshold)
 
@@ -81,7 +74,6 @@ abstract class ManagedStrategy(
     protected var suddenInvocationResult: InvocationResult? = null
 
     // == TRACE CONSTRUCTION FIELDS ==
-
     // Whether an additional information requires for the trace construction should be collected.
     private var collectTrace = false
 
@@ -91,22 +83,17 @@ abstract class ManagedStrategy(
     // Trace point constructors, where `tracePointConstructors[id]`
     // stores a constructor for the corresponding code location.
     private val tracePointConstructors: MutableList<TracePointConstructor> = ArrayList()
-
     // Collector of all events in the execution such as thread switches.
     private var traceCollector: TraceCollector? = null // null when `collectTrace` is false
-
     // Stores the currently executing methods call stack for each thread.
     private val callStackTrace = Array(nThreads) { mutableListOf<CallStackTraceElement>() }
-
     // Stores the global number of method calls.
     private var methodCallNumber = 0
-
     // In case of suspension, the call stack of the corresponding `suspend`
     // methods is stored here, so that the same method call identifiers are
     // used on resumption, and the trace point before and after the suspension
     // correspond to the same method call in the trace.
     private val suspendedFunctionsStack = Array(nThreads) { mutableListOf<Int>() }
-
     // Current execution part
     protected lateinit var executionPart: ExecutionPart
 
@@ -123,10 +110,14 @@ abstract class ManagedStrategy(
         }
     }
 
+    /**
+     * Configures if tracking methods enter/exit and arguments tracking is enabled or not
+     */
     protected fun setAdditionalEventsTracking(trackEvents: Boolean) {
         TrackMethodsFlagHolder.trackingEnabled = trackEvents
     }
 
+    private fun additionalEventsTrackingEnabled(): Boolean = TrackMethodsFlagHolder.trackingEnabled
 
     private fun createRunner(): ManagedStrategyRunner =
         ManagedStrategyRunner(
@@ -206,7 +197,6 @@ abstract class ManagedStrategy(
             if (verifier.verifyResults(scenario, result.results)) null
             else IncorrectResultsFailure(scenario, result.results, collectTrace(result))
         }
-
         else -> result.toLincheckFailure(scenario, collectTrace(result))
     }
 
@@ -264,7 +254,7 @@ abstract class ManagedStrategy(
         initializeInvocation()
         val result = runner.run()
         // Has strategy already determined the invocation result?
-        suddenInvocationResult?.let { return it }
+        suddenInvocationResult?.let { return it  }
         return result
     }
 
@@ -1058,7 +1048,7 @@ abstract class ManagedStrategy(
             val detectedEarly = loopTrackingCursor.isInCycle
             // Check whether the count exceeds the maximum number of repetitions for loop/hang detection.
             if (detectedFirstTime && !detectedEarly) {
-                if (TrackMethodsFlagHolder.trackingEnabled) {
+                if (additionalEventsTrackingEnabled()) {
                     registerCycle()
                     // Enormous operations count considered as total spin lock
                     checkHaltDueToTotalExecutionsBigCount()
