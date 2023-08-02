@@ -10,7 +10,6 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import kotlinx.atomicfu.atomic
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
@@ -21,7 +20,6 @@ import org.jetbrains.kotlinx.lincheck_test.util.*
 import java.lang.StringBuilder
 import java.util.concurrent.atomic.*
 import org.junit.*
-import java.util.concurrent.ThreadLocalRandom
 
 /**
  * This test checks that the last event in the case of an active lock

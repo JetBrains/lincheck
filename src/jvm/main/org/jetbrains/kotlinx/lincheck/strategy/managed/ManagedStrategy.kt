@@ -110,10 +110,6 @@ abstract class ManagedStrategy(
     // Current execution part
     protected lateinit var executionPart: ExecutionPart
 
-//    private var isSpinCycleDetectionMode: Boolean = false
-
-//    fun isSpinCycleDetectionModeEnabled(): Boolean = isSpinCycleDetectionMode
-
     init {
         runner = createRunner()
         // The managed state should be initialized before еру test class transformation.
@@ -279,14 +275,6 @@ abstract class ManagedStrategy(
             throw ForcibleExecutionFinishException
         }
     }
-
-//    val invoc: Int get() = (this@ManagedStrategy as ModelCheckingStrategy).usedInvocations
-//
-//    inline fun ifDebug(action: () -> Unit) {
-//        if (invoc == 21) {
-//            action()
-//        }
-//    }
 
     private val curActorIsBlocking: Boolean
         get() = scenario.threads[currentThread][currentActorId[currentThread]].blocking
