@@ -108,7 +108,6 @@ internal class InterleavingHistoryNode(
      */
     var spinCyclePeriod: Int = 0,
     var executionsBeforeSpinCycleWithAdditionalEvents: Int,
-    val periodUnknown: Boolean = false
 ) {
     val cycleOccurred: Boolean get() = spinCyclePeriod != 0
 
@@ -139,7 +138,6 @@ internal class InterleavingHistoryNode(
             spinCyclePeriod = cyclePeriod,
             executionHash = cycleExecutionsHash,
             executionsBeforeSpinCycleWithAdditionalEvents = executionsBeforeSpinCycleWithAdditionalEvents,
-            periodUnknown = periodUnknown
         )
     }
 
@@ -149,7 +147,6 @@ internal class InterleavingHistoryNode(
         executionHash = executionHash,
         spinCyclePeriod = spinCyclePeriod,
         executionsBeforeSpinCycleWithAdditionalEvents = executionsBeforeSpinCycleWithAdditionalEvents,
-        periodUnknown = periodUnknown
     )
 
 
