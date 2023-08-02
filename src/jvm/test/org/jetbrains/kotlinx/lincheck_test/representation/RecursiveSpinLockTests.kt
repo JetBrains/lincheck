@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 
 /**
- * Checks proper output is case of recursive spin-lock of one thread.
+ * Checks proper output in case of recursive spin-lock in one thread.
  */
 class RecursiveSpinLockTest {
 
@@ -69,7 +69,7 @@ class RecursiveSpinLockTest {
 }
 
 /**
- * Checks recursive spin lock representation when execution hung due to alternation of two thread
+ * Checks recursive spin lock representation when execution hung due to alternation of two threads
  * in recursive live-lock.
  */
 class BrokenCas2RecursiveLiveLockTest {

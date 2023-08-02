@@ -292,6 +292,9 @@ class SpinCycleWithSideEffectsTest {
 
 }
 
+/**
+ * Checks spin cycle start label is placed correctly when many nested calls are before and inside spin cycle.
+ */
 class ManyNestedFunctionsBeforeAndInsideSpinCycleTest {
 
     private val counter = AtomicInteger(0)
@@ -385,6 +388,9 @@ class SpinCycleFirstExecutionIsFirstInMethodCallTest {
         .checkLincheckOutput("spin_cycle_with_zero_invocations_before.txt")
 }
 
+/**
+ * Checks that a correct spin cycle period is found when two calls inside a spin cycle differ only by their receivers.
+ */
 class SpinCycleWithPeriodTwiceBiggerBySwitchingReceiversTest {
 
     private val counter = AtomicInteger(0)
@@ -431,6 +437,9 @@ class SpinCycleWithPeriodTwiceBiggerBySwitchingReceiversTest {
         .checkLincheckOutput("spin_cycle_twice_bigger_because_of_switching_receivers.txt")
 }
 
+/**
+ * Checks that a correct spin cycle period is found when two calls inside a spin cycle differ only by their parameters.
+ */
 class SpinCycleWithPeriodTwiceBiggerBySwitchingParametersTest {
 
     private val counter = AtomicInteger(0)
@@ -472,6 +481,10 @@ class SpinCycleWithPeriodTwiceBiggerBySwitchingParametersTest {
         .checkLincheckOutput("spin_cycle_twice_bigger_because_of_switching_parameters.txt")
 }
 
+/**
+ * Verify that if spin cycle can't be found by considering switch points and method parameters,
+ * Lincheck should try to find it without considering parameters.
+ */
 class SpinLockPeriodCanNotBeFoundOnlyWithParametersTest {
     private val counter = AtomicInteger(0)
     private val sharedData = AtomicInteger(0)
@@ -513,6 +526,10 @@ class SpinLockPeriodCanNotBeFoundOnlyWithParametersTest {
         .checkLincheckOutput("spin_cycle_with_different_parameters.txt")
 }
 
+
+/**
+ * Checks that a correct spin cycle period is found when two atomic calls inside a spin cycle differ only by their parameters.
+ */
 class SpinCycleWithPeriodTwiceBiggerBySwitchingAtomicMethodParametersTest {
 
     private val counter = AtomicInteger(0)
