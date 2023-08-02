@@ -57,12 +57,14 @@ class ObstructionFreedomViolationInvocationResult(
 ) : InvocationResult()
 
 /**
- * Indicates that spin-cycle has been found for the first time and replay of current interleaving is required to measure its period.
+ * Indicates that spin-cycle has been found for the first time, and replay with additional events tracking
+ * (methods enter/exit, receiver and parameters) of current interleaving is required to measure its period.
  */
 object SpinCycleFoundForTheFirstTimeAndReplayRequired: InvocationResult()
 
 /**
- * Indicates that the period of the spin-cycle has been calculated, and we can resume standard flow from the current interleaving.
+ * Indicates that the period of the spin-cycle has been calculated, additional events tracking can be turned off,
+ * and we can resume standard flow from the current interleaving.
  */
 object SpinCyclePeriodMeasuredAndExecutionCanBeContinued: InvocationResult()
 

@@ -405,7 +405,7 @@ internal class ManagedStrategyTransformer(
     }
 
     /**
-     * Adds [ManagedStrategy.beforeMethodCallWithArguments] and [ManagedStrategy.afterMethodCallWithArguments] methods invocations,
+     * Adds [ManagedStrategy.beforeTrackedMethodCall] and [ManagedStrategy.afterTrackedMethodCall] methods invocations,
      * if [TrackMethodsFlagHolder.trackingEnabled] is enabled.
      * This information is used to detect a spin lock period, considering arguments and receivers.
      */
@@ -430,7 +430,7 @@ internal class ManagedStrategyTransformer(
             adapter.visitMethodInsn(opcode, owner, name, desc, itf)
             adapter.goTo(endLabel)
             visitLabel(interceptionLabel)
-            invokeBeforeRegularMethodCall(methodCallCodeLocation, opcode, owner, name, desc)
+            invokeBeforeTrackedMethodCall(methodCallCodeLocation, opcode, owner, name, desc)
 
             val callStart = adapter.newLabel()
             val callEnd = adapter.newLabel()
@@ -441,24 +441,24 @@ internal class ManagedStrategyTransformer(
             adapter.visitLabel(callStart)
             adapter.visitMethodInsn(opcode, owner, name, desc, itf)
             adapter.visitLabel(callEnd)
-            invokeAfterRegularMethodCall(methodCallCodeLocation)
+            invokeAfterTrackedMethodCall(methodCallCodeLocation)
             adapter.goTo(endLabel)
             // } catch {
             adapter.visitLabel(exceptionHandler)
-            invokeAfterRegularMethodCall(methodCallCodeLocation)
+            invokeAfterTrackedMethodCall(methodCallCodeLocation)
             adapter.throwException()
             // }
             adapter.visitLabel(endLabel)
         }
 
-        private fun invokeAfterRegularMethodCall(methodCallCodeLocation: Int) {
+        private fun invokeAfterTrackedMethodCall(methodCallCodeLocation: Int) {
             loadStrategy()
             loadCurrentThreadNumber()
             adapter.push(methodCallCodeLocation)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, AFTER_REGULAR_METHOD_CALL)
         }
 
-        private fun invokeBeforeRegularMethodCall(
+        private fun invokeBeforeTrackedMethodCall(
             methodCallCodeLocation: Int,
             opcode: Int,
             owner: String,
@@ -466,7 +466,7 @@ internal class ManagedStrategyTransformer(
             desc: String
         ) {
             // array: [ owner_if_exists, param_1_int_view, param_2_int_view, ..., param_n_int_view ]
-            val parametersIntValues = captureOwnerAndParametersBeforeRegularMethodCall(opcode, owner, name, desc)
+            val parametersIntValues = captureOwnerAndParametersViewsBeforeTrackedMethodCall(opcode, owner, name, desc)
             loadStrategy()
             loadCurrentThreadNumber()
             adapter.push(methodCallCodeLocation)
@@ -479,7 +479,7 @@ internal class ManagedStrategyTransformer(
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_REGULAR_METHOD_CALL)
         }
 
-        private fun captureOwnerAndParametersBeforeRegularMethodCall(
+        private fun captureOwnerAndParametersViewsBeforeTrackedMethodCall(
             opcode: Int,
             owner: String,
             methodName: String,
@@ -515,8 +515,7 @@ internal class ManagedStrategyTransformer(
             visitIntInsn(NEWARRAY, T_INT)
             val parameterValuesLocal = adapter.newLocal(INT_ARRAY_TYPE)
             adapter.storeLocal(parameterValuesLocal)
-
-            // Add to array int representation of receiver if method is not static
+            // Add to the array int representation of receiver if method is not static
             if (!isStatic) {
                 adapter.loadLocal(parameterValuesLocal)
                 adapter.push(0)
@@ -524,7 +523,7 @@ internal class ManagedStrategyTransformer(
                 adapter.invokeStatic(SYSTEM_TYPE, SYSTEM_IDENTITY_HASHCODE_METHOD)
                 adapter.arrayStore(Type.INT_TYPE)
             }
-
+            // Fill the array with arguments views
             for (i in firstLoggedParameter until lastLoggedParameter) {
                 adapter.loadLocal(parameterValuesLocal)
                 adapter.push(i - firstLoggedParameter + parametersStartIndexInArray)
@@ -540,6 +539,10 @@ internal class ManagedStrategyTransformer(
 
         /**
          * Puts on the stack int view of this parameter or receiver.
+         * Int view is a some integer value correspond to a primitive or an object.
+         * According to our convention, to be able to distinguish between potential switch points, code locations,
+         * methods enter/exit and parameters and arguments, int view must be a negative number.
+         * This method calculates a raw int view, it will be transformed to a negative value in [ManagedStrategy.beforeTrackedMethodCall].
          */
         private fun pushParamToIntIdentity(local: Int, localType: Type) {
             // Process all primitive types
@@ -1508,6 +1511,12 @@ internal class ManagedStrategyTransformer(
  * The counter that helps to assign gradually increasing disjoint ids to different code locations.
  * Code locations are used to distinguish between potential switch point and method enter/exit points,
  * that are used for spin cycle period detection.
+ *
+ * We use the following system:
+ * 1. All potential switch points code locations are even positive numbers, starting from [LEAST_CODE_LOCATION_ID].
+ * 2. All method enter/exit code locations are odd positive numbers, starting from [LEAST_CODE_LOCATION_ID] + 1.
+ * 3. All threads finish code locations are just threads ids.
+ * 4. All int views of parameters and receivers are negative numbers.
  */
 internal class CodeLocationIdProvider {
 
@@ -1625,8 +1634,8 @@ private val INITIALIZE_THROWN_EXCEPTION_METHOD = Method.getMethod(MethodCallTrac
 private val INITIALIZE_PARAMETERS_METHOD = Method.getMethod(MethodCallTracePoint::initializeParameters.javaMethod)
 private val INITIALIZE_OWNER_NAME_METHOD = Method.getMethod(MethodCallTracePoint::initializeOwnerName.javaMethod)
 private val NEXT_INT_METHOD = Method("nextInt", Type.INT_TYPE, emptyArray<Type>())
-private val BEFORE_REGULAR_METHOD_CALL = Method.getMethod(ManagedStrategy::beforeMethodCallWithArguments.javaMethod)
-private val AFTER_REGULAR_METHOD_CALL = Method.getMethod(ManagedStrategy::afterMethodCallWithArguments.javaMethod)
+private val BEFORE_REGULAR_METHOD_CALL = Method.getMethod(ManagedStrategy::beforeTrackedMethodCall.javaMethod)
+private val AFTER_REGULAR_METHOD_CALL = Method.getMethod(ManagedStrategy::afterTrackedMethodCall.javaMethod)
 
 private val INT_WRAPPER_TYPE = Type.getType(java.lang.Integer::class.java)
 private val INT_WRAPPER_TYPE_NAME = INT_WRAPPER_TYPE.internalName

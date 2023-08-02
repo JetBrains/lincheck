@@ -442,11 +442,17 @@ abstract class ManagedStrategy(
         awaitTurn(iThread)
     }
 
+    /**
+     * Calls [TraceCollector.newSwitch] method when spin lock the right switch lock reason,
+     * determining if it is a recursive spin lock or not.
+     */
     private fun passActiveLockTraceNode(iThread: Int) {
         val currentCallStacktrace = callStackTrace[iThread]
-        val startOfTheCyclePoint =
-            traceCollector!!.trace.let { it[it.size - loopDetector.replayModeCurrentCyclePeriod] }
+        val startOfTheCyclePoint = traceCollector!!.trace.let { it[it.size - loopDetector.replayModeCurrentCyclePeriod] }
         val callStackTraceOnTheStartOfTheCycle = startOfTheCyclePoint.callStackTrace
+        // According to the existing sequence of byte-code transformers, if a spin cycle first
+        // event is MethodCallTracePoint, then callStackTrace will not contain this event.
+        // As we want to get a stacktrace of the first event in the cycle, including it, we correct it below.
         val startOfTheCycleCallStackTraceDepth = if (startOfTheCyclePoint is MethodCallTracePoint) {
             callStackTraceOnTheStartOfTheCycle.size + 1
         } else {
@@ -738,15 +744,23 @@ abstract class ManagedStrategy(
         }
     }
 
-    internal fun beforeMethodCallWithArguments(iThread: Int, codeLocation: Int, ownerAndParametersCodes: IntArray?) {
+    /**
+     * This method in invoked before each method call (except those restricted by [RestrictedMethodsToInterceptNamesHolder])
+     * when additional information collection (method enter/exit, receiver, and parameters) is enabled for trace collection.
+     */
+    internal fun beforeTrackedMethodCall(iThread: Int, codeLocation: Int, ownerAndParametersInvViews: IntArray?) {
         if (inIgnoredSection(iThread)) return
         if (loopDetector.replayModeEnabled) {
             traceCollector!!.checkAddOrActualizeSpinCycleStartPoint(iThread, true)
         }
-        loopDetector.beforeNextMethodCall(codeLocation, ownerAndParametersCodes)
+        loopDetector.beforeNextMethodCall(codeLocation, ownerAndParametersInvViews)
     }
 
-    internal fun afterMethodCallWithArguments(iThread: Int, codeLocation: Int) {
+    /**
+     * This method in invoked after each method call (except those restricted by [RestrictedMethodsToInterceptNamesHolder])
+     * when additional information collection (method enter/exit, receiver, and parameters) is enabled for trace collection.
+     */
+    internal fun afterTrackedMethodCall(iThread: Int, codeLocation: Int) {
         if (inIgnoredSection(iThread)) return
         loopDetector.afterMethodCall(codeLocation)
     }
@@ -819,11 +833,15 @@ abstract class ManagedStrategy(
 
         private val spinCycleStartNodeAdded: Boolean get() = spinCycleStartNode != null
 
+        /**
+         * Is not null when we're logging spin cycle, and it has already stated, but the switch hasn't happened yet.
+         */
         private var spinCycleStartNode: SpinCycleStartTracePoint? = null
 
         fun newSwitch(iThread: Int, reason: SwitchReason) {
             if (reason == SwitchReason.ACTIVE_LOCK_RECURSIVE) {
                 val startNode = spinCycleStartNode!!
+                // If spin lock is recursive - we want to lift out the start label under the recursive call.
                 startNode.callStackTrace = startNode.callStackTrace.dropLast(1)
             }
             spinCycleStartNode = null
@@ -856,17 +874,29 @@ abstract class ManagedStrategy(
             )
         }
 
+        /**
+         * Checks should we add a spin cycle start point.
+         * If a spin cycle start point is present, then we check should we correct its call depth.
+         *
+         * @param beforeMethodCall if this method is called before tracked method call
+         */
         fun checkAddOrActualizeSpinCycleStartPoint(iThread: Int, beforeMethodCall: Boolean) {
-            if (!spinCycleStartNodeAdded && loopDetector.currentlyInSpinCycle) {
-                val stackTraceElements =
-                    if (beforeMethodCall) callStackTrace[iThread].dropLast(1) else callStackTrace[iThread]
-                val spinCycleStartTracePoint =
-                    SpinCycleStartTracePoint(iThread, currentActorId[iThread], stackTraceElements)
+            // If we're logging a spin cycle and haven't added spin cycle start point yet.
+            if (!spinCycleStartNodeAdded && loopDetector.replayModeCurrentlyInSpinCycle) {
+                /*
+                 According to a sequence of transformers, if we're trying to insert a spin cycle start label right
+                 before some tracked method, we have to keep in mind that beforeMethod is already called
+                 and callStackTrace increased, but we haven't entered this method yet, so we should correct
+                 stacktrace as we do it below.
+                 */
+                val stackTraceElements = if (beforeMethodCall) callStackTrace[iThread].dropLast(1) else callStackTrace[iThread]
+                val spinCycleStartTracePoint = SpinCycleStartTracePoint(iThread, currentActorId[iThread], stackTraceElements)
                 spinCycleStartNode = spinCycleStartTracePoint
                 _trace += spinCycleStartTracePoint
                 return
             }
             spinCycleStartNode?.let { startNode ->
+                // See the explanation above for more details.
                 val updatedSpinCycleStartDepth = if (beforeMethodCall) callStackTrace[iThread].size - 1 else callStackTrace[iThread].size
                 val currentSpinCycleStartDepth = startNode.callStackTrace.size
                 if (updatedSpinCycleStartDepth < currentSpinCycleStartDepth) {
@@ -886,10 +916,14 @@ abstract class ManagedStrategy(
      * In default mode:
      * - The LoopDetector tracks code location executions (using [currentThreadCodeLocationsHistory]) performed by threads.
      * The history is stored for the current thread and is cleared during a thread switch.
-     * - A map ([currentThreadCodeLocationVisitCountMap]) is maintained to track the number of times a thread visits a certain code location.
+     * - A map ([codeLocationsMap]) is maintained to track the number of times a thread visits a certain code location.
      * This map is also cleared during a thread switch.
      * - If a code location is visited more than a defined [hangingDetectionThreshold], it is considered as a spin cycle.
-     * The LoopDetector then tries to identify the sequence of actions leading to the spin cycle.
+     * Then we enable additional information collection (method enter/exit, receiver and parameters tracking) and re-run
+     * current interleaving. When we run in spin-cycle again, LoopDetector then tries to identify the sequence of actions leading to the spin cycle.
+     * It makes two attempts to fina a cycle.
+     * On the first attempt, we consider switch points, method enter/exits, parameters, and receivers.
+     * On the second attempt, we consider only switch points and method enter/exits.
      * Once identified, this sub-interleaving is stored for future avoidance.
      * - A history of executions and switches is maintained to record the sequence of actions and thread switches.
      * - A [loopTrackingCursor] tracks executions and thread switches to facilitate early thread switches.
@@ -909,10 +943,8 @@ abstract class ManagedStrategy(
      * Note: An example of this behavior is detailed in the comments of the code itself.
      */
     inner class LoopDetector(private val hangingDetectionThreshold: Int) {
-        val currentlyInSpinCycle: Boolean
-            get() = replayModeLoopDetectorHelper!!.currentlyInSpinCycle(currentThreadCodeLocationsHistory.size)
 
-        private var lastExecutedThread = -1// no last thread
+        private var lastExecutedThread = -1 // no last thread
 
         /**
          * Is used to find a cycle period inside the exact thread execution if it has hung
@@ -942,9 +974,11 @@ abstract class ManagedStrategy(
          */
         private val loopTrackingCursor = interleavingsLeadToSpinLockSet.cursor
 
+        /**
+         * Server to find that we should halt the execution with sudden
+         * invocation result due to global livelock happened.
+         */
         private var totalExecutionsCount = 0
-
-        private val firstThreadSet: Boolean get() = lastExecutedThread != -1
 
         /**
          * Delegate helper, active in replay (trace collection) mode.
@@ -952,9 +986,20 @@ abstract class ManagedStrategy(
          */
         private var replayModeLoopDetectorHelper: ReplayModeLoopDetectorHelper? = null
 
-        val replayModeCurrentCyclePeriod: Int get() = replayModeLoopDetectorHelper?.currentCyclePeriod ?: 0
-
         val replayModeEnabled: Boolean get() = replayModeLoopDetectorHelper != null
+
+        /**
+         * Indicates that we are in a spin cycle iteration now.
+         * Should be called only in replay mode.
+         */
+        val replayModeCurrentlyInSpinCycle: Boolean
+            get() = replayModeLoopDetectorHelper!!.currentlyInSpinCycle(currentThreadCodeLocationsHistory.size)
+
+        /**
+         * Spin cycle period if we're in a spin cycle now, or 0.
+         * Should be called only in replay mode.
+         */
+        val replayModeCurrentCyclePeriod: Int get() = replayModeLoopDetectorHelper?.currentCyclePeriod ?: 0
 
         private var codeLocationsMap = TIntIntHashMap()
 
@@ -978,8 +1023,17 @@ abstract class ManagedStrategy(
         }
 
         /**
-         * Returns `true` if a loop or a hang is detected,
-         * `false` otherwise.
+         * Helps to determine should we switch due to spin lock or in a replay mode, or not.
+         * If a cycle is detected for the first time, we halt execution indicating that replay
+         * with additional information tracking is required to calculate a spin cycle period.
+         * When we run in the same cycle for the second time, with additional events tracking enabled,
+         * we calculate the period of this spin cycle and store interleaving sequence leads to it to switch
+         * early and avoid considering redundant potential switch points. After that, we halt execution
+         * for the second time to avoid undesired side effects caused by the spin cycle iterations.
+         * Then execution resumes in a normal mode.
+         *
+         * @throws ForcibleExecutionFinishException if we have to replay current execution
+         * @return `true` if a loop or a spin cycle is detected, `false` otherwise.
          */
         fun visitCodeLocation(iThread: Int, codeLocation: Int): Boolean {
             threadsRan[iThread] = true
@@ -998,7 +1052,6 @@ abstract class ManagedStrategy(
             codeLocationsMap.put(codeLocation, ++count)
             val detectedFirstTime = count > hangingDetectionThreshold
             val detectedEarly = loopTrackingCursor.isInCycle
-            // If cycle is detected for the first time
             if (detectedFirstTime && !detectedEarly) {
                 if (additionalEventsTrackingEnabled()) {
                     registerCycle()
@@ -1008,7 +1061,8 @@ abstract class ManagedStrategy(
                     suddenInvocationResult = SpinCyclePeriodMeasuredAndExecutionCanBeContinued
                     throw ForcibleExecutionFinishException
                 } else {
-                    // Replay current interleaving to avoid side effects caused by multiple cycle executions
+                    // If a cycle is detected for the first time, we halt execution indicating that replay
+                    // with additional information tracking is required to calculate a spin cycle period.
                     suddenInvocationResult = SpinCycleFoundForTheFirstTimeAndReplayRequired
                     throw ForcibleExecutionFinishException
                 }
@@ -1210,7 +1264,7 @@ abstract class ManagedStrategy(
          */
         fun beforePart(nextThread: Int) {
             clearRanThreads()
-            if (!firstThreadSet) {
+            if (!(lastExecutedThread != -1)) {
                 setFirstThread(nextThread)
             } else if (lastExecutedThread != nextThread) {
                 onThreadSwitch(nextThread)
@@ -1248,10 +1302,11 @@ abstract class ManagedStrategy(
             replayModeLoopDetectorHelper?.initialize()
         }
 
-        fun beforeNextMethodCall(codeLocation: Int, ownerAndParametersCodes: IntArray?) {
+        fun beforeNextMethodCall(codeLocation: Int, ownerAndParametersInvViews: IntArray?) {
             onNextExecutionPoint(codeLocation)
-            if (ownerAndParametersCodes != null) {
-                for (element in ownerAndParametersCodes) {
+            if (ownerAndParametersInvViews != null) {
+                for (element in ownerAndParametersInvViews) {
+                    // Convert int view to a negative value
                     val paramIdentity = if (element >= 0) -abs(element + 10003) else element
                     onNextExecutionPoint(paramIdentity)
                 }
@@ -1261,7 +1316,6 @@ abstract class ManagedStrategy(
         fun afterMethodCall(codeLocation: Int) {
             onNextExecutionPoint(codeLocation)
         }
-
     }
 
     /**
@@ -1281,7 +1335,7 @@ abstract class ManagedStrategy(
         val isActiveLockNode: Boolean get() = interleavingHistory[currentInterleavingNodeIndex].spinCyclePeriod != 0
 
         /**
-         * Cycle period if is occurred in during current thread switch or 0 if no spin-cycle happened
+         * Cycle period if is occurred in during the current thread switch or 0 if no spin-cycle happened
          */
         val currentCyclePeriod: Int get() = interleavingHistory[currentInterleavingNodeIndex].spinCyclePeriod
 
