@@ -118,14 +118,7 @@ abstract class ManagedStrategy(
     private fun additionalEventsTrackingEnabled(): Boolean = TrackMethodsFlagHolder.trackingEnabled
 
     private fun createRunner(): ManagedStrategyRunner =
-        ManagedStrategyRunner(
-            this,
-            testClass,
-            validationFunctions,
-            stateRepresentationFunction,
-            testCfg.timeoutMs,
-            UseClocks.ALWAYS
-        )
+        ManagedStrategyRunner(this, testClass, validationFunctions, stateRepresentationFunction, testCfg.timeoutMs, UseClocks.ALWAYS)
 
     override fun createTransformer(cv: ClassVisitor): ClassVisitor = ManagedStrategyTransformer(
         cv = cv,
@@ -268,10 +261,10 @@ abstract class ManagedStrategy(
 
     private val concurrentActorCausesBlocking: Boolean
         get() = currentActorId.mapIndexed { iThread, actorId ->
-            if (iThread != currentThread && !finished[iThread])
-                scenario.threads[iThread][actorId]
-            else null
-        }.filterNotNull().any { it.causesBlocking }
+                    if (iThread != currentThread && !finished[iThread])
+                        scenario.threads[iThread][actorId]
+                    else null
+                }.filterNotNull().any { it.causesBlocking }
 
     private fun failDueToDeadlock(): Nothing {
         suddenInvocationResult = DeadlockInvocationResult()
@@ -291,12 +284,7 @@ abstract class ManagedStrategy(
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
      * @param codeLocation the byte-code location identifier of the point in code.
      */
-    private fun newSwitchPoint(
-        iThread: Int,
-        codeLocation: Int,
-        tracePoint: TracePoint?,
-        isBeforeMethodCall: Boolean = false
-    ) {
+    private fun newSwitchPoint(iThread: Int, codeLocation: Int, tracePoint: TracePoint?, isBeforeMethodCall: Boolean = false) {
         if (!isTestThread(iThread)) return // can switch only test threads
         if (inIgnoredSection(iThread)) return // cannot suspend in ignored sections
         check(iThread == currentThread)
@@ -352,12 +340,7 @@ abstract class ManagedStrategy(
         }
     }
 
-    private fun newSwitchPointInReplayMode(
-        iThread: Int,
-        codeLocation: Int,
-        tracePoint: TracePoint?,
-        isBeforeMethodCall: Boolean
-    ) {
+    private fun newSwitchPointInReplayMode(iThread: Int, codeLocation: Int, tracePoint: TracePoint?, isBeforeMethodCall: Boolean) {
         traceCollector!!.checkAddOrActualizeSpinCycleStartPoint(iThread, isBeforeMethodCall)
         if (loopDetector.visitCodeLocation(iThread, codeLocation)) {
             if (loopDetector.isActiveLockNode) {
