@@ -404,6 +404,11 @@ internal class ManagedStrategyTransformer(
         }
     }
 
+    /**
+     * Adds [ManagedStrategy.beforeMethodCallWithArguments] and [ManagedStrategy.afterMethodCallWithArguments] methods invocations,
+     * if [TrackMethodsFlagHolder.trackingEnabled] is enabled.
+     * This information is used to detect a spin lock period, considering arguments and receivers.
+     */
     private inner class MethodCallsWithArgumentTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
             if (name == "<init>" ||
@@ -418,11 +423,8 @@ internal class ManagedStrategyTransformer(
             val methodCallCodeLocation = codeLocationIdProvider.newRegularMethodCallId()
             val endLabel = adapter.newLabel()
             val interceptionLabel = adapter.newLabel()
-//            loadStrategy()
-//            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, IS_SPIN_CYCLE_DETECTION_MODE_ENABLED)
 
             adapter.getStatic(TRACKING_FLAG_HOLDER_TYPE, "trackingEnabled", Type.BOOLEAN_TYPE)
-
             adapter.visitJumpInsn(IFNE, interceptionLabel)
 
             adapter.visitMethodInsn(opcode, owner, name, desc, itf)
@@ -439,7 +441,6 @@ internal class ManagedStrategyTransformer(
             adapter.visitLabel(callStart)
             adapter.visitMethodInsn(opcode, owner, name, desc, itf)
             adapter.visitLabel(callEnd)
-
             invokeAfterRegularMethodCall(methodCallCodeLocation)
             adapter.goTo(endLabel)
             // } catch {
@@ -447,7 +448,6 @@ internal class ManagedStrategyTransformer(
             invokeAfterRegularMethodCall(methodCallCodeLocation)
             adapter.throwException()
             // }
-
             adapter.visitLabel(endLabel)
         }
 
@@ -465,10 +465,12 @@ internal class ManagedStrategyTransformer(
             name: String,
             desc: String
         ) {
+            // array: [ owner_if_exists, param_1_int_view, param_2_int_view, ..., param_n_int_view ]
             val parametersIntValues = captureOwnerAndParametersBeforeRegularMethodCall(opcode, owner, name, desc)
             loadStrategy()
             loadCurrentThreadNumber()
             adapter.push(methodCallCodeLocation)
+            // if this method is static and has no arguments
             if (parametersIntValues == -1) {
                 adapter.push(null as Type?)
             } else {
@@ -486,7 +488,7 @@ internal class ManagedStrategyTransformer(
             val paramTypes = Type.getArgumentTypes(desc)
             val isStatic = opcode and ACC_STATIC != 0
             if (isStatic && paramTypes.isEmpty()) return -1  // nothing to capture
-            val ownerIfExistsAndParams = adapter.copyParametersAndOwnerIfNotStatic(isStatic, paramTypes)
+            val ownerIfExistsAndParams = adapter.copyParametersAndReceiverIfNotStatic(isStatic, paramTypes)
             val firstLoggedParameter = if (paramTypes.isEmpty()) 0 else
                 if (isAFUMethodCall(opcode, owner, methodName, desc)) {
                     // do not log the first object in AFU methods
@@ -506,16 +508,18 @@ internal class ManagedStrategyTransformer(
                 } else {
                     paramTypes.size
                 }
-            // create array of parameters
-            adapter.push(lastLoggedParameter - firstLoggedParameter + (if (isStatic) 0 else 1)) // size of the array
-            visitIntInsn(NEWARRAY, T_INT) // Creates a new array of integers with the size on the top of the stack (5 in this case)
+            // If the method is not static - receiver int view goes first in the representation array
+            val parametersStartIndexInArray = if (isStatic) 0 else 1
+            adapter.push(lastLoggedParameter - firstLoggedParameter + parametersStartIndexInArray)
+            // Create an array of parameters
+            visitIntInsn(NEWARRAY, T_INT)
             val parameterValuesLocal = adapter.newLocal(INT_ARRAY_TYPE)
             adapter.storeLocal(parameterValuesLocal)
 
+            // Add to array int representation of receiver if method is not static
             if (!isStatic) {
                 adapter.loadLocal(parameterValuesLocal)
                 adapter.push(0)
-                // Load the object
                 adapter.loadLocal(ownerIfExistsAndParams[0])
                 adapter.invokeStatic(SYSTEM_TYPE, SYSTEM_IDENTITY_HASHCODE_METHOD)
                 adapter.arrayStore(Type.INT_TYPE)
@@ -523,10 +527,10 @@ internal class ManagedStrategyTransformer(
 
             for (i in firstLoggedParameter until lastLoggedParameter) {
                 adapter.loadLocal(parameterValuesLocal)
-                adapter.push(i - firstLoggedParameter + (if (isStatic) 0 else 1))
+                adapter.push(i - firstLoggedParameter + parametersStartIndexInArray)
 
                 val paramType = paramTypes[i]
-                val paramLocal = ownerIfExistsAndParams[i + (if (isStatic) 0 else 1)]
+                val paramLocal = ownerIfExistsAndParams[i + parametersStartIndexInArray]
                 pushParamToIntIdentity(paramLocal, paramType)
 
                 adapter.arrayStore(Type.INT_TYPE)
@@ -534,8 +538,11 @@ internal class ManagedStrategyTransformer(
             return parameterValuesLocal
         }
 
-        // RESULT STACK: param int identity
+        /**
+         * Puts on the stack int view of this parameter or receiver.
+         */
         private fun pushParamToIntIdentity(local: Int, localType: Type) {
+            // Process all primitive types
             when (localType.sort) {
                 Type.INT, Type.BOOLEAN, Type.SHORT, Type.BYTE, Type.CHAR -> { // Type.BOOLEAN, Type.SHORT, Type.BYTE, Type.CHAR
                     adapter.loadLocal(local)
@@ -555,12 +562,13 @@ internal class ManagedStrategyTransformer(
                 }
 
                 Type.LONG -> {
-                    adapter.loadLocal(local);
+                    adapter.loadLocal(local)
                     adapter.visitInsn(L2I)
                     return
                 }
             }
 
+            // Process null
             val end = adapter.newLabel()
             val nullBranch = adapter.newLabel()
             adapter.loadLocal(local)
@@ -569,6 +577,7 @@ internal class ManagedStrategyTransformer(
             adapter.push(0)
             adapter.goTo(end)
 
+            // Process all wrapper types
             when (localType.internalName) {
                 INT_WRAPPER_TYPE_NAME -> {
                     adapter.loadLocal(local)
@@ -622,7 +631,7 @@ internal class ManagedStrategyTransformer(
                 }
 
                 else -> {
-                    // Load the object
+                    // If this is an Object and not a wrapper, then call System.identityHashCode method
                     adapter.loadLocal(local)
                     adapter.invokeStatic(SYSTEM_TYPE, SYSTEM_IDENTITY_HASHCODE_METHOD)
                 }
@@ -631,31 +640,22 @@ internal class ManagedStrategyTransformer(
         }
 
         /**
-         * Find a guarantee that a method has if any
+         * Returns an array of locals containing receiver given parameters.
+         *
+         * STACK: owner (if not static) param_1 param_2 ... param_n
+         * RESULT STACK: owner (if not static) param_1 param_2 ... param_n (the stack is not changed)
          */
-        private fun classifyGuaranteeType(className: String, methodName: String): ManagedGuaranteeType? {
-            for (guarantee in guarantees)
-                if (guarantee.methodPredicate(methodName) && guarantee.classPredicate(className.canonicalClassName))
-                    return guarantee.type
-            return null
-        }
-
-        /**
-         * Returns array of locals containing given parameters.
-         * STACK: owner param_1 param_2 ... param_n
-         * RESULT STACK: owner param_1 param_2 ... param_n (the stack is not changed)
-         */
-        private fun GeneratorAdapter.copyParametersAndOwnerIfNotStatic(isStatic: Boolean, paramTypes: Array<Type>): IntArray {
-            val locals = storeParametersAndOwnerIfExists(isStatic, paramTypes)
+        private fun GeneratorAdapter.copyParametersAndReceiverIfNotStatic(isStatic: Boolean, paramTypes: Array<Type>): IntArray {
+            val locals = storeParametersAndReceiverIfExists(isStatic, paramTypes)
             loadLocals(locals)
             return locals
         }
         /**
-         * Returns array of locals containing given parameters.
-         * STACK: owner param_1 param_2 ... param_n
+         * Returns an array of locals containing given parameters.
+         * STACK: receiver (if not static) param_1 param_2 ... param_n
          * RESULT STACK: (empty)
          */
-        private fun GeneratorAdapter.storeParametersAndOwnerIfExists(isStatic: Boolean, paramTypes: Array<Type>): IntArray {
+        private fun GeneratorAdapter.storeParametersAndReceiverIfExists(isStatic: Boolean, paramTypes: Array<Type>): IntArray {
             val startPosition = if (isStatic) 0 else 1
             val size = paramTypes.size + startPosition
             val locals = IntArray(size)
@@ -1584,6 +1584,7 @@ private val NOTIFY_TRACE_POINT_TYPE = Type.getType(NotifyTracePoint::class.java)
 private val PARK_TRACE_POINT_TYPE = Type.getType(ParkTracePoint::class.java)
 private val UNPARK_TRACE_POINT_TYPE = Type.getType(UnparkTracePoint::class.java)
 
+private val SYSTEM_IDENTITY_HASHCODE_METHOD = Method.getMethod(System::identityHashCode.javaMethod)
 private val CURRENT_THREAD_NUMBER_METHOD = Method.getMethod(ManagedStrategy::currentThreadNumber.javaMethod)
 private val BEFORE_SHARED_VARIABLE_READ_METHOD = Method.getMethod(ManagedStrategy::beforeSharedVariableRead.javaMethod)
 private val BEFORE_SHARED_VARIABLE_WRITE_METHOD = Method.getMethod(ManagedStrategy::beforeSharedVariableWrite.javaMethod)
@@ -1618,39 +1619,26 @@ private val NEXT_INT_METHOD = Method("nextInt", Type.INT_TYPE, emptyArray<Type>(
 private val BEFORE_REGULAR_METHOD_CALL = Method.getMethod(ManagedStrategy::beforeMethodCallWithArguments.javaMethod)
 private val AFTER_REGULAR_METHOD_CALL = Method.getMethod(ManagedStrategy::afterMethodCallWithArguments.javaMethod)
 
-
 private val INT_WRAPPER_TYPE = Type.getType(java.lang.Integer::class.java)
 private val INT_WRAPPER_TYPE_NAME = INT_WRAPPER_TYPE.internalName
-
 private val SHORT_WRAPPER_TYPE = Type.getType(java.lang.Short::class.java)
 private val SHORT_WRAPPER_TYPE_NAME = SHORT_WRAPPER_TYPE.internalName
-
 private val CHAR_WRAPPER_TYPE = Type.getType(java.lang.Character::class.java)
 private val CHAR_WRAPPER_TYPE_NAME = CHAR_WRAPPER_TYPE.internalName
-
 private val BYTE_WRAPPER_TYPE = Type.getType(java.lang.Byte::class.java)
 private val BYTE_WRAPPER_TYPE_NAME = BYTE_WRAPPER_TYPE.internalName
-
 private val BOOLEAN_WRAPPER_TYPE = Type.getType(java.lang.Boolean::class.java)
 private val BOOLEAN_WRAPPER_TYPE_NAME = BOOLEAN_WRAPPER_TYPE.internalName
-
 private val DOUBLE_WRAPPER_TYPE = Type.getType(java.lang.Double::class.java)
 private val DOUBLE_WRAPPER_TYPE_NAME = DOUBLE_WRAPPER_TYPE.internalName
-
 private val FLOAT_WRAPPER_TYPE = Type.getType(java.lang.Float::class.java)
 private val FLOAT_WRAPPER_TYPE_NAME = FLOAT_WRAPPER_TYPE.internalName
-
 private val LONG_WRAPPER_TYPE = Type.getType(java.lang.Long::class.java)
 private val LONG_WRAPPER_TYPE_NAME = LONG_WRAPPER_TYPE.internalName
 
 private val SYSTEM_TYPE = Type.getType(System::class.java)
 private val INT_ARRAY_TYPE = Type.getType("[I")
-
 private val WRITE_KEYWORDS = listOf("set", "put", "swap", "exchange")
-private val SYSTEM_IDENTITY_HASHCODE_METHOD = Method.getMethod(System::identityHashCode.javaMethod)
-
-//private val IS_SPIN_CYCLE_DETECTION_MODE_ENABLED = Method.getMethod(ManagedStrategy::isSpinCycleDetectionModeEnabled.javaMethod)
-
 private val TRACKING_FLAG_HOLDER_TYPE = Type.getType(TrackMethodsFlagHolder::class.java)
 
 /**
