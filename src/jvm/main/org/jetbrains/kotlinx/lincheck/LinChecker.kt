@@ -45,9 +45,25 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         check(testConfigurations.isNotEmpty()) { "No Lincheck test configuration to run" }
         for (testCfg in testConfigurations) {
             val failure = testCfg.checkImpl()
-            if (failure != null) return failure
+            if (failure != null) return failure.fixClocksIfLinearisabilityVerifier(testCfg)
         }
         return null
+    }
+
+    /**
+     * This is a temporary fix of clocks representation that adds initial executions to clocks.
+     */
+    private fun LincheckFailure.fixClocksIfLinearisabilityVerifier(testCfg: CTestConfiguration): LincheckFailure {
+        if (this !is IncorrectResultsFailure) {
+            return this
+        }
+        val initActorsCount = this.results.initResults.size
+        this.results.parallelResultsWithClock.forEach { threadResult ->
+            threadResult.forEach { resultWithClocks ->
+                resultWithClocks.clockOnStart.clock[0] += initActorsCount
+            }
+        }
+        return this
     }
 
     private fun CTestConfiguration.checkImpl(): LincheckFailure? {
