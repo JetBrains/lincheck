@@ -98,12 +98,12 @@ internal class ManagedStrategyTransformer(
      */
     private class VMSupportsCS8MethodGenerator(val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, null) {
         override fun visitEnd() = adapter.run {
-            visitCode()
-            push(true) // suppose that we always have CAS for Long
-            returnValue()
-            visitMaxs(1, 0)
-            visitEnd()
-        }
+                visitCode()
+                push(true) // suppose that we always have CAS for Long
+                returnValue()
+                visitMaxs(1, 0)
+                visitEnd()
+            }
     }
 
     /**
@@ -374,7 +374,7 @@ internal class ManagedStrategyTransformer(
         private fun invokeBeforeAtomicMethodCall() {
             loadStrategy()
             loadCurrentThreadNumber()
-            adapter.push(codeLocationIdProvider.newId()) // re-use previous code location
+            adapter.push(codeLocationIdProvider.newId())
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_ATOMIC_METHOD_CALL_METHOD)
         }
     }
@@ -942,9 +942,9 @@ internal class ManagedStrategyTransformer(
         private fun extendsRandom(className: String) = java.util.Random::class.java.isAssignableFrom(Class.forName(className))
 
         private fun isRandomMethod(methodName: String, desc: String): Boolean = randomMethods.any {
-            val method = Method.getMethod(it)
-            method.name == methodName && method.descriptor == desc
-        }
+                val method = Method.getMethod(it)
+                method.name == methodName && method.descriptor == desc
+            }
     }
 
     /**
@@ -1104,9 +1104,9 @@ internal class ManagedStrategyTransformer(
                 when (desc) {
                     "(J)V" -> loadLocal(firstArgument)
                     "(JI)V" -> {
-                        loadLocal(firstArgument)
-                        loadLocal(lastArgument)
-                    }
+                            loadLocal(firstArgument)
+                            loadLocal(lastArgument)
+                        }
                 }
             }
             if (isNotify) {
@@ -1783,9 +1783,9 @@ private fun String.isUnsafe() = this == "sun/misc/Unsafe" || this == "jdk/intern
  */
 internal fun isImpossibleToTransformApiClass(className: String) =
     className == "sun.misc.Unsafe" ||
-            className == "jdk.internal.misc.Unsafe" ||
-            className == "java.lang.invoke.VarHandle" ||
-            className.startsWith("java.util.concurrent.atomic.Atomic") && className.endsWith("FieldUpdater")
+        className == "jdk.internal.misc.Unsafe" ||
+        className == "java.lang.invoke.VarHandle" ||
+        className.startsWith("java.util.concurrent.atomic.Atomic") && className.endsWith("FieldUpdater")
 
 /**
  * This class is used for getting the [sun.misc.Unsafe] or [jdk.internal.misc.Unsafe] instance.
