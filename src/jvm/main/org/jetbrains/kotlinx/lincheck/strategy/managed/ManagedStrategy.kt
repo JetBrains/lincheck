@@ -753,7 +753,7 @@ abstract class ManagedStrategy(
         if (loopDetector.replayModeEnabled) {
             traceCollector!!.checkAddOrActualizeSpinCycleStartPoint(iThread, true)
         }
-        loopDetector.beforeNextMethodCall(codeLocation, ownerAndParametersInvViews)
+        loopDetector.beforeNextTrackedMethodCall(codeLocation, ownerAndParametersInvViews)
     }
 
     /**
@@ -762,7 +762,7 @@ abstract class ManagedStrategy(
      */
     internal fun afterTrackedMethodCall(iThread: Int, codeLocation: Int) {
         if (inIgnoredSection(iThread)) return
-        loopDetector.afterMethodCall(codeLocation)
+        loopDetector.afterTrackedMethodCall(codeLocation)
     }
 
     // == LOGGING METHODS ==
@@ -1302,18 +1302,32 @@ abstract class ManagedStrategy(
             replayModeLoopDetectorHelper?.initialize()
         }
 
-        fun beforeNextMethodCall(codeLocation: Int, ownerAndParametersInvViews: IntArray?) {
+        /**
+         * Invoked when additional information tracking is enabled when we calculate a spin cycle period or
+         * during replay (trace collection).
+         *
+         * @param ownerAndParametersRawInvViews an array, containing raw int views (they may be positive)
+         * of the receiver (if not static) and the parameters of the method.
+         */
+        fun beforeNextTrackedMethodCall(codeLocation: Int, ownerAndParametersRawInvViews: IntArray?) {
             onNextExecutionPoint(codeLocation)
-            if (ownerAndParametersInvViews != null) {
-                for (element in ownerAndParametersInvViews) {
+            if (ownerAndParametersRawInvViews != null) {
+                for (rawIntView in ownerAndParametersRawInvViews) {
                     // Convert int view to a negative value
-                    val paramIdentity = if (element >= 0) -abs(element + 10003) else element
-                    onNextExecutionPoint(paramIdentity)
+                    val valueIntView = makeIntViewNegative(rawIntView)
+                    onNextExecutionPoint(valueIntView)
                 }
             }
         }
 
-        fun afterMethodCall(codeLocation: Int) {
+        /**
+         * According to our convention (see [CodeLocationIdProvider]), int views of receivers and parameters
+         * must be negative numbers.
+         * Here we convert a raw int view, which may be positive, into negative value.
+         */
+        private fun makeIntViewNegative(element: Int) = if (element >= 0) -abs(element + 10003) else element
+
+        fun afterTrackedMethodCall(codeLocation: Int) {
             onNextExecutionPoint(codeLocation)
         }
     }

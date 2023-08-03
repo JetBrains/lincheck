@@ -455,7 +455,7 @@ internal class ManagedStrategyTransformer(
             loadStrategy()
             loadCurrentThreadNumber()
             adapter.push(methodCallCodeLocation)
-            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, AFTER_REGULAR_METHOD_CALL)
+            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, AFTER_TRACKED_METHOD_CALL)
         }
 
         private fun invokeBeforeTrackedMethodCall(
@@ -476,7 +476,7 @@ internal class ManagedStrategyTransformer(
             } else {
                 adapter.loadLocal(parametersIntValues)
             }
-            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_REGULAR_METHOD_CALL)
+            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_TRACKED_METHOD_CALL)
         }
 
         private fun captureOwnerAndParametersViewsBeforeTrackedMethodCall(
@@ -1634,8 +1634,8 @@ private val INITIALIZE_THROWN_EXCEPTION_METHOD = Method.getMethod(MethodCallTrac
 private val INITIALIZE_PARAMETERS_METHOD = Method.getMethod(MethodCallTracePoint::initializeParameters.javaMethod)
 private val INITIALIZE_OWNER_NAME_METHOD = Method.getMethod(MethodCallTracePoint::initializeOwnerName.javaMethod)
 private val NEXT_INT_METHOD = Method("nextInt", Type.INT_TYPE, emptyArray<Type>())
-private val BEFORE_REGULAR_METHOD_CALL = Method.getMethod(ManagedStrategy::beforeTrackedMethodCall.javaMethod)
-private val AFTER_REGULAR_METHOD_CALL = Method.getMethod(ManagedStrategy::afterTrackedMethodCall.javaMethod)
+private val BEFORE_TRACKED_METHOD_CALL = Method.getMethod(ManagedStrategy::beforeTrackedMethodCall.javaMethod)
+private val AFTER_TRACKED_METHOD_CALL = Method.getMethod(ManagedStrategy::afterTrackedMethodCall.javaMethod)
 
 private val INT_WRAPPER_TYPE = Type.getType(java.lang.Integer::class.java)
 private val INT_WRAPPER_TYPE_NAME = INT_WRAPPER_TYPE.internalName
