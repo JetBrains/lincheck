@@ -156,6 +156,7 @@ class EventStructure(
         // TODO: filter unused initialization events
         _currentExecution = event.frontier.toMutableExecution().apply {
             add(event)
+            fixupDependencies()
         }
         pinnedEvents = event.pinnedEvents.copy().ensure {
             currentExecution.containsAll(it.events)
@@ -560,9 +561,7 @@ class EventStructure(
     private fun addRequestEvent(iThread: Int, label: EventLabel): Event {
         require(label.isRequest)
         tryReplayEvent(iThread)?.let { event ->
-            event.label.remapRecipient(label, currentRemapping)
             event.label.replay(label, currentRemapping)
-            // event.label.remap(currentRemapping)
             addEventToCurrentExecution(event)
             return event
         }
@@ -584,17 +583,8 @@ class EventStructure(
             if (!readyToReplay) {
                 return (null to listOf())
             }
-            // TODO: replace with `synchronizesInto` check
-            val label = event.dependencies.fold (event.parent.label) { label: EventLabel, dependency ->
-                if (label.synchronizable(dependency.label))
-                    label.synchronize(dependency.label)!!
-                else
-                    label
-            }
-            event.label.remapRecipient(label, currentRemapping)
+            val label = event.recalculateResponseLabel()
             event.label.replay(label, currentRemapping)
-            // check(label != null)
-            // event.label.replay(label, currentRemapping)
             addEventToCurrentExecution(event)
             return event to listOf(event)
         }

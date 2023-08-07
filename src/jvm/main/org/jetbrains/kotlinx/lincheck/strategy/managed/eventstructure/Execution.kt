@@ -21,6 +21,8 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.ensure
+import org.jetbrains.kotlinx.lincheck.strategy.managed.Remapping
+import org.jetbrains.kotlinx.lincheck.unreachable
 import org.jetbrains.kotlinx.lincheck.utils.*
 
 
@@ -192,6 +194,33 @@ fun Execution.computeVectorClock(event: Event, relation: Relation<Event>): Vecto
             .coerceAtLeast(-1)
     }
     return clock
+}
+
+// TODO: rename?
+fun Execution.fixupDependencies() {
+    val remapping = Remapping()
+    // TODO: refactor, simplify & unify cases
+    for (event in executionOrderSortedList()) {
+        if (!(event.label is MemoryAccessLabel || event.label is MutexLabel))
+            continue
+        // TODO: unify cases
+        if (event.label.isRequest) {
+            val obj = when (event.label) {
+                is MemoryAccessLabel -> event.label.location.obj
+                is MutexLabel -> event.label.mutex.unwrap()
+                else -> unreachable()
+            }
+            val allocEvent = event.dependencies.firstOrNull { it.label is ObjectAllocationLabel }
+                // TODO: add check for `external` objects allocated by `InitializationLabel`
+                ?: continue
+            remapping[obj] = (allocEvent.label as ObjectAllocationLabel).obj.unwrap()
+            event.label.remap(remapping)
+        }
+        if (event.label.isResponse) {
+            val label = event.recalculateResponseLabel()
+            event.label.replay(label, remapping)
+        }
+    }
 }
 
 typealias ExecutionCounter = IntArray

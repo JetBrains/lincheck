@@ -21,6 +21,8 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import  org.jetbrains.kotlinx.lincheck.ensure
+import org.jetbrains.kotlinx.lincheck.strategy.managed.opaque
+import org.jetbrains.kotlinx.lincheck.unreachable
 import org.jetbrains.kotlinx.lincheck.utils.IntMap
 import org.jetbrains.kotlinx.lincheck.utils.MutableIntMap
 
@@ -231,6 +233,18 @@ class Event private constructor(
             syncFrom
         }
 
+    val allocatedBy: Event by lazy {
+        // TODO: generalize?
+        require(label is MemoryAccessLabel || label is MutexLabel)
+        // TODO: unify cases
+        val obj = when (label) {
+            is MemoryAccessLabel -> label.location.obj.opaque()
+            is MutexLabel -> label.mutex
+            else -> unreachable()
+        }
+        dependencies.first { it.label.asObjectAllocationLabel(obj) != null }
+    }
+
     /**
      * Checks whether this event is valid response to the [request] event.
      * If this event is not a response or [request] is not a request returns false.
@@ -271,6 +285,18 @@ class Event private constructor(
         readResponse.label is ReadAccessLabel && readResponse.label.isResponse && readResponse.label.isExclusive &&
         label is WriteAccessLabel && label.isExclusive && parent == readResponse &&
         label.location == readResponse.label.location
+
+    fun recalculateResponseLabel(): EventLabel {
+        require(label.isResponse)
+        require(parent != null && parent.label.isRequest)
+        return dependencies.fold (parent.label) { label: EventLabel, dependency ->
+            // TODO: can we do this better?
+            //  - currently we assume extra dependencies do not participate into synchronization
+            label.getResponse(dependency.label) ?: label
+        }.ensure {
+            it != parent.label
+        }
+    }
 
     override fun equals(other: Any?): Boolean {
         return (other is Event) && (id == other.id)

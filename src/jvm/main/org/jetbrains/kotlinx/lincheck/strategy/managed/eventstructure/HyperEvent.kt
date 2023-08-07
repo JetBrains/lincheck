@@ -142,7 +142,6 @@ fun List<Event>.nextAtomicMemoryAccessEvent(firstEvent: Event): HyperEvent {
                 ?: return SingletonEvent(readRequestEvent)
 
             check(readResponseEvent.label.isResponse && readResponseEvent.label is ReadAccessLabel)
-            readResponseEvent.label.remapRecipient(readRequestEvent.label)
             if (!readResponseEvent.label.isExclusive) {
                 return ReceiveEvent(readRequestEvent, readResponseEvent)
             }
@@ -151,7 +150,6 @@ fun List<Event>.nextAtomicMemoryAccessEvent(firstEvent: Event): HyperEvent {
                 ?.takeIf { it.label is WriteAccessLabel && it.label.isExclusive }
                 ?: return ReceiveEvent(readRequestEvent, readResponseEvent)
 
-            writeEvent.label.remapRecipient(readResponseEvent.label)
             ReadModifyWriteEvent(readRequestEvent, readResponseEvent, writeEvent)
         }
 
@@ -203,7 +201,6 @@ fun List<Event>.nextAtomicMutexEvent(firstEvent: Event): HyperEvent {
                 ?.takeIf { it.label is WaitLabel }
                 ?: return SingletonEvent(unlockEvent)
 
-            waitRequestEvent.label.remapRecipient(unlockEvent.label)
             UnlockAndWait(unlockEvent, waitRequestEvent)
         }
 
@@ -215,7 +212,6 @@ fun List<Event>.nextAtomicMutexEvent(firstEvent: Event): HyperEvent {
             val lockRequestEvent = getOrNull(1 + waitResponseEvent.threadPosition)
                 ?: return SingletonEvent(waitResponseEvent)
 
-            lockRequestEvent.label.remapRecipient(waitResponseEvent.label)
             WakeUpAndTryLock(waitResponseEvent, lockRequestEvent)
         }
 

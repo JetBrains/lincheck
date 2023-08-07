@@ -126,12 +126,11 @@ sealed class EventLabel(
     }
 
     /**
-     * For this request (or response) returns its corresponding response label to given [label].
+     * Returns response of this label corresponding to the given [label].
      *
      * @throws IllegalArgumentException if this is not either request or response label.
      */
     open fun getResponse(label: EventLabel): EventLabel? {
-        require(isRequest || isResponse)
         return null
     }
 
@@ -192,6 +191,9 @@ sealed class EventLabel(
      * @param remapping stores the mapping from old to new replayed objects.
      * @throws IllegalStateException if shapes of labels do not match or
      *   [remapping] already contains a binding that contradicts the replaying.
+     *
+     * TODO: instead of storing actual object references in labels, we can store there object IDs,
+     *   and then additionally keep a mapping `ObjectID -> Any`
      */
     open fun replay(label: EventLabel, remapping: Remapping) {
         check(this == label) {
@@ -206,11 +208,6 @@ sealed class EventLabel(
      */
     open fun remap(remapping: Remapping) {}
 
-    fun remapRecipient(label: EventLabel, remapping: Remapping = Remapping()) {
-        // TODO: check that labels have same operation kind
-        remapping[recipient] = label.recipient
-        remap(remapping)
-    }
 }
 
 /**
@@ -352,16 +349,17 @@ data class ThreadStartLabel(
         }
     }
 
-    override fun getResponse(label: EventLabel): ThreadStartLabel? {
-        require(isRequest || isResponse)
-        return label.asThreadForkLabel()
-            ?.takeIf { isRequest && threadId in it.forkThreadIds }
-            ?.let {
-                ThreadStartLabel(
-                    kind = LabelKind.Response,
-                    threadId = threadId,
-                )
-            }
+    override fun getResponse(label: EventLabel): ThreadStartLabel? = when {
+        (isRequest || isResponse) ->
+            label.asThreadForkLabel()
+                ?.takeIf { isRequest && threadId in it.forkThreadIds }
+                ?.let {
+                    ThreadStartLabel(
+                        kind = LabelKind.Response,
+                        threadId = threadId,
+                    )
+                }
+        else -> null
     }
 
     override fun isValidReceive(label: EventLabel): Boolean {
@@ -455,14 +453,13 @@ data class ThreadJoinLabel(
         }
     }
 
-    override fun getResponse(label: EventLabel): EventLabel? {
-        require(isRequest || isResponse)
-        return if (label is ThreadFinishLabel && joinThreadIds.containsAll(label.finishedThreadIds))
+    override fun getResponse(label: EventLabel): EventLabel? = when {
+        (isRequest || isResponse) && label is ThreadFinishLabel && joinThreadIds.containsAll(label.finishedThreadIds) ->
             ThreadJoinLabel(
                 kind = LabelKind.Response,
                 joinThreadIds = joinThreadIds - label.finishedThreadIds,
             )
-        else null
+        else -> null
     }
 
     override fun isValidReceive(label: EventLabel): Boolean {
@@ -735,18 +732,19 @@ data class ReadAccessLabel(
         }
     }
 
-    override fun getResponse(label: EventLabel): EventLabel? {
-        require(isRequest)
-        return label.asWriteAccessLabel(location)?.let {
-            // TODO: perform dynamic type-check
-            ReadAccessLabel(
-                kind = LabelKind.Response,
-                location = location,
-                kClass = kClass,
-                _value = it.value,
-                isExclusive = isExclusive,
-            )
-        }
+    override fun getResponse(label: EventLabel): EventLabel? = when {
+        isRequest ->
+            label.asWriteAccessLabel(location)?.let {
+                // TODO: perform dynamic type-check
+                ReadAccessLabel(
+                    kind = LabelKind.Response,
+                    location = location,
+                    kClass = kClass,
+                    _value = it.value,
+                    isExclusive = isExclusive,
+                )
+            }
+        else -> null
     }
 
     override fun isValidReceive(label: EventLabel): Boolean {
@@ -1078,18 +1076,19 @@ data class LockLabel(
         }
     }
 
-    override fun getResponse(label: EventLabel): LockLabel? {
-        require(isRequest)
-        return label.asUnlockLabel(mutex)
-            ?.takeIf { !it.isReentry && (isReentry implies it.isInitUnlock) }
-            ?.let {
-                LockLabel(
-                    kind = LabelKind.Response,
-                    mutex_ = mutex,
-                    reentranceDepth = reentranceDepth,
-                    reentranceCount = reentranceCount,
-                )
-            }
+    override fun getResponse(label: EventLabel): LockLabel? = when {
+        isRequest ->
+            label.asUnlockLabel(mutex)
+                ?.takeIf { !it.isReentry && (isReentry implies it.isInitUnlock) }
+                ?.let {
+                    LockLabel(
+                        kind = LabelKind.Response,
+                        mutex_ = mutex,
+                        reentranceDepth = reentranceDepth,
+                        reentranceCount = reentranceCount,
+                    )
+                }
+        else -> null
     }
 
     override fun toString(): String =
@@ -1169,11 +1168,11 @@ data class WaitLabel(
         }
     }
 
-    override fun getResponse(label: EventLabel): WaitLabel? {
-        require(isRequest)
-        return label.asNotifyLabel(mutex)?.let {
+    override fun getResponse(label: EventLabel): WaitLabel? = when {
+        isRequest -> label.asNotifyLabel(mutex)?.let {
             WaitLabel(LabelKind.Response, mutex)
         }
+        else -> null
     }
 
     override fun toString(): String =
@@ -1295,14 +1294,11 @@ data class ParkLabel(
         }
     }
 
-    override fun getResponse(label: EventLabel): ParkLabel? {
-        require(isRequest)
-        return when {
-            label is UnparkLabel && threadId == label.threadId ->
-                ParkLabel(LabelKind.Response, threadId)
-            // TODO: provide an option to enable spurious wake-ups
-            else -> null
-        }
+    override fun getResponse(label: EventLabel): ParkLabel? = when {
+        isRequest && label is UnparkLabel && threadId == label.threadId ->
+            ParkLabel(LabelKind.Response, threadId)
+        // TODO: provide an option to enable spurious wake-ups
+        else -> null
     }
 
     override fun isValidReceive(label: EventLabel): Boolean {
