@@ -200,8 +200,7 @@ class Event private constructor(
 
     val syncFrom: Event by lazy {
         require(label.isResponse)
-        check(dependencies.size == 1)
-        dependencies.first()
+        dependencies.first { label.isValidResponse(it.label) }
     }
 
     val readsFrom: Event
@@ -244,6 +243,7 @@ class Event private constructor(
      */
     fun isValidResponse(request: Event) =
         request.label.isRequest && label.isResponse && parent == request
+                && label.isValidResponse(request.label)
 
     /**
      * Checks whether this event is valid response to its parent request event.

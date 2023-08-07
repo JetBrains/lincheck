@@ -168,7 +168,6 @@ class ReadModifyWriteEvent(
     init {
         require(readResponse.isValidResponse(readRequest))
         require(writeSend.isWritePartOfAtomicUpdate(readResponse))
-        check(readRequest.dependencies.isEmpty())
         check(readRequestPart !in readResponsePart.dependencies)
     }
 
@@ -234,7 +233,6 @@ class UnlockAndWait(
         require(waitRequest.label is WaitLabel && waitRequest.label.isRequest)
         require(waitRequest.label.mutex == unlock.label.mutex)
         require(waitRequest.parent == unlock)
-        check(unlock.dependencies.isEmpty() && waitRequest.dependencies.isEmpty())
     }
 
     val unlockPart: Event
@@ -257,7 +255,6 @@ class WakeUpAndTryLock(
         require(lockRequest.label is LockLabel && lockRequest.label.isRequest)
         require(lockRequest.label.mutex == waitResponse.label.mutex)
         require(lockRequest.parent == waitResponse)
-        check(lockRequest.dependencies.isEmpty())
     }
 
     val waitResponsePart: Event

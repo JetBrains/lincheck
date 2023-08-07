@@ -310,24 +310,43 @@ class EventStructure(
     }
 
     private fun addEvent(iThread: Int, label: EventLabel, parent: Event?, dependencies: List<Event>): Event? {
-        require(parent !in dependencies)
-        val conflicts = conflictingEvents(iThread, parent?.let { it.threadPosition + 1 } ?: 0, label, dependencies)
-        return createEvent(iThread, label, parent, dependencies, conflicts)?.also { event ->
+        // TODO: do we really need this invariant?
+        // require(parent !in dependencies)
+        val allDependencies = dependencies + extraDependencies(iThread, label, parent, dependencies)
+        val conflicts = conflictingEvents(iThread, parent, label, allDependencies)
+        return createEvent(iThread, label, parent, allDependencies, conflicts)?.also { event ->
             _events.add(event)
         }
     }
 
-    private fun conflictingEvents(iThread: Int, position: Int, label: EventLabel, dependencies: List<Event>): List<Event> {
+    private fun extraDependencies(iThread: Int, label: EventLabel, parent: Event?, dependencies: List<Event>): List<Event> {
+        return when (label) {
+            is MemoryAccessLabel, is MutexLabel -> {
+                // TODO: unify cases
+                val obj = when (label) {
+                    is MemoryAccessLabel -> label.location.obj
+                    is MutexLabel -> label.mutex.unwrap()
+                    else -> unreachable()
+                }
+                listOfNotNull(
+                    allocationEvents[obj]
+                )
+            }
+            else -> listOf()
+        }
+    }
+
+    private fun conflictingEvents(iThread: Int, parent: Event?, label: EventLabel, dependencies: List<Event>): List<Event> {
+        val position = parent?.let { it.threadPosition + 1 } ?: 0
         val conflicts = mutableListOf<Event>()
-        // if current execution already has an event in given position --- then it is conflict
+        // if the current execution already has an event in given position --- then it is conflict
         currentExecution[iThread, position]?.also { conflicts.add(it) }
         // handle label specific cases
         // TODO: unify this logic for various kinds of labels?
         when {
             // lock-response synchronizing with our unlock is conflict
             label is LockLabel && label.isResponse && !label.isReentry -> run {
-                require(dependencies.size == 1)
-                val unlock = dependencies.first()
+                val unlock = dependencies.first { it.label.asUnlockLabel(label.mutex) != null }
                 currentExecution.forEach { event ->
                     if (event.label is LockLabel && event.label.isResponse &&
                         event.label.mutex == label.mutex && event.locksFrom == unlock) {
@@ -337,8 +356,7 @@ class EventStructure(
             }
             // wait-response synchronizing with our notify is conflict
             label is WaitLabel && label.isResponse -> run {
-                require(dependencies.size == 1)
-                val notify = dependencies.first()
+                val notify = dependencies.first { it.label is NotifyLabel }
                 if ((notify.label as NotifyLabel).isBroadcast)
                     return@run
                 currentExecution.forEach { event ->
@@ -386,6 +404,9 @@ class EventStructure(
 
     private val EventLabel.syncType
         get() = syncAlgebra.syncType(this)
+
+    private fun EventLabel.synchronizable(other: EventLabel) =
+        syncAlgebra.synchronizable(this, other)
 
     private fun EventLabel.synchronize(other: EventLabel) =
         syncAlgebra.synchronize(this, other)
@@ -530,7 +551,7 @@ class EventStructure(
             return event
         }
         val parent = playedFrontier[iThread]
-        val dependencies = mutableListOf<Event>()
+        val dependencies = listOf<Event>()
         return addEvent(iThread, label, parent, dependencies)!!.also { event ->
             addEventToCurrentExecution(event, synchronize = true)
         }
@@ -539,7 +560,9 @@ class EventStructure(
     private fun addRequestEvent(iThread: Int, label: EventLabel): Event {
         require(label.isRequest)
         tryReplayEvent(iThread)?.let { event ->
+            event.label.remapRecipient(label, currentRemapping)
             event.label.replay(label, currentRemapping)
+            // event.label.remap(currentRemapping)
             addEventToCurrentExecution(event)
             return event
         }
@@ -562,11 +585,16 @@ class EventStructure(
                 return (null to listOf())
             }
             // TODO: replace with `synchronizesInto` check
-            val label = event.dependencies.fold (event.parent.label) { label: EventLabel?, dependency ->
-                label?.synchronize(dependency.label)
+            val label = event.dependencies.fold (event.parent.label) { label: EventLabel, dependency ->
+                if (label.synchronizable(dependency.label))
+                    label.synchronize(dependency.label)!!
+                else
+                    label
             }
-            check(label != null)
+            event.label.remapRecipient(label, currentRemapping)
             event.label.replay(label, currentRemapping)
+            // check(label != null)
+            // event.label.replay(label, currentRemapping)
             addEventToCurrentExecution(event)
             return event to listOf(event)
         }
