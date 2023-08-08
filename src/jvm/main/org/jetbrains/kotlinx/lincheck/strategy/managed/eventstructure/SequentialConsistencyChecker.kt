@@ -400,7 +400,6 @@ private class WritesBeforeRelation(
             val readFrom = event.exclusiveReadPart.readsFrom
             val chain = if (readFrom.label is WriteAccessLabel)
                     chainsMap.computeIfAbsent(readFrom) {
-                        check(readFrom.label.isExclusive)
                         mutableListOf(readFrom)
                     }
                 else mutableListOf(readFrom)

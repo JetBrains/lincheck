@@ -204,7 +204,7 @@ fun Execution.fixupDependencies(): Remapping {
         if (!(event.label is MemoryAccessLabel || event.label is MutexLabel))
             continue
         // TODO: unify cases
-        if (event.label.isRequest) {
+        if (event.label.isRequest || event.label.isSend) {
             val obj = when (event.label) {
                 is MemoryAccessLabel -> event.label.location.obj
                 is MutexLabel -> event.label.mutex.unwrap()
