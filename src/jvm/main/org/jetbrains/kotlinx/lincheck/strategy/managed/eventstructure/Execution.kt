@@ -217,6 +217,22 @@ fun Execution.fixupDependencies(): Remapping {
             event.label.remap(remapping)
         }
         if (event.label.isResponse) {
+            val req = event.parent!!
+            val objFrom = when (req.label) {
+                is MemoryAccessLabel -> req.label.location.obj
+                is MutexLabel -> req.label.mutex.unwrap()
+                else -> unreachable()
+            }
+            val syncFrom = event.syncFrom
+            val objTo = when (syncFrom.label) {
+                is MemoryAccessLabel -> syncFrom.label.location.obj
+                is MutexLabel -> syncFrom.label.mutex.unwrap()
+                else -> null
+            }
+            if (objTo != null) {
+                remapping[objFrom] = objTo
+                req.label.remap(remapping)
+            }
             event.label.replay(event.recalculateResponseLabel(), remapping)
         }
     }
