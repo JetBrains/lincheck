@@ -79,6 +79,7 @@ class EventStructureStrategy(
             val (result, inconsistency) = runNextExploration()
                 ?: break
             if (inconsistency == null) {
+                check(result != null)
                 runUntracking(nThreads) {
                     memoryTracker.dumpMemory()
                 }
@@ -90,10 +91,13 @@ class EventStructureStrategy(
     }
 
     // TODO: rename & refactor!
-    fun runNextExploration(): Pair<InvocationResult, Inconsistency?>? {
+    fun runNextExploration(): Pair<InvocationResult?, Inconsistency?>? {
         // check that we have next invocation to explore
         if (!eventStructure.startNextExploration())
             return null
+        eventStructure.checkConsistency()?.let { inconsistency ->
+            return (null to inconsistency)
+        }
         val result = runInvocation()
         // if invocation was aborted we also abort the current execution inside event structure
         if (result.isAbortedInvocation()) {

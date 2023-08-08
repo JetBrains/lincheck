@@ -197,7 +197,7 @@ fun Execution.computeVectorClock(event: Event, relation: Relation<Event>): Vecto
 }
 
 // TODO: rename?
-fun Execution.fixupDependencies() {
+fun Execution.fixupDependencies(): Remapping {
     val remapping = Remapping()
     // TODO: refactor, simplify & unify cases
     for (event in executionOrderSortedList()) {
@@ -217,10 +217,10 @@ fun Execution.fixupDependencies() {
             event.label.remap(remapping)
         }
         if (event.label.isResponse) {
-            val label = event.recalculateResponseLabel()
-            event.label.replay(label, remapping)
+            event.label.replay(event.recalculateResponseLabel(), remapping)
         }
     }
+    return remapping
 }
 
 typealias ExecutionCounter = IntArray

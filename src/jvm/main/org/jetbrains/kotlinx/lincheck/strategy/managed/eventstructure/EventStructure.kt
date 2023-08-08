@@ -65,7 +65,7 @@ class EventStructure(
 
     private var pinnedEvents = ExecutionFrontier(this.nThreads)
 
-    private val currentRemapping: Remapping = Remapping()
+    private var currentRemapping: Remapping = Remapping()
 
     private val delayedConsistencyCheckBuffer = mutableListOf<Event>()
 
@@ -152,77 +152,50 @@ class EventStructure(
     }
 
     private fun resetExploration(event: Event) {
+        check(event.label is InitializationLabel || event.label.isResponse)
+        // reset consistency check state
+        detectedInconsistency = null
+        // set current exploration root
         currentExplorationRoot = event
-        // TODO: filter unused initialization events
+        // reset current execution
         _currentExecution = event.frontier.toMutableExecution().apply {
-            add(event)
-            fixupDependencies()
+            currentRemapping = fixupDependencies()
         }
+        // reset the internal state of incremental checker
+        incrementalChecker.reset(currentExecution)
+        // add new event to current execution
+        _currentExecution.add(event)
+        // remap new event's label
+        if (event.label.isResponse) {
+            event.label.replay(event.recalculateResponseLabel(), currentRemapping)
+        }
+        // check new event with the incremental consistency checker
+        detectedInconsistency = incrementalChecker.check(event)
+        // set pinned events
         pinnedEvents = event.pinnedEvents.copy().ensure {
             currentExecution.containsAll(it.events)
         }
+        // reset state of other auxiliary structures
         currentRemapping.reset()
         danglingEvents.clear()
         allocationEvents.clear()
         delayedConsistencyCheckBuffer.clear()
-        detectedInconsistency = null
     }
 
     fun checkConsistency(): Inconsistency? {
+        // TODO: set suddenInvocationResult instead of `detectedInconsistency`
         if (detectedInconsistency == null) {
             detectedInconsistency = checker.check(currentExecution)
         }
         return detectedInconsistency
     }
 
-    private fun checkConsistencyIncrementally(event: Event, isReplayedEvent: Boolean): Inconsistency? {
-        if (inReplayPhase()) {
-            // If we are in replay phase, but the event being added is not a replayed event,
-            // then we need to save it to delayed events consistency check buffer,
-            // so that we will be able to pass it to incremental consistency checker later.
-            // This situation can occur when we are replaying instruction that produces several events.
-            // For example, replaying the read part of read-modify-write instruction (like CAS)
-            // can also create new event representing write part of this RMW.
-            if (!isReplayedEvent) {
-                delayedConsistencyCheckBuffer.add(event)
-            }
-            // In any case we do not run incremental consistency checks during replay phase,
-            // because during this phase consistency checker has invalid internal state.
-            return null
+    private fun checkConsistencyIncrementally(event: Event): Inconsistency? {
+        // TODO: set suddenInvocationResult instead of `detectedInconsistency`
+        if (detectedInconsistency == null) {
+            detectedInconsistency = incrementalChecker.check(event)
         }
-        // If we are not in replay phase anymore, but the current event is replayed event,
-        // it means that we just finished replay phase (i.e. the given event is the last replayed event).
-        // In this case we need to do the following.
-        //   (1) Reset internal state of incremental checker.
-        //   (2) Run incremental checker on all delayed non-replayed events.
-        //   (3) Check full consistency of the new execution before we start to explore it further.
-        // We run incremental consistency checker before heavyweight full consistency check
-        // in order to give it more lightweight incremental checker
-        // an opportunity to find inconsistency earlier.
-        if (isReplayedEvent) {
-            val replayedExecution = currentExplorationRoot.frontier.toMutableExecution()
-            // reset internal state of incremental checker
-            incrementalChecker.reset(replayedExecution)
-            // copy delayed events from the buffer and reset it
-            val delayedEvents = delayedConsistencyCheckBuffer.toMutableList()
-            delayedConsistencyCheckBuffer.clear()
-            // run incremental checker on delayed events
-            for (delayedEvent in delayedEvents) {
-                replayedExecution.add(delayedEvent)
-                // TODO: refactor this check!!!
-                if (delayedEvent.label.isSend) {
-                    addSynchronizedEvents(delayedEvent)
-                }
-                incrementalChecker.check(delayedEvent)?.let { return it }
-            }
-            // to make sure that we have incrementally checked all newly added events
-            check(replayedExecution == currentExecution)
-            // finally run heavyweight full consistency check
-            return checker.check(_currentExecution)
-        }
-        // If we are not in replay phase (and we have finished it before adding current event)
-        // then just run incremental consistency checker.
-        return incrementalChecker.check(event)
+        return detectedInconsistency
     }
 
     fun inReplayPhase(): Boolean =
@@ -372,35 +345,58 @@ class EventStructure(
         return conflicts
     }
 
-    private fun addEventToCurrentExecution(event: Event, visit: Boolean = true, synchronize: Boolean = false) {
+    private fun addEventToCurrentExecution(event: Event, visit: Boolean = true) {
+        // Mark event as visited if necessary.
         if (visit) {
             event.visit()
         }
+        // Check if the added event is replayed event.
         val isReplayedEvent = inReplayPhase(event.threadId)
+        // Update current execution and replayed frontier.
         if (!isReplayedEvent) {
             _currentExecution.add(event)
         }
         playedFrontier.update(event)
-        // mark last replayed blocking event as dangling
-        if (event.label.isRequest && event.label.isBlocking &&
-            isReplayedEvent && !inReplayPhase(event.threadId)) {
+        // Check if we still in replay phase.
+        val inReplayPhase = inReplayPhase()
+        // Mark last replayed blocking event as dangling.
+        if (event.label.isRequest && event.label.isBlocking && isReplayedEvent && !inReplayPhase(event.threadId)) {
             markBlockedDanglingRequest(event)
         }
-        // unmark dangling request if its response was added
-        if (event.label.isResponse && event.label.isBlocking &&
-            event.parent in danglingEvents) {
+        // Unmark dangling request if its response was added.
+        if (event.label.isResponse && event.label.isBlocking && event.parent in danglingEvents) {
             unmarkBlockedDanglingRequest(event.parent!!)
         }
-        if (synchronize && !inReplayPhase()) {
-            addSynchronizedEvents(event)
-        }
+        // Update allocation events index.
         if (event.label is ObjectAllocationLabel) {
             allocationEvents.put(event.label.obj.unwrap(), event).ensureNull()
         }
-        // TODO: set suddenInvocationResult instead
-        if (detectedInconsistency == null) {
-            detectedInconsistency = checkConsistencyIncrementally(event, isReplayedEvent && event != currentExplorationRoot)
+        // If we are still in replay phase, but the added event is not a replayed event,
+        // then save it to delayed events buffer to postpone its further processing.
+        if (inReplayPhase) {
+            if (!isReplayedEvent) {
+                delayedConsistencyCheckBuffer.add(event)
+            }
+            return
         }
+        // If we are not in replay phase anymore, but the current event is replayed event,
+        // it means that we just finished replay phase (i.e. the given event is the last replayed event).
+        // In this case, we need to proceed all postponed non-replayed events.
+        if (isReplayedEvent) {
+            for (delayedEvent in delayedConsistencyCheckBuffer) {
+                if (delayedEvent.label.isSend) {
+                    addSynchronizedEvents(delayedEvent)
+                }
+                checkConsistencyIncrementally(delayedEvent)
+            }
+            delayedConsistencyCheckBuffer.clear()
+            return
+        }
+        // If we are not in the replay phase and the newly added event is not replayed, then we proceed it as usual.
+        if (event.label.isSend) {
+            addSynchronizedEvents(event)
+        }
+        checkConsistencyIncrementally(event)
     }
 
     private val EventLabel.syncType
@@ -472,11 +468,10 @@ class EventStructure(
      */
     private fun addSynchronizedEvents(event: Event): List<Event> {
         // TODO: we should maintain an index of read/write accesses to specific memory location
-        val candidateEvents = synchronizationCandidates(event)
         val syncEvents = when (event.label.syncType) {
-            SynchronizationType.Binary -> addBinarySynchronizedEvents(event, candidateEvents)
-            SynchronizationType.Barrier -> addBarrierSynchronizedEvents(event, candidateEvents)
-            else -> unreachable()
+            SynchronizationType.Binary -> addBinarySynchronizedEvents(event, synchronizationCandidates(event))
+            SynchronizationType.Barrier -> addBarrierSynchronizedEvents(event, synchronizationCandidates(event))
+            else -> return listOf()
         }
         // if there are responses to blocked dangling requests, then set the response of one of these requests
         for (syncEvent in syncEvents) {
@@ -554,7 +549,7 @@ class EventStructure(
         val parent = playedFrontier[iThread]
         val dependencies = listOf<Event>()
         return addEvent(iThread, label, parent, dependencies)!!.also { event ->
-            addEventToCurrentExecution(event, synchronize = true)
+            addEventToCurrentExecution(event)
         }
     }
 
@@ -583,8 +578,7 @@ class EventStructure(
             if (!readyToReplay) {
                 return (null to listOf())
             }
-            val label = event.recalculateResponseLabel()
-            event.label.replay(label, currentRemapping)
+            event.label.replay(event.recalculateResponseLabel(), currentRemapping)
             addEventToCurrentExecution(event)
             return event to listOf(event)
         }
