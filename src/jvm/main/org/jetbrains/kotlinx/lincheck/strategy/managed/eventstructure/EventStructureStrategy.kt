@@ -95,23 +95,20 @@ class EventStructureStrategy(
         // check that we have next invocation to explore
         if (!eventStructure.startNextExploration())
             return null
-        eventStructure.checkConsistency()?.let { inconsistency ->
-            return (null to inconsistency)
+        var result: InvocationResult? = null
+        var inconsistency: Inconsistency? = eventStructure.checkConsistency()
+        if (inconsistency == null) {
+            result = runInvocation()
+            // if invocation was aborted we also abort the current execution inside event structure
+            if (result.isAbortedInvocation()) {
+                eventStructure.abortExploration()
+            }
+            // patch clocks
+            if (result is CompletedInvocationResult) {
+                patchResultsClock(result.results)
+            }
+            inconsistency = eventStructure.checkConsistency()
         }
-        val result = runInvocation()
-        // if invocation was aborted we also abort the current execution inside event structure
-        if (result.isAbortedInvocation()) {
-            // println("============ Before abort =================")
-            // println(eventStructure.currentExecution)
-            eventStructure.abortExploration()
-            // println("============ After abort =================")
-            // println(eventStructure.currentExecution)
-        }
-        // patch clocks
-        if (result is CompletedInvocationResult) {
-            patchResultsClock(result.results)
-        }
-        val inconsistency = eventStructure.checkConsistency()
         stats.update(result, inconsistency)
         return (result to inconsistency)
     }
