@@ -460,6 +460,15 @@ abstract class ManagedStrategy(
         memoryTracker.objectAllocation(iThread, obj.opaque())
     }
 
+    // TODO: should take initialized `Class` as well
+    internal fun onObjectInitialization(iThread: Int, obj: Any) {
+        if (!shouldTrackMemory(iThread))
+            return
+        if (obj !in memoryTracker.allocatedObjects) {
+            memoryTracker.objectAllocation(iThread, obj.opaque())
+        }
+    }
+
     /**
      * This method is executed before a shared variable read operation.
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].

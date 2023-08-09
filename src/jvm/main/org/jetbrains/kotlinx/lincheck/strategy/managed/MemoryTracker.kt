@@ -22,11 +22,14 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import java.util.*
 import kotlin.reflect.KClass
+import org.jetbrains.kotlinx.lincheck.ensureNull
 
 /**
  * Tracks memory operations with shared variables.
  */
 abstract class MemoryTracker {
+
+    abstract val allocatedObjects: Set<Any>
 
     abstract fun objectAllocation(iThread: Int, value: OpaqueValue)
 
@@ -60,9 +63,17 @@ typealias MemoryInitializer = (MemoryLocation) -> OpaqueValue?
 internal class PlainMemoryTracker(
     val memoryInitializer: MemoryInitializer
 ) : MemoryTracker() {
+
+    private val objects = IdentityHashMap<Any, Unit>()
+
+    override val allocatedObjects: Set<Any>
+        get() = objects.keys
+
     private val memory = HashMap<MemoryLocation, OpaqueValue>()
 
-    override fun objectAllocation(iThread: Int, value: OpaqueValue) {}
+    override fun objectAllocation(iThread: Int, value: OpaqueValue) {
+        objects.put(value.unwrap(), Unit).ensureNull()
+    }
 
     override fun writeValue(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?) =
         memory.set(location, value ?: NULL)
@@ -95,6 +106,7 @@ internal class PlainMemoryTracker(
     }
 
     override fun reset() {
+        objects.clear()
         memory.clear()
     }
 

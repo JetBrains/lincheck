@@ -1686,42 +1686,22 @@ internal class ManagedStrategyTransformer(
 
     private inner class ObjectAllocationTransformer(methodName: String, mv: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, mv) {
 
-        override fun visitMethodInsn(opcode: Int, owner: String, name: String, descriptor: String, isInterface: Boolean) = adapter.run {
-            // for single object allocation we cannot simply instrument `NEW` instruction,
-            // because if we will try to intercept the object reference at this stage,
-            // it will point to an uninitialized object;
-            // thus we intercept object allocation event after the initializing constructor call;
-            val isObjectInit = (opcode == INVOKESPECIAL && name == "<init>" && (
-                // we cannot intercept only the Object::<init> invocations ---
-                // this is because we ignore and do not instrument some classes;
-                // because of inheritance, some class may call Parent::<init>, but not Object::<init> ---
-                // if Parent::<init> is not instrumented we will miss the object allocation;
-                // we handle such cases by checking if `owner` is non-instrumented class
-                (owner == "java/lang/Object") || isIgnoredClass(owner.canonicalClassName)
-            ))
-            if (!isObjectInit || isIgnoredClass(className.canonicalClassName)) {
-                super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
-                return
-            }
-            val objType = Type.getObjectType(owner)
-            val objLocal: Int
-            if (owner == "java/lang/Object") {
-                // handle common case separately
-                objLocal = newLocal(objType).also { copyLocal(it) }
-            } else {
-                val constructorType = Type.getType(descriptor)
-                val params = storeParameters(constructorType.argumentTypes)
-                objLocal = newLocal(objType).also { copyLocal(it) }
-                params.forEach { loadLocal(it) }
-            }
-            super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
-            invokeOnObjectAllocation(objLocal)
-        }
-
         override fun visitTypeInsn(opcode: Int, type: String?) = adapter.run {
             super.visitTypeInsn(opcode, type)
+            check(type != null)
+            /* for single object allocation we cannot simply instrument `NEW` instruction,
+             * because if we will try to intercept the object reference at this stage,
+             * it will point to an uninitialized object;
+             * thus we also the initializing constructor calls ---
+             * and managed strategy calls object allocation interceptor
+             * upon a call to the first constructor of an object;
+             * see `visitMethodInsn` implementation
+             */
+            // if (opcode == NEW) {
+            //     val objType = Type.getObjectType(type)
+            //     invokeOnObjectAllocation(objType)
+            // }
             if (opcode == ANEWARRAY) {
-                check(type != null)
                 val objType = Type.getObjectType(type).getArrayType()
                 invokeOnObjectAllocation(objType)
             }
@@ -1741,6 +1721,26 @@ internal class ManagedStrategyTransformer(
             invokeOnObjectAllocation(objType)
         }
 
+        override fun visitMethodInsn(opcode: Int, owner: String, name: String, descriptor: String, isInterface: Boolean) = adapter.run {
+            if (!(opcode == INVOKESPECIAL && name == "<init>")) {
+                super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+                return
+            }
+            val objType = Type.getObjectType(owner)
+            val objLocal: Int
+            if (owner == "java/lang/Object") {
+                // handle common case separately
+                objLocal = newLocal(objType).also { copyLocal(it) }
+            } else {
+                val constructorType = Type.getType(descriptor)
+                val params = storeParameters(constructorType.argumentTypes)
+                objLocal = newLocal(objType).also { copyLocal(it) }
+                params.forEach { loadLocal(it) }
+            }
+            super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+            invokeOnObjectInitialization(objLocal)
+        }
+
         private fun invokeOnObjectAllocation(objType: Type) = adapter.run {
             val objLocal = newLocal(objType).also { copyLocal(it) }
             invokeOnObjectAllocation(objLocal)
@@ -1751,6 +1751,13 @@ internal class ManagedStrategyTransformer(
             loadCurrentThreadNumber()
             loadLocal(objLocal)
             invokeVirtual(MANAGED_STRATEGY_TYPE, ON_OBJECT_ALLOCATION_METHOD)
+        }
+
+        private fun invokeOnObjectInitialization(objLocal: Int) = adapter.run {
+            loadStrategy()
+            loadCurrentThreadNumber()
+            loadLocal(objLocal)
+            invokeVirtual(MANAGED_STRATEGY_TYPE, ON_OBJECT_INITIALIZATION_METHOD)
         }
 
     }
@@ -2118,6 +2125,7 @@ private val UTILS_KT_TYPE = Type.getType("Lorg/jetbrains/kotlinx/lincheck/UtilsK
 
 private val CURRENT_THREAD_NUMBER_METHOD = Method.getMethod(ManagedStrategy::currentThreadNumber.javaMethod)
 private val ON_OBJECT_ALLOCATION_METHOD = Method.getMethod(ManagedStrategy::onObjectAllocation.javaMethod)
+private val ON_OBJECT_INITIALIZATION_METHOD = Method.getMethod(ManagedStrategy::onObjectInitialization.javaMethod)
 private val BEFORE_SHARED_VARIABLE_READ_METHOD = Method.getMethod(ManagedStrategy::beforeSharedVariableRead.javaMethod)
 private val BEFORE_SHARED_VARIABLE_WRITE_METHOD = Method.getMethod(ManagedStrategy::beforeSharedVariableWrite.javaMethod)
 private val ON_SHARED_VARIABLE_READ_METHOD = Method.getMethod(ManagedStrategy::onSharedVariableRead.javaMethod)

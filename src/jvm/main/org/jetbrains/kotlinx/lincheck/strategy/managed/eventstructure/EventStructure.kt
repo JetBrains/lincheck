@@ -74,6 +74,9 @@ class EventStructure(
     // TODO: move to EventIndexer once it will be implemented
     private val allocationEvents = IdentityHashMap<Any, Event>()
 
+    val allocatedObjects: Set<Any>
+        get() = allocationEvents.keys
+
     /*
      * Map from blocked dangling events to their responses.
      * If event is blocked but the corresponding response has not yet arrived then it is mapped to null.

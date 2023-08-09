@@ -270,6 +270,9 @@ class EventStructureStrategy(
 
 private class EventStructureMemoryTracker(private val eventStructure: EventStructure): MemoryTracker() {
 
+    override val allocatedObjects: Set<Any>
+        get() = eventStructure.allocatedObjects
+
     override fun objectAllocation(iThread: Int, value: OpaqueValue) {
         eventStructure.addObjectAllocationEvent(iThread, value)
     }
