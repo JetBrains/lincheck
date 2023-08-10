@@ -126,8 +126,7 @@ abstract class ManagedStrategy(
     override fun needsTransformation(): Boolean = true
 
     fun useBytecodeCache(): Boolean =
-        (!collectTrace) && testCfg.eliminateLocalObjects
-                && (testCfg.guarantees == ManagedCTestConfiguration.DEFAULT_GUARANTEES)
+        !collectTrace && testCfg.eliminateLocalObjects && (testCfg.guarantees == ManagedCTestConfiguration.DEFAULT_GUARANTEES)
 
     override fun run(): LincheckFailure? = runImpl().also { close() }
 
