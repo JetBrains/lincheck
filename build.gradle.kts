@@ -24,6 +24,9 @@ repositories {
 }
 
 kotlin {
+    // we have to create custom sourceSets before corresponding compilation targets
+    sourceSets.create("jvmBenchmark")
+
     jvm {
         withJava()
 
@@ -33,6 +36,21 @@ kotlin {
 
         val test by compilations.getting {
             kotlinOptions.jvmTarget = "11"
+        }
+
+        val benchmark by compilations.creating {
+            kotlinOptions.jvmTarget = "11"
+
+            defaultSourceSet {
+                dependencies {
+                    implementation(main.compileDependencyFiles + main.output.classesDirs)
+                }
+            }
+
+            tasks.register<Test>("jvmBenchmark") {
+                classpath = compileDependencyFiles + runtimeDependencyFiles + output.allOutputs
+                testClassesDirs = output.classesDirs
+            }
         }
     }
 
@@ -67,6 +85,17 @@ kotlin {
                 implementation("io.mockk:mockk:${mockkVersion}")
             }
         }
+
+        val jvmBenchmark by getting {
+            kotlin.srcDirs("src/jvm/benchmark")
+
+            val junitVersion: String by project
+            val jctoolsVersion: String by project
+            dependencies {
+                implementation("junit:junit:$junitVersion")
+                implementation("org.jctools:jctools-core:$jctoolsVersion")
+            }
+        }
     }
 }
 
@@ -86,10 +115,12 @@ sourceSets.test {
     }
 }
 
+
 tasks {
     replace("jvmSourcesJar", Jar::class).run {
         from(sourceSets["main"].allSource)
     }
+
     withType<Test> {
         maxParallelForks = 1
         jvmArgs(
