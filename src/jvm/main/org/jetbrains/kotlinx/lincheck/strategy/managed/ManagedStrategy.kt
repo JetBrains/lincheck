@@ -43,9 +43,13 @@ abstract class ManagedStrategy(
     // Runner for scenario invocations,
     // can be replaced with a new one for trace construction.
     private var runner: ManagedStrategyRunner
-    // Shares location ids between class transformers in order
-    // to keep them different in different code locations.
-    private val codeLocationIdProvider = CodeLocationIdProvider()
+
+    companion object {
+        // Shares location ids between class transformers in order
+        // to keep them different in different code locations.
+        // TODO: global code location ID counter can potentially overflow --- handle this situation
+        private val codeLocationIdProvider = CodeLocationIdProvider()
+    }
 
     // == EXECUTION CONTROL FIELDS ==
 
@@ -120,6 +124,9 @@ abstract class ManagedStrategy(
     )
 
     override fun needsTransformation(): Boolean = true
+
+    fun useBytecodeCache(): Boolean =
+        !collectTrace && testCfg.eliminateLocalObjects && (testCfg.guarantees == ManagedCTestConfiguration.DEFAULT_GUARANTEES)
 
     override fun run(): LincheckFailure? = runImpl().also { close() }
 
