@@ -1,0 +1,49 @@
+= The execution has hung, see the thread dump =
+| ---------------------------- |
+|    Thread 1     |  Thread 2  |
+| ---------------------------- |
+| spinLockCause() | spinLock() |
+| ---------------------------- |
+
+
+The following interleaving leads to the error:
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                         Thread 1                                                         |                                                      Thread 2                                                       |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| spinLockCause()                                                                                                          |                                                                                                                     |
+|   incrementAndGet(): 1 at SpinLockPeriodCanNotBeFoundOnlyWithParametersTest.spinLockCause(SpinlockEventsCutTests.kt:481) |                                                                                                                     |
+|   switch                                                                                                                 |                                                                                                                     |
+|                                                                                                                          | spinLock()                                                                                                          |
+|                                                                                                                          |   get(): 1 at SpinLockPeriodCanNotBeFoundOnlyWithParametersTest.spinLock(SpinlockEventsCutTests.kt:487)             |
+|                                                                                                                          |   spinLockActions() at SpinLockPeriodCanNotBeFoundOnlyWithParametersTest.spinLock(SpinlockEventsCutTests.kt:488)    |
+|                                                                                                                          |     /* The following events repeat infinitely: */                                                                   |
+|                                                                                                                          | ┌╶> someCall(0) at SpinLockPeriodCanNotBeFoundOnlyWithParametersTest.spinLockActions(SpinlockEventsCutTests.kt:496) |
+|                                                                                                                          | └╶╶ switch (reason: active lock detected)                                                                           |
+|   decrementAndGet(): 0 at SpinLockPeriodCanNotBeFoundOnlyWithParametersTest.spinLockCause(SpinlockEventsCutTests.kt:482) |                                                                                                                     |
+|                                                                                                                          |     /* The following events repeat infinitely: */                                                                   |
+|                                                                                                                          | ┌╶> someCall(1) at SpinLockPeriodCanNotBeFoundOnlyWithParametersTest.spinLockActions(SpinlockEventsCutTests.kt:496) |
+|                                                                                                                          | └╶╶ switch (reason: active lock detected)                                                                           |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+All unfinished threads are in deadlock
+
+Detailed trace:
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                         Thread 1                                                         |                                                           Thread 2                                                           |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| spinLockCause()                                                                                                          |                                                                                                                              |
+|   incrementAndGet(): 1 at SpinLockPeriodCanNotBeFoundOnlyWithParametersTest.spinLockCause(SpinlockEventsCutTests.kt:481) |                                                                                                                              |
+|   switch                                                                                                                 |                                                                                                                              |
+|                                                                                                                          | spinLock()                                                                                                                   |
+|                                                                                                                          |   get(): 1 at SpinLockPeriodCanNotBeFoundOnlyWithParametersTest.spinLock(SpinlockEventsCutTests.kt:487)                      |
+|                                                                                                                          |   spinLockActions() at SpinLockPeriodCanNotBeFoundOnlyWithParametersTest.spinLock(SpinlockEventsCutTests.kt:488)             |
+|                                                                                                                          |     /* The following events repeat infinitely: */                                                                            |
+|                                                                                                                          | ┌╶> someCall(0) at SpinLockPeriodCanNotBeFoundOnlyWithParametersTest.spinLockActions(SpinlockEventsCutTests.kt:496)          |
+|                                                                                                                          | |     compareAndSet(3,0): false at SpinLockPeriodCanNotBeFoundOnlyWithParametersTest.someCall(SpinlockEventsCutTests.kt:501) |
+|                                                                                                                          | └╶╶ switch (reason: active lock detected)                                                                                    |
+|   decrementAndGet(): 0 at SpinLockPeriodCanNotBeFoundOnlyWithParametersTest.spinLockCause(SpinlockEventsCutTests.kt:482) |                                                                                                                              |
+|                                                                                                                          |     /* The following events repeat infinitely: */                                                                            |
+|                                                                                                                          | ┌╶> someCall(1) at SpinLockPeriodCanNotBeFoundOnlyWithParametersTest.spinLockActions(SpinlockEventsCutTests.kt:496)          |
+|                                                                                                                          | |     compareAndSet(3,1): false at SpinLockPeriodCanNotBeFoundOnlyWithParametersTest.someCall(SpinlockEventsCutTests.kt:501) |
+|                                                                                                                          | └╶╶ switch (reason: active lock detected)                                                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+All unfinished threads are in deadlock

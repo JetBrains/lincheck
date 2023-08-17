@@ -1,0 +1,85 @@
+= The execution has hung, see the thread dump =
+| ---------------------------- |
+| Thread 1  |     Thread 2     |
+| ---------------------------- |
+| trigger() | causesSpinLock() |
+| ---------------------------- |
+
+
+The following interleaving leads to the error:
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                       Thread 1                                        |                                                       Thread 2                                                        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| trigger()                                                                             |                                                                                                                       |
+|   incrementAndGet(): 1 at RecursiveSpinLockTest.trigger(RecursiveSpinLockTests.kt:36) |                                                                                                                       |
+|   switch                                                                              |                                                                                                                       |
+|                                                                                       | causesSpinLock()                                                                                                      |
+|                                                                                       |     get(): 1 at RecursiveSpinLockTest.causesSpinLock(RecursiveSpinLockTests.kt:42)                                    |
+|                                                                                       |     /* The following events repeat infinitely: */                                                                     |
+|                                                                                       | ┌╶> deadSpinCycleRecursive() at RecursiveSpinLockTest.causesSpinLock(RecursiveSpinLockTests.kt:43)                    |
+|                                                                                       | |     getSharedVariable(): false at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:49)        |
+|                                                                                       | |     compareAndSet(false,true): true at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:50)   |
+|                                                                                       | |     getSharedVariable(): true at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:49)         |
+|                                                                                       | |     compareAndSet(true,false): true at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:50)   |
+|                                                                                       | |     getSharedVariable(): false at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:49)        |
+|                                                                                       | |     compareAndSet(false,true): true at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:50)   |
+|                                                                                       | |     getSharedVariable(): true at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:49)         |
+|                                                                                       | |     compareAndSet(true,false): true at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:50)   |
+|                                                                                       | └╶╶╶╶ switch (reason: active recursive lock detected)                                                                 |
+|   decrementAndGet(): 0 at RecursiveSpinLockTest.trigger(RecursiveSpinLockTests.kt:37) |                                                                                                                       |
+|                                                                                       |       /* The following events repeat infinitely: */                                                                   |
+|                                                                                       |   ┌╶> deadSpinCycleRecursive() at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:52)          |
+|                                                                                       |   |     getSharedVariable(): false at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:49)      |
+|                                                                                       |   |     compareAndSet(false,true): true at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:50) |
+|                                                                                       |   |     getSharedVariable(): true at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:49)       |
+|                                                                                       |   |     compareAndSet(true,false): true at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:50) |
+|                                                                                       |   |     getSharedVariable(): false at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:49)      |
+|                                                                                       |   |     compareAndSet(false,true): true at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:50) |
+|                                                                                       |   |     getSharedVariable(): true at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:49)       |
+|                                                                                       |   |     compareAndSet(true,false): true at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:50) |
+|                                                                                       |   └╶╶╶╶ switch (reason: active recursive lock detected)                                                               |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+All unfinished threads are in deadlock
+
+Detailed trace:
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                       Thread 1                                        |                                                       Thread 2                                                        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| trigger()                                                                             |                                                                                                                       |
+|   incrementAndGet(): 1 at RecursiveSpinLockTest.trigger(RecursiveSpinLockTests.kt:36) |                                                                                                                       |
+|   switch                                                                              |                                                                                                                       |
+|                                                                                       | causesSpinLock()                                                                                                      |
+|                                                                                       |     get(): 1 at RecursiveSpinLockTest.causesSpinLock(RecursiveSpinLockTests.kt:42)                                    |
+|                                                                                       |     /* The following events repeat infinitely: */                                                                     |
+|                                                                                       | ┌╶> deadSpinCycleRecursive() at RecursiveSpinLockTest.causesSpinLock(RecursiveSpinLockTests.kt:43)                    |
+|                                                                                       | |     getSharedVariable(): false at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:49)        |
+|                                                                                       | |       get(): false at RecursiveSpinLockTest.getSharedVariable(RecursiveSpinLockTests.kt:55)                         |
+|                                                                                       | |     compareAndSet(false,true): true at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:50)   |
+|                                                                                       | |     getSharedVariable(): true at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:49)         |
+|                                                                                       | |       get(): true at RecursiveSpinLockTest.getSharedVariable(RecursiveSpinLockTests.kt:55)                          |
+|                                                                                       | |     compareAndSet(true,false): true at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:50)   |
+|                                                                                       | |     getSharedVariable(): false at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:49)        |
+|                                                                                       | |       get(): false at RecursiveSpinLockTest.getSharedVariable(RecursiveSpinLockTests.kt:55)                         |
+|                                                                                       | |     compareAndSet(false,true): true at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:50)   |
+|                                                                                       | |     getSharedVariable(): true at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:49)         |
+|                                                                                       | |       get(): true at RecursiveSpinLockTest.getSharedVariable(RecursiveSpinLockTests.kt:55)                          |
+|                                                                                       | |     compareAndSet(true,false): true at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:50)   |
+|                                                                                       | └╶╶╶╶ switch (reason: active recursive lock detected)                                                                 |
+|   decrementAndGet(): 0 at RecursiveSpinLockTest.trigger(RecursiveSpinLockTests.kt:37) |                                                                                                                       |
+|                                                                                       |       /* The following events repeat infinitely: */                                                                   |
+|                                                                                       |   ┌╶> deadSpinCycleRecursive() at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:52)          |
+|                                                                                       |   |     getSharedVariable(): false at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:49)      |
+|                                                                                       |   |       get(): false at RecursiveSpinLockTest.getSharedVariable(RecursiveSpinLockTests.kt:55)                       |
+|                                                                                       |   |     compareAndSet(false,true): true at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:50) |
+|                                                                                       |   |     getSharedVariable(): true at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:49)       |
+|                                                                                       |   |       get(): true at RecursiveSpinLockTest.getSharedVariable(RecursiveSpinLockTests.kt:55)                        |
+|                                                                                       |   |     compareAndSet(true,false): true at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:50) |
+|                                                                                       |   |     getSharedVariable(): false at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:49)      |
+|                                                                                       |   |       get(): false at RecursiveSpinLockTest.getSharedVariable(RecursiveSpinLockTests.kt:55)                       |
+|                                                                                       |   |     compareAndSet(false,true): true at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:50) |
+|                                                                                       |   |     getSharedVariable(): true at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:49)       |
+|                                                                                       |   |       get(): true at RecursiveSpinLockTest.getSharedVariable(RecursiveSpinLockTests.kt:55)                        |
+|                                                                                       |   |     compareAndSet(true,false): true at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTests.kt:50) |
+|                                                                                       |   └╶╶╶╶ switch (reason: active recursive lock detected)                                                               |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+All unfinished threads are in deadlock

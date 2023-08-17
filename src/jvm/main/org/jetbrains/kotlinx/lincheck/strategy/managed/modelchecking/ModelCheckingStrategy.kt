@@ -59,10 +59,17 @@ internal class ModelCheckingStrategy(
         while (usedInvocations < maxInvocations) {
             // run invocation and check its results
             val invocationResult = runInvocation()
-            if (suddenInvocationResult is SpinCycleFoundAndReplayRequired) {
+            if (suddenInvocationResult is SpinCycleFoundForTheFirstTimeAndReplayRequired) {
                 currentInterleaving.rollbackAfterSpinCycleFound()
+                setAdditionalEventsTracking(true)
                 continue
             }
+            if (suddenInvocationResult is SpinCyclePeriodMeasuredAndExecutionCanBeContinued) {
+                currentInterleaving.rollbackAfterSpinCycleFound()
+                setAdditionalEventsTracking(false)
+                continue
+            }
+            setAdditionalEventsTracking(false)
             usedInvocations++
             checkResult(invocationResult)?.let { return it }
             // get new unexplored interleaving
@@ -229,8 +236,9 @@ internal class ModelCheckingStrategy(
     private inner class Interleaving(
         private val switchPositions: List<Int>,
         private val threadSwitchChoices: List<Int>,
-        private var lastNotInitializedNode: SwitchChoosingNode?
+        private val initialLastNotInitializedNode: SwitchChoosingNode?
     ) {
+        private var lastNotInitializedNode: SwitchChoosingNode? = initialLastNotInitializedNode
         private lateinit var interleavingFinishingRandom: Random
         private lateinit var nextThreadToSwitch: Iterator<Int>
         private var lastNotInitializedNodeChoices: MutableList<Choice>? = null
@@ -252,6 +260,7 @@ internal class ModelCheckingStrategy(
         }
 
         fun rollbackAfterSpinCycleFound() {
+            lastNotInitializedNode = initialLastNotInitializedNode
             lastNotInitializedNodeChoices?.clear()
         }
 

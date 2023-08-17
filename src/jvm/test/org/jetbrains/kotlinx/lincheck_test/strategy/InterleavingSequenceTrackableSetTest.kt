@@ -350,7 +350,7 @@ class InterleavingSequenceTrackableSetTest {
     }
 
     private fun node(threadId: Int, count: Int, spinCyclePeriod: Int = 0) =
-        InterleavingHistoryNode(threadId = threadId, executions = count, spinCyclePeriod = spinCyclePeriod)
+        InterleavingHistoryNode(threadId = threadId, executions = count, spinCyclePeriod = spinCyclePeriod, executionsBeforeSpinCycleWithAdditionalEvents = 0)
 
     private fun addBranch(branch: List<InterleavingHistoryNode>) {
         set.addBranch(branch)

@@ -11,7 +11,7 @@
 
 
 java.lang.IllegalStateException: Validation works!
-	at org.jetbrains.kotlinx.lincheck_test.representation.ValidateFunctionTest.validateWithError(ValidateFunctionTest.kt:39)
+	at org.jetbrains.kotlinx.lincheck_test.representation.ValidateFunctionTest.validateWithError(ValidateFunctionTest.kt:38)
 
 
 The following interleaving leads to the error:

@@ -52,6 +52,7 @@ kotlin {
                 api("org.ow2.asm:asm-commons:$asmVersion")
                 api("org.ow2.asm:asm-util:$asmVersion")
                 api("org.reflections:reflections:$reflectionsVersion")
+                api("net.sf.trove4j:trove4j:3.0.3")
             }
         }
 
