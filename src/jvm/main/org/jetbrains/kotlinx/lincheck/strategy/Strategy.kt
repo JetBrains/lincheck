@@ -35,23 +35,33 @@ abstract class Strategy protected constructor(
 
     fun run(verifier: Verifier, planner: InvocationsPlanner, tracker: RunTracker? = null): LincheckFailure? {
         var invocation = 0
+        var spinning = false
         while (planner.shouldDoNextInvocation(invocation)) {
-            if (!nextInvocation()) {
+            if (!spinning && !nextInvocation()) {
                 return null
             }
+            spinning = false
             initializeInvocation()
-            tracker.trackInvocation(invocation) { runInvocation(verifier) }
-                ?.let { return it }
+            val failure = tracker.trackInvocation(invocation) {
+                val result = runInvocation()
+                spinning = (result is SpinCycleFoundAndReplayRequired)
+                verify(result, verifier)
+            }
+            if (failure != null)
+                return failure
             invocation++
         }
         return null
     }
 
-    fun runInvocation(verifier: Verifier): LincheckFailure? = when (val result = runInvocation()) {
+    fun verify(result: InvocationResult, verifier: Verifier): LincheckFailure? = when (result) {
         is CompletedInvocationResult ->
             if (!verifier.verifyResults(scenario, result.results)) {
                 IncorrectResultsFailure(scenario, result.results, result.tryCollectTrace())
             } else null
+
+        is SpinCycleFoundAndReplayRequired -> null
+
         else -> result.toLincheckFailure(scenario, result.tryCollectTrace())
     }
 
@@ -88,3 +98,4 @@ abstract class Strategy protected constructor(
      */
     open fun onActorStart(iThread: Int) {}
 }
+

@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.runner.SpinCycleFoundAndReplayRequired
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
@@ -52,16 +53,20 @@ fun Planner.runIterations(
             val (strategy, verifier) = factory(scenario)
             strategy.use {
                 var invocation = 0
+                var spinning = false
                 while (invocationsPlanner.shouldDoNextInvocation(invocation)) {
-                    if (!strategy.nextInvocation()) {
+                    if (!spinning && !strategy.nextInvocation()) {
                         return@trackIteration null
                     }
+                    spinning = false
                     strategy.initializeInvocation()
-                    tracker.trackInvocation(invocation) {
-                        strategy.runInvocation(verifier)
-                    }?.let {
-                        return@trackIteration it
+                    val failure = tracker.trackInvocation(invocation) {
+                        val result = strategy.runInvocation()
+                        spinning = (result is SpinCycleFoundAndReplayRequired)
+                        strategy.verify(result, verifier)
                     }
+                    if (failure != null)
+                        return failure
                     invocation++
                 }
             }

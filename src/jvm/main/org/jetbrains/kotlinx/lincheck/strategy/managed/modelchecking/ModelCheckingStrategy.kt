@@ -73,6 +73,13 @@ internal class ModelCheckingStrategy(
         currentInterleaving.initialize()
     }
 
+    override fun runInvocation(): InvocationResult {
+        return super.runInvocation().also {
+            if (it is SpinCycleFoundAndReplayRequired)
+                currentInterleaving.rollbackAfterSpinCycleFound()
+        }
+    }
+
     override fun InvocationResult.tryCollectTrace(): Trace? = collectTrace(this)
 
     override fun onNewSwitch(iThread: Int, mustSwitch: Boolean) {

@@ -8,7 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-@file:Suppress("unused")
+@file:Suppress("unused", "DEPRECATION_ERROR")
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
