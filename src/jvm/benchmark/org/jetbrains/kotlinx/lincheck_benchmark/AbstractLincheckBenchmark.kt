@@ -13,9 +13,8 @@
 package org.jetbrains.kotlinx.lincheck_benchmark
 
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.junit.Test
 import kotlin.reflect.KClass
 
@@ -23,11 +22,23 @@ abstract class AbstractLincheckBenchmark(
     private vararg val expectedFailures: KClass<out LincheckFailure>
 ) {
 
-    open fun <O: Options<O, *>> O.customize() {}
+    @Test(timeout = TIMEOUT)
+    fun benchmarkWithStressStrategy(): Unit = LincheckOptions {
+        this as LincheckOptionsImpl
+        mode = LincheckMode.Stress
+        configure()
+    }.runTest()
 
-    private fun <O : Options<O, *>> O.runInternalTest() {
-        val failure: LincheckFailure? = checkImpl(this@AbstractLincheckBenchmark::class.java)
-        if (failure === null) {
+    @Test(timeout = TIMEOUT)
+    fun benchmarkWithModelCheckingStrategy(): Unit = LincheckOptions {
+        this as LincheckOptionsImpl
+        mode = LincheckMode.ModelChecking
+        configure()
+    }.runTest()
+
+    private fun LincheckOptions.runTest() {
+        val failure = runTests(this@AbstractLincheckBenchmark::class.java, tracker = createRunTracker())
+        if (failure == null) {
             assert(expectedFailures.isEmpty()) {
                 "This test should fail, but no error has been occurred (see the logs for details)"
             }
@@ -38,29 +49,61 @@ abstract class AbstractLincheckBenchmark(
         }
     }
 
-    @Test(timeout = TIMEOUT)
-    fun benchmarkWithStressStrategy(): Unit = StressOptions().run {
-        invocationsPerIteration(5_000)
-        commonConfiguration()
-        runInternalTest()
-    }
-
-    @Test(timeout = TIMEOUT)
-    fun benchmarkWithModelCheckingStrategy(): Unit = ModelCheckingOptions().run {
-        invocationsPerIteration(1_000)
-        commonConfiguration()
-        runInternalTest()
-    }
-
-    private fun <O : Options<O, *>> O.commonConfiguration(): Unit = run {
-        iterations(30)
-        actorsBefore(2)
-        threads(3)
-        actorsPerThread(2)
-        actorsAfter(2)
-        minimizeFailedScenario(false)
+    private fun LincheckOptionsImpl.configure() {
+        maxThreads = 4
+        maxOperationsInThread = 2
+        minimizeFailedScenario = false
+        iterations = 30
+        invocationsPerIteration = 5000
         customize()
     }
+
+    internal open fun LincheckOptionsImpl.customize() {}
+
+    private fun createRunTracker() = object : RunTracker {
+
+        private val scenarios = mutableListOf<ExecutionScenario>()
+
+        override fun iterationStart(iteration: Int, scenario: ExecutionScenario) {
+            scenarios.add(scenario)
+        }
+
+        override fun runEnd(
+            name: String,
+            testClass: Class<*>,
+            options: LincheckOptions,
+            failure: LincheckFailure?,
+            exception: Throwable?,
+            statistics: Statistics?
+        ) {
+            check(statistics != null)
+            check(scenarios.size == statistics.iterationsCount)
+            // TODO: check that all scenarios either have or do not have init/post parts
+            // TODO: check that in each scenario all threads have same number of operations
+            check(options is LincheckOptionsImpl)
+            check(options.mode in listOf(LincheckMode.Stress, LincheckMode.ModelChecking))
+            val benchmarkName = "${testClass.name}-${options.mode}"
+            val benchmarkStatistics = BenchmarkStatistics(
+                name = benchmarkName,
+                runningTimeNano = statistics.runningTimeNano,
+                iterationsCount = statistics.iterationsCount,
+                invocationsCount = statistics.invocationsCount,
+                scenariosStatistics = statistics.iterationsStatistics.mapIndexed { i, iterationStatistics ->
+                    val scenario = scenarios[i]
+                    ScenarioStatistics(
+                        threads = scenario.nThreads,
+                        operations = scenario.parallelExecution[0].size,
+                        runningTimeNano = iterationStatistics.runningTimeNano,
+                        averageInvocationTimeNano = iterationStatistics.averageInvocationTimeNano.toLong(),
+                        invocationsCount = iterationStatistics.invocationsCount,
+                    )
+                }
+            )
+            benchmarksListener.registerBenchmarkStatistics(benchmarkName, benchmarkStatistics)
+        }
+
+    }
+
 }
 
 private const val TIMEOUT = 5 * 60 * 1000L // 5 minutes
