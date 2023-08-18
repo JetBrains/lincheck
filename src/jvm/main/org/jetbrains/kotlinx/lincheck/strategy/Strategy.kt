@@ -33,7 +33,7 @@ abstract class Strategy protected constructor(
         throw UnsupportedOperationException("$javaClass strategy does not transform classes")
     }
 
-    fun run(verifier: Verifier, planner: InvocationsPlanner, tracker: RunTracker? = null): LincheckFailure? {
+    internal fun run(verifier: Verifier, planner: InvocationsPlanner, tracker: RunTracker? = null): LincheckFailure? {
         var invocation = 0
         var spinning = false
         while (planner.shouldDoNextInvocation(invocation)) {

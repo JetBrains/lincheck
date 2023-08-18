@@ -28,6 +28,7 @@ interface Statistics {
      * Total running time in nanoseconds, excluding warm-up time.
      */
     val runningTimeNano: Long
+        get() = iterationsStatistics.sumOf { it.runningTimeNano }
     /**
      * A list of iteration statistics.
      */
@@ -35,6 +36,16 @@ interface Statistics {
 }
 
 interface IterationStatistics {
+    /**
+     * Used scenario.
+     */
+    val scenario: ExecutionScenario
+
+    /**
+     * Used mode.
+     */
+    val mode: LincheckMode
+
     /**
      * Running time of this iteration in nanoseconds, excluding warm-up time.
      */
@@ -116,7 +127,13 @@ val IterationStatistics.totalInvocationsCount: Int
 val IterationStatistics.averageInvocationTimeNano
     get() = runningTimeNano.toDouble() / invocationsCount
 
-internal class StatisticsTracker : Statistics, RunTracker {
+fun Statistics.filter(predicate: (IterationStatistics) -> Boolean) = object : Statistics {
+    override val iterationsStatistics: List<IterationStatistics> =
+        this@filter.iterationsStatistics.filter(predicate)
+}
+
+
+class StatisticsTracker : Statistics, RunTracker {
 
     override var runningTimeNano: Long = 0
         private set
@@ -125,7 +142,10 @@ internal class StatisticsTracker : Statistics, RunTracker {
         get() = _iterationsStatistics
     private val _iterationsStatistics = mutableListOf<IterationStatisticsTracker>()
 
-    private class IterationStatisticsTracker : IterationStatistics {
+    private class IterationStatisticsTracker(
+        override val scenario: ExecutionScenario,
+        override val mode: LincheckMode,
+    ) : IterationStatistics {
         override var runningTimeNano: Long = 0
         override var warmUpTimeNano: Long = 0
         override var invocationsCount: Int = 0
@@ -151,7 +171,7 @@ internal class StatisticsTracker : Statistics, RunTracker {
         get() = iterationsStatistics[iteration].runningTimeNano
 
     /**
-     * Number of invocations in current iteration.
+     * Number of invocations in the current iteration.
      */
     val currentIterationInvocationsCount: Int
         get() = iterationsStatistics[iteration].invocationsCount
@@ -162,10 +182,10 @@ internal class StatisticsTracker : Statistics, RunTracker {
     // flag indicating that next invocations should be considered warm-up
     private var warmUpFlag: Boolean = false
 
-    override fun iterationStart(iteration: Int, scenario: ExecutionScenario) {
+    override fun iterationStart(iteration: Int, scenario: ExecutionScenario, mode: LincheckMode) {
         check(iteration == this.iteration + 1)
         ++this.iteration
-        _iterationsStatistics.add(IterationStatisticsTracker())
+        _iterationsStatistics.add(IterationStatisticsTracker(scenario, mode))
         warmUpFlag = false
     }
 

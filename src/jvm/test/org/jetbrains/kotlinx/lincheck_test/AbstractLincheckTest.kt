@@ -43,13 +43,14 @@ abstract class AbstractLincheckTest(
     }.runTest()
 
     private fun LincheckOptions.runTest() {
-        val failure = runTests(this@AbstractLincheckTest::class.java, tracker = runTracker)
+        val statisticsTracker = StatisticsTracker()
+        val failure = runTests(this@AbstractLincheckTest::class.java, tracker = statisticsTracker)
         if (failure == null) {
             assert(expectedFailures.isEmpty()) {
                 "This test should fail, but no error has been occurred (see the logs for details)"
             }
             if (testPlanningConstraints) {
-                checkAdaptivePlanningConstraints()
+                checkAdaptivePlanningConstraints(statisticsTracker)
             }
         } else {
             failure.trace?.let { checkTraceHasNoLincheckEvents(it.toString()) }
@@ -59,7 +60,7 @@ abstract class AbstractLincheckTest(
         }
     }
 
-    private fun LincheckOptions.checkAdaptivePlanningConstraints() {
+    private fun LincheckOptions.checkAdaptivePlanningConstraints(statistics: Statistics) {
         this as LincheckOptionsImpl
         // if we tested only custom scenarios, then return
         if (!generateRandomScenarios)
@@ -67,29 +68,28 @@ abstract class AbstractLincheckTest(
         // we expect test to run only custom or only random scenarios
         check(customScenariosOptions.size == 0)
         val randomTestingTimeNano = testingTimeInSeconds * 1_000_000_000
-        val runningTimeNano = runStatistics.values.sumOf { it.totalRunningTimeNano }
+        val runningTimeNano = statistics.totalRunningTimeNano
         val timeDeltaNano = AdaptivePlanner.TIME_ERROR_MARGIN_NANO
         // check that the actual running time is close to specified time
-        assert(abs(randomTestingTimeNano - runningTimeNano) < timeDeltaNano) { """
-            Testing time is beyond expected bounds:
-            actual: ${String.format("%.3f", runningTimeNano.toDouble() / 1_000_000_000)}
-            expected: ${String.format("%.3f", randomTestingTimeNano.toDouble() / 1_000_000_000)}
-        """.trimIndent()
+        assert(abs(randomTestingTimeNano - runningTimeNano) < timeDeltaNano) {
+            """
+                Testing time is beyond expected bounds:
+                actual: ${String.format("%.3f", runningTimeNano.toDouble() / 1_000_000_000)}
+                expected: ${String.format("%.3f", randomTestingTimeNano.toDouble() / 1_000_000_000)}
+            """.trimIndent()
         }
-        // check invocations to iterations ratio (per each strategy run)
-        for ((runName, statistics) in runStatistics.entries) {
-            if (statistics.iterationsStatistics.isEmpty())
-                return
-            val invocationsRatio = statistics.averageInvocationsCount / statistics.iterationsCount
-            val expectedRatio = AdaptivePlanner.INVOCATIONS_TO_ITERATIONS_RATIO.toDouble()
-            val ratioError = 0.30
-            assert(abs(invocationsRatio - expectedRatio) < expectedRatio * ratioError) { """
+        // check invocations to iterations ratio
+        if (statistics.iterationsStatistics.isEmpty())
+            return
+        val invocationsRatio = statistics.averageInvocationsCount / statistics.iterationsCount
+        val expectedRatio = AdaptivePlanner.INVOCATIONS_TO_ITERATIONS_RATIO.toDouble()
+        val ratioError = 0.30
+        assert(abs(invocationsRatio - expectedRatio) < expectedRatio * ratioError) {
+            """
                 Invocations to iterations ratio differs from expected.
                     actual: ${String.format("%.3f", invocationsRatio)}
                     expected: $expectedRatio
-                    run name: $runName
             """.trimIndent()
-            }
         }
     }
 
@@ -106,21 +106,6 @@ abstract class AbstractLincheckTest(
     internal open val testPlanningConstraints: Boolean = true
 
     override fun extractState(): Any = System.identityHashCode(this)
-
-    private val runOptions = mutableMapOf<String, LincheckOptions>()
-    private val runStatistics = mutableMapOf<String, Statistics>()
-
-    private val runTracker = object : RunTracker {
-
-        override fun runStart(name: String, options: LincheckOptions) {
-            runOptions[name] = options
-        }
-
-        override fun runEnd(name: String, failure: LincheckFailure?, exception: Throwable?, statistics: Statistics?) {
-            check(statistics != null)
-            runStatistics[name] = statistics
-        }
-    }
 
 }
 

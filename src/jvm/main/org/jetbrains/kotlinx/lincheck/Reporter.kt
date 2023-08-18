@@ -21,15 +21,17 @@ class Reporter(private val logLevel: LoggingLevel) {
     private val out: PrintStream = System.out
     private val outErr: PrintStream = System.err
 
-    fun logIteration(iteration: Int, scenario: ExecutionScenario) = log(INFO) {
+    fun logIteration(iteration: Int, scenario: ExecutionScenario, mode: LincheckMode? = null) = log(INFO) {
         appendLine("\n= Iteration $iteration =")
+        if (mode != null) {
+            appendLine("- Mode: $mode")
+        }
         appendExecutionScenario(scenario)
     }
 
-    fun logIterationStatistics(invocations: Int, runningTimeNano: Long, remainingTimeNano: Long?) = log(INFO) {
+    fun logIterationStatistics(invocations: Int, runningTimeNano: Long) = log(INFO) {
         val runningTime = nanoTimeToString(runningTimeNano)
-        val remainingString = remainingTimeNano?.let { String.format(", remaining time ${nanoTimeToString(it)}s") } ?: ""
-        appendLine("= Statistics: #invocations=$invocations, running time ${runningTime}s${remainingString} =")
+        appendLine("= Statistics: #invocations=$invocations, running time ${runningTime}s =")
     }
 
     fun logFailedIteration(failure: LincheckFailure) = log(INFO) {

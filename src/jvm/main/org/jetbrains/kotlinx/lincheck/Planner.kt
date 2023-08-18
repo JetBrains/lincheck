@@ -28,30 +28,39 @@ import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import kotlin.math.*
 
-interface Planner {
+internal interface Planner {
     val scenarios: Sequence<ExecutionScenario>
     val iterationsPlanner: IterationsPlanner
-    val invocationsPlanner: InvocationsPlanner
+    fun invocationsPlanner(iteration: Int): InvocationsPlanner
 }
 
-interface IterationsPlanner {
+internal interface IterationsPlanner {
     fun shouldDoNextIteration(iteration: Int): Boolean
+    fun iterationOptions(iteration: Int): IterationOptions
 }
 
-interface InvocationsPlanner {
+internal interface InvocationsPlanner {
     fun shouldDoNextInvocation(invocation: Int): Boolean
 }
 
-fun Planner.runIterations(
+internal class IterationOptions(
+    val mode: LincheckMode,
+)
+
+internal typealias StrategyFactory = (ExecutionScenario, IterationOptions) -> Strategy
+
+internal fun Planner.runIterations(
+    verifier: Verifier,
     tracker: RunTracker? = null,
-    factory: (ExecutionScenario) -> Pair<Strategy, Verifier>,
+    factory: StrategyFactory,
 ): LincheckFailure? {
-    scenarios.forEachIndexed { i, scenario ->
-        if (!iterationsPlanner.shouldDoNextIteration(i))
+    scenarios.forEachIndexed { iteration, scenario ->
+        if (!iterationsPlanner.shouldDoNextIteration(iteration))
             return null
-        tracker.trackIteration(i, scenario) {
-            val (strategy, verifier) = factory(scenario)
-            strategy.use {
+        val options = iterationsPlanner.iterationOptions(iteration)
+        val invocationsPlanner = invocationsPlanner(iteration)
+        tracker.trackIteration(iteration, scenario, options.mode) {
+            factory(scenario, options).use { strategy ->
                 var invocation = 0
                 var spinning = false
                 while (invocationsPlanner.shouldDoNextInvocation(invocation)) {
@@ -79,58 +88,134 @@ fun Planner.runIterations(
 }
 
 internal class CustomScenariosPlanner(
-    val scenariosOptions: List<CustomScenarioOptions>,
-) : Planner, IterationsPlanner {
+    val mode: LincheckMode,
+    scenariosOptions: List<CustomScenarioOptions>,
+) : Planner {
 
-    override val scenarios = scenariosOptions.asSequence().map { it.scenario }
+    // if we are in hybrid mode, then each scenario should be run
+    // both under Stress and ModelChecking strategies
+    val scenariosOptions = scenariosOptions
+        .flatMap { options ->
+            val mode = options.mode ?: this.mode
+            if (mode == LincheckMode.Hybrid) {
+                val stressInvocations = (options.invocations * STRATEGY_SWITCH_THRESHOLD).toInt()
+                val modelCheckingInvocations = options.invocations - stressInvocations
+                listOf(
+                    options.copy(mode = LincheckMode.Stress, invocations = stressInvocations),
+                    options.copy(mode = LincheckMode.ModelChecking, invocations = modelCheckingInvocations),
+                )
+            } else {
+                listOf(options.copy(mode = mode))
+            }
+        }
 
-    override val iterationsPlanner = this
+    override val scenarios =
+        this.scenariosOptions.asSequence().map { it.scenario }
 
-    override var invocationsPlanner = FixedInvocationsPlanner(0)
-        private set
+    override val iterationsPlanner =
+        FixedIterationsPlanner(this.scenariosOptions.size) { iteration ->
+            IterationOptions(this.scenariosOptions[iteration].mode!!)
+        }
 
-    override fun shouldDoNextIteration(iteration: Int): Boolean {
-        invocationsPlanner = FixedInvocationsPlanner(scenariosOptions[iteration].invocations)
-        return iteration < scenariosOptions.size
-    }
+    override fun invocationsPlanner(iteration: Int) =
+        FixedInvocationsPlanner(scenariosOptions[iteration].invocations)
 
 }
 
-internal class RandomScenariosAdaptivePlanner(
-    mode: LincheckMode,
-    testingTimeMs: Long,
+internal data class RandomScenarioOptions(
     val minThreads: Int,
     val maxThreads: Int,
     val minOperations: Int,
     val maxOperations: Int,
     val generateBeforeAndAfterParts: Boolean,
+)
+
+internal class RandomScenariosFixedPlanner(
+    val mode: LincheckMode,
+    val iterations: Int,
+    val invocationsPerIteration: Int,
+    randomScenarioOptions: RandomScenarioOptions,
+    scenarioGenerator: ExecutionGenerator,
+) : Planner {
+
+    override val scenarios: Sequence<ExecutionScenario> =
+        scenarioGenerator.createSequence(randomScenarioOptions, ::testingProgress)
+
+    override val iterationsPlanner: IterationsPlanner =
+        FixedIterationsPlanner(iterations) { iteration ->
+            IterationOptions(iterationMode(iteration))
+        }
+
+    override fun invocationsPlanner(iteration: Int): InvocationsPlanner =
+        FixedInvocationsPlanner(invocationsPerIteration)
+
+    private fun testingProgress(iteration: Int): Double =
+        iteration.toDouble() / iterations
+
+    private fun iterationMode(iteration: Int): LincheckMode = when {
+        this.mode == LincheckMode.Hybrid && testingProgress(iteration) < STRATEGY_SWITCH_THRESHOLD ->
+            LincheckMode.Stress
+        this.mode == LincheckMode.Hybrid && testingProgress(iteration) >= STRATEGY_SWITCH_THRESHOLD ->
+            LincheckMode.ModelChecking
+        else ->
+            this.mode
+    }
+}
+
+internal class RandomScenariosAdaptivePlanner(
+    mode: LincheckMode,
+    testingTimeMs: Long,
+    randomScenarioOptions: RandomScenarioOptions,
     scenarioGenerator: ExecutionGenerator,
     statisticsTracker: StatisticsTracker,
 ) : Planner {
     private val planner = AdaptivePlanner(mode, testingTimeMs, statisticsTracker)
-    override val iterationsPlanner = planner
-    override val invocationsPlanner = planner
 
-    private val configurations: List<Pair<Int, Int>> = run {
-        (minThreads .. maxThreads).flatMap { threads ->
-            (minOperations .. maxOperations).flatMap { operations ->
+    override val scenarios: Sequence<ExecutionScenario> =
+        scenarioGenerator.createSequence(randomScenarioOptions) {
+            planner.testingProgress
+        }
+
+    override val iterationsPlanner = planner
+
+    override fun invocationsPlanner(iteration: Int) = planner
+
+}
+
+private fun ExecutionGenerator.createSequence(
+    options: RandomScenarioOptions,
+    testingProgress: (Int) -> Double,
+): Sequence<ExecutionScenario> {
+    val configurations: List<Pair<Int, Int>> =
+        (options.minThreads .. options.maxThreads).flatMap { threads ->
+            (options.minOperations .. options.maxOperations).flatMap { operations ->
                 listOf(threads to operations)
             }
         }
-    }
-
-    override val scenarios = sequence {
+    return sequence {
+        var i = 0
         while (true) {
-            val n = round(planner.testingProgress * configurations.size).toInt()
+            val n = round(testingProgress(i++) * configurations.size).toInt()
                 .coerceAtLeast(0)
                 .coerceAtMost(configurations.size - 1)
             val (threads, operations) = configurations[n]
-            yield(scenarioGenerator.nextExecution(threads, operations,
-                if (generateBeforeAndAfterParts) operations else 0,
-                if (generateBeforeAndAfterParts) operations else 0,
+            yield(nextExecution(threads, operations,
+                if (options.generateBeforeAndAfterParts) operations else 0,
+                if (options.generateBeforeAndAfterParts) operations else 0,
             ))
         }
     }
+}
+
+internal class FixedIterationsPlanner(
+    val totalIterations: Int,
+    val iterationOptionsFactory: (Int) -> IterationOptions,
+) : IterationsPlanner {
+    override fun shouldDoNextIteration(iteration: Int): Boolean =
+        iteration < totalIterations
+
+    override fun iterationOptions(iteration: Int): IterationOptions =
+        iterationOptionsFactory(iteration)
 }
 
 internal class FixedInvocationsPlanner(val totalInvocations: Int) : InvocationsPlanner {
@@ -149,7 +234,7 @@ internal class AdaptivePlanner(
     /**
      * Testing mode. It is used to calculate upper/lower bounds on the number of invocations.
      */
-    mode: LincheckMode,
+    val mode: LincheckMode,
     /**
      * Total amount of time in milliseconds allocated for testing.
      */
@@ -205,13 +290,25 @@ internal class AdaptivePlanner(
     /**
      * Upper bound of invocations allocated per iteration.
      */
-    private val invocationsUpperBound = when (mode) {
+    private val invocationsUpperBound = when (currentMode) {
         LincheckMode.Stress         -> STRESS_INVOCATIONS_UPPER_BOUND
         LincheckMode.ModelChecking  -> MODEL_CHECKING_INVOCATIONS_UPPER_BOUND
         else -> throw IllegalArgumentException()
     }
 
     private var currentIterationUpperTimeNano = Long.MAX_VALUE
+
+    private val currentMode: LincheckMode get() = when {
+        mode == LincheckMode.Hybrid && (testingProgress < STRATEGY_SWITCH_THRESHOLD) ->
+            LincheckMode.Stress
+        mode == LincheckMode.Hybrid && (testingProgress >= STRATEGY_SWITCH_THRESHOLD) ->
+            LincheckMode.ModelChecking
+        else ->
+            mode
+    }
+
+    override fun iterationOptions(iteration: Int) =
+        IterationOptions(currentMode)
 
     override fun shouldDoNextIteration(iteration: Int): Boolean {
         check(iteration == statisticsTracker.iteration + 1)
@@ -399,6 +496,10 @@ internal class AdaptivePlanner(
     }
 
 }
+
+// in hybrid mode: testing progress threshold (in %) after which strategy switch
+//   from Stress to ModelChecking strategy occurs
+private const val STRATEGY_SWITCH_THRESHOLD = 0.25
 
 private fun solveQuadraticEquation(a: Double, b: Double, c: Double, default: Double): Double {
     val d = (b * b - 4 * a * c)

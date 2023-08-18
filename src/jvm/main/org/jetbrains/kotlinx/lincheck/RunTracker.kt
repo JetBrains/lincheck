@@ -24,59 +24,28 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 
 interface RunTracker {
-    fun runStart(name: String, options: LincheckOptions) {}
 
-    fun runEnd(
-        name: String,
-        failure: LincheckFailure? = null,
-        exception: Throwable? = null,
-        statistics: Statistics? = null
-    ) {}
+    fun iterationStart(iteration: Int, scenario: ExecutionScenario, mode: LincheckMode) {}
 
-    fun iterationStart(iteration: Int, scenario: ExecutionScenario) {}
-
-    fun iterationEnd(
-        iteration: Int,
-        failure: LincheckFailure? = null,
-        exception: Throwable? = null,
-    ) {}
+    fun iterationEnd(iteration: Int, failure: LincheckFailure? = null, exception: Throwable? = null) {}
 
     fun invocationStart(invocation: Int) {}
 
-    fun invocationEnd(
-        invocation: Int,
-        failure: LincheckFailure? = null,
-        exception: Throwable? = null,
-    ) {}
+    fun invocationEnd(invocation: Int, failure: LincheckFailure? = null, exception: Throwable? = null) {}
+
+    fun internalTrackers(): List<RunTracker> = listOf()
 
 }
 
-inline fun RunTracker?.trackRun(
-    name: String,
-    options: LincheckOptions,
-    block: () -> Pair<LincheckFailure?, Statistics>
-): Pair<LincheckFailure?, Statistics> {
+inline fun RunTracker?.trackIteration(
+    iteration: Int,
+    scenario: ExecutionScenario,
+    mode: LincheckMode,
+    block: () -> LincheckFailure?
+): LincheckFailure? {
     var failure: LincheckFailure? = null
     var exception: Throwable? = null
-    var statistics: Statistics? = null
-    this?.runStart(name, options)
-    try {
-        return block().also {
-            failure = it.first
-            statistics = it.second
-        }
-    } catch (throwable: Throwable) {
-        exception = throwable
-        throw throwable
-    } finally {
-        this?.runEnd(name, failure, exception, statistics)
-    }
-}
-
-inline fun RunTracker?.trackIteration(iteration: Int, scenario: ExecutionScenario, block: () -> LincheckFailure?): LincheckFailure? {
-    var failure: LincheckFailure? = null
-    var exception: Throwable? = null
-    this?.iterationStart(iteration, scenario)
+    this?.iterationStart(iteration, scenario, mode)
     try {
         return block().also {
             failure = it
@@ -89,7 +58,10 @@ inline fun RunTracker?.trackIteration(iteration: Int, scenario: ExecutionScenari
     }
 }
 
-inline fun RunTracker?.trackInvocation(invocation: Int, block: () -> LincheckFailure?): LincheckFailure? {
+inline fun RunTracker?.trackInvocation(
+    invocation: Int,
+    block: () -> LincheckFailure?
+): LincheckFailure? {
     var failure: LincheckFailure? = null
     var exception: Throwable? = null
     this?.invocationStart(invocation)
@@ -105,26 +77,16 @@ inline fun RunTracker?.trackInvocation(invocation: Int, block: () -> LincheckFai
     }
 }
 
-fun trackersList(trackers: List<RunTracker>): RunTracker? =
-    if (trackers.isEmpty())
+fun List<RunTracker>.chainTrackers(): RunTracker? =
+    if (this.isEmpty())
         null
     else object : RunTracker {
 
-        override fun runStart(name: String, options: LincheckOptions) {
-            for (tracker in trackers) {
-                tracker.runStart(name, options)
-            }
-        }
+        val trackers = this@chainTrackers
 
-        override fun runEnd(name: String, failure: LincheckFailure?, exception: Throwable?, statistics: Statistics?) {
+        override fun iterationStart(iteration: Int, scenario: ExecutionScenario, mode: LincheckMode) {
             for (tracker in trackers) {
-                tracker.runEnd(name, failure, exception, statistics)
-            }
-        }
-
-        override fun iterationStart(iteration: Int, scenario: ExecutionScenario) {
-            for (tracker in trackers) {
-                tracker.iterationStart(iteration, scenario)
+                tracker.iterationStart(iteration, scenario, mode)
             }
         }
 
@@ -146,4 +108,22 @@ fun trackersList(trackers: List<RunTracker>): RunTracker? =
             }
         }
 
+        override fun internalTrackers(): List<RunTracker> {
+            return trackers
+        }
+
     }
+
+inline fun<reified T : RunTracker> RunTracker.findTracker(): T? {
+    if (this is T)
+        return this
+    val trackers = ArrayDeque<RunTracker>()
+    trackers.addAll(internalTrackers())
+    while (trackers.isNotEmpty()) {
+        val tracker = trackers.removeFirst()
+        if (tracker is T)
+            return tracker
+        trackers.addAll(tracker.internalTrackers())
+    }
+    return null
+}
