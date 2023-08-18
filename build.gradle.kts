@@ -5,11 +5,14 @@ import org.gradle.jvm.tasks.Jar
 // atomicfu
 buildscript {
     val atomicfuVersion: String by project
+    val serializationPluginVersion: String by project
     dependencies {
         classpath("org.jetbrains.kotlinx:atomicfu-gradle-plugin:$atomicfuVersion")
+        classpath("org.jetbrains.kotlin:kotlin-serialization:$serializationPluginVersion")
     }
 }
 apply(plugin = "kotlinx-atomicfu")
+apply(plugin = "kotlinx-serialization")
 
 plugins {
     java
@@ -91,9 +94,11 @@ kotlin {
 
             val junitVersion: String by project
             val jctoolsVersion: String by project
+            val serializationVersion: String by project
             dependencies {
                 implementation("junit:junit:$junitVersion")
                 implementation("org.jctools:jctools-core:$jctoolsVersion")
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
             }
         }
     }
