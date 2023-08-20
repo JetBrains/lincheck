@@ -270,34 +270,11 @@ internal fun StringBuilder.appendExecutionScenarioWithResults(
     executionResult: ExecutionResult,
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>,
 ): StringBuilder {
-    requireEqualSize(scenario.parallelExecution, executionResult.parallelResults) {
-        "Different numbers of threads and matching results found"
-    }
-    requireEqualSize(scenario.initExecution, executionResult.initResults) {
-        "Different numbers of actors and matching results found"
-    }
-    requireEqualSize(scenario.postExecution, executionResult.postResults) {
-        "Different numbers of actors and matching results found"
-    }
-    for (i in scenario.parallelExecution.indices) {
-        requireEqualSize(scenario.parallelExecution[i], executionResult.parallelResults[i]) {
-            "Different numbers of actors and matching results found"
-        }
-    }
-    val initPart = scenario.initExecution.zip(executionResult.initResults) {
-        actor, result -> ActorWithResult(actor, result, exceptionStackTraces).toString()
-    }
-    val postPart = scenario.postExecution.zip(executionResult.postResults) {
-        actor, result -> ActorWithResult(actor, result, exceptionStackTraces).toString()
-    }
-    var hasClocks = false
-    val parallelPart = scenario.parallelExecution.mapIndexed { i, actors ->
-        actors.zip(executionResult.parallelResultsWithClock[i]) { actor, resultWithClock ->
-            if (!resultWithClock.clockOnStart.empty)
-                hasClocks = true
-            ActorWithResult(actor, resultWithClock.result, exceptionStackTraces, clock = resultWithClock.clockOnStart).toString()
-        }
-    }
+    val representation = constructResultsRepresentation(executionResult, scenario, exceptionStackTraces)
+    val initPart = representation.initResultsRepresentation
+    val parallelPart = representation.parallelResultsRepresentation
+    val postPart = representation.postResultsRepresentation
+
     with(ExecutionLayout(initPart, parallelPart, postPart)) {
         appendSeparatorLine()
         appendHeader()
@@ -333,7 +310,7 @@ internal fun StringBuilder.appendExecutionScenarioWithResults(
             """.trimIndent()
         )
     }
-    if (hasClocks) {
+    if (representation.hasClocks) {
         hints.add(
             """
                 Values in "[..]" brackets indicate the number of completed operations
@@ -350,6 +327,61 @@ internal fun StringBuilder.appendExecutionScenarioWithResults(
     }
     appendHints(hints)
     return this
+}
+
+internal class ExecutionResultsRepresentation(
+    val hasClocks: Boolean,
+    val initResultsRepresentation: List<String>,
+    val afterInitStateRepresentation: String?,
+    val parallelResultsRepresentation: List<List<String>>,
+    val afterParallelStateRepresentation: String?,
+    val postResultsRepresentation: List<String>,
+    val afterPostStateRepresentation: String?,
+)
+
+internal fun constructResultsRepresentation(
+    executionResult: ExecutionResult,
+    scenario: ExecutionScenario,
+    exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>,
+): ExecutionResultsRepresentation {
+    requireEqualSize(scenario.parallelExecution, executionResult.parallelResults) {
+        "Different numbers of threads and matching results found"
+    }
+    requireEqualSize(scenario.initExecution, executionResult.initResults) {
+        "Different numbers of actors and matching results found"
+    }
+    requireEqualSize(scenario.postExecution, executionResult.postResults) {
+        "Different numbers of actors and matching results found"
+    }
+    for (i in scenario.parallelExecution.indices) {
+        requireEqualSize(scenario.parallelExecution[i], executionResult.parallelResults[i]) {
+            "Different numbers of actors and matching results found"
+        }
+    }
+    val initPart = scenario.initExecution.zip(executionResult.initResults) {
+            actor, result -> ActorWithResult(actor, result, exceptionStackTraces).toString()
+    }
+    val postPart = scenario.postExecution.zip(executionResult.postResults) {
+            actor, result -> ActorWithResult(actor, result, exceptionStackTraces).toString()
+    }
+    var hasClocks = false
+    val parallelPart = scenario.parallelExecution.mapIndexed { i, actors ->
+        actors.zip(executionResult.parallelResultsWithClock[i]) { actor, resultWithClock ->
+            if (!resultWithClock.clockOnStart.empty)
+                hasClocks = true
+            ActorWithResult(actor, resultWithClock.result, exceptionStackTraces, clock = resultWithClock.clockOnStart).toString()
+        }
+    }
+
+    return ExecutionResultsRepresentation(
+        hasClocks = hasClocks,
+        initResultsRepresentation = initPart,
+        afterInitStateRepresentation = executionResult.afterInitStateRepresentation,
+        parallelResultsRepresentation = parallelPart,
+        afterParallelStateRepresentation = executionResult.afterParallelStateRepresentation,
+        postResultsRepresentation = postPart,
+        afterPostStateRepresentation = executionResult.afterPostStateRepresentation
+    )
 }
 
 internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilder {

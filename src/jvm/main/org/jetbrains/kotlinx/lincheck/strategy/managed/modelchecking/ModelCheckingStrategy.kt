@@ -128,8 +128,16 @@ internal class ModelCheckingStrategy(
             checkResult(invocationResult)?.let { failure ->
                 if (replay && failure.trace != null) {
                     val trace = extractDebugTrace(failure, failure.trace)
+                    val executionResults = if (failure is IncorrectResultsFailure) constructResultsRepresentation(failure.results, failure.scenario, emptyMap()) else null
                     val currentVersion = this::class.java.`package`.implementationVersion
-                    testFailed(trace, currentVersion, MINIMAL_PLUGIN_VERSION)
+                    testFailed(
+                        executionResultsInitPart = executionResults?.initResultsRepresentation?.toTypedArray(),
+                        executionResultsParallelPart = executionResults?.let { prepareParallelPart(it.parallelResultsRepresentation) },
+                        executionResultsPostPart = executionResults?.postResultsRepresentation?.toTypedArray(),
+                        trace = trace,
+                        version = currentVersion,
+                        minimalPluginVersion = MINIMAL_PLUGIN_VERSION
+                    )
 
                     doReplay()
                     while (replay()) {
@@ -142,6 +150,18 @@ internal class ModelCheckingStrategy(
             currentInterleaving = root.nextInterleaving() ?: break
         }
         return null
+    }
+
+    private fun prepareParallelPart(executionResultsRepresentation: List<List<String>>): Array<Array<String>> {
+        if (executionResultsRepresentation.isEmpty()) return emptyArray()
+
+        val maxActorsInThread = executionResultsRepresentation.maxOf { it.size }
+
+        return Array(executionResultsRepresentation.size) { i ->
+            val threadExecution = executionResultsRepresentation[i].toMutableList()
+            repeat(maxActorsInThread - threadExecution.size) { threadExecution.add("") }
+            threadExecution.toTypedArray()
+        }
     }
 
     private fun extractDebugTrace(failure: LincheckFailure, trace: Trace): Array<String> {

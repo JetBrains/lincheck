@@ -9,6 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import kotlinx.atomicfu.locks.ReentrantLock
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
@@ -21,6 +22,7 @@ import org.objectweb.asm.*
 import java.io.*
 import java.lang.reflect.*
 import java.util.*
+import java.util.concurrent.Executors
 import kotlin.collections.set
 
 private const val DEBUGGER_TIMEOUT = 1000L * 60 * 60 * 24 * 365
@@ -1386,6 +1388,7 @@ private class MonitorTracker(nThreads: Int) {
     fun notifyAll(monitor: Any): Unit = waitingMonitor.forEachIndexed { iThread, info ->
         if (monitor === info?.monitor)
             waitForNotify[iThread] = false
+        ReentrantLock().unlock()
     }
 
     /**

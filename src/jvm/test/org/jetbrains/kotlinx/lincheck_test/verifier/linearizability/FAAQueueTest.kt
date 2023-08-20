@@ -41,7 +41,7 @@ open class FAAQueue<T> {
                 continue
             }
             val enqueueIndex = tail.enqIdx.getAndIncrement()
-            if (enqueueIndex >= SEGMENT_SIZE) {
+            if (enqueueIndex >= org.jetbrains.kotlinx.lincheck_test.representation.SEGMENT_SIZE) {
                 val nextTail = Segment(x)
                 tail = this.tail.get()
                 val nextTailLink = tail.next.get()
@@ -68,7 +68,7 @@ open class FAAQueue<T> {
     fun dequeue(): T? {
         while (true) {
             val head = head.get()
-            if (head.deqIdx.value >= SEGMENT_SIZE) {
+            if (head.deqIdx.value >= org.jetbrains.kotlinx.lincheck_test.representation.SEGMENT_SIZE) {
                 val next = head.next.get()
                 if (next != null) {
                     this.head.compareAndSet(head, next);
@@ -77,7 +77,7 @@ open class FAAQueue<T> {
                 }
             } else {
                 val dequeIndex = head.deqIdx.getAndIncrement();
-                if (dequeIndex >= SEGMENT_SIZE) {
+                if (dequeIndex >= org.jetbrains.kotlinx.lincheck_test.representation.SEGMENT_SIZE) {
                     continue
                 }
                 return head.elements.getAndSet(dequeIndex, DONE) as T? ?: continue;
@@ -93,7 +93,7 @@ open class FAAQueue<T> {
         get() {
             while (true) {
                 val head = head.get()
-                if (head.deqIdx.value >= SEGMENT_SIZE) {
+                if (head.deqIdx.value >= org.jetbrains.kotlinx.lincheck_test.representation.SEGMENT_SIZE) {
                     if (head.next.get() == null) {
                         return true
                     } else {
@@ -110,7 +110,7 @@ internal class Segment {
     val next: AtomicReference<Segment?> = AtomicReference(null)
     val enqIdx = atomic(0)// index for the next enqueue operation
     val deqIdx = atomic(0) // index for the next dequeue operation
-    val elements: AtomicReferenceArray<Any?> = AtomicReferenceArray(SEGMENT_SIZE)
+    val elements: AtomicReferenceArray<Any?> = AtomicReferenceArray(org.jetbrains.kotlinx.lincheck_test.representation.SEGMENT_SIZE)
 
     constructor() // for the first segment creation
 
@@ -146,7 +146,7 @@ internal class FAAQueueFailingTest : AbstractLincheckTest(IncorrectResultsFailur
 //                    continue
 //                }
                 val enqueueIndex = tail.enqIdx.getAndIncrement()
-                if (enqueueIndex >= SEGMENT_SIZE) {
+                if (enqueueIndex >= org.jetbrains.kotlinx.lincheck_test.representation.SEGMENT_SIZE) {
                     val nextTail = Segment(x)
                     tail = this.tail.get()
                     val nextTailLink = tail.next.get()
