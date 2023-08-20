@@ -10,6 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck.verifier
 
+import gnu.trove.map.TIntObjectMap
+import gnu.trove.map.hash.TIntObjectHashMap
+import gnu.trove.set.hash.TIntHashSet
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.verifier.LTS.*
@@ -19,7 +22,7 @@ import kotlin.coroutines.*
 import kotlin.math.*
 
 typealias RemappingFunction = IntArray
-typealias ResumedTickets = Set<Int>
+typealias ResumedTickets = TIntHashSet
 
 /**
  * Common interface for different labeled transition systems, which several correctness formalisms use.
@@ -61,8 +64,8 @@ class LTS(sequentialSpecification: Class<*>) {
      */
     inner class State(val seqToCreate: List<Operation>) {
         internal val transitionsByRequests by lazy { mutableMapOf<Actor, TransitionInfo>() }
-        internal val transitionsByFollowUps by lazy { mutableMapOf<Int, TransitionInfo>() }
-        internal val transitionsByCancellations by lazy { mutableMapOf<Int, TransitionInfo>() }
+        internal val transitionsByFollowUps by lazy { TIntObjectHashMap<TransitionInfo>() }
+        internal val transitionsByCancellations by lazy { TIntObjectHashMap<TransitionInfo>() }
         private val atomicallySuspendedAndCancelledTransition: TransitionInfo by lazy {
             createAtomicallySuspendedAndCancelledTransition()
         }
@@ -76,7 +79,7 @@ class LTS(sequentialSpecification: Class<*>) {
         }
 
         private fun createAtomicallySuspendedAndCancelledTransition() =  copyAndApply { instance, suspendedOperations, resumedTicketsWithResults, continuationsMap ->
-            TransitionInfo(this, getResumedOperations(resumedTicketsWithResults).map { it.resumedActorTicket }.toSet(), NO_TICKET, null, Cancelled)
+            TransitionInfo(this, getResumedOperations(resumedTicketsWithResults).map { it.resumedActorTicket }.toTIntHashSet(), NO_TICKET, null, Cancelled)
         }
 
         private fun nextByRequest(actor: Actor, expectedResult: Result): TransitionInfo? {
@@ -142,14 +145,14 @@ class LTS(sequentialSpecification: Class<*>) {
             action: (
                 instance: Any,
                 suspendedOperations: MutableList<Operation>,
-                resumedTicketsWithResults: MutableMap<Int, ResumedResult>,
+                resumedTicketsWithResults: TIntObjectMap<ResumedResult>,
                 continuationsMap: MutableMap<Operation, CancellableContinuation<*>>
             ) -> T
         ): T {
             // Copy the state by sequentially applying operations from seqToCreate.
             val instance = createInitialStateInstance()
             val suspendedOperations = mutableListOf<Operation>()
-            val resumedTicketsWithResults = mutableMapOf<Int, ResumedResult>()
+            val resumedTicketsWithResults = TIntObjectHashMap<ResumedResult>()
             val continuationsMap = mutableMapOf<Operation, CancellableContinuation<*>>()
             try {
                 seqToCreate.forEach { it.invoke(instance, suspendedOperations, resumedTicketsWithResults, continuationsMap) }
@@ -170,7 +173,7 @@ class LTS(sequentialSpecification: Class<*>) {
             return stateInfo.intern(actorWithTicket) { nextStateInfo, rf ->
                 TransitionInfo(
                     nextState = nextStateInfo.state,
-                    resumedTickets = stateInfo.resumedOperations.map { it.resumedActorTicket }.toSet(),
+                    resumedTickets = stateInfo.resumedOperations.map { it.resumedActorTicket }.toTIntHashSet(),
                     ticket = if (rf != null && result === Suspended) rf[actorWithTicket.ticket] else actorWithTicket.ticket,
                     rf = rf,
                     result = result
@@ -178,7 +181,7 @@ class LTS(sequentialSpecification: Class<*>) {
             }
         }
 
-        private fun getResumedOperations(resumedTicketsWithResults: Map<Int, ResumedResult>): List<ResumptionInfo> {
+        private fun getResumedOperations(resumedTicketsWithResults: TIntObjectMap<ResumedResult>): List<ResumptionInfo> {
             val resumedOperations = mutableListOf<ResumptionInfo>()
             resumedTicketsWithResults.forEach { resumedTicket, res ->
                 resumedOperations.add(ResumptionInfo(res.resumedActor, res.by, resumedTicket))
@@ -191,10 +194,10 @@ class LTS(sequentialSpecification: Class<*>) {
     private fun Operation.invoke(
         externalState: Any,
         suspendedOperations: MutableList<Operation>,
-        resumedOperations: MutableMap<Int, ResumedResult>,
+        resumedOperations: TIntObjectMap<ResumedResult>,
         continuationsMap: MutableMap<Operation, CancellableContinuation<*>>
     ): Result {
-        val prevResumedTickets = resumedOperations.keys.toMutableList()
+        val prevResumedTickets = resumedOperations.keys.toTIntList()
         CancellableContinuationHolder.storedLastCancellableCont = null
         val res = when (type) {
             REQUEST -> executeActor(externalState, actor, Completion(ticket, actor, resumedOperations))
@@ -228,7 +231,7 @@ class LTS(sequentialSpecification: Class<*>) {
             // Operation suspended it's execution.
             suspendedOperations.add(this)
         }
-        resumedOperations.forEach { (resumedTicket, res) ->
+        resumedOperations.forEach { resumedTicket, res ->
             if (!prevResumedTickets.contains(resumedTicket)) {
                 suspendedOperations.removeIf { it.ticket == resumedTicket }
                 res.by = actor
@@ -284,11 +287,11 @@ class LTS(sequentialSpecification: Class<*>) {
 
     private fun findFirstAvailableTicket(
         suspendedActorWithTickets: List<Operation>,
-        resumedTicketsWithResults: MutableMap<Int, ResumedResult>
+        resumedTicketsWithResults: TIntObjectMap<ResumedResult>
     ): Int {
         for (ticket in 0 until suspendedActorWithTickets.size + resumedTicketsWithResults.size) {
             if (suspendedActorWithTickets.find { it.ticket == ticket } == null &&
-                !resumedTicketsWithResults.contains(ticket)) {
+                !resumedTicketsWithResults.containsKey(ticket)) {
                 return ticket
             }
         }
@@ -364,7 +367,7 @@ private class StateInfo(
 internal class VerifierInterceptor(
     private val ticket: Int,
     private val actor: Actor,
-    private val resumedTicketsWithResults: MutableMap<Int, ResumedResult>
+    private val resumedTicketsWithResults: TIntObjectMap<ResumedResult>
 ) : AbstractCoroutineContextElement(ContinuationInterceptor),
     ContinuationInterceptor {
     override fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T> {
@@ -392,7 +395,7 @@ internal class VerifierInterceptor(
 internal class Completion(
     private val ticket: Int,
     private val actor: Actor,
-    private val resumedTicketsWithResults: MutableMap<Int, ResumedResult>
+    private val resumedTicketsWithResults: TIntObjectMap<ResumedResult>
 ) : Continuation<Any?> {
     override val context: CoroutineContext
         get() = VerifierInterceptor(ticket, actor, resumedTicketsWithResults) + StoreExceptionHandler() + Job()

@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck
 
+import gnu.trove.list.TIntList
 import org.jetbrains.kotlinx.lincheck.LoggingLevel.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
@@ -62,7 +63,7 @@ enum class LoggingLevel {
  */
 internal fun<T> columnsToString(
     data: List<List<T>>,
-    columnWidths: List<Int>? = null,
+    columnWidths: TIntList? = null,
     transform: ((T) -> String)? = null
 ): String {
     require(columnWidths == null || columnWidths.size == data.size)
@@ -71,7 +72,7 @@ internal fun<T> columnsToString(
     val strings = data.map { col -> col.map {
         transform?.invoke(it) ?: it.toString()
     }}
-    val colsWidth = columnWidths ?: strings.map { col ->
+    val colsWidth = columnWidths ?: strings.mapToTIntList { col ->
         col.maxOfOrNull { it.length } ?: 0
     }
     val table = (0 until nRows).map { iRow -> (0 until nCols).map { iCol ->
@@ -89,7 +90,7 @@ internal fun<T> columnsToString(
  */
 internal fun <T> StringBuilder.appendColumns(
     data: List<List<T>>,
-    columnWidths: List<Int>? = null,
+    columnWidths: TIntList? = null,
     transform: ((T) -> String)? = null
 ) {
     appendLine(columnsToString(data, columnWidths, transform))
@@ -104,7 +105,7 @@ internal fun <T> StringBuilder.appendColumns(
  */
 internal class TableLayout(
     columnNames: List<String>,
-    columnWidths: List<Int>,
+    columnWidths: TIntList,
     columnHeaderCentering: Boolean = true,
 ) {
     init {
@@ -203,7 +204,7 @@ internal fun ExecutionLayout(
 ): TableLayout {
     val size = parallelPart.size
     val threadHeaders = (0 until size).map { "Thread ${it + 1}" }
-    val columnsWidth = parallelPart.mapIndexed { i, actors ->
+    val columnsWidth = parallelPart.mapIndexedToTIntList { i, actors ->
         val col = actors + if (i == 0) (initPart + postPart) else listOf()
         col.maxOfOrNull { it.length } ?: 0
     }

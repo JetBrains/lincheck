@@ -9,6 +9,9 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import gnu.trove.list.array.TIntArrayList
+import gnu.trove.map.hash.TIntIntHashMap
+import gnu.trove.set.hash.TIntHashSet
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
@@ -846,12 +849,12 @@ abstract class ManagedStrategy(
         /**
          * Map, which helps us to determine how many times current thread visits some code location.
          */
-        private val currentThreadCodeLocationVisitCountMap = mutableMapOf<Int, Int>()
+        private val currentThreadCodeLocationVisitCountMap = TIntIntHashMap()
 
         /**
          * Is used to find a cycle period inside exact thread execution if it has hung
          */
-        private val currentThreadCodeLocationsHistory = mutableListOf<Int>()
+        private val currentThreadCodeLocationsHistory = TIntArrayList()
 
         /**
          *  Threads switches and executions history to store sequences lead to loops
@@ -1142,7 +1145,7 @@ abstract class ManagedStrategy(
          * [onNextExecution] won't be called before the first execution,
          * so we have to start [executionsPerformedInCurrentThread] from 1.
          */
-        private val threadsRan = hashSetOf<Int>()
+        private val threadsRan = TIntHashSet()
 
         fun initialize() {
             currentInterleavingNodeIndex = 0

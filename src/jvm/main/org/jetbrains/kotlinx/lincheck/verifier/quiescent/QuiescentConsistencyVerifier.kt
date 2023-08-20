@@ -9,6 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.verifier.quiescent
 
+import gnu.trove.list.array.TIntArrayList
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
@@ -57,7 +58,7 @@ class QuiescentConsistencyVerifier(sequentialSpecification: Class<*>) : Verifier
             parallelResults.add(ArrayList())
         }
         val clocks = Array(originalScenario.nThreads) { ArrayList<IntArray>() }
-        val clockMapping = Array(originalScenario.nThreads) { ArrayList<Int>() }
+        val clockMapping = Array(originalScenario.nThreads) { TIntArrayList() }
         clockMapping.forEach { it.add(-1) }
         originalScenario.parallelExecution.forEachIndexed { t, threadActors ->
             threadActors.forEachIndexed { i, a ->

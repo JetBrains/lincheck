@@ -9,6 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import gnu.trove.map.hash.TIntObjectHashMap
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.DeadlockWithDumpFailure
@@ -110,7 +111,7 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
         Array<ActorNode?>(scenario.threads[i].size) { null }
     }
     // call nodes for each method call
-    val callNodes = mutableMapOf<Int, CallNode>()
+    val callNodes = TIntObjectHashMap<CallNode>()
     // all trace nodes in order corresponding to `tracePoints`
     val traceGraphNodes = mutableListOf<TraceNode>()
 

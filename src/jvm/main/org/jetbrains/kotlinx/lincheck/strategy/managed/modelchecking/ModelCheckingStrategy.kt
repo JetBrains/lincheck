@@ -9,12 +9,17 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
+import gnu.trove.iterator.TIntIterator
+import gnu.trove.list.TIntList
+import gnu.trove.list.array.TIntArrayList
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.lastOrNull
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.lang.reflect.*
+import org.jetbrains.kotlinx.lincheck.size
 import kotlin.random.*
 
 /**
@@ -227,12 +232,12 @@ internal class ModelCheckingStrategy(
      * This class specifies an interleaving that is re-producible.
      */
     private inner class Interleaving(
-        private val switchPositions: List<Int>,
-        private val threadSwitchChoices: List<Int>,
+        private val switchPositions: TIntList,
+        private val threadSwitchChoices: TIntList,
         private var lastNotInitializedNode: SwitchChoosingNode?
     ) {
         private lateinit var interleavingFinishingRandom: Random
-        private lateinit var nextThreadToSwitch: Iterator<Int>
+        private lateinit var nextThreadToSwitch: TIntIterator
         private var lastNotInitializedNodeChoices: MutableList<Choice>? = null
         private var executionPosition: Int = 0
 
@@ -278,7 +283,7 @@ internal class ModelCheckingStrategy(
          */
         fun newExecutionPosition(iThread: Int) {
             executionPosition++
-            if (executionPosition > switchPositions.lastOrNull() ?: -1) {
+            if (executionPosition > (switchPositions.lastOrNull() ?: -1)) {
                 // Add a new thread choosing node corresponding to the switch at the current execution position.
                 lastNotInitializedNodeChoices?.add(Choice(ThreadChoosingNode(switchableThreads(iThread)), executionPosition))
             }
@@ -286,8 +291,8 @@ internal class ModelCheckingStrategy(
     }
 
     private inner class InterleavingBuilder {
-        private val switchPositions = mutableListOf<Int>()
-        private val threadSwitchChoices = mutableListOf<Int>()
+        private val switchPositions = TIntArrayList()
+        private val threadSwitchChoices = TIntArrayList()
         private var lastNoninitializedNode: SwitchChoosingNode? = null
 
         val numberOfSwitches get() = switchPositions.size
