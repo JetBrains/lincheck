@@ -12,18 +12,21 @@ package org.jetbrains.kotlinx.lincheck_benchmark
 
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
-import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.*
 
-@Param(name = "key", gen = IntGen::class, conf = "1:5")
-class ConcurrentHashMapBenchmark : AbstractLincheckBenchmark() {
-    private val map = ConcurrentHashMap<Int, Int>()
-
-    @Operation
-    fun put(@Param(name = "key") key: Int, value: Int) = map.put(key, value)
+@Param(name = "value", gen = IntGen::class, conf = "1:5")
+class ConcurrentSkipListMapBenchmark : AbstractLincheckBenchmark() {
+    private val skiplistMap = ConcurrentSkipListMap<Int, Int>()
 
     @Operation
-    operator fun get(@Param(name = "key") key: Int) = map[key]
+    fun put(key: Int, value: Int) = skiplistMap.put(key, value)
 
     @Operation
-    fun remove(@Param(name = "key") key: Int) = map.remove(key)
+    fun get(key: Int) = skiplistMap.get(key)
+
+    @Operation
+    fun containsKey(key: Int) = skiplistMap.containsKey(key)
+
+    @Operation
+    fun remove(key: Int) = skiplistMap.remove(key)
 }
