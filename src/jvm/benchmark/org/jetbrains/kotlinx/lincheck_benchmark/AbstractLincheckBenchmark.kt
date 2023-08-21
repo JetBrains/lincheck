@@ -59,7 +59,7 @@ abstract class AbstractLincheckBenchmark(
         customize()
     }
 
-    internal open fun LincheckOptionsImpl.customize() {}
+    internal open fun LincheckOptions.customize() {}
 
     private fun createRunTracker() = object : RunTracker {
 

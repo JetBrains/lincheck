@@ -21,6 +21,8 @@ import org.junit.runners.Suite
 @Suite.SuiteClasses(
     ConcurrentHashMapBenchmark::class,
     ConcurrentSkipListMapBenchmark::class,
+    ConcurrentLinkedQueueBenchmark::class,
+    ConcurrentDequeBenchmark::class,
 )
 class LincheckBenchmarksSuite {
 
