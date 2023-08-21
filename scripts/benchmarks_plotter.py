@@ -90,10 +90,10 @@ def runtime_plot(ax: plt.Axes, report: BenchmarksReport):
         ax.bar(x + offset, data, width, label=mode)
         multiplier += 1
     ax.set_title("Benchmarks running time")
-    ax.set_ylabel("time (ms)")
+    ax.set_ylabel("time (s)")
     ax.set_ylim(0, round_up_to(max_runtime, multiplier=10))
-    ax.set_xticks(x + width, report.benchmarks_names())
-    ax.legend(loc="upper left", bbox_to_anchor=(0, -0.1), ncols=2)
+    ax.set_xticks(x + width / 2, report.benchmarks_names(), rotation=45)
+    ax.legend(loc="upper left", bbox_to_anchor=(1, 1), ncol=1)
 
 def round_up_to(n, multiplier):
     return math.ceil(n / multiplier) * multiplier
