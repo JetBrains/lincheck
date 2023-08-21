@@ -83,9 +83,9 @@ abstract class AbstractLincheckBenchmark(
             // TODO: check that in each scenario all threads have same number of operations
             check(options is LincheckOptionsImpl)
             check(options.mode in listOf(LincheckMode.Stress, LincheckMode.ModelChecking))
-            val benchmarkName = "${testClass.name}-${options.mode}"
-            val benchmarkStatistics = BenchmarkStatistics(
-                name = benchmarkName,
+            val benchmarkStatistics = BenchmarkStatistics.create(
+                name = testClass.simpleName,
+                mode = options.mode,
                 runningTimeNano = statistics.runningTimeNano,
                 iterationsCount = statistics.iterationsCount,
                 invocationsCount = statistics.invocationsCount,
@@ -100,7 +100,7 @@ abstract class AbstractLincheckBenchmark(
                     )
                 }
             )
-            benchmarksReporter.registerBenchmark(benchmarkName, benchmarkStatistics)
+            benchmarksReporter.registerBenchmark(benchmarkStatistics)
         }
 
     }

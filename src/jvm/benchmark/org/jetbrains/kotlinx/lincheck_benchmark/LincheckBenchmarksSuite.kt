@@ -19,7 +19,8 @@ import org.junit.runners.Suite
 
 @RunWith(Suite::class)
 @Suite.SuiteClasses(
-    ConcurrentHashMapBenchmark::class
+    ConcurrentHashMapBenchmark::class,
+    ConcurrentSkipListMapBenchmark::class,
 )
 class LincheckBenchmarksSuite {
 
@@ -35,10 +36,10 @@ class LincheckBenchmarksSuite {
 
 class LincheckBenchmarksReporter {
 
-    private val statistics = mutableMapOf<String, BenchmarkStatistics>()
+    private val statistics = mutableMapOf<Int, BenchmarkStatistics>()
 
-    fun registerBenchmark(benchmarkName: String, benchmarkStatistics: BenchmarkStatistics) {
-        statistics[benchmarkName] = benchmarkStatistics
+    fun registerBenchmark(benchmarkStatistics: BenchmarkStatistics) {
+        statistics[benchmarkStatistics.id] = benchmarkStatistics
     }
 
     fun saveReport() {
