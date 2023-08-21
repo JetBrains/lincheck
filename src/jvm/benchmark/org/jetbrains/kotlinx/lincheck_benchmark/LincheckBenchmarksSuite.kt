@@ -12,30 +12,36 @@ package org.jetbrains.kotlinx.lincheck_benchmark
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToStream
-import org.junit.runner.Result
-import org.junit.runners.BlockJUnit4ClassRunner
-import org.junit.runner.notification.*
 import java.io.File
+import org.junit.AfterClass
+import org.junit.runner.RunWith
+import org.junit.runners.Suite
 
-class LincheckBenchmarksRunner(clazz: Class<*>) : BlockJUnit4ClassRunner(clazz) {
+@RunWith(Suite::class)
+@Suite.SuiteClasses(
+    ConcurrentHashMapBenchmark::class
+)
+class LincheckBenchmarksSuite {
 
-    override fun run(notifier: RunNotifier?) {
-        notifier?.addListener(benchmarksListener)
-        super.run(notifier)
+    companion object {
+        @AfterClass
+        @JvmStatic
+        fun tearDown() {
+            benchmarksReporter.saveReport()
+        }
     }
 
 }
 
-class LincheckBenchmarksListener : RunListener() {
+class LincheckBenchmarksReporter {
 
     private val statistics = mutableMapOf<String, BenchmarkStatistics>()
 
-    fun registerBenchmarkStatistics(benchmarkName: String, benchmarkStatistics: BenchmarkStatistics) {
+    fun registerBenchmark(benchmarkName: String, benchmarkStatistics: BenchmarkStatistics) {
         statistics[benchmarkName] = benchmarkStatistics
     }
 
-    override fun testRunFinished(result: Result?) {
-        super.testRunFinished(result)
+    fun saveReport() {
         val file = File("benchmarks-results.json")
         file.outputStream().use { outputStream ->
             Json.encodeToStream(statistics, outputStream)
@@ -44,4 +50,4 @@ class LincheckBenchmarksListener : RunListener() {
 
 }
 
-val benchmarksListener = LincheckBenchmarksListener()
+val benchmarksReporter = LincheckBenchmarksReporter()

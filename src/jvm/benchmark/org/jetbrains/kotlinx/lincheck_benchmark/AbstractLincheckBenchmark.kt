@@ -17,10 +17,8 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import kotlin.reflect.KClass
 import org.junit.Test
-import org.junit.runner.RunWith
 
 
-@RunWith(LincheckBenchmarksRunner::class)
 abstract class AbstractLincheckBenchmark(
     private vararg val expectedFailures: KClass<out LincheckFailure>
 ) {
@@ -102,7 +100,7 @@ abstract class AbstractLincheckBenchmark(
                     )
                 }
             )
-            benchmarksListener.registerBenchmarkStatistics(benchmarkName, benchmarkStatistics)
+            benchmarksReporter.registerBenchmark(benchmarkName, benchmarkStatistics)
         }
 
     }

@@ -54,6 +54,19 @@ kotlin {
                 classpath = compileDependencyFiles + runtimeDependencyFiles + output.allOutputs
                 testClassesDirs = output.classesDirs
             }
+
+            val benchmarkSuite = tasks.register("jvmBenchmarksSuite", Test::class) {
+                classpath = compileDependencyFiles + runtimeDependencyFiles + output.allOutputs
+                testClassesDirs = output.classesDirs
+
+                filter {
+                    includeTestsMatching("LincheckBenchmarksSuite")
+                }
+            }
+
+            // val benchmarksReport by tasks.creating {
+            //     dependsOn(benchmarkSuite)
+            // }
         }
     }
 
