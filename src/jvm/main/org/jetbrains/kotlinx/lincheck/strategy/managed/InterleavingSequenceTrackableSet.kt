@@ -10,6 +10,11 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import gnu.trove.list.TIntList
+import gnu.trove.map.TIntObjectMap
+import gnu.trove.map.hash.TIntObjectHashMap
+import org.jetbrains.kotlinx.lincheck.*
+
 /**
  * Helps find max prefix length without cycle on suffix
  *
@@ -54,10 +59,37 @@ internal fun <T> findMaxPrefixLengthWithNoCycleOnSuffix(elements: List<T>): Cycl
     } else CycleInfo(minLastPositionNotRelatedToCycle + 1, targetCycleLength) // number of prefix elements with first cycle
 }
 
-data class CycleInfo(
-    val executionsBeforeCycle: Int,
-    val cyclePeriod: Int
-)
+/**
+ * The same function as above but specialized for [TIntList]
+ */
+@Suppress("DuplicatedCode")
+internal fun findMaxPrefixLengthWithNoCycleOnSuffix(elements: TIntList): CycleInfo? {
+    if (elements.isEmpty || elements.size == 1) return null
+    val lastIndex = elements.size - 1
+    var targetCycleLength = elements.size
+    var minLastPositionNotRelatedToCycle = elements.lastIndex
+
+    for (i in lastIndex - 1 downTo elements.size / 2 - 1) {
+        var j = 0
+        // trying to find the second cycle segment occurrence
+        while (i - j >= 0 && elements[i - j] == elements[lastIndex - j] && lastIndex - j > i) {
+            j++
+        }
+        if (lastIndex - j != i) continue // cycle not found
+        val cycleLength = elements.size - (i + 1)
+        val lastPositionNotRelatedToCycle = if (i - j >= 0) {
+            findLastIndexNotRelatedToCycle(elements = elements, cycleLength = cycleLength, startPosition = i - j)
+        } else -1
+        if (minLastPositionNotRelatedToCycle > lastPositionNotRelatedToCycle) {
+            minLastPositionNotRelatedToCycle = lastPositionNotRelatedToCycle
+            targetCycleLength = cycleLength
+        }
+    }
+
+    return if (targetCycleLength == elements.size) {
+        null // cycle not found
+    } else CycleInfo(minLastPositionNotRelatedToCycle + 1, targetCycleLength) // number of prefix elements with first cycle
+}
 
 /**
  * @return the last index of the element doesn't belong to any suffix cycle iteration, or -1, if all elements belong to the cycle
@@ -77,6 +109,31 @@ private fun <T> findLastIndexNotRelatedToCycle(elements: List<T>, cycleLength: I
 
     return -1
 }
+
+/**
+ * The same function as above but specialized for [TIntList]
+ */
+@Suppress("DuplicatedCode")
+private fun findLastIndexNotRelatedToCycle(elements: TIntList, cycleLength: Int, startPosition: Int): Int {
+    var position = startPosition
+
+    while (position >= 0) {
+        val elementFromCycle = elements[elements.lastIndex - ((elements.lastIndex - position) % cycleLength)]
+        val elementToMatch = elements[position]
+        if (elementFromCycle != elementToMatch) {
+            return position
+        }
+
+        position--
+    }
+
+    return -1
+}
+
+data class CycleInfo(
+    val executionsBeforeCycle: Int,
+    val cyclePeriod: Int
+)
 
 /**
  * This class holds information about executions in exact thread and serves to find spin-cycles
@@ -186,7 +243,7 @@ internal class InterleavingSequenceTrackableSet {
     /**
      * Thread id to node map
      */
-    private val rootTransitions: MutableMap<Int, InterleavingSequenceSetNode> = mutableMapOf()
+    private val rootTransitions: TIntObjectMap<InterleavingSequenceSetNode> = TIntObjectHashMap()
 
     val cursor = Cursor()
 
@@ -219,7 +276,7 @@ internal class InterleavingSequenceTrackableSet {
          * Only present when this node corresponds to cycle, i.e. [cycleOccurred] != 0
          */
         val cycleLocationsHash: Int,
-        private var transitions: MutableMap<Int, InterleavingSequenceSetNode>? = null
+        private var transitions: TIntObjectMap<InterleavingSequenceSetNode>? = null
     ) {
 
         fun transition(threadId: Int): InterleavingSequenceSetNode? = transitions?.get(threadId)
@@ -229,7 +286,7 @@ internal class InterleavingSequenceTrackableSet {
                 it[threadId] = node
                 return
             }
-            transitions = mutableMapOf(threadId to node)
+            transitions = TIntObjectHashMap<InterleavingSequenceSetNode>().also { it[threadId] = node }
         }
 
         /**
@@ -270,10 +327,10 @@ internal class InterleavingSequenceTrackableSet {
                     cycleOccurred = firstNewNode.cycleOccurred
 
                     val (newChainRoot, newChainLeaf) = wrapChain(newChain, startIndex + 1)
-                    transitions = mutableMapOf(
-                        threadId to nextNode,
-                        newChainRoot.threadId to newChainRoot
-                    )
+                    transitions = TIntObjectHashMap<InterleavingSequenceSetNode>().also {
+                        it[threadId] = nextNode
+                        it[newChainRoot.threadId] = newChainRoot
+                    }
                     cursor.setTo(newChainLeaf)
                 }
             }

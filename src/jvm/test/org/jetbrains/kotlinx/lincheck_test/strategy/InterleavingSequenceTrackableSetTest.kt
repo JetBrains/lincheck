@@ -12,9 +12,11 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy
 
+import gnu.trove.list.TIntList
 import org.jetbrains.kotlinx.lincheck.strategy.managed.InterleavingSequenceTrackableSet
 import org.jetbrains.kotlinx.lincheck.strategy.managed.InterleavingHistoryNode
 import org.jetbrains.kotlinx.lincheck.strategy.managed.findMaxPrefixLengthWithNoCycleOnSuffix
+import org.jetbrains.kotlinx.lincheck.toTIntList
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -359,6 +361,10 @@ class InterleavingSequenceTrackableSetTest {
 
 }
 
+/**
+ * This test checks both specializations of [findMaxPrefixLengthWithNoCycleOnSuffix] functions:
+ * for [TIntList] and the generic one
+ */
 class CycleDetectionTests {
 
     @Test
@@ -418,8 +424,11 @@ class CycleDetectionTests {
     }
 
     private fun assertPrefixAndFistCycleOccurrence(elements: List<Int>, expected: List<Int>) {
-        val cycleLength = findMaxPrefixLengthWithNoCycleOnSuffix(elements)!!
-        val actualCycle = elements.take(cycleLength.cyclePeriod + cycleLength.executionsBeforeCycle)
+        val cycleLengthGeneric = findMaxPrefixLengthWithNoCycleOnSuffix(elements)!!
+        val cycleLengthInt = findMaxPrefixLengthWithNoCycleOnSuffix(elements.toTIntList())
+
+        assertEquals("Generic function results doesn't match int specialized version", cycleLengthGeneric, cycleLengthInt)
+        val actualCycle = elements.take(cycleLengthGeneric.cyclePeriod + cycleLengthGeneric.executionsBeforeCycle)
 
         assertEquals(expected, actualCycle)
     }
