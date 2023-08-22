@@ -10,6 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck;
 
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.jetbrains.kotlinx.lincheck.annotations.*;
 import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.paramgen.*;
@@ -49,13 +51,13 @@ public class CTestStructure {
      * Constructs {@link CTestStructure} for the specified test class.
      */
     public static CTestStructure getFromTestClass(Class<?> testClass) {
-        Map<String, OperationGroup> groupConfigs = new HashMap<>();
-        List<ActorGenerator> actorGenerators = new ArrayList<>();
-        List<Method> validationFunctions = new ArrayList<>();
-        List<Method> stateRepresentations = new ArrayList<>();
+        Map<String, OperationGroup> groupConfigs = new Object2ObjectOpenHashMap<>();
+        List<ActorGenerator> actorGenerators = new ObjectArrayList<>();
+        List<Method> validationFunctions = new ObjectArrayList<>();
+        List<Method> stateRepresentations = new ObjectArrayList<>();
         Class<?> clazz = testClass;
         RandomProvider randomProvider = new RandomProvider();
-        Map<Class<?>, ParameterGenerator<?>> parameterGeneratorsMap = new HashMap<>();
+        Map<Class<?>, ParameterGenerator<?>> parameterGeneratorsMap = new Object2ObjectOpenHashMap<>();
 
         while (clazz != null) {
             readTestStructureFromClass(clazz, groupConfigs, actorGenerators, parameterGeneratorsMap, validationFunctions, stateRepresentations, randomProvider);
@@ -70,9 +72,9 @@ public class CTestStructure {
         if (!stateRepresentations.isEmpty())
             stateRepresentation = stateRepresentations.get(0);
         // Create StressCTest class configuration
-        List<ParameterGenerator<?>> parameterGenerators = new ArrayList<>(parameterGeneratorsMap.values());
+        List<ParameterGenerator<?>> parameterGenerators = new ObjectArrayList<>(parameterGeneratorsMap.values());
 
-        return new CTestStructure(actorGenerators, parameterGenerators, new ArrayList<>(groupConfigs.values()), validationFunctions, stateRepresentation, randomProvider);
+        return new CTestStructure(actorGenerators, parameterGenerators, new ObjectArrayList<>(groupConfigs.values()), validationFunctions, stateRepresentation, randomProvider);
     }
 
     private static void readTestStructureFromClass(
@@ -104,7 +106,7 @@ public class CTestStructure {
                     throw new IllegalArgumentException("Invalid count of parameter generators for " + m);
                 }
                 // Construct a list of parameter generators
-                final List<ParameterGenerator<?>> gens = new ArrayList<>();
+                final List<ParameterGenerator<?>> gens = new ObjectArrayList<>();
                 int nParameters = m.getParameterCount() - (isSuspendableMethod ? 1 : 0);
                 for (int i = 0; i < nParameters; i++) {
                     String nameInOperation = opAnn.params().length > 0 ? opAnn.params()[i] : null;
@@ -148,7 +150,7 @@ public class CTestStructure {
     }
 
     private static Map<String, ParameterGenerator<?>> createNamedGens(Class<?> clazz, RandomProvider randomProvider) {
-        Map<String, ParameterGenerator<?>> namedGens = new HashMap<>();
+        Map<String, ParameterGenerator<?>> namedGens = new Object2ObjectOpenHashMap<>();
         // Traverse all operations to determine named EnumGens types
         // or throw if one named enum gen is associated with many types
         Map<String, Class<? extends Enum<?>>> enumGeneratorNameToClassMap = collectNamedEnumGeneratorToClassMap(clazz);
@@ -181,7 +183,7 @@ public class CTestStructure {
      *                               which violates the uniqueness principle of enum generator to enum class mapping.
      */
     private static Map<String, Class<? extends Enum<?>>> collectNamedEnumGeneratorToClassMap(Class<?> clazz) {
-        Map<String, Class<? extends Enum<?>>> enumGeneratorNameToClassMap = new HashMap<>();
+        Map<String, Class<? extends Enum<?>>> enumGeneratorNameToClassMap = new Object2ObjectOpenHashMap<>();
 
         Arrays.stream(clazz.getDeclaredMethods()) // get all methods of the class
                 .filter(method -> method.isAnnotationPresent(Operation.class)) // take methods, annotated as @Operation
@@ -281,7 +283,7 @@ public class CTestStructure {
     }
 
     private static Map<Class<?>, ParameterGenerator<?>> createDefaultGenerators(RandomProvider randomProvider) {
-        Map<Class<?>, ParameterGenerator<?>> defaultGens = new HashMap<>();
+        Map<Class<?>, ParameterGenerator<?>> defaultGens = new Object2ObjectOpenHashMap<>();
         defaultGens.put(boolean.class, new BooleanGen(randomProvider, ""));
         defaultGens.put(Boolean.class, defaultGens.get(boolean.class));
         defaultGens.put(byte.class, new ByteGen(randomProvider, ""));
@@ -313,7 +315,7 @@ public class CTestStructure {
         public OperationGroup(String name, boolean nonParallel) {
             this.name = name;
             this.nonParallel = nonParallel;
-            this.actors = new ArrayList<>();
+            this.actors = new ObjectArrayList<>();
         }
 
         @Override

@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.runner;
 
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import kotlin.coroutines.Continuation;
 import org.jetbrains.kotlinx.lincheck.*;
 import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner.*;
@@ -19,7 +20,6 @@ import org.objectweb.asm.commons.Method;
 import org.objectweb.asm.commons.TryCatchBlockSorter;
 import org.objectweb.asm.util.CheckClassAdapter;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import static org.objectweb.asm.Opcodes.*;
@@ -95,7 +95,7 @@ public class TestThreadExecutionGenerator {
     ) {
         String className = TestThreadExecution.class.getCanonicalName() + generatedClassNumber++;
         String internalClassName = className.replace('.', '/');
-        List<Object> objArgs = new ArrayList<>();
+        List<Object> objArgs = new ObjectArrayList<>();
         Class<? extends TestThreadExecution> clz = runner.getClassLoader().defineClass(className,
                 generateClass(internalClassName, getType(runner.getTestClass()), iThread, actors, objArgs, completions, scenarioContainsSuspendableActors));
         try {

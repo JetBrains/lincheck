@@ -16,6 +16,7 @@ plugins {
     kotlin("multiplatform")
     id("maven-publish")
     id("kotlinx.team.infra") version "0.3.0-dev-64"
+    id("com.github.johnrengelman.shadow") version "7.1.2"
 }
 
 repositories {
@@ -44,6 +45,8 @@ kotlin {
             val kotlinxCoroutinesVersion: String by project
             val asmVersion: String by project
             val reflectionsVersion: String by project
+            val fastUtilVersion: String by project
+
             dependencies {
                 api("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
                 api("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion")
@@ -52,6 +55,7 @@ kotlin {
                 api("org.ow2.asm:asm-commons:$asmVersion")
                 api("org.ow2.asm:asm-util:$asmVersion")
                 api("org.reflections:reflections:$reflectionsVersion")
+                api("it.unimi.dsi:fastutil:$fastUtilVersion")
             }
         }
 
@@ -73,6 +77,10 @@ kotlin {
 java {
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
+}
+
+tasks.shadowJar {
+    relocate("it.unimi.dsi.fastutil", "org.jetbrains.kotlinx.lincheck.collections")
 }
 
 sourceSets.main {

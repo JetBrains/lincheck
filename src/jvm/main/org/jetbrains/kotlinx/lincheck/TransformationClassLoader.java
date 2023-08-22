@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck;
 
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.jetbrains.kotlinx.lincheck.runner.*;
 import org.jetbrains.kotlinx.lincheck.strategy.*;
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*;
@@ -43,7 +44,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
     private final Remapper remapper;
 
     public TransformationClassLoader(Strategy strategy, Runner runner) {
-        classTransformers = new ArrayList<>();
+        classTransformers = new ObjectArrayList<>();
         // Apply the strategy's transformer at first, then the runner's one.
         if (strategy.needsTransformation()) classTransformers.add(strategy::createTransformer);
         if (runner.needsTransformation()) classTransformers.add(runner::createTransformer);

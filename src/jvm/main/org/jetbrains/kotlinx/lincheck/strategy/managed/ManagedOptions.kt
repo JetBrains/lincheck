@@ -15,7 +15,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.Companion.DEFAULT_GUARANTEES
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.Companion.DEFAULT_HANGING_DETECTION_THRESHOLD
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.Companion.DEFAULT_INVOCATIONS
-import java.util.*
 
 /**
  * Common options for all managed strategies.
@@ -24,7 +23,7 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
     protected var invocationsPerIteration = DEFAULT_INVOCATIONS
     protected var checkObstructionFreedom = DEFAULT_CHECK_OBSTRUCTION_FREEDOM
     protected var hangingDetectionThreshold = DEFAULT_HANGING_DETECTION_THRESHOLD
-    protected val guarantees: MutableList<ManagedStrategyGuarantee> = ArrayList(DEFAULT_GUARANTEES)
+    protected val guarantees: MutableList<ManagedStrategyGuarantee> = MutableObjectList(DEFAULT_GUARANTEES)
     protected var eliminateLocalObjects: Boolean = DEFAULT_ELIMINATE_LOCAL_OBJECTS
 
     /**
