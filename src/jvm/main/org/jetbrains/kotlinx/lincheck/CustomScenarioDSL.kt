@@ -52,7 +52,7 @@ internal fun actor(f: KFunction<*>, vararg args: Any?, cancelOnSuspension: Boole
 }
 
 @ScenarioDSLMarker
-class DSLThreadScenario : ArrayList<Actor>() {
+class DSLThreadScenario : MutableObjectList<Actor>() {
     /**
      * An actor to be executed
      */
@@ -62,7 +62,7 @@ class DSLThreadScenario : ArrayList<Actor>() {
 }
 
 @ScenarioDSLMarker
-class DSLParallelScenario : ArrayList<DSLThreadScenario>() {
+class DSLParallelScenario : MutableObjectList<DSLThreadScenario>() {
     /**
      * Define a sequence of actors to be executed in a separate thread
      */
@@ -73,9 +73,9 @@ class DSLParallelScenario : ArrayList<DSLThreadScenario>() {
 
 @ScenarioDSLMarker
 class DSLScenarioBuilder {
-    private val initial = mutableListOf<Actor>()
-    private var parallel = mutableListOf<MutableList<Actor>>()
-    private val post = mutableListOf<Actor>()
+    private val initial = mutableObjectListOf<Actor>()
+    private var parallel = mutableObjectListOf<MutableList<Actor>>()
+    private val post = mutableObjectListOf<Actor>()
     private var initialSpecified = false
     private var parallelSpecified = false
     private var postSpecified = false

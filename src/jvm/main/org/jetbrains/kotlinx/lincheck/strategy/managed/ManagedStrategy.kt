@@ -19,7 +19,6 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.objectweb.asm.*
 import java.io.*
 import java.lang.reflect.*
-import java.util.*
 import kotlin.collections.set
 
 /**
@@ -82,18 +81,18 @@ abstract class ManagedStrategy(
     private val collectStateRepresentation get() = collectTrace && stateRepresentationFunction != null
     // Trace point constructors, where `tracePointConstructors[id]`
     // stores a constructor for the corresponding code location.
-    private val tracePointConstructors: MutableList<TracePointConstructor> = ArrayList()
+    private val tracePointConstructors: MutableList<TracePointConstructor> = MutableObjectList()
     // Collector of all events in the execution such as thread switches.
     private var traceCollector: TraceCollector? = null // null when `collectTrace` is false
     // Stores the currently executing methods call stack for each thread.
-    private val callStackTrace = Array(nThreads) { mutableListOf<CallStackTraceElement>() }
+    private val callStackTrace = Array(nThreads) { mutableObjectListOf<CallStackTraceElement>() }
     // Stores the global number of method calls.
     private var methodCallNumber = 0
     // In case of suspension, the call stack of the corresponding `suspend`
     // methods is stored here, so that the same method call identifiers are
     // used on resumption, and the trace point before and after the suspension
     // correspond to the same method call in the trace.
-    private val suspendedFunctionsStack = Array(nThreads) { mutableListOf<Int>() }
+    private val suspendedFunctionsStack = Array(nThreads) { mutableIntListOf() }
     // Current execution part
     protected lateinit var executionPart: ExecutionPart
 
@@ -775,7 +774,7 @@ abstract class ManagedStrategy(
      * Logs thread events such as thread switches and passed code locations.
      */
     private inner class TraceCollector {
-        private val _trace = mutableListOf<TracePoint>()
+        private val _trace = mutableObjectListOf<TracePoint>()
         val trace: List<TracePoint> = _trace
 
         fun newSwitch(iThread: Int, reason: SwitchReason) {
@@ -853,17 +852,17 @@ abstract class ManagedStrategy(
         /**
          * Map, which helps us to determine how many times current thread visits some code location.
          */
-        private val currentThreadCodeLocationVisitCountMap = mutableMapOf<Int, Int>()
+        private val currentThreadCodeLocationVisitCountMap = mutableIntToIntMapOf()
 
         /**
          * Is used to find a cycle period inside exact thread execution if it has hung
          */
-        private val currentThreadCodeLocationsHistory = mutableListOf<Int>()
+        private val currentThreadCodeLocationsHistory = mutableIntListOf()
 
         /**
          *  Threads switches and executions history to store sequences lead to loops
          */
-        private val currentInterleavingHistory = ArrayList<InterleavingHistoryNode>()
+        private val currentInterleavingHistory = MutableObjectList<InterleavingHistoryNode>()
 
         /**
          * When we're back to some thread, newSwitchPoint won't be called before the first event in the current
@@ -1149,7 +1148,7 @@ abstract class ManagedStrategy(
          * [onNextExecution] won't be called before the first execution,
          * so we have to start [executionsPerformedInCurrentThread] from 1.
          */
-        private val threadsRan = hashSetOf<Int>()
+        private val threadsRan = mutableIntSetOf()
 
         fun initialize() {
             currentInterleavingNodeIndex = 0
@@ -1275,7 +1274,7 @@ private class ManagedStrategyRunner(
 private class MonitorTracker(nThreads: Int) {
     // Maintains a set of acquired monitors with an information on which thread
     // performed the acquisition and the reentrancy depth.
-    private val acquiredMonitors = IdentityHashMap<Any, MonitorAcquiringInfo>()
+    private val acquiredMonitors = ObjectToObjectIdentityHashMap<Any, MonitorAcquiringInfo>()
     // Maintains a set of monitors on which each thread is waiting.
     // Note, that a thread can wait on a free monitor if it is waiting for a `notify` call.
     // Stores `null` if thread is not waiting on any monitor.
@@ -1290,7 +1289,7 @@ private class MonitorTracker(nThreads: Int) {
     fun acquireMonitor(iThread: Int, monitor: Any): Boolean {
         // Increment the reentrant depth and store the
         // acquisition info if needed.
-        val info = acquiredMonitors.computeIfAbsent(monitor) {
+        val info = acquiredMonitors.getOrComputeIfAbsent(monitor) {
             MonitorAcquiringInfo(monitor, iThread, 0)
         }
         if (info.iThread != iThread) {

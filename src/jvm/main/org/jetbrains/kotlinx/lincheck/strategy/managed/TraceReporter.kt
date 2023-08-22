@@ -13,7 +13,6 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.DeadlockWithDumpFailure
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
-import java.util.*
 import kotlin.math.*
 
 @Synchronized // we should avoid concurrent executions to keep `objectNumeration` consistent
@@ -75,7 +74,7 @@ private fun StringBuilder.appendTraceRepresentation(
  * Convert trace events to the final form of a matrix of strings.
  */
 private fun splitToColumns(nThreads: Int, traceRepresentation: List<TraceEventRepresentation>): List<List<String>> {
-    val result = List(nThreads) { mutableListOf<String>() }
+    val result = List(nThreads) { mutableObjectListOf<String>() }
     for (event in traceRepresentation) {
         val columnId = event.iThread
         // write message in an appropriate column
@@ -110,9 +109,9 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
         Array<ActorNode?>(scenario.threads[i].size) { null }
     }
     // call nodes for each method call
-    val callNodes = mutableMapOf<Int, CallNode>()
+    val callNodes = mutableIntToObjectMapOf<CallNode>()
     // all trace nodes in order corresponding to `tracePoints`
-    val traceGraphNodes = mutableListOf<TraceNode>()
+    val traceGraphNodes = mutableObjectListOf<TraceNode>()
 
     for (eventId in tracePoints.indices) {
         val event = tracePoints[eventId]
@@ -140,7 +139,7 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
             val callId = call.identifier
             // Switch events that happen as a first event of the method are lifted out of the method in the trace
             if (!callNodes.containsKey(callId) && event is SwitchEventTracePoint) break
-            val callNode = callNodes.computeIfAbsent(callId) {
+            val callNode = callNodes.getOrComputeIfAbsent(callId) {
                 // create a new call node if needed
                 val result = traceGraphNodes.createAndAppend { lastNode ->
                     CallNode(iThread, lastNode, innerNode.callDepth + 1, call.call)
@@ -205,7 +204,7 @@ private fun traceGraphToRepresentationList(
     verboseTrace: Boolean
 ): List<TraceEventRepresentation> {
     var curNode: TraceNode? = startNode
-    val traceRepresentation = mutableListOf<TraceEventRepresentation>()
+    val traceRepresentation = mutableObjectListOf<TraceEventRepresentation>()
     while (curNode != null) {
         curNode = curNode.addRepresentationTo(traceRepresentation, verboseTrace)
     }
@@ -291,7 +290,7 @@ private abstract class TraceInnerNode(iThread: Int, last: TraceNode?, callDepth:
             it.shouldBeExpanded(verboseTrace)
         }
 
-    private val internalEvents = mutableListOf<TraceNode>()
+    private val internalEvents = mutableObjectListOf<TraceNode>()
 
     fun addInternalEvent(node: TraceNode) {
         internalEvents.add(node)
@@ -376,10 +375,10 @@ private class TraceEventRepresentation(val iThread: Int, val representation: Str
 
 // Should be called only during `appendTrace` invocation
 internal fun getObjectNumber(clazz: Class<Any>, obj: Any): Int = objectNumeration
-    .computeIfAbsent(clazz) { IdentityHashMap() }
-    .computeIfAbsent(obj) { 1 + objectNumeration[clazz]!!.size }
+    .computeIfAbsent(clazz) { ObjectToObjectIdentityHashMap() }
+    .getOrComputeIfAbsent(obj) { 1 + objectNumeration[clazz]!!.size }
 
-private val objectNumeration = WeakHashMap<Class<Any>, MutableMap<Any, Int>>()
+private val objectNumeration = ObjectToObjectWeakHashMap<Class<Any>, ObjectToObjectIdentityHashMap<Any, Int>>()
 
 const val TRACE_TITLE = "The following interleaving leads to the error:"
 const val DETAILED_TRACE_TITLE = "Detailed trace:"

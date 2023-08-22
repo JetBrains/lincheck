@@ -10,12 +10,12 @@
 
 package org.jetbrains.kotlinx.lincheck.execution;
 
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.jetbrains.kotlinx.lincheck.Actor;
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration;
 import org.jetbrains.kotlinx.lincheck.CTestStructure;
 import org.jetbrains.kotlinx.lincheck.RandomProvider;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -35,7 +35,7 @@ public class RandomExecutionGenerator extends ExecutionGenerator {
         // Create init execution part
         List<ActorGenerator> validActorGeneratorsForInit = testStructure.actorGenerators.stream()
             .filter(ag -> !ag.getUseOnce() && !ag.isSuspendable()).collect(Collectors.toList());
-        List<Actor> initExecution = new ArrayList<>();
+        List<Actor> initExecution = new ObjectArrayList<>();
         for (int i = 0; i < testConfiguration.getActorsBefore() && !validActorGeneratorsForInit.isEmpty(); i++) {
             ActorGenerator ag = validActorGeneratorsForInit.get(random.nextInt(validActorGeneratorsForInit.size()));
             initExecution.add(ag.generate(0, random));
@@ -46,20 +46,20 @@ public class RandomExecutionGenerator extends ExecutionGenerator {
             .filter(g -> g.nonParallel)
             .collect(Collectors.toList());
         Collections.shuffle(nonParallelGroups, random);
-        List<ActorGenerator> parallelGroup = new ArrayList<>(testStructure.actorGenerators);
+        List<ActorGenerator> parallelGroup = new ObjectArrayList<>(testStructure.actorGenerators);
         nonParallelGroups.forEach(g -> parallelGroup.removeAll(g.actors));
 
-        List<List<Actor>> parallelExecution = new ArrayList<>();
-        List<ThreadGen> threadGens = new ArrayList<>();
+        List<List<Actor>> parallelExecution = new ObjectArrayList<>();
+        List<ThreadGen> threadGens = new ObjectArrayList<>();
         for (int t = 0; t < testConfiguration.getThreads(); t++) {
-            parallelExecution.add(new ArrayList<>());
+            parallelExecution.add(new ObjectArrayList<>());
             threadGens.add(new ThreadGen(t, testConfiguration.getActorsPerThread()));
         }
         for (int i = 0; i < nonParallelGroups.size(); i++) {
             threadGens.get(i % threadGens.size()).nonParallelActorGenerators
                 .addAll(nonParallelGroups.get(i).actors);
         }
-        List<ThreadGen> tgs2 = new ArrayList<>(threadGens);
+        List<ThreadGen> tgs2 = new ObjectArrayList<>(threadGens);
         while (!threadGens.isEmpty()) {
             for (Iterator<ThreadGen> it = threadGens.iterator(); it.hasNext(); ) {
                 ThreadGen threadGen = it.next();
@@ -85,8 +85,8 @@ public class RandomExecutionGenerator extends ExecutionGenerator {
         // Create post execution part if the parallel part does not have suspendable actors
         List<Actor> postExecution;
         if (parallelExecution.stream().noneMatch(actors -> actors.stream().anyMatch(Actor::isSuspendable))) {
-            postExecution = new ArrayList<>();
-            List<ActorGenerator> leftActorGenerators = new ArrayList<>(parallelGroup);
+            postExecution = new ObjectArrayList<>();
+            List<ActorGenerator> leftActorGenerators = new ObjectArrayList<>(parallelGroup);
             for (ThreadGen threadGen : tgs2)
                 leftActorGenerators.addAll(threadGen.nonParallelActorGenerators);
             for (int i = 0; i < testConfiguration.getActorsAfter() && !leftActorGenerators.isEmpty(); i++) {
@@ -107,7 +107,7 @@ public class RandomExecutionGenerator extends ExecutionGenerator {
     }
 
     private static class ThreadGen {
-        final List<ActorGenerator> nonParallelActorGenerators = new ArrayList<>();
+        final List<ActorGenerator> nonParallelActorGenerators = new ObjectArrayList<>();
         int iThread;
         int left;
 

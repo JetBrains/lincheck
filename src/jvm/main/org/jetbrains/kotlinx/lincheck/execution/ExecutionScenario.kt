@@ -124,9 +124,9 @@ fun ExecutionScenario.validate() {
  * Creates a copy of the scenario.
  */
 fun ExecutionScenario.copy() = ExecutionScenario(
-    ArrayList(initExecution),
-    parallelExecution.map { ArrayList(it) },
-    ArrayList(postExecution)
+    MutableObjectList(initExecution),
+    parallelExecution.map { MutableObjectList(it) },
+    MutableObjectList(postExecution)
 )
 
 /**

@@ -50,7 +50,7 @@ class LTS(sequentialSpecification: Class<*>) {
      * Cache with all LTS states in order to reuse the equivalent ones.
      * Equivalency relation among LTS states is defined by the [StateInfo] class.
      */
-    private val stateInfos = HashMap<StateInfo, StateInfo>()
+    private val stateInfos = MutableObjectToObjectMap<StateInfo, StateInfo>()
 
     val initialState: State = createInitialState()
 
@@ -60,9 +60,9 @@ class LTS(sequentialSpecification: Class<*>) {
      * by the corresponding [next] requests ([nextByRequest] and [nextByFollowUp] respectively).
      */
     inner class State(val seqToCreate: List<Operation>) {
-        internal val transitionsByRequests by lazy { mutableMapOf<Actor, TransitionInfo>() }
-        internal val transitionsByFollowUps by lazy { mutableMapOf<Int, TransitionInfo>() }
-        internal val transitionsByCancellations by lazy { mutableMapOf<Int, TransitionInfo>() }
+        internal val transitionsByRequests by lazy { mutableObjectToObjectMapOf<Actor, TransitionInfo>() }
+        internal val transitionsByFollowUps by lazy { mutableIntToObjectMapOf<TransitionInfo>() }
+        internal val transitionsByCancellations by lazy { mutableIntToObjectMapOf<TransitionInfo>() }
         private val atomicallySuspendedAndCancelledTransition: TransitionInfo by lazy {
             createAtomicallySuspendedAndCancelledTransition()
         }
@@ -81,7 +81,7 @@ class LTS(sequentialSpecification: Class<*>) {
 
         private fun nextByRequest(actor: Actor, expectedResult: Result): TransitionInfo? {
             // Compute the transition following the sequential specification.
-            val transitionInfo = transitionsByRequests.computeIfAbsent(actor) { a ->
+            val transitionInfo = transitionsByRequests.getOrComputeIfAbsent(actor) { a ->
                 copyAndApply { instance, suspendedOperations, resumedTicketsWithResults, continuationsMap ->
                     val ticket = findFirstAvailableTicket(suspendedOperations, resumedTicketsWithResults)
                     val op = Operation(a, ticket, REQUEST)
@@ -99,7 +99,7 @@ class LTS(sequentialSpecification: Class<*>) {
         }
 
         private fun nextByFollowUp(actor: Actor, ticket: Int, expectedResult: Result): TransitionInfo? {
-            val transitionInfo = transitionsByFollowUps.computeIfAbsent(ticket) {
+            val transitionInfo = transitionsByFollowUps.getOrComputeIfAbsent(ticket) {
                 copyAndApply { instance, suspendedOperations, resumedTicketsWithResults, continuationsMap ->
                     // Invoke the given operation to count the next transition.
                     val op = Operation(actor, ticket, FOLLOW_UP)
@@ -113,7 +113,7 @@ class LTS(sequentialSpecification: Class<*>) {
             return if (expectedResult.isLegalByFollowUp(transitionInfo, actor.allowExtraSuspension)) transitionInfo else null
         }
 
-        fun nextByCancellation(actor: Actor, ticket: Int): TransitionInfo = transitionsByCancellations.computeIfAbsent(ticket) {
+        fun nextByCancellation(actor: Actor, ticket: Int): TransitionInfo = transitionsByCancellations.getOrComputeIfAbsent(ticket) {
             copyAndApply { instance, suspendedOperations, resumedTicketsWithResults, continuationsMap ->
                 // Invoke the given operation to count the next transition.
                 val op = Operation(actor, ticket, CANCELLATION)
@@ -148,9 +148,9 @@ class LTS(sequentialSpecification: Class<*>) {
         ): T {
             // Copy the state by sequentially applying operations from seqToCreate.
             val instance = createInitialStateInstance()
-            val suspendedOperations = mutableListOf<Operation>()
+            val suspendedOperations = mutableObjectListOf<Operation>()
             val resumedTicketsWithResults = mutableMapOf<Int, ResumedResult>()
-            val continuationsMap = mutableMapOf<Operation, CancellableContinuation<*>>()
+            val continuationsMap = mutableObjectToObjectMapOf<Operation, CancellableContinuation<*>>()
             try {
                 seqToCreate.forEach { it.invoke(instance, suspendedOperations, resumedTicketsWithResults, continuationsMap) }
             } catch (e: Exception) {
@@ -179,7 +179,7 @@ class LTS(sequentialSpecification: Class<*>) {
         }
 
         private fun getResumedOperations(resumedTicketsWithResults: Map<Int, ResumedResult>): List<ResumptionInfo> {
-            val resumedOperations = mutableListOf<ResumptionInfo>()
+            val resumedOperations = mutableObjectListOf<ResumptionInfo>()
             resumedTicketsWithResults.forEach { resumedTicket, res ->
                 resumedOperations.add(ResumptionInfo(res.resumedActor, res.by, resumedTicket))
             }
@@ -299,12 +299,12 @@ class LTS(sequentialSpecification: Class<*>) {
         val builder = StringBuilder()
         builder.appendln("digraph {")
         builder.appendln("\"${initialState.hashCode()}\" [style=filled, fillcolor=green]")
-        builder.appendTransitions(initialState, IdentityHashMap())
+        builder.appendTransitions(initialState, ObjectToObjectIdentityHashMap())
         builder.appendln("}")
         return builder.toString()
     }
 
-    private fun StringBuilder.appendTransitions(state: State, visitedStates: IdentityHashMap<State, Unit>) {
+    private fun StringBuilder.appendTransitions(state: State, visitedStates: ObjectToObjectIdentityHashMap<State, Unit>) {
         state.transitionsByRequests.forEach { actor, transition ->
             appendln("${state.hashCode()} -> ${transition.nextState.hashCode()} [ label=\"<R,$actor:${transition.result},${transition.ticket}>, rf=${transition.rf?.contentToString()}\" ]")
             if (visitedStates.put(transition.nextState, Unit) === null) appendTransitions(transition.nextState, visitedStates)

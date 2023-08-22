@@ -28,7 +28,7 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     protected var minimizeFailedScenario = CTestConfiguration.DEFAULT_MINIMIZE_ERROR
     protected var sequentialSpecification: Class<*>? = null
     protected var timeoutMs: Long = CTestConfiguration.DEFAULT_TIMEOUT_MS
-    protected var customScenarios: MutableList<ExecutionScenario> = mutableListOf()
+    protected var customScenarios: MutableList<ExecutionScenario> = mutableObjectListOf()
 
     /**
      * Number of different test scenarios to be executed
