@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
+import org.jetbrains.kotlinx.lincheck.NO_METHOD_MARKED_AS_OPERATION_MESSAGE
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.junit.Assert.assertEquals
@@ -25,10 +26,7 @@ class NoOperationsDefinedTest {
     @Test
     fun test() {
         val exception = assertThrows(IllegalArgumentException::class.java) { ModelCheckingOptions().check(this::class) }
-        assertEquals(
-            "At least one method in a tested class should be marked as @Operation to make random scenarios generation possible. Please see official guide for more details.",
-            exception.message
-        )
+        assertEquals(NO_METHOD_MARKED_AS_OPERATION_MESSAGE, exception.message)
     }
 
 }
