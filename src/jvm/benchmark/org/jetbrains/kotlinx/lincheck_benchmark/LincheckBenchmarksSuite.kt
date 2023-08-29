@@ -13,6 +13,7 @@ package org.jetbrains.kotlinx.lincheck_benchmark
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToStream
 import java.io.File
+import org.junit.Before
 import org.junit.AfterClass
 import org.junit.runner.RunWith
 import org.junit.runners.Suite
@@ -25,6 +26,11 @@ import org.junit.runners.Suite
     ConcurrentDequeBenchmark::class,
 )
 class LincheckBenchmarksSuite {
+
+    @Before
+    fun setUp() {
+        System.gc()
+    }
 
     companion object {
         @AfterClass

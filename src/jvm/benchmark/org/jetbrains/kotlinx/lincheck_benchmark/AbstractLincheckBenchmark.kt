@@ -52,7 +52,7 @@ abstract class AbstractLincheckBenchmark(
 
     private fun LincheckOptionsImpl.configure() {
         maxThreads = 4
-        maxOperationsInThread = 2
+        maxOperationsInThread = 3
         minimizeFailedScenario = false
         iterations = 30
         invocationsPerIteration = 5000
