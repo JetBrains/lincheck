@@ -49,6 +49,10 @@ class BenchmarksReport:
     def benchmark_mode(self, benchmark_id: int):
         return self._data[str(benchmark_id)]["mode"]
 
+    def benchmark_id(self, name: str, mode: str):
+        return next(benchmark["id"] for benchmark in self._data.values()
+                    if benchmark["name"] == name + "Benchmark" and benchmark["mode"] == mode)
+
     def benchmark_scenarios_stats(self, benchmark_id: int):
         return self._data[str(benchmark_id)]["scenariosStatistics"]
 
@@ -85,7 +89,7 @@ class BenchmarksReport:
             runtime = np.sum(list(map(itemgetter("runningTimeNano"), iterations)))
             invocations = np.sum(list(map(itemgetter("invocationsCount"), iterations)))
             avg_runtime = as_time_unit(float(runtime) / invocations, unit)
-            result.append((params, avg_runtime))
+            result.append({"params": params, "avg_runtime": avg_runtime})
         return result
 
 
@@ -96,9 +100,8 @@ def runtime_plot(ax: plt.Axes, report: BenchmarksReport):
     max_runtime = max(report.benchmarks_runtime(unit=time_unit).values())
     x = np.arange(len(report.benchmarks_names()))
     for mode in report.benchmarks_modes():
-        offset = width * multiplier
         data = report.benchmarks_runtime_with_mode(mode=mode, unit=time_unit).values()
-        ax.bar(x + offset, data, width=width, label=mode)
+        ax.bar(x + width * multiplier, data, width=width, label=mode)
         multiplier += 1
     ax.set_title("Benchmarks running time")
     ax.set_ylabel("time (s)")
@@ -107,18 +110,32 @@ def runtime_plot(ax: plt.Axes, report: BenchmarksReport):
     ax.legend(loc="upper left", bbox_to_anchor=(1, 1), ncol=1)
 
 
-def scenarios_average_runtime_plot(ax: plt.Axes, report: BenchmarksReport, benchmark_id: int):
+def scenarios_average_runtime_plot(ax: plt.Axes, report: BenchmarksReport, benchmark_name: str):
     width = 0.25
-    data = report.benchmark_average_runtime_by_scenario_params(benchmark_id, unit=TimeUnit.MILLI)
-    data.sort(key=itemgetter(0))
-    scenario_params = list(map(itemgetter(0), data))
-    runtimes = list(map(itemgetter(1), data))
-    x = np.arange(len(data))
-    ax.bar(x, runtimes, width=width)
-    ax.set_title("Invocation average running time by scenario size")
+    multiplier = 0
+    time_unit = TimeUnit.MILLI
+    x = []
+    params = []
+    for mode in report.benchmarks_modes():
+        benchmark_id = report.benchmark_id(benchmark_name, mode)
+        data = report.benchmark_average_runtime_by_scenario_params(benchmark_id, unit=time_unit)
+        data.sort(key=itemgetter("params"))
+        runtimes = list(map(itemgetter("avg_runtime"), data))
+        x = np.arange(len(data))
+        ax.bar(x + width * multiplier, runtimes, width=width, label=mode)
+        multiplier += 1
+        scenario_params = list(map(itemgetter("params"), data))
+        if not params:
+            params = scenario_params
+        else:
+            assert params == scenario_params
+    ax.set_title(
+        "{}\nInvocation average running time by scenario size".format(benchmark_name)
+    )
     ax.set_ylabel("time (ms)")
     ax.set_xlabel("(#threads, #operations)")
-    ax.set_xticks(x, scenario_params)
+    ax.set_xticks(x, params)
+    ax.legend(loc="upper left", bbox_to_anchor=(1, 1), ncol=1)
 
 
 def round_up_to(n, multiplier):
@@ -129,11 +146,13 @@ def main():
     with open("benchmarks-results.json", 'r') as json_file:
         data = json.load(json_file)
     report = BenchmarksReport(data)
-    fig, ax = plt.subplots(nrows=2, ncols=1)
+    nplots = 1 + len(report.benchmarks_names())
+    fig, ax = plt.subplots(nrows=nplots, ncols=1)
     fig.set_figwidth(6)
-    fig.set_figheight(8)
+    fig.set_figheight(24)
     runtime_plot(ax[0], report)
-    scenarios_average_runtime_plot(ax[1], report, benchmark_id=1)
+    for i, name in enumerate(report.benchmarks_names()):
+        scenarios_average_runtime_plot(ax[i+1], report, benchmark_name=name)
     plt.tight_layout()
     plt.show()
 
