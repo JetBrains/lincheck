@@ -22,34 +22,30 @@ import java.lang.ref.ReferenceQueue
 import java.lang.ref.WeakReference
 import java.util.function.Function
 
-internal typealias MutableIntList = IntArrayList
-internal typealias MutableObjectList<T> = ObjectArrayList<T>
-internal typealias MutableIntToObjectMap<V> = Int2ObjectOpenHashMap<V>
-internal typealias MutableObjectToObjectMap<K, V> = Object2ObjectOpenHashMap<K, V>
-internal typealias MutableIntToIntMap = Int2IntOpenHashMap
-internal typealias MutableIntSet = IntOpenHashSet
+internal fun lincheckIntSetOf(vararg ints: Int): IntOpenHashSet = IntOpenHashSet(ints)
 
-internal fun mutableIntSetOf(vararg ints: Int): MutableIntSet = MutableIntSet(ints)
+internal fun lincheckIntListOf(vararg ints: Int): IntArrayList = IntArrayList(ints)
 
-internal fun mutableIntListOf(vararg ints: Int): MutableIntList = MutableIntList(ints)
+internal fun <T> lincheckListOf(vararg ints: T): ObjectArrayList<T> =
+    ObjectArrayList<T>(ints)
 
-internal fun <T> mutableObjectListOf(vararg ints: T): MutableObjectList<T> = MutableObjectList(ints)
+internal fun <K, V> lincheckMapOf(): Object2ObjectOpenHashMap<K, V> = Object2ObjectOpenHashMap<K, V>()
 
-internal fun <K, V> mutableObjectToObjectMapOf(vararg pairs: Pair<K, V>): MutableObjectToObjectMap<K, V> {
-    val result = MutableObjectToObjectMap<K, V>()
+internal fun <K, V> lincheckMapOf(vararg pairs: Pair<K, V>): Object2ObjectOpenHashMap<K, V> {
+    val result = Object2ObjectOpenHashMap<K, V>()
     pairs.forEach { (key, value) -> result[key] = value }
     return result
 }
 
 
-internal fun <V> mutableIntToObjectMapOf(vararg pairs: Pair<Int, V>): MutableIntToObjectMap<V> {
-    val result = MutableIntToObjectMap<V>()
+internal fun <V> lincheckIntToObjectMapOf(vararg pairs: Pair<Int, V>): Int2ObjectOpenHashMap<V> {
+    val result = Int2ObjectOpenHashMap<V>()
     pairs.forEach { (key, value) -> result[key] = value }
     return result
 }
 
-internal fun mutableIntToIntMapOf(vararg pairs: Pair<Int, Int>): MutableIntToIntMap {
-    val result = MutableIntToIntMap()
+internal fun lincheckIntToIntMapOf(vararg pairs: Pair<Int, Int>): Int2IntOpenHashMap {
+    val result = Int2IntOpenHashMap()
     pairs.forEach { (key, value) -> result[key] = value }
     return result
 }
@@ -60,7 +56,8 @@ internal fun mutableIntToIntMapOf(vararg pairs: Pair<Int, Int>): MutableIntToInt
  * Exists as there is an ambiguity when using [java.util.Map.computeIfAbsent] in Kotlin, because Fastutil
  * library provides [it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap.computeIfAbsent] method with the same name.
  */
-internal fun <K, V> MutableMap<K, V>.getOrComputeIfAbsent(key: K, mappingFunction: Function<K, V>): V = computeIfAbsent(key, mappingFunction)
+internal fun <K, V> MutableMap<K, V>.getOrComputeIfAbsent(key: K, mappingFunction: Function<K, V>): V =
+    computeIfAbsent(key, mappingFunction)
 
 internal class ObjectToObjectIdentityHashMap<K, V> : Object2ObjectOpenCustomHashMap<K, V>(IdentityStrategy<K>())
 
@@ -74,7 +71,7 @@ private class IdentityStrategy<T> : Hash.Strategy<T> {
     }
 }
 
-internal class ObjectToObjectWeakHashMap<K, V: Any> {
+internal class ObjectToObjectWeakHashMap<K, V : Any> {
     private val queue = ReferenceQueue<K>()
     private val internalMap = Object2ObjectOpenHashMap<WeakKey<K>, V>()
 

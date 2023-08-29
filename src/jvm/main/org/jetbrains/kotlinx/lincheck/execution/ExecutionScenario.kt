@@ -9,6 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.execution
 
+import it.unimi.dsi.fastutil.objects.ObjectArrayList
 import org.jetbrains.kotlinx.lincheck.*
 
 /**
@@ -124,9 +125,9 @@ fun ExecutionScenario.validate() {
  * Creates a copy of the scenario.
  */
 fun ExecutionScenario.copy() = ExecutionScenario(
-    MutableObjectList(initExecution),
-    parallelExecution.map { MutableObjectList(it) },
-    MutableObjectList(postExecution)
+    ObjectArrayList(initExecution),
+    parallelExecution.map { ObjectArrayList(it) },
+    ObjectArrayList(postExecution)
 )
 
 /**

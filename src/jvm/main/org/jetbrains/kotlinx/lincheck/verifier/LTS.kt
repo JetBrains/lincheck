@@ -50,7 +50,7 @@ class LTS(sequentialSpecification: Class<*>) {
      * Cache with all LTS states in order to reuse the equivalent ones.
      * Equivalency relation among LTS states is defined by the [StateInfo] class.
      */
-    private val stateInfos = MutableObjectToObjectMap<StateInfo, StateInfo>()
+    private val stateInfos = lincheckMapOf<StateInfo, StateInfo>()
 
     val initialState: State = createInitialState()
 
@@ -60,9 +60,9 @@ class LTS(sequentialSpecification: Class<*>) {
      * by the corresponding [next] requests ([nextByRequest] and [nextByFollowUp] respectively).
      */
     inner class State(val seqToCreate: List<Operation>) {
-        internal val transitionsByRequests by lazy { mutableObjectToObjectMapOf<Actor, TransitionInfo>() }
-        internal val transitionsByFollowUps by lazy { mutableIntToObjectMapOf<TransitionInfo>() }
-        internal val transitionsByCancellations by lazy { mutableIntToObjectMapOf<TransitionInfo>() }
+        internal val transitionsByRequests by lazy { lincheckMapOf<Actor, TransitionInfo>() }
+        internal val transitionsByFollowUps by lazy { lincheckIntToObjectMapOf<TransitionInfo>() }
+        internal val transitionsByCancellations by lazy { lincheckIntToObjectMapOf<TransitionInfo>() }
         private val atomicallySuspendedAndCancelledTransition: TransitionInfo by lazy {
             createAtomicallySuspendedAndCancelledTransition()
         }
@@ -148,9 +148,9 @@ class LTS(sequentialSpecification: Class<*>) {
         ): T {
             // Copy the state by sequentially applying operations from seqToCreate.
             val instance = createInitialStateInstance()
-            val suspendedOperations = mutableObjectListOf<Operation>()
+            val suspendedOperations = lincheckListOf<Operation>()
             val resumedTicketsWithResults = mutableMapOf<Int, ResumedResult>()
-            val continuationsMap = mutableObjectToObjectMapOf<Operation, CancellableContinuation<*>>()
+            val continuationsMap = lincheckMapOf<Operation, CancellableContinuation<*>>()
             try {
                 seqToCreate.forEach { it.invoke(instance, suspendedOperations, resumedTicketsWithResults, continuationsMap) }
             } catch (e: Exception) {
@@ -179,7 +179,7 @@ class LTS(sequentialSpecification: Class<*>) {
         }
 
         private fun getResumedOperations(resumedTicketsWithResults: Map<Int, ResumedResult>): List<ResumptionInfo> {
-            val resumedOperations = mutableObjectListOf<ResumptionInfo>()
+            val resumedOperations = lincheckListOf<ResumptionInfo>()
             resumedTicketsWithResults.forEach { resumedTicket, res ->
                 resumedOperations.add(ResumptionInfo(res.resumedActor, res.by, resumedTicket))
             }
@@ -201,11 +201,11 @@ class LTS(sequentialSpecification: Class<*>) {
             FOLLOW_UP -> {
                 val (cont, suspensionPointRes) = resumedOperations[ticket]!!.contWithSuspensionPointRes
                 val finalRes = (
-                    if (cont == null) suspensionPointRes // Resumed operation has no follow-up.
-                    else {
-                        cont.resumeWith(suspensionPointRes)
-                        resumedOperations[ticket]!!.contWithSuspensionPointRes.second
-                    })
+                        if (cont == null) suspensionPointRes // Resumed operation has no follow-up.
+                        else {
+                            cont.resumeWith(suspensionPointRes)
+                            resumedOperations[ticket]!!.contWithSuspensionPointRes.second
+                        })
                 resumedOperations.remove(ticket)
                 createLincheckResult(finalRes, wasSuspended = true)
             }
@@ -304,7 +304,7 @@ class LTS(sequentialSpecification: Class<*>) {
         return builder.toString()
     }
 
-    private fun StringBuilder.appendTransitions(state: State, visitedStates: ObjectToObjectIdentityHashMap<State, Unit>) {
+    private fun StringBuilder.appendTransitions(state: State, visitedStates: MutableMap<State, Unit>) {
         state.transitionsByRequests.forEach { actor, transition ->
             appendln("${state.hashCode()} -> ${transition.nextState.hashCode()} [ label=\"<R,$actor:${transition.result},${transition.ticket}>, rf=${transition.rf?.contentToString()}\" ]")
             if (visitedStates.put(transition.nextState, Unit) === null) appendTransitions(transition.nextState, visitedStates)

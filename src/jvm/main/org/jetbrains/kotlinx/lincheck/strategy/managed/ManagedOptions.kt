@@ -9,6 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import it.unimi.dsi.fastutil.objects.ObjectArrayList
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.Companion.DEFAULT_CHECK_OBSTRUCTION_FREEDOM
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.Companion.DEFAULT_ELIMINATE_LOCAL_OBJECTS
@@ -23,7 +24,7 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
     protected var invocationsPerIteration = DEFAULT_INVOCATIONS
     protected var checkObstructionFreedom = DEFAULT_CHECK_OBSTRUCTION_FREEDOM
     protected var hangingDetectionThreshold = DEFAULT_HANGING_DETECTION_THRESHOLD
-    protected val guarantees: MutableList<ManagedStrategyGuarantee> = MutableObjectList(DEFAULT_GUARANTEES)
+    protected val guarantees: MutableList<ManagedStrategyGuarantee> = ObjectArrayList(DEFAULT_GUARANTEES)
     protected var eliminateLocalObjects: Boolean = DEFAULT_ELIMINATE_LOCAL_OBJECTS
 
     /**

@@ -321,7 +321,7 @@ internal fun StringBuilder.appendExecutionScenarioWithResults(
             appendSeparatorLine()
         }
     }
-    val hints = mutableObjectListOf<String>()
+    val hints = lincheckListOf<String>()
     if (scenario.initExecution.isNotEmpty() || scenario.postExecution.isNotEmpty()) {
         hints.add(
             """
@@ -487,7 +487,7 @@ private data class ExceptionStackTracesResult(val exceptionStackTraces: Map<Thro
  * if some exception occurred due a bug in Lincheck itself
  */
 private fun collectExceptionStackTraces(executionResult: ExecutionResult): ExceptionsProcessingResult {
-    val exceptionStackTraces = mutableObjectToObjectMapOf<Throwable, ExceptionNumberAndStacktrace>()
+    val exceptionStackTraces = lincheckMapOf<Throwable, ExceptionNumberAndStacktrace>()
 
     (executionResult.initResults.asSequence()
             + executionResult.parallelResults.asSequence().flatten()

@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck
 
+import it.unimi.dsi.fastutil.objects.ObjectArrayList
 import org.jetbrains.kotlinx.lincheck.execution.*
 import java.lang.IllegalStateException
 import kotlin.reflect.KFunction
@@ -52,7 +53,7 @@ internal fun actor(f: KFunction<*>, vararg args: Any?, cancelOnSuspension: Boole
 }
 
 @ScenarioDSLMarker
-class DSLThreadScenario : MutableObjectList<Actor>() {
+class DSLThreadScenario : ObjectArrayList<Actor>() {
     /**
      * An actor to be executed
      */
@@ -62,7 +63,8 @@ class DSLThreadScenario : MutableObjectList<Actor>() {
 }
 
 @ScenarioDSLMarker
-class DSLParallelScenario : MutableObjectList<DSLThreadScenario>() {
+class DSLParallelScenario :
+    ObjectArrayList<DSLThreadScenario>() {
     /**
      * Define a sequence of actors to be executed in a separate thread
      */
@@ -73,9 +75,9 @@ class DSLParallelScenario : MutableObjectList<DSLThreadScenario>() {
 
 @ScenarioDSLMarker
 class DSLScenarioBuilder {
-    private val initial = mutableObjectListOf<Actor>()
-    private var parallel = mutableObjectListOf<MutableList<Actor>>()
-    private val post = mutableObjectListOf<Actor>()
+    private val initial = lincheckListOf<Actor>()
+    private var parallel = lincheckListOf<MutableList<Actor>>()
+    private val post = lincheckListOf<Actor>()
     private var initialSpecified = false
     private var parallelSpecified = false
     private var postSpecified = false

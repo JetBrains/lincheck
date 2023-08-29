@@ -10,7 +10,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.ObjectToObjectIdentityHashMap
-import org.jetbrains.kotlinx.lincheck.mutableObjectListOf
+import org.jetbrains.kotlinx.lincheck.lincheckListOf
 
 /**
  * First of all, the object manager keeps information of locally accessible objects
@@ -35,7 +35,7 @@ internal class ObjectManager(private val testClass: Class<out Any>) {
         // check by name to ignore difference in loaders
         if (o::class.java.name == testClass.name) return
         // add o to list of local object with no dependencies
-        localObjects[o] = mutableObjectListOf()
+        localObjects[o] = lincheckListOf()
     }
 
     fun deleteLocalObject(o: Any?) {

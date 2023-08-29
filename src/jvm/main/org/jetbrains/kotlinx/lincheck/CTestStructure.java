@@ -10,7 +10,6 @@
 
 package org.jetbrains.kotlinx.lincheck;
 
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.jetbrains.kotlinx.lincheck.annotations.*;
 import org.jetbrains.kotlinx.lincheck.execution.*;
@@ -22,6 +21,8 @@ import java.util.*;
 import java.util.stream.*;
 
 import static org.jetbrains.kotlinx.lincheck.ActorKt.*;
+import static org.jetbrains.kotlinx.lincheck.CollectionsUtilsKt.lincheckListOf;
+import static org.jetbrains.kotlinx.lincheck.CollectionsUtilsKt.lincheckMapOf;
 
 /**
  * Contains information about the provided operations (see {@link Operation}).
@@ -51,13 +52,13 @@ public class CTestStructure {
      * Constructs {@link CTestStructure} for the specified test class.
      */
     public static CTestStructure getFromTestClass(Class<?> testClass) {
-        Map<String, OperationGroup> groupConfigs = new Object2ObjectOpenHashMap<>();
-        List<ActorGenerator> actorGenerators = new ObjectArrayList<>();
-        List<Method> validationFunctions = new ObjectArrayList<>();
-        List<Method> stateRepresentations = new ObjectArrayList<>();
+        Map<String, OperationGroup> groupConfigs = lincheckMapOf();
+        List<ActorGenerator> actorGenerators = lincheckListOf();
+        List<Method> validationFunctions = lincheckListOf();
+        List<Method> stateRepresentations = lincheckListOf();
         Class<?> clazz = testClass;
         RandomProvider randomProvider = new RandomProvider();
-        Map<Class<?>, ParameterGenerator<?>> parameterGeneratorsMap = new Object2ObjectOpenHashMap<>();
+        Map<Class<?>, ParameterGenerator<?>> parameterGeneratorsMap = lincheckMapOf();
 
         while (clazz != null) {
             readTestStructureFromClass(clazz, groupConfigs, actorGenerators, parameterGeneratorsMap, validationFunctions, stateRepresentations, randomProvider);
@@ -150,7 +151,7 @@ public class CTestStructure {
     }
 
     private static Map<String, ParameterGenerator<?>> createNamedGens(Class<?> clazz, RandomProvider randomProvider) {
-        Map<String, ParameterGenerator<?>> namedGens = new Object2ObjectOpenHashMap<>();
+        Map<String, ParameterGenerator<?>> namedGens = lincheckMapOf();
         // Traverse all operations to determine named EnumGens types
         // or throw if one named enum gen is associated with many types
         Map<String, Class<? extends Enum<?>>> enumGeneratorNameToClassMap = collectNamedEnumGeneratorToClassMap(clazz);
@@ -183,7 +184,7 @@ public class CTestStructure {
      *                               which violates the uniqueness principle of enum generator to enum class mapping.
      */
     private static Map<String, Class<? extends Enum<?>>> collectNamedEnumGeneratorToClassMap(Class<?> clazz) {
-        Map<String, Class<? extends Enum<?>>> enumGeneratorNameToClassMap = new Object2ObjectOpenHashMap<>();
+        Map<String, Class<? extends Enum<?>>> enumGeneratorNameToClassMap = lincheckMapOf();
 
         Arrays.stream(clazz.getDeclaredMethods()) // get all methods of the class
                 .filter(method -> method.isAnnotationPresent(Operation.class)) // take methods, annotated as @Operation
@@ -283,7 +284,7 @@ public class CTestStructure {
     }
 
     private static Map<Class<?>, ParameterGenerator<?>> createDefaultGenerators(RandomProvider randomProvider) {
-        Map<Class<?>, ParameterGenerator<?>> defaultGens = new Object2ObjectOpenHashMap<>();
+        Map<Class<?>, ParameterGenerator<?>> defaultGens = lincheckMapOf();
         defaultGens.put(boolean.class, new BooleanGen(randomProvider, ""));
         defaultGens.put(Boolean.class, defaultGens.get(boolean.class));
         defaultGens.put(byte.class, new ByteGen(randomProvider, ""));

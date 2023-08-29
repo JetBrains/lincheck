@@ -74,7 +74,7 @@ private fun StringBuilder.appendTraceRepresentation(
  * Convert trace events to the final form of a matrix of strings.
  */
 private fun splitToColumns(nThreads: Int, traceRepresentation: List<TraceEventRepresentation>): List<List<String>> {
-    val result = List(nThreads) { mutableObjectListOf<String>() }
+    val result = List(nThreads) { lincheckListOf<String>() }
     for (event in traceRepresentation) {
         val columnId = event.iThread
         // write message in an appropriate column
@@ -109,9 +109,9 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
         Array<ActorNode?>(scenario.threads[i].size) { null }
     }
     // call nodes for each method call
-    val callNodes = mutableIntToObjectMapOf<CallNode>()
+    val callNodes = lincheckIntToObjectMapOf<CallNode>()
     // all trace nodes in order corresponding to `tracePoints`
-    val traceGraphNodes = mutableObjectListOf<TraceNode>()
+    val traceGraphNodes = lincheckListOf<TraceNode>()
 
     for (eventId in tracePoints.indices) {
         val event = tracePoints[eventId]
@@ -204,7 +204,7 @@ private fun traceGraphToRepresentationList(
     verboseTrace: Boolean
 ): List<TraceEventRepresentation> {
     var curNode: TraceNode? = startNode
-    val traceRepresentation = mutableObjectListOf<TraceEventRepresentation>()
+    val traceRepresentation = lincheckListOf<TraceEventRepresentation>()
     while (curNode != null) {
         curNode = curNode.addRepresentationTo(traceRepresentation, verboseTrace)
     }
@@ -290,7 +290,7 @@ private abstract class TraceInnerNode(iThread: Int, last: TraceNode?, callDepth:
             it.shouldBeExpanded(verboseTrace)
         }
 
-    private val internalEvents = mutableObjectListOf<TraceNode>()
+    private val internalEvents = lincheckListOf<TraceNode>()
 
     fun addInternalEvent(node: TraceNode) {
         internalEvents.add(node)

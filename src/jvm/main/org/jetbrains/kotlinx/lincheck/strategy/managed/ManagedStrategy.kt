@@ -9,6 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import it.unimi.dsi.fastutil.objects.ObjectArrayList
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
@@ -81,18 +82,18 @@ abstract class ManagedStrategy(
     private val collectStateRepresentation get() = collectTrace && stateRepresentationFunction != null
     // Trace point constructors, where `tracePointConstructors[id]`
     // stores a constructor for the corresponding code location.
-    private val tracePointConstructors: MutableList<TracePointConstructor> = MutableObjectList()
+    private val tracePointConstructors: MutableList<TracePointConstructor> = ObjectArrayList()
     // Collector of all events in the execution such as thread switches.
     private var traceCollector: TraceCollector? = null // null when `collectTrace` is false
     // Stores the currently executing methods call stack for each thread.
-    private val callStackTrace = Array(nThreads) { mutableObjectListOf<CallStackTraceElement>() }
+    private val callStackTrace = Array(nThreads) { lincheckListOf<CallStackTraceElement>() }
     // Stores the global number of method calls.
     private var methodCallNumber = 0
     // In case of suspension, the call stack of the corresponding `suspend`
     // methods is stored here, so that the same method call identifiers are
     // used on resumption, and the trace point before and after the suspension
     // correspond to the same method call in the trace.
-    private val suspendedFunctionsStack = Array(nThreads) { mutableIntListOf() }
+    private val suspendedFunctionsStack = Array(nThreads) { lincheckIntListOf() }
     // Current execution part
     protected lateinit var executionPart: ExecutionPart
 
@@ -774,7 +775,7 @@ abstract class ManagedStrategy(
      * Logs thread events such as thread switches and passed code locations.
      */
     private inner class TraceCollector {
-        private val _trace = mutableObjectListOf<TracePoint>()
+        private val _trace = lincheckListOf<TracePoint>()
         val trace: List<TracePoint> = _trace
 
         fun newSwitch(iThread: Int, reason: SwitchReason) {
@@ -852,17 +853,17 @@ abstract class ManagedStrategy(
         /**
          * Map, which helps us to determine how many times current thread visits some code location.
          */
-        private val currentThreadCodeLocationVisitCountMap = mutableIntToIntMapOf()
+        private val currentThreadCodeLocationVisitCountMap = lincheckIntToIntMapOf()
 
         /**
          * Is used to find a cycle period inside exact thread execution if it has hung
          */
-        private val currentThreadCodeLocationsHistory = mutableIntListOf()
+        private val currentThreadCodeLocationsHistory = lincheckIntListOf()
 
         /**
          *  Threads switches and executions history to store sequences lead to loops
          */
-        private val currentInterleavingHistory = MutableObjectList<InterleavingHistoryNode>()
+        private val currentInterleavingHistory = ObjectArrayList<InterleavingHistoryNode>()
 
         /**
          * When we're back to some thread, newSwitchPoint won't be called before the first event in the current
@@ -1148,7 +1149,7 @@ abstract class ManagedStrategy(
          * [onNextExecution] won't be called before the first execution,
          * so we have to start [executionsPerformedInCurrentThread] from 1.
          */
-        private val threadsRan = mutableIntSetOf()
+        private val threadsRan = lincheckIntSetOf()
 
         fun initialize() {
             currentInterleavingNodeIndex = 0
