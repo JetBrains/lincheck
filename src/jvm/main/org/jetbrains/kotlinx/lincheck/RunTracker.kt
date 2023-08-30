@@ -25,7 +25,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 
 interface RunTracker {
 
-    fun iterationStart(iteration: Int, scenario: ExecutionScenario, mode: LincheckMode) {}
+    fun iterationStart(iteration: Int, scenario: ExecutionScenario, options: IterationOptions) {}
 
     fun iterationEnd(iteration: Int, failure: LincheckFailure? = null, exception: Throwable? = null) {}
 
@@ -40,12 +40,12 @@ interface RunTracker {
 inline fun RunTracker?.trackIteration(
     iteration: Int,
     scenario: ExecutionScenario,
-    mode: LincheckMode,
+    options: IterationOptions,
     block: () -> LincheckFailure?
 ): LincheckFailure? {
     var failure: LincheckFailure? = null
     var exception: Throwable? = null
-    this?.iterationStart(iteration, scenario, mode)
+    this?.iterationStart(iteration, scenario, options)
     try {
         return block().also {
             failure = it
@@ -84,9 +84,9 @@ fun List<RunTracker>.chainTrackers(): RunTracker? =
 
         val trackers = this@chainTrackers
 
-        override fun iterationStart(iteration: Int, scenario: ExecutionScenario, mode: LincheckMode) {
+        override fun iterationStart(iteration: Int, scenario: ExecutionScenario, options: IterationOptions) {
             for (tracker in trackers) {
-                tracker.iterationStart(iteration, scenario, mode)
+                tracker.iterationStart(iteration, scenario, options)
             }
         }
 

@@ -43,8 +43,9 @@ internal interface InvocationsPlanner {
     fun shouldDoNextInvocation(invocation: Int): Boolean
 }
 
-internal class IterationOptions(
+data class IterationOptions(
     val mode: LincheckMode,
+    val invocationsBound: Int,
 )
 
 internal typealias StrategyFactory = (ExecutionScenario, IterationOptions) -> Strategy
@@ -59,7 +60,7 @@ internal fun Planner.runIterations(
             return null
         val options = iterationsPlanner.iterationOptions(iteration)
         val invocationsPlanner = invocationsPlanner(iteration)
-        tracker.trackIteration(iteration, scenario, options.mode) {
+        tracker.trackIteration(iteration, scenario, options) {
             factory(scenario, options).use { strategy ->
                 var invocation = 0
                 var spinning = false
@@ -114,7 +115,10 @@ internal class CustomScenariosPlanner(
 
     override val iterationsPlanner =
         FixedIterationsPlanner(this.scenariosOptions.size) { iteration ->
-            IterationOptions(this.scenariosOptions[iteration].mode!!)
+            IterationOptions(
+                mode = this.scenariosOptions[iteration].mode!!,
+                invocationsBound = this.scenariosOptions[iteration].invocations,
+            )
         }
 
     override fun invocationsPlanner(iteration: Int) =
@@ -143,7 +147,10 @@ internal class RandomScenariosFixedPlanner(
 
     override val iterationsPlanner: IterationsPlanner =
         FixedIterationsPlanner(iterations) { iteration ->
-            IterationOptions(iterationMode(iteration))
+            IterationOptions(
+                mode = iterationMode(iteration),
+                invocationsBound = invocationsPerIteration,
+            )
         }
 
     override fun invocationsPlanner(iteration: Int): InvocationsPlanner =
@@ -277,7 +284,7 @@ internal class AdaptivePlanner(
     private var iterationsBound = INITIAL_ITERATIONS_BOUND
 
     /**
-     * Bound on the number of invocations allocated to current iteration.
+     * Bound on the number of invocations allocated to current iteration (excluding warm-up invocations).
      * Adjusted automatically after each iteration.
      */
     private var invocationsBound = INITIAL_INVOCATIONS_BOUND
@@ -307,8 +314,10 @@ internal class AdaptivePlanner(
             mode
     }
 
-    override fun iterationOptions(iteration: Int) =
-        IterationOptions(currentMode)
+    override fun iterationOptions(iteration: Int) = IterationOptions(
+        mode = currentMode,
+        invocationsBound = invocationsBound,
+    )
 
     override fun shouldDoNextIteration(iteration: Int): Boolean {
         check(iteration == statisticsTracker.iteration + 1)
@@ -352,7 +361,7 @@ internal class AdaptivePlanner(
         if (statisticsTracker.currentIterationRunningTimeNano > currentIterationUpperTimeNano) {
             return false
         }
-        return (invocation < invocationsBound + statisticsTracker.currentIterationWarmUpInvocationsCount)
+        return (invocation < invocationsBound)
     }
 
     /*
@@ -454,6 +463,9 @@ internal class AdaptivePlanner(
             invocationsBound = remainingInvocations.toInt()
             remainingIterations += 1
         }
+
+        // add warm-up invocations
+        invocationsBound += WARM_UP_INVOCATIONS_COUNT
 
         // finally, set the iterations bound
         iterationsBound = performedIterations + remainingIterations

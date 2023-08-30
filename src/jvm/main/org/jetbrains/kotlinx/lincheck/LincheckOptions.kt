@@ -282,7 +282,7 @@ internal data class LincheckOptionsImpl(
     private fun createReporterManager(statistics: Statistics?) = object : RunTracker {
         val reporter = Reporter(DEFAULT_LOG_LEVEL)
 
-        override fun iterationStart(iteration: Int, scenario: ExecutionScenario, mode: LincheckMode) {
+        override fun iterationStart(iteration: Int, scenario: ExecutionScenario, options: IterationOptions) {
             reporter.logIteration(iteration + 1, scenario, mode)
         }
 
@@ -346,7 +346,7 @@ internal data class LincheckOptionsImpl(
         override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean =
             verifier.verifyResults(scenario, results)
 
-        override fun iterationStart(iteration: Int, scenario: ExecutionScenario, mode: LincheckMode) {
+        override fun iterationStart(iteration: Int, scenario: ExecutionScenario, options: IterationOptions) {
             // For performance reasons, verifier re-uses LTS from previous iterations.
             // This behaviour is similar to a memory leak and can potentially cause OutOfMemoryError.
             // This is why we periodically create a new verifier to still have increased performance

@@ -28,11 +28,18 @@ interface Statistics {
      * Total running time in nanoseconds, excluding warm-up time.
      */
     val runningTimeNano: Long
-        get() = iterationsStatistics.sumOf { it.runningTimeNano }
+
     /**
      * A list of iteration statistics.
      */
     val iterationsStatistics: List<IterationStatistics>
+
+    /**
+     * Granularity at which running time is captures, either:
+     *   - [StatisticsGranularity.PER_ITERATION] --- per iteration only;
+     *   - [StatisticsGranularity.PER_INVOCATION] --- per each invocation (consumes more memory).
+     */
+    val granularity: StatisticsGranularity
 }
 
 interface IterationStatistics {
@@ -65,6 +72,17 @@ interface IterationStatistics {
      * Number of warm-up invocations performed on this iteration.
      */
     val warmUpInvocationsCount: Int
+
+    /**
+     * Running time of all invocations in this iteration.
+     * If per-iteration statistics tracking granularity is specified,
+     * then running time of invocations is not collected, and this array is left empty.
+     */
+    val invocationsRunningTimeNano: LongArray
+}
+
+enum class StatisticsGranularity {
+    PER_ITERATION, PER_INVOCATION
 }
 
 /**
@@ -127,13 +145,10 @@ val IterationStatistics.totalInvocationsCount: Int
 val IterationStatistics.averageInvocationTimeNano
     get() = runningTimeNano.toDouble() / invocationsCount
 
-fun Statistics.filter(predicate: (IterationStatistics) -> Boolean) = object : Statistics {
-    override val iterationsStatistics: List<IterationStatistics> =
-        this@filter.iterationsStatistics.filter(predicate)
-}
 
-
-class StatisticsTracker : Statistics, RunTracker {
+class StatisticsTracker(
+    override val granularity: StatisticsGranularity = StatisticsGranularity.PER_ITERATION
+) : Statistics, RunTracker {
 
     override var runningTimeNano: Long = 0
         private set
@@ -144,12 +159,18 @@ class StatisticsTracker : Statistics, RunTracker {
 
     private class IterationStatisticsTracker(
         override val scenario: ExecutionScenario,
-        override val mode: LincheckMode,
+        options: IterationOptions,
+        granularity: StatisticsGranularity,
     ) : IterationStatistics {
+        override val mode: LincheckMode = options.mode
         override var runningTimeNano: Long = 0
         override var warmUpTimeNano: Long = 0
         override var invocationsCount: Int = 0
         override var warmUpInvocationsCount: Int = 0
+        override val invocationsRunningTimeNano: LongArray = when (granularity) {
+            StatisticsGranularity.PER_ITERATION -> longArrayOf()
+            StatisticsGranularity.PER_INVOCATION -> LongArray(options.invocationsBound)
+        }
     }
 
     /**
@@ -182,14 +203,17 @@ class StatisticsTracker : Statistics, RunTracker {
     // flag indicating that next invocations should be considered warm-up
     private var warmUpFlag: Boolean = false
 
-    override fun iterationStart(iteration: Int, scenario: ExecutionScenario, mode: LincheckMode) {
+    override fun iterationStart(iteration: Int, scenario: ExecutionScenario, options: IterationOptions) {
         check(iteration == this.iteration + 1)
         ++this.iteration
-        _iterationsStatistics.add(IterationStatisticsTracker(scenario, mode))
+        _iterationsStatistics.add(
+            IterationStatisticsTracker(scenario, options, granularity)
+        )
         warmUpFlag = false
     }
 
     override fun iterationEnd(iteration: Int, failure: LincheckFailure?, exception: Throwable?) {
+        check(iteration == this.iteration)
         invocation = -1
     }
 
@@ -202,15 +226,20 @@ class StatisticsTracker : Statistics, RunTracker {
     }
 
     override fun invocationEnd(invocation: Int, failure: LincheckFailure?, exception: Throwable?) {
+        check(invocation == this.invocation)
         val invocationTimeNano = System.nanoTime() - lastInvocationStartTimeNano
         check(invocationTimeNano >= 0)
+        val statistics = _iterationsStatistics[iteration]
         if (warmUpFlag) {
-            _iterationsStatistics[iteration].warmUpTimeNano += invocationTimeNano
-            _iterationsStatistics[iteration].warmUpInvocationsCount += 1
+            statistics.warmUpTimeNano += invocationTimeNano
+            statistics.warmUpInvocationsCount += 1
         } else {
-            _iterationsStatistics[iteration].runningTimeNano += invocationTimeNano
-            _iterationsStatistics[iteration].invocationsCount += 1
+            statistics.runningTimeNano += invocationTimeNano
+            statistics.invocationsCount += 1
             runningTimeNano += invocationTimeNano
+        }
+        if (granularity == StatisticsGranularity.PER_INVOCATION) {
+            statistics.invocationsRunningTimeNano[invocation] = invocationTimeNano
         }
     }
 
