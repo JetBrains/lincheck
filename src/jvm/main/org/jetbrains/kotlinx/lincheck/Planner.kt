@@ -46,6 +46,7 @@ internal interface InvocationsPlanner {
 data class IterationOptions(
     val mode: LincheckMode,
     val invocationsBound: Int,
+    val warmUpInvocationsCount: Int,
 )
 
 internal typealias StrategyFactory = (ExecutionScenario, IterationOptions) -> Strategy
@@ -118,6 +119,7 @@ internal class CustomScenariosPlanner(
             IterationOptions(
                 mode = this.scenariosOptions[iteration].mode!!,
                 invocationsBound = this.scenariosOptions[iteration].invocations,
+                warmUpInvocationsCount = 0,
             )
         }
 
@@ -150,6 +152,7 @@ internal class RandomScenariosFixedPlanner(
             IterationOptions(
                 mode = iterationMode(iteration),
                 invocationsBound = invocationsPerIteration,
+                warmUpInvocationsCount = 0,
             )
         }
 
@@ -317,6 +320,7 @@ internal class AdaptivePlanner(
     override fun iterationOptions(iteration: Int) = IterationOptions(
         mode = currentMode,
         invocationsBound = invocationsBound,
+        warmUpInvocationsCount = WARM_UP_INVOCATIONS_COUNT,
     )
 
     override fun shouldDoNextIteration(iteration: Int): Boolean {
@@ -346,21 +350,10 @@ internal class AdaptivePlanner(
 
     override fun shouldDoNextInvocation(invocation: Int): Boolean {
         check(invocation == statisticsTracker.invocation + 1)
-        if (invocation == 0) {
-            statisticsTracker.iterationWarmUpStart(statisticsTracker.iteration)
-        }
-        if (invocation == WARM_UP_INVOCATIONS_COUNT) {
-            statisticsTracker.iterationWarmUpEnd(statisticsTracker.iteration)
-        }
-        if (statisticsTracker.totalRunningTimeNano > testingTimeNano + admissibleErrorTimeNano) {
+        if (statisticsTracker.totalRunningTimeNano > testingTimeNano + admissibleErrorTimeNano)
             return false
-        }
-        if (invocation < WARM_UP_INVOCATIONS_COUNT) {
-            return true
-        }
-        if (statisticsTracker.currentIterationRunningTimeNano > currentIterationUpperTimeNano) {
+        if (statisticsTracker.currentIterationRunningTimeNano > currentIterationUpperTimeNano)
             return false
-        }
         return (invocation < invocationsBound)
     }
 

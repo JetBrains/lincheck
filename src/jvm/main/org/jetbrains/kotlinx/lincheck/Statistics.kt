@@ -159,10 +159,10 @@ class StatisticsTracker(
 
     private class IterationStatisticsTracker(
         override val scenario: ExecutionScenario,
-        options: IterationOptions,
+        val options: IterationOptions,
         granularity: StatisticsGranularity,
     ) : IterationStatistics {
-        override val mode: LincheckMode = options.mode
+        override val mode: LincheckMode get() = options.mode
         override var runningTimeNano: Long = 0
         override var warmUpTimeNano: Long = 0
         override var invocationsCount: Int = 0
@@ -172,6 +172,9 @@ class StatisticsTracker(
             StatisticsGranularity.PER_INVOCATION -> LongArray(options.invocationsBound)
         }
     }
+
+    private val IterationStatisticsTracker.plannedWarmUpInvocationsCount: Int
+        get() = options.warmUpInvocationsCount
 
     /**
      * Current iteration number.
@@ -200,16 +203,12 @@ class StatisticsTracker(
     val currentIterationWarmUpInvocationsCount: Int
         get() = iterationsStatistics[iteration].warmUpInvocationsCount
 
-    // flag indicating that next invocations should be considered warm-up
-    private var warmUpFlag: Boolean = false
-
     override fun iterationStart(iteration: Int, scenario: ExecutionScenario, options: IterationOptions) {
         check(iteration == this.iteration + 1)
         ++this.iteration
         _iterationsStatistics.add(
             IterationStatisticsTracker(scenario, options, granularity)
         )
-        warmUpFlag = false
     }
 
     override fun iterationEnd(iteration: Int, failure: LincheckFailure?, exception: Throwable?) {
@@ -230,7 +229,7 @@ class StatisticsTracker(
         val invocationTimeNano = System.nanoTime() - lastInvocationStartTimeNano
         check(invocationTimeNano >= 0)
         val statistics = _iterationsStatistics[iteration]
-        if (warmUpFlag) {
+        if (invocation < statistics.plannedWarmUpInvocationsCount) {
             statistics.warmUpTimeNano += invocationTimeNano
             statistics.warmUpInvocationsCount += 1
         } else {
@@ -241,17 +240,6 @@ class StatisticsTracker(
         if (granularity == StatisticsGranularity.PER_INVOCATION) {
             statistics.invocationsRunningTimeNano[invocation] = invocationTimeNano
         }
-    }
-
-    fun iterationWarmUpStart(iteration: Int) {
-        check(iteration == this.iteration)
-        check(iterationsStatistics[this.iteration].warmUpTimeNano == 0L)
-        warmUpFlag = true
-    }
-
-    fun iterationWarmUpEnd(iteration: Int) {
-        check(iteration == this.iteration)
-        warmUpFlag = false
     }
 
 }
