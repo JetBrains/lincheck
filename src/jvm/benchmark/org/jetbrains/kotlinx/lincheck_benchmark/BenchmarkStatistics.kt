@@ -43,6 +43,8 @@ data class ScenarioStatistics(
     val averageInvocationTimeNano: Long,
     val invocationsCount: Int,
     val warmUpInvocationsCount: Int,
+    // TODO: check array is not empty
+    val invocationsRunningTimeNano: LongArray,
 )
 
 val BenchmarksReport.benchmarkNames: List<String>
@@ -75,6 +77,7 @@ fun Statistics.toBenchmarkStatistics(name: String, mode: LincheckMode) = Benchma
             averageInvocationTimeNano = iterationStatistics.averageInvocationTimeNano.toLong(),
             invocationsCount = iterationStatistics.invocationsCount,
             warmUpInvocationsCount = iterationStatistics.warmUpInvocationsCount,
+            invocationsRunningTimeNano = iterationStatistics.invocationsRunningTimeNano,
         )
     }
 )

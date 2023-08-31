@@ -10,19 +10,25 @@
 
 package org.jetbrains.kotlinx.lincheck_benchmark
 
-import java.io.File
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.decodeFromStream
 import org.jetbrains.letsPlot.*
 import org.jetbrains.letsPlot.export.*
 import org.jetbrains.letsPlot.geom.*
+import org.jetbrains.letsPlot.label.*
 import org.jetbrains.letsPlot.pos.positionDodge
 import kotlin.time.Duration.Companion.nanoseconds
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromStream
+import java.io.File
+
 
 fun BenchmarksReport.runtimePlot(filename: String) {
     val data = runningTimeData()
     var plot = letsPlot(data)
     plot += ggsize(600, 800)
+    plot += labs(
+        x = "benchmark name",
+        y = "time (ms)",
+    )
     plot += geomBar(
         stat = Stat.identity,
         position = positionDodge(),
