@@ -12,13 +12,23 @@
 
 package org.jetbrains.kotlinx.lincheck_benchmark
 
-import kotlinx.serialization.Serializable
 import org.jetbrains.kotlinx.lincheck.*
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.encodeToStream
+import java.io.File
+
+typealias BenchmarkID = String
+
+@Serializable
+data class BenchmarksReport(
+    val data: Map<String, BenchmarkStatistics>
+)
 
 @Serializable
 data class BenchmarkStatistics(
-    val name: String,
     val mode: LincheckMode,
+    val name: String,
     val runningTimeNano: Long,
     val iterationsCount: Int,
     val invocationsCount: Int,
@@ -34,6 +44,19 @@ data class ScenarioStatistics(
     val invocationsCount: Int,
     val warmUpInvocationsCount: Int,
 )
+
+val BenchmarksReport.benchmarkNames: List<String>
+    get() = data.map { (_, statistics) -> statistics.name }.distinct()
+
+fun BenchmarksReport.saveJson(filename: String) {
+    val file = File("$filename.json")
+    file.outputStream().use { outputStream ->
+        Json.encodeToStream(this, outputStream)
+    }
+}
+
+val BenchmarkStatistics.id: BenchmarkID
+    get() = "$name-$mode"
 
 fun Statistics.toBenchmarkStatistics(name: String, mode: LincheckMode) = BenchmarkStatistics(
     name = name,

@@ -10,9 +10,6 @@
 
 package org.jetbrains.kotlinx.lincheck_benchmark
 
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.encodeToStream
-import java.io.File
 import org.junit.Before
 import org.junit.AfterClass
 import org.junit.runner.RunWith
@@ -44,17 +41,16 @@ class LincheckBenchmarksSuite {
 
 class LincheckBenchmarksReporter {
 
-    private val statistics = mutableMapOf<String, BenchmarkStatistics>()
+    private val statistics = mutableMapOf<BenchmarkID, BenchmarkStatistics>()
 
     fun registerBenchmark(benchmarkStatistics: BenchmarkStatistics) {
-        statistics[benchmarkStatistics.name] = benchmarkStatistics
+        statistics[benchmarkStatistics.id] = benchmarkStatistics
     }
 
     fun saveReport() {
-        val file = File("benchmarks-results.json")
-        file.outputStream().use { outputStream ->
-            Json.encodeToStream(statistics, outputStream)
-        }
+        val report = BenchmarksReport(statistics)
+        report.saveJson("benchmarks-results")
+        report.runtimePlot("running-time")
     }
 
 }

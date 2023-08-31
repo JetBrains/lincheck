@@ -41,7 +41,8 @@ abstract class AbstractLincheckBenchmark(
         val statisticsTracker = StatisticsTracker(
             granularity = StatisticsGranularity.PER_INVOCATION
         )
-        val failure = runTests(this@AbstractLincheckBenchmark::class.java, tracker = statisticsTracker)
+        val klass = this@AbstractLincheckBenchmark::class
+        val failure = runTests(klass.java, tracker = statisticsTracker)
         if (failure == null) {
             assert(expectedFailures.isEmpty()) {
                 "This test should fail, but no error has been occurred (see the logs for details)"
@@ -52,7 +53,7 @@ abstract class AbstractLincheckBenchmark(
             }
         }
         val statistics = statisticsTracker.toBenchmarkStatistics(
-            name = (this@AbstractLincheckBenchmark::class.java).simpleName,
+            name = klass.simpleName!!.removeSuffix("Benchmark"),
             mode = this.mode,
         )
         benchmarksReporter.registerBenchmark(statistics)

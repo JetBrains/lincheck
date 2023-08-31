@@ -50,23 +50,28 @@ kotlin {
                 }
             }
 
-            tasks.register<Test>("jvmBenchmark") {
-                classpath = compileDependencyFiles + runtimeDependencyFiles + output.allOutputs
-                testClassesDirs = output.classesDirs
+            val benchmarksClassPath = compileDependencyFiles + runtimeDependencyFiles + output.allOutputs
+            val benchmarksTestClassesDirs = output.classesDirs
+
+            // task allowing to run selected benchmarks using JUnit API
+            val benchmarks = tasks.register<Test>("jvmBenchmark") {
+                classpath = benchmarksClassPath
+                testClassesDirs = benchmarksTestClassesDirs
             }
 
-            val benchmarkSuite = tasks.register("jvmBenchmarksSuite", Test::class) {
-                classpath = compileDependencyFiles + runtimeDependencyFiles + output.allOutputs
-                testClassesDirs = output.classesDirs
-
+            // task aggregating all benchmarks into single suite and producing custom reports
+            val benchmarksSuite = tasks.register<Test>("jvmBenchmarksSuite") {
+                classpath = benchmarksClassPath
+                testClassesDirs = benchmarksTestClassesDirs
                 filter {
                     includeTestsMatching("LincheckBenchmarksSuite")
                 }
             }
 
-            // val benchmarksReport by tasks.creating {
-            //     dependsOn(benchmarkSuite)
-            // }
+            val benchmarksReport by tasks.register<JavaExec>("runBenchmarksPlots") {
+                classpath = benchmarksClassPath
+                mainClass.set("org.jetbrains.kotlinx.lincheck_benchmark.PlotsKt")
+            }
         }
     }
 
@@ -108,10 +113,14 @@ kotlin {
             val junitVersion: String by project
             val jctoolsVersion: String by project
             val serializationVersion: String by project
+            val letsPlotVersion: String by project
+            val letsPlotKotlinVersion: String by project
             dependencies {
                 implementation("junit:junit:$junitVersion")
                 implementation("org.jctools:jctools-core:$jctoolsVersion")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
+                implementation("org.jetbrains.lets-plot:lets-plot-common:$letsPlotVersion")
+                implementation("org.jetbrains.lets-plot:lets-plot-kotlin-jvm:$letsPlotKotlinVersion")
             }
         }
     }
