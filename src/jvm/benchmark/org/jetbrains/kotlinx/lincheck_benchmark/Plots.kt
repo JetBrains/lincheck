@@ -18,6 +18,9 @@ import org.jetbrains.letsPlot.pos.positionDodge
 import kotlin.time.Duration.Companion.nanoseconds
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
+import org.jetbrains.letsPlot.sampling.samplingNone
+import org.jetbrains.letsPlot.scale.scaleYContinuous
+import org.jetbrains.letsPlot.scale.scaleYLog10
 import java.io.File
 
 
@@ -40,6 +43,29 @@ fun BenchmarksReport.runtimePlot(filename: String) {
     ggsave(plot, "${filename}.html")
 }
 
+fun BenchmarksReport.invocationsTimePlot(filename: String, benchmarkID: BenchmarkID) {
+    val data = invocationsTimeData(benchmarkID)
+    var plot = letsPlot(data)
+    plot += ggsize(1600, 900)
+    plot += labs(
+        x = "# invocation",
+        y = "time (us)"
+    )
+    plot += geomPoint(
+        stat = Stat.identity,
+        sampling = samplingNone,
+    ) {
+        x = "invocationID"
+        y = "invocationRunningTimeNano"
+    }
+    plot += scaleYLog10()
+    plot += scaleYContinuous(
+        breaks = listOf(10, 100, 1000, 10_000, 100_000, 1_000_000),
+        limits = 10 to 5_000_000
+    )
+    ggsave(plot, "${filename}.html")
+}
+
 fun BenchmarksReport.runningTimeData(): Map<String, Any> {
     val map = mutableMapOf<String, Any>()
     val ids = data.keys.toList()
@@ -55,6 +81,20 @@ fun BenchmarksReport.runningTimeData(): Map<String, Any> {
     return map
 }
 
+fun BenchmarksReport.invocationsTimeData(benchmarkID: BenchmarkID): Map<String, Any> {
+    val map = mutableMapOf<String, Any>()
+    val invocationsRunningTimeNano = data[benchmarkID]!!
+        // TODO: move preprocessing into [toBenchmarkStatistics] function
+        .scenariosStatistics.flatMap { statistics ->
+            statistics.invocationsRunningTimeNano
+                .map { it.nanoseconds.inWholeMicroseconds }
+                .asIterable()
+        }
+    map["invocationID"] = invocationsRunningTimeNano.indices.toList()
+    map["invocationRunningTimeNano"] = invocationsRunningTimeNano
+    return map
+}
+
 fun main(args: Array<String>) {
     val reportFilename = args.getOrNull(0)
     if (reportFilename == null) {
@@ -66,4 +106,5 @@ fun main(args: Array<String>) {
         Json.decodeFromStream<BenchmarksReport>(inputStream)
     }
     report.runtimePlot("running-time")
+    report.invocationsTimePlot("invocations-time", "ConcurrentHashMap-ModelChecking")
 }
