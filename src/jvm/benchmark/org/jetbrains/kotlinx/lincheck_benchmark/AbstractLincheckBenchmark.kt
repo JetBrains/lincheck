@@ -13,7 +13,6 @@
 package org.jetbrains.kotlinx.lincheck_benchmark
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import kotlin.reflect.KClass
 import org.junit.Test
@@ -38,7 +37,11 @@ abstract class AbstractLincheckBenchmark(
     }.runTest()
 
     private fun LincheckOptions.runTest() {
-        val failure = runTests(this@AbstractLincheckBenchmark::class.java, tracker = createRunTracker())
+        check(this is LincheckOptionsImpl)
+        val statisticsTracker = StatisticsTracker(
+            granularity = StatisticsGranularity.PER_INVOCATION
+        )
+        val failure = runTests(this@AbstractLincheckBenchmark::class.java, tracker = statisticsTracker)
         if (failure == null) {
             assert(expectedFailures.isEmpty()) {
                 "This test should fail, but no error has been occurred (see the logs for details)"
@@ -48,6 +51,11 @@ abstract class AbstractLincheckBenchmark(
                 "This test has failed with an unexpected error: \n $failure"
             }
         }
+        val statistics = statisticsTracker.toBenchmarkStatistics(
+            name = (this@AbstractLincheckBenchmark::class.java).simpleName,
+            mode = this.mode,
+        )
+        benchmarksReporter.registerBenchmark(statistics)
     }
 
     private fun LincheckOptionsImpl.configure() {
@@ -60,50 +68,6 @@ abstract class AbstractLincheckBenchmark(
     }
 
     internal open fun LincheckOptions.customize() {}
-
-    private fun createRunTracker() = object : RunTracker {
-
-        private val scenarios = mutableListOf<ExecutionScenario>()
-
-        override fun iterationStart(iteration: Int, scenario: ExecutionScenario) {
-            scenarios.add(scenario)
-        }
-
-        override fun runEnd(
-            name: String,
-            testClass: Class<*>,
-            options: LincheckOptions,
-            failure: LincheckFailure?,
-            exception: Throwable?,
-            statistics: Statistics?
-        ) {
-            check(statistics != null)
-            check(scenarios.size == statistics.iterationsCount)
-            // TODO: check that all scenarios either have or do not have init/post parts
-            // TODO: check that in each scenario all threads have same number of operations
-            check(options is LincheckOptionsImpl)
-            check(options.mode in listOf(LincheckMode.Stress, LincheckMode.ModelChecking))
-            val benchmarkStatistics = BenchmarkStatistics.create(
-                name = testClass.simpleName,
-                mode = options.mode,
-                runningTimeNano = statistics.runningTimeNano,
-                iterationsCount = statistics.iterationsCount,
-                invocationsCount = statistics.invocationsCount,
-                scenariosStatistics = statistics.iterationsStatistics.mapIndexed { i, iterationStatistics ->
-                    val scenario = scenarios[i]
-                    ScenarioStatistics(
-                        threads = scenario.nThreads,
-                        operations = scenario.parallelExecution[0].size,
-                        runningTimeNano = iterationStatistics.runningTimeNano,
-                        averageInvocationTimeNano = iterationStatistics.averageInvocationTimeNano.toLong(),
-                        invocationsCount = iterationStatistics.invocationsCount,
-                    )
-                }
-            )
-            benchmarksReporter.registerBenchmark(benchmarkStatistics)
-        }
-
-    }
 
 }
 

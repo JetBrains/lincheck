@@ -12,40 +12,18 @@
 
 package org.jetbrains.kotlinx.lincheck_benchmark
 
-import org.jetbrains.kotlinx.lincheck.LincheckMode
 import kotlinx.serialization.Serializable
+import org.jetbrains.kotlinx.lincheck.*
 
 @Serializable
 data class BenchmarkStatistics(
-    val id: Int,
     val name: String,
     val mode: LincheckMode,
     val runningTimeNano: Long,
     val iterationsCount: Int,
     val invocationsCount: Int,
     val scenariosStatistics: List<ScenarioStatistics>,
-) {
-    companion object {
-        private var id: Int = 0
-
-        fun create(
-            name: String,
-            mode: LincheckMode,
-            runningTimeNano: Long,
-            iterationsCount: Int,
-            invocationsCount: Int,
-            scenariosStatistics: List<ScenarioStatistics>,
-        ) = BenchmarkStatistics(
-            ++id,
-            name,
-            mode,
-            runningTimeNano,
-            iterationsCount,
-            invocationsCount,
-            scenariosStatistics
-        )
-    }
-}
+)
 
 @Serializable
 data class ScenarioStatistics(
@@ -54,4 +32,26 @@ data class ScenarioStatistics(
     val runningTimeNano: Long,
     val averageInvocationTimeNano: Long,
     val invocationsCount: Int,
+    val warmUpInvocationsCount: Int,
+)
+
+fun Statistics.toBenchmarkStatistics(name: String, mode: LincheckMode) = BenchmarkStatistics(
+    name = name,
+    mode = mode,
+    runningTimeNano = runningTimeNano,
+    iterationsCount = iterationsCount,
+    invocationsCount = invocationsCount,
+    scenariosStatistics = iterationsStatistics.map { iterationStatistics ->
+        // TODO: check that all scenarios either have or do not have init/post parts
+        // TODO: check that in each scenario all threads have same number of operations
+        val scenario = iterationStatistics.scenario
+        ScenarioStatistics(
+            threads = scenario.nThreads,
+            operations = scenario.parallelExecution[0].size,
+            runningTimeNano = iterationStatistics.runningTimeNano,
+            averageInvocationTimeNano = iterationStatistics.averageInvocationTimeNano.toLong(),
+            invocationsCount = iterationStatistics.invocationsCount,
+            warmUpInvocationsCount = iterationStatistics.warmUpInvocationsCount,
+        )
+    }
 )

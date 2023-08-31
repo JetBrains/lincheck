@@ -44,10 +44,10 @@ class LincheckBenchmarksSuite {
 
 class LincheckBenchmarksReporter {
 
-    private val statistics = mutableMapOf<Int, BenchmarkStatistics>()
+    private val statistics = mutableMapOf<String, BenchmarkStatistics>()
 
     fun registerBenchmark(benchmarkStatistics: BenchmarkStatistics) {
-        statistics[benchmarkStatistics.id] = benchmarkStatistics
+        statistics[benchmarkStatistics.name] = benchmarkStatistics
     }
 
     fun saveReport() {
