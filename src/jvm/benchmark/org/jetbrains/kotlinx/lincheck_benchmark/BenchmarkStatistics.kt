@@ -16,7 +16,9 @@ import org.jetbrains.kotlinx.lincheck.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToStream
+import kotlin.math.*
 import java.io.File
+
 
 typealias BenchmarkID = String
 
@@ -33,18 +35,18 @@ data class BenchmarkStatistics(
     val iterationsCount: Int,
     val invocationsCount: Int,
     val scenariosStatistics: List<ScenarioStatistics>,
+    // TODO: check array is not empty
+    val invocationsRunningTimeNano: LongArray,
 )
 
 @Serializable
 data class ScenarioStatistics(
     val threads: Int,
     val operations: Int,
-    val runningTimeNano: Long,
-    val averageInvocationTimeNano: Long,
     val invocationsCount: Int,
-    val warmUpInvocationsCount: Int,
-    // TODO: check array is not empty
-    val invocationsRunningTimeNano: LongArray,
+    val runningTimeNano: Long,
+    val invocationAverageTimeNano: Long,
+    val invocationStandardDeviationTimeNano: Long,
 )
 
 val BenchmarksReport.benchmarkNames: List<String>
@@ -66,18 +68,40 @@ fun Statistics.toBenchmarkStatistics(name: String, mode: LincheckMode) = Benchma
     runningTimeNano = runningTimeNano,
     iterationsCount = iterationsCount,
     invocationsCount = invocationsCount,
-    scenariosStatistics = iterationsStatistics.map { iterationStatistics ->
-        // TODO: check that all scenarios either have or do not have init/post parts
-        // TODO: check that in each scenario all threads have same number of operations
-        val scenario = iterationStatistics.scenario
-        ScenarioStatistics(
-            threads = scenario.nThreads,
-            operations = scenario.parallelExecution[0].size,
-            runningTimeNano = iterationStatistics.runningTimeNano,
-            averageInvocationTimeNano = iterationStatistics.averageInvocationTimeNano.toLong(),
-            invocationsCount = iterationStatistics.invocationsCount,
-            warmUpInvocationsCount = iterationStatistics.warmUpInvocationsCount,
-            invocationsRunningTimeNano = iterationStatistics.invocationsRunningTimeNano,
-        )
-    }
+    invocationsRunningTimeNano = iterationsStatistics
+        .map { it.invocationsRunningTimeNano }
+        .flatten(),
+    scenariosStatistics = iterationsStatistics
+        .groupBy { (it.scenario.nThreads to it.scenario.parallelExecution[0].size) }
+        .map { (key, statistics) ->
+            val (threads, operations) = key
+            val invocationsRunningTime = statistics
+                .map { it.invocationsRunningTimeNano }
+                .flatten()
+            ScenarioStatistics(
+                threads = threads,
+                operations = operations,
+                invocationsCount = statistics.sumOf { it.invocationsCount },
+                runningTimeNano = statistics.sumOf { it.runningTimeNano },
+                invocationAverageTimeNano = invocationsRunningTime.average().toLong(),
+                invocationStandardDeviationTimeNano = invocationsRunningTime.standardDeviation().toLong(),
+            )
+        }
 )
+
+fun Iterable<LongArray>.flatten(): LongArray {
+    val size = sumOf { it.size }
+    val result = LongArray(size)
+    var i = 0
+    for (array in this) {
+        for (element in array) {
+            result[i++] = element
+        }
+    }
+    return result
+}
+
+fun LongArray.standardDeviation(): Double {
+    val mean = average()
+    return sqrt(map { (it - mean).pow(2) }.average())
+}

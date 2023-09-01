@@ -63,7 +63,7 @@ abstract class AbstractLincheckBenchmark(
         maxThreads = 4
         maxOperationsInThread = 3
         minimizeFailedScenario = false
-        iterations = 30
+        iterations = 20
         invocationsPerIteration = 5000
         customize()
     }

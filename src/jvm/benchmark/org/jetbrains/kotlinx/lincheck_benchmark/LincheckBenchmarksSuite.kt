@@ -19,7 +19,8 @@ import org.junit.runners.Suite
 @Suite.SuiteClasses(
     ConcurrentHashMapBenchmark::class,
     ConcurrentSkipListMapBenchmark::class,
-    ConcurrentLinkedQueueBenchmark::class,
+    // TODO: investigate performance problem in ConcurrentLinkedQueueBenchmark.benchmarkWithStressStrategy
+    // ConcurrentLinkedQueueBenchmark::class,
     ConcurrentDequeBenchmark::class,
 )
 class LincheckBenchmarksSuite {

@@ -83,13 +83,9 @@ fun BenchmarksReport.runningTimeData(): Map<String, Any> {
 
 fun BenchmarksReport.invocationsTimeData(benchmarkID: BenchmarkID): Map<String, Any> {
     val map = mutableMapOf<String, Any>()
-    val invocationsRunningTimeNano = data[benchmarkID]!!
-        // TODO: move preprocessing into [toBenchmarkStatistics] function
-        .scenariosStatistics.flatMap { statistics ->
-            statistics.invocationsRunningTimeNano
-                .map { it.nanoseconds.inWholeMicroseconds }
-                .asIterable()
-        }
+    val invocationsRunningTimeNano = data[benchmarkID]!!.invocationsRunningTimeNano.map {
+        it.nanoseconds.inWholeMicroseconds
+    }
     map["invocationID"] = invocationsRunningTimeNano.indices.toList()
     map["invocationRunningTimeNano"] = invocationsRunningTimeNano
     return map
