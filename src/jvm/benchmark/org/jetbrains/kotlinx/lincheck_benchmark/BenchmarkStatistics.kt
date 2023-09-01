@@ -90,7 +90,7 @@ fun Statistics.toBenchmarkStatistics(name: String, mode: LincheckMode) = Benchma
                     it.runningTimeNano.nanoseconds.toLong(DurationUnit.MILLISECONDS)
                 },
                 invocationAverageTimeMicro = invocationsRunningTime.average().toLong(),
-                invocationStandardDeviationTimeMicro = invocationsRunningTime.standardDeviation().toLong(),
+                invocationStandardDeviationTimeMicro = invocationsRunningTime.standardError().toLong(),
             )
         }
 )
@@ -114,6 +114,18 @@ fun Iterable<LongArray>.flatten(): LongArray {
 }
 
 fun LongArray.standardDeviation(): Double {
-    val mean = average()
-    return sqrt(map { (it - mean).pow(2) }.average())
+    val mean = round(average()).toLong()
+    var variance = 0L
+    for (x in this) {
+        val d = x - mean
+        variance += d * d
+    }
+    val std = sqrt(variance.toDouble() / (size - 1))
+    println("avg=$mean")
+    println("std=$std")
+    return std
+}
+
+fun LongArray.standardError(): Double {
+    return standardDeviation() / sqrt(size.toDouble())
 }
