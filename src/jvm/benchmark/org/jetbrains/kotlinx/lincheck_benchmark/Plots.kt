@@ -15,13 +15,14 @@ import org.jetbrains.letsPlot.export.*
 import org.jetbrains.letsPlot.geom.*
 import org.jetbrains.letsPlot.label.*
 import org.jetbrains.letsPlot.pos.positionDodge
-import kotlin.time.Duration.Companion.nanoseconds
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
 import org.jetbrains.letsPlot.sampling.samplingNone
 import org.jetbrains.letsPlot.scale.scaleYContinuous
 import org.jetbrains.letsPlot.scale.scaleYLog10
 import java.io.File
+import kotlin.time.Duration.Companion.nanoseconds
+import kotlin.time.DurationUnit
 
 
 fun BenchmarksReport.runtimePlot(filename: String) {
@@ -64,8 +65,8 @@ fun BenchmarksReport.invocationTimeByScenarioSizePlot(filename: String, benchmar
         width = .1,
         position = positionDodge(0.9),
     ) {
-        ymin = "timeStdLow"
-        ymax = "timeStdHigh"
+        ymin = "timeErrorLow"
+        ymax = "timeErrorHigh"
         group = "mode"
     }
     ggsave(plot, "${filename}.html")
@@ -94,7 +95,9 @@ fun BenchmarksReport.invocationsTimePlot(filename: String, benchmarkID: Benchmar
     ggsave(plot, "${filename}.html")
 }
 
-fun BenchmarksReport.runningTimeData(): Map<String, Any> {
+fun BenchmarksReport.runningTimeData(
+    durationUnit: DurationUnit = DurationUnit.MILLISECONDS
+): Map<String, Any> {
     val map = mutableMapOf<String, Any>()
     val ids = data.keys.toList()
     map["name"] = ids.map { id ->
@@ -104,12 +107,14 @@ fun BenchmarksReport.runningTimeData(): Map<String, Any> {
         data[id]!!.mode.toString()
     }
     map["runningTime"] = ids.map { id ->
-        data[id]!!.runningTimeMilli
+        data[id]!!.runningTimeNano.nanoseconds.toLong(durationUnit)
     }
     return map
 }
 
-fun BenchmarksReport.invocationTimeByScenarioSizeData(benchmarkName: String): Map<String, Any> {
+fun BenchmarksReport.invocationTimeByScenarioSizeData(benchmarkName: String,
+      durationUnit: DurationUnit = DurationUnit.MICROSECONDS,
+): Map<String, Any> {
     val map = mutableMapOf<String, Any>()
     val benchmarks = data.values
         .filter { it.name == benchmarkName }
@@ -121,27 +126,38 @@ fun BenchmarksReport.invocationTimeByScenarioSizeData(benchmarkName: String): Ma
         stats.map { mode.toString() }
     }
     map["timeAverage"] = benchmarks.flatMap { (_, stats) ->
-        stats.map { it.invocationAverageTimeMicro }
+        stats.map { it.invocationAverageTimeNano.nanoseconds.toLong(durationUnit) }
     }
-    map["timeStdLow"] = benchmarks.flatMap { (_, stats) ->
+    map["timeErrorLow"] = benchmarks.flatMap { (_, stats) ->
         stats.map {
-            (it.invocationAverageTimeMicro - it.invocationStandardDeviationTimeMicro)
+            (it.invocationAverageTimeNano - it.invocationStandardErrorTimeNano)
+                .nanoseconds.toLong(durationUnit)
         }
     }
-    map["timeStdHigh"] = benchmarks.flatMap { (_, stats) ->
+    map["timeErrorHigh"] = benchmarks.flatMap { (_, stats) ->
         stats.map {
-            (it.invocationAverageTimeMicro + it.invocationStandardDeviationTimeMicro)
+            (it.invocationAverageTimeNano + it.invocationStandardErrorTimeNano)
+                .nanoseconds.toLong(durationUnit)
         }
     }
     return map
 }
 
-fun BenchmarksReport.invocationsTimeData(benchmarkID: BenchmarkID): Map<String, Any> {
+fun BenchmarksReport.invocationsTimeData(benchmarkID: BenchmarkID,
+     durationUnit: DurationUnit = DurationUnit.MICROSECONDS,
+): Map<String, Any> {
     val map = mutableMapOf<String, Any>()
-    val invocationsRunningTimeNano = data[benchmarkID]!!.invocationsRunningTimeMicro
+    val invocationsRunningTimeNano = data[benchmarkID]!!.invocationsRunningTimeNano
+        .apply { convertTo(durationUnit) }
     map["invocationID"] = invocationsRunningTimeNano.indices.toList()
     map["invocationRunningTimeNano"] = invocationsRunningTimeNano
     return map
+}
+
+private fun LongArray.convertTo(unit: DurationUnit) {
+    for (i in indices) {
+        this[i] = this[i].nanoseconds.toLong(unit)
+    }
 }
 
 fun main(args: Array<String>) {

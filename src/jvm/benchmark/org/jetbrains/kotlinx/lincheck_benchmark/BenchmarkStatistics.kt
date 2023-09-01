@@ -18,8 +18,6 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToStream
 import kotlin.math.*
 import java.io.File
-import kotlin.time.Duration.Companion.nanoseconds
-import kotlin.time.DurationUnit
 
 
 typealias BenchmarkID = String
@@ -33,12 +31,12 @@ data class BenchmarksReport(
 data class BenchmarkStatistics(
     val mode: LincheckMode,
     val name: String,
-    val runningTimeMilli: Long,
+    val runningTimeNano: Long,
     val iterationsCount: Int,
     val invocationsCount: Int,
     val scenariosStatistics: List<ScenarioStatistics>,
     // TODO: check array is not empty
-    val invocationsRunningTimeMicro: LongArray,
+    val invocationsRunningTimeNano: LongArray,
 )
 
 @Serializable
@@ -46,9 +44,9 @@ data class ScenarioStatistics(
     val threads: Int,
     val operations: Int,
     val invocationsCount: Int,
-    val runningTimeMilli: Long,
-    val invocationAverageTimeMicro: Long,
-    val invocationStandardDeviationTimeMicro: Long,
+    val runningTimeNano: Long,
+    val invocationAverageTimeNano: Long,
+    val invocationStandardErrorTimeNano: Long,
 )
 
 val BenchmarksReport.benchmarkNames: List<String>
@@ -67,39 +65,29 @@ val BenchmarkStatistics.id: BenchmarkID
 fun Statistics.toBenchmarkStatistics(name: String, mode: LincheckMode) = BenchmarkStatistics(
     name = name,
     mode = mode,
-    runningTimeMilli = runningTimeNano.nanoseconds.toLong(DurationUnit.MILLISECONDS),
+    runningTimeNano = runningTimeNano,
     iterationsCount = iterationsCount,
     invocationsCount = invocationsCount,
-    invocationsRunningTimeMicro = iterationsStatistics
+    invocationsRunningTimeNano = iterationsStatistics
         .map { it.invocationsRunningTimeNano }
-        .flatten()
-        .apply { convertTo(DurationUnit.MICROSECONDS) },
+        .flatten(),
     scenariosStatistics = iterationsStatistics
         .groupBy { (it.scenario.nThreads to it.scenario.parallelExecution[0].size) }
         .map { (key, statistics) ->
             val (threads, operations) = key
             val invocationsRunningTime = statistics
-                .map { it.invocationsRunningTimeNano.drop(100).toLongArray() }
+                .map { it.invocationsRunningTimeNano }
                 .flatten()
-                .apply { convertTo(DurationUnit.MICROSECONDS) }
             ScenarioStatistics(
                 threads = threads,
                 operations = operations,
                 invocationsCount = statistics.sumOf { it.invocationsCount },
-                runningTimeMilli = statistics.sumOf {
-                    it.runningTimeNano.nanoseconds.toLong(DurationUnit.MILLISECONDS)
-                },
-                invocationAverageTimeMicro = invocationsRunningTime.average().toLong(),
-                invocationStandardDeviationTimeMicro = invocationsRunningTime.standardError().toLong(),
+                runningTimeNano = statistics.sumOf { it.runningTimeNano },
+                invocationAverageTimeNano = invocationsRunningTime.average().toLong(),
+                invocationStandardErrorTimeNano = invocationsRunningTime.standardError().toLong(),
             )
         }
 )
-
-private fun LongArray.convertTo(unit: DurationUnit) {
-    for (i in indices) {
-        this[i] = this[i].nanoseconds.toLong(unit)
-    }
-}
 
 fun Iterable<LongArray>.flatten(): LongArray {
     val size = sumOf { it.size }
