@@ -43,6 +43,34 @@ fun BenchmarksReport.runtimePlot(filename: String) {
     ggsave(plot, "${filename}.html")
 }
 
+fun BenchmarksReport.invocationTimeByScenarioSizePlot(filename: String, benchmarkName: String) {
+    val data = invocationTimeByScenarioSizeData(benchmarkName)
+    var plot = letsPlot(data) {
+        x = "params"
+    }
+    plot += ggsize(600, 800)
+    plot += labs(
+        x = "(#threads, #operations)",
+        y = "time (us)",
+    )
+    plot += geomBar(
+        stat = Stat.identity,
+        position = positionDodge(),
+    ) {
+        y = "timeAverage"
+        fill = "mode"
+    }
+    plot += geomErrorBar(
+        width = .1,
+        position = positionDodge(0.9),
+    ) {
+        ymin = "timeStdLow"
+        ymax = "timeStdHigh"
+        group = "mode"
+    }
+    ggsave(plot, "${filename}.html")
+}
+
 fun BenchmarksReport.invocationsTimePlot(filename: String, benchmarkID: BenchmarkID) {
     val data = invocationsTimeData(benchmarkID)
     var plot = letsPlot(data)
@@ -76,16 +104,41 @@ fun BenchmarksReport.runningTimeData(): Map<String, Any> {
         data[id]!!.mode.toString()
     }
     map["runningTime"] = ids.map { id ->
-        data[id]!!.runningTimeNano.nanoseconds.inWholeMilliseconds
+        data[id]!!.runningTimeMilli
+    }
+    return map
+}
+
+fun BenchmarksReport.invocationTimeByScenarioSizeData(benchmarkName: String): Map<String, Any> {
+    val map = mutableMapOf<String, Any>()
+    val benchmarks = data.values
+        .filter { it.name == benchmarkName }
+        .map { (it.mode to it.scenariosStatistics) }
+    map["params"] = benchmarks.flatMap { (_, stats) ->
+        stats.map { (it.threads to it.operations).toString() }
+    }
+    map["mode"] = benchmarks.flatMap { (mode, stats) ->
+        stats.map { mode.toString() }
+    }
+    map["timeAverage"] = benchmarks.flatMap { (_, stats) ->
+        stats.map { it.invocationAverageTimeMicro }
+    }
+    map["timeStdLow"] = benchmarks.flatMap { (_, stats) ->
+        stats.map {
+            (it.invocationAverageTimeMicro - it.invocationStandardDeviationTimeMicro)
+        }
+    }
+    map["timeStdHigh"] = benchmarks.flatMap { (_, stats) ->
+        stats.map {
+            (it.invocationAverageTimeMicro + it.invocationStandardDeviationTimeMicro)
+        }
     }
     return map
 }
 
 fun BenchmarksReport.invocationsTimeData(benchmarkID: BenchmarkID): Map<String, Any> {
     val map = mutableMapOf<String, Any>()
-    val invocationsRunningTimeNano = data[benchmarkID]!!.invocationsRunningTimeNano.map {
-        it.nanoseconds.inWholeMicroseconds
-    }
+    val invocationsRunningTimeNano = data[benchmarkID]!!.invocationsRunningTimeMicro
     map["invocationID"] = invocationsRunningTimeNano.indices.toList()
     map["invocationRunningTimeNano"] = invocationsRunningTimeNano
     return map
@@ -102,5 +155,6 @@ fun main(args: Array<String>) {
         Json.decodeFromStream<BenchmarksReport>(inputStream)
     }
     report.runtimePlot("running-time")
+    report.invocationTimeByScenarioSizePlot("invocation-time-by-size", "ConcurrentHashMap")
     report.invocationsTimePlot("invocations-time", "ConcurrentHashMap-ModelChecking")
 }
