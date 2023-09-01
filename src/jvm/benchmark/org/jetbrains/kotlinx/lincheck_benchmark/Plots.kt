@@ -28,6 +28,7 @@ import kotlin.time.DurationUnit
 fun BenchmarksReport.runtimePlot(filename: String) {
     val data = runningTimeData()
     var plot = letsPlot(data)
+    plot += ggtitle("Benchmarks running time")
     plot += ggsize(600, 800)
     plot += labs(
         x = "benchmark name",
@@ -49,6 +50,7 @@ fun BenchmarksReport.invocationTimeByScenarioSizePlot(filename: String, benchmar
     var plot = letsPlot(data) {
         x = "params"
     }
+    plot += ggtitle("Invocation average time by scenario size", subtitle = benchmarkName)
     plot += ggsize(600, 800)
     plot += labs(
         x = "(#threads, #operations)",
@@ -75,11 +77,12 @@ fun BenchmarksReport.invocationTimeByScenarioSizePlot(filename: String, benchmar
 fun BenchmarksReport.invocationsTimePlot(filename: String, benchmarkID: BenchmarkID) {
     val data = invocationsTimeData(benchmarkID)
     var plot = letsPlot(data)
-    plot += ggsize(1600, 900)
+    plot += ggtitle("Invocations time", subtitle = benchmarkID)
     plot += labs(
         x = "# invocation",
         y = "time (us)"
     )
+    plot += ggsize(1600, 900)
     plot += geomPoint(
         stat = Stat.identity,
         sampling = samplingNone,
