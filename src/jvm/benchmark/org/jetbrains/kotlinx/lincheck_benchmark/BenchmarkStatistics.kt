@@ -49,6 +49,9 @@ data class ScenarioStatistics(
     val invocationStandardErrorTimeNano: Long,
 )
 
+val BenchmarksReport.benchmarkIDs: List<BenchmarkID>
+    get() = data.keys.toList()
+
 val BenchmarksReport.benchmarkNames: List<String>
     get() = data.map { (_, statistics) -> statistics.name }.distinct()
 

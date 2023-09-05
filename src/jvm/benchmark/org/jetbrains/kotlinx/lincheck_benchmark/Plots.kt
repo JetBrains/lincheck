@@ -173,7 +173,11 @@ fun main(args: Array<String>) {
     val report = file.inputStream().use { inputStream ->
         Json.decodeFromStream<BenchmarksReport>(inputStream)
     }
-    report.runtimePlot("running-time")
-    report.invocationTimeByScenarioSizePlot("invocation-time-by-size", "ConcurrentHashMap")
-    report.invocationsTimePlot("invocations-time", "ConcurrentHashMap-ModelChecking")
+    report.runtimePlot("running-time-bar-plot")
+    for (name in report.benchmarkNames) {
+        report.invocationTimeByScenarioSizePlot("$name-invocation-time-by-size-bar-plot", name)
+    }
+    for (id in report.benchmarkIDs) {
+        report.invocationsTimePlot("$id-invocations-time-scatter-plot", id)
+    }
 }
