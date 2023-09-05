@@ -41,22 +41,8 @@ class EventStructureStrategy(
     // The number of invocations that the strategy is eligible to use to search for an incorrect execution.
     private val maxInvocations = testCfg.invocationsPerIteration
 
-    private val sequentialConsistencyChecker: SequentialConsistencyChecker =
-        SequentialConsistencyChecker(
-            checkReleaseAcquireConsistency = true,
-            approximateSequentialConsistency = false
-        )
-
-    private val atomicityChecker: AtomicityChecker =
-        AtomicityChecker()
-
     private val eventStructure: EventStructure =
-        EventStructure(
-            nThreads,
-            sequentialConsistencyChecker,
-            atomicityChecker,
-            memoryInitializer,
-        )
+        EventStructure(nThreads, memoryInitializer)
 
     // Tracker of shared memory accesses.
     override val memoryTracker: MemoryTracker = EventStructureMemoryTracker(eventStructure)
@@ -67,10 +53,6 @@ class EventStructureStrategy(
     override val parkingTracker: ParkingTracker = EventStructureParkingTracker(eventStructure)
 
     val stats = Stats()
-
-    init {
-        atomicityChecker.initialize(eventStructure)
-    }
 
     override fun runImpl(): LincheckFailure? {
         // TODO: move invocation counting logic to ManagedStrategy class
@@ -83,7 +65,9 @@ class EventStructureStrategy(
                 runUntracking(nThreads) {
                     memoryTracker.dumpMemory()
                 }
-                checkResult(result, shouldCollectTrace = false)?.let { return it }
+                checkResult(result, shouldCollectTrace = false)?.let {
+                    return it
+                }
             }
         }
         println(stats)

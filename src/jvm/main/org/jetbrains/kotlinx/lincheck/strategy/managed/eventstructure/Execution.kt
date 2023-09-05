@@ -44,9 +44,6 @@ interface Execution : Collection<Event> {
     override fun iterator(): Iterator<Event> =
         threadIDs.map { get(it)!! }.asSequence().flatten().iterator()
 
-    fun executionOrderSortedList(): List<Event> =
-        this.sorted()
-
 }
 
 interface MutableExecution : Execution {
@@ -167,7 +164,7 @@ fun Execution.toMutableFrontier(): MutableExecutionFrontier =
 
 fun Execution.buildIndexer() = object : Indexer<Event> {
 
-    private val events = executionOrderSortedList()
+    private val events = enumerationOrderSortedList()
 
     private val eventIndices = threadMap.mapValues { (_, threadEvents) ->
         List(threadEvents.size) { pos ->
@@ -196,11 +193,14 @@ fun Execution.computeVectorClock(event: Event, relation: Relation<Event>): Vecto
     return clock
 }
 
+fun Execution.enumerationOrderSortedList(): List<Event> =
+    this.sorted()
+
 // TODO: rename?
 fun Execution.fixupDependencies(): Remapping {
     val remapping = Remapping()
     // TODO: refactor, simplify & unify cases
-    for (event in executionOrderSortedList()) {
+    for (event in enumerationOrderSortedList()) {
         if (!(event.label is MemoryAccessLabel || event.label is MutexLabel))
             continue
         // TODO: unify cases

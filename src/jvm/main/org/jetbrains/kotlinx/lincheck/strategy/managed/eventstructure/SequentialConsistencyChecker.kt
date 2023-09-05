@@ -41,13 +41,11 @@ class SequentialConsistencyChecker(
     val approximateSequentialConsistency: Boolean = true
 ) : ConsistencyChecker {
 
+    var executionOrder: List<Event> = listOf()
+        private set
+
     override fun check(execution: Execution): Inconsistency? {
-        // do basic preliminary checks
-        checkLocks(execution)?.let { return it }
-        // first try to simply replay according to execution order
-        if (canReplayByExecutionOrder(execution)) {
-            return null
-        }
+        executionOrder = listOf()
         // calculate writes-before relation if required
         val wbRelation = if (checkReleaseAcquireConsistency) {
             WritesBeforeRelation(execution).apply {
@@ -71,6 +69,100 @@ class SequentialConsistencyChecker(
         return checkByReplaying(execution, covering)
     }
 
+    private fun checkByReplaying(execution: Execution, covering: Covering<Event>): Inconsistency? {
+        // TODO: this is just a DFS search.
+        //  In fact, we can generalize this algorithm to
+        //  two arbitrary labelled transition systems by taking their product LTS
+        //  and trying to find a trace in this LTS leading to terminal state.
+        val context = Context(execution, covering)
+        val initState = State.initial(execution)
+        val stack = ArrayDeque(listOf(initState))
+        val visited = mutableSetOf(initState)
+        with(context) {
+            while (stack.isNotEmpty()) {
+                val state = stack.removeLast()
+                // TODO: maybe we should return more information than just success
+                //  (e.g. path leading to terminal state)?
+                if (state.isTerminal) {
+                    executionOrder = state.history
+                    return null
+                }
+                state.transitions().forEach {
+                    if (it !in visited) {
+                        visited.add(it)
+                        stack.addLast(it)
+                    }
+                }
+            }
+            return SequentialConsistencyViolation(
+                phase = SequentialConsistencyCheckPhase.REPLAYING
+            )
+        }
+    }
+
+}
+
+class IncrementalSequentialConsistencyChecker(
+    checkReleaseAcquireConsistency: Boolean = true,
+    approximateSequentialConsistency: Boolean = true
+) : IncrementalConsistencyChecker {
+
+    private var execution = executionOf()
+    private val executionOrder = mutableListOf<Event>()
+
+    private val sequentialConsistencyChecker = SequentialConsistencyChecker(
+        checkReleaseAcquireConsistency,
+        approximateSequentialConsistency,
+    )
+
+    override fun check(): Inconsistency? {
+        // TODO: expensive check???
+        // check(execution.enumerationOrderSortedList() == executionOrder.sorted())
+
+        // do basic preliminary checks
+        checkLocks(execution)?.let { return it }
+        // first try to replay according to execution order
+        if (checkByExecutionOrderReplaying()) {
+            return null
+        }
+        val inconsistency = sequentialConsistencyChecker.check(execution)
+        if (inconsistency == null) {
+            executionOrder.clear()
+            executionOrder.addAll(sequentialConsistencyChecker.executionOrder.ensure {
+                it.isNotEmpty()
+            })
+        }
+        return inconsistency
+    }
+
+    override fun check(event: Event): Inconsistency? {
+        executionOrder.add(event)
+        return null
+    }
+
+    override fun reset(execution: Execution) {
+        this.execution = execution
+        executionOrder.clear()
+        executionOrder.addAll(execution.enumerationOrderSortedList())
+    }
+
+    private fun checkByExecutionOrderReplaying(): Boolean {
+        // TODO: this should be handled by the replayer itself ---
+        //    as a first step it should build hyper-execution graph
+        for (i in executionOrder.indices) {
+            val event = executionOrder[i]
+            if (event.label is WriteAccessLabel && event.label.isExclusive) {
+                val j = i - 1
+                val valid = (j >= 0) && event.isWritePartOfAtomicUpdate(executionOrder[j])
+                if (!valid)
+                    return false
+            }
+        }
+        val replayer = SequentialConsistencyReplayer(1 + execution.maxThreadID)
+        return (replayer.replay(executionOrder) != null)
+    }
+
+    // TODO: move to a separate consistency checker!
     private fun checkLocks(execution: Execution): Inconsistency? {
         // maps unlock (or notify) event to its single matching lock (or wait) event;
         // if lock synchronizes-from initialization event,
@@ -96,40 +188,6 @@ class SequentialConsistencyChecker(
         }
         return null
     }
-
-    private fun canReplayByExecutionOrder(execution: Execution): Boolean {
-        val replayer = SequentialConsistencyReplayer(1 + execution.maxThreadID)
-        return (replayer.replay(execution) != null)
-    }
-
-    private fun checkByReplaying(execution: Execution, covering: Covering<Event>): Inconsistency? {
-        // TODO: this is just a DFS search.
-        //  In fact, we can generalize this algorithm to
-        //  two arbitrary labelled transition systems by taking their product LTS
-        //  and trying to find a trace in this LTS leading to terminal state.
-        val context = Context(execution, covering)
-        val initState = State.initial(execution)
-        val stack = ArrayDeque(listOf(initState))
-        val visited = mutableSetOf(initState)
-        with(context) {
-            while (stack.isNotEmpty()) {
-                val state = stack.removeLast()
-                // TODO: maybe we should return more information than just success
-                //  (e.g. path leading to terminal state)?
-                if (state.isTerminal) return null
-                state.transitions().forEach {
-                    if (it !in visited) {
-                        visited.add(it)
-                        stack.addLast(it)
-                    }
-                }
-            }
-            return SequentialConsistencyViolation(
-                phase = SequentialConsistencyCheckPhase.REPLAYING
-            )
-        }
-    }
-
 }
 
 private data class SequentialConsistencyReplayer(
@@ -220,6 +278,20 @@ private data class State(
     val atomicCounter: ExecutionCounter,
     val replayer: SequentialConsistencyReplayer,
 ) {
+
+    // TODO: move to Context
+    var history: List<Event> = listOf()
+        private set
+
+    constructor(
+        counter: ExecutionCounter,
+        atomicCounter: ExecutionCounter,
+        replayer: SequentialConsistencyReplayer,
+        history: List<Event>,
+    ) : this(counter, atomicCounter, replayer) {
+        this.history = history
+    }
+
     companion object {
         fun initial(execution: Execution) = State(
             counter = IntArray(1 + execution.maxThreadID),
@@ -271,7 +343,7 @@ private class Context(val execution: Execution, val covering: Covering<Event>) {
 
     fun State.transition(threadId: Int): State? {
         val position = atomicCounter[threadId]
-        val atomicEvent = hyperExecution[threadId]?.getOrNull(position)
+        val atomicEvent = hyperExecution.getOrNull(threadId)?.getOrNull(position)
             ?.takeIf { atomicEvent -> atomicEvent.events.all { coverable(it) } }
             ?: return null
         val view = replayer.replay(atomicEvent) ?: return null
@@ -282,7 +354,8 @@ private class Context(val execution: Execution, val covering: Covering<Event>) {
             },
             atomicCounter = this.atomicCounter.copyOf().also {
                 it[threadId] += 1
-            }
+            },
+            history = this.history + atomicEvent.events
         )
     }
 
@@ -394,7 +467,7 @@ private class WritesBeforeRelation(
 
     private fun initializeReadModifyWriteChains() {
         val chainsMap = mutableMapOf<Event, MutableList<Event>>()
-        for (event in execution.executionOrderSortedList()) {
+        for (event in execution.enumerationOrderSortedList()) {
             if (event.label !is WriteAccessLabel || !event.label.isExclusive)
                 continue
             val readFrom = event.exclusiveReadPart.readsFrom

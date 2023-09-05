@@ -28,13 +28,15 @@ fun interface ConsistencyChecker {
     fun check(execution: Execution): Inconsistency?
 }
 
-val idleConsistencyChecker : ConsistencyChecker =
-    ConsistencyChecker { null }
-
 interface IncrementalConsistencyChecker {
-
     /**
-     * Checks whether adding the given [event] to the current execution retains execution's consistency.
+     * Performs incremental consistency check,
+     * verifying whether adding the given [event] to the current execution retains execution's consistency.
+     * The implementation is allowed to approximate the check in the following sense.
+     * - The check can be incomplete --- it can miss some inconsistencies.
+     * - The check should be sound --- if an inconsistency is reported, the execution should indeed be inconsistent.
+     * However, if an inconsistency was missed by an incremental check,
+     * a subsequent full consistency check via [check] function should detect this inconsistency.
      *
      * @return `null` if execution remains consistent,
      *   otherwise returns non-null [Inconsistency] object
@@ -43,15 +45,71 @@ interface IncrementalConsistencyChecker {
     fun check(event: Event): Inconsistency?
 
     /**
+     * Performs full consistency check.
+     * The check should be sound and complete:
+     * an inconsistency should be reported if and only if the execution is indeed inconsistent.
+     *
+     * @return `null` if execution remains consistent,
+     *   otherwise returns non-null [Inconsistency] object
+     *   representing the reason of inconsistency.
+     */
+    fun check(): Inconsistency?
+
+    /**
      * Resets the internal state of consistency checker to [execution].
      */
     fun reset(execution: Execution)
 }
 
-val idleIncrementalConsistencyChecker = object : IncrementalConsistencyChecker {
+private class AggregatedIncrementalConsistencyChecker(
+    val incrementalConsistencyCheckers: List<IncrementalConsistencyChecker>,
+    val consistencyCheckers: List<ConsistencyChecker>,
+) : IncrementalConsistencyChecker {
 
-    override fun check(event: Event): Inconsistency? = null
+    private var execution: Execution = executionOf()
 
-    override fun reset(execution: Execution) {}
+    override fun check(event: Event): Inconsistency? {
+        var inconsistency: Inconsistency? = null
+        for (incrementalChecker in incrementalConsistencyCheckers) {
+            incrementalChecker.check(event)?.also {
+                if (inconsistency == null)
+                    inconsistency = it
+            }
+        }
+        // TODO: implement amortized checks for full-consistency checkers?
+        return inconsistency
+    }
+
+    override fun check(): Inconsistency? {
+        var inconsistency: Inconsistency? = null
+        for (incrementalChecker in incrementalConsistencyCheckers) {
+            incrementalChecker.check()?.also {
+                if (inconsistency == null)
+                    inconsistency = it
+            }
+        }
+        for (checker in consistencyCheckers) {
+            if (inconsistency != null)
+                break
+            inconsistency = checker.check(execution)
+        }
+        return inconsistency
+    }
+
+    override fun reset(execution: Execution) {
+        this.execution = execution
+        for (incrementalChecker in incrementalConsistencyCheckers) {
+            incrementalChecker.reset(execution)
+        }
+    }
 
 }
+
+fun aggregateConsistencyCheckers(
+    incrementalConsistencyCheckers: List<IncrementalConsistencyChecker>,
+    consistencyCheckers: List<ConsistencyChecker>,
+) : IncrementalConsistencyChecker =
+    AggregatedIncrementalConsistencyChecker(
+        incrementalConsistencyCheckers,
+        consistencyCheckers,
+    )

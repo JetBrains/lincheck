@@ -28,8 +28,6 @@ import kotlin.reflect.KClass
 
 class EventStructure(
     nParallelThreads: Int,
-    val checker: ConsistencyChecker = idleConsistencyChecker,
-    val incrementalChecker: IncrementalConsistencyChecker = idleIncrementalConsistencyChecker,
     val memoryInitializer: MemoryInitializer,
 ) {
     val mainThreadId = nParallelThreads
@@ -77,6 +75,22 @@ class EventStructure(
     val allocatedObjects: Set<Any>
         get() = allocationEvents.keys
 
+    private val sequentialConsistencyChecker =
+        IncrementalSequentialConsistencyChecker(
+            checkReleaseAcquireConsistency = true,
+            approximateSequentialConsistency = false
+        )
+
+    private val atomicityChecker = AtomicityChecker()
+
+    private val consistencyChecker = aggregateConsistencyCheckers(
+        listOf(
+            atomicityChecker,
+            sequentialConsistencyChecker
+        ),
+        listOf(),
+    )
+    
     /*
      * Map from blocked dangling events to their responses.
      * If event is blocked but the corresponding response has not yet arrived then it is mapped to null.
@@ -164,16 +178,16 @@ class EventStructure(
         _currentExecution = event.frontier.toMutableExecution().apply {
             currentRemapping = fixupDependencies()
         }
-        // reset the internal state of incremental checker
-        incrementalChecker.reset(currentExecution)
+        // reset the internal state of incremental checkers
+        consistencyChecker.reset(currentExecution)
         // add new event to current execution
         _currentExecution.add(event)
         // remap new event's label
         if (event.label.isResponse) {
             event.label.replay(event.recalculateResponseLabel(), currentRemapping)
         }
-        // check new event with the incremental consistency checker
-        detectedInconsistency = incrementalChecker.check(event)
+        // check new event with the incremental consistency checkers
+        detectedInconsistency = consistencyChecker.check(event)
         // set pinned events
         pinnedEvents = event.pinnedEvents.copy().ensure {
             currentExecution.containsAll(it.events)
@@ -188,7 +202,7 @@ class EventStructure(
     fun checkConsistency(): Inconsistency? {
         // TODO: set suddenInvocationResult instead of `detectedInconsistency`
         if (detectedInconsistency == null) {
-            detectedInconsistency = checker.check(currentExecution)
+            detectedInconsistency = consistencyChecker.check()
         }
         return detectedInconsistency
     }
@@ -196,7 +210,7 @@ class EventStructure(
     private fun checkConsistencyIncrementally(event: Event): Inconsistency? {
         // TODO: set suddenInvocationResult instead of `detectedInconsistency`
         if (detectedInconsistency == null) {
-            detectedInconsistency = incrementalChecker.check(event)
+            detectedInconsistency = consistencyChecker.check(event)
         }
         return detectedInconsistency
     }

@@ -24,15 +24,7 @@ data class AtomicityViolation(val write1: Event, val write2: Event): Inconsisten
 
 class AtomicityChecker : IncrementalConsistencyChecker {
 
-    private var isInitialized: Boolean = false
-
-    private lateinit var eventStructure: EventStructure
-
-    fun initialize(eventStructure: EventStructure) {
-        check(!isInitialized)
-        isInitialized = true
-        this.eventStructure = eventStructure
-    }
+    private var execution: Execution = executionOf()
 
     override fun check(event: Event): Inconsistency? {
         if (event.label !is MemoryAccessLabel)
@@ -40,7 +32,7 @@ class AtomicityChecker : IncrementalConsistencyChecker {
         if (event.label.accessKind != MemoryAccessKind.Write || !event.label.isExclusive)
             return null
         val readFrom = event.exclusiveReadPart.readsFrom
-        eventStructure.currentExecution.find {
+        execution.find {
             it != event &&
             it.label is MemoryAccessLabel &&
             it.label.accessKind == MemoryAccessKind.Write &&
@@ -50,8 +42,12 @@ class AtomicityChecker : IncrementalConsistencyChecker {
         return null
     }
 
+    override fun check(): Inconsistency? {
+        return null
+    }
+
     override fun reset(execution: Execution) {
-        return
+        this.execution = execution
     }
 
 }
