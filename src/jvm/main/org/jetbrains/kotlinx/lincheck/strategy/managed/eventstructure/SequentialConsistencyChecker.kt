@@ -88,8 +88,8 @@ class SequentialConsistencyChecker(
                     return null
                 }
                 state.transitions().forEach {
-                    if (it !in visited) {
-                        visited.add(it)
+                    val unvisited = visited.add(it)
+                    if (unvisited) {
                         stack.addLast(it)
                     }
                 }
