@@ -228,7 +228,15 @@ fun Execution.fixupDependencies(): Remapping {
                 is MutexLabel -> req.label.mutex.unwrap()
                 else -> unreachable()
             }
-            val syncFrom = event.syncFrom
+            val syncFrom = when (event.label) {
+                is MemoryAccessLabel ->
+                    event.dependencies.firstOrNull { it.label is MemoryAccessLabel }
+                        ?: event.dependencies.first { it.label is InitializationLabel || it.label is ObjectAllocationLabel }
+                is MutexLabel ->
+                    event.dependencies.firstOrNull { it.label is UnlockLabel }
+                        ?: event.dependencies.first { it.label is InitializationLabel || it.label is ObjectAllocationLabel }
+                else -> event.syncFrom
+            }
             val objTo = when (syncFrom.label) {
                 is MemoryAccessLabel -> syncFrom.label.location.obj
                 is MutexLabel -> syncFrom.label.mutex.unwrap()
