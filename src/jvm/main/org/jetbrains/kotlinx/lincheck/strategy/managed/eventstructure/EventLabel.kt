@@ -763,8 +763,11 @@ data class ReadAccessLabel(
 
     override fun replay(label: EventLabel, remapping: Remapping) {
         super.replay(label, remapping)
-        // TODO: check primitive values are equal
-        remapping[value?.unwrap()] = (label as ReadAccessLabel).value?.unwrap()
+        (label as ReadAccessLabel)
+        if (value != null && label.value != null) {
+            // TODO: check primitive values are equal
+            remapping[value?.unwrap()] = label.value?.unwrap()
+        }
         _value = label.value
     }
 
