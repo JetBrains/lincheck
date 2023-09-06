@@ -45,7 +45,7 @@ import org.jetbrains.kotlinx.lincheck.unreachable
  *    5th International Conference on Formal Structures for Computation and Deduction. 2020.
  *
  */
-abstract class HyperEvent(val events: List<Event>) {
+open class HyperEvent(val events: List<Event>) {
 
     open val dependencies: List<Event> =
         mutableListOf<Event>().apply {
@@ -60,13 +60,18 @@ fun Execution.nextAtomicEvent(iThread: Int, pos: Int): HyperEvent? {
 
 fun List<Event>.nextAtomicEvent(pos: Int): HyperEvent? {
     val event = getOrNull(pos) ?: return null
-    return when(event.label) {
+    var atomicEvent = when(event.label) {
         is ThreadEventLabel     -> nextAtomicThreadEvent(event)
         is MemoryAccessLabel    -> nextAtomicMemoryAccessEvent(event)
         is MutexLabel           -> nextAtomicMutexEvent(event)
         is ParkingEventLabel    -> nextAtomicParkingEvent(event)
         else                    -> SingletonEvent(event)
     }
+    // do not leave ThreadFinish event alone
+    if (pos + atomicEvent.events.size == lastIndex && last().label is ThreadFinishLabel) {
+        atomicEvent = HyperEvent(atomicEvent.events + listOf(last()))
+    }
+    return atomicEvent
 }
 
 class SingletonEvent(event: Event) : HyperEvent(listOf(event)) {
