@@ -182,6 +182,11 @@ fun Execution.buildIndexer() = object : Indexer<Event> {
 
 }
 
+fun Execution.isBlockedDanglingRequest(event: Event): Boolean {
+    return event.label.isRequest && event.label.isBlocking &&
+            (event == this[event.threadId]?.last())
+}
+
 fun Execution.computeVectorClock(event: Event, relation: Relation<Event>): VectorClock {
     check(this is ExecutionImpl)
     val clock = MutableVectorClock(threadMap.capacity)

@@ -651,7 +651,7 @@ class EventStructure(
 
     fun isBlockedDanglingRequest(request: Event): Boolean {
         require(request.label.isRequest && request.label.isBlocking)
-        return (request == currentExecution[request.threadId]?.last())
+        return currentExecution.isBlockedDanglingRequest(request)
     }
 
     fun isBlockedAwaitingRequest(request: Event): Boolean {

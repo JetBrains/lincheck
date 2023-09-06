@@ -52,19 +52,28 @@ class SequentialConsistencyChecker(
                 saturate()?.let { return it }
             }
         } else null
-        // calculate union of happens-before and writes-before relations
-        val hbwbRelation = wbRelation?.let { wb ->
-            executionRelation(execution, relation = causalityOrder.lessThan union wb)
-        }
+        // calculate additional ordering constraints
+        val orderingRelation = executionRelation(execution, relation =
+            // take happens-before as a base relation
+            causalityOrder.lessThan
+            // take union with writes-before relation
+            union (wbRelation ?: Relation.empty())
+            // order dangling request events at the end
+            // union Relation { x, y ->
+            //     execution.isBlockedDanglingRequest(y) && !execution.isBlockedDanglingRequest(x)
+            //             // TODO: remove this hack! (we need it because wait-request is joined with unlock)
+            //             && (x.label !is UnlockLabel)
+            // }
+        )
         // calculate approximation of sequential consistency order if required
         val scApproximationRelation = if (approximateSequentialConsistency) {
-            val initialApproximation = hbwbRelation ?: causalityOrder.lessThan
+            val initialApproximation = orderingRelation ?: causalityOrder.lessThan
             SequentialConsistencyRelation(execution, initialApproximation).apply {
                 saturate()?.let { return it }
             }
-        } else hbwbRelation
+        } else orderingRelation
         // get dependency covering to guide the search
-        val covering = scApproximationRelation?.buildExternalCovering() ?: externalCausalityCovering
+        val covering = scApproximationRelation.buildExternalCovering()
         // check consistency by trying to replay execution using sequentially consistent abstract machine
         return checkByReplaying(execution, covering)
     }
@@ -130,10 +139,14 @@ class IncrementalSequentialConsistencyChecker(
         }
         val inconsistency = sequentialConsistencyChecker.check(execution)
         if (inconsistency == null) {
+            check(sequentialConsistencyChecker.executionOrder.isNotEmpty())
+            // TODO: invent a nicer way to handle blocked dangling requests
+            val (events, blockedRequests) = sequentialConsistencyChecker.executionOrder.partition {
+                !execution.isBlockedDanglingRequest(it)
+            }
             _executionOrder.clear()
-            _executionOrder.addAll(sequentialConsistencyChecker.executionOrder.ensure {
-                it.isNotEmpty()
-            })
+            _executionOrder.addAll(events)
+            _executionOrder.addAll(blockedRequests)
         }
         return inconsistency
     }
@@ -152,20 +165,32 @@ class IncrementalSequentialConsistencyChecker(
     private fun checkByExecutionOrderReplaying(): Boolean {
         // TODO: this should be handled by the replayer itself ---
         //    as a first step it should build hyper-execution graph
+        var valid = true
         for (i in _executionOrder.indices) {
             val event = _executionOrder[i]
             if (event.label is ReadAccessLabel && event.label.isResponse) {
                 val j = i - 1
-                val valid = (j >= 0) && event.isValidResponse(_executionOrder[j])
+                valid = (j >= 0) && event.isValidResponse(_executionOrder[j])
                 if (!valid)
                     return false
             }
             if (event.label is WriteAccessLabel && event.label.isExclusive) {
                 val j = i - 1
-                val valid = (j >= 0) && event.isWritePartOfAtomicUpdate(_executionOrder[j])
+                valid = (j >= 0) && event.isWritePartOfAtomicUpdate(_executionOrder[j])
                 if (!valid)
                     return false
             }
+        }
+        // TODO: think how to enforce this!!!
+        val firstBlockedRequestIndex = _executionOrder.indexOfFirst {
+            execution.isBlockedDanglingRequest(it)
+        }
+        if (firstBlockedRequestIndex >= 0) {
+            valid = (firstBlockedRequestIndex until _executionOrder.size).all { i ->
+                execution.isBlockedDanglingRequest(executionOrder[i])
+            }
+            if (!valid)
+                return false
         }
         val replayer = SequentialConsistencyReplayer(1 + execution.maxThreadID)
         return (replayer.replay(_executionOrder) != null)
@@ -355,7 +380,8 @@ private class Context(val execution: Execution, val covering: Covering<Event>) {
         val atomicEvent = hyperExecution.getOrNull(threadId)?.getOrNull(position)
             ?.takeIf { atomicEvent -> atomicEvent.events.all { coverable(it) } }
             ?: return null
-        val view = replayer.replay(atomicEvent) ?: return null
+        val view = replayer.replay(atomicEvent)
+            ?: return null
         return State(
             replayer = view,
             counter = this.counter.copyOf().also {

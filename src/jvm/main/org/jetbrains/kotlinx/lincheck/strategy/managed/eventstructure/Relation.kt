@@ -30,6 +30,10 @@ fun interface Relation<T> {
     infix fun intersection(relation: Relation<T>) = Relation<T> { x, y ->
         this(x, y) && relation(x, y)
     }
+
+    companion object {
+        fun<T> empty() = Relation<T> { _, _ -> false }
+    }
 }
 
 fun interface Covering<T> {

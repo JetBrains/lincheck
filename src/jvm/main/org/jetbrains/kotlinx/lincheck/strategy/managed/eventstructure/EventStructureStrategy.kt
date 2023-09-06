@@ -246,7 +246,8 @@ class EventStructureStrategy(
         //   call overridden `onStart` and `onFinish` methods only when thread is active
         //   and the `currentThread` lock is held
         awaitTurn(iThread)
-        while (!isActive(iThread)) {
+        // TODO: extract this check into a method ?
+        while (eventStructure.inReplayPhase() && !eventStructure.canReplayNextEvent(iThread)) {
             switchCurrentThread(iThread, mustSwitch = true)
         }
         eventStructure.addThreadFinishEvent(iThread)

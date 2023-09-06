@@ -191,7 +191,7 @@ class ReadModifyWriteEvent(
 fun List<Event>.nextAtomicMutexEvent(firstEvent: Event): HyperEvent {
     require(firstEvent.label is MutexLabel)
     return when(firstEvent.label) {
-        is LockLabel -> SingletonEvent(firstEvent)
+        is LockLabel -> nextAtomicSendOrReceiveEvent(firstEvent)
 
         is UnlockLabel -> {
             val unlockEvent = firstEvent
@@ -212,7 +212,9 @@ fun List<Event>.nextAtomicMutexEvent(firstEvent: Event): HyperEvent {
             val lockRequestEvent = getOrNull(1 + waitResponseEvent.threadPosition)
                 ?: return SingletonEvent(waitResponseEvent)
 
-            WakeUpAndTryLock(waitResponseEvent, lockRequestEvent)
+            val lockResponseEvent = getOrNull(1 + lockRequestEvent.threadPosition)
+
+            WakeUpAndTryLock(waitResponseEvent, lockRequestEvent, lockResponseEvent)
         }
 
         is NotifyLabel -> SingletonEvent(firstEvent)
@@ -244,13 +246,19 @@ class UnlockAndWait(
 class WakeUpAndTryLock(
     waitResponse: Event,
     lockRequest: Event,
-) : HyperEvent(listOf(waitResponse, lockRequest)) {
+    lockResponse: Event?,
+) : HyperEvent(listOfNotNull(waitResponse, lockRequest, lockResponse)) {
 
     init {
         require(waitResponse.label is WaitLabel && waitResponse.label.isResponse)
         require(lockRequest.label is LockLabel && lockRequest.label.isRequest)
         require(lockRequest.label.mutex == waitResponse.label.mutex)
         require(lockRequest.parent == waitResponse)
+        if (lockResponse != null) {
+            require(lockResponse.label is LockLabel && lockResponse.label.isResponse)
+            require(lockRequest.label.mutex == lockResponse.label.mutex)
+            require(lockResponse.parent == lockRequest)
+        }
     }
 
     val waitResponsePart: Event
@@ -259,8 +267,8 @@ class WakeUpAndTryLock(
     val lockRequestPart: Event
         get() = events[1]
 
-    val lockResponsePart: Event
-        get() = events[2]
+    val lockResponsePart: Event?
+        get() = events.getOrNull(2)
 
     override val dependencies: List<Event> = waitResponse.dependencies
 
@@ -363,5 +371,5 @@ class CriticalSectionEvent(events: List<Event>) : HyperEvent(events) {
 
 fun List<Event>.nextAtomicParkingEvent(firstEvent: Event): HyperEvent {
     require(firstEvent.label is ParkingEventLabel)
-    return SingletonEvent(firstEvent)
+    return nextAtomicSendOrReceiveEvent(firstEvent)
 }
