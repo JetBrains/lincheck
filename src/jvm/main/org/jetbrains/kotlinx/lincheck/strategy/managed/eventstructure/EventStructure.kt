@@ -29,6 +29,7 @@ import kotlin.reflect.KClass
 class EventStructure(
     nParallelThreads: Int,
     val memoryInitializer: MemoryInitializer,
+    val internalThreadSwitchCallback: InternalThreadSwitchCallback,
 ) {
     val mainThreadId = nParallelThreads
     val initThreadId = nParallelThreads + 1
@@ -61,13 +62,16 @@ class EventStructure(
 
     private var playedFrontier = MutableExecutionFrontier(this.nThreads)
 
+    private var replayer = Replayer()
+
     private var pinnedEvents = ExecutionFrontier(this.nThreads)
 
     private var currentRemapping: Remapping = Remapping()
 
     private val delayedConsistencyCheckBuffer = mutableListOf<Event>()
 
-    private var detectedInconsistency: Inconsistency? = null
+    var detectedInconsistency: Inconsistency? = null
+        private set
 
     // TODO: move to EventIndexer once it will be implemented
     private val allocationEvents = IdentityHashMap<Any, Event>()
@@ -126,6 +130,10 @@ class EventStructure(
     fun initializeExploration() {
         playedFrontier = MutableExecutionFrontier(nThreads)
         playedFrontier[initThreadId] = currentExecution[initThreadId]!!.last()
+        replayer.currentEvent.ensure {
+            it != null && it.label is InitializationLabel
+        }
+        replayer.setNextEvent()
     }
 
     fun abortExploration() {
@@ -186,12 +194,16 @@ class EventStructure(
         if (event.label.isResponse) {
             event.label.replay(event.recalculateResponseLabel(), currentRemapping)
         }
-        // check new event with the incremental consistency checkers
-        detectedInconsistency = consistencyChecker.check(event)
         // set pinned events
         pinnedEvents = event.pinnedEvents.copy().ensure {
             currentExecution.containsAll(it.events)
         }
+        // check new event with the incremental consistency checkers
+        checkConsistencyIncrementally(event)
+        // check the full consistency of the whole execution
+        checkConsistency()
+        // set the replayer state
+        replayer = Replayer(sequentialConsistencyChecker.executionOrder)
         // reset state of other auxiliary structures
         currentRemapping.reset()
         danglingEvents.clear()
@@ -215,36 +227,48 @@ class EventStructure(
         return detectedInconsistency
     }
 
+    private class Replayer(private val executionOrder: List<Event>) {
+        private var index: Int = 0
+        private val size: Int = executionOrder.size
+
+        constructor(): this(listOf())
+
+        fun inProgress(): Boolean =
+            (index < size)
+
+        val currentEvent: Event?
+            get() = if (inProgress()) executionOrder[index] else null
+
+        fun setNextEvent() {
+            index++
+        }
+    }
+
     fun inReplayPhase(): Boolean =
-        (0 .. maxThreadId).any { inReplayPhase(it) }
+        replayer.inProgress()
 
     fun inReplayPhase(iThread: Int): Boolean {
-        val frontEvent = playedFrontier[iThread]?.ensure { it in _currentExecution }
+        val frontEvent = playedFrontier[iThread]
+            ?.ensure { it in _currentExecution }
         return (frontEvent != currentExecution.lastEvent(iThread))
     }
 
     // should only be called in replay phase!
-    fun getNextEventToReplay(iThread: Int): Event =
-        currentExecution[iThread, playedFrontier.getNextPosition(iThread)]!!
-
-    // should only be called in replay phase!
-    private fun getNextHyperEventToReplay(iThread: Int): HyperEvent =
-        currentExecution.nextAtomicEvent(iThread, playedFrontier.getNextPosition(iThread))!!
-
-    // should only be called in replay phase!
     fun canReplayNextEvent(iThread: Int): Boolean {
-        val atomicEvent = getNextHyperEventToReplay(iThread)
-        return atomicEvent.dependencies.all { dependency ->
-            dependency in playedFrontier
-        }
+        return iThread == replayer.currentEvent?.threadId
     }
 
     private fun tryReplayEvent(iThread: Int): Event? {
-        return if (inReplayPhase(iThread)) {
-            val position = 1 + playedFrontier.getPosition(iThread)
-            check(position < currentExecution.getThreadSize(iThread))
-            currentExecution[iThread, position]!!
-        } else null
+        if (inReplayPhase() && !canReplayNextEvent(iThread)) {
+            // TODO: can we get rid of this?
+            //   we can try to enforce more ordering invariants by grouping "atomic" events
+            //   and also grouping events for which there is no reason to make switch in-between
+            //   (e.g. `Alloc` followed by a `Write`).
+            internalThreadSwitchCallback(iThread)
+            check(!inReplayPhase() || canReplayNextEvent(iThread))
+        }
+        return replayer.currentEvent
+            ?.also { replayer.setNextEvent() }
     }
 
     private fun emptyClock(): MutableVectorClock =

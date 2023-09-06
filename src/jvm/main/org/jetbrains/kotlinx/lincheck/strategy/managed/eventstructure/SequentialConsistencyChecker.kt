@@ -108,7 +108,10 @@ class IncrementalSequentialConsistencyChecker(
 ) : IncrementalConsistencyChecker {
 
     private var execution = executionOf()
-    private val executionOrder = mutableListOf<Event>()
+    private val _executionOrder = mutableListOf<Event>()
+
+    val executionOrder: List<Event>
+        get() = _executionOrder
 
     private val sequentialConsistencyChecker = SequentialConsistencyChecker(
         checkReleaseAcquireConsistency,
@@ -127,8 +130,8 @@ class IncrementalSequentialConsistencyChecker(
         }
         val inconsistency = sequentialConsistencyChecker.check(execution)
         if (inconsistency == null) {
-            executionOrder.clear()
-            executionOrder.addAll(sequentialConsistencyChecker.executionOrder.ensure {
+            _executionOrder.clear()
+            _executionOrder.addAll(sequentialConsistencyChecker.executionOrder.ensure {
                 it.isNotEmpty()
             })
         }
@@ -136,30 +139,36 @@ class IncrementalSequentialConsistencyChecker(
     }
 
     override fun check(event: Event): Inconsistency? {
-        executionOrder.add(event)
+        _executionOrder.add(event)
         return null
     }
 
     override fun reset(execution: Execution) {
         this.execution = execution
-        executionOrder.clear()
-        executionOrder.addAll(execution.enumerationOrderSortedList())
+        _executionOrder.clear()
+        _executionOrder.addAll(execution.enumerationOrderSortedList())
     }
 
     private fun checkByExecutionOrderReplaying(): Boolean {
         // TODO: this should be handled by the replayer itself ---
         //    as a first step it should build hyper-execution graph
-        for (i in executionOrder.indices) {
-            val event = executionOrder[i]
+        for (i in _executionOrder.indices) {
+            val event = _executionOrder[i]
+            if (event.label is ReadAccessLabel && event.label.isResponse) {
+                val j = i - 1
+                val valid = (j >= 0) && event.isValidResponse(_executionOrder[j])
+                if (!valid)
+                    return false
+            }
             if (event.label is WriteAccessLabel && event.label.isExclusive) {
                 val j = i - 1
-                val valid = (j >= 0) && event.isWritePartOfAtomicUpdate(executionOrder[j])
+                val valid = (j >= 0) && event.isWritePartOfAtomicUpdate(_executionOrder[j])
                 if (!valid)
                     return false
             }
         }
         val replayer = SequentialConsistencyReplayer(1 + execution.maxThreadID)
-        return (replayer.replay(executionOrder) != null)
+        return (replayer.replay(_executionOrder) != null)
     }
 
     // TODO: move to a separate consistency checker!

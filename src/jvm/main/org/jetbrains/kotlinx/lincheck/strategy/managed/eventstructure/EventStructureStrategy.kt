@@ -42,7 +42,9 @@ class EventStructureStrategy(
     private val maxInvocations = testCfg.invocationsPerIteration
 
     private val eventStructure: EventStructure =
-        EventStructure(nThreads, memoryInitializer)
+        EventStructure(nThreads, memoryInitializer) { iThread ->
+            switchCurrentThread(iThread, SwitchReason.STRATEGY_SWITCH, mustSwitch = true)
+        }
 
     // Tracker of shared memory accesses.
     override val memoryTracker: MemoryTracker = EventStructureMemoryTracker(eventStructure)
@@ -80,7 +82,7 @@ class EventStructureStrategy(
         if (!eventStructure.startNextExploration())
             return null
         var result: InvocationResult? = null
-        var inconsistency: Inconsistency? = eventStructure.checkConsistency()
+        var inconsistency: Inconsistency? = eventStructure.detectedInconsistency
         if (inconsistency == null) {
             result = runInvocation()
             // if invocation was aborted we also abort the current execution inside event structure
@@ -244,13 +246,15 @@ class EventStructureStrategy(
         //   call overridden `onStart` and `onFinish` methods only when thread is active
         //   and the `currentThread` lock is held
         awaitTurn(iThread)
-        // while (!isActive(iThread)) {
-        //     switchCurrentThread(iThread, mustSwitch = true)
-        // }
+        while (!isActive(iThread)) {
+            switchCurrentThread(iThread, mustSwitch = true)
+        }
         eventStructure.addThreadFinishEvent(iThread)
         super.onFinish(iThread)
     }
 }
+
+typealias InternalThreadSwitchCallback = (ThreadID) -> Unit
 
 private class EventStructureMemoryTracker(private val eventStructure: EventStructure): MemoryTracker() {
 
