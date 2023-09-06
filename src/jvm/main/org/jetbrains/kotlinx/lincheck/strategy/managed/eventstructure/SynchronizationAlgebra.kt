@@ -20,8 +20,6 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
-import org.jetbrains.kotlinx.lincheck.implies
-
 /**
  * Synchronization algebra describes how event labels can synchronize to form new labels using [synchronize] method.
  * For example, write access label can synchronize with read-request label

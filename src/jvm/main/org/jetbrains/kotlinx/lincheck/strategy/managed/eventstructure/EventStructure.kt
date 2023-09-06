@@ -485,9 +485,9 @@ class EventStructure(
                     !staleWrites.any { write -> causalityOrder.lessOrEqual(it, write) }
                 }
             }
-            // re-entry lock-request synchronizes only with the initial event
+            // re-entry lock-request synchronizes only with object allocation label
             event.label is LockLabel && event.label.isRequest && event.label.isReentry -> {
-                return listOf(root)
+                candidates.filter { it.label.asObjectAllocationLabel(event.label.mutex) != null }
             }
             // re-entry unlock synchronizes with nothing
             event.label is UnlockLabel && event.label.isReentry -> {
