@@ -346,6 +346,9 @@ private class EventStructureMonitorTracker(
             val depth = monitorTracker.reentranceDepth(iThread, monitor)
             lockRequest = eventStructure.addLockRequestEvent(iThread, monitor, reentranceDepth = depth + 1)
         }
+        if (eventStructure.inReplayPhase() && !eventStructure.canReplayNextEvent(iThread)) {
+            return false
+        }
         // if lock is acquired by another thread then postpone addition of lock-response event
         if (!monitorTracker.acquire(iThread, monitor)) {
             return false
