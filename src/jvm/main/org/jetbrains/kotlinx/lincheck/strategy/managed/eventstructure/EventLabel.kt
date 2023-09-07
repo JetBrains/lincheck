@@ -23,7 +23,6 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.implies
 import java.util.IdentityHashMap
-import java.util.WeakHashMap
 import kotlin.reflect.KClass
 
 /**
@@ -96,20 +95,20 @@ sealed class EventLabel(
         }
 
     /**
-     * Recipient object for the operation represented by the label.
-     * For example, for object field memory access labels this is the accessed object.
-     * If particular subclass of labels does not have natural recipient object
+     * Object accesses by the operation represented by the label.
+     * For example, for object field memory access labels, this is the accessed object.
+     * If a particular subclass of labels does not access any object,
      * then this property is null.
      */
-    open val recipient: Any? = null
+    open val obj: OpaqueValue? = null
 
     /**
      * An index of a label which is used to group semantically similar and
      * potentially concurrent labels operating on the same object or location.
      * For example, for object field memory access labels this is the accessed memory location.
-     * Note that [index] and [recipient] do not necessarily match. In case of object field memory access labels,
+     * Note that [index] and [obj] do not necessarily match. In case of object field memory access labels,
      * the [index] is a tuple of accessed object, accessed field name and class name,
-     * while [recipient] is only the accessed object itself.
+     * while [obj] is only the accessed object itself.
      * If particular subclass of labels does not have natural index
      * then this property is null.
      */
@@ -496,7 +495,7 @@ data class ObjectAllocationLabel(
     val memoryInitializer: MemoryInitializer,
 ) : EventLabel(kind = LabelKind.Send) {
 
-    val obj: OpaqueValue
+    override val obj: OpaqueValue
         get() = _obj
 
     // TODO: reset on replay!
@@ -618,8 +617,8 @@ sealed class MemoryAccessLabel(
     /**
      * Recipient of a memory access label is equal to its memory location's object.
      */
-    override val recipient: Any?
-        get() = location.obj
+    override val obj: OpaqueValue?
+        get() = location.obj.opaque()
 
     /**
      * Index of a memory access label is equal to accessed memory location.
@@ -971,7 +970,7 @@ sealed class MutexLabel(
     /**
      * Recipient of a mutex label is its mutex object.
      */
-    override val recipient: Any?
+    override val obj: OpaqueValue?
         get() = mutex
 
     /**

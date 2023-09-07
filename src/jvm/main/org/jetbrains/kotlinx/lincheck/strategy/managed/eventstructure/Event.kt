@@ -21,6 +21,8 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import  org.jetbrains.kotlinx.lincheck.ensure
+import org.jetbrains.kotlinx.lincheck.ensureNotNull
+import org.jetbrains.kotlinx.lincheck.implies
 import org.jetbrains.kotlinx.lincheck.strategy.managed.opaque
 import org.jetbrains.kotlinx.lincheck.unreachable
 import org.jetbrains.kotlinx.lincheck.utils.IntMap
@@ -34,7 +36,217 @@ typealias ThreadMap<T> = IntMap<T>
 
 typealias MutableThreadMap<T> = MutableIntMap<T>
 
-class Event private constructor(
+interface Event : Comparable<Event> {
+    /**
+     * Event's ID.
+     */
+    val id: EventID
+
+    /**
+     * Event's label.
+     */
+    val label: EventLabel
+
+    /**
+     * List of event's dependencies.
+     */
+    val dependencies: List<Event>
+
+    override fun compareTo(other: Event): Int {
+        return id.compareTo(other.id)
+    }
+}
+
+interface ThreadEvent : Event {
+    /**
+     * Event's thread
+     */
+    val threadId: Int
+
+    /**
+     * Event's position in a thread.
+     */
+    val threadPosition: Int
+
+    /**
+     * Event's parent in program order.
+     */
+    // TODO: do we need to store it in `ThreadEvent` ?
+    val parent: ThreadEvent?
+
+    fun predNth(n: Int): ThreadEvent?
+}
+
+fun ThreadEvent.pred(inclusive: Boolean = false, predicate: (Event) -> Boolean): Event? {
+    if (inclusive && predicate(this))
+        return this
+    var event: ThreadEvent? = parent
+    while (event != null && !predicate(event)) {
+        event = event.parent
+    }
+    return event
+}
+
+val ThreadEvent.threadRoot: Event
+    get() = predNth(threadPosition)!!
+
+fun ThreadEvent.threadPrefix(inclusive: Boolean = false, reversed: Boolean = false): List<ThreadEvent> {
+    val events = arrayListOf<ThreadEvent>()
+    if (inclusive) {
+        events.add(this)
+    }
+    // obtain a list of predecessors of given event
+    var event: ThreadEvent? = parent
+    while (event != null) {
+        events.add(event)
+        event = event.parent
+    }
+    // since we iterate from child to parent, the list by default is in reverse order;
+    // if the callee passed `reversed=true` leave it as is, otherwise reverse
+    // to get the list in the order from ancestors to descendants
+    if (!reversed) {
+        events.reverse()
+    }
+    return events
+}
+
+interface SynchronizedEvent : Event {
+    /**
+     * List of events which synchronize into the given event.
+     */
+    val synchronized: List<Event>
+}
+
+fun SynchronizedEvent.resynchronize(algebra: SynchronizationAlgebra): EventLabel? {
+    if (synchronized.isEmpty())
+        return label
+    return synchronized.fold (null) { label: EventLabel?, event ->
+        label?.let { algebra.synchronize(it, event.label) }
+    }
+}
+
+abstract class AbstractEvent(override val label: EventLabel) : Event {
+
+    companion object {
+        private var nextID: EventID = 0
+    }
+
+    override val id: EventID = nextID++
+
+    protected open fun validate() {}
+
+}
+
+abstract class AbstractThreadEvent(
+    label: EventLabel,
+    final override val threadId: Int,
+    final override val parent: ThreadEvent? = null,
+) : AbstractEvent(label), ThreadEvent {
+
+    final override val threadPosition: Int =
+        1 + (parent?.threadPosition ?: -1)
+
+    override fun validate() {
+        super.validate()
+        check((parent != null) implies (parent in dependencies))
+    }
+
+    override fun predNth(n: Int): ThreadEvent? {
+        return predNthOptimized(n)
+            // .also { check(it == predNthNaive(n)) }
+    }
+
+    // naive implementation with O(N) complexity, just for testing and debugging
+    private fun predNthNaive(n : Int): ThreadEvent? {
+        var e: ThreadEvent = this
+        for (i in 0 until n)
+            e = e.parent ?: return null
+        return e
+    }
+
+    // binary lifting search with O(lgN) complexity
+    // https://cp-algorithms.com/graph/lca_binary_lifting.html;
+    private fun predNthOptimized(n: Int): ThreadEvent? {
+        require(n >= 0)
+        var e = this
+        var r = n
+        while (r > MAX_JUMP) {
+            e = e.jumps[N_JUMPS - 1] ?: return null
+            r -= MAX_JUMP
+        }
+        while (r != 0) {
+            val k = 31 - Integer.numberOfLeadingZeros(r)
+            val jump = Integer.highestOneBit(r)
+            e = e.jumps[k] ?: return null
+            r -= jump
+        }
+        return e
+    }
+
+    private val jumps = Array<AbstractThreadEvent?>(N_JUMPS) { null }
+
+    companion object {
+        private const val N_JUMPS = 10
+        private const val MAX_JUMP = 1 shl (N_JUMPS - 1)
+
+        private fun calculateJumps(event: AbstractThreadEvent) {
+            require(N_JUMPS > 0)
+            event.jumps[0] = (event.parent as AbstractThreadEvent)
+            for (i in 1 until N_JUMPS) {
+                event.jumps[i] = event.jumps[i - 1]?.jumps?.get(i - 1)
+            }
+        }
+    }
+
+}
+
+class AtomicThreadEvent(
+    label: EventLabel,
+    threadId: Int,
+    parent: ThreadEvent? = null,
+    /**
+     * Sender events corresponding to this event.
+     * Applicable only to response events.
+     */
+    val senders: List<Event> = listOf(),
+    /**
+     * The allocation event for the accessed object.
+     * Applicable only to object accessing events.
+     */
+    val allocation: Event? = null,
+) : AbstractThreadEvent(
+    label = label,
+    threadId = threadId,
+    parent = parent,
+), SynchronizedEvent {
+
+    /**
+     * Request event corresponding to this event.
+     * Applicable only to response and receive events.
+     */
+    val request: Event? =
+        parent?.takeIf { label.isResponse }
+
+    override val dependencies: List<Event> =
+        listOfNotNull(parent, allocation) + senders
+
+    override val synchronized: List<Event> =
+        if (label.isResponse) (listOf(request!!) + senders) else listOf()
+
+    init {
+        validate()
+    }
+
+    override fun validate() {
+        super.validate()
+        check(label.isResponse implies (request != null && senders.isNotEmpty()))
+        check(!label.isResponse implies (request == null && senders.isEmpty()))
+        check((label.obj != null) implies (allocation != null))
+    }
+
+}
+
+class OldEvent private constructor(
     val id: EventID,
     /**
      * Event's label.
@@ -128,78 +340,6 @@ class Event private constructor(
 
     }
 
-    fun predNth(n: Int): Event? {
-        return predNthOptimized(n)
-            // .also { check(it == predNthNaive(n)) }
-    }
-
-    // naive implementation with O(N) complexity, just for testing and debugging
-    private fun predNthNaive(n : Int): Event? {
-        var e = this
-        // current implementation has O(N) complexity,
-        // as an optimization, we can implement binary lifting and get O(lgN) complexity
-        // https://cp-algorithms.com/graph/lca_binary_lifting.html;
-        // since `predNth` is used to compute programOrder
-        // this optimization might be crucial for performance
-        for (i in 0 until n)
-            e = e.parent ?: return null
-        return e
-    }
-
-    private val jumps = Array<Event?>(N_JUMPS) { null }
-
-    // binary lifting search with O(lgN) complexity
-    // https://cp-algorithms.com/graph/lca_binary_lifting.html;
-    private fun predNthOptimized(n: Int): Event? {
-        require(n >= 0)
-        var e = this
-        var r = n
-        while (r > MAX_JUMP) {
-            e = e.jumps[N_JUMPS - 1] ?: return null
-            r -= MAX_JUMP
-        }
-        while (r != 0) {
-            val k = 31 - Integer.numberOfLeadingZeros(r)
-            val jump = Integer.highestOneBit(r)
-            e = e.jumps[k] ?: return null
-            r -= jump
-        }
-        return e
-    }
-
-    fun pred(inclusive: Boolean = false, predicate: (Event) -> Boolean): Event? {
-        if (inclusive && predicate(this))
-            return this
-        var event: Event? = parent
-        while (event != null && !predicate(event)) {
-            event = event.parent
-        }
-        return event
-    }
-
-    val threadRoot: Event
-        get() = predNth(threadPosition)!!
-
-    fun threadPrefix(inclusive: Boolean = false, reversed: Boolean = false): List<Event> {
-        val events = arrayListOf<Event>()
-        if (inclusive) {
-            events.add(this)
-        }
-        // obtain a list of predecessors of given event
-        var event: Event? = parent
-        while (event != null) {
-            events.add(event)
-            event = event.parent
-        }
-        // since we iterate from child to parent, the list by default is in reverse order;
-        // if the callee passed `reversed=true` leave it as is, otherwise reverse
-        // to get the list in the order from ancestors to descendants
-        if (!reversed) {
-            events.reverse()
-        }
-        return events
-    }
-
     val syncFrom: Event by lazy {
         require(label.isResponse)
         dependencies.first { label.isValidResponse(it.label) }
@@ -285,18 +425,6 @@ class Event private constructor(
         readResponse.label is ReadAccessLabel && readResponse.label.isResponse && readResponse.label.isExclusive &&
         label is WriteAccessLabel && label.isExclusive && parent == readResponse &&
         label.location == readResponse.label.location
-
-    fun recalculateResponseLabel(): EventLabel {
-        require(label.isResponse)
-        require(parent != null && parent.label.isRequest)
-        return dependencies.fold (parent.label) { label: EventLabel, dependency ->
-            // TODO: can we do this better?
-            //  - currently we assume extra dependencies do not participate into synchronization
-            label.getResponse(dependency.label) ?: label
-        }.ensure {
-            it != parent.label
-        }
-    }
 
     override fun equals(other: Any?): Boolean {
         return (other is Event) && (id == other.id)

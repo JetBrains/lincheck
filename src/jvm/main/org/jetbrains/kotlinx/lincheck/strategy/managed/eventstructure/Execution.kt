@@ -29,25 +29,25 @@ import org.jetbrains.kotlinx.lincheck.utils.*
 /**
  * Execution represents a set of events belonging to single program's execution.
  */
-interface Execution : Collection<Event> {
-    val threadMap: ThreadMap<SortedList<Event>>
+interface Execution : Collection<ThreadEvent> {
+    val threadMap: ThreadMap<SortedList<ThreadEvent>>
 
-    operator fun get(tid: ThreadID): SortedList<Event>? =
+    operator fun get(tid: ThreadID): SortedList<ThreadEvent>? =
         threadMap[tid]
 
-    override fun contains(element: Event): Boolean =
+    override fun contains(element: ThreadEvent): Boolean =
         get(element.threadId, element.threadPosition) == element
 
-    override fun containsAll(elements: Collection<Event>): Boolean =
+    override fun containsAll(elements: Collection<ThreadEvent>): Boolean =
         elements.all { contains(it) }
 
-    override fun iterator(): Iterator<Event> =
+    override fun iterator(): Iterator<ThreadEvent> =
         threadIDs.map { get(it)!! }.asSequence().flatten().iterator()
 
 }
 
 interface MutableExecution : Execution {
-    fun add(event: Event)
+    fun add(event: ThreadEvent)
     fun cut(tid: ThreadID, pos: Int)
 }
 
@@ -72,16 +72,16 @@ fun Execution.lastEvent(tid: ThreadID): Event? =
 operator fun Execution.get(tid: ThreadID, pos: Int): Event? =
     get(tid)?.getOrNull(pos)
 
-fun Execution.nextEvent(event: Event): Event? =
+fun Execution.nextEvent(event: ThreadEvent): Event? =
     get(event.threadId)?.let { events ->
         require(events[event.threadPosition] == event)
         events.getOrNull(event.threadPosition + 1)
     }
 
-fun MutableExecution.cut(event: Event) =
+fun MutableExecution.cut(event: ThreadEvent) =
     cut(event.threadId, event.threadPosition)
 
-fun MutableExecution.cutNext(event: Event) =
+fun MutableExecution.cutNext(event: ThreadEvent) =
     cut(event.threadId, 1 + event.threadPosition)
 
 fun Execution(nThreads: Int): Execution =
@@ -89,21 +89,21 @@ fun Execution(nThreads: Int): Execution =
 
 fun MutableExecution(nThreads: Int): MutableExecution =
     ExecutionImpl(ArrayMap(*(0 until nThreads)
-        .map { (it to sortedArrayListOf<Event>()) }
+        .map { (it to sortedArrayListOf<ThreadEvent>()) }
         .toTypedArray()
     ))
 
-fun executionOf(vararg pairs: Pair<ThreadID, List<Event>>): Execution =
+fun executionOf(vararg pairs: Pair<ThreadID, List<ThreadEvent>>): Execution =
     mutableExecutionOf(*pairs)
 
-fun mutableExecutionOf(vararg pairs: Pair<ThreadID, List<Event>>): MutableExecution =
+fun mutableExecutionOf(vararg pairs: Pair<ThreadID, List<ThreadEvent>>): MutableExecution =
     ExecutionImpl(ArrayMap(*pairs
         .map { (tid, events) -> (tid to SortedArrayList(events)) }
         .toTypedArray()
     ))
 
 private class ExecutionImpl(
-    override val threadMap: ArrayMap<SortedMutableList<Event>>
+    override val threadMap: ArrayMap<SortedMutableList<ThreadEvent>>
 ) : MutableExecution {
 
     override var size: Int = threadMap.values.sumOf { it.size }
@@ -112,10 +112,10 @@ private class ExecutionImpl(
     override fun isEmpty(): Boolean =
         (size > 0)
 
-    override fun get(tid: ThreadID): SortedMutableList<Event>? =
+    override fun get(tid: ThreadID): SortedMutableList<ThreadEvent>? =
         threadMap[tid]
 
-    override fun add(event: Event) {
+    override fun add(event: ThreadEvent) {
         ++size
         threadMap[event.threadId]!!
             .ensure { event.parent == it.lastOrNull() }
@@ -142,9 +142,7 @@ private class ExecutionImpl(
             for (event in events) {
                 appendLine("$event")
                 if (event.dependencies.isNotEmpty()) {
-                    appendLine("    dependencies: ${event.dependencies.joinToString {
-                        "#${it.id}: [${it.threadId}, ${it.threadPosition}]"
-                    }}")
+                    appendLine("    dependencies: ${event.dependencies.joinToString()}}")
                 }
             }
         }
@@ -162,7 +160,7 @@ fun Execution.toMutableFrontier(): MutableExecutionFrontier =
         mutableExecutionFrontierOf(*it.toTypedArray())
     }
 
-fun Execution.buildIndexer() = object : Indexer<Event> {
+fun Execution.buildIndexer() = object : Indexer<ThreadEvent> {
 
     private val events = enumerationOrderSortedList()
 
@@ -172,17 +170,17 @@ fun Execution.buildIndexer() = object : Indexer<Event> {
         }
     }
 
-    override fun get(i: Int): Event {
+    override fun get(i: Int): ThreadEvent {
         return events[i]
     }
 
-    override fun index(x: Event): Int {
+    override fun index(x: ThreadEvent): Int {
         return eventIndices[x.threadId]!![x.threadPosition]
     }
 
 }
 
-fun Execution.isBlockedDanglingRequest(event: Event): Boolean {
+fun Execution.isBlockedDanglingRequest(event: ThreadEvent): Boolean {
     return event.label.isRequest && event.label.isBlocking &&
             (event == this[event.threadId]?.last())
 }
@@ -198,7 +196,7 @@ fun Execution.computeVectorClock(event: Event, relation: Relation<Event>): Vecto
     return clock
 }
 
-fun Execution.enumerationOrderSortedList(): List<Event> =
+fun Execution.enumerationOrderSortedList(): List<ThreadEvent> =
     this.sorted()
 
 // TODO: rename?

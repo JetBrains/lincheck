@@ -343,7 +343,7 @@ private val MemoryAccessAggregationAlgebra = object : SynchronizationAlgebra {
         label is ReadAccessLabel && other is ReadModifyWriteAccessLabel && other.isReceive ->
             (label.isRequest || label.isReceive) && label.isValidReadPart(other)
 
-        // write can can produce read-modify-write receive access
+        // write can produce read-modify-write receive access
         label is WriteAccessLabel && other is ReadModifyWriteAccessLabel && other.isReceive ->
             label.isValidWritePart(other)
 
