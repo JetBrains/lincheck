@@ -27,17 +27,21 @@ class AtomicityChecker : IncrementalConsistencyChecker {
     private var execution: Execution = executionOf()
 
     override fun check(event: Event): Inconsistency? {
-        if (event.label !is MemoryAccessLabel)
+        val label = event.label
+        if (label !is MemoryAccessLabel)
             return null
-        if (event.label.accessKind != MemoryAccessKind.Write || !event.label.isExclusive)
+        if (label.accessKind != MemoryAccessKind.Write || !label.isExclusive)
             return null
-        val readFrom = event.exclusiveReadPart.readsFrom
+        check(event is AbstractAtomicThreadEvent)
+        val readFrom = (event.exclusiveReadPart as AbstractAtomicThreadEvent).readsFrom
         execution.find {
+            check(it is AbstractAtomicThreadEvent)
+            val label = it.label
             it != event &&
-            it.label is MemoryAccessLabel &&
-            it.label.accessKind == MemoryAccessKind.Write &&
-            it.label.isExclusive &&
-            it.exclusiveReadPart.readsFrom == readFrom
+            label is MemoryAccessLabel &&
+            label.accessKind == MemoryAccessKind.Write &&
+            label.isExclusive &&
+            (it.exclusiveReadPart as AbstractAtomicThreadEvent).readsFrom == readFrom
         }?.let { return AtomicityViolation(it, event) }
         return null
     }

@@ -318,8 +318,9 @@ private class EventStructureMemoryTracker(private val eventStructure: EventStruc
     override fun dumpMemory() {
         val locations = mutableSetOf<MemoryLocation>()
         for (event in eventStructure.currentExecution) {
-            if (event.label is MemoryAccessLabel) {
-                locations.add(event.label.location)
+            val label = event.label
+            if (label is MemoryAccessLabel) {
+                locations.add(label.location)
             }
         }
         for (location in locations) {
@@ -376,11 +377,11 @@ private class EventStructureMonitorTracker(
     }
 
     override fun wait(iThread: Int, monitor: OpaqueValue): Boolean {
-        var unlockEvent: Event? = null
-        var waitRequestEvent: Event? = null
-        var waitResponseEvent: Event? = null
-        var lockRequestEvent: Event? = null
-        var lockResponseEvent: Event? = null
+        var unlockEvent: ThreadEvent? = null
+        var waitRequestEvent: ThreadEvent? = null
+        var waitResponseEvent: ThreadEvent? = null
+        var lockRequestEvent: ThreadEvent? = null
+        var lockResponseEvent: ThreadEvent? = null
         val blockedEvent = eventStructure.getBlockedRequest(iThread)
         if (blockedEvent != null) {
             check(blockedEvent.label is WaitLabel || blockedEvent.label is LockLabel)

@@ -20,20 +20,20 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
-fun interface Relation<T> {
+fun interface Relation<in T> {
     operator fun invoke(x: T, y: T): Boolean
-
-    infix fun union(relation: Relation<T>) = Relation<T> { x, y ->
-        this(x, y) || relation(x, y)
-    }
-
-    infix fun intersection(relation: Relation<T>) = Relation<T> { x, y ->
-        this(x, y) && relation(x, y)
-    }
 
     companion object {
         fun<T> empty() = Relation<T> { _, _ -> false }
     }
+}
+
+infix fun<T> Relation<T>.union(relation: Relation<T>) = Relation<T> { x, y ->
+    this(x, y) || relation(x, y)
+}
+
+infix fun<T> Relation<T>.intersection(relation: Relation<T>) = Relation<T> { x, y ->
+    this(x, y) && relation(x, y)
 }
 
 fun interface Covering<T> {

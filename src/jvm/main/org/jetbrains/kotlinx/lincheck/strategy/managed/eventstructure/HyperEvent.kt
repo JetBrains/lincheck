@@ -45,7 +45,7 @@ import org.jetbrains.kotlinx.lincheck.unreachable
  *    5th International Conference on Formal Structures for Computation and Deduction. 2020.
  *
  */
-open class HyperEvent(val events: List<Event>) {
+open class HyperEvent(val events: List<ThreadEvent>) {
 
     open val dependencies: List<Event> =
         mutableListOf<Event>().apply {
@@ -58,7 +58,7 @@ fun Execution.nextAtomicEvent(iThread: Int, pos: Int): HyperEvent? {
     return get(iThread)?.nextAtomicEvent(pos)
 }
 
-fun List<Event>.nextAtomicEvent(pos: Int): HyperEvent? {
+fun List<ThreadEvent>.nextAtomicEvent(pos: Int): HyperEvent? {
     val event = getOrNull(pos) ?: return null
     var atomicEvent = when(event.label) {
         is ThreadEventLabel     -> nextAtomicThreadEvent(event)
@@ -74,7 +74,7 @@ fun List<Event>.nextAtomicEvent(pos: Int): HyperEvent? {
     return atomicEvent
 }
 
-class SingletonEvent(event: Event) : HyperEvent(listOf(event)) {
+class SingletonEvent(event: ThreadEvent) : HyperEvent(listOf(event)) {
 
     val event: Event
         get() = events[0]
@@ -86,7 +86,7 @@ class SingletonEvent(event: Event) : HyperEvent(listOf(event)) {
 
 /* ======== Send and Receive Events  ======== */
 
-fun List<Event>.nextAtomicSendOrReceiveEvent(firstEvent: Event): HyperEvent {
+fun List<ThreadEvent>.nextAtomicSendOrReceiveEvent(firstEvent: ThreadEvent): HyperEvent {
     if (firstEvent.label.isSend)
         return SingletonEvent(firstEvent)
     check(firstEvent.label.isRequest)
@@ -98,16 +98,15 @@ fun List<Event>.nextAtomicSendOrReceiveEvent(firstEvent: Event): HyperEvent {
 }
 
 class ReceiveEvent(
-    request: Event,
-    response: Event,
+    request: ThreadEvent,
+    response: ThreadEvent,
 ) : HyperEvent(listOf(request, response)) {
 
     init {
         require(request.label.isRequest)
         require(response.label.isResponse)
         require(response.parent == request)
-        require(response.isValidResponse(request))
-        check(requestPart !in responsePart.dependencies)
+        // require(response.isValidResponse(request))
     }
 
     val requestPart: Event
@@ -126,14 +125,14 @@ class ReceiveEvent(
 
 /* ======== Thread Event  ======== */
 
-fun List<Event>.nextAtomicThreadEvent(firstEvent: Event): HyperEvent {
+fun List<ThreadEvent>.nextAtomicThreadEvent(firstEvent: ThreadEvent): HyperEvent {
     require(firstEvent.label is ThreadEventLabel)
     return nextAtomicSendOrReceiveEvent(firstEvent)
 }
 
 /* ======== Memory Accesses  ======== */
 
-fun List<Event>.nextAtomicMemoryAccessEvent(firstEvent: Event): HyperEvent {
+fun List<ThreadEvent>.nextAtomicMemoryAccessEvent(firstEvent: ThreadEvent): HyperEvent {
     require(firstEvent.label is MemoryAccessLabel)
     return when(firstEvent.label) {
         is WriteAccessLabel -> SingletonEvent(firstEvent)
@@ -147,12 +146,12 @@ fun List<Event>.nextAtomicMemoryAccessEvent(firstEvent: Event): HyperEvent {
                 ?: return SingletonEvent(readRequestEvent)
 
             check(readResponseEvent.label.isResponse && readResponseEvent.label is ReadAccessLabel)
-            if (!readResponseEvent.label.isExclusive) {
+            if (!(readResponseEvent.label as MemoryAccessLabel).isExclusive) {
                 return ReceiveEvent(readRequestEvent, readResponseEvent)
             }
 
             val writeEvent = getOrNull(1 + readResponseEvent.threadPosition)
-                ?.takeIf { it.label is WriteAccessLabel && it.label.isExclusive }
+                ?.takeIf { it.label is WriteAccessLabel && (readResponseEvent.label as MemoryAccessLabel).isExclusive }
                 ?: return ReceiveEvent(readRequestEvent, readResponseEvent)
 
             ReadModifyWriteEvent(readRequestEvent, readResponseEvent, writeEvent)
@@ -163,14 +162,14 @@ fun List<Event>.nextAtomicMemoryAccessEvent(firstEvent: Event): HyperEvent {
 }
 
 class ReadModifyWriteEvent(
-    readRequest: Event,
-    readResponse: Event,
-    writeSend: Event,
+    readRequest: ThreadEvent,
+    readResponse: ThreadEvent,
+    writeSend: ThreadEvent,
 ) : HyperEvent(listOf(readRequest, readResponse, writeSend)) {
 
     init {
-        require(readResponse.isValidResponse(readRequest))
-        require(writeSend.isWritePartOfAtomicUpdate(readResponse))
+        // require(readResponse.isValidResponse(readRequest))
+        // require(writeSend.isWritePartOfAtomicUpdate(readResponse))
         check(readRequestPart !in readResponsePart.dependencies)
     }
 
@@ -193,9 +192,9 @@ class ReadModifyWriteEvent(
 
 /* ======== Mutex Event  ======== */
 
-fun List<Event>.nextAtomicMutexEvent(firstEvent: Event): HyperEvent {
+fun List<ThreadEvent>.nextAtomicMutexEvent(firstEvent: ThreadEvent): HyperEvent {
     require(firstEvent.label is MutexLabel)
-    return when(firstEvent.label) {
+    return when((firstEvent.label as MutexLabel)) {
         is LockLabel -> nextAtomicSendOrReceiveEvent(firstEvent)
 
         is UnlockLabel -> {
@@ -227,14 +226,14 @@ fun List<Event>.nextAtomicMutexEvent(firstEvent: Event): HyperEvent {
 }
 
 class UnlockAndWait(
-    unlock: Event,
-    waitRequest: Event,
+    unlock: ThreadEvent,
+    waitRequest: ThreadEvent,
 ) : HyperEvent(listOf(unlock, waitRequest)) {
 
     init {
         require(unlock.label is UnlockLabel)
         require(waitRequest.label is WaitLabel && waitRequest.label.isRequest)
-        require(waitRequest.label.mutex == unlock.label.mutex)
+        // require(waitRequest.label.mutex == unlock.label.mutex)
         require(waitRequest.parent == unlock)
     }
 
@@ -249,19 +248,19 @@ class UnlockAndWait(
 }
 
 class WakeUpAndTryLock(
-    waitResponse: Event,
-    lockRequest: Event,
-    lockResponse: Event?,
+    waitResponse: ThreadEvent,
+    lockRequest: ThreadEvent,
+    lockResponse: ThreadEvent?,
 ) : HyperEvent(listOfNotNull(waitResponse, lockRequest, lockResponse)) {
 
     init {
         require(waitResponse.label is WaitLabel && waitResponse.label.isResponse)
         require(lockRequest.label is LockLabel && lockRequest.label.isRequest)
-        require(lockRequest.label.mutex == waitResponse.label.mutex)
+        // require(lockRequest.label.mutex == waitResponse.label.mutex)
         require(lockRequest.parent == waitResponse)
         if (lockResponse != null) {
             require(lockResponse.label is LockLabel && lockResponse.label.isResponse)
-            require(lockRequest.label.mutex == lockResponse.label.mutex)
+            // require(lockRequest.label.mutex == lockResponse.label.mutex)
             require(lockResponse.parent == lockRequest)
         }
     }
@@ -279,22 +278,22 @@ class WakeUpAndTryLock(
 
 }
 
-fun List<Event>.nextCriticalSectionEvents(firstEvent: Event): List<CriticalSectionEvent> {
+fun List<ThreadEvent>.nextCriticalSectionEvents(firstEvent: ThreadEvent): List<CriticalSectionEvent> {
     require(firstEvent.label is LockLabel && firstEvent.label.isRequest)
     var pos = firstEvent.threadPosition
     var sectionStart = firstEvent
     val sections = mutableListOf<CriticalSectionEvent>()
-    val mutex = firstEvent.label.mutex
+    val mutex = (firstEvent.label as MutexLabel).mutex
     // TODO: handle non-reentrant locks too
     var counter = 0
     while (pos < size) {
         val event = get(pos++)
-        if (event.label !is MutexLabel || event.label.mutex != mutex)
+        if (event.label !is MutexLabel || (event.label as MutexLabel).mutex != mutex)
             continue
         when (event.label) {
             is LockLabel -> if (event.label.isResponse) {
                 // TODO: check that response's parent is actually a previous event in the list?
-                check(event.isValidResponse())
+                // check(event.isValidResponse())
                 counter++
             }
 
@@ -315,7 +314,7 @@ fun List<Event>.nextCriticalSectionEvents(firstEvent: Event): List<CriticalSecti
                     ))
                 }
                 if (event.label.isResponse) {
-                    check(event.isValidResponse())
+                    // check(event.isValidResponse())
                     sectionStart = event
                 }
             }
@@ -326,7 +325,7 @@ fun List<Event>.nextCriticalSectionEvents(firstEvent: Event): List<CriticalSecti
     return sections
 }
 
-class CriticalSectionEvent(events: List<Event>) : HyperEvent(events) {
+class CriticalSectionEvent(events: List<ThreadEvent>) : HyperEvent(events) {
 
     init {
         require(events.size >= 2)
@@ -334,10 +333,10 @@ class CriticalSectionEvent(events: List<Event>) : HyperEvent(events) {
         val finishEvent = events.last()
         require(isValidStartEvent(startEvent))
         require(isValidFinishEvent(finishEvent))
-        if (startEvent.label.isRequest) {
-            val responseEvent = events[1]
-            require(responseEvent.isValidResponse(startEvent))
-        }
+        // if (startEvent.label.isRequest) {
+            // val responseEvent = events[1]
+            // require(responseEvent.isValidResponse(startEvent))
+        // }
     }
 
     val isCompleted: Boolean
@@ -361,8 +360,8 @@ class CriticalSectionEvent(events: List<Event>) : HyperEvent(events) {
             var counter = 0
             for (event in events) {
                 when(event.label) {
-                    is LockLabel    -> if (event.label.mutex == mutex) counter++
-                    is UnlockLabel  -> if (event.label.mutex == mutex) counter--
+                    is LockLabel    -> if ((event.label as MutexLabel).mutex == mutex) counter++
+                    is UnlockLabel  -> if ((event.label as MutexLabel).mutex == mutex) counter--
                 }
             }
             return (counter == 0)
@@ -374,7 +373,7 @@ class CriticalSectionEvent(events: List<Event>) : HyperEvent(events) {
 
 /* ======== Park and Unpark Events  ======== */
 
-fun List<Event>.nextAtomicParkingEvent(firstEvent: Event): HyperEvent {
+fun List<ThreadEvent>.nextAtomicParkingEvent(firstEvent: ThreadEvent): HyperEvent {
     require(firstEvent.label is ParkingEventLabel)
     return nextAtomicSendOrReceiveEvent(firstEvent)
 }

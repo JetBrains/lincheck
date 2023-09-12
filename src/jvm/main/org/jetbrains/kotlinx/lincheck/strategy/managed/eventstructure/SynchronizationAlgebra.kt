@@ -102,6 +102,12 @@ interface SynchronizationAlgebra {
     //   We need to apply some tricks to overcome this.
 }
 
+fun SynchronizationAlgebra.synchronize(label: EventLabel?, other: EventLabel?): EventLabel? = when {
+    label == null -> other
+    other == null -> label
+    else -> synchronize(label, other)
+}
+
 /**
  * A commutative synchronization algebra --- its [synchronize] operation is expected to be commutative.
  */

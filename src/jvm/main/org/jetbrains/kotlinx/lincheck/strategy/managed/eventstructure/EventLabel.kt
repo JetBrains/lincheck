@@ -242,7 +242,7 @@ enum class LabelType {
 }
 
 /**
- * Special label acting as a label of the virtual root event of every execution.
+ * Special label acting as a label of the virtual root event.
  *
  * Has [LabelKind.Send] kind.
  *
@@ -250,7 +250,7 @@ enum class LabelType {
  * Usually synchronization of initialization label with some request label
  * results in response label that obtains some default value.
  * For example, synchronizing initialization label with read-request label of integer
- * results in read-response label with 0 value.
+ * results in read-response label with value `0`.
  *
  * ```
  * Init \+ Read^{req}(x) = Read^{rsp}(x, 0)

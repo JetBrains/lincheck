@@ -41,7 +41,7 @@ class SequentialConsistencyChecker(
     val approximateSequentialConsistency: Boolean = true
 ) : ConsistencyChecker {
 
-    var executionOrder: List<Event> = listOf()
+    var executionOrder: List<ThreadEvent> = listOf()
         private set
 
     override fun check(execution: Execution): Inconsistency? {
@@ -78,7 +78,7 @@ class SequentialConsistencyChecker(
         return checkByReplaying(execution, covering)
     }
 
-    private fun checkByReplaying(execution: Execution, covering: Covering<Event>): Inconsistency? {
+    private fun checkByReplaying(execution: Execution, covering: Covering<ThreadEvent>): Inconsistency? {
         // TODO: this is just a DFS search.
         //  In fact, we can generalize this algorithm to
         //  two arbitrary labelled transition systems by taking their product LTS
@@ -117,9 +117,9 @@ class IncrementalSequentialConsistencyChecker(
 ) : IncrementalConsistencyChecker {
 
     private var execution = executionOf()
-    private val _executionOrder = mutableListOf<Event>()
+    private val _executionOrder = mutableListOf<ThreadEvent>()
 
-    val executionOrder: List<Event>
+    val executionOrder: List<ThreadEvent>
         get() = _executionOrder
 
     private val sequentialConsistencyChecker = SequentialConsistencyChecker(
@@ -152,7 +152,7 @@ class IncrementalSequentialConsistencyChecker(
     }
 
     override fun check(event: Event): Inconsistency? {
-        _executionOrder.add(event)
+        _executionOrder.add(event as ThreadEvent)
         return null
     }
 
@@ -167,7 +167,7 @@ class IncrementalSequentialConsistencyChecker(
         //    as a first step it should build hyper-execution graph
         var valid = true
         for (i in _executionOrder.indices) {
-            val event = _executionOrder[i]
+            val event = _executionOrder[i] as AbstractAtomicThreadEvent
             if (event.label is ReadAccessLabel && event.label.isResponse) {
                 val j = i - 1
                 valid = (j >= 0) && event.isValidResponse(_executionOrder[j])
@@ -204,6 +204,7 @@ class IncrementalSequentialConsistencyChecker(
         // TODO: generalize and refactor!
         val mapping = mutableMapOf<Any, Event>()
         for (event in execution) {
+            (event as AbstractAtomicThreadEvent)
             if (event.label !is MutexLabel || !event.label.isResponse)
                 continue
             if (!(event.label is LockLabel || event.label is WaitLabel))
@@ -212,7 +213,7 @@ class IncrementalSequentialConsistencyChecker(
                 continue
             val key: Any = when (event.syncFrom.label) {
                 is UnlockLabel, is NotifyLabel -> event.syncFrom
-                else -> event.label.mutex
+                else -> (event.label as MutexLabel).mutex
             }
             if (mapping.put(key, event) != null) {
                 return SequentialConsistencyViolation(
@@ -230,56 +231,58 @@ private data class SequentialConsistencyReplayer(
     val monitorTracker: MapMonitorTracker = MapMonitorTracker(nThreads),
 ) {
 
-    fun replay(event: Event): SequentialConsistencyReplayer? {
+    fun replay(event: ThreadEvent): SequentialConsistencyReplayer? {
+        val label = event.label
         return when {
 
-            event.label is ReadAccessLabel && event.label.isRequest ->
+            label is ReadAccessLabel && label.isRequest ->
                 this
 
-            event.label is ReadAccessLabel && event.label.isResponse ->
+            label is ReadAccessLabel && label.isResponse ->
                 this.takeIf {
+                    (event as AbstractAtomicThreadEvent)
                     // TODO: do we really need this `if` here?
                     if (event.readsFrom.label is WriteAccessLabel)
-                         memoryView[event.label.location] == event.readsFrom
-                    else memoryView[event.label.location] == null
+                         memoryView[label.location] == event.readsFrom
+                    else memoryView[label.location] == null
                 }
 
-            event.label is WriteAccessLabel ->
-                this.copy().apply { memoryView[event.label.location] = event }
+            label is WriteAccessLabel ->
+                this.copy().apply { memoryView[label.location] = event }
 
-            event.label is LockLabel && event.label.isRequest ->
+            label is LockLabel && label.isRequest ->
                 this
 
-            event.label is LockLabel && event.label.isResponse && !event.label.isWaitLock ->
-                if (this.monitorTracker.canAcquire(event.threadId, event.label.mutex)) {
-                    this.copy().apply { monitorTracker.acquire(event.threadId, event.label.mutex).ensure() }
+            label is LockLabel && label.isResponse && !label.isWaitLock ->
+                if (this.monitorTracker.canAcquire(event.threadId, label.mutex)) {
+                    this.copy().apply { monitorTracker.acquire(event.threadId, label.mutex).ensure() }
                 } else null
 
-            event.label is UnlockLabel && !event.label.isWaitUnlock ->
-                this.copy().apply { monitorTracker.release(event.threadId, event.label.mutex) }
+            label is UnlockLabel && !label.isWaitUnlock ->
+                this.copy().apply { monitorTracker.release(event.threadId, label.mutex) }
 
-            event.label is WaitLabel && event.label.isRequest ->
-                this.copy().apply { monitorTracker.wait(event.threadId, event.label.mutex).ensure() }
+            label is WaitLabel && label.isRequest ->
+                this.copy().apply { monitorTracker.wait(event.threadId, label.mutex).ensure() }
 
-            event.label is WaitLabel && event.label.isResponse ->
-                if (this.monitorTracker.canAcquire(event.threadId, event.label.mutex)) {
-                    this.copy().takeIf { !it.monitorTracker.wait(event.threadId, event.label.mutex) }
+            label is WaitLabel && label.isResponse ->
+                if (this.monitorTracker.canAcquire(event.threadId, label.mutex)) {
+                    this.copy().takeIf { !it.monitorTracker.wait(event.threadId, label.mutex) }
                 } else null
 
-            event.label is NotifyLabel ->
-                this.copy().apply { monitorTracker.notify(event.threadId, event.label.mutex, event.label.isBroadcast) }
+            label is NotifyLabel ->
+                this.copy().apply { monitorTracker.notify(event.threadId, label.mutex, label.isBroadcast) }
 
             // auxiliary unlock/lock events inserted before/after wait events
-            event.label is LockLabel && event.label.isWaitLock ->
+            label is LockLabel && label.isWaitLock ->
                 this
-            event.label is UnlockLabel && event.label.isWaitUnlock ->
+            label is UnlockLabel && label.isWaitUnlock ->
                 this
 
-            event.label is InitializationLabel -> this
-            event.label is ObjectAllocationLabel -> this
-            event.label is ThreadEventLabel -> this
+            label is InitializationLabel -> this
+            label is ObjectAllocationLabel -> this
+            label is ThreadEventLabel -> this
             // TODO: do we need to care about parking?
-            event.label is ParkingEventLabel -> this
+            label is ParkingEventLabel -> this
 
             else -> unreachable()
 
@@ -289,7 +292,7 @@ private data class SequentialConsistencyReplayer(
     fun replay(events: Iterable<Event>): SequentialConsistencyReplayer? {
         var replayer = this
         for (event in events) {
-            replayer = replayer.replay(event) ?: return null
+            replayer = replayer.replay(event as ThreadEvent) ?: return null
         }
         return replayer
     }
@@ -314,14 +317,14 @@ private data class State(
 ) {
 
     // TODO: move to Context
-    var history: List<Event> = listOf()
+    var history: List<ThreadEvent> = listOf()
         private set
 
     constructor(
         counter: ExecutionCounter,
         atomicCounter: ExecutionCounter,
         replayer: SequentialConsistencyReplayer,
-        history: List<Event>,
+        history: List<ThreadEvent>,
     ) : this(counter, atomicCounter, replayer) {
         this.history = history
     }
@@ -351,7 +354,7 @@ private data class State(
 
 }
 
-private class Context(val execution: Execution, val covering: Covering<Event>) {
+private class Context(val execution: Execution, val covering: Covering<ThreadEvent>) {
 
     val hyperExecution = execution.threadMap.map { (_, events) ->
         var pos = 0
@@ -364,10 +367,10 @@ private class Context(val execution: Execution, val covering: Covering<Event>) {
         atomicEvents
     }
 
-    fun State.covered(event: Event): Boolean =
+    fun State.covered(event: ThreadEvent): Boolean =
         event.threadPosition < counter[event.threadId]
 
-    fun State.coverable(event: Event): Boolean =
+    fun State.coverable(event: ThreadEvent): Boolean =
         covering(event).all { covered(it) }
 
     val State.isTerminal: Boolean
@@ -378,7 +381,7 @@ private class Context(val execution: Execution, val covering: Covering<Event>) {
     fun State.transition(threadId: Int): State? {
         val position = atomicCounter[threadId]
         val atomicEvent = hyperExecution.getOrNull(threadId)?.getOrNull(position)
-            ?.takeIf { atomicEvent -> atomicEvent.events.all { coverable(it) } }
+            ?.takeIf { atomicEvent -> atomicEvent.events.all { coverable(it as ThreadEvent) } }
             ?: return null
         val view = replayer.replay(atomicEvent)
             ?: return null
@@ -390,7 +393,7 @@ private class Context(val execution: Execution, val covering: Covering<Event>) {
             atomicCounter = this.atomicCounter.copyOf().also {
                 it[threadId] += 1
             },
-            history = this.history + atomicEvent.events
+            history = this.history + (atomicEvent.events as List<ThreadEvent>)
         )
     }
 
@@ -406,12 +409,12 @@ private class Context(val execution: Execution, val covering: Covering<Event>) {
 
 private class SequentialConsistencyRelation(
     execution: Execution,
-    initialApproximation: Relation<Event>
+    initialApproximation: Relation<ThreadEvent>
 ): ExecutionRelation(execution) {
 
     val relation = RelationMatrix(execution, indexer, initialApproximation)
 
-    override fun invoke(x: Event, y: Event): Boolean =
+    override fun invoke(x: ThreadEvent, y: ThreadEvent): Boolean =
         relation(x, y)
 
     fun saturate(): SequentialConsistencyViolation? {
@@ -430,9 +433,12 @@ private class SequentialConsistencyRelation(
         readLoop@for (read in execution) {
             if (!(read.label is ReadAccessLabel && read.label.isResponse))
                 continue
-            val readFrom = read.readsFrom
+            val readFrom = (read as? AbstractAtomicThreadEvent)?.readsFrom
+                ?: continue
             writeLoop@for (write in execution) {
-                if (!(write.label is WriteAccessLabel && write.label.location == read.label.location))
+                val rloc = (read.label as? ReadAccessLabel)?.location
+                val wloc = (write.label as? WriteAccessLabel)?.location
+                if (wloc == null || wloc != rloc)
                     continue
                 if (write != readFrom && relation(write, read) && !relation(write, readFrom)) {
                     relation[write, readFrom] = true
@@ -453,13 +459,13 @@ private class WritesBeforeRelation(
     execution: Execution
 ): ExecutionRelation(execution) {
 
-    private val readsMap: MutableMap<MemoryLocation, ArrayList<Event>> = mutableMapOf()
+    private val readsMap: MutableMap<MemoryLocation, ArrayList<ThreadEvent>> = mutableMapOf()
 
-    private val writesMap: MutableMap<MemoryLocation, ArrayList<Event>> = mutableMapOf()
+    private val writesMap: MutableMap<MemoryLocation, ArrayList<ThreadEvent>> = mutableMapOf()
 
-    private val relations: MutableMap<MemoryLocation, RelationMatrix<Event>> = mutableMapOf()
+    private val relations: MutableMap<MemoryLocation, RelationMatrix<ThreadEvent>> = mutableMapOf()
 
-    private val rmwChains:  MutableMap<Event, List<Event>> = mutableMapOf()
+    private val rmwChains:  MutableMap<ThreadEvent, List<ThreadEvent>> = mutableMapOf()
 
     private var inconsistent = false
 
@@ -469,23 +475,24 @@ private class WritesBeforeRelation(
     }
 
     private fun initializeWritesBeforeOrder() {
-        var initEvent: Event? = null
-        val allocEvents = mutableListOf<Event>()
+        var initEvent: ThreadEvent? = null
+        val allocEvents = mutableListOf<ThreadEvent>()
         // TODO: refactor once per-kind indexing of events will be implemented
         for (event in execution) {
-            if (event.label is InitializationLabel)
+            val label = event.label
+            if (label is InitializationLabel)
                 initEvent = event
-            if (event.label is ObjectAllocationLabel)
+            if (label is ObjectAllocationLabel)
                 allocEvents.add(event)
-            if (event.label !is MemoryAccessLabel)
+            if (label !is MemoryAccessLabel)
                 continue
-            if (event.label.isRead && event.label.isResponse) {
-                readsMap.computeIfAbsent(event.label.location) { arrayListOf() }.apply {
+            if (label.isRead && label.isResponse) {
+                readsMap.computeIfAbsent(label.location) { arrayListOf() }.apply {
                     add(event)
                 }
             }
-            if (event.label.isWrite) {
-                writesMap.computeIfAbsent(event.label.location) { arrayListOf() }.apply {
+            if (label.isWrite) {
+                writesMap.computeIfAbsent(label.location) { arrayListOf() }.apply {
                     add(event)
                 }
             }
@@ -501,11 +508,15 @@ private class WritesBeforeRelation(
     }
 
     private fun initializeReadModifyWriteChains() {
-        val chainsMap = mutableMapOf<Event, MutableList<Event>>()
+        val chainsMap = mutableMapOf<ThreadEvent, MutableList<ThreadEvent>>()
         for (event in execution.enumerationOrderSortedList()) {
-            if (event.label !is WriteAccessLabel || !event.label.isExclusive)
+            val label = event.label
+            if (label !is WriteAccessLabel || !label.isExclusive)
                 continue
-            val readFrom = event.exclusiveReadPart.readsFrom
+            val readPart = (event as? AbstractAtomicThreadEvent)?.exclusiveReadPart
+                ?: continue
+            val readFrom = (readPart as? AbstractAtomicThreadEvent)?.readsFrom
+                ?: continue
             val chain = if (readFrom.label is WriteAccessLabel)
                     chainsMap.computeIfAbsent(readFrom) {
                         mutableListOf(readFrom)
@@ -549,7 +560,8 @@ private class WritesBeforeRelation(
             val writes = writesMap[memId] ?: continue
             var changed = false
             readLoop@ for (read in reads) {
-                val readFrom = read.readsFrom
+                val readFrom = (read as? AbstractAtomicThreadEvent)?.readsFrom
+                    ?: continue
                 val readFromChain = rmwChains[readFrom]
                 writeLoop@ for (write in writes) {
                     val writeChain = rmwChains[write]
@@ -575,24 +587,25 @@ private class WritesBeforeRelation(
         return null
     }
 
-    override fun invoke(x: Event, y: Event): Boolean {
+    override fun invoke(x: ThreadEvent, y: ThreadEvent): Boolean {
         // TODO: handle InitializationLabel?
-        return if (x.label is WriteAccessLabel && y.label is WriteAccessLabel &&
-            x.label.location == y.label.location) {
-            relations[x.label.location]?.get(x, y) ?: false
+        val xloc = (x.label as? WriteAccessLabel)?.location
+        val yloc = (y.label as? WriteAccessLabel)?.location
+        return if (xloc != null && xloc == yloc) {
+            relations[xloc]?.get(x, y) ?: false
         } else false
     }
 
     fun isIrreflexive(): Boolean =
         relations.all { (_, relation) -> relation.isIrreflexive() }
 
-    private fun buildIndexer(_events: ArrayList<Event>) = object : Indexer<Event> {
+    private fun buildIndexer(_events: ArrayList<ThreadEvent>) = object : Indexer<ThreadEvent> {
 
-        val events: SortedList<Event> = SortedArrayList(_events.apply { sort() })
+        val events: SortedList<ThreadEvent> = SortedArrayList(_events.apply { sort() })
 
-        override fun get(i: Int): Event = events[i]
+        override fun get(i: Int): ThreadEvent = events[i]
 
-        override fun index(x: Event): Int = events.indexOf(x)
+        override fun index(x: ThreadEvent): Int = events.indexOf(x)
 
     }
 

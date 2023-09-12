@@ -74,10 +74,15 @@ interface ThreadEvent : Event {
     // TODO: do we need to store it in `ThreadEvent` ?
     val parent: ThreadEvent?
 
+    /**
+     * Vector clock to track causality relation.
+     */
+    val causalityClock: VectorClock
+
     fun predNth(n: Int): ThreadEvent?
 }
 
-fun ThreadEvent.pred(inclusive: Boolean = false, predicate: (Event) -> Boolean): Event? {
+fun ThreadEvent.pred(inclusive: Boolean = false, predicate: (ThreadEvent) -> Boolean): ThreadEvent? {
     if (inclusive && predicate(this))
         return this
     var event: ThreadEvent? = parent
@@ -117,30 +122,41 @@ interface SynchronizedEvent : Event {
     val synchronized: List<Event>
 }
 
-fun SynchronizedEvent.resynchronize(algebra: SynchronizationAlgebra): EventLabel? {
+fun SynchronizedEvent.resynchronize(algebra: SynchronizationAlgebra): EventLabel {
     if (synchronized.isEmpty())
         return label
     return synchronized.fold (null) { label: EventLabel?, event ->
-        label?.let { algebra.synchronize(it, event.label) }
+        algebra.synchronize(label, event.label)
+    }.ensureNotNull() {
+        "hehn't"
     }
 }
 
-abstract class AbstractEvent(override val label: EventLabel) : Event {
+abstract class AbstractEvent(final override val label: EventLabel) : Event {
 
     companion object {
         private var nextID: EventID = 0
     }
 
-    override val id: EventID = nextID++
+    final override val id: EventID = nextID++
 
     protected open fun validate() {}
+
+    override fun equals(other: Any?): Boolean {
+        return (other is AbstractEvent) && (id == other.id)
+    }
+
+    override fun hashCode(): Int {
+        return id.hashCode()
+    }
 
 }
 
 abstract class AbstractThreadEvent(
     label: EventLabel,
     final override val threadId: Int,
-    final override val parent: ThreadEvent? = null,
+    final override val parent: ThreadEvent?,
+    final override val causalityClock: VectorClock,
 ) : AbstractEvent(label), ThreadEvent {
 
     final override val threadPosition: Int =
@@ -148,7 +164,11 @@ abstract class AbstractThreadEvent(
 
     override fun validate() {
         super.validate()
-        check((parent != null) implies (parent in dependencies))
+        // require((parent != null) implies { parent!! in dependencies })
+    }
+
+    override fun toString(): String {
+        return "#${id}: [${threadId}, ${threadPosition}] $label"
     }
 
     override fun predNth(n: Int): ThreadEvent? {
@@ -185,13 +205,17 @@ abstract class AbstractThreadEvent(
 
     private val jumps = Array<AbstractThreadEvent?>(N_JUMPS) { null }
 
+    init {
+        calculateJumps(this)
+    }
+
     companion object {
         private const val N_JUMPS = 10
         private const val MAX_JUMP = 1 shl (N_JUMPS - 1)
 
         private fun calculateJumps(event: AbstractThreadEvent) {
             require(N_JUMPS > 0)
-            event.jumps[0] = (event.parent as AbstractThreadEvent)
+            event.jumps[0] = (event.parent as? AbstractThreadEvent)
             for (i in 1 until N_JUMPS) {
                 event.jumps[i] = event.jumps[i - 1]?.jumps?.get(i - 1)
             }
@@ -200,189 +224,81 @@ abstract class AbstractThreadEvent(
 
 }
 
-class AtomicThreadEvent(
+abstract class AbstractAtomicThreadEvent(
     label: EventLabel,
     threadId: Int,
-    parent: ThreadEvent? = null,
+    parent: ThreadEvent?,
+    causalityClock: VectorClock,
     /**
      * Sender events corresponding to this event.
      * Applicable only to response events.
      */
-    val senders: List<Event> = listOf(),
+    val senders: List<ThreadEvent> = listOf(),
     /**
      * The allocation event for the accessed object.
      * Applicable only to object accessing events.
      */
-    val allocation: Event? = null,
+    val allocation: ThreadEvent? = null,
 ) : AbstractThreadEvent(
     label = label,
     threadId = threadId,
     parent = parent,
+    causalityClock = causalityClock,
 ), SynchronizedEvent {
 
     /**
      * Request event corresponding to this event.
      * Applicable only to response and receive events.
      */
-    val request: Event? =
+    val request: ThreadEvent? =
         parent?.takeIf { label.isResponse }
 
-    override val dependencies: List<Event> =
-        listOfNotNull(parent, allocation) + senders
+    final override val dependencies: List<ThreadEvent> =
+        listOfNotNull(allocation) + senders
 
-    override val synchronized: List<Event> =
+    final override val synchronized: List<ThreadEvent> =
         if (label.isResponse) (listOf(request!!) + senders) else listOf()
-
-    init {
-        validate()
-    }
 
     override fun validate() {
         super.validate()
-        check(label.isResponse implies (request != null && senders.isNotEmpty()))
-        check(!label.isResponse implies (request == null && senders.isEmpty()))
-        check((label.obj != null) implies (allocation != null))
-    }
-
-}
-
-class OldEvent private constructor(
-    val id: EventID,
-    /**
-     * Event's label.
-     */
-    val label: EventLabel,
-    /**
-     * Event's thread
-     */
-    val threadId: Int,
-    /**
-     * Event's position in a thread
-     * (i.e. number of its program-order predecessors).
-     */
-    val threadPosition: Int = 0,
-    /**
-     * Event's parent in program order.
-     */
-    val parent: Event? = null,
-    /**
-     * List of event's dependencies
-     * (e.g. reads-from write for a read event).
-     */
-    val dependencies: List<Event> = listOf(),
-    /**
-     * Vector clock to track causality relation.
-     */
-    val causalityClock: VectorClock,
-    /**
-     * State of the execution frontier at the point when event is created.
-     */
-    val frontier: ExecutionFrontier,
-    /**
-     * Frontier of pinned events.
-     * Pinned events are the events that should not be
-     * considering for branching in an exploration starting from this event.
-     */
-    val pinnedEvents: ExecutionFrontier,
-) : Comparable<Event> {
-
-    var visited: Boolean = false
-        private set
-
-    // should only be called from EventStructure
-    // TODO: enforce this invariant!
-    fun visit() {
-        visited = true
-    }
-
-    companion object {
-        private var nextId: EventID = 0
-
-        fun create(
-            threadId: Int,
-            threadPosition: Int,
-            label: EventLabel,
-            parent: Event?,
-            dependencies: List<Event>,
-            causalityClock: VectorClock,
-            // TODO: make read-only here
-            frontier: MutableExecutionFrontier,
-            // TODO: make read-only here
-            pinnedEvents: MutableExecutionFrontier,
-        ): Event {
-            val id = nextId++
-            return Event(
-                id,
-                threadId = threadId,
-                threadPosition = threadPosition,
-                label = label,
-                parent = parent,
-                dependencies = dependencies,
-                causalityClock = causalityClock,
-                frontier = frontier,
-                pinnedEvents = pinnedEvents,
-            ).apply {
-                calculateJumps(this)
-                pinnedEvents[threadId] = this
+        require(label.isResponse implies (request != null && senders.isNotEmpty()))
+        require(!label.isResponse implies (request == null && senders.isEmpty()))
+        // check that read-exclusive label precedes that write-exclusive label
+        if (label is WriteAccessLabel && label.isExclusive) {
+            require(parent != null)
+            parent.label.ensure {
+                it is ReadAccessLabel
+                    && it.isResponse
+                    && it.isExclusive
+                    && it.location == label.location
             }
         }
-
-        private const val N_JUMPS = 10
-        private const val MAX_JUMP = 1 shl (N_JUMPS - 1)
-
-        private fun calculateJumps(event: Event) {
-            require(N_JUMPS > 0)
-            event.jumps[0] = event.parent
-            for (i in 1 until N_JUMPS) {
-                event.jumps[i] = event.jumps[i - 1]?.jumps?.get(i - 1)
-            }
-        }
-
     }
 
-    val syncFrom: Event by lazy {
+    val syncFrom: ThreadEvent get() = run {
         require(label.isResponse)
-        dependencies.first { label.isValidResponse(it.label) }
+        require(senders.size == 1)
+        senders.first()
     }
 
-    val readsFrom: Event
-        get() = run {
-            require(label is ReadAccessLabel)
-            syncFrom
-        }
+    val readsFrom: ThreadEvent get() = run {
+        require(label is ReadAccessLabel)
+        syncFrom
+    }
 
-    val exclusiveReadPart: Event by lazy {
+    val locksFrom: ThreadEvent get() = run {
+        require(label is LockLabel)
+        syncFrom
+    }
+
+    val notifiedBy: ThreadEvent get() = run {
+        require(label is WaitLabel)
+        syncFrom
+    }
+
+    val exclusiveReadPart: ThreadEvent get() = run {
         require(label is WriteAccessLabel && label.isExclusive)
-        check(parent != null)
-        parent.ensure {
-            it.label is ReadAccessLabel && it.label.isResponse
-                && it.label.location == label.location
-                && it.label.isExclusive
-        }
-    }
-
-    val locksFrom: Event
-        get() = run {
-            require(label is LockLabel)
-            syncFrom
-        }
-
-    val notifiedBy: Event
-        get() = run {
-            require(label is WaitLabel)
-            syncFrom
-        }
-
-    val allocatedBy: Event by lazy {
-        // TODO: generalize?
-        require(label is MemoryAccessLabel || label is MutexLabel)
-        // TODO: unify cases
-        val obj = when (label) {
-            is MemoryAccessLabel -> label.location.obj.opaque()
-            is MutexLabel -> label.mutex
-            else -> unreachable()
-        }
-        dependencies.first { it.label.asObjectAllocationLabel(obj) != null }
+        parent!!
     }
 
     /**
@@ -393,14 +309,15 @@ class OldEvent private constructor(
      * - request is a parent of response,
      * - request-label can be synchronized-into response-label.
      *
-     * @see EventLabel.synchronizesInto
+     * @see EventLabel.isValidResponse
      */
-    fun isValidResponse(request: Event) =
-        request.label.isRequest && label.isResponse && parent == request
-                && label.isValidResponse(request.label)
+    fun isValidResponse(request: ThreadEvent) =
+        request.label.isRequest && label.isResponse
+            && parent == request
+            && label.isValidResponse(request.label)
 
     /**
-     * Checks whether this event is valid response to its parent request event.
+     * Checks whether this event is a valid response to its parent request event.
      * If this event is not a response or its parent is not a request returns false.
      *
      * @see isValidResponse
@@ -421,38 +338,36 @@ class OldEvent private constructor(
      *
      * @see MemoryAccessLabel.isExclusive
      */
-    fun isWritePartOfAtomicUpdate(readResponse: Event) =
-        readResponse.label is ReadAccessLabel && readResponse.label.isResponse && readResponse.label.isExclusive &&
-        label is WriteAccessLabel && label.isExclusive && parent == readResponse &&
-        label.location == readResponse.label.location
+    fun isWritePartOfAtomicUpdate(readResponse: ThreadEvent) =
+        label is WriteAccessLabel && label.isExclusive
+            && parent == readResponse && readResponse.label.let {
+                it is ReadAccessLabel && it.isResponse && it.isExclusive
+                    && it.location == label.location
+            }
 
-    override fun equals(other: Any?): Boolean {
-        return (other is Event) && (id == other.id)
-    }
-
-    override fun hashCode(): Int {
-        return id.hashCode()
-    }
-
-    override fun compareTo(other: Event): Int {
-        return id.compareTo(other.id)
-    }
-
-    override fun toString(): String {
-        return "#${id}: [${threadId}, ${threadPosition}] $label"
-    }
 }
 
-val programOrder: PartialOrder<Event> = PartialOrder.ofLessThan { x, y ->
+class AtomicThreadEvent(
+    label: EventLabel,
+    threadId: Int,
+    parent: ThreadEvent?,
+    causalityClock: VectorClock,
+    senders: List<ThreadEvent> = listOf(),
+    allocation: ThreadEvent? = null,
+) : AbstractAtomicThreadEvent(label, threadId, parent, causalityClock, senders, allocation) {
+
+    init {
+        validate()
+    }
+
+}
+
+val programOrder: PartialOrder<ThreadEvent> = PartialOrder.ofLessThan { x, y ->
     if (x.threadId != y.threadId || x.threadPosition >= y.threadPosition)
         false
     else (x == y.predNth(y.threadPosition - x.threadPosition))
 }
 
-val causalityOrder: PartialOrder<Event> = PartialOrder.ofLessOrEqual { x, y ->
+val causalityOrder: PartialOrder<ThreadEvent> = PartialOrder.ofLessOrEqual { x, y ->
     y.causalityClock.observes(x.threadId, x.threadPosition)
-}
-
-val externalCausalityCovering: Covering<Event> = Covering { y ->
-    y.dependencies
 }

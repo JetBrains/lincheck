@@ -22,7 +22,6 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.ensure
 import org.jetbrains.kotlinx.lincheck.strategy.managed.Remapping
-import org.jetbrains.kotlinx.lincheck.unreachable
 import org.jetbrains.kotlinx.lincheck.utils.*
 
 
@@ -63,16 +62,16 @@ fun Execution.getThreadSize(tid: ThreadID): Int =
 fun Execution.lastPosition(tid: ThreadID): Int =
     getThreadSize(tid) - 1
 
-fun Execution.firstEvent(tid: ThreadID): Event? =
+fun Execution.firstEvent(tid: ThreadID): ThreadEvent? =
     get(tid)?.firstOrNull()
 
-fun Execution.lastEvent(tid: ThreadID): Event? =
+fun Execution.lastEvent(tid: ThreadID): ThreadEvent? =
     get(tid)?.lastOrNull()
 
-operator fun Execution.get(tid: ThreadID, pos: Int): Event? =
+operator fun Execution.get(tid: ThreadID, pos: Int): ThreadEvent? =
     get(tid)?.getOrNull(pos)
 
-fun Execution.nextEvent(event: ThreadEvent): Event? =
+fun Execution.nextEvent(event: ThreadEvent): ThreadEvent? =
     get(event.threadId)?.let { events ->
         require(events[event.threadPosition] == event)
         events.getOrNull(event.threadPosition + 1)
@@ -185,7 +184,7 @@ fun Execution.isBlockedDanglingRequest(event: ThreadEvent): Boolean {
             (event == this[event.threadId]?.last())
 }
 
-fun Execution.computeVectorClock(event: Event, relation: Relation<Event>): VectorClock {
+fun Execution.computeVectorClock(event: ThreadEvent, relation: Relation<ThreadEvent>): VectorClock {
     check(this is ExecutionImpl)
     val clock = MutableVectorClock(threadMap.capacity)
     for (i in 0 until threadMap.capacity) {
@@ -200,51 +199,20 @@ fun Execution.enumerationOrderSortedList(): List<ThreadEvent> =
     this.sorted()
 
 // TODO: rename?
-fun Execution.fixupDependencies(): Remapping {
+fun Execution.fixupDependencies(algebra: SynchronizationAlgebra): Remapping {
     val remapping = Remapping()
     // TODO: refactor, simplify & unify cases
     for (event in enumerationOrderSortedList()) {
         if (!(event.label is MemoryAccessLabel || event.label is MutexLabel))
             continue
         // TODO: unify cases
-        if (event.label.isRequest || event.label.isSend) {
-            val obj = when (event.label) {
-                is MemoryAccessLabel -> event.label.location.obj
-                is MutexLabel -> event.label.mutex.unwrap()
-                else -> unreachable()
-            }
-            val allocEvent = event.dependencies.firstOrNull { it.label is ObjectAllocationLabel }
-                // TODO: add check for `external` objects allocated by `InitializationLabel`
-                ?: continue
-            remapping[obj] = (allocEvent.label as ObjectAllocationLabel).obj.unwrap()
+        check(event is AbstractAtomicThreadEvent)
+        event.allocation?.also { alloc ->
+            remapping[event.label.obj?.unwrap()] = alloc.label.obj?.unwrap()
             event.label.remap(remapping)
         }
         if (event.label.isResponse) {
-            val req = event.parent!!
-            val objFrom = when (req.label) {
-                is MemoryAccessLabel -> req.label.location.obj
-                is MutexLabel -> req.label.mutex.unwrap()
-                else -> unreachable()
-            }
-            val syncFrom = when (event.label) {
-                is MemoryAccessLabel ->
-                    event.dependencies.firstOrNull { it.label is MemoryAccessLabel }
-                        ?: event.dependencies.first { it.label is InitializationLabel || it.label is ObjectAllocationLabel }
-                is MutexLabel ->
-                    event.dependencies.firstOrNull { it.label is UnlockLabel }
-                        ?: event.dependencies.first { it.label is InitializationLabel || it.label is ObjectAllocationLabel }
-                else -> event.syncFrom
-            }
-            val objTo = when (syncFrom.label) {
-                is MemoryAccessLabel -> syncFrom.label.location.obj
-                is MutexLabel -> syncFrom.label.mutex.unwrap()
-                else -> null
-            }
-            if (objTo != null) {
-                remapping[objFrom] = objTo
-                req.label.remap(remapping)
-            }
-            event.label.replay(event.recalculateResponseLabel(), remapping)
+            event.label.replay(event.resynchronize(algebra), remapping)
         }
     }
     return remapping
@@ -255,11 +223,11 @@ typealias ExecutionCounter = IntArray
 abstract class ExecutionRelation(
     val execution: Execution,
     val respectsProgramOrder: Boolean = true,
-) : Relation<Event> {
+) : Relation<ThreadEvent> {
 
     val indexer = execution.buildIndexer()
 
-    fun buildExternalCovering() = object : Covering<Event> {
+    fun buildExternalCovering() = object : Covering<ThreadEvent> {
 
         init {
             require(respectsProgramOrder)
@@ -269,7 +237,7 @@ abstract class ExecutionRelation(
 
         private val nThreads = 1 + execution.maxThreadID
 
-        val covering: List<List<Event>> = execution.indices.map { index ->
+        val covering: List<List<ThreadEvent>> = execution.indices.map { index ->
             val event = indexer[index]
             val clock = execution.computeVectorClock(event, relation)
             (0 until nThreads).mapNotNull { tid ->
@@ -279,7 +247,7 @@ abstract class ExecutionRelation(
             }
         }
 
-        override fun invoke(x: Event): List<Event> =
+        override fun invoke(x: ThreadEvent): List<ThreadEvent> =
             covering[indexer.index(x)]
 
     }
@@ -289,9 +257,9 @@ abstract class ExecutionRelation(
 fun executionRelation(
     execution: Execution,
     respectsProgramOrder: Boolean = true,
-    relation: Relation<Event>
+    relation: Relation<ThreadEvent>
 ) = object : ExecutionRelation(execution, respectsProgramOrder) {
 
-    override fun invoke(x: Event, y: Event): Boolean = relation(x, y)
+    override fun invoke(x: ThreadEvent, y: ThreadEvent): Boolean = relation(x, y)
 
 }

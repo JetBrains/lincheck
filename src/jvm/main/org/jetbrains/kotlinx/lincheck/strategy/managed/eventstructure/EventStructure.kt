@@ -39,11 +39,11 @@ class EventStructure(
 
     val syncAlgebra: SynchronizationAlgebra = AtomicSynchronizationAlgebra
 
-    val root: Event
+    val root: ThreadEvent
 
     // TODO: this pattern is covered by explicit backing fields KEEP
     //   https://github.com/Kotlin/KEEP/issues/278
-    private val _events = sortedMutableListOf<Event>()
+    private val _events = sortedMutableListOf<BacktrackableEvent>()
 
     /**
      * List of events of the event structure.
@@ -68,7 +68,7 @@ class EventStructure(
 
     private var currentRemapping: Remapping = Remapping()
 
-    private val delayedConsistencyCheckBuffer = mutableListOf<Event>()
+    private val delayedConsistencyCheckBuffer = mutableListOf<ThreadEvent>()
 
     var detectedInconsistency: Inconsistency? = null
         private set
@@ -99,13 +99,13 @@ class EventStructure(
      * Map from blocked dangling events to their responses.
      * If event is blocked but the corresponding response has not yet arrived then it is mapped to null.
      */
-    private val danglingEvents = mutableMapOf<Event, Event?>()
+    private val danglingEvents = mutableMapOf<ThreadEvent, ThreadEvent?>()
 
     init {
         root = addRootEvent()
     }
 
-    fun getThreadRoot(iThread: Int): Event? =
+    fun getThreadRoot(iThread: Int): ThreadEvent? =
         currentExecution.firstEvent(iThread)?.also { event ->
             check(event.label is ThreadStartLabel && event.label.isRequest)
         }
@@ -120,8 +120,9 @@ class EventStructure(
 
     fun startNextExploration(): Boolean {
         loop@while (true) {
-            val event = rollbackToEvent { !it.visited }?.apply { visit() }
+            val event = rollbackToEvent { !it.visited }
                 ?: return false
+            event.visit()
             resetExploration(event)
             return true
         }
@@ -154,7 +155,7 @@ class EventStructure(
                 lastEvent.label.isRequest && lastEvent.label.isBlocking -> {
                     val responseEvent = _currentExecution[lastEvent.threadId, lastEvent.threadPosition + 1]
                         ?: continue
-                    if (responseEvent.dependencies.any { it !in playedFrontier }) {
+                    if (responseEvent.dependencies.any { (it as ThreadEvent) !in playedFrontier }) {
                         _currentExecution.cut(responseEvent)
                         continue
                     }
@@ -170,13 +171,13 @@ class EventStructure(
         }
     }
 
-    private fun rollbackToEvent(predicate: (Event) -> Boolean): Event? {
+    private fun rollbackToEvent(predicate: (BacktrackableEvent) -> Boolean): BacktrackableEvent? {
         val eventIdx = _events.indexOfLast(predicate)
         _events.subList(eventIdx + 1, _events.size).clear()
-        return events.lastOrNull()
+        return _events.lastOrNull()
     }
 
-    private fun resetExploration(event: Event) {
+    private fun resetExploration(event: BacktrackableEvent) {
         check(event.label is InitializationLabel || event.label.isResponse)
         // reset consistency check state
         detectedInconsistency = null
@@ -184,7 +185,7 @@ class EventStructure(
         currentExplorationRoot = event
         // reset current execution
         _currentExecution = event.frontier.toMutableExecution().apply {
-            currentRemapping = fixupDependencies()
+            currentRemapping = fixupDependencies(syncAlgebra)
         }
         // reset the internal state of incremental checkers
         consistencyChecker.reset(currentExecution)
@@ -192,7 +193,7 @@ class EventStructure(
         _currentExecution.add(event)
         // remap new event's label
         if (event.label.isResponse) {
-            event.label.replay(event.recalculateResponseLabel(), currentRemapping)
+            event.label.replay(event.resynchronize(syncAlgebra), currentRemapping)
         }
         // set pinned events
         pinnedEvents = event.pinnedEvents.copy().ensure {
@@ -227,7 +228,7 @@ class EventStructure(
         return detectedInconsistency
     }
 
-    private class Replayer(private val executionOrder: List<Event>) {
+    private class Replayer(private val executionOrder: List<ThreadEvent>) {
         private var index: Int = 0
         private val size: Int = executionOrder.size
 
@@ -236,8 +237,8 @@ class EventStructure(
         fun inProgress(): Boolean =
             (index < size)
 
-        val currentEvent: Event?
-            get() = if (inProgress()) executionOrder[index] else null
+        val currentEvent: BacktrackableEvent?
+            get() = if (inProgress()) (executionOrder[index] as? BacktrackableEvent) else null
 
         fun setNextEvent() {
             index++
@@ -258,7 +259,7 @@ class EventStructure(
         return iThread == replayer.currentEvent?.threadId
     }
 
-    private fun tryReplayEvent(iThread: Int): Event? {
+    private fun tryReplayEvent(iThread: Int): BacktrackableEvent? {
         if (inReplayPhase() && !canReplayNextEvent(iThread)) {
             // TODO: can we get rid of this?
             //   we can try to enforce more ordering invariants by grouping "atomic" events
@@ -281,8 +282,13 @@ class EventStructure(
             mutableExecutionFrontierOf(*it.toTypedArray())
         }
 
-    private fun createEvent(iThread: Int, label: EventLabel, parent: Event?,
-                            dependencies: List<Event>, conflicts: List<Event>): Event? {
+    private fun createEvent(
+        iThread: Int,
+        label: EventLabel,
+        parent: ThreadEvent?,
+        dependencies: List<ThreadEvent>,
+        conflicts: List<ThreadEvent>
+    ): BacktrackableEvent? {
         var causalityViolation = false
         // Check that parent does not depend on conflicting events.
         if (parent != null) {
@@ -300,6 +306,7 @@ class EventStructure(
         val causalityClock = dependencies.fold(parent?.causalityClock?.copy() ?: emptyClock()) { clock, event ->
             clock + event.causalityClock
         }
+        val allocation = label.obj?.let { allocationEvents[it.unwrap()] }
         val frontier = currentExecution.toMutableFrontier().apply {
             cut(conflicts)
             cutDanglingRequestEvents()
@@ -310,50 +317,65 @@ class EventStructure(
             merge(causalityClock.toMutableFrontier())
             cutDanglingRequestEvents()
         }
-        return Event.create(
-            threadId = iThread,
-            threadPosition = threadPosition,
+        return BacktrackableEvent(
             label = label,
+            threadId = iThread,
             parent = parent,
-            dependencies = dependencies,
             causalityClock = causalityClock.apply {
                 set(iThread, threadPosition)
             },
+            senders = dependencies,
+            allocation = (allocation as? ThreadEvent),
             frontier = frontier,
             pinnedEvents = pinnedEvents,
         )
     }
 
-    private fun addEvent(iThread: Int, label: EventLabel, parent: Event?, dependencies: List<Event>): Event? {
+    private fun addEvent(
+        iThread: Int,
+        label: EventLabel,
+        parent: ThreadEvent?,
+        dependencies: List<ThreadEvent>
+    ): BacktrackableEvent? {
         // TODO: do we really need this invariant?
         // require(parent !in dependencies)
-        val allDependencies = dependencies + extraDependencies(iThread, label, parent, dependencies)
+        val allDependencies = dependencies // + extraDependencies(iThread, label, parent, dependencies)
         val conflicts = conflictingEvents(iThread, parent, label, allDependencies)
         return createEvent(iThread, label, parent, allDependencies, conflicts)?.also { event ->
             _events.add(event)
         }
     }
 
-    private fun extraDependencies(iThread: Int, label: EventLabel, parent: Event?, dependencies: List<Event>): List<Event> {
-        return when (label) {
-            is MemoryAccessLabel, is MutexLabel -> {
-                // TODO: unify cases
-                val obj = when (label) {
-                    is MemoryAccessLabel -> label.location.obj
-                    is MutexLabel -> label.mutex.unwrap()
-                    else -> unreachable()
-                }
-                listOfNotNull(
-                    allocationEvents[obj]
-                )
-            }
-            else -> listOf()
-        }
-    }
+    // private fun extraDependencies(
+    //     iThread: Int,
+    //     label: EventLabel,
+    //     parent: ThreadEvent?,
+    //     dependencies: List<ThreadEvent>
+    // ): List<ThreadEvent> {
+    //     return when (label) {
+    //         is MemoryAccessLabel, is MutexLabel -> {
+    //             // TODO: unify cases
+    //             val obj = when (label) {
+    //                 is MemoryAccessLabel -> label.location.obj
+    //                 is MutexLabel -> label.mutex.unwrap()
+    //                 else -> unreachable()
+    //             }
+    //             listOfNotNull(
+    //                 allocationEvents[obj]
+    //             )
+    //         }
+    //         else -> listOf()
+    //     }
+    // }
 
-    private fun conflictingEvents(iThread: Int, parent: Event?, label: EventLabel, dependencies: List<Event>): List<Event> {
+    private fun conflictingEvents(
+        iThread: Int,
+        parent: ThreadEvent?,
+        label: EventLabel,
+        dependencies: List<ThreadEvent>
+    ): List<ThreadEvent> {
         val position = parent?.let { it.threadPosition + 1 } ?: 0
-        val conflicts = mutableListOf<Event>()
+        val conflicts = mutableListOf<ThreadEvent>()
         // if the current execution already has an event in given position --- then it is conflict
         currentExecution[iThread, position]?.also { conflicts.add(it) }
         // handle label specific cases
@@ -363,8 +385,10 @@ class EventStructure(
             label is LockLabel && label.isResponse && !label.isReentry -> run {
                 val unlock = dependencies.first { it.label.asUnlockLabel(label.mutex) != null }
                 currentExecution.forEach { event ->
-                    if (event.label is LockLabel && event.label.isResponse &&
-                        event.label.mutex == label.mutex && event.locksFrom == unlock) {
+                    check(event is AbstractAtomicThreadEvent)
+                    if (event.label.isResponse
+                            && (event.label as? LockLabel)?.mutex == label.mutex
+                            && event.locksFrom == unlock) {
                         conflicts.add(event)
                     }
                 }
@@ -375,8 +399,10 @@ class EventStructure(
                 if ((notify.label as NotifyLabel).isBroadcast)
                     return@run
                 currentExecution.forEach { event ->
-                    if (event.label is WaitLabel && event.label.isResponse &&
-                        event.label.mutex == label.mutex && event.notifiedBy == notify) {
+                    check(event is AbstractAtomicThreadEvent)
+                    if (event.label.isResponse
+                            && (event.label as? WaitLabel)?.mutex == label.mutex
+                            && event.notifiedBy == notify) {
                         conflicts.add(event)
                     }
                 }
@@ -386,7 +412,7 @@ class EventStructure(
         return conflicts
     }
 
-    private fun addEventToCurrentExecution(event: Event, visit: Boolean = true) {
+    private fun addEventToCurrentExecution(event: BacktrackableEvent, visit: Boolean = true) {
         // Mark event as visited if necessary.
         if (visit) {
             event.visit()
@@ -449,7 +475,7 @@ class EventStructure(
     private fun EventLabel.synchronize(other: EventLabel) =
         syncAlgebra.synchronize(this, other)
 
-    private fun synchronizationCandidates(event: Event): List<Event> {
+    private fun synchronizationCandidates(event: ThreadEvent): List<ThreadEvent> {
         // consider all candidates in current execution and apply some general filters
         val candidates = currentExecution.asSequence()
             // for send event we filter out ...
@@ -461,24 +487,25 @@ class EventStructure(
                 //     unless pinned event is blocking dangling event
                 (!pinnedEvents.contains(it) || danglingEvents.contains(it))
             }}
+        val label = event.label
         return when {
             // for read-request events we search for the last write to the same memory location
             // in the same thread, and then filter out all causal predecessors of this last write,
             // because these events are "obsolete" --- reading from them will result in coherence cycle
             // and will violate consistency
-            event.label is MemoryAccessLabel && event.label.isRequest -> {
+            label is MemoryAccessLabel && label.isRequest -> {
                 // val threadLastWrite = currentExecution[event.threadId]?.lastOrNull {
                 //     it.label is WriteAccessLabel && it.label.location == event.label.location
                 // } ?: root
                 val threadReads = currentExecution[event.threadId]!!.filter {
-                    it.label is ReadAccessLabel && it.label.isResponse && it.label.location == event.label.location
+                    it.label.isResponse && (it.label as? ReadAccessLabel)?.location == label.location
                 }
-                val lastSeenWrite = threadReads.lastOrNull()?.readsFrom
+                val lastSeenWrite = threadReads.lastOrNull()?.let { (it as AbstractAtomicThreadEvent).readsFrom }
                 val staleWrites = threadReads
-                    .map { it.readsFrom }
+                    .map { (it as AbstractAtomicThreadEvent).readsFrom }
                     .filter { it != lastSeenWrite }
                     .distinct()
-                val racyWrites = calculateRacyWrites(event.label.location, event.causalityClock.toMutableFrontier())
+                val racyWrites = calculateRacyWrites(label.location, event.causalityClock.toMutableFrontier())
                 candidates.filter {
                     // !causalityOrder.lessThan(it, threadLastWrite) &&
                     !racyWrites.any { write -> causalityOrder.lessThan(it, write) } &&
@@ -486,11 +513,11 @@ class EventStructure(
                 }
             }
             // re-entry lock-request synchronizes only with object allocation label
-            event.label is LockLabel && event.label.isRequest && event.label.isReentry -> {
-                candidates.filter { it.label.asObjectAllocationLabel(event.label.mutex) != null }
+            label is LockLabel && event.label.isRequest && label.isReentry -> {
+                candidates.filter { it.label.asObjectAllocationLabel(label.mutex) != null }
             }
             // re-entry unlock synchronizes with nothing
-            event.label is UnlockLabel && event.label.isReentry -> {
+            label is UnlockLabel && label.isReentry -> {
                 return listOf(root)
             }
 
@@ -507,7 +534,7 @@ class EventStructure(
      *
      * @return list of added events
      */
-    private fun addSynchronizedEvents(event: Event): List<Event> {
+    private fun addSynchronizedEvents(event: ThreadEvent): List<ThreadEvent> {
         // TODO: we should maintain an index of read/write accesses to specific memory location
         val syncEvents = when (event.label.syncType) {
             SynchronizationType.Binary -> addBinarySynchronizedEvents(event, synchronizationCandidates(event))
@@ -527,12 +554,13 @@ class EventStructure(
         return syncEvents
     }
 
-    private fun addBinarySynchronizedEvents(event: Event, candidateEvents: Collection<Event>): List<Event> {
+    private fun addBinarySynchronizedEvents(event: ThreadEvent, candidateEvents: Collection<ThreadEvent>): List<ThreadEvent> {
         require(event.label.syncType == SynchronizationType.Binary)
         // TODO: sort resulting events according to some strategy?
         return candidateEvents
             .mapNotNull { other ->
-                val syncLab = event.label.synchronize(other.label) ?: return@mapNotNull null
+                val syncLab = event.label.synchronize(other.label)
+                    ?: return@mapNotNull null
                 val (parent, dependency) = when {
                     event.label.isRequest -> event to other
                     other.label.isRequest -> other to event
@@ -547,7 +575,7 @@ class EventStructure(
             }
     }
 
-    private fun addBarrierSynchronizedEvents(event: Event, candidateEvents: Collection<Event>): List<Event> {
+    private fun addBarrierSynchronizedEvents(event: ThreadEvent, candidateEvents: Collection<ThreadEvent>): List<ThreadEvent> {
         require(event.label.syncType == SynchronizationType.Barrier)
         val (syncLab, dependencies) =
             candidateEvents.fold(event.label to listOf(event)) { (lab, deps), candidateEvent ->
@@ -557,17 +585,17 @@ class EventStructure(
             }
         if (syncLab.isBlocking && !syncLab.unblocked)
             return listOf()
-        // We assume that at most one of the events participating into synchronization
-        // is a request event, and the result of synchronization is response event.
+        // We assume that at most, one of the events participating into synchronization
+        // is a request event, and the result of synchronization is a response event.
         check(syncLab.isResponse)
         val parent = dependencies.first { it.label.isRequest }
         val responseEvent = addEvent(parent.threadId, syncLab, parent, dependencies.filter { it != parent })
         return listOfNotNull(responseEvent)
     }
 
-    private fun addRootEvent(): Event {
+    private fun addRootEvent(): ThreadEvent {
         // we do not mark root event as visited purposefully;
-        // this is just a trick to make first call to `startNextExploration`
+        // this is just a trick to make the first call to `startNextExploration`
         // to pick the root event as the next event to explore from.
         val label = InitializationLabel(mainThreadId, memoryInitializer) { obj ->
             obj !in allocationEvents
@@ -577,7 +605,7 @@ class EventStructure(
         }
     }
 
-    private fun addSendEvent(iThread: Int, label: EventLabel): Event {
+    private fun addSendEvent(iThread: Int, label: EventLabel): ThreadEvent {
         require(label.isSend)
         tryReplayEvent(iThread)?.let { event ->
             // TODO: also check custom event/label specific rules when replaying,
@@ -588,13 +616,13 @@ class EventStructure(
             return event
         }
         val parent = playedFrontier[iThread]
-        val dependencies = listOf<Event>()
+        val dependencies = listOf<ThreadEvent>()
         return addEvent(iThread, label, parent, dependencies)!!.also { event ->
             addEventToCurrentExecution(event)
         }
     }
 
-    private fun addRequestEvent(iThread: Int, label: EventLabel): Event {
+    private fun addRequestEvent(iThread: Int, label: EventLabel): ThreadEvent {
         require(label.isRequest)
         tryReplayEvent(iThread)?.let { event ->
             event.label.replay(label, currentRemapping)
@@ -607,7 +635,7 @@ class EventStructure(
         }
     }
 
-    private fun addResponseEvents(requestEvent: Event): Pair<Event?, List<Event>> {
+    private fun addResponseEvents(requestEvent: ThreadEvent): Pair<ThreadEvent?, List<ThreadEvent>> {
         require(requestEvent.label.isRequest)
         tryReplayEvent(requestEvent.threadId)?.let { event ->
             check(event.label.isResponse)
@@ -619,7 +647,7 @@ class EventStructure(
             if (!readyToReplay) {
                 return (null to listOf())
             }
-            event.label.replay(event.recalculateResponseLabel(), currentRemapping)
+            event.label.replay(event.resynchronize(syncAlgebra), currentRemapping)
             addEventToCurrentExecution(event)
             return event to listOf(event)
         }
@@ -628,6 +656,7 @@ class EventStructure(
                 ?: return (null to listOf())
             check(event.label.isResponse)
             check(event.parent == requestEvent)
+            check(event is BacktrackableEvent)
             addEventToCurrentExecution(event)
             return event to listOf(event)
         }
@@ -639,22 +668,22 @@ class EventStructure(
         // TODO: use some other strategy to select the next event in the current exploration?
         // TODO: check consistency of chosen event!
         val chosenEvent = responseEvents.last().also { event ->
-            addEventToCurrentExecution(event)
+            addEventToCurrentExecution(event as BacktrackableEvent)
         }
         return (chosenEvent to responseEvents)
     }
 
-    fun isBlockedRequest(request: Event): Boolean {
+    fun isBlockedRequest(request: ThreadEvent): Boolean {
         require(request.label.isRequest && request.label.isBlocking)
         return (request == playedFrontier[request.threadId])
     }
 
-    fun isBlockedDanglingRequest(request: Event): Boolean {
+    fun isBlockedDanglingRequest(request: ThreadEvent): Boolean {
         require(request.label.isRequest && request.label.isBlocking)
         return currentExecution.isBlockedDanglingRequest(request)
     }
 
-    fun isBlockedAwaitingRequest(request: Event): Boolean {
+    fun isBlockedAwaitingRequest(request: ThreadEvent): Boolean {
         require(isBlockedRequest(request))
         if (inReplayPhase(request.threadId)) {
             return !canReplayNextEvent(request.threadId)
@@ -665,27 +694,27 @@ class EventStructure(
         return false
     }
 
-    fun getBlockedRequest(iThread: Int): Event? =
+    fun getBlockedRequest(iThread: Int): ThreadEvent? =
         playedFrontier[iThread]?.takeIf { it.label.isRequest && it.label.isBlocking }
 
-    fun getBlockedAwaitingRequest(iThread: Int): Event? =
+    fun getBlockedAwaitingRequest(iThread: Int): ThreadEvent? =
         getBlockedRequest(iThread)?.takeIf { isBlockedAwaitingRequest(it) }
 
-    private fun markBlockedDanglingRequest(request: Event) {
+    private fun markBlockedDanglingRequest(request: ThreadEvent) {
         require(isBlockedDanglingRequest(request))
         check(request !in danglingEvents)
         check(danglingEvents.keys.all { it.threadId != request.threadId })
         danglingEvents.put(request, null).ensureNull()
     }
 
-    private fun unmarkBlockedDanglingRequest(request: Event) {
+    private fun unmarkBlockedDanglingRequest(request: ThreadEvent) {
         require(request.label.isRequest && request.label.isBlocking)
         require(!isBlockedDanglingRequest(request))
         require(request in danglingEvents)
         danglingEvents.remove(request)
     }
 
-    private fun setUnblockingResponse(response: Event) {
+    private fun setUnblockingResponse(response: ThreadEvent) {
         require(response.label.isResponse && response.label.isBlocking)
         val request = response.parent
             .ensure { it != null }
@@ -694,13 +723,13 @@ class EventStructure(
         danglingEvents.put(request!!, response).ensureNull()
     }
 
-    private fun getUnblockingResponse(request: Event): Event? {
+    private fun getUnblockingResponse(request: ThreadEvent): ThreadEvent? {
         require(isBlockedDanglingRequest(request))
         require(request in danglingEvents)
         return danglingEvents[request]
     }
 
-    fun addThreadStartEvent(iThread: Int): Event {
+    fun addThreadStartEvent(iThread: Int): ThreadEvent {
         val label = ThreadStartLabel(
             threadId = iThread,
             kind = LabelKind.Request,
@@ -712,21 +741,21 @@ class EventStructure(
         return responseEvent
     }
 
-    fun addThreadFinishEvent(iThread: Int): Event {
+    fun addThreadFinishEvent(iThread: Int): ThreadEvent {
         val label = ThreadFinishLabel(
             threadId = iThread,
         )
         return addSendEvent(iThread, label)
     }
 
-    fun addThreadForkEvent(iThread: Int, forkThreadIds: Set<Int>): Event {
+    fun addThreadForkEvent(iThread: Int, forkThreadIds: Set<Int>): ThreadEvent {
         val label = ThreadForkLabel(
             forkThreadIds = forkThreadIds
         )
         return addSendEvent(iThread, label)
     }
 
-    fun addThreadJoinEvent(iThread: Int, joinThreadIds: Set<Int>): Event {
+    fun addThreadJoinEvent(iThread: Int, joinThreadIds: Set<Int>): ThreadEvent {
         val label = ThreadJoinLabel(
             kind = LabelKind.Request,
             joinThreadIds = joinThreadIds,
@@ -739,13 +768,13 @@ class EventStructure(
         return responseEvent
     }
 
-    fun addObjectAllocationEvent(iThread: Int, value: OpaqueValue): Event {
+    fun addObjectAllocationEvent(iThread: Int, value: OpaqueValue): ThreadEvent {
         val label = ObjectAllocationLabel(value, memoryInitializer)
         return addSendEvent(iThread, label)
     }
 
     fun addWriteEvent(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?,
-                      isExclusive: Boolean = false): Event {
+                      isExclusive: Boolean = false): ThreadEvent {
         val label = WriteAccessLabel(
             location = location,
             _value = value,
@@ -756,7 +785,7 @@ class EventStructure(
     }
 
     fun addReadEvent(iThread: Int, location: MemoryLocation, kClass: KClass<*>,
-                     isExclusive: Boolean = false): Event {
+                     isExclusive: Boolean = false): ThreadEvent {
         // we first create read-request event with unknown (null) value,
         // value will be filled later in read-response event
         val label = ReadAccessLabel(
@@ -771,11 +800,13 @@ class EventStructure(
         // TODO: think again --- is it possible that there is no write to read-from?
         //  Probably not, because in Kotlin variables are always initialized by default?
         //  What about initialization-related issues?
-        checkNotNull(responseEvent)
+        checkNotNull(responseEvent) {
+            "hehn't"
+        }
         return responseEvent
     }
 
-    fun addLockRequestEvent(iThread: Int, mutex: OpaqueValue, reentranceDepth: Int = 1, reentranceCount: Int = 1, isWaitLock: Boolean = false): Event {
+    fun addLockRequestEvent(iThread: Int, mutex: OpaqueValue, reentranceDepth: Int = 1, reentranceCount: Int = 1, isWaitLock: Boolean = false): ThreadEvent {
         val label = LockLabel(
             kind = LabelKind.Request,
             mutex_ = mutex,
@@ -786,12 +817,12 @@ class EventStructure(
         return addRequestEvent(iThread, label)
     }
 
-    fun addLockResponseEvent(lockRequest: Event): Event? {
+    fun addLockResponseEvent(lockRequest: ThreadEvent): ThreadEvent? {
         require(lockRequest.label.isRequest && lockRequest.label is LockLabel)
         return addResponseEvents(lockRequest).first
     }
 
-    fun addUnlockEvent(iThread: Int, mutex: OpaqueValue, reentranceDepth: Int = 1, reentranceCount: Int = 1, isWaitUnlock: Boolean = false): Event {
+    fun addUnlockEvent(iThread: Int, mutex: OpaqueValue, reentranceDepth: Int = 1, reentranceCount: Int = 1, isWaitUnlock: Boolean = false): ThreadEvent {
         val label = UnlockLabel(
             mutex_ = mutex,
             reentranceDepth = reentranceDepth,
@@ -801,7 +832,7 @@ class EventStructure(
         return addSendEvent(iThread, label)
     }
 
-    fun addWaitRequestEvent(iThread: Int, mutex: OpaqueValue): Event {
+    fun addWaitRequestEvent(iThread: Int, mutex: OpaqueValue): ThreadEvent {
         val label = WaitLabel(
             kind = LabelKind.Request,
             mutex_ = mutex,
@@ -810,7 +841,7 @@ class EventStructure(
 
     }
 
-    fun addWaitResponseEvent(waitRequest: Event): Event? {
+    fun addWaitResponseEvent(waitRequest: ThreadEvent): ThreadEvent? {
         require(waitRequest.label.isRequest && waitRequest.label is WaitLabel)
         return addResponseEvents(waitRequest).first
     }
@@ -825,17 +856,17 @@ class EventStructure(
         return addSendEvent(iThread, label)
     }
 
-    fun addParkRequestEvent(iThread: Int): Event {
+    fun addParkRequestEvent(iThread: Int): ThreadEvent {
         val label = ParkLabel(LabelKind.Request, iThread)
         return addRequestEvent(iThread, label)
     }
 
-    fun addParkResponseEvent(parkRequest: Event): Event? {
+    fun addParkResponseEvent(parkRequest: ThreadEvent): ThreadEvent? {
         require(parkRequest.label.isRequest && parkRequest.label is ParkLabel)
         return addResponseEvents(parkRequest).first
     }
 
-    fun addUnparkEvent(iThread: Int, unparkingThreadId: Int): Event {
+    fun addUnparkEvent(iThread: Int, unparkingThreadId: Int): ThreadEvent {
         val label = UnparkLabel(unparkingThreadId)
         return addSendEvent(iThread, label)
     }
@@ -874,13 +905,48 @@ class EventStructure(
      *
      * TODO: move to Execution?
      */
-    fun calculateRacyWrites(location: MemoryLocation, observation: ExecutionFrontier): List<Event> {
+    fun calculateRacyWrites(location: MemoryLocation, observation: ExecutionFrontier): List<ThreadEvent> {
         val writes = calculateMemoryLocationView(location, observation).events
         return writes.filter { write ->
             !writes.any { other ->
                 causalityOrder.lessThan(write, other)
             }
         }
+    }
+
+}
+
+private class BacktrackableEvent(
+    label: EventLabel,
+    threadId: Int,
+    parent: ThreadEvent?,
+    causalityClock: VectorClock,
+    senders: List<ThreadEvent> = listOf(),
+    allocation: ThreadEvent? = null,
+    /**
+     * State of the execution frontier at the point when event is created.
+     */
+    val frontier: ExecutionFrontier,
+    pinnedEvents: MutableExecutionFrontier,
+) : AbstractAtomicThreadEvent(label, threadId, parent, causalityClock, senders, allocation) {
+
+    var visited: Boolean = false
+        private set
+
+    /**
+     * Frontier of pinned events.
+     * Pinned events are the events that should not be
+     * considered for branching in an exploration starting from this event.
+     */
+    val pinnedEvents: ExecutionFrontier =
+        pinnedEvents.apply { set(threadId, this@BacktrackableEvent) }
+
+    init {
+        validate()
+    }
+
+    fun visit() {
+        visited = true
     }
 
 }
