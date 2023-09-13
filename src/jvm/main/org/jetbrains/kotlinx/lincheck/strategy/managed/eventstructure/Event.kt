@@ -239,6 +239,12 @@ abstract class AbstractAtomicThreadEvent(
      * Applicable only to object accessing events.
      */
     val allocation: ThreadEvent? = null,
+    /**
+     * The allocation event for the value produced by this label
+     * (for example, written value for write access label).
+     */
+    // TODO: refactor!
+    val source: ThreadEvent? = null,
 ) : AbstractThreadEvent(
     label = label,
     threadId = threadId,
@@ -254,7 +260,7 @@ abstract class AbstractAtomicThreadEvent(
         parent?.takeIf { label.isResponse }
 
     final override val dependencies: List<ThreadEvent> =
-        listOfNotNull(allocation) + senders
+        listOfNotNull(allocation, source) + senders
 
     final override val synchronized: List<ThreadEvent> =
         if (label.isResponse) (listOf(request!!) + senders) else listOf()

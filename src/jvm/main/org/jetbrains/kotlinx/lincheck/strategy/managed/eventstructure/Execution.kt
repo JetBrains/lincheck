@@ -207,13 +207,22 @@ fun Execution.fixupDependencies(algebra: SynchronizationAlgebra): Remapping {
             continue
         // TODO: unify cases
         check(event is AbstractAtomicThreadEvent)
+        var resyncedLabel = event.label
         event.allocation?.also { alloc ->
             remapping[event.label.obj?.unwrap()] = alloc.label.obj?.unwrap()
-            event.label.remap(remapping)
+        }
+        event.source?.also { source ->
+            check(event.label is WriteAccessLabel)
+            val value = (event.label as WriteAccessLabel).writeValue?.unwrap()
+            remapping[value] = source.label.obj?.unwrap()
         }
         if (event.label.isResponse) {
-            event.label.replay(event.resynchronize(algebra), remapping)
+            resyncedLabel = event.resynchronize(algebra)
+            val value = (event.label as? ReadAccessLabel)?.readValue?.unwrap()
+            remapping[value] = (resyncedLabel as? ReadAccessLabel)?.readValue?.unwrap()
         }
+        event.label.remap(remapping)
+        event.label.replay(resyncedLabel)
     }
     return remapping
 }

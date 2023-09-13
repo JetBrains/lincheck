@@ -193,7 +193,12 @@ class EventStructure(
         _currentExecution.add(event)
         // remap new event's label
         if (event.label.isResponse) {
-            event.label.replay(event.resynchronize(syncAlgebra), currentRemapping)
+            // TODO: extract into function
+            val resyncedLabel = event.resynchronize(syncAlgebra)
+            val value = (event.label as? ReadAccessLabel)?.readValue?.unwrap()
+            currentRemapping[value] = (resyncedLabel as? ReadAccessLabel)?.readValue?.unwrap()
+            event.label.remap(currentRemapping)
+            event.label.replay(resyncedLabel)
         }
         // set pinned events
         pinnedEvents = event.pinnedEvents.copy().ensure {
@@ -306,7 +311,12 @@ class EventStructure(
         val causalityClock = dependencies.fold(parent?.causalityClock?.copy() ?: emptyClock()) { clock, event ->
             clock + event.causalityClock
         }
-        val allocation = label.obj?.let { allocationEvents[it.unwrap()] }
+        val allocation = label.obj?.let {
+            allocationEvents[it.unwrap()]
+        }
+        val source = (label as? WriteAccessLabel)?.writeValue?.let {
+            allocationEvents[it.unwrap()]
+        }
         val frontier = currentExecution.toMutableFrontier().apply {
             cut(conflicts)
             cutDanglingRequestEvents()
@@ -326,6 +336,7 @@ class EventStructure(
             },
             senders = dependencies,
             allocation = (allocation as? ThreadEvent),
+            source = (source as? ThreadEvent),
             frontier = frontier,
             pinnedEvents = pinnedEvents,
         )
@@ -611,7 +622,11 @@ class EventStructure(
             // TODO: also check custom event/label specific rules when replaying,
             //   e.g. upon replaying write-exclusive check its location equal to
             //   the location of previous read-exclusive part
-            event.label.replay(label, currentRemapping)
+            if (label is ObjectAllocationLabel) {
+                currentRemapping[event.label.obj?.unwrap()] = label.obj.unwrap()
+            }
+            event.label.remap(currentRemapping)
+            event.label.replay(label)
             addEventToCurrentExecution(event)
             return event
         }
@@ -625,7 +640,8 @@ class EventStructure(
     private fun addRequestEvent(iThread: Int, label: EventLabel): ThreadEvent {
         require(label.isRequest)
         tryReplayEvent(iThread)?.let { event ->
-            event.label.replay(label, currentRemapping)
+            event.label.remap(currentRemapping)
+            event.label.replay(label)
             addEventToCurrentExecution(event)
             return event
         }
@@ -647,7 +663,8 @@ class EventStructure(
             if (!readyToReplay) {
                 return (null to listOf())
             }
-            event.label.replay(event.resynchronize(syncAlgebra), currentRemapping)
+            event.label.remap(currentRemapping)
+            event.label.replay(event.resynchronize(syncAlgebra))
             addEventToCurrentExecution(event)
             return event to listOf(event)
         }
@@ -923,12 +940,13 @@ private class BacktrackableEvent(
     causalityClock: VectorClock,
     senders: List<ThreadEvent> = listOf(),
     allocation: ThreadEvent? = null,
+    source: ThreadEvent? = null,
     /**
      * State of the execution frontier at the point when event is created.
      */
     val frontier: ExecutionFrontier,
     pinnedEvents: MutableExecutionFrontier,
-) : AbstractAtomicThreadEvent(label, threadId, parent, causalityClock, senders, allocation) {
+) : AbstractAtomicThreadEvent(label, threadId, parent, causalityClock, senders, allocation, source) {
 
     var visited: Boolean = false
         private set

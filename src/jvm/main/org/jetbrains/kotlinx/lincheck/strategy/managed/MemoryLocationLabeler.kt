@@ -33,7 +33,7 @@ interface MemoryLocation {
     fun read(): Any?
     fun write(value: Any?)
 
-    fun replay(location: MemoryLocation, remapping: Remapping)
+    fun replay(location: MemoryLocation)
 
     fun remap(remapping: Remapping)
 }
@@ -193,7 +193,7 @@ internal class StaticFieldMemoryLocation(
         field.set(null, value)
     }
 
-    override fun replay(location: MemoryLocation, remapping: Remapping) {
+    override fun replay(location: MemoryLocation) {
         check(location is StaticFieldMemoryLocation &&
             className == location.className &&
             fieldName == location.fieldName) {
@@ -239,15 +239,13 @@ internal class ObjectFieldMemoryLocation(
         field.set(this.obj, value)
     }
 
-    override fun replay(location: MemoryLocation, remapping: Remapping) {
+    override fun replay(location: MemoryLocation) {
         check(location is ObjectFieldMemoryLocation &&
-            this.obj::class == location.obj::class &&
+            this.obj === location.obj &&
             className == location.className &&
             fieldName == location.fieldName) {
             "Memory location $this cannot be replayed by ${location}."
         }
-        remapping[this.obj] = location.obj
-        _obj = location.obj
     }
 
     override fun remap(remapping: Remapping) {
@@ -350,14 +348,12 @@ internal class ArrayElementMemoryLocation(
         else -> { setMethod.invoke(array, index, value); Unit }
     }
 
-    override fun replay(location: MemoryLocation, remapping: Remapping) {
+    override fun replay(location: MemoryLocation) {
         check(location is ArrayElementMemoryLocation &&
-            array::class == location.array::class &&
+            array === location.array &&
             index == location.index) {
             "Memory location $this cannot be replayed by ${location}."
         }
-        remapping[array] = location.array
-        _array = location.array
     }
 
     override fun remap(remapping: Remapping) {
@@ -414,13 +410,11 @@ internal class AtomicPrimitiveMemoryLocation(
         else                    -> { setMethod.invoke(primitive, value); Unit }
     }
 
-    override fun replay(location: MemoryLocation, remapping: Remapping) {
+    override fun replay(location: MemoryLocation) {
         check(location is AtomicPrimitiveMemoryLocation &&
-            primitive::class == location.primitive::class) {
+            primitive === location.primitive) {
             "Memory location $this cannot be replayed by ${location}."
         }
-        remapping[primitive] = location.primitive
-        _primitive = location.primitive
     }
 
     override fun remap(remapping: Remapping) {

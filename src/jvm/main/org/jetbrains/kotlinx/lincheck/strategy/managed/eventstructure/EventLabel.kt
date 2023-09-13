@@ -194,7 +194,7 @@ sealed class EventLabel(
      * TODO: instead of storing actual object references in labels, we can store there object IDs,
      *   and then additionally keep a mapping `ObjectID -> Any`
      */
-    open fun replay(label: EventLabel, remapping: Remapping) {
+    open fun replay(label: EventLabel) {
         check(this == label) {
             "Event label $this cannot be replayed by $label"
         }
@@ -528,13 +528,11 @@ data class ObjectAllocationLabel(
      *
      * @see EventLabel.replay
      */
-    override fun replay(label: EventLabel, remapping: Remapping) {
+    override fun replay(label: EventLabel) {
         // TODO: check type of objects?
-        check(label is ObjectAllocationLabel) {
+        check(label is ObjectAllocationLabel && obj == label.obj) {
             "Event label $this cannot be replayed by $label"
         }
-        remapping[obj.unwrap()] = label.obj.unwrap()
-        _obj = label._obj
     }
 
     /**
@@ -543,7 +541,7 @@ data class ObjectAllocationLabel(
      * @see EventLabel.replay
      */
     override fun remap(remapping: Remapping) {
-        remapping[obj]?.also { _obj = it.opaque() }
+        remapping[obj.unwrap()]?.also { _obj = it.opaque() }
     }
 
     override fun toString(): String =
@@ -633,7 +631,9 @@ sealed class MemoryAccessLabel(
         kind == label.kind &&
         kClass == label.kClass &&
         isExclusive == label.isExclusive &&
-        accessKind == label.accessKind
+        accessKind == label.accessKind &&
+        readValue == label.readValue &&
+        writeValue == label.writeValue
 
     /**
      * Replays this memory access label using another memory access label given as argument.
@@ -641,11 +641,11 @@ sealed class MemoryAccessLabel(
      *
      * @see EventLabel.replay
      */
-    override fun replay(label: EventLabel, remapping: Remapping) {
+    override fun replay(label: EventLabel) {
         check(label is MemoryAccessLabel && replayable(label)) {
             "Event label $this cannot be replayed by $label"
         }
-        location.replay(label.location, remapping)
+        location.replay(label.location)
     }
 
     /**
@@ -760,16 +760,6 @@ data class ReadAccessLabel(
         return copy(kind = LabelKind.Receive)
     }
 
-    override fun replay(label: EventLabel, remapping: Remapping) {
-        super.replay(label, remapping)
-        (label as ReadAccessLabel)
-        if (value != null && label.value != null) {
-            // TODO: check primitive values are equal
-            remapping[value?.unwrap()] = label.value?.unwrap()
-        }
-        _value = label.value
-    }
-
     override fun remap(remapping: Remapping) {
         super.remap(remapping)
         value?.unwrap()
@@ -806,13 +796,6 @@ data class WriteAccessLabel(
 
     override val writeValue: OpaqueValue?
         get() = value
-
-    override fun replay(label: EventLabel, remapping: Remapping) {
-        super.replay(label, remapping)
-        // TODO: check primitive values are equal
-        remapping[value?.unwrap()] = (label as WriteAccessLabel).value?.unwrap()
-        _value = label.value
-    }
 
     override fun remap(remapping: Remapping) {
         super.remap(remapping)
@@ -868,16 +851,6 @@ data class ReadModifyWriteAccessLabel(
     override fun getReceive(): ReadModifyWriteAccessLabel {
         require(isResponse)
         return copy(kind = LabelKind.Receive)
-    }
-
-    override fun replay(label: EventLabel, remapping: Remapping) {
-        super.replay(label, remapping)
-        // TODO: check primitive values are equal
-        check(label is ReadModifyWriteAccessLabel)
-        remapping[readValue?.unwrap()] = label.readValue?.unwrap()
-        remapping[writeValue?.unwrap()] = label.writeValue?.unwrap()
-        _readValue = label._readValue
-        _writeValue = label._writeValue
     }
 
     override fun remap(remapping: Remapping) {
@@ -981,28 +954,36 @@ sealed class MutexLabel(
         get() = null
 
     /**
+     * Checks whether this label can be replayed by another [label].
+     */
+    private fun replayable(label: MutexLabel): Boolean =
+        kind == label.kind &&
+        operationKind == label.operationKind &&
+        mutex == label.mutex &&
+        when (this) {
+            is LockLabel ->
+                label is LockLabel
+                    && reentranceDepth == label.reentranceDepth
+                    && reentranceCount == label.reentranceCount
+            is UnlockLabel ->
+                label is UnlockLabel
+                    && reentranceDepth == label.reentranceDepth
+                    && reentranceCount == label.reentranceCount
+            is NotifyLabel ->
+                label is NotifyLabel && isBroadcast == label.isBroadcast
+            else -> true
+        }
+
+    /**
      * Replays this mutex label using another mutex label given as argument.
      * Replaying can substitute accessed mutex object.
      *
      * @see EventLabel.replay
      */
-    override fun replay(label: EventLabel, remapping: Remapping) {
-        check(label is MutexLabel &&
-            kind == label.kind &&
-            operationKind == label.operationKind &&
-            when (this) {
-                is LockLabel -> label is LockLabel &&
-                    reentranceDepth == label.reentranceDepth && reentranceCount == label.reentranceCount
-                is UnlockLabel -> label is UnlockLabel &&
-                    reentranceDepth == label.reentranceDepth && reentranceCount == label.reentranceCount
-                is NotifyLabel -> label is NotifyLabel &&
-                    isBroadcast == label.isBroadcast
-                else -> true
-            }) {
+    override fun replay(label: EventLabel) {
+        check(label is MutexLabel && replayable(label)) {
             "Event label $this cannot be replayed by $label"
         }
-        remapping[mutex.unwrap()] = label.mutex.unwrap()
-        mutex_ = label.mutex
     }
 
     override fun remap(remapping: Remapping) {
