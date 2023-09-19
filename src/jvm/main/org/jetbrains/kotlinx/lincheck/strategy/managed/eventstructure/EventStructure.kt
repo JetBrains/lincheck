@@ -632,7 +632,7 @@ class EventStructure(
             if (label is ObjectAllocationLabel) {
                 currentRemapping[event.label.obj?.unwrap()] = label.obj.unwrap()
             }
-            currentRemapping.replay(event, syncAlgebra)
+            currentRemapping.replay(event, label)
             addEventToCurrentExecution(event)
             return event
         }
@@ -646,7 +646,7 @@ class EventStructure(
     private fun addRequestEvent(iThread: Int, label: EventLabel): ThreadEvent {
         require(label.isRequest)
         tryReplayEvent(iThread)?.let { event ->
-            currentRemapping.replay(event, syncAlgebra)
+            currentRemapping.replay(event, label)
             addEventToCurrentExecution(event)
             return event
         }
@@ -668,7 +668,8 @@ class EventStructure(
             if (!readyToReplay) {
                 return (null to listOf())
             }
-            currentRemapping.replay(event, syncAlgebra)
+            val label = event.resynchronize(syncAlgebra)
+            currentRemapping.replay(event, label)
             addEventToCurrentExecution(event)
             return event to listOf(event)
         }

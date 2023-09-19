@@ -68,12 +68,7 @@ fun Remapping.resynchronize(event: ThreadEvent, algebra: SynchronizationAlgebra)
     event.label.replay(resyncedLabel)
 }
 
-fun Remapping.replay(event: ThreadEvent, algebra: SynchronizationAlgebra) {
-    check(event is AbstractAtomicThreadEvent)
-    var resyncedLabel = event.label
-    if (event.label.isResponse) {
-        resyncedLabel = event.resynchronize(algebra)
-    }
+fun Remapping.replay(event: ThreadEvent, label: EventLabel) {
     event.label.remap(this)
-    event.label.replay(resyncedLabel)
+    event.label.replay(label)
 }
