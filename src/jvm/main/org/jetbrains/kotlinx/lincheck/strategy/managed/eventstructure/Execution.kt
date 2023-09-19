@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.ensure
 import org.jetbrains.kotlinx.lincheck.strategy.managed.Remapping
+import org.jetbrains.kotlinx.lincheck.strategy.managed.resynchronize
 import org.jetbrains.kotlinx.lincheck.utils.*
 
 
@@ -198,31 +199,11 @@ fun Execution.computeVectorClock(event: ThreadEvent, relation: Relation<ThreadEv
 fun Execution.enumerationOrderSortedList(): List<ThreadEvent> =
     this.sorted()
 
-// TODO: rename?
-fun Execution.fixupDependencies(algebra: SynchronizationAlgebra): Remapping {
+fun Execution.resynchronize(algebra: SynchronizationAlgebra): Remapping {
     val remapping = Remapping()
     // TODO: refactor, simplify & unify cases
     for (event in enumerationOrderSortedList()) {
-        if (!(event.label is MemoryAccessLabel || event.label is MutexLabel))
-            continue
-        // TODO: unify cases
-        check(event is AbstractAtomicThreadEvent)
-        var resyncedLabel = event.label
-        event.allocation?.also { alloc ->
-            remapping[event.label.obj?.unwrap()] = alloc.label.obj?.unwrap()
-        }
-        event.source?.also { source ->
-            check(event.label is WriteAccessLabel)
-            val value = (event.label as WriteAccessLabel).writeValue?.unwrap()
-            remapping[value] = source.label.obj?.unwrap()
-        }
-        if (event.label.isResponse) {
-            resyncedLabel = event.resynchronize(algebra)
-            val value = (event.label as? ReadAccessLabel)?.readValue?.unwrap()
-            remapping[value] = (resyncedLabel as? ReadAccessLabel)?.readValue?.unwrap()
-        }
-        event.label.remap(remapping)
-        event.label.replay(resyncedLabel)
+        remapping.resynchronize(event, algebra)
     }
     return remapping
 }

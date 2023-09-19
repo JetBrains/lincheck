@@ -185,21 +185,14 @@ class EventStructure(
         currentExplorationRoot = event
         // reset current execution
         _currentExecution = event.frontier.toMutableExecution().apply {
-            currentRemapping = fixupDependencies(syncAlgebra)
+            currentRemapping = resynchronize(syncAlgebra)
         }
         // reset the internal state of incremental checkers
         consistencyChecker.reset(currentExecution)
         // add new event to current execution
         _currentExecution.add(event)
         // remap new event's label
-        if (event.label.isResponse) {
-            // TODO: extract into function
-            val resyncedLabel = event.resynchronize(syncAlgebra)
-            val value = (event.label as? ReadAccessLabel)?.readValue?.unwrap()
-            currentRemapping[value] = (resyncedLabel as? ReadAccessLabel)?.readValue?.unwrap()
-            event.label.remap(currentRemapping)
-            event.label.replay(resyncedLabel)
-        }
+        currentRemapping.resynchronize(event, syncAlgebra)
         // set pinned events
         pinnedEvents = event.pinnedEvents.copy().ensure {
             currentExecution.containsAll(it.events)
@@ -625,8 +618,7 @@ class EventStructure(
             if (label is ObjectAllocationLabel) {
                 currentRemapping[event.label.obj?.unwrap()] = label.obj.unwrap()
             }
-            event.label.remap(currentRemapping)
-            event.label.replay(label)
+            currentRemapping.replay(event, syncAlgebra)
             addEventToCurrentExecution(event)
             return event
         }
@@ -640,8 +632,7 @@ class EventStructure(
     private fun addRequestEvent(iThread: Int, label: EventLabel): ThreadEvent {
         require(label.isRequest)
         tryReplayEvent(iThread)?.let { event ->
-            event.label.remap(currentRemapping)
-            event.label.replay(label)
+            currentRemapping.replay(event, syncAlgebra)
             addEventToCurrentExecution(event)
             return event
         }
@@ -663,8 +654,7 @@ class EventStructure(
             if (!readyToReplay) {
                 return (null to listOf())
             }
-            event.label.remap(currentRemapping)
-            event.label.replay(event.resynchronize(syncAlgebra))
+            currentRemapping.replay(event, syncAlgebra)
             addEventToCurrentExecution(event)
             return event to listOf(event)
         }

@@ -489,28 +489,3 @@ private data class UnsafeArrayAccessDescriptor(
     val indexShift: Int
         get() = Integer.numberOfLeadingZeros(indexScale)
 }
-
-// TODO: move to another place
-// TODO: make value class?
-// TODO: remapping should work with OpaqueValue?
-class Remapping {
-
-    private val map = IdentityHashMap<Any, Any>()
-
-    operator fun get(from: Any): Any? = map[from]
-
-    operator fun set(from: Any?, to: Any?) {
-        if (from === to) return
-        check(from != null && to != null) {
-            "Value ${opaqueString(from)} cannot be remapped to ${opaqueString(to)} because one of them is null but not the other!"
-        }
-        map.put(from, to).also { old -> check(old == null || old === to) {
-            "Value ${opaqueString(from)} cannot be remapped to ${opaqueString(to)} because it is already mapped to ${opaqueString(old!!)}!"
-        }}
-    }
-
-    fun reset() {
-        map.clear()
-    }
-
-}
