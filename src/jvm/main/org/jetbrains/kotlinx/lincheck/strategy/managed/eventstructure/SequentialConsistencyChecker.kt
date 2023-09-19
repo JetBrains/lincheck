@@ -513,10 +513,7 @@ private class WritesBeforeRelation(
             val label = event.label
             if (label !is WriteAccessLabel || !label.isExclusive)
                 continue
-            val readPart = (event as? AbstractAtomicThreadEvent)?.exclusiveReadPart
-                ?: continue
-            val readFrom = (readPart as? AbstractAtomicThreadEvent)?.readsFrom
-                ?: continue
+            val readFrom = event.exclusiveReadPart.readsFrom
             val chain = if (readFrom.label is WriteAccessLabel)
                     chainsMap.computeIfAbsent(readFrom) {
                         mutableListOf(readFrom)
@@ -589,6 +586,7 @@ private class WritesBeforeRelation(
 
     override fun invoke(x: AtomicThreadEvent, y: AtomicThreadEvent): Boolean {
         // TODO: handle InitializationLabel?
+        // TODO: make this code pattern look nicer (it appears several times in codebase)
         val xloc = (x.label as? WriteAccessLabel)?.location
         val yloc = (y.label as? WriteAccessLabel)?.location
         return if (xloc != null && xloc == yloc) {
