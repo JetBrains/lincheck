@@ -127,9 +127,7 @@ fun SynchronizedEvent.resynchronize(algebra: SynchronizationAlgebra): EventLabel
         return label
     return synchronized.fold (null) { label: EventLabel?, event ->
         algebra.synchronize(label, event.label)
-    }.ensureNotNull() {
-        "hehn't"
-    }
+    }.ensureNotNull()
 }
 
 abstract class AbstractEvent(final override val label: EventLabel) : Event {

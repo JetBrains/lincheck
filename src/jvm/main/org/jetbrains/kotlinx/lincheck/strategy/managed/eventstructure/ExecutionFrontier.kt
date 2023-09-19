@@ -114,12 +114,15 @@ fun ExecutionFrontier.toMutableExecution(): MutableExecution =
         mutableExecutionOf(*it.toTypedArray())
     }
 
-fun MutableExecutionFrontier.cutDanglingRequestEvents() {
+fun MutableExecutionFrontier.cutDanglingRequestEvents(): List<ThreadEvent> {
+    val cutEvents = mutableListOf<ThreadEvent>()
     for (threadId in threadIDs) {
         val lastEvent = get(threadId) ?: continue
-        if (lastEvent.label.isRequest && !lastEvent.label.isBlocking) {
+        if (lastEvent.label.isRequest) {
             lastEvent.parent?.label?.ensure { !it.isRequest }
             set(threadId, lastEvent.parent)
+            cutEvents.add(lastEvent)
         }
     }
+    return cutEvents
 }

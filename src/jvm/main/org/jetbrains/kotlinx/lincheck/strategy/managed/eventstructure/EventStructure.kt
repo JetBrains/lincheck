@@ -181,31 +181,47 @@ class EventStructure(
         check(event.label is InitializationLabel || event.label.isResponse)
         // reset consistency check state
         detectedInconsistency = null
+        // reset dangling events
+        danglingEvents.clear()
         // set current exploration root
         currentExplorationRoot = event
         // reset current execution
         _currentExecution = event.frontier.toMutableExecution().apply {
             currentRemapping = resynchronize(syncAlgebra)
         }
+        // copy pinned events and pin current re-exploration root event
+        val pinnedEvents = event.pinnedEvents.copy()
+            .apply { set(event.threadId, event) }
         // reset the internal state of incremental checkers
         consistencyChecker.reset(currentExecution)
         // add new event to current execution
         _currentExecution.add(event)
         // remap new event's label
         currentRemapping.resynchronize(event, syncAlgebra)
-        // set pinned events
-        pinnedEvents = event.pinnedEvents.copy().ensure {
-            currentExecution.containsAll(it.events)
-        }
         // check new event with the incremental consistency checkers
         checkConsistencyIncrementally(event)
+        // do the same for blocked requests
+        for (blockedRequest in event.blockedRequests) {
+            _currentExecution.add(blockedRequest)
+            currentRemapping.resynchronize(blockedRequest, syncAlgebra)
+            checkConsistencyIncrementally(blockedRequest)
+            // additionally, pin blocked requests if all their predecessors are also blocked ...
+            if (blockedRequest.parent == pinnedEvents[blockedRequest.threadId]) {
+                pinnedEvents[blockedRequest.threadId] = blockedRequest
+            }
+            // ... and mark it as dangling
+            markBlockedDanglingRequest(blockedRequest)
+        }
+        // set pinned events
+        this.pinnedEvents = pinnedEvents.ensure {
+            currentExecution.containsAll(it.events)
+        }
         // check the full consistency of the whole execution
         checkConsistency()
         // set the replayer state
         replayer = Replayer(sequentialConsistencyChecker.executionOrder)
         // reset state of other auxiliary structures
         currentRemapping.reset()
-        danglingEvents.clear()
         allocationEvents.clear()
         delayedConsistencyCheckBuffer.clear()
     }
@@ -310,12 +326,13 @@ class EventStructure(
         val source = (label as? WriteAccessLabel)?.writeValue?.let {
             allocationEvents[it.unwrap()]
         }
-        val frontier = currentExecution.toMutableFrontier().apply {
-            cut(conflicts)
-            cutDanglingRequestEvents()
-            set(iThread, parent)
-        }
+        val frontier = currentExecution.toMutableFrontier()
+            .apply { cut(conflicts) }
+        val blockedRequests = frontier.cutDanglingRequestEvents()
+            .filter { it.label.isBlocking && it != parent }
+        frontier[iThread] = parent
         val pinnedEvents = pinnedEvents.copy().apply {
+            // TODO: can reorder cut and merge?
             cut(conflicts)
             merge(causalityClock.toMutableFrontier())
             cutDanglingRequestEvents()
@@ -332,6 +349,7 @@ class EventStructure(
             source = (source as? ThreadEvent),
             frontier = frontier,
             pinnedEvents = pinnedEvents,
+            blockedRequests = blockedRequests,
         )
     }
 
@@ -430,10 +448,6 @@ class EventStructure(
         playedFrontier.update(event)
         // Check if we still in replay phase.
         val inReplayPhase = inReplayPhase()
-        // Mark last replayed blocking event as dangling.
-        if (event.label.isRequest && event.label.isBlocking && isReplayedEvent && !inReplayPhase(event.threadId)) {
-            markBlockedDanglingRequest(event)
-        }
         // Unmark dangling request if its response was added.
         if (event.label.isResponse && event.label.isBlocking && event.parent in danglingEvents) {
             unmarkBlockedDanglingRequest(event.parent!!)
@@ -807,9 +821,7 @@ class EventStructure(
         // TODO: think again --- is it possible that there is no write to read-from?
         //  Probably not, because in Kotlin variables are always initialized by default?
         //  What about initialization-related issues?
-        checkNotNull(responseEvent) {
-            "hehn't"
-        }
+        checkNotNull(responseEvent)
         return responseEvent
     }
 
@@ -935,19 +947,20 @@ private class BacktrackableEvent(
      * State of the execution frontier at the point when event is created.
      */
     val frontier: ExecutionFrontier,
-    pinnedEvents: MutableExecutionFrontier,
-) : AbstractAtomicThreadEvent(label, threadId, parent, causalityClock, senders, allocation, source) {
-
-    var visited: Boolean = false
-        private set
-
     /**
      * Frontier of pinned events.
      * Pinned events are the events that should not be
      * considered for branching in an exploration starting from this event.
      */
-    val pinnedEvents: ExecutionFrontier =
-        pinnedEvents.apply { set(threadId, this@BacktrackableEvent) }
+    val pinnedEvents: ExecutionFrontier,
+    /**
+     * List of blocked request events.
+     */
+    val blockedRequests: List<ThreadEvent>,
+) : AbstractAtomicThreadEvent(label, threadId, parent, causalityClock, senders, allocation, source) {
+
+    var visited: Boolean = false
+        private set
 
     init {
         validate()
