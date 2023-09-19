@@ -70,14 +70,14 @@ class PartialOrder<T>(val lessOrEqual: Relation<T>, val lessThan: Relation<T>) {
         }
     }
 
-    fun maxOrNull(x: T, y: T): T? =
+    fun<U : T> maxOrNull(x: U, y: U): U? =
         when {
             lessOrEqual(x, y) -> y
             lessOrEqual(y, x) -> x
             else -> null
         }
 
-    fun max(x: T, y: T): T =
+    fun<U : T> max(x: U, y: U): U =
         maxOrNull(x, y) ?:
             throw IncomparableArgumentsException("$x and $y are incomparable")
 

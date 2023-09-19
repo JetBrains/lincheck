@@ -377,11 +377,11 @@ private class EventStructureMonitorTracker(
     }
 
     override fun wait(iThread: Int, monitor: OpaqueValue): Boolean {
-        var unlockEvent: ThreadEvent? = null
-        var waitRequestEvent: ThreadEvent? = null
-        var waitResponseEvent: ThreadEvent? = null
-        var lockRequestEvent: ThreadEvent? = null
-        var lockResponseEvent: ThreadEvent? = null
+        var unlockEvent: AtomicThreadEvent? = null
+        var waitRequestEvent: AtomicThreadEvent? = null
+        var waitResponseEvent: AtomicThreadEvent? = null
+        var lockRequestEvent: AtomicThreadEvent? = null
+        var lockResponseEvent: AtomicThreadEvent? = null
         val blockedEvent = eventStructure.getBlockedRequest(iThread)
         if (blockedEvent != null) {
             check(blockedEvent.label is WaitLabel || blockedEvent.label is LockLabel)

@@ -29,82 +29,82 @@ import org.jetbrains.kotlinx.lincheck.utils.*
 /**
  * Execution represents a set of events belonging to single program's execution.
  */
-interface Execution : Collection<ThreadEvent> {
-    val threadMap: ThreadMap<SortedList<ThreadEvent>>
+interface Execution<out E : ThreadEvent> : Collection<E> {
+    val threadMap: ThreadMap<SortedList<E>>
 
-    operator fun get(tid: ThreadID): SortedList<ThreadEvent>? =
+    operator fun get(tid: ThreadID): SortedList<E>? =
         threadMap[tid]
 
-    override fun contains(element: ThreadEvent): Boolean =
+    override fun contains(element: @UnsafeVariance E): Boolean =
         get(element.threadId, element.threadPosition) == element
 
-    override fun containsAll(elements: Collection<ThreadEvent>): Boolean =
+    override fun containsAll(elements: Collection<@UnsafeVariance E>): Boolean =
         elements.all { contains(it) }
 
-    override fun iterator(): Iterator<ThreadEvent> =
+    override fun iterator(): Iterator<E> =
         threadIDs.map { get(it)!! }.asSequence().flatten().iterator()
 
 }
 
-interface MutableExecution : Execution {
-    fun add(event: ThreadEvent)
+interface MutableExecution<E: ThreadEvent> : Execution<E> {
+    fun add(event: E)
     fun cut(tid: ThreadID, pos: Int)
 }
 
-val Execution.threadIDs: Set<ThreadID>
+val Execution<*>.threadIDs: Set<ThreadID>
     get() = threadMap.keys
 
-val Execution.maxThreadID: ThreadID
+val Execution<*>.maxThreadID: ThreadID
     get() = threadIDs.maxOrNull() ?: -1
 
-fun Execution.getThreadSize(tid: ThreadID): Int =
+fun Execution<*>.getThreadSize(tid: ThreadID): Int =
     get(tid)?.size ?: 0
 
-fun Execution.lastPosition(tid: ThreadID): Int =
+fun Execution<*>.lastPosition(tid: ThreadID): Int =
     getThreadSize(tid) - 1
 
-fun Execution.firstEvent(tid: ThreadID): ThreadEvent? =
+fun<E : ThreadEvent> Execution<E>.firstEvent(tid: ThreadID): E? =
     get(tid)?.firstOrNull()
 
-fun Execution.lastEvent(tid: ThreadID): ThreadEvent? =
+fun<E : ThreadEvent> Execution<E>.lastEvent(tid: ThreadID): E? =
     get(tid)?.lastOrNull()
 
-operator fun Execution.get(tid: ThreadID, pos: Int): ThreadEvent? =
+operator fun<E : ThreadEvent> Execution<E>.get(tid: ThreadID, pos: Int): E? =
     get(tid)?.getOrNull(pos)
 
-fun Execution.nextEvent(event: ThreadEvent): ThreadEvent? =
+fun<E : ThreadEvent> Execution<E>.nextEvent(event: E): E? =
     get(event.threadId)?.let { events ->
         require(events[event.threadPosition] == event)
         events.getOrNull(event.threadPosition + 1)
     }
 
-fun MutableExecution.cut(event: ThreadEvent) =
+fun<E : ThreadEvent> MutableExecution<E>.cut(event: E) =
     cut(event.threadId, event.threadPosition)
 
-fun MutableExecution.cutNext(event: ThreadEvent) =
+fun<E : ThreadEvent> MutableExecution<E>.cutNext(event: E) =
     cut(event.threadId, 1 + event.threadPosition)
 
-fun Execution(nThreads: Int): Execution =
+fun<E : ThreadEvent> Execution(nThreads: Int): Execution<E> =
     MutableExecution(nThreads)
 
-fun MutableExecution(nThreads: Int): MutableExecution =
+fun<E : ThreadEvent> MutableExecution(nThreads: Int): MutableExecution<E> =
     ExecutionImpl(ArrayMap(*(0 until nThreads)
-        .map { (it to sortedArrayListOf<ThreadEvent>()) }
+        .map { (it to sortedArrayListOf<E>()) }
         .toTypedArray()
     ))
 
-fun executionOf(vararg pairs: Pair<ThreadID, List<ThreadEvent>>): Execution =
+fun<E : ThreadEvent> executionOf(vararg pairs: Pair<ThreadID, List<E>>): Execution<E> =
     mutableExecutionOf(*pairs)
 
-fun mutableExecutionOf(vararg pairs: Pair<ThreadID, List<ThreadEvent>>): MutableExecution =
+fun<E : ThreadEvent> mutableExecutionOf(vararg pairs: Pair<ThreadID, List<E>>): MutableExecution<E> =
     ExecutionImpl(ArrayMap(*pairs
         .map { (tid, events) -> (tid to SortedArrayList(events)) }
         .toTypedArray()
     ))
 
-private class ExecutionImpl(
-    override val threadMap: ArrayMap<SortedMutableList<ThreadEvent>>
-) : MutableExecution {
+private class ExecutionImpl<E : ThreadEvent>(
+    override val threadMap: ArrayMap<SortedMutableList<E>>
+) : MutableExecution<E> {
 
     override var size: Int = threadMap.values.sumOf { it.size }
         private set
@@ -112,10 +112,10 @@ private class ExecutionImpl(
     override fun isEmpty(): Boolean =
         (size > 0)
 
-    override fun get(tid: ThreadID): SortedMutableList<ThreadEvent>? =
+    override fun get(tid: ThreadID): SortedMutableList<E>? =
         threadMap[tid]
 
-    override fun add(event: ThreadEvent) {
+    override fun add(event: E) {
         ++size
         threadMap[event.threadId]!!
             .ensure { event.parent == it.lastOrNull() }
@@ -129,7 +129,7 @@ private class ExecutionImpl(
     }
 
     override fun equals(other: Any?): Boolean =
-        (other is ExecutionImpl) && (size == other.size) && (threadMap == other.threadMap)
+        (other is ExecutionImpl<*>) && (size == other.size) && (threadMap == other.threadMap)
 
     override fun hashCode(): Int =
        threadMap.hashCode()
@@ -150,17 +150,17 @@ private class ExecutionImpl(
 
 }
 
-fun Execution.toFrontier(): ExecutionFrontier =
+fun<E : ThreadEvent> Execution<E>.toFrontier(): ExecutionFrontier<E> =
     toMutableFrontier()
 
-fun Execution.toMutableFrontier(): MutableExecutionFrontier =
+fun<E : ThreadEvent> Execution<E>.toMutableFrontier(): MutableExecutionFrontier<E> =
     threadIDs.map { tid ->
         tid to get(tid)?.lastOrNull()
     }.let {
         mutableExecutionFrontierOf(*it.toTypedArray())
     }
 
-fun Execution.buildIndexer() = object : Indexer<ThreadEvent> {
+fun<E : ThreadEvent> Execution<E>.buildIndexer() = object : Indexer<E> {
 
     private val events = enumerationOrderSortedList()
 
@@ -170,23 +170,23 @@ fun Execution.buildIndexer() = object : Indexer<ThreadEvent> {
         }
     }
 
-    override fun get(i: Int): ThreadEvent {
+    override fun get(i: Int): E {
         return events[i]
     }
 
-    override fun index(x: ThreadEvent): Int {
+    override fun index(x: E): Int {
         return eventIndices[x.threadId]!![x.threadPosition]
     }
 
 }
 
-fun Execution.isBlockedDanglingRequest(event: ThreadEvent): Boolean {
+fun<E : ThreadEvent> Execution<E>.isBlockedDanglingRequest(event: E): Boolean {
     return event.label.isRequest && event.label.isBlocking &&
             (event == this[event.threadId]?.last())
 }
 
-fun Execution.computeVectorClock(event: ThreadEvent, relation: Relation<ThreadEvent>): VectorClock {
-    check(this is ExecutionImpl)
+fun<E : ThreadEvent> Execution<E>.computeVectorClock(event: E, relation: Relation<E>): VectorClock {
+    check(this is ExecutionImpl<E>)
     val clock = MutableVectorClock(threadMap.capacity)
     for (i in 0 until threadMap.capacity) {
         val threadEvents = get(i) ?: continue
@@ -196,10 +196,10 @@ fun Execution.computeVectorClock(event: ThreadEvent, relation: Relation<ThreadEv
     return clock
 }
 
-fun Execution.enumerationOrderSortedList(): List<ThreadEvent> =
+fun<E : ThreadEvent> Execution<E>.enumerationOrderSortedList(): List<E> =
     this.sorted()
 
-fun Execution.resynchronize(algebra: SynchronizationAlgebra): Remapping {
+fun<E : ThreadEvent> Execution<E>.resynchronize(algebra: SynchronizationAlgebra): Remapping {
     val remapping = Remapping()
     // TODO: refactor, simplify & unify cases
     for (event in enumerationOrderSortedList()) {
@@ -210,14 +210,14 @@ fun Execution.resynchronize(algebra: SynchronizationAlgebra): Remapping {
 
 typealias ExecutionCounter = IntArray
 
-abstract class ExecutionRelation(
-    val execution: Execution,
+abstract class ExecutionRelation<E : ThreadEvent>(
+    val execution: Execution<E>,
     val respectsProgramOrder: Boolean = true,
-) : Relation<ThreadEvent> {
+) : Relation<E> {
 
     val indexer = execution.buildIndexer()
 
-    fun buildExternalCovering() = object : Covering<ThreadEvent> {
+    fun buildExternalCovering() = object : Covering<E> {
 
         init {
             require(respectsProgramOrder)
@@ -227,7 +227,7 @@ abstract class ExecutionRelation(
 
         private val nThreads = 1 + execution.maxThreadID
 
-        val covering: List<List<ThreadEvent>> = execution.indices.map { index ->
+        val covering: List<List<E>> = execution.indices.map { index ->
             val event = indexer[index]
             val clock = execution.computeVectorClock(event, relation)
             (0 until nThreads).mapNotNull { tid ->
@@ -237,19 +237,19 @@ abstract class ExecutionRelation(
             }
         }
 
-        override fun invoke(x: ThreadEvent): List<ThreadEvent> =
+        override fun invoke(x: E): List<E> =
             covering[indexer.index(x)]
 
     }
 
 }
 
-fun executionRelation(
-    execution: Execution,
+fun<E : ThreadEvent> executionRelation(
+    execution: Execution<E>,
+    relation: Relation<E>,
     respectsProgramOrder: Boolean = true,
-    relation: Relation<ThreadEvent>
-) = object : ExecutionRelation(execution, respectsProgramOrder) {
+) = object : ExecutionRelation<E>(execution, respectsProgramOrder) {
 
-    override fun invoke(x: ThreadEvent, y: ThreadEvent): Boolean = relation(x, y)
+    override fun invoke(x: E, y: E): Boolean = relation(x, y)
 
 }

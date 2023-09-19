@@ -95,14 +95,23 @@ fun ThreadEvent.pred(inclusive: Boolean = false, predicate: (ThreadEvent) -> Boo
 val ThreadEvent.threadRoot: Event
     get() = predNth(threadPosition)!!
 
-fun ThreadEvent.threadPrefix(inclusive: Boolean = false, reversed: Boolean = false): List<ThreadEvent> {
-    val events = arrayListOf<ThreadEvent>()
+inline fun<reified E : ThreadEvent> ThreadEvent.threadPrefix(
+    inclusive: Boolean = false,
+    reversed: Boolean = false
+): List<E> {
+    if (this !is E) {
+        return listOf()
+    }
+    val events = arrayListOf<E>()
     if (inclusive) {
         events.add(this)
     }
     // obtain a list of predecessors of given event
     var event: ThreadEvent? = parent
     while (event != null) {
+        if (event !is E) {
+            return listOf()
+        }
         events.add(event)
         event = event.parent
     }
@@ -114,6 +123,10 @@ fun ThreadEvent.threadPrefix(inclusive: Boolean = false, reversed: Boolean = fal
     }
     return events
 }
+
+private fun ThreadEvent?.calculateNextEventPosition(): Int =
+    1 + (this?.threadPosition ?: -1)
+
 
 interface SynchronizedEvent : Event {
     /**
@@ -129,6 +142,107 @@ fun SynchronizedEvent.resynchronize(algebra: SynchronizationAlgebra): EventLabel
         algebra.synchronize(label, event.label)
     }.ensureNotNull()
 }
+
+interface AtomicThreadEvent : ThreadEvent, SynchronizedEvent {
+
+    override val parent: AtomicThreadEvent?
+
+    /**
+     * Sender events corresponding to this event.
+     * Applicable only to response events.
+     */
+    val senders: List<AtomicThreadEvent>
+
+    /**
+     * The allocation event for the accessed object.
+     * Applicable only to object accessing events.
+     */
+    val allocation: AtomicThreadEvent?
+
+    /**
+     * The allocation event for the value produced by this label
+     * (for example, written value for write access label).
+     */
+    // TODO: refactor!
+    val source: AtomicThreadEvent?
+}
+
+/**
+ * Request event corresponding to this event.
+ * Applicable only to response and receive events.
+ */
+val AtomicThreadEvent.request: AtomicThreadEvent? get() =
+    if (label.isResponse) parent!! else null
+
+val AtomicThreadEvent.syncFrom: AtomicThreadEvent get() = run {
+    require(label.isResponse)
+    require(senders.size == 1)
+    senders.first()
+}
+
+val AtomicThreadEvent.readsFrom: AtomicThreadEvent get() = run {
+    require(label is ReadAccessLabel)
+    syncFrom
+}
+
+val AtomicThreadEvent.locksFrom: AtomicThreadEvent get() = run {
+    require(label is LockLabel)
+    syncFrom
+}
+
+val AtomicThreadEvent.notifiedBy: AtomicThreadEvent get() = run {
+    require(label is WaitLabel)
+    syncFrom
+}
+
+val AtomicThreadEvent.exclusiveReadPart: AtomicThreadEvent get() = run {
+    require(label is WriteAccessLabel && (label as WriteAccessLabel).isExclusive)
+    parent!!
+}
+
+/**
+ * Checks whether this event is valid response to the [request] event.
+ * If this event is not a response or [request] is not a request returns false.
+ *
+ * Response is considered to be valid if:
+ * - request is a parent of response,
+ * - request-label can be synchronized-into response-label.
+ *
+ * @see EventLabel.isValidResponse
+ */
+fun AtomicThreadEvent.isValidResponse(request: ThreadEvent) =
+    request.label.isRequest && label.isResponse
+            && parent == request
+            && label.isValidResponse(request.label)
+
+/**
+ * Checks whether this event is a valid response to its parent request event.
+ * If this event is not a response or its parent is not a request returns false.
+ *
+ * @see isValidResponse
+ */
+fun AtomicThreadEvent.isValidResponse() =
+    parent?.let { isValidResponse(it) } ?: false
+
+/**
+ * Checks whether this event is valid write part of atomic read-modify-write,
+ * of which the [readResponse] is a read-response part.
+ * If this event is not an exclusive write or [readResponse] is not an exclusive read-response returns false.
+ *
+ * Write is considered to be valid write part of read-modify-write if:
+ * - read-response is a parent of write,
+ * - read-response and write access same location,
+ * - both have exclusive flag set.
+ * request-label can be synchronized-into response-label.
+ *
+ * @see MemoryAccessLabel.isExclusive
+ */
+fun AtomicThreadEvent.isWritePartOfAtomicUpdate(readResponse: ThreadEvent) =
+    label is WriteAccessLabel && (label as WriteAccessLabel).isExclusive
+            && parent == readResponse && readResponse.label.let {
+                it is ReadAccessLabel && it.isResponse && it.isExclusive
+                    && it.location == (label as WriteAccessLabel).location
+            }
 
 abstract class AbstractEvent(final override val label: EventLabel) : Event {
 
@@ -152,16 +266,15 @@ abstract class AbstractEvent(final override val label: EventLabel) : Event {
 
 abstract class AbstractThreadEvent(
     label: EventLabel,
+    override val parent: AbstractThreadEvent?,
     final override val threadId: Int,
-    final override val parent: ThreadEvent?,
+    final override val threadPosition: Int,
     final override val causalityClock: VectorClock,
 ) : AbstractEvent(label), ThreadEvent {
 
-    final override val threadPosition: Int =
-        1 + (parent?.threadPosition ?: -1)
-
     override fun validate() {
         super.validate()
+        require(threadPosition == parent.calculateNextEventPosition())
         // require((parent != null) implies { parent!! in dependencies })
     }
 
@@ -203,7 +316,8 @@ abstract class AbstractThreadEvent(
 
     private val jumps = Array<AbstractThreadEvent?>(N_JUMPS) { null }
 
-    init {
+
+    protected open fun initialize() {
         calculateJumps(this)
     }
 
@@ -213,7 +327,7 @@ abstract class AbstractThreadEvent(
 
         private fun calculateJumps(event: AbstractThreadEvent) {
             require(N_JUMPS > 0)
-            event.jumps[0] = (event.parent as? AbstractThreadEvent)
+            event.jumps[0] = event.parent
             for (i in 1 until N_JUMPS) {
                 event.jumps[i] = event.jumps[i - 1]?.jumps?.get(i - 1)
             }
@@ -225,37 +339,32 @@ abstract class AbstractThreadEvent(
 abstract class AbstractAtomicThreadEvent(
     label: EventLabel,
     threadId: Int,
-    parent: ThreadEvent?,
-    causalityClock: VectorClock,
+    override val parent: AbstractAtomicThreadEvent?,
     /**
      * Sender events corresponding to this event.
      * Applicable only to response events.
      */
-    val senders: List<ThreadEvent> = listOf(),
+    final override val senders: List<AtomicThreadEvent> = listOf(),
     /**
      * The allocation event for the accessed object.
      * Applicable only to object accessing events.
      */
-    val allocation: ThreadEvent? = null,
+    final override val allocation: AtomicThreadEvent? = null,
     /**
      * The allocation event for the value produced by this label
      * (for example, written value for write access label).
      */
     // TODO: refactor!
-    val source: ThreadEvent? = null,
+    final override val source: AtomicThreadEvent? = null,
+
+    causalityClock: VectorClock,
 ) : AbstractThreadEvent(
     label = label,
-    threadId = threadId,
     parent = parent,
+    threadId = threadId,
+    threadPosition = parent.calculateNextEventPosition(),
     causalityClock = causalityClock,
-), SynchronizedEvent {
-
-    /**
-     * Request event corresponding to this event.
-     * Applicable only to response and receive events.
-     */
-    val request: ThreadEvent? =
-        parent?.takeIf { label.isResponse }
+), AtomicThreadEvent {
 
     final override val dependencies: List<ThreadEvent> =
         listOfNotNull(allocation, source) + senders
@@ -270,98 +379,13 @@ abstract class AbstractAtomicThreadEvent(
         // check that read-exclusive label precedes that write-exclusive label
         if (label is WriteAccessLabel && label.isExclusive) {
             require(parent != null)
-            parent.label.ensure {
+            parent!!.label.ensure {
                 it is ReadAccessLabel
                     && it.isResponse
                     && it.isExclusive
                     && it.location == label.location
             }
         }
-    }
-
-    val syncFrom: ThreadEvent get() = run {
-        require(label.isResponse)
-        require(senders.size == 1)
-        senders.first()
-    }
-
-    val readsFrom: ThreadEvent get() = run {
-        require(label is ReadAccessLabel)
-        syncFrom
-    }
-
-    val locksFrom: ThreadEvent get() = run {
-        require(label is LockLabel)
-        syncFrom
-    }
-
-    val notifiedBy: ThreadEvent get() = run {
-        require(label is WaitLabel)
-        syncFrom
-    }
-
-    val exclusiveReadPart: ThreadEvent get() = run {
-        require(label is WriteAccessLabel && label.isExclusive)
-        parent!!
-    }
-
-    /**
-     * Checks whether this event is valid response to the [request] event.
-     * If this event is not a response or [request] is not a request returns false.
-     *
-     * Response is considered to be valid if:
-     * - request is a parent of response,
-     * - request-label can be synchronized-into response-label.
-     *
-     * @see EventLabel.isValidResponse
-     */
-    fun isValidResponse(request: ThreadEvent) =
-        request.label.isRequest && label.isResponse
-            && parent == request
-            && label.isValidResponse(request.label)
-
-    /**
-     * Checks whether this event is a valid response to its parent request event.
-     * If this event is not a response or its parent is not a request returns false.
-     *
-     * @see isValidResponse
-     */
-    fun isValidResponse() =
-        parent != null && isValidResponse(parent)
-
-    /**
-     * Checks whether this event is valid write part of atomic read-modify-write,
-     * of which the [readResponse] is a read-response part.
-     * If this event is not an exclusive write or [readResponse] is not an exclusive read-response returns false.
-     *
-     * Write is considered to be valid write part of read-modify-write if:
-     * - read-response is a parent of write,
-     * - read-response and write access same location,
-     * - both have exclusive flag set.
-     * request-label can be synchronized-into response-label.
-     *
-     * @see MemoryAccessLabel.isExclusive
-     */
-    fun isWritePartOfAtomicUpdate(readResponse: ThreadEvent) =
-        label is WriteAccessLabel && label.isExclusive
-            && parent == readResponse && readResponse.label.let {
-                it is ReadAccessLabel && it.isResponse && it.isExclusive
-                    && it.location == label.location
-            }
-
-}
-
-class AtomicThreadEvent(
-    label: EventLabel,
-    threadId: Int,
-    parent: ThreadEvent?,
-    causalityClock: VectorClock,
-    senders: List<ThreadEvent> = listOf(),
-    allocation: ThreadEvent? = null,
-) : AbstractAtomicThreadEvent(label, threadId, parent, causalityClock, senders, allocation) {
-
-    init {
-        validate()
     }
 
 }

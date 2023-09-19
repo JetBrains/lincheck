@@ -24,11 +24,11 @@ abstract class Inconsistency
 
 class InconsistentExecutionException(val reason: Inconsistency): Exception(reason.toString())
 
-fun interface ConsistencyChecker {
-    fun check(execution: Execution): Inconsistency?
+fun interface ConsistencyChecker<E : ThreadEvent> {
+    fun check(execution: Execution<E>): Inconsistency?
 }
 
-interface IncrementalConsistencyChecker {
+interface IncrementalConsistencyChecker<E : ThreadEvent> {
     /**
      * Performs incremental consistency check,
      * verifying whether adding the given [event] to the current execution retains execution's consistency.
@@ -42,7 +42,7 @@ interface IncrementalConsistencyChecker {
      *   otherwise returns non-null [Inconsistency] object
      *   representing the reason of inconsistency.
      */
-    fun check(event: Event): Inconsistency?
+    fun check(event: E): Inconsistency?
 
     /**
      * Performs full consistency check.
@@ -58,17 +58,17 @@ interface IncrementalConsistencyChecker {
     /**
      * Resets the internal state of consistency checker to [execution].
      */
-    fun reset(execution: Execution)
+    fun reset(execution: Execution<E>)
 }
 
-private class AggregatedIncrementalConsistencyChecker(
-    val incrementalConsistencyCheckers: List<IncrementalConsistencyChecker>,
-    val consistencyCheckers: List<ConsistencyChecker>,
-) : IncrementalConsistencyChecker {
+private class AggregatedIncrementalConsistencyChecker<E : ThreadEvent>(
+    val incrementalConsistencyCheckers: List<IncrementalConsistencyChecker<E>>,
+    val consistencyCheckers: List<ConsistencyChecker<E>>,
+) : IncrementalConsistencyChecker<E> {
 
-    private var execution: Execution = executionOf()
+    private var execution: Execution<E> = executionOf()
 
-    override fun check(event: Event): Inconsistency? {
+    override fun check(event: E): Inconsistency? {
         var inconsistency: Inconsistency? = null
         for (incrementalChecker in incrementalConsistencyCheckers) {
             incrementalChecker.check(event)?.also {
@@ -96,7 +96,7 @@ private class AggregatedIncrementalConsistencyChecker(
         return inconsistency
     }
 
-    override fun reset(execution: Execution) {
+    override fun reset(execution: Execution<E>) {
         this.execution = execution
         for (incrementalChecker in incrementalConsistencyCheckers) {
             incrementalChecker.reset(execution)
@@ -105,10 +105,10 @@ private class AggregatedIncrementalConsistencyChecker(
 
 }
 
-fun aggregateConsistencyCheckers(
-    incrementalConsistencyCheckers: List<IncrementalConsistencyChecker>,
-    consistencyCheckers: List<ConsistencyChecker>,
-) : IncrementalConsistencyChecker =
+fun<E : ThreadEvent> aggregateConsistencyCheckers(
+    incrementalConsistencyCheckers: List<IncrementalConsistencyChecker<E>>,
+    consistencyCheckers: List<ConsistencyChecker<E>>,
+) : IncrementalConsistencyChecker<E> =
     AggregatedIncrementalConsistencyChecker(
         incrementalConsistencyCheckers,
         consistencyCheckers,

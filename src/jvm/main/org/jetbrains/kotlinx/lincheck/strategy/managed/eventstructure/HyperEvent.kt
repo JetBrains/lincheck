@@ -45,7 +45,7 @@ import org.jetbrains.kotlinx.lincheck.unreachable
  *    5th International Conference on Formal Structures for Computation and Deduction. 2020.
  *
  */
-open class HyperEvent(val events: List<ThreadEvent>) {
+open class HyperEvent(val events: List<AtomicThreadEvent>) {
 
     open val dependencies: List<Event> =
         mutableListOf<Event>().apply {
@@ -54,11 +54,11 @@ open class HyperEvent(val events: List<ThreadEvent>) {
         }
 }
 
-fun Execution.nextAtomicEvent(iThread: Int, pos: Int): HyperEvent? {
+fun Execution<AtomicThreadEvent>.nextAtomicEvent(iThread: Int, pos: Int): HyperEvent? {
     return get(iThread)?.nextAtomicEvent(pos)
 }
 
-fun List<ThreadEvent>.nextAtomicEvent(pos: Int): HyperEvent? {
+fun List<AtomicThreadEvent>.nextAtomicEvent(pos: Int): HyperEvent? {
     val event = getOrNull(pos) ?: return null
     var atomicEvent = when(event.label) {
         is ThreadEventLabel     -> nextAtomicThreadEvent(event)
@@ -74,7 +74,7 @@ fun List<ThreadEvent>.nextAtomicEvent(pos: Int): HyperEvent? {
     return atomicEvent
 }
 
-class SingletonEvent(event: ThreadEvent) : HyperEvent(listOf(event)) {
+class SingletonEvent(event: AtomicThreadEvent) : HyperEvent(listOf(event)) {
 
     val event: Event
         get() = events[0]
@@ -86,7 +86,7 @@ class SingletonEvent(event: ThreadEvent) : HyperEvent(listOf(event)) {
 
 /* ======== Send and Receive Events  ======== */
 
-fun List<ThreadEvent>.nextAtomicSendOrReceiveEvent(firstEvent: ThreadEvent): HyperEvent {
+fun List<AtomicThreadEvent>.nextAtomicSendOrReceiveEvent(firstEvent: AtomicThreadEvent): HyperEvent {
     if (firstEvent.label.isSend)
         return SingletonEvent(firstEvent)
     check(firstEvent.label.isRequest)
@@ -98,8 +98,8 @@ fun List<ThreadEvent>.nextAtomicSendOrReceiveEvent(firstEvent: ThreadEvent): Hyp
 }
 
 class ReceiveEvent(
-    request: ThreadEvent,
-    response: ThreadEvent,
+    request: AtomicThreadEvent,
+    response: AtomicThreadEvent,
 ) : HyperEvent(listOf(request, response)) {
 
     init {
@@ -125,14 +125,14 @@ class ReceiveEvent(
 
 /* ======== Thread Event  ======== */
 
-fun List<ThreadEvent>.nextAtomicThreadEvent(firstEvent: ThreadEvent): HyperEvent {
+fun List<AtomicThreadEvent>.nextAtomicThreadEvent(firstEvent: AtomicThreadEvent): HyperEvent {
     require(firstEvent.label is ThreadEventLabel)
     return nextAtomicSendOrReceiveEvent(firstEvent)
 }
 
 /* ======== Memory Accesses  ======== */
 
-fun List<ThreadEvent>.nextAtomicMemoryAccessEvent(firstEvent: ThreadEvent): HyperEvent {
+fun List<AtomicThreadEvent>.nextAtomicMemoryAccessEvent(firstEvent: AtomicThreadEvent): HyperEvent {
     require(firstEvent.label is MemoryAccessLabel)
     return when(firstEvent.label) {
         is WriteAccessLabel -> SingletonEvent(firstEvent)
@@ -162,9 +162,9 @@ fun List<ThreadEvent>.nextAtomicMemoryAccessEvent(firstEvent: ThreadEvent): Hype
 }
 
 class ReadModifyWriteEvent(
-    readRequest: ThreadEvent,
-    readResponse: ThreadEvent,
-    writeSend: ThreadEvent,
+    readRequest: AtomicThreadEvent,
+    readResponse: AtomicThreadEvent,
+    writeSend: AtomicThreadEvent,
 ) : HyperEvent(listOf(readRequest, readResponse, writeSend)) {
 
     init {
@@ -192,7 +192,7 @@ class ReadModifyWriteEvent(
 
 /* ======== Mutex Event  ======== */
 
-fun List<ThreadEvent>.nextAtomicMutexEvent(firstEvent: ThreadEvent): HyperEvent {
+fun List<AtomicThreadEvent>.nextAtomicMutexEvent(firstEvent: AtomicThreadEvent): HyperEvent {
     require(firstEvent.label is MutexLabel)
     return when((firstEvent.label as MutexLabel)) {
         is LockLabel -> nextAtomicSendOrReceiveEvent(firstEvent)
@@ -226,8 +226,8 @@ fun List<ThreadEvent>.nextAtomicMutexEvent(firstEvent: ThreadEvent): HyperEvent 
 }
 
 class UnlockAndWait(
-    unlock: ThreadEvent,
-    waitRequest: ThreadEvent,
+    unlock: AtomicThreadEvent,
+    waitRequest: AtomicThreadEvent,
 ) : HyperEvent(listOf(unlock, waitRequest)) {
 
     init {
@@ -248,9 +248,9 @@ class UnlockAndWait(
 }
 
 class WakeUpAndTryLock(
-    waitResponse: ThreadEvent,
-    lockRequest: ThreadEvent,
-    lockResponse: ThreadEvent?,
+    waitResponse: AtomicThreadEvent,
+    lockRequest: AtomicThreadEvent,
+    lockResponse: AtomicThreadEvent?,
 ) : HyperEvent(listOfNotNull(waitResponse, lockRequest, lockResponse)) {
 
     init {
@@ -278,7 +278,7 @@ class WakeUpAndTryLock(
 
 }
 
-fun List<ThreadEvent>.nextCriticalSectionEvents(firstEvent: ThreadEvent): List<CriticalSectionEvent> {
+fun List<AtomicThreadEvent>.nextCriticalSectionEvents(firstEvent: AtomicThreadEvent): List<CriticalSectionEvent> {
     require(firstEvent.label is LockLabel && firstEvent.label.isRequest)
     var pos = firstEvent.threadPosition
     var sectionStart = firstEvent
@@ -325,7 +325,7 @@ fun List<ThreadEvent>.nextCriticalSectionEvents(firstEvent: ThreadEvent): List<C
     return sections
 }
 
-class CriticalSectionEvent(events: List<ThreadEvent>) : HyperEvent(events) {
+class CriticalSectionEvent(events: List<AtomicThreadEvent>) : HyperEvent(events) {
 
     init {
         require(events.size >= 2)
@@ -373,7 +373,7 @@ class CriticalSectionEvent(events: List<ThreadEvent>) : HyperEvent(events) {
 
 /* ======== Park and Unpark Events  ======== */
 
-fun List<ThreadEvent>.nextAtomicParkingEvent(firstEvent: ThreadEvent): HyperEvent {
+fun List<AtomicThreadEvent>.nextAtomicParkingEvent(firstEvent: AtomicThreadEvent): HyperEvent {
     require(firstEvent.label is ParkingEventLabel)
     return nextAtomicSendOrReceiveEvent(firstEvent)
 }

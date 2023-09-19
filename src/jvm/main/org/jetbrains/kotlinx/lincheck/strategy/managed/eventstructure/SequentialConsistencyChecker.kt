@@ -39,12 +39,12 @@ enum class SequentialConsistencyCheckPhase {
 class SequentialConsistencyChecker(
     val checkReleaseAcquireConsistency: Boolean = true,
     val approximateSequentialConsistency: Boolean = true
-) : ConsistencyChecker {
+) : ConsistencyChecker<AtomicThreadEvent> {
 
-    var executionOrder: List<ThreadEvent> = listOf()
+    var executionOrder: List<AtomicThreadEvent> = listOf()
         private set
 
-    override fun check(execution: Execution): Inconsistency? {
+    override fun check(execution: Execution<AtomicThreadEvent>): Inconsistency? {
         executionOrder = listOf()
         // calculate writes-before relation if required
         val wbRelation = if (checkReleaseAcquireConsistency) {
@@ -78,7 +78,8 @@ class SequentialConsistencyChecker(
         return checkByReplaying(execution, covering)
     }
 
-    private fun checkByReplaying(execution: Execution, covering: Covering<ThreadEvent>): Inconsistency? {
+    private fun checkByReplaying(execution: Execution<AtomicThreadEvent>,
+                                 covering: Covering<AtomicThreadEvent>): Inconsistency? {
         // TODO: this is just a DFS search.
         //  In fact, we can generalize this algorithm to
         //  two arbitrary labelled transition systems by taking their product LTS
@@ -114,12 +115,12 @@ class SequentialConsistencyChecker(
 class IncrementalSequentialConsistencyChecker(
     checkReleaseAcquireConsistency: Boolean = true,
     approximateSequentialConsistency: Boolean = true
-) : IncrementalConsistencyChecker {
+) : IncrementalConsistencyChecker<AtomicThreadEvent> {
 
-    private var execution = executionOf()
-    private val _executionOrder = mutableListOf<ThreadEvent>()
+    private var execution = executionOf<AtomicThreadEvent>()
+    private val _executionOrder = mutableListOf<AtomicThreadEvent>()
 
-    val executionOrder: List<ThreadEvent>
+    val executionOrder: List<AtomicThreadEvent>
         get() = _executionOrder
 
     private val sequentialConsistencyChecker = SequentialConsistencyChecker(
@@ -151,12 +152,12 @@ class IncrementalSequentialConsistencyChecker(
         return inconsistency
     }
 
-    override fun check(event: Event): Inconsistency? {
-        _executionOrder.add(event as ThreadEvent)
+    override fun check(event: AtomicThreadEvent): Inconsistency? {
+        _executionOrder.add(event)
         return null
     }
 
-    override fun reset(execution: Execution) {
+    override fun reset(execution: Execution<AtomicThreadEvent>) {
         this.execution = execution
         _executionOrder.clear()
         _executionOrder.addAll(execution.enumerationOrderSortedList())
@@ -197,7 +198,7 @@ class IncrementalSequentialConsistencyChecker(
     }
 
     // TODO: move to a separate consistency checker!
-    private fun checkLocks(execution: Execution): Inconsistency? {
+    private fun checkLocks(execution: Execution<AtomicThreadEvent>): Inconsistency? {
         // maps unlock (or notify) event to its single matching lock (or wait) event;
         // if lock synchronizes-from initialization event,
         // then instead maps lock object itself to its first lock event
@@ -317,20 +318,20 @@ private data class State(
 ) {
 
     // TODO: move to Context
-    var history: List<ThreadEvent> = listOf()
+    var history: List<AtomicThreadEvent> = listOf()
         private set
 
     constructor(
         counter: ExecutionCounter,
         atomicCounter: ExecutionCounter,
         replayer: SequentialConsistencyReplayer,
-        history: List<ThreadEvent>,
+        history: List<AtomicThreadEvent>,
     ) : this(counter, atomicCounter, replayer) {
         this.history = history
     }
 
     companion object {
-        fun initial(execution: Execution) = State(
+        fun initial(execution: Execution<AtomicThreadEvent>) = State(
             counter = IntArray(1 + execution.maxThreadID),
             atomicCounter = IntArray(1 + execution.maxThreadID),
             replayer = SequentialConsistencyReplayer(1 + execution.maxThreadID),
@@ -354,7 +355,7 @@ private data class State(
 
 }
 
-private class Context(val execution: Execution, val covering: Covering<ThreadEvent>) {
+private class Context(val execution: Execution<AtomicThreadEvent>, val covering: Covering<AtomicThreadEvent>) {
 
     val hyperExecution = execution.threadMap.map { (_, events) ->
         var pos = 0
@@ -367,10 +368,10 @@ private class Context(val execution: Execution, val covering: Covering<ThreadEve
         atomicEvents
     }
 
-    fun State.covered(event: ThreadEvent): Boolean =
+    fun State.covered(event: AtomicThreadEvent): Boolean =
         event.threadPosition < counter[event.threadId]
 
-    fun State.coverable(event: ThreadEvent): Boolean =
+    fun State.coverable(event: AtomicThreadEvent): Boolean =
         covering(event).all { covered(it) }
 
     val State.isTerminal: Boolean
@@ -381,7 +382,7 @@ private class Context(val execution: Execution, val covering: Covering<ThreadEve
     fun State.transition(threadId: Int): State? {
         val position = atomicCounter[threadId]
         val atomicEvent = hyperExecution.getOrNull(threadId)?.getOrNull(position)
-            ?.takeIf { atomicEvent -> atomicEvent.events.all { coverable(it as ThreadEvent) } }
+            ?.takeIf { atomicEvent -> atomicEvent.events.all { coverable(it as AtomicThreadEvent) } }
             ?: return null
         val view = replayer.replay(atomicEvent)
             ?: return null
@@ -393,7 +394,7 @@ private class Context(val execution: Execution, val covering: Covering<ThreadEve
             atomicCounter = this.atomicCounter.copyOf().also {
                 it[threadId] += 1
             },
-            history = this.history + (atomicEvent.events as List<ThreadEvent>)
+            history = this.history + atomicEvent.events
         )
     }
 
@@ -408,13 +409,13 @@ private class Context(val execution: Execution, val covering: Covering<ThreadEve
 }
 
 private class SequentialConsistencyRelation(
-    execution: Execution,
-    initialApproximation: Relation<ThreadEvent>
-): ExecutionRelation(execution) {
+    execution: Execution<AtomicThreadEvent>,
+    initialApproximation: Relation<AtomicThreadEvent>
+): ExecutionRelation<AtomicThreadEvent>(execution) {
 
     val relation = RelationMatrix(execution, indexer, initialApproximation)
 
-    override fun invoke(x: ThreadEvent, y: ThreadEvent): Boolean =
+    override fun invoke(x: AtomicThreadEvent, y: AtomicThreadEvent): Boolean =
         relation(x, y)
 
     fun saturate(): SequentialConsistencyViolation? {
@@ -433,8 +434,7 @@ private class SequentialConsistencyRelation(
         readLoop@for (read in execution) {
             if (!(read.label is ReadAccessLabel && read.label.isResponse))
                 continue
-            val readFrom = (read as? AbstractAtomicThreadEvent)?.readsFrom
-                ?: continue
+            val readFrom = read.readsFrom
             writeLoop@for (write in execution) {
                 val rloc = (read.label as? ReadAccessLabel)?.location
                 val wloc = (write.label as? WriteAccessLabel)?.location
@@ -456,8 +456,8 @@ private class SequentialConsistencyRelation(
 }
 
 private class WritesBeforeRelation(
-    execution: Execution
-): ExecutionRelation(execution) {
+    execution: Execution<AtomicThreadEvent>
+): ExecutionRelation<AtomicThreadEvent>(execution) {
 
     private val readsMap: MutableMap<MemoryLocation, ArrayList<ThreadEvent>> = mutableMapOf()
 
@@ -508,7 +508,7 @@ private class WritesBeforeRelation(
     }
 
     private fun initializeReadModifyWriteChains() {
-        val chainsMap = mutableMapOf<ThreadEvent, MutableList<ThreadEvent>>()
+        val chainsMap = mutableMapOf<ThreadEvent, MutableList<AtomicThreadEvent>>()
         for (event in execution.enumerationOrderSortedList()) {
             val label = event.label
             if (label !is WriteAccessLabel || !label.isExclusive)
@@ -587,7 +587,7 @@ private class WritesBeforeRelation(
         return null
     }
 
-    override fun invoke(x: ThreadEvent, y: ThreadEvent): Boolean {
+    override fun invoke(x: AtomicThreadEvent, y: AtomicThreadEvent): Boolean {
         // TODO: handle InitializationLabel?
         val xloc = (x.label as? WriteAccessLabel)?.location
         val yloc = (y.label as? WriteAccessLabel)?.location
