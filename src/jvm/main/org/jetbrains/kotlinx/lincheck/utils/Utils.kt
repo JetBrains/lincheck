@@ -20,6 +20,10 @@
 
 package org.jetbrains.kotlinx.lincheck.utils
 
+inline fun<reified T> List<Any?>.reify(): List<T>? {
+    return if (all { it is T }) (this as List<T>) else null
+}
+
 private fun rangeCheck(size: Int, fromIndex: Int, toIndex: Int) {
     when {
         fromIndex > toIndex -> throw IllegalArgumentException("fromIndex ($fromIndex) is greater than toIndex ($toIndex).")

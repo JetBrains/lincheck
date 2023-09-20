@@ -113,7 +113,8 @@ inline fun<reified E : ThreadEvent> ExecutionFrontier<E>.toExecution(): Executio
 
 inline fun<reified E : ThreadEvent> ExecutionFrontier<E>.toMutableExecution(): MutableExecution<E> =
     threadIDs.map { tid ->
-        tid to (get(tid)?.threadPrefix<E>(inclusive = true) ?: listOf())
+        val events = get(tid)?.threadPrefix(inclusive = true)
+        tid to (events?.reify<E>() ?: listOf())
     }.let {
         mutableExecutionOf(*it.toTypedArray())
     }

@@ -95,23 +95,14 @@ fun ThreadEvent.pred(inclusive: Boolean = false, predicate: (ThreadEvent) -> Boo
 val ThreadEvent.threadRoot: Event
     get() = predNth(threadPosition)!!
 
-inline fun<reified E : ThreadEvent> ThreadEvent.threadPrefix(
-    inclusive: Boolean = false,
-    reversed: Boolean = false
-): List<E> {
-    if (this !is E) {
-        return listOf()
-    }
-    val events = arrayListOf<E>()
+fun ThreadEvent.threadPrefix(inclusive: Boolean = false, reversed: Boolean = false): List<ThreadEvent> {
+    val events = arrayListOf<ThreadEvent>()
     if (inclusive) {
         events.add(this)
     }
     // obtain a list of predecessors of given event
     var event: ThreadEvent? = parent
     while (event != null) {
-        if (event !is E) {
-            return listOf()
-        }
         events.add(event)
         event = event.parent
     }
