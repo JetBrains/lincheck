@@ -43,7 +43,7 @@ fun<T> List<T>.binarySearch(fromIndex: Int = 0, toIndex: Int = size, predicate: 
         else
             low = mid
     }
-    return low
+    return high
 }
 
 fun<T> MutableList<T>.expand(size: Int, defaultValue: T) {
