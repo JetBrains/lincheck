@@ -1265,7 +1265,7 @@ data class ParkLabel(
     unblocked = (kind != LabelKind.Request),
 ) {
     init {
-        require(isRequest || isResponse)
+        require(isRequest || isResponse || isReceive)
     }
 
     override fun isValidResponse(label: EventLabel): Boolean {
