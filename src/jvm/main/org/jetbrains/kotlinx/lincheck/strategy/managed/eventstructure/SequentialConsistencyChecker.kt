@@ -115,10 +115,13 @@ class IncrementalSequentialConsistencyChecker(
 ) : IncrementalConsistencyChecker<AtomicThreadEvent> {
 
     private var execution = executionOf<AtomicThreadEvent>()
+
     private val _executionOrder = mutableListOf<AtomicThreadEvent>()
 
     val executionOrder: List<AtomicThreadEvent>
         get() = _executionOrder
+
+    private var executionOrderEnabled = true
 
     private val sequentialConsistencyChecker = SequentialConsistencyChecker(
         checkReleaseAcquireConsistency,
@@ -142,27 +145,58 @@ class IncrementalSequentialConsistencyChecker(
             val (events, blockedRequests) = sequentialConsistencyChecker.executionOrder.partition {
                 !execution.isBlockedDanglingRequest(it)
             }
-            _executionOrder.clear()
-            _executionOrder.addAll(events)
-            _executionOrder.addAll(blockedRequests)
+            _executionOrder.apply {
+                clear()
+                addAll(events)
+                addAll(blockedRequests)
+            }
+            executionOrderEnabled = true
         }
         return inconsistency
     }
 
     override fun check(event: AtomicThreadEvent): Inconsistency? {
-        _executionOrder.add(event)
+        if (!executionOrderEnabled)
+            return null
+        if (event.extendsExecutionOrder()) {
+            _executionOrder.add(event)
+        } else {
+            _executionOrder.clear()
+            executionOrderEnabled = false
+        }
         return null
     }
 
     override fun reset(execution: Execution<AtomicThreadEvent>) {
         this.execution = execution
         _executionOrder.clear()
-        _executionOrder.addAll(execution.enumerationOrderSortedList())
+        executionOrderEnabled = true
+        for (event in execution.enumerationOrderSortedList()) {
+            check(event)
+        }
     }
 
     private fun checkByExecutionOrderReplaying(): Boolean {
+        if (!executionOrderEnabled)
+            return false
         val replayer = SequentialConsistencyReplayer(1 + execution.maxThreadID)
-        return (replayer.replay(_executionOrder) != null)
+        return (replayer.replay(executionOrder) != null)
+    }
+
+    private fun AtomicThreadEvent.extendsExecutionOrder(): Boolean {
+        // TODO: this check should be generalized ---
+        //   it should be derivable from the aggregation algebra
+        if (label is ReadAccessLabel && label.isResponse) {
+            val last = executionOrder.lastOrNull()
+                ?: return false
+            return isValidResponse(last)
+        }
+        if (label is WriteAccessLabel && (label as WriteAccessLabel).isExclusive) {
+            val last = executionOrder.lastOrNull()
+                ?: return false
+            return isWritePartOfAtomicUpdate(last)
+        }
+        return true
     }
 
     // TODO: move to a separate consistency checker!
