@@ -205,11 +205,11 @@ fun VectorClock.observes(execution: Execution<*>): Boolean =
         events.lastOrNull()?.let { observes(it) } ?: true
     }
 
-fun ThreadEvent.coverable(clock: VectorClock): Boolean =
-    dependencies.all { clock.observes(it) }
-
 fun<E : ThreadEvent> Covering<E>.coverable(event: E, clock: VectorClock): Boolean =
     this(event).all { clock.observes(it) }
+
+fun<E : ThreadEvent> Covering<E>.coverable(events: List<E>, clock: VectorClock): Boolean =
+    events.all { event -> this(event).all { clock.observes(it) || it in events } }
 
 fun<E : ThreadEvent> Execution<E>.enumerationOrderSortedList(): List<E> =
     this.sorted()
@@ -223,9 +223,14 @@ fun<E : ThreadEvent> Execution<E>.resynchronize(algebra: SynchronizationAlgebra)
     return remapping
 }
 
-fun Execution<AtomicThreadEvent>.aggregate(algebra: SynchronizationAlgebra): Execution<HyperThreadEvent> {
-    val clock = MutableVectorClock(maxThreadID)
-    val result = MutableExecution<HyperThreadEvent>(maxThreadID)
+// TODO: unify with Remapping class
+typealias EventRemapping = Map<AtomicThreadEvent, HyperThreadEvent>
+
+fun Execution<AtomicThreadEvent>.aggregate(
+    algebra: SynchronizationAlgebra
+): Pair<Execution<HyperThreadEvent>, EventRemapping> {
+    val clock = MutableVectorClock(1 + maxThreadID)
+    val result = MutableExecution<HyperThreadEvent>(1 + maxThreadID)
     val remapping = mutableMapOf<AtomicThreadEvent, HyperThreadEvent>()
     val squashed = threadMap.mapValues { (_, events) ->
         events.squash { x, y -> algebra.synchronizable(x.label, y.label) }
@@ -235,15 +240,12 @@ fun Execution<AtomicThreadEvent>.aggregate(algebra: SynchronizationAlgebra): Exe
         var events: List<AtomicThreadEvent>? = null
         for ((tid, list) in squashed.entries) {
             position = result.getThreadSize(tid)
-            events = list?.get(position) ?: continue
-            val last = events.lastOrNull() ?: continue
-            if (last.coverable(clock)) {
+            events = list.getOrNull(position) ?: continue
+            if (causalityCovering.coverable(events, clock))
                 break
-            }
         }
-        if (events == null) {
+        if (events == null)
             error("Cannot aggregate events due to cyclic dependencies")
-        }
         check(position >= 0)
         check(events.isNotEmpty())
         val tid = events.first().threadId
@@ -269,10 +271,18 @@ fun Execution<AtomicThreadEvent>.aggregate(algebra: SynchronizationAlgebra): Exe
         }
         clock.increment(tid, events.size)
     }
-    return result
+    return result to remapping
 }
 
-typealias ExecutionCounter = IntArray
+fun Covering<AtomicThreadEvent>.aggregate(remapping: EventRemapping) =
+    Covering<HyperThreadEvent> { event ->
+        event.events
+            .flatMap { atomicEvent ->
+                this(atomicEvent).mapNotNull { remapping[it] }
+            }
+            .distinct()
+    }
+
 
 abstract class ExecutionRelation<E : ThreadEvent>(
     val execution: Execution<E>,

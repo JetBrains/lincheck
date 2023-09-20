@@ -69,7 +69,7 @@ fun<T, R> IntMap<T>.map(transform: (IntMap.Entry<T>) -> R) =
 fun<T, R> IntMap<T>.mapNotNull(transform: (IntMap.Entry<T>) -> R?) =
     entries.mapNotNull(transform)
 
-fun <T, R> IntMap<T>.mapValues(transform: (IntMap.Entry<T>) -> R?) =
+fun <T, R> IntMap<T>.mapValues(transform: (IntMap.Entry<T>) -> R) =
     entries
         .map { entry -> entry.key to transform(entry) }
         .let { intMapOf(*it.toTypedArray()) }

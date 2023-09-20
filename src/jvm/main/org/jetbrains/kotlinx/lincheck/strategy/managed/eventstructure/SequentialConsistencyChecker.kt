@@ -58,28 +58,25 @@ class SequentialConsistencyChecker(
             causalityOrder.lessThan
             // take union with writes-before relation
             union (wbRelation ?: Relation.empty())
-            // order dangling request events at the end
-            // union Relation { x, y ->
-            //     execution.isBlockedDanglingRequest(y) && !execution.isBlockedDanglingRequest(x)
-            //             // TODO: remove this hack! (we need it because wait-request is joined with unlock)
-            //             && (x.label !is UnlockLabel)
-            // }
         )
         // calculate approximation of sequential consistency order if required
         val scApproximationRelation = if (approximateSequentialConsistency) {
-            val initialApproximation = orderingRelation ?: causalityOrder.lessThan
-            SequentialConsistencyRelation(execution, initialApproximation).apply {
+            SequentialConsistencyRelation(execution, orderingRelation).apply {
                 saturate()?.let { return it }
             }
         } else orderingRelation
         // get dependency covering to guide the search
         val covering = scApproximationRelation.buildExternalCovering()
+        // aggregate atomic events before replaying
+        val (aggregated, remapping) = execution.aggregate(ThreadAggregationAlgebra)
         // check consistency by trying to replay execution using sequentially consistent abstract machine
-        return checkByReplaying(execution, covering)
+        return checkByReplaying(aggregated, covering.aggregate(remapping))
     }
 
-    private fun checkByReplaying(execution: Execution<AtomicThreadEvent>,
-                                 covering: Covering<AtomicThreadEvent>): Inconsistency? {
+    private fun checkByReplaying(
+        execution: Execution<HyperThreadEvent>,
+        covering: Covering<HyperThreadEvent>
+    ): Inconsistency? {
         // TODO: this is just a DFS search.
         //  In fact, we can generalize this algorithm to
         //  two arbitrary labelled transition systems by taking their product LTS
@@ -94,7 +91,7 @@ class SequentialConsistencyChecker(
                 // TODO: maybe we should return more information than just success
                 //  (e.g. path leading to terminal state)?
                 if (state.isTerminal) {
-                    executionOrder = state.history
+                    executionOrder = state.history.flatMap { it.events }
                     return null
                 }
                 state.transitions().forEach {
@@ -164,35 +161,6 @@ class IncrementalSequentialConsistencyChecker(
     }
 
     private fun checkByExecutionOrderReplaying(): Boolean {
-        // TODO: this should be handled by the replayer itself ---
-        //    as a first step it should build hyper-execution graph
-        var valid = true
-        for (i in _executionOrder.indices) {
-            val event = _executionOrder[i] as AbstractAtomicThreadEvent
-            if (event.label is ReadAccessLabel && event.label.isResponse) {
-                val j = i - 1
-                valid = (j >= 0) && event.isValidResponse(_executionOrder[j])
-                if (!valid)
-                    return false
-            }
-            if (event.label is WriteAccessLabel && event.label.isExclusive) {
-                val j = i - 1
-                valid = (j >= 0) && event.isWritePartOfAtomicUpdate(_executionOrder[j])
-                if (!valid)
-                    return false
-            }
-        }
-        // TODO: think how to enforce this!!!
-        val firstBlockedRequestIndex = _executionOrder.indexOfFirst {
-            execution.isBlockedDanglingRequest(it)
-        }
-        if (firstBlockedRequestIndex >= 0) {
-            valid = (firstBlockedRequestIndex until _executionOrder.size).all { i ->
-                execution.isBlockedDanglingRequest(executionOrder[i])
-            }
-            if (!valid)
-                return false
-        }
         val replayer = SequentialConsistencyReplayer(1 + execution.maxThreadID)
         return (replayer.replay(_executionOrder) != null)
     }
@@ -232,7 +200,7 @@ private data class SequentialConsistencyReplayer(
     val monitorTracker: MapMonitorTracker = MapMonitorTracker(nThreads),
 ) {
 
-    fun replay(event: ThreadEvent): SequentialConsistencyReplayer? {
+    fun replay(event: AtomicThreadEvent): SequentialConsistencyReplayer? {
         val label = event.label
         return when {
 
@@ -290,16 +258,16 @@ private data class SequentialConsistencyReplayer(
         }
     }
 
-    fun replay(events: Iterable<Event>): SequentialConsistencyReplayer? {
+    fun replay(events: Iterable<AtomicThreadEvent>): SequentialConsistencyReplayer? {
         var replayer = this
         for (event in events) {
-            replayer = replayer.replay(event as ThreadEvent) ?: return null
+            replayer = replayer.replay(event) ?: return null
         }
         return replayer
     }
 
-    fun replay(hyperEvent: HyperEvent): SequentialConsistencyReplayer? {
-        return replay(hyperEvent.events)
+    fun replay(event: HyperThreadEvent): SequentialConsistencyReplayer? {
+        return replay(event.events)
     }
 
     fun copy(): SequentialConsistencyReplayer =
@@ -312,95 +280,75 @@ private data class SequentialConsistencyReplayer(
 }
 
 private data class State(
-    val counter: ExecutionCounter,
-    val atomicCounter: ExecutionCounter,
+    val executionClock: MutableVectorClock,
     val replayer: SequentialConsistencyReplayer,
 ) {
 
     // TODO: move to Context
-    var history: List<AtomicThreadEvent> = listOf()
+    var history: List<HyperThreadEvent> = listOf()
         private set
 
     constructor(
-        counter: ExecutionCounter,
-        atomicCounter: ExecutionCounter,
+        executionClock: MutableVectorClock,
         replayer: SequentialConsistencyReplayer,
-        history: List<AtomicThreadEvent>,
-    ) : this(counter, atomicCounter, replayer) {
+        history: List<HyperThreadEvent>,
+    ) : this(executionClock, replayer) {
         this.history = history
     }
 
     companion object {
-        fun initial(execution: Execution<AtomicThreadEvent>) = State(
-            counter = IntArray(1 + execution.maxThreadID),
-            atomicCounter = IntArray(1 + execution.maxThreadID),
+        fun initial(execution: Execution<HyperThreadEvent>) = State(
+            executionClock = MutableVectorClock(1 + execution.maxThreadID),
             replayer = SequentialConsistencyReplayer(1 + execution.maxThreadID),
         )
     }
 
     override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is State) return false
-        return counter.contentEquals(other.counter)
-                && atomicCounter.contentEquals(other.atomicCounter)
+        if (this === other)
+            return true
+        return (other is State)
+                && executionClock == other.executionClock
                 && replayer == other.replayer
     }
 
     override fun hashCode(): Int {
-        var result = counter.contentHashCode()
-        result = 31 * result + atomicCounter.contentHashCode()
+        var result = executionClock.hashCode()
         result = 31 * result + replayer.hashCode()
         return result
     }
 
 }
 
-private class Context(val execution: Execution<AtomicThreadEvent>, val covering: Covering<AtomicThreadEvent>) {
+private class Context(val execution: Execution<HyperThreadEvent>, val covering: Covering<HyperThreadEvent>) {
 
-    val hyperExecution = execution.threadMap.map { (_, events) ->
-        var pos = 0
-        val atomicEvents = mutableListOf<HyperEvent>()
-        while (pos < events.size) {
-            val atomicEvent = events.nextAtomicEvent(pos)!!
-            atomicEvents.add(atomicEvent)
-            pos += atomicEvent.events.size
-        }
-        atomicEvents
-    }
+    fun State.covered(event: HyperThreadEvent): Boolean =
+        executionClock.observes(event)
 
-    fun State.covered(event: AtomicThreadEvent): Boolean =
-        event.threadPosition < counter[event.threadId]
-
-    fun State.coverable(event: AtomicThreadEvent): Boolean =
-        covering(event).all { covered(it) }
+    fun State.coverable(event: HyperThreadEvent): Boolean =
+        covering.coverable(event, executionClock)
 
     val State.isTerminal: Boolean
-        get() = counter.withIndex().all { (threadId, position) ->
-            position == execution.getThreadSize(threadId)
-        }
+        get() = executionClock.observes(execution)
 
     fun State.transition(threadId: Int): State? {
-        val position = atomicCounter[threadId]
-        val atomicEvent = hyperExecution.getOrNull(threadId)?.getOrNull(position)
-            ?.takeIf { atomicEvent -> atomicEvent.events.all { coverable(it as AtomicThreadEvent) } }
+        val position = 1 + executionClock[threadId]
+        val event = execution[threadId, position]
+            ?.takeIf { coverable(it) }
             ?: return null
-        val view = replayer.replay(atomicEvent)
+        val view = replayer.replay(event)
             ?: return null
         return State(
             replayer = view,
-            counter = this.counter.copyOf().also {
-                it[threadId] += atomicEvent.events.size
+            history = this.history + event,
+            executionClock = this.executionClock.copy().apply {
+                increment(event.threadId)
             },
-            atomicCounter = this.atomicCounter.copyOf().also {
-                it[threadId] += 1
-            },
-            history = this.history + atomicEvent.events
         )
     }
 
     fun State.transitions() : List<State> {
         val states = arrayListOf<State>()
-        for (threadId in counter.indices) {
+        for (threadId in execution.threadIDs) {
             transition(threadId)?.let { states.add(it) }
         }
         return states

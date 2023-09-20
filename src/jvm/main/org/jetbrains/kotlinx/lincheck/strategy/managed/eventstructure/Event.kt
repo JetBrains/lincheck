@@ -439,3 +439,5 @@ val programOrder: PartialOrder<ThreadEvent> = PartialOrder.ofLessThan { x, y ->
 val causalityOrder: PartialOrder<ThreadEvent> = PartialOrder.ofLessOrEqual { x, y ->
     y.causalityClock.observes(x.threadId, x.threadPosition)
 }
+
+val causalityCovering: Covering<ThreadEvent> = Covering { it.dependencies }
