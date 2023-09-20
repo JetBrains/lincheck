@@ -108,6 +108,15 @@ fun SynchronizationAlgebra.synchronize(label: EventLabel?, other: EventLabel?): 
     else -> synchronize(label, other)
 }
 
+fun SynchronizationAlgebra.synchronize(events: List<Event>): EventLabel? {
+    if (events.isEmpty())
+        return null
+    return events.fold (null) { label: EventLabel?, event ->
+        synchronize(label, event.label)
+    }
+}
+
+
 /**
  * A commutative synchronization algebra --- its [synchronize] operation is expected to be commutative.
  */

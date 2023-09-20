@@ -75,10 +75,18 @@ interface ThreadEvent : Event {
     val parent: ThreadEvent?
 
     /**
+     * List of event's dependencies.
+     */
+    override val dependencies: List<ThreadEvent>
+
+    /**
      * Vector clock to track causality relation.
      */
     val causalityClock: VectorClock
 
+    /**
+     * Returns n-th predecessor of the given event.
+     */
     fun predNth(n: Int): ThreadEvent?
 }
 
@@ -126,13 +134,10 @@ interface SynchronizedEvent : Event {
     val synchronized: List<Event>
 }
 
-fun SynchronizedEvent.resynchronize(algebra: SynchronizationAlgebra): EventLabel {
-    if (synchronized.isEmpty())
-        return label
-    return synchronized.fold (null) { label: EventLabel?, event ->
-        algebra.synchronize(label, event.label)
-    }.ensureNotNull()
-}
+fun SynchronizedEvent.resynchronize(algebra: SynchronizationAlgebra): EventLabel =
+    if (synchronized.isNotEmpty())
+        algebra.synchronize(synchronized).ensureNotNull()
+    else label
 
 interface AtomicThreadEvent : ThreadEvent, SynchronizedEvent {
 
@@ -234,6 +239,32 @@ fun AtomicThreadEvent.isWritePartOfAtomicUpdate(readResponse: ThreadEvent) =
                 it is ReadAccessLabel && it.isResponse && it.isExclusive
                     && it.location == (label as WriteAccessLabel).location
             }
+
+/**
+ * Hyper event is a composite event consisting of multiple atomic events.
+ * It allows viewing subset of events of an execution as an atomic event by itself.
+ * Some notable examples of hyper events are listed below:
+ * - pair of consecutive request and response events of the same operation
+ *   can be viewed as a composite receive event;
+ * - pair of exclusive read and write events of the same atomic operation
+ *   can be viewed as a composite read-modify-write event;
+ * - all the events between lock acquire and lock release events
+ *   can be viewed as a composite critical section event;
+ * for other examples see subclasses of this class.
+ *
+ * We support only sequential hyper events --- that is set of events
+ * totally ordered by some criterion.
+ *
+ * This class of events is called "hyper" after term "hyper pomsets" from [1].
+ *
+ * [1] Brunet, Paul, and David Pym.
+ *    "Pomsets with Boxes: Protection, Separation, and Locality in Concurrent Kleene Algebra."
+ *    5th International Conference on Formal Structures for Computation and Deduction. 2020.
+ *
+ */
+interface HyperEvent : Event {
+    val events: List<AtomicThreadEvent>
+}
 
 abstract class AbstractEvent(final override val label: EventLabel) : Event {
 
@@ -349,13 +380,15 @@ abstract class AbstractAtomicThreadEvent(
     final override val source: AtomicThreadEvent? = null,
 
     causalityClock: VectorClock,
-) : AbstractThreadEvent(
-    label = label,
-    parent = parent,
-    threadId = threadId,
-    threadPosition = parent.calculateNextEventPosition(),
-    causalityClock = causalityClock,
-), AtomicThreadEvent {
+) : AtomicThreadEvent,
+    AbstractThreadEvent(
+        label = label,
+        parent = parent,
+        threadId = threadId,
+        threadPosition = parent.calculateNextEventPosition(),
+        causalityClock = causalityClock,
+    )
+{
 
     final override val dependencies: List<ThreadEvent> =
         listOfNotNull(allocation, source) + senders
@@ -380,6 +413,22 @@ abstract class AbstractAtomicThreadEvent(
     }
 
 }
+
+class HyperThreadEvent(
+    label: EventLabel,
+    threadId: Int,
+    override val parent: HyperThreadEvent?,
+    override val dependencies: List<HyperThreadEvent>,
+    causalityClock: VectorClock,
+    override val events: List<AtomicThreadEvent>,
+) : HyperEvent,
+    AbstractThreadEvent(
+        label = label,
+        parent = parent,
+        threadId = threadId,
+        threadPosition = parent.calculateNextEventPosition(),
+        causalityClock = causalityClock,
+    )
 
 val programOrder: PartialOrder<ThreadEvent> = PartialOrder.ofLessThan { x, y ->
     if (x.threadId != y.threadId || x.threadPosition >= y.threadPosition)

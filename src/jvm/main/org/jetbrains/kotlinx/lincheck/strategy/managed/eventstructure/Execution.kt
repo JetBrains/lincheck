@@ -21,6 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.ensure
+import org.jetbrains.kotlinx.lincheck.ensureNull
 import org.jetbrains.kotlinx.lincheck.strategy.managed.Remapping
 import org.jetbrains.kotlinx.lincheck.strategy.managed.resynchronize
 import org.jetbrains.kotlinx.lincheck.utils.*
@@ -196,6 +197,20 @@ fun<E : ThreadEvent> Execution<E>.computeVectorClock(event: E, relation: Relatio
     return clock
 }
 
+fun VectorClock.observes(event: ThreadEvent): Boolean =
+    observes(event.threadId, event.threadPosition)
+
+fun VectorClock.observes(execution: Execution<*>): Boolean =
+    execution.threadMap.values.all { events ->
+        events.lastOrNull()?.let { observes(it) } ?: true
+    }
+
+fun ThreadEvent.coverable(clock: VectorClock): Boolean =
+    dependencies.all { clock.observes(it) }
+
+fun<E : ThreadEvent> Covering<E>.coverable(event: E, clock: VectorClock): Boolean =
+    this(event).all { clock.observes(it) }
+
 fun<E : ThreadEvent> Execution<E>.enumerationOrderSortedList(): List<E> =
     this.sorted()
 
@@ -206,6 +221,55 @@ fun<E : ThreadEvent> Execution<E>.resynchronize(algebra: SynchronizationAlgebra)
         remapping.resynchronize(event, algebra)
     }
     return remapping
+}
+
+fun Execution<AtomicThreadEvent>.aggregate(algebra: SynchronizationAlgebra): Execution<HyperThreadEvent> {
+    val clock = MutableVectorClock(maxThreadID)
+    val result = MutableExecution<HyperThreadEvent>(maxThreadID)
+    val remapping = mutableMapOf<AtomicThreadEvent, HyperThreadEvent>()
+    val squashed = threadMap.mapValues { (_, events) ->
+        events.squash { x, y -> algebra.synchronizable(x.label, y.label) }
+    }
+    while (!clock.observes(this)) {
+        var position = -1
+        var events: List<AtomicThreadEvent>? = null
+        for ((tid, list) in squashed.entries) {
+            position = result.getThreadSize(tid)
+            events = list?.get(position) ?: continue
+            val last = events.lastOrNull() ?: continue
+            if (last.coverable(clock)) {
+                break
+            }
+        }
+        if (events == null) {
+            error("Cannot aggregate events due to cyclic dependencies")
+        }
+        check(position >= 0)
+        check(events.isNotEmpty())
+        val tid = events.first().threadId
+        val parent = result[tid]?.lastOrNull()
+        val dependencies = events
+            .flatMap { event -> event.dependencies.mapNotNull { remapping[it] } }
+            .distinct()
+        // TODO: extract into function, remove copy-paste with EventStructure::createEvent
+        val causalityClock = dependencies.fold(parent?.causalityClock?.copy() ?: MutableVectorClock(maxThreadID)) { clock, event ->
+            clock + event.causalityClock
+        }
+        val event = HyperThreadEvent(
+            label = algebra.synchronize(events)!!,
+            threadId = tid,
+            parent = parent,
+            dependencies = dependencies,
+            causalityClock = causalityClock,
+            events = events,
+        )
+        result.add(event)
+        events.forEach {
+            remapping.put(it, event).ensureNull()
+        }
+        clock.increment(tid, events.size)
+    }
+    return result
 }
 
 typealias ExecutionCounter = IntArray

@@ -48,6 +48,14 @@ fun MutableVectorClock.update(tid: ThreadID, timestamp: Int) {
     put(tid, timestamp).ensure { it < timestamp }
 }
 
+fun MutableVectorClock.increment(tid: ThreadID, n: Int) {
+    put(tid, get(tid) + n)
+}
+
+fun MutableVectorClock.increment(tid: ThreadID) {
+    increment(tid, 1)
+}
+
 // TODO: use sealed interfaces to make when exhaustive
 operator fun VectorClock.plus(other: VectorClock): MutableVectorClock =
     copy().apply { merge(other) }
