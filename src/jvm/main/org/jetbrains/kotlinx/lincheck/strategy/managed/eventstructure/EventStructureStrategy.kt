@@ -161,13 +161,13 @@ class EventStructureStrategy(
         //         result.clockOnStart.reset()
         //     }
         // }
-        val (actorsExecution, _) = execution.aggregate(ActorAggregator)
+        val (actorsExecution, _) = execution.aggregate(ActorAggregator(execution))
         check(actorsExecution.threadIDs.size == executionResult.parallelResultsWithClock.size + 2)
         for (tid in executionResult.parallelResultsWithClock.indices) {
             val actorEvents = actorsExecution[tid]!!
             val actorResults = executionResult.parallelResultsWithClock[tid]
             actorResults.forEachIndexed { i, result ->
-                result.clockOnStart.reset(actorEvents[i].causalityClock.toHBClock())
+                result.clockOnStart.reset(actorEvents[i].causalityClock.toHBClock(tid, i))
             }
         }
     }

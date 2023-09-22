@@ -230,7 +230,9 @@ fun<E : ThreadEvent> Execution<E>.resynchronize(algebra: SynchronizationAlgebra)
 // TODO: make an interface instead of type-alias?
 interface EventAggregator {
     fun aggregate(events: List<AtomicThreadEvent>): List<List<AtomicThreadEvent>>
+
     fun label(events: List<AtomicThreadEvent>): EventLabel?
+    fun dependencies(events: List<AtomicThreadEvent>, remapping: EventRemapping): List<HyperThreadEvent>
 
     fun isCoverable(
         events: List<AtomicThreadEvent>,
@@ -247,6 +249,13 @@ fun SynchronizationAlgebra.aggregator() = object : EventAggregator {
     override fun label(events: List<AtomicThreadEvent>): EventLabel =
         synchronize(events).ensureNotNull()
 
+    override fun dependencies(events: List<AtomicThreadEvent>, remapping: EventRemapping): List<HyperThreadEvent> {
+        return events
+            // TODO: should use covering here instead of dependencies?
+            .flatMap { event -> event.dependencies.mapNotNull { remapping[it] } }
+            .distinct()
+    }
+
     override fun isCoverable(
         events: List<AtomicThreadEvent>,
         covering: Covering<ThreadEvent>,
@@ -257,7 +266,9 @@ fun SynchronizationAlgebra.aggregator() = object : EventAggregator {
 
 }
 
-val ActorAggregator = object : EventAggregator {
+fun ActorAggregator(execution: Execution<AtomicThreadEvent>) = object : EventAggregator {
+
+    // val execution = execution
 
     override fun aggregate(events: List<AtomicThreadEvent>): List<List<AtomicThreadEvent>> {
         var pos = 0
@@ -287,6 +298,25 @@ val ActorAggregator = object : EventAggregator {
         }
         check((start.label as ActorLabel).actor == (end.label as ActorLabel).actor)
         return ActorLabel(ActorLabelKind.Span, (start.label as ActorLabel).actor)
+    }
+
+    override fun dependencies(events: List<AtomicThreadEvent>, remapping: EventRemapping): List<HyperThreadEvent> {
+        return events
+            .flatMap { event ->
+                val causalEvents = execution.threadMap.entries.mapNotNull { (tid, thread) ->
+                    if (tid != event.threadId)
+                        thread.getOrNull(event.causalityClock[tid])
+                    else null
+                }
+                causalEvents.mapNotNull { remapping[it] }
+            }
+            // TODO: should use covering here instead of dependencies?
+            .filter {
+                // take the last event before ActorEnd event
+                val last = it.events[it.events.size - 2]
+                events.first().causalityClock.observes(last)
+            }
+            .distinct()
     }
 
     override fun isCoverable(
@@ -334,11 +364,9 @@ fun Execution<AtomicThreadEvent>.aggregate(
         check(events.isNotEmpty())
         val tid = events.first().threadId
         val label = aggregator.label(events)
+        val parent = result[tid]?.lastOrNull()
         if (label != null) {
-            val parent = result[tid]?.lastOrNull()
-            val dependencies = events
-                .flatMap { event -> event.dependencies.mapNotNull { remapping[it] } }
-                .distinct()
+            val dependencies = aggregator.dependencies(events, remapping)
             // TODO: extract into function, remove copy-paste with EventStructure::createEvent
             val causalityClock =
                 dependencies.fold(parent?.causalityClock?.copy() ?: MutableVectorClock(1 + maxThreadID)) { clock, event ->
@@ -357,6 +385,12 @@ fun Execution<AtomicThreadEvent>.aggregate(
             result.add(event)
             events.forEach {
                 remapping.put(it, event).ensureNull()
+            }
+        } else if (parent != null) {
+            // effectively squash skipped events into previous hyper event,
+            // such representation is convenient for causality clock maintenance
+            events.forEach {
+                remapping.put(it, parent).ensureNull()
             }
         }
         clock.increment(tid, events.size)

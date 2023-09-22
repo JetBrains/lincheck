@@ -109,10 +109,14 @@ private class IntArrayClock(val nThreads: Int) : MutableVectorClock {
 
 }
 
-fun VectorClock.toHBClock(): HBClock {
+fun VectorClock.toHBClock(tid: ThreadID, aid: Int): HBClock {
     check(this is IntArrayClock)
     val result = emptyClock(clock.size - 2)
     for (i in 0 until clock.size - 2) {
+        if (i == tid) {
+            result.clock[i] = clock[i].ensure { it == aid }
+            continue
+        }
         result.clock[i] = 1 + clock[i]
     }
     return result
