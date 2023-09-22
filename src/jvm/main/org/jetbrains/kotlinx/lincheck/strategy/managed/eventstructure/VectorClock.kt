@@ -21,6 +21,8 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.ensure
+import org.jetbrains.kotlinx.lincheck.execution.HBClock
+import org.jetbrains.kotlinx.lincheck.execution.emptyClock
 import kotlin.math.max
 
 interface VectorClock {
@@ -105,6 +107,15 @@ private class IntArrayClock(val nThreads: Int) : MutableVectorClock {
     override fun hashCode(): Int =
         clock.contentHashCode()
 
+}
+
+fun VectorClock.toHBClock(): HBClock {
+    check(this is IntArrayClock)
+    val result = emptyClock(clock.size - 2)
+    for (i in 0 until clock.size - 2) {
+        result.clock[i] = 1 + clock[i]
+    }
+    return result
 }
 
 // class VectorClock<P, T>(val partialOrder: PartialOrder<T>, clock: Map<P, T> = mapOf()) {

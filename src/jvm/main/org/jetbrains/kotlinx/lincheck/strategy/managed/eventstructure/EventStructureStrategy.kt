@@ -91,7 +91,7 @@ class EventStructureStrategy(
             }
             // patch clocks
             if (result is CompletedInvocationResult) {
-                patchResultsClock(result.results)
+                patchResultsClock(eventStructure.currentExecution, result.results)
             }
             inconsistency = eventStructure.checkConsistency()
         }
@@ -155,10 +155,19 @@ class EventStructureStrategy(
     // TODO: refactor this --- we need a more robust solution;
     //   for example, we can compute happens before relation induced by
     //   the event structure and pass it on
-    private fun patchResultsClock(executionResult: ExecutionResult) {
-        for (results in executionResult.parallelResultsWithClock) {
-            for (result in results) {
-                result.clockOnStart.reset()
+    private fun patchResultsClock(execution: Execution<AtomicThreadEvent>, executionResult: ExecutionResult) {
+        // for (results in executionResult.parallelResultsWithClock) {
+        //     for (result in results) {
+        //         result.clockOnStart.reset()
+        //     }
+        // }
+        val (actorsExecution, _) = execution.aggregate(ActorAggregator)
+        check(actorsExecution.threadIDs.size == executionResult.parallelResultsWithClock.size + 2)
+        for (tid in executionResult.parallelResultsWithClock.indices) {
+            val actorEvents = actorsExecution[tid]!!
+            val actorResults = executionResult.parallelResultsWithClock[tid]
+            actorResults.forEachIndexed { i, result ->
+                result.clockOnStart.reset(actorEvents[i].causalityClock.toHBClock())
             }
         }
     }

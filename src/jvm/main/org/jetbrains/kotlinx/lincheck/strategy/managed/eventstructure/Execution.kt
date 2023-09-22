@@ -21,6 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.ensure
+import org.jetbrains.kotlinx.lincheck.ensureNotNull
 import org.jetbrains.kotlinx.lincheck.ensureNull
 import org.jetbrains.kotlinx.lincheck.strategy.managed.Remapping
 import org.jetbrains.kotlinx.lincheck.strategy.managed.resynchronize
@@ -208,8 +209,11 @@ fun VectorClock.observes(execution: Execution<*>): Boolean =
 fun<E : ThreadEvent> Covering<E>.coverable(event: E, clock: VectorClock): Boolean =
     this(event).all { clock.observes(it) }
 
-fun<E : ThreadEvent> Covering<E>.coverable(events: List<E>, clock: VectorClock): Boolean =
+fun<E : ThreadEvent> Covering<E>.allCoverable(events: List<E>, clock: VectorClock): Boolean =
     events.all { event -> this(event).all { clock.observes(it) || it in events } }
+
+fun<E : ThreadEvent> Covering<E>.firstCoverable(events: List<E>, clock: VectorClock): Boolean =
+    coverable(events.first(), clock)
 
 fun<E : ThreadEvent> Execution<E>.enumerationOrderSortedList(): List<E> =
     this.sorted()
@@ -227,6 +231,12 @@ fun<E : ThreadEvent> Execution<E>.resynchronize(algebra: SynchronizationAlgebra)
 interface EventAggregator {
     fun aggregate(events: List<AtomicThreadEvent>): List<List<AtomicThreadEvent>>
     fun label(events: List<AtomicThreadEvent>): EventLabel?
+
+    fun isCoverable(
+        events: List<AtomicThreadEvent>,
+        covering: Covering<ThreadEvent>,
+        clock: VectorClock
+    ): Boolean
 }
 
 fun SynchronizationAlgebra.aggregator() = object : EventAggregator {
@@ -234,8 +244,16 @@ fun SynchronizationAlgebra.aggregator() = object : EventAggregator {
     override fun aggregate(events: List<AtomicThreadEvent>): List<List<AtomicThreadEvent>> =
         events.squash { x, y -> synchronizable(x.label, y.label) }
 
-    override fun label(events: List<AtomicThreadEvent>): EventLabel? =
-        synchronize(events)
+    override fun label(events: List<AtomicThreadEvent>): EventLabel =
+        synchronize(events).ensureNotNull()
+
+    override fun isCoverable(
+        events: List<AtomicThreadEvent>,
+        covering: Covering<ThreadEvent>,
+        clock: VectorClock
+    ): Boolean {
+        return covering.allCoverable(events, clock)
+    }
 
 }
 
@@ -245,28 +263,38 @@ val ActorAggregator = object : EventAggregator {
         var pos = 0
         val result = mutableListOf<List<AtomicThreadEvent>>()
         while (pos < events.size) {
-            val start = events.subList(fromIndex = pos, toIndex = events.size).find {
-                (it.label as? ActorLabel)?.actorKind == ActorLabelKind.Start
-            } ?: break
+            if ((events[pos].label as? ActorLabel)?.actorKind != ActorLabelKind.Start) {
+                result.add(listOf(events[pos++]))
+                continue
+            }
+            val start = events[pos]
             val end = events.subList(fromIndex = start.threadPosition, toIndex = events.size).find {
                 (it.label as? ActorLabel)?.actorKind == ActorLabelKind.End
             } ?: break
             check((start.label as ActorLabel).actor == (end.label as ActorLabel).actor)
-            result.add(events.subList(fromIndex = start.threadPosition, toIndex = end.threadPosition))
-            pos = 1 + end.threadPosition
+            result.add(events.subList(fromIndex = start.threadPosition, toIndex = end.threadPosition + 1))
+            pos = end.threadPosition + 1
         }
         return result
     }
 
     override fun label(events: List<AtomicThreadEvent>): EventLabel? {
-        val start = events.first().ensure {
+        val start = events.first().takeIf {
             (it.label as? ActorLabel)?.actorKind == ActorLabelKind.Start
-        }
+        } ?: return null
         val end = events.last().ensure {
             (it.label as? ActorLabel)?.actorKind == ActorLabelKind.End
         }
         check((start.label as ActorLabel).actor == (end.label as ActorLabel).actor)
         return ActorLabel(ActorLabelKind.Span, (start.label as ActorLabel).actor)
+    }
+
+    override fun isCoverable(
+        events: List<AtomicThreadEvent>,
+        covering: Covering<ThreadEvent>,
+        clock: VectorClock
+    ): Boolean {
+        return covering.firstCoverable(events, clock)
     }
 
 }
@@ -281,41 +309,58 @@ fun Execution<AtomicThreadEvent>.aggregate(
     val result = MutableExecution<HyperThreadEvent>(1 + maxThreadID)
     val remapping = mutableMapOf<AtomicThreadEvent, HyperThreadEvent>()
     val aggregated = threadMap.mapValues { (_, events) -> aggregator.aggregate(events) }
+    val aggregatedClock = MutableVectorClock(1 + maxThreadID).apply {
+        for (i in 0 .. maxThreadID)
+            this[i] = 0
+    }
     while (!clock.observes(this)) {
         var position = -1
+        var found = false
         var events: List<AtomicThreadEvent>? = null
         for ((tid, list) in aggregated.entries) {
-            position = result.getThreadSize(tid)
+            position = aggregatedClock[tid]
             events = list.getOrNull(position) ?: continue
-            if (causalityCovering.coverable(events, clock))
+            if (aggregator.isCoverable(events, causalityCovering, clock)) {
+                found = true
                 break
+            }
         }
-        if (events == null)
-            error("Cannot aggregate events due to cyclic dependencies")
+        if (!found) {
+            // error("Cannot aggregate events due to cyclic dependencies")
+            break
+        }
         check(position >= 0)
+        check(events != null)
         check(events.isNotEmpty())
         val tid = events.first().threadId
-        val parent = result[tid]?.lastOrNull()
-        val dependencies = events
-            .flatMap { event -> event.dependencies.mapNotNull { remapping[it] } }
-            .distinct()
-        // TODO: extract into function, remove copy-paste with EventStructure::createEvent
-        val causalityClock = dependencies.fold(parent?.causalityClock?.copy() ?: MutableVectorClock(maxThreadID)) { clock, event ->
-            clock + event.causalityClock
-        }
-        val event = HyperThreadEvent(
-            label = aggregator.label(events)!!, // algebra.synchronize(events)!!,
-            threadId = tid,
-            parent = parent,
-            dependencies = dependencies,
-            causalityClock = causalityClock,
-            events = events,
-        )
-        result.add(event)
-        events.forEach {
-            remapping.put(it, event).ensureNull()
+        val label = aggregator.label(events)
+        if (label != null) {
+            val parent = result[tid]?.lastOrNull()
+            val dependencies = events
+                .flatMap { event -> event.dependencies.mapNotNull { remapping[it] } }
+                .distinct()
+            // TODO: extract into function, remove copy-paste with EventStructure::createEvent
+            val causalityClock =
+                dependencies.fold(parent?.causalityClock?.copy() ?: MutableVectorClock(1 + maxThreadID)) { clock, event ->
+                    clock + event.causalityClock
+                }
+            val threadPosition = parent?.let { it.threadPosition + 1 } ?: 0
+            causalityClock[tid] = threadPosition
+            val event = HyperThreadEvent(
+                label = label,
+                threadId = tid,
+                parent = parent,
+                dependencies = dependencies,
+                causalityClock = causalityClock,
+                events = events,
+            )
+            result.add(event)
+            events.forEach {
+                remapping.put(it, event).ensureNull()
+            }
         }
         clock.increment(tid, events.size)
+        aggregatedClock.increment(tid)
     }
     return result to remapping
 }

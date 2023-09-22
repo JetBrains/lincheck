@@ -35,6 +35,13 @@ data class HBClock(val clock: IntArray) {
         }
     }
 
+    fun reset(other: HBClock) {
+        check(clock.size == other.clock.size)
+        for (i in clock.indices) {
+            clock[i] = other.clock[i]
+        }
+    }
+
     override fun toString() = clock.joinToString(prefix = "[", separator = ",", postfix = "]") {
         if (it == 0) "-" else "$it"
     }
