@@ -20,6 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
+import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.implies
 import java.util.IdentityHashMap
@@ -92,6 +93,7 @@ sealed class EventLabel(
             is NotifyLabel                  -> LabelType.Notify
             is ParkLabel                    -> LabelType.Park
             is UnparkLabel                  -> LabelType.Unpark
+            is ActorLabel                   -> LabelType.Actor
         }
 
     /**
@@ -239,6 +241,7 @@ enum class LabelType {
     Notify,
     Park,
     Unpark,
+    Actor,
 }
 
 /**
@@ -1316,4 +1319,18 @@ data class UnparkLabel(
 
     override fun toString(): String =
         super.toString()
+}
+
+// TODO: generalize actor labels to method call/return labels?
+data class ActorLabel(
+    val actorKind: ActorLabelKind,
+    val actor: Actor
+) : EventLabel(actorKind.labelKind())
+
+enum class ActorLabelKind { Start, End, Span }
+
+fun ActorLabelKind.labelKind(): LabelKind = when (this) {
+    ActorLabelKind.Start -> LabelKind.Request
+    ActorLabelKind.End -> LabelKind.Response
+    ActorLabelKind.Span -> LabelKind.Receive
 }

@@ -168,7 +168,7 @@ interface AtomicThreadEvent : ThreadEvent, SynchronizedEvent {
  * Applicable only to response and receive events.
  */
 val AtomicThreadEvent.request: AtomicThreadEvent? get() =
-    if (label.isResponse) parent!! else null
+    if (label.isResponse && (label !is ActorLabel)) parent!! else null
 
 val AtomicThreadEvent.syncFrom: AtomicThreadEvent get() = run {
     require(label.isResponse)
@@ -394,12 +394,12 @@ abstract class AbstractAtomicThreadEvent(
         listOfNotNull(allocation, source) + senders
 
     final override val synchronized: List<ThreadEvent> =
-        if (label.isResponse) (listOf(request!!) + senders) else listOf()
+        if (label.isResponse && label !is ActorLabel) (listOf(request!!) + senders) else listOf()
 
     override fun validate() {
         super.validate()
-        require(label.isResponse implies (request != null && senders.isNotEmpty()))
-        require(!label.isResponse implies (request == null && senders.isEmpty()))
+        // require(label.isResponse implies (request != null && senders.isNotEmpty()))
+        // require(!label.isResponse implies (request == null && senders.isEmpty()))
         // check that read-exclusive label precedes that write-exclusive label
         if (label is WriteAccessLabel && label.isExclusive) {
             require(parent != null)

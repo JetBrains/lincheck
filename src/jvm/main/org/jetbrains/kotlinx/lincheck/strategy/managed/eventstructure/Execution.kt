@@ -223,22 +223,68 @@ fun<E : ThreadEvent> Execution<E>.resynchronize(algebra: SynchronizationAlgebra)
     return remapping
 }
 
+// TODO: make an interface instead of type-alias?
+interface EventAggregator {
+    fun aggregate(events: List<AtomicThreadEvent>): List<List<AtomicThreadEvent>>
+    fun label(events: List<AtomicThreadEvent>): EventLabel?
+}
+
+fun SynchronizationAlgebra.aggregator() = object : EventAggregator {
+
+    override fun aggregate(events: List<AtomicThreadEvent>): List<List<AtomicThreadEvent>> =
+        events.squash { x, y -> synchronizable(x.label, y.label) }
+
+    override fun label(events: List<AtomicThreadEvent>): EventLabel? =
+        synchronize(events)
+
+}
+
+val ActorAggregator = object : EventAggregator {
+
+    override fun aggregate(events: List<AtomicThreadEvent>): List<List<AtomicThreadEvent>> {
+        var pos = 0
+        val result = mutableListOf<List<AtomicThreadEvent>>()
+        while (pos < events.size) {
+            val start = events.subList(fromIndex = pos, toIndex = events.size).find {
+                (it.label as? ActorLabel)?.actorKind == ActorLabelKind.Start
+            } ?: break
+            val end = events.subList(fromIndex = start.threadPosition, toIndex = events.size).find {
+                (it.label as? ActorLabel)?.actorKind == ActorLabelKind.End
+            } ?: break
+            check((start.label as ActorLabel).actor == (end.label as ActorLabel).actor)
+            result.add(events.subList(fromIndex = start.threadPosition, toIndex = end.threadPosition))
+            pos = 1 + end.threadPosition
+        }
+        return result
+    }
+
+    override fun label(events: List<AtomicThreadEvent>): EventLabel? {
+        val start = events.first().ensure {
+            (it.label as? ActorLabel)?.actorKind == ActorLabelKind.Start
+        }
+        val end = events.last().ensure {
+            (it.label as? ActorLabel)?.actorKind == ActorLabelKind.End
+        }
+        check((start.label as ActorLabel).actor == (end.label as ActorLabel).actor)
+        return ActorLabel(ActorLabelKind.Span, (start.label as ActorLabel).actor)
+    }
+
+}
+
 // TODO: unify with Remapping class
 typealias EventRemapping = Map<AtomicThreadEvent, HyperThreadEvent>
 
 fun Execution<AtomicThreadEvent>.aggregate(
-    algebra: SynchronizationAlgebra
+    aggregator: EventAggregator
 ): Pair<Execution<HyperThreadEvent>, EventRemapping> {
     val clock = MutableVectorClock(1 + maxThreadID)
     val result = MutableExecution<HyperThreadEvent>(1 + maxThreadID)
     val remapping = mutableMapOf<AtomicThreadEvent, HyperThreadEvent>()
-    val squashed = threadMap.mapValues { (_, events) ->
-        events.squash { x, y -> algebra.synchronizable(x.label, y.label) }
-    }
+    val aggregated = threadMap.mapValues { (_, events) -> aggregator.aggregate(events) }
     while (!clock.observes(this)) {
         var position = -1
         var events: List<AtomicThreadEvent>? = null
-        for ((tid, list) in squashed.entries) {
+        for ((tid, list) in aggregated.entries) {
             position = result.getThreadSize(tid)
             events = list.getOrNull(position) ?: continue
             if (causalityCovering.coverable(events, clock))
@@ -258,7 +304,7 @@ fun Execution<AtomicThreadEvent>.aggregate(
             clock + event.causalityClock
         }
         val event = HyperThreadEvent(
-            label = algebra.synchronize(events)!!,
+            label = aggregator.label(events)!!, // algebra.synchronize(events)!!,
             threadId = tid,
             parent = parent,
             dependencies = dependencies,
@@ -282,7 +328,6 @@ fun Covering<AtomicThreadEvent>.aggregate(remapping: EventRemapping) =
             }
             .distinct()
     }
-
 
 abstract class ExecutionRelation<E : ThreadEvent>(
     val execution: Execution<E>,

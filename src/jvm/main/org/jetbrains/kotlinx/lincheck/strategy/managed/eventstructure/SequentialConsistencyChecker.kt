@@ -68,7 +68,7 @@ class SequentialConsistencyChecker(
         // get dependency covering to guide the search
         val covering = scApproximationRelation.buildExternalCovering()
         // aggregate atomic events before replaying
-        val (aggregated, remapping) = execution.aggregate(ThreadAggregationAlgebra)
+        val (aggregated, remapping) = execution.aggregate(ThreadAggregationAlgebra.aggregator())
         // check consistency by trying to replay execution using sequentially consistent abstract machine
         return checkByReplaying(aggregated, covering.aggregate(remapping))
     }
@@ -286,6 +286,7 @@ private data class SequentialConsistencyReplayer(
             label is ThreadEventLabel -> this
             // TODO: do we need to care about parking?
             label is ParkingEventLabel -> this
+            label is ActorLabel -> this
 
             else -> unreachable()
 

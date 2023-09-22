@@ -124,7 +124,7 @@ fun MutableExecutionFrontier<AtomicThreadEvent>.cutDanglingRequestEvents(): List
     for (threadId in threadIDs) {
         val lastEvent = get(threadId) ?: continue
         if (lastEvent.label.isRequest) {
-            lastEvent.parent?.label?.ensure { !it.isRequest }
+            lastEvent.parent?.label?.ensure { !it.isRequest || it is ActorLabel }
             set(threadId, lastEvent.parent)
             cutEvents.add(lastEvent)
         }

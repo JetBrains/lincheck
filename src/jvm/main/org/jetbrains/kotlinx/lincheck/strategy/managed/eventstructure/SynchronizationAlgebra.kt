@@ -421,18 +421,21 @@ val ThreadAggregationAlgebra = object : SynchronizationAlgebra {
     override fun syncType(label: EventLabel): SynchronizationType? = when (label) {
         is MemoryAccessLabel    -> MemoryAccessAggregationAlgebra.syncType(label)
         is MutexLabel           -> MutexAggregationAlgebra.syncType(label)
+        is ActorLabel           -> null
         else                    -> ReceiveAggregationAlgebra.syncType(label)
     }
 
     override fun synchronize(label: EventLabel, other: EventLabel): EventLabel? = when (label) {
         is MemoryAccessLabel    -> MemoryAccessAggregationAlgebra.synchronize(label, other)
         is MutexLabel           -> MutexSynchronizationAlgebra.synchronize(label, other)
+        is ActorLabel           -> null
         else                    -> ReceiveAggregationAlgebra.synchronize(label, other)
     }
 
     override fun synchronizesInto(label: EventLabel, other: EventLabel): Boolean = when (label) {
         is MemoryAccessLabel    -> MemoryAccessAggregationAlgebra.synchronizesInto(label, other)
         is MutexLabel           -> MutexSynchronizationAlgebra.synchronizesInto(label, other)
+        is ActorLabel           -> false
         else                    -> ReceiveAggregationAlgebra.synchronizesInto(label, other)
     }
 

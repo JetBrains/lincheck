@@ -253,6 +253,18 @@ class EventStructureStrategy(
         eventStructure.addThreadFinishEvent(iThread)
         super.onFinish(iThread)
     }
+
+    override fun onActorStart(iThread: Int) {
+        super.onActorStart(iThread)
+        val actor = scenario[1 + iThread][currentActorId[iThread]]
+        eventStructure.addActorStartEvent(iThread, actor)
+    }
+
+    override fun onActorEnd(iThread: Int) {
+        super.onActorEnd(iThread)
+        val actor = scenario[1 + iThread][currentActorId[iThread]]
+        eventStructure.addActorEndEvent(iThread, actor)
+    }
 }
 
 typealias InternalThreadSwitchCallback = (ThreadID) -> Unit

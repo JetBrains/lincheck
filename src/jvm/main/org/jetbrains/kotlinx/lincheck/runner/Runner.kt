@@ -142,6 +142,14 @@ abstract class Runner protected constructor(
         strategy.onActorStart(iThread)
     }
 
+    /**
+     * Is invoked after each actor execution from the specified thread.
+     * The invocations are inserted into the generated code.
+     */
+    fun onActorEnd(iThread: Int) {
+        strategy.onActorEnd(iThread)
+    }
+
     fun beforeParallelPart() {
         strategy.beforeParallelPart()
     }

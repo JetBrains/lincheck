@@ -50,4 +50,9 @@ abstract class Strategy protected constructor(
      * Is invoked before each actor execution.
      */
     open fun onActorStart(iThread: Int) {}
+
+    /**
+     * Is invoked after each actor execution.
+     */
+    open fun onActorEnd(iThread: Int) {}
 }

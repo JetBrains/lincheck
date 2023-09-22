@@ -56,6 +56,8 @@ public class TestThreadExecutionGenerator {
     private static final Method RUNNER_ON_FAILURE_METHOD = new Method("onFailure", Type.VOID_TYPE, new Type[]{Type.INT_TYPE, THROWABLE_TYPE});
     private static final Method RUNNER_ON_ACTOR_START = new Method("onActorStart", Type.VOID_TYPE, new Type[]{ Type.INT_TYPE });
 
+    private static final Method RUNNER_ON_ACTOR_END = new Method("onActorEnd", Type.VOID_TYPE, new Type[]{ Type.INT_TYPE });
+
     private static final Type TEST_THREAD_EXECUTION_TYPE = getType(TestThreadExecution.class);
     private static final Method TEST_THREAD_EXECUTION_CONSTRUCTOR;
     private static final Method TEST_THREAD_EXECUTION_INC_CLOCK = new Method("incClock", VOID_TYPE, NO_ARGS);
@@ -279,6 +281,11 @@ public class TestThreadExecutionGenerator {
             mv.throwException();
             mv.visitLabel(skipHandlers);
 
+            // onActorEnd call
+            mv.loadThis();
+            mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
+            mv.push(iThread);
+            mv.invokeVirtual(RUNNER_TYPE, RUNNER_ON_ACTOR_END);
             // Increment the clock
             mv.loadThis();
             mv.invokeVirtual(TEST_THREAD_EXECUTION_TYPE, TEST_THREAD_EXECUTION_INC_CLOCK);

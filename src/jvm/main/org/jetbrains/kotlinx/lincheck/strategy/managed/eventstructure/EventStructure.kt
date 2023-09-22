@@ -700,6 +700,18 @@ class EventStructure(
         return (chosenEvent to responseEvents)
     }
 
+    private fun addActorEvent(iThread: Int, label: ActorLabel): AtomicThreadEvent {
+        tryReplayEvent(iThread)?.let { event ->
+            currentRemapping.replay(event, label)
+            addEventToCurrentExecution(event)
+            return event
+        }
+        val parent = playedFrontier[iThread]
+        return addEvent(iThread, label, parent, dependencies = emptyList())!!.also { event ->
+            addEventToCurrentExecution(event)
+        }
+    }
+
     fun isBlockedRequest(request: AtomicThreadEvent): Boolean {
         require(request.label.isRequest && request.label.isBlocking)
         return (request == playedFrontier[request.threadId])
@@ -894,6 +906,16 @@ class EventStructure(
     fun addUnparkEvent(iThread: Int, unparkingThreadId: Int): AtomicThreadEvent {
         val label = UnparkLabel(unparkingThreadId)
         return addSendEvent(iThread, label)
+    }
+
+    fun addActorStartEvent(iThread: Int, actor: Actor): AtomicThreadEvent {
+        val label = ActorLabel(ActorLabelKind.Start, actor)
+        return addActorEvent(iThread, label)
+    }
+
+    fun addActorEndEvent(iThread: Int, actor: Actor): AtomicThreadEvent {
+        val label = ActorLabel(ActorLabelKind.End, actor)
+        return addActorEvent(iThread, label)
     }
 
     /**
