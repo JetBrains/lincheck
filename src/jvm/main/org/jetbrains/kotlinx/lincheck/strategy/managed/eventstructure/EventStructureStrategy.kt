@@ -156,18 +156,19 @@ class EventStructureStrategy(
     //   for example, we can compute happens before relation induced by
     //   the event structure and pass it on
     private fun patchResultsClock(execution: Execution<AtomicThreadEvent>, executionResult: ExecutionResult) {
-        // for (results in executionResult.parallelResultsWithClock) {
-        //     for (result in results) {
-        //         result.clockOnStart.reset()
-        //     }
-        // }
+        val hbClockSize = executionResult.parallelResultsWithClock.size
         val (actorsExecution, _) = execution.aggregate(ActorAggregator(execution))
-        check(actorsExecution.threadIDs.size == executionResult.parallelResultsWithClock.size + 2)
+        check(actorsExecution.threadIDs.size == hbClockSize + 2)
         for (tid in executionResult.parallelResultsWithClock.indices) {
             val actorEvents = actorsExecution[tid]!!
             val actorResults = executionResult.parallelResultsWithClock[tid]
             actorResults.forEachIndexed { i, result ->
-                result.clockOnStart.reset(actorEvents[i].causalityClock.toHBClock(tid, i))
+                val actorEvent = actorEvents.getOrNull(i)
+                val prevHBClock = actorResults.getOrNull(i - 1)?.clockOnStart?.copy()
+                    ?: emptyClock(hbClockSize)
+                val hbClock = actorEvent?.causalityClock?.toHBClock(tid, i)
+                    ?: prevHBClock.apply { clock[tid] = i }
+                result.clockOnStart.reset(hbClock)
             }
         }
     }
