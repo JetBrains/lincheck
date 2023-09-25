@@ -220,7 +220,6 @@ fun<E : ThreadEvent> Execution<E>.enumerationOrderSortedList(): List<E> =
 
 fun<E : ThreadEvent> Execution<E>.resynchronize(algebra: SynchronizationAlgebra): Remapping {
     val remapping = Remapping()
-    // TODO: refactor, simplify & unify cases
     for (event in enumerationOrderSortedList()) {
         remapping.resynchronize(event, algebra)
     }
