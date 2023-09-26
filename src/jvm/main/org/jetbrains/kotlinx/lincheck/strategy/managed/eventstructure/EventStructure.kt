@@ -116,19 +116,6 @@ class EventStructure(
         root = addRootEvent()
     }
 
-    fun getThreadRoot(iThread: Int): ThreadEvent? =
-        currentExecution.firstEvent(iThread)?.also { event ->
-            check(event.label is ThreadStartLabel && event.label.isRequest)
-        }
-
-    fun isStartedThread(iThread: Int): Boolean =
-        getThreadRoot(iThread) != null
-
-    fun isFinishedThread(iThread: Int): Boolean =
-        currentExecution.lastEvent(iThread)?.let { event ->
-            event.label is ThreadFinishLabel
-        } ?: false
-
     fun startNextExploration(): Boolean {
         loop@while (true) {
             val event = rollbackToEvent { !it.visited }
