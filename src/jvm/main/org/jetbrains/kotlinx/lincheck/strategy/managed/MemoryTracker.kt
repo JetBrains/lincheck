@@ -29,7 +29,9 @@ import org.jetbrains.kotlinx.lincheck.ensureNull
  */
 abstract class MemoryTracker {
 
-    abstract val allocatedObjects: Set<Any>
+    abstract fun getObject(id: ObjectID): OpaqueValue?
+
+    abstract fun getObjectID(value: OpaqueValue?): ObjectID
 
     abstract fun objectAllocation(iThread: Int, value: OpaqueValue)
 
@@ -52,6 +54,7 @@ abstract class MemoryTracker {
 }
 
 typealias MemoryInitializer = (MemoryLocation) -> OpaqueValue?
+typealias MemoryIDInitializer = (MemoryLocation) -> ObjectID
 
 /**
  * Simple straightforward implementation of memory tracking.
@@ -64,24 +67,50 @@ internal class PlainMemoryTracker(
     val memoryInitializer: MemoryInitializer
 ) : MemoryTracker() {
 
-    private val objects = IdentityHashMap<Any, Unit>()
+    private var nextObjectID = 1 + STATIC_OBJECT_ID
 
-    override val allocatedObjects: Set<Any>
-        get() = objects.keys
+    private val objectIdIndex = HashMap<ObjectID, OpaqueValue>()
+    private val objectIndex = IdentityHashMap<Any, ObjectID>()
 
-    private val memory = HashMap<MemoryLocation, OpaqueValue>()
+    private val memory = HashMap<MemoryLocation, ObjectID>()
 
-    override fun objectAllocation(iThread: Int, value: OpaqueValue) {
-        objects.put(value.unwrap(), Unit).ensureNull()
+    override fun getObject(id: ObjectID): OpaqueValue? {
+        if (id == NULL_OBJECT_ID)
+            return null
+        return objectIdIndex[id]
     }
 
-    override fun writeValue(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?) =
-        memory.set(location, value ?: NULL)
+    override fun getObjectID(value: OpaqueValue?): ObjectID {
+        if (value == null)
+            return NULL_OBJECT_ID
+        return objectIndex[value.unwrap()] ?: INVALID_OBJECT_ID
+    }
 
-    override fun readValue(iThread: Int, location: MemoryLocation, kClass: KClass<*>): OpaqueValue? =
-        memory
-            .computeIfAbsent(location) { memoryInitializer(it) ?: NULL }
-            .takeIf { it != NULL }
+    private fun computeObjectID(value: OpaqueValue?): ObjectID {
+        if (value == null)
+            return NULL_OBJECT_ID
+        return objectIndex.computeIfAbsent(value.unwrap()) {
+            nextObjectID++
+        }
+    }
+
+    override fun objectAllocation(iThread: Int, value: OpaqueValue) {
+        val id = nextObjectID++
+        objectIdIndex.put(id, value).ensureNull()
+        objectIndex.put(value.unwrap(), id).ensureNull()
+    }
+
+    override fun writeValue(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?) {
+        memory[location] = computeObjectID(value)
+    }
+
+    override fun readValue(iThread: Int, location: MemoryLocation, kClass: KClass<*>): OpaqueValue? {
+        val valueID = memory.computeIfAbsent(location) {
+            val value = memoryInitializer(it)
+            computeObjectID(value)
+        }
+        return getObject(valueID)
+    }
 
     override fun compareAndSet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, expected: OpaqueValue?, desired: OpaqueValue?): Boolean {
         if (expected == readValue(iThread, location, kClass)) {
@@ -106,13 +135,14 @@ internal class PlainMemoryTracker(
     }
 
     override fun reset() {
-        objects.clear()
+        objectIdIndex.clear()
+        objectIndex.clear()
         memory.clear()
     }
 
     override fun dumpMemory() {
-        for ((location, value) in memory.entries) {
-            location.write(value.takeIf { it != NULL }?.unwrap())
+        for ((location, valueID) in memory.entries) {
+            location.write(this::getObject, valueID)
         }
     }
 
@@ -127,7 +157,4 @@ internal class PlainMemoryTracker(
         return memory.hashCode()
     }
 
-    companion object {
-        private val NULL : OpaqueValue = Any().opaque()
-    }
 }

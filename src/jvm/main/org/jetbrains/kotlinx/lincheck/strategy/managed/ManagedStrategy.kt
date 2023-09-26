@@ -116,7 +116,10 @@ abstract class ManagedStrategy(
     private val suspendedFunctionsStack = Array(nThreads) { mutableListOf<Int>() }
 
     protected val memoryInitializer: MemoryInitializer = { location ->
-        runUntracking(currentThreadNumber()) { location.read() }?.opaque()
+        runUntracking(currentThreadNumber()) {
+            val value = location.read(memoryTracker::getObject)?.opaque()
+            memoryTracker.getObjectID(value)
+        }
     }
 
     init {
@@ -452,6 +455,14 @@ abstract class ManagedStrategy(
     private fun inIgnoredSection(iThread: Int): Boolean =
         !isTestThread(iThread) || ignoredSectionDepth[iThread] > 0 || suddenInvocationResult != null
 
+    fun getObject(id: ObjectID): Any? {
+        return memoryTracker.getObject(id)?.unwrap()
+    }
+
+    fun getObjectID(obj: Any?): Int {
+        return memoryTracker.getObjectID(obj?.opaque())
+    }
+
     // == LISTENING METHODS ==
 
     internal fun onObjectAllocation(iThread: Int, obj: Any) {
@@ -464,7 +475,7 @@ abstract class ManagedStrategy(
     internal fun onObjectInitialization(iThread: Int, obj: Any) {
         if (!shouldTrackMemory(iThread))
             return
-        if (obj !in memoryTracker.allocatedObjects) {
+        if (memoryTracker.getObjectID(obj.opaque()) == INVALID_OBJECT_ID) {
             memoryTracker.objectAllocation(iThread, obj.opaque())
         }
     }

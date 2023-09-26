@@ -279,10 +279,17 @@ class EventStructureStrategy(
 
 typealias InternalThreadSwitchCallback = (ThreadID) -> Unit
 
-private class EventStructureMemoryTracker(private val eventStructure: EventStructure): MemoryTracker() {
+private class EventStructureMemoryTracker(
+    private val eventStructure: EventStructure,
+): MemoryTracker() {
 
-    override val allocatedObjects: Set<Any>
-        get() = eventStructure.allocatedObjects
+    override fun getObject(id: ObjectID): OpaqueValue? {
+        return eventStructure.getObject(id)
+    }
+
+    override fun getObjectID(value: OpaqueValue?): ObjectID {
+        return eventStructure.getObjectID(value)
+    }
 
     override fun objectAllocation(iThread: Int, value: OpaqueValue) {
         eventStructure.addObjectAllocationEvent(iThread, value)
@@ -294,12 +301,14 @@ private class EventStructureMemoryTracker(private val eventStructure: EventStruc
 
     override fun readValue(iThread: Int, location: MemoryLocation, kClass: KClass<*>): OpaqueValue? {
         val readEvent = eventStructure.addReadEvent(iThread, location, kClass)
-        return (readEvent.label as ReadAccessLabel).value
+        val valueID = (readEvent.label as ReadAccessLabel).value
+        return eventStructure.getObject(valueID)
     }
 
     override fun compareAndSet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, expected: OpaqueValue?, desired: OpaqueValue?): Boolean {
         val readEvent = eventStructure.addReadEvent(iThread, location, kClass, isExclusive = true)
-        val value = (readEvent.label as ReadAccessLabel).value
+        val valueID = (readEvent.label as ReadAccessLabel).value
+        val value = eventStructure.getObject(valueID)
         if (value != expected)
             return false
         eventStructure.addWriteEvent(iThread, location, kClass, desired, isExclusive = true)
@@ -310,10 +319,8 @@ private class EventStructureMemoryTracker(private val eventStructure: EventStruc
 
     private fun fetchAndAdd(iThread: Int, memoryLocationId: MemoryLocation, kClass: KClass<*>, delta: Number, incKind: IncrementKind): OpaqueValue? {
         val readEvent = eventStructure.addReadEvent(iThread, memoryLocationId, kClass, isExclusive = true)
-        val readLabel = readEvent.label as ReadAccessLabel
-        // TODO: should we use some sub-type check instead of equality check?
-        check(readLabel.kClass == kClass)
-        val oldValue = readLabel.value!!
+        val oldValueID = (readEvent.label as ReadAccessLabel).value
+        val oldValue = eventStructure.getObject(oldValueID)!!
         val newValue = oldValue + delta
         eventStructure.addWriteEvent(iThread, memoryLocationId, kClass, newValue, isExclusive = true)
         return when (incKind) {
@@ -332,9 +339,9 @@ private class EventStructureMemoryTracker(private val eventStructure: EventStruc
 
     override fun getAndSet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?): OpaqueValue? {
         val readEvent = eventStructure.addReadEvent(iThread, location, kClass, isExclusive = true)
-        val readValue = (readEvent.label as ReadAccessLabel).value
+        val readValueID = (readEvent.label as ReadAccessLabel).value
         eventStructure.addWriteEvent(iThread, location, kClass, value, isExclusive = true)
-        return readValue
+        return eventStructure.getObject(readValueID)
     }
 
     override fun dumpMemory() {
@@ -350,7 +357,8 @@ private class EventStructureMemoryTracker(private val eventStructure: EventStruc
             // we choose one of the racy final writes non-deterministically and dump it to the memory
             val write = finalWrites.firstOrNull() ?: continue
             val label = write.label.asWriteAccessLabel(location).ensureNotNull()
-            location.write(label.value?.unwrap())
+            val value = eventStructure.getObject(label.value)
+            location.write(this::getObject, value?.unwrap())
         }
     }
 

@@ -25,19 +25,6 @@ import java.lang.reflect.*
 import java.util.*
 import java.util.concurrent.atomic.*
 
-interface MemoryLocation {
-    val obj: Any
-
-    val isAtomic: Boolean
-
-    fun read(): Any?
-    fun write(value: Any?)
-
-    fun replay(location: MemoryLocation)
-
-    fun remap(remapping: Remapping)
-}
-
 /**
  * Assigns identifiers to every shared memory location
  * accessed directly or through reflections (e.g., through AFU or VarHandle).
@@ -51,33 +38,36 @@ internal class MemoryLocationLabeler {
         StaticFieldMemoryLocation(strategy, className, fieldName)
 
     fun labelObjectField(strategy: ManagedStrategy, obj: Any, className: String, fieldName: String): MemoryLocation =
-        ObjectFieldMemoryLocation(strategy, obj, className, fieldName)
+        ObjectFieldMemoryLocation(strategy, obj.javaClass, strategy.getObjectID(obj), className, fieldName)
 
     fun labelArrayElement(strategy: ManagedStrategy, array: Any, position: Int): MemoryLocation =
-        ArrayElementMemoryLocation(strategy, array, position)
+        ArrayElementMemoryLocation(strategy, array.javaClass, strategy.getObjectID(array), position)
 
     fun labelAtomicPrimitive(strategy: ManagedStrategy, primitive: Any): MemoryLocation =
-        AtomicPrimitiveMemoryLocation(strategy, primitive)
+        AtomicPrimitiveMemoryLocation(strategy, primitive.javaClass, strategy.getObjectID(primitive))
 
     fun labelAtomicReflectionFieldAccess(strategy: ManagedStrategy, reflection: Any, obj: Any): MemoryLocation {
+        val id = strategy.getObjectID(obj)
         val descriptor = lookupAtomicReflectionDescriptor(reflection) as AtomicReflectionFieldAccessDescriptor
-        return ObjectFieldMemoryLocation(strategy, obj, descriptor.className, descriptor.fieldName, isAtomic = true)
+        return ObjectFieldMemoryLocation(strategy, obj.javaClass, id, descriptor.className, descriptor.fieldName)
     }
 
     fun labelAtomicReflectionArrayAccess(strategy: ManagedStrategy, reflection: Any, array: Any, index: Int): MemoryLocation {
         check(lookupAtomicReflectionDescriptor(reflection) is AtomicReflectionArrayAccessDescriptor)
-        return ArrayElementMemoryLocation(strategy, array, index)
+        val id = strategy.getObjectID(array)
+        return ArrayElementMemoryLocation(strategy, array.javaClass, id, index)
     }
 
     fun labelUnsafeAccess(strategy: ManagedStrategy, unsafe: Any, obj: Any, offset: Long): MemoryLocation {
+        val id = strategy.getObjectID(obj)
         if (isArrayObject(obj)) {
             val descriptor = lookupUnsafeArrayDescriptor(strategy, obj)
             val index = (offset - descriptor.baseOffset) shr descriptor.indexShift
-            return ArrayElementMemoryLocation(strategy, obj, index.toInt())
+            return ArrayElementMemoryLocation(strategy, obj.javaClass, id, index.toInt())
         }
         val className = normalizeClassName(strategy, obj.javaClass.name)
         val fieldName = lookupFieldNameByOffset(strategy, obj, offset)
-        return ObjectFieldMemoryLocation(strategy, obj, className, fieldName)
+        return ObjectFieldMemoryLocation(strategy, obj.javaClass, id, className, fieldName)
     }
 
     fun getAtomicReflectionName(reflection: Any): String {
@@ -172,296 +162,6 @@ internal class MemoryLocationLabeler {
 
 }
 
-internal class StaticFieldMemoryLocation(
-    private val strategy: ManagedStrategy,
-    val className: String,
-    val fieldName: String
-) : MemoryLocation {
-
-    override val obj: Any = STATIC_OBJECT
-
-    override val isAtomic = false
-
-    private val field by lazy {
-        getClass(strategy, className = className).getDeclaredField(fieldName)
-            .apply { isAccessible = true }
-    }
-
-    override fun read(): Any? = field.get(null)
-
-    override fun write(value: Any?) {
-        field.set(null, value)
-    }
-
-    override fun replay(location: MemoryLocation) {
-        check(location is StaticFieldMemoryLocation &&
-            className == location.className &&
-            fieldName == location.fieldName) {
-            "Memory location $this cannot be replayed by $location"
-        }
-    }
-
-    override fun remap(remapping: Remapping) {}
-
-    override fun equals(other: Any?): Boolean =
-        other is StaticFieldMemoryLocation && (className == other.className && fieldName == other.fieldName)
-
-    override fun hashCode(): Int =
-        Objects.hash(className, fieldName)
-
-    override fun toString(): String = "$className.$fieldName"
-
-}
-
-// TODO: override `toString` ?
-internal val STATIC_OBJECT = Any()
-
-internal class ObjectFieldMemoryLocation(
-    private val strategy: ManagedStrategy,
-    private var _obj: Any,
-    val className: String,
-    val fieldName: String,
-    override val isAtomic: Boolean = false
-) : MemoryLocation {
-
-    override val obj: Any
-        get() = _obj
-
-    private val field by lazy {
-        val clazz = getClass(strategy, this.obj, className = className)
-        getField(clazz, className, fieldName)
-            .apply { isAccessible = true }
-    }
-
-    override fun read(): Any? = field.get(this.obj)
-
-    override fun write(value: Any?) {
-        field.set(this.obj, value)
-    }
-
-    override fun replay(location: MemoryLocation) {
-        check(location is ObjectFieldMemoryLocation &&
-            this.obj === location.obj &&
-            className == location.className &&
-            fieldName == location.fieldName) {
-            "Memory location $this cannot be replayed by ${location}."
-        }
-    }
-
-    override fun remap(remapping: Remapping) {
-        remapping[this.obj]?.also { _obj = it }
-    }
-
-    override fun equals(other: Any?): Boolean =
-        other is ObjectFieldMemoryLocation && (this.obj === other.obj && className == other.className && fieldName == other.fieldName)
-
-    override fun hashCode(): Int =
-        Objects.hash(System.identityHashCode(this.obj), fieldName)
-
-    override fun toString(): String =
-        // TODO: also print className if it does not match actual name of the obj's class
-        "${opaqueString(this.obj)}::$fieldName"
-
-}
-
-private fun isArrayObject(obj: Any): Boolean = when (obj) {
-    is ByteArray,
-    is ShortArray,
-    is IntArray,
-    is LongArray,
-    is FloatArray,
-    is DoubleArray,
-    is CharArray,
-    is BooleanArray,
-    is Array<*>,
-    is AtomicIntegerArray,
-    is AtomicLongArray,
-    is AtomicReferenceArray<*>
-            -> true
-    else    -> false
-}
-
-internal class ArrayElementMemoryLocation(
-    private val strategy: ManagedStrategy,
-    private var _array: Any,
-    val index: Int
-) : MemoryLocation {
-
-    val array: Any get() = _array
-
-    override val obj: Any get() = array
-
-    override val isAtomic: Boolean = when (array) {
-        is AtomicIntegerArray,
-        is AtomicLongArray,
-        is AtomicReferenceArray<*> -> true
-        else -> false
-    }
-
-    private val getMethod by lazy {
-        // TODO: can we use getOpaque() for atomic arrays here?
-        getClass(strategy, array).methods.first { it.name == "get" }
-            .apply { isAccessible = true }
-    }
-
-    private val setMethod by lazy {
-        // TODO: can we use setOpaque() for atomic arrays here?
-        getClass(strategy, array).methods.first { it.name == "set" }
-            .apply { isAccessible = true }
-    }
-
-    override fun read(): Any? = when (array) {
-        is IntArray     -> (array as IntArray)[index]
-        is ByteArray    -> (array as ByteArray)[index]
-        is ShortArray   -> (array as ShortArray)[index]
-        is LongArray    -> (array as LongArray)[index]
-        is FloatArray   -> (array as FloatArray)[index]
-        is DoubleArray  -> (array as DoubleArray)[index]
-        is CharArray    -> (array as CharArray)[index]
-        is BooleanArray -> (array as BooleanArray)[index]
-        is Array<*>     -> (array as Array<*>)[index]
-
-        // TODO: can we use getOpaque() here?
-        is AtomicIntegerArray       -> (array as AtomicIntegerArray)[index]
-        is AtomicLongArray          -> (array as AtomicLongArray)[index]
-        is AtomicReferenceArray<*>  -> (array as AtomicReferenceArray<*>)[index]
-
-        else -> getMethod.invoke(array, index)
-    }
-
-    override fun write(value: Any?) = when (array) {
-        is IntArray     -> (array as IntArray)[index]     = (value as Int)
-        is ByteArray    -> (array as ByteArray)[index]    = (value as Byte)
-        is ShortArray   -> (array as ShortArray)[index]   = (value as Short)
-        is LongArray    -> (array as LongArray)[index]    = (value as Long)
-        is FloatArray   -> (array as FloatArray)[index]   = (value as Float)
-        is DoubleArray  -> (array as DoubleArray)[index]  = (value as Double)
-        is CharArray    -> (array as CharArray)[index]    = (value as Char)
-        is BooleanArray -> (array as BooleanArray)[index] = (value as Boolean)
-        is Array<*>     -> (array as Array<Any?>)[index]  = value
-
-        // TODO: can we use setOpaque() here?
-        is AtomicIntegerArray       -> (array as AtomicIntegerArray)[index]         = (value as Int)
-        is AtomicLongArray          -> (array as AtomicLongArray)[index]            = (value as Long)
-        is AtomicReferenceArray<*>  -> (array as AtomicReferenceArray<Any?>)[index] = value
-
-        else -> { setMethod.invoke(array, index, value); Unit }
-    }
-
-    override fun replay(location: MemoryLocation) {
-        check(location is ArrayElementMemoryLocation &&
-            array === location.array &&
-            index == location.index) {
-            "Memory location $this cannot be replayed by ${location}."
-        }
-    }
-
-    override fun remap(remapping: Remapping) {
-        remapping[array]?.also { _array = it }
-    }
-
-    override fun equals(other: Any?): Boolean =
-        other is ArrayElementMemoryLocation && (array === other.array && index == other.index)
-
-    override fun hashCode(): Int =
-        Objects.hash(System.identityHashCode(array), index)
-
-    override fun toString(): String = "${opaqueString(array)}[$index]"
-}
-
-internal class AtomicPrimitiveMemoryLocation(
-    private val strategy: ManagedStrategy,
-    private var _primitive: Any
-) : MemoryLocation {
-
-    val primitive: Any get() = _primitive
-
-    override val obj: Any get() = primitive
-
-    override val isAtomic = true
-
-    private val getMethod by lazy {
-        // TODO: can we use getOpaque() here?
-        getClass(strategy, primitive).methods.first { it.name == "get" }
-            .apply { isAccessible = true }
-    }
-
-    private val setMethod by lazy {
-        // TODO: can we use setOpaque() here?
-        getClass(strategy, primitive).methods.first { it.name == "set" }
-            .apply { isAccessible = true }
-    }
-
-    override fun read(): Any? = when (primitive) {
-        // TODO: can we use getOpaque() here?
-        is AtomicBoolean        -> (primitive as AtomicBoolean).get()
-        is AtomicInteger        -> (primitive as AtomicInteger).get()
-        is AtomicLong           -> (primitive as AtomicLong).get()
-        is AtomicReference<*>   -> (primitive as AtomicReference<*>).get()
-        else                    -> getMethod.invoke(primitive)
-    }
-
-    override fun write(value: Any?) = when (primitive) {
-        // TODO: can we use setOpaque() here?
-        is AtomicBoolean        -> (primitive as AtomicBoolean).set(value as Boolean)
-        is AtomicInteger        -> (primitive as AtomicInteger).set(value as Int)
-        is AtomicLong           -> (primitive as AtomicLong).set(value as Long)
-        is AtomicReference<*>   -> (primitive as AtomicReference<Any>).set(value)
-        else                    -> { setMethod.invoke(primitive, value); Unit }
-    }
-
-    override fun replay(location: MemoryLocation) {
-        check(location is AtomicPrimitiveMemoryLocation &&
-            primitive === location.primitive) {
-            "Memory location $this cannot be replayed by ${location}."
-        }
-    }
-
-    override fun remap(remapping: Remapping) {
-        remapping[primitive]?.also { _primitive = it }
-    }
-
-    override fun equals(other: Any?): Boolean =
-        other is AtomicPrimitiveMemoryLocation && primitive === other.primitive
-
-    override fun hashCode(): Int = System.identityHashCode(primitive)
-
-    override fun toString(): String = opaqueString(primitive)
-
-}
-
-private fun matchClassName(clazz: Class<*>, className: String) =
-    clazz.name.endsWith(className) || (clazz.canonicalName?.endsWith(className) ?: false)
-
-private fun getClass(strategy: ManagedStrategy, obj: Any? = null, className: String? = null): Class<*> {
-    if (className == null) {
-        return obj!!.javaClass
-    }
-    if (obj == null) {
-        return strategy.classLoader.loadClass(className)
-    }
-    if (matchClassName(obj.javaClass, className)) {
-        return obj.javaClass
-    }
-    var superClass = obj.javaClass.superclass
-    while (superClass != null) {
-        if (matchClassName(superClass, className))
-            return superClass
-        superClass = superClass.superclass
-    }
-    throw IllegalStateException("Cannot find class $className for object $obj!")
-}
-
-private fun getField(clazz: Class<*>, className: String, fieldName: String): Field {
-    var currentClass: Class<*>? = clazz
-    do {
-        currentClass?.fields?.firstOrNull { it.name == fieldName }?.let { return it }
-        currentClass?.declaredFields?.firstOrNull { it.name == fieldName }?.let { return it }
-        currentClass = currentClass?.superclass
-    } while (currentClass != null)
-    throw IllegalStateException("Cannot find field $className::$fieldName for class $clazz!")
-}
-
 private sealed class AtomicReflectionAccessDescriptor
 
 private data class AtomicReflectionFieldAccessDescriptor(
@@ -488,4 +188,21 @@ private data class UnsafeArrayAccessDescriptor(
 
     val indexShift: Int
         get() = Integer.numberOfLeadingZeros(indexScale)
+}
+
+private fun isArrayObject(obj: Any): Boolean = when (obj) {
+    is ByteArray,
+    is ShortArray,
+    is IntArray,
+    is LongArray,
+    is FloatArray,
+    is DoubleArray,
+    is CharArray,
+    is BooleanArray,
+    is Array<*>,
+    is AtomicIntegerArray,
+    is AtomicLongArray,
+    is AtomicReferenceArray<*>
+    -> true
+    else    -> false
 }

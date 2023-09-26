@@ -102,7 +102,7 @@ sealed class EventLabel(
      * If a particular subclass of labels does not access any object,
      * then this property is null.
      */
-    open val obj: OpaqueValue? = null
+    open val objID: ObjectID = NULL_OBJECT_ID
 
     /**
      * An index of a label which is used to group semantically similar and
@@ -262,28 +262,27 @@ enum class LabelType {
 // TODO: now that we have ObjectAllocationLabel we can get rid of it?
 class InitializationLabel(
     val mainThreadID: ThreadID,
-    val memoryInitializer: MemoryInitializer,
-    val isExternalObject: (Any) -> Boolean,
+    val memoryInitializer: MemoryIDInitializer,
 ) : EventLabel(LabelKind.Send) {
 
     private val objectsAllocations =
-        IdentityHashMap<Any, ObjectAllocationLabel>()
+        IdentityHashMap<ObjectID, ObjectAllocationLabel>()
+
+    fun trackExternalObject(objID: ObjectID) {
+        objectsAllocations[objID] = ObjectAllocationLabel(objID, memoryInitializer)
+    }
 
     fun asThreadForkLabel() =
         ThreadForkLabel(setOf(mainThreadID))
 
-    fun asObjectAllocationLabel(obj: Any): ObjectAllocationLabel? =
-        if (isExternalObject(obj))
-            objectsAllocations.computeIfAbsent(obj) {
-                ObjectAllocationLabel(obj.opaque(), memoryInitializer)
-            }
-        else null
+    fun asObjectAllocationLabel(objID: ObjectID): ObjectAllocationLabel? =
+        objectsAllocations[objID]
 
     fun asWriteAccessLabel(location: MemoryLocation) =
-        asObjectAllocationLabel(location.obj)?.asWriteAccessLabel(location)
+        asObjectAllocationLabel(location.objID)?.asWriteAccessLabel(location)
 
-    fun asUnlockLabel(mutex: OpaqueValue) =
-        asObjectAllocationLabel(mutex.unwrap())?.asUnlockLabel(mutex)
+    fun asUnlockLabel(mutex: ObjectID) =
+        asObjectAllocationLabel(mutex)?.asUnlockLabel(mutex)
 
     override fun toString(): String = "Init"
 
@@ -494,71 +493,44 @@ fun EventLabel.asThreadEventLabel(): ThreadEventLabel? = when (this) {
 }
 
 data class ObjectAllocationLabel(
-    private var _obj: OpaqueValue,
-    val memoryInitializer: MemoryInitializer,
+    override val objID: ObjectID,
+    val memoryInitializer: MemoryIDInitializer,
 ) : EventLabel(kind = LabelKind.Send) {
 
-    override val obj: OpaqueValue
-        get() = _obj
+    init {
+        require(objID != NULL_OBJECT_ID)
+    }
 
     // TODO: reset on replay!
-    private val initialValues = HashMap<MemoryLocation, OpaqueValue>()
+    private val initialValues = HashMap<MemoryLocation, ObjectID>()
 
-    private fun initialValue(location: MemoryLocation): OpaqueValue? {
-        require(location.obj === obj.unwrap())
-        return initialValues
-            .computeIfAbsent(location) {
-                memoryInitializer(it) ?: NULL
-            }
-            .takeIf { it != NULL }
+    private fun initialValue(location: MemoryLocation): ObjectID {
+        require(location.objID == objID)
+        return initialValues.computeIfAbsent(location) {
+            memoryInitializer(it)
+        }
     }
 
     fun asWriteAccessLabel(location: MemoryLocation) =
-        if (location.obj === obj.unwrap())
+        if (location.objID == objID)
             WriteAccessLabel(
                 location = location,
-                _value = initialValue(location),
+                value = initialValue(location),
                 isExclusive = false,
             )
         else null
 
-    fun asUnlockLabel(mutex: OpaqueValue) =
-        if (mutex == obj) UnlockLabel(mutex_ = obj, isInitUnlock = true) else null
-
-    /**
-     * Replays this object allocation label using another allocation label given as argument.
-     * Replaying can substitute the allocated object.
-     *
-     * @see EventLabel.replay
-     */
-    override fun replay(label: EventLabel) {
-        // TODO: check type of objects?
-        check(label is ObjectAllocationLabel && obj == label.obj) {
-            "Event label $this cannot be replayed by $label"
-        }
-    }
-
-    /**
-     * Remaps memory location and value according to given [remapping].
-     *
-     * @see EventLabel.replay
-     */
-    override fun remap(remapping: Remapping) {
-        remapping[obj.unwrap()]?.also { _obj = it.opaque() }
-    }
+    fun asUnlockLabel(mutex: ObjectID) =
+        if (mutex == objID) UnlockLabel(mutex = objID, isInitUnlock = true) else null
 
     override fun toString(): String =
-        "Alloc($obj)"
-
-    companion object {
-        private val NULL : OpaqueValue = Any().opaque()
-    }
+        "Alloc($objID)"
 
 }
 
-fun EventLabel.asObjectAllocationLabel(obj: OpaqueValue): ObjectAllocationLabel? = when (this) {
-    is ObjectAllocationLabel -> takeIf { it.obj == obj }
-    is InitializationLabel -> asObjectAllocationLabel(obj.unwrap())
+fun EventLabel.asObjectAllocationLabel(objID: ObjectID): ObjectAllocationLabel? = when (this) {
+    is ObjectAllocationLabel -> takeIf { it.objID == objID }
+    is InitializationLabel -> asObjectAllocationLabel(objID)
     else -> null
 }
 
@@ -585,12 +557,12 @@ sealed class MemoryAccessLabel(
     /**
      * Read value for read access.
      */
-    abstract val readValue: OpaqueValue?
+    abstract val readValue: ObjectID
 
     /**
      * Written value for write access.
      */
-    abstract val writeValue: OpaqueValue?
+    abstract val writeValue: ObjectID
 
     /**
      * Kind of memory access of this label:
@@ -618,47 +590,14 @@ sealed class MemoryAccessLabel(
     /**
      * Recipient of a memory access label is equal to its memory location's object.
      */
-    override val obj: OpaqueValue?
-        get() = location.obj.opaque()
+    override val objID: ObjectID
+        get() = location.objID
 
     /**
      * Index of a memory access label is equal to accessed memory location.
      */
     override val index: Any?
         get() = location
-
-    /**
-     * Checks whether this label can be replayed by another [label].
-     */
-    private fun replayable(label: MemoryAccessLabel): Boolean =
-        kind == label.kind &&
-        kClass == label.kClass &&
-        isExclusive == label.isExclusive &&
-        accessKind == label.accessKind &&
-        readValue == label.readValue &&
-        writeValue == label.writeValue
-
-    /**
-     * Replays this memory access label using another memory access label given as argument.
-     * Replaying can substitute accessed memory location and read/written value of the memory access.
-     *
-     * @see EventLabel.replay
-     */
-    override fun replay(label: EventLabel) {
-        check(label is MemoryAccessLabel && replayable(label)) {
-            "Event label $this cannot be replayed by $label"
-        }
-        location.replay(label.location)
-    }
-
-    /**
-     * Remaps memory location and value according to given [remapping].
-     *
-     * @see EventLabel.replay
-     */
-    override fun remap(remapping: Remapping) {
-        location.remap(remapping)
-    }
 
     override fun toString(): String {
         val kindString = when (kind) {
@@ -699,24 +638,20 @@ enum class MemoryAccessKind { Read, Write, ReadModifyWrite }
 data class ReadAccessLabel(
     override val kind: LabelKind,
     override val location: MemoryLocation,
-    private var _value: OpaqueValue?,
-    override val kClass: KClass<*>?,
+    val value: ObjectID,
+    override val kClass: KClass<*>? = null,
     override val isExclusive: Boolean = false
 ): MemoryAccessLabel(kind, location, kClass, isExclusive) {
 
     init {
         require(isRequest || isResponse || isReceive)
-        require(isRequest implies (value == null))
+        require(isRequest implies (value == NULL_OBJECT_ID))
     }
 
-    val value: OpaqueValue?
-        get() = _value
-
-    override val readValue: OpaqueValue?
+    override val readValue: ObjectID
         get() = value
 
-    override val writeValue: OpaqueValue?
-        get() = null
+    override val writeValue: ObjectID = NULL_OBJECT_ID
 
     override fun isValidResponse(label: EventLabel): Boolean {
         require(isResponse)
@@ -742,7 +677,7 @@ data class ReadAccessLabel(
                     kind = LabelKind.Response,
                     location = location,
                     kClass = kClass,
-                    _value = it.value,
+                    value = it.value,
                     isExclusive = isExclusive,
                 )
             }
@@ -763,13 +698,6 @@ data class ReadAccessLabel(
         return copy(kind = LabelKind.Receive)
     }
 
-    override fun remap(remapping: Remapping) {
-        super.remap(remapping)
-        value?.unwrap()
-            ?.let { remapping[it] }
-            ?.also { _value = it.opaque() }
-    }
-
     override fun toString(): String =
         super.toString()
 }
@@ -786,26 +714,15 @@ data class ReadAccessLabel(
  */
 data class WriteAccessLabel(
     override val location: MemoryLocation,
-    private var _value: OpaqueValue?,
-    override val kClass: KClass<*>? = _value?.unwrap()?.javaClass?.kotlin,
+    val value: ObjectID,
+    override val kClass: KClass<*>? = null,
     override val isExclusive: Boolean = false
 ): MemoryAccessLabel(LabelKind.Send, location, kClass, isExclusive) {
 
-    val value: OpaqueValue?
-        get() = _value
+    override val readValue: ObjectID = NULL_OBJECT_ID
 
-    override val readValue: OpaqueValue?
-        get() = null
-
-    override val writeValue: OpaqueValue?
+    override val writeValue: ObjectID
         get() = value
-
-    override fun remap(remapping: Remapping) {
-        super.remap(remapping)
-        value?.unwrap()
-            ?.let { remapping[it] }
-            ?.also { _value = it.opaque() }
-    }
 
     override fun toString(): String =
         super.toString()
@@ -826,20 +743,14 @@ data class WriteAccessLabel(
 data class ReadModifyWriteAccessLabel(
     override val kind: LabelKind,
     override val location: MemoryLocation,
-    private var _readValue: OpaqueValue?,
-    private var _writeValue: OpaqueValue?,
-    override val kClass: KClass<*>? = _writeValue?.unwrap()?.javaClass?.kotlin
+    override val readValue: ObjectID,
+    override val writeValue: ObjectID,
+    override val kClass: KClass<*>? = null,
 ): MemoryAccessLabel(kind, location, kClass, isExclusive = true) {
 
     init {
         require(kind == LabelKind.Response || kind == LabelKind.Receive)
     }
-
-    override val readValue: OpaqueValue?
-        get() = _readValue
-
-    override val writeValue: OpaqueValue?
-        get() = _writeValue
 
     override fun isValidReceive(label: EventLabel): Boolean {
         require(isReceive)
@@ -856,16 +767,6 @@ data class ReadModifyWriteAccessLabel(
         return copy(kind = LabelKind.Receive)
     }
 
-    override fun remap(remapping: Remapping) {
-        super.remap(remapping)
-        readValue?.unwrap()
-            ?.let { remapping[it] }
-            ?.also { _readValue = it.opaque() }
-        writeValue?.unwrap()
-            ?.let { remapping[it] }
-            ?.also { _writeValue = it.opaque() }
-    }
-
     override fun toString(): String =
         super.toString()
 }
@@ -879,8 +780,8 @@ fun ReadModifyWriteAccessLabel(read: ReadAccessLabel, write: WriteAccessLabel) :
             kind = read.kind,
             kClass = read.kClass,
             location = read.location,
-            _readValue = read.value,
-            _writeValue = write.value,
+            readValue = read.value,
+            writeValue = write.value,
         )
     else null
 }
@@ -915,22 +816,16 @@ fun EventLabel.asMemoryAccessLabel(location: MemoryLocation): MemoryAccessLabel?
  * Base class of all mutex operations event labels.
  *
  * @param kind the kind of this label.
- * @param mutex_ the mutex to perform operation on.
+ * @param mutex id of the mutex to perform operation on.
  * @param isBlocking whether this label is blocking.
  * @param unblocked whether this blocking label is already unblocked.
  */
 sealed class MutexLabel(
     kind: LabelKind,
-    protected open var mutex_: OpaqueValue,
+    open val mutex: ObjectID,
     isBlocking: Boolean = false,
     unblocked: Boolean = true,
 ): EventLabel(kind, isBlocking, unblocked) {
-
-    /**
-     * Lock object affected by this operation.
-     */
-    val mutex: OpaqueValue
-        get() = mutex_
 
     /**
      * Kind of mutex operation.
@@ -946,7 +841,7 @@ sealed class MutexLabel(
     /**
      * Recipient of a mutex label is its mutex object.
      */
-    override val obj: OpaqueValue?
+    override val objID: ObjectID
         get() = mutex
 
     /**
@@ -955,43 +850,6 @@ sealed class MutexLabel(
     override val index: Any?
         // TODO: get() = mutex
         get() = null
-
-    /**
-     * Checks whether this label can be replayed by another [label].
-     */
-    private fun replayable(label: MutexLabel): Boolean =
-        kind == label.kind &&
-        operationKind == label.operationKind &&
-        mutex == label.mutex &&
-        when (this) {
-            is LockLabel ->
-                label is LockLabel
-                    && reentranceDepth == label.reentranceDepth
-                    && reentranceCount == label.reentranceCount
-            is UnlockLabel ->
-                label is UnlockLabel
-                    && reentranceDepth == label.reentranceDepth
-                    && reentranceCount == label.reentranceCount
-            is NotifyLabel ->
-                label is NotifyLabel && isBroadcast == label.isBroadcast
-            else -> true
-        }
-
-    /**
-     * Replays this mutex label using another mutex label given as argument.
-     * Replaying can substitute accessed mutex object.
-     *
-     * @see EventLabel.replay
-     */
-    override fun replay(label: EventLabel) {
-        check(label is MutexLabel && replayable(label)) {
-            "Event label $this cannot be replayed by $label"
-        }
-    }
-
-    override fun remap(remapping: Remapping) {
-        remapping[mutex.unwrap()]?.also { mutex_ = it.opaque() }
-    }
 
     override fun toString(): String {
         val kindString = when (kind) {
@@ -1027,13 +885,13 @@ enum class MutexOperationKind { Lock, Unlock, Wait, Notify }
  */
 data class LockLabel(
     override val kind: LabelKind,
-    override var mutex_: OpaqueValue,
+    override val mutex: ObjectID,
     val reentranceDepth: Int = 1,
     val reentranceCount: Int = 1,
     val isWaitLock: Boolean = false,
 ) : MutexLabel(
     kind = kind,
-    mutex_ = mutex_,
+    mutex = mutex,
     isBlocking = true,
     unblocked = (kind != LabelKind.Request),
 ) {
@@ -1069,7 +927,7 @@ data class LockLabel(
                 ?.let {
                     LockLabel(
                         kind = LabelKind.Response,
-                        mutex_ = mutex,
+                        mutex = mutex,
                         reentranceDepth = reentranceDepth,
                         reentranceCount = reentranceCount,
                     )
@@ -1093,14 +951,14 @@ data class LockLabel(
  * @see MutexLabel
  */
 data class UnlockLabel(
-    override var mutex_: OpaqueValue,
+    override val mutex: ObjectID,
     val reentranceDepth: Int = 1,
     val reentranceCount: Int = 1,
     // TODO: get rid of this!
     val isWaitUnlock: Boolean = false,
     // TODO: get rid of this!
     val isInitUnlock: Boolean = false,
-) : MutexLabel(LabelKind.Send, mutex_) {
+) : MutexLabel(LabelKind.Send, mutex) {
 
     init {
         // TODO: checks for non-reentrant locks
@@ -1129,12 +987,12 @@ data class UnlockLabel(
  */
 data class WaitLabel(
     override val kind: LabelKind,
-    override var mutex_: OpaqueValue,
+    override val mutex: ObjectID,
     val unlocking: Boolean = false,
     val locking: Boolean = false,
 ) : MutexLabel(
     kind = kind,
-    mutex_ = mutex_,
+    mutex = mutex,
     isBlocking = true,
     unblocked = (kind != LabelKind.Request),
 ) {
@@ -1179,22 +1037,22 @@ data class WaitLabel(
  * @see MutexLabel
  */
 data class NotifyLabel(
-    override var mutex_: OpaqueValue,
+    override val mutex: ObjectID,
     val isBroadcast: Boolean
-) : MutexLabel(LabelKind.Send, mutex_) {
+) : MutexLabel(LabelKind.Send, mutex) {
 
     override fun toString(): String =
         super.toString()
 }
 
-fun EventLabel.asUnlockLabel(mutex: OpaqueValue): UnlockLabel? = when (this) {
+fun EventLabel.asUnlockLabel(mutex: ObjectID): UnlockLabel? = when (this) {
     is UnlockLabel -> this.takeIf { it.mutex == mutex }
     is ObjectAllocationLabel -> asUnlockLabel(mutex)
     is InitializationLabel -> asUnlockLabel(mutex)
     else -> null
 }
 
-fun EventLabel.asNotifyLabel(mutex: OpaqueValue): NotifyLabel? = when (this) {
+fun EventLabel.asNotifyLabel(mutex: ObjectID): NotifyLabel? = when (this) {
     is NotifyLabel -> this.takeIf { it.mutex == mutex }
     else -> null
 }

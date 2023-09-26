@@ -73,12 +73,6 @@ class EventStructure(
     var detectedInconsistency: Inconsistency? = null
         private set
 
-    // TODO: move to EventIndexer once it will be implemented
-    private val allocationEvents = IdentityHashMap<Any, AtomicThreadEvent>()
-
-    val allocatedObjects: Set<Any>
-        get() = allocationEvents.keys
-
     private val sequentialConsistencyChecker =
         IncrementalSequentialConsistencyChecker(
             checkReleaseAcquireConsistency = true,
@@ -94,7 +88,26 @@ class EventStructure(
         ),
         listOf(),
     )
-    
+
+    // TODO: move to EventIndexer once it will be implemented
+    private data class ObjectEntry(
+        val id: ObjectID,
+        val obj: OpaqueValue?,
+    ) {
+        var allocationEvent: AtomicThreadEvent? = null
+            private set
+
+        fun setAllocationEvent(event: AtomicThreadEvent) {
+            check(allocationEvent == null)
+            allocationEvent = event
+        }
+    }
+
+    private val objectIdIndex = HashMap<ObjectID, ObjectEntry>()
+    private val objectIndex = IdentityHashMap<Any, ObjectEntry>()
+
+    private var nextObjectID = 1 + STATIC_OBJECT_ID
+
     /*
      * Map from blocked dangling events to their responses.
      * If event is blocked but the corresponding response has not yet arrived then it is mapped to null.
@@ -220,9 +233,15 @@ class EventStructure(
         checkConsistency()
         // set the replayer state
         replayer = Replayer(sequentialConsistencyChecker.executionOrder)
+        // reset object indices (retain only those events already present in current execution)
+        objectIdIndex.values.retainAll {
+            it.allocationEvent in currentExecution
+        }
+        objectIndex.values.retainAll {
+            it.allocationEvent in currentExecution
+        }
         // reset state of other auxiliary structures
         currentRemapping.reset()
-        allocationEvents.clear()
         delayedConsistencyCheckBuffer.clear()
     }
 
@@ -320,11 +339,9 @@ class EventStructure(
         val causalityClock = dependencies.fold(parent?.causalityClock?.copy() ?: emptyClock()) { clock, event ->
             clock + event.causalityClock
         }
-        val allocation = label.obj?.let {
-            allocationEvents[it.unwrap()]
-        }
+        val allocation = objectIdIndex[label.objID]?.allocationEvent
         val source = (label as? WriteAccessLabel)?.writeValue?.let {
-            allocationEvents[it.unwrap()]
+            objectIdIndex[it]?.allocationEvent
         }
         val frontier = currentExecution.toMutableFrontier()
             .apply { cut(conflicts) }
@@ -366,28 +383,6 @@ class EventStructure(
             _events.add(event)
         }
     }
-
-    // private fun extraDependencies(
-    //     iThread: Int,
-    //     label: EventLabel,
-    //     parent: ThreadEvent?,
-    //     dependencies: List<ThreadEvent>
-    // ): List<ThreadEvent> {
-    //     return when (label) {
-    //         is MemoryAccessLabel, is MutexLabel -> {
-    //             // TODO: unify cases
-    //             val obj = when (label) {
-    //                 is MemoryAccessLabel -> label.location.obj
-    //                 is MutexLabel -> label.mutex.unwrap()
-    //                 else -> unreachable()
-    //             }
-    //             listOfNotNull(
-    //                 allocationEvents[obj]
-    //             )
-    //         }
-    //         else -> listOf()
-    //     }
-    // }
 
     private fun conflictingEvents(
         iThread: Int,
@@ -452,8 +447,9 @@ class EventStructure(
             unmarkBlockedDanglingRequest(event.parent!!)
         }
         // Update allocation events index.
-        if (event.label is ObjectAllocationLabel) {
-            allocationEvents.put(event.label.obj.unwrap(), event).ensureNull()
+        if (!isReplayedEvent && event.label is ObjectAllocationLabel) {
+            val objectEntry = objectIdIndex[event.label.objID]!!
+            objectEntry.setAllocationEvent(event)
         }
         // If we are still in replay phase, but the added event is not a replayed event,
         // then save it to delayed events buffer to postpone its further processing.
@@ -481,6 +477,32 @@ class EventStructure(
             addSynchronizedEvents(event)
         }
         checkConsistencyIncrementally(event)
+    }
+
+    private fun computeObjectID(value: OpaqueValue?, delayedAllocation: Boolean = false): ObjectID {
+        if (value == null)
+            return NULL_OBJECT_ID
+        val objectEntry = objectIndex.computeIfAbsent(value.unwrap()) {
+            val id = nextObjectID++
+            val newEntry = ObjectEntry(obj = value, id = id)
+            if (!delayedAllocation) {
+                (root.label as InitializationLabel).trackExternalObject(id)
+                newEntry.setAllocationEvent(root)
+            }
+            objectIdIndex.put(id, newEntry).ensureNull()
+            newEntry
+        }
+        return objectEntry.id
+    }
+
+    fun getObjectID(value: OpaqueValue?): ObjectID {
+        if (value == null)
+            return NULL_OBJECT_ID
+        return objectIndex[value.unwrap()]?.id ?: INVALID_OBJECT_ID
+    }
+
+    fun getObject(objID: ObjectID): OpaqueValue? {
+        return objectIdIndex[objID]?.obj
     }
 
     private val EventLabel.syncType
@@ -620,8 +642,9 @@ class EventStructure(
         // we do not mark root event as visited purposefully;
         // this is just a trick to make the first call to `startNextExploration`
         // to pick the root event as the next event to explore from.
-        val label = InitializationLabel(mainThreadId, memoryInitializer) { obj ->
-            obj !in allocationEvents
+        val label = InitializationLabel(mainThreadId) { location ->
+            val value = memoryInitializer(location)
+            computeObjectID(value)
         }
         return addEvent(initThreadId, label, parent = null, dependencies = emptyList())!!.also {
             addEventToCurrentExecution(it, visit = false)
@@ -631,13 +654,7 @@ class EventStructure(
     private fun addSendEvent(iThread: Int, label: EventLabel): AtomicThreadEvent {
         require(label.isSend)
         tryReplayEvent(iThread)?.let { event ->
-            // TODO: also check custom event/label specific rules when replaying,
-            //   e.g. upon replaying write-exclusive check its location equal to
-            //   the location of previous read-exclusive part
-            if (label is ObjectAllocationLabel) {
-                currentRemapping[event.label.obj?.unwrap()] = label.obj.unwrap()
-            }
-            currentRemapping.replay(event, label)
+            check(event.label == label)
             addEventToCurrentExecution(event)
             return event
         }
@@ -651,7 +668,7 @@ class EventStructure(
     private fun addRequestEvent(iThread: Int, label: EventLabel): AtomicThreadEvent {
         require(label.isRequest)
         tryReplayEvent(iThread)?.let { event ->
-            currentRemapping.replay(event, label)
+            check(event.label == label)
             addEventToCurrentExecution(event)
             return event
         }
@@ -673,8 +690,7 @@ class EventStructure(
             if (!readyToReplay) {
                 return (null to listOf())
             }
-            val label = event.resynchronize(syncAlgebra)
-            currentRemapping.replay(event, label)
+            check(event.label == event.resynchronize(syncAlgebra))
             addEventToCurrentExecution(event)
             return event to listOf(event)
         }
@@ -702,7 +718,7 @@ class EventStructure(
 
     private fun addActorEvent(iThread: Int, label: ActorLabel): AtomicThreadEvent {
         tryReplayEvent(iThread)?.let { event ->
-            currentRemapping.replay(event, label)
+            check(event.label == label)
             addEventToCurrentExecution(event)
             return event
         }
@@ -808,7 +824,13 @@ class EventStructure(
     }
 
     fun addObjectAllocationEvent(iThread: Int, value: OpaqueValue): AtomicThreadEvent {
-        val label = ObjectAllocationLabel(value, memoryInitializer)
+        val label = ObjectAllocationLabel(
+            objID = computeObjectID(value, delayedAllocation = true),
+            memoryInitializer = { location ->
+                val initValue = memoryInitializer(location)
+                computeObjectID(initValue)
+            },
+        )
         return addSendEvent(iThread, label)
     }
 
@@ -816,7 +838,7 @@ class EventStructure(
                       isExclusive: Boolean = false): AtomicThreadEvent {
         val label = WriteAccessLabel(
             location = location,
-            _value = value,
+            value = computeObjectID(value),
             kClass = kClass,
             isExclusive = isExclusive,
         )
@@ -830,7 +852,7 @@ class EventStructure(
         val label = ReadAccessLabel(
             kind = LabelKind.Request,
             location = location,
-            _value = null,
+            value = NULL_OBJECT_ID,
             kClass = kClass,
             isExclusive = isExclusive,
         )
@@ -846,7 +868,7 @@ class EventStructure(
     fun addLockRequestEvent(iThread: Int, mutex: OpaqueValue, reentranceDepth: Int = 1, reentranceCount: Int = 1, isWaitLock: Boolean = false): AtomicThreadEvent {
         val label = LockLabel(
             kind = LabelKind.Request,
-            mutex_ = mutex,
+            mutex = computeObjectID(mutex),
             reentranceDepth = reentranceDepth,
             reentranceCount = reentranceCount,
             isWaitLock = isWaitLock,
@@ -861,7 +883,7 @@ class EventStructure(
 
     fun addUnlockEvent(iThread: Int, mutex: OpaqueValue, reentranceDepth: Int = 1, reentranceCount: Int = 1, isWaitUnlock: Boolean = false): AtomicThreadEvent {
         val label = UnlockLabel(
-            mutex_ = mutex,
+            mutex = computeObjectID(mutex),
             reentranceDepth = reentranceDepth,
             reentranceCount = reentranceCount,
             isWaitUnlock = isWaitUnlock,
@@ -872,7 +894,7 @@ class EventStructure(
     fun addWaitRequestEvent(iThread: Int, mutex: OpaqueValue): AtomicThreadEvent {
         val label = WaitLabel(
             kind = LabelKind.Request,
-            mutex_ = mutex,
+            mutex = computeObjectID(mutex),
         )
         return addRequestEvent(iThread, label)
 
@@ -889,7 +911,7 @@ class EventStructure(
         //   Thus multiple wake-ups due to single notify can be interpreted as spurious.
         //   However, if one day we will want to support wait semantics without spurious wake-ups
         //   we will need to revisit this.
-        val label = NotifyLabel(mutex, isBroadcast)
+        val label = NotifyLabel(computeObjectID(mutex), isBroadcast)
         return addSendEvent(iThread, label)
     }
 
