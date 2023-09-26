@@ -126,7 +126,7 @@ internal class MemoryLocationLabeler {
 
     private fun registerAtomicReflectionDescriptor(descriptor: AtomicReflectionAccessDescriptor, reflection: Any) {
         fieldLocationByReflectionMap.put(reflection, descriptor).ensureNull {
-            "Atomic reflection object ${opaqueString(reflection)} cannot be registered to access $descriptor," +
+            "Atomic reflection object ${reflection.toOpaqueString()} cannot be registered to access $descriptor," +
                 "because it is already registered to access $it!"
         }
     }
@@ -140,12 +140,12 @@ internal class MemoryLocationLabeler {
 
     private fun lookupAtomicReflectionDescriptor(reflection: Any): AtomicReflectionAccessDescriptor =
         fieldLocationByReflectionMap[reflection].ensureNotNull {
-            "Cannot access memory via unregistered reflection object ${opaqueString(reflection)}!"
+            "Cannot access memory via unregistered reflection object ${reflection.toOpaqueString()}!"
         }
 
     private fun lookupFieldNameByOffset(strategy: ManagedStrategy, obj: Any, offset: Long): String =
         lookupFieldNameByOffset(strategy, obj.javaClass, offset).ensureNotNull {
-            "Cannot access object ${opaqueString(obj)} via unregistered offset $offset!"
+            "Cannot access object ${obj.toOpaqueString()} via unregistered offset $offset!"
         }
 
     private fun lookupFieldNameByOffset(strategy: ManagedStrategy, clazz: Class<*>, offset: Long): String? {
@@ -159,7 +159,7 @@ internal class MemoryLocationLabeler {
 
     private fun lookupUnsafeArrayDescriptor(strategy: ManagedStrategy, obj: Any): UnsafeArrayAccessDescriptor {
         return unsafeArrayDescriptorByClassMap[obj.javaClass].ensureNotNull {
-            "Cannot unsafely access array ${opaqueString(obj)} via unregistered class ${obj.javaClass}!"
+            "Cannot unsafely access array ${obj.toOpaqueString()} via unregistered class ${obj.javaClass}!"
         }.ensure { it.isValid() }
     }
 

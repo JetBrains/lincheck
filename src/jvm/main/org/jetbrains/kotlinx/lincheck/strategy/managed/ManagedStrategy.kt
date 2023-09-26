@@ -518,7 +518,7 @@ abstract class ManagedStrategy(
      * @param value the value to be written.
      */
     internal fun onSharedVariableWrite(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: Any?) {
-        memoryTracker.writeValue(iThread, location, kClass, value?.opaque(kClass))
+        memoryTracker.writeValue(iThread, location, kClass, value?.opaque())
     }
 
     /**
@@ -530,7 +530,7 @@ abstract class ManagedStrategy(
      * @return result of this operation, replacing the "real" result.
      */
     internal fun onCompareAndSet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, expected: Any?, desired: Any?): Boolean {
-        return memoryTracker.compareAndSet(iThread, location, kClass, expected?.opaque(kClass), desired?.opaque(kClass))
+        return memoryTracker.compareAndSet(iThread, location, kClass, expected?.opaque(), desired?.opaque())
     }
 
     /**
@@ -563,7 +563,7 @@ abstract class ManagedStrategy(
      * @return result of this operation, replacing the "real" result.
      */
     internal fun onGetAndSet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: Any?): Any? {
-        return memoryTracker.getAndSet(iThread, location, kClass, value?.opaque(kClass))?.unwrap()
+        return memoryTracker.getAndSet(iThread, location, kClass, value?.opaque())?.unwrap()
     }
 
     /**

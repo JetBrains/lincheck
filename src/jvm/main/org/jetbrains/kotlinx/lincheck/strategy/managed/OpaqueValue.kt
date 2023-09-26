@@ -52,26 +52,23 @@ import kotlin.reflect.KClass
  *
  * TODO: use @JvmInline value class?
  */
-class OpaqueValue private constructor(
-    private val value: Any,
-    val kClass: KClass<*> = value.javaClass.kotlin,
-) {
+class OpaqueValue private constructor(private val value: Any) {
 
     companion object {
-        fun fromAny(value: Any, kClass: KClass<*> = value.javaClass.kotlin): OpaqueValue =
-            OpaqueValue(value, kClass)
+        fun fromAny(value: Any): OpaqueValue =
+            OpaqueValue(value)
 
         fun default(kClass: KClass<*>): OpaqueValue? = kClass.defaultValue()
     }
 
-    val isPrimitive: Boolean =
-        (kClass.javaPrimitiveType != null)
-
     fun unwrap(): Any = value
 
+    val isPrimitive: Boolean
+        get() = value.isPrimitive()
+
     operator fun plus(delta: Number): OpaqueValue = when (value) {
-        is Int -> (value + delta as Int).opaque(Int::class)
-        is Long -> (value + delta as Long).opaque(Long::class)
+        is Int -> (value + delta as Int).opaque()
+        is Long -> (value + delta as Long).opaque()
         // TODO: handle other Numeric types?
         else -> throw IllegalStateException()
     }
@@ -88,12 +85,12 @@ class OpaqueValue private constructor(
         System.identityHashCode(value)
 
     override fun toString(): String =
-        if (isPrimitive) value.toString() else opaqueString(value)
+        if (isPrimitive) value.toString() else value.toOpaqueString()
 
 }
 
-fun Any.opaque(kClass: KClass<*> = this.javaClass.kotlin): OpaqueValue =
-    OpaqueValue.fromAny(this, kClass)
+fun Any.opaque(): OpaqueValue =
+    OpaqueValue.fromAny(this)
 
 fun OpaqueValue?.isInstanceOf(kClass: KClass<*>) =
     this?.unwrap()?.let { kClass.isInstance(it) } ?: true
@@ -108,14 +105,15 @@ fun KClass<*>.defaultValue(): OpaqueValue? = when(this) {
     Char::class     -> 0.toChar()
     Boolean::class  -> false
     else            -> null
-}?.opaque(kClass = this)
+}?.opaque()
 
-fun opaqueString(className: String, obj: Any): String =
-    "${className}@${Integer.toHexString(System.identityHashCode(obj))}"
-
-// TODO: use obj.opaque().toString() instead?
-fun opaqueString(obj: Any?): String =
-    if (obj != null) opaqueString(obj::class.simpleName ?: "", obj) else "null"
+fun Any?.toOpaqueString(): String {
+    if (this == null)
+        return "null"
+    val className = this::class.simpleName.orEmpty()
+    val objRepr = Integer.toHexString(System.identityHashCode(this))
+    return "${className}@${objRepr}"
+}
 
 fun Any.isPrimitive(): Boolean =
     (this::class.javaPrimitiveType != null)
