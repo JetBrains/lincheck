@@ -461,9 +461,9 @@ data class ObjectAllocationLabel(
         require(objID != NULL_OBJECT_ID)
     }
 
-    private val initialValues = HashMap<MemoryLocation, ObjectID>()
+    private val initialValues = HashMap<MemoryLocation, ValueID>()
 
-    private fun initialValue(location: MemoryLocation): ObjectID {
+    private fun initialValue(location: MemoryLocation): ValueID {
         require(location.objID == objID)
         return initialValues.computeIfAbsent(location) {
             memoryInitializer(it)
@@ -516,12 +516,12 @@ sealed class MemoryAccessLabel(
     /**
      * Read value for read access.
      */
-    abstract val readValue: ObjectID
+    abstract val readValue: ValueID
 
     /**
      * Written value for write access.
      */
-    abstract val writeValue: ObjectID
+    abstract val writeValue: ValueID
 
     /**
      * Kind of memory access of this label:
@@ -597,7 +597,7 @@ enum class MemoryAccessKind { Read, Write, ReadModifyWrite }
 data class ReadAccessLabel(
     override val kind: LabelKind,
     override val location: MemoryLocation,
-    val value: ObjectID,
+    val value: ValueID,
     override val kClass: KClass<*>? = null,
     override val isExclusive: Boolean = false
 ): MemoryAccessLabel(kind, location, kClass, isExclusive) {
@@ -607,10 +607,10 @@ data class ReadAccessLabel(
         require(isRequest implies (value == NULL_OBJECT_ID))
     }
 
-    override val readValue: ObjectID
+    override val readValue: ValueID
         get() = value
 
-    override val writeValue: ObjectID = NULL_OBJECT_ID
+    override val writeValue: ValueID = NULL_OBJECT_ID
 
     override fun isValidResponse(label: EventLabel): Boolean {
         require(isResponse)
@@ -673,14 +673,14 @@ data class ReadAccessLabel(
  */
 data class WriteAccessLabel(
     override val location: MemoryLocation,
-    val value: ObjectID,
+    val value: ValueID,
     override val kClass: KClass<*>? = null,
     override val isExclusive: Boolean = false
 ): MemoryAccessLabel(LabelKind.Send, location, kClass, isExclusive) {
 
-    override val readValue: ObjectID = NULL_OBJECT_ID
+    override val readValue: ValueID = NULL_OBJECT_ID
 
-    override val writeValue: ObjectID
+    override val writeValue: ValueID
         get() = value
 
     override fun toString(): String =
@@ -702,8 +702,8 @@ data class WriteAccessLabel(
 data class ReadModifyWriteAccessLabel(
     override val kind: LabelKind,
     override val location: MemoryLocation,
-    override val readValue: ObjectID,
-    override val writeValue: ObjectID,
+    override val readValue: ValueID,
+    override val writeValue: ValueID,
     override val kClass: KClass<*>? = null,
 ): MemoryAccessLabel(kind, location, kClass, isExclusive = true) {
 

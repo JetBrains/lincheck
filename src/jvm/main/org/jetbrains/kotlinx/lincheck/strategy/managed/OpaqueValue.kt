@@ -58,7 +58,6 @@ class OpaqueValue private constructor(
 ) {
 
     companion object {
-
         fun fromAny(value: Any, kClass: KClass<*> = value.javaClass.kotlin): OpaqueValue =
             OpaqueValue(value, kClass)
 
@@ -111,10 +110,26 @@ fun KClass<*>.defaultValue(): OpaqueValue? = when(this) {
     else            -> null
 }?.opaque(kClass = this)
 
-
 fun opaqueString(className: String, obj: Any): String =
     "${className}@${Integer.toHexString(System.identityHashCode(obj))}"
 
 // TODO: use obj.opaque().toString() instead?
 fun opaqueString(obj: Any?): String =
     if (obj != null) opaqueString(obj::class.simpleName ?: "", obj) else "null"
+
+fun Any.isPrimitive(): Boolean =
+    (this::class.javaPrimitiveType != null)
+
+sealed class ValueID
+
+data class PrimitiveID(val value: Any): ValueID() {
+    init {
+        require(value.isPrimitive())
+    }
+}
+
+data class ObjectID(val id: Int): ValueID()
+
+// TODO: override `toString` ?
+internal val INVALID_OBJECT_ID = ObjectID(-1)
+internal val NULL_OBJECT_ID = ObjectID(0)

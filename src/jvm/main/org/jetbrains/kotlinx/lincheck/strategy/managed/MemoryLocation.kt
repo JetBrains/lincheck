@@ -24,20 +24,14 @@ import java.lang.reflect.*
 import java.lang.reflect.Array as ReflectArray
 import java.util.concurrent.atomic.*
 
-typealias ObjectID = Int
 
-// TODO: override `toString` ?
-internal val INVALID_OBJECT_ID = -1
-internal val NULL_OBJECT_ID = 0
-internal val STATIC_OBJECT_ID = 1
-
-typealias ObjectIDMapper = (ObjectID) -> OpaqueValue?
+typealias ValueMapper = (ValueID) -> OpaqueValue?
 
 interface MemoryLocation {
     val objID: ObjectID
 
-    fun read(objMapper: ObjectIDMapper): Any?
-    fun write(objMapper: ObjectIDMapper, value: Any?)
+    fun read(valueMapper: ValueMapper): Any?
+    fun write(valueMapper: ValueMapper, value: Any?)
 }
 
 internal class StaticFieldMemoryLocation(
@@ -46,7 +40,7 @@ internal class StaticFieldMemoryLocation(
     val fieldName: String,
 ) : MemoryLocation {
 
-    override val objID: Int = STATIC_OBJECT_ID
+    override val objID: ObjectID = NULL_OBJECT_ID
 
     private val field: Field by lazy {
         resolveClass(strategy, className = className)
@@ -54,11 +48,11 @@ internal class StaticFieldMemoryLocation(
             .apply { isAccessible = true }
     }
 
-    override fun read(objMapper: ObjectIDMapper): Any? {
+    override fun read(valueMapper: ValueMapper): Any? {
         return field.get(null)
     }
 
-    override fun write(objMapper: ObjectIDMapper, value: Any?) {
+    override fun write(valueMapper: ValueMapper, value: Any?) {
         field.set(null, value)
     }
 
@@ -96,12 +90,12 @@ internal class ObjectFieldMemoryLocation(
     }
 
 
-    override fun read(objMapper: ObjectIDMapper): Any? {
-        return field.get(objMapper(objID)?.unwrap())
+    override fun read(valueMapper: ValueMapper): Any? {
+        return field.get(valueMapper(objID)?.unwrap())
     }
 
-    override fun write(objMapper: ObjectIDMapper, value: Any?) {
-        field.set(objMapper(objID)?.unwrap(), value)
+    override fun write(valueMapper: ValueMapper, value: Any?) {
+        field.set(valueMapper(objID)?.unwrap(), value)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -114,7 +108,7 @@ internal class ObjectFieldMemoryLocation(
     }
 
     override fun hashCode(): Int {
-        var result = objID
+        var result = objID.hashCode()
         result = 31 * result + className.hashCode()
         result = 31 * result + fieldName.hashCode()
         return result
@@ -164,19 +158,19 @@ internal class ArrayElementMemoryLocation(
             .apply { isAccessible = true }
     }
 
-    override fun read(objMapper: ObjectIDMapper): Any? {
+    override fun read(valueMapper: ValueMapper): Any? {
         if (isAtomicArray) {
-            return getMethod!!.invoke(objMapper(objID)?.unwrap(), index)
+            return getMethod!!.invoke(valueMapper(objID)?.unwrap(), index)
         }
-        return ReflectArray.get(objMapper(objID)?.unwrap(), index)
+        return ReflectArray.get(valueMapper(objID)?.unwrap(), index)
     }
 
-    override fun write(objMapper: ObjectIDMapper, value: Any?) {
+    override fun write(valueMapper: ValueMapper, value: Any?) {
         if (isAtomicArray) {
-            setMethod!!.invoke(objMapper(objID)?.unwrap(), index, value)
+            setMethod!!.invoke(valueMapper(objID)?.unwrap(), index, value)
             return
         }
-        ReflectArray.set(objMapper(objID)?.unwrap(), index, value)
+        ReflectArray.set(valueMapper(objID)?.unwrap(), index, value)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -188,7 +182,7 @@ internal class ArrayElementMemoryLocation(
     }
 
     override fun hashCode(): Int {
-        var result = objID
+        var result = objID.hashCode()
         result = 31 * result + index
         return result
     }
@@ -227,12 +221,12 @@ internal class AtomicPrimitiveMemoryLocation(
             .apply { isAccessible = true }
     }
 
-    override fun read(objMapper: ObjectIDMapper): Any? {
-        return getMethod.invoke(objMapper(objID)?.unwrap())
+    override fun read(valueMapper: ValueMapper): Any? {
+        return getMethod.invoke(valueMapper(objID)?.unwrap())
     }
 
-    override fun write(objMapper: ObjectIDMapper, value: Any?) {
-        setMethod.invoke(objMapper(objID)?.unwrap(), value)
+    override fun write(valueMapper: ValueMapper, value: Any?) {
+        setMethod.invoke(valueMapper(objID)?.unwrap(), value)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -243,7 +237,7 @@ internal class AtomicPrimitiveMemoryLocation(
     }
 
     override fun hashCode(): Int {
-        return objID
+        return objID.hashCode()
     }
 
     override fun toString(): String {
@@ -256,7 +250,6 @@ internal class AtomicPrimitiveMemoryLocation(
 internal fun objRepr(className: String, objID: ObjectID): String {
     return when (objID) {
         NULL_OBJECT_ID -> "null"
-        STATIC_OBJECT_ID -> className
         else -> "$className@$objID"
     }
 }

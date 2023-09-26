@@ -104,7 +104,7 @@ class EventStructure(
     private val objectIdIndex = HashMap<ObjectID, ObjectEntry>()
     private val objectIndex = IdentityHashMap<Any, ObjectEntry>()
 
-    private var nextObjectID = 1 + STATIC_OBJECT_ID
+    private var nextObjectID = 1 + NULL_OBJECT_ID.id
 
     /*
      * Map from blocked dangling events to their responses.
@@ -448,18 +448,29 @@ class EventStructure(
         checkConsistencyIncrementally(event)
     }
 
-    private fun registerObjectEntry(entry: ObjectEntry) {
-        objectIdIndex.put(entry.id, entry).ensureNull()
-        objectIndex.put(entry.obj.unwrap(), entry).ensureNull()
+    fun getValue(id: ValueID): OpaqueValue? = when (id) {
+        NULL_OBJECT_ID -> null
+        is PrimitiveID -> id.value.opaque()
+        is ObjectID -> objectIdIndex[id]?.obj
     }
 
-    private fun computeObjectID(value: OpaqueValue?): ObjectID {
+    fun getValueID(value: OpaqueValue?): ValueID {
         if (value == null)
             return NULL_OBJECT_ID
+        if (value.isPrimitive)
+            return PrimitiveID(value.unwrap())
+        return objectIndex[value.unwrap()]?.id ?: INVALID_OBJECT_ID
+    }
+
+    private fun computeValueID(value: OpaqueValue?): ValueID {
+        if (value == null)
+            return NULL_OBJECT_ID
+        if (value.isPrimitive)
+            return PrimitiveID(value.unwrap())
         objectIndex[value.unwrap()]?.let {
             return it.id
         }
-        val id = nextObjectID++
+        val id = ObjectID(nextObjectID++)
         val entry = ObjectEntry(id, value, root)
         val initLabel = (root.label as InitializationLabel)
         val className = value.unwrap().javaClass.simpleName
@@ -468,14 +479,9 @@ class EventStructure(
         return entry.id
     }
 
-    fun getObjectID(value: OpaqueValue?): ObjectID {
-        if (value == null)
-            return NULL_OBJECT_ID
-        return objectIndex[value.unwrap()]?.id ?: INVALID_OBJECT_ID
-    }
-
-    fun getObject(objID: ObjectID): OpaqueValue? {
-        return objectIdIndex[objID]?.obj
+    private fun registerObjectEntry(entry: ObjectEntry) {
+        objectIdIndex.put(entry.id, entry).ensureNull()
+        objectIndex.put(entry.obj.unwrap(), entry).ensureNull()
     }
 
     private val EventLabel.syncType
@@ -617,7 +623,7 @@ class EventStructure(
         // to pick the root event as the next event to explore from.
         val label = InitializationLabel(mainThreadId) { location ->
             val value = memoryInitializer(location)
-            computeObjectID(value)
+            computeValueID(value)
         }
         return addEvent(initThreadId, label, parent = null, dependencies = emptyList())!!.also {
             addEventToCurrentExecution(it, visit = false)
@@ -804,13 +810,13 @@ class EventStructure(
             addEventToCurrentExecution(event)
             return event
         }
-        val id = nextObjectID++
+        val id = ObjectID(nextObjectID++)
         val label = ObjectAllocationLabel(
             objID = id,
             className = value.unwrap().javaClass.simpleName,
             memoryInitializer = { location ->
                 val initValue = memoryInitializer(location)
-                computeObjectID(initValue)
+                computeValueID(initValue)
             },
         )
         val parent = playedFrontier[iThread]
@@ -826,7 +832,7 @@ class EventStructure(
                       isExclusive: Boolean = false): AtomicThreadEvent {
         val label = WriteAccessLabel(
             location = location,
-            value = computeObjectID(value),
+            value = computeValueID(value),
             kClass = kClass,
             isExclusive = isExclusive,
         )
@@ -856,7 +862,7 @@ class EventStructure(
     fun addLockRequestEvent(iThread: Int, mutex: OpaqueValue, reentranceDepth: Int = 1, reentranceCount: Int = 1, isWaitLock: Boolean = false): AtomicThreadEvent {
         val label = LockLabel(
             kind = LabelKind.Request,
-            mutex = computeObjectID(mutex),
+            mutex = computeValueID(mutex) as ObjectID,
             reentranceDepth = reentranceDepth,
             reentranceCount = reentranceCount,
             isWaitLock = isWaitLock,
@@ -871,7 +877,7 @@ class EventStructure(
 
     fun addUnlockEvent(iThread: Int, mutex: OpaqueValue, reentranceDepth: Int = 1, reentranceCount: Int = 1, isWaitUnlock: Boolean = false): AtomicThreadEvent {
         val label = UnlockLabel(
-            mutex = computeObjectID(mutex),
+            mutex = computeValueID(mutex) as ObjectID,
             reentranceDepth = reentranceDepth,
             reentranceCount = reentranceCount,
             isWaitUnlock = isWaitUnlock,
@@ -882,7 +888,7 @@ class EventStructure(
     fun addWaitRequestEvent(iThread: Int, mutex: OpaqueValue): AtomicThreadEvent {
         val label = WaitLabel(
             kind = LabelKind.Request,
-            mutex = computeObjectID(mutex),
+            mutex = computeValueID(mutex) as ObjectID,
         )
         return addRequestEvent(iThread, label)
 
@@ -899,7 +905,10 @@ class EventStructure(
         //   Thus multiple wake-ups due to single notify can be interpreted as spurious.
         //   However, if one day we will want to support wait semantics without spurious wake-ups
         //   we will need to revisit this.
-        val label = NotifyLabel(computeObjectID(mutex), isBroadcast)
+        val label = NotifyLabel(
+            mutex = computeValueID(mutex) as ObjectID,
+            isBroadcast = isBroadcast
+        )
         return addSendEvent(iThread, label)
     }
 

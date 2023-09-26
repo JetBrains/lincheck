@@ -37,29 +37,35 @@ internal class MemoryLocationLabeler {
     fun labelStaticField(strategy: ManagedStrategy, className: String, fieldName: String): MemoryLocation =
         StaticFieldMemoryLocation(strategy, className, fieldName)
 
-    fun labelObjectField(strategy: ManagedStrategy, obj: Any, className: String, fieldName: String): MemoryLocation =
-        ObjectFieldMemoryLocation(strategy, obj.javaClass, strategy.getObjectID(obj), className, fieldName)
+    fun labelObjectField(strategy: ManagedStrategy, obj: Any, className: String, fieldName: String): MemoryLocation {
+        val id = strategy.getValueID(obj) as ObjectID
+        return ObjectFieldMemoryLocation(strategy, obj.javaClass, id, className, fieldName)
+    }
 
-    fun labelArrayElement(strategy: ManagedStrategy, array: Any, position: Int): MemoryLocation =
-        ArrayElementMemoryLocation(strategy, array.javaClass, strategy.getObjectID(array), position)
+    fun labelArrayElement(strategy: ManagedStrategy, array: Any, position: Int): MemoryLocation {
+        val id = strategy.getValueID(array) as ObjectID
+        return ArrayElementMemoryLocation(strategy, array.javaClass, id, position)
+    }
 
-    fun labelAtomicPrimitive(strategy: ManagedStrategy, primitive: Any): MemoryLocation =
-        AtomicPrimitiveMemoryLocation(strategy, primitive.javaClass, strategy.getObjectID(primitive))
+    fun labelAtomicPrimitive(strategy: ManagedStrategy, primitive: Any): MemoryLocation {
+        val id = strategy.getValueID(primitive) as ObjectID
+        return AtomicPrimitiveMemoryLocation(strategy, primitive.javaClass, id)
+    }
 
     fun labelAtomicReflectionFieldAccess(strategy: ManagedStrategy, reflection: Any, obj: Any): MemoryLocation {
-        val id = strategy.getObjectID(obj)
+        val id = strategy.getValueID(obj) as ObjectID
         val descriptor = lookupAtomicReflectionDescriptor(reflection) as AtomicReflectionFieldAccessDescriptor
         return ObjectFieldMemoryLocation(strategy, obj.javaClass, id, descriptor.className, descriptor.fieldName)
     }
 
     fun labelAtomicReflectionArrayAccess(strategy: ManagedStrategy, reflection: Any, array: Any, index: Int): MemoryLocation {
         check(lookupAtomicReflectionDescriptor(reflection) is AtomicReflectionArrayAccessDescriptor)
-        val id = strategy.getObjectID(array)
+        val id = strategy.getValueID(array) as ObjectID
         return ArrayElementMemoryLocation(strategy, array.javaClass, id, index)
     }
 
     fun labelUnsafeAccess(strategy: ManagedStrategy, unsafe: Any, obj: Any, offset: Long): MemoryLocation {
-        val id = strategy.getObjectID(obj)
+        val id = strategy.getValueID(obj) as ObjectID
         if (isArrayObject(obj)) {
             val descriptor = lookupUnsafeArrayDescriptor(strategy, obj)
             val index = (offset - descriptor.baseOffset) shr descriptor.indexShift
