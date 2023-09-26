@@ -117,8 +117,7 @@ abstract class ManagedStrategy(
 
     protected val memoryInitializer: MemoryInitializer = { location ->
         runUntracking(currentThreadNumber()) {
-            val value = location.read(memoryTracker::getObject)?.opaque()
-            memoryTracker.getObjectID(value)
+            location.read(memoryTracker::getObject)?.opaque()
         }
     }
 

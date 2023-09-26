@@ -168,47 +168,6 @@ sealed class EventLabel(
      */
     open fun subsumes(label: EventLabel): Boolean = false
 
-    /**
-     * Replays this label using another label given as argument.
-     *
-     * Replaying can be used by an executor in order to reproduce execution saved as a list of labels.
-     * Because some values of execution can change non-deterministically
-     * between different invocations (for example, addresses of allocated objects),
-     * replaying execution scenario may require to change some internal state
-     * kept in event label, without modifying shape of the label.
-     * For example, write access label should remain write access label,
-     * but the address of the accessed memory location can change.
-     *
-     * This method takes as arguments [label] to replay and current [remapping]
-     * that keeps the mapping from old to new objects.
-     * If the shape of this label matches the shape of argument [label], then
-     * internal state of this label is changed to match the state of [label],
-     * and the [remapping] is updated to reflect this change.
-     * If [remapping] already has conflicting information
-     * (for example, it maps address of allocated object to another address not
-     * equal to the address stored in [label]), then the exception is thrown.
-     *
-     * @param label to replay this label.
-     * @param remapping stores the mapping from old to new replayed objects.
-     * @throws IllegalStateException if shapes of labels do not match or
-     *   [remapping] already contains a binding that contradicts the replaying.
-     *
-     * TODO: instead of storing actual object references in labels, we can store there object IDs,
-     *   and then additionally keep a mapping `ObjectID -> Any`
-     */
-    open fun replay(label: EventLabel) {
-        check(this == label) {
-            "Event label $this cannot be replayed by $label"
-        }
-    }
-
-    /**
-     * Changes the internal state of this label using given [remapping].
-     *
-     * @see replay
-     */
-    open fun remap(remapping: Remapping) {}
-
 }
 
 /**

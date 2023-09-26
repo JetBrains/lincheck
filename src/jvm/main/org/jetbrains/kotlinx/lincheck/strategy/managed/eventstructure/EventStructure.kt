@@ -66,8 +66,6 @@ class EventStructure(
 
     private var pinnedEvents = ExecutionFrontier<AtomicThreadEvent>(this.nThreads)
 
-    private var currentRemapping: Remapping = Remapping()
-
     private val delayedConsistencyCheckBuffer = mutableListOf<AtomicThreadEvent>()
 
     var detectedInconsistency: Inconsistency? = null
@@ -173,7 +171,6 @@ class EventStructure(
                         continue
                     }
                     check(responseEvent.label.isResponse)
-                    responseEvent.label.remap(currentRemapping)
                     _currentExecution.cutNext(responseEvent)
                 }
                 // otherwise just cut last replayed event
@@ -199,9 +196,7 @@ class EventStructure(
         // set current exploration root
         currentExplorationRoot = event
         // reset current execution
-        _currentExecution = event.frontier.toMutableExecution().apply {
-            currentRemapping = resynchronize(syncAlgebra)
-        }
+        _currentExecution = event.frontier.toMutableExecution()
         // copy pinned events and pin current re-exploration root event
         val pinnedEvents = event.pinnedEvents.copy()
             .apply { set(event.threadId, event) }
@@ -209,14 +204,11 @@ class EventStructure(
         consistencyChecker.reset(currentExecution)
         // add new event to current execution
         _currentExecution.add(event)
-        // remap new event's label
-        currentRemapping.resynchronize(event, syncAlgebra)
         // check new event with the incremental consistency checkers
         checkConsistencyIncrementally(event)
         // do the same for blocked requests
         for (blockedRequest in event.blockedRequests) {
             _currentExecution.add(blockedRequest)
-            currentRemapping.resynchronize(blockedRequest, syncAlgebra)
             checkConsistencyIncrementally(blockedRequest)
             // additionally, pin blocked requests if all their predecessors are also blocked ...
             if (blockedRequest.parent == pinnedEvents[blockedRequest.threadId]) {
@@ -241,7 +233,6 @@ class EventStructure(
             it.allocationEvent in currentExecution
         }
         // reset state of other auxiliary structures
-        currentRemapping.reset()
         delayedConsistencyCheckBuffer.clear()
     }
 

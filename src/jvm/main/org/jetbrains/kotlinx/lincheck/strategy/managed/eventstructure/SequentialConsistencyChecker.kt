@@ -232,6 +232,7 @@ private data class SequentialConsistencyReplayer(
     val nThreads: Int,
     val memoryView: MutableMap<MemoryLocation, Event> = mutableMapOf(),
     val monitorTracker: MapMonitorTracker = MapMonitorTracker(nThreads),
+    val monitorMapping: MutableMap<ObjectID, Any> = mutableMapOf()
 ) {
 
     fun replay(event: AtomicThreadEvent): SequentialConsistencyReplayer? {
@@ -256,24 +257,28 @@ private data class SequentialConsistencyReplayer(
             label is LockLabel && label.isRequest ->
                 this
 
-            label is LockLabel && label.isResponse && !label.isWaitLock ->
-                if (this.monitorTracker.canAcquire(event.threadId, label.mutex)) {
-                    this.copy().apply { monitorTracker.acquire(event.threadId, label.mutex).ensure() }
+            label is LockLabel && label.isResponse && !label.isWaitLock -> {
+                val monitor = getMonitor(label.mutex)
+                if (this.monitorTracker.canAcquire(event.threadId, monitor)) {
+                    this.copy().apply { monitorTracker.acquire(event.threadId, monitor).ensure() }
                 } else null
+            }
 
             label is UnlockLabel && !label.isWaitUnlock ->
-                this.copy().apply { monitorTracker.release(event.threadId, label.mutex) }
+                this.copy().apply { monitorTracker.release(event.threadId, getMonitor(label.mutex)) }
 
             label is WaitLabel && label.isRequest ->
-                this.copy().apply { monitorTracker.wait(event.threadId, label.mutex).ensure() }
+                this.copy().apply { monitorTracker.wait(event.threadId, getMonitor(label.mutex)).ensure() }
 
-            label is WaitLabel && label.isResponse ->
-                if (this.monitorTracker.canAcquire(event.threadId, label.mutex)) {
-                    this.copy().takeIf { !it.monitorTracker.wait(event.threadId, label.mutex) }
+            label is WaitLabel && label.isResponse -> {
+                val monitor = getMonitor(label.mutex)
+                if (this.monitorTracker.canAcquire(event.threadId, monitor)) {
+                    this.copy().takeIf { !it.monitorTracker.wait(event.threadId, monitor) }
                 } else null
+            }
 
             label is NotifyLabel ->
-                this.copy().apply { monitorTracker.notify(event.threadId, label.mutex, label.isBroadcast) }
+                this.copy().apply { monitorTracker.notify(event.threadId, getMonitor(label.mutex), label.isBroadcast) }
 
             // auxiliary unlock/lock events inserted before/after wait events
             label is LockLabel && label.isWaitLock ->
@@ -310,7 +315,13 @@ private data class SequentialConsistencyReplayer(
             nThreads,
             memoryView.toMutableMap(),
             monitorTracker.copy(),
+            monitorMapping.toMutableMap(),
         )
+
+    private fun getMonitor(objID: ObjectID): OpaqueValue {
+        check(objID != NULL_OBJECT_ID)
+        return monitorMapping.computeIfAbsent(objID) { Any() }.opaque()
+    }
 
 }
 

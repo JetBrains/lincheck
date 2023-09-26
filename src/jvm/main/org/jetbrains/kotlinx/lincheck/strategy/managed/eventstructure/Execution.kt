@@ -20,11 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
-import org.jetbrains.kotlinx.lincheck.ensure
-import org.jetbrains.kotlinx.lincheck.ensureNotNull
-import org.jetbrains.kotlinx.lincheck.ensureNull
-import org.jetbrains.kotlinx.lincheck.strategy.managed.Remapping
-import org.jetbrains.kotlinx.lincheck.strategy.managed.resynchronize
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.utils.*
 
 
@@ -217,14 +213,6 @@ fun<E : ThreadEvent> Covering<E>.firstCoverable(events: List<E>, clock: VectorCl
 
 fun<E : ThreadEvent> Execution<E>.enumerationOrderSortedList(): List<E> =
     this.sorted()
-
-fun<E : ThreadEvent> Execution<E>.resynchronize(algebra: SynchronizationAlgebra): Remapping {
-    val remapping = Remapping()
-    for (event in enumerationOrderSortedList()) {
-        remapping.resynchronize(event, algebra)
-    }
-    return remapping
-}
 
 // TODO: make an interface instead of type-alias?
 interface EventAggregator {
