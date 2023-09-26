@@ -253,7 +253,7 @@ internal class AtomicPrimitiveMemoryLocation(
 
 }
 
-private fun objRepr(className: String, objID: ObjectID): String {
+internal fun objRepr(className: String, objID: ObjectID): String {
     return when (objID) {
         NULL_OBJECT_ID -> "null"
         STATIC_OBJECT_ID -> className

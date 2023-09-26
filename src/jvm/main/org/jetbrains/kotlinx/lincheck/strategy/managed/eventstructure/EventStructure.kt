@@ -461,8 +461,10 @@ class EventStructure(
         }
         val id = nextObjectID++
         val entry = ObjectEntry(id, value, root)
+        val initLabel = (root.label as InitializationLabel)
+        val className = value.unwrap().javaClass.simpleName
         registerObjectEntry(entry)
-        (root.label as InitializationLabel).trackExternalObject(id)
+        initLabel.trackExternalObject(className, id)
         return entry.id
     }
 
@@ -805,6 +807,7 @@ class EventStructure(
         val id = nextObjectID++
         val label = ObjectAllocationLabel(
             objID = id,
+            className = value.unwrap().javaClass.simpleName,
             memoryInitializer = { location ->
                 val initValue = memoryInitializer(location)
                 computeObjectID(initValue)

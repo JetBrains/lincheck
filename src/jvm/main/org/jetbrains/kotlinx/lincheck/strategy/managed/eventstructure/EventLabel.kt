@@ -227,8 +227,8 @@ class InitializationLabel(
     private val objectsAllocations =
         IdentityHashMap<ObjectID, ObjectAllocationLabel>()
 
-    fun trackExternalObject(objID: ObjectID) {
-        objectsAllocations[objID] = ObjectAllocationLabel(objID, memoryInitializer)
+    fun trackExternalObject(className: String, objID: ObjectID) {
+        objectsAllocations[objID] = ObjectAllocationLabel(className, objID, memoryInitializer)
     }
 
     fun asThreadForkLabel() =
@@ -452,6 +452,7 @@ fun EventLabel.asThreadEventLabel(): ThreadEventLabel? = when (this) {
 }
 
 data class ObjectAllocationLabel(
+    val className: String,
     override val objID: ObjectID,
     val memoryInitializer: MemoryIDInitializer,
 ) : EventLabel(kind = LabelKind.Send) {
@@ -482,7 +483,7 @@ data class ObjectAllocationLabel(
         if (mutex == objID) UnlockLabel(mutex = objID, isInitUnlock = true) else null
 
     override fun toString(): String =
-        "Alloc($objID)"
+        "Alloc(${objRepr(className, objID)})"
 
 }
 
