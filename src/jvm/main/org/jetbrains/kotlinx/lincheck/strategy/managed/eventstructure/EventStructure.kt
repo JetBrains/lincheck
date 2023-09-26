@@ -459,8 +459,10 @@ class EventStructure(
         objectIndex[value.unwrap()]?.let {
             return it.id
         }
-        val entry = ObjectEntry(obj = value, id = nextObjectID++, event = root)
+        val id = nextObjectID++
+        val entry = ObjectEntry(id, value, root)
         registerObjectEntry(entry)
+        (root.label as InitializationLabel).trackExternalObject(id)
         return entry.id
     }
 
