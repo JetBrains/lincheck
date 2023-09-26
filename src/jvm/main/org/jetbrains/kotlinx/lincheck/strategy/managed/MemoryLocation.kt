@@ -96,11 +96,11 @@ internal class ObjectFieldMemoryLocation(
 
 
     override fun read(objMapper: ObjectIDMapper): Any? {
-        return field.get(objMapper(objID))
+        return field.get(objMapper(objID)?.unwrap())
     }
 
     override fun write(objMapper: ObjectIDMapper, value: Any?) {
-        field.set(objMapper(objID), value)
+        field.set(objMapper(objID)?.unwrap(), value)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -154,11 +154,11 @@ internal class ArrayElementMemoryLocation(
     }
 
     override fun read(objMapper: ObjectIDMapper): Any? {
-        return getMethod.invoke(objMapper(objID), index)
+        return getMethod.invoke(objMapper(objID)?.unwrap(), index)
     }
 
     override fun write(objMapper: ObjectIDMapper, value: Any?) {
-        setMethod.invoke(objMapper(objID), index, value)
+        setMethod.invoke(objMapper(objID)?.unwrap(), index, value)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -209,11 +209,11 @@ internal class AtomicPrimitiveMemoryLocation(
     }
 
     override fun read(objMapper: ObjectIDMapper): Any? {
-        return getMethod.invoke(objMapper(objID))
+        return getMethod.invoke(objMapper(objID)?.unwrap())
     }
 
     override fun write(objMapper: ObjectIDMapper, value: Any?) {
-        setMethod.invoke(objMapper(objID), value)
+        setMethod.invoke(objMapper(objID)?.unwrap(), value)
     }
 
     override fun equals(other: Any?): Boolean {

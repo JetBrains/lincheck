@@ -90,15 +90,15 @@ class EventStructure(
     // TODO: move to EventIndexer once it will be implemented
     private data class ObjectEntry(
         val id: ObjectID,
-        val obj: OpaqueValue?,
+        val obj: OpaqueValue,
+        val event: AtomicThreadEvent,
     ) {
-        var allocationEvent: AtomicThreadEvent? = null
-            private set
-
-        fun setAllocationEvent(event: AtomicThreadEvent) {
-            check(allocationEvent == null)
-            allocationEvent = event
+        init {
+            require(event.label is InitializationLabel || event.label is ObjectAllocationLabel)
         }
+
+        val isExternal: Boolean
+            get() = (event.label is InitializationLabel)
     }
 
     private val objectIdIndex = HashMap<ObjectID, ObjectEntry>()
@@ -212,13 +212,9 @@ class EventStructure(
         checkConsistency()
         // set the replayer state
         replayer = Replayer(sequentialConsistencyChecker.executionOrder)
-        // reset object indices (retain only those events already present in current execution)
-        objectIdIndex.values.retainAll {
-            it.allocationEvent in currentExecution
-        }
-        objectIndex.values.retainAll {
-            it.allocationEvent in currentExecution
-        }
+        // reset object indices --- retain only external events
+        objectIdIndex.values.retainAll { it.isExternal }
+        objectIndex.values.retainAll { it.isExternal }
         // reset state of other auxiliary structures
         delayedConsistencyCheckBuffer.clear()
     }
@@ -317,9 +313,9 @@ class EventStructure(
         val causalityClock = dependencies.fold(parent?.causalityClock?.copy() ?: emptyClock()) { clock, event ->
             clock + event.causalityClock
         }
-        val allocation = objectIdIndex[label.objID]?.allocationEvent
+        val allocation = objectIdIndex[label.objID]?.event
         val source = (label as? WriteAccessLabel)?.writeValue?.let {
-            objectIdIndex[it]?.allocationEvent
+            objectIdIndex[it]?.event
         }
         val frontier = currentExecution.toMutableFrontier()
             .apply { cut(conflicts) }
@@ -424,11 +420,6 @@ class EventStructure(
         if (event.label.isResponse && event.label.isBlocking && event.parent in danglingEvents) {
             unmarkBlockedDanglingRequest(event.parent!!)
         }
-        // Update allocation events index.
-        if (!isReplayedEvent && event.label is ObjectAllocationLabel) {
-            val objectEntry = objectIdIndex[event.label.objID]!!
-            objectEntry.setAllocationEvent(event)
-        }
         // If we are still in replay phase, but the added event is not a replayed event,
         // then save it to delayed events buffer to postpone its further processing.
         if (inReplayPhase) {
@@ -457,20 +448,20 @@ class EventStructure(
         checkConsistencyIncrementally(event)
     }
 
-    private fun computeObjectID(value: OpaqueValue?, delayedAllocation: Boolean = false): ObjectID {
+    private fun registerObjectEntry(entry: ObjectEntry) {
+        objectIdIndex.put(entry.id, entry).ensureNull()
+        objectIndex.put(entry.obj.unwrap(), entry).ensureNull()
+    }
+
+    private fun computeObjectID(value: OpaqueValue?): ObjectID {
         if (value == null)
             return NULL_OBJECT_ID
-        val objectEntry = objectIndex.computeIfAbsent(value.unwrap()) {
-            val id = nextObjectID++
-            val newEntry = ObjectEntry(obj = value, id = id)
-            if (!delayedAllocation) {
-                (root.label as InitializationLabel).trackExternalObject(id)
-                newEntry.setAllocationEvent(root)
-            }
-            objectIdIndex.put(id, newEntry).ensureNull()
-            newEntry
+        objectIndex[value.unwrap()]?.let {
+            return it.id
         }
-        return objectEntry.id
+        val entry = ObjectEntry(obj = value, id = nextObjectID++, event = root)
+        registerObjectEntry(entry)
+        return entry.id
     }
 
     fun getObjectID(value: OpaqueValue?): ObjectID {
@@ -802,14 +793,28 @@ class EventStructure(
     }
 
     fun addObjectAllocationEvent(iThread: Int, value: OpaqueValue): AtomicThreadEvent {
+        tryReplayEvent(iThread)?.let { event ->
+            val id = event.label.objID
+            val entry = ObjectEntry(id, value, event)
+            registerObjectEntry(entry)
+            addEventToCurrentExecution(event)
+            return event
+        }
+        val id = nextObjectID++
         val label = ObjectAllocationLabel(
-            objID = computeObjectID(value, delayedAllocation = true),
+            objID = id,
             memoryInitializer = { location ->
                 val initValue = memoryInitializer(location)
                 computeObjectID(initValue)
             },
         )
-        return addSendEvent(iThread, label)
+        val parent = playedFrontier[iThread]
+        val dependencies = listOf<AtomicThreadEvent>()
+        return addEvent(iThread, label, parent, dependencies)!!.also { event ->
+            val entry = ObjectEntry(id, value, event)
+            addEventToCurrentExecution(event)
+            registerObjectEntry(entry)
+        }
     }
 
     fun addWriteEvent(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?,

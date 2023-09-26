@@ -460,7 +460,6 @@ data class ObjectAllocationLabel(
         require(objID != NULL_OBJECT_ID)
     }
 
-    // TODO: reset on replay!
     private val initialValues = HashMap<MemoryLocation, ObjectID>()
 
     private fun initialValue(location: MemoryLocation): ObjectID {
