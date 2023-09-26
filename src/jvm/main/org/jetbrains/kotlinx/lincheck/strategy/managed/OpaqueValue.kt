@@ -131,5 +131,6 @@ data class PrimitiveID(val value: Any): ValueID() {
 data class ObjectID(val id: Int): ValueID()
 
 // TODO: override `toString` ?
-internal val INVALID_OBJECT_ID = ObjectID(-1)
+internal val INVALID_OBJECT_ID = ObjectID(-2)
+internal val STATIC_OBJECT_ID = ObjectID(-1)
 internal val NULL_OBJECT_ID = ObjectID(0)

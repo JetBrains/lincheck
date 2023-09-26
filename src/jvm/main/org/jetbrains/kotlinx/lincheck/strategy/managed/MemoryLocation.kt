@@ -40,7 +40,7 @@ internal class StaticFieldMemoryLocation(
     val fieldName: String,
 ) : MemoryLocation {
 
-    override val objID: ObjectID = NULL_OBJECT_ID
+    override val objID: ObjectID = STATIC_OBJECT_ID
 
     private val field: Field by lazy {
         resolveClass(strategy, className = className)
@@ -139,10 +139,10 @@ internal class ArrayElementMemoryLocation(
 
     val className: String = clazz.simpleName
 
-    private val isAtomicArray = clazz.isAtomicArrayClass()
+    private val isPlainArray = clazz.isArray
 
     private val getMethod: Method? by lazy {
-        if (!isAtomicArray) {
+        if (isPlainArray) {
             return@lazy null
         }
         val resolvedClass = resolveClass(strategy, clazz)
@@ -153,7 +153,7 @@ internal class ArrayElementMemoryLocation(
     }
 
     private val setMethod by lazy {
-        if (!isAtomicArray) {
+        if (isPlainArray) {
             return@lazy null
         }
         val resolvedClass = resolveClass(strategy, clazz)
@@ -164,18 +164,18 @@ internal class ArrayElementMemoryLocation(
     }
 
     override fun read(valueMapper: ValueMapper): Any? {
-        if (isAtomicArray) {
-            return getMethod!!.invoke(valueMapper(objID)?.unwrap(), index)
+        if (isPlainArray) {
+            return ReflectArray.get(valueMapper(objID)?.unwrap(), index)
         }
-        return ReflectArray.get(valueMapper(objID)?.unwrap(), index)
+        return getMethod!!.invoke(valueMapper(objID)?.unwrap(), index)
     }
 
     override fun write(valueMapper: ValueMapper, value: Any?) {
-        if (isAtomicArray) {
-            setMethod!!.invoke(valueMapper(objID)?.unwrap(), index, value)
+        if (isPlainArray) {
+            ReflectArray.set(valueMapper(objID)?.unwrap(), index, value)
             return
         }
-        ReflectArray.set(valueMapper(objID)?.unwrap(), index, value)
+        setMethod!!.invoke(valueMapper(objID)?.unwrap(), index, value)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -207,7 +207,7 @@ internal class AtomicPrimitiveMemoryLocation(
     init {
         require(objID != NULL_OBJECT_ID)
         // TODO: disable transformation of atomic classes --- make this check work!
-        require(clazz.isAtomicPrimitiveClass())
+        // require(clazz.isAtomicPrimitiveClass())
     }
 
     val className: String = clazz.simpleName
@@ -292,22 +292,8 @@ private fun resolveField(clazz: Class<*>, className: String, fieldName: String):
     throw IllegalStateException("Cannot find field $className::$fieldName for class $clazz!")
 }
 
-private fun Class<*>.isArrayClass(): Boolean = when (this) {
-    ByteArray::class.java,
-    ShortArray::class.java,
-    IntArray::class.java,
-    LongArray::class.java,
-    FloatArray::class.java,
-    DoubleArray::class.java,
-    CharArray::class.java,
-    BooleanArray::class.java,
-    Array::class.java,
-    AtomicIntegerArray::class.java,
-    AtomicLongArray::class.java,
-    AtomicReferenceArray::class.java
-            -> true
-    else    -> false
-}
+private fun Class<*>.isArrayClass(): Boolean =
+    isArray || isAtomicArrayClass()
 
 private fun Class<*>.isAtomicArrayClass(): Boolean = when (this) {
     AtomicIntegerArray::class.java,

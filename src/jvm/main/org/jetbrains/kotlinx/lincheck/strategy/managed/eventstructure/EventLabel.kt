@@ -224,6 +224,9 @@ class InitializationLabel(
     val memoryInitializer: MemoryIDInitializer,
 ) : EventLabel(LabelKind.Send) {
 
+    private val staticMemory =
+        HashMap<StaticFieldMemoryLocation, ValueID>()
+
     private val objectsAllocations =
         IdentityHashMap<ObjectID, ObjectAllocationLabel>()
 
@@ -237,8 +240,18 @@ class InitializationLabel(
     fun asObjectAllocationLabel(objID: ObjectID): ObjectAllocationLabel? =
         objectsAllocations[objID]
 
-    fun asWriteAccessLabel(location: MemoryLocation) =
-        asObjectAllocationLabel(location.objID)?.asWriteAccessLabel(location)
+    fun asWriteAccessLabel(location: MemoryLocation): WriteAccessLabel? {
+        if (location is StaticFieldMemoryLocation) {
+            return WriteAccessLabel(
+                location = location,
+                value = staticMemory.computeIfAbsent(location) {
+                    memoryInitializer(it)
+                },
+                isExclusive = false,
+            )
+        }
+        return asObjectAllocationLabel(location.objID)?.asWriteAccessLabel(location)
+    }
 
     fun asUnlockLabel(mutex: ObjectID) =
         asObjectAllocationLabel(mutex)?.asUnlockLabel(mutex)
