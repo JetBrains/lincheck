@@ -83,12 +83,17 @@ internal class ObjectFieldMemoryLocation(
     val fieldName: String,
 ) : MemoryLocation {
 
+    init {
+        check(objID != NULL_OBJECT_ID)
+    }
+
+    val simpleClassName: String = clazz.simpleName
+
     private val field: Field by lazy {
         val resolvedClass = resolveClass(strategy, clazz, className = className)
         resolveField(resolvedClass, className, fieldName)
             .apply { isAccessible = true }
     }
-
 
     override fun read(valueMapper: ValueMapper): Any? {
         return field.get(valueMapper(objID)?.unwrap())
@@ -115,8 +120,7 @@ internal class ObjectFieldMemoryLocation(
     }
 
     override fun toString(): String {
-        check(objID != NULL_OBJECT_ID)
-        return "${objRepr(className, objID)}::$fieldName"
+        return "${objRepr(simpleClassName, objID)}::$fieldName"
     }
 
 }
@@ -129,6 +133,7 @@ internal class ArrayElementMemoryLocation(
 ) : MemoryLocation {
 
     init {
+        check(objID != NULL_OBJECT_ID)
         require(clazz.isArrayClass())
     }
 
@@ -188,7 +193,6 @@ internal class ArrayElementMemoryLocation(
     }
 
     override fun toString(): String {
-        check(objID != NULL_OBJECT_ID)
         return "${objRepr(className, objID)}[$index]"
     }
 
@@ -201,8 +205,9 @@ internal class AtomicPrimitiveMemoryLocation(
 ) : MemoryLocation {
 
     init {
+        require(objID != NULL_OBJECT_ID)
         // TODO: disable transformation of atomic classes --- make this check work!
-        // require(clazz.isAtomicPrimitiveClass())
+        require(clazz.isAtomicPrimitiveClass())
     }
 
     val className: String = clazz.simpleName
