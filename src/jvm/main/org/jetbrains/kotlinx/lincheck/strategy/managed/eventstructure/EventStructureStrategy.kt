@@ -291,6 +291,10 @@ private class EventStructureMemoryTracker(
         return eventStructure.getValueID(value)
     }
 
+    override fun computeValueID(value: OpaqueValue?): ValueID {
+        return eventStructure.computeValueID(value)
+    }
+
     override fun objectAllocation(iThread: Int, value: OpaqueValue) {
         eventStructure.addObjectAllocationEvent(iThread, value)
     }

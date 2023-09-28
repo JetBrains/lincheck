@@ -33,6 +33,8 @@ abstract class MemoryTracker {
 
     abstract fun getValueID(value: OpaqueValue?): ValueID
 
+    abstract fun computeValueID(value: OpaqueValue?): ValueID
+
     abstract fun objectAllocation(iThread: Int, value: OpaqueValue)
 
     abstract fun writeValue(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?)
@@ -88,7 +90,7 @@ internal class PlainMemoryTracker(
         return objectIndex[value.unwrap()] ?: INVALID_OBJECT_ID
     }
 
-    private fun computeValueID(value: OpaqueValue?): ValueID {
+    override fun computeValueID(value: OpaqueValue?): ValueID {
         if (value == null)
             return NULL_OBJECT_ID
         if (value.isPrimitive)

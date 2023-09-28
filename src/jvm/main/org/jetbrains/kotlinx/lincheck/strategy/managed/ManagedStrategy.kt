@@ -462,6 +462,10 @@ abstract class ManagedStrategy(
         return memoryTracker.getValueID(value?.opaque())
     }
 
+    fun computeValueID(value: Any?): ValueID {
+        return memoryTracker.computeValueID(value?.opaque())
+    }
+
     // == LISTENING METHODS ==
 
     internal fun onObjectAllocation(iThread: Int, obj: Any) {

@@ -462,7 +462,7 @@ class EventStructure(
         return objectIndex[value.unwrap()]?.id ?: INVALID_OBJECT_ID
     }
 
-    private fun computeValueID(value: OpaqueValue?): ValueID {
+    fun computeValueID(value: OpaqueValue?): ValueID {
         if (value == null)
             return NULL_OBJECT_ID
         if (value.isPrimitive)
