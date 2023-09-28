@@ -134,7 +134,6 @@ internal class ArrayElementMemoryLocation(
 
     init {
         check(objID != NULL_OBJECT_ID)
-        require(clazz.isArrayClass())
     }
 
     val className: String = clazz.simpleName
@@ -206,8 +205,6 @@ internal class AtomicPrimitiveMemoryLocation(
 
     init {
         require(objID != NULL_OBJECT_ID)
-        // TODO: disable transformation of atomic classes --- make this check work!
-        // require(clazz.isAtomicPrimitiveClass())
     }
 
     val className: String = clazz.simpleName
@@ -290,24 +287,4 @@ private fun resolveField(clazz: Class<*>, className: String, fieldName: String):
         currentClass = currentClass?.superclass
     } while (currentClass != null)
     throw IllegalStateException("Cannot find field $className::$fieldName for class $clazz!")
-}
-
-private fun Class<*>.isArrayClass(): Boolean =
-    isArray || isAtomicArrayClass()
-
-private fun Class<*>.isAtomicArrayClass(): Boolean = when (this) {
-    AtomicIntegerArray::class.java,
-    AtomicLongArray::class.java,
-    AtomicReferenceArray::class.java
-            -> true
-    else    -> false
-}
-
-private fun Class<*>.isAtomicPrimitiveClass(): Boolean = when (this) {
-    AtomicBoolean::class.java,
-    AtomicInteger::class.java,
-    AtomicLong::class.java,
-    AtomicReference::class.java
-            -> true
-    else    -> false
 }
