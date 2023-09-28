@@ -76,6 +76,11 @@ internal class PlainMemoryTracker(
 
     private val memory = HashMap<MemoryLocation, ValueID>()
 
+    private fun registerObject(id: ObjectID, value: OpaqueValue) {
+        objectIdIndex.put(id, value).ensureNull()
+        objectIndex.put(value.unwrap(), id).ensureNull()
+    }
+
     override fun getValue(id: ValueID): OpaqueValue? = when (id) {
         NULL_OBJECT_ID -> null
         is PrimitiveID -> id.value.opaque()
@@ -96,14 +101,15 @@ internal class PlainMemoryTracker(
         if (value.isPrimitive)
             return PrimitiveID(value.unwrap())
         return objectIndex.computeIfAbsent(value.unwrap()) {
-            ObjectID(nextObjectID++)
+            ObjectID(nextObjectID++).also { id ->
+                registerObject(id, value)
+            }
         }
     }
 
     override fun objectAllocation(iThread: Int, value: OpaqueValue) {
         val id = ObjectID(nextObjectID++)
-        objectIdIndex.put(id, value).ensureNull()
-        objectIndex.put(value.unwrap(), id).ensureNull()
+        registerObject(id, value)
     }
 
     override fun writeValue(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?) {
