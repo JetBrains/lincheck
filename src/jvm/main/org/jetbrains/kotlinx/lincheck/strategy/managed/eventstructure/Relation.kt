@@ -20,6 +20,8 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
+import org.jetbrains.kotlinx.lincheck.ensureAllNotNull
+
 fun interface Relation<in T> {
     operator fun invoke(x: T, y: T): Boolean
 
@@ -36,9 +38,81 @@ infix fun<T> Relation<T>.intersection(relation: Relation<T>) = Relation<T> { x, 
     this(x, y) && relation(x, y)
 }
 
+// covering for each element returns a list of elements on which it depends;
+// in terms of a graph: for each node it returns source nodes of its incoming edges
 fun interface Covering<T> {
     operator fun invoke(x: T): List<T>
 }
+
+// adjacency list is a function that
+// for each node of a graph returns destination nodes of its outgoing edges
+interface Graph<T> {
+    val nodes: Collection<T>
+    fun adjacent(node: T): List<T>
+}
+
+fun<T> topologicalSortings(graph: Graph<T>): Sequence<List<T>> {
+    val state = mutableMapOf<T, TopoSortNodeState>()
+    val result = MutableList<T?>(graph.nodes.size) { null }
+    for (node in graph.nodes) {
+        state[node] = TopoSortNodeState.initial()
+        for (adjacentNode in graph.adjacent(node)) {
+            state.computeIfAbsent(node) { TopoSortNodeState.initial() }
+                .apply { indegree++ }
+        }
+    }
+    return sequence {
+        yieldTopologicalSortings(graph, 0, result, state)
+    }
+}
+
+private data class TopoSortNodeState(
+    var visited: Boolean,
+    var indegree: Int,
+) {
+    companion object {
+        fun initial() = TopoSortNodeState(false, 0)
+    }
+}
+
+private suspend fun<T> SequenceScope<List<T>>.yieldTopologicalSortings(
+    graph: Graph<T>,
+    depth: Int,
+    result: MutableList<T?>,
+    state: MutableMap<T, TopoSortNodeState>,
+) {
+    // this flag is used to detect terminal recursive calls
+    var isTerminal = true
+    // iterate through all nodes
+    for (node in graph.nodes) {
+        val nodeState = state[node]!!
+        // skip visited and not-yet ready nodes
+        if (nodeState.visited || nodeState.indegree != 0)
+            continue
+        // push the current node on top of the result list
+        result[depth] = node
+        // mark node as visited
+        nodeState.visited = true
+        // decrease indegree of all adjacent nodes
+        for (adjacentNode in graph.adjacent(node))
+            state[adjacentNode]!!.indegree--
+        // explore topological sortings recursively
+        yieldTopologicalSortings(graph, depth + 1, result, state)
+        // since we made recursive call, reset the isTerminal flag
+        isTerminal = false
+        // rollback the state
+        for (adjacentNode in graph.adjacent(node))
+            state[adjacentNode]!!.indegree++
+        nodeState.visited = false
+        result[depth] = null
+    }
+    // if we are at terminal call, yield the resulting sorted list
+    if (isTerminal) {
+        val sorting = result.toMutableList().ensureAllNotNull()
+        yield(sorting)
+    }
+}
+
 
 interface Indexer<T> {
 
