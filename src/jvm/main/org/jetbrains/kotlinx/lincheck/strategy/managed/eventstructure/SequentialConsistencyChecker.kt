@@ -453,13 +453,13 @@ private class WritesBeforeRelation(
     execution: Execution<AtomicThreadEvent>
 ): ExecutionRelation<AtomicThreadEvent>(execution) {
 
-    private val readsMap: MutableMap<MemoryLocation, ArrayList<ThreadEvent>> = mutableMapOf()
+    private val readsMap: MutableMap<MemoryLocation, ArrayList<AtomicThreadEvent>> = mutableMapOf()
 
-    private val writesMap: MutableMap<MemoryLocation, ArrayList<ThreadEvent>> = mutableMapOf()
+    private val writesMap: MutableMap<MemoryLocation, ArrayList<AtomicThreadEvent>> = mutableMapOf()
 
-    private val relations: MutableMap<MemoryLocation, RelationMatrix<ThreadEvent>> = mutableMapOf()
+    private val relations: MutableMap<MemoryLocation, RelationMatrix<AtomicThreadEvent>> = mutableMapOf()
 
-    private val rmwChains:  MutableMap<ThreadEvent, List<ThreadEvent>> = mutableMapOf()
+    private val rmwChains:  MutableMap<AtomicThreadEvent, List<AtomicThreadEvent>> = mutableMapOf()
 
     private var inconsistent = false
 
@@ -469,8 +469,8 @@ private class WritesBeforeRelation(
     }
 
     private fun initializeWritesBeforeOrder() {
-        var initEvent: ThreadEvent? = null
-        val allocEvents = mutableListOf<ThreadEvent>()
+        var initEvent: AtomicThreadEvent? = null
+        val allocEvents = mutableListOf<AtomicThreadEvent>()
         // TODO: refactor once per-kind indexing of events will be implemented
         for (event in execution) {
             val label = event.label
@@ -502,7 +502,7 @@ private class WritesBeforeRelation(
     }
 
     private fun initializeReadModifyWriteChains() {
-        val chainsMap = mutableMapOf<ThreadEvent, MutableList<AtomicThreadEvent>>()
+        val chainsMap = mutableMapOf<AtomicThreadEvent, MutableList<AtomicThreadEvent>>()
         for (event in execution.enumerationOrderSortedList()) {
             val label = event.label
             if (label !is WriteAccessLabel || !label.isExclusive)
@@ -551,8 +551,7 @@ private class WritesBeforeRelation(
             val writes = writesMap[memId] ?: continue
             var changed = false
             readLoop@ for (read in reads) {
-                val readFrom = (read as? AbstractAtomicThreadEvent)?.readsFrom
-                    ?: continue
+                val readFrom = read.readsFrom
                 val readFromChain = rmwChains[readFrom]
                 writeLoop@ for (write in writes) {
                     val writeChain = rmwChains[write]
@@ -591,13 +590,13 @@ private class WritesBeforeRelation(
     fun isIrreflexive(): Boolean =
         relations.all { (_, relation) -> relation.isIrreflexive() }
 
-    private fun buildIndexer(_events: ArrayList<ThreadEvent>) = object : Indexer<ThreadEvent> {
+    private fun buildIndexer(_events: ArrayList<AtomicThreadEvent>) = object : Indexer<AtomicThreadEvent> {
 
-        val events: SortedList<ThreadEvent> = SortedArrayList(_events.apply { sort() })
+        val events: SortedList<AtomicThreadEvent> = SortedArrayList(_events.apply { sort() })
 
-        override fun get(i: Int): ThreadEvent = events[i]
+        override fun get(i: Int): AtomicThreadEvent = events[i]
 
-        override fun index(x: ThreadEvent): Int = events.indexOf(x)
+        override fun index(x: AtomicThreadEvent): Int = events.indexOf(x)
 
     }
 
