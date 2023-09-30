@@ -74,3 +74,49 @@ fun <T> List<T>.squash(relation: (T, T) -> Boolean): List<List<T>> {
     }
     return squashed
 }
+
+fun <T> List<Sequence<T>>.cartesianProduct(): Sequence<List<T>> = sequence {
+    val sequences = this@cartesianProduct
+    if (sequences.isEmpty())
+        return@sequence
+
+    // prepare iterators of argument sequences
+    val iterators = sequences.map { it.iterator() }
+        .toMutableList()
+    // compute the first element of each argument sequence,
+    // while also count the number of non-empty sequences
+    var count = 0
+    val elements = iterators.map {
+        if (it.hasNext()) it.next().also { count++ } else null
+    }.toMutableList()
+    // return the empty sequence if at least one of the argument sequences is empty
+    if (count != iterators.size)
+        return@sequence
+    // can cast here since the list can only contain elements
+    // returned by iterators' `next()` function
+    elements as MutableList<T>
+
+    // produce tuples in a loop
+    while (true) {
+        // yield current tuple (make a copy)
+        yield(elements.toMutableList())
+        // prepare the next tuple:
+        // while the last sequence has elements, spawn it
+        if (iterators.last().hasNext()) {
+            elements[iterators.lastIndex] = iterators.last().next()
+            continue
+        }
+        // otherwise, reset the last sequence iterator,
+        // advance a preceding sequence, and repeat this process
+        // until we find a non-exceeded sequence
+        var idx = iterators.indices.last
+        while (idx >= 0 && !iterators[idx].hasNext()) {
+            iterators[idx] = sequences[idx].iterator()
+            elements[idx] = iterators[idx].next()
+            idx -= 1
+        }
+        // if all sequences have been exceeded, return
+        if (idx < 0)
+            return@sequence
+    }
+}
