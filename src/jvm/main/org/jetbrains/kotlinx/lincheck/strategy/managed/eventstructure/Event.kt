@@ -277,7 +277,9 @@ abstract class AbstractEvent(final override val label: EventLabel) : Event {
     protected open fun validate() {}
 
     override fun equals(other: Any?): Boolean {
-        return (other is AbstractEvent) && (id == other.id)
+        // TODO: think again --- is it sound? seems so, as we only create single event per ID
+        return (this === other)
+        // return (other is AbstractEvent) && (id == other.id)
     }
 
     override fun hashCode(): Int {

@@ -160,8 +160,9 @@ class RelationMatrix<T>(
 
     fun add(relation: Relation<T>) {
         for (i in 0 until size) {
+            val x = indexer[i]
             for (j in 0 until size) {
-                this[i, j] = this[i, j] || relation(indexer[i], indexer[j])
+                this[i, j] = this[i, j] || relation(x, indexer[j])
             }
         }
     }
