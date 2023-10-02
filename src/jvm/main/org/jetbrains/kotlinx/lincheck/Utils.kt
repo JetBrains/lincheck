@@ -411,11 +411,6 @@ inline fun<T> T?.ensureNotNull(lazyMessage: () -> Any): T {
     return this
 }
 
-fun<T> List<T?>.ensureAllNotNull(): List<T> {
-    check(all { it != null })
-    return (this as List<T>)
-}
-
 inline fun<T> T.ensure(predicate: (T) -> Boolean): T {
     check(predicate(this))
     return this
