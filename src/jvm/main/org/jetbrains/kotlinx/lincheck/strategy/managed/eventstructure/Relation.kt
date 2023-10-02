@@ -227,15 +227,14 @@ class RelationMatrix<T>(
 
     fun transitiveClosure(): Boolean {
         var changed = false
-        iLoop@for (i in 0 until size) {
-            jLoop@for (j in 0 until size) {
-                if (this[i, j])
-                    continue@jLoop
-                kLoop@for (k in 0 until size) {
-                    if (this[i, k] && this[k, j]) {
+        kLoop@for (k in 0 until size) {
+            iLoop@for (i in 0 until size) {
+                if (!this[i, k])
+                    continue@iLoop
+                jLoop@for (j in 0 until size) {
+                    if (!this[i, j] && this[k, j]) {
                         this[i, j] = true
                         changed = true
-                        continue@jLoop
                     }
                 }
             }
