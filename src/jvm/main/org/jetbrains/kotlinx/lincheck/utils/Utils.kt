@@ -118,5 +118,7 @@ fun <T> List<Sequence<T>>.cartesianProduct(): Sequence<List<T>> = sequence {
         // if all sequences have been exceeded, return
         if (idx < 0)
             return@sequence
+        // otherwise, advance the non-exceeded sequence
+        elements[idx] = iterators[idx].next()
     }
 }
