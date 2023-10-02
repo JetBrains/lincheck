@@ -789,6 +789,12 @@ private class ExtendedCoherenceRelation(
         for (response in execution) {
             if (!response.label.isResponse)
                 continue
+            // put notify event after wait-request
+            if (response.label is WaitLabel) {
+                this[response.request!!, response.notifiedBy] = true
+                continue
+            }
+            // otherwise, put request events after dependencies
             for (dependency in response.dependencies) {
                 check(dependency is AtomicThreadEvent)
                 this[dependency, response.request!!] = true
