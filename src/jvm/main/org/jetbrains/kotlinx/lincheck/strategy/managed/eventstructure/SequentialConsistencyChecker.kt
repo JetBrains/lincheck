@@ -803,6 +803,8 @@ private class ExtendedCoherenceRelation(
 
 private fun buildIndexer(events: MutableList<AtomicThreadEvent>) = object : Indexer<AtomicThreadEvent> {
 
+    // TODO: perhaps we can maintain event numbers directly in events themself
+    //   and update them during replay?
     val index: Map<AtomicThreadEvent, Int> =
         mutableMapOf<AtomicThreadEvent, Int>().apply {
             events.forEachIndexed { i, event ->

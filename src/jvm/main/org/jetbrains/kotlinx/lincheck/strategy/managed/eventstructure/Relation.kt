@@ -232,10 +232,9 @@ class RelationMatrix<T>(
                 if (!this[i, k])
                     continue@iLoop
                 jLoop@for (j in 0 until size) {
-                    if (!this[i, j] && this[k, j]) {
-                        this[i, j] = true
-                        changed = true
-                    }
+                    val connected = this[i, j]
+                    this[i, j] = connected || this[k, j]
+                    changed = changed || !connected && this[k, j]
                 }
             }
         }
