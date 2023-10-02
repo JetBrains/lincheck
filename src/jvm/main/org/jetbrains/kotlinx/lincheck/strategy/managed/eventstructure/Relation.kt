@@ -20,8 +20,6 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
-import org.jetbrains.kotlinx.lincheck.ensureAllNotNull
-
 fun interface Relation<in T> {
     operator fun invoke(x: T, y: T): Boolean
 
@@ -56,9 +54,10 @@ fun<T> topologicalSortings(graph: Graph<T>): Sequence<List<T>> {
     val result = MutableList<T?>(graph.nodes.size) { null }
     for (node in graph.nodes) {
         state[node] = TopoSortNodeState.initial()
+    }
+    for (node in graph.nodes) {
         for (adjacentNode in graph.adjacent(node)) {
-            state.computeIfAbsent(node) { TopoSortNodeState.initial() }
-                .apply { indegree++ }
+            state[adjacentNode]!!.indegree++
         }
     }
     return sequence {
@@ -108,7 +107,7 @@ private suspend fun<T> SequenceScope<List<T>>.yieldTopologicalSortings(
     }
     // if we are at terminal call, yield the resulting sorted list
     if (isTerminal) {
-        val sorting = result.toMutableList().ensureAllNotNull()
+        val sorting = result.toMutableList().requireNoNulls()
         yield(sorting)
     }
 }
