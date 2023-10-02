@@ -121,7 +121,7 @@ class SequentialConsistencyChecker(
             val extendedCoherence = ExtendedCoherenceRelation.fromCoherenceOrderings(execution, coherence)
             val scOrder = extendedCoherence.computeSequentialConsistencyOrder()
             if (scOrder != null) {
-                executionOrder = topologicalSortings(scOrder.asGraph()).first()
+                executionOrder = topologicalSorting(scOrder.asGraph())
                 val replayer = SequentialConsistencyReplayer(1 + execution.maxThreadID)
                 check(replayer.replay(executionOrder) != null)
                 return null

@@ -20,6 +20,9 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
+import java.util.LinkedList
+import java.util.Queue
+
 fun interface Relation<in T> {
     operator fun invoke(x: T, y: T): Boolean
 
@@ -49,28 +52,30 @@ interface Graph<T> {
     fun adjacent(node: T): List<T>
 }
 
-fun<T> topologicalSortings(graph: Graph<T>): Sequence<List<T>> {
-    val state = mutableMapOf<T, TopoSortNodeState>()
-    val result = MutableList<T?>(graph.nodes.size) { null }
+fun<T> topologicalSorting(graph: Graph<T>): List<T> {
+    val result = mutableListOf<T>()
+    val state = graph.initializeTopoSortState()
+    val queue: Queue<T> = LinkedList()
     for (node in graph.nodes) {
-        state[node] = TopoSortNodeState.initial()
+        if (state[node]!!.indegree == 0)
+            queue.add(node)
     }
-    for (node in graph.nodes) {
-        for (adjacentNode in graph.adjacent(node)) {
-            state[adjacentNode]!!.indegree++
+    while (queue.isNotEmpty()) {
+        val node = queue.poll()
+        result.add(node)
+        graph.adjacent(node).forEach {
+            if (--state[it]!!.indegree == 0)
+                queue.add(it)
         }
     }
-    return sequence {
-        yieldTopologicalSortings(graph, 0, result, state)
-    }
+    return result
 }
 
-private data class TopoSortNodeState(
-    var visited: Boolean,
-    var indegree: Int,
-) {
-    companion object {
-        fun initial() = TopoSortNodeState(false, 0)
+fun<T> topologicalSortings(graph: Graph<T>): Sequence<List<T>> {
+    val result = MutableList<T?>(graph.nodes.size) { null }
+    val state = graph.initializeTopoSortState()
+    return sequence {
+        yieldTopologicalSortings(graph, 0, result, state)
     }
 }
 
@@ -78,7 +83,7 @@ private suspend fun<T> SequenceScope<List<T>>.yieldTopologicalSortings(
     graph: Graph<T>,
     depth: Int,
     result: MutableList<T?>,
-    state: MutableMap<T, TopoSortNodeState>,
+    state: TopoSortState<T>,
 ) {
     // this flag is used to detect terminal recursive calls
     var isTerminal = true
@@ -110,6 +115,30 @@ private suspend fun<T> SequenceScope<List<T>>.yieldTopologicalSortings(
         val sorting = result.toMutableList().requireNoNulls()
         yield(sorting)
     }
+}
+
+private typealias TopoSortState<T> = MutableMap<T, TopoSortNodeState>
+
+private data class TopoSortNodeState(
+    var visited: Boolean,
+    var indegree: Int,
+) {
+    companion object {
+        fun initial() = TopoSortNodeState(false, 0)
+    }
+}
+
+private fun<T> Graph<T>.initializeTopoSortState(): TopoSortState<T> {
+    val state = mutableMapOf<T, TopoSortNodeState>()
+    for (node in nodes) {
+        state[node] = TopoSortNodeState.initial()
+    }
+    for (node in nodes) {
+        for (adjacentNode in adjacent(node)) {
+            state[adjacentNode]!!.indegree++
+        }
+    }
+    return state
 }
 
 
