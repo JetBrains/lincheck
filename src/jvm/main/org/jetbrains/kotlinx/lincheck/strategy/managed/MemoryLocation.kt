@@ -252,7 +252,7 @@ internal class AtomicPrimitiveMemoryLocation(
 internal fun objRepr(className: String, objID: ObjectID): String {
     return when (objID) {
         NULL_OBJECT_ID -> "null"
-        else -> "$className@$objID"
+        else -> "$className$objID"
     }
 }
 
