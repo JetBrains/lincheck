@@ -713,15 +713,13 @@ private class ExtendedCoherenceRelation(
     private fun addExtendendCoherenceEdges() {
         addReadsFromEdges()
         addReadsBeforeEdges()
-        addCoherenceReadFromEdges()
-        addReadsBeforeReadsFromEdges()
+        // addCoherenceReadFromEdges()
+        // addReadsBeforeReadsFromEdges()
     }
 
     // TODO: move to `SequentialConsistencyRelation`
     fun computeSequentialConsistencyOrder(): RelationMatrix<AtomicThreadEvent>? {
-        val scOrder = RelationMatrix(execution, indexer, causalityOrder.lessThan).apply {
-            add(this@ExtendedCoherenceRelation)
-        }
+        val scOrder = RelationMatrix(execution, indexer, causalityOrder.lessThan union this)
         // TODO: remove this ad-hoc
         scOrder.addRequestResponseEdges()
         scOrder.transitiveClosure()
@@ -803,12 +801,17 @@ private class ExtendedCoherenceRelation(
     }
 }
 
-private fun buildIndexer(_events: MutableList<AtomicThreadEvent>) = object : Indexer<AtomicThreadEvent> {
+private fun buildIndexer(events: MutableList<AtomicThreadEvent>) = object : Indexer<AtomicThreadEvent> {
 
-    val events: SortedList<AtomicThreadEvent> = SortedArrayList(_events.apply { sort() })
+    val index: Map<AtomicThreadEvent, Int> =
+        mutableMapOf<AtomicThreadEvent, Int>().apply {
+            events.forEachIndexed { i, event ->
+                put(event, i).ensureNull()
+            }
+        }
 
     override fun get(i: Int): AtomicThreadEvent = events[i]
 
-    override fun index(x: AtomicThreadEvent): Int = events.indexOf(x)
+    override fun index(x: AtomicThreadEvent): Int = index[x]!!
 
 }
