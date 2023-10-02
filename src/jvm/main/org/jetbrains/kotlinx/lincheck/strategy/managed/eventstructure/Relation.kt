@@ -122,7 +122,7 @@ interface Indexer<T> {
 }
 
 class RelationMatrix<T>(
-    nodes: Collection<T>,
+    val nodes: Collection<T>,
     val indexer: Indexer<T>,
     relation: Relation<T>? = null
 ) : Relation<T> {
@@ -162,6 +162,16 @@ class RelationMatrix<T>(
         for (i in 0 until size) {
             for (j in 0 until size) {
                 this[i, j] = this[i, j] || relation(indexer[i], indexer[j])
+            }
+        }
+    }
+
+    fun addTotalOrdering(ordering: List<T>, strict: Boolean = true) {
+        for (i in ordering.indices) {
+            for (j in i until ordering.size) {
+                if (strict && i == j)
+                    continue
+                this[ordering[i], ordering[j]] = true
             }
         }
     }
@@ -256,6 +266,26 @@ class RelationMatrix<T>(
                 return false
         }
         return true
+    }
+
+    fun asGraph() = object : Graph<T> {
+        override val nodes: Collection<T>
+            get() = this@RelationMatrix.nodes
+
+        private val adjacencyList = Array<List<T>>(nodes.size) { i ->
+            val result = mutableListOf<T>()
+            val indexer = this@RelationMatrix.indexer
+            matrix[i].forEachIndexed { j, b ->
+                if (!b) return@forEachIndexed
+                result.add(indexer[j])
+            }
+            result
+        }
+
+        override fun adjacent(node: T): List<T> {
+            val idx = this@RelationMatrix.indexer.index(node)
+            return adjacencyList[idx]
+        }
     }
 
     fun covering() = object : Covering<T> {

@@ -143,7 +143,8 @@ class EventStructureStrategy(
             #RelAcq violations   = $relAcqInconsistenciesCount
             #SeqCst violations   = ${sequentialConsistencyViolationsCount()}
                 #prelim. phase   = ${sequentialConsistencyViolationsCount(SequentialConsistencyCheckPhase.PRELIMINARY)}
-                #approx. phase   = ${sequentialConsistencyViolationsCount(SequentialConsistencyCheckPhase.APPROXIMATION)} 
+                #approx. phase   = ${sequentialConsistencyViolationsCount(SequentialConsistencyCheckPhase.APPROXIMATION)}
+                #coh.    phase   = ${sequentialConsistencyViolationsCount(SequentialConsistencyCheckPhase.COHERENCE)}
                 #replay  phase   = ${sequentialConsistencyViolationsCount(SequentialConsistencyCheckPhase.REPLAYING)}
         """.trimIndent()
 
