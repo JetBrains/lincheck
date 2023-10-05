@@ -151,6 +151,7 @@ class EventStructureStrategy(
             #Total invocations   = $totalInvocations         
                 #consistent      = $consistentInvocations    
                 #inconsistent    = $inconsistentInvocations  
+            #Atom.  violations   = $atomicityInconsistenciesCount
             #RelAcq violations   = $relAcqInconsistenciesCount
             #SeqCst violations   = ${sequentialConsistencyViolationsCount()}
                 #prelim. phase   = ${sequentialConsistencyViolationsCount(SequentialConsistencyCheckPhase.PRELIMINARY)}
