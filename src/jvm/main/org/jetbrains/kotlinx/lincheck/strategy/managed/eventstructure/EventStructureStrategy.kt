@@ -42,7 +42,7 @@ class EventStructureStrategy(
     private val maxInvocations = testCfg.invocationsPerIteration
 
     private val eventStructure: EventStructure =
-        EventStructure(nThreads, memoryInitializer) { iThread ->
+        EventStructure(nThreads, memoryInitializer, ::onInconsistency) { iThread ->
             switchCurrentThread(iThread, SwitchReason.STRATEGY_SWITCH, mustSwitch = true)
         }
 
@@ -93,9 +93,13 @@ class EventStructureStrategy(
             if (result is CompletedInvocationResult) {
                 patchResultsClock(eventStructure.currentExecution, result.results)
             }
-            inconsistency = eventStructure.checkConsistency()
+            inconsistency = when (result) {
+                is InconsistentInvocationResult -> result.inconsistency
+                else -> eventStructure.checkConsistency()
+            }
         }
         stats.update(result, inconsistency)
+        // println(stats.totalInvocations)
         return (result to inconsistency)
     }
 
@@ -276,8 +280,14 @@ class EventStructureStrategy(
         val actor = scenario[1 + iThread][currentActorId[iThread]]
         eventStructure.addActorEndEvent(iThread, actor)
     }
+
+    private fun onInconsistency(inconsistency: Inconsistency) {
+        suddenInvocationResult = InconsistentInvocationResult(inconsistency)
+        throw ForcibleExecutionFinishException
+    }
 }
 
+typealias ReportInconsistencyCallback = (Inconsistency) -> Unit
 typealias InternalThreadSwitchCallback = (ThreadID) -> Unit
 
 private class EventStructureMemoryTracker(

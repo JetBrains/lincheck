@@ -29,6 +29,8 @@ import kotlin.reflect.KClass
 class EventStructure(
     nParallelThreads: Int,
     val memoryInitializer: MemoryInitializer,
+    // TODO: refactor --- avoid using callbacks!
+    val reportInconsistencyCallback: ReportInconsistencyCallback,
     val internalThreadSwitchCallback: InternalThreadSwitchCallback,
 ) {
     val mainThreadId = nParallelThreads
@@ -445,7 +447,10 @@ class EventStructure(
         if (event.label.isSend) {
             addSynchronizedEvents(event)
         }
-        checkConsistencyIncrementally(event)
+        val inconsistency = checkConsistencyIncrementally(event)
+        if (inconsistency != null) {
+            reportInconsistencyCallback(inconsistency)
+        }
     }
 
     fun getValue(id: ValueID): OpaqueValue? = when (id) {

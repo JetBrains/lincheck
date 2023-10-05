@@ -22,6 +22,7 @@
 package org.jetbrains.kotlinx.lincheck.runner
 
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.Inconsistency
 
 /**
  * Represents results for invocations, see [Runner.run].
@@ -33,6 +34,7 @@ fun InvocationResult.isAbortedInvocation(): Boolean =
         is DeadlockInvocationResult,
         is UnexpectedExceptionInvocationResult,
         is ObstructionFreedomViolationInvocationResult -> true
+        is InconsistentInvocationResult -> true
         else -> false
     }
 
@@ -74,4 +76,8 @@ class ValidationFailureInvocationResult(
  */
 class ObstructionFreedomViolationInvocationResult(
     val reason: String
+) : InvocationResult()
+
+class InconsistentInvocationResult(
+    val inconsistency: Inconsistency
 ) : InvocationResult()

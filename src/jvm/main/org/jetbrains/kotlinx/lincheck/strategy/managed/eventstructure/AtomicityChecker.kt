@@ -41,7 +41,9 @@ class AtomicityChecker : IncrementalConsistencyChecker<AtomicThreadEvent> {
                 && label.accessKind == MemoryAccessKind.Write
                 && label.isExclusive
                 && it.exclusiveReadPart.readsFrom == readFrom
-        }?.let { return AtomicityViolation(it, event) }
+        }?.let {
+            return AtomicityViolation(it, event)
+        }
         return null
     }
 

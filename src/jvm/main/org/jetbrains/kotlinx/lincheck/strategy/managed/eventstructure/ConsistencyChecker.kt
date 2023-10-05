@@ -67,26 +67,23 @@ private class AggregatedIncrementalConsistencyChecker<E : ThreadEvent>(
 ) : IncrementalConsistencyChecker<E> {
 
     private var execution: Execution<E> = executionOf()
+    private var inconsistency: Inconsistency? = null
 
     override fun check(event: E): Inconsistency? {
-        var inconsistency: Inconsistency? = null
         for (incrementalChecker in incrementalConsistencyCheckers) {
-            incrementalChecker.check(event)?.also {
-                if (inconsistency == null)
-                    inconsistency = it
-            }
+            if (inconsistency != null)
+                break
+            inconsistency = incrementalChecker.check(event)
         }
         // TODO: implement amortized checks for full-consistency checkers?
         return inconsistency
     }
 
     override fun check(): Inconsistency? {
-        var inconsistency: Inconsistency? = null
         for (incrementalChecker in incrementalConsistencyCheckers) {
-            incrementalChecker.check()?.also {
-                if (inconsistency == null)
-                    inconsistency = it
-            }
+            if (inconsistency != null)
+                break
+            inconsistency = incrementalChecker.check()
         }
         for (checker in consistencyCheckers) {
             if (inconsistency != null)
@@ -98,6 +95,7 @@ private class AggregatedIncrementalConsistencyChecker<E : ThreadEvent>(
 
     override fun reset(execution: Execution<E>) {
         this.execution = execution
+        this.inconsistency = null
         for (incrementalChecker in incrementalConsistencyCheckers) {
             incrementalChecker.reset(execution)
         }
