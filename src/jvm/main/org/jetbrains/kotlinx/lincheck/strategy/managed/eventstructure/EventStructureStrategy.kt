@@ -108,6 +108,8 @@ class EventStructureStrategy(
         var consistentInvocations: Int = 0
             private set
 
+        private var atomicityInconsistenciesCount: Int = 0
+
         private var relAcqInconsistenciesCount: Int = 0
 
         private var seqCstViolationsCount: IntArray =
@@ -115,11 +117,15 @@ class EventStructureStrategy(
 
         val inconsistentInvocations: Int
             get() =
+                atomicityInconsistenciesCount() +
                 releaseAcquireViolationsCount() +
                 sequentialConsistencyViolationsCount()
 
         val totalInvocations: Int
             get() = consistentInvocations + inconsistentInvocations
+
+        fun atomicityInconsistenciesCount(): Int =
+            atomicityInconsistenciesCount
 
         fun releaseAcquireViolationsCount(): Int =
             relAcqInconsistenciesCount
@@ -133,6 +139,8 @@ class EventStructureStrategy(
                 return
             }
             when(inconsistency) {
+                is AtomicityViolation ->
+                    atomicityInconsistenciesCount++
                 is ReleaseAcquireConsistencyViolation ->
                     relAcqInconsistenciesCount++
                 is SequentialConsistencyViolation ->

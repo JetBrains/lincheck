@@ -484,7 +484,7 @@ private class WritesBeforeRelation(
 
     private val relations: MutableMap<MemoryLocation, RelationMatrix<AtomicThreadEvent>> = mutableMapOf()
 
-    private val rmwChains:  MutableMap<AtomicThreadEvent, List<AtomicThreadEvent>> = mutableMapOf()
+    private val rmwChains:  ReadModifyWriteChainsMutableMap = mutableMapOf()
 
     private var inconsistent = false
 
@@ -527,17 +527,15 @@ private class WritesBeforeRelation(
     }
 
     private fun initializeReadModifyWriteChains() {
-        val chainsMap = mutableMapOf<AtomicThreadEvent, MutableList<AtomicThreadEvent>>()
+        val chainsMap : ReadModifyWriteChainsMutableMap = mutableMapOf()
         for (event in execution.enumerationOrderSortedList()) {
             val label = event.label
             if (label !is WriteAccessLabel || !label.isExclusive)
                 continue
             val readFrom = event.exclusiveReadPart.readsFrom
-            val chain = if (readFrom.label is WriteAccessLabel)
-                    chainsMap.computeIfAbsent(readFrom) {
-                        mutableListOf(readFrom)
-                    }
-                else mutableListOf(readFrom)
+            val chain = chainsMap.computeIfAbsent(label.location to readFrom) {
+                mutableListOf(readFrom)
+            }
             // TODO: this should be detected earlier
             // check(readFrom == chain.last())
             if (readFrom != chain.last()) {
@@ -545,7 +543,7 @@ private class WritesBeforeRelation(
                 return
             }
             chain.add(event)
-            chainsMap.put(event, chain).ensureNull()
+            chainsMap.put((label.location to event), chain).ensureNull()
         }
         for (chain in chainsMap.values) {
             check(chain.size >= 2)
@@ -556,7 +554,6 @@ private class WritesBeforeRelation(
             }
             relation.transitiveClosure()
         }
-        check(chainsMap.keys.all { it.label is WriteAccessLabel })
         rmwChains.putAll(chainsMap)
     }
 
@@ -629,6 +626,14 @@ private class WritesBeforeRelation(
     }
 
 }
+
+// We use a map from pairs (location, event), because some events
+// (e.g. ObjectAllocation events) can encompass several memory locations simultaneously.
+private typealias ReadModifyWriteChainsMap =
+        MutableMap<Pair<MemoryLocation, AtomicThreadEvent>, MutableList<AtomicThreadEvent>>
+
+private typealias ReadModifyWriteChainsMutableMap =
+    MutableMap<Pair<MemoryLocation, AtomicThreadEvent>, MutableList<AtomicThreadEvent>>
 
 private class ExtendedCoherenceRelation(
     execution: Execution<AtomicThreadEvent>,
