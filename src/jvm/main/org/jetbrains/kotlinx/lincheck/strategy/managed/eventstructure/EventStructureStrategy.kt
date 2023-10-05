@@ -99,7 +99,6 @@ class EventStructureStrategy(
             }
         }
         stats.update(result, inconsistency)
-        // println(stats.totalInvocations)
         return (result to inconsistency)
     }
 

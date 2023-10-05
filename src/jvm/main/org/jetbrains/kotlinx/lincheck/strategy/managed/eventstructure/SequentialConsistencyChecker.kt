@@ -618,20 +618,57 @@ private class WritesBeforeRelation(
     fun generateCoherenceTotalOrderings(): Sequence<List<List<AtomicThreadEvent>>> {
         val coherenceOrderings = relations.mapNotNull { (_, relation) ->
             // TODO: remove this check!
-            if (relation.nodes.size > 1)
-                topologicalSortings(relation.asGraph())
-            else null
+            if (relation.nodes.size <= 1)
+                return@mapNotNull null
+            topologicalSortings(relation.asGraph()).filter {
+                // filter-out coherence orderings violating atomicity
+                respectsAtomicity(it)
+            }
         }
         return coherenceOrderings.cartesianProduct()
     }
 
+    fun getReadModifyWriteChains(location: MemoryLocation): List<List<AtomicThreadEvent>> {
+        return rmwChains.entries.asSequence()
+            .mapNotNull { (key, chain) ->
+                if (key.first == location) chain else null
+            }
+            .distinct()
+            .toMutableList()
+            .apply {
+                sortBy { chain ->
+                    chain.first()
+                }
+            }
+    }
+
+    private fun respectsAtomicity(coherence: List<AtomicThreadEvent>): Boolean {
+        check(coherence.isNotEmpty())
+        val location = coherence
+            .first { it.label is WriteAccessLabel }
+            .let { (it.label as WriteAccessLabel).location }
+        // atomicity violation occurs when a write event is put in the middle of some rmw chain
+        val chains = getReadModifyWriteChains(location)
+        if (chains.isEmpty())
+            return true
+        var i = 0
+        var pos = 0
+        while (pos + chains[i].size <= coherence.size) {
+            if (coherence[pos] == chains[i].first() &&
+                coherence.subList(pos, pos + chains[i].size) == chains[i]) {
+                pos += chains[i].size
+                if (++i == chains.size)
+                    return true
+            } else {
+                pos++
+            }
+        }
+        return false
+    }
 }
 
 // We use a map from pairs (location, event), because some events
 // (e.g. ObjectAllocation events) can encompass several memory locations simultaneously.
-private typealias ReadModifyWriteChainsMap =
-        MutableMap<Pair<MemoryLocation, AtomicThreadEvent>, MutableList<AtomicThreadEvent>>
-
 private typealias ReadModifyWriteChainsMutableMap =
     MutableMap<Pair<MemoryLocation, AtomicThreadEvent>, MutableList<AtomicThreadEvent>>
 
