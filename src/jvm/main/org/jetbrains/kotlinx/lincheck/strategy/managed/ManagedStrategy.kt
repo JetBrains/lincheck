@@ -657,7 +657,7 @@ abstract class ManagedStrategy(
         if (!isTestThread(iThread)) return false // TODO: return true?
         newSwitchPoint(iThread, codeLocation, tracePoint)
         parkingTracker.park(iThread)
-        while (parkingTracker.isParked(iThread)) {
+        while (parkingTracker.waitUnpark(iThread)) {
             // switch to another thread and wait till an unpark event happens
             switchCurrentThread(iThread, SwitchReason.PARK_WAIT, true)
         }

@@ -513,16 +513,22 @@ private class EventStructureParkingTracker(
         eventStructure.addParkRequestEvent(iThread)
     }
 
-    override fun unpark(iThread: Int, unparkingThreadId: Int) {
-        eventStructure.addUnparkEvent(iThread, unparkingThreadId)
-    }
-
-    override fun isParked(iThread: Int): Boolean {
+    override fun waitUnpark(iThread: Int): Boolean {
         val parkRequest = eventStructure.getBlockedRequest(iThread)
             ?.takeIf { it.label is ParkLabel }
             ?: return false
         val parkResponse = eventStructure.addParkResponseEvent(parkRequest)
         return (parkResponse == null)
+    }
+
+    override fun unpark(iThread: Int, unparkingThreadId: Int) {
+        eventStructure.addUnparkEvent(iThread, unparkingThreadId)
+    }
+
+    override fun isParked(iThread: Int): Boolean {
+        val blockedEvent = eventStructure.getBlockedAwaitingRequest(iThread)
+            ?: return false
+        return blockedEvent.label is ParkLabel
     }
 
     override fun reset() {}
