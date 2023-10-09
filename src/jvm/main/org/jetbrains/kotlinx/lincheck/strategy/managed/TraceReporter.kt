@@ -349,7 +349,7 @@ internal class ActorResultNode(
     iThread: Int,
     last: TraceNode?,
     callDepth: Int,
-    private val resultRepresentation: String?
+    val resultRepresentation: String?
 ) : TraceNode(iThread, last, callDepth) {
     override val lastState: String? = null
     override val lastInternalEvent: TraceNode = this

@@ -164,20 +164,55 @@ internal class ModelCheckingStrategy(
         }
     }
 
+    /**
+     * | Value                          | Code |
+     * |--------------------------------|------|
+     * | REGULAR                        | 0    |
+     * | ACTOR                          | 1    |
+     * | RESULT                         | 2    |
+     * | SWITCH                         | 3    |
+     * | SPIN_CYCLE_START               | 4    |
+     * | SPIN_CYCLE_SWITCH              | 5    |
+     * | OBSTRUCTION_FREEDOM_VIOLATION  | 6    |
+     */
     private fun extractDebugTrace(failure: LincheckFailure, trace: Trace): Array<String> {
         val results = if (failure is IncorrectResultsFailure) failure.results else null
         var node = constructTraceGraph(scenario, results, trace, exceptionsOrEmpty(failure))
         val representations = mutableListOf<String>()
         while (node != null) {
-            val (beforeEventId, representation) = when (node) {
-                is TraceLeafEvent -> node.event.beforeEventId to node.event.toStringImpl(false)
-                is CallNode -> node.call.beforeEventId to  node.call.toStringImpl(false)
-                is ActorNode -> -1 to node.actor.toString()
-                else -> -1 to ""
+            when (node) {
+                is TraceLeafEvent -> {
+                    val beforeEventId = node.event.beforeEventId
+                    val representation = node.event.toStringImpl(false)
+                    val type = if (node.event is SwitchEventTracePoint) 3 else 0
+                    if (representation.isNotEmpty()) {
+                        representations.add("$type;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation}")
+                    }
+                }
+
+                is CallNode -> {
+                    val beforeEventId = node.call.beforeEventId
+                    val representation = node.call.toStringImpl(false)
+                    if (representation.isNotEmpty()) {
+                        representations.add("0;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation}")
+                    }
+                }
+
+                is ActorNode -> {
+                    val beforeEventId = -1
+                    val representation = node.actor.toString()
+                    if (representation.isNotEmpty()) {
+                        representations.add("1;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation}")
+                    }
+                }
+
+                is ActorResultNode -> {
+                    val beforeEventId = -1
+                    val representation = node.resultRepresentation.toString()
+                    representations.add("2;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation}")
+                }
             }
-            if (representation != "") {
-                representations.add("${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation}")
-            }
+
             node = node.next
         }
         return representations.toTypedArray()
