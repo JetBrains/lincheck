@@ -410,11 +410,12 @@ internal class ManagedStrategyTransformer(
         // STACK: [location args ...] -> read value
         protected fun visitRead(locationState: MemoryLocationState, descriptor: String, performRead: () -> Unit) = adapter.run {
             val valueType = Type.getType(descriptor)
+            val codeLocationLocal = newCodeLocationLocal()
             val tracePointLocal = newTracePointLocal()
-            invokeBeforeSharedVariableRead(locationState.locationName, tracePointLocal)
+            invokeBeforeSharedVariableRead(locationState.locationName, codeLocationLocal, tracePointLocal)
             interceptIfMemoryTrackingEnabled(performRead) {
                 locationState.store()
-                invokeOnSharedVariableRead(locationState, valueType)
+                invokeOnSharedVariableRead(locationState, valueType, codeLocationLocal)
                 unboxOrCast(valueType)
             }
             // capture read value only when logging is enabled
@@ -428,12 +429,13 @@ internal class ManagedStrategyTransformer(
         protected fun visitWrite(locationState: MemoryLocationState, descriptor: String, performWrite: () -> Unit) = adapter.run {
             val valueType = Type.getType(descriptor)
             val valueLocal = newLocal(valueType).also { copyLocal(it) }
+            val codeLocationLocal = newCodeLocationLocal()
             val tracePointLocal = newTracePointLocal()
-            invokeBeforeSharedVariableWrite(locationState.locationName, tracePointLocal)
+            invokeBeforeSharedVariableWrite(locationState.locationName, codeLocationLocal, tracePointLocal)
             interceptIfMemoryTrackingEnabled(performWrite) {
                 pop(valueType) // pops value from stack
                 locationState.store()
-                invokeOnSharedVariableWrite(locationState, valueLocal, valueType)
+                invokeOnSharedVariableWrite(locationState, valueLocal, valueType, codeLocationLocal)
             }
             // capture written value only when logging is enabled
             if (constructTraceRepresentation) {
@@ -446,8 +448,9 @@ internal class ManagedStrategyTransformer(
         protected fun visitAtomicUpdateMethod(methodDescriptor: AtomicUpdateMethodDescriptor, locationState: MemoryLocationState, descriptor: String,
                                               performMethod: () -> Unit) = adapter.run {
             val valueType = Type.getType(descriptor)
+            val codeLocationLocal = newCodeLocationLocal()
             val tracePointLocal = newTracePointLocal()
-            invokeBeforeSharedVariableRead(locationState.locationName, tracePointLocal)
+            invokeBeforeSharedVariableRead(locationState.locationName, codeLocationLocal, tracePointLocal)
             interceptIfMemoryTrackingEnabled(performMethod) {
                 if (methodDescriptor.isIncrement()) {
                     when (descriptor) {
@@ -468,7 +471,7 @@ internal class ManagedStrategyTransformer(
                     newLocal(valueType).also { storeLocal(it) }
                 } else null
                 locationState.store()
-                invokeOnAtomicMethod(methodDescriptor, locationState, cmpValueLocal, updValueLocal, valueType)
+                invokeOnAtomicMethod(methodDescriptor, locationState, cmpValueLocal, updValueLocal, valueType, codeLocationLocal)
                 if (methodDescriptor.returnsReadValue()) {
                     unboxOrCast(valueType)
                 }
@@ -490,47 +493,52 @@ internal class ManagedStrategyTransformer(
         }
 
         // STACK: (empty) -> (empty)
-        private fun invokeBeforeSharedVariableRead(fieldName: String?, tracePointLocal: Int?) = adapter.run {
+        private fun invokeBeforeSharedVariableRead(fieldName: String?, codeLocationLocal: Int, tracePointLocal: Int?) = adapter.run {
             loadStrategy()
             loadCurrentThreadNumber()
-            loadNewCodeLocationAndTracePoint(tracePointLocal, READ_TRACE_POINT_TYPE) { iThread, actorId, callStackTrace, stackTraceElement ->
-                ReadTracePoint(iThread, actorId, callStackTrace, fieldName, stackTraceElement)
-            }
+            loadNewCodeLocationAndTracePoint(tracePointLocal, READ_TRACE_POINT_TYPE, codeLocationLocal)
+                { iThread, actorId, callStackTrace, stackTraceElement ->
+                    ReadTracePoint(iThread, actorId, callStackTrace, fieldName, stackTraceElement)
+                }
             invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_SHARED_VARIABLE_READ_METHOD)
         }
 
         // STACK: (empty) -> (empty)
-        private fun invokeBeforeSharedVariableWrite(fieldName: String?, tracePointLocal: Int?) = adapter.run {
+        private fun invokeBeforeSharedVariableWrite(fieldName: String?, codeLocationLocal: Int, tracePointLocal: Int?) = adapter.run {
             loadStrategy()
             loadCurrentThreadNumber()
-            loadNewCodeLocationAndTracePoint(tracePointLocal, WRITE_TRACE_POINT_TYPE) { iThread, actorId, callStackTrace, stackTraceElement ->
-                WriteTracePoint(iThread, actorId, callStackTrace, fieldName, stackTraceElement)
-            }
+            loadNewCodeLocationAndTracePoint(tracePointLocal, WRITE_TRACE_POINT_TYPE, codeLocationLocal)
+                { iThread, actorId, callStackTrace, stackTraceElement ->
+                    WriteTracePoint(iThread, actorId, callStackTrace, fieldName, stackTraceElement)
+                }
             invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_SHARED_VARIABLE_WRITE_METHOD)
         }
 
         // STACK: (empty) -> read value
-        private fun invokeOnSharedVariableRead(locationState: MemoryLocationState, valueType: Type) = adapter.run {
+        private fun invokeOnSharedVariableRead(locationState: MemoryLocationState, valueType: Type, codeLocationLocal: Int) = adapter.run {
             loadStrategy()                              // STACK: strategy
             loadCurrentThreadNumber()                   // STACK: strategy, threadId
             invokeLabelMemoryLocation(locationState)    // STACK: strategy, threadId, location
             invokeGetKClassFromType(valueType)          // STACK: strategy, threadId, location, kClass
+            loadLocal(codeLocationLocal)                // STACK: strategy, threadId, location, kClass, codeloc
             invokeVirtual(MANAGED_STRATEGY_TYPE, ON_SHARED_VARIABLE_READ_METHOD)
         }
 
         // STACK: (empty) -> (empty)
-        private fun invokeOnSharedVariableWrite(locationState: MemoryLocationState, valueLocal: Int, valueType: Type) = adapter.run {
+        private fun invokeOnSharedVariableWrite(locationState: MemoryLocationState, valueLocal: Int, valueType: Type, codeLocationLocal: Int) = adapter.run {
             loadStrategy()                                  // STACK: strategy
             loadCurrentThreadNumber()                       // STACK: strategy, threadId
             invokeLabelMemoryLocation(locationState)        // STACK: strategy, threadId, location
             invokeGetKClassFromType(valueType)              // STACK: strategy, threadId, location, kClass
             loadLocal(valueLocal); box(valueType)           // STACK: strategy, threadId, location, kClass, value
+            loadLocal(codeLocationLocal)                    // STACK: strategy, threadId, location, kClass, value, codeloc
             invokeVirtual(MANAGED_STRATEGY_TYPE, ON_SHARED_VARIABLE_WRITE_METHOD)
         }
 
         // STACK: (empty) -> method result
         private fun invokeOnAtomicMethod(methodDescriptor: AtomicUpdateMethodDescriptor, locationState: MemoryLocationState,
-                                         cmpValueLocal: Int?, updValueLocal: Int, valueType: Type) = adapter.run {
+                                         cmpValueLocal: Int?, updValueLocal: Int, valueType: Type,
+                                         codeLocationLocal: Int) = adapter.run {
             require((methodDescriptor == AtomicUpdateMethodDescriptor.CMP_AND_SET) implies (cmpValueLocal != null))
             loadStrategy()                                          // STACK: strategy
             loadCurrentThreadNumber()                               // STACK: strategy, threadId
@@ -538,6 +546,7 @@ internal class ManagedStrategyTransformer(
             invokeGetKClassFromType(valueType)                      // STACK: strategy, threadId, location, kClass
             cmpValueLocal?.also { loadLocal(it); box(valueType) }   // STACK: strategy, threadId, location, kClass, cmpValue?
             updValueLocal .also { loadLocal(it); box(valueType) }   // STACK: strategy, threadId, location, kClass, cmpValue?, updValue
+            loadLocal(codeLocationLocal)                            // STACK: strategy, threadId, location, kClass, cmpValue?, updValue, codeloc
             invokeVirtual(MANAGED_STRATEGY_TYPE, methodDescriptor.method())
         }
 
@@ -1464,7 +1473,7 @@ internal class ManagedStrategyTransformer(
             adapter.storeLocal(monitorLocal)
             loadStrategy()
             loadCurrentThreadNumber()
-            loadNewCodeLocationAndTracePoint(null, tracePointType, codeLocationConstructor)
+            loadNewCodeLocationAndTracePoint(null, tracePointType, null, codeLocationConstructor)
             adapter.loadLocal(monitorLocal)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, method)
         }
@@ -1609,7 +1618,7 @@ internal class ManagedStrategyTransformer(
             adapter.storeLocal(monitorLocal)
             loadStrategy()
             loadCurrentThreadNumber()
-            loadNewCodeLocationAndTracePoint(null, tracePointType, codeLocationConstructor)
+            loadNewCodeLocationAndTracePoint(null, tracePointType, null, codeLocationConstructor)
             adapter.loadLocal(monitorLocal)
             adapter.push(flag)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, method)
@@ -1667,7 +1676,7 @@ internal class ManagedStrategyTransformer(
             adapter.storeLocal(withTimeoutLocal)
             loadStrategy()
             loadCurrentThreadNumber()
-            loadNewCodeLocationAndTracePoint(null, PARK_TRACE_POINT_TYPE, ::ParkTracePoint)
+            loadNewCodeLocationAndTracePoint(null, PARK_TRACE_POINT_TYPE, null, ::ParkTracePoint)
             adapter.loadLocal(withTimeoutLocal)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_PARK_METHOD)
         }
@@ -1678,7 +1687,7 @@ internal class ManagedStrategyTransformer(
             adapter.storeLocal(threadLocal)
             loadStrategy()
             loadCurrentThreadNumber()
-            loadNewCodeLocationAndTracePoint(null, UNPARK_TRACE_POINT_TYPE, ::UnparkTracePoint)
+            loadNewCodeLocationAndTracePoint(null, UNPARK_TRACE_POINT_TYPE, null, ::UnparkTracePoint)
             adapter.loadLocal(threadLocal)
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, AFTER_UNPARK_METHOD)
         }
@@ -1968,9 +1977,15 @@ internal class ManagedStrategyTransformer(
         }
 
         // STACK: (empty) -> code location, trace point
-        protected fun loadNewCodeLocationAndTracePoint(tracePointLocal: Int?, tracePointType: Type, codeLocationConstructor: CodeLocationTracePointConstructor) {
+        protected fun loadNewCodeLocationAndTracePoint(
+            tracePointLocal: Int?,
+            tracePointType: Type,
+            codeLocationLocal: Int? = null,
+            codeLocationConstructor: CodeLocationTracePointConstructor
+        ) {
             // push the codeLocation on stack
             adapter.push(codeLocationIdProvider.newId())
+            if (codeLocationLocal != null) adapter.copyLocal(codeLocationLocal)
             // push the corresponding trace point
             if (constructTraceRepresentation) {
                 // add constructor for the code location
@@ -1993,6 +2008,9 @@ internal class ManagedStrategyTransformer(
                 adapter.push(null as Type?)
             }
         }
+
+        protected fun newCodeLocationLocal(): Int =
+            adapter.newLocal(CODE_LOCATION_TYPE)
 
         protected fun newTracePointLocal(): Int? =
             if (constructTraceRepresentation) {
@@ -2111,6 +2129,7 @@ private val STRING_TYPE = Type.getType(String::class.java)
 private val CLASS_TYPE = Type.getType(Class::class.java)
 private val FIELD_TYPE = Type.getType(Field::class.java)
 private val OBJECT_ARRAY_TYPE = Type.getType("[" + OBJECT_TYPE.descriptor)
+private val CODE_LOCATION_TYPE = Type.INT_TYPE
 private val TRACE_POINT_TYPE = Type.getType(TracePoint::class.java)
 private val WRITE_TRACE_POINT_TYPE = Type.getType(WriteTracePoint::class.java)
 private val READ_TRACE_POINT_TYPE = Type.getType(ReadTracePoint::class.java)

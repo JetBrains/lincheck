@@ -511,7 +511,7 @@ abstract class ManagedStrategy(
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
      * @param location the memory location identifier.
      */
-    internal fun onSharedVariableRead(iThread: Int, location: MemoryLocation, kClass: KClass<*>): Any? {
+    internal fun onSharedVariableRead(iThread: Int, location: MemoryLocation, kClass: KClass<*>, codeLocation: Int): Any? {
         return memoryTracker.readValue(iThread, location, kClass)?.unwrap()
     }
 
@@ -521,7 +521,7 @@ abstract class ManagedStrategy(
      * @param location the memory location identifier.
      * @param value the value to be written.
      */
-    internal fun onSharedVariableWrite(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: Any?) {
+    internal fun onSharedVariableWrite(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: Any?, codeLocation: Int) {
         memoryTracker.writeValue(iThread, location, kClass, value?.opaque())
     }
 
@@ -533,7 +533,7 @@ abstract class ManagedStrategy(
      * @param desired next value if CAS is successful.
      * @return result of this operation, replacing the "real" result.
      */
-    internal fun onCompareAndSet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, expected: Any?, desired: Any?): Boolean {
+    internal fun onCompareAndSet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, expected: Any?, desired: Any?, codeLocation: Int): Boolean {
         return memoryTracker.compareAndSet(iThread, location, kClass, expected?.opaque(), desired?.opaque())
     }
 
@@ -544,7 +544,7 @@ abstract class ManagedStrategy(
      * @param delta value change. Int or Long depending on atomic primitive type.
      * @return result of this operation, replacing the "real" result.
      */
-    internal fun onAddAndGet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, delta: Number): Number {
+    internal fun onAddAndGet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, delta: Number, codeLocation: Int): Number {
         return memoryTracker.addAndGet(iThread, location, kClass, delta)?.unwrap() as Number
     }
 
@@ -555,7 +555,7 @@ abstract class ManagedStrategy(
      * @param delta value change. Int or Long depending on atomic primitive type.
      * @return result of this operation, replacing the "real" result.
      */
-    internal fun onGetAndAdd(iThread: Int, location: MemoryLocation, kClass: KClass<*>, delta: Number): Number {
+    internal fun onGetAndAdd(iThread: Int, location: MemoryLocation, kClass: KClass<*>, delta: Number, codeLocation: Int): Number {
         return memoryTracker.getAndAdd(iThread, location, kClass, delta)?.unwrap() as Number
     }
 
@@ -566,7 +566,7 @@ abstract class ManagedStrategy(
      * @param delta value change. Int or Long depending on atomic primitive type.
      * @return result of this operation, replacing the "real" result.
      */
-    internal fun onGetAndSet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: Any?): Any? {
+    internal fun onGetAndSet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: Any?, codeLocation: Int): Any? {
         return memoryTracker.getAndSet(iThread, location, kClass, value?.opaque())?.unwrap()
     }
 
