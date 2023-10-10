@@ -74,14 +74,17 @@ abstract class ManagedStrategy(
     private val finished = BooleanArray(nThreads) { false }
     // Which threads are suspended?
     private val isSuspended = BooleanArray(nThreads) { false }
+    // Which threads are spin-bound blocked?
+    private val isSpinBoundBlocked = BooleanArray(nThreads) { false }
     // Current actor id for each thread.
     protected val currentActorId = IntArray(nThreads)
     // Ihe number of entered but not left (yet) blocks that should be ignored by the strategy analysis for each thread.
     private val ignoredSectionDepth = IntArray(nThreads) { 0 }
     // Ihe number of entered but not left (yet) blocks where memory operations should not be tracked.
     private val untrackingSectionDepth = IntArray(nThreads + 1) { if (memoryTrackingEnabled) 0 else 1 }
+
     // Detector of loops or hangs (i.e. active locks).
-    private var loopDetector: LoopDetector = LoopDetector(testCfg.hangingDetectionThreshold)
+    protected abstract val loopDetector: LoopDetector
 
     // Tracker of shared memory accesses.
     protected abstract val memoryTracker: MemoryTracker
@@ -188,6 +191,7 @@ abstract class ManagedStrategy(
     protected open fun initializeInvocation() {
         finished.fill(false)
         isSuspended.fill(false)
+        isSpinBoundBlocked.fill(false)
         currentActorId.fill(-1)
         loopDetector.reset()
         memoryTracker.reset()
@@ -217,6 +221,7 @@ abstract class ManagedStrategy(
                 IncorrectResultsFailure(scenario, result.results, trace)
             }
         }
+        is SpinLoopBoundInvocationResult -> null
         else -> {
             val trace = if (shouldCollectTrace) collectTrace(result) else null
             result.toLincheckFailure(scenario, trace)
@@ -352,7 +357,7 @@ abstract class ManagedStrategy(
         currentActorId[iThread]++
         callStackTrace[iThread].clear()
         suspendedFunctionsStack[iThread].clear()
-        loopDetector.reset(iThread)
+        loopDetector.onActorStart(iThread)
     }
 
     /**
@@ -362,6 +367,7 @@ abstract class ManagedStrategy(
     protected open fun isActive(iThread: Int): Boolean =
         !finished[iThread] &&
         !(isSuspended[iThread] && !runner.isCoroutineResumed(iThread, currentActorId[iThread])) &&
+        !isSpinBoundBlocked[iThread] &&
         !monitorTracker.isWaiting(iThread) &&
         !parkingTracker.isParked(iThread)
 
@@ -413,6 +419,8 @@ abstract class ManagedStrategy(
      */
     protected fun switchCurrentThread(iThread: Int, reason: SwitchReason = SwitchReason.STRATEGY_SWITCH, mustSwitch: Boolean = false) {
         if (!isTestThread(iThread)) return // can switch only test threads
+        if (reason == SwitchReason.SPIN_BOUND)
+            isSpinBoundBlocked[iThread] = true
         traceCollector?.newSwitch(iThread, reason)
         doSwitchCurrentThread(iThread, mustSwitch)
         awaitTurn(iThread)
@@ -420,24 +428,31 @@ abstract class ManagedStrategy(
 
     private fun doSwitchCurrentThread(iThread: Int, mustSwitch: Boolean = false) {
         onNewSwitch(iThread, mustSwitch)
-        val switchableThreads = switchableThreads(iThread)
-        if (switchableThreads.isEmpty()) {
-            if (mustSwitch && !finished.all { it }) {
-                // all threads are suspended
-                // then switch on any suspended thread to finish it and get SuspendedResult
-                val nextThread = (0 until nThreads).firstOrNull { !finished[it] && isSuspended[it] }
-                if (nextThread == null) {
-                    // must switch not to get into a deadlock, but there are no threads to switch.
-                    suddenInvocationResult = DeadlockInvocationResult(collectThreadDump(runner))
-                    // forcibly finish execution by throwing an exception.
-                    throw ForcibleExecutionFinishException
-                }
-                currentThread = nextThread
-            }
-            return // ignore switch, because there is no one to switch to
+        // if there exists active threads to switch then simply switch to one of such threads
+        if (switchableThreads(iThread).isNotEmpty()) {
+            val nextThreadId = chooseThread(iThread)
+            currentThread = nextThreadId
+            return
         }
-        val nextThreadId = chooseThread(iThread)
-        currentThread = nextThreadId
+        // otherwise if switch is optional, or all threads are finished --- simply return
+        if (!mustSwitch || finished.all { it })
+            return
+        // try to resume some suspended thread
+        val suspendedThread = (0 until nThreads).firstOrNull { !finished[it] && isSuspended[it] }
+        if (suspendedThread != null) {
+            currentThread = suspendedThread
+            return
+        }
+        // if some threads (but not all of them!) are blocked due to spin-loop bounding,
+        // then finish the execution, but do not count it as a deadlock;
+        // otherwise consider the
+        if (isSpinBoundBlocked.any { it } && !isSpinBoundBlocked.all { it }) {
+            suddenInvocationResult = SpinLoopBoundInvocationResult()
+            throw ForcibleExecutionFinishException
+        }
+        // any other situation is considered to be a deadlock
+        suddenInvocationResult = DeadlockInvocationResult(collectThreadDump(runner))
+        throw ForcibleExecutionFinishException
     }
 
     /**
@@ -512,7 +527,7 @@ abstract class ManagedStrategy(
      * @param location the memory location identifier.
      */
     internal fun onSharedVariableRead(iThread: Int, location: MemoryLocation, kClass: KClass<*>, codeLocation: Int): Any? {
-        return memoryTracker.readValue(iThread, location, kClass)?.unwrap()
+        return memoryTracker.readValue(iThread, codeLocation, location, kClass)?.unwrap()
     }
 
     /**
@@ -522,7 +537,7 @@ abstract class ManagedStrategy(
      * @param value the value to be written.
      */
     internal fun onSharedVariableWrite(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: Any?, codeLocation: Int) {
-        memoryTracker.writeValue(iThread, location, kClass, value?.opaque())
+        memoryTracker.writeValue(iThread, codeLocation, location, kClass, value?.opaque())
     }
 
     /**
@@ -534,7 +549,7 @@ abstract class ManagedStrategy(
      * @return result of this operation, replacing the "real" result.
      */
     internal fun onCompareAndSet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, expected: Any?, desired: Any?, codeLocation: Int): Boolean {
-        return memoryTracker.compareAndSet(iThread, location, kClass, expected?.opaque(), desired?.opaque())
+        return memoryTracker.compareAndSet(iThread, codeLocation, location, kClass, expected?.opaque(), desired?.opaque())
     }
 
     /**
@@ -545,7 +560,7 @@ abstract class ManagedStrategy(
      * @return result of this operation, replacing the "real" result.
      */
     internal fun onAddAndGet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, delta: Number, codeLocation: Int): Number {
-        return memoryTracker.addAndGet(iThread, location, kClass, delta)?.unwrap() as Number
+        return memoryTracker.addAndGet(iThread, codeLocation, location, kClass, delta)?.unwrap() as Number
     }
 
     /**
@@ -556,7 +571,7 @@ abstract class ManagedStrategy(
      * @return result of this operation, replacing the "real" result.
      */
     internal fun onGetAndAdd(iThread: Int, location: MemoryLocation, kClass: KClass<*>, delta: Number, codeLocation: Int): Number {
-        return memoryTracker.getAndAdd(iThread, location, kClass, delta)?.unwrap() as Number
+        return memoryTracker.getAndAdd(iThread, codeLocation, location, kClass, delta)?.unwrap() as Number
     }
 
     /**
@@ -567,7 +582,7 @@ abstract class ManagedStrategy(
      * @return result of this operation, replacing the "real" result.
      */
     internal fun onGetAndSet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: Any?, codeLocation: Int): Any? {
-        return memoryTracker.getAndSet(iThread, location, kClass, value?.opaque())?.unwrap()
+        return memoryTracker.getAndSet(iThread, codeLocation, location, kClass, value?.opaque())?.unwrap()
     }
 
     /**
@@ -962,26 +977,41 @@ private class ManagedStrategyRunner(
 /**
  * Detects loops, active locks and live locks when the same code location is visited too often.
  */
-private class LoopDetector(private val hangingDetectionThreshold: Int) {
+class LoopDetector(
+    private val hangingDetectionThreshold: Int,
+    private val resetOnThreadSwitch: Boolean,
+    private val resetOnActorStart: Boolean,
+) {
     private var lastIThread = -1 // no last thread
-    private val operationCounts = mutableMapOf<Int, Int>()
+    private val operationCounts = mutableMapOf<Pair<Int, Int>, Int>()
     var totalOperations = 0
         private set
 
+    fun codeLocationCounter(iThread: Int, codeLocation: Int): Int =
+        operationCounts.getOrDefault((iThread to codeLocation), 0)
+
+    fun onActorStart(iThread: Int) {
+        lastIThread = iThread
+        if (resetOnActorStart)
+            reset(iThread)
+    }
+
     /**
-     * Returns `true` if a loop or a hang is detected,
-     * `false` otherwise.
+     * Returns `true` if a loop or a hang is detected, `false` otherwise.
      */
     fun visitCodeLocation(iThread: Int, codeLocation: Int): Boolean {
         // Increase the total number of happened operations for live-lock detection
         totalOperations++
         // Have the thread changed? Reset the counters in this case.
-        if (lastIThread != iThread) reset(iThread)
+        if (lastIThread != iThread && resetOnThreadSwitch) {
+            reset(iThread)
+        }
+        lastIThread = iThread
         // Ignore coroutine suspension code locations.
-        if (codeLocation == COROUTINE_SUSPENSION_CODE_LOCATION) return false
+        if (codeLocation == COROUTINE_SUSPENSION_CODE_LOCATION)
+            return false
         // Increment the number of times the specified code location is visited.
-        val count = operationCounts.getOrDefault(codeLocation, 0) + 1
-        operationCounts[codeLocation] = count
+        val count = operationCounts.compute(iThread to codeLocation) { _, count -> 1 + (count ?: 0) }!!
         // Check whether the count exceeds the maximum number of repetitions for loop/hang detection.
         return count > hangingDetectionThreshold
     }
@@ -990,14 +1020,20 @@ private class LoopDetector(private val hangingDetectionThreshold: Int) {
      * Resets the counters for the specified thread.
      */
     fun reset(iThread: Int) {
-        operationCounts.clear()
-        lastIThread = iThread
+        if (resetOnThreadSwitch) {
+            // if we reset on each thread switch,
+            // then we can clear the whole map on each `reset` call
+            operationCounts.clear()
+        } else {
+            // otherwise we need to reset only the counters corresponding to given thread
+            operationCounts.keys.removeIf { (tid, _) -> tid == iThread }
+        }
     }
 
     fun reset() {
-        operationCounts.clear()
         lastIThread = -1
         totalOperations = 0
+        operationCounts.clear()
     }
 }
 

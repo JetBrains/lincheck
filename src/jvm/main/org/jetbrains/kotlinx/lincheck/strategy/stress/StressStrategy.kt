@@ -64,6 +64,7 @@ class StressStrategy(
                         if (!verifier.verifyResults(scenario, ir.results))
                             return IncorrectResultsFailure(scenario, ir.results)
                     }
+                    is SpinLoopBoundInvocationResult -> return null
                     else -> return ir.toLincheckFailure(scenario)
                 }
             }

@@ -32,9 +32,11 @@ sealed class InvocationResult
 fun InvocationResult.isAbortedInvocation(): Boolean =
     when (this) {
         is DeadlockInvocationResult,
+        is SpinLoopBoundInvocationResult,
         is UnexpectedExceptionInvocationResult,
-        is ObstructionFreedomViolationInvocationResult -> true
-        is InconsistentInvocationResult -> true
+        is ObstructionFreedomViolationInvocationResult,
+        is InconsistentInvocationResult
+             -> true
         else -> false
     }
 
@@ -81,3 +83,9 @@ class ObstructionFreedomViolationInvocationResult(
 class InconsistentInvocationResult(
     val inconsistency: Inconsistency
 ) : InvocationResult()
+
+/**
+ * Invocation is aborted due to one of the threads reaching
+ * the bound on the number of spin-loop iterations.
+ */
+class SpinLoopBoundInvocationResult() : InvocationResult()

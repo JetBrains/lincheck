@@ -29,6 +29,7 @@ import kotlin.reflect.KClass
 class EventStructure(
     nParallelThreads: Int,
     val memoryInitializer: MemoryInitializer,
+    val loopDetector: LoopDetector,
     // TODO: refactor --- avoid using callbacks!
     val reportInconsistencyCallback: ReportInconsistencyCallback,
     val internalThreadSwitchCallback: InternalThreadSwitchCallback,
@@ -284,7 +285,7 @@ class EventStructure(
             //   we can try to enforce more ordering invariants by grouping "atomic" events
             //   and also grouping events for which there is no reason to make switch in-between
             //   (e.g. `Alloc` followed by a `Write`).
-            internalThreadSwitchCallback(iThread)
+            internalThreadSwitchCallback(iThread, SwitchReason.STRATEGY_SWITCH)
             check(!inReplayPhase() || canReplayNextEvent(iThread))
         }
         return replayer.currentEvent
@@ -869,18 +870,19 @@ class EventStructure(
         }
     }
 
-    fun addWriteEvent(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?,
+    fun addWriteEvent(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?,
                       isExclusive: Boolean = false): AtomicThreadEvent {
         val label = WriteAccessLabel(
             location = location,
             value = computeValueID(value),
             kClass = kClass,
             isExclusive = isExclusive,
+            codeLocation = codeLocation,
         )
         return addSendEvent(iThread, label)
     }
 
-    fun addReadEvent(iThread: Int, location: MemoryLocation, kClass: KClass<*>,
+    fun addReadEvent(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>,
                      isExclusive: Boolean = false): AtomicThreadEvent {
         // we first create read-request event with unknown (null) value,
         // value will be filled later in read-response event
@@ -890,6 +892,7 @@ class EventStructure(
             value = NULL_OBJECT_ID,
             kClass = kClass,
             isExclusive = isExclusive,
+            codeLocation = codeLocation
         )
         val requestEvent = addRequestEvent(iThread, label)
         val (responseEvent, _) = addResponseEvents(requestEvent)
@@ -897,6 +900,9 @@ class EventStructure(
         //  Probably not, because in Kotlin variables are always initialized by default?
         //  What about initialization-related issues?
         checkNotNull(responseEvent)
+        if (isSpinLoopBoundReached(responseEvent)) {
+            internalThreadSwitchCallback(iThread, SwitchReason.SPIN_BOUND)
+        }
         return responseEvent
     }
 
@@ -1025,6 +1031,26 @@ class EventStructure(
                 causalityOrder.lessThan(write, other)
             }
         }
+    }
+
+    private fun isSpinLoopBoundReached(event: ThreadEvent): Boolean {
+        check(event.label is ReadAccessLabel && event.label.isResponse)
+        val readValue = (event.label as ReadAccessLabel).readValue
+        val codeLocation = (event.label as ReadAccessLabel).codeLocation
+        if (loopDetector.codeLocationCounter(event.threadId, codeLocation) >= SPIN_BOUND) {
+            var spinEvent: ThreadEvent = event
+            var spinCounter = SPIN_BOUND
+            while (spinCounter-- > 0) {
+                spinEvent = spinEvent.pred {
+                    it.label.isResponse &&
+                    (it.label as? ReadAccessLabel)?.codeLocation == codeLocation
+                } ?: return false
+                if ((spinEvent.label as ReadAccessLabel).readValue != readValue)
+                    return false
+            }
+            return true
+        }
+        return false
     }
 
 }

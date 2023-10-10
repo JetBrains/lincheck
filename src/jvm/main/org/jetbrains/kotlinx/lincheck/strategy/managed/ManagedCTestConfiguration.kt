@@ -70,6 +70,6 @@ abstract class ManagedCTestConfiguration(
 private fun isTrustedPrimitive(className: String) =
     className == "java.lang.invoke.VarHandle" ||
     className == "sun.misc.Unsafe" ||
-    className == "jdk.internal.misc.Unsafe" ||
-    className.startsWith("java.util.concurrent.atomic.Atomic") || // AFUs and Atomic[Integer/Long/...]
-    className.startsWith("kotlinx.atomicfu.Atomic")
+    className == "jdk.internal.misc.Unsafe" // ||
+    // className.startsWith("java.util.concurrent.atomic.Atomic") || // AFUs and Atomic[Integer/Long/...]
+    // className.startsWith("kotlinx.atomicfu.Atomic")

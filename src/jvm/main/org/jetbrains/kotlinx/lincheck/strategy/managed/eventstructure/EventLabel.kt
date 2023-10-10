@@ -248,6 +248,7 @@ class InitializationLabel(
                     memoryInitializer(it)
                 },
                 isExclusive = false,
+                codeLocation = INIT_CODE_LOCATION,
             )
         }
         return asObjectAllocationLabel(location.objID)?.asWriteAccessLabel(location)
@@ -489,6 +490,8 @@ data class ObjectAllocationLabel(
                 location = location,
                 value = initialValue(location),
                 isExclusive = false,
+                // TODO: use actual allocation-site code location?
+                codeLocation = INIT_CODE_LOCATION,
             )
         else null
 
@@ -521,6 +524,7 @@ fun EventLabel.asObjectAllocationLabel(objID: ObjectID): ObjectAllocationLabel? 
  */
 sealed class MemoryAccessLabel(
     kind: LabelKind,
+    open val codeLocation: Int,
     open val location: MemoryLocation,
     open val kClass: KClass<*>?,
     open val isExclusive: Boolean = false
@@ -609,11 +613,12 @@ enum class MemoryAccessKind { Read, Write, ReadModifyWrite }
  */
 data class ReadAccessLabel(
     override val kind: LabelKind,
+    override val codeLocation: Int,
     override val location: MemoryLocation,
     val value: ValueID,
     override val kClass: KClass<*>? = null,
     override val isExclusive: Boolean = false
-): MemoryAccessLabel(kind, location, kClass, isExclusive) {
+): MemoryAccessLabel(kind, codeLocation, location, kClass, isExclusive) {
 
     init {
         require(isRequest || isResponse || isReceive)
@@ -647,6 +652,7 @@ data class ReadAccessLabel(
                 // TODO: perform dynamic type-check
                 ReadAccessLabel(
                     kind = LabelKind.Response,
+                    codeLocation = codeLocation,
                     location = location,
                     kClass = kClass,
                     value = it.value,
@@ -685,11 +691,12 @@ data class ReadAccessLabel(
  * @see MemoryAccessLabel
  */
 data class WriteAccessLabel(
+    override val codeLocation: Int,
     override val location: MemoryLocation,
     val value: ValueID,
     override val kClass: KClass<*>? = null,
     override val isExclusive: Boolean = false
-): MemoryAccessLabel(LabelKind.Send, location, kClass, isExclusive) {
+): MemoryAccessLabel(LabelKind.Send, codeLocation, location, kClass, isExclusive) {
 
     override val readValue: ValueID = NULL_OBJECT_ID
 
@@ -714,11 +721,12 @@ data class WriteAccessLabel(
  */
 data class ReadModifyWriteAccessLabel(
     override val kind: LabelKind,
+    override val codeLocation: Int,
     override val location: MemoryLocation,
     override val readValue: ValueID,
     override val writeValue: ValueID,
     override val kClass: KClass<*>? = null,
-): MemoryAccessLabel(kind, location, kClass, isExclusive = true) {
+): MemoryAccessLabel(kind, codeLocation, location, kClass, isExclusive = true) {
 
     init {
         require(kind == LabelKind.Response || kind == LabelKind.Receive)
@@ -747,9 +755,11 @@ fun ReadModifyWriteAccessLabel(read: ReadAccessLabel, write: WriteAccessLabel) :
     require(read.kind == LabelKind.Response || read.kind == LabelKind.Receive)
     return if (read.kClass == write.kClass &&
                read.location == write.location &&
-               read.isExclusive == write.isExclusive)
+               read.isExclusive == write.isExclusive &&
+               read.codeLocation == write.codeLocation)
         ReadModifyWriteAccessLabel(
             kind = read.kind,
+            codeLocation = read.codeLocation,
             kClass = read.kClass,
             location = read.location,
             readValue = read.value,
@@ -1164,3 +1174,5 @@ fun ActorLabelKind.labelKind(): LabelKind = when (this) {
     ActorLabelKind.End -> LabelKind.Response
     ActorLabelKind.Span -> LabelKind.Receive
 }
+
+private const val INIT_CODE_LOCATION = -1

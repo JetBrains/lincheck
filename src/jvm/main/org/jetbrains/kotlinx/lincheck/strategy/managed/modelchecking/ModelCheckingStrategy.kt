@@ -69,6 +69,12 @@ internal class ModelCheckingStrategy(
     // The interleaving that will be studied on the next invocation.
     private lateinit var currentInterleaving: Interleaving
 
+    override val loopDetector: LoopDetector = LoopDetector(
+        hangingDetectionThreshold = testCfg.hangingDetectionThreshold,
+        resetOnActorStart = true,
+        resetOnThreadSwitch = true,
+    )
+
     // Tracker of shared memory accesses.
     override var memoryTracker: MemoryTracker = PlainMemoryTracker(memoryInitializer)
     // Tracker of monitors operations.

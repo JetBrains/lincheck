@@ -41,18 +41,26 @@ class EventStructureStrategy(
     // The number of invocations that the strategy is eligible to use to search for an incorrect execution.
     private val maxInvocations = testCfg.invocationsPerIteration
 
+    override val loopDetector: LoopDetector = LoopDetector(
+        hangingDetectionThreshold = SPIN_BOUND,
+        resetOnActorStart = true,
+        resetOnThreadSwitch = false,
+    )
+
     private val eventStructure: EventStructure =
-        EventStructure(nThreads, memoryInitializer, ::onInconsistency) { iThread ->
-            switchCurrentThread(iThread, SwitchReason.STRATEGY_SWITCH, mustSwitch = true)
+        EventStructure(nThreads, memoryInitializer, loopDetector, ::onInconsistency) { iThread, reason ->
+            switchCurrentThread(iThread, reason, mustSwitch = true)
         }
 
     // Tracker of shared memory accesses.
-    override val memoryTracker: MemoryTracker = EventStructureMemoryTracker(eventStructure)
+    override val memoryTracker: MemoryTracker =
+        EventStructureMemoryTracker(eventStructure)
     // Tracker of monitors operations.
     override val monitorTracker: MonitorTracker =
         EventStructureMonitorTracker(eventStructure, MapMonitorTracker(nThreads))
     // Tracker of thread parking
-    override val parkingTracker: ParkingTracker = EventStructureParkingTracker(eventStructure)
+    override val parkingTracker: ParkingTracker =
+        EventStructureParkingTracker(eventStructure)
 
     val stats = Stats()
 
@@ -95,9 +103,11 @@ class EventStructureStrategy(
             }
             inconsistency = when (result) {
                 is InconsistentInvocationResult -> result.inconsistency
+                is SpinLoopBoundInvocationResult -> null
                 else -> eventStructure.checkConsistency()
             }
         }
+        // println(eventStructure.currentExecution)
         stats.update(result, inconsistency)
         return (result to inconsistency)
     }
@@ -105,6 +115,9 @@ class EventStructureStrategy(
     class Stats {
 
         var consistentInvocations: Int = 0
+            private set
+
+        var blockedInvocations: Int = 0
             private set
 
         private var atomicityInconsistenciesCount: Int = 0
@@ -121,7 +134,7 @@ class EventStructureStrategy(
                 sequentialConsistencyViolationsCount()
 
         val totalInvocations: Int
-            get() = consistentInvocations + inconsistentInvocations
+            get() = consistentInvocations + inconsistentInvocations + blockedInvocations
 
         fun atomicityInconsistenciesCount(): Int =
             atomicityInconsistenciesCount
@@ -133,6 +146,11 @@ class EventStructureStrategy(
             phase?.let { seqCstViolationsCount[it.ordinal] } ?: seqCstViolationsCount.sum()
 
         fun update(result: InvocationResult?, inconsistency: Inconsistency?) {
+            if (result is SpinLoopBoundInvocationResult) {
+                check(inconsistency == null)
+                blockedInvocations++
+                return
+            }
             if (inconsistency == null) {
                 consistentInvocations++
                 return
@@ -150,7 +168,8 @@ class EventStructureStrategy(
         override fun toString(): String = """
             #Total invocations   = $totalInvocations         
                 #consistent      = $consistentInvocations    
-                #inconsistent    = $inconsistentInvocations  
+                #inconsistent    = $inconsistentInvocations
+                #blocked         = $blockedInvocations
             #Atom.  violations   = $atomicityInconsistenciesCount
             #RelAcq violations   = $relAcqInconsistenciesCount
             #SeqCst violations   = ${sequentialConsistencyViolationsCount()}
@@ -296,7 +315,7 @@ class EventStructureStrategy(
 }
 
 typealias ReportInconsistencyCallback = (Inconsistency) -> Unit
-typealias InternalThreadSwitchCallback = (ThreadID) -> Unit
+typealias InternalThreadSwitchCallback = (ThreadID, SwitchReason) -> Unit
 
 private class EventStructureMemoryTracker(
     private val eventStructure: EventStructure,
@@ -318,52 +337,52 @@ private class EventStructureMemoryTracker(
         eventStructure.addObjectAllocationEvent(iThread, value)
     }
 
-    override fun writeValue(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?) {
-        eventStructure.addWriteEvent(iThread, location, kClass, value)
+    override fun writeValue(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?) {
+        eventStructure.addWriteEvent(iThread, codeLocation, location, kClass, value)
     }
 
-    override fun readValue(iThread: Int, location: MemoryLocation, kClass: KClass<*>): OpaqueValue? {
-        val readEvent = eventStructure.addReadEvent(iThread, location, kClass)
+    override fun readValue(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>): OpaqueValue? {
+        val readEvent = eventStructure.addReadEvent(iThread, codeLocation, location, kClass)
         val valueID = (readEvent.label as ReadAccessLabel).value
         return eventStructure.getValue(valueID)
     }
 
-    override fun compareAndSet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, expected: OpaqueValue?, desired: OpaqueValue?): Boolean {
-        val readEvent = eventStructure.addReadEvent(iThread, location, kClass, isExclusive = true)
+    override fun compareAndSet(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>, expected: OpaqueValue?, desired: OpaqueValue?): Boolean {
+        val readEvent = eventStructure.addReadEvent(iThread, codeLocation, location, kClass, isExclusive = true)
         val valueID = (readEvent.label as ReadAccessLabel).value
         val value = eventStructure.getValue(valueID)
         if (value != expected)
             return false
-        eventStructure.addWriteEvent(iThread, location, kClass, desired, isExclusive = true)
+        eventStructure.addWriteEvent(iThread, codeLocation, location, kClass, desired, isExclusive = true)
         return true
     }
 
     private enum class IncrementKind { Pre, Post }
 
-    private fun fetchAndAdd(iThread: Int, memoryLocationId: MemoryLocation, kClass: KClass<*>, delta: Number, incKind: IncrementKind): OpaqueValue? {
-        val readEvent = eventStructure.addReadEvent(iThread, memoryLocationId, kClass, isExclusive = true)
+    private fun fetchAndAdd(iThread: Int, codeLocation: Int, memoryLocationId: MemoryLocation, kClass: KClass<*>, delta: Number, incKind: IncrementKind): OpaqueValue? {
+        val readEvent = eventStructure.addReadEvent(iThread, codeLocation, memoryLocationId, kClass, isExclusive = true)
         val oldValueID = (readEvent.label as ReadAccessLabel).value
         val oldValue = eventStructure.getValue(oldValueID)!!
         val newValue = oldValue + delta
-        eventStructure.addWriteEvent(iThread, memoryLocationId, kClass, newValue, isExclusive = true)
+        eventStructure.addWriteEvent(iThread, codeLocation, memoryLocationId, kClass, newValue, isExclusive = true)
         return when (incKind) {
             IncrementKind.Pre -> oldValue
             IncrementKind.Post -> newValue
         }
     }
 
-    override fun getAndAdd(iThread: Int, location: MemoryLocation, kClass: KClass<*>, delta: Number): OpaqueValue? {
-        return fetchAndAdd(iThread, location, kClass, delta, IncrementKind.Pre)
+    override fun getAndAdd(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>, delta: Number): OpaqueValue? {
+        return fetchAndAdd(iThread, codeLocation, location, kClass, delta, IncrementKind.Pre)
     }
 
-    override fun addAndGet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, delta: Number): OpaqueValue? {
-        return fetchAndAdd(iThread, location, kClass, delta, IncrementKind.Post)
+    override fun addAndGet(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>, delta: Number): OpaqueValue? {
+        return fetchAndAdd(iThread, codeLocation, location, kClass, delta, IncrementKind.Post)
     }
 
-    override fun getAndSet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?): OpaqueValue? {
-        val readEvent = eventStructure.addReadEvent(iThread, location, kClass, isExclusive = true)
+    override fun getAndSet(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?): OpaqueValue? {
+        val readEvent = eventStructure.addReadEvent(iThread, codeLocation, location, kClass, isExclusive = true)
         val readValueID = (readEvent.label as ReadAccessLabel).value
-        eventStructure.addWriteEvent(iThread, location, kClass, value, isExclusive = true)
+        eventStructure.addWriteEvent(iThread, codeLocation, location, kClass, value, isExclusive = true)
         return eventStructure.getValue(readValueID)
     }
 
@@ -534,3 +553,5 @@ private class EventStructureParkingTracker(
     override fun reset() {}
 
 }
+
+internal const val SPIN_BOUND = 3

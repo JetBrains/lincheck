@@ -37,17 +37,17 @@ abstract class MemoryTracker {
 
     abstract fun objectAllocation(iThread: Int, value: OpaqueValue)
 
-    abstract fun writeValue(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?)
+    abstract fun writeValue(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?)
 
-    abstract fun readValue(iThread: Int, location: MemoryLocation, kClass: KClass<*>): OpaqueValue?
+    abstract fun readValue(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>): OpaqueValue?
 
-    abstract fun compareAndSet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, expected: OpaqueValue?, desired: OpaqueValue?): Boolean
+    abstract fun compareAndSet(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>, expected: OpaqueValue?, desired: OpaqueValue?): Boolean
 
-    abstract fun addAndGet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, delta: Number): OpaqueValue?
+    abstract fun addAndGet(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>, delta: Number): OpaqueValue?
 
-    abstract fun getAndAdd(iThread: Int, location: MemoryLocation, kClass: KClass<*>, delta: Number): OpaqueValue?
+    abstract fun getAndAdd(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>, delta: Number): OpaqueValue?
 
-    abstract fun getAndSet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?): OpaqueValue?
+    abstract fun getAndSet(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?): OpaqueValue?
 
     abstract fun dumpMemory()
 
@@ -112,11 +112,11 @@ internal class PlainMemoryTracker(
         registerObject(id, value)
     }
 
-    override fun writeValue(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?) {
+    override fun writeValue(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?) {
         memory[location] = computeValueID(value)
     }
 
-    override fun readValue(iThread: Int, location: MemoryLocation, kClass: KClass<*>): OpaqueValue? {
+    override fun readValue(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>): OpaqueValue? {
         val valueID = memory.computeIfAbsent(location) {
             val value = memoryInitializer(it)
             computeValueID(value)
@@ -124,25 +124,25 @@ internal class PlainMemoryTracker(
         return getValue(valueID)
     }
 
-    override fun compareAndSet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, expected: OpaqueValue?, desired: OpaqueValue?): Boolean {
-        if (expected == readValue(iThread, location, kClass)) {
-            writeValue(iThread, location, kClass, desired)
+    override fun compareAndSet(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>, expected: OpaqueValue?, desired: OpaqueValue?): Boolean {
+        if (expected == readValue(iThread, codeLocation, location, kClass)) {
+            writeValue(iThread, codeLocation, location, kClass, desired)
             return true
         }
         return false
     }
 
-    override fun addAndGet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, delta: Number): OpaqueValue? =
-        (readValue(iThread, location, kClass)!! + delta)
-            .also { value -> writeValue(iThread, location, kClass, value) }
+    override fun addAndGet(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>, delta: Number): OpaqueValue? =
+        (readValue(iThread, codeLocation, location, kClass)!! + delta)
+            .also { value -> writeValue(iThread, codeLocation, location, kClass, value) }
 
-    override fun getAndAdd(iThread: Int, location: MemoryLocation, kClass: KClass<*>, delta: Number): OpaqueValue? =
-        readValue(iThread, location, kClass)!!
-            .also { value -> writeValue(iThread, location, kClass, value + delta) }
+    override fun getAndAdd(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>, delta: Number): OpaqueValue? =
+        readValue(iThread, codeLocation, location, kClass)!!
+            .also { value -> writeValue(iThread, codeLocation, location, kClass, value + delta) }
 
-    override fun getAndSet(iThread: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?): OpaqueValue? {
-        val result = readValue(iThread, location, kClass)
-        writeValue(iThread, location, kClass, value)
+    override fun getAndSet(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?): OpaqueValue? {
+        val result = readValue(iThread, codeLocation, location, kClass)
+        writeValue(iThread, codeLocation, location, kClass, value)
         return result
     }
 
