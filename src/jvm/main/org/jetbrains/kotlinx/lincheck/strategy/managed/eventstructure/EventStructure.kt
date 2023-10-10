@@ -96,17 +96,26 @@ class EventStructure(
         val event: AtomicThreadEvent,
     ) {
         init {
+            require(id != NULL_OBJECT_ID)
             require(event.label is InitializationLabel || event.label is ObjectAllocationLabel)
         }
 
         val isExternal: Boolean
             get() = (event.label is InitializationLabel)
+
+        var isLocal: Boolean =
+            (id != STATIC_OBJECT_ID)
+
+        val localThreadID: ThreadID
+            get() = if (isLocal) event.threadId else -1
     }
 
     private val objectIdIndex = HashMap<ObjectID, ObjectEntry>()
     private val objectIndex = IdentityHashMap<Any, ObjectEntry>()
 
     private var nextObjectID = 1 + NULL_OBJECT_ID.id
+
+    private val localWrites = mutableMapOf<MemoryLocation, AtomicThreadEvent>()
 
     /*
      * Map from blocked dangling events to their responses.
@@ -219,6 +228,7 @@ class EventStructure(
         objectIndex.values.retainAll { it.isExternal }
         // reset state of other auxiliary structures
         delayedConsistencyCheckBuffer.clear()
+        localWrites.clear()
     }
 
     fun checkConsistency(): Inconsistency? {
@@ -416,15 +426,22 @@ class EventStructure(
             _currentExecution.add(event)
         }
         playedFrontier.update(event)
-        // Check if we still in replay phase.
-        val inReplayPhase = inReplayPhase()
         // Unmark dangling request if its response was added.
         if (event.label.isResponse && event.label.isBlocking && event.parent in danglingEvents) {
             unmarkBlockedDanglingRequest(event.parent!!)
         }
+        // mark the object as non-local if it is accessed from another thread
+        if (event.label.objID != NULL_OBJECT_ID && event.label.objID != STATIC_OBJECT_ID) {
+            val objEntry = objectIdIndex[event.label.objID]!!
+            objEntry.isLocal = (objEntry.localThreadID == event.threadId)
+            // update latest local write index for a write event
+            if (objEntry.isLocal && event.label is WriteAccessLabel) {
+                localWrites[event.label.location] = event
+            }
+        }
         // If we are still in replay phase, but the added event is not a replayed event,
         // then save it to delayed events buffer to postpone its further processing.
-        if (inReplayPhase) {
+        if (inReplayPhase()) {
             if (!isReplayedEvent) {
                 delayedConsistencyCheckBuffer.add(event)
             }
@@ -516,10 +533,17 @@ class EventStructure(
             // in the same thread, and then filter out all causal predecessors of this last write,
             // because these events are "obsolete" --- reading from them will result in coherence cycle
             // and will violate consistency
-            label is MemoryAccessLabel && label.isRequest -> {
+            label is ReadAccessLabel && label.isRequest -> {
                 // val threadLastWrite = currentExecution[event.threadId]?.lastOrNull {
                 //     it.label is WriteAccessLabel && it.label.location == event.label.location
                 // } ?: root
+                if (label.objID != STATIC_OBJECT_ID) {
+                    val objectEntry = objectIdIndex[label.objID]!!
+                    if (objectEntry.isLocal) {
+                        val write = localWrites.computeIfAbsent(label.location) { objectEntry.event }
+                        return listOf(write)
+                    }
+                }
                 val threadReads = currentExecution[event.threadId]!!.filter {
                     it.label.isResponse && (it.label as? ReadAccessLabel)?.location == label.location
                 }
@@ -534,6 +558,18 @@ class EventStructure(
                     !racyWrites.any { write -> causalityOrder.lessThan(it, write) } &&
                     !staleWrites.any { write -> causalityOrder.lessOrEqual(it, write) }
                 }
+            }
+            label is WriteAccessLabel -> {
+                if (label.objID != STATIC_OBJECT_ID) {
+                    val objectEntry = objectIdIndex[label.objID]!!
+                    if (objectEntry.isLocal) {
+                        return listOf()
+                    }
+                }
+                candidates
+            }
+            label is ObjectAllocationLabel -> {
+                return listOf()
             }
             // re-entry lock-request synchronizes only with object allocation label
             label is LockLabel && event.label.isRequest && label.isReentry -> {
@@ -828,8 +864,8 @@ class EventStructure(
         val dependencies = listOf<AtomicThreadEvent>()
         return addEvent(iThread, label, parent, dependencies)!!.also { event ->
             val entry = ObjectEntry(id, value, event)
-            addEventToCurrentExecution(event)
             registerObjectEntry(entry)
+            addEventToCurrentExecution(event)
         }
     }
 
