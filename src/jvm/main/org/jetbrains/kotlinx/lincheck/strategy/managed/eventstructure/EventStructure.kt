@@ -1035,6 +1035,7 @@ class EventStructure(
 
     private fun isSpinLoopBoundReached(event: ThreadEvent): Boolean {
         check(event.label is ReadAccessLabel && event.label.isResponse)
+        val location = (event.label as ReadAccessLabel).location
         val readValue = (event.label as ReadAccessLabel).readValue
         val codeLocation = (event.label as ReadAccessLabel).codeLocation
         if (loopDetector.codeLocationCounter(event.threadId, codeLocation) >= SPIN_BOUND) {
@@ -1043,6 +1044,7 @@ class EventStructure(
             while (spinCounter-- > 0) {
                 spinEvent = spinEvent.pred {
                     it.label.isResponse &&
+                    (it.label as? ReadAccessLabel)?.location == location &&
                     (it.label as? ReadAccessLabel)?.codeLocation == codeLocation
                 } ?: return false
                 if ((spinEvent.label as ReadAccessLabel).readValue != readValue)
