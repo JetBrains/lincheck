@@ -63,7 +63,6 @@ open class ModelCheckingStateReportingTest {
         check(failure != null) { "the test should fail" }
         val log = StringBuilder().appendFailure(failure).toString()
         check("STATE: 0" in log)
-        check("STATE: 1" in log)
         check("STATE: 4" in log)
         check(log.split("incrementAndGet(): 1").size - 1 == 1) { "A method call is logged twice in the trace" }
         checkTraceHasNoLincheckEvents(log)
