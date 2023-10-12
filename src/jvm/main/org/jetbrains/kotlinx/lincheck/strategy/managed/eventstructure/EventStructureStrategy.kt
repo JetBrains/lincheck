@@ -42,7 +42,7 @@ class EventStructureStrategy(
     private val maxInvocations = testCfg.invocationsPerIteration
 
     override val loopDetector: LoopDetector = LoopDetector(
-        hangingDetectionThreshold = SPIN_BOUND,
+        hangingDetectionThreshold = testCfg.hangingDetectionThreshold,
         resetOnActorStart = true,
         resetOnThreadSwitch = false,
     )
