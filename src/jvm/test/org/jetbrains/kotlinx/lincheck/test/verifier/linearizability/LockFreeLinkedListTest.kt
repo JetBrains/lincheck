@@ -22,7 +22,6 @@ package org.jetbrains.kotlinx.lincheck.test
 
 import kotlinx.coroutines.*
 import kotlinx.coroutines.internal.*
-import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.paramgen.*
@@ -30,7 +29,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.EventStruc
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 
 @Param(name = "value", gen = IntGen::class, conf = "1:5")
-class LockFreeListLinkedListTest : AbstractLincheckTest() {
+class LockFreeLinkedListTest : AbstractLincheckTest() {
 
     @OptIn(InternalCoroutinesApi::class)
     class Node(val value: Int): LockFreeLinkedListNode()
