@@ -240,6 +240,9 @@ class InitializationLabel(
     fun asObjectAllocationLabel(objID: ObjectID): ObjectAllocationLabel? =
         objectsAllocations[objID]
 
+    fun isWriteAccess(location: MemoryLocation): Boolean =
+        location is StaticFieldMemoryLocation || (location.objID in objectsAllocations)
+
     fun asWriteAccessLabel(location: MemoryLocation): WriteAccessLabel? {
         if (location is StaticFieldMemoryLocation) {
             return WriteAccessLabel(
@@ -483,6 +486,9 @@ data class ObjectAllocationLabel(
             memoryInitializer(it)
         }
     }
+
+    fun isWriteAccess(location: MemoryLocation) =
+        (location.objID == objID)
 
     fun asWriteAccessLabel(location: MemoryLocation) =
         if (location.objID == objID)
@@ -780,17 +786,24 @@ fun WriteAccessLabel.isValidWritePart(label: ReadModifyWriteAccessLabel): Boolea
     isExclusive == label.isExclusive &&
     writeValue == label.writeValue
 
+fun EventLabel.isWriteAccess(location: MemoryLocation): Boolean = when (this) {
+    is WriteAccessLabel         -> (this.location == location)
+    is ObjectAllocationLabel    -> isWriteAccess(location)
+    is InitializationLabel      -> isWriteAccess(location)
+    else -> false
+}
+
 fun EventLabel.asWriteAccessLabel(location: MemoryLocation): WriteAccessLabel? = when (this) {
-    is WriteAccessLabel -> this.takeIf { it.location == location }
-    is ObjectAllocationLabel -> asWriteAccessLabel(location)
-    is InitializationLabel -> asWriteAccessLabel(location)
+    is WriteAccessLabel         -> this.takeIf { it.location == location }
+    is ObjectAllocationLabel    -> asWriteAccessLabel(location)
+    is InitializationLabel      -> asWriteAccessLabel(location)
     else -> null
 }
 
 fun EventLabel.asMemoryAccessLabel(location: MemoryLocation): MemoryAccessLabel? = when (this) {
-    is MemoryAccessLabel -> this.takeIf { it.location == location }
-    is ObjectAllocationLabel -> asWriteAccessLabel(location)
-    is InitializationLabel -> asWriteAccessLabel(location)
+    is MemoryAccessLabel        -> this.takeIf { it.location == location }
+    is ObjectAllocationLabel    -> asWriteAccessLabel(location)
+    is InitializationLabel      -> asWriteAccessLabel(location)
     else -> null
 }
 
