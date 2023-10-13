@@ -330,8 +330,17 @@ class EventStructure(
         val source = (label as? WriteAccessLabel)?.writeValue?.let {
             objectIdIndex[it]?.event
         }
-        val frontier = currentExecution.toMutableFrontier()
-            .apply { cut(conflicts) }
+        val frontier = currentExecution.toMutableFrontier().apply {
+            cut(conflicts)
+            // for already unblocked dangling requests,
+            // also put their responses into the frontier
+            // TODO: extract this into function
+            for ((request, response) in danglingEvents) {
+                if (request == this[request.threadId] && response != null) {
+                    this.update(response)
+                }
+            }
+        }
         val blockedRequests = frontier.cutDanglingRequestEvents()
             .filter { it.label.isBlocking && it != parent }
         frontier[iThread] = parent
