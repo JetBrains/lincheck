@@ -312,6 +312,20 @@ class EventStructureStrategy(
         suddenInvocationResult = InconsistentInvocationResult(inconsistency)
         throw ForcibleExecutionFinishException
     }
+
+    override fun interceptRandom(): Int? {
+        val iThread = (Thread.currentThread() as? FixedActiveThreadsExecutor.TestThread)?.iThread
+            ?: return null
+        val event = eventStructure.tryReplayRandomEvent(iThread)
+            ?: return null
+        return (event.label as RandomLabel).value
+    }
+
+    override fun trackRandom(generated: Int) {
+        val iThread = (Thread.currentThread() as? FixedActiveThreadsExecutor.TestThread)?.iThread
+            ?: return
+        eventStructure.addRandomEvent(iThread, generated)
+    }
 }
 
 typealias ReportInconsistencyCallback = (Inconsistency) -> Unit

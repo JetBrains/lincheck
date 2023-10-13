@@ -285,8 +285,9 @@ class EventStructure(
             //   we can try to enforce more ordering invariants by grouping "atomic" events
             //   and also grouping events for which there is no reason to make switch in-between
             //   (e.g. `Alloc` followed by a `Write`).
-            internalThreadSwitchCallback(iThread, SwitchReason.STRATEGY_SWITCH)
-            check(!inReplayPhase() || canReplayNextEvent(iThread))
+            do {
+                internalThreadSwitchCallback(iThread, SwitchReason.STRATEGY_SWITCH)
+            } while (inReplayPhase() && !canReplayNextEvent(iThread))
         }
         return replayer.currentEvent
             ?.also { replayer.setNextEvent() }
@@ -592,6 +593,8 @@ class EventStructure(
             label is UnlockLabel && label.isReentry -> {
                 return listOf(root)
             }
+            label is RandomLabel ->
+                return listOf()
 
             else -> candidates
         }.toList()
@@ -994,6 +997,23 @@ class EventStructure(
     fun addActorEndEvent(iThread: Int, actor: Actor): AtomicThreadEvent {
         val label = ActorLabel(ActorLabelKind.End, actor)
         return addActorEvent(iThread, label)
+    }
+
+    fun tryReplayRandomEvent(iThread: Int): AtomicThreadEvent? {
+        tryReplayEvent(iThread)?.let { event ->
+            check(event.label is RandomLabel)
+            addEventToCurrentExecution(event)
+            return event
+        }
+        return null
+    }
+
+    fun addRandomEvent(iThread: Int, generated: Int): AtomicThreadEvent {
+        val label = RandomLabel(generated)
+        val parent = playedFrontier[iThread]
+        return addEvent(iThread, label, parent, dependencies = emptyList())!!.also { event ->
+            addEventToCurrentExecution(event)
+        }
     }
 
     /**

@@ -796,6 +796,14 @@ abstract class ManagedStrategy(
         }
     }
 
+    internal open fun interceptRandom(): Int? {
+        return null
+    }
+
+    internal open fun trackRandom(generated: Int) {
+        return
+    }
+
     internal fun shouldTrackMemory(iThread: Int): Boolean {
         return (iThread < untrackingSectionDepth.size) && (untrackingSectionDepth[iThread] == 0)
     }

@@ -94,6 +94,7 @@ sealed class EventLabel(
             is ParkLabel                    -> LabelType.Park
             is UnparkLabel                  -> LabelType.Unpark
             is ActorLabel                   -> LabelType.Actor
+            is RandomLabel                  -> LabelType.Random
         }
 
     /**
@@ -201,6 +202,7 @@ enum class LabelType {
     Park,
     Unpark,
     Actor,
+    Random,
 }
 
 /**
@@ -1187,5 +1189,7 @@ fun ActorLabelKind.labelKind(): LabelKind = when (this) {
     ActorLabelKind.End -> LabelKind.Response
     ActorLabelKind.Span -> LabelKind.Receive
 }
+
+data class RandomLabel(val value: Int): EventLabel(kind = LabelKind.Send)
 
 private const val INIT_CODE_LOCATION = -1

@@ -49,8 +49,10 @@ internal object ManagedStrategyStateHolder {
             clazz.getField(ManagedStrategyStateHolder::strategy.name)[null] = strategy
             clazz.getField(ManagedStrategyStateHolder::objectManager.name)[null] = ObjectManager(testClass)
             // load transformed java.util.Random class
-            val randomClass = loader.loadClass(Random::class.java.canonicalName)
-            clazz.getField(ManagedStrategyStateHolder::random.name)[null] = randomClass.getConstructor().newInstance()
+            val randomClass = loader.loadClass(ManagedStrategyRandom::class.java.canonicalName)
+            clazz.getField(ManagedStrategyStateHolder::random.name)[null] = randomClass
+                .getConstructor(ManagedStrategy::class.java)
+                .newInstance(strategy)
             // set new memory location labeler
             clazz.getField(ManagedStrategyStateHolder::memoryLocationLabeler.name)[null] = MemoryLocationLabeler()
         } catch (e: Throwable) {
@@ -82,3 +84,15 @@ internal object ManagedStrategyStateHolder {
 }
 
 private const val INITIAL_SEED: Long = 1337
+
+// TODO: refactor this!!!
+private class ManagedStrategyRandom(val strategy: ManagedStrategy) : Random() {
+
+    override fun next(bits: Int): Int {
+        strategy.interceptRandom()?.let { return it }
+        return super.next(bits).also {
+            strategy.trackRandom(it)
+        }
+    }
+
+}

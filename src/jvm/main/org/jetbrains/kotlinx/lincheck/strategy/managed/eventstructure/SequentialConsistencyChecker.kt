@@ -317,6 +317,7 @@ private data class SequentialConsistencyReplayer(
             // TODO: do we need to care about parking?
             label is ParkingEventLabel -> this
             label is ActorLabel -> this
+            label is RandomLabel -> this
 
             else -> unreachable()
 
