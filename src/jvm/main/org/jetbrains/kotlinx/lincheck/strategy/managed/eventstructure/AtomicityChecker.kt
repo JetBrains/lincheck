@@ -32,14 +32,16 @@ class AtomicityChecker : IncrementalConsistencyChecker<AtomicThreadEvent> {
             return null
         if (label.accessKind != MemoryAccessKind.Write || !label.isExclusive)
             return null
+        val location = label.location
         val readFrom = event.exclusiveReadPart.readsFrom
         execution.find {
             check(it is AbstractAtomicThreadEvent)
             val label = it.label
             it != event
                 && label is MemoryAccessLabel
-                && label.accessKind == MemoryAccessKind.Write
                 && label.isExclusive
+                && label.accessKind == MemoryAccessKind.Write
+                && label.location == location
                 && it.exclusiveReadPart.readsFrom == readFrom
         }?.let {
             return AtomicityViolation(it, event)
