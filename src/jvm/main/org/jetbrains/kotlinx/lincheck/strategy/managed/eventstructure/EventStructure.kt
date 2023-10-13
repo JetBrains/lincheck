@@ -336,7 +336,10 @@ class EventStructure(
             // also put their responses into the frontier
             // TODO: extract this into function
             for ((request, response) in danglingEvents) {
-                if (request == this[request.threadId] && response != null) {
+                if (request in conflicts || response in conflicts)
+                    continue
+                if (request == this[request.threadId] && response != null &&
+                    response.dependencies.all { it in this }) {
                     this.update(response)
                 }
             }
