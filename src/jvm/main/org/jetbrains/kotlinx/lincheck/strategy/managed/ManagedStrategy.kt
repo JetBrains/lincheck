@@ -697,7 +697,7 @@ abstract class ManagedStrategy(
      * if a coroutine was suspended.
      * @param iThread number of invoking thread
      */
-    internal fun afterCoroutineSuspended(iThread: Int) {
+    internal open fun afterCoroutineSuspended(iThread: Int) {
         check(currentThread == iThread)
         isSuspended[iThread] = true
         if (runner.isCoroutineResumed(iThread, currentActorId[iThread])) {
@@ -714,7 +714,7 @@ abstract class ManagedStrategy(
      * if a coroutine was resumed.
      * @param iThread number of invoking thread
      */
-    internal fun afterCoroutineResumed(iThread: Int) {
+    internal open fun afterCoroutineResumed(iThread: Int) {
         check(currentThread == iThread)
         isSuspended[iThread] = false
     }
@@ -724,11 +724,19 @@ abstract class ManagedStrategy(
      * if a coroutine was cancelled.
      * @param iThread number of invoking thread
      */
-    internal fun afterCoroutineCancelled(iThread: Int) {
+    internal open fun afterCoroutineCancelled(iThread: Int) {
         check(currentThread == iThread)
         isSuspended[iThread] = false
         // method will not be resumed after suspension, so clear prepared for resume call stack
         suspendedFunctionsStack[iThread].clear()
+    }
+
+    /**
+     * This method is invoked by a test thread
+     * that attempts to resume coroutine.
+     */
+    internal open fun onResumeCoroutine(iThread: Int, iResumedThread: Int, iResumedActor: Int) {
+        check(currentThread == iThread)
     }
 
     /**
@@ -953,13 +961,9 @@ private class ManagedStrategyRunner(
         managedStrategy.afterCoroutineCancelled(iThread)
     }
 
-    override fun constructStateRepresentation(): String? {
-        // Enter ignored section, because Runner will call transformed state representation method
-        val iThread = managedStrategy.currentThreadNumber()
-        managedStrategy.enterIgnoredSection(iThread)
-        val stateRepresentation = super.constructStateRepresentation()
-        managedStrategy.leaveIgnoredSection(iThread)
-        return stateRepresentation
+    override fun onResumeCoroutine(iResumedThread: Int, iResumedActor: Int) {
+        super.onResumeCoroutine(iResumedThread, iResumedActor)
+        managedStrategy.onResumeCoroutine(managedStrategy.currentThreadNumber(), iResumedThread, iResumedActor)
     }
 
     override fun <T> cancelByLincheck(cont: CancellableContinuation<T>, promptCancellation: Boolean): CancellationResult {
@@ -979,6 +983,15 @@ private class ManagedStrategyRunner(
             cancellationTracePoint?.initializeException(e)
             throw e // throw further
         }
+    }
+
+    override fun constructStateRepresentation(): String? {
+        // Enter ignored section, because Runner will call transformed state representation method
+        val iThread = managedStrategy.currentThreadNumber()
+        managedStrategy.enterIgnoredSection(iThread)
+        val stateRepresentation = super.constructStateRepresentation()
+        managedStrategy.leaveIgnoredSection(iThread)
+        return stateRepresentation
     }
 }
 

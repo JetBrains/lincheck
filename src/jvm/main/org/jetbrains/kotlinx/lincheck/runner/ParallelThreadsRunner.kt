@@ -154,6 +154,7 @@ internal open class ParallelThreadsRunner(
                 }
                 // write function's final result
                 suspensionPointResults[iThread][actorId] = createLincheckResult(result, wasSuspended = true)
+                onResumeCoroutine(iThread, actorId)
             }
         }
 
@@ -176,6 +177,7 @@ internal open class ParallelThreadsRunner(
                             completedOrSuspendedThreads.incrementAndGet()
                         }
                         resWithCont.set(result to continuation as Continuation<Any?>)
+                        onResumeCoroutine(iThread, actorId)
                     }
                 }
             }
@@ -244,7 +246,7 @@ internal open class ParallelThreadsRunner(
     private fun waitAndInvokeFollowUp(iThread: Int, actorId: Int): Result {
         // Coroutine is suspended. Call method so that strategy can learn it.
         afterCoroutineSuspended(iThread)
-        // Tf the suspended method call has a follow-up part after this suspension point,
+        // If the suspended method call has a follow-up part after this suspension point,
         // then wait for the resuming thread to write a result of this suspension point
         // as well as the continuation to be executed by this thread;
         // wait for the final result of the method call otherwise.

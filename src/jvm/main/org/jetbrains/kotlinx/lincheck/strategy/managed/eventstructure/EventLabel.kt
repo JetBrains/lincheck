@@ -87,6 +87,9 @@ sealed class EventLabel(
             is ReadAccessLabel              -> LabelType.ReadAccess
             is WriteAccessLabel             -> LabelType.WriteAccess
             is ReadModifyWriteAccessLabel   -> LabelType.ReadModifyWriteAccess
+            is CoroutineSuspendLabel        -> LabelType.CoroutineSuspend
+            is CoroutineResumeLabel         -> LabelType.CoroutineResume
+            is CoroutineCancelLabel         -> LabelType.CoroutineCancel
             is LockLabel                    -> LabelType.Lock
             is UnlockLabel                  -> LabelType.Unlock
             is WaitLabel                    -> LabelType.Wait
@@ -195,6 +198,9 @@ enum class LabelType {
     ReadAccess,
     WriteAccess,
     ReadModifyWriteAccess,
+    CoroutineSuspend,
+    CoroutineResume,
+    CoroutineCancel,
     Lock,
     Unlock,
     Wait,
@@ -1188,6 +1194,108 @@ fun ActorLabelKind.labelKind(): LabelKind = when (this) {
     ActorLabelKind.Start -> LabelKind.Request
     ActorLabelKind.End -> LabelKind.Response
     ActorLabelKind.Span -> LabelKind.Receive
+}
+
+sealed class CoroutineLabel(
+    override val kind: LabelKind,
+    open val threadId: Int,
+    open val actorId: Int,
+    isBlocking: Boolean = false,
+    unblocked: Boolean = true,
+) : EventLabel(kind, isBlocking, unblocked) {
+
+    override fun toString(): String {
+        val operationKind = when (this) {
+            is CoroutineSuspendLabel -> "Suspend"
+            is CoroutineResumeLabel  -> "Resume"
+            is CoroutineCancelLabel  -> "Cancel"
+        }
+        val kindString = when (kind) {
+            LabelKind.Send -> ""
+            LabelKind.Request -> "^req"
+            LabelKind.Response -> "^rsp"
+            LabelKind.Receive -> ""
+        }
+        return "${operationKind}${kindString}($threadId, $actorId)"
+    }
+
+}
+
+data class CoroutineSuspendLabel(
+    override val kind: LabelKind,
+    override val threadId: Int,
+    override val actorId: Int,
+) : CoroutineLabel(
+    kind = kind,
+    threadId = threadId,
+    actorId = actorId,
+    isBlocking = true,
+    unblocked = (kind != LabelKind.Request),
+) {
+    init {
+        require(isRequest || isResponse || isReceive)
+    }
+
+    override fun isValidResponse(label: EventLabel): Boolean {
+        require(isResponse)
+        return when (label) {
+            is CoroutineLabel ->
+                (label is CoroutineSuspendLabel && label.isRequest || label is CoroutineResumeLabel)
+                        && threadId == label.threadId
+                        && actorId == label.actorId
+            else -> false
+        }
+    }
+
+    override fun getResponse(label: EventLabel): CoroutineSuspendLabel? = when {
+        isRequest && label is CoroutineResumeLabel
+            && threadId == label.threadId
+            && actorId == label.actorId ->
+                CoroutineSuspendLabel(
+                    kind = LabelKind.Response,
+                    threadId = threadId,
+                    actorId = actorId,
+                )
+        else -> null
+    }
+
+    override fun isValidReceive(label: EventLabel): Boolean {
+        require(isReceive)
+        return label is CoroutineSuspendLabel && !label.isReceive
+                && threadId == label.threadId
+                && actorId == label.actorId
+    }
+
+    override fun getReceive(): EventLabel {
+        require(isResponse)
+        return copy(kind = LabelKind.Receive)
+    }
+
+    override fun toString(): String =
+        super.toString()
+
+}
+
+data class CoroutineResumeLabel(
+    override val kind: LabelKind,
+    override val threadId: Int,
+    override val actorId: Int,
+) : CoroutineLabel(kind, threadId, actorId) {
+
+    override fun toString(): String =
+        super.toString()
+
+}
+
+data class CoroutineCancelLabel(
+    override val kind: LabelKind,
+    override val threadId: Int,
+    override val actorId: Int,
+) : CoroutineLabel(kind, threadId, actorId) {
+
+    override fun toString(): String =
+        super.toString()
+
 }
 
 data class RandomLabel(val value: Int): EventLabel(kind = LabelKind.Send)

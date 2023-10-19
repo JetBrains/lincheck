@@ -114,19 +114,29 @@ abstract class Runner protected constructor(
      * when the current coroutine suspends.
      * @param iThread number of invoking thread
      */
-    open fun afterCoroutineSuspended(iThread: Int): Unit = throw UnsupportedOperationException("Coroutines are not supported")
+    open fun afterCoroutineSuspended(iThread: Int): Unit =
+        throw UnsupportedOperationException("Coroutines are not supported")
 
     /**
      * This method is invoked by the corresponding test thread
      * when the current coroutine is resumed.
      */
-    open fun afterCoroutineResumed(iThread: Int): Unit = throw UnsupportedOperationException("Coroutines are not supported")
+    open fun afterCoroutineResumed(iThread: Int): Unit =
+        throw UnsupportedOperationException("Coroutines are not supported")
 
     /**
      * This method is invoked by the corresponding test thread
      * when the current coroutine is cancelled.
      */
-    open fun afterCoroutineCancelled(iThread: Int): Unit = throw UnsupportedOperationException("Coroutines are not supported")
+    open fun afterCoroutineCancelled(iThread: Int): Unit =
+        throw UnsupportedOperationException("Coroutines are not supported")
+
+    /**
+     * This method is invoked by a test thread
+     * that attempts to resume coroutine.
+     */
+    open fun onResumeCoroutine(iResumedThread: Int, iResumedActor: Int): Unit =
+        throw UnsupportedOperationException("Coroutines are not supported")
 
     /**
      * Returns `true` if the coroutine corresponding to
