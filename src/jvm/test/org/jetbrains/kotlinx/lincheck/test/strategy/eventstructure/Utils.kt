@@ -27,16 +27,17 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 
 import org.junit.Assert
 
-const val UNIQUE_OUTCOMES = -1
+internal const val UNIQUE = -1
+internal const val UNKNOWN = -2
 
 internal fun<Outcome> litmusTest(
     testClass: Class<*>,
     testScenario: ExecutionScenario,
     expectedOutcomes: Set<Outcome>,
-    executionCount: Int = UNIQUE_OUTCOMES,
+    executionCount: Int = UNIQUE,
     getOutcome: (ExecutionResult) -> Outcome,
 ) {
-    require(executionCount >= 0 || executionCount == UNIQUE_OUTCOMES)
+    require(executionCount >= 0 || executionCount == UNIQUE || executionCount == UNKNOWN)
 
     val outcomes: MutableSet<Outcome> = mutableSetOf()
     val verifier = createVerifier(testScenario) { results ->
@@ -48,9 +49,11 @@ internal fun<Outcome> litmusTest(
     assert(failure == null) { failure.toString() }
     Assert.assertEquals(expectedOutcomes, outcomes)
 
-    val expectedCount = if (executionCount == UNIQUE_OUTCOMES)
-        expectedOutcomes.size
-        else executionCount
+    val expectedCount = when (executionCount) {
+        UNIQUE     -> expectedOutcomes.size
+        UNKNOWN    -> strategy.stats.consistentInvocations
+        else       -> executionCount
+    }
     Assert.assertEquals(expectedCount, strategy.stats.consistentInvocations)
 }
 
@@ -88,3 +91,11 @@ internal fun createVerifier(testScenario: ExecutionScenario?, verify: (Execution
 
 internal inline fun<reified T> getValue(result: Result): T =
     (result as ValueResult).value as T
+
+internal fun getValueOrSuspended(result: Result): Any? = when (result) {
+    is ValueResult -> result.value
+    is Suspended -> result
+    else -> throw IllegalArgumentException()
+}
+
+internal const val TIMEOUT = 30 * 1000L // 30 sec

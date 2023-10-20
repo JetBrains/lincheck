@@ -24,13 +24,17 @@
 
 package org.jetbrains.kotlinx.lincheck.test.strategy.eventstructure
 
+import org.jetbrains.kotlinx.lincheck.Suspended
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.scenario
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import java.util.concurrent.atomic.*
 import java.util.concurrent.locks.LockSupport.*
 import java.lang.invoke.MethodHandles
 import jdk.internal.misc.Unsafe
+import kotlin.coroutines.*
+import kotlinx.coroutines.*
 import org.junit.Ignore
 import org.junit.Test
 
@@ -987,6 +991,127 @@ class PrimitivesTest {
         val outcomes = setOf(null, 1)
         litmusTest(ParkLatchedVariable::class.java, testScenario, outcomes, executionCount = 3) { results ->
             getValue<Int?>(results.parallelResults[1][0])
+        }
+    }
+
+    class CoroutineWrapper {
+
+        val continuation = AtomicReference<CancellableContinuation<Int>>()
+        var resumedOrCancelled = AtomicBoolean(false)
+
+        @Operation
+        suspend fun suspend(): Int {
+            return suspendCancellableCoroutine<Int> { continuation ->
+                this.continuation.set(continuation)
+            }
+        }
+
+        @Operation
+        fun resume(value: Int): Boolean {
+            this.continuation.get()?.let {
+                if (resumedOrCancelled.compareAndSet(false, true)) {
+                    it.resume(value)
+                    return true
+                }
+            }
+            return false
+        }
+
+        @Operation
+        fun cancel(): Boolean {
+            this.continuation.get()?.let {
+                if (resumedOrCancelled.compareAndSet(false, true)) {
+                    it.cancel()
+                    return true
+                }
+            }
+            return false
+        }
+
+    }
+
+    @Test(timeout = TIMEOUT)
+    fun testResume() {
+        val suspend = CoroutineWrapper::suspend
+        val resume = CoroutineWrapper::resume
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(suspend)
+                }
+                thread {
+                    actor(resume, 1)
+                }
+            }
+        }
+        val outcomes = setOf(
+            (Suspended to false),
+            (1 to true)
+        )
+        litmusTest(CoroutineWrapper::class.java, testScenario, outcomes, executionCount = UNKNOWN) { results ->
+            val r = getValueOrSuspended(results.parallelResults[0][0])
+            val b = getValue<Boolean>(results.parallelResults[1][0])
+            (r to b)
+        }
+    }
+
+    @Test(timeout = TIMEOUT)
+    fun test1Resume2Suspend() {
+        val suspend = CoroutineWrapper::suspend
+        val resume = CoroutineWrapper::resume
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(suspend)
+                }
+                thread {
+                    actor(suspend)
+                }
+                thread {
+                    actor(resume, 1)
+                }
+            }
+        }
+        val outcomes = setOf(
+            Triple(Suspended, Suspended, false),
+            Triple(Suspended, 1, true),
+            Triple(1, Suspended, true),
+        )
+        litmusTest(CoroutineWrapper::class.java, testScenario, outcomes, executionCount = UNKNOWN) { results ->
+            val r1 = getValueOrSuspended(results.parallelResults[0][0])
+            val r2 = getValueOrSuspended(results.parallelResults[1][0])
+            val b = getValue<Boolean>(results.parallelResults[2][0])
+            Triple(r1, r2, b)
+        }
+    }
+
+    @Test(timeout = TIMEOUT)
+    fun test2Resume1Suspend() {
+        val suspend = CoroutineWrapper::suspend
+        val resume = CoroutineWrapper::resume
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(suspend)
+                }
+                thread {
+                    actor(resume, 1)
+                }
+                thread {
+                    actor(resume, 2)
+                }
+            }
+        }
+        val outcomes = setOf(
+            Triple(Suspended, false, false),
+            Triple(1, true, false),
+            Triple(2, false, true),
+        )
+        litmusTest(CoroutineWrapper::class.java, testScenario, outcomes, executionCount = UNKNOWN) { results ->
+            val r = getValueOrSuspended(results.parallelResults[0][0])
+            val b1 = getValue<Boolean>(results.parallelResults[1][0])
+            val b2 = getValue<Boolean>(results.parallelResults[2][0])
+            Triple(r, b1, b2)
         }
     }
 

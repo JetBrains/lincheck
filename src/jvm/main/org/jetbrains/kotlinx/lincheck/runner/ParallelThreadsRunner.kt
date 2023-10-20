@@ -285,6 +285,8 @@ internal open class ParallelThreadsRunner(
 
     override fun afterCoroutineResumed(iThread: Int) {}
 
+    override fun onResumeCoroutine(iResumedThread: Int, iResumedActor: Int) {}
+
     // We cannot use `completionStatuses` here since
     // they are set _before_ the result is published.
     override fun isCoroutineResumed(iThread: Int, actorId: Int) =
