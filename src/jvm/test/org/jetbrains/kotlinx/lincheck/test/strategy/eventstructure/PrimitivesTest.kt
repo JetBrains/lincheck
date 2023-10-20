@@ -35,8 +35,10 @@ import java.lang.invoke.MethodHandles
 import jdk.internal.misc.Unsafe
 import kotlin.coroutines.*
 import kotlinx.coroutines.*
+import org.jetbrains.kotlinx.lincheck.Actor
 import org.junit.Ignore
 import org.junit.Test
+import kotlin.reflect.jvm.javaMethod
 
 /**
  * These tests check that [EventStructureStrategy] correctly handles all basic concurrent primitives.
@@ -999,7 +1001,7 @@ class PrimitivesTest {
         val continuation = AtomicReference<CancellableContinuation<Int>>()
         var resumedOrCancelled = AtomicBoolean(false)
 
-        @Operation
+        @Operation(handleExceptionsAsResult = [CancelledOperationException::class])
         suspend fun suspend(): Int {
             return suspendCancellableCoroutine<Int> { continuation ->
                 this.continuation.set(continuation)
@@ -1021,14 +1023,15 @@ class PrimitivesTest {
         fun cancel(): Boolean {
             this.continuation.get()?.let {
                 if (resumedOrCancelled.compareAndSet(false, true)) {
-                    it.cancel()
+                    it.cancel(CancelledOperationException)
                     return true
                 }
             }
             return false
         }
-
     }
+
+    internal object CancelledOperationException : Exception()
 
     @Test(timeout = TIMEOUT)
     fun testResume() {
@@ -1049,9 +1052,75 @@ class PrimitivesTest {
             (1 to true)
         )
         litmusTest(CoroutineWrapper::class.java, testScenario, outcomes, executionCount = UNKNOWN) { results ->
-            val r = getValueOrSuspended(results.parallelResults[0][0])
+            val r = getValueSuspended(results.parallelResults[0][0])
             val b = getValue<Boolean>(results.parallelResults[1][0])
             (r to b)
+        }
+    }
+
+    @Test(timeout = TIMEOUT)
+    fun testCancel() {
+        val suspendActor = Actor(
+            method = CoroutineWrapper::suspend.javaMethod!!,
+            arguments = listOf(),
+            handledExceptions = listOf(CancelledOperationException::class.java),
+            cancelOnSuspension = false
+        )
+        val cancel = CoroutineWrapper::cancel
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    add(suspendActor)
+                }
+                thread {
+                    actor(cancel)
+                }
+            }
+        }
+        val outcomes = setOf(
+            (Suspended to false),
+            (CancelledOperationException::class.java to true)
+        )
+        litmusTest(CoroutineWrapper::class.java, testScenario, outcomes, executionCount = UNKNOWN) { results ->
+            val r = getValueSuspended(results.parallelResults[0][0])
+            val b = getValue<Boolean>(results.parallelResults[1][0])
+            (r to b)
+        }
+    }
+
+    @Test(timeout = TIMEOUT)
+    fun testResumeCancel() {
+        val suspendActor = Actor(
+            method = CoroutineWrapper::suspend.javaMethod!!,
+            arguments = listOf(),
+            handledExceptions = listOf(CancelledOperationException::class.java),
+            cancelOnSuspension = false
+        )
+        val resume = CoroutineWrapper::resume
+        val cancel = CoroutineWrapper::cancel
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    add(suspendActor)
+                }
+                thread {
+                    actor(resume, 1)
+                }
+                thread {
+                    actor(cancel)
+                }
+            }
+        }
+        val outcomes = setOf(
+            Triple(Suspended, false, false),
+            Triple(1, true, false),
+            Triple(CancelledOperationException::class.java, false, true)
+        )
+        litmusTest(CoroutineWrapper::class.java, testScenario, outcomes, executionCount = UNKNOWN) { results ->
+            val r = getValueSuspended(results.parallelResults[0][0])
+            val b1 = getValue<Boolean>(results.parallelResults[1][0])
+            val b2 = getValue<Boolean>(results.parallelResults[2][0])
+            Triple(r, b1, b2)
         }
     }
 
@@ -1078,8 +1147,8 @@ class PrimitivesTest {
             Triple(1, Suspended, true),
         )
         litmusTest(CoroutineWrapper::class.java, testScenario, outcomes, executionCount = UNKNOWN) { results ->
-            val r1 = getValueOrSuspended(results.parallelResults[0][0])
-            val r2 = getValueOrSuspended(results.parallelResults[1][0])
+            val r1 = getValueSuspended(results.parallelResults[0][0])
+            val r2 = getValueSuspended(results.parallelResults[1][0])
             val b = getValue<Boolean>(results.parallelResults[2][0])
             Triple(r1, r2, b)
         }
@@ -1108,7 +1177,7 @@ class PrimitivesTest {
             Triple(2, false, true),
         )
         litmusTest(CoroutineWrapper::class.java, testScenario, outcomes, executionCount = UNKNOWN) { results ->
-            val r = getValueOrSuspended(results.parallelResults[0][0])
+            val r = getValueSuspended(results.parallelResults[0][0])
             val b1 = getValue<Boolean>(results.parallelResults[1][0])
             val b2 = getValue<Boolean>(results.parallelResults[2][0])
             Triple(r, b1, b2)

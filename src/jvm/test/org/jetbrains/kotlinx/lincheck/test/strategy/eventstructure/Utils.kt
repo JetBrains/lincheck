@@ -92,8 +92,9 @@ internal fun createVerifier(testScenario: ExecutionScenario?, verify: (Execution
 internal inline fun<reified T> getValue(result: Result): T =
     (result as ValueResult).value as T
 
-internal fun getValueOrSuspended(result: Result): Any? = when (result) {
+internal fun getValueSuspended(result: Result): Any? = when (result) {
     is ValueResult -> result.value
+    is ExceptionResult -> result.tClazz
     is Suspended -> result
     else -> throw IllegalArgumentException()
 }
