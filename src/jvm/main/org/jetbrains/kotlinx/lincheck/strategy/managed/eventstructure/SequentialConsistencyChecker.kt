@@ -316,6 +316,7 @@ private data class SequentialConsistencyReplayer(
             label is ThreadEventLabel -> this
             // TODO: do we need to care about parking?
             label is ParkingEventLabel -> this
+            label is CoroutineLabel -> this
             label is ActorLabel -> this
             label is RandomLabel -> this
 

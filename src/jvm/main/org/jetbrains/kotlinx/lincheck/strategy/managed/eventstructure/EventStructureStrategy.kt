@@ -313,6 +313,28 @@ class EventStructureStrategy(
         throw ForcibleExecutionFinishException
     }
 
+    override fun afterCoroutineSuspended(iThread: Int) {
+        eventStructure.addCoroutineSuspendRequestEvent(iThread, currentActorId[iThread])
+        super.afterCoroutineSuspended(iThread)
+    }
+
+    override fun afterCoroutineResumed(iThread: Int) {
+        eventStructure.addCoroutineSuspendResponseEvent(iThread, currentActorId[iThread])
+        super.afterCoroutineResumed(iThread)
+    }
+
+    override fun onResumeCoroutine(iThread: Int, iResumedThread: Int, iResumedActor: Int) {
+        eventStructure.addCoroutineResumeEvent(iThread, iResumedThread, iResumedActor)
+        super.onResumeCoroutine(iThread, iResumedThread, iResumedActor)
+    }
+
+    override fun isCoroutineResumed(iThread: Int, iActor: Int): Boolean {
+        val blockedEvent = eventStructure.getBlockedRequest(iThread).ensure {
+            it != null && it.label is CoroutineSuspendLabel
+        }!!
+        return !eventStructure.isBlockedAwaitingRequest(blockedEvent)
+    }
+
     override fun interceptRandom(): Int? {
         val iThread = (Thread.currentThread() as? FixedActiveThreadsExecutor.TestThread)?.iThread
             ?: return null

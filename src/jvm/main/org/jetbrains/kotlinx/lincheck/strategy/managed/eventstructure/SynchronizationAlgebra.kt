@@ -164,7 +164,7 @@ fun SynchronizationAlgebra.isBarrierSynchronizing(label: EventLabel): Boolean =
  *
  * - [SynchronizationType.Barrier] barrier synchronization ---
  *   a set of events can synchronize. For example,
- *   several thread finish labels can synchronize with single thread
+ *   several thread finish labels can synchronize with a single thread
  *   join-request label waiting for all of these threads to complete.
  *
  * @see [EventLabel]
@@ -173,7 +173,7 @@ enum class SynchronizationType { Binary, Barrier }
 
 private val ThreadSynchronizationAlgebra = object : SynchronizationAlgebra {
 
-    override fun syncType(label: EventLabel): SynchronizationType? = when(label) {
+    override fun syncType(label: EventLabel): SynchronizationType? = when (label) {
         is ThreadForkLabel      -> SynchronizationType.Binary
         is ThreadStartLabel     -> SynchronizationType.Binary
         is ThreadFinishLabel    -> SynchronizationType.Barrier
@@ -272,6 +272,27 @@ private val ParkingSynchronizationAlgebra = object : SynchronizationAlgebra {
 
 }
 
+private val CoroutineSynchronizationAlgebra = object : SynchronizationAlgebra {
+
+    override fun syncType(label: EventLabel): SynchronizationType? = when(label) {
+        is CoroutineLabel -> SynchronizationType.Binary
+        else              -> null
+    }
+
+    override fun synchronize(label: EventLabel, other: EventLabel): EventLabel? = when {
+        other is CoroutineSuspendLabel && other.isRequest ->
+            other.getResponse(label)
+        else -> null
+    }
+
+    override fun synchronizesInto(label: EventLabel, other: EventLabel): Boolean = when {
+        other is CoroutineSuspendLabel && other.isResponse ->
+            other.isValidResponse(label)
+        else -> false
+    }
+
+}
+
 val AtomicSynchronizationAlgebra = CommutativeSynchronizationAlgebra(object : SynchronizationAlgebra {
 
     // TODO: generalize this construction to arbitrary list of disjoint algebras (?)
@@ -281,6 +302,7 @@ val AtomicSynchronizationAlgebra = CommutativeSynchronizationAlgebra(object : Sy
         is MemoryAccessLabel        -> MemoryAccessSynchronizationAlgebra.syncType(label)
         is MutexLabel               -> MutexSynchronizationAlgebra.syncType(label)
         is ParkingEventLabel        -> ParkingSynchronizationAlgebra.syncType(label)
+        is CoroutineLabel           -> CoroutineSynchronizationAlgebra.syncType(label)
         // special treatment of ObjectAllocationLabel, because it can contribute to several sub-algebras
         // TODO: handle such cases uniformly --- check that all algebras are either disjoint or agree with each other
         is ObjectAllocationLabel    -> SynchronizationType.Binary
@@ -292,6 +314,7 @@ val AtomicSynchronizationAlgebra = CommutativeSynchronizationAlgebra(object : Sy
         is MemoryAccessLabel    -> MemoryAccessSynchronizationAlgebra.synchronize(label, other)
         is MutexLabel           -> MutexSynchronizationAlgebra.synchronize(label, other)
         is ParkLabel            -> ParkingSynchronizationAlgebra.synchronize(label, other)
+        is CoroutineLabel       -> CoroutineSynchronizationAlgebra.synchronize(label, other)
         else                    -> null
     }
 
@@ -300,6 +323,7 @@ val AtomicSynchronizationAlgebra = CommutativeSynchronizationAlgebra(object : Sy
         is MemoryAccessLabel    -> MemoryAccessSynchronizationAlgebra.synchronizesInto(label, other)
         is MutexLabel           -> MutexSynchronizationAlgebra.synchronizesInto(label, other)
         is ParkLabel            -> ParkingSynchronizationAlgebra.synchronizesInto(label, other)
+        is CoroutineLabel       -> CoroutineSynchronizationAlgebra.synchronizesInto(label, other)
         else                    -> false
     }
 

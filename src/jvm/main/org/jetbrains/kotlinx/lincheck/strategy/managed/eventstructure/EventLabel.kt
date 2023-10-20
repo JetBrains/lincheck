@@ -89,7 +89,6 @@ sealed class EventLabel(
             is ReadModifyWriteAccessLabel   -> LabelType.ReadModifyWriteAccess
             is CoroutineSuspendLabel        -> LabelType.CoroutineSuspend
             is CoroutineResumeLabel         -> LabelType.CoroutineResume
-            is CoroutineCancelLabel         -> LabelType.CoroutineCancel
             is LockLabel                    -> LabelType.Lock
             is UnlockLabel                  -> LabelType.Unlock
             is WaitLabel                    -> LabelType.Wait
@@ -200,7 +199,6 @@ enum class LabelType {
     ReadModifyWriteAccess,
     CoroutineSuspend,
     CoroutineResume,
-    CoroutineCancel,
     Lock,
     Unlock,
     Wait,
@@ -1208,7 +1206,6 @@ sealed class CoroutineLabel(
         val operationKind = when (this) {
             is CoroutineSuspendLabel -> "Suspend"
             is CoroutineResumeLabel  -> "Resume"
-            is CoroutineCancelLabel  -> "Cancel"
         }
         val kindString = when (kind) {
             LabelKind.Send -> ""
@@ -1225,6 +1222,7 @@ data class CoroutineSuspendLabel(
     override val kind: LabelKind,
     override val threadId: Int,
     override val actorId: Int,
+    // TODO: should we also keep resume value and cancellation flag?
 ) : CoroutineLabel(
     kind = kind,
     threadId = threadId,
@@ -1277,21 +1275,10 @@ data class CoroutineSuspendLabel(
 }
 
 data class CoroutineResumeLabel(
-    override val kind: LabelKind,
     override val threadId: Int,
     override val actorId: Int,
-) : CoroutineLabel(kind, threadId, actorId) {
-
-    override fun toString(): String =
-        super.toString()
-
-}
-
-data class CoroutineCancelLabel(
-    override val kind: LabelKind,
-    override val threadId: Int,
-    override val actorId: Int,
-) : CoroutineLabel(kind, threadId, actorId) {
+    // TODO: should we also keep resume value and cancellation flag?
+) : CoroutineLabel(LabelKind.Send, threadId, actorId) {
 
     override fun toString(): String =
         super.toString()

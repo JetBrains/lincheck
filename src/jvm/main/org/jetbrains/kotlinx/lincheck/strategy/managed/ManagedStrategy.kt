@@ -739,6 +739,10 @@ abstract class ManagedStrategy(
         check(currentThread == iThread)
     }
 
+    internal open fun isCoroutineResumed(iThread: Int, iActor: Int): Boolean {
+        return true
+    }
+
     /**
      * This method is invoked by a test thread
      * before each ignored section start.
@@ -964,6 +968,10 @@ private class ManagedStrategyRunner(
     override fun onResumeCoroutine(iResumedThread: Int, iResumedActor: Int) {
         super.onResumeCoroutine(iResumedThread, iResumedActor)
         managedStrategy.onResumeCoroutine(managedStrategy.currentThreadNumber(), iResumedThread, iResumedActor)
+    }
+
+    override fun isCoroutineResumed(iThread: Int, actorId: Int): Boolean {
+        return super.isCoroutineResumed(iThread, actorId) && managedStrategy.isCoroutineResumed(iThread, actorId)
     }
 
     override fun <T> cancelByLincheck(cont: CancellableContinuation<T>, promptCancellation: Boolean): CancellationResult {
