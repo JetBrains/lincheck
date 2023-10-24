@@ -324,7 +324,9 @@ class EventStructureStrategy(
     }
 
     override fun onResumeCoroutine(iThread: Int, iResumedThread: Int, iResumedActor: Int) {
-        eventStructure.addCoroutineResumeEvent(iThread, iResumedThread, iResumedActor)
+        if (iThread != iResumedThread && isSuspended[iResumedThread]) {
+            eventStructure.addCoroutineResumeEvent(iThread, iResumedThread, iResumedActor)
+        }
         super.onResumeCoroutine(iThread, iResumedThread, iResumedActor)
     }
 

@@ -73,7 +73,7 @@ abstract class ManagedStrategy(
     // Which threads finished all the operations?
     private val finished = BooleanArray(nThreads) { false }
     // Which threads are suspended?
-    private val isSuspended = BooleanArray(nThreads) { false }
+    protected val isSuspended = BooleanArray(nThreads) { false }
     // Which threads are spin-bound blocked?
     private val isSpinBoundBlocked = BooleanArray(nThreads) { false }
     // Current actor id for each thread.
