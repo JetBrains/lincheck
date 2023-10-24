@@ -315,6 +315,7 @@ class EventStructureStrategy(
     }
 
     override fun afterCoroutineSuspended(iThread: Int) {
+        eventStructure.addCoroutineSuspendRequestEvent(iThread, currentActorId[iThread])
         super.afterCoroutineSuspended(iThread)
     }
 
