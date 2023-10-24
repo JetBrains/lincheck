@@ -28,6 +28,7 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.TestThread
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.objectweb.asm.*
 import java.lang.reflect.*
 import java.util.Objects
@@ -254,11 +255,13 @@ internal open class ParallelThreadsRunner(
         var i = 1
         while (!isCoroutineResumed(iThread, actorId)) {
             // Check whether the scenario is completed and the current suspended operation cannot be resumed.
-            if (completedOrSuspendedThreads.get() == scenario.threads) {
+            if (completedOrSuspendedThreads.get() == scenario.threads ||
+                (strategy as? ManagedStrategy)?.isBlocked() == true) {
                 suspensionPointResults[iThread][actorId] = NoResult
                 return Suspended
             }
-            if (i++ % spinningTimeBeforeYield == 0) Thread.yield()
+            if (i++ % spinningTimeBeforeYield == 0)
+                Thread.yield()
         }
         // Coroutine will be resumed. Call method so that strategy can learn it.
         afterCoroutineResumed(iThread)

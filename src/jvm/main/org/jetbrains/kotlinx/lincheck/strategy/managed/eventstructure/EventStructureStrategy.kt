@@ -109,6 +109,7 @@ class EventStructureStrategy(
         }
         // println(eventStructure.currentExecution)
         stats.update(result, inconsistency)
+        // println(stats.totalInvocations)
         return (result to inconsistency)
     }
 
@@ -314,7 +315,6 @@ class EventStructureStrategy(
     }
 
     override fun afterCoroutineSuspended(iThread: Int) {
-        eventStructure.addCoroutineSuspendRequestEvent(iThread, currentActorId[iThread])
         super.afterCoroutineSuspended(iThread)
     }
 
@@ -329,6 +329,8 @@ class EventStructureStrategy(
     }
 
     override fun isCoroutineResumed(iThread: Int, iActor: Int): Boolean {
+        if (!super.isCoroutineResumed(iThread, iActor))
+            return false
         val blockedEvent = eventStructure.getBlockedRequest(iThread).ensure {
             it != null && it.label is CoroutineSuspendLabel
         }!!
@@ -590,4 +592,4 @@ private class EventStructureParkingTracker(
 
 }
 
-internal const val SPIN_BOUND = 3
+internal const val SPIN_BOUND = 5

@@ -371,6 +371,10 @@ abstract class ManagedStrategy(
         !monitorTracker.isWaiting(iThread) &&
         !parkingTracker.isParked(iThread)
 
+    // TODO: refactor --- get rid of this!!!
+    internal fun isBlocked(): Boolean =
+        (0 until nThreads).all { !isActive(it) }
+
     /**
      * Waits until the specified thread can continue
      * the execution according to the strategy decision.
@@ -417,7 +421,8 @@ abstract class ManagedStrategy(
     /**
      * A regular context thread switch to another thread.
      */
-    protected fun switchCurrentThread(iThread: Int, reason: SwitchReason = SwitchReason.STRATEGY_SWITCH, mustSwitch: Boolean = false) {
+    // TODO: make protected again!
+    internal fun switchCurrentThread(iThread: Int, reason: SwitchReason = SwitchReason.STRATEGY_SWITCH, mustSwitch: Boolean = false) {
         if (!isTestThread(iThread)) return // can switch only test threads
         if (reason == SwitchReason.SPIN_BOUND)
             isSpinBoundBlocked[iThread] = true
@@ -438,14 +443,15 @@ abstract class ManagedStrategy(
         if (!mustSwitch || finished.all { it })
             return
         // try to resume some suspended thread
-        val suspendedThread = (0 until nThreads).firstOrNull { !finished[it] && isSuspended[it] }
+        val suspendedThread = (0 until nThreads).firstOrNull {
+            it != iThread && !finished[it] && isSuspended[it]
+        }
         if (suspendedThread != null) {
             currentThread = suspendedThread
             return
         }
         // if some threads (but not all of them!) are blocked due to spin-loop bounding,
         // then finish the execution, but do not count it as a deadlock;
-        // otherwise consider the
         if (isSpinBoundBlocked.any { it } && !isSpinBoundBlocked.all { it }) {
             suddenInvocationResult = SpinLoopBoundInvocationResult()
             throw ForcibleExecutionFinishException
@@ -703,10 +709,9 @@ abstract class ManagedStrategy(
         if (runner.isCoroutineResumed(iThread, currentActorId[iThread])) {
             // `COROUTINE_SUSPENSION_CODE_LOCATION`, because we do not know the actual code location
             newSwitchPoint(iThread, COROUTINE_SUSPENSION_CODE_LOCATION, null)
-        } else {
-            // coroutine suspension does not violate obstruction-freedom
-            switchCurrentThread(iThread, SwitchReason.SUSPENDED, true)
+            return
         }
+        switchCurrentThread(iThread, SwitchReason.SUSPENDED, true)
     }
 
     /**
