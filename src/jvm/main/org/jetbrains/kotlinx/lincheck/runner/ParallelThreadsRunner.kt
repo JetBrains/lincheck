@@ -254,7 +254,6 @@ internal open class ParallelThreadsRunner(
                 currentExecutionPart = ExecutionPart.INIT
                 beforePart(ExecutionPart.INIT)
                 timeout -= executor.submitAndAwait(arrayOf(this), timeout)
-                validationFailure?.let { return it }
             }
             // execute parallel part
             currentExecutionPart = ExecutionPart.PARALLEL
@@ -302,9 +301,6 @@ internal open class ParallelThreadsRunner(
         if (hasNonTrivialInitialPart) InitTestThreadExecution() else null
 
     inner class InitTestThreadExecution : TestThreadExecution(INIT_THREAD_ID) {
-
-        var validationFailure: ValidationFailureInvocationResult? = null
-
         var stateRepresentation: String? = null
 
         init {
@@ -315,19 +311,6 @@ internal open class ParallelThreadsRunner(
             scenario.initExecution.mapIndexed { i, actor ->
                 onActorStart(INIT_THREAD_ID)
                 results[i] = executeActor(testInstance, actor)
-                executeInIgnoredSection {
-                    executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
-                        validationFailure = ValidationFailureInvocationResult(
-                            ExecutionScenario(
-                                scenario.initExecution.subList(0, i + 1),
-                                emptyList(),
-                                emptyList()
-                            ),
-                            functionName,
-                            exception
-                        )
-                    }
-                }
             }
             stateRepresentation = constructStateRepresentation()
         }
@@ -353,24 +336,7 @@ internal open class ParallelThreadsRunner(
         }
 
         override fun run() {
-            // (1): execute validation functions and construct state representation after parallel part
-            executeInIgnoredSection {
-                executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
-                    validationFailure = ValidationFailureInvocationResult(
-                        ExecutionScenario(
-                            scenario.initExecution,
-                            scenario.parallelExecution,
-                            emptyList()
-                        ),
-                        functionName,
-                        exception
-                    )
-                }
-            }
             afterParallelStateRepresentation = constructStateRepresentation()
-            if (validationFailure != null)
-                return
-            // (2): execute post part and validation functions, then construct state representation after post part
             val dummyCompletion = Continuation<Any?>(EmptyCoroutineContext) {}
             var suspended = false
             scenario.postExecution.mapIndexed { i, actor ->
@@ -384,21 +350,13 @@ internal open class ParallelThreadsRunner(
                         suspended = it === Suspended
                     }
                 }
-                executeInIgnoredSection {
-                    executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
-                        validationFailure = ValidationFailureInvocationResult(
-                            ExecutionScenario(
-                                scenario.initExecution,
-                                scenario.parallelExecution,
-                                scenario.postExecution.subList(0, i + 1)
-                            ),
-                            functionName,
-                            exception
-                        )
-                    }
-                }
             }
             afterPostStateRepresentation = constructStateRepresentation()
+            executeInIgnoredSection {
+                executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
+                    validationFailure = ValidationFailureInvocationResult(scenario, functionName, exception)
+                }
+            }
         }
     }
 
