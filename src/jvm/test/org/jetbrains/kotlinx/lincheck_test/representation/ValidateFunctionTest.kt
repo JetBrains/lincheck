@@ -14,43 +14,38 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
-import java.util.concurrent.atomic.*
 
-class ValidateFunctionTest : VerifierState() {
-    val c = AtomicInteger()
-
+class ValidateFunctionTest {
     @Operation
-    fun inc() = c.incrementAndGet()
+    fun operation() {
+        if (validateInvoked != 0) {
+            error("The validation function should be called only at the end of the scenario")
+        }
+    }
 
-    override fun extractState() = c.get()
+    private var validateInvoked: Int = 0
 
     @Validate
-    fun validateNoError() {}
-
-    var validateInvoked: Int = 0
-
-    // This function fails on the 3rd invocation
-    @Validate
-    fun validateWithError() {
+    fun validateWithError(): Int {
         validateInvoked++
-        if (validateInvoked == 3) error("Validation works!")
+        if (validateInvoked == 1) error("Validation works!")
+        return 0
     }
 
     @Test
     fun test() = ModelCheckingOptions().apply {
         addCustomScenario {
             initial {
-                actor(::inc)
+                actor(::operation)
             }
             parallel {
                 thread {
-                    actor(::inc)
+                    actor(::operation)
                 }
             }
             post {
-                actor(::inc)
+                actor(::operation)
             }
         }
     }

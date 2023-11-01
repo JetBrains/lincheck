@@ -100,7 +100,6 @@ internal class ModelCheckingStrategy(
             ExecutionPart.PARALLEL -> currentInterleaving.chooseThread(0)
             ExecutionPart.POST -> 0
         }
-        executionPart = part
         loopDetector.beforePart(nextThread)
         currentThread = nextThread
     }
