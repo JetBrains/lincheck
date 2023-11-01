@@ -180,6 +180,7 @@ internal fun constructTraceGraph(scenario: ExecutionScenario, results: Execution
                 continue
             // insert an ActorResultNode between the last actor event and the next event after it
             val lastEvent = actorNode.lastInternalEvent
+            if ((lastEvent as? TraceLeafEvent)?.event is SwitchEventTracePoint) continue
             val lastEventNext = lastEvent.next
             val result = results[iThread, actorId]
             val resultRepresentation = result?.let { resultRepresentation(result, exceptionStackTraces) }

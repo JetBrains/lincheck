@@ -128,12 +128,9 @@ internal class ModelCheckingStrategy(
             checkResult(invocationResult)?.let { failure ->
                 if (replay && failure.trace != null) {
                     val trace = extractDebugTrace(failure, failure.trace)
-                    val executionResults = if (failure is IncorrectResultsFailure) constructResultsRepresentation(failure.results, failure.scenario, emptyMap()) else null
                     val currentVersion = this::class.java.`package`.implementationVersion
                     testFailed(
-                        executionResultsInitPart = executionResults?.initResultsRepresentation?.toTypedArray(),
-                        executionResultsParallelPart = executionResults?.let { prepareParallelPart(it.parallelResultsRepresentation) },
-                        executionResultsPostPart = executionResults?.postResultsRepresentation?.toTypedArray(),
+                        failureType = failure.type,
                         trace = trace,
                         version = currentVersion,
                         minimalPluginVersion = MINIMAL_PLUGIN_VERSION
@@ -151,6 +148,15 @@ internal class ModelCheckingStrategy(
         }
         return null
     }
+
+    private val LincheckFailure.type: String
+        get() = when (this) {
+            is DeadlockWithDumpFailure -> "DEADLOCK"
+            is IncorrectResultsFailure -> "INCORRECT_RESULTS"
+            is ObstructionFreedomViolationFailure -> "OBSTRUCTION_FREEDOM_VIOLATION"
+            is UnexpectedExceptionFailure -> "UNEXPECTED_EXCEPTION"
+            is ValidationFailure -> "VALIDATION_FAILURE"
+        }
 
     private fun prepareParallelPart(executionResultsRepresentation: List<List<String>>): Array<Array<String>> {
         if (executionResultsRepresentation.isEmpty()) return emptyArray()
@@ -182,9 +188,23 @@ internal class ModelCheckingStrategy(
         while (node != null) {
             when (node) {
                 is TraceLeafEvent -> {
-                    val beforeEventId = node.event.beforeEventId
-                    val representation = node.event.toStringImpl(false)
-                    val type = if (node.event is SwitchEventTracePoint) 3 else 0
+                    val event = node.event
+                    val beforeEventId = event.beforeEventId
+                    val representation = event.toStringImpl(false)
+                    val type = when (event) {
+                        is SwitchEventTracePoint -> {
+                            when (event.reason) {
+                                SwitchReason.ACTIVE_LOCK -> {
+                                    5
+                                }
+                                else -> 3
+                            }
+                        }
+                        is SpinCycleStartTracePoint -> 4
+                        is ObstructionFreedomViolationExecutionAbortTracePoint -> 6
+                        else -> 0
+                    }
+
                     if (representation.isNotEmpty()) {
                         representations.add("$type;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation}")
                     }
@@ -440,7 +460,12 @@ internal class ModelCheckingStrategy(
             executionPosition++
             if (executionPosition > switchPositions.lastOrNull() ?: -1) {
                 // Add a new thread choosing node corresponding to the switch at the current execution position.
-                lastNotInitializedNodeChoices?.add(Choice(ThreadChoosingNode(switchableThreads(iThread)), executionPosition))
+                lastNotInitializedNodeChoices?.add(
+                    Choice(
+                        ThreadChoosingNode(switchableThreads(iThread)),
+                        executionPosition
+                    )
+                )
             }
         }
     }

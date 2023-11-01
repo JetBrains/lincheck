@@ -22,9 +22,7 @@ const val MINIMAL_PLUGIN_VERSION = "0.0.1"
 // Invoked by Lincheck after the minimization is applied.
 @Suppress("UNUSED_PARAMETER")
 fun testFailed(
-    executionResultsInitPart: Array<String>?,
-    executionResultsParallelPart: Array<Array<String>>?,
-    executionResultsPostPart: Array<String>?,
+    failureType: String,
     trace: Array<String>,
     version: String?,
     minimalPluginVersion: String
