@@ -33,4 +33,6 @@ class IncorrectOnCancellationTest : AbstractLincheckTest(IncorrectResultsFailure
     }
 
     override fun extractState(): Any = 0 // constant state
+
+    override val testPlanningConstraints: Boolean = false
 }

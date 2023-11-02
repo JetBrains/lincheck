@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.runner;
 
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.kotlinx.lincheck.*;
 import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.runner.*;
@@ -28,8 +29,9 @@ public class TestThreadExecutionHelperTest {
     public void setUp() {
         ExecutionScenario scenario = new ExecutionScenario(emptyList(), emptyList(), emptyList());
         Strategy strategy = new Strategy(scenario) {
+            @NotNull
             @Override
-            public LincheckFailure run() {
+            public InvocationResult runInvocation() {
                 throw new UnsupportedOperationException();
             }
         };

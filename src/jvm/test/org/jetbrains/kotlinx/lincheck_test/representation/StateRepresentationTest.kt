@@ -13,8 +13,8 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation
 import org.jetbrains.kotlinx.lincheck.appendFailure
 import org.jetbrains.kotlinx.lincheck.checkImpl
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
@@ -40,6 +40,7 @@ open class ModelCheckingStateReportingTest {
     fun stateRepresentation() = counter.toString()
 
     @Test
+    @Suppress("DEPRECATION_ERROR")
     fun test() = ModelCheckingOptions().apply {
         actorsPerThread(1)
         actorsBefore(0)
@@ -70,6 +71,7 @@ class StressStateReportingTest : VerifierState() {
     fun stateRepresentation() = counter.toString()
 
     @Test
+    @Suppress("DEPRECATION_ERROR")
     fun test() {
         val options = StressOptions()
             .actorsPerThread(1)
@@ -107,6 +109,7 @@ class TwoStateRepresentationFunctionsTest : VerifierState() {
     fun stateRepresentation2() = counter.toString()
 
     @Test(expected = IllegalStateException::class)
+    @Suppress("DEPRECATION_ERROR")
     fun test() {
         ModelCheckingOptions()
             .actorsPerThread(1)
@@ -133,6 +136,7 @@ class NonDeterministicStateRepresentationTest() {
     fun stateRepresentation() = "(${counter.get()}, ${Any()})"
 
     @Test
+    @Suppress("DEPRECATION_ERROR")
     fun test() {
         val options = ModelCheckingOptions()
             .actorsPerThread(1)

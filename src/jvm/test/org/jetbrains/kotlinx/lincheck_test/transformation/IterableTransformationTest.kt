@@ -9,9 +9,9 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.transformation
 
-import org.jetbrains.kotlinx.lincheck.LinChecker
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.LincheckOptionsImpl
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 
@@ -19,7 +19,6 @@ import org.junit.Test
  * Tests that java.lang.Iterable is transformed and
  * iterator() method returns transformed java.util.Iterator
  */
-@ModelCheckingCTest(iterations = 1, actorsBefore = 1, actorsAfter = 1, actorsPerThread = 1)
 class IterableTransformationTest : VerifierState() {
     private var sum = 0
 
@@ -33,7 +32,9 @@ class IterableTransformationTest : VerifierState() {
 
     @Test
     fun test() {
-        LinChecker.check(this::class.java)
+        LincheckOptions {
+            testingTimeInSeconds = 1
+        }.check(this::class)
     }
 
     override fun extractState(): Any = 0 // constant state

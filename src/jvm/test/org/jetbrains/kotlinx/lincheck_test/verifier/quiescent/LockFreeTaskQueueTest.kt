@@ -32,13 +32,7 @@ class LockFreeTaskQueueTest : AbstractLincheckTest() {
     @Operation
     fun close() = q.close()
 
-    override fun <O : Options<O, *>> O.customize() {
-        actorsBefore(2)
-        actorsAfter(2)
-        threads(2)
-        actorsPerThread(3)
-        verifier(QuiescentConsistencyVerifier::class.java)
+    override fun LincheckOptionsImpl.customize() {
+        verifier = QuiescentConsistencyVerifier::class.java
     }
-
-    override fun extractState() = q.map { it } to q.isClosed()
 }

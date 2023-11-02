@@ -9,6 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.verifier.linearizability
 
+import org.jetbrains.kotlinx.lincheck.LincheckOptionsImpl
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck_test.*
@@ -28,6 +29,7 @@ abstract class AbstractSetTest(private val set: Set) : AbstractLincheckTest() {
     operator fun contains(@Param(name = "key") key: Int): Boolean = set.contains(key)
 
     override fun extractState(): Any = (1..5).map { set.contains(it) }
+
 }
 
 class SpinLockSetTest : AbstractSetTest(SpinLockBasedSet())

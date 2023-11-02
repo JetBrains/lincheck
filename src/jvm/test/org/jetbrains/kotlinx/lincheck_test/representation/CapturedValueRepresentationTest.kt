@@ -9,10 +9,12 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.representation
 
+import org.jetbrains.kotlinx.lincheck.LincheckMode
+import org.jetbrains.kotlinx.lincheck.LincheckOptions
+import org.jetbrains.kotlinx.lincheck.LincheckOptionsImpl
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
 import org.junit.Test
 
@@ -44,10 +46,12 @@ class CapturedValueRepresentationTest : VerifierState() {
     }
 
     @Test
-    fun test() = ModelCheckingOptions().apply {
-        actorsAfter(0)
-        actorsBefore(0)
-        actorsPerThread(1)
+    fun test() = LincheckOptions {
+        this as LincheckOptionsImpl
+        maxThreads = 2
+        maxOperationsInThread = 1
+        generateBeforeAndAfterParts = false
+        mode = LincheckMode.ModelChecking
     }
         .checkImpl(this::class.java)
         .checkLincheckOutput("captured_value.txt")

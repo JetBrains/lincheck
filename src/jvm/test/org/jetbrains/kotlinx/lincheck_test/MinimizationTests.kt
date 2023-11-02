@@ -27,15 +27,18 @@ class MinimizationTest {
      */
     @Test
     fun testWithoutMinimization() {
-        val options = StressOptions()
-            .threads(4)
-            .actorsPerThread(4)
-            .actorsBefore(4)
-            .actorsAfter(4)
-            .invocationsPerIteration(1_000)
-            .minimizeFailedScenario(false)
+        val options = LincheckOptions {
+            this as LincheckOptionsImpl
+            mode = LincheckMode.Stress
+            minThreads = 4
+            maxThreads = 4
+            minOperationsInThread = 4
+            maxOperationsInThread = 4
+            minimizeFailedScenario = false
+            tryReproduceTrace = false
+        }
         try {
-            LinChecker.check(MinimizationTest::class.java, options)
+            options.check(MinimizationTest::class.java)
             fail("Should fail with LincheckAssertionError")
         } catch (error: LincheckAssertionError) {
             val failedScenario = error.failure.scenario
@@ -53,14 +56,17 @@ class MinimizationTest {
      */
     @Test
     fun testWithMinimization() {
-        val options = StressOptions()
-            .threads(4)
-            .actorsPerThread(4)
-            .actorsBefore(4)
-            .actorsAfter(4)
-            .invocationsPerIteration(1_000)
+        val options = LincheckOptions {
+            this as LincheckOptionsImpl
+            mode = LincheckMode.Stress
+            minThreads = 4
+            maxThreads = 4
+            minOperationsInThread = 4
+            maxOperationsInThread = 4
+            tryReproduceTrace = false
+        }
         try {
-            LinChecker.check(MinimizationTest::class.java, options)
+            options.check(MinimizationTest::class.java)
             fail("Should fail with LincheckAssertionError")
         } catch (error: LincheckAssertionError) {
             val failedScenario = error.failure.scenario
@@ -86,14 +92,17 @@ class MinimizationWithExceptionTest {
      */
     @Test
     fun testWithExpectedException() {
-        val options = StressOptions()
-            .threads(4)
-            .actorsPerThread(4)
-            .actorsBefore(4)
-            .actorsAfter(4)
-            .invocationsPerIteration(1_000)
+        val options = LincheckOptions {
+            this as LincheckOptionsImpl
+            mode = LincheckMode.Stress
+            minThreads = 4
+            maxThreads = 4
+            minOperationsInThread = 4
+            maxOperationsInThread = 4
+            tryReproduceTrace = false
+        }
         try {
-            LinChecker.check(IncorrectImplementationWithException::class.java, options)
+            options.check(IncorrectImplementationWithException::class.java)
             fail("Should fail with LincheckAssertionError")
         } catch (error: LincheckAssertionError) {
             val failedScenario = error.failure.scenario
@@ -117,15 +126,18 @@ class MinimizationWithExceptionTest {
      */
     @Test
     fun testWithUnexpectedException() {
-        val options = StressOptions()
-            .threads(4)
-            .actorsPerThread(4)
-            .actorsBefore(4)
-            .actorsAfter(4)
-            .invocationsPerIteration(1_000)
-            .sequentialSpecification(SequentialImplementation::class.java)
+        val options = LincheckOptions {
+            this as LincheckOptionsImpl
+            mode = LincheckMode.Stress
+            minThreads = 4
+            maxThreads = 4
+            minOperationsInThread = 4
+            maxOperationsInThread = 4
+            tryReproduceTrace = false
+            sequentialImplementation = SequentialImplementation::class.java
+        }
         try {
-            LinChecker.check(CorrectImplementationWithException::class.java, options)
+            options.check(CorrectImplementationWithException::class.java)
             fail("Should fail with LincheckAssertionError")
         } catch (error: LincheckAssertionError) {
             val failedScenario = error.failure.scenario

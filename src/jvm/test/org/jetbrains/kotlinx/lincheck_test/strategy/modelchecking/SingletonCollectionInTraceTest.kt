@@ -39,6 +39,7 @@ class SingletonCollectionInTraceTest {
     }
 
     @Test
+    @Suppress("DEPRECATION_ERROR")
     fun modelCheckingTest() {
         val failure = ModelCheckingOptions()
             .iterations(1)

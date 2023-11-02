@@ -41,7 +41,10 @@ class IllegalModuleAccessOutputMessageTest {
     }
 
     @Test
-    fun test() = ModelCheckingOptions()
+    fun test() = LincheckOptions {
+        this as LincheckOptionsImpl
+        mode = LincheckMode.ModelChecking
+    }
         .checkImpl(this::class.java)
         .checkLincheckOutput("illegal_module_access.txt")
 }

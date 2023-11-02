@@ -10,9 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.LincheckOptionsImpl
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.checkImpl
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.junit.Test
 
@@ -34,9 +34,22 @@ class ClocksWithExceptionsInOutputTest {
     fun operation2() = check(!canEnterForbiddenSection) { "Violating exception" }
 
     @Test
-    fun `should add stackTrace to output`() = ModelCheckingOptions().apply {
-        actorsPerThread(2)
-        minimizeFailedScenario(false)
+    fun `should add stackTrace to output`() = LincheckOptions {
+        this as LincheckOptionsImpl
+        mode = LincheckMode.ModelChecking
+        addCustomScenario {
+            parallel {
+                thread {
+                    actor(::operation1)
+                    actor(::operation1)
+                }
+                thread {
+                    actor(::operation2)
+                }
+            }
+        }
+        generateRandomScenarios = false
+        minimizeFailedScenario = false
     }
         .checkImpl(this::class.java)
         .checkLincheckOutput("clocks_and_exceptions.txt")

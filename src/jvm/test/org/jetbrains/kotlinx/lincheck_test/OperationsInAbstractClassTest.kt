@@ -16,13 +16,18 @@ import org.junit.*
 import java.lang.AssertionError
 import kotlin.random.*
 
-@StressCTest(iterations = 1, minimizeFailedScenario = false, requireStateEquivalenceImplCheck = false)
 class OperationsInAbstractClassTest : AbstractTestClass() {
     @Operation
     fun goodOperation() = 10
 
     @Test(expected = AssertionError::class)
-    fun test(): Unit = LinChecker.check(this::class.java)
+    fun test(): Unit = LincheckOptions {
+        this as LincheckOptionsImpl
+        mode = LincheckMode.Stress
+        testingTimeInSeconds = 1
+        minimizeFailedScenario = false
+        tryReproduceTrace = false
+    }.check(this::class.java)
 }
 
 open class AbstractTestClass {

@@ -10,6 +10,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking;
 
 import kotlin.Deprecated;
+import kotlin.DeprecationLevel;
 import org.jetbrains.kotlinx.lincheck.*;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.execution.*;
@@ -22,11 +23,17 @@ import static org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.Mode
 
 /**
  * This annotation configures concurrent test using {@link ModelCheckingStrategy managed} strategy.
+ *
+ * @deprecated use {@link LincheckOptions} instead.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 @Repeatable(ModelCheckingCTest.ModelCheckingCTests.class)
 @Inherited
+@Deprecated(
+        message = "Please use `LincheckOptions` instead",
+        level = DeprecationLevel.ERROR
+)
 public @interface ModelCheckingCTest {
     /**
      * The number of different test scenarios to be executed

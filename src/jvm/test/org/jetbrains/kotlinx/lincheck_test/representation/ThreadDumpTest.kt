@@ -20,6 +20,7 @@ import org.junit.*
  */
 class ThreadDumpTest {
     @Test
+    @Suppress("DEPRECATION_ERROR")
     fun test() {
         val iterations = 30
         repeat(iterations) {

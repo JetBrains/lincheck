@@ -34,10 +34,13 @@ import kotlin.collections.set
 abstract class ManagedStrategy(
     private val testClass: Class<*>,
     scenario: ExecutionScenario,
-    private val verifier: Verifier,
     private val validationFunctions: List<Method>,
     private val stateRepresentationFunction: Method?,
-    private val testCfg: ManagedCTestConfiguration
+    private val timeoutMs: Long,
+    private val checkObstructionFreedom: Boolean,
+    private val eliminateLocalObjects: Boolean,
+    private val hangingDetectionThreshold: Int,
+    private val guarantees: List<ManagedStrategyGuarantee>,
 ) : Strategy(scenario), Closeable {
     // The number of parallel threads.
     protected val nThreads: Int = scenario.nThreads
@@ -66,7 +69,7 @@ abstract class ManagedStrategy(
     // Ihe number of entered but not left (yet) blocks that should be ignored by the strategy analysis for each thread.
     private val ignoredSectionDepth = IntArray(nThreads) { 0 }
     // Detector of loops or hangs (i.e. active locks).
-    protected val loopDetector: LoopDetector = LoopDetector(testCfg.hangingDetectionThreshold)
+    protected val loopDetector: LoopDetector = LoopDetector(hangingDetectionThreshold)
 
     // Tracker of acquisitions and releases of monitors.
     private lateinit var monitorTracker: MonitorTracker
@@ -110,13 +113,19 @@ abstract class ManagedStrategy(
     }
 
     private fun createRunner(): ManagedStrategyRunner =
-        ManagedStrategyRunner(this, testClass, validationFunctions, stateRepresentationFunction, testCfg.timeoutMs, UseClocks.ALWAYS)
+        ManagedStrategyRunner(this,
+            testClass,
+            validationFunctions,
+            stateRepresentationFunction,
+            timeoutMs,
+            UseClocks.ALWAYS
+        )
 
     override fun createTransformer(cv: ClassVisitor): ClassVisitor = ManagedStrategyTransformer(
         cv = cv,
         tracePointConstructors = tracePointConstructors,
-        guarantees = testCfg.guarantees,
-        eliminateLocalObjects = testCfg.eliminateLocalObjects,
+        guarantees = guarantees,
+        eliminateLocalObjects = eliminateLocalObjects,
         collectStateRepresentation = collectStateRepresentation,
         constructTraceRepresentation = collectTrace,
         codeLocationIdProvider = codeLocationIdProvider
@@ -125,16 +134,9 @@ abstract class ManagedStrategy(
     override fun needsTransformation(): Boolean = true
 
     fun useBytecodeCache(): Boolean =
-        !collectTrace && testCfg.eliminateLocalObjects && (testCfg.guarantees == ManagedCTestConfiguration.DEFAULT_GUARANTEES)
-
-    override fun run(): LincheckFailure? = runImpl().also { close() }
+        !collectTrace && eliminateLocalObjects && (guarantees == ManagedCTestConfiguration.DEFAULT_GUARANTEES)
 
     // == STRATEGY INTERFACE METHODS ==
-
-    /**
-     * This method implements the strategy logic.
-     */
-    protected abstract fun runImpl(): LincheckFailure?
 
     /**
      * This method is invoked before every thread context switch.
@@ -156,9 +158,10 @@ abstract class ManagedStrategy(
     protected abstract fun chooseThread(iThread: Int): Int
 
     /**
-     * Returns all data to the initial state.
+     * Resets all internal data to the initial state and initialized next invocation to be run.
      */
-    protected open fun initializeInvocation() {
+    override fun initializeInvocation() {
+        super.initializeInvocation()
         finished.fill(false)
         isSuspended.fill(false)
         currentActorId.fill(-1)
@@ -171,25 +174,22 @@ abstract class ManagedStrategy(
         ManagedStrategyStateHolder.setState(runner.classLoader, this, testClass)
     }
 
-    // == BASIC STRATEGY METHODS ==
-
     /**
-     * Checks whether the [result] is a failing one or is [CompletedInvocationResult]
-     * but the verification fails, and return the corresponding failure.
-     * Returns `null` if the result is correct.
+     * Runs the next invocation with the same [scenario][ExecutionScenario].
      */
-    protected fun checkResult(result: InvocationResult): LincheckFailure? = when (result) {
-        is CompletedInvocationResult -> {
-            if (verifier.verifyResults(scenario, result.results)) null
-            else IncorrectResultsFailure(scenario, result.results, collectTrace(result))
-        }
-        else -> result.toLincheckFailure(scenario, collectTrace(result))
+    override fun runInvocation(): InvocationResult {
+        val result = runner.run()
+        // Has strategy already determined the invocation result?
+        suddenInvocationResult?.let { return it  }
+        return result
     }
+
+    // == BASIC STRATEGY METHODS ==
 
     /**
      * Re-runs the last invocation to collect its trace.
      */
-    private fun collectTrace(failingResult: InvocationResult): Trace? {
+    fun collectTrace(failingResult: InvocationResult): Trace? {
         val detectedByStrategy = suddenInvocationResult != null
         val canCollectTrace = when {
             detectedByStrategy -> true // ObstructionFreedomViolationInvocationResult or UnexpectedExceptionInvocationResult
@@ -211,7 +211,7 @@ abstract class ManagedStrategy(
         runner = createRunner()
         ManagedStrategyStateHolder.setState(runner.classLoader, this, testClass)
         runner.initialize()
-
+        initializeInvocation()
         loopDetector.enableReplayMode(
             failDueToDeadlockInTheEnd = failingResult is DeadlockInvocationResult || failingResult is ObstructionFreedomViolationInvocationResult
         )
@@ -231,19 +231,8 @@ abstract class ManagedStrategy(
         return Trace(traceCollector!!.trace)
     }
 
-    /**
-     * Runs the next invocation with the same [scenario][ExecutionScenario].
-     */
-    protected fun runInvocation(): InvocationResult {
-        initializeInvocation()
-        val result = runner.run()
-        // Has strategy already determined the invocation result?
-        suddenInvocationResult?.let { return it  }
-        return result
-    }
-
     private fun failIfObstructionFreedomIsRequired(lazyMessage: () -> String) {
-        if (testCfg.checkObstructionFreedom && !curActorIsBlocking && !concurrentActorCausesBlocking) {
+        if (checkObstructionFreedom && !curActorIsBlocking && !concurrentActorCausesBlocking) {
             suddenInvocationResult = ObstructionFreedomViolationInvocationResult(lazyMessage())
             // Forcibly finish the current execution by throwing an exception.
             throw ForcibleExecutionFinishException
@@ -255,7 +244,7 @@ abstract class ManagedStrategy(
 
     private val concurrentActorCausesBlocking: Boolean
         get() = currentActorId.mapIndexed { iThread, actorId ->
-                    if (iThread != currentThread && !finished[iThread])
+                    if (iThread != currentThread && actorId >= 0 && !finished[iThread])
                         scenario.threads[iThread][actorId]
                     else null
                 }.filterNotNull().any { it.causesBlocking }

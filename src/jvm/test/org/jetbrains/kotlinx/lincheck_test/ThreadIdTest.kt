@@ -30,4 +30,6 @@ class ThreadIdTest : AbstractLincheckTest() {
     }
 
     override fun extractState() = balances.toList() to counter.value
+
+    override val testPlanningConstraints: Boolean = false
 }

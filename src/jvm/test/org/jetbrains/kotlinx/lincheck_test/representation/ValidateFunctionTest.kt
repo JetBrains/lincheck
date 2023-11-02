@@ -9,10 +9,9 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.representation
 
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.checkImpl
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.junit.*
 
@@ -34,7 +33,9 @@ class ValidateFunctionTest {
     }
 
     @Test
-    fun test() = ModelCheckingOptions().apply {
+    fun test() = LincheckOptions {
+        this as LincheckOptionsImpl
+        mode = LincheckMode.ModelChecking
         addCustomScenario {
             initial {
                 actor(::operation)
@@ -48,6 +49,7 @@ class ValidateFunctionTest {
                 actor(::operation)
             }
         }
+        generateRandomScenarios = false
     }
         .checkImpl(this::class.java)
         .checkLincheckOutput("validation_function_failure.txt")

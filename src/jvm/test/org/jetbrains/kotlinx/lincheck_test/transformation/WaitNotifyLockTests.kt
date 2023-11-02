@@ -10,14 +10,12 @@
 
 package org.jetbrains.kotlinx.lincheck_test.transformation
 
-import org.jetbrains.kotlinx.lincheck.LinChecker
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTest
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 
 // tests wait/notify support in model checking strategy
-@ModelCheckingCTest(iterations = 30)
 class WaitNotifyLockTest : VerifierState() {
     private var counter = 0
     private val lock = WaitNotifyLock()
@@ -29,12 +27,11 @@ class WaitNotifyLockTest : VerifierState() {
 
     @Test
     fun test() {
-        LinChecker.check(this::class.java)
+        LincheckOptions().check(this::class)
     }
 }
 
 // tests wait/notify support under lock re-entrance in model checking strategy
-@ModelCheckingCTest(iterations = 30)
 class NestedWaitNotifyLockTest : VerifierState() {
     private var counter = 0
     private val lock = NestedWaitNotifyLock()
@@ -46,7 +43,7 @@ class NestedWaitNotifyLockTest : VerifierState() {
 
     @Test
     fun test() {
-        LinChecker.check(this::class.java)
+        LincheckOptions().check(this::class)
     }
 }
 

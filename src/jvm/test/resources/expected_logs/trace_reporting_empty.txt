@@ -18,7 +18,7 @@ The following interleaving leads to the error:
 
 Exception stack traces:
 #1: kotlin.NotImplementedError: An operation is not implemented.
-	at org.jetbrains.kotlinx.lincheck_test.representation.TraceReportingTest.notImplemented(TraceReportingTest.kt:123)
+	at org.jetbrains.kotlinx.lincheck_test.representation.TraceReportingTest.notImplemented(TraceReportingTest.kt:126)
 
 Detailed trace:
 | ---------------------------------------- |

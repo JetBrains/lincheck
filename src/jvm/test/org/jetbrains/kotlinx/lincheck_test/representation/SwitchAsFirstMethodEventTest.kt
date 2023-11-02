@@ -49,10 +49,20 @@ class SwitchAsFirstMethodEventTest {
     private fun incAndGetImpl() = counter.incrementAndGet()
 
     @Test
-    fun test() = ModelCheckingOptions().apply {
-        actorsPerThread(1)
-        actorsBefore(0)
-        actorsAfter(0)
+    fun test() = LincheckOptions {
+        this as LincheckOptionsImpl
+        addCustomScenario {
+            parallel {
+                thread {
+                    actor(::incTwiceAndGet)
+                }
+                thread {
+                    actor(::incTwiceAndGet)
+                }
+            }
+        }
+        mode = LincheckMode.ModelChecking
+        generateRandomScenarios = false
     }
         .checkImpl(this::class.java)
         .checkLincheckOutput("switch_as_first_method_event.txt")

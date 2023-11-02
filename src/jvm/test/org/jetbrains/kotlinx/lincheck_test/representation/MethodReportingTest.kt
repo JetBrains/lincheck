@@ -62,6 +62,7 @@ class MethodReportingTest : VerifierState() {
     override fun extractState(): Any = a
 
     @Test
+    @Suppress("DEPRECATION_ERROR")
     fun test() {
         val options = ModelCheckingOptions()
             .actorsPerThread(1)
@@ -107,10 +108,20 @@ class CaughtExceptionMethodReportingTest : VerifierState() {
     override fun extractState(): Any = counter
 
     @Test
-    fun test() = ModelCheckingOptions().apply {
-        actorsPerThread(1)
-        actorsBefore(0)
-        actorsAfter(0)
+    fun test() = LincheckOptions {
+        this as LincheckOptionsImpl
+        addCustomScenario {
+            parallel {
+                thread {
+                    actor(::operation)
+                }
+                thread {
+                    actor(::operation)
+                }
+            }
+        }
+        mode = LincheckMode.ModelChecking
+        generateRandomScenarios = false
     }
         .checkImpl(this::class.java)
         .checkLincheckOutput("method_reporting.txt")

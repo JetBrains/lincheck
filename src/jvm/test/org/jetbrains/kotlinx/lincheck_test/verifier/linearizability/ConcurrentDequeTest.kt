@@ -9,7 +9,6 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.verifier.linearizability
 
-import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck_test.*
@@ -33,7 +32,4 @@ class ConcurrentDequeTest : AbstractLincheckTest() {
 
     override fun extractState() = deque.toList()
 
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(100) // more iterations, because stress strategy not always finds the bug quickly
-    }
 }

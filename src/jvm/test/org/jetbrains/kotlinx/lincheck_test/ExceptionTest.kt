@@ -21,22 +21,19 @@ class ExceptionInParallelPartTest : AbstractLincheckTest(IncorrectResultsFailure
         throw IllegalStateException()
     }
 
-    val scenario = scenario {
-        parallel {
-            thread {
-                actor(::exception)
-            }
-            thread {
-                actor(::exception)
+    override fun LincheckOptionsImpl.customize() {
+        addCustomScenario {
+            parallel {
+                thread {
+                    actor(::exception)
+                }
+                thread {
+                    actor(::exception)
+                }
             }
         }
-    }
-
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(0)
-        addCustomScenario(scenario)
-        minimizeFailedScenario(false)
-        sequentialSpecification(ExceptionTestSequentialImplementation::class.java)
+        generateRandomScenarios = false
+        sequentialImplementation = ExceptionTestSequentialImplementation::class.java
     }
 
 }
@@ -51,22 +48,19 @@ class ExceptionInInitPartTest : AbstractLincheckTest(IncorrectResultsFailure::cl
     @Operation
     fun idle() {}
 
-    val scenario = scenario {
-        initial {
-            actor(ExceptionInInitPartTest::exception)
-        }
-        parallel {
-            thread {
-                actor(ExceptionInInitPartTest::idle)
+    override fun LincheckOptionsImpl.customize() {
+        addCustomScenario {
+            initial {
+                actor(ExceptionInInitPartTest::exception)
+            }
+            parallel {
+                thread {
+                    actor(ExceptionInInitPartTest::idle)
+                }
             }
         }
-    }
-
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(0)
-        addCustomScenario(scenario)
-        minimizeFailedScenario(false)
-        sequentialSpecification(ExceptionTestSequentialImplementation::class.java)
+        generateRandomScenarios = false
+        sequentialImplementation = ExceptionTestSequentialImplementation::class.java
     }
 
 }
@@ -81,22 +75,19 @@ class ExceptionInPostPartTest : AbstractLincheckTest(IncorrectResultsFailure::cl
     @Operation
     fun idle() {}
 
-    val scenario = scenario {
-        parallel {
-            thread {
-                actor(ExceptionInPostPartTest::idle)
+    override fun LincheckOptionsImpl.customize() {
+        addCustomScenario {
+            parallel {
+                thread {
+                    actor(ExceptionInPostPartTest::idle)
+                }
+            }
+            post {
+                actor(ExceptionInPostPartTest::exception)
             }
         }
-        post {
-            actor(ExceptionInPostPartTest::exception)
-        }
-    }
-
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(0)
-        addCustomScenario(scenario)
-        minimizeFailedScenario(false)
-        sequentialSpecification(ExceptionTestSequentialImplementation::class.java)
+        generateRandomScenarios = false
+        sequentialImplementation = ExceptionTestSequentialImplementation::class.java
     }
 
 }
