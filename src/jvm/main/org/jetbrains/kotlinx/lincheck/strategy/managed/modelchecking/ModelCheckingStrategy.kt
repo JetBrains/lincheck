@@ -99,8 +99,12 @@ internal class ModelCheckingStrategy(
             ExecutionPart.INIT -> 0
             ExecutionPart.PARALLEL -> currentInterleaving.chooseThread(0)
             ExecutionPart.POST -> 0
+            ExecutionPart.VALIDATION -> 0
         }
         loopDetector.beforePart(nextThread)
+        if (part == ExecutionPart.VALIDATION) {
+            traceCollector?.passCodeLocation(ValidationStartTracePoint)
+        }
         currentThread = nextThread
     }
 

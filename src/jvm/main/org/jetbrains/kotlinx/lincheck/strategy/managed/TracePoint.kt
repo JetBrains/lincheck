@@ -240,6 +240,10 @@ internal class CoroutineCancellationTracePoint(
     }
 }
 
+internal object ValidationStartTracePoint : TracePoint(0, -1, emptyList()) {
+    override fun toStringImpl(): String = ""
+}
+
 internal class SpinCycleStartTracePoint(iThread: Int, actorId: Int, callStackTrace: CallStackTrace): TracePoint(iThread, actorId, callStackTrace) {
     override fun toStringImpl() =  "/* The following events repeat infinitely: */"
 }

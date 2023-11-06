@@ -1,36 +1,49 @@
 = Validation function validateWithError has failed =
-| ----------- |
-|  Thread 1   |
-| ----------- |
-| operation() |
-| ----------- |
-| operation() |
-| ----------- |
-| operation() |
-| ----------- |
+| ------------------------- |
+|  Thread 1   |  Thread 2   |
+| ------------------------- |
+| operation() |             |
+| ------------------------- |
+| operation() | operation() |
+| ------------------------- |
+| operation() |             |
+| ------------------------- |
 
 
 java.lang.IllegalStateException: Validation works!
-	at org.jetbrains.kotlinx.lincheck_test.representation.ValidateFunctionTest.validateWithError(ValidateFunctionTest.kt:34)
+	at org.jetbrains.kotlinx.lincheck_test.representation.ValidateFunctionTest.validateWithError(ValidateFunctionTest.kt:39)
 
 
 The following interleaving leads to the error:
-| ----------- |
-|  Thread 1   |
-| ----------- |
-| operation() |
-| operation() |
-| operation() |
-| ----------- |
+| -------------------------------------------------------- |
+|                  Thread 1                  |  Thread 2   |
+| -------------------------------------------------------- |
+| operation()                                |             |
+|                                            | operation() |
+| operation()                                |             |
+| operation()                                |             |
+| -------------------------------------------------------- |
+| validate()                                 |             |
+| validateWithError(): IllegalStateException |             |
+| -------------------------------------------------------- |
 
 Detailed trace:
-| --------------------------------------------------------------------------------------- |
-|                                        Thread 1                                         |
-| --------------------------------------------------------------------------------------- |
-| operation()                                                                             |
-|   validateInvoked.READ: 0 at ValidateFunctionTest.operation(ValidateFunctionTest.kt:24) |
-| operation()                                                                             |
-|   validateInvoked.READ: 0 at ValidateFunctionTest.operation(ValidateFunctionTest.kt:24) |
-| operation()                                                                             |
-|   validateInvoked.READ: 0 at ValidateFunctionTest.operation(ValidateFunctionTest.kt:24) |
-| --------------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|                                             Thread 1                                             |                                        Thread 2                                         |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| operation()                                                                                      |                                                                                         |
+|   validateInvoked.READ: 0 at ValidateFunctionTest.operation(ValidateFunctionTest.kt:26)          |                                                                                         |
+|                                                                                                  | operation()                                                                             |
+|                                                                                                  |   validateInvoked.READ: 0 at ValidateFunctionTest.operation(ValidateFunctionTest.kt:26) |
+| operation()                                                                                      |                                                                                         |
+|   validateInvoked.READ: 0 at ValidateFunctionTest.operation(ValidateFunctionTest.kt:26)          |                                                                                         |
+| operation()                                                                                      |                                                                                         |
+|   validateInvoked.READ: 0 at ValidateFunctionTest.operation(ValidateFunctionTest.kt:26)          |                                                                                         |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| validate()                                                                                       |                                                                                         |
+|   validateInvoked.READ: 0 at ValidateFunctionTest.validate(ValidateFunctionTest.kt:33)           |                                                                                         |
+| validateWithError(): IllegalStateException                                                       |                                                                                         |
+|   validateInvoked.READ: 0 at ValidateFunctionTest.validateWithError(ValidateFunctionTest.kt:38)  |                                                                                         |
+|   validateInvoked.WRITE(1) at ValidateFunctionTest.validateWithError(ValidateFunctionTest.kt:38) |                                                                                         |
+|   validateInvoked.READ: 1 at ValidateFunctionTest.validateWithError(ValidateFunctionTest.kt:39)  |                                                                                         |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

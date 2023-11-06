@@ -16,6 +16,7 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import java.io.*
+import kotlin.math.max
 
 class Reporter(private val logLevel: LoggingLevel) {
     private val out: PrintStream = System.out
@@ -155,6 +156,16 @@ internal class TableLayout(
     }
 
     /**
+     * Appends first column.
+     *
+     * @see columnsToString
+     */
+    fun <T> StringBuilder.appendFirstColumn(data: List<T>, transform: ((T) -> String)? = null) = apply {
+        val columns = listOf(data) + List(columnWidths.size - 1) { emptyList() }
+        appendColumns(columns, columnWidths, transform)
+    }
+
+    /**
      * Appends a single column, all other columns are filled blank.
      *
      * @param iCol index of the appended column.
@@ -199,13 +210,20 @@ internal class TableLayout(
 internal fun ExecutionLayout(
     initPart: List<String>,
     parallelPart: List<List<String>>,
-    postPart: List<String>
+    postPart: List<String>,
+    validation: List<String>?
 ): TableLayout {
     val size = parallelPart.size
     val threadHeaders = (0 until size).map { "Thread ${it + 1}" }
-    val columnsWidth = parallelPart.mapIndexed { i, actors ->
-        val col = actors + if (i == 0) (initPart + postPart) else listOf()
-        col.maxOfOrNull { it.length } ?: 0
+    val columnsWidth = parallelPart.mapIndexed { columnWidth, actors ->
+        var maxColWidth = 0
+        actors.forEach { maxColWidth = max(maxColWidth, it.length) }
+        if (columnWidth == 0) {
+            initPart.forEach { maxColWidth = max(maxColWidth, it.length)  }
+            postPart.forEach { maxColWidth = max(maxColWidth, it.length)  }
+            validation?.forEach { maxColWidth = max(maxColWidth, it.length)  }
+        }
+        maxColWidth
     }
     return TableLayout(threadHeaders, columnsWidth)
 }
@@ -214,7 +232,7 @@ internal fun StringBuilder.appendExecutionScenario(scenario: ExecutionScenario):
     val initPart = scenario.initExecution.map(Actor::toString)
     val postPart = scenario.postExecution.map(Actor::toString)
     val parallelPart = scenario.parallelExecution.map { it.map(Actor::toString) }
-    with(ExecutionLayout(initPart, parallelPart, postPart)) {
+    with(ExecutionLayout(initPart, parallelPart, postPart, null)) {
         appendSeparatorLine()
         appendHeader()
         appendSeparatorLine()
@@ -294,7 +312,7 @@ internal fun StringBuilder.appendExecutionScenarioWithResults(
             ActorWithResult(actor, resultWithClock.result, exceptionStackTraces, clock = resultWithClock.clockOnStart).toString()
         }
     }
-    with(ExecutionLayout(initPart, parallelPart, postPart)) {
+    with(ExecutionLayout(initPart, parallelPart, postPart, null)) {
         appendSeparatorLine()
         appendHeader()
         appendSeparatorLine()
@@ -559,7 +577,7 @@ private fun StringBuilder.appendHints(hints: List<String>) {
 }
 
 private fun StringBuilder.appendValidationFailure(failure: ValidationFailure): StringBuilder {
-    appendLine("= Validation function ${failure.functionName} has failed =")
+    appendLine("= Validation function ${failure.validationFunctionsFailedName} has failed =")
     appendExecutionScenario(failure.scenario)
     appendln()
     appendln()

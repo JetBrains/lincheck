@@ -16,7 +16,15 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.junit.*
 
+/**
+ * Test verifies validation function representation in the trace.
+ */
+@Suppress("unused")
 class ValidateFunctionTest {
+
+    @Volatile
+    private var validateInvoked: Int = 0
+
     @Operation
     fun operation() {
         if (validateInvoked != 0) {
@@ -24,7 +32,10 @@ class ValidateFunctionTest {
         }
     }
 
-    private var validateInvoked: Int = 0
+    @Validate
+    fun validate() {
+        check(validateInvoked != -1)
+    }
 
     @Validate
     fun validateWithError(): Int {
@@ -40,6 +51,9 @@ class ValidateFunctionTest {
                 actor(::operation)
             }
             parallel {
+                thread {
+                    actor(::operation)
+                }
                 thread {
                     actor(::operation)
                 }

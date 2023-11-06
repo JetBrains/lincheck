@@ -44,7 +44,8 @@ class UnexpectedExceptionInvocationResult(
  */
 class ValidationFailureInvocationResult(
     val scenario: ExecutionScenario,
-    val functionName: String,
+    val validationFunctionsPassedNames: List<String>,
+    val validationFunctionsFailedName: String,
     val exception: Throwable
 ) : InvocationResult()
 

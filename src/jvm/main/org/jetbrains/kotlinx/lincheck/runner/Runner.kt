@@ -157,5 +157,5 @@ abstract class Runner protected constructor(
 }
 
 enum class ExecutionPart {
-    INIT, PARALLEL, POST
+    INIT, PARALLEL, POST, VALIDATION
 }

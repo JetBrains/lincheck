@@ -13,6 +13,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.DeadlockWithDumpFailure
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
+import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
 import java.util.*
 import kotlin.math.*
 
@@ -23,7 +24,7 @@ internal fun StringBuilder.appendTrace(
     trace: Trace,
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
 ) {
-    val startTraceGraphNode = constructTraceGraph(failure.scenario, results, trace, exceptionStackTraces)
+    val startTraceGraphNode = constructTraceGraph(failure, results, trace, exceptionStackTraces)
 
     appendShortTrace(startTraceGraphNode, failure)
     appendExceptionsStackTracesBlock(exceptionStackTraces)
@@ -33,7 +34,7 @@ internal fun StringBuilder.appendTrace(
 }
 
 private fun StringBuilder.appendShortTrace(
-    startTraceGraphNode: TraceNode?,
+    startTraceGraphNode: TraceGraphNodes,
     failure: LincheckFailure
 ) {
     val traceRepresentation = traceGraphToRepresentationList(startTraceGraphNode, false)
@@ -46,7 +47,7 @@ private fun StringBuilder.appendShortTrace(
 }
 
 private fun StringBuilder.appendDetailedTrace(
-    startTraceGraphNode: TraceNode?,
+    startTraceGraphNode: TraceGraphNodes,
     failure: LincheckFailure
 ) {
     appendLine(DETAILED_TRACE_TITLE)
@@ -59,14 +60,25 @@ private fun StringBuilder.appendDetailedTrace(
 
 private fun StringBuilder.appendTraceRepresentation(
     scenario: ExecutionScenario,
-    traceRepresentation: List<TraceEventRepresentation>
+    traceRepresentation: TraceGraphRepresentation
 ) {
     val traceRepresentationSplitted = splitToColumns(scenario.nThreads, traceRepresentation)
-    with(ExecutionLayout(listOf(), traceRepresentationSplitted, listOf())) {
+    with(
+        ExecutionLayout(
+            initPart = listOf(),
+            parallelPart = traceRepresentationSplitted.interleavingRows,
+            postPart = listOf(),
+            validation = traceRepresentationSplitted.validationFunctionRows
+        )
+    ) {
         appendSeparatorLine()
         appendHeader()
         appendSeparatorLine()
-        appendColumns(traceRepresentationSplitted)
+        appendColumns(traceRepresentationSplitted.interleavingRows)
+        traceRepresentationSplitted.validationFunctionRows?.let { validationRows ->
+            appendSeparatorLine()
+            appendFirstColumn(validationRows)
+        }
         appendSeparatorLine()
     }
 }
@@ -74,9 +86,9 @@ private fun StringBuilder.appendTraceRepresentation(
 /**
  * Convert trace events to the final form of a matrix of strings.
  */
-private fun splitToColumns(nThreads: Int, traceRepresentation: List<TraceEventRepresentation>): List<List<String>> {
+private fun splitToColumns(nThreads: Int, traceRepresentationModel: TraceGraphRepresentation): TableLayoutModel {
     val result = List(nThreads) { mutableListOf<String>() }
-    for (event in traceRepresentation) {
+    for (event in traceRepresentationModel.interleavingRepresentation) {
         val columnId = event.iThread
         // write message in an appropriate column
         result[columnId].add(event.representation)
@@ -86,8 +98,17 @@ private fun splitToColumns(nThreads: Int, traceRepresentation: List<TraceEventRe
             if (column.size != neededSize)
                 column.add("")
     }
-    return result
+    val validationResult = traceRepresentationModel.validationFunctionRepresentation?.let { validation ->
+        validation.map { it.representation }
+    }
+
+    return TableLayoutModel(result, validationResult)
 }
+
+data class TableLayoutModel(
+    val interleavingRows: List<List<String>>,
+    val validationFunctionRows: List<String>?,
+)
 
 /**
  * Constructs a trace graph based on the provided [trace].
@@ -97,7 +118,13 @@ private fun splitToColumns(nThreads: Int, traceRepresentation: List<TraceEventRe
  * `next` edges form a single-directed list in which the order of events is the same as in [trace].
  * `internalEvents` edges form a directed forest.
  */
-private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionResult?, trace: Trace, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): TraceNode? {
+private fun constructTraceGraph(
+    failure: LincheckFailure,
+    results: ExecutionResult?,
+    trace: Trace,
+    exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
+): TraceGraphNodes {
+    val scenario = failure.scenario
     val tracePoints = trace.trace
     // last events that were executed for each thread. It is either thread finish events or events before crash
     val lastExecutedEvents = IntArray(scenario.nThreads) { iThread ->
@@ -105,21 +132,35 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
     }
     // last actor that was handled for each thread
     val lastHandledActor = IntArray(scenario.nThreads) { -1 }
-    // actor nodes for each actor in each thread
+    val isValidationFunctionFailure = failure is ValidationFailure
+
     val actorNodes = Array(scenario.nThreads) { i ->
-        Array<ActorNode?>(scenario.threads[i].size) { null }
+        val actorsCount = scenario.threads[i].size + if (i == 0 && isValidationFunctionFailure) (failure as ValidationFailure).validationFunctionsPassedNames.size + 1 else 0
+        Array<ActorNode?>(actorsCount) { null }
     }
+    val actorRepresentations = createActorRepresentation(scenario, failure)
     // call nodes for each method call
     val callNodes = mutableMapOf<Int, CallNode>()
     // all trace nodes in order corresponding to `tracePoints`
-    val traceGraphNodes = mutableListOf<TraceNode>()
+    val interleavingTraceGraphNodes = mutableListOf<TraceNode>()
+    var validationTraceGraphNodes: MutableList<TraceNode>? = null
+
+    var traceGraphNodes = interleavingTraceGraphNodes
 
     for (eventId in tracePoints.indices) {
         val event = tracePoints[eventId]
+        if (event is ValidationStartTracePoint) {
+            // we don't need validation function trace if the cause of the failure is not a validation function failure
+            if (!isValidationFunctionFailure) break
+            val validationNodes = mutableListOf<TraceNode>()
+            traceGraphNodes = validationNodes
+            validationTraceGraphNodes = validationNodes
+            continue
+        }
         val iThread = event.iThread
         val actorId = event.actorId
         // add all actors that started since the last event
-        while (lastHandledActor[iThread] < min(actorId, scenario.threads[iThread].lastIndex)) {
+        while (lastHandledActor[iThread] < min(actorId, actorNodes[iThread].lastIndex)) {
             val nextActor = ++lastHandledActor[iThread]
             // create new actor node actor
             val actorNode = traceGraphNodes.createAndAppend { lastNode ->
@@ -127,7 +168,7 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
                     iThread = iThread,
                     last = lastNode,
                     callDepth = 0,
-                    actor = scenario.threads[iThread][nextActor],
+                    actorRepresentation = actorRepresentations[iThread][nextActor],
                     resultRepresentation = results[iThread, nextActor]
                         ?.let { actorNodeResultRepresentation(it, exceptionStackTraces) }
                 )
@@ -157,6 +198,7 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
         }
         innerNode.addInternalEvent(node)
     }
+    traceGraphNodes = interleavingTraceGraphNodes
     // add an ActorResultNode to each actor, because did not know where actor ends before
     for (iThread in actorNodes.indices) {
         for (actorId in actorNodes[iThread].indices) {
@@ -170,7 +212,7 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
                     iThread = iThread,
                     last = lastNode,
                     callDepth = 0,
-                    actor = scenario.threads[iThread][actorId],
+                    actorRepresentation = actorRepresentations[iThread][actorId],
                     resultRepresentation = actorNodeResultRepresentation(actorResult, exceptionStackTraces)
                 )
                 actorNodes[iThread][actorId] = actorNode
@@ -188,7 +230,34 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
             resultNode.next = lastEventNext
         }
     }
-    return traceGraphNodes.firstOrNull()
+    return TraceGraphNodes(traceGraphNodes.firstOrNull(), validationTraceGraphNodes?.firstOrNull())
+}
+
+private data class TraceGraphNodes(
+    val interleavingTraceFirstNode: TraceNode?,
+    val validationTraceFirstNode: TraceNode?
+)
+
+/**
+ * Creates united actors representation, including invoked actors and validation functions.
+ * In output construction, we treat validation function call like a regular actor for unification.
+ */
+private fun createActorRepresentation(
+    scenario: ExecutionScenario,
+    failure: LincheckFailure
+): Array<List<String>> {
+    return Array(scenario.nThreads) { i ->
+        if (i == 0) {
+            val actors = scenario.threads[i].map { it.toString() }.toMutableList()
+
+            if (failure is ValidationFailure) {
+                failure.validationFunctionsPassedNames.forEach { actors += "$it()" }
+                actors += "${failure.validationFunctionsFailedName}(): ${failure.exception::class.simpleName}"
+            }
+
+            actors
+        } else scenario.threads[i].map { it.toString() }
+    }
 }
 
 private operator fun ExecutionResult?.get(iThread: Int, actorId: Int): Result? =
@@ -201,16 +270,26 @@ private fun <T : TraceNode> MutableList<TraceNode>.createAndAppend(constructor: 
     constructor(lastOrNull()).also { add(it) }
 
 private fun traceGraphToRepresentationList(
-    startNode: TraceNode?,
+    graphModel: TraceGraphNodes,
     verboseTrace: Boolean
-): List<TraceEventRepresentation> {
-    var curNode: TraceNode? = startNode
-    val traceRepresentation = mutableListOf<TraceEventRepresentation>()
-    while (curNode != null) {
-        curNode = curNode.addRepresentationTo(traceRepresentation, verboseTrace)
+): TraceGraphRepresentation {
+    fun makeRepresentation(startNode: TraceNode?) = buildList {
+        var curNode = startNode
+        while (curNode != null) {
+            curNode = curNode.addRepresentationTo(this, verboseTrace)
+        }
     }
-    return traceRepresentation
+
+    return TraceGraphRepresentation(
+        interleavingRepresentation = makeRepresentation(graphModel.interleavingTraceFirstNode),
+        validationFunctionRepresentation = graphModel.validationTraceFirstNode?.let { makeRepresentation(it) }
+    )
 }
+
+private data class TraceGraphRepresentation(
+    val interleavingRepresentation: List<TraceEventRepresentation>,
+    val validationFunctionRepresentation: List<TraceEventRepresentation>?
+)
 
 private sealed class TraceNode(
     protected val iThread: Int,
@@ -257,10 +336,11 @@ private class TraceLeafEvent(
 
     override val lastInternalEvent: TraceNode = this
 
-    private val TracePoint.isBlocking: Boolean get() = when (this) {
-        is MonitorEnterTracePoint, is WaitTracePoint, is ParkTracePoint -> true
-        else -> false
-    }
+    private val TracePoint.isBlocking: Boolean
+        get() = when (this) {
+            is MonitorEnterTracePoint, is WaitTracePoint, is ParkTracePoint -> true
+            else -> false
+        }
 
     override fun shouldBeExpanded(verboseTrace: Boolean): Boolean {
         return (lastExecutedEvent && event.isBlocking)
@@ -327,14 +407,14 @@ private class ActorNode(
     iThread: Int,
     last: TraceNode?,
     callDepth: Int,
-    private val actor: Actor,
+    private val actorRepresentation: String,
     private val resultRepresentation: String?
 ) : TraceInnerNode(iThread, last, callDepth) {
     override fun addRepresentationTo(
         traceRepresentation: MutableList<TraceEventRepresentation>,
         verboseTrace: Boolean
     ): TraceNode? {
-        val actorRepresentation = "$actor" + if (resultRepresentation != null) ": $resultRepresentation" else ""
+        val actorRepresentation = actorRepresentation + if (resultRepresentation != null) ": $resultRepresentation" else ""
         traceRepresentation.add(TraceEventRepresentation(iThread, actorRepresentation))
         return if (!shouldBeExpanded(verboseTrace)) {
             lastState?.let { traceRepresentation.add(stateEventRepresentation(iThread, it)) }

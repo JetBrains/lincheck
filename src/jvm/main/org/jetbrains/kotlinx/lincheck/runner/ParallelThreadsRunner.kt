@@ -262,9 +262,27 @@ internal open class ParallelThreadsRunner(
             }
             val afterPostStateRepresentation = constructStateRepresentation()
             // Execute validation functions
-            executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
-                return ValidationFailureInvocationResult(scenario, functionName, exception)
+            if (validationFunctions.isNotEmpty()) {
+                strategy.beforePart(VALIDATION)
+                var validationFunctionResult: ValidationFailureInvocationResult? = null
+                val validationFunctionExecution = object : TestThreadExecution() {
+                    override fun run() {
+                        executeValidationFunctions(strategy, testInstance, validationFunctions) { failedIndex, exception ->
+                            validationFunctionResult = ValidationFailureInvocationResult(
+                                scenario = scenario,
+                                validationFunctionsPassedNames = validationFunctions.take(failedIndex).map { it.name },
+                                validationFunctionsFailedName = validationFunctions[failedIndex].name,
+                                exception = exception
+                            )
+                        }
+                    }
+                }
+                validationFunctionExecution.testInstance = testInstance
+
+                executor.submitAndAwait(arrayOf(validationFunctionExecution), timeout)
+                validationFunctionResult?.let { return it }
             }
+
             // Combine the results and convert them for the standard class loader (if they are of non-primitive types).
             // We do not want the transformed code to be reachable outside of the runner and strategy classes.
             return CompletedInvocationResult(

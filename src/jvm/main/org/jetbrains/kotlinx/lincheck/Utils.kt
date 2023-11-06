@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
+import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.objectweb.asm.*
@@ -64,12 +65,18 @@ internal fun executeActor(
     }
 }
 
-internal inline fun executeValidationFunctions(instance: Any, validationFunctions: List<Method>,
-                                               onError: (functionName: String, exception: Throwable) -> Unit) {
-    for (f in validationFunctions) {
+internal inline fun executeValidationFunctions(
+    strategy: Strategy,
+    instance: Any,
+    validationFunctions: List<Method>,
+    onError: (failedFunctionIndex: Int, exception: Throwable) -> Unit
+) {
+    for (i in validationFunctions.indices) {
+        strategy.beforeValidationFunctionCall()
+        val f = validationFunctions[i]
         val validationException = executeValidationFunction(instance, f)
         if (validationException != null) {
-            onError(f.name, validationException)
+            onError(i, validationException)
             return
         }
     }
