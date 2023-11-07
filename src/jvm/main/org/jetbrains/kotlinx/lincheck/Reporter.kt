@@ -235,10 +235,9 @@ internal fun ExecutionLayout(
  * Must be not empty, i.e. contain at leas one section.
  */
 internal fun ExecutionLayout(
+    nThreads: Int,
     interleavingSections: List<List<List<String>>>,
 ): TableLayout {
-    require(interleavingSections.isNotEmpty()) { "Sections must be not empty" }
-    val nThreads = interleavingSections.first().size
     val columnWidths = MutableList(nThreads) { 0 }
     val threadHeaders = (0 until nThreads).map { "Thread ${it + 1}" }
     interleavingSections.forEach { section ->
