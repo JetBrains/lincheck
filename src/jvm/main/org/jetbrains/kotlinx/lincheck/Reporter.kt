@@ -228,11 +228,38 @@ internal fun ExecutionLayout(
     return TableLayout(threadHeaders, columnsWidth)
 }
 
-internal fun StringBuilder.appendExecutionScenario(scenario: ExecutionScenario): StringBuilder {
+/**
+ * Table layout for interleaving.
+ *
+ * @param interleavingSections list of sections. Each section is represented by a list of columns related to threads.
+ * Must be not empty, i.e. contain at leas one section.
+ */
+internal fun ExecutionLayout(
+    interleavingSections: List<List<List<String>>>,
+): TableLayout {
+    require(interleavingSections.isNotEmpty()) { "Sections must be not empty" }
+    val nThreads = interleavingSections.first().size
+    val columnWidths = MutableList(nThreads) { 0 }
+    val threadHeaders = (0 until nThreads).map { "Thread ${it + 1}" }
+    interleavingSections.forEach { section ->
+        section.mapIndexed { columnIndex, actors ->
+            val maxColumnActorLength = actors.maxOf { it.length }
+            columnWidths[columnIndex] = max(columnWidths[columnIndex], maxColumnActorLength)
+        }
+    }
+
+    return TableLayout(threadHeaders, columnWidths)
+}
+
+internal fun StringBuilder.appendExecutionScenario(
+    scenario: ExecutionScenario,
+    showValidationFunctions: Boolean = false
+): StringBuilder {
     val initPart = scenario.initExecution.map(Actor::toString)
     val postPart = scenario.postExecution.map(Actor::toString)
     val parallelPart = scenario.parallelExecution.map { it.map(Actor::toString) }
-    with(ExecutionLayout(initPart, parallelPart, postPart, null)) {
+    val validationPart = if (showValidationFunctions) scenario.validationFunctions?.map { "${it.name}()" } else null
+    with(ExecutionLayout(initPart, parallelPart, postPart, validationPart)) {
         appendSeparatorLine()
         appendHeader()
         appendSeparatorLine()
@@ -244,6 +271,10 @@ internal fun StringBuilder.appendExecutionScenario(scenario: ExecutionScenario):
         appendSeparatorLine()
         if (postPart.isNotEmpty()) {
             appendColumn(0, postPart)
+            appendSeparatorLine()
+        }
+        if (validationPart != null) {
+            appendFirstColumn(validationPart)
             appendSeparatorLine()
         }
     }
@@ -577,8 +608,8 @@ private fun StringBuilder.appendHints(hints: List<String>) {
 }
 
 private fun StringBuilder.appendValidationFailure(failure: ValidationFailure): StringBuilder {
-    appendLine("= Validation function ${failure.validationFunctionsFailedName} has failed =")
-    appendExecutionScenario(failure.scenario)
+    appendLine("= Validation function ${failure.functionName} has failed =")
+    appendExecutionScenario(failure.scenario, showValidationFunctions = true)
     appendln()
     appendln()
     appendException(failure.exception)

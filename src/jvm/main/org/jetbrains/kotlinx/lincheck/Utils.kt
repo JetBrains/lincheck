@@ -69,14 +69,14 @@ internal inline fun executeValidationFunctions(
     strategy: Strategy,
     instance: Any,
     validationFunctions: List<Method>,
-    onError: (failedFunctionIndex: Int, exception: Throwable) -> Unit
+    onError: (functionName: String, exception: Throwable) -> Unit
 ) {
     for (i in validationFunctions.indices) {
         strategy.beforeValidationFunctionCall()
         val f = validationFunctions[i]
         val validationException = executeValidationFunction(instance, f)
         if (validationException != null) {
-            onError(i, validationException)
+            onError(f.name, validationException)
             return
         }
     }
@@ -235,7 +235,8 @@ internal fun ExecutionScenario.convertForLoader(loader: ClassLoader) = Execution
     },
     postExecution.map {
         it.convertForLoader(loader)
-    }
+    },
+    validationFunctions = validationFunctions
 )
 
 private fun Actor.convertForLoader(loader: ClassLoader): Actor {

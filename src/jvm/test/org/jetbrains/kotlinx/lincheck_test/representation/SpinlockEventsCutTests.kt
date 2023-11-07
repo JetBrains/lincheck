@@ -226,6 +226,7 @@ class SpinlockInIncorrectResultsWithClocksTest {
                     Actor(method = SpinlockInIncorrectResultsWithClocksTest::d.javaMethod!!, arguments = emptyList())
                 )
             ),
+            emptyList(),
             emptyList()
         )
 

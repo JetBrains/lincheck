@@ -110,8 +110,9 @@ class DSLScenarioBuilder {
     /**
      * Constructs a new [scenario][ExecutionScenario] according to
      * the specified [initial], [parallel], and [post] parts.
+     * As validation functions can be found only after test class scan, we temporarily set it to `null`.
      */
-    fun buildScenario() = ExecutionScenario(initial, parallel, post)
+    fun buildScenario() = ExecutionScenario(initial, parallel, post, validationFunctions = null)
 }
 
 @DslMarker

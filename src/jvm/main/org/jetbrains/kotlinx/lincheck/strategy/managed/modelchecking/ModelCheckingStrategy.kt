@@ -102,9 +102,7 @@ internal class ModelCheckingStrategy(
             ExecutionPart.VALIDATION -> 0
         }
         loopDetector.beforePart(nextThread)
-        if (part == ExecutionPart.VALIDATION) {
-            traceCollector?.passCodeLocation(ValidationStartTracePoint)
-        }
+        traceCollector?.passCodeLocation(SectionDelimiterTracePoint(part))
         currentThread = nextThread
     }
 

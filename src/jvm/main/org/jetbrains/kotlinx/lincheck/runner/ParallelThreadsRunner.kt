@@ -18,7 +18,6 @@ import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.*
 import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner.Completion.*
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.objectweb.asm.*
 import java.lang.reflect.*
 import java.util.concurrent.*
@@ -267,11 +266,10 @@ internal open class ParallelThreadsRunner(
                 var validationFunctionResult: ValidationFailureInvocationResult? = null
                 val validationFunctionExecution = object : TestThreadExecution() {
                     override fun run() {
-                        executeValidationFunctions(strategy, testInstance, validationFunctions) { failedIndex, exception ->
+                        executeValidationFunctions(strategy, testInstance, validationFunctions) { functionName, exception ->
                             validationFunctionResult = ValidationFailureInvocationResult(
                                 scenario = scenario,
-                                validationFunctionsPassedNames = validationFunctions.take(failedIndex).map { it.name },
-                                validationFunctionsFailedName = validationFunctions[failedIndex].name,
+                                functionName = functionName,
                                 exception = exception
                             )
                         }

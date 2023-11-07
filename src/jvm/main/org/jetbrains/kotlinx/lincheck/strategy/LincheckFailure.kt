@@ -42,8 +42,7 @@ internal class UnexpectedExceptionFailure(
 
 internal class ValidationFailure(
     scenario: ExecutionScenario,
-    val validationFunctionsPassedNames: List<String>,
-    val validationFunctionsFailedName: String,
+    val functionName: String,
     val exception: Throwable,
     trace: Trace? = null
 ) : LincheckFailure(scenario, trace)
@@ -57,7 +56,7 @@ internal class ObstructionFreedomViolationFailure(
 internal fun InvocationResult.toLincheckFailure(scenario: ExecutionScenario, trace: Trace? = null) = when (this) {
     is DeadlockInvocationResult -> DeadlockWithDumpFailure(scenario, threadDump, trace)
     is UnexpectedExceptionInvocationResult -> UnexpectedExceptionFailure(scenario, exception, trace)
-    is ValidationFailureInvocationResult -> ValidationFailure(scenario, validationFunctionsPassedNames, validationFunctionsFailedName, exception, trace)
+    is ValidationFailureInvocationResult -> ValidationFailure(scenario, functionName, exception, trace)
     is ObstructionFreedomViolationInvocationResult -> ObstructionFreedomViolationFailure(scenario, reason, trace)
     is CompletedInvocationResult -> IncorrectResultsFailure(scenario, results, trace)
     else -> error("Unexpected invocation result type: ${this.javaClass.simpleName}")
