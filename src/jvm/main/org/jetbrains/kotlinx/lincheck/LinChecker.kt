@@ -12,6 +12,8 @@ package org.jetbrains.kotlinx.lincheck
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import kotlin.reflect.*
 
@@ -41,11 +43,14 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     /**
      * @return TestReport with information about concurrent test run.
      */
+    @Synchronized
     internal fun checkImpl(): LincheckFailure? {
         check(testConfigurations.isNotEmpty()) { "No Lincheck test configuration to run" }
         for (testCfg in testConfigurations) {
-            val failure = testCfg.checkImpl()
-            if (failure != null) return failure
+            withLincheckJavaAgent(stressTest = testCfg is StressCTestConfiguration) {
+                val failure = testCfg.checkImpl()
+                if (failure != null) return failure
+            }
         }
         return null
     }
@@ -118,7 +123,29 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             validationFunctions = testStructure.validationFunctions,
             stateRepresentationMethod = testStructure.stateRepresentation,
             verifier = verifier
-        ).run()
+        ).use { it.run() }
+
+    private fun ExecutionScenario.validate() {
+        require(!isParallelPartEmpty) {
+            "The generated scenario has empty parallel part"
+        }
+        if (hasSuspendableActors) {
+            require(!hasSuspendableActorsInInitPart) {
+                "The generated scenario for the test class with suspendable methods contains suspendable actors in initial part"
+            }
+            require(!hasPostPartAndSuspendableActors) {
+                "The generated scenario  for the test class with suspendable methods has non-empty post part"
+            }
+        }
+    }
+
+    private val ExecutionScenario.hasSuspendableActorsInInitPart
+        get() = initExecution.stream().anyMatch(Actor::isSuspendable)
+    private val ExecutionScenario.hasPostPartAndSuspendableActors
+        get() = (parallelExecution.stream().anyMatch { actors -> actors.stream().anyMatch { it.isSuspendable } } && postExecution.isNotEmpty())
+    private val ExecutionScenario.isParallelPartEmpty
+        get() = parallelExecution.sumOf { it.size } == 0
+
 
     private fun CTestConfiguration.createVerifier() =
         verifierClass.getConstructor(Class::class.java).newInstance(sequentialSpecification)

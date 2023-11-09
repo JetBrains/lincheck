@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck_test.verifier.linearizability
 import kotlinx.coroutines.channels.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck_test.verifier.*
+import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
 import org.junit.*
@@ -39,7 +40,7 @@ class RendezvousChannelCustomTest : VerifierState() {
     private val pollFun = RendezvousChannelCustomTest::poll
 
     @Test
-    fun testCancellation_01() {
+    fun testCancellation_01() = withLincheckJavaAgent(stressTest = true) {
         verify(RendezvousChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {
@@ -53,7 +54,7 @@ class RendezvousChannelCustomTest : VerifierState() {
     }
 
     @Test
-    fun testCancellation_02() {
+    fun testCancellation_02() = withLincheckJavaAgent(stressTest = true) {
         verify(RendezvousChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {
@@ -67,7 +68,7 @@ class RendezvousChannelCustomTest : VerifierState() {
     }
 
     @Test
-    fun testCancellation_03() {
+    fun testCancellation_03() = withLincheckJavaAgent(stressTest = true) {
         verify(RendezvousChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {
@@ -81,7 +82,7 @@ class RendezvousChannelCustomTest : VerifierState() {
     }
 
     @Test
-    fun testCancellation_04() {
+    fun testCancellation_04() = withLincheckJavaAgent(stressTest = true) {
         verify(RendezvousChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {
@@ -95,7 +96,7 @@ class RendezvousChannelCustomTest : VerifierState() {
     }
 
     @Test
-    fun testCancellation_05() {
+    fun testCancellation_05() = withLincheckJavaAgent(stressTest = true) {
         verify(RendezvousChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {

@@ -15,7 +15,7 @@ import java.util.concurrent.*
 
 class FixedActiveThreadsExecutorTest {
     @Test
-    fun testSubmit() = FixedActiveThreadsExecutor(2, 0).use { executor ->
+    fun testSubmit() = FixedActiveThreadsExecutor("FixedActiveThreadsExecutorTest.testSubmit", 2).use { executor ->
         val executed = arrayOf(false, false)
         val tasks = Array<TestThreadExecution>(2) { iThread ->
             object : TestThreadExecution(iThread) {
@@ -29,7 +29,7 @@ class FixedActiveThreadsExecutorTest {
     }
 
     @Test
-    fun testResubmit() = FixedActiveThreadsExecutor(2, 0).use { executor ->
+    fun testResubmit() = FixedActiveThreadsExecutor("FixedActiveThreadsExecutorTest.testResubmit", 2).use { executor ->
         val executed = arrayOf(false, false)
         val tasks = Array<TestThreadExecution>(2) { iThread ->
             object : TestThreadExecution(iThread) {
@@ -45,7 +45,7 @@ class FixedActiveThreadsExecutorTest {
     }
 
     @Test(timeout = 100_000)
-    fun testSubmitTimeout() = FixedActiveThreadsExecutor(2, 0).use { executor ->
+    fun testSubmitTimeout() = FixedActiveThreadsExecutor("FixedActiveThreadsExecutorTest.testSubmitTimeout", 2).use { executor ->
         val tasks = Array<TestThreadExecution>(2) { iThread ->
             object : TestThreadExecution(iThread) {
                 init {
@@ -64,17 +64,5 @@ class FixedActiveThreadsExecutorTest {
             return // TimeoutException is expected
         }
         check(false) { "TimeoutException was expected" }
-    }
-
-    @Test(timeout = 100_000)
-    fun testShutdown() {
-        // executor with unique runner hash
-        val uniqueRunnerHash = 1337
-        FixedActiveThreadsExecutor(2, uniqueRunnerHash).close()
-        while (true) {
-            // check that all test threads are finished
-            if (Thread.getAllStackTraces().keys.all { it !is FixedActiveThreadsExecutor.TestThread || it.runnerHash != uniqueRunnerHash })
-                return
-        }
     }
 }

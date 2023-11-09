@@ -27,5 +27,5 @@ public class FieldInheritedFromInterfaceTest implements InterfaceWithField {
 }
 
 interface InterfaceWithField {
-    public static final ValueHolder INTERFACE_CONSTANT = new ValueHolder(6);
+    CustomValue INTERFACE_CONSTANT = new CustomValue(6);
 }

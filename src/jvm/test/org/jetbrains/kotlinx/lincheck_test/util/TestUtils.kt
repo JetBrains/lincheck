@@ -34,22 +34,24 @@ internal fun LincheckFailure?.checkLincheckOutput(expectedOutputFile: String) {
 private val String.filtered: String get() {
     // Remove platform-specific lines
     var filtered = lines().filter {
-        !it.matches(TEST_EXECUTION_TRACE_ELEMENT_REGEX)
+        !it.matches(IGNORED_LINES)
     }.joinToString("\n")
     // Remove line numbers
     filtered = filtered.replace(LINE_NUMBER_REGEX, "")
+    filtered = filtered.replace(LAMBDA_NUMBER_REGEX, "")
     return filtered
 }
 
 // removing the following lines from the trace (because they may vary):
 // - pattern `org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution(\d+)` (the number of thread may vary)
 // - everything from `java.base/` (because code locations may vary between different versions of JVM)
-private val TEST_EXECUTION_TRACE_ELEMENT_REGEX = listOf(
+private val IGNORED_LINES = listOf(
     "(\\W*)at org\\.jetbrains\\.kotlinx\\.lincheck\\.runner\\.TestThreadExecution(\\d+)\\.run\\(Unknown Source\\)",
     "(\\W*)at java.base\\/(.*)"
 ).joinToString(separator = ")|(", prefix = "(", postfix = ")").toRegex()
 
 private val LINE_NUMBER_REGEX = Regex(":(\\d+)\\)")
+private val LAMBDA_NUMBER_REGEX = Regex("-(\\d+)")
 
 internal fun getExpectedLogFromResources(testFileName: String): String {
     val resourceName = "expected_logs/$testFileName"
