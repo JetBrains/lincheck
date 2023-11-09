@@ -217,25 +217,33 @@ fun storeCancellableContinuation(cont: CancellableContinuation<*>) {
 }
 
 internal fun ExecutionScenario.convertForLoader(loader: ClassLoader) = ExecutionScenario(
-    initExecution,
+    initExecution.map {
+         it.convertForLoader(loader)
+    },
     parallelExecution.map { actors ->
         actors.map { a ->
-            val args = a.arguments.map { it.convertForLoader(loader) }
-            // the original `isSuspendable` is used here since `KFunction.isSuspend` fails on transformed classes
-            Actor(
-                method = a.method.convertForLoader(loader),
-                arguments = args,
-                cancelOnSuspension = a.cancelOnSuspension,
-                allowExtraSuspension = a.allowExtraSuspension,
-                blocking = a.blocking,
-                causesBlocking = a.causesBlocking,
-                promptCancellation = a.promptCancellation,
-                isSuspendable = a.isSuspendable
-            )
+            a.convertForLoader(loader)
         }
     },
-    postExecution
+    postExecution.map {
+        it.convertForLoader(loader)
+    }
 )
+
+private fun Actor.convertForLoader(loader: ClassLoader): Actor {
+    val args = arguments.map { it.convertForLoader(loader) }
+    // the original `isSuspendable` is used here since `KFunction.isSuspend` fails on transformed classes
+    return Actor(
+        method = method.convertForLoader(loader),
+        arguments = args,
+        cancelOnSuspension = cancelOnSuspension,
+        allowExtraSuspension = allowExtraSuspension,
+        blocking = blocking,
+        causesBlocking = causesBlocking,
+        promptCancellation = promptCancellation,
+        isSuspendable = isSuspendable
+    )
+}
 
 internal fun ExecutionResult.convertForLoader(loader: ClassLoader) = ExecutionResult(
         initResults.map { it.convertForLoader(loader) },

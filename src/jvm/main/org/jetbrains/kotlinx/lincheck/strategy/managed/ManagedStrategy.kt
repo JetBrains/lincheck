@@ -15,6 +15,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
+import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.objectweb.asm.*
@@ -94,8 +95,6 @@ abstract class ManagedStrategy(
     // used on resumption, and the trace point before and after the suspension
     // correspond to the same method call in the trace.
     private val suspendedFunctionsStack = Array(nThreads) { lincheckIntListOf() }
-    // Current execution part
-    protected lateinit var executionPart: ExecutionPart
 
     init {
         runner = createRunner()
@@ -316,7 +315,8 @@ abstract class ManagedStrategy(
         iThread: Int,
         codeLocation: Int
     ) {
-        val shouldSwitchDueToStrategy = shouldSwitch(iThread)
+        // Switch in the parallel part if the strategy decides so.
+        val shouldSwitchDueToStrategy = runner.currentExecutionPart == PARALLEL && shouldSwitch(iThread)
         val spinLockDetected = loopDetector.visitCodeLocation(iThread, codeLocation)
 
         if (spinLockDetected) {
@@ -468,9 +468,11 @@ abstract class ManagedStrategy(
      * Threads to which an execution can be switched from thread [iThread].
      */
     protected fun switchableThreads(iThread: Int) =
-        if (runner.currentExecutionPart == ExecutionPart.PARALLEL)
+        if (runner.currentExecutionPart == PARALLEL) {
             (0 until nThreads).filter { it != iThread && isActive(it) }
-        else listOf()
+        } else {
+            emptyList()
+        }
 
     private fun isTestThread(iThread: Int) = iThread < nThreads
 
@@ -1210,11 +1212,13 @@ private class ManagedStrategyRunner(
     stateRepresentationMethod: Method?, timeoutMs: Long, useClocks: UseClocks
 ) : ParallelThreadsRunner(managedStrategy, testClass, validationFunctions, stateRepresentationMethod, timeoutMs, useClocks) {
     override fun onStart(iThread: Int) {
+        if (currentExecutionPart !== PARALLEL) return
         super.onStart(iThread)
         managedStrategy.onStart(iThread)
     }
 
     override fun onFinish(iThread: Int) {
+        if (currentExecutionPart !== PARALLEL) return
         managedStrategy.onFinish(iThread)
         super.onFinish(iThread)
     }

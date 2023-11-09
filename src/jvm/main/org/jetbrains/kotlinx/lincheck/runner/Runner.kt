@@ -39,6 +39,9 @@ abstract class Runner protected constructor(
 
     protected val completedOrSuspendedThreads = AtomicInteger(0)
 
+    var currentExecutionPart: ExecutionPart? = null
+        private set
+
     /**
      * This method is a part of `Runner` initialization and should be invoked after this runner
      * creation. It is separated from the constructor to perform the strategy initialization at first.
@@ -135,6 +138,8 @@ abstract class Runner protected constructor(
     }
 
     fun beforePart(part: ExecutionPart) {
+        completedOrSuspendedThreads.set(0)
+        currentExecutionPart = part
         strategy.beforePart(part)
     }
 

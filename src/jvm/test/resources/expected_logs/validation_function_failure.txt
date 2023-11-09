@@ -1,36 +1,36 @@
 = Validation function validateWithError has failed =
-| -------- |
-| Thread 1 |
-| -------- |
-| inc()    |
-| -------- |
-| inc()    |
-| -------- |
-| inc()    |
-| -------- |
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+| operation() |
+| ----------- |
+| operation() |
+| ----------- |
 
 
 java.lang.IllegalStateException: Validation works!
-	at org.jetbrains.kotlinx.lincheck_test.representation.ValidateFunctionTest.validateWithError(ValidateFunctionTest.kt:39)
+	at org.jetbrains.kotlinx.lincheck_test.representation.ValidateFunctionTest.validateWithError(ValidateFunctionTest.kt:34)
 
 
 The following interleaving leads to the error:
-| -------- |
-| Thread 1 |
-| -------- |
-| inc()    |
-| inc()    |
-| inc()    |
-| -------- |
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| operation() |
+| operation() |
+| ----------- |
 
 Detailed trace:
-| ------------------------------------------------------------------------------ |
-|                                    Thread 1                                    |
-| ------------------------------------------------------------------------------ |
-| inc()                                                                          |
-|   incrementAndGet(): 1 at ValidateFunctionTest.inc(ValidateFunctionTest.kt:25) |
-| inc()                                                                          |
-|   incrementAndGet(): 2 at ValidateFunctionTest.inc(ValidateFunctionTest.kt:25) |
-| inc()                                                                          |
-|   incrementAndGet(): 3 at ValidateFunctionTest.inc(ValidateFunctionTest.kt:25) |
-| ------------------------------------------------------------------------------ |
+| --------------------------------------------------------------------------------------- |
+|                                        Thread 1                                         |
+| --------------------------------------------------------------------------------------- |
+| operation()                                                                             |
+|   validateInvoked.READ: 0 at ValidateFunctionTest.operation(ValidateFunctionTest.kt:24) |
+| operation()                                                                             |
+|   validateInvoked.READ: 0 at ValidateFunctionTest.operation(ValidateFunctionTest.kt:24) |
+| operation()                                                                             |
+|   validateInvoked.READ: 0 at ValidateFunctionTest.operation(ValidateFunctionTest.kt:24) |
+| --------------------------------------------------------------------------------------- |
