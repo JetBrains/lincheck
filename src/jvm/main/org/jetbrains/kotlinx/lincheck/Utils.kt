@@ -20,7 +20,6 @@ import java.io.*
 import java.lang.ref.*
 import java.lang.reflect.*
 import java.lang.reflect.Method
-import java.util.*
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
 
@@ -105,14 +104,14 @@ private fun executeValidationFunction(instance: Any, validationFunction: Method)
 @Suppress("UNCHECKED_CAST")
 internal fun <T> Class<T>.normalize() = LinChecker::class.java.classLoader.loadClass(name) as Class<T>
 
-private val methodsCache = WeakHashMap<Class<*>, WeakHashMap<Method, WeakReference<Method>>>()
+private val methodsCache = ObjectToObjectWeakHashMap<Class<*>, ObjectToObjectWeakHashMap<Method, WeakReference<Method>>>()
 
 /**
  * Get the same [method] for [instance] solving the different class loaders problem.
  */
 @Synchronized
 internal fun getMethod(instance: Any, method: Method): Method {
-    val methods = methodsCache.computeIfAbsent(instance.javaClass) { WeakHashMap() }
+    val methods = methodsCache.computeIfAbsent(instance.javaClass) { ObjectToObjectWeakHashMap() }
     return methods[method]?.get() ?: run {
         val m = instance.javaClass.getMethod(method.name, method.parameterTypes)
         methods[method] = WeakReference(m)

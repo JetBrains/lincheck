@@ -10,6 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck.verifier;
 
+import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
+import org.jetbrains.kotlinx.lincheck.ObjectToObjectWeakHashMap;
 import org.jetbrains.kotlinx.lincheck.execution.*;
 
 import java.util.*;
@@ -21,11 +23,11 @@ import java.util.*;
  * phase significantly.
  */
 public abstract class CachedVerifier implements Verifier {
-    private final Map<ExecutionScenario, Set<ExecutionResult>> previousResults = new WeakHashMap<>();
+    private final ObjectToObjectWeakHashMap<ExecutionScenario, Set<ExecutionResult>> previousResults = new ObjectToObjectWeakHashMap<>();
 
     @Override
     public boolean verifyResults(ExecutionScenario scenario, ExecutionResult results) {
-        boolean newResult = previousResults.computeIfAbsent(scenario, s -> new HashSet<>()).add(results);
+        boolean newResult = previousResults.computeIfAbsent(scenario, s -> new ObjectOpenHashSet<>()).add(results);
         if (!newResult) return true;
         return verifyResultsImpl(scenario, results);
     }

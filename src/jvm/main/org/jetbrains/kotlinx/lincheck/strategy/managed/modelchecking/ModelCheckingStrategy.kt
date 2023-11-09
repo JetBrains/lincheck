@@ -10,6 +10,8 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.lincheckIntListOf
+import org.jetbrains.kotlinx.lincheck.lincheckListOf
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
@@ -243,7 +245,7 @@ internal class ModelCheckingStrategy(
             lastNotInitializedNodeChoices = null
             lastNotInitializedNode?.let {
                 // Create a mutable list for the initialization of the not initialized node choices.
-                lastNotInitializedNodeChoices = mutableListOf<Choice>().also { choices ->
+                lastNotInitializedNodeChoices = lincheckListOf<Choice>().also { choices ->
                     it.choices = choices
                 }
                 lastNotInitializedNode = null
@@ -285,8 +287,8 @@ internal class ModelCheckingStrategy(
     }
 
     private inner class InterleavingBuilder {
-        private val switchPositions = mutableListOf<Int>()
-        private val threadSwitchChoices = mutableListOf<Int>()
+        private val switchPositions = lincheckIntListOf()
+        private val threadSwitchChoices = lincheckIntListOf()
         private var lastNoninitializedNode: SwitchChoosingNode? = null
 
         val numberOfSwitches get() = switchPositions.size
