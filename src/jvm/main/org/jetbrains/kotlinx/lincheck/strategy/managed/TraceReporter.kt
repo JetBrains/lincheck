@@ -201,7 +201,7 @@ private fun constructTraceGraph(
         }
         innerNode.addInternalEvent(node)
     }
-//    // add an ActorResultNode to each actor, because did not know where actor ends before
+    // add an ActorResultNode to each actor, because did not know where actor ends before
     for (iThread in actorNodes.indices) {
         for (actorId in actorNodes[iThread].indices) {
             var actorNode = actorNodes[iThread][actorId]
