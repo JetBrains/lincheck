@@ -64,6 +64,7 @@ class IncorrectQueueWithValidationFunctionsTest {
             .sequentialSpecification(IntQueueSequential::class.java)
             .checkImpl(this::class.java)
 
+        println(failure)
         assertTrue(failure is IncorrectResultsFailure)
     }
 }

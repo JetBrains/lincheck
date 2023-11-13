@@ -257,7 +257,7 @@ internal fun StringBuilder.appendExecutionScenario(
     val initPart = scenario.initExecution.map(Actor::toString)
     val postPart = scenario.postExecution.map(Actor::toString)
     val parallelPart = scenario.parallelExecution.map { it.map(Actor::toString) }
-    val validationPart = if (showValidationFunctions) scenario.validationFunctions?.map { "${it.name}()" } else null
+    val validationPart = if (showValidationFunctions) scenario.validationFunctions?.map { "${it.method.name}()" } else null
     with(ExecutionLayout(initPart, parallelPart, postPart, validationPart)) {
         appendSeparatorLine()
         appendHeader()

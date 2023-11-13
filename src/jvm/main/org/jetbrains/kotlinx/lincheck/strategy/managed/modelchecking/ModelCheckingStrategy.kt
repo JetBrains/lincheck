@@ -9,6 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
+import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -33,12 +34,12 @@ import kotlin.random.*
  * than the number of all possible interleavings on the current depth level.
  */
 internal class ModelCheckingStrategy(
-        testCfg: ModelCheckingCTestConfiguration,
-        testClass: Class<*>,
-        scenario: ExecutionScenario,
-        validationFunctions: List<Method>,
-        stateRepresentation: Method?,
-        verifier: Verifier
+    testCfg: ModelCheckingCTestConfiguration,
+    testClass: Class<*>,
+    scenario: ExecutionScenario,
+    validationFunctions: List<Actor>,
+    stateRepresentation: Method?,
+    verifier: Verifier
 ) : ManagedStrategy(testClass, scenario, verifier, validationFunctions, stateRepresentation, testCfg) {
     // The number of invocations that the strategy is eligible to use to search for an incorrect execution.
     private val maxInvocations = testCfg.invocationsPerIteration

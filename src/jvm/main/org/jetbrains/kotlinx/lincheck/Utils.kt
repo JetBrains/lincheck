@@ -65,23 +65,6 @@ internal fun executeActor(
     }
 }
 
-internal inline fun executeValidationFunctions(
-    strategy: Strategy,
-    instance: Any,
-    validationFunctions: List<Method>,
-    onError: (functionName: String, exception: Throwable) -> Unit
-) {
-    for (i in validationFunctions.indices) {
-        strategy.beforeValidationFunctionCall()
-        val f = validationFunctions[i]
-        val validationException = executeValidationFunction(instance, f)
-        if (validationException != null) {
-            onError(f.name, validationException)
-            return
-        }
-    }
-}
-
 private fun executeValidationFunction(instance: Any, validationFunction: Method): Throwable? {
     val m = getMethod(instance, validationFunction)
     try {

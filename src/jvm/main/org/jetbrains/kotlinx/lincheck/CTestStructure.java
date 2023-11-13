@@ -30,13 +30,13 @@ public class CTestStructure {
     public final List<ActorGenerator> actorGenerators;
     public final List<ParameterGenerator<?>> parameterGenerators;
     public final List<OperationGroup> operationGroups;
-    public final List<Method> validationFunctions;
+    public final List<Actor> validationFunctions;
     public final Method stateRepresentation;
 
     public final RandomProvider randomProvider;
 
     private CTestStructure(List<ActorGenerator> actorGenerators, List<ParameterGenerator<?>> parameterGenerators, List<OperationGroup> operationGroups,
-                           List<Method> validationFunctions, Method stateRepresentation, RandomProvider randomProvider) {
+                           List<Actor> validationFunctions, Method stateRepresentation, RandomProvider randomProvider) {
         this.actorGenerators = actorGenerators;
         this.parameterGenerators = parameterGenerators;
         this.operationGroups = operationGroups;
@@ -51,7 +51,7 @@ public class CTestStructure {
     public static CTestStructure getFromTestClass(Class<?> testClass) {
         Map<String, OperationGroup> groupConfigs = new HashMap<>();
         List<ActorGenerator> actorGenerators = new ArrayList<>();
-        List<Method> validationFunctions = new ArrayList<>();
+        List<Actor> validationFunctions = new ArrayList<>();
         List<Method> stateRepresentations = new ArrayList<>();
         Class<?> clazz = testClass;
         RandomProvider randomProvider = new RandomProvider();
@@ -80,7 +80,7 @@ public class CTestStructure {
            Map<String, OperationGroup> groupConfigs,
            List<ActorGenerator> actorGenerators,
            Map<Class<?>, ParameterGenerator<?>> parameterGeneratorsMap,
-           List<Method> validationFunctions,
+           List<Actor> validationFunctions,
            List<Method> stateRepresentations,
            RandomProvider randomProvider
     ) {
@@ -134,7 +134,7 @@ public class CTestStructure {
             if (m.isAnnotationPresent(Validate.class)) {
                 if (m.getParameterCount() != 0)
                     throw new IllegalStateException("Validation function " + m.getName() + " should not have parameters");
-                validationFunctions.add(m);
+                validationFunctions.add(new Actor(m, Collections.emptyList()));
             }
 
             if (m.isAnnotationPresent(StateRepresentation.class)) {

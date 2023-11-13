@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.*
 abstract class Runner protected constructor(
     protected val strategy: Strategy,
     private val _testClass: Class<*>, // will be transformed later
-    protected val validationFunctions: List<Method>,
+    protected val validationFunctions: List<Actor>,
     protected val stateRepresentationFunction: Method?
 ) : Closeable {
     protected var scenario = strategy.scenario // `strategy.scenario` will be transformed in `initialize`

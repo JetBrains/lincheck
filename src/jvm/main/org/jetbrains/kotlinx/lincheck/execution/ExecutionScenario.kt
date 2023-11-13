@@ -49,7 +49,7 @@ class ExecutionScenario(
      * Validation functions that will be called after scenario execution.
      * Is `var` as in case of custom scenario validation functions are found only after test class scan.
      */
-    var validationFunctions: List<Method>?
+    var validationFunctions: List<Actor>?
 ) {
 
     /**
@@ -179,7 +179,7 @@ fun ExecutionScenario.tryMinimize(threadId: Int, actorId: Int): ExecutionScenari
  * @param postPartSize the size of the post part of the execution.
  * @return execution scenario with separate init, post, and parallel parts.
  */
-private fun List<List<Actor>>.splitIntoParts(initPartSize: Int, postPartSize: Int, validationFunctions: List<Method>?): ExecutionScenario {
+private fun List<List<Actor>>.splitIntoParts(initPartSize: Int, postPartSize: Int, validationFunctions: List<Actor>?): ExecutionScenario {
     // empty scenario case
     if (isEmpty())
         return ExecutionScenario(listOf(), listOf(), listOf(), validationFunctions)
@@ -207,3 +207,4 @@ private fun List<List<Actor>>.splitIntoParts(initPartSize: Int, postPartSize: In
 
 const val INIT_THREAD_ID = 0
 const val POST_THREAD_ID = 0
+const val VALIDATION_THREAD_ID = 0
