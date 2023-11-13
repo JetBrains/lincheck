@@ -487,7 +487,7 @@ abstract class ManagedStrategy(
      * The execution in an ignored section (added by transformer) or not in a test thread must not add switch points.
      * Additionally, after [ForcibleExecutionFinishException] everything is ignored.
      */
-    private fun inIgnoredSection(iThread: Int): Boolean =
+    internal fun inIgnoredSection(iThread: Int): Boolean =
         !isTestThread(iThread) ||
             ignoredSectionDepth[iThread] > 0 ||
             suddenInvocationResult != null
@@ -530,10 +530,17 @@ abstract class ManagedStrategy(
      * @param codeLocation the byte-code location identifier of this operation.
      * @return whether lock should be actually acquired
      */
-    internal fun beforeLockAcquire(iThread: Int, codeLocation: Int, tracePoint: MonitorEnterTracePoint?, monitor: Any): Boolean {
+    internal fun beforeLockAcquire(iThread: Int, codeLocation: Int, tracePoint: MonitorEnterTracePoint?): Boolean {
         if (!isTestThread(iThread)) return true
         if (inIgnoredSection(iThread)) return false
         newSwitchPoint(iThread, codeLocation, tracePoint)
+        return false
+    }
+
+    /**
+     * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
+     */
+    internal fun internalLockAcquire(iThread: Int, monitor: Any) {
         // Try to acquire the monitor
         while (!monitorTracker.acquireMonitor(iThread, monitor)) {
             failIfObstructionFreedomIsRequired {
@@ -543,7 +550,6 @@ abstract class ManagedStrategy(
             switchCurrentThread(iThread, SwitchReason.LOCK_WAIT, true)
         }
         // The monitor is acquired, finish.
-        return false
     }
 
     /**
@@ -584,22 +590,28 @@ abstract class ManagedStrategy(
     /**
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
      * @param codeLocation the byte-code location identifier of this operation.
-     * @param withTimeout `true` if is invoked with timeout, `false` otherwise.
      * @return whether `Object.wait` should be executed
      */
-    internal fun beforeWait(iThread: Int, codeLocation: Int, tracePoint: WaitTracePoint?, monitor: Any, withTimeout: Boolean): Boolean {
+    internal fun beforeWait(iThread: Int, codeLocation: Int, tracePoint: WaitTracePoint?): Boolean {
         if (!isTestThread(iThread)) return true
         if (inIgnoredSection(iThread)) return false
         newSwitchPoint(iThread, codeLocation, tracePoint)
+        return false
+    }
+
+    /**
+     * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
+     * @param withTimeout `true` if is invoked with timeout, `false` otherwise.
+     */
+    internal fun internalWait(iThread: Int, monitor: Any, withTimeout: Boolean) {
         failIfObstructionFreedomIsRequired {
             OBSTRUCTION_FREEDOM_WAIT_VIOLATION_MESSAGE
         }
-        if (withTimeout) return false // timeouts occur instantly
+        if (withTimeout) return // timeouts occur instantly
         while (monitorTracker.waitOnMonitor(iThread, monitor)) {
             val mustSwitch = monitorTracker.isWaiting(iThread)
             switchCurrentThread(iThread, SwitchReason.MONITOR_WAIT, mustSwitch)
         }
-        return false
     }
 
     /**

@@ -184,7 +184,9 @@ internal class ModelCheckingStrategy(
      */
     private fun extractDebugTrace(failure: LincheckFailure, trace: Trace): Array<String> {
         val results = if (failure is IncorrectResultsFailure) failure.results else null
-        var node = constructTraceGraph(scenario, results, trace, exceptionsOrEmpty(failure))
+        val nodesList = constructTraceGraph(failure, results, trace, exceptionsOrEmpty(failure))
+        var sectionIndex = 0
+        var node: TraceNode? = nodesList.firstOrNull()
         val representations = mutableListOf<String>()
         while (node != null) {
             when (node) {
@@ -221,7 +223,7 @@ internal class ModelCheckingStrategy(
 
                 is ActorNode -> {
                     val beforeEventId = -1
-                    val representation = node.actor.toString()
+                    val representation = node.actorRepresentation
                     if (representation.isNotEmpty()) {
                         representations.add("1;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation}")
                     }
@@ -235,6 +237,9 @@ internal class ModelCheckingStrategy(
             }
 
             node = node.next
+            if (node == null && sectionIndex != nodesList.lastIndex) {
+                node = nodesList[++sectionIndex]
+            }
         }
         return representations.toTypedArray()
     }

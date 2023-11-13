@@ -43,9 +43,9 @@ internal open class ParallelThreadsRunner(
     private val useClocks: UseClocks // specifies whether `HBClock`-s should always be used or with some probability
 ) : Runner(strategy, testClass, validationFunctions, stateRepresentationFunction) {
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
-    private val executor = FixedActiveThreadsExecutor(scenario.nThreads, runnerHash) // should be closed in `close()`
+    internal val executor = FixedActiveThreadsExecutor(scenario.nThreads, runnerHash) // should be closed in `close()`
 
-    private lateinit var testInstance: Any
+    internal lateinit var testInstance: Any
 
     private var suspensionPointResults = List(scenario.nThreads) { t ->
         MutableList<Result>(scenario.threads[t].size) { NoResult }

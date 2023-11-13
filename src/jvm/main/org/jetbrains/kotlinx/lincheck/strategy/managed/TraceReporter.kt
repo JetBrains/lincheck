@@ -118,7 +118,7 @@ data class TableSectionLayoutModel(
  *
  * @return a list of nodes corresponding to the starting trace event in each section.
  */
-private fun constructTraceGraph(
+internal fun constructTraceGraph(
     failure: LincheckFailure,
     results: ExecutionResult?,
     trace: Trace,
@@ -412,7 +412,7 @@ internal class ActorNode(
     iThread: Int,
     last: TraceNode?,
     callDepth: Int,
-    private val actorRepresentation: String,
+    val actorRepresentation: String,
     private val resultRepresentation: String?
 ) : TraceInnerNode(iThread, last, callDepth) {
     override fun addRepresentationTo(
