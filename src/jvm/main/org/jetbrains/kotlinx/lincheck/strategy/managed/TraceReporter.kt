@@ -34,11 +34,14 @@ internal fun StringBuilder.appendTrace(
     objectNumeration.clear() // clear the numeration at the end to avoid memory leaks
 }
 
+/**
+ * @param sectionsFirstNodes a list of first nodes in each scenario section
+ */
 private fun StringBuilder.appendShortTrace(
-    sectionsFirstNode: List<TraceNode>,
+    sectionsFirstNodes: List<TraceNode>,
     failure: LincheckFailure
 ) {
-    val traceRepresentation = traceGraphToRepresentationList(sectionsFirstNode, false)
+    val traceRepresentation = traceGraphToRepresentationList(sectionsFirstNodes, false)
     appendLine(TRACE_TITLE)
     appendTraceRepresentation(failure.scenario, traceRepresentation)
     if (failure is DeadlockWithDumpFailure) {
@@ -47,12 +50,15 @@ private fun StringBuilder.appendShortTrace(
     appendLine()
 }
 
+/**
+ * @param sectionsFirstNodes a list of first nodes in each scenario section
+ */
 private fun StringBuilder.appendDetailedTrace(
-    sectionsFirstNode: List<TraceNode>,
+    sectionsFirstNodes: List<TraceNode>,
     failure: LincheckFailure
 ) {
     appendLine(DETAILED_TRACE_TITLE)
-    val traceRepresentationVerbose = traceGraphToRepresentationList(sectionsFirstNode, true)
+    val traceRepresentationVerbose = traceGraphToRepresentationList(sectionsFirstNodes, true)
     appendTraceRepresentation(failure.scenario, traceRepresentationVerbose)
     if (failure is DeadlockWithDumpFailure) {
         appendLine(ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE)
@@ -104,11 +110,13 @@ data class TableSectionLayoutModel(
 
 /**
  * Constructs a trace graph based on the provided [trace].
- * Returns the node corresponding to the starting trace event.
+ * Trace is divided into several sections with init, parallel, post and validation parts.
  *
  * A trace graph consists of two types of edges:
  * `next` edges form a single-directed list in which the order of events is the same as in [trace].
  * `internalEvents` edges form a directed forest.
+ *
+ * @return a list of nodes corresponding to the starting trace event in each section.
  */
 private fun constructTraceGraph(
     failure: LincheckFailure,
@@ -270,8 +278,11 @@ private operator fun ExecutionResult?.get(iThread: Int, actorId: Int): Result? =
 private fun <T : TraceNode> MutableList<TraceNode>.createAndAppend(constructor: (lastNode: TraceNode?) -> T): T =
     constructor(lastOrNull()).also { add(it) }
 
+/**
+ * @param sectionsFirstNodes a list of first nodes in each scenario section
+ */
 private fun traceGraphToRepresentationList(
-    graphModel: List<TraceNode>,
+    sectionsFirstNodes: List<TraceNode>,
     verboseTrace: Boolean
 ): List<List<TraceEventRepresentation>> {
     fun makeRepresentation(startNode: TraceNode?) = buildList {
@@ -281,7 +292,7 @@ private fun traceGraphToRepresentationList(
         }
     }
 
-    return graphModel.map { makeRepresentation(it) }
+    return sectionsFirstNodes.map { makeRepresentation(it) }
 }
 
 private sealed class TraceNode(

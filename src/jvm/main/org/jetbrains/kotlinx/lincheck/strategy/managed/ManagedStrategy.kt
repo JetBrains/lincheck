@@ -85,7 +85,7 @@ abstract class ManagedStrategy(
     // stores a constructor for the corresponding code location.
     private val tracePointConstructors: MutableList<TracePointConstructor> = ArrayList()
     // Collector of all events in the execution such as thread switches.
-    internal var traceCollector: TraceCollector? = null // null when `collectTrace` is false
+    protected var traceCollector: TraceCollector? = null // null when `collectTrace` is false
     // Stores the currently executing methods call stack for each thread.
     private val callStackTrace = Array(nThreads) { mutableListOf<CallStackTraceElement>() }
     // Stores the global number of method calls.
@@ -388,10 +388,6 @@ abstract class ManagedStrategy(
         currentActorId[iThread]++
         callStackTrace[iThread].clear()
         suspendedFunctionsStack[iThread].clear()
-    }
-
-    override fun beforeValidationFunctionCall() {
-        currentActorId[0]++
     }
 
     /**
@@ -780,11 +776,11 @@ abstract class ManagedStrategy(
     /**
      * Logs thread events such as thread switches and passed code locations.
      */
-    internal inner class TraceCollector {
+    protected inner class TraceCollector {
         private val _trace = mutableListOf<TracePoint>()
         val trace: List<TracePoint> = _trace
 
-        fun newSwitch(iThread: Int, reason: SwitchReason) {
+        internal fun newSwitch(iThread: Int, reason: SwitchReason) {
             _trace += SwitchEventTracePoint(iThread, currentActorId[iThread], reason, callStackTrace[iThread].toList())
         }
 

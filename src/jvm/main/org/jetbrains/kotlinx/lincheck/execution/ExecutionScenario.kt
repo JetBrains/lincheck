@@ -25,7 +25,6 @@ class ExecutionScenario(
      *
      * The initial part is executed in the first thread of the scenario before the parallel part.
      *
-     *
      * The initial part should contain only non-suspendable actors;
      * otherwise, the single initial execution thread will suspend with no chance to be resumed.
      */

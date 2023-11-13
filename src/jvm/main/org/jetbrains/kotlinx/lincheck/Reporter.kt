@@ -156,11 +156,11 @@ internal class TableLayout(
     }
 
     /**
-     * Appends first column.
+     * Appends the first column.
      *
      * @see columnsToString
      */
-    fun <T> StringBuilder.appendFirstColumn(data: List<T>, transform: ((T) -> String)? = null) = apply {
+    fun <T> StringBuilder.appendToFirstColumn(data: List<T>, transform: ((T) -> String)? = null) = apply {
         val columns = listOf(data) + List(columnWidths.size - 1) { emptyList() }
         appendColumns(columns, columnWidths, transform)
     }
@@ -273,7 +273,7 @@ internal fun StringBuilder.appendExecutionScenario(
             appendSeparatorLine()
         }
         if (validationPart != null) {
-            appendFirstColumn(validationPart)
+            appendToFirstColumn(validationPart)
             appendSeparatorLine()
         }
     }

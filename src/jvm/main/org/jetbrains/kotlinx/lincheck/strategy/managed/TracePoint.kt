@@ -241,6 +241,9 @@ internal class CoroutineCancellationTracePoint(
     }
 }
 
+/**
+ * This trace point that is added to the trace between execution parts (init, parallel, post, validation).
+ */
 internal class SectionDelimiterTracePoint(val executionPart: ExecutionPart): TracePoint(0, -1, emptyList()) {
     override fun toStringImpl(): String = ""
 }
