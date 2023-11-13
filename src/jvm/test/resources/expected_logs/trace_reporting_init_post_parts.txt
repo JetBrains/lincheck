@@ -18,6 +18,7 @@ The following interleaving leads to the error:
 |  Thread 1   |                                               Thread 2                                                |
 | ------------------------------------------------------------------------------------------------------------------- |
 | enterInit() |                                                                                                       |
+| ------------------------------------------------------------------------------------------------------------------- |
 |             | bar()                                                                                                 |
 |             |   a.READ: 0 at TraceReportingTest.bar(TraceReportingTest.kt:41)                                       |
 |             |   a.WRITE(1) at TraceReportingTest.bar(TraceReportingTest.kt:41)                                      |
@@ -33,6 +34,7 @@ The following interleaving leads to the error:
 |             |       canEnterForbiddenSection.WRITE(false) at TraceReportingTest.resetFlag(TraceReportingTest.kt:54) |
 |             |       MONITOREXIT at TraceReportingTest.resetFlag(TraceReportingTest.kt:55)                           |
 |             |   result: void                                                                                        |
+| ------------------------------------------------------------------------------------------------------------------- |
 | enterPost() |                                                                                                       |
 | ------------------------------------------------------------------------------------------------------------------- |
 
@@ -43,6 +45,7 @@ Detailed trace:
 | enterInit()                                                                               |                                                                                                       |
 |   init.WRITE(1) at TraceReportingTest.enterInit(TraceReportingTest.kt:88)                 |                                                                                                       |
 |   result: void                                                                            |                                                                                                       |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                                           | bar()                                                                                                 |
 |                                                                                           |   a.READ: 0 at TraceReportingTest.bar(TraceReportingTest.kt:41)                                       |
 |                                                                                           |   a.WRITE(1) at TraceReportingTest.bar(TraceReportingTest.kt:41)                                      |
@@ -64,6 +67,7 @@ Detailed trace:
 |                                                                                           |       canEnterForbiddenSection.WRITE(false) at TraceReportingTest.resetFlag(TraceReportingTest.kt:54) |
 |                                                                                           |       MONITOREXIT at TraceReportingTest.resetFlag(TraceReportingTest.kt:55)                           |
 |                                                                                           |   result: void                                                                                        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | enterPost()                                                                               |                                                                                                       |
 |   post.WRITE(1) at TraceReportingTest.enterPost(TraceReportingTest.kt:93)                 |                                                                                                       |
 |   result: void                                                                            |                                                                                                       |

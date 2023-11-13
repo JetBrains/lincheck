@@ -25,15 +25,22 @@ import java.util.concurrent.atomic.*
 abstract class Runner protected constructor(
     protected val strategy: Strategy,
     private val _testClass: Class<*>, // will be transformed later
-    protected val validationFunctions: List<Method>,
+    protected val validationFunctions: List<Actor>,
     protected val stateRepresentationFunction: Method?
 ) : Closeable {
     protected var scenario = strategy.scenario // `strategy.scenario` will be transformed in `initialize`
     protected lateinit var testClass: Class<*> // not available before `initialize` call
+
     @Suppress("LeakingThis")
-    val classLoader: ExecutionClassLoader = if (needsTransformation() || strategy.needsTransformation()) TransformationClassLoader(strategy, this)
-                                            else ExecutionClassLoader()
+    val classLoader: ExecutionClassLoader =
+        if (needsTransformation() || strategy.needsTransformation())
+            TransformationClassLoader(strategy, this)
+        else ExecutionClassLoader()
+
     protected val completedOrSuspendedThreads = AtomicInteger(0)
+
+    var currentExecutionPart: ExecutionPart? = null
+        private set
 
     /**
      * This method is a part of `Runner` initialization and should be invoked after this runner
@@ -131,6 +138,8 @@ abstract class Runner protected constructor(
     }
 
     fun beforePart(part: ExecutionPart) {
+        completedOrSuspendedThreads.set(0)
+        currentExecutionPart = part
         strategy.beforePart(part)
     }
 
@@ -148,5 +157,5 @@ abstract class Runner protected constructor(
 }
 
 enum class ExecutionPart {
-    INIT, PARALLEL, POST
+    INIT, PARALLEL, POST, VALIDATION
 }

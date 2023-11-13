@@ -13,6 +13,8 @@ package org.jetbrains.kotlinx.lincheck;
 import org.jetbrains.kotlinx.lincheck.runner.*;
 import org.jetbrains.kotlinx.lincheck.strategy.*;
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*;
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*;
+import org.jetbrains.kotlinx.lincheck.strategy.stress.*;
 import org.objectweb.asm.*;
 import org.objectweb.asm.commons.*;
 import org.objectweb.asm.util.*;
@@ -38,9 +40,14 @@ public class TransformationClassLoader extends ExecutionClassLoader {
     public static final int ASM_API = ASM9;
 
     private final List<Function<ClassVisitor, ClassVisitor>> classTransformers;
-    // Cache for classloading and frames computing during the transformation.
-    private final Map<String, Class<?>> cache = new ConcurrentHashMap<>();
     private final Remapper remapper;
+
+    // Cache for classloading and frames computing during the transformation.
+    private Map<String, Class<?>> cache = new ConcurrentHashMap<>();
+
+    private Map<String, byte[]> bytecodeCache = null;
+    private static final Map<String, byte[]> stressStrategyBytecodeCache = new ConcurrentHashMap<>();
+    private static final Map<String, byte[]> modelCheckingStrategyBytecodeCache = new ConcurrentHashMap<>();
 
     public TransformationClassLoader(Strategy strategy, Runner runner) {
         classTransformers = new ArrayList<>();
@@ -54,6 +61,11 @@ public class TransformationClassLoader extends ExecutionClassLoader {
                         .map(constructor -> constructor.apply(new TraceClassVisitor(null)))
                         .collect(Collectors.toList())
         );
+        if (strategy instanceof StressStrategy) {
+            bytecodeCache = stressStrategyBytecodeCache;
+        } else if (strategy instanceof ManagedStrategy && ((ManagedStrategy) strategy).useBytecodeCache()) {
+            bytecodeCache = modelCheckingStrategyBytecodeCache;
+        }
     }
 
     public TransformationClassLoader(Function<ClassVisitor, ClassVisitor> classTransformer) {
@@ -120,7 +132,16 @@ public class TransformationClassLoader extends ExecutionClassLoader {
                 return result;
             }
             try {
-                byte[] bytes = instrument(originalName(name));
+                byte[] bytes = null;
+                if (bytecodeCache != null) {
+                    bytes = bytecodeCache.get(name);
+                }
+                if (bytes == null) {
+                    bytes = instrument(originalName(name));
+                    if (bytecodeCache != null) {
+                        bytecodeCache.put(name, bytes);
+                    }
+                }
                 result = defineClass(name, bytes, 0, bytes.length);
                 cache.put(name, result);
                 return result;

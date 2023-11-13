@@ -16,6 +16,7 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import java.io.*
+import kotlin.math.max
 
 class Reporter(private val logLevel: LoggingLevel) {
     private val out: PrintStream = System.out
@@ -159,6 +160,16 @@ internal class TableLayout(
     }
 
     /**
+     * Appends the first column.
+     *
+     * @see columnsToString
+     */
+    fun <T> StringBuilder.appendToFirstColumn(data: List<T>, transform: ((T) -> String)? = null) = apply {
+        val columns = listOf(data) + List(columnWidths.size - 1) { emptyList() }
+        appendColumns(columns, columnWidths, transform)
+    }
+
+    /**
      * Appends a single column, all other columns are filled blank.
      *
      * @param iCol index of the appended column.
@@ -203,22 +214,55 @@ internal class TableLayout(
 internal fun ExecutionLayout(
     initPart: List<String>,
     parallelPart: List<List<String>>,
-    postPart: List<String>
+    postPart: List<String>,
+    validation: List<String>?
 ): TableLayout {
     val size = parallelPart.size
     val threadHeaders = (0 until size).map { "Thread ${it + 1}" }
-    val columnsWidth = parallelPart.mapIndexed { i, actors ->
-        val col = actors + if (i == 0) (initPart + postPart) else listOf()
-        col.maxOfOrNull { it.length } ?: 0
+    val columnsWidth = parallelPart.mapIndexed { columnWidth, actors ->
+        var maxColWidth = 0
+        actors.forEach { maxColWidth = max(maxColWidth, it.length) }
+        if (columnWidth == 0) {
+            initPart.forEach { maxColWidth = max(maxColWidth, it.length)  }
+            postPart.forEach { maxColWidth = max(maxColWidth, it.length)  }
+            validation?.forEach { maxColWidth = max(maxColWidth, it.length)  }
+        }
+        maxColWidth
     }
     return TableLayout(threadHeaders, columnsWidth)
 }
 
-internal fun StringBuilder.appendExecutionScenario(scenario: ExecutionScenario): StringBuilder {
+/**
+ * Table layout for interleaving.
+ *
+ * @param interleavingSections list of sections. Each section is represented by a list of columns related to threads.
+ * Must be not empty, i.e. contain at leas one section.
+ */
+internal fun ExecutionLayout(
+    nThreads: Int,
+    interleavingSections: List<List<List<String>>>,
+): TableLayout {
+    val columnWidths = MutableList(nThreads) { 0 }
+    val threadHeaders = (0 until nThreads).map { "Thread ${it + 1}" }
+    interleavingSections.forEach { section ->
+        section.mapIndexed { columnIndex, actors ->
+            val maxColumnActorLength = actors.maxOf { it.length }
+            columnWidths[columnIndex] = max(columnWidths[columnIndex], maxColumnActorLength)
+        }
+    }
+
+    return TableLayout(threadHeaders, columnWidths)
+}
+
+internal fun StringBuilder.appendExecutionScenario(
+    scenario: ExecutionScenario,
+    showValidationFunctions: Boolean = false
+): StringBuilder {
     val initPart = scenario.initExecution.map(Actor::toString)
     val postPart = scenario.postExecution.map(Actor::toString)
     val parallelPart = scenario.parallelExecution.map { it.map(Actor::toString) }
-    with(ExecutionLayout(initPart, parallelPart, postPart)) {
+    val validationPart = if (showValidationFunctions) scenario.validationFunctions?.map { "${it.method.name}()" } else null
+    with(ExecutionLayout(initPart, parallelPart, postPart, validationPart)) {
         appendSeparatorLine()
         appendHeader()
         appendSeparatorLine()
@@ -230,6 +274,10 @@ internal fun StringBuilder.appendExecutionScenario(scenario: ExecutionScenario):
         appendSeparatorLine()
         if (postPart.isNotEmpty()) {
             appendColumn(0, postPart)
+            appendSeparatorLine()
+        }
+        if (validationPart != null) {
+            appendToFirstColumn(validationPart)
             appendSeparatorLine()
         }
     }
@@ -270,12 +318,35 @@ internal fun StringBuilder.appendExecutionScenarioWithResults(
     executionResult: ExecutionResult,
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>,
 ): StringBuilder {
-    val representation = constructResultsRepresentation(executionResult, scenario, exceptionStackTraces)
-    val initPart = representation.initResultsRepresentation
-    val parallelPart = representation.parallelResultsRepresentation
-    val postPart = representation.postResultsRepresentation
-
-    with(ExecutionLayout(initPart, parallelPart, postPart)) {
+    requireEqualSize(scenario.parallelExecution, executionResult.parallelResults) {
+        "Different numbers of threads and matching results found"
+    }
+    requireEqualSize(scenario.initExecution, executionResult.initResults) {
+        "Different numbers of actors and matching results found"
+    }
+    requireEqualSize(scenario.postExecution, executionResult.postResults) {
+        "Different numbers of actors and matching results found"
+    }
+    for (i in scenario.parallelExecution.indices) {
+        requireEqualSize(scenario.parallelExecution[i], executionResult.parallelResults[i]) {
+            "Different numbers of actors and matching results found"
+        }
+    }
+    val initPart = scenario.initExecution.zip(executionResult.initResults) {
+        actor, result -> ActorWithResult(actor, result, exceptionStackTraces).toString()
+    }
+    val postPart = scenario.postExecution.zip(executionResult.postResults) {
+        actor, result -> ActorWithResult(actor, result, exceptionStackTraces).toString()
+    }
+    var hasClocks = false
+    val parallelPart = scenario.parallelExecution.mapIndexed { i, actors ->
+        actors.zip(executionResult.parallelResultsWithClock[i]) { actor, resultWithClock ->
+            if (!resultWithClock.clockOnStart.empty)
+                hasClocks = true
+            ActorWithResult(actor, resultWithClock.result, exceptionStackTraces, clock = resultWithClock.clockOnStart).toString()
+        }
+    }
+    with(ExecutionLayout(initPart, parallelPart, postPart, null)) {
         appendSeparatorLine()
         appendHeader()
         appendSeparatorLine()
@@ -310,7 +381,7 @@ internal fun StringBuilder.appendExecutionScenarioWithResults(
             """.trimIndent()
         )
     }
-    if (representation.hasClocks) {
+    if (hasClocks) {
         hints.add(
             """
                 Values in "[..]" brackets indicate the number of completed operations
@@ -604,7 +675,7 @@ private fun StringBuilder.appendHints(hints: List<String>) {
 
 private fun StringBuilder.appendValidationFailure(failure: ValidationFailure): StringBuilder {
     appendLine("= Validation function ${failure.functionName} has failed =")
-    appendExecutionScenario(failure.scenario)
+    appendExecutionScenario(failure.scenario, showValidationFunctions = true)
     appendln()
     appendln()
     appendException(failure.exception)

@@ -10,6 +10,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -37,7 +38,7 @@ internal class ModelCheckingStrategy(
         testCfg: ModelCheckingCTestConfiguration,
         testClass: Class<*>,
         scenario: ExecutionScenario,
-        validationFunctions: List<Method>,
+        validationFunctions: List<Actor>,
         stateRepresentation: Method?,
         verifier: Verifier,
         val replay: Boolean,
@@ -277,9 +278,10 @@ internal class ModelCheckingStrategy(
             ExecutionPart.INIT -> 0
             ExecutionPart.PARALLEL -> currentInterleaving.chooseThread(0)
             ExecutionPart.POST -> 0
+            ExecutionPart.VALIDATION -> 0
         }
-        executionPart = part
         loopDetector.beforePart(nextThread)
+        traceCollector?.passCodeLocation(SectionDelimiterTracePoint(part))
         currentThread = nextThread
     }
 
@@ -460,12 +462,7 @@ internal class ModelCheckingStrategy(
             executionPosition++
             if (executionPosition > switchPositions.lastOrNull() ?: -1) {
                 // Add a new thread choosing node corresponding to the switch at the current execution position.
-                lastNotInitializedNodeChoices?.add(
-                    Choice(
-                        ThreadChoosingNode(switchableThreads(iThread)),
-                        executionPosition
-                    )
-                )
+                lastNotInitializedNodeChoices?.add(Choice(ThreadChoosingNode(switchableThreads(iThread)), executionPosition))
             }
         }
     }

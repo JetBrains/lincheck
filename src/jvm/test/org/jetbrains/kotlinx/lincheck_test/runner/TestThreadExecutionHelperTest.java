@@ -26,7 +26,7 @@ public class TestThreadExecutionHelperTest {
 
     @Before
     public void setUp() {
-        ExecutionScenario scenario = new ExecutionScenario(emptyList(), emptyList(), emptyList());
+        ExecutionScenario scenario = new ExecutionScenario(emptyList(), emptyList(), emptyList(), emptyList());
         Strategy strategy = new Strategy(scenario) {
             @Override
             public LincheckFailure run() {

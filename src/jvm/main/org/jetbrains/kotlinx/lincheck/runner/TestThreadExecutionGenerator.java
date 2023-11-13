@@ -90,7 +90,7 @@ public class TestThreadExecutionGenerator {
      * Creates a {@link TestThreadExecution} instance with specified {@link TestThreadExecution#run()} implementation.
      */
     public static TestThreadExecution create(Runner runner, int iThread, List<Actor> actors,
-                                             List<ParallelThreadsRunner.Completion> completions,
+                                             List<Continuation> completions,
                                              boolean scenarioContainsSuspendableActors
     ) {
         String className = TestThreadExecution.class.getCanonicalName() + generatedClassNumber++;
@@ -110,7 +110,7 @@ public class TestThreadExecutionGenerator {
     }
 
     private static byte[] generateClass(String internalClassName, Type testClassType, int iThread, List<Actor> actors,
-                                        List<Object> objArgs, List<ParallelThreadsRunner.Completion> completions,
+                                        List<Object> objArgs, List<Continuation> completions,
                                         boolean scenarioContainsSuspendableActors)
     {
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
@@ -133,7 +133,7 @@ public class TestThreadExecutionGenerator {
     }
 
     private static void generateRun(ClassVisitor cv, Type testType, int iThread, List<Actor> actors,
-                                    List<Object> objArgs, List<Completion> completions,
+                                    List<Object> objArgs, List<Continuation> completions,
                                     boolean scenarioContainsSuspendableActors)
     {
         int access = ACC_PUBLIC;
@@ -341,7 +341,7 @@ public class TestThreadExecutionGenerator {
         mv.arrayStore(RESULT_TYPE);
     }
 
-    private static void loadArguments(GeneratorAdapter mv, Actor actor, List<Object> objArgs, Completion completion) {
+    private static void loadArguments(GeneratorAdapter mv, Actor actor, List<Object> objArgs, Continuation completion) {
         int nArguments = actor.getArguments().size();
         for (int j = 0; j < nArguments; j++) {
             pushArgumentOnStack(mv, objArgs, actor.getArguments().toArray()[j], actor.getMethod().getParameterTypes()[j]);
