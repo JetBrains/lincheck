@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.*
+import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import java.math.*
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
@@ -238,6 +239,13 @@ internal class CoroutineCancellationTracePoint(
             CANCELLATION_FAILED -> "CANCELLATION ATTEMPT FAILED"
         }
     }
+}
+
+/**
+ * This trace point that is added to the trace between execution parts (init, parallel, post, validation).
+ */
+internal class SectionDelimiterTracePoint(val executionPart: ExecutionPart): TracePoint(0, -1, emptyList()) {
+    override fun toStringImpl(): String = ""
 }
 
 internal class SpinCycleStartTracePoint(iThread: Int, actorId: Int, callStackTrace: CallStackTrace): TracePoint(iThread, actorId, callStackTrace) {

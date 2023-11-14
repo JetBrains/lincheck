@@ -1,36 +1,59 @@
 = Validation function validateWithError has failed =
-| ----------- |
-|  Thread 1   |
-| ----------- |
-| operation() |
-| ----------- |
-| operation() |
-| ----------- |
-| operation() |
-| ----------- |
+| --------------------------------- |
+|      Thread 1       |  Thread 2   |
+| --------------------------------- |
+| operation()         |             |
+| --------------------------------- |
+| operation()         | operation() |
+| --------------------------------- |
+| operation()         |             |
+| --------------------------------- |
+| validate()          |             |
+| validateWithError() |             |
+| --------------------------------- |
 
 
 java.lang.IllegalStateException: Validation works!
-	at org.jetbrains.kotlinx.lincheck_test.representation.ValidateFunctionTest.validateWithError(ValidateFunctionTest.kt:34)
+	at org.jetbrains.kotlinx.lincheck_test.representation.ValidationFunctionCallTest.validateWithError(ValidationFunctionTests.kt:45)
+	at org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution12754.run(Unknown Source)
+	at org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.testThreadRunnable$lambda-8(FixedActiveThreadsExecutor.kt:151)
+	at java.base/java.lang.Thread.run(Thread.java:840)
 
 
 The following interleaving leads to the error:
-| ----------- |
-|  Thread 1   |
-| ----------- |
-| operation() |
-| operation() |
-| operation() |
-| ----------- |
+| -------------------------------------------------------- |
+|                  Thread 1                  |  Thread 2   |
+| -------------------------------------------------------- |
+| operation()                                |             |
+| -------------------------------------------------------- |
+|                                            | operation() |
+| operation()                                |             |
+| -------------------------------------------------------- |
+| operation()                                |             |
+| -------------------------------------------------------- |
+| validate()                                 |             |
+| validateWithError(): IllegalStateException |             |
+| -------------------------------------------------------- |
 
 Detailed trace:
-| --------------------------------------------------------------------------------------- |
-|                                        Thread 1                                         |
-| --------------------------------------------------------------------------------------- |
-| operation()                                                                             |
-|   validateInvoked.READ: 0 at ValidateFunctionTest.operation(ValidateFunctionTest.kt:24) |
-| operation()                                                                             |
-|   validateInvoked.READ: 0 at ValidateFunctionTest.operation(ValidateFunctionTest.kt:24) |
-| operation()                                                                             |
-|   validateInvoked.READ: 0 at ValidateFunctionTest.operation(ValidateFunctionTest.kt:24) |
-| --------------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|                                                 Thread 1                                                  |                                             Thread 2                                             |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| operation()                                                                                               |                                                                                                  |
+|   validateInvoked.READ: 0 at ValidationFunctionCallTest.operation(ValidationFunctionTests.kt:32)          |                                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|                                                                                                           | operation()                                                                                      |
+|                                                                                                           |   validateInvoked.READ: 0 at ValidationFunctionCallTest.operation(ValidationFunctionTests.kt:32) |
+| operation()                                                                                               |                                                                                                  |
+|   validateInvoked.READ: 0 at ValidationFunctionCallTest.operation(ValidationFunctionTests.kt:32)          |                                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| operation()                                                                                               |                                                                                                  |
+|   validateInvoked.READ: 0 at ValidationFunctionCallTest.operation(ValidationFunctionTests.kt:32)          |                                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| validate()                                                                                                |                                                                                                  |
+|   validateInvoked.READ: 0 at ValidationFunctionCallTest.validate(ValidationFunctionTests.kt:39)           |                                                                                                  |
+| validateWithError(): IllegalStateException                                                                |                                                                                                  |
+|   validateInvoked.READ: 0 at ValidationFunctionCallTest.validateWithError(ValidationFunctionTests.kt:44)  |                                                                                                  |
+|   validateInvoked.WRITE(1) at ValidationFunctionCallTest.validateWithError(ValidationFunctionTests.kt:44) |                                                                                                  |
+|   validateInvoked.READ: 1 at ValidationFunctionCallTest.validateWithError(ValidationFunctionTests.kt:45)  |                                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

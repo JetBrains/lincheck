@@ -16,7 +16,17 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.junit.*
 
-class ValidateFunctionTest {
+/**
+ * Test verifies validation function representation in the trace.
+ * Also verifies that validation function is invoked only at the end of the scenario execution.
+ * This test contains two treads to verify that the output is correctly formatted in non-trivial case.
+ */
+@Suppress("unused")
+class ValidationFunctionCallTest {
+
+    @Volatile
+    private var validateInvoked: Int = 0
+
     @Operation
     fun operation() {
         if (validateInvoked != 0) {
@@ -24,7 +34,10 @@ class ValidateFunctionTest {
         }
     }
 
-    private var validateInvoked: Int = 0
+    @Validate
+    fun validate() {
+        check(validateInvoked != -1)
+    }
 
     @Validate
     fun validateWithError(): Int {
@@ -43,6 +56,9 @@ class ValidateFunctionTest {
                 thread {
                     actor(::operation)
                 }
+                thread {
+                    actor(::operation)
+                }
             }
             post {
                 actor(::operation)
@@ -52,4 +68,30 @@ class ValidateFunctionTest {
         .checkImpl(this::class.java)
         .checkLincheckOutput("validation_function_failure.txt")
 
+}
+
+/**
+ * Checks the case when a test is failed due to incorrect execution results but
+ *  the validation function is present and passed successfully.
+ *
+ *  In the expected output, we check that validation function internals is not present in the trace.
+ */
+class IncorrectResultsFailureWithCorrectValidationFunctionTest {
+
+    @Volatile
+    var counter: Int = 0
+
+    @Operation
+    fun inc(): Int = counter++
+
+    @Operation
+    fun get(): Int = counter
+
+    @Validate
+    fun validate() = check(counter >= 0)
+
+    @Test
+    fun test() = ModelCheckingOptions()
+        .checkImpl(this::class.java)
+        .checkLincheckOutput("incorrect_results_with_validation_function.txt")
 }

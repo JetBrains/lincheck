@@ -9,6 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.stress
 
+import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -19,7 +20,7 @@ class StressStrategy(
     testCfg: StressCTestConfiguration,
     testClass: Class<*>,
     scenario: ExecutionScenario,
-    validationFunctions: List<Method>,
+    validationFunctions: List<Actor>,
     stateRepresentationFunction: Method?,
     private val verifier: Verifier
 ) : Strategy(scenario) {

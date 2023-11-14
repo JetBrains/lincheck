@@ -9,6 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
+import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -36,7 +37,7 @@ internal class ModelCheckingStrategy(
         testCfg: ModelCheckingCTestConfiguration,
         testClass: Class<*>,
         scenario: ExecutionScenario,
-        validationFunctions: List<Method>,
+        validationFunctions: List<Actor>,
         stateRepresentation: Method?,
         verifier: Verifier
 ) : ManagedStrategy(testClass, scenario, verifier, validationFunctions, stateRepresentation, testCfg) {
@@ -95,10 +96,12 @@ internal class ModelCheckingStrategy(
     }
 
     override fun beforePart(part: ExecutionPart) {
+        super.beforePart(part)
         val nextThread = when (part) {
             ExecutionPart.INIT -> 0
             ExecutionPart.PARALLEL -> currentInterleaving.chooseThread(0)
             ExecutionPart.POST -> 0
+            ExecutionPart.VALIDATION -> 0
         }
         loopDetector.beforePart(nextThread)
         currentThread = nextThread

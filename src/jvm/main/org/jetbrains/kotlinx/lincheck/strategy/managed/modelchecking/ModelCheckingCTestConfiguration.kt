@@ -9,6 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
+import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
@@ -43,7 +44,7 @@ class ModelCheckingCTestConfiguration(testClass: Class<*>, iterations: Int, thre
     eliminateLocalObjects = eliminateLocalObjects,
     customScenarios = customScenarios
 ) {
-    override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Method>,
+    override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Actor>,
                                 stateRepresentationMethod: Method?, verifier: Verifier): Strategy
         = ModelCheckingStrategy(this, testClass, scenario, validationFunctions, stateRepresentationMethod, verifier)
 }

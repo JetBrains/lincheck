@@ -35,7 +35,7 @@ abstract class ManagedStrategy(
     private val testClass: Class<*>,
     scenario: ExecutionScenario,
     private val verifier: Verifier,
-    private val validationFunctions: List<Method>,
+    private val validationFunctions: List<Actor>,
     private val stateRepresentationFunction: Method?,
     private val testCfg: ManagedCTestConfiguration
 ) : Strategy(scenario), Closeable {
@@ -169,6 +169,10 @@ abstract class ManagedStrategy(
         callStackTrace.forEach { it.clear() }
         suspendedFunctionsStack.forEach { it.clear() }
         ManagedStrategyStateHolder.setState(runner.classLoader, this, testClass)
+    }
+
+    override fun beforePart(part: ExecutionPart) {
+        traceCollector?.passCodeLocation(SectionDelimiterTracePoint(part))
     }
 
     // == BASIC STRATEGY METHODS ==
@@ -1208,7 +1212,7 @@ abstract class ManagedStrategy(
  * to the strategy so that it can known about some required events.
  */
 private class ManagedStrategyRunner(
-    private val managedStrategy: ManagedStrategy, testClass: Class<*>, validationFunctions: List<Method>,
+    private val managedStrategy: ManagedStrategy, testClass: Class<*>, validationFunctions: List<Actor>,
     stateRepresentationMethod: Method?, timeoutMs: Long, useClocks: UseClocks
 ) : ParallelThreadsRunner(managedStrategy, testClass, validationFunctions, stateRepresentationMethod, timeoutMs, useClocks) {
     override fun onStart(iThread: Int) {

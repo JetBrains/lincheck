@@ -12,9 +12,6 @@ package org.jetbrains.kotlinx.lincheck_test.verifier
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
-import java.lang.IllegalStateException
-import kotlin.reflect.KFunction
-import kotlin.reflect.jvm.javaMethod
 
 /**
  * Kotlin DSL for defining custom scenarios and corresponding expected results.
@@ -96,7 +93,8 @@ class ExecutionBuilder {
         return ExecutionScenario(
             initial.map { it.actor },
             parallelExecution,
-            post.map { it.actor }
+            post.map { it.actor },
+            emptyList()
         ) to ExecutionResult(
             initial.map { it.result },
             parallelResults.map { it.withEmptyClock(parallelExecution.size) },
