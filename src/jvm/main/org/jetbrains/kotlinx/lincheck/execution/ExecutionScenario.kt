@@ -179,8 +179,9 @@ fun ExecutionScenario.tryMinimize(threadId: Int, actorId: Int): ExecutionScenari
  */
 private fun List<List<Actor>>.splitIntoParts(initPartSize: Int, postPartSize: Int, validationFunction: Actor?): ExecutionScenario {
     // empty scenario case
-    if (isEmpty())
+    if (isEmpty()) {
         return ExecutionScenario(listOf(), listOf(), listOf(), validationFunction)
+    }
     // get potential init and post parts
     val firstThreadSize = get(0).size
     val initExecution = get(0).subList(0, initPartSize)

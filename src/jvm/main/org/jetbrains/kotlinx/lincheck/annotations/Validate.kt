@@ -18,7 +18,7 @@ import kotlin.annotation.AnnotationTarget.*
  * At most one validation function is allowed.
  *
  * The validation function should be marked with this annotation and have no arguments.
- * In case the testing data structure is in an invalid state, they should throw an exception.
+ * In case the testing data structure is in an invalid state, it should throw an exception.
  * ([AssertionError] or [IllegalStateException] are the preferable ones).
  */
 @Retention(RUNTIME)
