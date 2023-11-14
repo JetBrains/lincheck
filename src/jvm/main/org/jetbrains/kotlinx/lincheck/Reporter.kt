@@ -211,7 +211,7 @@ internal fun ExecutionLayout(
     initPart: List<String>,
     parallelPart: List<List<String>>,
     postPart: List<String>,
-    validation: List<String>?
+    validationPart: List<String>?
 ): TableLayout {
     val size = parallelPart.size
     val threadHeaders = (0 until size).map { "Thread ${it + 1}" }
@@ -221,7 +221,7 @@ internal fun ExecutionLayout(
         if (columnWidth == 0) {
             initPart.forEach { maxColWidth = max(maxColWidth, it.length)  }
             postPart.forEach { maxColWidth = max(maxColWidth, it.length)  }
-            validation?.forEach { maxColWidth = max(maxColWidth, it.length)  }
+            validationPart?.forEach { maxColWidth = max(maxColWidth, it.length)  }
         }
         maxColWidth
     }
@@ -342,7 +342,7 @@ internal fun StringBuilder.appendExecutionScenarioWithResults(
             ActorWithResult(actor, resultWithClock.result, exceptionStackTraces, clock = resultWithClock.clockOnStart).toString()
         }
     }
-    with(ExecutionLayout(initPart, parallelPart, postPart, null)) {
+    with(ExecutionLayout(initPart, parallelPart, postPart, validationPart = null)) {
         appendSeparatorLine()
         appendHeader()
         appendSeparatorLine()

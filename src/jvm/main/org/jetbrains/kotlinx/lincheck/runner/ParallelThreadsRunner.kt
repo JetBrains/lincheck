@@ -278,7 +278,6 @@ internal open class ParallelThreadsRunner(
                     }
                 }
             }
-
             // Combine the results and convert them for the standard class loader (if they are of non-primitive types).
             // We do not want the transformed code to be reachable outside of the runner and strategy classes.
             return CompletedInvocationResult(

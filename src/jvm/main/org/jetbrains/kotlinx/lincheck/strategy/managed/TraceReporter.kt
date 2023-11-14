@@ -16,6 +16,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.DeadlockWithDumpFailure
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
 import java.util.*
+import kotlin.collections.ArrayList
 import kotlin.math.*
 
 @Synchronized // we should avoid concurrent executions to keep `objectNumeration` consistent
@@ -284,16 +285,15 @@ private fun <T : TraceNode> MutableList<TraceNode>.createAndAppend(constructor: 
 private fun traceGraphToRepresentationList(
     sectionsFirstNodes: List<TraceNode>,
     verboseTrace: Boolean
-): List<List<TraceEventRepresentation>> {
-    fun makeRepresentation(startNode: TraceNode?) = buildList {
-        var curNode = startNode
-        while (curNode != null) {
-            curNode = curNode.addRepresentationTo(this, verboseTrace)
+): List<List<TraceEventRepresentation>> =
+    sectionsFirstNodes.map { firstNodeInSection ->
+        buildList {
+            var curNode: TraceNode? = firstNodeInSection
+            while (curNode != null) {
+                curNode = curNode.addRepresentationTo(this, verboseTrace)
+            }
         }
     }
-
-    return sectionsFirstNodes.map { makeRepresentation(it) }
-}
 
 private sealed class TraceNode(
     protected val iThread: Int,
