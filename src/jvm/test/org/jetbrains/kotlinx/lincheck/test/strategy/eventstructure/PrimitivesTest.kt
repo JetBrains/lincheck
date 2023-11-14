@@ -1089,6 +1089,36 @@ class PrimitivesTest {
     }
 
     @Test(timeout = TIMEOUT)
+    fun testLincheckCancel() {
+        val suspendActor = Actor(
+            method = CoroutineWrapper::suspend.javaMethod!!,
+            arguments = listOf(),
+            handledExceptions = listOf(CancellationException::class.java),
+            cancelOnSuspension = true
+        )
+        val resume = CoroutineWrapper::resume
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    add(suspendActor)
+                }
+                thread {
+                    actor(resume, 1)
+                }
+            }
+        }
+        val outcomes = setOf(
+            (CancellationException::class.java to false),
+            (1 to true)
+        )
+        litmusTest(CoroutineWrapper::class.java, testScenario, outcomes, executionCount = UNKNOWN) { results ->
+            val r = getValueSuspended(results.parallelResults[0][0])
+            val b = getValue<Boolean>(results.parallelResults[1][0])
+            (r to b)
+        }
+    }
+
+    @Test(timeout = TIMEOUT)
     fun testResumeCancel() {
         val suspendActor = Actor(
             method = CoroutineWrapper::suspend.javaMethod!!,
