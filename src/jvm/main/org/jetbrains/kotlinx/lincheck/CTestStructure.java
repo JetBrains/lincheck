@@ -65,8 +65,8 @@ public class CTestStructure {
         }
         if (stateRepresentations.size() > 1) {
             throw new IllegalStateException("Several functions marked with " + StateRepresentation.class.getSimpleName() +
-                    " were found, while at most one should be specified: " +
-                    stateRepresentations.stream().map(Method::getName).collect(Collectors.joining(", ")));
+                " were found, while at most one should be specified: " +
+                stateRepresentations.stream().map(Method::getName).collect(Collectors.joining(", ")));
         }
         Method stateRepresentation = null;
         if (!stateRepresentations.isEmpty())
@@ -86,13 +86,13 @@ public class CTestStructure {
     }
 
     private static void readTestStructureFromClass(
-            Class<?> clazz,
-            Map<String, OperationGroup> groupConfigs,
-            List<ActorGenerator> actorGenerators,
-            Map<Class<?>, ParameterGenerator<?>> parameterGeneratorsMap,
-            List<Actor> validationFunctions,
-            List<Method> stateRepresentations,
-            RandomProvider randomProvider
+           Class<?> clazz,
+           Map<String, OperationGroup> groupConfigs,
+           List<ActorGenerator> actorGenerators,
+           Map<Class<?>, ParameterGenerator<?>> parameterGeneratorsMap,
+           List<Actor> validationFunctions,
+           List<Method> stateRepresentations,
+           RandomProvider randomProvider
     ) {
         // Read named parameter generators (declared for class)
         Map<String, ParameterGenerator<?>> namedGens = createNamedGens(clazz, randomProvider);
@@ -124,8 +124,8 @@ public class CTestStructure {
                     gens.add(parameterGenerator);
                 }
                 ActorGenerator actorGenerator = new ActorGenerator(m, gens, opAnn.runOnce(),
-                        opAnn.cancellableOnSuspension(), opAnn.allowExtraSuspension(), opAnn.blocking(), opAnn.causesBlocking(),
-                        opAnn.promptCancellation());
+                    opAnn.cancellableOnSuspension(), opAnn.allowExtraSuspension(), opAnn.blocking(), opAnn.causesBlocking(),
+                    opAnn.promptCancellation());
                 actorGenerators.add(actorGenerator);
                 // Get list of groups and add this operation to specified ones
                 String opGroup = opAnn.group();
@@ -197,8 +197,8 @@ public class CTestStructure {
                 .filter(method -> method.isAnnotationPresent(Operation.class)) // take methods, annotated as @Operation
                 .flatMap(method -> Arrays.stream(method.getParameters())) // get their parameters
                 .filter(parameter -> parameter.getType().isEnum() && // which are enums
-                        parameter.isAnnotationPresent(Param.class) && // annotated with @Param
-                        !parameter.getAnnotationsByType(Param.class)[0].name().isEmpty()) // and references to some named EnumGen
+                                     parameter.isAnnotationPresent(Param.class) && // annotated with @Param
+                                     !parameter.getAnnotationsByType(Param.class)[0].name().isEmpty()) // and references to some named EnumGen
                 .forEach(parameter -> {
                     String paramGenName = parameter.getAnnotationsByType(Param.class)[0].name();
 
@@ -243,7 +243,7 @@ public class CTestStructure {
             // If name in @Operation is presented, return the generator with this name,
             // otherwise return generator with parameter's name
             String name = nameInOperation != null ? nameInOperation :
-                    (p.isNamePresent() ? p.getName() : null);
+                (p.isNamePresent() ? p.getName() : null);
             if (name != null)
                 return checkAndGetNamedGenerator(namedGens, name);
             // Parameter generator is not specified, try to create a default one
@@ -258,7 +258,7 @@ public class CTestStructure {
             }
             // Cannot create default parameter generator, throw an exception
             throw new IllegalStateException("Generator for parameter \"" + p + "\" in method \""
-                    + m.getName() + "\" should be specified.");
+                + m.getName() + "\" should be specified.");
         }
         // If the @Param annotation is presented check its correctness firstly
         if (!paramAnn.name().isEmpty() && !(paramAnn.gen() == DummyParameterGenerator.class))
@@ -333,10 +333,10 @@ public class CTestStructure {
         @Override
         public String toString() {
             return "OperationGroup{" +
-                    "name='" + name + '\'' +
-                    ", nonParallel=" + nonParallel +
-                    ", actors=" + actors +
-                    '}';
+                "name='" + name + '\'' +
+                ", nonParallel=" + nonParallel +
+                ", actors=" + actors +
+                '}';
         }
     }
 }
