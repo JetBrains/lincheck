@@ -86,7 +86,7 @@ public class CTestStructure {
     }
 
     private static void readTestStructureFromClass(
-           Class<?> clazz,
+            Class<?> clazz,
            Map<String, OperationGroup> groupConfigs,
            List<ActorGenerator> actorGenerators,
            Map<Class<?>, ParameterGenerator<?>> parameterGeneratorsMap,
