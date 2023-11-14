@@ -109,15 +109,6 @@ class MoreThenOneValidationFunctionFailureTest {
     }
 
     @Test
-    fun test() {
-        val exception = assertThrows(IllegalStateException::class.java) {
-            ModelCheckingOptions().check(this::class.java)
-        }
-        assertEquals(
-            """
-            You can't have more than one validation function.
-            @Validation annotation is present here: org.jetbrains.kotlinx.lincheck_test.representation.MoreThenOneValidationFunctionFailureTest.firstCheck, and here: org.jetbrains.kotlinx.lincheck_test.representation.MoreThenOneValidationFunctionFailureTest.secondCheck
-            """.trimIndent(), exception.message
-        )
-    }
+    fun test() = ModelCheckingOptions()
+        .checkFailsWithException(this::class.java, "two_validation_functions_exception.txt")
 }

@@ -1,0 +1,4 @@
+You can't have more than one validation function.
+@Validation annotation is present here:
+org.jetbrains.kotlinx.lincheck_test.representation.MoreThenOneValidationFunctionFailureTest.firstCheck
+org.jetbrains.kotlinx.lincheck_test.representation.MoreThenOneValidationFunctionFailureTest.secondCheck

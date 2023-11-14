@@ -79,7 +79,7 @@ internal open class ParallelThreadsRunner(
         initialPartExecution = createInitialPartExecution()
         parallelPartExecutions = createParallelPartExecutions()
         postPartExecution = createPostPartExecution()
-        validationPartExecution = validationFunction?.let { createValidationPartExecution(it) }
+        validationPartExecution = createValidationPartExecution(validationFunction)
         testThreadExecutions = listOfNotNull(
             initialPartExecution,
             *parallelPartExecutions,
@@ -339,8 +339,9 @@ internal open class ParallelThreadsRunner(
         }
 
     private fun createValidationPartExecution(validationFunction: Actor?): TestThreadExecution? {
+        if (validationFunction == null) return null
         return TestThreadExecutionGenerator.create(this, VALIDATION_THREAD_ID, listOf(validationFunction), emptyList(), false)
-            .also { it.initialize(1, 1) }
+            .also { it.initialize(nActors = 1, nThreads = 1) }
     }
 
     private fun createParallelPartExecutions(): Array<TestThreadExecution> = Array(scenario.nThreads) { iThread ->
