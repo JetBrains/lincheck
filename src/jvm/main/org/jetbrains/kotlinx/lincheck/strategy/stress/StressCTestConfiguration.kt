@@ -36,7 +36,7 @@ class StressCTestConfiguration(
     timeoutMs = timeoutMs,
     customScenarios = customScenarios
 ) {
-    override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Method>,
+    override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Actor>,
                                 stateRepresentationMethod: Method?, verifier: Verifier) =
         StressStrategy(this, testClass, scenario, validationFunctions, stateRepresentationMethod, verifier)
 

@@ -1,0 +1,33 @@
+= Invalid execution results =
+| ------------------- |
+| Thread 1 | Thread 2 |
+| ------------------- |
+| inc(): 0 | inc(): 0 |
+| ------------------- |
+
+The following interleaving leads to the error:
+| ---------------------------------------------------------------------------------------------------------------------------- |
+| Thread 1 |                                                     Thread 2                                                      |
+| ---------------------------------------------------------------------------------------------------------------------------- |
+|          | inc(): 0                                                                                                          |
+|          |   counter.READ: 0 at IncorrectResultsFailureWithCorrectValidationFunctionTest.inc(ValidationFunctionTests.kt:83)  |
+|          |   switch                                                                                                          |
+| inc(): 0 |                                                                                                                   |
+|          |   counter.WRITE(1) at IncorrectResultsFailureWithCorrectValidationFunctionTest.inc(ValidationFunctionTests.kt:83) |
+|          |   result: 0                                                                                                       |
+| ---------------------------------------------------------------------------------------------------------------------------- |
+
+Detailed trace:
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                     Thread 1                                                      |                                                     Thread 2                                                      |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                                   | inc(): 0                                                                                                          |
+|                                                                                                                   |   counter.READ: 0 at IncorrectResultsFailureWithCorrectValidationFunctionTest.inc(ValidationFunctionTests.kt:83)  |
+|                                                                                                                   |   switch                                                                                                          |
+| inc(): 0                                                                                                          |                                                                                                                   |
+|   counter.READ: 0 at IncorrectResultsFailureWithCorrectValidationFunctionTest.inc(ValidationFunctionTests.kt:83)  |                                                                                                                   |
+|   counter.WRITE(1) at IncorrectResultsFailureWithCorrectValidationFunctionTest.inc(ValidationFunctionTests.kt:83) |                                                                                                                   |
+|   result: 0                                                                                                       |                                                                                                                   |
+|                                                                                                                   |   counter.WRITE(1) at IncorrectResultsFailureWithCorrectValidationFunctionTest.inc(ValidationFunctionTests.kt:83) |
+|                                                                                                                   |   result: 0                                                                                                       |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

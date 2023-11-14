@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
+import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.objectweb.asm.*
@@ -62,44 +63,6 @@ internal fun executeActor(
             throw IllegalStateException("Cannot invoke method " + actor.method, e)
         }
     }
-}
-
-internal inline fun executeValidationFunctions(instance: Any, validationFunctions: List<Method>,
-                                               onError: (functionName: String, exception: Throwable) -> Unit) {
-    for (f in validationFunctions) {
-        val validationException = executeValidationFunction(instance, f)
-        if (validationException != null) {
-            onError(f.name, validationException)
-            return
-        }
-    }
-}
-
-private fun executeValidationFunction(instance: Any, validationFunction: Method): Throwable? {
-    val m = getMethod(instance, validationFunction)
-    try {
-        m.invoke(instance)
-    } catch (e: Exception) { // We don't catch any Errors - the only correct way is to re-throw them
-        // There are some exception types that can be thrown from this method:
-        return when (e) {
-            // It's our fault if we supplied null instead of method or instance
-            is NullPointerException -> LincheckInternalBugException(e)
-            // It's our fault as it can appear if this validation function has parameters, but we had to check it before
-            is IllegalArgumentException -> LincheckInternalBugException(e)
-            // Something wrong with access to some classes, just report it
-            is IllegalAccessException -> e
-            // Regular validation function exception
-            is InvocationTargetException -> {
-                val validationException = e.targetException
-                val wrapperExceptionStackTraceLength = e.stackTrace.size
-                // drop stacktrace related to Lincheck call, keeping only stacktrace starting from validation function call
-                validationException.stackTrace = validationException.stackTrace.dropLast(wrapperExceptionStackTraceLength).toTypedArray()
-                validationException
-            }
-            else -> LincheckInternalBugException(e)
-        }
-    }
-    return null
 }
 
 @Suppress("UNCHECKED_CAST")
@@ -228,7 +191,8 @@ internal fun ExecutionScenario.convertForLoader(loader: ClassLoader) = Execution
     },
     postExecution.map {
         it.convertForLoader(loader)
-    }
+    },
+    validationFunctions = validationFunctions
 )
 
 private fun Actor.convertForLoader(loader: ClassLoader): Actor {

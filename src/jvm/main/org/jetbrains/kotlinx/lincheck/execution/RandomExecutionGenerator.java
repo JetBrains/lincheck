@@ -96,7 +96,7 @@ public class RandomExecutionGenerator extends ExecutionGenerator {
         } else {
             postExecution = Collections.emptyList();
         }
-        return new ExecutionScenario(initExecution, parallelExecution, postExecution);
+        return new ExecutionScenario(initExecution, parallelExecution, postExecution, testStructure.validationFunctions);
     }
 
     private ActorGenerator getActorGenFromGroup(List<ActorGenerator> aGens, int index) {

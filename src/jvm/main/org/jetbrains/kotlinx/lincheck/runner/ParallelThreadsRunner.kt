@@ -18,7 +18,6 @@ import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.*
 import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner.Completion.*
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.objectweb.asm.*
 import java.lang.reflect.*
 import java.util.concurrent.*
@@ -38,7 +37,7 @@ private typealias SuspensionPointResultWithContinuation = AtomicReference<Pair<k
 internal open class ParallelThreadsRunner(
     strategy: Strategy,
     testClass: Class<*>,
-    validationFunctions: List<Method>,
+    validationFunctions: List<Actor>,
     stateRepresentationFunction: Method?,
     private val timeoutMs: Long, // for deadlock or livelock detection
     private val useClocks: UseClocks // specifies whether `HBClock`-s should always be used or with some probability
@@ -71,6 +70,7 @@ internal open class ParallelThreadsRunner(
     private var initialPartExecution: TestThreadExecution? = null
     private var parallelPartExecutions: Array<TestThreadExecution> = arrayOf()
     private var postPartExecution: TestThreadExecution? = null
+    private var validationPartExecution: TestThreadExecution? = null
 
     private var testThreadExecutions: List<TestThreadExecution> = listOf()
 
@@ -79,6 +79,7 @@ internal open class ParallelThreadsRunner(
         initialPartExecution = createInitialPartExecution()
         parallelPartExecutions = createParallelPartExecutions()
         postPartExecution = createPostPartExecution()
+        validationPartExecution = createValidationPartExecution()
         testThreadExecutions = listOfNotNull(
             initialPartExecution,
             *parallelPartExecutions,
@@ -154,11 +155,13 @@ internal open class ParallelThreadsRunner(
         executor.threads.forEach { it.cont = null }
         // reset thread executions
         testThreadExecutions.forEach { it.reset() }
+        validationPartExecution?.results?.fill(null)
     }
 
     private fun createTestInstance() {
         testInstance = testClass.newInstance()
         testThreadExecutions.forEach { it.testInstance = testInstance }
+        validationPartExecution?.let { it.testInstance = testInstance }
     }
 
     /**
@@ -226,7 +229,10 @@ internal open class ParallelThreadsRunner(
      * This method is used for communication between `ParallelThreadsRunner` and `ManagedStrategy` via overriding,
      * so that runner does not know about managed strategy details.
      */
-    internal open fun <T> cancelByLincheck(cont: CancellableContinuation<T>, promptCancellation: Boolean): CancellationResult =
+    internal open fun <T> cancelByLincheck(
+        cont: CancellableContinuation<T>,
+        promptCancellation: Boolean
+    ): CancellationResult =
         cont.cancelByLincheck(promptCancellation)
 
     override fun afterCoroutineSuspended(iThread: Int) {
@@ -262,8 +268,15 @@ internal open class ParallelThreadsRunner(
             }
             val afterPostStateRepresentation = constructStateRepresentation()
             // Execute validation functions
-            executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
-                return ValidationFailureInvocationResult(scenario, functionName, exception)
+            validationPartExecution?.let { validationPart ->
+                beforePart(VALIDATION)
+                executor.submitAndAwait(arrayOf(validationPart), timeout)
+                validationPart.results.forEachIndexed { i, result ->
+                    if (result is ExceptionResult) {
+                        val failedFunctionName = validationFunctions[i].method.name
+                        return ValidationFailureInvocationResult(scenario, failedFunctionName, result.throwable)
+                    }
+                }
             }
             // Combine the results and convert them for the standard class loader (if they are of non-primitive types).
             // We do not want the transformed code to be reachable outside of the runner and strategy classes.
@@ -327,6 +340,11 @@ internal open class ParallelThreadsRunner(
             null
         }
 
+    private fun createValidationPartExecution(): TestThreadExecution? {
+        return TestThreadExecutionGenerator.create(this, VALIDATION_THREAD_ID, validationFunctions, emptyList(), false)
+            .also { it.initialize(validationFunctions.size, 1) }
+    }
+
     private fun createParallelPartExecutions(): Array<TestThreadExecution> = Array(scenario.nThreads) { iThread ->
         TestThreadExecutionGenerator.create(this, iThread,
             scenario.parallelExecution[iThread],
@@ -373,7 +391,7 @@ internal open class ParallelThreadsRunner(
     override fun createTransformer(cv: ClassVisitor) = CancellabilitySupportClassTransformer(cv)
 
     override fun constructStateRepresentation() =
-        stateRepresentationFunction?.let{ getMethod(testInstance, it) }?.invoke(testInstance) as String?
+        stateRepresentationFunction?.let { getMethod(testInstance, it) }?.invoke(testInstance) as String?
 
     override fun close() {
         super.close()

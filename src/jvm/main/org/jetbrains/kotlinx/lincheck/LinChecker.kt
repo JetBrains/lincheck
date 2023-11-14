@@ -28,6 +28,11 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         reporter = Reporter(logLevel)
         testConfigurations = if (options != null) listOf(options.createTestConfigurations(testClass))
                              else createFromTestClassAnnotations(testClass)
+        // Currently, we extract validation functions from testClass structure, so for custom scenarios declared
+        // with DSL, we have to set up it when testClass is scanned
+        testConfigurations.forEach { cTestConfiguration ->
+            cTestConfiguration.customScenarios.forEach { it.validationFunctions = testStructure.validationFunctions }
+        }
     }
 
     /**
