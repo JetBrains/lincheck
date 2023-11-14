@@ -327,11 +327,6 @@ internal open class ParallelThreadsRunner(
             null
         }
 
-    private fun createValidationPartExecution(): TestThreadExecution? {
-        return TestThreadExecutionGenerator.create(this, VALIDATION_THREAD_ID, validationFunctions, emptyList(), false)
-            .also { it.initialize(validationFunctions.size, 1) }
-    }
-
     private fun createPostPartExecution() =
         if (scenario.postExecution.isNotEmpty()) {
             val dummyCompletion = Continuation<Any?>(EmptyCoroutineContext) {}
@@ -375,12 +370,10 @@ internal open class ParallelThreadsRunner(
         clocks = Array(nActors) { emptyClockArray(nThreads) }
     }
 
-    private fun TestThreadExecution.reset(runWithoutClocks: Boolean) {
+    private fun TestThreadExecution.reset() {
         val runner = this@ParallelThreadsRunner
         results.fill(null)
-        useClocks = if (runWithoutClocks) false else {
-            if (runner.useClocks == ALWAYS) true else Random.nextBoolean()
-        }
+        useClocks = if (runner.useClocks == ALWAYS) true else Random.nextBoolean()
         clocks.forEach { it.fill(0) }
         curClock = 0
     }
