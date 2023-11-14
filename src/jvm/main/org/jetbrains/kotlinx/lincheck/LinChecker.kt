@@ -18,7 +18,7 @@ import kotlin.reflect.*
 /**
  * This class runs concurrent tests.
  */
-class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
+class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
     private val testStructure = CTestStructure.getFromTestClass(testClass)
     private val testConfigurations: List<CTestConfiguration>
     private val reporter: Reporter
@@ -56,35 +56,34 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     }
 
     private fun CTestConfiguration.checkImpl(): LincheckFailure? {
-        val exGen = createExecutionGenerator(testStructure.randomProvider)
-        for (i in customScenarios.indices) {
-            val verifier = createVerifier()
-            val scenario = customScenarios[i]
-            scenario.validate()
-            reporter.logIteration(i + 1, customScenarios.size, scenario)
-            val failure = scenario.run(this, verifier)
-            if (failure != null) return failure
-        }
         var verifier = createVerifier()
-        repeat(iterations) { i ->
+        val generator = createExecutionGenerator(testStructure.randomProvider)
+        val randomScenarios = sequence {
+            while (true) {
+                yield(generator.nextExecution())
+                // reset the parameter generator ranges to start with the same initial bounds for each scenario.
+                testStructure.parameterGenerators.forEach { it.reset() }
+            }
+        }
+        val scenarios = customScenarios + randomScenarios.take(iterations).toList()
+        scenarios.forEachIndexed { i, scenario ->
+            val isCustomScenario = (i < customScenarios.size)
             // For performance reasons, verifier re-uses LTS from previous iterations.
-            // This behaviour is similar to a memory leak and can potentially cause OutOfMemoryError.
+            // This behavior is similar to a memory leak and can potentially cause OutOfMemoryError.
             // This is why we periodically create a new verifier to still have increased performance
             // from re-using LTS and limit the size of potential memory leak.
             // https://github.com/Kotlin/kotlinx-lincheck/issues/124
             if ((i + 1) % VERIFIER_REFRESH_CYCLE == 0)
                 verifier = createVerifier()
-            val scenario = exGen.nextExecution()
             scenario.validate()
-            reporter.logIteration(i + 1 + customScenarios.size, iterations, scenario)
-            val failure = scenario.run(this, verifier)
-            if (failure != null) {
-                val minimizedFailedIteration = if (!minimizeFailedScenario) failure else failure.minimize(this)
-                reporter.logFailedIteration(minimizedFailedIteration)
-                return minimizedFailedIteration
+            reporter.logIteration(i + 1, scenarios.size, scenario)
+            var failure = scenario.run(this, verifier)
+                ?: return@forEachIndexed
+            if (minimizeFailedScenario && !isCustomScenario) {
+                failure = failure.minimize(this)
             }
-            // Reset the parameter generator ranges to start with the same initial bounds on each scenario generation.
-            testStructure.parameterGenerators.forEach { it.reset() }
+            reporter.logFailedIteration(failure)
+            return failure
         }
         return null
     }
