@@ -322,16 +322,10 @@ internal open class ParallelThreadsRunner(
             null
         }
 
-    private fun createValidationPartExecution(): TestThreadExecution? {
-        return TestThreadExecutionGenerator.create(this, VALIDATION_THREAD_ID, validationFunctions, emptyList(), false)
-            .also { it.initialize(validationFunctions.size, 1) }
-    }
-
     private fun createPostPartExecution() =
         if (scenario.postExecution.isNotEmpty()) {
             val dummyCompletion = Continuation<Any?>(EmptyCoroutineContext) {}
-            TestThreadExecutionGenerator.create(
-                this, POST_THREAD_ID,
+            TestThreadExecutionGenerator.create(this, POST_THREAD_ID,
                 scenario.postExecution,
                 Array(scenario.postExecution.size) { dummyCompletion }.toList(),
                 scenario.hasSuspendableActors
@@ -345,6 +339,11 @@ internal open class ParallelThreadsRunner(
         } else {
             null
         }
+
+    private fun createValidationPartExecution(): TestThreadExecution? {
+        return TestThreadExecutionGenerator.create(this, VALIDATION_THREAD_ID, validationFunctions, emptyList(), false)
+            .also { it.initialize(validationFunctions.size, 1) }
+    }
 
     private fun createParallelPartExecutions(): Array<TestThreadExecution> = Array(scenario.nThreads) { iThread ->
         TestThreadExecutionGenerator.create(this, iThread,
