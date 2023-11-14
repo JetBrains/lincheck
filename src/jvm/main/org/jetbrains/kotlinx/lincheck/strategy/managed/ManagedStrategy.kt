@@ -177,6 +177,10 @@ abstract class ManagedStrategy(
         ManagedStrategyStateHolder.setState(runner.classLoader, this, testClass)
     }
 
+    override fun beforePart(part: ExecutionPart) {
+        traceCollector?.passCodeLocation(SectionDelimiterTracePoint(part))
+    }
+
     // == BASIC STRATEGY METHODS ==
 
     /**

@@ -10,6 +10,7 @@
 package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.annotations.*
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
@@ -71,6 +72,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
                 return failure
             }
         }
+        checkAtLeastOneMethodIsMarkedAsOperation(testClass)
         var verifier = createVerifier()
         repeat(iterations) { i ->
             // For performance reasons, verifier re-uses LTS from previous iterations.
@@ -150,6 +152,12 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             CTestStructure::class.java,
             RandomProvider::class.java
         ).newInstance(this, testStructure, randomProvider)
+
+    private fun checkAtLeastOneMethodIsMarkedAsOperation(testClass: Class<*>) {
+        require (testClass.methods.any { it.isAnnotationPresent(Operation::class.java) }) {
+            "At least one method in a tested class should be marked as @Operation to make random scenarios generation possible. Please see official guide for more details."
+        }
+    }
 
     // This companion object is used for backwards compatibility.
     companion object {

@@ -156,8 +156,8 @@ internal open class ParallelThreadsRunner(
         // reset stored continuations
         executor.threads.forEach { it.cont = null }
         // reset thread executions
-        testThreadExecutions.forEach { it.reset(runWithoutClocks = false) }
-        validationPartExecution?.reset(runWithoutClocks = true)
+        testThreadExecutions.forEach { it.reset() }
+        validationPartExecution?.results?.fill(null)
     }
 
     private fun createTestInstance() {
@@ -350,6 +350,11 @@ internal open class ParallelThreadsRunner(
         } else {
             null
         }
+
+    private fun createValidationPartExecution(): TestThreadExecution? {
+        return TestThreadExecutionGenerator.create(this, VALIDATION_THREAD_ID, validationFunctions, emptyList(), false)
+            .also { it.initialize(validationFunctions.size, 1) }
+    }
 
     private fun createParallelPartExecutions(): Array<TestThreadExecution> = Array(scenario.nThreads) { iThread ->
         TestThreadExecutionGenerator.create(this, iThread,

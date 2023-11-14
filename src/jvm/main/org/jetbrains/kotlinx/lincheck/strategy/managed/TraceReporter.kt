@@ -84,7 +84,7 @@ private fun StringBuilder.appendTraceRepresentation(
 /**
  * Convert trace events to the final form of a matrix of strings.
  */
-private fun splitToColumns(nThreads: Int, traceRepresentation:  List<List<TraceEventRepresentation>>): List<TableSectionLayoutModel> {
+private fun splitToColumns(nThreads: Int, traceRepresentation:  List<List<TraceEventRepresentation>>): List<TableSectionColumnsRepresentation> {
     return traceRepresentation.map { sectionRepresentation ->
         val result = List(nThreads) { mutableListOf<String>() }
         for (event in sectionRepresentation) {
@@ -97,11 +97,14 @@ private fun splitToColumns(nThreads: Int, traceRepresentation:  List<List<TraceE
                 if (column.size != neededSize)
                     column.add("")
         }
-        TableSectionLayoutModel(result)
+        TableSectionColumnsRepresentation(result)
     }
 }
 
-data class TableSectionLayoutModel(
+/**
+ * Represents a column list representation of any table section (init, parallel, post, validation).
+ */
+class TableSectionColumnsRepresentation(
     /**
      * List of column representation.
      */
@@ -285,16 +288,15 @@ private fun <T : TraceNode> MutableList<TraceNode>.createAndAppend(constructor: 
 private fun traceGraphToRepresentationList(
     sectionsFirstNodes: List<TraceNode>,
     verboseTrace: Boolean
-): List<List<TraceEventRepresentation>> {
-    fun makeRepresentation(startNode: TraceNode?) = buildList {
-        var curNode = startNode
-        while (curNode != null) {
-            curNode = curNode.addRepresentationTo(this, verboseTrace)
+): List<List<TraceEventRepresentation>> =
+    sectionsFirstNodes.map { firstNodeInSection ->
+        buildList {
+            var curNode: TraceNode? = firstNodeInSection
+            while (curNode != null) {
+                curNode = curNode.addRepresentationTo(this, verboseTrace)
+            }
         }
     }
-
-    return sectionsFirstNodes.map { makeRepresentation(it) }
-}
 
 internal sealed class TraceNode(
     val iThread: Int,
