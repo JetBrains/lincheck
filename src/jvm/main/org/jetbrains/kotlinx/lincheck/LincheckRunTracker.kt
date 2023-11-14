@@ -25,6 +25,12 @@ import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 
 /**
  * The LincheckRunTracker interface defines methods for tracking the progress and results of a Lincheck test run.
+ *
+ * Each Lincheck test run consists of a number of iterations,
+ * with each iteration corresponding to the specific scenario.
+ * On each iteration, the same scenario can be invoked multiple times in an attempt to uncover a failure.
+ * By overriding the methods of LincheckRunTracker interface, one can track
+ * the beginning and end of each iteration or invocation, as well as their results.
  */
 interface LincheckRunTracker {
 
@@ -34,7 +40,7 @@ interface LincheckRunTracker {
      * @param iteration The iteration id.
      * @param scenario The execution scenario to be run.
      */
-    fun iterationStart(iteration: Int, scenario: ExecutionScenario) {}
+    fun iterationStart(iteration: Int, scenario: ExecutionScenario, parameters: IterationParameters) {}
 
     /**
      * This method is called at the end of each iteration of the Lincheck test.
@@ -75,6 +81,17 @@ interface LincheckRunTracker {
 }
 
 /**
+ * Represents the parameters for controlling the iteration of a Lincheck test run.
+ *
+ * @property invocationsBound The maximum number of invocations to be performed on the iteration.
+ * @property warmUpInvocationsCount The number of warm-up invocations to be performed.
+ */
+data class IterationParameters(
+    val invocationsBound: Int,
+    val warmUpInvocationsCount: Int,
+)
+
+/**
  * Tracks the execution of a given Lincheck test iteration.
  *
  * @param iteration The iteration id.
@@ -86,11 +103,12 @@ interface LincheckRunTracker {
 inline fun LincheckRunTracker?.trackIteration(
     iteration: Int,
     scenario: ExecutionScenario,
+    params: IterationParameters,
     block: () -> LincheckFailure?
 ): LincheckFailure? {
     var failure: LincheckFailure? = null
     var exception: Throwable? = null
-    this?.iterationStart(iteration, scenario)
+    this?.iterationStart(iteration, scenario, params)
     try {
         return block().also {
             failure = it
@@ -145,9 +163,9 @@ fun List<LincheckRunTracker>.chainTrackers(): LincheckRunTracker? =
 
 internal class ChainRunTracker(val trackers: List<LincheckRunTracker>) : LincheckRunTracker {
 
-    override fun iterationStart(iteration: Int, scenario: ExecutionScenario) {
+    override fun iterationStart(iteration: Int, scenario: ExecutionScenario, parameters: IterationParameters) {
         for (tracker in trackers) {
-            tracker.iterationStart(iteration, scenario)
+            tracker.iterationStart(iteration, scenario, parameters)
         }
     }
 

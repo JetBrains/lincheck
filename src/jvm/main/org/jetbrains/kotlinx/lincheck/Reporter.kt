@@ -27,6 +27,11 @@ class Reporter(private val logLevel: LoggingLevel) {
         appendExecutionScenario(scenario)
     }
 
+    fun logIterationStatistics(invocations: Int, runningTimeNano: Long) = log(INFO) {
+        val runningTime = nanoTimeToString(runningTimeNano)
+        appendLine("= Statistics: #invocations=$invocations, running time ${runningTime}s =")
+    }
+
     fun logFailedIteration(failure: LincheckFailure) = log(INFO) {
         appendFailure(failure)
     }
@@ -630,3 +635,6 @@ private fun StringBuilder.appendException(t: Throwable) {
 }
 
 private const val EXCEPTIONS_TRACES_TITLE = "Exception stack traces:"
+
+internal fun nanoTimeToString(timeNano: Long, decimalPlaces: Int = 3) =
+    String.format("%.${decimalPlaces}f", timeNano.toDouble() / 1_000_000_000)

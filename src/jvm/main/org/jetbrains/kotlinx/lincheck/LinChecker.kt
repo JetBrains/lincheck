@@ -68,6 +68,7 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
             }
         }
         val scenarios = customScenarios + randomScenarios.take(iterations).toList()
+        val statisticsTracker = LincheckStatisticsTracker()
         scenarios.forEachIndexed { i, scenario ->
             val isCustomScenario = (i < customScenarios.size)
             // For performance reasons, verifier re-uses LTS from previous iterations.
@@ -79,13 +80,15 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
                 verifier = createVerifier()
             scenario.validate()
             reporter.logIteration(i + 1, scenarios.size, scenario)
-            var failure = scenario.run(i, this, verifier)
-                ?: return@forEachIndexed
+            var failure = scenario.run(i, this, verifier, statisticsTracker)
+            reporter.logIterationStatistics(i, statisticsTracker)
+            if (failure == null)
+                return@forEachIndexed
             if (minimizeFailedScenario && !isCustomScenario) {
                 var j = i + 1
                 reporter.logScenarioMinimization(scenario)
                 failure = failure.minimize { minimizedScenario ->
-                    minimizedScenario.run(j++, this, verifier)
+                    minimizedScenario.run(j++, this, verifier, statisticsTracker)
                 }
             }
             reporter.logFailedIteration(failure)
@@ -94,16 +97,30 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
         return null
     }
 
-    private fun ExecutionScenario.run(iteration: Int, testCfg: CTestConfiguration, verifier: Verifier): LincheckFailure? {
+    private fun ExecutionScenario.run(
+        iteration: Int,
+        testCfg: CTestConfiguration,
+        verifier: Verifier,
+        tracker: LincheckRunTracker? = null,
+    ): LincheckFailure? {
         val strategy = testCfg.createStrategy(
             testClass = testClass,
             scenario = this,
             validationFunction = testStructure.validationFunction,
             stateRepresentationMethod = testStructure.stateRepresentation,
         )
+        val parameters = IterationParameters(
+            invocationsBound = testCfg.invocationsPerIteration,
+            warmUpInvocationsCount = 0,
+        )
         return strategy.use {
-            it.runIteration(iteration, testCfg.invocationsPerIteration, verifier)
+            it.runIteration(iteration, parameters, verifier, tracker)
         }
+    }
+
+    private fun Reporter.logIterationStatistics(iteration: Int, statisticsTracker: LincheckStatisticsTracker) {
+        val statistics = statisticsTracker.iterationsStatistics[iteration]!!
+        logIterationStatistics(statistics.totalInvocationsCount, statistics.totalRunningTimeNano)
     }
 
     private fun CTestConfiguration.createVerifier() =

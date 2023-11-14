@@ -109,12 +109,12 @@ abstract class Strategy protected constructor(
 
 fun Strategy.runIteration(
     iteration: Int,
-    invocationsPerIteration: Int,
+    params: IterationParameters,
     verifier: Verifier,
     tracker: LincheckRunTracker? = null
-): LincheckFailure? = tracker.trackIteration(iteration, scenario) {
+): LincheckFailure? = tracker.trackIteration(iteration, scenario, params) {
     var spinning = false
-    for (invocation in 0 until invocationsPerIteration) {
+    for (invocation in 0 until params.invocationsBound) {
         if (!(spinning || nextInvocation()))
             return null
         spinning = false
