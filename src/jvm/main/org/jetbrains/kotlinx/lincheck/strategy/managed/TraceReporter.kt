@@ -16,7 +16,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.DeadlockWithDumpFailure
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
 import java.util.*
-import kotlin.collections.ArrayList
 import kotlin.math.*
 
 @Synchronized // we should avoid concurrent executions to keep `objectNumeration` consistent
@@ -85,7 +84,7 @@ private fun StringBuilder.appendTraceRepresentation(
 /**
  * Convert trace events to the final form of a matrix of strings.
  */
-private fun splitToColumns(nThreads: Int, traceRepresentation:  List<List<TraceEventRepresentation>>): List<TableSectionLayoutModel> {
+private fun splitToColumns(nThreads: Int, traceRepresentation:  List<List<TraceEventRepresentation>>): List<TableSectionColumnsRepresentation> {
     return traceRepresentation.map { sectionRepresentation ->
         val result = List(nThreads) { mutableListOf<String>() }
         for (event in sectionRepresentation) {
@@ -98,11 +97,14 @@ private fun splitToColumns(nThreads: Int, traceRepresentation:  List<List<TraceE
                 if (column.size != neededSize)
                     column.add("")
         }
-        TableSectionLayoutModel(result)
+        TableSectionColumnsRepresentation(result)
     }
 }
 
-data class TableSectionLayoutModel(
+/**
+ * Represents a column list representation of any table section (init, parallel, post, validation).
+ */
+class TableSectionColumnsRepresentation(
     /**
      * List of column representation.
      */
@@ -340,11 +342,10 @@ private class TraceLeafEvent(
 
     override val lastInternalEvent: TraceNode = this
 
-    private val TracePoint.isBlocking: Boolean
-        get() = when (this) {
-            is MonitorEnterTracePoint, is WaitTracePoint, is ParkTracePoint -> true
-            else -> false
-        }
+    private val TracePoint.isBlocking: Boolean get() = when (this) {
+        is MonitorEnterTracePoint, is WaitTracePoint, is ParkTracePoint -> true
+        else -> false
+    }
 
     override fun shouldBeExpanded(verboseTrace: Boolean): Boolean {
         return (lastExecutedEvent && event.isBlocking)

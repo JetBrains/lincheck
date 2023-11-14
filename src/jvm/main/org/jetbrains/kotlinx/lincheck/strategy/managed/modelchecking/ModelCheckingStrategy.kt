@@ -96,6 +96,7 @@ internal class ModelCheckingStrategy(
     }
 
     override fun beforePart(part: ExecutionPart) {
+        super.beforePart(part)
         val nextThread = when (part) {
             ExecutionPart.INIT -> 0
             ExecutionPart.PARALLEL -> currentInterleaving.chooseThread(0)
@@ -103,7 +104,6 @@ internal class ModelCheckingStrategy(
             ExecutionPart.VALIDATION -> 0
         }
         loopDetector.beforePart(nextThread)
-        traceCollector?.passCodeLocation(SectionDelimiterTracePoint(part))
         currentThread = nextThread
     }
 

@@ -83,7 +83,7 @@ internal open class ParallelThreadsRunner(
         testThreadExecutions = listOfNotNull(
             initialPartExecution,
             *parallelPartExecutions,
-            postPartExecution,
+            postPartExecution
         )
         reset()
     }
@@ -154,8 +154,8 @@ internal open class ParallelThreadsRunner(
         // reset stored continuations
         executor.threads.forEach { it.cont = null }
         // reset thread executions
-        testThreadExecutions.forEach { it.reset(runWithoutClocks = false) }
-        validationPartExecution?.reset(runWithoutClocks = true)
+        testThreadExecutions.forEach { it.reset() }
+        validationPartExecution?.results?.fill(null)
     }
 
     private fun createTestInstance() {
@@ -365,12 +365,10 @@ internal open class ParallelThreadsRunner(
         clocks = Array(nActors) { emptyClockArray(nThreads) }
     }
 
-    private fun TestThreadExecution.reset(runWithoutClocks: Boolean) {
+    private fun TestThreadExecution.reset() {
         val runner = this@ParallelThreadsRunner
         results.fill(null)
-        useClocks = if (runWithoutClocks) false else {
-            if (runner.useClocks == ALWAYS) true else Random.nextBoolean()
-        }
+        useClocks = if (runner.useClocks == ALWAYS) true else Random.nextBoolean()
         clocks.forEach { it.fill(0) }
         curClock = 0
     }

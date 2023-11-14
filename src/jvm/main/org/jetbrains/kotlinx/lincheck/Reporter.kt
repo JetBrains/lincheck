@@ -211,21 +211,23 @@ internal fun ExecutionLayout(
     initPart: List<String>,
     parallelPart: List<List<String>>,
     postPart: List<String>,
-    validationPart: List<String>?
+    validationPart: List<String>
 ): TableLayout {
     val size = parallelPart.size
     val threadHeaders = (0 until size).map { "Thread ${it + 1}" }
-    val columnsWidth = parallelPart.mapIndexed { columnWidth, actors ->
-        var maxColWidth = 0
-        actors.forEach { maxColWidth = max(maxColWidth, it.length) }
-        if (columnWidth == 0) {
-            initPart.forEach { maxColWidth = max(maxColWidth, it.length)  }
-            postPart.forEach { maxColWidth = max(maxColWidth, it.length)  }
-            validationPart?.forEach { maxColWidth = max(maxColWidth, it.length)  }
-        }
-        maxColWidth
+    val firstThreadNonParallelParts = initPart + postPart + validationPart
+    val columnsContent = parallelPart.map { it.toMutableList() }.toMutableList()
+
+    if (columnsContent.isNotEmpty()) {
+        // we don't care about the order as we just want to find the longest string
+        columnsContent.first() += firstThreadNonParallelParts
+    } else {
+        // if the parallel part is empty, we need to add the first column
+        columnsContent + firstThreadNonParallelParts.toMutableList()
     }
-    return TableLayout(threadHeaders, columnsWidth)
+    val columnWidths = columnsContent.map { column -> column.maxOfOrNull { it.length } ?: 0 }
+
+    return TableLayout(threadHeaders, columnWidths)
 }
 
 /**
@@ -257,7 +259,7 @@ internal fun StringBuilder.appendExecutionScenario(
     val initPart = scenario.initExecution.map(Actor::toString)
     val postPart = scenario.postExecution.map(Actor::toString)
     val parallelPart = scenario.parallelExecution.map { it.map(Actor::toString) }
-    val validationPart = if (showValidationFunctions) scenario.validationFunctions?.map { "${it.method.name}()" } else null
+    val validationPart = if (showValidationFunctions) scenario.validationFunctions?.map { "${it.method.name}()" } ?: emptyList() else emptyList()
     with(ExecutionLayout(initPart, parallelPart, postPart, validationPart)) {
         appendSeparatorLine()
         appendHeader()
@@ -272,7 +274,7 @@ internal fun StringBuilder.appendExecutionScenario(
             appendColumn(0, postPart)
             appendSeparatorLine()
         }
-        if (validationPart != null) {
+        if (validationPart.isNotEmpty()) {
             appendToFirstColumn(validationPart)
             appendSeparatorLine()
         }
@@ -342,7 +344,7 @@ internal fun StringBuilder.appendExecutionScenarioWithResults(
             ActorWithResult(actor, resultWithClock.result, exceptionStackTraces, clock = resultWithClock.clockOnStart).toString()
         }
     }
-    with(ExecutionLayout(initPart, parallelPart, postPart, validationPart = null)) {
+    with(ExecutionLayout(initPart, parallelPart, postPart, validationPart = emptyList())) {
         appendSeparatorLine()
         appendHeader()
         appendSeparatorLine()
