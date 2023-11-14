@@ -22,9 +22,7 @@ class StressStrategy(
     scenario: ExecutionScenario,
     validationFunction: Actor?,
     stateRepresentationFunction: Method?,
-    private val verifier: Verifier
 ) : Strategy(scenario) {
-    private val invocations = testCfg.invocationsPerIteration
     private val runner: Runner
 
     init {
@@ -44,19 +42,11 @@ class StressStrategy(
         }
     }
 
-    override fun run(): LincheckFailure? {
-        runner.use {
-            // Run invocations
-            for (invocation in 0 until invocations) {
-                when (val ir = runner.run()) {
-                    is CompletedInvocationResult -> {
-                        if (!verifier.verifyResults(scenario, ir.results))
-                            return IncorrectResultsFailure(scenario, ir.results)
-                    }
-                    else -> return ir.toLincheckFailure(scenario)
-                }
-            }
-            return null
-        }
+    override fun runInvocation(): InvocationResult {
+        return runner.run()
+    }
+
+    override fun close() {
+        runner.close()
     }
 }

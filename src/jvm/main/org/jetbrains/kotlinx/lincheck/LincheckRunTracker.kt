@@ -1,0 +1,198 @@
+/*
+ * Lincheck
+ *
+ * Copyright (C) 2019 - 2023 JetBrains s.r.o.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Lesser Public License for more details.
+ *
+ * You should have received a copy of the GNU General Lesser Public
+ * License along with this program.  If not, see
+ * <http://www.gnu.org/licenses/lgpl-3.0.html>
+ */
+
+package org.jetbrains.kotlinx.lincheck
+
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
+
+/**
+ * The LincheckRunTracker interface defines methods for tracking the progress and results of a Lincheck test run.
+ */
+interface LincheckRunTracker {
+
+    /**
+     * This method is called before the start of each iteration of the Lincheck test.
+     *
+     * @param iteration The iteration id.
+     * @param scenario The execution scenario to be run.
+     */
+    fun iterationStart(iteration: Int, scenario: ExecutionScenario) {}
+
+    /**
+     * This method is called at the end of each iteration of the Lincheck test.
+     *
+     * @param iteration The iteration id.
+     * @param failure The failure that occurred during the iteration or null if no failure occurred.
+     * @param exception The exception that occurred during the iteration or null if no exception occurred.
+     */
+    fun iterationEnd(iteration: Int, failure: LincheckFailure? = null, exception: Throwable? = null) {}
+
+    /**
+     * This method is called before the start of each invocation of the specific iteration.
+     *
+     * @param iteration The iteration id.
+     * @param invocation The invocation number.
+     */
+    fun invocationStart(iteration: Int, invocation: Int) {}
+
+    /**
+     * This method is called at the end of each invocation of the specific iteration.
+     *
+     * @param iteration The iteration id.
+     * @param invocation The invocation number.
+     * @param failure the failure that occurred during the invocation or null if no failure occurred.
+     * @param exception the exception that occurred during the invocation or null if no exception occurred.
+     */
+    fun invocationEnd(iteration: Int, invocation: Int, failure: LincheckFailure? = null, exception: Throwable? = null) {}
+
+    /**
+     * For a composite trackers, encompassing several internal sub-trackers,
+     * this method should return a list of internal sub-trackers in the order
+     * they are called by the parent tracker.
+     *
+     * @return a list of internal trackers.
+     */
+    fun internalTrackers(): List<LincheckRunTracker> = listOf()
+
+}
+
+/**
+ * Tracks the execution of a given Lincheck test iteration.
+ *
+ * @param iteration The iteration id.
+ * @param scenario The execution scenario for the iteration.
+ * @param block The code to be executed for the iteration.
+ *
+ * @return The failure, if any, that occurred during the execution of the iteration.
+ */
+inline fun LincheckRunTracker?.trackIteration(
+    iteration: Int,
+    scenario: ExecutionScenario,
+    block: () -> LincheckFailure?
+): LincheckFailure? {
+    var failure: LincheckFailure? = null
+    var exception: Throwable? = null
+    this?.iterationStart(iteration, scenario)
+    try {
+        return block().also {
+            failure = it
+        }
+    } catch (throwable: Throwable) {
+        exception = throwable
+        throw throwable
+    } finally {
+        this?.iterationEnd(iteration, failure, exception)
+    }
+}
+
+
+/**
+ * Tracks the invocation of the specific Lincheck test iteration.
+ *
+ * @param iteration The iteration id.
+ * @param invocation The current invocation within the iteration.
+ * @param block The block of code to be executed.
+ *
+ * @return The failure, if any, that occurred during the execution of the invocation.
+ */
+inline fun LincheckRunTracker?.trackInvocation(
+    iteration: Int,
+    invocation: Int,
+    block: () -> LincheckFailure?
+): LincheckFailure? {
+    var failure: LincheckFailure? = null
+    var exception: Throwable? = null
+    this?.invocationStart(iteration, invocation)
+    try {
+        return block().also {
+            failure = it
+        }
+    } catch (throwable: Throwable) {
+        exception = throwable
+        throw throwable
+    } finally {
+        this?.invocationEnd(iteration, invocation, failure, exception)
+    }
+}
+
+
+/**
+ * Chains multiple Lincheck run trackers into a single tracker.
+ * The chained tracker delegates method calls to each tracker in the chain.
+ *
+ * @return The chained LincheckRunTracker, or null if the original list is empty.
+ */
+fun List<LincheckRunTracker>.chainTrackers(): LincheckRunTracker? =
+    if (this.isEmpty()) null else ChainRunTracker(this)
+
+internal class ChainRunTracker(val trackers: List<LincheckRunTracker>) : LincheckRunTracker {
+
+    override fun iterationStart(iteration: Int, scenario: ExecutionScenario) {
+        for (tracker in trackers) {
+            tracker.iterationStart(iteration, scenario)
+        }
+    }
+
+    override fun iterationEnd(iteration: Int, failure: LincheckFailure?, exception: Throwable?) {
+        for (tracker in trackers) {
+            tracker.iterationEnd(iteration, failure, exception)
+        }
+    }
+
+    override fun invocationStart(iteration: Int, invocation: Int) {
+        for (tracker in trackers) {
+            tracker.invocationStart(iteration, invocation)
+        }
+    }
+
+    override fun invocationEnd(iteration: Int, invocation: Int, failure: LincheckFailure?, exception: Throwable?) {
+        for (tracker in trackers) {
+            tracker.invocationEnd(iteration, invocation, failure, exception)
+        }
+    }
+
+    override fun internalTrackers(): List<LincheckRunTracker> {
+        return trackers
+    }
+}
+
+
+/**
+ * Searches for a first LincheckRunTracker of the specified type
+ * among the internal sub-trackers of a given tracker.
+ *
+ * @param T The type of LincheckRunTracker to search for.
+ *
+ * @return The LincheckRunTracker of the specified type if found, otherwise null.
+ */
+inline fun<reified T : LincheckRunTracker> LincheckRunTracker.findTracker(): T? {
+    if (this is T)
+        return this
+    val trackers = ArrayDeque<LincheckRunTracker>()
+    trackers.addAll(internalTrackers())
+    while (trackers.isNotEmpty()) {
+        val tracker = trackers.removeFirst()
+        if (tracker is T)
+            return tracker
+        trackers.addAll(tracker.internalTrackers())
+    }
+    return null
+}

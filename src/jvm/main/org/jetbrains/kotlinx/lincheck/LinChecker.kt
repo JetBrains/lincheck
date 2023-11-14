@@ -13,6 +13,8 @@ import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration
 import kotlin.reflect.*
 
 /**
@@ -77,10 +79,14 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
                 verifier = createVerifier()
             scenario.validate()
             reporter.logIteration(i + 1, scenarios.size, scenario)
-            var failure = scenario.run(this, verifier)
+            var failure = scenario.run(i, this, verifier)
                 ?: return@forEachIndexed
             if (minimizeFailedScenario && !isCustomScenario) {
-                failure = failure.minimize(this)
+                var j = i + 1
+                reporter.logScenarioMinimization(scenario)
+                failure = failure.minimize { minimizedScenario ->
+                    minimizedScenario.run(j++, this, verifier)
+                }
             }
             reporter.logFailedIteration(failure)
             return failure
@@ -88,41 +94,17 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
         return null
     }
 
-    // Tries to minimize the specified failing scenario to make the error easier to understand.
-    // The algorithm is greedy: it tries to remove one actor from the scenario and checks
-    // whether a test with the modified one fails with error as well. If it fails,
-    // then the scenario has been successfully minimized, and the algorithm tries to minimize it again, recursively.
-    // Otherwise, if no actor can be removed so that the generated test fails, the minimization is completed.
-    // Thus, the algorithm works in the linear time of the total number of actors.
-    private fun LincheckFailure.minimize(testCfg: CTestConfiguration): LincheckFailure {
-        reporter.logScenarioMinimization(scenario)
-        var minimizedFailure = this
-        while (true) {
-            minimizedFailure = minimizedFailure.scenario.tryMinimize(testCfg) ?: break
-        }
-        return minimizedFailure
-    }
-
-    private fun ExecutionScenario.tryMinimize(testCfg: CTestConfiguration): LincheckFailure? {
-        // Reversed indices to avoid conflicts with in-loop removals
-        for (i in threads.indices.reversed()) {
-            for (j in threads[i].indices.reversed()) {
-                tryMinimize(i, j)
-                    ?.run(testCfg, testCfg.createVerifier())
-                    ?.let { return it }
-            }
-        }
-        return null
-    }
-
-    private fun ExecutionScenario.run(testCfg: CTestConfiguration, verifier: Verifier): LincheckFailure? =
-        testCfg.createStrategy(
+    private fun ExecutionScenario.run(iteration: Int, testCfg: CTestConfiguration, verifier: Verifier): LincheckFailure? {
+        val strategy = testCfg.createStrategy(
             testClass = testClass,
             scenario = this,
             validationFunction = testStructure.validationFunction,
             stateRepresentationMethod = testStructure.stateRepresentation,
-            verifier = verifier
-        ).run()
+        )
+        return strategy.use {
+            it.runIteration(iteration, testCfg.invocationsPerIteration, verifier)
+        }
+    }
 
     private fun CTestConfiguration.createVerifier() =
         verifierClass.getConstructor(Class::class.java).newInstance(sequentialSpecification)
@@ -133,6 +115,12 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
             CTestStructure::class.java,
             RandomProvider::class.java
         ).newInstance(this, testStructure, randomProvider)
+
+    private val CTestConfiguration.invocationsPerIteration get() = when (this) {
+        is ModelCheckingCTestConfiguration -> this.invocationsPerIteration
+        is StressCTestConfiguration -> this.invocationsPerIteration
+        else -> error("unexpected")
+    }
 
     // This companion object is used for backwards compatibility.
     companion object {
@@ -150,6 +138,33 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
 
         private const val VERIFIER_REFRESH_CYCLE = 100
     }
+}
+
+// Tries to minimize the specified failing scenario to make the error easier to understand.
+// The algorithm is greedy: it tries to remove one actor from the scenario and checks
+// whether a test with the modified one fails with error as well. If it fails,
+// then the scenario has been successfully minimized, and the algorithm tries to minimize it again, recursively.
+// Otherwise, if no actor can be removed so that the generated test fails, the minimization is completed.
+// Thus, the algorithm works in the linear time of the total number of actors.
+private fun LincheckFailure.minimize(checkScenario: (ExecutionScenario) -> LincheckFailure?): LincheckFailure {
+    var minimizedFailure = this
+    while (true) {
+        minimizedFailure = minimizedFailure.scenario.tryMinimize(checkScenario)
+            ?: break
+    }
+    return minimizedFailure
+}
+
+private fun ExecutionScenario.tryMinimize(checkScenario: (ExecutionScenario) -> LincheckFailure?): LincheckFailure? {
+    // Reversed indices to avoid conflicts with in-loop removals
+    for (i in threads.indices.reversed()) {
+        for (j in threads[i].indices.reversed()) {
+            tryMinimize(i, j)
+                ?.run(checkScenario)
+                ?.let { return it }
+        }
+    }
+    return null
 }
 
 

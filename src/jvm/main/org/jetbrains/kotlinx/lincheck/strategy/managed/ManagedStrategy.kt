@@ -34,11 +34,10 @@ import kotlin.collections.set
 abstract class ManagedStrategy(
     private val testClass: Class<*>,
     scenario: ExecutionScenario,
-    private val verifier: Verifier,
     private val validationFunction: Actor?,
     private val stateRepresentationFunction: Method?,
     private val testCfg: ManagedCTestConfiguration
-) : Strategy(scenario), Closeable {
+) : Strategy(scenario) {
     // The number of parallel threads.
     protected val nThreads: Int = scenario.nThreads
     // Runner for scenario invocations,
@@ -127,14 +126,7 @@ abstract class ManagedStrategy(
     fun useBytecodeCache(): Boolean =
         !collectTrace && testCfg.eliminateLocalObjects && (testCfg.guarantees == ManagedCTestConfiguration.DEFAULT_GUARANTEES)
 
-    override fun run(): LincheckFailure? = runImpl().also { close() }
-
     // == STRATEGY INTERFACE METHODS ==
-
-    /**
-     * This method implements the strategy logic.
-     */
-    protected abstract fun runImpl(): LincheckFailure?
 
     /**
      * This method is invoked before every thread context switch.
@@ -156,9 +148,10 @@ abstract class ManagedStrategy(
     protected abstract fun chooseThread(iThread: Int): Int
 
     /**
-     * Returns all data to the initial state.
+     * Resets all internal data to the initial state and initializes current invocation to be run.
      */
-    protected open fun initializeInvocation() {
+    override fun initializeInvocation() {
+        super.initializeInvocation()
         finished.fill(false)
         isSuspended.fill(false)
         currentActorId.fill(-1)
@@ -171,34 +164,31 @@ abstract class ManagedStrategy(
         ManagedStrategyStateHolder.setState(runner.classLoader, this, testClass)
     }
 
-    override fun beforePart(part: ExecutionPart) {
-        traceCollector?.passCodeLocation(SectionDelimiterTracePoint(part))
+    /**
+     * Runs the current invocation.
+     */
+    override fun runInvocation(): InvocationResult {
+        val result = runner.run()
+        // Has strategy already determined the invocation result?
+        suddenInvocationResult?.let { return it  }
+        return result
     }
 
     // == BASIC STRATEGY METHODS ==
 
-    /**
-     * Checks whether the [result] is a failing one or is [CompletedInvocationResult]
-     * but the verification fails, and return the corresponding failure.
-     * Returns `null` if the result is correct.
-     */
-    protected fun checkResult(result: InvocationResult): LincheckFailure? = when (result) {
-        is CompletedInvocationResult -> {
-            if (verifier.verifyResults(scenario, result.results)) null
-            else IncorrectResultsFailure(scenario, result.results, collectTrace(result))
-        }
-        else -> result.toLincheckFailure(scenario, collectTrace(result))
+    override fun beforePart(part: ExecutionPart) {
+        traceCollector?.passCodeLocation(SectionDelimiterTracePoint(part))
     }
 
     /**
      * Re-runs the last invocation to collect its trace.
      */
-    private fun collectTrace(failingResult: InvocationResult): Trace? {
+    override fun tryCollectTrace(result: InvocationResult): Trace? {
         val detectedByStrategy = suddenInvocationResult != null
         val canCollectTrace = when {
             detectedByStrategy -> true // ObstructionFreedomViolationInvocationResult or UnexpectedExceptionInvocationResult
-            failingResult is CompletedInvocationResult -> true
-            failingResult is ValidationFailureInvocationResult -> true
+            result is CompletedInvocationResult -> true
+            result is ValidationFailureInvocationResult -> true
             else -> false
         }
 
@@ -215,35 +205,25 @@ abstract class ManagedStrategy(
         runner = createRunner()
         ManagedStrategyStateHolder.setState(runner.classLoader, this, testClass)
         runner.initialize()
+        initializeInvocation()
 
         loopDetector.enableReplayMode(
-            failDueToDeadlockInTheEnd = failingResult is DeadlockInvocationResult || failingResult is ObstructionFreedomViolationInvocationResult
+            failDueToDeadlockInTheEnd = result is DeadlockInvocationResult || result is ObstructionFreedomViolationInvocationResult
         )
 
         val loggedResults = runInvocation()
-        val sameResultTypes = loggedResults.javaClass == failingResult.javaClass
-        val sameResults = loggedResults !is CompletedInvocationResult || failingResult !is CompletedInvocationResult || loggedResults.results == failingResult.results
+        val sameResultTypes = loggedResults.javaClass == result.javaClass
+        val sameResults = loggedResults !is CompletedInvocationResult || result !is CompletedInvocationResult || loggedResults.results == result.results
         check(sameResultTypes && sameResults) {
             StringBuilder().apply {
                 appendln("Non-determinism found. Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc).")
                 appendln("== Reporting the first execution without execution trace ==")
-                appendln(failingResult.toLincheckFailure(scenario, null))
+                appendln(result.toLincheckFailure(scenario, null))
                 appendln("== Reporting the second execution ==")
                 appendln(loggedResults.toLincheckFailure(scenario, Trace(traceCollector!!.trace)).toString())
             }.toString()
         }
         return Trace(traceCollector!!.trace)
-    }
-
-    /**
-     * Runs the next invocation with the same [scenario][ExecutionScenario].
-     */
-    protected fun runInvocation(): InvocationResult {
-        initializeInvocation()
-        val result = runner.run()
-        // Has strategy already determined the invocation result?
-        suddenInvocationResult?.let { return it  }
-        return result
     }
 
     private fun failIfObstructionFreedomIsRequired(lazyMessage: () -> String) {
