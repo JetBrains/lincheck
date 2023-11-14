@@ -998,7 +998,7 @@ class EventStructure(
     fun addCoroutineSuspendRequestEvent(iThread: Int, iActor: Int): AtomicThreadEvent {
         val label = CoroutineSuspendLabel(LabelKind.Request, iThread, iActor)
         return addRequestEvent(iThread, label).also { event ->
-            if (event !in danglingEvents)
+            if (isBlockedDanglingRequest(event) && event !in danglingEvents)
                 markBlockedDanglingRequest(event)
         }
     }
@@ -1011,6 +1011,32 @@ class EventStructure(
         val (response, events) = addResponseEvents(request)
         check(events.size == 1)
         return response!!
+    }
+
+    fun addCoroutineCancelResponseEvent(iThread: Int, iActor: Int): AtomicThreadEvent? {
+        val request = getBlockedRequest(iThread).ensure { event ->
+            (event != null) && event.label is CoroutineSuspendLabel
+                    && ((event.label as CoroutineSuspendLabel).actorId == iActor)
+        }!!
+        // in the non-replay phase, we add the cancellation event to the event structure,
+        // but not to the current execution, so it will be explored later at the next invocation
+        if (!inReplayPhase(iThread)) {
+            check(!inReplayPhase())
+            val label = (request.label as CoroutineSuspendLabel).getResponse(root.label)!!
+            addEvent(iThread, label, parent = request, dependencies = listOf(root))!!
+            return null
+        }
+        // if we are at replay phase, wait until we can replay the next event
+        while (!canReplayNextEvent(iThread))
+            internalThreadSwitchCallback(iThread, SwitchReason.STRATEGY_SWITCH)
+        // obtain the response event
+        val (response, events) = addResponseEvents(request)
+        check(events.size == 1)
+        check(response != null)
+        check(response.label.isResponse)
+        check(response.label is CoroutineSuspendLabel)
+        // check if the response is successful cancellation
+        return response.takeIf { (it.label as CoroutineSuspendLabel).cancelled }
     }
 
     fun addCoroutineResumeEvent(iThread: Int, iResumedThread: Int, iResumedActor: Int): AtomicThreadEvent {

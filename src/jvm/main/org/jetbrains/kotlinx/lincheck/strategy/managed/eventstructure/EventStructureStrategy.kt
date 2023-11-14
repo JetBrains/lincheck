@@ -52,6 +52,10 @@ class EventStructureStrategy(
             switchCurrentThread(iThread, reason, mustSwitch = true)
         }
 
+    private enum class SuspensionStatus { AwaitingDecision, Suspended, Cancelled }
+
+    private val suspensionStatus = Array<SuspensionStatus?>(nThreads) { null }
+
     // Tracker of shared memory accesses.
     override val memoryTracker: MemoryTracker =
         EventStructureMemoryTracker(eventStructure)
@@ -86,14 +90,14 @@ class EventStructureStrategy(
 
     // TODO: rename & refactor!
     fun runNextExploration(): Pair<InvocationResult?, Inconsistency?>? {
-        // check that we have next invocation to explore
+        // check that we have the next invocation to explore
         if (!eventStructure.startNextExploration())
             return null
         var result: InvocationResult? = null
         var inconsistency: Inconsistency? = eventStructure.detectedInconsistency
         if (inconsistency == null) {
             result = runInvocation()
-            // if invocation was aborted we also abort the current execution inside event structure
+            // if invocation was aborted, we also abort the current execution inside event structure
             if (result.isAbortedInvocation()) {
                 eventStructure.abortExploration()
             }
@@ -265,6 +269,7 @@ class EventStructureStrategy(
     override fun initializeInvocation() {
         super.initializeInvocation()
         thread_steps = 0
+        suspensionStatus.fill(null)
         eventStructure.initializeExploration()
         eventStructure.addThreadStartEvent(eventStructure.mainThreadId)
     }
@@ -314,21 +319,56 @@ class EventStructureStrategy(
         throw ForcibleExecutionFinishException
     }
 
-    override fun afterCoroutineSuspended(iThread: Int) {
+    override fun beforeCoroutineSuspensionPoint(iThread: Int) {
+        super.beforeCoroutineSuspensionPoint(iThread)
+        if (eventStructure.inReplayPhase()) {
+            suspensionStatus[iThread] = SuspensionStatus.AwaitingDecision
+        }
         eventStructure.addCoroutineSuspendRequestEvent(iThread, currentActorId[iThread])
+        // suspensionStatus[iThread] = SuspensionStatus.Suspended
+    }
+
+    override fun afterCoroutineSuspended(iThread: Int) {
+        suspensionStatus[iThread] = SuspensionStatus.Suspended
         super.afterCoroutineSuspended(iThread)
     }
 
     override fun afterCoroutineResumed(iThread: Int) {
-        eventStructure.addCoroutineSuspendResponseEvent(iThread, currentActorId[iThread])
         super.afterCoroutineResumed(iThread)
+        suspensionStatus[iThread] = null
+        eventStructure.addCoroutineSuspendResponseEvent(iThread, currentActorId[iThread])
+    }
+
+    override fun beforeCoroutineCancel(iThread: Int): Boolean {
+        if (!super.beforeCoroutineCancel(iThread))
+            return false
+        val event = eventStructure.addCoroutineCancelResponseEvent(iThread, currentActorId[iThread])
+        if (event != null) {
+            suspensionStatus[iThread] = SuspensionStatus.AwaitingDecision
+            return true
+        }
+        return false
+    }
+
+    override fun afterCoroutineCancelled(iThread: Int, cancellationResult: CancellationResult) {
+        super.afterCoroutineCancelled(iThread, cancellationResult)
+        // TODO: what should we do if cancellation failed?
+        if (cancellationResult == CancellationResult.CANCELLATION_FAILED) {
+
+        }
+        // check(cancellationResult != CancellationResult.CANCELLATION_FAILED)
+        if (cancellationResult != CancellationResult.CANCELLATION_FAILED)
+            suspensionStatus[iThread] = SuspensionStatus.Cancelled
     }
 
     override fun onResumeCoroutine(iThread: Int, iResumedThread: Int, iResumedActor: Int) {
-        if (iThread != iResumedThread && isSuspended[iResumedThread]) {
+        super.onResumeCoroutine(iThread, iResumedThread, iResumedActor)
+        while (suspensionStatus[iResumedThread] == SuspensionStatus.AwaitingDecision) {
+            switchCurrentThread(iThread, SwitchReason.STRATEGY_SWITCH, mustSwitch = true)
+        }
+        if (iThread != iResumedThread && suspensionStatus[iResumedThread] == SuspensionStatus.Suspended) {
             eventStructure.addCoroutineResumeEvent(iThread, iResumedThread, iResumedActor)
         }
-        super.onResumeCoroutine(iThread, iResumedThread, iResumedActor)
     }
 
     override fun isCoroutineResumed(iThread: Int, iActor: Int): Boolean {

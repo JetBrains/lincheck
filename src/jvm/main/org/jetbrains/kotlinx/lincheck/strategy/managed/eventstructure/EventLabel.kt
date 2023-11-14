@@ -1213,7 +1213,8 @@ sealed class CoroutineLabel(
             LabelKind.Response -> "^rsp"
             LabelKind.Receive -> ""
         }
-        return "${operationKind}${kindString}($threadId, $actorId)"
+        val cancelled = if (this is CoroutineSuspendLabel && cancelled) "cancelled" else null
+        return "${operationKind}${kindString}(${listOfNotNull(threadId, actorId, cancelled).joinToString()})"
     }
 
 }
@@ -1222,6 +1223,7 @@ data class CoroutineSuspendLabel(
     override val kind: LabelKind,
     override val threadId: Int,
     override val actorId: Int,
+    val cancelled: Boolean = false,
     // TODO: should we also keep resume value and cancellation flag?
 ) : CoroutineLabel(
     kind = kind,
@@ -1232,6 +1234,7 @@ data class CoroutineSuspendLabel(
 ) {
     init {
         require(isRequest || isResponse || isReceive)
+        require(cancelled implies isResponse)
     }
 
     override fun isValidResponse(label: EventLabel): Boolean {
@@ -1254,6 +1257,15 @@ data class CoroutineSuspendLabel(
                     threadId = threadId,
                     actorId = actorId,
                 )
+
+        isRequest && label is InitializationLabel ->
+            CoroutineSuspendLabel(
+                kind = LabelKind.Response,
+                threadId = threadId,
+                actorId = actorId,
+                cancelled = true,
+            )
+
         else -> null
     }
 
