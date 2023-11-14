@@ -10,7 +10,6 @@
 package org.jetbrains.kotlinx.lincheck.execution
 
 import org.jetbrains.kotlinx.lincheck.*
-import java.lang.reflect.Method
 
 /**
  * This class represents an execution scenario.
@@ -45,10 +44,10 @@ class ExecutionScenario(
      */
     val postExecution: List<Actor>,
     /**
-     * Validation functions that will be called after scenario execution.
-     * Is `var` as in case of custom scenario validation functions are found only after test class scan.
+     * Validation function that will be called after scenario execution.
+     * Is `var` as in case of custom scenario validation function is found only after test class scan.
      */
-    var validationFunctions: List<Actor>?
+    var validationFunction: Actor?
 ) {
 
     /**
@@ -134,7 +133,7 @@ fun ExecutionScenario.copy() = ExecutionScenario(
     ArrayList(initExecution),
     parallelExecution.map { ArrayList(it) },
     ArrayList(postExecution),
-    validationFunctions
+    validationFunction
 )
 
 /**
@@ -165,7 +164,7 @@ fun ExecutionScenario.tryMinimize(threadId: Int, actorId: Int): ExecutionScenari
             }
         }
         .filter { it.isNotEmpty() }
-        .splitIntoParts(initPartSize, postPartSize, validationFunctions)
+        .splitIntoParts(initPartSize, postPartSize, validationFunction)
         .takeIf { it.isValid }
 }
 
@@ -178,10 +177,10 @@ fun ExecutionScenario.tryMinimize(threadId: Int, actorId: Int): ExecutionScenari
  * @param postPartSize the size of the post part of the execution.
  * @return execution scenario with separate init, post, and parallel parts.
  */
-private fun List<List<Actor>>.splitIntoParts(initPartSize: Int, postPartSize: Int, validationFunctions: List<Actor>?): ExecutionScenario {
+private fun List<List<Actor>>.splitIntoParts(initPartSize: Int, postPartSize: Int, validationFunction: Actor?): ExecutionScenario {
     // empty scenario case
     if (isEmpty())
-        return ExecutionScenario(listOf(), listOf(), listOf(), validationFunctions)
+        return ExecutionScenario(listOf(), listOf(), listOf(), validationFunction)
     // get potential init and post parts
     val firstThreadSize = get(0).size
     val initExecution = get(0).subList(0, initPartSize)
@@ -199,9 +198,9 @@ private fun List<List<Actor>>.splitIntoParts(initPartSize: Int, postPartSize: In
     // single-thread scenario is not split into init/post parts
     if (parallelExecution.size == 1) {
         val threadExecution = initExecution + parallelExecution[0] + postExecution
-        return ExecutionScenario(listOf(), listOf(threadExecution), listOf(), validationFunctions)
+        return ExecutionScenario(listOf(), listOf(threadExecution), listOf(), validationFunction)
     }
-    return ExecutionScenario(initExecution, parallelExecution, postExecution, validationFunctions)
+    return ExecutionScenario(initExecution, parallelExecution, postExecution, validationFunction)
 }
 
 const val INIT_THREAD_ID = 0

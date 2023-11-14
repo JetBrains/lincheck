@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck;
 
+import org.jetbrains.annotations.Nullable;
 import org.jetbrains.kotlinx.lincheck.annotations.*;
 import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.paramgen.*;
@@ -30,17 +31,18 @@ public class CTestStructure {
     public final List<ActorGenerator> actorGenerators;
     public final List<ParameterGenerator<?>> parameterGenerators;
     public final List<OperationGroup> operationGroups;
-    public final List<Actor> validationFunctions;
+    @Nullable
+    public final Actor validationFunction;
     public final Method stateRepresentation;
 
     public final RandomProvider randomProvider;
 
     private CTestStructure(List<ActorGenerator> actorGenerators, List<ParameterGenerator<?>> parameterGenerators, List<OperationGroup> operationGroups,
-                           List<Actor> validationFunctions, Method stateRepresentation, RandomProvider randomProvider) {
+                           @Nullable Actor validationFunction, Method stateRepresentation, RandomProvider randomProvider) {
         this.actorGenerators = actorGenerators;
         this.parameterGenerators = parameterGenerators;
         this.operationGroups = operationGroups;
-        this.validationFunctions = validationFunctions;
+        this.validationFunction = validationFunction;
         this.stateRepresentation = stateRepresentation;
         this.randomProvider = randomProvider;
     }
@@ -49,39 +51,21 @@ public class CTestStructure {
      * Constructs {@link CTestStructure} for the specified test class.
      */
     public static CTestStructure getFromTestClass(Class<?> testClass) {
-        Map<String, OperationGroup> groupConfigs = new HashMap<>();
-        List<ActorGenerator> actorGenerators = new ArrayList<>();
-        List<Actor> validationFunctions = new ArrayList<>();
-        List<Method> stateRepresentations = new ArrayList<>();
         Class<?> clazz = testClass;
         RandomProvider randomProvider = new RandomProvider();
-        Map<Class<?>, ParameterGenerator<?>> parameterGeneratorsMap = new HashMap<>();
+        CTestStructureBuilder testStructureBuilder = new CTestStructureBuilder();
 
         while (clazz != null) {
-            readTestStructureFromClass(clazz, groupConfigs, actorGenerators, parameterGeneratorsMap, validationFunctions, stateRepresentations, randomProvider);
+            readTestStructureFromClass(clazz, testStructureBuilder, randomProvider);
             clazz = clazz.getSuperclass();
         }
-        if (stateRepresentations.size() > 1) {
-            throw new IllegalStateException("Several functions marked with " + StateRepresentation.class.getSimpleName() +
-                " were found, while at most one should be specified: " +
-                stateRepresentations.stream().map(Method::getName).collect(Collectors.joining(", ")));
-        }
-        Method stateRepresentation = null;
-        if (!stateRepresentations.isEmpty())
-            stateRepresentation = stateRepresentations.get(0);
-        // Create StressCTest class configuration
-        List<ParameterGenerator<?>> parameterGenerators = new ArrayList<>(parameterGeneratorsMap.values());
 
-        return new CTestStructure(actorGenerators, parameterGenerators, new ArrayList<>(groupConfigs.values()), validationFunctions, stateRepresentation, randomProvider);
+        return testStructureBuilder.build(randomProvider);
     }
 
     private static void readTestStructureFromClass(
             Class<?> clazz,
-           Map<String, OperationGroup> groupConfigs,
-           List<ActorGenerator> actorGenerators,
-           Map<Class<?>, ParameterGenerator<?>> parameterGeneratorsMap,
-           List<Actor> validationFunctions,
-           List<Method> stateRepresentations,
+           CTestStructureBuilder testStructureBuilder,
            RandomProvider randomProvider
     ) {
         // Read named parameter generators (declared for class)
@@ -90,7 +74,7 @@ public class CTestStructure {
         Map<Class<?>, ParameterGenerator<?>> defaultGens = createDefaultGenerators(randomProvider);
         // Read group configurations
         for (OpGroupConfig opGroupConfigAnn: clazz.getAnnotationsByType(OpGroupConfig.class)) {
-            groupConfigs.put(opGroupConfigAnn.name(), new OperationGroup(opGroupConfigAnn.name(),
+            testStructureBuilder.groupConfigs.put(opGroupConfigAnn.name(), new OperationGroup(opGroupConfigAnn.name(),
                     opGroupConfigAnn.nonParallel()));
         }
         // Process class methods
@@ -110,31 +94,37 @@ public class CTestStructure {
                     String nameInOperation = opAnn.params().length > 0 ? opAnn.params()[i] : null;
                     Parameter parameter = m.getParameters()[i];
                     ParameterGenerator<?> parameterGenerator = getOrCreateGenerator(m, parameter, nameInOperation, namedGens, defaultGens, randomProvider);
-                    parameterGeneratorsMap.putIfAbsent(parameter.getType(), parameterGenerator);
+                    testStructureBuilder.parameterGeneratorsMap.putIfAbsent(parameter.getType(), parameterGenerator);
                     gens.add(parameterGenerator);
                 }
                 ActorGenerator actorGenerator = new ActorGenerator(m, gens, opAnn.runOnce(),
                     opAnn.cancellableOnSuspension(), opAnn.allowExtraSuspension(), opAnn.blocking(), opAnn.causesBlocking(),
                     opAnn.promptCancellation());
-                actorGenerators.add(actorGenerator);
+                testStructureBuilder.actorGenerators.add(actorGenerator);
                 // Get list of groups and add this operation to specified ones
                 String opGroup = opAnn.group();
                 if (!opGroup.isEmpty()) {
-                    OperationGroup operationGroup = groupConfigs.get(opGroup);
+                    OperationGroup operationGroup = testStructureBuilder.groupConfigs.get(opGroup);
                     if (operationGroup == null)
                         throw new IllegalStateException("Operation group " + opGroup + " is not configured");
                     operationGroup.actors.add(actorGenerator);
                 }
                 String opNonParallelGroupName = opAnn.nonParallelGroup();
                 if (!opNonParallelGroupName.isEmpty()) { // is `nonParallelGroup` specified?
-                    groupConfigs.computeIfAbsent(opNonParallelGroupName, name -> new OperationGroup(name, true));
-                    groupConfigs.get(opNonParallelGroupName).actors.add(actorGenerator);
+                    testStructureBuilder.groupConfigs.computeIfAbsent(opNonParallelGroupName, name -> new OperationGroup(name, true));
+                    testStructureBuilder.groupConfigs.get(opNonParallelGroupName).actors.add(actorGenerator);
                 }
             }
             if (m.isAnnotationPresent(Validate.class)) {
                 if (m.getParameterCount() != 0)
                     throw new IllegalStateException("Validation function " + m.getName() + " should not have parameters");
-                validationFunctions.add(new Actor(m, Collections.emptyList()));
+                if (testStructureBuilder.validationFunction == null) {
+                    testStructureBuilder.validationFunction = new Actor(m, Collections.emptyList());
+                } else {
+                    throw new IllegalStateException("You can't have more than one validation function.\n" +
+                            "@Validation annotation is present here: " + getMethodSignature(testStructureBuilder.validationFunction.getMethod()) +
+                            ", and here: " + getMethodSignature(m));
+                }
             }
 
             if (m.isAnnotationPresent(StateRepresentation.class)) {
@@ -142,9 +132,13 @@ public class CTestStructure {
                     throw new IllegalStateException("State representation function " + m.getName() + " should not have parameters");
                 if (m.getReturnType() != String.class)
                     throw new IllegalStateException("State representation function " + m.getName() + " should have String return type");
-                stateRepresentations.add(m);
+                testStructureBuilder.stateRepresentations.add(m);
             }
         }
+    }
+
+    public static String getMethodSignature(Method m) {
+        return m.getDeclaringClass().getName() + "." + m.getName();
     }
 
     private static Map<String, ParameterGenerator<?>> createNamedGens(Class<?> clazz, RandomProvider randomProvider) {
@@ -303,6 +297,29 @@ public class CTestStructure {
 
     private static ParameterGenerator<?> checkAndGetNamedGenerator(Map<String, ParameterGenerator<?>> namedGens, String name) {
         return Objects.requireNonNull(namedGens.get(name), "Unknown generator name: \"" + name + "\"");
+    }
+
+    private static class CTestStructureBuilder {
+        Map<String, OperationGroup> groupConfigs = new HashMap<>();
+        List<ActorGenerator> actorGenerators = new ArrayList<>();
+        Actor validationFunction = null;
+        List<Method> stateRepresentations = new ArrayList<>();
+        Map<Class<?>, ParameterGenerator<?>> parameterGeneratorsMap = new HashMap<>();
+
+        public CTestStructure build(RandomProvider randomProvider) {
+            if (stateRepresentations.size() > 1) {
+                throw new IllegalStateException("Several functions marked with " + StateRepresentation.class.getSimpleName() +
+                        " were found, while at most one should be specified: " +
+                        stateRepresentations.stream().map(Method::getName).collect(Collectors.joining(", ")));
+            }
+            Method stateRepresentation = null;
+            if (!stateRepresentations.isEmpty())
+                stateRepresentation = stateRepresentations.get(0);
+            // Create StressCTest class configuration
+            List<ParameterGenerator<?>> parameterGenerators = new ArrayList<>(parameterGeneratorsMap.values());
+
+            return new CTestStructure(actorGenerators, parameterGenerators, new ArrayList<>(groupConfigs.values()), validationFunction, stateRepresentation, randomProvider);
+        }
     }
 
     public static class OperationGroup {

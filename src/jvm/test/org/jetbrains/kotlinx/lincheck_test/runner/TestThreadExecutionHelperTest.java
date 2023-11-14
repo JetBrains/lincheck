@@ -26,14 +26,14 @@ public class TestThreadExecutionHelperTest {
 
     @Before
     public void setUp() {
-        ExecutionScenario scenario = new ExecutionScenario(emptyList(), emptyList(), emptyList(), emptyList());
+        ExecutionScenario scenario = new ExecutionScenario(emptyList(), emptyList(), emptyList(), null);
         Strategy strategy = new Strategy(scenario) {
             @Override
             public LincheckFailure run() {
                 throw new UnsupportedOperationException();
             }
         };
-        runner = new Runner(strategy, ArrayDeque.class, emptyList(), null) {
+        runner = new Runner(strategy, ArrayDeque.class, null, null) {
             @Override
             public InvocationResult run() {
                 throw new UnsupportedOperationException();

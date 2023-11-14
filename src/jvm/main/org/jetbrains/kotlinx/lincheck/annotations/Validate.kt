@@ -15,9 +15,9 @@ import kotlin.annotation.AnnotationTarget.*
 /**
  * It is possible to check the data structure consistency at the end of the execution
  * by specifying a validation function that is called at the end of each scenario.
+ * At most one validation function is allowed.
  *
- * The validation functions should be marked with this annotation,
- * have no arguments, and not modify the data structure state.
+ * The validation function should be marked with this annotation and have no arguments.
  * In case the testing data structure is in an invalid state, they should throw an exception.
  * ([AssertionError] or [IllegalStateException] are the preferable ones).
  */

@@ -44,7 +44,7 @@ class ModelCheckingCTestConfiguration(testClass: Class<*>, iterations: Int, thre
     eliminateLocalObjects = eliminateLocalObjects,
     customScenarios = customScenarios
 ) {
-    override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Actor>,
+    override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunction: Actor?,
                                 stateRepresentationMethod: Method?, verifier: Verifier): Strategy
-        = ModelCheckingStrategy(this, testClass, scenario, validationFunctions, stateRepresentationMethod, verifier)
+        = ModelCheckingStrategy(this, testClass, scenario, validationFunction, stateRepresentationMethod, verifier)
 }

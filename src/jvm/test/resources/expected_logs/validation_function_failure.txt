@@ -8,7 +8,6 @@
 | --------------------------------- |
 | operation()         |             |
 | --------------------------------- |
-| validate()          |             |
 | validateWithError() |             |
 | --------------------------------- |
 
@@ -31,7 +30,6 @@ The following interleaving leads to the error:
 | -------------------------------------------------------- |
 | operation()                                |             |
 | -------------------------------------------------------- |
-| validate()                                 |             |
 | validateWithError(): IllegalStateException |             |
 | -------------------------------------------------------- |
 
@@ -50,8 +48,6 @@ Detailed trace:
 | operation()                                                                                               |                                                                                                  |
 |   validateInvoked.READ: 0 at ValidationFunctionCallTest.operation(ValidationFunctionTests.kt:32)          |                                                                                                  |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| validate()                                                                                                |                                                                                                  |
-|   validateInvoked.READ: 0 at ValidationFunctionCallTest.validate(ValidationFunctionTests.kt:39)           |                                                                                                  |
 | validateWithError(): IllegalStateException                                                                |                                                                                                  |
 |   validateInvoked.READ: 0 at ValidationFunctionCallTest.validateWithError(ValidationFunctionTests.kt:44)  |                                                                                                  |
 |   validateInvoked.WRITE(1) at ValidationFunctionCallTest.validateWithError(ValidationFunctionTests.kt:44) |                                                                                                  |

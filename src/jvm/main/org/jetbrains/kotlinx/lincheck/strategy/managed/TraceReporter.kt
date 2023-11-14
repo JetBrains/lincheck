@@ -137,10 +137,7 @@ private fun constructTraceGraph(
     val lastHandledActor = IntArray(scenario.nThreads) { -1 }
     val isValidationFunctionFailure = failure is ValidationFailure
     val actorNodes = Array(scenario.nThreads) { i ->
-        val actorsCount = scenario.threads[i].size + if (i == 0 && failure is ValidationFailure) {
-            // find index of failed function
-            scenario.validationFunctions!!.indexOfFirst { it.method.name == failure.functionName } + 1
-        } else 0
+        val actorsCount = scenario.threads[i].size + if (i == 0 && failure is ValidationFailure) 1 else 0
         Array<ActorNode?>(actorsCount) { null }
     }
     val actorRepresentations = createActorRepresentation(scenario, failure)
@@ -256,15 +253,7 @@ private fun createActorRepresentation(
             val actors = scenario.threads[i].map { it.toString() }.toMutableList()
 
             if (failure is ValidationFailure) {
-                for (validationFunction in scenario.validationFunctions!!) {
-                    val functionName = validationFunction.method.name
-                    if (functionName == failure.functionName) {
-                        actors += "${functionName}(): ${failure.exception::class.simpleName}"
-                        break
-                    } else {
-                        actors += "$functionName()"
-                    }
-                }
+                actors += "${failure.validationFunctionName}(): ${failure.exception::class.simpleName}"
             }
 
             actors

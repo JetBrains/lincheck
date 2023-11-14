@@ -37,11 +37,11 @@ private typealias SuspensionPointResultWithContinuation = AtomicReference<Pair<k
 internal open class ParallelThreadsRunner(
     strategy: Strategy,
     testClass: Class<*>,
-    validationFunctions: List<Actor>,
+    validationFunction: Actor?,
     stateRepresentationFunction: Method?,
     private val timeoutMs: Long, // for deadlock or livelock detection
     private val useClocks: UseClocks // specifies whether `HBClock`-s should always be used or with some probability
-) : Runner(strategy, testClass, validationFunctions, stateRepresentationFunction) {
+) : Runner(strategy, testClass, validationFunction, stateRepresentationFunction) {
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
     private val executor = FixedActiveThreadsExecutor(scenario.nThreads, runnerHash) // should be closed in `close()`
 
@@ -79,7 +79,7 @@ internal open class ParallelThreadsRunner(
         initialPartExecution = createInitialPartExecution()
         parallelPartExecutions = createParallelPartExecutions()
         postPartExecution = createPostPartExecution()
-        validationPartExecution = createValidationPartExecution()
+        validationPartExecution = validationFunction?.let { createValidationPartExecution(it) }
         testThreadExecutions = listOfNotNull(
             initialPartExecution,
             *parallelPartExecutions,
@@ -271,11 +271,9 @@ internal open class ParallelThreadsRunner(
             validationPartExecution?.let { validationPart ->
                 beforePart(VALIDATION)
                 executor.submitAndAwait(arrayOf(validationPart), timeout)
-                validationPart.results.forEachIndexed { i, result ->
-                    if (result is ExceptionResult) {
-                        val failedFunctionName = validationFunctions[i].method.name
-                        return ValidationFailureInvocationResult(scenario, failedFunctionName, result.throwable)
-                    }
+                val validationResult = validationPart.results.single()
+                if (validationResult is ExceptionResult) {
+                    return ValidationFailureInvocationResult(scenario, validationResult.throwable)
                 }
             }
             // Combine the results and convert them for the standard class loader (if they are of non-primitive types).
@@ -340,9 +338,9 @@ internal open class ParallelThreadsRunner(
             null
         }
 
-    private fun createValidationPartExecution(): TestThreadExecution? {
-        return TestThreadExecutionGenerator.create(this, VALIDATION_THREAD_ID, validationFunctions, emptyList(), false)
-            .also { it.initialize(validationFunctions.size, 1) }
+    private fun createValidationPartExecution(validationFunction: Actor?): TestThreadExecution? {
+        return TestThreadExecutionGenerator.create(this, VALIDATION_THREAD_ID, listOf(validationFunction), emptyList(), false)
+            .also { it.initialize(1, 1) }
     }
 
     private fun createParallelPartExecutions(): Array<TestThreadExecution> = Array(scenario.nThreads) { iThread ->
