@@ -16,6 +16,29 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.Assert.*
 
 /**
+ * Checks output when Lincheck run fails with an exception and don't return [LincheckFailure]
+ * internally.
+ * This happens when the configuration of the test is incorrect.
+ * @param expectedOutputFile name of file stored in resources/expected_logs, storing the expected lincheck output.
+ */
+internal inline fun <reified E: Exception> Options<*, *>.checkFailsWithException(testClass: Class<*>, expectedOutputFile: String) {
+    try {
+        LinChecker(testClass, this).check()
+    } catch (e: Exception) {
+        assertTrue(
+            "Exception of type ${E::class.simpleName} expected, but ${e::class.simpleName} was thrown.\n $e",
+            e is E
+        )
+        val actualOutput = e.message ?: ""
+        val expectedOutput = getExpectedLogFromResources(expectedOutputFile)
+
+        if (actualOutput.filtered != expectedOutput.filtered) {
+            assertEquals(expectedOutput, actualOutput)
+        }
+    }
+}
+
+/**
  * Checks that failure output matches the expected one stored in a file.
  *
  * @param expectedOutputFile name of file stored in resources/expected_logs, storing the expected lincheck output.

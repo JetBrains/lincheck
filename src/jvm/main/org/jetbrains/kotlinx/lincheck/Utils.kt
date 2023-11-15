@@ -12,7 +12,6 @@ package org.jetbrains.kotlinx.lincheck
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
-import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.objectweb.asm.*
@@ -192,7 +191,7 @@ internal fun ExecutionScenario.convertForLoader(loader: ClassLoader) = Execution
     postExecution.map {
         it.convertForLoader(loader)
     },
-    validationFunctions = validationFunctions
+    validationFunction = validationFunction
 )
 
 private fun Actor.convertForLoader(loader: ClassLoader): Actor {

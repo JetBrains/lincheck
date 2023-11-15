@@ -36,9 +36,9 @@ class StressCTestConfiguration(
     timeoutMs = timeoutMs,
     customScenarios = customScenarios
 ) {
-    override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Actor>,
+    override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunction: Actor?,
                                 stateRepresentationMethod: Method?, verifier: Verifier) =
-        StressStrategy(this, testClass, scenario, validationFunctions, stateRepresentationMethod, verifier)
+        StressStrategy(this, testClass, scenario, validationFunction, stateRepresentationMethod, verifier)
 
     companion object {
         const val DEFAULT_INVOCATIONS = 10000

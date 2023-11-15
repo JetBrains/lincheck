@@ -91,10 +91,10 @@ class ExecutionBuilder {
             parallelResults.add(it.map { it.result })
         }
         return ExecutionScenario(
-            initial.map { it.actor },
-            parallelExecution,
-            post.map { it.actor },
-            emptyList()
+            initExecution = initial.map { it.actor },
+            parallelExecution = parallelExecution,
+            postExecution = post.map { it.actor },
+            validationFunction = null
         ) to ExecutionResult(
             initial.map { it.result },
             parallelResults.map { it.withEmptyClock(parallelExecution.size) },

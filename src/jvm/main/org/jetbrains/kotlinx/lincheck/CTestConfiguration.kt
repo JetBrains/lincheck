@@ -38,7 +38,7 @@ abstract class CTestConfiguration(
     val customScenarios: List<ExecutionScenario>
 ) {
     abstract fun createStrategy(
-        testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Actor>,
+        testClass: Class<*>, scenario: ExecutionScenario, validationFunction: Actor?,
         stateRepresentationMethod: Method?, verifier: Verifier
     ): Strategy
 

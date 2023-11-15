@@ -20,7 +20,7 @@ class StressStrategy(
     testCfg: StressCTestConfiguration,
     testClass: Class<*>,
     scenario: ExecutionScenario,
-    validationFunctions: List<Actor>,
+    validationFunction: Actor?,
     stateRepresentationFunction: Method?,
     private val verifier: Verifier
 ) : Strategy(scenario) {
@@ -31,7 +31,7 @@ class StressStrategy(
         runner = ParallelThreadsRunner(
             strategy = this,
             testClass = testClass,
-            validationFunctions = validationFunctions,
+            validationFunction = validationFunction,
             stateRepresentationFunction = stateRepresentationFunction,
             timeoutMs = testCfg.timeoutMs,
             useClocks = UseClocks.RANDOM

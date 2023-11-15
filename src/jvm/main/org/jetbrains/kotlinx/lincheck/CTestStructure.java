@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck;
 
+import org.jetbrains.annotations.Nullable;
 import org.jetbrains.kotlinx.lincheck.annotations.*;
 import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.paramgen.*;
@@ -30,17 +31,18 @@ public class CTestStructure {
     public final List<ActorGenerator> actorGenerators;
     public final List<ParameterGenerator<?>> parameterGenerators;
     public final List<OperationGroup> operationGroups;
-    public final List<Actor> validationFunctions;
+    @Nullable
+    public final Actor validationFunction;
     public final Method stateRepresentation;
 
     public final RandomProvider randomProvider;
 
     private CTestStructure(List<ActorGenerator> actorGenerators, List<ParameterGenerator<?>> parameterGenerators, List<OperationGroup> operationGroups,
-                           List<Actor> validationFunctions, Method stateRepresentation, RandomProvider randomProvider) {
+                           @Nullable Actor validationFunction, Method stateRepresentation, RandomProvider randomProvider) {
         this.actorGenerators = actorGenerators;
         this.parameterGenerators = parameterGenerators;
         this.operationGroups = operationGroups;
-        this.validationFunctions = validationFunctions;
+        this.validationFunction = validationFunction;
         this.stateRepresentation = stateRepresentation;
         this.randomProvider = randomProvider;
     }
@@ -71,8 +73,18 @@ public class CTestStructure {
             stateRepresentation = stateRepresentations.get(0);
         // Create StressCTest class configuration
         List<ParameterGenerator<?>> parameterGenerators = new ArrayList<>(parameterGeneratorsMap.values());
+        if (validationFunctions.size() > 1) {
+            throw new IllegalStateException("At most one validation function is allowed, but several were detected: " +
+                    validationFunctions.stream()
+                            .map(actor -> {
+                                Method method = actor.getMethod();
+                                return method.getDeclaringClass().getSimpleName() + "." + method.getName();
+                            })
+                            .collect(Collectors.joining(", ")));
+        }
 
-        return new CTestStructure(actorGenerators, parameterGenerators, new ArrayList<>(groupConfigs.values()), validationFunctions, stateRepresentation, randomProvider);
+        Actor validationFunction = validationFunctions.isEmpty() ? null : validationFunctions.get(0);
+        return new CTestStructure(actorGenerators, parameterGenerators, new ArrayList<>(groupConfigs.values()), validationFunction, stateRepresentation, randomProvider);
     }
 
     private static void readTestStructureFromClass(
