@@ -21,10 +21,14 @@ import org.junit.Assert.*
  * This happens when the configuration of the test is incorrect.
  * @param expectedOutputFile name of file stored in resources/expected_logs, storing the expected lincheck output.
  */
-internal fun <O : Options<O, *>> Options<O, *>.checkFailsWithException(testClass: Class<*>, expectedOutputFile: String) {
+internal inline fun <reified E: Exception> Options<*, *>.checkFailsWithException(testClass: Class<*>, expectedOutputFile: String) {
     try {
         LinChecker(testClass, this).check()
     } catch (e: Exception) {
+        assertTrue(
+            "Exception of type ${E::class.simpleName} expected, but ${e::class.simpleName} was thrown.\n $e",
+            e is E
+        )
         val actualOutput = e.message ?: ""
         val expectedOutput = getExpectedLogFromResources(expectedOutputFile)
 

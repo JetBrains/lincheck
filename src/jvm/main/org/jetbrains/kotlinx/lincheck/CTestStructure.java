@@ -74,11 +74,13 @@ public class CTestStructure {
         // Create StressCTest class configuration
         List<ParameterGenerator<?>> parameterGenerators = new ArrayList<>(parameterGeneratorsMap.values());
         if (validationFunctions.size() > 1) {
-            throw new IllegalStateException("You can't have more than one validation function.\n" +
-                    "@Validation annotation is present here:\n" +
+            throw new IllegalStateException("At most one validation function is allowed, but several were detected: " +
                     validationFunctions.stream()
-                            .map(m -> getMethodSignature(m.getMethod()))
-                            .collect(Collectors.joining("\n")));
+                            .map(actor -> {
+                                Method method = actor.getMethod();
+                                return method.getDeclaringClass().getSimpleName() + "." + method.getName();
+                            })
+                            .collect(Collectors.joining(", ")));
         }
 
         Actor validationFunction = validationFunctions.isEmpty() ? null : validationFunctions.get(0);
@@ -313,10 +315,6 @@ public class CTestStructure {
 
     private static ParameterGenerator<?> checkAndGetNamedGenerator(Map<String, ParameterGenerator<?>> namedGens, String name) {
         return Objects.requireNonNull(namedGens.get(name), "Unknown generator name: \"" + name + "\"");
-    }
-
-    public static String getMethodSignature(Method m) {
-        return m.getDeclaringClass().getName() + "." + m.getName();
     }
 
     public static class OperationGroup {

@@ -110,5 +110,5 @@ class MoreThenOneValidationFunctionFailureTest {
 
     @Test
     fun test() = ModelCheckingOptions()
-        .checkFailsWithException(this::class.java, "two_validation_functions_exception.txt")
+        .checkFailsWithException<IllegalStateException>(this::class.java, "two_validation_functions_exception.txt")
 }
