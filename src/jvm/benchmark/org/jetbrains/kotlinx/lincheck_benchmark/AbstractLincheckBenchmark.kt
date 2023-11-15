@@ -40,7 +40,7 @@ abstract class AbstractLincheckBenchmark(
 
     private fun <O : Options<O, *>> O.runTest() {
         val statisticsTracker = LincheckStatisticsTracker(
-            granularity = StatisticsGranularity.PER_INVOCATION
+            granularity = benchmarksReporter.granularity
         )
         val klass = this@AbstractLincheckBenchmark::class
         val checker = LinChecker(klass.java, this)

@@ -66,6 +66,10 @@ kotlin {
                 filter {
                     includeTestsMatching("LincheckBenchmarksSuite")
                 }
+                // pass the properties
+                systemProperty("statisticsGranularity", System.getProperty("statisticsGranularity"))
+                // always re-run test suite
+                outputs.upToDateWhen { false }
             }
 
             // task producing plots given the benchmarks report file

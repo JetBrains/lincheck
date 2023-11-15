@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_benchmark
 
+import org.jetbrains.kotlinx.lincheck.StatisticsGranularity
 import org.junit.Before
 import org.junit.AfterClass
 import org.junit.runner.RunWith
@@ -43,6 +44,20 @@ class LincheckBenchmarksSuite {
 class LincheckBenchmarksReporter {
 
     private val statistics = mutableMapOf<BenchmarkID, BenchmarkStatistics>()
+
+    val granularity: StatisticsGranularity = run {
+        when (val value = System.getProperty("statisticsGranularity").orEmpty()) {
+            "perInvocation" -> StatisticsGranularity.PER_INVOCATION
+            "perIteration" -> StatisticsGranularity.PER_ITERATION
+            "" -> StatisticsGranularity.PER_ITERATION
+
+            else -> throw IllegalStateException("""
+                Illegal value "$value" passed for statisticsGranularity parameter.
+                Allowed values are: perIteration, perInvocation.  
+            """.trimIndent()
+            )
+        }
+    }
 
     fun registerBenchmark(benchmarkStatistics: BenchmarkStatistics) {
         statistics[benchmarkStatistics.id] = benchmarkStatistics
