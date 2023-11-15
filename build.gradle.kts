@@ -64,7 +64,7 @@ kotlin {
                 classpath = benchmarksClassPath
                 testClassesDirs = benchmarksTestClassesDirs
                 filter {
-                    includeTestsMatching("LincheckBenchmarksSuite")
+                    includeTestsMatching("LincheckBenchmarkSuite")
                 }
                 // pass the properties
                 systemProperty("statisticsGranularity", System.getProperty("statisticsGranularity"))

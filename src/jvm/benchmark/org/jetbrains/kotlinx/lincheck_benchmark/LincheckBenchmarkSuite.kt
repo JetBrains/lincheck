@@ -24,7 +24,7 @@ import org.junit.runners.Suite
     // ConcurrentLinkedQueueBenchmark::class,
     ConcurrentDequeBenchmark::class,
 )
-class LincheckBenchmarksSuite {
+class LincheckBenchmarkSuite {
 
     @Before
     fun setUp() {
