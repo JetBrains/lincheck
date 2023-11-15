@@ -5,11 +5,14 @@ import org.gradle.jvm.tasks.Jar
 // atomicfu
 buildscript {
     val atomicfuVersion: String by project
+    val serializationPluginVersion: String by project
     dependencies {
         classpath("org.jetbrains.kotlinx:atomicfu-gradle-plugin:$atomicfuVersion")
+        classpath("org.jetbrains.kotlin:kotlin-serialization:$serializationPluginVersion")
     }
 }
 apply(plugin = "kotlinx-atomicfu")
+apply(plugin = "kotlinx-serialization")
 
 plugins {
     java
@@ -24,6 +27,9 @@ repositories {
 }
 
 kotlin {
+    // we have to create custom sourceSets in advance before defining corresponding compilation targets
+    sourceSets.create("jvmBenchmark")
+
     jvm {
         withJava()
 
@@ -33,6 +39,40 @@ kotlin {
 
         val test by compilations.getting {
             kotlinOptions.jvmTarget = "11"
+        }
+
+        val benchmark by compilations.creating {
+            kotlinOptions.jvmTarget = "11"
+
+            defaultSourceSet {
+                dependencies {
+                    implementation(main.compileDependencyFiles + main.output.classesDirs)
+                }
+            }
+
+            val benchmarksClassPath = compileDependencyFiles + runtimeDependencyFiles + output.allOutputs
+            val benchmarksTestClassesDirs = output.classesDirs
+
+            // task allowing to run benchmarks using JUnit API
+            val benchmark = tasks.register<Test>("jvmBenchmark") {
+                classpath = benchmarksClassPath
+                testClassesDirs = benchmarksTestClassesDirs
+            }
+
+            // task aggregating all benchmarks into single suite and producing custom reports
+            val benchmarkSuite = tasks.register<Test>("jvmBenchmarkSuite") {
+                classpath = benchmarksClassPath
+                testClassesDirs = benchmarksTestClassesDirs
+                filter {
+                    includeTestsMatching("LincheckBenchmarksSuite")
+                }
+            }
+
+            // task producing plots given the benchmarks report file
+            val benchmarkPlots by tasks.register<JavaExec>("runBenchmarkPlots") {
+                classpath = benchmarksClassPath
+                mainClass.set("org.jetbrains.kotlinx.lincheck_benchmark.PlotsKt")
+            }
         }
     }
 
@@ -65,6 +105,23 @@ kotlin {
                 implementation("junit:junit:$junitVersion")
                 implementation("org.jctools:jctools-core:$jctoolsVersion")
                 implementation("io.mockk:mockk:${mockkVersion}")
+            }
+        }
+
+        val jvmBenchmark by getting {
+            kotlin.srcDirs("src/jvm/benchmark")
+
+            val junitVersion: String by project
+            val jctoolsVersion: String by project
+            val serializationVersion: String by project
+            val letsPlotVersion: String by project
+            val letsPlotKotlinVersion: String by project
+            dependencies {
+                implementation("junit:junit:$junitVersion")
+                implementation("org.jctools:jctools-core:$jctoolsVersion")
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
+                implementation("org.jetbrains.lets-plot:lets-plot-common:$letsPlotVersion")
+                implementation("org.jetbrains.lets-plot:lets-plot-kotlin-jvm:$letsPlotKotlinVersion")
             }
         }
     }

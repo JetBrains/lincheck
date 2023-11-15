@@ -13,8 +13,8 @@ import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import kotlin.reflect.*
 
 /**
@@ -48,16 +48,17 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
     /**
      * @return TestReport with information about concurrent test run.
      */
-    internal fun checkImpl(): LincheckFailure? {
+    internal fun checkImpl(tracker: LincheckRunTracker? = null): LincheckFailure? {
         check(testConfigurations.isNotEmpty()) { "No Lincheck test configuration to run" }
         for (testCfg in testConfigurations) {
-            val failure = testCfg.checkImpl()
-            if (failure != null) return failure
+            val failure = testCfg.checkImpl(tracker)
+            if (failure != null)
+                return failure
         }
         return null
     }
 
-    private fun CTestConfiguration.checkImpl(): LincheckFailure? {
+    private fun CTestConfiguration.checkImpl(customTracker: LincheckRunTracker? = null): LincheckFailure? {
         var verifier = createVerifier()
         val generator = createExecutionGenerator(testStructure.randomProvider)
         val randomScenarios = sequence {
@@ -68,7 +69,15 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
             }
         }
         val scenarios = customScenarios + randomScenarios.take(iterations).toList()
-        val statisticsTracker = LincheckStatisticsTracker()
+        var customStatisticsTrackerDetected = false
+        val statisticsTracker = customTracker
+            ?.findTracker<LincheckStatisticsTracker>()
+            ?.also { customStatisticsTrackerDetected = true }
+            ?: LincheckStatisticsTracker()
+        val tracker = listOfNotNull(
+            statisticsTracker.takeIf { !customStatisticsTrackerDetected },
+            customTracker,
+        ).chainTrackers()
         scenarios.forEachIndexed { i, scenario ->
             val isCustomScenario = (i < customScenarios.size)
             // For performance reasons, verifier re-uses LTS from previous iterations.
@@ -80,7 +89,7 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
                 verifier = createVerifier()
             scenario.validate()
             reporter.logIteration(i + 1, scenarios.size, scenario)
-            var failure = scenario.run(i, this, verifier, statisticsTracker)
+            var failure = scenario.run(i, this, verifier, tracker)
             reporter.logIterationStatistics(i, statisticsTracker)
             if (failure == null)
                 return@forEachIndexed
@@ -88,7 +97,7 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
                 var j = i + 1
                 reporter.logScenarioMinimization(scenario)
                 failure = failure.minimize { minimizedScenario ->
-                    minimizedScenario.run(j++, this, verifier, statisticsTracker)
+                    minimizedScenario.run(j++, this, verifier, tracker)
                 }
             }
             reporter.logFailedIteration(failure)
@@ -110,6 +119,11 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
             stateRepresentationMethod = testStructure.stateRepresentation,
         )
         val parameters = IterationParameters(
+            strategy = when (strategy) {
+                is StressStrategy -> LincheckStrategy.Stress
+                is ModelCheckingStrategy -> LincheckStrategy.ModelChecking
+                else -> throw IllegalStateException("Unsupported Lincheck strategy")
+            },
             invocationsBound = testCfg.invocationsPerIteration,
             warmUpInvocationsCount = 0,
         )

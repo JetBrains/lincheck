@@ -87,9 +87,17 @@ interface LincheckRunTracker {
  * @property warmUpInvocationsCount The number of warm-up invocations to be performed.
  */
 data class IterationParameters(
+    val strategy: LincheckStrategy,
     val invocationsBound: Int,
     val warmUpInvocationsCount: Int,
 )
+
+/**
+ * Represents the testing strategies that can be used in Lincheck.
+ */
+enum class LincheckStrategy {
+    Stress, ModelChecking
+}
 
 /**
  * Tracks the execution of a given Lincheck test iteration.
