@@ -167,9 +167,19 @@ inline fun LincheckRunTracker?.trackInvocation(
  * @return The chained LincheckRunTracker, or null if the original list is empty.
  */
 fun List<LincheckRunTracker>.chainTrackers(): LincheckRunTracker? =
-    if (this.isEmpty()) null else ChainRunTracker(this)
+    if (this.isEmpty()) null else ChainedRunTracker(this)
 
-internal class ChainRunTracker(val trackers: List<LincheckRunTracker>) : LincheckRunTracker {
+internal class ChainedRunTracker(trackers: List<LincheckRunTracker> = listOf()) : LincheckRunTracker {
+
+    private val trackers = mutableListOf<LincheckRunTracker>()
+
+    init {
+        this.trackers.addAll(trackers)
+    }
+
+    fun addTracker(tracker: LincheckRunTracker) {
+        trackers.add(tracker)
+    }
 
     override fun iterationStart(iteration: Int, scenario: ExecutionScenario, parameters: IterationParameters) {
         for (tracker in trackers) {
@@ -200,7 +210,6 @@ internal class ChainRunTracker(val trackers: List<LincheckRunTracker>) : Linchec
     }
 }
 
-
 /**
  * Searches for a first LincheckRunTracker of the specified type
  * among the internal sub-trackers of a given tracker.
@@ -221,4 +230,13 @@ inline fun<reified T : LincheckRunTracker> LincheckRunTracker.findTracker(): T? 
         trackers.addAll(tracker.internalTrackers())
     }
     return null
+}
+
+internal inline fun<reified T : LincheckRunTracker> ChainedRunTracker.addTrackerIfAbsent(createTracker: () -> T): T {
+    val tracker = findTracker<T>()
+    if (tracker != null)
+        return tracker
+    return createTracker().also {
+        addTracker(it)
+    }
 }

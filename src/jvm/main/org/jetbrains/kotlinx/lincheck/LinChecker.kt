@@ -69,15 +69,11 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
             }
         }
         val scenarios = customScenarios + randomScenarios.take(iterations).toList()
-        var customStatisticsTrackerDetected = false
-        val statisticsTracker = customTracker
-            ?.findTracker<LincheckStatisticsTracker>()
-            ?.also { customStatisticsTrackerDetected = true }
-            ?: LincheckStatisticsTracker()
-        val tracker = listOfNotNull(
-            statisticsTracker.takeIf { !customStatisticsTrackerDetected },
-            customTracker,
-        ).chainTrackers()
+        val tracker = ChainedRunTracker().apply {
+            if (customTracker != null)
+                addTracker(customTracker)
+        }
+        val statisticsTracker = tracker.addTrackerIfAbsent { LincheckStatisticsTracker() }
         scenarios.forEachIndexed { i, scenario ->
             val isCustomScenario = (i < customScenarios.size)
             // For performance reasons, verifier re-uses LTS from previous iterations.
