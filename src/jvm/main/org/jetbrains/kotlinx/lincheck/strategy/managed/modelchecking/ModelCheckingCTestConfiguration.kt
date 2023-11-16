@@ -40,7 +40,6 @@ class ModelCheckingCTestConfiguration(testClass: Class<*>, iterations: Int, thre
     minimizeFailedScenario = minimizeFailedScenario,
     sequentialSpecification = sequentialSpecification,
     timeoutMs = timeoutMs,
-    eliminateLocalObjects = eliminateLocalObjects,
     customScenarios = customScenarios
 ) {
     override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Method>,

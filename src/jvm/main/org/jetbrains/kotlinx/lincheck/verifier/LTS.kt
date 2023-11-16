@@ -12,8 +12,12 @@ package org.jetbrains.kotlinx.lincheck.verifier
 
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.StoreExceptionHandler
+import org.jetbrains.kotlinx.lincheck.createLincheckResult
+import org.jetbrains.kotlinx.lincheck.executeActor
 import org.jetbrains.kotlinx.lincheck.verifier.LTS.*
 import org.jetbrains.kotlinx.lincheck.verifier.OperationType.*
+import sun.nio.ch.lincheck.Injections.lastSuspendedCancellableContinuationDuringVerification
 import java.util.*
 import kotlin.coroutines.*
 import kotlin.math.*
@@ -41,11 +45,7 @@ typealias ResumedTickets = Set<Int>
  * Practically, Kotlin implementation of such operations via suspend functions is supported.
  */
 
-class LTS(sequentialSpecification: Class<*>) {
-    // we should transform the specification with `CancellabilitySupportClassTransformer`
-    private val sequentialSpecification: Class<*> = TransformationClassLoader { cv -> CancellabilitySupportClassTransformer(cv)}
-                                                    .loadClass(sequentialSpecification.name)!!
-
+class LTS(private val sequentialSpecification: Class<*>) {
     /**
      * Cache with all LTS states in order to reuse the equivalent ones.
      * Equivalency relation among LTS states is defined by the [StateInfo] class.
@@ -90,7 +90,7 @@ class LTS(sequentialSpecification: Class<*>) {
                     createTransition(op, result, instance, suspendedOperations, getResumedOperations(resumedTicketsWithResults))
                 }
             }
-            // Check whether the current actor allows an extra suspension and the the expected result is `Cancelled` while the
+            // Check whether the current actor allows an extra suspension and the expected result is `Cancelled` while the
             // constructed transition does not suspend -- we can simply consider that this cancelled invocation does not take
             // any effect and remove it from the history.
             if (actor.allowExtraSuspension && expectedResult == Cancelled && transitionInfo.result != Suspended)
@@ -195,7 +195,7 @@ class LTS(sequentialSpecification: Class<*>) {
         continuationsMap: MutableMap<Operation, CancellableContinuation<*>>
     ): Result {
         val prevResumedTickets = resumedOperations.keys.toMutableList()
-        CancellableContinuationHolder.storedLastCancellableCont = null
+        lastSuspendedCancellableContinuationDuringVerification = null
         val res = when (type) {
             REQUEST -> executeActor(externalState, actor, Completion(ticket, actor, resumedOperations))
             FOLLOW_UP -> {
@@ -222,10 +222,10 @@ class LTS(sequentialSpecification: Class<*>) {
             }
         }
         if (res === Suspended) {
-            val cont = CancellableContinuationHolder.storedLastCancellableCont
-            CancellableContinuationHolder.storedLastCancellableCont = null
+            val cont = lastSuspendedCancellableContinuationDuringVerification as CancellableContinuation<*>?
+            lastSuspendedCancellableContinuationDuringVerification = null
             if (cont !== null) continuationsMap[this] = cont
-            // Operation suspended it's execution.
+            // Operation suspended its execution.
             suspendedOperations.add(this)
         }
         resumedOperations.forEach { (resumedTicket, res) ->

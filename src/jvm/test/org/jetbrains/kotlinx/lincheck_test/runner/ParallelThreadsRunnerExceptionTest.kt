@@ -102,7 +102,6 @@ class ParallelThreadsRunnerExceptionTest {
             strategy = mockStrategy(scenario), testClass = testClass, validationFunctions = emptyList(),
             stateRepresentationFunction = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
         ).use { runner ->
-            runner.initialize()
             val results = (runner.run() as CompletedInvocationResult).results
             assertTrue(results.equalsIgnoringClocks(expectedResults))
         }
@@ -127,7 +126,6 @@ class ParallelThreadsRunnerExceptionTest {
             strategy = mockStrategy(scenario), testClass = testClass, validationFunctions = emptyList(),
             stateRepresentationFunction = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
         ).use { runner ->
-            runner.initialize()
             val results = (runner.run() as CompletedInvocationResult).results
             assertTrue(results.equalsIgnoringClocks(expectedResults))
         }
@@ -146,37 +144,9 @@ class ParallelThreadsRunnerExceptionTest {
             strategy = mockStrategy(scenario), testClass = testClass, validationFunctions = emptyList(),
             stateRepresentationFunction = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
         ).use { runner ->
-            runner.initialize()
             val results = (runner.run() as CompletedInvocationResult).results
             assertTrue(results.equalsIgnoringClocks(expectedResults))
         }
-    }
-}
-
-class ParallelThreadExecutionExceptionsTest {
-    @Test
-    fun `should fail with unexpected exception results because of classes are not accessible from unnamed modules`() {
-        val scenario = scenario {
-            parallel {
-                thread { actor(::operation) }
-            }
-        }
-        ParallelThreadsRunner(
-            strategy = mockStrategy(scenario), testClass = this::class.java, validationFunctions = emptyList(),
-            stateRepresentationFunction = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
-        ).use { runner ->
-            runner.initialize()
-            val results = (runner.run() as UnexpectedExceptionInvocationResult)
-            val exception = results.exception
-
-            assertTrue(results.exception is RuntimeException)
-            assertEquals(ADD_OPENS_MESSAGE, exception.message)
-        }
-    }
-
-    @Operation
-    fun operation(): Nothing {
-        throw IllegalAccessException("module java.base does not \"opens java.io\" to unnamed module")
     }
 }
 

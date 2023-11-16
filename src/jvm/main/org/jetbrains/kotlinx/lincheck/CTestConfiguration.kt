@@ -16,6 +16,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.Companion.DEFAULT_ELIMINATE_LOCAL_OBJECTS
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.TransformationMode
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
 import java.lang.reflect.*
@@ -53,6 +54,11 @@ abstract class CTestConfiguration(
         const val DEFAULT_MINIMIZE_ERROR = true
         const val DEFAULT_TIMEOUT_MS: Long = 10000
     }
+
+    /**
+     * Specifies the transformation required for this strategy.
+     */
+    abstract val transformationMode: TransformationMode
 }
 
 internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConfiguration> {

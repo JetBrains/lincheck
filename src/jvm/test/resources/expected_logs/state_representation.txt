@@ -14,10 +14,13 @@ The following interleaving leads to the error:
 |    Thread 1    |                                                  Thread 2                                                   |
 | ---------------------------------------------------------------------------------------------------------------------------- |
 |                | operation(): 3                                                                                              |
+|                |   STATE: 0                                                                                                  |
 |                |   counter.READ: AtomicInteger@1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:35) |
+|                |   STATE: 0                                                                                                  |
 |                |   incrementAndGet(): 1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:35)          |
 |                |   STATE: 1                                                                                                  |
 |                |   counter.READ: AtomicInteger@1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:36) |
+|                |   STATE: 1                                                                                                  |
 |                |   switch                                                                                                    |
 | operation(): 2 |                                                                                                             |
 | STATE: 3       |                                                                                                             |
@@ -31,16 +34,22 @@ Detailed trace:
 |                                                  Thread 1                                                   |                                                  Thread 2                                                   |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                                                             | operation(): 3                                                                                              |
+|                                                                                                             |   STATE: 0                                                                                                  |
 |                                                                                                             |   counter.READ: AtomicInteger@1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:35) |
+|                                                                                                             |   STATE: 0                                                                                                  |
 |                                                                                                             |   incrementAndGet(): 1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:35)          |
 |                                                                                                             |   STATE: 1                                                                                                  |
 |                                                                                                             |   counter.READ: AtomicInteger@1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:36) |
+|                                                                                                             |   STATE: 1                                                                                                  |
 |                                                                                                             |   switch                                                                                                    |
 | operation(): 2                                                                                              |                                                                                                             |
+|   STATE: 1                                                                                                  |                                                                                                             |
 |   counter.READ: AtomicInteger@1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:35) |                                                                                                             |
+|   STATE: 1                                                                                                  |                                                                                                             |
 |   incrementAndGet(): 2 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:35)          |                                                                                                             |
 |   STATE: 2                                                                                                  |                                                                                                             |
 |   counter.READ: AtomicInteger@1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:36) |                                                                                                             |
+|   STATE: 2                                                                                                  |                                                                                                             |
 |   getAndIncrement(): 2 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:36)          |                                                                                                             |
 |   STATE: 3                                                                                                  |                                                                                                             |
 |   result: 2                                                                                                 |                                                                                                             |

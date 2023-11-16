@@ -47,8 +47,7 @@ class ExecutionScenario(
     /**
      * Number of threads used by this execution.
      */
-    val nThreads: Int
-        get() = parallelExecution.size
+    val nThreads = parallelExecution.size
 
     /**
      * List containing for each thread its list of actors.

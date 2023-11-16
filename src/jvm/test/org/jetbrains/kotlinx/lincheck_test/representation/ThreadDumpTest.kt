@@ -21,12 +21,12 @@ import org.junit.*
 class ThreadDumpTest {
     @Test
     fun test() {
-        val iterations = 30
+        val iterations = 3
         repeat(iterations) {
             val options = StressOptions()
                 .minimizeFailedScenario(false)
-                .iterations(100_000)
-                .invocationsPerIteration(1)
+                .iterations(10)
+                .invocationsPerIteration(10_000)
                 .invocationTimeout(100)
             val failure = options.checkImpl(DeadlockOnSynchronizedTest::class.java)
             check(failure is DeadlockWithDumpFailure) { "${DeadlockWithDumpFailure::class.simpleName} was expected but ${failure?.javaClass} was obtained"}

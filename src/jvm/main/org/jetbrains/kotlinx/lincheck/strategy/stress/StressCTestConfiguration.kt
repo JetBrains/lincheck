@@ -11,6 +11,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.stress
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.TransformationMode.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.lang.reflect.*
 
@@ -43,4 +44,6 @@ class StressCTestConfiguration(
     companion object {
         const val DEFAULT_INVOCATIONS = 10000
     }
+
+    override val transformationMode get() = STRESS
 }

@@ -11,6 +11,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.TransformationMode.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 
 /**
@@ -32,8 +33,6 @@ abstract class ManagedCTestConfiguration(
     minimizeFailedScenario: Boolean,
     sequentialSpecification: Class<*>,
     timeoutMs: Long,
-    val eliminateLocalObjects: Boolean,
-
     customScenarios: List<ExecutionScenario>
 ) : CTestConfiguration(
     testClass = testClass,
@@ -63,6 +62,8 @@ abstract class ManagedCTestConfiguration(
             forClasses { className: String -> isTrustedPrimitive(className) }.allMethods().treatAsAtomic()
         )
     }
+
+    override val transformationMode get() = MODEL_CHECKING
 }
 
 /**
