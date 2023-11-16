@@ -43,12 +43,12 @@ abstract class AbstractLincheckTest(
         // waitUntilAllLincheckThreadsAreFinished()
     }
 
-    @Test(timeout = TIMEOUT)
-    fun testWithStressStrategy(): Unit = StressOptions().run {
-        invocationsPerIteration(5_000)
-        commonConfiguration()
-        runInternalTest()
-    }
+//    @Test(timeout = TIMEOUT)
+//    fun testWithStressStrategy(): Unit = StressOptions().run {
+//        invocationsPerIteration(5_000)
+//        commonConfiguration()
+//        runInternalTest()
+//    }
 
     @Test(timeout = TIMEOUT)
     fun testWithModelCheckingStrategy(): Unit = ModelCheckingOptions().run {

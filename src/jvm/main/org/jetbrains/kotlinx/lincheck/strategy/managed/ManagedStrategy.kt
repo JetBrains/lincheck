@@ -17,6 +17,7 @@ import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.Counters
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import sun.nio.ch.lincheck.*
 import java.io.*
@@ -83,9 +84,9 @@ abstract class ManagedStrategy(
     // == TRACE CONSTRUCTION FIELDS ==
 
     // Whether additional information requires for the trace construction should be collected.
-    private var collectTrace = false
+    private var collectTrace = Counters.isRequired
     // Collector of all events in the execution such as thread switches.
-    private var traceCollector: TraceCollector? = null // null when `collectTrace` is false
+    var traceCollector: TraceCollector? = null // null when `collectTrace` is false
     // Stores the currently executing methods call stack for each thread.
     private val callStackTrace = Array(nThreads) { mutableListOf<CallStackTraceElement>() }
     // Stores the global number of method calls.
@@ -97,6 +98,12 @@ abstract class ManagedStrategy(
     private val suspendedFunctionsStack = Array(nThreads) { mutableListOf<Int>() }
 
     private val methodCallTracePointStack = (0 until nThreads + 2).map { ArrayList<MethodCallTracePoint>() }
+
+    init {
+        if (Counters.isRequired) {
+            Unit
+        }
+    }
 
 
     override fun run(): LincheckFailure? = runImpl().also { close() }
@@ -131,11 +138,12 @@ abstract class ManagedStrategy(
      * Returns all data to the initial state.
      */
     protected open fun initializeInvocation() {
+        collectTrace = Counters.isRequired
         finished.fill(false)
         isSuspended.fill(false)
         currentActorId.fill(-1)
         monitorTracker = MonitorTracker(nThreads)
-        traceCollector = if (collectTrace) TraceCollector() else null
+        traceCollector = if (Counters.isRequired) TraceCollector() else null
         suddenInvocationResult = null
         callStackTrace.forEach { it.clear() }
         suspendedFunctionsStack.forEach { it.clear() }
@@ -1031,7 +1039,7 @@ abstract class ManagedStrategy(
     /**
      * Logs thread events such as thread switches and passed code locations.
      */
-    private inner class TraceCollector {
+    inner class TraceCollector {
         private val _trace = mutableListOf<TracePoint>()
         val trace: List<TracePoint> = _trace
 

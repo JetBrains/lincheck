@@ -35,6 +35,26 @@ class BufferedChannelTest : AbstractLincheckTest() {
 
     override fun <O : Options<O, *>> O.customize() {
         sequentialSpecification(SequentiaBuffered2IntChannel::class.java)
+        addCustomScenario {
+            initial {
+                actor(BufferedChannelTest::offer, 3)
+                actor(BufferedChannelTest::offer, 3)
+            }
+            parallel {
+                thread {
+                    actor(BufferedChannelTest::receive)
+                    actor(BufferedChannelTest::receive)
+                }
+                thread {
+                    actor(BufferedChannelTest::receive)
+                    actor(BufferedChannelTest::send, 4)
+                }
+                thread {
+                    actor(BufferedChannelTest::offer, 3)
+                    actor(BufferedChannelTest::send, 3)
+                }
+            }
+        }
     }
 }
 

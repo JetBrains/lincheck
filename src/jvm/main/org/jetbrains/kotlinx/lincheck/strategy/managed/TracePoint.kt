@@ -54,7 +54,7 @@ internal class SwitchEventTracePoint(
 internal abstract class CodeLocationTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
-    protected val stackTraceElement: StackTraceElement
+    val stackTraceElement: StackTraceElement
 ) : TracePoint(iThread, actorId, callStackTrace)
 
 internal class StateRepresentationTracePoint(
@@ -269,7 +269,7 @@ private fun adornedStringRepresentation(any: Any?): String {
    return getObjectName(any)
 }
 
-internal enum class SwitchReason(private val reason: String) {
+enum class SwitchReason(private val reason: String) {
     MONITOR_WAIT("wait on monitor"),
     LOCK_WAIT("lock is already acquired"),
     ACTIVE_LOCK("active lock detected"),

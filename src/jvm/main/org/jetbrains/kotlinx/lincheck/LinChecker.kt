@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.Counters
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
@@ -67,6 +68,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         }
         var verifier = createVerifier()
         repeat(iterations) { i ->
+            Counters.currentScenario.incrementAndGet()
             // For performance reasons, verifier re-uses LTS from previous iterations.
             // This behaviour is similar to a memory leak and can potentially cause OutOfMemoryError.
             // This is why we periodically create a new verifier to still have increased performance

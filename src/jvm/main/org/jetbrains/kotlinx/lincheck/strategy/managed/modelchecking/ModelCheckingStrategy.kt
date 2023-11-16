@@ -9,12 +9,14 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.lang.reflect.*
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.random.*
 
 /**
@@ -55,6 +57,7 @@ internal class ModelCheckingStrategy(
     private lateinit var currentInterleaving: Interleaving
 
     override fun runImpl(): LincheckFailure? {
+        Counters.currentInterleaving.set(0)
         currentInterleaving = root.nextInterleaving() ?: return null
         while (usedInvocations < maxInvocations) {
             // run invocation and check its results
@@ -67,6 +70,7 @@ internal class ModelCheckingStrategy(
             checkResult(invocationResult)?.let { return it }
             // get new unexplored interleaving
             currentInterleaving = root.nextInterleaving() ?: break
+            Counters.currentInterleaving.incrementAndGet()
         }
         return null
     }
@@ -109,6 +113,7 @@ internal class ModelCheckingStrategy(
            check(it in switchableThreads(iThread)) { """
                Trying to switch the execution to thread $it,
                but only the following threads are eligible to switch: ${switchableThreads(iThread)}
+               Res = ${traceCollector?.trace?.filter { it.callStackTrace.lastOrNull()?.call?.stackTraceElement?.className?.contains("lincheck") ?: false}}
            """.trimIndent() }
         }
 
@@ -305,4 +310,14 @@ internal class ModelCheckingStrategy(
 
         fun build() = Interleaving(switchPositions, threadSwitchChoices, lastNoninitializedNode)
     }
+}
+
+object Counters {
+    val currentInterleaving = AtomicInteger(0)
+    val currentScenario = AtomicInteger(0)
+
+    val isRequired: Boolean get() {
+        return currentInterleaving.get() == 289 && currentScenario.get() == 0
+    }
+
 }
