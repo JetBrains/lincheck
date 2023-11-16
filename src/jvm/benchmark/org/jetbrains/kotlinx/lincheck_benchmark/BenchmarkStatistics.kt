@@ -16,7 +16,8 @@ import org.jetbrains.kotlinx.lincheck.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToStream
-import kotlin.math.*
+import kotlin.time.Duration.Companion.nanoseconds
+import kotlin.time.DurationUnit
 import java.io.File
 
 
@@ -54,13 +55,6 @@ val BenchmarksReport.benchmarkIDs: List<BenchmarkID>
 val BenchmarksReport.benchmarkNames: List<String>
     get() = data.map { (_, statistics) -> statistics.className }.distinct()
 
-fun BenchmarksReport.saveJson(filename: String) {
-    val file = File("$filename.json")
-    file.outputStream().use { outputStream ->
-        Json.encodeToStream(this, outputStream)
-    }
-}
-
 val BenchmarkStatistics.id: BenchmarkID
     get() = "$className-$strategy"
 
@@ -91,28 +85,33 @@ fun LincheckStatistics.toBenchmarkStatistics(name: String, strategy: LincheckStr
         }
 )
 
-fun Iterable<LongArray>.flatten(): LongArray {
-    val size = sumOf { it.size }
-    val result = LongArray(size)
-    var i = 0
-    for (array in this) {
-        for (element in array) {
-            result[i++] = element
+fun BenchmarksReport.saveJson(filename: String) {
+    val file = File("$filename.json")
+    file.outputStream().use { outputStream ->
+        Json.encodeToStream(this, outputStream)
+    }
+}
+
+// saves the report in simple text format for testing integration with ij-perf dashboards
+fun BenchmarksReport.saveTxt(filename: String) {
+    val text = StringBuilder().apply {
+        appendReportHeader()
+        for (benchmarkStatistics in data.values) {
+            // for ij-perf reports, we currently track only benchmarks overall running time
+            appendBenchmarkRunningTime(benchmarkStatistics)
         }
-    }
-    return result
+    }.toString()
+    val file = File("$filename.txt")
+    file.appendText(text, charset = Charsets.US_ASCII)
 }
 
-fun LongArray.standardDeviation(): Double {
-    val mean = round(average()).toLong()
-    var variance = 0L
-    for (x in this) {
-        val d = x - mean
-        variance += d * d
-    }
-    return sqrt(variance.toDouble() / (size - 1))
+private fun StringBuilder.appendReportHeader() {
+    appendLine("Lincheck benchmarks suite")
 }
 
-fun LongArray.standardError(): Double {
-    return standardDeviation() / sqrt(size.toDouble())
+private fun StringBuilder.appendBenchmarkRunningTime(benchmarkStatistics: BenchmarkStatistics) {
+    with(benchmarkStatistics) {
+        val runningTimeMs = runningTimeNano.nanoseconds.toLong(DurationUnit.MILLISECONDS)
+        appendLine("${strategy}.${className}.runtime.ms $runningTimeMs")
+    }
 }

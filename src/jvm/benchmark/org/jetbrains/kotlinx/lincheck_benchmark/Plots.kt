@@ -14,15 +14,14 @@ import org.jetbrains.letsPlot.*
 import org.jetbrains.letsPlot.export.*
 import org.jetbrains.letsPlot.geom.*
 import org.jetbrains.letsPlot.label.*
+import org.jetbrains.letsPlot.scale.*
+import org.jetbrains.letsPlot.sampling.samplingNone
 import org.jetbrains.letsPlot.pos.positionDodge
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
-import org.jetbrains.letsPlot.sampling.samplingNone
-import org.jetbrains.letsPlot.scale.scaleYContinuous
-import org.jetbrains.letsPlot.scale.scaleYLog10
-import java.io.File
 import kotlin.time.Duration.Companion.nanoseconds
 import kotlin.time.DurationUnit
+import java.io.File
 
 
 fun BenchmarksReport.runtimePlot(filename: String) {
