@@ -14,6 +14,7 @@ import org.objectweb.asm.*
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
 import sun.nio.ch.lincheck.*
+import java.io.*
 import kotlin.reflect.*
 import kotlin.reflect.jvm.*
 
@@ -144,6 +145,32 @@ internal inline fun GeneratorAdapter.invokeInIgnoredSection(
         },
         elseClause = {}
     )
+}
+
+internal fun isCoroutineStateMachineClass(internalClassName: String) =
+    getSuperclassName(internalClassName) == "kotlin/coroutines/jvm/internal/ContinuationImpl"
+
+private fun getSuperclassName(internalClassName: String): String? {
+    class SuperclassClassVisitor : ClassVisitor(ASM_API) {
+        var internalSuperclassName: String? = null
+            private set
+
+        override fun visit(version: Int, access: Int, name: String?, signature: String?, superName: String?, interfaces: Array<out String>?) {
+            internalSuperclassName = superName
+        }
+    }
+    // Try to find the
+    try {
+        val classStream: InputStream = ClassLoader.getSystemClassLoader().getResourceAsStream("$internalClassName.class")
+            ?: return null
+        val classReader = ClassReader(classStream)
+        val superclassVisitor = SuperclassClassVisitor()
+        classReader.accept(superclassVisitor, 0)
+        return superclassVisitor.internalSuperclassName
+    } catch (t: Throwable) {
+        // Failed to read or process the class.
+        return null
+    }
 }
 
 internal const val ASM_API = Opcodes.ASM9
