@@ -10,22 +10,25 @@
 
 package org.jetbrains.kotlinx.lincheck_benchmark
 
+import kotlinx.coroutines.InternalCoroutinesApi
 import org.jetbrains.kotlinx.lincheck.StatisticsGranularity
 import org.junit.Before
 import org.junit.AfterClass
 import org.junit.runner.RunWith
 import org.junit.runners.Suite
 
+@InternalCoroutinesApi
 @RunWith(Suite::class)
 @Suite.SuiteClasses(
-    ConcurrentHashMapBenchmark::class,
-    ConcurrentSkipListMapBenchmark::class,
-    // TODO: investigate performance problem in ConcurrentLinkedQueueBenchmark.benchmarkWithStressStrategy
-    ConcurrentLinkedQueueBenchmark::class,
-    ConcurrentDequeBenchmark::class,
     SpinLockBenchmark::class,
     ReentrantLockBenchmark::class,
     IntrinsicLockBenchmark::class,
+    ConcurrentLinkedQueueBenchmark::class,
+    ConcurrentDequeBenchmark::class,
+    ConcurrentHashMapBenchmark::class,
+    ConcurrentSkipListMapBenchmark::class,
+    RendezvousChannelBenchmark::class,
+    BufferedChannelBenchmark::class,
 )
 class LincheckBenchmarkSuite {
 

@@ -7,14 +7,18 @@
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.jetbrains.kotlinx.lincheck_test.verifier.linearizability
 
-import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
+package org.jetbrains.kotlinx.lincheck.specifications
+
+import kotlinx.coroutines.CancellableContinuation
+import kotlinx.coroutines.InternalCoroutinesApi
+import kotlinx.coroutines.channels.ClosedReceiveChannelException
+import kotlinx.coroutines.channels.ClosedSendChannelException
+import kotlinx.coroutines.suspendCancellableCoroutine
+import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 
 @InternalCoroutinesApi
-open class SequentialIntChannel(private val capacity: Int) : VerifierState() {
+open class SequentialIntChannelSpecification(private val capacity: Int) : VerifierState() {
     private val senders   = ArrayList<Pair<CancellableContinuation<Unit>, Int>>()
     private val receivers = ArrayList<CancellableContinuation<Any>>()
     private val buffer = ArrayList<Int>()
