@@ -21,8 +21,11 @@ import org.junit.runners.Suite
     ConcurrentHashMapBenchmark::class,
     ConcurrentSkipListMapBenchmark::class,
     // TODO: investigate performance problem in ConcurrentLinkedQueueBenchmark.benchmarkWithStressStrategy
-    // ConcurrentLinkedQueueBenchmark::class,
+    ConcurrentLinkedQueueBenchmark::class,
     ConcurrentDequeBenchmark::class,
+    SpinLockBenchmark::class,
+    ReentrantLockBenchmark::class,
+    IntrinsicLockBenchmark::class,
 )
 class LincheckBenchmarkSuite {
 
