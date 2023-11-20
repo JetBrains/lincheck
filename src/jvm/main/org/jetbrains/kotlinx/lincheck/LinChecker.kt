@@ -94,7 +94,7 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
                 var j = i + 1
                 reporter.logScenarioMinimization(scenario)
                 failure = failure.minimize { minimizedScenario ->
-                    minimizedScenario.run(j++, this, verifier, tracker)
+                    minimizedScenario.run(j++, this, createVerifier(), tracker)
                 }
             }
             reporter.logFailedIteration(failure)
