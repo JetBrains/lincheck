@@ -189,7 +189,7 @@ const val defaultPlotExtension = "html"
 fun PlotType.defaultOutputFilename(): String = when (this) {
     PlotType.RunningTimeBarPlot -> "running-time-bar-plot.$defaultPlotExtension"
     PlotType.InvocationTimeByScenarioSizeBarPlot -> "invocation-time-by-size-bar-plot.$defaultPlotExtension"
-    PlotType.InvocationTimeScatterPlot -> "invocations-time-scatter-plot.$defaultPlotExtension"
+    PlotType.InvocationTimeScatterPlot -> "invocation-time-scatter-plot.$defaultPlotExtension"
     else -> throw IllegalArgumentException()
 }
 
