@@ -74,7 +74,7 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
             if (customTracker != null)
                 addTracker(customTracker)
         }
-        val statisticsTracker = tracker.addTrackerIfAbsent { LincheckStatisticsTracker() }
+        // val statisticsTracker = tracker.addTrackerIfAbsent { LincheckStatisticsTracker() }
         scenarios.forEachIndexed { i, scenario ->
             val isCustomScenario = (i < customScenarios.size)
             // For performance reasons, verifier re-uses LTS from previous iterations.
@@ -87,7 +87,7 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
             scenario.validate()
             reporter.logIteration(i + 1, scenariosSize, scenario)
             var failure = scenario.run(i, this, verifier, tracker)
-            reporter.logIterationStatistics(i, statisticsTracker)
+            // reporter.logIterationStatistics(i, statisticsTracker)
             if (failure == null)
                 return@forEachIndexed
             if (minimizeFailedScenario && !isCustomScenario) {
