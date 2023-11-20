@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck_benchmark
 
 import kotlinx.coroutines.InternalCoroutinesApi
 import org.jetbrains.kotlinx.lincheck.StatisticsGranularity
+import org.jetbrains.kotlinx.lincheck_benchmark.running.*
 import org.junit.Before
 import org.junit.AfterClass
 import org.junit.runner.RunWith
