@@ -61,9 +61,8 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
     private fun CTestConfiguration.checkImpl(customTracker: LincheckRunTracker? = null): LincheckFailure? {
         var verifier = createVerifier()
         val generator = createExecutionGenerator(testStructure.randomProvider)
-        val randomScenarios = sequence {
-            while (true) {
-                yield(generator.nextExecution())
+        val randomScenarios = generateSequence {
+            generator.nextExecution().also {
                 // reset the parameter generator ranges to start with the same initial bounds for each scenario.
                 testStructure.parameterGenerators.forEach { it.reset() }
             }
