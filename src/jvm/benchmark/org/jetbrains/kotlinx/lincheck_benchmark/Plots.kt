@@ -88,13 +88,15 @@ fun BenchmarksReport.invocationTimeByScenarioSizeBarPlot(
         y = "timeAverage"
         fill = "strategy"
     }
-    plot += geomErrorBar(
-        width = .1,
-        position = positionDodge(0.9),
-    ) {
-        ymin = "timeErrorLow"
-        ymax = "timeErrorHigh"
-        group = "strategy"
+    if ("timeErrorLow" in data && "timeErrorHigh" in data) {
+        plot += geomErrorBar(
+            width = .1,
+            position = positionDodge(0.9),
+        ) {
+            ymin = "timeErrorLow"
+            ymax = "timeErrorHigh"
+            group = "strategy"
+        }
     }
     ggsave(plot, filename, path = path)
 }
@@ -107,6 +109,9 @@ fun BenchmarksReport.invocationTimeByScenarioSizeData(
     val benchmarks = data.values
         .filter { it.name == benchmarkName }
         .map { (it.strategy to it.scenariosStatistics) }
+    val isStandardErrorDefined: Boolean = benchmarks.all { (_, scenariosStatistics) ->
+        scenariosStatistics.all { it.invocationStandardErrorTimeNano >= 0L }
+    }
     map["params"] = benchmarks.flatMap { (_, stats) ->
         stats.map { (it.threads to it.operations).toString() }
     }
@@ -116,16 +121,18 @@ fun BenchmarksReport.invocationTimeByScenarioSizeData(
     map["timeAverage"] = benchmarks.flatMap { (_, stats) ->
         stats.map { it.invocationAverageTimeNano.nanoseconds.toLong(durationUnit) }
     }
-    map["timeErrorLow"] = benchmarks.flatMap { (_, stats) ->
-        stats.map {
-            (it.invocationAverageTimeNano - it.invocationStandardErrorTimeNano)
-                .nanoseconds.toLong(durationUnit)
+    if (isStandardErrorDefined) {
+        map["timeErrorLow"] = benchmarks.flatMap { (_, stats) ->
+            stats.map {
+                (it.invocationAverageTimeNano - it.invocationStandardErrorTimeNano)
+                    .nanoseconds.toLong(durationUnit)
+            }
         }
-    }
-    map["timeErrorHigh"] = benchmarks.flatMap { (_, stats) ->
-        stats.map {
-            (it.invocationAverageTimeNano + it.invocationStandardErrorTimeNano)
-                .nanoseconds.toLong(durationUnit)
+        map["timeErrorHigh"] = benchmarks.flatMap { (_, stats) ->
+            stats.map {
+                (it.invocationAverageTimeNano + it.invocationStandardErrorTimeNano)
+                    .nanoseconds.toLong(durationUnit)
+            }
         }
     }
     return map

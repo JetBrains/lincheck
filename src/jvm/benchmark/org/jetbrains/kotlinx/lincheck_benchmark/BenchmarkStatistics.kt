@@ -74,13 +74,25 @@ fun LincheckStatistics.toBenchmarkStatistics(name: String, strategy: LincheckStr
             val invocationsRunningTime = statistics
                 .map { it.invocationsRunningTimeNano }
                 .flatten()
+            val invocationsCount = statistics.sumOf { it.invocationsCount }
+            val runningTimeNano = statistics.sumOf { it.runningTimeNano }
+            val invocationAverageTimeNano = when {
+                // handle the case when per-invocation statistics is not gathered
+                invocationsRunningTime.isEmpty() -> (runningTimeNano.toDouble() / invocationsCount).toLong()
+                else -> invocationsRunningTime.average().toLong()
+            }
+            val invocationStandardErrorTimeNano = when {
+                // if per-invocation statistics is not gathered we cannot compute standard error
+                invocationsRunningTime.isEmpty() -> -1L
+                else -> invocationsRunningTime.standardError().toLong()
+            }
             ScenarioStatistics(
                 threads = threads,
                 operations = operations,
-                invocationsCount = statistics.sumOf { it.invocationsCount },
-                runningTimeNano = statistics.sumOf { it.runningTimeNano },
-                invocationAverageTimeNano = invocationsRunningTime.average().toLong(),
-                invocationStandardErrorTimeNano = invocationsRunningTime.standardError().toLong(),
+                invocationsCount = invocationsCount,
+                runningTimeNano = runningTimeNano,
+                invocationAverageTimeNano = invocationAverageTimeNano,
+                invocationStandardErrorTimeNano = invocationStandardErrorTimeNano,
             )
         }
 )
@@ -102,7 +114,7 @@ fun BenchmarksReport.saveTxt(filename: String) {
         }
     }.toString()
     val file = File("$filename.txt")
-    file.appendText(text, charset = Charsets.US_ASCII)
+    file.writeText(text, charset = Charsets.US_ASCII)
 }
 
 private fun StringBuilder.appendReportHeader() {
