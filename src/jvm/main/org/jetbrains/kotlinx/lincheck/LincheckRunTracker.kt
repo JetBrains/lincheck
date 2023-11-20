@@ -29,8 +29,8 @@ import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
  * Each Lincheck test run consists of a number of iterations,
  * with each iteration corresponding to the specific scenario.
  * On each iteration, the same scenario can be invoked multiple times in an attempt to uncover a failure.
- * By overriding the methods of LincheckRunTracker interface, one can track
- * the beginning and end of each iteration or invocation, as well as their results.
+ * By overriding the methods of LincheckRunTracker interface,
+ * it is possible to track the beginning and end of each iteration or invocation, as well as their results.
  */
 interface LincheckRunTracker {
 

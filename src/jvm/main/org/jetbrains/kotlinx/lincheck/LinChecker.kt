@@ -68,7 +68,8 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
                 testStructure.parameterGenerators.forEach { it.reset() }
             }
         }
-        val scenarios = customScenarios + randomScenarios.take(iterations).toList()
+        val scenarios = customScenarios.asSequence() + randomScenarios.take(iterations)
+        val scenariosSize = customScenarios.size + iterations
         val tracker = ChainedRunTracker().apply {
             if (customTracker != null)
                 addTracker(customTracker)
@@ -84,7 +85,7 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
             if ((i + 1) % VERIFIER_REFRESH_CYCLE == 0)
                 verifier = createVerifier()
             scenario.validate()
-            reporter.logIteration(i + 1, scenarios.size, scenario)
+            reporter.logIteration(i + 1, scenariosSize, scenario)
             var failure = scenario.run(i, this, verifier, tracker)
             reporter.logIterationStatistics(i, statisticsTracker)
             if (failure == null)
