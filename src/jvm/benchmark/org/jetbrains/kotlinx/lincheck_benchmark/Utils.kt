@@ -12,6 +12,8 @@ package org.jetbrains.kotlinx.lincheck_benchmark
 
 import kotlin.math.round
 import kotlin.math.sqrt
+import kotlin.time.Duration.Companion.nanoseconds
+import kotlin.time.DurationUnit
 
 fun Iterable<LongArray>.flatten(): LongArray {
     val size = sumOf { it.size }
@@ -23,6 +25,12 @@ fun Iterable<LongArray>.flatten(): LongArray {
         }
     }
     return result
+}
+
+fun LongArray.convertTo(unit: DurationUnit) {
+    for (i in indices) {
+        this[i] = this[i].nanoseconds.toLong(unit)
+    }
 }
 
 fun LongArray.standardDeviation(): Double {

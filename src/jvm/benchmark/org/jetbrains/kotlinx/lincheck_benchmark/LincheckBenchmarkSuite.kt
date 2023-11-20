@@ -73,7 +73,7 @@ class LincheckBenchmarksReporter {
         val report = BenchmarksReport(statistics)
         report.saveJson("benchmarks-results")
         report.saveTxt("benchmarks-results")
-        report.runtimePlot("running-time")
+        report.runningTimeBarPlot("running-time")
     }
 
 }

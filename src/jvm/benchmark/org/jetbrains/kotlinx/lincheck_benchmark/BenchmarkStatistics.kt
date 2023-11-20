@@ -30,7 +30,7 @@ data class BenchmarksReport(
 
 @Serializable
 data class BenchmarkStatistics(
-    val className: String,
+    val name: String,
     val strategy: LincheckStrategy,
     val runningTimeNano: Long,
     val iterationsCount: Int,
@@ -53,13 +53,13 @@ val BenchmarksReport.benchmarkIDs: List<BenchmarkID>
     get() = data.keys.toList()
 
 val BenchmarksReport.benchmarkNames: List<String>
-    get() = data.map { (_, statistics) -> statistics.className }.distinct()
+    get() = data.map { (_, statistics) -> statistics.name }.distinct()
 
 val BenchmarkStatistics.id: BenchmarkID
-    get() = "$className-$strategy"
+    get() = "$name-$strategy"
 
 fun LincheckStatistics.toBenchmarkStatistics(name: String, strategy: LincheckStrategy) = BenchmarkStatistics(
-    className = name,
+    name = name,
     strategy = strategy,
     runningTimeNano = runningTimeNano,
     iterationsCount = iterationsCount,
@@ -112,6 +112,6 @@ private fun StringBuilder.appendReportHeader() {
 private fun StringBuilder.appendBenchmarkRunningTime(benchmarkStatistics: BenchmarkStatistics) {
     with(benchmarkStatistics) {
         val runningTimeMs = runningTimeNano.nanoseconds.toLong(DurationUnit.MILLISECONDS)
-        appendLine("${strategy}.${className}.runtime.ms $runningTimeMs")
+        appendLine("${strategy}.${name}.runtime.ms $runningTimeMs")
     }
 }
