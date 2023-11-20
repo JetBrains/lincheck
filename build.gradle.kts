@@ -118,16 +118,16 @@ kotlin {
             val junitVersion: String by project
             val jctoolsVersion: String by project
             val serializationVersion: String by project
-            val kotlinxCliVersion: String by project
             val letsPlotVersion: String by project
             val letsPlotKotlinVersion: String by project
+            val cliktVersion: String by project
             dependencies {
                 implementation("junit:junit:$junitVersion")
                 implementation("org.jctools:jctools-core:$jctoolsVersion")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
-                implementation("org.jetbrains.kotlinx:kotlinx-cli:$kotlinxCliVersion")
                 implementation("org.jetbrains.lets-plot:lets-plot-common:$letsPlotVersion")
                 implementation("org.jetbrains.lets-plot:lets-plot-kotlin-jvm:$letsPlotKotlinVersion")
+                implementation("com.github.ajalt.clikt:clikt:$cliktVersion")
             }
         }
     }

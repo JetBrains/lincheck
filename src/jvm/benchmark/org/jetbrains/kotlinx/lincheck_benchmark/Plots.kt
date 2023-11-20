@@ -10,7 +10,10 @@
 
 package org.jetbrains.kotlinx.lincheck_benchmark
 
-import kotlinx.cli.*
+import com.github.ajalt.clikt.core.*
+import com.github.ajalt.clikt.parameters.options.*
+import com.github.ajalt.clikt.parameters.arguments.*
+import com.github.ajalt.clikt.parameters.types.*
 import org.jetbrains.letsPlot.*
 import org.jetbrains.letsPlot.export.*
 import org.jetbrains.letsPlot.geom.*
@@ -23,8 +26,7 @@ import kotlinx.serialization.json.decodeFromStream
 import org.jetbrains.kotlinx.lincheck.LincheckStrategy
 import kotlin.time.Duration.Companion.nanoseconds
 import kotlin.time.DurationUnit
-import java.io.File
-import java.nio.file.Paths
+import kotlin.io.path.inputStream
 
 
 fun BenchmarksReport.runningTimeBarPlot(filename: String, path: String? = null) {
@@ -44,7 +46,7 @@ fun BenchmarksReport.runningTimeBarPlot(filename: String, path: String? = null) 
         y = "runningTime"
         fill = "strategy"
     }
-    ggsave(plot, "${filename}.html", path = path)
+    ggsave(plot, filename, path = path)
 }
 
 fun BenchmarksReport.runningTimeData(
@@ -94,7 +96,7 @@ fun BenchmarksReport.invocationTimeByScenarioSizeBarPlot(
         ymax = "timeErrorHigh"
         group = "strategy"
     }
-    ggsave(plot, "${filename}.html", path = path)
+    ggsave(plot, filename, path = path)
 }
 
 fun BenchmarksReport.invocationTimeByScenarioSizeData(
@@ -154,7 +156,7 @@ fun BenchmarksReport.invocationTimeScatterPlot(
         breaks = listOf(10, 100, 1000, 10_000, 100_000, 1_000_000),
         limits = 10 to 5_000_000
     )
-    ggsave(plot, "${filename}.html", path = path)
+    ggsave(plot, filename, path = path)
 }
 
 fun BenchmarksReport.invocationsTimeData(benchmarkID: BenchmarkID,
@@ -184,102 +186,95 @@ fun PlotType.defaultOutputFilename(): String = when (this) {
     else -> throw IllegalArgumentException()
 }
 
-fun main(args: Array<String>) {
-    val parser = ArgParser("Lincheck benchmarks report plotter")
-    val plotType by parser.option(
-        ArgType.Choice<PlotType>(),
-        description = "type of the plot to draw"
-    ).default(PlotType.AllPlots)
-    val benchmarkName by parser.option(
-        ArgType.String,
-        description = "name of the benchmark"
-    )
-    val strategy by parser.option(
-        ArgType.Choice<LincheckStrategy>(),
-        description = "strategy used in the benchmark"
-    )
-    val reportFilename by parser.argument(
-        ArgType.String,
-        description = "path to the benchmarks report file (.json)"
-    )
-    val outputPath by parser.argument(
-        ArgType.String,
-        description = "path to the output plot file, or output directory if all plots were requested"
-    )
-    parser.parse(args)
+class PlotCommand : CliktCommand() {
 
-    val file = File(reportFilename)
-    val report = file.inputStream().use { inputStream ->
-        Json.decodeFromStream<BenchmarksReport>(inputStream)
-    }
-    val outputFilename = when (plotType) {
-        PlotType.AllPlots -> null
-        else -> Paths.get(outputPath).fileName.toString()
-    }
-    val outputDirectory = when (plotType) {
-        PlotType.AllPlots -> outputPath
-        else -> Paths.get(outputPath).parent.toString()
-    }
+    val plotType by option()
+        .help("type of the plot to draw")
+        .enum<PlotType>()
+        .default(PlotType.AllPlots)
 
-    if (plotType == PlotType.RunningTimeBarPlot || plotType == PlotType.AllPlots) {
-        report.runningTimeBarPlot(
-            filename = outputFilename ?: PlotType.RunningTimeBarPlot.defaultOutputFilename(),
-            path = outputDirectory
-        )
-    }
+    val benchmarkName by option()
+        .help("name of the benchmark")
 
-    if (plotType == PlotType.InvocationTimeByScenarioSizeBarPlot || plotType == PlotType.AllPlots) {
-        val benchmarkNames = when (plotType) {
-            PlotType.InvocationTimeByScenarioSizeBarPlot -> {
-                require(benchmarkName != null) {
-                    "Benchmark name is required for $plotType"
+    val strategyName by option()
+        .help("strategy used in the benchmark")
+        .enum<LincheckStrategy>()
+
+    val report by argument()
+        .help("path to the benchmarks report file (.json)")
+        .path(canBeFile = true, canBeDir = false)
+
+    val output by argument()
+        .help("path to the output directory")
+        .path(canBeDir = true, canBeFile = false)
+        .optional()
+
+    override fun run() {
+        val report = report.inputStream().use { inputStream ->
+            Json.decodeFromStream<BenchmarksReport>(inputStream)
+        }
+
+        if (plotType == PlotType.RunningTimeBarPlot || plotType == PlotType.AllPlots) {
+            val plotFilename = PlotType.RunningTimeBarPlot.defaultOutputFilename()
+            report.runningTimeBarPlot(plotFilename, path = output?.toString())
+            logProducedPlot(plotFilename)
+        }
+
+        if (plotType == PlotType.InvocationTimeByScenarioSizeBarPlot || plotType == PlotType.AllPlots) {
+            val benchmarkNames = when (plotType) {
+                PlotType.InvocationTimeByScenarioSizeBarPlot -> {
+                    require(benchmarkName != null) {
+                        "Benchmark name is required for $plotType"
+                    }
+                    listOf(benchmarkName!!)
                 }
-                listOf(benchmarkName!!)
+                PlotType.AllPlots -> report.benchmarkNames
+                else -> throw IllegalStateException()
             }
-            PlotType.AllPlots -> report.benchmarkNames
-            else -> throw IllegalStateException()
+            for (name in benchmarkNames) {
+                val plotFilename = "${name}-${PlotType.RunningTimeBarPlot.defaultOutputFilename()}"
+                report.invocationTimeByScenarioSizeBarPlot(name, plotFilename, path = output?.toString())
+                logProducedPlot(plotFilename)
+            }
         }
-        for (name in benchmarkNames) {
-            report.invocationTimeByScenarioSizeBarPlot(
-                benchmarkName = name,
-                filename = "${name}-${PlotType.RunningTimeBarPlot.defaultOutputFilename()}",
-                path = outputDirectory,
-            )
-        }
-    }
 
-    if (plotType == PlotType.InvocationTimeScatterPlot || plotType == PlotType.AllPlots) {
-        val benchmarkIDs = when (plotType) {
-            PlotType.InvocationTimeScatterPlot -> {
-                require(benchmarkName != null) {
-                    "Benchmark name is required for $plotType"
-                }
-                require(strategy != null) {
-                    "Strategy name is required for $plotType"
-                }
-                val benchmark = report.data.values.find {
-                    it.name == benchmarkName && it.strategy == strategy
-                }
-                require(benchmark != null) {
-                    """
+        if (plotType == PlotType.InvocationTimeScatterPlot || plotType == PlotType.AllPlots) {
+            val benchmarkIDs = when (plotType) {
+                PlotType.InvocationTimeScatterPlot -> {
+                    require(benchmarkName != null) {
+                        "Benchmark name is required for $plotType"
+                    }
+                    require(strategyName != null) {
+                        "Strategy name is required for $plotType"
+                    }
+                    val benchmark = report.data.values.find {
+                        it.name == benchmarkName && it.strategy == strategyName
+                    }
+                    require(benchmark != null) {
+                        """
                         Benchmark with the given parameters has not been found in the report:
                             benchmark name = $benchmarkName
-                            strategy name = $strategy
+                            strategy name = $strategyName
                     """.trimIndent()
+                    }
+                    listOf(benchmark.id)
                 }
-                listOf(benchmark.id)
+                PlotType.AllPlots -> report.benchmarkIDs
+                else -> throw IllegalStateException()
             }
-            PlotType.AllPlots -> report.benchmarkIDs
-            else -> throw IllegalStateException()
-        }
-        for (benchmarkID in benchmarkIDs) {
-            val benchmark = report.data[benchmarkID]!!
-            val plotFilename = PlotType.InvocationTimeScatterPlot.defaultOutputFilename()
-            report.invocationTimeScatterPlot(
-                benchmarkID = benchmarkID,
-                filename = "${benchmark.name}-${benchmark.strategy}-${plotFilename}",
-                path = outputDirectory,
-            )
+            for (benchmarkID in benchmarkIDs) {
+                val benchmark = report.data[benchmarkID]!!
+                val plotFilename = "${benchmark.name}-${benchmark.strategy}-" +
+                        PlotType.InvocationTimeScatterPlot.defaultOutputFilename()
+                report.invocationTimeScatterPlot(benchmarkID, plotFilename, path = output?.toString())
+                logProducedPlot(plotFilename)
+            }
         }
     }
+
+    private fun logProducedPlot(plotFilename: String) {
+        println("Produced plot $plotFilename")
+    }
 }
+
+fun main(args: Array<String>) = PlotCommand().main(args)
