@@ -699,14 +699,6 @@ abstract class ManagedStrategy(
     }
 
     /**
-     * This method is invoked by a test thread before a suspension point.
-     * @param iThread number of invoking thread
-     */
-    internal open fun beforeCoroutineSuspensionPoint(iThread: Int) {
-        check(currentThread == iThread)
-    }
-
-    /**
      * This method is invoked by a test thread
      * if a coroutine was suspended.
      * @param iThread number of invoking thread
@@ -733,22 +725,12 @@ abstract class ManagedStrategy(
     }
 
     /**
-     * This method is invoked by a test thread before a coroutine cancellation attempt.
-     *
-     * @param iThread number of the invoking thread.
-     * @return true if the coroutine should be cancelled.
-     */
-    internal open fun beforeCoroutineCancel(iThread: Int): Boolean {
-        return true
-    }
-
-    /**
      * This method is invoked by a test thread after a coroutine cancellation attempt.
      *
      * @param iThread number of the invoking thread.
      * @param cancellationResult the result of the cancellation attempt.
      */
-    internal open fun afterCoroutineCancelled(iThread: Int, cancellationResult: CancellationResult) {
+    internal open fun afterCoroutineCancelled(iThread: Int, promptCancellation: Boolean, cancellationResult: CancellationResult) {
         check(currentThread == iThread)
         if (cancellationResult == CANCELLATION_FAILED)
             return
@@ -766,6 +748,7 @@ abstract class ManagedStrategy(
     }
 
     internal open fun isCoroutineResumed(iThread: Int, iActor: Int): Boolean {
+        // TODO: fixme! check if coroutine resume event was added to the current execution
         return true
     }
 
@@ -985,11 +968,6 @@ internal class ManagedStrategyRunner(
         super.onFailure(iThread, e)
     }
 
-    override fun beforeCoroutineSuspensionPoint(iThread: Int) {
-        super.beforeCoroutineSuspensionPoint(iThread)
-        managedStrategy.beforeCoroutineSuspensionPoint(iThread)
-    }
-
     override fun afterCoroutineSuspended(iThread: Int) {
         super.afterCoroutineSuspended(iThread)
         managedStrategy.afterCoroutineSuspended(iThread)
@@ -1000,13 +978,9 @@ internal class ManagedStrategyRunner(
         managedStrategy.afterCoroutineResumed(iThread)
     }
 
-    override fun beforeCoroutineCancel(iThread: Int): Boolean {
-        return super.beforeCoroutineCancel(iThread) && managedStrategy.beforeCoroutineCancel(iThread)
-    }
-
-    override fun afterCoroutineCancel(iThread: Int, result: CancellationResult) {
-        super.afterCoroutineCancel(iThread, result)
-        managedStrategy.afterCoroutineCancelled(iThread, result)
+    override fun afterCoroutineCancel(iThread: Int, promptCancellation: Boolean, result: CancellationResult) {
+        super.afterCoroutineCancel(iThread, promptCancellation, result)
+        managedStrategy.afterCoroutineCancelled(iThread, promptCancellation, result)
     }
 
     override fun onResumeCoroutine(iResumedThread: Int, iResumedActor: Int) {
@@ -1020,21 +994,16 @@ internal class ManagedStrategyRunner(
 
     override fun <T> cancelByLincheck(cont: CancellableContinuation<T>, promptCancellation: Boolean): CancellationResult {
         val iThread = managedStrategy.currentThreadNumber()
-        val shouldCancel = beforeCoroutineCancel(iThread)
-        if (!shouldCancel)
-            return CANCELLATION_FAILED
         // Create a cancellation trace point before `cancel`, so that cancellation trace point
         // precedes the events in `onCancellation` handler.
         val cancellationTracePoint = managedStrategy.createAndLogCancellationTracePoint()
         try {
             // Call the `cancel` method.
-            val cancellationResult = // managedStrategy.runIgnored(iThread) {
-                super.cancelByLincheck(cont, promptCancellation)
-            // }
+            val cancellationResult = super.cancelByLincheck(cont, promptCancellation)
             // Pass the result to `cancellationTracePoint`.
             cancellationTracePoint?.initializeCancellationResult(cancellationResult)
             // Invoke `strategy.afterCoroutineCancelled`.
-            afterCoroutineCancel(iThread, cancellationResult)
+            afterCoroutineCancel(iThread, promptCancellation, cancellationResult)
             return cancellationResult
         } catch(e: Throwable) {
             cancellationTracePoint?.initializeException(e)

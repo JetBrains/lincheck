@@ -1224,6 +1224,7 @@ data class CoroutineSuspendLabel(
     override val threadId: Int,
     override val actorId: Int,
     val cancelled: Boolean = false,
+    val promptCancellation: Boolean = false,
     // TODO: should we also keep resume value and cancellation flag?
 ) : CoroutineLabel(
     kind = kind,
@@ -1234,22 +1235,31 @@ data class CoroutineSuspendLabel(
 ) {
     init {
         require(isRequest || isResponse || isReceive)
+        require(promptCancellation implies isRequest)
         require(cancelled implies isResponse)
     }
 
     override fun isValidResponse(label: EventLabel): Boolean {
         require(isResponse)
         return when (label) {
-            is CoroutineLabel ->
-                (label is CoroutineSuspendLabel && label.isRequest || label is CoroutineResumeLabel)
-                        && threadId == label.threadId
-                        && actorId == label.actorId
+            is CoroutineSuspendLabel ->
+                label.isRequest
+                    && (label.promptCancellation implies cancelled)
+                    && threadId == label.threadId
+                    && actorId == label.actorId
+            is CoroutineResumeLabel ->
+                !cancelled
+                    && threadId == label.threadId
+                    && actorId == label.actorId
+            is InitializationLabel ->
+                cancelled
             else -> false
         }
     }
 
     override fun getResponse(label: EventLabel): CoroutineSuspendLabel? = when {
-        isRequest && label is CoroutineResumeLabel
+        isRequest && !promptCancellation
+            && label is CoroutineResumeLabel
             && threadId == label.threadId
             && actorId == label.actorId ->
                 CoroutineSuspendLabel(

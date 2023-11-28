@@ -230,8 +230,8 @@ internal open class ParallelThreadsRunner(
         val finalResult = if (res === COROUTINE_SUSPENDED) {
             val t = Thread.currentThread() as TestThread
             val cont = t.cont.also { t.cont = null }
-            beforeCoroutineSuspensionPoint(t.iThread)
-            if (actor.cancelOnSuspension && cont !== null && cancelByLincheck(cont, actor.promptCancellation) != CANCELLATION_FAILED) {
+            if (actor.cancelOnSuspension && cont !== null
+                && cancelByLincheck(cont, actor.promptCancellation) != CANCELLATION_FAILED) {
                 if (!trySetCancelledStatus(iThread, actorId)) {
                     // already resumed, increment `completedOrSuspendedThreads` back
                     completedOrSuspendedThreads.incrementAndGet()
@@ -288,19 +288,13 @@ internal open class ParallelThreadsRunner(
     internal open fun <T> cancelByLincheck(cont: CancellableContinuation<T>, promptCancellation: Boolean): CancellationResult =
         cont.cancelByLincheck(promptCancellation)
 
-    override fun beforeCoroutineSuspensionPoint(iThread: Int) {}
-
     override fun afterCoroutineSuspended(iThread: Int) {
         completedOrSuspendedThreads.incrementAndGet()
     }
 
     override fun afterCoroutineResumed(iThread: Int) {}
 
-    override fun beforeCoroutineCancel(iThread: Int): Boolean {
-        return true
-    }
-
-    override fun afterCoroutineCancel(iThread: Int, result: CancellationResult) {}
+    override fun afterCoroutineCancel(iThread: Int, promptCancellation: Boolean, result: CancellationResult) {}
 
     override fun onResumeCoroutine(iResumedThread: Int, iResumedActor: Int) {}
 

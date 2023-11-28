@@ -593,13 +593,18 @@ class EventStructure(
             label is UnlockLabel && label.isReentry -> {
                 return listOf(root)
             }
-            label is CoroutineResumeLabel -> {
-                val suspendRequest = getBlockedAwaitingRequest(label.threadId).ensure { request ->
-                    (request != null) && request.label is CoroutineSuspendLabel
-                            && ((request.label as CoroutineSuspendLabel).actorId == label.actorId)
-                }!!
-                return listOf(suspendRequest)
+            label is CoroutineSuspendLabel && label.isRequest -> {
+                // filter-out InitializationLabel to prevent creating cancellation response
+                // TODO: refactor!!!
+                candidates.filter { it.label !is InitializationLabel }
             }
+            // label is CoroutineResumeLabel -> {
+            //     val suspendRequest = getBlockedAwaitingRequest(label.threadId).ensure { request ->
+            //         (request != null) && request.label is CoroutineSuspendLabel
+            //                 && ((request.label as CoroutineSuspendLabel).actorId == label.actorId)
+            //     }!!
+            //     return listOf(suspendRequest)
+            // }
             label is RandomLabel ->
                 return listOf()
 
@@ -995,12 +1000,9 @@ class EventStructure(
         return addSendEvent(iThread, label)
     }
 
-    fun addCoroutineSuspendRequestEvent(iThread: Int, iActor: Int): AtomicThreadEvent {
-        val label = CoroutineSuspendLabel(LabelKind.Request, iThread, iActor)
-        return addRequestEvent(iThread, label).also { event ->
-            if (isBlockedDanglingRequest(event) && event !in danglingEvents)
-                markBlockedDanglingRequest(event)
-        }
+    fun addCoroutineSuspendRequestEvent(iThread: Int, iActor: Int, promptCancellation: Boolean = false): AtomicThreadEvent {
+        val label = CoroutineSuspendLabel(LabelKind.Request, iThread, iActor, promptCancellation = promptCancellation)
+        return addRequestEvent(iThread, label)
     }
 
     fun addCoroutineSuspendResponseEvent(iThread: Int, iActor: Int): AtomicThreadEvent {
@@ -1013,39 +1015,25 @@ class EventStructure(
         return response!!
     }
 
-    fun addCoroutineCancelResponseEvent(iThread: Int, iActor: Int): AtomicThreadEvent? {
+    fun addCoroutineCancelResponseEvent(iThread: Int, iActor: Int): AtomicThreadEvent {
         val request = getBlockedRequest(iThread).ensure { event ->
             (event != null) && event.label is CoroutineSuspendLabel
                     && ((event.label as CoroutineSuspendLabel).actorId == iActor)
         }!!
-        // in the non-replay phase, we add the cancellation event to the event structure,
-        // but not to the current execution, so it will be explored later at the next invocation
-        if (!inReplayPhase(iThread)) {
-            check(!inReplayPhase())
-            val label = (request.label as CoroutineSuspendLabel).getResponse(root.label)!!
-            addEvent(iThread, label, parent = request, dependencies = listOf(root))!!
-            return null
+        val label = (request.label as CoroutineSuspendLabel).getResponse(root.label)!!
+        tryReplayEvent(iThread)?.let { event ->
+            check(event.label == label)
+            addEventToCurrentExecution(event)
+            return event
         }
-        // if we are at replay phase, wait until we can replay the next event
-        while (!canReplayNextEvent(iThread))
-            internalThreadSwitchCallback(iThread, SwitchReason.STRATEGY_SWITCH)
-        // obtain the response event
-        val (response, events) = addResponseEvents(request)
-        check(events.size == 1)
-        check(response != null)
-        check(response.label.isResponse)
-        check(response.label is CoroutineSuspendLabel)
-        // check if the response is successful cancellation
-        return response.takeIf { (it.label as CoroutineSuspendLabel).cancelled }
+        return addEvent(iThread, label, parent = request, dependencies = listOf(root))!!.also { event ->
+            addEventToCurrentExecution(event)
+        }
     }
 
     fun addCoroutineResumeEvent(iThread: Int, iResumedThread: Int, iResumedActor: Int): AtomicThreadEvent {
-        val suspendRequest = getBlockedAwaitingRequest(iResumedThread).ensure { event ->
-            (event != null) && event.label is CoroutineSuspendLabel
-                    && ((event.label as CoroutineSuspendLabel).actorId == iResumedActor)
-        }!!
         val label = CoroutineResumeLabel(iResumedThread, iResumedActor)
-        return addSendEvent(iThread, label, dependencies = listOf(suspendRequest))
+        return addSendEvent(iThread, label)
     }
 
     fun addActorStartEvent(iThread: Int, actor: Actor): AtomicThreadEvent {

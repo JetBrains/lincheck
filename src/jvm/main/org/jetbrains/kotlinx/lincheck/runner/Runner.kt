@@ -110,13 +110,6 @@ abstract class Runner protected constructor(
     open fun onFailure(iThread: Int, e: Throwable) {}
 
     /**
-     * This method is invoked before the suspension point.
-     * @param iThread number of invoking thread
-     */
-    open fun beforeCoroutineSuspensionPoint(iThread: Int): Unit =
-        throw UnsupportedOperationException("Coroutines are not supported")
-
-    /**
      * This method is invoked by the corresponding test thread
      * when the current coroutine suspends.
      * @param iThread number of invoking thread
@@ -133,18 +126,9 @@ abstract class Runner protected constructor(
 
     /**
      * This method is invoked by the corresponding test thread
-     * before the current coroutine cancellation attempt.
-     *
-     * @return true if the coroutine should be canceled, false otherwise.
-     */
-    open fun beforeCoroutineCancel(iThread: Int): Boolean =
-        throw UnsupportedOperationException("Coroutines are not supported")
-
-    /**
-     * This method is invoked by the corresponding test thread
      * after the current coroutine cancellation attempt.
      */
-    open fun afterCoroutineCancel(iThread: Int, result: CancellationResult): Unit =
+    open fun afterCoroutineCancel(iThread: Int, promptCancellation: Boolean, result: CancellationResult): Unit =
         throw UnsupportedOperationException("Coroutines are not supported")
 
     /**

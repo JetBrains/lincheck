@@ -96,6 +96,7 @@ internal fun getValueSuspended(result: Result): Any? = when (result) {
     is ValueResult -> result.value
     is ExceptionResult -> result.tClazz
     is Suspended -> result
+    is Cancelled -> result
     else -> throw IllegalArgumentException()
 }
 

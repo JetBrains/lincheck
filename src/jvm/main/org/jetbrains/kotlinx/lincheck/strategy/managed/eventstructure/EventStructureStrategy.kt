@@ -52,10 +52,6 @@ class EventStructureStrategy(
             switchCurrentThread(iThread, reason, mustSwitch = true)
         }
 
-    private enum class SuspensionStatus { AwaitingDecision, Suspended, Cancelled }
-
-    private val suspensionStatus = Array<SuspensionStatus?>(nThreads) { null }
-
     // Tracker of shared memory accesses.
     override val memoryTracker: MemoryTracker =
         EventStructureMemoryTracker(eventStructure)
@@ -269,7 +265,6 @@ class EventStructureStrategy(
     override fun initializeInvocation() {
         super.initializeInvocation()
         thread_steps = 0
-        suspensionStatus.fill(null)
         eventStructure.initializeExploration()
         eventStructure.addThreadStartEvent(eventStructure.mainThreadId)
     }
@@ -319,65 +314,43 @@ class EventStructureStrategy(
         throw ForcibleExecutionFinishException
     }
 
-    override fun beforeCoroutineSuspensionPoint(iThread: Int) {
-        super.beforeCoroutineSuspensionPoint(iThread)
-        if (eventStructure.inReplayPhase()) {
-            suspensionStatus[iThread] = SuspensionStatus.AwaitingDecision
-        }
-        eventStructure.addCoroutineSuspendRequestEvent(iThread, currentActorId[iThread])
-        // suspensionStatus[iThread] = SuspensionStatus.Suspended
-    }
-
     override fun afterCoroutineSuspended(iThread: Int) {
-        suspensionStatus[iThread] = SuspensionStatus.Suspended
+        eventStructure.addCoroutineSuspendRequestEvent(iThread, currentActorId[iThread])
         super.afterCoroutineSuspended(iThread)
     }
 
     override fun afterCoroutineResumed(iThread: Int) {
         super.afterCoroutineResumed(iThread)
-        suspensionStatus[iThread] = null
         eventStructure.addCoroutineSuspendResponseEvent(iThread, currentActorId[iThread])
     }
 
-    override fun beforeCoroutineCancel(iThread: Int): Boolean {
-        if (!super.beforeCoroutineCancel(iThread))
-            return false
-        val event = eventStructure.addCoroutineCancelResponseEvent(iThread, currentActorId[iThread])
-        if (event != null) {
-            suspensionStatus[iThread] = SuspensionStatus.AwaitingDecision
-            return true
-        }
-        return false
-    }
-
-    override fun afterCoroutineCancelled(iThread: Int, cancellationResult: CancellationResult) {
-        super.afterCoroutineCancelled(iThread, cancellationResult)
-        // TODO: what should we do if cancellation failed?
-        if (cancellationResult == CancellationResult.CANCELLATION_FAILED) {
-
-        }
-        // check(cancellationResult != CancellationResult.CANCELLATION_FAILED)
-        if (cancellationResult != CancellationResult.CANCELLATION_FAILED)
-            suspensionStatus[iThread] = SuspensionStatus.Cancelled
+    override fun afterCoroutineCancelled(iThread: Int, promptCancellation: Boolean, cancellationResult: CancellationResult) {
+        super.afterCoroutineCancelled(iThread, promptCancellation, cancellationResult)
+        if (cancellationResult == CancellationResult.CANCELLATION_FAILED)
+            return
+        eventStructure.addCoroutineSuspendRequestEvent(iThread, currentActorId[iThread], promptCancellation)
+        eventStructure.addCoroutineCancelResponseEvent(iThread, currentActorId[iThread])
     }
 
     override fun onResumeCoroutine(iThread: Int, iResumedThread: Int, iResumedActor: Int) {
         super.onResumeCoroutine(iThread, iResumedThread, iResumedActor)
-        while (suspensionStatus[iResumedThread] == SuspensionStatus.AwaitingDecision) {
-            switchCurrentThread(iThread, SwitchReason.STRATEGY_SWITCH, mustSwitch = true)
-        }
-        if (iThread != iResumedThread && suspensionStatus[iResumedThread] == SuspensionStatus.Suspended) {
-            eventStructure.addCoroutineResumeEvent(iThread, iResumedThread, iResumedActor)
-        }
+        eventStructure.addCoroutineResumeEvent(iThread, iResumedThread, iResumedActor)
     }
 
     override fun isCoroutineResumed(iThread: Int, iActor: Int): Boolean {
         if (!super.isCoroutineResumed(iThread, iActor))
             return false
-        val blockedEvent = eventStructure.getBlockedRequest(iThread).ensure {
-            it != null && it.label is CoroutineSuspendLabel
-        }!!
-        return !eventStructure.isBlockedAwaitingRequest(blockedEvent)
+        val resumeEvent = eventStructure.currentExecution.find {
+            val label = it.label
+            label is CoroutineResumeLabel
+                && label.threadId ==iThread
+                && label.actorId == iActor
+        }
+        return (resumeEvent != null)
+        // val blockedEvent = eventStructure.getBlockedRequest(iThread).ensure {
+        //     it != null && it.label is CoroutineSuspendLabel
+        // }!!
+        // return !eventStructure.isBlockedAwaitingRequest(blockedEvent)
     }
 
     override fun interceptRandom(): Int? {
