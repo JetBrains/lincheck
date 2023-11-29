@@ -346,7 +346,8 @@ class EventStructure(
             }
         }
         val blockedRequests = frontier.cutDanglingRequestEvents()
-            .filter { it.label.isBlocking && it != parent }
+            // TODO: perhaps, we should change this to the list of requests to conflicting response events?
+            .filter { it.label.isBlocking && it != parent && (it.label !is CoroutineSuspendLabel) }
         frontier[iThread] = parent
         val pinnedEvents = pinnedEvents.copy().apply {
             // TODO: can reorder cut and merge?
