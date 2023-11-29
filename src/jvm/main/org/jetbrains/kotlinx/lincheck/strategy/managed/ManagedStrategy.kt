@@ -835,7 +835,7 @@ abstract class ManagedStrategy(
     }
 
     internal fun shouldTrackMemory(iThread: Int): Boolean {
-        return (iThread < untrackingSectionDepth.size) && (untrackingSectionDepth[iThread] == 0)
+        return (iThread < untrackingSectionDepth.size) && (untrackingSectionDepth[iThread] == 0) && (suddenInvocationResult == null)
     }
 
     internal fun enterUntrackingSection(iThread: Int) {
