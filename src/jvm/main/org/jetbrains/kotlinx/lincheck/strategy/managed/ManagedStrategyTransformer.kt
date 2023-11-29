@@ -113,6 +113,7 @@ internal class ManagedStrategyTransformer(
         mv = TimeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = RandomTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = ThreadYieldTransformer(GeneratorAdapter(mv, access, mname, desc))
+        mv = IgnoreMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         return mv
     }
 
@@ -915,6 +916,25 @@ internal class ManagedStrategyTransformer(
             adapter.push(codeLocationIdProvider.lastId) // re-use previous code location
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, BEFORE_ATOMIC_METHOD_CALL_METHOD)
         }
+    }
+
+    private inner class IgnoreMethodTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
+        override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
+//            println("should ignore method: $owner::$name ?")
+            if (isIgnoredMethod(owner, name, desc)) {
+                // println("ignoring method: $owner::$name")
+                runInIgnoredSection(untrack = true) {
+                    adapter.visitMethodInsn(opcode, owner, name, desc, itf)
+                }
+            } else {
+                adapter.visitMethodInsn(opcode, owner, name, desc, itf)
+            }
+        }
+
+        private fun isIgnoredMethod(owner: String, name: String, desc: String): Boolean =
+            (owner == "kotlinx/coroutines/internal/StackTraceRecoveryKt" && name == "recoverStackTrace") ||
+            (owner == "kotlinx/coroutines/internal/StackTraceRecoveryKt" && name == "access\$recoverFromStackFrame")
+
     }
 
     /**
@@ -2038,7 +2058,7 @@ internal class ManagedStrategyTransformer(
          * }
          * ```
          */
-        protected fun runInIgnoredSection(block: () -> Unit) = adapter.run {
+        protected fun runInIgnoredSection(untrack: Boolean = false, block: () -> Unit) = adapter.run {
             val callStart = newLabel()
             val callEnd = newLabel()
             val exceptionHandler = newLabel()
@@ -2049,13 +2069,22 @@ internal class ManagedStrategyTransformer(
                 visitTryCatchBlock(callStart, callEnd, exceptionHandler, null)
             }
             invokeBeforeIgnoredSectionEntering()
+            if (untrack) {
+                invokeBeforeUntrackingSectionEntering()
+            }
             visitLabel(callStart)
             block()
             visitLabel(callEnd)
+            if (untrack) {
+                invokeAfterUntrackingSectionLeaving()
+            }
             invokeAfterIgnoredSectionLeaving()
             goTo(skipHandler)
             // upon exception leave ignored section
             visitLabel(exceptionHandler)
+            if (untrack) {
+                invokeAfterUntrackingSectionLeaving()
+            }
             invokeAfterIgnoredSectionLeaving()
             throwException() // throw the exception further
             visitLabel(skipHandler)

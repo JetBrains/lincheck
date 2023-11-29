@@ -520,6 +520,10 @@ class EventStructure(
         objectIndex.put(entry.obj.unwrap(), entry).ensureNull()
     }
 
+    fun allocationEvent(id: ObjectID): AtomicThreadEvent? {
+        return objectIdIndex[id]?.event
+    }
+
     private val EventLabel.syncType
         get() = syncAlgebra.syncType(this)
 

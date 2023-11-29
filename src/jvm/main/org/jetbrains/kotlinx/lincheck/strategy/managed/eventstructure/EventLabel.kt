@@ -236,6 +236,9 @@ class InitializationLabel(
     private val objectsAllocations =
         IdentityHashMap<ObjectID, ObjectAllocationLabel>()
 
+    val externalObjects: Set<ObjectID>
+        get() = objectsAllocations.keys
+
     fun trackExternalObject(className: String, objID: ObjectID) {
         objectsAllocations[objID] = ObjectAllocationLabel(className, objID, memoryInitializer)
     }
@@ -247,7 +250,7 @@ class InitializationLabel(
         objectsAllocations[objID]
 
     fun isWriteAccess(location: MemoryLocation): Boolean =
-        location is StaticFieldMemoryLocation || (location.objID in objectsAllocations)
+        location is StaticFieldMemoryLocation || (location.objID in externalObjects)
 
     fun asWriteAccessLabel(location: MemoryLocation): WriteAccessLabel? {
         if (location is StaticFieldMemoryLocation) {

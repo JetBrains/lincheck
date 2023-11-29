@@ -391,34 +391,42 @@ private class EventStructureMemoryTracker(
         eventStructure.addObjectAllocationEvent(iThread, value)
     }
 
-    override fun writeValue(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?) {
-        eventStructure.addWriteEvent(iThread, codeLocation, location, kClass, value)
+    private fun performWrite(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?, isExclusive: Boolean = false) {
+        // force evaluation of initial value (before possibly overwriting it)
+        // TODO: refactor this!
+        eventStructure.allocationEvent(location.objID)?.label?.asWriteAccessLabel(location)
+        eventStructure.addWriteEvent(iThread, codeLocation, location, kClass, value, isExclusive)
+        location.write(::getValue, value?.unwrap())
     }
 
-    override fun readValue(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>): OpaqueValue? {
-        val readEvent = eventStructure.addReadEvent(iThread, codeLocation, location, kClass)
+    private fun performRead(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>, isExclusive: Boolean = false): OpaqueValue? {
+        val readEvent = eventStructure.addReadEvent(iThread, codeLocation, location, kClass, isExclusive)
         val valueID = (readEvent.label as ReadAccessLabel).value
         return eventStructure.getValue(valueID)
     }
 
+    override fun writeValue(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?) {
+        performWrite(iThread, codeLocation, location, kClass, value)
+    }
+
+    override fun readValue(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>): OpaqueValue? {
+        return performRead(iThread, codeLocation, location, kClass)
+    }
+
     override fun compareAndSet(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>, expected: OpaqueValue?, desired: OpaqueValue?): Boolean {
-        val readEvent = eventStructure.addReadEvent(iThread, codeLocation, location, kClass, isExclusive = true)
-        val valueID = (readEvent.label as ReadAccessLabel).value
-        val value = eventStructure.getValue(valueID)
+        val value = performRead(iThread, codeLocation, location, kClass, isExclusive = true)
         if (value != expected)
             return false
-        eventStructure.addWriteEvent(iThread, codeLocation, location, kClass, desired, isExclusive = true)
+        performWrite(iThread, codeLocation, location, kClass, desired, isExclusive = true)
         return true
     }
 
     private enum class IncrementKind { Pre, Post }
 
     private fun fetchAndAdd(iThread: Int, codeLocation: Int, memoryLocationId: MemoryLocation, kClass: KClass<*>, delta: Number, incKind: IncrementKind): OpaqueValue? {
-        val readEvent = eventStructure.addReadEvent(iThread, codeLocation, memoryLocationId, kClass, isExclusive = true)
-        val oldValueID = (readEvent.label as ReadAccessLabel).value
-        val oldValue = eventStructure.getValue(oldValueID)!!
+        val oldValue = performRead(iThread, codeLocation, memoryLocationId, kClass, isExclusive = true)!!
         val newValue = oldValue + delta
-        eventStructure.addWriteEvent(iThread, codeLocation, memoryLocationId, kClass, newValue, isExclusive = true)
+        performWrite(iThread, codeLocation, memoryLocationId, kClass, newValue, isExclusive = true)
         return when (incKind) {
             IncrementKind.Pre -> oldValue
             IncrementKind.Post -> newValue
@@ -434,10 +442,9 @@ private class EventStructureMemoryTracker(
     }
 
     override fun getAndSet(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?): OpaqueValue? {
-        val readEvent = eventStructure.addReadEvent(iThread, codeLocation, location, kClass, isExclusive = true)
-        val readValueID = (readEvent.label as ReadAccessLabel).value
-        eventStructure.addWriteEvent(iThread, codeLocation, location, kClass, value, isExclusive = true)
-        return eventStructure.getValue(readValueID)
+        val readValue = performRead(iThread, codeLocation, location, kClass, isExclusive = true)
+        performWrite(iThread, codeLocation, location, kClass, value, isExclusive = true)
+        return readValue
     }
 
     override fun dumpMemory() {
