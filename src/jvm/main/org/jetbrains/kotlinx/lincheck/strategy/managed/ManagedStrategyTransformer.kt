@@ -201,6 +201,84 @@ internal class ManagedStrategyTransformer(
             }
         }
 
+        override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
+            val isSystemMethodInvocation = (owner == "java/lang/System")
+            if (!isSystemMethodInvocation) {
+                super.visitMethodInsn(opcode, owner, name, desc, itf)
+                return
+            }
+            when (name) {
+                "arraycopy" -> visitArrayCopyMethod(desc) {
+                    super.visitMethodInsn(opcode, owner, name, desc, itf)
+                }
+                else ->
+                    super.visitMethodInsn(opcode, owner, name, desc, itf)
+            }
+        }
+
+        // STACK: srcArray, srcPos, dstArray, dstPos, length
+        private fun visitArrayCopyMethod(descriptor: String, emitMethod: () -> Unit) = adapter.run {
+            // skip if memory tracking is disabled
+            val exitLabel = newLabel()
+            invokeShouldTrackMemory()
+            ifZCmp(GeneratorAdapter.EQ, exitLabel)
+            // copy parameters
+            val srcArrayLocal = newLocal(OBJECT_TYPE)
+            val dstArrayLocal = newLocal(OBJECT_TYPE)
+            val srcPosLocal = newLocal(Type.INT_TYPE)
+            val dstPosLocal = newLocal(Type.INT_TYPE)
+            val lengthLocal = newLocal(Type.INT_TYPE)
+            storeLocal(lengthLocal)
+            storeLocal(dstPosLocal)
+            storeLocal(dstArrayLocal)
+            storeLocal(srcPosLocal)
+            storeLocal(srcArrayLocal)
+            loadLocal(srcArrayLocal)
+            loadLocal(srcPosLocal)
+            loadLocal(dstArrayLocal)
+            loadLocal(dstPosLocal)
+            loadLocal(lengthLocal)
+            // copy length variable to count for iterations
+            val counterLocal = newLocal(Type.INT_TYPE).also { copyLocal(it) }
+            // loop for each copied element
+            val loopStartLabel = newLabel()
+            // loop start
+            visitLabel(loopStartLabel)
+            loadLocal(counterLocal)
+            ifZCmp(GeneratorAdapter.EQ, exitLabel)
+            // intercept the load from the source array
+            val srcArrayLocationState = ArrayElementMemoryLocationState(adapter)
+            loadLocal(srcArrayLocal)
+            loadLocal(srcPosLocal)
+            visitRead(srcArrayLocationState, OBJECT_TYPE.descriptor) {
+                // idle - just pop memory location arguments from the stack and push the null as a result of read
+                // TODO: handle trace construction?
+                pop(); pop(); visitInsn(ACONST_NULL);
+            }
+            // copy the read value
+            val valueLocal = newLocal(OBJECT_TYPE).also { storeLocal(it) }
+            // intercept the store to the destination array
+            val dstArrayLocationState = ArrayElementMemoryLocationState(adapter)
+            loadLocal(dstArrayLocal)
+            loadLocal(dstPosLocal)
+            loadLocal(valueLocal)
+            visitWrite(dstArrayLocationState, OBJECT_TYPE.descriptor) {
+                // idle - just pop memory location and value arguments from the stack
+                // TODO: handle trace construction?
+                pop(OBJECT_TYPE); pop(); pop();
+            }
+            // update counters
+            iinc(srcPosLocal, 1)
+            iinc(dstPosLocal, 1)
+            iinc(counterLocal, -1)
+            // loop back-edge
+            goTo(loopStartLabel)
+            // loop exit
+            visitLabel(exitLabel)
+            // emit the actual copy method
+            emitMethod()
+        }
+
         // STACK: array, index, value -> array, index, value
         private fun getArrayStoreType(opcode: Int): Type? = when (opcode) {
             IASTORE -> Type.INT_TYPE
@@ -229,8 +307,8 @@ internal class ManagedStrategyTransformer(
 
         /*
          * Tries to obtain the type of array elements by inspecting the type of the array itself.
-         * In order to do this queries the analyzer to get the type of accessed array
-         * which should lie on the stack. If the analyzer does not know the type
+         * To do this, query the analyzer to get the type of accessed array which should lie on the stack.
+         * If the analyzer does not know the type
          * (according to the ASM docs it can happen, for example, when the visited instruction is unreachable)
          * then return null.
          */
@@ -242,6 +320,12 @@ internal class ManagedStrategyTransformer(
             check(arrayType.sort == Type.ARRAY)
             check(arrayType.dimensions > 0)
             return Type.getType(arrayDesc.substring(1))
+        }
+
+        private fun Type.getArrayElementType(): Type {
+            check(sort == Type.ARRAY)
+            check(dimensions > 0)
+            return Type.getType(descriptor.substring(1))
         }
 
         // STACK: object
@@ -552,7 +636,7 @@ internal class ManagedStrategyTransformer(
         }
 
         // STACK: (empty) -> bool
-        private fun invokeShouldTrackMemory() = adapter.run {
+        protected fun invokeShouldTrackMemory() = adapter.run {
             loadStrategy()                      // STACK: strategy
             loadCurrentThreadNumber()           // STACK: strategy, threadId
             invokeVirtual(MANAGED_STRATEGY_TYPE, SHOULD_TRACK_MEMORY_METHOD)
@@ -920,9 +1004,7 @@ internal class ManagedStrategyTransformer(
 
     private inner class IgnoreMethodTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
-//            println("should ignore method: $owner::$name ?")
             if (isIgnoredMethod(owner, name, desc)) {
-                // println("ignoring method: $owner::$name")
                 runInIgnoredSection(untrack = true) {
                     adapter.visitMethodInsn(opcode, owner, name, desc, itf)
                 }
@@ -1751,14 +1833,21 @@ internal class ManagedStrategyTransformer(
         }
 
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, descriptor: String, isInterface: Boolean) = adapter.run {
-            if (!(opcode == INVOKESPECIAL && name == "<init>")) {
-                super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
-                return
+            when {
+                (opcode == INVOKESPECIAL && name == "<init>") ->
+                    visitInvokeInit(opcode, owner, name, descriptor, isInterface)
+                (opcode == INVOKESTATIC && owner == "java/lang/reflect/Array" && name == "newInstance") ->
+                    visitInvokeArrayNewInstance(opcode, owner, name, descriptor, isInterface)
+                else ->
+                    super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
             }
+        }
+
+        private fun visitInvokeInit(opcode: Int, owner: String, name: String, descriptor: String, isInterface: Boolean) = adapter.run {
             val objType = Type.getObjectType(owner)
             val objLocal: Int
             if (owner == "java/lang/Object") {
-                // handle common case separately
+                // handle the common case separately
                 objLocal = newLocal(objType).also { copyLocal(it) }
             } else {
                 val constructorType = Type.getType(descriptor)
@@ -1768,6 +1857,11 @@ internal class ManagedStrategyTransformer(
             }
             super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
             invokeOnObjectInitialization(objLocal)
+        }
+
+        private fun visitInvokeArrayNewInstance(opcode: Int, owner: String, name: String, descriptor: String, isInterface: Boolean) = adapter.run {
+            super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+            invokeOnObjectAllocation(OBJECT_ARRAY_TYPE)
         }
 
         private fun invokeOnObjectAllocation(objType: Type) = adapter.run {
