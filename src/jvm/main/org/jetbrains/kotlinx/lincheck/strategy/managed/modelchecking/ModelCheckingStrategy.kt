@@ -35,24 +35,29 @@ import kotlin.random.*
  * than the number of all possible interleavings on the current depth level.
  */
 internal class ModelCheckingStrategy(
-        testCfg: ModelCheckingCTestConfiguration,
-        testClass: Class<*>,
-        scenario: ExecutionScenario,
-        validationFunctions: List<Method>,
-        stateRepresentation: Method?,
-        verifier: Verifier
+    testCfg: ModelCheckingCTestConfiguration,
+    testClass: Class<*>,
+    scenario: ExecutionScenario,
+    validationFunctions: List<Method>,
+    stateRepresentation: Method?,
+    verifier: Verifier
 ) : ManagedStrategy(testClass, scenario, verifier, validationFunctions, stateRepresentation, testCfg) {
     // The number of invocations that the strategy is eligible to use to search for an incorrect execution.
     private val maxInvocations = testCfg.invocationsPerIteration
+
     // The number of already used invocations.
     private var usedInvocations = 0
+
     // The maximum number of thread switch choices that strategy should perform
     // (increases when all the interleavings with the current depth are studied).
     private var maxNumberOfSwitches = 0
+
     // The root of the interleaving tree that chooses the starting thread.
     private var root: InterleavingTreeNode = ThreadChoosingNode((0 until nThreads).toList())
+
     // This random is used for choosing the next unexplored interleaving node in the tree.
     private val generationRandom = Random(0)
+
     // The interleaving that will be studied on the next invocation.
     private lateinit var currentInterleaving: Interleaving
 
@@ -60,6 +65,9 @@ internal class ModelCheckingStrategy(
         Counters.currentInterleaving.set(0)
         currentInterleaving = root.nextInterleaving() ?: return null
         while (usedInvocations < maxInvocations) {
+            if (Counters.isRequired) {
+                Unit
+            }
             // run invocation and check its results
             val invocationResult = runInvocation()
             if (suddenInvocationResult is SpinCycleFoundAndReplayRequired) {
@@ -69,6 +77,9 @@ internal class ModelCheckingStrategy(
             usedInvocations++
             checkResult(invocationResult)?.let { return it }
             // get new unexplored interleaving
+            if (Counters.isPrevRequired) {
+                Unit
+            }
             currentInterleaving = root.nextInterleaving() ?: break
             Counters.currentInterleaving.incrementAndGet()
         }
@@ -110,18 +121,66 @@ internal class ModelCheckingStrategy(
 
     override fun chooseThread(iThread: Int): Int =
         currentInterleaving.chooseThread(iThread).also {
-           check(it in switchableThreads(iThread)) { """
+            check(it in switchableThreads(iThread)) {
+//
+//                val stringBuilder = StringBuilder().also {
+//                    it.appendTrace(
+//                            DeadlockWithDumpFailure(scenario, emptyMap(), Trace(traceCollector!!.trace)),
+//                            null,
+//                            Trace(traceCollector!!.trace),
+//                            emptyMap()
+//                        )
+//                }.toString()
+//
+
+                """
                Trying to switch the execution to thread $it,
                but only the following threads are eligible to switch: ${switchableThreads(iThread)}
-               Res = ${traceCollector?.trace?.filter { it.callStackTrace.lastOrNull()?.call?.stackTraceElement?.className?.contains("lincheck") ?: false}}
-           """.trimIndent() }
+           """.trimIndent()
+            }
         }
+
+
+    private fun visualizeTree(
+        root: InterleavingTreeNode,
+        prefix: String = "",
+        isRoot: Boolean = false,
+        isTail: Boolean = true,
+        choice: Int? = null
+    ): String {
+        val nodeType = root::class.java.simpleName
+
+        val nodeInfo = StringBuilder()
+        val choiceLine = choice?.let { "choice=$it, " }
+        val line = if (isRoot) "" else if (isTail) "└── " else "├── "
+        nodeInfo.append(prefix + line + nodeType + "(${choiceLine}fractionUnexplored=${root.fractionUnexplored}, isFullyExplored=${root.isFullyExplored})\n")
+
+        if (root.isInitialized) {
+            for (i in root.choices.indices) {
+                val nextPrefix = prefix + (if (isTail) "    " else "|   ")
+                val choice = root.choices[i]
+                nodeInfo.append(
+                    visualizeTree(
+                        choice.node,
+                        nextPrefix,
+                        isTail = i == root.choices.lastIndex,
+                        choice = choice.value,
+                        isRoot = false
+                    )
+                )
+            }
+        } else {
+            nodeInfo.append(prefix + (if (isTail) "    " else "|   ") + "No initialized choices\n")
+        }
+
+        return nodeInfo.toString()
+    }
 
     /**
      * An abstract node with an execution choice in the interleaving tree.
      */
     private abstract inner class InterleavingTreeNode {
-        private var fractionUnexplored = 1.0
+        var fractionUnexplored = 1.0
         lateinit var choices: List<Choice>
         var isFullyExplored: Boolean = false
             protected set
@@ -159,8 +218,10 @@ internal class ModelCheckingStrategy(
         }
 
         protected fun updateExplorationStatistics() {
-            check(isInitialized) { "An interleaving tree node was not initialized properly. " +
-                    "Probably caused by non-deterministic behaviour (WeakHashMap, Object.hashCode, etc)" }
+            check(isInitialized) {
+                "An interleaving tree node was not initialized properly. " +
+                        "Probably caused by non-deterministic behaviour (WeakHashMap, Object.hashCode, etc)"
+            }
             if (choices.isEmpty()) {
                 finishExploration()
                 return
@@ -284,7 +345,12 @@ internal class ModelCheckingStrategy(
             executionPosition++
             if (executionPosition > switchPositions.lastOrNull() ?: -1) {
                 // Add a new thread choosing node corresponding to the switch at the current execution position.
-                lastNotInitializedNodeChoices?.add(Choice(ThreadChoosingNode(switchableThreads(iThread)), executionPosition))
+                lastNotInitializedNodeChoices?.add(
+                    Choice(
+                        ThreadChoosingNode(switchableThreads(iThread)),
+                        executionPosition
+                    )
+                )
             }
         }
     }
@@ -316,8 +382,14 @@ object Counters {
     val currentInterleaving = AtomicInteger(0)
     val currentScenario = AtomicInteger(0)
 
-    val isRequired: Boolean get() {
-        return currentInterleaving.get() == 289 && currentScenario.get() == 0
-    }
+    val isRequired: Boolean
+        get() {
+            return currentInterleaving.get() == 366 && currentScenario.get() == 0
+        }
+
+    val isPrevRequired: Boolean
+        get() {
+            return currentInterleaving.get() == 365 && currentScenario.get() == 0
+        }
 
 }

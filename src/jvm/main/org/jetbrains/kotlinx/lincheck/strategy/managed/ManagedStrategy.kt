@@ -84,7 +84,7 @@ abstract class ManagedStrategy(
     // == TRACE CONSTRUCTION FIELDS ==
 
     // Whether additional information requires for the trace construction should be collected.
-    private var collectTrace = Counters.isRequired
+    private var collectTrace = false // Counters.isRequired
     // Collector of all events in the execution such as thread switches.
     var traceCollector: TraceCollector? = null // null when `collectTrace` is false
     // Stores the currently executing methods call stack for each thread.
@@ -98,13 +98,6 @@ abstract class ManagedStrategy(
     private val suspendedFunctionsStack = Array(nThreads) { mutableListOf<Int>() }
 
     private val methodCallTracePointStack = (0 until nThreads + 2).map { ArrayList<MethodCallTracePoint>() }
-
-    init {
-        if (Counters.isRequired) {
-            Unit
-        }
-    }
-
 
     override fun run(): LincheckFailure? = runImpl().also { close() }
 
@@ -138,12 +131,12 @@ abstract class ManagedStrategy(
      * Returns all data to the initial state.
      */
     protected open fun initializeInvocation() {
-        collectTrace = Counters.isRequired
+//        collectTrace = Counters.isRequired
         finished.fill(false)
         isSuspended.fill(false)
         currentActorId.fill(-1)
         monitorTracker = MonitorTracker(nThreads)
-        traceCollector = if (Counters.isRequired) TraceCollector() else null
+        traceCollector = if (collectTrace) TraceCollector() else null
         suddenInvocationResult = null
         callStackTrace.forEach { it.clear() }
         suspendedFunctionsStack.forEach { it.clear() }
@@ -257,6 +250,13 @@ abstract class ManagedStrategy(
     private fun newSwitchPoint(iThread: Int, codeLocation: Int, tracePoint: TracePoint?) {
         if (suddenInvocationResult != null) return
         check(iThread == currentThread)
+        if (Counters.isRequired && iThread == 2 && currentActorId[iThread] == 1) {
+            if (Thread.currentThread().stackTrace.any { it.methodName == "sendSuspend" }) {
+                Unit
+            }
+        } else {
+            Unit
+        }
 
         if (loopDetector.replayModeEnabled) {
             /*

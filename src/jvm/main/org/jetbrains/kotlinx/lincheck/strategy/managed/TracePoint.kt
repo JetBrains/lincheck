@@ -84,12 +84,6 @@ internal class ReadTracePoint(
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
     private var value: Any? = null
 
-    init {
-        if (callStackTrace.isEmpty()) {
-            Unit
-        }
-    }
-
     override fun toStringImpl(): String = StringBuilder().apply {
         if (fieldName != null)
             append("$fieldName.")
