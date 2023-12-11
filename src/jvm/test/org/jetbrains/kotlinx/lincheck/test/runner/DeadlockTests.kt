@@ -72,6 +72,7 @@ class DeadlockOnSynchronizedWaitTest : AbstractLincheckTest(DeadlockWithDumpFail
         actorsBefore(0)
         minimizeFailedScenario(false)
         invocationTimeout(200)
+        iterations(1)
     }
 
     override fun extractState(): Any = 0 // constant

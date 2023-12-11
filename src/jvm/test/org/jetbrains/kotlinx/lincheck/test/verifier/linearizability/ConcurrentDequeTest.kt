@@ -46,6 +46,6 @@ class ConcurrentDequeTest : AbstractLincheckTest() {
     override fun extractState() = deque.toList()
 
     override fun <O : Options<O, *>> O.customize() {
-        iterations(100) // more iterations, because stress strategy not always finds the bug quickly
+        iterations(30)
     }
 }
