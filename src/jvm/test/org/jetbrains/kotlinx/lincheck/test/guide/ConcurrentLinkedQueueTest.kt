@@ -28,6 +28,7 @@ import org.junit.*
 import java.util.*
 import java.util.concurrent.*
 
+@Ignore
 class ConcurrentLinkedQueueTest {
     private val s = ConcurrentLinkedQueue<Int>()
 

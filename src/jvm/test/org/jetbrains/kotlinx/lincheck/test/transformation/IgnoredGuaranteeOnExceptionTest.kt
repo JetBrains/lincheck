@@ -24,6 +24,7 @@ package org.jetbrains.kotlinx.lincheck.test.transformation
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
@@ -47,7 +48,8 @@ class IgnoredGuaranteeOnExceptionTest : VerifierState() {
 
     @Test
     fun test() {
-        val options = ModelCheckingOptions().addGuarantee(forClasses(this.javaClass.name).methods("badMethod").ignore())
+        val options = EventStructureOptions() // ModelCheckingOptions()
+            .addGuarantee(forClasses(this.javaClass.name).methods("badMethod").ignore())
         val failure = options.checkImpl(this.javaClass)
         check(failure != null) { "This test should fail" }
     }

@@ -25,6 +25,7 @@ package org.jetbrains.kotlinx.lincheck.test
 import kotlinx.atomicfu.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
@@ -34,7 +35,7 @@ class BlockingOperationTest {
     fun blocking(): Unit = synchronized(this) {}
 
     @Test
-    fun test() = ModelCheckingOptions()
+    fun test() = EventStructureOptions() // ModelCheckingOptions()
         .checkObstructionFreedom()
         .verifier(EpsilonVerifier::class.java)
         .requireStateEquivalenceImplCheck(false)
@@ -58,7 +59,7 @@ class CausesBlockingOperationTest {
     }
 
     @Test
-    fun test() = ModelCheckingOptions()
+    fun test() = EventStructureOptions() // ModelCheckingOptions()
         .checkObstructionFreedom()
         .verifier(EpsilonVerifier::class.java)
         .requireStateEquivalenceImplCheck(false)

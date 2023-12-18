@@ -24,6 +24,7 @@ package org.jetbrains.kotlinx.lincheck.test.strategy.modelchecking
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
@@ -39,7 +40,7 @@ class ObstructionFreedomViolationTest : VerifierState() {
 
     @Test
     fun test() {
-        val options = ModelCheckingOptions()
+        val options = EventStructureOptions() // ModelCheckingOptions()
             .checkObstructionFreedom()
             .minimizeFailedScenario(false)
         val failure = options.checkImpl(ObstructionFreedomViolationTest::class.java)

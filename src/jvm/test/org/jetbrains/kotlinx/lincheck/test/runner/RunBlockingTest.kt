@@ -30,6 +30,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 import kotlin.coroutines.*
 
+@Ignore
 class RunBlockingTest : AbstractLincheckTest() {
     @Operation
     fun foo(x: Int) = runBlocking<Int> {

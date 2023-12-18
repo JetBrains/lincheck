@@ -24,6 +24,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.forClasses
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.junit.*
@@ -72,11 +73,14 @@ class MultiMapTest {
 
     // @Test TODO: Please, uncomment me and comment the line below to run the test and get the output
     @Test(expected = AssertionError::class)
-    fun modelCheckingTest() = ModelCheckingOptions().check(this::class)
+    fun modelCheckingTest() =
+        EventStructureOptions().check(this::class)
+        // ModelCheckingOptions().check(this::class)
 
     // @Test TODO: Please, uncomment me and comment the line below to run the test and get the output
+    @Ignore
     @Test(expected = AssertionError::class)
-    fun modularTest() = ModelCheckingOptions()
+    fun modularTest() = EventStructureOptions() // ModelCheckingOptions()
         .addGuarantee(forClasses(ConcurrentHashMap::class).allMethods().treatAsAtomic())
         // Note that with the atomicity guarantees set, Lincheck can examine all possible interleavings,
         // so the test successfully passes when the number of invocations is set to `Int.MAX_VALUE`

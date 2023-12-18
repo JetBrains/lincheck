@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.test.transformation
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.junit.*
 import java.util.concurrent.atomic.*
@@ -41,7 +42,7 @@ class Striped64SupportTest {
 
     @Test
     fun test() {
-        val failure = ModelCheckingOptions()
+        val failure = EventStructureOptions() // ModelCheckingOptions()
             .minimizeFailedScenario(false)
             .checkImpl(this::class.java)
         assert(failure is IncorrectResultsFailure) {
