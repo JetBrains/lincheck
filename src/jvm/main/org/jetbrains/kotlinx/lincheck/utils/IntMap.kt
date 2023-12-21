@@ -24,7 +24,10 @@ import kotlin.math.max
 
 interface IntMap<out T> {
 
-    data class Entry<out T>(val key: Int, val value: T)
+    interface Entry<out T> {
+        val key: Int
+        val value: T
+    }
 
     val keys: Set<Int>
 
@@ -46,6 +49,16 @@ interface IntMap<out T> {
 
 interface MutableIntMap<T>: IntMap<T> {
 
+    interface MutableEntry<T> : IntMap.Entry<T> {
+        fun setValue(newValue: T): T
+    }
+
+    override val keys: MutableSet<Int>
+
+    override val values: MutableCollection<T>
+
+    override val entries: MutableSet<MutableEntry<T>>
+
     fun put(key: Int, value: T): T?
 
     fun remove(key: Int)
@@ -53,6 +66,9 @@ interface MutableIntMap<T>: IntMap<T> {
     fun clear()
 
 }
+
+operator fun<T> IntMap.Entry<T>.component1(): Int = key
+operator fun<T> IntMap.Entry<T>.component2(): T = value
 
 fun<T> intMapOf(vararg pairs: Pair<Int, T>) : IntMap<T> =
     mutableIntMapOf(*pairs)
@@ -108,18 +124,14 @@ class ArrayMap<T>(capacity: Int) : MutableIntMap<T> {
     val capacity: Int
         get() = array.size
 
-    override val keys: Set<Int>
-        get() = array.indices.filter { containsKey(it) }.toSet()
+    override val keys: MutableSet<Int>
+        get() = KeySet()
 
-    override val values: Collection<T>
-        get() = array.filterIndexed { i, _ -> bitmap[i] } as Collection<T>
+    override val values: MutableCollection<T>
+        get() = ValueCollection()
 
-    override val entries: Set<IntMap.Entry<T>>
-        get() = array.indices.mapNotNull { i ->
-            if (containsKey(i))
-                IntMap.Entry(i, array[i] as T)
-            else null
-        }.toSet()
+    override val entries: MutableSet<MutableIntMap.MutableEntry<T>>
+        get() = EntrySet()
 
     constructor(vararg pairs: Pair<Int, T>)
         : this(1 + (pairs.maxOfOrNull { (i, _) -> i } ?: -1)) {
@@ -204,5 +216,126 @@ class ArrayMap<T>(capacity: Int) : MutableIntMap<T> {
 
     override fun toString(): String =
         keys.map { key -> key to get(key) }.toString()
+
+    private inner class KeySet : AbstractMutableSet<Int>() {
+
+        override val size: Int
+            get() = this@ArrayMap.size
+
+        override fun contains(element: Int): Boolean =
+            this@ArrayMap.containsKey(element)
+
+        override fun add(element: Int): Boolean {
+            throw UnsupportedOperationException("Unsupported operation.")
+        }
+
+        override fun remove(element: Int): Boolean {
+            return this@ArrayMap.containsKey(element).also {
+                this@ArrayMap.remove(element)
+            }
+        }
+
+        override fun iterator(): MutableIterator<Int> = object : AbstractIterator<Int>(), MutableIterator<Int> {
+
+            private var index: Int = -1
+
+            override fun computeNext() {
+                while (++index < this@ArrayMap.capacity) {
+                    if (this@ArrayMap.containsKey(index)) {
+                        setNext(index)
+                        return
+                    }
+                }
+                done()
+            }
+
+            override fun remove() {
+                throw UnsupportedOperationException("Unsupported operation.")
+            }
+
+        }
+    }
+
+    private inner class ValueCollection : AbstractMutableCollection<T>() {
+
+        override val size: Int
+            get() = this@ArrayMap.size
+
+        override fun add(element: T): Boolean {
+            throw UnsupportedOperationException("Unsupported operation.")
+        }
+
+        override fun iterator(): MutableIterator<T> = object : AbstractIterator<T>(), MutableIterator<T> {
+
+            private var index: Int = -1
+
+            override fun computeNext() {
+                while (++index < this@ArrayMap.capacity) {
+                    if (this@ArrayMap.containsKey(index)) {
+                        setNext(this@ArrayMap[index]!!)
+                        return
+                    }
+                }
+                done()
+            }
+
+            override fun remove() {
+                throw UnsupportedOperationException("Unsupported operation.")
+            }
+
+        }
+    }
+
+    private inner class EntrySet : AbstractMutableSet<MutableIntMap.MutableEntry<T>>() {
+
+        override val size: Int
+            get() = this@ArrayMap.size
+
+        override fun add(element: MutableIntMap.MutableEntry<T>): Boolean {
+            val (key, value) = element
+            val prev = this@ArrayMap.put(key, value)
+            return (prev != value)
+        }
+
+        override fun remove(element: MutableIntMap.MutableEntry<T>): Boolean {
+            val (key, value) = element
+            val prev = this@ArrayMap[key]
+            this@ArrayMap.remove(key)
+            return (prev == value)
+        }
+
+        override fun iterator(): MutableIterator<MutableIntMap.MutableEntry<T>> =
+            object : AbstractIterator<MutableIntMap.MutableEntry<T>>(), MutableIterator<MutableIntMap.MutableEntry<T>> {
+
+                private var index: Int = -1
+
+                override fun computeNext() {
+                    while (++index < this@ArrayMap.capacity) {
+                        if (this@ArrayMap.containsKey(index)) {
+                            val value = this@ArrayMap[index]!!
+                            val entry : MutableIntMap.MutableEntry<T> = Entry(index, value)
+                            setNext(entry)
+                            return
+                        }
+                    }
+                    done()
+                }
+
+                override fun remove() {
+                    throw UnsupportedOperationException("Unsupported operation.")
+                }
+        }
+    }
+
+    private data class Entry<T>(
+        override val key: Int,
+        override var value: T,
+    ) : MutableIntMap.MutableEntry<T> {
+        override fun setValue(newValue: T): T {
+            val prev = value
+            value = newValue
+            return prev
+        }
+    }
 
 }
