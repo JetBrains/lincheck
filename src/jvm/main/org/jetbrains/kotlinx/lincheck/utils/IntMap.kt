@@ -133,9 +133,7 @@ class ArrayMap<T>(capacity: Int) : MutableIntMap<T> {
     override val entries: MutableSet<MutableIntMap.MutableEntry<T>>
         get() = EntrySet()
 
-    constructor(vararg pairs: Pair<Int, T>)
-        : this(1 + (pairs.maxOfOrNull { (i, _) -> i } ?: -1)) {
-        require(pairs.all { (i, _) -> i >= 0 })
+    constructor(vararg pairs: Pair<Int, T>) : this(pairs.calculateCapacity()) {
         if (capacity == 0)
             return
         pairs.forEach { (key, value) ->
@@ -164,18 +162,21 @@ class ArrayMap<T>(capacity: Int) : MutableIntMap<T> {
     override fun put(key: Int, value: T): T? {
         val oldValue = get(key)
         if (key > array.size) {
-            val capacity = key + 1
-            array.expand(capacity, null)
-            bitmap = BooleanArray(capacity) { false }
+            val newCapacity = key + 1
+            expand(newCapacity)
         }
-        size++
+        if (!bitmap[key]) {
+            size++
+        }
         array[key] = value
         bitmap[key] = true
         return oldValue
     }
 
     override fun remove(key: Int) {
-        size--
+        if (bitmap[key]) {
+            size--
+        }
         array[key] = null
         bitmap[key] = false
     }
@@ -192,6 +193,12 @@ class ArrayMap<T>(capacity: Int) : MutableIntMap<T> {
                 continue
             it[i] = this[i] as T
         }
+    }
+
+    private fun expand(newCapacity: Int) {
+        require(newCapacity > capacity)
+        array.expand(newCapacity, null)
+        bitmap = BooleanArray(newCapacity) { i -> i < bitmap.size && bitmap[i] }
     }
 
     override fun equals(other: Any?): Boolean {
@@ -313,7 +320,7 @@ class ArrayMap<T>(capacity: Int) : MutableIntMap<T> {
                     while (++index < this@ArrayMap.capacity) {
                         if (this@ArrayMap.containsKey(index)) {
                             val value = this@ArrayMap[index]!!
-                            val entry : MutableIntMap.MutableEntry<T> = Entry(index, value)
+                            val entry: MutableIntMap.MutableEntry<T> = Entry(index, value)
                             setNext(entry)
                             return
                         }
@@ -324,7 +331,7 @@ class ArrayMap<T>(capacity: Int) : MutableIntMap<T> {
                 override fun remove() {
                     throw UnsupportedOperationException("Unsupported operation.")
                 }
-        }
+            }
     }
 
     private data class Entry<T>(
@@ -335,6 +342,13 @@ class ArrayMap<T>(capacity: Int) : MutableIntMap<T> {
             val prev = value
             value = newValue
             return prev
+        }
+    }
+
+    companion object {
+        private fun<T> Array<out Pair<Int, T>>.calculateCapacity(): Int {
+            require(all { (i, _) -> i >= 0 })
+            return 1 + (maxOfOrNull { (i, _) -> i } ?: -1)
         }
     }
 
