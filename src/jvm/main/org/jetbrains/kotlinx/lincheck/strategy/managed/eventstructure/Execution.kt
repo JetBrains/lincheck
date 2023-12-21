@@ -87,7 +87,7 @@ fun<E : ThreadEvent> Execution(nThreads: Int): Execution<E> =
     MutableExecution(nThreads)
 
 fun<E : ThreadEvent> MutableExecution(nThreads: Int): MutableExecution<E> =
-    ExecutionImpl(ArrayMap(*(0 until nThreads)
+    ExecutionImpl(ArrayIntMap(*(0 until nThreads)
         .map { (it to sortedArrayListOf<E>()) }
         .toTypedArray()
     ))
@@ -96,13 +96,13 @@ fun<E : ThreadEvent> executionOf(vararg pairs: Pair<ThreadID, List<E>>): Executi
     mutableExecutionOf(*pairs)
 
 fun<E : ThreadEvent> mutableExecutionOf(vararg pairs: Pair<ThreadID, List<E>>): MutableExecution<E> =
-    ExecutionImpl(ArrayMap(*pairs
+    ExecutionImpl(ArrayIntMap(*pairs
         .map { (tid, events) -> (tid to SortedArrayList(events)) }
         .toTypedArray()
     ))
 
 private class ExecutionImpl<E : ThreadEvent>(
-    override val threadMap: ArrayMap<SortedMutableList<E>>
+    override val threadMap: ArrayIntMap<SortedMutableList<E>>
 ) : MutableExecution<E> {
 
     override var size: Int = threadMap.values.sumOf { it.size }

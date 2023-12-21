@@ -74,7 +74,7 @@ fun<T> intMapOf(vararg pairs: Pair<Int, T>) : IntMap<T> =
     mutableIntMapOf(*pairs)
 
 fun<T> mutableIntMapOf(vararg pairs: Pair<Int, T>) : MutableIntMap<T> =
-    ArrayMap(*pairs)
+    ArrayIntMap(*pairs)
 
 fun<T> IntMap<T>.forEach(action: (IntMap.Entry<T>) -> Unit) =
     entries.forEach(action)
@@ -110,7 +110,7 @@ fun <T> MutableIntMap<T>.mergeReduce(other: IntMap<T>, reduce: (T, T) -> T) {
     }
 }
 
-class ArrayMap<T>(capacity: Int) : MutableIntMap<T> {
+class ArrayIntMap<T>(capacity: Int) : MutableIntMap<T> {
 
     override var size: Int = 0
         private set
@@ -187,7 +187,7 @@ class ArrayMap<T>(capacity: Int) : MutableIntMap<T> {
         bitmap.fill(false)
     }
 
-    fun copy() = ArrayMap<T>(capacity).also {
+    fun copy() = ArrayIntMap<T>(capacity).also {
         for (i in 0 until capacity) {
             if (!bitmap[i])
                 continue
@@ -202,7 +202,7 @@ class ArrayMap<T>(capacity: Int) : MutableIntMap<T> {
     }
 
     override fun equals(other: Any?): Boolean {
-        if (other !is ArrayMap<*>)
+        if (other !is ArrayIntMap<*>)
             return false
         for (i in 0 until max(array.size, other.array.size)) {
             if (this[i] != other[i] || bitmap[i] != other.bitmap[i])
@@ -227,18 +227,18 @@ class ArrayMap<T>(capacity: Int) : MutableIntMap<T> {
     private inner class KeySet : AbstractMutableSet<Int>() {
 
         override val size: Int
-            get() = this@ArrayMap.size
+            get() = this@ArrayIntMap.size
 
         override fun contains(element: Int): Boolean =
-            this@ArrayMap.containsKey(element)
+            this@ArrayIntMap.containsKey(element)
 
         override fun add(element: Int): Boolean {
             throw UnsupportedOperationException("Unsupported operation.")
         }
 
         override fun remove(element: Int): Boolean {
-            return this@ArrayMap.containsKey(element).also {
-                this@ArrayMap.remove(element)
+            return this@ArrayIntMap.containsKey(element).also {
+                this@ArrayIntMap.remove(element)
             }
         }
 
@@ -247,8 +247,8 @@ class ArrayMap<T>(capacity: Int) : MutableIntMap<T> {
             private var index: Int = -1
 
             override fun computeNext() {
-                while (++index < this@ArrayMap.capacity) {
-                    if (this@ArrayMap.containsKey(index)) {
+                while (++index < this@ArrayIntMap.capacity) {
+                    if (this@ArrayIntMap.containsKey(index)) {
                         setNext(index)
                         return
                     }
@@ -266,7 +266,7 @@ class ArrayMap<T>(capacity: Int) : MutableIntMap<T> {
     private inner class ValueCollection : AbstractMutableCollection<T>() {
 
         override val size: Int
-            get() = this@ArrayMap.size
+            get() = this@ArrayIntMap.size
 
         override fun add(element: T): Boolean {
             throw UnsupportedOperationException("Unsupported operation.")
@@ -277,9 +277,9 @@ class ArrayMap<T>(capacity: Int) : MutableIntMap<T> {
             private var index: Int = -1
 
             override fun computeNext() {
-                while (++index < this@ArrayMap.capacity) {
-                    if (this@ArrayMap.containsKey(index)) {
-                        setNext(this@ArrayMap[index]!!)
+                while (++index < this@ArrayIntMap.capacity) {
+                    if (this@ArrayIntMap.containsKey(index)) {
+                        setNext(this@ArrayIntMap[index]!!)
                         return
                     }
                 }
@@ -296,18 +296,18 @@ class ArrayMap<T>(capacity: Int) : MutableIntMap<T> {
     private inner class EntrySet : AbstractMutableSet<MutableIntMap.MutableEntry<T>>() {
 
         override val size: Int
-            get() = this@ArrayMap.size
+            get() = this@ArrayIntMap.size
 
         override fun add(element: MutableIntMap.MutableEntry<T>): Boolean {
             val (key, value) = element
-            val prev = this@ArrayMap.put(key, value)
+            val prev = this@ArrayIntMap.put(key, value)
             return (prev != value)
         }
 
         override fun remove(element: MutableIntMap.MutableEntry<T>): Boolean {
             val (key, value) = element
-            val prev = this@ArrayMap[key]
-            this@ArrayMap.remove(key)
+            val prev = this@ArrayIntMap[key]
+            this@ArrayIntMap.remove(key)
             return (prev == value)
         }
 
@@ -317,9 +317,9 @@ class ArrayMap<T>(capacity: Int) : MutableIntMap<T> {
                 private var index: Int = -1
 
                 override fun computeNext() {
-                    while (++index < this@ArrayMap.capacity) {
-                        if (this@ArrayMap.containsKey(index)) {
-                            val value = this@ArrayMap[index]!!
+                    while (++index < this@ArrayIntMap.capacity) {
+                        if (this@ArrayIntMap.containsKey(index)) {
+                            val value = this@ArrayIntMap[index]!!
                             val entry: MutableIntMap.MutableEntry<T> = Entry(index, value)
                             setNext(entry)
                             return
