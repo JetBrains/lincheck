@@ -75,7 +75,7 @@ private class IntArrayClock(capacity: Int = 0) : MutableVectorClock {
         clock.all { it == -1 }
 
     override fun get(tid: ThreadID): Int =
-        clock[tid]
+        if (tid < capacity) clock[tid] else -1
 
     override fun set(tid: ThreadID, timestamp: Int) {
         expandIfNeeded(tid)
@@ -130,9 +130,10 @@ private class IntArrayClock(capacity: Int = 0) : MutableVectorClock {
 
 }
 
-fun VectorClock.toHBClock(tid: ThreadID, aid: Int): HBClock {
+fun VectorClock.toHBClock(capacity: Int, tid: ThreadID, aid: Int): HBClock {
     check(this is IntArrayClock)
-    val result = emptyClock(clock.size - 2)
+    check(capacity >= clock.size - 2)
+    val result = emptyClock(capacity)
     for (i in 0 until clock.size - 2) {
         if (i == tid) {
             result.clock[i] = clock[i].ensure { it == aid }

@@ -159,6 +159,16 @@ fun<E : ThreadEvent> Execution<E>.toMutableFrontier(): MutableExecutionFrontier<
         mutableExecutionFrontierOf(*it.toTypedArray())
     }
 
+fun<E : ThreadEvent> Execution<E>.calculateFrontier(clock: VectorClock): MutableExecutionFrontier<E> =
+    (0 until maxThreadID).mapNotNull { tid ->
+        val timestamp = clock[tid]
+        if (timestamp >= 0)
+            tid to this[tid, timestamp]
+        else null
+    }.let {
+        mutableExecutionFrontierOf(*it.toTypedArray())
+    }
+
 fun<E : ThreadEvent> Execution<E>.buildIndexer() = object : Indexer<E> {
 
     private val events = enumerationOrderSortedList()
@@ -295,7 +305,7 @@ fun ActorAggregator(execution: Execution<AtomicThreadEvent>) = object : EventAgg
             (it.label as? ActorLabel)?.actorKind == ActorLabelKind.End
         }
         check((start.label as ActorLabel).actor == (end.label as ActorLabel).actor)
-        return ActorLabel(ActorLabelKind.Span, (start.label as ActorLabel).actor)
+        return ActorLabel((start.label as ActorLabel).threadId, ActorLabelKind.Span, (start.label as ActorLabel).actor)
     }
 
     override fun dependencies(events: List<AtomicThreadEvent>, remapping: EventRemapping): List<HyperThreadEvent> {
@@ -365,19 +375,10 @@ fun Execution<AtomicThreadEvent>.aggregate(
         val parent = result[tid]?.lastOrNull()
         if (label != null) {
             val dependencies = aggregator.dependencies(events, remapping)
-            // TODO: extract into function, remove copy-paste with EventStructure::createEvent
-            val causalityClock =
-                dependencies.fold(parent?.causalityClock?.copy() ?: MutableVectorClock(1 + maxThreadID)) { clock, event ->
-                    clock + event.causalityClock
-                }
-            val threadPosition = parent?.let { it.threadPosition + 1 } ?: 0
-            causalityClock[tid] = threadPosition
             val event = HyperThreadEvent(
                 label = label,
-                threadId = tid,
                 parent = parent,
                 dependencies = dependencies,
-                causalityClock = causalityClock,
                 events = events,
             )
             result.add(event)

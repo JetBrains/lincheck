@@ -293,15 +293,64 @@ class EventStructure(
             ?.also { replayer.setNextEvent() }
     }
 
-    private fun emptyClock(): MutableVectorClock =
-        MutableVectorClock(nThreads)
-
+    // TODO: use calculateFrontier
     private fun VectorClock.toMutableFrontier(): MutableExecutionFrontier<AtomicThreadEvent> =
         (0 until nThreads).map { tid ->
             tid to currentExecution[tid, this[tid]]
         }.let {
             mutableExecutionFrontierOf(*it.toTypedArray())
         }
+
+    private inner class BacktrackableEvent(
+        label: EventLabel,
+        parent: AtomicThreadEvent?,
+        senders: List<AtomicThreadEvent> = listOf(),
+        allocation: AtomicThreadEvent? = null,
+        source: AtomicThreadEvent? = null,
+        conflicts: List<AtomicThreadEvent> = listOf(),
+        /**
+         * State of the execution frontier at the point when event is created.
+         */
+        val frontier: ExecutionFrontier<AtomicThreadEvent>,
+        /**
+         * Frontier of pinned events.
+         * Pinned events are the events that should not be
+         * considered for branching in an exploration starting from this event.
+         */
+        pinnedEvents: ExecutionFrontier<AtomicThreadEvent>,
+        /**
+         * List of blocked request events.
+         */
+        val blockedRequests: List<AtomicThreadEvent>,
+    ) : AbstractAtomicThreadEvent(
+        label = label,
+        // TODO: get rid of cast
+        parent = (parent as? AbstractAtomicThreadEvent?),
+        senders = senders,
+        allocation = allocation,
+        source = source,
+        dependencies = listOfNotNull(allocation, source) + senders,
+    ) {
+
+        init {
+            validate()
+        }
+
+        val pinnedEvents : ExecutionFrontier<AtomicThreadEvent> = pinnedEvents.copy().apply {
+            // TODO: can reorder cut and merge?
+            cut(conflicts)
+            merge(causalityClock.toMutableFrontier())
+            cutDanglingRequestEvents()
+        }
+
+        var visited: Boolean = false
+            private set
+
+        fun visit() {
+            visited = true
+        }
+
+    }
 
     private fun createEvent(
         iThread: Int,
@@ -323,10 +372,6 @@ class EventStructure(
         }}
         if (causalityViolation)
             return null
-        val threadPosition = parent?.let { it.threadPosition + 1 } ?: 0
-        val causalityClock = dependencies.fold(parent?.causalityClock?.copy() ?: emptyClock()) { clock, event ->
-            clock + event.causalityClock
-        }
         val allocation = objectIdIndex[label.objID]?.event
         val source = (label as? WriteAccessLabel)?.writeValue?.let {
             objectIdIndex[it]?.event
@@ -349,25 +394,16 @@ class EventStructure(
             // TODO: perhaps, we should change this to the list of requests to conflicting response events?
             .filter { it.label.isBlocking && it != parent && (it.label !is CoroutineSuspendLabel) }
         frontier[iThread] = parent
-        val pinnedEvents = pinnedEvents.copy().apply {
-            // TODO: can reorder cut and merge?
-            cut(conflicts)
-            merge(causalityClock.toMutableFrontier())
-            cutDanglingRequestEvents()
-        }
         return BacktrackableEvent(
             label = label,
             parent = parent,
-            threadId = iThread,
             senders = dependencies,
             allocation = allocation,
             source = source,
+            conflicts = conflicts,
             frontier = frontier,
             pinnedEvents = pinnedEvents,
             blockedRequests = blockedRequests,
-            causalityClock = causalityClock.apply {
-                set(iThread, threadPosition)
-            },
         )
     }
 
@@ -695,7 +731,7 @@ class EventStructure(
         // we do not mark root event as visited purposefully;
         // this is just a trick to make the first call to `startNextExploration`
         // to pick the root event as the next event to explore from.
-        val label = InitializationLabel(mainThreadId) { location ->
+        val label = InitializationLabel(initThreadId, mainThreadId) { location ->
             val value = memoryInitializer(location)
             computeValueID(value)
         }
@@ -1042,12 +1078,12 @@ class EventStructure(
     }
 
     fun addActorStartEvent(iThread: Int, actor: Actor): AtomicThreadEvent {
-        val label = ActorLabel(ActorLabelKind.Start, actor)
+        val label = ActorLabel(iThread, ActorLabelKind.Start, actor)
         return addActorEvent(iThread, label)
     }
 
     fun addActorEndEvent(iThread: Int, actor: Actor): AtomicThreadEvent {
-        val label = ActorLabel(ActorLabelKind.End, actor)
+        val label = ActorLabel(iThread, ActorLabelKind.End, actor)
         return addActorEvent(iThread, label)
     }
 
@@ -1137,53 +1173,6 @@ class EventStructure(
             return true
         }
         return false
-    }
-
-}
-
-private class BacktrackableEvent(
-    label: EventLabel,
-    threadId: Int,
-    parent: AtomicThreadEvent?,
-    senders: List<AtomicThreadEvent> = listOf(),
-    allocation: AtomicThreadEvent? = null,
-    source: AtomicThreadEvent? = null,
-    causalityClock: VectorClock,
-    /**
-     * State of the execution frontier at the point when event is created.
-     */
-    val frontier: ExecutionFrontier<AtomicThreadEvent>,
-    /**
-     * Frontier of pinned events.
-     * Pinned events are the events that should not be
-     * considered for branching in an exploration starting from this event.
-     */
-    val pinnedEvents: ExecutionFrontier<AtomicThreadEvent>,
-    /**
-     * List of blocked request events.
-     */
-    val blockedRequests: List<AtomicThreadEvent>,
-) : AbstractAtomicThreadEvent(
-    label = label,
-    threadId = threadId,
-    // TODO: get rid of cast
-    parent = (parent as? AbstractAtomicThreadEvent?),
-    senders = senders,
-    allocation = allocation,
-    source = source,
-    causalityClock = causalityClock
-) {
-
-    var visited: Boolean = false
-        private set
-
-    init {
-        initialize()
-        validate()
-    }
-
-    fun visit() {
-        visited = true
     }
 
 }

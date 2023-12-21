@@ -280,11 +280,26 @@ abstract class AbstractEvent(final override val label: EventLabel) : Event {
 
 abstract class AbstractThreadEvent(
     label: EventLabel,
-    override val parent: AbstractThreadEvent?,
-    final override val threadId: Int,
-    final override val threadPosition: Int,
-    final override val causalityClock: VectorClock,
+    parent: AbstractThreadEvent?,
+    dependencies: List<ThreadEvent>,
 ) : AbstractEvent(label), ThreadEvent {
+
+    final override val threadId: Int = when (label) {
+        is InitializationLabel -> label.initThreadID
+        is ThreadStartLabel -> label.threadId
+        is ActorLabel -> label.threadId
+        else -> parent!!.threadId
+    }
+
+    final override val threadPosition: Int =
+        parent.calculateNextEventPosition()
+
+    final override val causalityClock: VectorClock =
+        dependencies.fold(parent?.causalityClock?.copy() ?: MutableVectorClock()) { clock, event ->
+            clock + event.causalityClock
+        }.apply {
+            set(threadId, threadPosition)
+        }
 
     override fun validate() {
         super.validate()
@@ -330,20 +345,20 @@ abstract class AbstractThreadEvent(
 
     private val jumps = Array<AbstractThreadEvent?>(N_JUMPS) { null }
 
-
-    protected open fun initialize() {
-        calculateJumps(this)
+    init {
+        calculateJumps(jumps, parent)
     }
 
     companion object {
         private const val N_JUMPS = 10
         private const val MAX_JUMP = 1 shl (N_JUMPS - 1)
 
-        private fun calculateJumps(event: AbstractThreadEvent) {
+        private fun calculateJumps(jumps: Array<AbstractThreadEvent?>, parent: AbstractThreadEvent?) {
             require(N_JUMPS > 0)
-            event.jumps[0] = event.parent
+            require(jumps.size >= N_JUMPS)
+            jumps[0] = parent
             for (i in 1 until N_JUMPS) {
-                event.jumps[i] = event.jumps[i - 1]?.jumps?.get(i - 1)
+                jumps[i] = jumps[i - 1]?.jumps?.get(i - 1)
             }
         }
     }
@@ -352,7 +367,6 @@ abstract class AbstractThreadEvent(
 
 abstract class AbstractAtomicThreadEvent(
     label: EventLabel,
-    threadId: Int,
     override val parent: AbstractAtomicThreadEvent?,
     /**
      * Sender events corresponding to this event.
@@ -370,20 +384,11 @@ abstract class AbstractAtomicThreadEvent(
      */
     // TODO: refactor!
     final override val source: AtomicThreadEvent? = null,
-
-    causalityClock: VectorClock,
-) : AtomicThreadEvent,
-    AbstractThreadEvent(
-        label = label,
-        parent = parent,
-        threadId = threadId,
-        threadPosition = parent.calculateNextEventPosition(),
-        causalityClock = causalityClock,
-    )
-{
-
-    final override val dependencies: List<ThreadEvent> =
-        listOfNotNull(allocation, source) + senders
+    /**
+     * List of event's dependencies
+     */
+    final override val dependencies: List<AtomicThreadEvent> = listOf(),
+) : AtomicThreadEvent, AbstractThreadEvent(label, parent, dependencies) {
 
     final override val synchronized: List<ThreadEvent> =
         if (label.isResponse && label !is ActorLabel) (listOf(request!!) + senders) else listOf()
@@ -408,19 +413,11 @@ abstract class AbstractAtomicThreadEvent(
 
 class HyperThreadEvent(
     label: EventLabel,
-    threadId: Int,
     override val parent: HyperThreadEvent?,
     override val dependencies: List<HyperThreadEvent>,
-    causalityClock: VectorClock,
     override val events: List<AtomicThreadEvent>,
-) : HyperEvent,
-    AbstractThreadEvent(
-        label = label,
-        parent = parent,
-        threadId = threadId,
-        threadPosition = parent.calculateNextEventPosition(),
-        causalityClock = causalityClock,
-    )
+) : HyperEvent, AbstractThreadEvent(label, parent, dependencies)
+
 
 val programOrder: PartialOrder<ThreadEvent> = PartialOrder.ofLessThan { x, y ->
     if (x.threadId != y.threadId || x.threadPosition >= y.threadPosition)

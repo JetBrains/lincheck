@@ -200,7 +200,8 @@ class EventStructureStrategy(
                 val actorEvent = actorEvents.getOrNull(i)
                 val prevHBClock = actorResults.getOrNull(i - 1)?.clockOnStart?.copy()
                     ?: emptyClock(hbClockSize)
-                val hbClock = actorEvent?.causalityClock?.toHBClock(tid, i)
+                val clockSize = result.clockOnStart.clock.size
+                val hbClock = actorEvent?.causalityClock?.toHBClock(clockSize, tid, i)
                     ?: prevHBClock.apply { clock[tid] = i }
                 result.clockOnStart.reset(hbClock)
             }

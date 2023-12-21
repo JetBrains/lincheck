@@ -226,6 +226,7 @@ enum class LabelType {
  */
 // TODO: now that we have ObjectAllocationLabel we can get rid of it?
 class InitializationLabel(
+    val initThreadID: ThreadID,
     val mainThreadID: ThreadID,
     val memoryInitializer: MemoryIDInitializer,
 ) : EventLabel(LabelKind.Send) {
@@ -1185,6 +1186,7 @@ data class UnparkLabel(
 
 // TODO: generalize actor labels to method call/return labels?
 data class ActorLabel(
+    val threadId: ThreadID,
     val actorKind: ActorLabelKind,
     val actor: Actor
 ) : EventLabel(actorKind.labelKind())
