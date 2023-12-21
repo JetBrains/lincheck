@@ -137,6 +137,7 @@ class ArrayIntMap<T>(capacity: Int) : MutableIntMap<T> {
         if (capacity == 0)
             return
         pairs.forEach { (key, value) ->
+            ++size
             array[key] = value
             bitmap[key] = true
         }
@@ -236,11 +237,12 @@ class ArrayIntMap<T>(capacity: Int) : MutableIntMap<T> {
             throw UnsupportedOperationException("Unsupported operation.")
         }
 
-        override fun remove(element: Int): Boolean {
-            return this@ArrayIntMap.containsKey(element).also {
-                this@ArrayIntMap.remove(element)
-            }
-        }
+        // TODO: cannot override because of weird compiler bug (probably due to boxing and override)
+        // override fun remove(element: Int): Boolean {
+        //     return this@ArrayIntMap.containsKey(element).also {
+        //         this@ArrayIntMap.remove(element)
+        //     }
+        // }
 
         override fun iterator() = object : IteratorBase<Int>() {
             override fun getElement(key: Int): Int {
@@ -260,7 +262,7 @@ class ArrayIntMap<T>(capacity: Int) : MutableIntMap<T> {
 
         override fun iterator() = object : IteratorBase<T>() {
             override fun getElement(key: Int): T {
-                return this@ArrayIntMap[key]!!
+                return this@ArrayIntMap[key] as T
             }
         }
     }
@@ -285,7 +287,7 @@ class ArrayIntMap<T>(capacity: Int) : MutableIntMap<T> {
 
         override fun iterator() = object : IteratorBase<MutableIntMap.MutableEntry<T>>() {
             override fun getElement(key: Int): MutableIntMap.MutableEntry<T> {
-                val value = this@ArrayIntMap[key]!!
+                val value = this@ArrayIntMap[key] as T
                 return Entry(key, value)
             }
         }
