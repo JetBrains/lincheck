@@ -294,12 +294,13 @@ abstract class AbstractThreadEvent(
     final override val threadPosition: Int =
         parent.calculateNextEventPosition()
 
-    final override val causalityClock: VectorClock =
+    final override val causalityClock: VectorClock = run {
         dependencies.fold(parent?.causalityClock?.copy() ?: MutableVectorClock()) { clock, event ->
             clock + event.causalityClock
         }.apply {
             set(threadId, threadPosition)
         }
+    }
 
     override fun validate() {
         super.validate()

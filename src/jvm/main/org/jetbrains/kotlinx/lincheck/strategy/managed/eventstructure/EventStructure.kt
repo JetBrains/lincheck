@@ -341,6 +341,7 @@ class EventStructure(
             cut(conflicts)
             merge(causalityClock.toMutableFrontier())
             cutDanglingRequestEvents()
+            set(threadId, parent)
         }
 
         var visited: Boolean = false

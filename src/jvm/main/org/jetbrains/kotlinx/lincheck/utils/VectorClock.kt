@@ -66,7 +66,7 @@ fun VectorClock.copy(): MutableVectorClock {
 }
 
 private class IntArrayClock(capacity: Int = 0) : MutableVectorClock {
-    var clock = IntArray(capacity) { -1 }
+    var clock = emptyIntArrayClock(capacity)
 
     val capacity: Int
         get() = clock.size
@@ -88,7 +88,11 @@ private class IntArrayClock(capacity: Int = 0) : MutableVectorClock {
     }
 
     override fun merge(other: VectorClock) {
-        val capacity = if (other is IntArrayClock) min(capacity, other.capacity) else capacity
+        // TODO: make VectorClock sealed interface?
+        check(other is IntArrayClock)
+        if (capacity < other.capacity) {
+            expand(other.capacity)
+        }
         for (i in 0 until capacity) {
             clock[i] = max(clock[i], other[i])
         }
@@ -100,7 +104,7 @@ private class IntArrayClock(capacity: Int = 0) : MutableVectorClock {
 
     private fun expand(newCapacity: Int) {
         require(newCapacity > capacity)
-        val newClock = IntArray(newCapacity)
+        val newClock = emptyIntArrayClock(newCapacity)
         copyInto(newClock)
         clock = newClock
     }
@@ -128,18 +132,21 @@ private class IntArrayClock(capacity: Int = 0) : MutableVectorClock {
     override fun hashCode(): Int =
         clock.contentHashCode()
 
+    companion object {
+        private fun emptyIntArrayClock(capacity: Int) =
+            IntArray(capacity) { -1 }
+    }
 }
 
 fun VectorClock.toHBClock(capacity: Int, tid: ThreadID, aid: Int): HBClock {
     check(this is IntArrayClock)
-    check(capacity >= clock.size - 2)
     val result = emptyClock(capacity)
-    for (i in 0 until clock.size - 2) {
+    for (i in 0 until capacity) {
         if (i == tid) {
-            result.clock[i] = clock[i].ensure { it == aid }
+            result.clock[i] = get(i).ensure { it == aid }
             continue
         }
-        result.clock[i] = 1 + clock[i]
+        result.clock[i] = 1 + get(i)
     }
     return result
 }
