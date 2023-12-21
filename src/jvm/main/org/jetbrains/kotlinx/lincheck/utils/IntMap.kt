@@ -242,24 +242,10 @@ class ArrayIntMap<T>(capacity: Int) : MutableIntMap<T> {
             }
         }
 
-        override fun iterator(): MutableIterator<Int> = object : AbstractIterator<Int>(), MutableIterator<Int> {
-
-            private var index: Int = -1
-
-            override fun computeNext() {
-                while (++index < this@ArrayIntMap.capacity) {
-                    if (this@ArrayIntMap.containsKey(index)) {
-                        setNext(index)
-                        return
-                    }
-                }
-                done()
+        override fun iterator() = object : IteratorBase<Int>() {
+            override fun getElement(key: Int): Int {
+                return key
             }
-
-            override fun remove() {
-                throw UnsupportedOperationException("Unsupported operation.")
-            }
-
         }
     }
 
@@ -272,24 +258,10 @@ class ArrayIntMap<T>(capacity: Int) : MutableIntMap<T> {
             throw UnsupportedOperationException("Unsupported operation.")
         }
 
-        override fun iterator(): MutableIterator<T> = object : AbstractIterator<T>(), MutableIterator<T> {
-
-            private var index: Int = -1
-
-            override fun computeNext() {
-                while (++index < this@ArrayIntMap.capacity) {
-                    if (this@ArrayIntMap.containsKey(index)) {
-                        setNext(this@ArrayIntMap[index]!!)
-                        return
-                    }
-                }
-                done()
+        override fun iterator() = object : IteratorBase<T>() {
+            override fun getElement(key: Int): T {
+                return this@ArrayIntMap[key]!!
             }
-
-            override fun remove() {
-                throw UnsupportedOperationException("Unsupported operation.")
-            }
-
         }
     }
 
@@ -311,27 +283,12 @@ class ArrayIntMap<T>(capacity: Int) : MutableIntMap<T> {
             return (prev == value)
         }
 
-        override fun iterator(): MutableIterator<MutableIntMap.MutableEntry<T>> =
-            object : AbstractIterator<MutableIntMap.MutableEntry<T>>(), MutableIterator<MutableIntMap.MutableEntry<T>> {
-
-                private var index: Int = -1
-
-                override fun computeNext() {
-                    while (++index < this@ArrayIntMap.capacity) {
-                        if (this@ArrayIntMap.containsKey(index)) {
-                            val value = this@ArrayIntMap[index]!!
-                            val entry: MutableIntMap.MutableEntry<T> = Entry(index, value)
-                            setNext(entry)
-                            return
-                        }
-                    }
-                    done()
-                }
-
-                override fun remove() {
-                    throw UnsupportedOperationException("Unsupported operation.")
-                }
+        override fun iterator() = object : IteratorBase<MutableIntMap.MutableEntry<T>>() {
+            override fun getElement(key: Int): MutableIntMap.MutableEntry<T> {
+                val value = this@ArrayIntMap[key]!!
+                return Entry(key, value)
             }
+        }
     }
 
     private data class Entry<T>(
@@ -343,6 +300,27 @@ class ArrayIntMap<T>(capacity: Int) : MutableIntMap<T> {
             value = newValue
             return prev
         }
+    }
+
+    private abstract inner class IteratorBase<E> : AbstractIterator<E>(), MutableIterator<E> {
+        private var index: Int = -1
+
+        override fun computeNext() {
+            while (++index < this@ArrayIntMap.capacity) {
+                if (this@ArrayIntMap.containsKey(index)) {
+                    setNext(getElement(index))
+                    return
+                }
+            }
+            done()
+        }
+
+        override fun remove() {
+            throw UnsupportedOperationException("Unsupported operation.")
+        }
+
+        abstract fun getElement(key: Int): E
+
     }
 
     companion object {
