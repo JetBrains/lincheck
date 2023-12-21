@@ -22,19 +22,9 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import  org.jetbrains.kotlinx.lincheck.ensure
 import org.jetbrains.kotlinx.lincheck.ensureNotNull
-import org.jetbrains.kotlinx.lincheck.implies
-import org.jetbrains.kotlinx.lincheck.strategy.managed.opaque
-import org.jetbrains.kotlinx.lincheck.unreachable
-import org.jetbrains.kotlinx.lincheck.utils.IntMap
-import org.jetbrains.kotlinx.lincheck.utils.MutableIntMap
+import org.jetbrains.kotlinx.lincheck.utils.*
 
 typealias EventID = Int
-
-typealias ThreadID = Int
-
-typealias ThreadMap<T> = IntMap<T>
-
-typealias MutableThreadMap<T> = MutableIntMap<T>
 
 interface Event : Comparable<Event> {
     /**

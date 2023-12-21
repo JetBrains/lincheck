@@ -20,9 +20,9 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
-import org.jetbrains.kotlinx.lincheck.Actor
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
-import org.jetbrains.kotlinx.lincheck.implies
+import org.jetbrains.kotlinx.lincheck.utils.*
 import java.util.IdentityHashMap
 import kotlin.reflect.KClass
 
