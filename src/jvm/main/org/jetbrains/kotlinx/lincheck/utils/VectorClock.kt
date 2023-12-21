@@ -23,7 +23,7 @@ package org.jetbrains.kotlinx.lincheck.utils
 import org.jetbrains.kotlinx.lincheck.ensure
 import org.jetbrains.kotlinx.lincheck.execution.HBClock
 import org.jetbrains.kotlinx.lincheck.execution.emptyClock
-import kotlin.math.max
+import kotlin.math.*
 
 interface VectorClock {
     fun isEmpty(): Boolean
@@ -32,7 +32,11 @@ interface VectorClock {
 }
 
 interface MutableVectorClock : VectorClock {
-    fun put(tid: ThreadID, timestamp: Int): Int
+    operator fun set(tid: ThreadID, timestamp: Int)
+
+    fun increment(tid: ThreadID, n: Int) {
+        set(tid, get(tid) + n)
+    }
 
     fun merge(other: VectorClock)
 
@@ -42,39 +46,30 @@ interface MutableVectorClock : VectorClock {
 fun VectorClock.observes(tid: ThreadID, timestamp: Int): Boolean =
     timestamp <= get(tid)
 
-operator fun MutableVectorClock.set(tid: ThreadID, timestamp: Int) {
-    put(tid, timestamp)
-}
-
-fun MutableVectorClock.update(tid: ThreadID, timestamp: Int) {
-    put(tid, timestamp).ensure { it < timestamp }
-}
-
-fun MutableVectorClock.increment(tid: ThreadID, n: Int) {
-    put(tid, get(tid) + n)
-}
-
 fun MutableVectorClock.increment(tid: ThreadID) {
     increment(tid, 1)
 }
 
-// TODO: use sealed interfaces to make when exhaustive
 operator fun VectorClock.plus(other: VectorClock): MutableVectorClock =
     copy().apply { merge(other) }
 
+fun VectorClock(capacity: Int = 0): VectorClock =
+    MutableVectorClock(capacity)
+
+fun MutableVectorClock(capacity: Int = 0): MutableVectorClock =
+    IntArrayClock(capacity)
+
 fun VectorClock.copy(): MutableVectorClock {
+    // TODO: make VectorClock sealed interface?
     check(this is IntArrayClock)
     return copy()
 }
 
-fun VectorClock(nThreads: Int): VectorClock =
-    MutableVectorClock(nThreads)
+private class IntArrayClock(capacity: Int = 0) : MutableVectorClock {
+    var clock = IntArray(capacity) { -1 }
 
-fun MutableVectorClock(nThreads: Int): MutableVectorClock =
-    IntArrayClock(nThreads)
-
-private class IntArrayClock(val nThreads: Int) : MutableVectorClock {
-    val clock = IntArray(nThreads) { -1 }
+    val capacity: Int
+        get() = clock.size
 
     override fun isEmpty(): Boolean =
         clock.all { it == -1 }
@@ -82,11 +77,19 @@ private class IntArrayClock(val nThreads: Int) : MutableVectorClock {
     override fun get(tid: ThreadID): Int =
         clock[tid]
 
-    override fun put(tid: ThreadID, timestamp: Int): Int =
-        clock[tid].also { clock[tid] = timestamp }
+    override fun set(tid: ThreadID, timestamp: Int) {
+        expandIfNeeded(tid)
+        clock[tid] = timestamp
+    }
+
+    override fun increment(tid: ThreadID, n: Int) {
+        expandIfNeeded(tid)
+        clock[tid] += n
+    }
 
     override fun merge(other: VectorClock) {
-        for (i in 0 until nThreads) {
+        val capacity = if (other is IntArrayClock) min(capacity, other.capacity) else capacity
+        for (i in 0 until capacity) {
             clock[i] = max(clock[i], other[i])
         }
     }
@@ -95,9 +98,27 @@ private class IntArrayClock(val nThreads: Int) : MutableVectorClock {
         clock.fill(-1)
     }
 
-    fun copy() = IntArrayClock(nThreads).also {
-        for (i in 0 until nThreads) {
-            it.clock[i] = clock[i]
+    private fun expand(newCapacity: Int) {
+        require(newCapacity > capacity)
+        val newClock = IntArray(newCapacity)
+        copyInto(newClock)
+        clock = newClock
+    }
+
+    private fun expandIfNeeded(tid: ThreadID) {
+        if (tid >= capacity) {
+            expand(tid + 1)
+        }
+    }
+
+    fun copy() = IntArrayClock(capacity).also { copyInto(it.clock) }
+
+    private fun copyInto(other: IntArray) {
+        require(other.size >= capacity)
+        // TODO: use arraycopy?
+        //  System.arraycopy(old, 0, clock, 0, capacity)
+        for (i in 0 until capacity) {
+            other[i] = clock[i]
         }
     }
 
