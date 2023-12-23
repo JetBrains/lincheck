@@ -31,11 +31,11 @@ fun forClasses(vararg classes: KClass<*>) = forClasses {
 fun forClasses(classPredicate: (fullClassName: String) -> Boolean) = ManagedStrategyGuarantee.MethodBuilder(classPredicate)
 
 class ManagedStrategyGuarantee private constructor(
-    internal val classPredicate: (fullClassName: String) -> Boolean,
-    internal val methodPredicate: (methodName: String) -> Boolean,
-    internal val type: ManagedGuaranteeType
+     val classPredicate: (fullClassName: String) -> Boolean,
+     val methodPredicate: (methodName: String) -> Boolean,
+     val type: ManagedGuaranteeType
 ) {
-    class MethodBuilder internal constructor(
+    class MethodBuilder  constructor(
         private val classPredicate: (fullClassName: String) -> Boolean
     ) {
         /**
@@ -54,7 +54,7 @@ class ManagedStrategyGuarantee private constructor(
         fun methods(methodPredicate: (methodName: String) -> Boolean) = GuaranteeBuilder(classPredicate, methodPredicate)
     }
 
-    class GuaranteeBuilder internal constructor(
+    class GuaranteeBuilder  constructor(
         private val classPredicate: (fullClassName: String) -> Boolean,
         private val methodPredicate: (methodName: String) -> Boolean
     ) {
@@ -77,7 +77,7 @@ class ManagedStrategyGuarantee private constructor(
     }
 }
 
-internal enum class ManagedGuaranteeType {
+ enum class ManagedGuaranteeType {
     IGNORE,
     TREAT_AS_ATOMIC
 }

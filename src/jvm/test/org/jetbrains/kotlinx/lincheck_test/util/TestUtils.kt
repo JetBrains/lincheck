@@ -20,7 +20,7 @@ import org.junit.Assert.*
  *
  * @param expectedOutputFile name of file stored in resources/expected_logs, storing the expected lincheck output.
  */
-internal fun LincheckFailure?.checkLincheckOutput(expectedOutputFile: String) {
+ fun LincheckFailure?.checkLincheckOutput(expectedOutputFile: String) {
     check(this != null) { "The test should fail" }
 
     val actualOutput = StringBuilder().appendFailure(this).toString()
@@ -53,7 +53,7 @@ private val IGNORED_LINES = listOf(
 private val LINE_NUMBER_REGEX = Regex(":(\\d+)\\)")
 private val LAMBDA_NUMBER_REGEX = Regex("-(\\d+)")
 
-internal fun getExpectedLogFromResources(testFileName: String): String {
+ fun getExpectedLogFromResources(testFileName: String): String {
     val resourceName = "expected_logs/$testFileName"
     val expectedLogResource = LTS::class.java.classLoader.getResourceAsStream(resourceName)
         ?: error("Expected log resource: $resourceName does not exist")

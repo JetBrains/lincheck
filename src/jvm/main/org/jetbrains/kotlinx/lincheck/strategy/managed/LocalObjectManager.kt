@@ -17,7 +17,7 @@ import java.util.*
  * This tracking helps to avoid unnecessary interleavings, which can occur if access to such local
  * objects triggers switch points in the model checking strategy.
  */
-internal class LocalObjectManager {
+ class LocalObjectManager {
     /**
      * An identity hash map holding each local object and its dependent objects.
      * Each local object is a key, and its value is a list of objects accessible from it.

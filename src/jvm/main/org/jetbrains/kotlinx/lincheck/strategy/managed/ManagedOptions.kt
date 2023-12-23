@@ -67,7 +67,7 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
     /**
      * Internal, DO NOT USE.
      */
-    internal fun eliminateLocalObjects(eliminateLocalObjects: Boolean) {
+     fun eliminateLocalObjects(eliminateLocalObjects: Boolean) {
         this.eliminateLocalObjects = eliminateLocalObjects
     }
 

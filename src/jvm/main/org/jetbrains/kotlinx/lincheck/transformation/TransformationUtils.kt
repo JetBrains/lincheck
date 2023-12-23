@@ -29,7 +29,7 @@ import kotlin.reflect.jvm.*
  * @param methodDescriptor String representation of method's descriptor
  * @return Array of local variables containing arguments.
  */
-internal fun GeneratorAdapter.storeArguments(methodDescriptor: String): IntArray {
+ fun GeneratorAdapter.storeArguments(methodDescriptor: String): IntArray {
     val argumentTypes = Type.getArgumentTypes(methodDescriptor)
     val locals = IntArray(argumentTypes.size)
 
@@ -47,7 +47,7 @@ internal fun GeneratorAdapter.storeArguments(methodDescriptor: String): IntArray
  *
  * @param locals Array of local variables.
  */
-internal fun GeneratorAdapter.loadLocals(locals: IntArray) {
+ fun GeneratorAdapter.loadLocals(locals: IntArray) {
     for (local in locals)
         loadLocal(local)
 }
@@ -58,7 +58,7 @@ internal fun GeneratorAdapter.loadLocals(locals: IntArray) {
  * @param locals Array of local variables.
  * @param localTypes Array of local variable types.
  */
-internal fun GeneratorAdapter.loadLocalsBoxed(locals: IntArray, localTypes: Array<Type>) {
+ fun GeneratorAdapter.loadLocalsBoxed(locals: IntArray, localTypes: Array<Type>) {
     for (i in locals.indices) {
         loadLocal(locals[i])
         box(localTypes[i])
@@ -70,18 +70,18 @@ internal fun GeneratorAdapter.loadLocalsBoxed(locals: IntArray, localTypes: Arra
  *
  * @param local Index of the local variable.
  */
-internal fun GeneratorAdapter.storeTopToLocal(local: Int) {
+ fun GeneratorAdapter.storeTopToLocal(local: Int) {
     storeLocal(local)
     loadLocal(local)
 }
 
 // Map for storing the declaring class and method of each function.
-internal val functionToDeclaringClassMap = HashMap<KFunction<*>, Pair<Type, Method>>()
+ val functionToDeclaringClassMap = HashMap<KFunction<*>, Pair<Type, Method>>()
 
 /**
  * Invokes a static method represented by a KFunction.
  */
-internal fun GeneratorAdapter.invokeStatic(function: KFunction<*>) {
+ fun GeneratorAdapter.invokeStatic(function: KFunction<*>) {
     val (clazz, method) = functionToDeclaringClassMap.computeIfAbsent(function) {
         function.javaMethod!!.let {
             Type.getType(it.declaringClass) to Method.getMethod(it)
@@ -97,7 +97,7 @@ internal fun GeneratorAdapter.invokeStatic(function: KFunction<*>) {
  * @param ifClause the if-clause code.
  * @param elseClause the else-clause code.
  */
-internal inline fun GeneratorAdapter.ifStatement(
+ inline fun GeneratorAdapter.ifStatement(
         condition: GeneratorAdapter.() -> Unit,
         ifClause: GeneratorAdapter.() -> Unit,
         elseClause: GeneratorAdapter.() -> Unit
@@ -119,7 +119,7 @@ internal inline fun GeneratorAdapter.ifStatement(
  * @param original the original code.
  * @param code the code to execute if in a testing context.
  */
-internal inline fun GeneratorAdapter.invokeIfInTestingCode(
+ inline fun GeneratorAdapter.invokeIfInTestingCode(
         original: GeneratorAdapter.() -> Unit,
         code: GeneratorAdapter.() -> Unit
 ) = ifStatement(
@@ -128,7 +128,7 @@ internal inline fun GeneratorAdapter.invokeIfInTestingCode(
         elseClause = original
 )
 
-internal inline fun GeneratorAdapter.invokeInIgnoredSection(
+ inline fun GeneratorAdapter.invokeInIgnoredSection(
     code: GeneratorAdapter.() -> Unit
 ) {
     invokeStatic(Injections::enterIgnoredSection)
@@ -146,11 +146,11 @@ internal inline fun GeneratorAdapter.invokeInIgnoredSection(
     )
 }
 
-internal const val ASM_API = Opcodes.ASM9
+ const val ASM_API = Opcodes.ASM9
 
-// Converts the internal JVM name to a canonical one
-internal val String.canonicalClassName get() = this.replace('/', '.')
+// Converts the  JVM name to a canonical one
+ val String.canonicalClassName get() = this.replace('/', '.')
 
-internal val STRING_TYPE = Type.getType(String::class.java)
-internal val CLASS_TYPE = Type.getType(Class::class.java)
-internal val CLASS_FOR_NAME_METHOD = Method("forName", CLASS_TYPE, arrayOf(STRING_TYPE))
+ val STRING_TYPE = Type.getType(String::class.java)
+ val CLASS_TYPE = Type.getType(Class::class.java)
+ val CLASS_FOR_NAME_METHOD = Method("forName", CLASS_TYPE, arrayOf(STRING_TYPE))

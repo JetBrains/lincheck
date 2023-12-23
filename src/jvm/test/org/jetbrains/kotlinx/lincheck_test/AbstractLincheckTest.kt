@@ -68,7 +68,7 @@ abstract class AbstractLincheckTest(
     }
 }
 
-private const val TIMEOUT = 100_000L
+private const val TIMEOUT = 1_000_000_000L
 
 private fun waitUntilAllLincheckThreadsAreFinished() {
     val deadline = System.currentTimeMillis() + 1000

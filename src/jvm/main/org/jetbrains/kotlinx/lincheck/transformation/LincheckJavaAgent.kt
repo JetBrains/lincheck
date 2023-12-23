@@ -17,11 +17,14 @@ import net.bytebuddy.dynamic.loading.*
 import net.bytebuddy.pool.*
 import org.jetbrains.kotlinx.lincheck.runInIgnoredSection
 import org.objectweb.asm.*
-import java.lang.NullPointerException
+import org.reflections.Reflections
+import org.reflections.scanners.SubTypesScanner
+import java.io.FileOutputStream
 import java.lang.instrument.*
 import java.security.*
 
-internal inline fun <R> withLincheckJavaAgent(stressTest: Boolean, block: () -> R): R {
+
+inline fun <R> withLincheckJavaAgent(stressTest: Boolean, block: () -> R): R {
     LincheckClassFileTransformer.install(stressTest)
     return try {
         block()
@@ -37,15 +40,15 @@ object LincheckClassFileTransformer : ClassFileTransformer {
 
     private val instrumentation = ByteBuddyAgent.install()
 
-    internal var isStressTest: Boolean = false
+    var isStressTest: Boolean = false
 
-    internal fun install(stressTest: Boolean) {
+    fun install(stressTest: Boolean) {
         isStressTest = stressTest
         TransformationInjectionsInitializer.initialize()
         instrumentation.addTransformer(LincheckClassFileTransformer, true)
         val loadedClasses = instrumentation.allLoadedClasses
-                .filter(instrumentation::isModifiableClass)
-                .filter { shouldTransform(it.name) }
+            .filter(instrumentation::isModifiableClass)
+            .filter { shouldTransform(it.name) }
         try {
             instrumentation.retransformClasses(*loadedClasses.toTypedArray())
         } catch (t: Throwable) {
@@ -60,7 +63,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         }
     }
 
-    internal fun uninstall() {
+    fun uninstall() {
         instrumentation.removeTransformer(LincheckClassFileTransformer)
         val classDefinitions = instrumentation.allLoadedClasses.mapNotNull { clazz ->
             val bytes = oldClasses[classKey(clazz.classLoader, clazz.name)]
@@ -70,11 +73,11 @@ object LincheckClassFileTransformer : ClassFileTransformer {
     }
 
     override fun transform(
-            loader: ClassLoader?,
-            className: String,
-            classBeingRedefined: Class<*>?,
-            protectionDomain: ProtectionDomain?,
-            classfileBuffer: ByteArray
+        loader: ClassLoader?,
+        className: String,
+        classBeingRedefined: Class<*>?,
+        protectionDomain: ProtectionDomain?,
+        classfileBuffer: ByteArray
     ): ByteArray? {
         runInIgnoredSection {
             if (!shouldTransform(className.canonicalClassName)) return null
@@ -85,7 +88,8 @@ object LincheckClassFileTransformer : ClassFileTransformer {
                     val reader = ClassReader(classfileBuffer)
                     val writer = ClassWriter(reader, ClassWriter.COMPUTE_FRAMES)
                     try {
-                        reader.accept(LincheckClassVisitor(writer), ClassReader.SKIP_FRAMES)
+                        val wrapInIgnoredSection = false // COMPLETION_NAME in className
+                        reader.accept(LincheckClassVisitor(writer, wrapInIgnoredSection), ClassReader.SKIP_FRAMES)
                         writer.toByteArray()
                     } catch (e: Exception) {
                         System.err.println("Unable to transform $className")
@@ -127,22 +131,50 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         }
 
         if (className.startsWith("sun.") ||
-                className.startsWith("java.") ||
-                className.startsWith("jdk.internal.") ||
-                className.startsWith("kotlin.") &&
-                !className.startsWith("kotlin.collections.") &&  // transform kotlin collections
-                !(className.startsWith("kotlin.jvm.internal.Array") && className.contains("Iterator")) &&
-                !className.startsWith("kotlin.ranges.") ||
-                className.startsWith("com.intellij.rt.coverage.") ||
-                className.startsWith("org.jetbrains.kotlinx.lincheck.") && !className.startsWith("org.jetbrains.kotlinx.lincheck.test.") ||
-                className.startsWith("kotlinx.coroutines.DispatchedTask")
+            className.startsWith("java.") ||
+            className.startsWith("jdk.internal.") ||
+            className.startsWith("kotlin.") &&
+            !className.startsWith("kotlin.collections.") &&  // transform kotlin collections
+            !(className.startsWith("kotlin.jvm.internal.Array") && className.contains("Iterator")) &&
+            !className.startsWith("kotlin.ranges.") ||
+            className.startsWith("com.intellij.rt.coverage.") ||
+            className.startsWith("org.jetbrains.kotlinx.lincheck.") && !className.startsWith("org.jetbrains.kotlinx.lincheck.test.") ||
+            className.startsWith("kotlinx.coroutines.DispatchedTask")
         ) return false
 
         return true
     }
+
+    private val jobSupportClass = Class.forName("kotlinx/coroutines/JobSupportKt".replace("/", "."))
+
+    val names = listOf(
+        "kotlinx.coroutines.AbstractCoroutine",
+        "kotlinx.coroutines.channels.ActorCoroutine",
+        "kotlinx.coroutines.BlockingCoroutine",
+        "kotlinx.coroutines.channels.BroadcastCoroutine",
+        "kotlinx.coroutines.channels.ChannelCoroutine",
+        "kotlinx.coroutines.CompletableDeferredImpl",
+        "kotlinx.coroutines.DeferredCoroutine",
+        "kotlinx.coroutines.DispatchedCoroutine",
+        "kotlinx.coroutines.flow.internal.FlowCoroutine",
+        "kotlinx.coroutines.JobImpl",
+        "kotlinx.coroutines.channels.LazyActorCoroutine",
+        "kotlinx.coroutines.channels.LazyBroadcastCoroutine",
+        "kotlinx.coroutines.LazyDeferredCoroutine",
+        "kotlinx.coroutines.LazyStandaloneCoroutine",
+        "kotlinx.coroutines.channels.ProducerCoroutine",
+        "kotlinx.coroutines.internal.ScopeCoroutine",
+        "kotlinx.coroutines.StandaloneCoroutine",
+        "kotlinx.coroutines.SupervisorCoroutine",
+        "kotlinx.coroutines.SupervisorCoroutine",
+        "kotlinx.coroutines.TimeoutCoroutine",
+        "kotlinx.coroutines.UndispatchedCoroutine",
+        "kotlinx.coroutines.JobSupport"
+    ).map { it.replace(".", "/") }
+
 }
 
-internal object TransformationInjectionsInitializer {
+object TransformationInjectionsInitializer {
     private var initialized = false
 
     fun initialize() {
@@ -156,18 +188,18 @@ internal object TransformationInjectionsInitializer {
         val typePool: TypePool = TypePool.Default.ofSystemLoader()
 
         listOf(
-                "kotlin.jvm.internal.Intrinsics",
-                "sun.nio.ch.lincheck.CoroutineInternalCallTracker",
-                "sun.nio.ch.lincheck.AtomicFields",
-                "sun.nio.ch.lincheck.FinalFields",
-                "sun.nio.ch.lincheck.CodeLocations",
-                "sun.nio.ch.lincheck.SharedEventsTracker",
-                "sun.nio.ch.lincheck.TestThread",
-                "sun.nio.ch.lincheck.Injections",
+            "kotlin.jvm.internal.Intrinsics",
+            "sun.nio.ch.lincheck.CoroutineInternalCallTracker",
+            "sun.nio.ch.lincheck.AtomicFields",
+            "sun.nio.ch.lincheck.FinalFields",
+            "sun.nio.ch.lincheck.CodeLocations",
+            "sun.nio.ch.lincheck.SharedEventsTracker",
+            "sun.nio.ch.lincheck.TestThread",
+            "sun.nio.ch.lincheck.Injections",
         ).forEach { className ->
             ByteBuddy().redefine<Any>(
-                    typePool.describe(className).resolve(),
-                    ClassFileLocator.ForClassLoader.ofSystemLoader()
+                typePool.describe(className).resolve(),
+                ClassFileLocator.ForClassLoader.ofSystemLoader()
             ).make().allTypes.let {
                 ClassInjector.UsingUnsafe.ofBootLoader().inject(it)
             }
@@ -178,5 +210,17 @@ internal object TransformationInjectionsInitializer {
 }
 
 private fun classKey(loader: ClassLoader?, className: String) =
-        if (loader == null) className
-        else loader to className
+    if (loader == null) className
+    else loader to className
+
+private val COMPLETION_NAME = "org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner.Completion".replace(".", "/")
+
+fun main() {
+    val reflections = Reflections("ваш.пакет", SubTypesScanner(false))
+
+    val subTypes = reflections.getSubTypesOf(Class.forName("kotlinx/coroutines/JobSupportKt".replace("/", ".")))
+
+    for (clazz in subTypes) {
+        println(clazz.getName())
+    }
+}

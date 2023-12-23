@@ -30,7 +30,7 @@ class ThreadDumpTest {
                 .invocationTimeout(100)
             val failure = options.checkImpl(DeadlockOnSynchronizedTest::class.java)
             check(failure is DeadlockWithDumpFailure) { "${DeadlockWithDumpFailure::class.simpleName} was expected but ${failure?.javaClass} was obtained"}
-            check(failure.threadDump!!.size == 2) { "thread dump for 2 threads expected, but for ${failure.threadDump.size} threads was detected"}
+            check(failure.threadDump!!.size == 2) { "thread dump for 2 threads expected, but for ${failure.threadDump!!.size} threads was detected"}
         }
     }
 }

@@ -23,8 +23,9 @@ import java.util.*
 
 fun getSuperclassName(internalClassName: String): String? {
     try {
-        val classStream: InputStream = ClassLoader.getSystemClassLoader().getResourceAsStream("$internalClassName.class")
-            ?: return null
+        val classStream: InputStream =
+            ClassLoader.getSystemClassLoader().getResourceAsStream("$internalClassName.class")
+                ?: return null
 
         val classReader = ClassReader(classStream)
         val superclassVisitor = SuperclassClassVisitor()
@@ -44,12 +45,19 @@ private class SuperclassClassVisitor : ClassVisitor(ASM_API) {
     var internalSuperclassName: String? = null
         private set
 
-    override fun visit(version: Int, access: Int, name: String?, signature: String?, superName: String?, interfaces: Array<out String>?) {
+    override fun visit(
+        version: Int,
+        access: Int,
+        name: String?,
+        signature: String?,
+        superName: String?,
+        interfaces: Array<out String>?
+    ) {
         internalSuperclassName = superName
     }
 }
 
-internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw) {
+class LincheckClassVisitor(cw: ClassWriter, val isIgnoredClass: Boolean = false) : ClassVisitor(ASM_API, cw) {
     private lateinit var className: String
     private var classVersion = 0
     private var fileName: String? = null
@@ -94,6 +102,10 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
     ): MethodVisitor {
         var mv = super.visitMethod(access, methodName, desc, signature, exceptions)
         if (access and ACC_NATIVE != 0) return mv
+        if (isIgnoredClass || methodName == "removeNode") {
+            mv = WrapMethodInIgnoreSectionTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
+            return mv
+        }
         if (LincheckClassFileTransformer.isStressTest && methodName != "<clinit>" && methodName != "<init>") {
             mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
             mv = CoroutineCancellabilitySupportMethodTransformer(mv, access, methodName, desc)
@@ -468,7 +480,7 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
                 }
             }
 
-            private fun isUnsafe(owner: String) = owner == "sun/misc/Unsafe" || owner == "jdk/internal/misc/Unsafe"
+        private fun isUnsafe(owner: String) = owner == "sun/misc/Unsafe" || owner == "jdk/internal/misc/Unsafe"
     }
 
 
@@ -760,151 +772,154 @@ internal class LincheckClassVisitor(cw: ClassWriter) : ClassVisitor(ASM_API, cw)
     /**
      * Adds strategy method invocations before and after method calls.
      */
-    private inner class MethodCallTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
-        override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
-            // TODO: ignore coroutine internals
-            // TODO: ignore safe calls
-            // TODO: do not ignore <init>?
-            if (isCoroutineInternalClass(owner)) {
-                invokeInIgnoredSection {
-                    visitMethodInsn(opcode, owner, name, desc, itf)
+    private inner class MethodCallTransformer(methodName: String, adapter: GeneratorAdapter) :
+        ManagedStrategyMethodVisitor(methodName, adapter) {
+        override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) =
+            adapter.run {
+                // TODO: ignore coroutine internals
+                // TODO: ignore safe calls
+                // TODO: do not ignore <init>?
+                if (isCoroutineInternalClass(owner)) {
+                    invokeInIgnoredSection {
+                        visitMethodInsn(opcode, owner, name, desc, itf)
+                    }
+                    return
                 }
-                return
-            }
-            if (name == "<init>" ||
-                owner == "kotlin/jvm/internal/Intrinsics" ||
-                owner == "java/util/Objects" ||
-                owner == "sun/nio/ch/lincheck/Injections" ||
-                owner == "java/lang/StringBuilder" ||
-                owner == "java/util/Locale" ||
-                owner == "java/lang/String" ||
-                owner == "org/slf4j/helpers/Util" ||
-                owner == "java/util/Properties" ||
-                owner == "java/lang/Boolean" ||
-                owner == "java/lang/Integer" ||
-                owner == "java/lang/Long"
-            ) {
-                visitMethodInsn(opcode, owner, name, desc, itf)
-                return
-            }
-            if (owner.startsWith("java/util/concurrent/") && (owner.contains("Atomic") || owner.contains("VarHandle"))) {
+                if (name == "<init>" ||
+                    owner == "kotlin/jvm/internal/Intrinsics" ||
+                    owner == "java/util/Objects" ||
+                    owner == "sun/nio/ch/lincheck/Injections" ||
+                    owner == "java/lang/StringBuilder" ||
+                    owner == "java/util/Locale" ||
+                    owner == "java/lang/String" ||
+                    owner == "org/slf4j/helpers/Util" ||
+                    owner == "java/util/Properties" ||
+                    owner == "java/lang/Boolean" ||
+                    owner == "java/lang/Integer" ||
+                    owner == "java/lang/Long" ||
+                    owner == "kotlinx/coroutines/JobSupport"
+                ) {
+                    visitMethodInsn(opcode, owner, name, desc, itf)
+                    return
+                }
+                if (owner.startsWith("java/util/concurrent/") && (owner.contains("Atomic") || owner.contains("VarHandle"))) {
+                    invokeIfInTestingCode(
+                        original = {
+                            visitMethodInsn(opcode, owner, name, desc, itf)
+                        },
+                        code = {
+                            processAtomicMethodCall(desc, opcode, owner, name, itf)
+                        }
+                    )
+                    return
+                }
                 invokeIfInTestingCode(
                     original = {
                         visitMethodInsn(opcode, owner, name, desc, itf)
                     },
                     code = {
-                        processAtomicMethodCall(desc, opcode, owner, name, itf)
+                        // STACK [INVOKEVIRTUAL]: owner, arguments
+                        // STACK [INVOKESTATIC]: arguments
+                        val argumentLocals = storeArguments(desc)
+                        // STACK [INVOKEVIRTUAL]: owner
+                        // STACK [INVOKESTATIC]: <empty>
+                        when (opcode) {
+                            INVOKESTATIC -> visitInsn(ACONST_NULL)
+                            else -> dup()
+                        }
+                        // STACK [INVOKEVIRTUAL]: owner, owner
+                        // STACK [INVOKESTATIC]: <empty>, null
+                        push(owner)
+                        push(name)
+                        loadNewCodeLocationId()
+                        // STACK [INVOKEVIRTUAL]: owner, owner, className, methodName, codeLocation
+                        // STACK [INVOKESTATIC]: <empty>, null, className, methodName, codeLocation
+                        val argumentTypes = getArgumentTypes(desc)
+                        when (argumentLocals.size) {
+                            0 -> {
+                                invokeStatic(Injections::beforeMethodCall0)
+                            }
+
+                            1 -> {
+                                loadLocalsBoxed(argumentLocals, argumentTypes)
+                                invokeStatic(Injections::beforeMethodCall1)
+                            }
+
+                            2 -> {
+                                loadLocalsBoxed(argumentLocals, argumentTypes)
+                                invokeStatic(Injections::beforeMethodCall2)
+                            }
+
+                            3 -> {
+                                loadLocalsBoxed(argumentLocals, argumentTypes)
+                                invokeStatic(Injections::beforeMethodCall3)
+                            }
+
+                            4 -> {
+                                loadLocalsBoxed(argumentLocals, argumentTypes)
+                                invokeStatic(Injections::beforeMethodCall4)
+                            }
+
+                            5 -> {
+                                loadLocalsBoxed(argumentLocals, argumentTypes)
+                                invokeStatic(Injections::beforeMethodCall5)
+                            }
+
+                            else -> {
+                                push(argumentLocals.size) // size of the array
+                                visitTypeInsn(ANEWARRAY, OBJECT_TYPE.internalName)
+                                // STACK: ..., array
+                                for (i in argumentLocals.indices) {
+                                    // STACK: ..., array
+                                    dup()
+                                    // STACK: ..., array, array
+                                    push(i)
+                                    // STACK: ..., array, array, index
+                                    loadLocal(argumentLocals[i])
+                                    // STACK: ..., array, array, index, argument[index]
+                                    box(argumentTypes[i])
+                                    arrayStore(OBJECT_TYPE)
+                                    // STACK: ..., array
+                                }
+                                // STACK: ..., array
+                                invokeStatic(Injections::beforeMethodCall)
+                            }
+                        }
+                        // STACK [INVOKEVIRTUAL]: owner, arguments
+                        // STACK [INVOKESTATIC]: arguments
+                        val methodCallStartLabel = newLabel()
+                        val methodCallEndLabel = newLabel()
+                        val handlerExceptionStartLabel = newLabel()
+                        val handlerExceptionEndLabel = newLabel()
+                        visitTryCatchBlock(methodCallStartLabel, methodCallEndLabel, handlerExceptionStartLabel, null)
+                        visitLabel(methodCallStartLabel)
+                        loadLocals(argumentLocals)
+                        visitMethodInsn(opcode, owner, name, desc, itf)
+                        visitLabel(methodCallEndLabel)
+                        // STACK [INVOKEVIRTUAL]: owner, arguments
+                        // STACK [INVOKESTATIC]: arguments
+                        val resultType = getReturnType(desc)
+                        if (resultType == VOID_TYPE) {
+                            invokeStatic(Injections::onMethodCallVoidFinishedSuccessfully)
+                        } else {
+                            val resultLocal = newLocal(resultType)
+                            storeLocal(resultLocal)
+                            loadLocal(resultLocal)
+                            box(resultType)
+                            invokeStatic(Injections::onMethodCallFinishedSuccessfully)
+                            loadLocal(resultLocal)
+                        }
+                        // STACK: value
+                        goTo(handlerExceptionEndLabel)
+                        visitLabel(handlerExceptionStartLabel)
+                        dup()
+                        invokeStatic(Injections::onMethodCallThrewException)
+                        throwException()
+                        visitLabel(handlerExceptionEndLabel)
+                        // STACK: value
                     }
                 )
-                return
             }
-            invokeIfInTestingCode(
-                original = {
-                    visitMethodInsn(opcode, owner, name, desc, itf)
-                },
-                code = {
-                    // STACK [INVOKEVIRTUAL]: owner, arguments
-                    // STACK [INVOKESTATIC]: arguments
-                    val argumentLocals = storeArguments(desc)
-                    // STACK [INVOKEVIRTUAL]: owner
-                    // STACK [INVOKESTATIC]: <empty>
-                    when (opcode) {
-                        INVOKESTATIC -> visitInsn(ACONST_NULL)
-                        else -> dup()
-                    }
-                    // STACK [INVOKEVIRTUAL]: owner, owner
-                    // STACK [INVOKESTATIC]: <empty>, null
-                    push(owner)
-                    push(name)
-                    loadNewCodeLocationId()
-                    // STACK [INVOKEVIRTUAL]: owner, owner, className, methodName, codeLocation
-                    // STACK [INVOKESTATIC]: <empty>, null, className, methodName, codeLocation
-                    val argumentTypes = getArgumentTypes(desc)
-                    when (argumentLocals.size) {
-                        0 -> {
-                            invokeStatic(Injections::beforeMethodCall0)
-                        }
-
-                        1 -> {
-                            loadLocalsBoxed(argumentLocals, argumentTypes)
-                            invokeStatic(Injections::beforeMethodCall1)
-                        }
-
-                        2 -> {
-                            loadLocalsBoxed(argumentLocals, argumentTypes)
-                            invokeStatic(Injections::beforeMethodCall2)
-                        }
-
-                        3 -> {
-                            loadLocalsBoxed(argumentLocals, argumentTypes)
-                            invokeStatic(Injections::beforeMethodCall3)
-                        }
-
-                        4 -> {
-                            loadLocalsBoxed(argumentLocals, argumentTypes)
-                            invokeStatic(Injections::beforeMethodCall4)
-                        }
-
-                        5 -> {
-                            loadLocalsBoxed(argumentLocals, argumentTypes)
-                            invokeStatic(Injections::beforeMethodCall5)
-                        }
-
-                        else -> {
-                            push(argumentLocals.size) // size of the array
-                            visitTypeInsn(ANEWARRAY, OBJECT_TYPE.internalName)
-                            // STACK: ..., array
-                            for (i in argumentLocals.indices) {
-                                // STACK: ..., array
-                                dup()
-                                // STACK: ..., array, array
-                                push(i)
-                                // STACK: ..., array, array, index
-                                loadLocal(argumentLocals[i])
-                                // STACK: ..., array, array, index, argument[index]
-                                box(argumentTypes[i])
-                                arrayStore(OBJECT_TYPE)
-                                // STACK: ..., array
-                            }
-                            // STACK: ..., array
-                            invokeStatic(Injections::beforeMethodCall)
-                        }
-                    }
-                    // STACK [INVOKEVIRTUAL]: owner, arguments
-                    // STACK [INVOKESTATIC]: arguments
-                    val methodCallStartLabel = newLabel()
-                    val methodCallEndLabel = newLabel()
-                    val handlerExceptionStartLabel = newLabel()
-                    val handlerExceptionEndLabel = newLabel()
-                    visitTryCatchBlock(methodCallStartLabel, methodCallEndLabel, handlerExceptionStartLabel, null)
-                    visitLabel(methodCallStartLabel)
-                    loadLocals(argumentLocals)
-                    visitMethodInsn(opcode, owner, name, desc, itf)
-                    visitLabel(methodCallEndLabel)
-                    // STACK [INVOKEVIRTUAL]: owner, arguments
-                    // STACK [INVOKESTATIC]: arguments
-                    val resultType = getReturnType(desc)
-                    if (resultType == VOID_TYPE) {
-                        invokeStatic(Injections::onMethodCallVoidFinishedSuccessfully)
-                    } else {
-                        val resultLocal = newLocal(resultType)
-                        storeLocal(resultLocal)
-                        loadLocal(resultLocal)
-                        box(resultType)
-                        invokeStatic(Injections::onMethodCallFinishedSuccessfully)
-                        loadLocal(resultLocal)
-                    }
-                    // STACK: value
-                    goTo(handlerExceptionEndLabel)
-                    visitLabel(handlerExceptionStartLabel)
-                    dup()
-                    invokeStatic(Injections::onMethodCallThrewException)
-                    throwException()
-                    visitLabel(handlerExceptionEndLabel)
-                    // STACK: value
-                }
-            )
-        }
 
         private fun GeneratorAdapter.processAtomicMethodCall(
             desc: String,

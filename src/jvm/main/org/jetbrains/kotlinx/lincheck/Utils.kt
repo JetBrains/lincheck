@@ -26,12 +26,12 @@ fun chooseSequentialSpecification(sequentialSpecificationByUser: Class<*>?, test
     if (sequentialSpecificationByUser === DummySequentialSpecification::class.java || sequentialSpecificationByUser == null) testClass
     else sequentialSpecificationByUser
 
-internal fun executeActor(testInstance: Any, actor: Actor) = executeActor(testInstance, actor, null)
+ fun executeActor(testInstance: Any, actor: Actor) = executeActor(testInstance, actor, null)
 
 /**
  * Executes the specified actor on the sequential specification instance and returns its result.
  */
-internal fun executeActor(
+ fun executeActor(
     instance: Any,
     actor: Actor,
     completion: Continuation<Any?>?
@@ -103,7 +103,7 @@ private val methodsCache = HashMap<Class<*>, HashMap<Method, Method>>()
  * Get the same [method] for [instance] solving the different class loaders problem.
  */
 @Synchronized
-internal fun getMethod(instance: Any, method: Method) = runInIgnoredSection {
+ fun getMethod(instance: Any, method: Method) = runInIgnoredSection {
     methodsCache.computeIfAbsent(instance.javaClass) { HashMap() }
         .computeIfAbsent(method) { instance.javaClass.getMethod(method.name, method.parameterTypes) }
 }
@@ -130,7 +130,7 @@ private fun Class<out Any>.getMethod(name: String, parameterTypes: Array<Class<o
  * Success values of [kotlin.Result] instances are represented as either [VoidResult] or [ValueResult].
  * Failure values of [kotlin.Result] instances are represented as [ExceptionResult].
  */
-internal fun createLincheckResult(res: Any?, wasSuspended: Boolean = false) = when {
+ fun createLincheckResult(res: Any?, wasSuspended: Boolean = false) = when {
     (res != null && res.javaClass.isAssignableFrom(Void.TYPE)) || res is Unit -> if (wasSuspended) SuspendedVoidResult else VoidResult
     res != null && res is Throwable -> ExceptionResult.create(res, wasSuspended)
     res === COROUTINE_SUSPENDED -> Suspended
@@ -154,7 +154,7 @@ inline fun <R> Throwable.catch(vararg exceptions: Class<*>, block: () -> R): R {
     } else throw this
 }
 
-internal class StoreExceptionHandler :
+ class StoreExceptionHandler :
     AbstractCoroutineContextElement(CoroutineExceptionHandler),
     CoroutineExceptionHandler
 {
@@ -166,7 +166,7 @@ internal class StoreExceptionHandler :
 }
 
 @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
-internal fun <T> CancellableContinuation<T>.cancelByLincheck(promptCancellation: Boolean): CancellationResult {
+ fun <T> CancellableContinuation<T>.cancelByLincheck(promptCancellation: Boolean): CancellationResult {
     val exceptionHandler = context[CoroutineExceptionHandler] as StoreExceptionHandler
     exceptionHandler.exception = null
 
@@ -180,7 +180,7 @@ internal fun <T> CancellableContinuation<T>.cancelByLincheck(promptCancellation:
     }
 
     exceptionHandler.exception?.let {
-        throw it.cause!! // let's throw the original exception, ignoring the internal coroutines details
+        throw it.cause!! // let's throw the original exception, ignoring the  coroutines details
     }
     return when {
         cancelled -> CancellationResult.CANCELLED_BEFORE_RESUMPTION
@@ -192,7 +192,7 @@ internal fun <T> CancellableContinuation<T>.cancelByLincheck(promptCancellation:
     }
 }
 
-internal enum class CancellationResult { CANCELLED_BEFORE_RESUMPTION, CANCELLED_AFTER_RESUMPTION, CANCELLATION_FAILED }
+ enum class CancellationResult { CANCELLED_BEFORE_RESUMPTION, CANCELLED_AFTER_RESUMPTION, CANCELLATION_FAILED }
 
 /**
  * Returns `true` if the continuation was cancelled by [CancellableContinuation.cancel].
@@ -205,14 +205,14 @@ private val cancellationByLincheckException = Exception("Cancelled by lincheck")
  * Collects the current thread dump and keeps only those
  * threads that are related to the specified [runner].
  */
-internal fun collectThreadDump(runner: Runner) = Thread.getAllStackTraces().filter { (t, _) ->
+ fun collectThreadDump(runner: Runner) = Thread.getAllStackTraces().filter { (t, _) ->
     t in (runner as ParallelThreadsRunner).executor.threads
 }
 
-internal inline fun <R> runInIgnoredSection(block: () -> R): R =
+ inline fun <R> runInIgnoredSection(block: () -> R): R =
     runInIgnoredSection(Thread.currentThread(), block)
 
-internal inline fun <R> runInIgnoredSection(currentThread: Thread, block: () -> R): R =
+ inline fun <R> runInIgnoredSection(currentThread: Thread, block: () -> R): R =
     if (currentThread is TestThread && !currentThread.inIgnoredSection) {
         currentThread.inIgnoredSection = true
         try {
@@ -224,7 +224,7 @@ internal inline fun <R> runInIgnoredSection(currentThread: Thread, block: () -> 
         block()
     }
 
-internal fun exceptionCanBeValidExecutionResult(exception: Throwable): Boolean {
+ fun exceptionCanBeValidExecutionResult(exception: Throwable): Boolean {
     return exception !is ThreadDeath && // used to stop thread in FixedActiveThreadsExecutor by calling thread.stop method
             exception !is InternalLincheckTestUnexpectedException &&
             exception !is ForcibleExecutionFinishException
@@ -235,11 +235,11 @@ internal fun exceptionCanBeValidExecutionResult(exception: Throwable): Boolean {
  * When this exception is thrown by an operation, it will halt testing with [UnexpectedExceptionInvocationResult].
  */
 @Suppress("JavaIoSerializableObjectMustHaveReadResolve")
-internal object InternalLincheckTestUnexpectedException : Exception()
+ object InternalLincheckTestUnexpectedException : Exception()
 
 /**
- * Thrown in case when `cause` exception is unexpected by Lincheck internal logic.
+ * Thrown in case when `cause` exception is unexpected by Lincheck  logic.
  */
-internal class LincheckInternalBugException(cause: Throwable): Exception(cause)
+ class LincheckInternalBugException(cause: Throwable): Exception(cause)
 
-internal const val LINCHECK_PACKAGE_NAME = "org.jetbrains.kotlinx.lincheck."
+ const val LINCHECK_PACKAGE_NAME = "org.jetbrains.kotlinx.lincheck."

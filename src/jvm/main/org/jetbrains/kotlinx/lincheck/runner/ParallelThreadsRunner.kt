@@ -33,7 +33,7 @@ private typealias SuspensionPointResultWithContinuation = AtomicReference<Pair<k
  *
  * It is pretty useful for stress testing or if you do not care about context switch expenses.
  */
-internal open class ParallelThreadsRunner(
+open class ParallelThreadsRunner(
     strategy: Strategy,
     testClass: Class<*>,
     validationFunctions: List<Method>,
@@ -47,11 +47,12 @@ internal open class ParallelThreadsRunner(
     private var _testInstance: Any? = null
     private val testInstance: Any get() = _testInstance!!
 
-    private var suspensionPointResults = List(scenario.nThreads) { t ->
+    var suspensionPointResults = List(scenario.nThreads) { t ->
         MutableList<Result>(scenario.threads[t].size) { NoResult }
     }
 
-    private val completions = List(scenario.nThreads) { t ->
+    @Volatile
+    private var completions = List(scenario.nThreads) { t ->
         List(scenario.threads[t].size) { actorId -> Completion(t, actorId) }
     }
 
@@ -85,6 +86,9 @@ internal open class ParallelThreadsRunner(
         reset()
     }
 
+    object MyKek: CoroutineContext.Key<MyKekElement>
+    object MyKekElement: AbstractCoroutineContextElement(MyKek)
+
     /**
      * Passed as continuation to invoke the suspendable actor from [iThread].
      *
@@ -97,7 +101,13 @@ internal open class ParallelThreadsRunner(
     protected inner class Completion(private val iThread: Int, private val actorId: Int) : Continuation<Any?> {
         val resWithCont = SuspensionPointResultWithContinuation(null)
 
-        override val context = ParallelThreadRunnerInterceptor(resWithCont) + StoreExceptionHandler() + Job()
+        private var currentContext = ParallelThreadRunnerInterceptor(resWithCont) + StoreExceptionHandler() + Job()
+
+        override val context get() = currentContext
+
+        fun recreateContext() {
+            currentContext = ParallelThreadRunnerInterceptor(resWithCont) + StoreExceptionHandler() + Job()
+        }
 
         override fun resumeWith(result: kotlin.Result<Any?>) = runInIgnoredSection {
             // decrement completed or suspended threads only if the operation was not cancelled and
@@ -143,7 +153,12 @@ internal open class ParallelThreadsRunner(
     private fun reset() = runInIgnoredSection {
         suspensionPointResults.forEach { it.fill(NoResult) }
         completedOrSuspendedThreads.set(0)
-        completions.forEach { it.forEach { it.resWithCont.set(null) } }
+        completions.forEach {
+            it.forEach { completion ->
+                completion.resWithCont.set(null)
+                completion.recreateContext()
+            }
+        }
         completionStatuses = List(scenario.nThreads) { t ->
             AtomicReferenceArray<CompletionStatus>(scenario.parallelExecution[t].size)
         }
@@ -224,7 +239,7 @@ internal open class ParallelThreadsRunner(
      * This method is used for communication between `ParallelThreadsRunner` and `ManagedStrategy` via overriding,
      * so that runner does not know about managed strategy details.
      */
-    internal open fun <T> cancelByLincheck(cont: CancellableContinuation<T>, promptCancellation: Boolean): CancellationResult {
+     open fun <T> cancelByLincheck(cont: CancellableContinuation<T>, promptCancellation: Boolean): CancellationResult {
         runInIgnoredSection { // TODO: not in ignored section?
             return cont.cancelByLincheck(promptCancellation)
         }
@@ -382,8 +397,8 @@ internal open class ParallelThreadsRunner(
     }
 }
 
-internal enum class UseClocks { ALWAYS, RANDOM }
+enum class UseClocks { ALWAYS, RANDOM }
 
-internal enum class CompletionStatus { CANCELLED, RESUMED }
+ enum class CompletionStatus { CANCELLED, RESUMED }
 
 private const val SPINNING_LOOP_ITERATIONS_BEFORE_YIELD = 100_000

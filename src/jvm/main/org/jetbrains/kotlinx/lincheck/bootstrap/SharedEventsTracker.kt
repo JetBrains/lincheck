@@ -25,7 +25,7 @@ package sun.nio.ch.lincheck
 
 import java.util.*
 
-internal interface SharedEventsTracker {
+ interface SharedEventsTracker {
     fun lock(monitor: Any, codeLocation: Int)
     fun unlock(monitor: Any, codeLocation: Int)
 

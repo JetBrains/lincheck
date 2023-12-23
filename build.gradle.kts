@@ -56,6 +56,7 @@ kotlin {
                 api("net.bytebuddy:byte-buddy:$byte_buddy_version")
                 api("net.bytebuddy:byte-buddy-agent:$byte_buddy_version")
                 api("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.0")
+                implementation("org.reflections:reflections:0.10.2")
             }
         }
 

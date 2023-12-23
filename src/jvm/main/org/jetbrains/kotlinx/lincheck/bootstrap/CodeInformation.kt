@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.*
  * along with their corresponding code locations. To minimize overhead, Lincheck assigns unique IDs to all
  * code locations it analyses, and stores more detailed information necessary for trace generation in this object.
  */
-internal object CodeLocations {
+ object CodeLocations {
     private val codeLocations = ArrayList<StackTraceElement>()
 
     /**
@@ -69,7 +69,7 @@ internal object CodeLocations {
  * and class owners. The weak identity hash map ensures that atomic objects are compared using reference
  * equality and does not prevent them from being garbage collected.
  */
-internal object AtomicFields {
+ object AtomicFields {
     private val unsafe: Unsafe =
         try {
             val unsafeField = Unsafe::class.java.getDeclaredField("theUnsafe")
@@ -117,7 +117,7 @@ internal object AtomicFields {
  * It is used to maintain a set of all final fields and
  * provides helper functions to add and check final fields.
  */
-internal object FinalFields {
+ object FinalFields {
     private val finalFields = HashSet<String>() // className + SEPARATOR + fieldName
     private const val SEPARATOR = "$^&*-#"
 
@@ -142,7 +142,7 @@ internal object FinalFields {
         finalFields.contains(className + SEPARATOR + fieldName)
 }
 
-internal object CoroutineInternalCallTracker {
+ object CoroutineInternalCallTracker {
     private val coroutineInternalClasses = HashSet<String>()
 
     init {

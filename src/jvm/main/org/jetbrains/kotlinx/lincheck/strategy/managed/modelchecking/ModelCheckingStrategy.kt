@@ -9,13 +9,15 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import kotlinx.atomicfu.atomic
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
+import sun.nio.ch.lincheck.TestThread
 import java.lang.reflect.*
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.random.*
 
@@ -34,7 +36,7 @@ import kotlin.random.*
  * as possible when the maximal number of interleavings to be studied is lower
  * than the number of all possible interleavings on the current depth level.
  */
-internal class ModelCheckingStrategy(
+ class ModelCheckingStrategy(
     testCfg: ModelCheckingCTestConfiguration,
     testClass: Class<*>,
     scenario: ExecutionScenario,
@@ -59,16 +61,16 @@ internal class ModelCheckingStrategy(
     private val generationRandom = Random(0)
 
     // The interleaving that will be studied on the next invocation.
-    private lateinit var currentInterleaving: Interleaving
+    lateinit var currentInterleaving: Interleaving
 
     override fun runImpl(): LincheckFailure? {
         Counters.currentInterleaving.set(0)
         currentInterleaving = root.nextInterleaving() ?: return null
         while (usedInvocations < maxInvocations) {
-            if (Counters.isRequired) {
+            // run invocation and check its results
+            if (Counters.isFirstBug) {
                 Unit
             }
-            // run invocation and check its results
             val invocationResult = runInvocation()
             if (suddenInvocationResult is SpinCycleFoundAndReplayRequired) {
                 currentInterleaving.rollbackAfterSpinCycleFound()
@@ -77,11 +79,21 @@ internal class ModelCheckingStrategy(
             usedInvocations++
             checkResult(invocationResult)?.let { return it }
             // get new unexplored interleaving
-            if (Counters.isPrevRequired) {
+            if (Counters.isFirstBug) {
                 Unit
             }
             currentInterleaving = root.nextInterleaving() ?: break
+            if (Counters.isFirstBug) {
+                Unit
+            }
             Counters.currentInterleaving.incrementAndGet()
+            if (Counters.isRequired) {
+                traceCollector = TraceCollector()
+                collectTrace = true
+            } else {
+                traceCollector = null
+                collectTrace = false
+            }
         }
         return null
     }
@@ -121,7 +133,12 @@ internal class ModelCheckingStrategy(
 
     override fun chooseThread(iThread: Int): Int =
         currentInterleaving.chooseThread(iThread).also {
-            check(it in switchableThreads(iThread)) {
+            val condition = it in switchableThreads(iThread)
+            if (!condition) {
+                Unit
+                switchableThreads(iThread)
+            }
+            check(condition) {
 //
 //                val stringBuilder = StringBuilder().also {
 //                    it.appendTrace(
@@ -176,10 +193,13 @@ internal class ModelCheckingStrategy(
         return nodeInfo.toString()
     }
 
+    // switch positions X thread switch choices
+    private val interleavingOfInterest: Pair<List<Int>, List<Int>> = listOf(50, 96) to listOf(2, 0, 2)
+
     /**
      * An abstract node with an execution choice in the interleaving tree.
      */
-    private abstract inner class InterleavingTreeNode {
+     abstract inner class InterleavingTreeNode {
         var fractionUnexplored = 1.0
         lateinit var choices: List<Choice>
         var isFullyExplored: Boolean = false
@@ -252,12 +272,15 @@ internal class ModelCheckingStrategy(
     /**
      * Represents a choice of a thread that should be next in the execution.
      */
-    private inner class ThreadChoosingNode(switchableThreads: List<Int>) : InterleavingTreeNode() {
+    private inner class ThreadChoosingNode(switchableThreads: List<Int>, runner: Runner? = null) : InterleavingTreeNode() {
         init {
-            choices = switchableThreads.map { Choice(SwitchChoosingNode(), it) }
+            choices = switchableThreads.map { Choice(SwitchChoosingNode(), it, runner) }
         }
 
         override fun nextInterleaving(interleavingBuilder: InterleavingBuilder): Interleaving {
+            if (Counters.isPrevRequired && interleavingBuilder.threadSwitchChoices.size == 2) {
+                Unit
+            }
             val child = chooseUnexploredNode()
             interleavingBuilder.addThreadSwitchChoice(child.value)
             val interleaving = child.node.nextInterleaving(interleavingBuilder)
@@ -269,7 +292,7 @@ internal class ModelCheckingStrategy(
     /**
      * Represents a choice of a position of a thread context switch.
      */
-    private inner class SwitchChoosingNode : InterleavingTreeNode() {
+     inner class SwitchChoosingNode : InterleavingTreeNode() {
         override fun nextInterleaving(interleavingBuilder: InterleavingBuilder): Interleaving {
             val isLeaf = maxNumberOfSwitches == interleavingBuilder.numberOfSwitches
             if (isLeaf) {
@@ -286,20 +309,22 @@ internal class ModelCheckingStrategy(
         }
     }
 
-    private inner class Choice(val node: InterleavingTreeNode, val value: Int)
+     inner class Choice(val node: InterleavingTreeNode, val value: Int, val runner: Runner? = null)
+
+
 
     /**
      * This class specifies an interleaving that is re-producible.
      */
-    private inner class Interleaving(
-        private val switchPositions: List<Int>,
-        private val threadSwitchChoices: List<Int>,
+    inner class Interleaving(
+        val switchPositions: List<Int>,
+        val threadSwitchChoices: List<Int>,
         private var lastNotInitializedNode: SwitchChoosingNode?
     ) {
         private lateinit var interleavingFinishingRandom: Random
         private lateinit var nextThreadToSwitch: Iterator<Int>
         private var lastNotInitializedNodeChoices: MutableList<Choice>? = null
-        private var executionPosition: Int = 0
+        var executionPosition: Int = 0
 
         fun initialize() {
             executionPosition = -1 // the first execution position will be zero
@@ -355,9 +380,9 @@ internal class ModelCheckingStrategy(
         }
     }
 
-    private inner class InterleavingBuilder {
-        private val switchPositions = mutableListOf<Int>()
-        private val threadSwitchChoices = mutableListOf<Int>()
+     inner class InterleavingBuilder {
+        val switchPositions = mutableListOf<Int>()
+        val threadSwitchChoices = mutableListOf<Int>()
         private var lastNoninitializedNode: SwitchChoosingNode? = null
 
         val numberOfSwitches get() = switchPositions.size
@@ -374,22 +399,42 @@ internal class ModelCheckingStrategy(
             this.lastNoninitializedNode = lastNoninitializedNode
         }
 
-        fun build() = Interleaving(switchPositions, threadSwitchChoices, lastNoninitializedNode)
+        fun build(): Interleaving {
+            val interleaving = Interleaving(switchPositions, threadSwitchChoices, lastNoninitializedNode)
+            if (interleaving.switchPositions == interleavingOfInterest.first && interleaving.threadSwitchChoices == interleavingOfInterest.second) {
+                Unit
+            }
+            return interleaving
+        }
     }
 }
 
 object Counters {
     val currentInterleaving = AtomicInteger(0)
     val currentScenario = AtomicInteger(0)
+    val isTrackingEnabled = AtomicBoolean(false)
+
+    val isEnabled: Boolean get() = isTrackingEnabled.get()
 
     val isRequired: Boolean
         get() {
-            return currentInterleaving.get() == 366 && currentScenario.get() == 0
+            return (currentInterleaving.get() == 15 || currentInterleaving.get() == 366) && currentScenario.get() == 0
         }
 
     val isPrevRequired: Boolean
         get() {
             return currentInterleaving.get() == 365 && currentScenario.get() == 0
         }
+
+    val isFirstBug: Boolean get() = currentInterleaving.get() == 366 && currentScenario.get() == 0
+
+    override fun toString(): String {
+        return "Counters(currentInterleaving=$currentInterleaving, currentScenario=$currentScenario)"
+    }
+
+    fun getThread(): TestThread  {
+        return Thread.currentThread() as TestThread
+    }
+
 
 }

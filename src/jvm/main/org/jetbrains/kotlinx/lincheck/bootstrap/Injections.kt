@@ -26,7 +26,7 @@ package sun.nio.ch.lincheck
 import org.jetbrains.kotlinx.lincheck.runInIgnoredSection
 import java.util.*
 
-internal object Injections {
+ object Injections {
     // TODO: make this part more robust
     @JvmStatic
     var lastSuspendedCancellableContinuation: Any? = null

@@ -45,7 +45,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
      * @return TestReport with information about concurrent test run.
      */
     @Synchronized
-    internal fun checkImpl(): LincheckFailure? {
+     fun checkImpl(): LincheckFailure? {
         check(testConfigurations.isNotEmpty()) { "No Lincheck test configuration to run" }
         for (testCfg in testConfigurations) {
             withLincheckJavaAgent(stressTest = testCfg is StressCTestConfiguration) {
@@ -196,4 +196,4 @@ fun <O : Options<O, *>> O.check(testClass: Class<*>) = LinChecker.check(testClas
  */
 fun <O : Options<O, *>> O.check(testClass: KClass<*>) = this.check(testClass.java)
 
-internal fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>) = LinChecker(testClass, this).checkImpl()
+ fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>) = LinChecker(testClass, this).checkImpl()

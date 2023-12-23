@@ -118,7 +118,7 @@ object Suspended : Result() {
  * Type of result used for verification.
  * Resuming thread writes result of the suspension point and continuation to be executed in the resumed thread into [contWithSuspensionPointRes].
  */
-internal data class ResumedResult(val contWithSuspensionPointRes: Pair<Continuation<Any?>?, kotlin.Result<Any?>>) : Result() {
+ data class ResumedResult(val contWithSuspensionPointRes: Pair<Continuation<Any?>?, kotlin.Result<Any?>>) : Result() {
     override val wasSuspended: Boolean get() = true
 
     lateinit var resumedActor: Actor

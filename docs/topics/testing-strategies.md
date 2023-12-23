@@ -106,7 +106,7 @@ the lowest possible number of context switches, making further bug investigation
 To control the execution, Lincheck inserts special switch points into the testing code. These points identify where
 a context switch can be performed. Essentially, these are shared memory accesses, such as field and array element reads
 or updates in the JVM, as well as `wait/notify` and `park/unpark` calls. To insert a switch point, Lincheck transforms
-the testing code on the fly using the ASM framework, adding internal function invocations to the existing code.
+the testing code on the fly using the ASM framework, adding  function invocations to the existing code.
 
 As the model checking strategy controls the execution, Lincheck can provide the trace that leads to the invalid
 interleaving, which is extremely helpful in practice. You can see the example of trace for the incorrect execution of the `Counter` in

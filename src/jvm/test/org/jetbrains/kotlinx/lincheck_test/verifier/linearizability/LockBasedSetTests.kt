@@ -41,7 +41,7 @@ interface Set {
     fun contains(key: Int): Boolean
 }
 
-internal class SpinLockBasedSet : Set {
+ class SpinLockBasedSet : Set {
     private val set = mutableSetOf<Int>()
     private val locked = AtomicBoolean()
 
@@ -67,7 +67,7 @@ internal class SpinLockBasedSet : Set {
     }
 }
 
-internal class ReentrantLockBasedSet : Set {
+ class ReentrantLockBasedSet : Set {
     private val set = mutableSetOf<Int>()
     private val lock = ReentrantLock()
 
@@ -84,7 +84,7 @@ internal class ReentrantLockBasedSet : Set {
     }
 }
 
-internal class SynchronizedBlockBasedSet : Set {
+ class SynchronizedBlockBasedSet : Set {
     private val set = mutableSetOf<Int>()
 
     override fun add(key: Int): Boolean = synchronized(set) {
@@ -100,7 +100,7 @@ internal class SynchronizedBlockBasedSet : Set {
     }
 }
 
-internal class SynchronizedMethodBasedSet : Set {
+ class SynchronizedMethodBasedSet : Set {
     private val set = mutableSetOf<Int>()
 
     @Synchronized

@@ -17,7 +17,7 @@ import java.util.*
 import kotlin.math.*
 
 @Synchronized // we should avoid concurrent executions to keep `objectNumeration` consistent
-internal fun StringBuilder.appendTrace(
+ fun StringBuilder.appendTrace(
     failure: LincheckFailure,
     results: ExecutionResult?,
     trace: Trace,
@@ -97,7 +97,7 @@ private fun splitToColumns(nThreads: Int, traceRepresentation: List<TraceEventRe
  * `next` edges form a single-directed list in which the order of events is the same as in [trace].
  * `internalEvents` edges form a directed forest.
  */
-private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionResult?, trace: Trace, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): TraceNode? {
+fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionResult?, trace: Trace, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): TraceNode? {
     val tracePoints = trace.trace
     // last events that were executed for each thread. It is either thread finish events or events before crash
     val lastExecutedEvents = IntArray(scenario.nThreads) { iThread ->
@@ -212,7 +212,7 @@ private fun traceGraphToRepresentationList(
     return traceRepresentation
 }
 
-private sealed class TraceNode(
+sealed class TraceNode(
     protected val iThread: Int,
     last: TraceNode?,
     val callDepth: Int // for tree indentation
@@ -220,13 +220,13 @@ private sealed class TraceNode(
     // `next` edges form an ordered single-directed event list
     var next: TraceNode? = null
 
-    // `lastInternalEvent` helps to skip internal events if an actor or a method call can be compressed
+    // `lastInternalEvent` helps to skip  events if an actor or a method call can be compressed
     abstract val lastInternalEvent: TraceNode
 
     // `lastState` helps to find the last state needed for the compression
     abstract val lastState: String?
 
-    // whether the internal events should be reported
+    // whether the  events should be reported
     abstract fun shouldBeExpanded(verboseTrace: Boolean): Boolean
 
     init {
@@ -372,9 +372,9 @@ private fun TraceNode.traceIndentation() = TRACE_INDENTATION.repeat(callDepth)
 private fun TraceNode.stateEventRepresentation(iThread: Int, stateRepresentation: String) =
     TraceEventRepresentation(iThread, traceIndentation() + "STATE: $stateRepresentation")
 
-private class TraceEventRepresentation(val iThread: Int, val representation: String)
+class TraceEventRepresentation(val iThread: Int, val representation: String)
 
-internal fun getObjectName(obj: Any?): String =
+ fun getObjectName(obj: Any?): String =
     if (obj != null) {
         if (obj.javaClass.isAnonymousClass) {
             obj.javaClass.simpleNameForAnonymous

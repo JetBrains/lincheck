@@ -27,14 +27,14 @@ data class Trace(val trace: List<TracePoint>)
  * happened in the same, nested, or disjoint methods.
  */
 sealed class TracePoint(val iThread: Int, val actorId: Int, callStackTrace: CallStackTrace) {
-    internal val callStackTrace = callStackTrace.toList() // copy it
-    protected abstract fun toStringImpl(): String
+     val callStackTrace = callStackTrace.toList() // copy it
+    abstract fun toStringImpl(): String
     override fun toString(): String = toStringImpl()
 }
 
-internal typealias CallStackTrace = List<CallStackTraceElement>
+ typealias CallStackTrace = List<CallStackTraceElement>
 
-internal class SwitchEventTracePoint(
+ class SwitchEventTracePoint(
     iThread: Int, actorId: Int,
     val reason: SwitchReason,
     callStackTrace: CallStackTrace
@@ -51,13 +51,13 @@ internal class SwitchEventTracePoint(
  * [stackTraceElement] provides information about the class, the file and the position in file
  * the code location has.
  */
-internal abstract class CodeLocationTracePoint(
+ abstract class CodeLocationTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
     val stackTraceElement: StackTraceElement
 ) : TracePoint(iThread, actorId, callStackTrace)
 
-internal class StateRepresentationTracePoint(
+ class StateRepresentationTracePoint(
     iThread: Int, actorId: Int,
     val stateRepresentation: String,
     callStackTrace: CallStackTrace
@@ -68,7 +68,7 @@ internal class StateRepresentationTracePoint(
 /**
  * This TracePoint is added only at the end of an execution when obstruction freedom is violated
  */
-internal class ObstructionFreedomViolationExecutionAbortTracePoint(
+ class ObstructionFreedomViolationExecutionAbortTracePoint(
     iThread: Int,
     actorId: Int,
     callStackTrace: CallStackTrace
@@ -76,7 +76,7 @@ internal class ObstructionFreedomViolationExecutionAbortTracePoint(
     override fun toStringImpl(): String = "/* An active lock was detected */"
 }
 
-internal class ReadTracePoint(
+ class ReadTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
     private val fieldName: String?,
@@ -97,7 +97,7 @@ internal class ReadTracePoint(
     }
 }
 
-internal class WriteTracePoint(
+ class WriteTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
     private val fieldName: String?,
@@ -118,7 +118,7 @@ internal class WriteTracePoint(
     }
 }
 
-internal class MethodCallTracePoint(
+ class MethodCallTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
     private val methodName: String,
@@ -163,7 +163,7 @@ internal class MethodCallTracePoint(
 }
 private val NO_VALUE = Any()
 
-internal class MonitorEnterTracePoint(
+ class MonitorEnterTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
@@ -171,7 +171,7 @@ internal class MonitorEnterTracePoint(
     override fun toStringImpl(): String = "MONITORENTER at " + stackTraceElement.shorten()
 }
 
-internal class MonitorExitTracePoint(
+ class MonitorExitTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
@@ -179,7 +179,7 @@ internal class MonitorExitTracePoint(
     override fun toStringImpl(): String = "MONITOREXIT at " + stackTraceElement.shorten()
 }
 
-internal class WaitTracePoint(
+ class WaitTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
@@ -187,7 +187,7 @@ internal class WaitTracePoint(
     override fun toStringImpl(): String = "WAIT at " + stackTraceElement.shorten()
 }
 
-internal class NotifyTracePoint(
+ class NotifyTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
@@ -195,7 +195,7 @@ internal class NotifyTracePoint(
     override fun toStringImpl(): String = "NOTIFY at " + stackTraceElement.shorten()
 }
 
-internal class ParkTracePoint(
+ class ParkTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
@@ -203,7 +203,7 @@ internal class ParkTracePoint(
     override fun toStringImpl(): String = "PARK at " + stackTraceElement.shorten()
 }
 
-internal class UnparkTracePoint(
+ class UnparkTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
@@ -211,7 +211,7 @@ internal class UnparkTracePoint(
     override fun toStringImpl(): String = "UNPARK at " + stackTraceElement.shorten()
 }
 
-internal class CoroutineCancellationTracePoint(
+ class CoroutineCancellationTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
 ) : TracePoint(iThread, actorId, callStackTrace) {
@@ -238,7 +238,7 @@ internal class CoroutineCancellationTracePoint(
     }
 }
 
-internal class SpinCycleStartTracePoint(iThread: Int, actorId: Int, callStackTrace: CallStackTrace): TracePoint(iThread, actorId, callStackTrace) {
+ class SpinCycleStartTracePoint(iThread: Int, actorId: Int, callStackTrace: CallStackTrace): TracePoint(iThread, actorId, callStackTrace) {
     override fun toStringImpl() =  "/* The following events repeat infinitely: */"
 }
 
@@ -285,7 +285,7 @@ enum class SwitchReason(private val reason: String) {
  * All methods calls are enumerated to make it possible to distinguish different calls of the same method.
  * Suspended method calls have the same [identifier] before and after suspension, but different [call] points.
  */
-internal class CallStackTraceElement(val call: MethodCallTracePoint, val identifier: Int)
+ class CallStackTraceElement(val call: MethodCallTracePoint, val identifier: Int)
 
 @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
 private val Class<out Any>?.isImmutableWithNiceToString get() = this?.canonicalName in

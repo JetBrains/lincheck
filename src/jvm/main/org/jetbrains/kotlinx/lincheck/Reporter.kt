@@ -60,7 +60,7 @@ enum class LoggingLevel {
  * @param transform a function to convert data elements to strings,
  *   [toString] method is used by default.
  */
-internal fun<T> columnsToString(
+ fun<T> columnsToString(
     data: List<List<T>>,
     columnWidths: List<Int>? = null,
     transform: ((T) -> String)? = null
@@ -87,7 +87,7 @@ internal fun<T> columnsToString(
 
  * @see columnsToString
  */
-internal fun <T> StringBuilder.appendColumns(
+ fun <T> StringBuilder.appendColumns(
     data: List<List<T>>,
     columnWidths: List<Int>? = null,
     transform: ((T) -> String)? = null
@@ -102,7 +102,7 @@ internal fun <T> StringBuilder.appendColumns(
  * @param columnWidths minimum widths of columns.
  * @param columnHeaderCentering a flag enabling/disabling centering of column names.
  */
-internal class TableLayout(
+ class TableLayout(
     columnNames: List<String>,
     columnWidths: List<Int>,
     columnHeaderCentering: Boolean = true,
@@ -196,7 +196,7 @@ internal class TableLayout(
 /**
  * Table layout for appending execution data (e.g. execution scenario, results, etc).
  */
-internal fun ExecutionLayout(
+ fun ExecutionLayout(
     initPart: List<String>,
     parallelPart: List<List<String>>,
     postPart: List<String>
@@ -210,7 +210,7 @@ internal fun ExecutionLayout(
     return TableLayout(threadHeaders, columnsWidth)
 }
 
-internal fun StringBuilder.appendExecutionScenario(scenario: ExecutionScenario): StringBuilder {
+ fun StringBuilder.appendExecutionScenario(scenario: ExecutionScenario): StringBuilder {
     val initPart = scenario.initExecution.map(Actor::toString)
     val postPart = scenario.postExecution.map(Actor::toString)
     val parallelPart = scenario.parallelExecution.map { it.map(Actor::toString) }
@@ -254,14 +254,14 @@ private data class ActorWithResult(
 
 }
 
-internal fun Result.exceptionInfo(exceptionMap: Map<Throwable, ExceptionNumberAndStacktrace>): ExceptionNumberAndStacktrace? =
+ fun Result.exceptionInfo(exceptionMap: Map<Throwable, ExceptionNumberAndStacktrace>): ExceptionNumberAndStacktrace? =
     (this as? ExceptionResult)?.let { exceptionMap[it.throwable] }
 
 private fun<T, U> requireEqualSize(x: List<T>, y: List<U>, lazyMessage: () -> String) {
     require(x.size == y.size) { "${lazyMessage()} (${x.size} != ${y.size})" }
 }
 
-internal fun StringBuilder.appendExecutionScenarioWithResults(
+ fun StringBuilder.appendExecutionScenarioWithResults(
     scenario: ExecutionScenario,
     executionResult: ExecutionResult,
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>,
@@ -348,7 +348,7 @@ internal fun StringBuilder.appendExecutionScenarioWithResults(
     return this
 }
 
-internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilder {
+ fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilder {
     val results: ExecutionResult? = (failure as? IncorrectResultsFailure)?.results
     // If a result is present - collect exceptions stack traces to print them
     val exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace> = results?.let {
@@ -382,7 +382,7 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
     return this
 }
 
-internal fun StringBuilder.appendExceptionsStackTracesBlock(exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>) {
+ fun StringBuilder.appendExceptionsStackTracesBlock(exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>) {
     if (exceptionStackTraces.isNotEmpty()) {
         appendLine(EXCEPTIONS_TRACES_TITLE)
         appendExceptionsStackTraces(exceptionStackTraces)
@@ -390,7 +390,7 @@ internal fun StringBuilder.appendExceptionsStackTracesBlock(exceptionStackTraces
     }
 }
 
-internal fun StringBuilder.appendExceptionsStackTraces(exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): StringBuilder {
+ fun StringBuilder.appendExceptionsStackTraces(exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): StringBuilder {
     exceptionStackTraces.entries.sortedBy { (_, description) -> description.number }.forEach { (exception, description) ->
         append("#${description.number}: ")
 
@@ -421,7 +421,7 @@ fun StringBuilder.appendInternalLincheckBugFailure(exception: Throwable) {
     append(exceptionRepresentation)
 }
 
-internal data class ExceptionNumberAndStacktrace(
+ data class ExceptionNumberAndStacktrace(
     /**
      * Serves to match exception in a scenario with its stackTrace
      */
@@ -432,7 +432,7 @@ internal data class ExceptionNumberAndStacktrace(
     val stackTrace: List<StackTraceElement>
 )
 
-internal fun resultRepresentation(result: Result, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): String {
+ fun resultRepresentation(result: Result, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): String {
     return when (result) {
         is ExceptionResult -> {
             val exceptionNumberRepresentation = exceptionStackTraces[result.throwable]?.let { " #${it.number}" } ?: ""
@@ -442,7 +442,7 @@ internal fun resultRepresentation(result: Result, exceptionStackTraces: Map<Thro
     }
 }
 
-internal fun actorNodeResultRepresentation(result: Result, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): String? {
+ fun actorNodeResultRepresentation(result: Result, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): String? {
     return when (result) {
         is ExceptionResult -> {
             val exceptionNumberRepresentation = exceptionStackTraces[result.throwable]?.let { " #${it.number}" } ?: ""
@@ -481,7 +481,7 @@ private data class ExceptionStackTracesResult(val exceptionStackTraces: Map<Thro
  * This method traverses over all execution results and collects exceptions.
  * For each exception, it also filters stacktrace to cut off all Lincheck-related [StackTraceElement]s.
  * If filtered stackTrace of some exception is empty, then this exception was thrown from Lincheck itself,
- * in that case we return that exception as an internal bug to report it.
+ * in that case we return that exception as an  bug to report it.
  *
  * @return exceptions stack traces map inside [ExceptionStackTracesResult] or [InternalLincheckBugResult]
  * if some exception occurred due a bug in Lincheck itself

@@ -17,7 +17,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
  * Abstract class for test options.
  */
 abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
-    internal var logLevel = DEFAULT_LOG_LEVEL
+     var logLevel = DEFAULT_LOG_LEVEL
     protected var iterations = CTestConfiguration.DEFAULT_ITERATIONS
     protected var threads = CTestConfiguration.DEFAULT_THREADS
     protected var actorsPerThread = CTestConfiguration.DEFAULT_ACTORS_PER_THREAD
@@ -155,7 +155,7 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     /**
      * Internal, DO NOT USE.
      */
-    internal fun invocationTimeout(timeoutMs: Long): OPT = applyAndCast {
+     fun invocationTimeout(timeoutMs: Long): OPT = applyAndCast {
         this.timeoutMs = timeoutMs
     }
 

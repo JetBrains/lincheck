@@ -139,7 +139,7 @@ class MSQueueWithLinearTimeRemove<E> {
     }
 
     /**
-     * This is an internal function for tests.
+     * This is an  function for tests.
      * DO NOT CHANGE THIS CODE.
      */
     fun checkNoRemovedElements() {

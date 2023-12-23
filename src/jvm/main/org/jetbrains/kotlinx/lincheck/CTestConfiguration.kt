@@ -55,7 +55,7 @@ abstract class CTestConfiguration(
     }
 }
 
-internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConfiguration> {
+ fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConfiguration> {
     val stressConfigurations: List<CTestConfiguration> = testClass.getAnnotationsByType(StressCTest::class.java)
         .map { ann: StressCTest ->
             StressCTestConfiguration(

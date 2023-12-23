@@ -49,6 +49,6 @@ class ForcibleFinishExceptionInTryBlockTest {
             "$forcibleFinishExceptionName was logged"
         }
 
-        assertTrue("Lincheck internal events in output mustn't present", "org.jetbrains.kotlinx.lincheck." !in log)
+        assertTrue("Lincheck  events in output mustn't present", "org.jetbrains.kotlinx.lincheck." !in log)
     }
 }

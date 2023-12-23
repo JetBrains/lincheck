@@ -41,7 +41,7 @@ fun scenario(block: DSLScenarioBuilder.() -> Unit): ExecutionScenario =
 /**
  * Create an actor with the specified [function][f] and [arguments][args].
  */
-internal fun actor(f: KFunction<*>, vararg args: Any?, cancelOnSuspension: Boolean = false): Actor {
+ fun actor(f: KFunction<*>, vararg args: Any?, cancelOnSuspension: Boolean = false): Actor {
     val method = f.javaMethod ?: throw IllegalStateException("The function is a constructor or cannot be represented by a Java Method")
     require(method.exceptionTypes.all { Throwable::class.java.isAssignableFrom(it) }) { "Not all declared exceptions are Throwable" }
     return Actor(

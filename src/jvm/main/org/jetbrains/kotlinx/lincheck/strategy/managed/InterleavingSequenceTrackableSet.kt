@@ -26,7 +26,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
  *
  * @return elements count from the beginning of the list
  */
-internal fun <T> findMaxPrefixLengthWithNoCycleOnSuffix(elements: List<T>): CycleInfo? {
+ fun <T> findMaxPrefixLengthWithNoCycleOnSuffix(elements: List<T>): CycleInfo? {
     if (elements.isEmpty() || elements.size == 1) return null
     val lastIndex = elements.lastIndex
     var targetCycleLength = elements.size
@@ -81,7 +81,7 @@ private fun <T> findLastIndexNotRelatedToCycle(elements: List<T>, cycleLength: I
 /**
  * This class holds information about executions in exact thread and serves to find spin-cycles
  */
-internal class InterleavingHistoryNode(
+ class InterleavingHistoryNode(
     val threadId: Int,
     var executions: Int = 0,
     /**
@@ -165,7 +165,7 @@ internal class InterleavingHistoryNode(
  * Structure to store chains of thread executions and switches for exact interleaving to detect spin-locks early.
  * For more effective memory usage, it stores chains as a prefix tree.
  */
-internal class InterleavingSequenceTrackableSet {
+ class InterleavingSequenceTrackableSet {
     /*
     Here is an example of such tree (notation: [threadId: executionsCount], '!' sign present if spin-lock occurred):
     root
@@ -210,7 +210,7 @@ internal class InterleavingSequenceTrackableSet {
         cursor.setTo(leaf)
     }
 
-    internal inner class InterleavingSequenceSetNode(
+     inner class InterleavingSequenceSetNode(
         val threadId: Int,
         var executions: Int = 0,
         var cyclePeriod: Int,
@@ -344,7 +344,7 @@ internal class InterleavingSequenceTrackableSet {
      * Consumes thread execution and switch events and answers if a current sequence corresponds to any cycle
      * is present inside the set or not.
      */
-    internal inner class Cursor {
+     inner class Cursor {
         /*
         The Cursor starts from the root of the tree and tries to find a way
          in that tree according to the execution and switch events.

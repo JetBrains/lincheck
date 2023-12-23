@@ -20,7 +20,7 @@ import org.junit.*
 /**
  * This test checks that if exception is thrown from the Lincheck itself, it will be reported properly.
  * Bug exception is emulated using [org.jetbrains.kotlinx.lincheck.util.InternalLincheckExceptionEmulator],
- * which is located in org.jetbrains.kotlinx.lincheck package, so exception will be treated like internal bug.
+ * which is located in org.jetbrains.kotlinx.lincheck package, so exception will be treated like  bug.
  */
 @Suppress("UNUSED")
 class InternalLincheckBugTest {

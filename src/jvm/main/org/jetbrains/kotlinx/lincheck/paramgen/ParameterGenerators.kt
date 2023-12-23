@@ -34,7 +34,7 @@ interface ParameterGenerator<T> {
 /**
  * Used only as a default value in [Operation] annotation, as it's impossible to use `null` as a default value in Java
  */
-internal object DummyParameterGenerator : ParameterGenerator<Any?> {
+ object DummyParameterGenerator : ParameterGenerator<Any?> {
     override fun generate() = throw UnsupportedOperationException()
 }
 
@@ -267,7 +267,7 @@ class ThreadIdGen(randomProvider: RandomProvider, configuration: String) : Param
     override fun generate() = THREAD_ID_TOKEN
 }
 
-internal val THREAD_ID_TOKEN = Any()
+ val THREAD_ID_TOKEN = Any()
 
 /**
  * Extensible range-based random generator.

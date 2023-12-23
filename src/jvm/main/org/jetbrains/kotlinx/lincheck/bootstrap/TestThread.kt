@@ -13,6 +13,8 @@
 
 package sun.nio.ch.lincheck
 
+import java.util.concurrent.atomic.AtomicInteger
+
 /**
  * When Lincheck runs a test, all threads should be instances of this [TestThread] class.
  * This class provides additional fields and controls for the Lincheck testing framework.
@@ -24,7 +26,7 @@ package sun.nio.ch.lincheck
  * @property threadNumber The index of the thread.
  * @param block The Runnable object associated with the thread.
  */
-internal class TestThread(
+ class TestThread(
     testName: String,
     val threadNumber: Int,
     block: Runnable
@@ -47,7 +49,7 @@ internal class TestThread(
     /**
      * This flag indicates whether the Lincheck is currently running user's code.
      *
-     * - When it is `true`, Lincheck is running user's code and analyses it.
+     * - When it is `true`, Lincheck is running user's code and analyzes it.
      * - When it is `false`, the analysis is disabled.
      */
     @JvmField

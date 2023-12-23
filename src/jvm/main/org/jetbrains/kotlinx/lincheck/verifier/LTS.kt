@@ -60,9 +60,9 @@ class LTS(private val sequentialSpecification: Class<*>) {
      * by the corresponding [next] requests ([nextByRequest] and [nextByFollowUp] respectively).
      */
     inner class State(val seqToCreate: List<Operation>) {
-        internal val transitionsByRequests by lazy { mutableMapOf<Actor, TransitionInfo>() }
-        internal val transitionsByFollowUps by lazy { mutableMapOf<Int, TransitionInfo>() }
-        internal val transitionsByCancellations by lazy { mutableMapOf<Int, TransitionInfo>() }
+         val transitionsByRequests by lazy { mutableMapOf<Actor, TransitionInfo>() }
+         val transitionsByFollowUps by lazy { mutableMapOf<Int, TransitionInfo>() }
+         val transitionsByCancellations by lazy { mutableMapOf<Int, TransitionInfo>() }
         private val atomicallySuspendedAndCancelledTransition: TransitionInfo by lazy {
             createAtomicallySuspendedAndCancelledTransition()
         }
@@ -361,7 +361,7 @@ private class StateInfo(
  * Intercepted continuation just writes the result of the suspension point and reference to the unintercepted continuation
  * so that the calling thread could resume this continuation by itself.
  */
-internal class VerifierInterceptor(
+ class VerifierInterceptor(
     private val ticket: Int,
     private val actor: Actor,
     private val resumedTicketsWithResults: MutableMap<Int, ResumedResult>
@@ -389,7 +389,7 @@ internal class VerifierInterceptor(
  * meaning that result of the suspension point equals the final result of the operation,
  * [resumeWith] will be executed just after resumption by the resuming thread.
  */
-internal class Completion(
+ class Completion(
     private val ticket: Int,
     private val actor: Actor,
     private val resumedTicketsWithResults: MutableMap<Int, ResumedResult>
@@ -448,7 +448,7 @@ data class Operation(
 enum class OperationType { REQUEST, FOLLOW_UP, CANCELLATION }
 
 // should be less than all tickets
-internal const val NO_TICKET = -1
+ const val NO_TICKET = -1
 
 private data class ResumptionInfo(
     val resumedActor: Actor,

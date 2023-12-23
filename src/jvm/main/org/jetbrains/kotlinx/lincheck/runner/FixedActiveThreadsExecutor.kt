@@ -24,7 +24,7 @@ import java.util.concurrent.locks.*
  * is that this executor keeps the re-using threads "hot" (active) as long as possible,
  * so that they should not be parked and unparked between invocations.
  */
-internal class FixedActiveThreadsExecutor(private val testName: String, private val nThreads: Int) : Closeable {
+class FixedActiveThreadsExecutor(private val testName: String, private val nThreads: Int) : Closeable {
     /**
      * null, waiting TestThread, Runnable task, or SHUTDOWN
      */
@@ -38,7 +38,7 @@ internal class FixedActiveThreadsExecutor(private val testName: String, private 
     /**
      * This flag is set to `true` when [await] detects a hang.
      * In this case, when this executor is closed, [Thread.stop]
-     * is called on all the internal threads.
+     * is called on all the  threads.
      */
     private var hangDetected = false
 
@@ -49,7 +49,7 @@ internal class FixedActiveThreadsExecutor(private val testName: String, private 
         TestThread(testName, iThread, testThreadRunnable(iThread)).also { it.start() }
     }
 
-    internal val numberOfThreadsExceedAvailableProcessors = Runtime.getRuntime().availableProcessors() < threads.size
+     val numberOfThreadsExceedAvailableProcessors = Runtime.getRuntime().availableProcessors() < threads.size
 
     /**
      * Submits the specified set of [tasks] to this executor
