@@ -64,13 +64,9 @@ import kotlin.random.*
     lateinit var currentInterleaving: Interleaving
 
     override fun runImpl(): LincheckFailure? {
-        Counters.currentInterleaving.set(0)
         currentInterleaving = root.nextInterleaving() ?: return null
         while (usedInvocations < maxInvocations) {
             // run invocation and check its results
-            if (Counters.isFirstBug) {
-                Unit
-            }
             val invocationResult = runInvocation()
             if (suddenInvocationResult is SpinCycleFoundAndReplayRequired) {
                 currentInterleaving.rollbackAfterSpinCycleFound()
@@ -79,21 +75,8 @@ import kotlin.random.*
             usedInvocations++
             checkResult(invocationResult)?.let { return it }
             // get new unexplored interleaving
-            if (Counters.isFirstBug) {
-                Unit
-            }
             currentInterleaving = root.nextInterleaving() ?: break
-            if (Counters.isFirstBug) {
-                Unit
-            }
-            Counters.currentInterleaving.incrementAndGet()
-            if (Counters.isRequired) {
-                traceCollector = TraceCollector()
-                collectTrace = true
-            } else {
-                traceCollector = null
-                collectTrace = false
-            }
+            traceCollector = if (collectTrace) TraceCollector() else null
         }
         return null
     }
@@ -278,9 +261,6 @@ import kotlin.random.*
         }
 
         override fun nextInterleaving(interleavingBuilder: InterleavingBuilder): Interleaving {
-            if (Counters.isPrevRequired && interleavingBuilder.threadSwitchChoices.size == 2) {
-                Unit
-            }
             val child = chooseUnexploredNode()
             interleavingBuilder.addThreadSwitchChoice(child.value)
             val interleaving = child.node.nextInterleaving(interleavingBuilder)
@@ -407,34 +387,4 @@ import kotlin.random.*
             return interleaving
         }
     }
-}
-
-object Counters {
-    val currentInterleaving = AtomicInteger(0)
-    val currentScenario = AtomicInteger(0)
-    val isTrackingEnabled = AtomicBoolean(false)
-
-    val isEnabled: Boolean get() = isTrackingEnabled.get()
-
-    val isRequired: Boolean
-        get() {
-            return (currentInterleaving.get() == 15 || currentInterleaving.get() == 366) && currentScenario.get() == 0
-        }
-
-    val isPrevRequired: Boolean
-        get() {
-            return currentInterleaving.get() == 365 && currentScenario.get() == 0
-        }
-
-    val isFirstBug: Boolean get() = currentInterleaving.get() == 366 && currentScenario.get() == 0
-
-    override fun toString(): String {
-        return "Counters(currentInterleaving=$currentInterleaving, currentScenario=$currentScenario)"
-    }
-
-    fun getThread(): TestThread  {
-        return Thread.currentThread() as TestThread
-    }
-
-
 }

@@ -17,8 +17,6 @@ import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.Counters
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import sun.nio.ch.lincheck.*
 import java.io.*
@@ -639,11 +637,6 @@ abstract class ManagedStrategy(
      * @param tracePoint the corresponding trace point for the invocation
      */
     private fun afterMethodCall(iThread: Int, tracePoint: MethodCallTracePoint?) {
-        runInIgnoredSection {
-            if (Counters.isFirstBug && traceCollector!!.stopRequired) {
-                Unit
-            }
-        }
         val callStackTrace = callStackTrace[iThread]
         if (tracePoint!!.wasSuspended) {
             // if a method call is suspended, save its identifier to reuse for continuation resuming
@@ -766,13 +759,6 @@ abstract class ManagedStrategy(
 
 
     override fun beforeReadField(obj: Any, className: String, fieldName: String, isFinal: Boolean, codeLocation: Int) {
-        val isI = (Thread.currentThread() as TestThread).inIgnoredSection
-        runInIgnoredSection {
-            if (Counters.isFirstBug && traceCollector?.stopRequired == true) {
-                println("Before field read $fieldName. Trace = ${traceCollector?.trace?.size}. Ignored section = $isI")
-                Unit
-            }
-        }
         if (isFinal) return
         runInIgnoredSection {
             if (localObjectManager.isLocalObject(obj)) return@runInIgnoredSection
@@ -1019,19 +1005,8 @@ abstract class ManagedStrategy(
         codeLocation: Int,
         param1: Any?
     ) {
-        val isI = (Thread.currentThread() as TestThread).inIgnoredSection
-        runInIgnoredSection {
-            if (Counters.isFirstBug && traceCollector!!.stopRequired) {
-                println("Before method call $methodName. Size = ${traceCollector!!.trace.size}. Ignore section = $isI")
-                Unit
-            }
-        }
-
         if (collectTrace) {
             runInIgnoredSection {
-                if (Counters.isFirstBug && methodName == "tryResumeSend") {
-                    Unit
-                }
                 beforeMethodCall(owner, className, methodName, codeLocation, arrayOf(param1))
             }
         } else {
@@ -1160,13 +1135,6 @@ abstract class ManagedStrategy(
             // tracePoint can be null here if trace is not available, e.g. in case of suspension
             if (tracePoint != null) {
                 _trace += tracePoint
-                runInIgnoredSection {
-                    if (_trace.size == 50) {
-                        val ok =
-                            tracePoint is WriteTracePoint && tracePoint.toStringImpl() == "exclusiveOwnerThread.WRITE(TestThread@1) at AbstractOwnableSynchronizer.setExclusiveOwnerThread(AbstractOwnableSynchronizer.java:74)"
-                        Unit
-                    }
-                }
             }
         }
 
