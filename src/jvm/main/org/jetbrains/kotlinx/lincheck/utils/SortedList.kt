@@ -20,8 +20,6 @@
 
 package org.jetbrains.kotlinx.lincheck.utils
 
-import org.jetbrains.kotlinx.lincheck.implies
-
 fun <T> List<T>.isChain(fromIndex : Int = 0, toIndex : Int = size, relation: (T, T) -> Boolean): Boolean {
     for (i in fromIndex until toIndex - 1) {
         if (!relation(get(i), get(i + 1)))

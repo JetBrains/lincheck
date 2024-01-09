@@ -21,6 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.utils.*
 import java.lang.reflect.*
 import java.util.*
 import java.util.concurrent.atomic.*

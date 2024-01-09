@@ -20,7 +20,6 @@
 
 package org.jetbrains.kotlinx.lincheck.utils
 
-import org.jetbrains.kotlinx.lincheck.ensure
 import org.jetbrains.kotlinx.lincheck.execution.HBClock
 import org.jetbrains.kotlinx.lincheck.execution.emptyClock
 import kotlin.math.*

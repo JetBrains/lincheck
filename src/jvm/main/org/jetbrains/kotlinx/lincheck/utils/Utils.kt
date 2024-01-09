@@ -20,6 +20,11 @@
 
 package org.jetbrains.kotlinx.lincheck.utils
 
+infix fun Boolean.implies(other: Boolean): Boolean = !this || other
+
+infix fun Boolean.implies(other: () -> Boolean): Boolean = !this || other()
+
+
 inline fun<reified T> Any?.satisfies(predicate: T.() -> Boolean): Boolean =
     this is T && predicate(this)
 
@@ -28,6 +33,60 @@ inline fun<reified T> Any?.refine(predicate: T.() -> Boolean): T? =
 
 inline fun<reified T> List<Any?>.reify(): List<T>? {
     return if (all { it is T }) (this as List<T>) else null
+}
+
+inline fun Boolean.ensure(): Boolean {
+    // TODO: add contract?
+    // contract {
+    //     returns() implies this
+    // }
+    check(this)
+    return this
+}
+
+inline fun Boolean.ensure(lazyMessage: () -> Any): Boolean {
+    check(this, lazyMessage)
+    return this
+}
+
+inline fun Boolean.ensureFalse(): Boolean {
+    check(!this)
+    return this
+}
+
+inline fun Boolean.ensureFalse(lazyMessage: () -> Any): Boolean {
+    check(!this, lazyMessage)
+    return this
+}
+
+inline fun<T> T?.ensureNull(): T? {
+    check(this == null)
+    return this
+}
+
+inline fun<T> T?.ensureNull(lazyMessage: (T?) -> Any): T? {
+    check(this == null) { lazyMessage(this) }
+    return this
+}
+
+inline fun<T> T?.ensureNotNull(): T {
+    checkNotNull(this)
+    return this
+}
+
+inline fun<T> T?.ensureNotNull(lazyMessage: () -> Any): T {
+    checkNotNull(this, lazyMessage)
+    return this
+}
+
+inline fun<T> T.ensure(predicate: (T) -> Boolean): T {
+    check(predicate(this))
+    return this
+}
+
+inline fun<T> T.ensure(predicate: (T) -> Boolean, lazyMessage: (T?) -> Any): T {
+    check(predicate(this)) { lazyMessage(this) }
+    return this
 }
 
 private fun rangeCheck(size: Int, fromIndex: Int, toIndex: Int) {
@@ -127,4 +186,10 @@ fun <T> List<Sequence<T>>.cartesianProduct(): Sequence<List<T>> = sequence {
         // otherwise, advance the non-exceeded sequence
         elements[idx] = iterators[idx].next()
     }
+}
+
+class UnreachableException(message: String?): Exception(message)
+
+fun unreachable(message: String? = null): Nothing {
+    throw UnreachableException(message)
 }

@@ -20,7 +20,6 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
-import org.jetbrains.kotlinx.lincheck.implies
 
 fun <K, V> MutableMap<K, V>.update(key: K, default: V, transform: (V) -> V) {
     // TODO: could it be done with a single lookup in a map?

@@ -20,9 +20,9 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import java.util.*
+import org.jetbrains.kotlinx.lincheck.utils.*
 import kotlin.reflect.KClass
-import org.jetbrains.kotlinx.lincheck.ensureNull
+import java.util.*
 
 /**
  * Tracks memory operations with shared variables.

@@ -20,7 +20,6 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
-import org.jetbrains.kotlinx.lincheck.ensure
 import org.jetbrains.kotlinx.lincheck.utils.*
 
 // TODO: implement VectorClock interface??

@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.utils.*
 import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.*
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
