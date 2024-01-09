@@ -20,6 +20,12 @@
 
 package org.jetbrains.kotlinx.lincheck.utils
 
+inline fun<reified T> Any?.satisfies(predicate: T.() -> Boolean): Boolean =
+    this is T && predicate(this)
+
+inline fun<reified T> Any?.refine(predicate: T.() -> Boolean): T? =
+    if (this is T && predicate(this)) this else null
+
 inline fun<reified T> List<Any?>.reify(): List<T>? {
     return if (all { it is T }) (this as List<T>) else null
 }

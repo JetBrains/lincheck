@@ -20,7 +20,6 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
-import  org.jetbrains.kotlinx.lincheck.ensure
 import org.jetbrains.kotlinx.lincheck.ensureNotNull
 import org.jetbrains.kotlinx.lincheck.utils.*
 
@@ -182,7 +181,7 @@ val AtomicThreadEvent.notifiedBy: AtomicThreadEvent get() = run {
 }
 
 val AtomicThreadEvent.exclusiveReadPart: AtomicThreadEvent get() = run {
-    require(label is WriteAccessLabel && (label as WriteAccessLabel).isExclusive)
+    require(label.satisfies<WriteAccessLabel> { isExclusive })
     parent!!
 }
 
@@ -197,9 +196,7 @@ val AtomicThreadEvent.exclusiveReadPart: AtomicThreadEvent get() = run {
  * @see EventLabel.isValidResponse
  */
 fun AtomicThreadEvent.isValidResponse(request: ThreadEvent) =
-    request.label.isRequest && label.isResponse
-            && parent == request
-            && label.isValidResponse(request.label)
+    label.isResponse && request.label.isRequest && parent == request && label.isValidResponse(request.label)
 
 /**
  * Checks whether this event is a valid response to its parent request event.
@@ -223,12 +220,14 @@ fun AtomicThreadEvent.isValidResponse() =
  *
  * @see MemoryAccessLabel.isExclusive
  */
-fun AtomicThreadEvent.isWritePartOfAtomicUpdate(readResponse: ThreadEvent) =
-    label is WriteAccessLabel && (label as WriteAccessLabel).isExclusive
-            && parent == readResponse && readResponse.label.let {
-                it is ReadAccessLabel && it.isResponse && it.isExclusive
-                    && it.location == (label as WriteAccessLabel).location
-            }
+fun AtomicThreadEvent.isWritePartOfAtomicUpdate(readResponse: ThreadEvent): Boolean {
+    val writeLabel = label.refine<WriteAccessLabel> { isExclusive }
+        ?: return false
+    val readLabel = readResponse.label.refine<ReadAccessLabel> { isResponse && isExclusive }
+        ?: return false
+    return (parent == readResponse) && readLabel.location == writeLabel.location
+}
+
 
 /**
  * Hyper event is a composite event consisting of multiple atomic events.
@@ -401,12 +400,9 @@ abstract class AbstractAtomicThreadEvent(
         // check that read-exclusive label precedes that write-exclusive label
         if (label is WriteAccessLabel && label.isExclusive) {
             require(parent != null)
-            parent!!.label.ensure {
-                it is ReadAccessLabel
-                    && it.isResponse
-                    && it.isExclusive
-                    && it.location == label.location
-            }
+            require(parent!!.label.satisfies<ReadAccessLabel> {
+                isResponse && isExclusive && location == label.location
+            })
         }
     }
 

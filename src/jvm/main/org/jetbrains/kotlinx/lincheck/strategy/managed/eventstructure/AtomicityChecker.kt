@@ -20,6 +20,8 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
+import org.jetbrains.kotlinx.lincheck.utils.*
+
 data class AtomicityViolation(val write1: Event, val write2: Event): Inconsistency()
 
 class AtomicityChecker : IncrementalConsistencyChecker<AtomicThreadEvent> {
@@ -27,26 +29,16 @@ class AtomicityChecker : IncrementalConsistencyChecker<AtomicThreadEvent> {
     private var execution: Execution<AtomicThreadEvent> = executionOf()
 
     override fun check(event: AtomicThreadEvent): Inconsistency? {
-        val label = event.label
-        if (label !is MemoryAccessLabel)
-            return null
-        if (label.accessKind != MemoryAccessKind.Write || !label.isExclusive)
-            return null
-        val location = label.location
+        val writeLabel = event.label.refine<WriteAccessLabel> { isExclusive }
+            ?: return null
+        val location = writeLabel.location
         val readFrom = event.exclusiveReadPart.readsFrom
-        execution.find {
-            check(it is AbstractAtomicThreadEvent)
-            val label = it.label
-            it != event
-                && label is MemoryAccessLabel
-                && label.isExclusive
-                && label.accessKind == MemoryAccessKind.Write
-                && label.location == location
-                && it.exclusiveReadPart.readsFrom == readFrom
-        }?.let {
-            return AtomicityViolation(it, event)
+        val other = execution.find { other ->
+            other != event && other.label.satisfies<WriteAccessLabel> {
+                isExclusive && this.location == location && other.exclusiveReadPart.readsFrom == readFrom
+            }
         }
-        return null
+        return if (other != null) AtomicityViolation(other, event) else null
     }
 
     override fun check(): Inconsistency? {

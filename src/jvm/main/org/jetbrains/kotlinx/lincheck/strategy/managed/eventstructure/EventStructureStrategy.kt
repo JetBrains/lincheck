@@ -343,16 +343,9 @@ class EventStructureStrategy(
         if (!super.isCoroutineResumed(iThread, iActor))
             return false
         val resumeEvent = eventStructure.currentExecution.find {
-            val label = it.label
-            label is CoroutineResumeLabel
-                && label.threadId ==iThread
-                && label.actorId == iActor
+            it.label.satisfies<CoroutineResumeLabel> { threadId == iThread && actorId == iActor }
         }
         return (resumeEvent != null)
-        // val blockedEvent = eventStructure.getBlockedRequest(iThread).ensure {
-        //     it != null && it.label is CoroutineSuspendLabel
-        // }!!
-        // return !eventStructure.isBlockedAwaitingRequest(blockedEvent)
     }
 
     override fun interceptRandom(): Int? {
@@ -452,9 +445,9 @@ private class EventStructureMemoryTracker(
     override fun dumpMemory() {
         val locations = mutableSetOf<MemoryLocation>()
         for (event in eventStructure.currentExecution) {
-            val label = event.label
-            if (label is MemoryAccessLabel) {
-                locations.add(label.location)
+            val location = (event.label as? MemoryAccessLabel)?.location
+            if (location != null) {
+                locations.add(location)
             }
         }
         for (location in locations) {

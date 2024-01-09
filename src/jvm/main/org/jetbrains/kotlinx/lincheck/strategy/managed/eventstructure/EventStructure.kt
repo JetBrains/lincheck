@@ -439,10 +439,8 @@ class EventStructure(
             label is LockLabel && label.isResponse && !label.isReentry -> run {
                 val unlock = dependencies.first { it.label.asUnlockLabel(label.mutex) != null }
                 currentExecution.forEach { event ->
-                    check(event is AbstractAtomicThreadEvent)
-                    if (event.label.isResponse
-                            && (event.label as? LockLabel)?.mutex == label.mutex
-                            && event.locksFrom == unlock) {
+                    if (event.label.satisfies<LockLabel> { isResponse && mutex == label.mutex }
+                        && event.locksFrom == unlock) {
                         conflicts.add(event)
                     }
                 }
@@ -453,10 +451,8 @@ class EventStructure(
                 if ((notify.label as NotifyLabel).isBroadcast)
                     return@run
                 currentExecution.forEach { event ->
-                    check(event is AbstractAtomicThreadEvent)
-                    if (event.label.isResponse
-                            && (event.label as? WaitLabel)?.mutex == label.mutex
-                            && event.notifiedBy == notify) {
+                    if (event.label.satisfies<WaitLabel> { isResponse && mutex == label.mutex }
+                        && event.notifiedBy == notify) {
                         conflicts.add(event)
                     }
                 }
@@ -1049,8 +1045,7 @@ class EventStructure(
 
     fun addCoroutineSuspendResponseEvent(iThread: Int, iActor: Int): AtomicThreadEvent {
         val request = getBlockedRequest(iThread).ensure { event ->
-            (event != null) && event.label is CoroutineSuspendLabel
-                    && ((event.label as CoroutineSuspendLabel).actorId == iActor)
+            (event != null) && event.label.satisfies<CoroutineSuspendLabel> { actorId == iActor }
         }!!
         val (response, events) = addResponseEvents(request)
         check(events.size == 1)
@@ -1059,8 +1054,7 @@ class EventStructure(
 
     fun addCoroutineCancelResponseEvent(iThread: Int, iActor: Int): AtomicThreadEvent {
         val request = getBlockedRequest(iThread).ensure { event ->
-            (event != null) && event.label is CoroutineSuspendLabel
-                    && ((event.label as CoroutineSuspendLabel).actorId == iActor)
+            (event != null) && event.label.satisfies<CoroutineSuspendLabel> { actorId == iActor }
         }!!
         val label = (request.label as CoroutineSuspendLabel).getResponse(root.label)!!
         tryReplayEvent(iThread)?.let { event ->
@@ -1156,24 +1150,27 @@ class EventStructure(
 
     private fun isSpinLoopBoundReached(event: ThreadEvent): Boolean {
         check(event.label is ReadAccessLabel && event.label.isResponse)
-        val location = (event.label as ReadAccessLabel).location
-        val readValue = (event.label as ReadAccessLabel).readValue
-        val codeLocation = (event.label as ReadAccessLabel).codeLocation
-        if (loopDetector.codeLocationCounter(event.threadId, codeLocation) >= SPIN_BOUND) {
-            var spinEvent: ThreadEvent = event
-            var spinCounter = SPIN_BOUND
-            while (spinCounter-- > 0) {
-                spinEvent = spinEvent.pred {
-                    it.label.isResponse &&
-                    (it.label as? ReadAccessLabel)?.location == location &&
-                    (it.label as? ReadAccessLabel)?.codeLocation == codeLocation
-                } ?: return false
-                if ((spinEvent.label as ReadAccessLabel).readValue != readValue)
-                    return false
-            }
-            return true
+        val readLabel = (event.label as ReadAccessLabel)
+        val location = readLabel.location
+        val readValue = readLabel.readValue
+        val codeLocation = readLabel.codeLocation
+        // a potential spin-loop occurs when we have visited the same code location more than N times
+        if (loopDetector.codeLocationCounter(event.threadId, codeLocation) < SPIN_BOUND)
+            return false
+        // if the last 3 reads with the same code location read the same value,
+        // then we consider this a spin-loop
+        var spinEvent: ThreadEvent = event
+        var spinCounter = SPIN_BOUND
+        while (spinCounter-- > 0) {
+            spinEvent = spinEvent.pred {
+                it.label.isResponse && it.label.satisfies<ReadAccessLabel> {
+                    this.location == location && this.codeLocation == codeLocation
+                }
+            } ?: return false
+            if ((spinEvent.label as ReadAccessLabel).readValue != readValue)
+                return false
         }
-        return false
+        return true
     }
 
 }
