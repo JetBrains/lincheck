@@ -276,8 +276,7 @@ private fun adornedStringRepresentation(any: Any?): String {
     // It is better not to use `toString` in general since
     // we usually care about references to certain objects,
     // not about the content inside them.
-    val id = getObjectNumber(any.javaClass, any)
-    return "${any.javaClass.simpleName}@$id"
+    return getObjectName(any)
 }
 
 internal enum class SwitchReason(private val reason: String) {

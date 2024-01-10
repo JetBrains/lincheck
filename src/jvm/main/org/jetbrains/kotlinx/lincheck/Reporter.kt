@@ -160,9 +160,9 @@ internal class TableLayout(
      *
      * @see columnsToString
      */
-    fun <T> StringBuilder.appendToFirstColumn(data: List<T>, transform: ((T) -> String)? = null) = apply {
-        val columns = listOf(data) + List(columnWidths.size - 1) { emptyList() }
-        appendColumns(columns, columnWidths, transform)
+    fun <T> StringBuilder.appendToFirstColumn(data: T) = apply {
+        val columns = listOf(listOf(data)) + List(columnWidths.size - 1) { emptyList() }
+        appendColumns(columns, columnWidths, transform = null)
     }
 
     /**
@@ -211,11 +211,11 @@ internal fun ExecutionLayout(
     initPart: List<String>,
     parallelPart: List<List<String>>,
     postPart: List<String>,
-    validationPart: List<String>
+    validationFunctionName: String?
 ): TableLayout {
     val size = parallelPart.size
     val threadHeaders = (0 until size).map { "Thread ${it + 1}" }
-    val firstThreadNonParallelParts = initPart + postPart + validationPart
+    val firstThreadNonParallelParts = initPart + postPart + (validationFunctionName?.let { listOf(it) } ?: emptyList())
     val columnsContent = parallelPart.map { it.toMutableList() }.toMutableList()
 
     if (columnsContent.isNotEmpty()) {
@@ -259,8 +259,8 @@ internal fun StringBuilder.appendExecutionScenario(
     val initPart = scenario.initExecution.map(Actor::toString)
     val postPart = scenario.postExecution.map(Actor::toString)
     val parallelPart = scenario.parallelExecution.map { it.map(Actor::toString) }
-    val validationPart = if (showValidationFunctions) scenario.validationFunctions?.map { "${it.method.name}()" } ?: emptyList() else emptyList()
-    with(ExecutionLayout(initPart, parallelPart, postPart, validationPart)) {
+    val validationFunctionName = if (showValidationFunctions) scenario.validationFunction?.let { "${it.method.name}()" } else null
+    with(ExecutionLayout(initPart, parallelPart, postPart, validationFunctionName)) {
         appendSeparatorLine()
         appendHeader()
         appendSeparatorLine()
@@ -274,8 +274,8 @@ internal fun StringBuilder.appendExecutionScenario(
             appendColumn(0, postPart)
             appendSeparatorLine()
         }
-        if (validationPart.isNotEmpty()) {
-            appendToFirstColumn(validationPart)
+        if (validationFunctionName != null) {
+            appendToFirstColumn(validationFunctionName)
             appendSeparatorLine()
         }
     }
@@ -344,7 +344,7 @@ internal fun StringBuilder.appendExecutionScenarioWithResults(
             ActorWithResult(actor, resultWithClock.result, exceptionStackTraces, clock = resultWithClock.clockOnStart).toString()
         }
     }
-    with(ExecutionLayout(initPart, parallelPart, postPart, validationPart = emptyList())) {
+    with(ExecutionLayout(initPart, parallelPart, postPart, validationFunctionName = null)) {
         appendSeparatorLine()
         appendHeader()
         appendSeparatorLine()
@@ -609,7 +609,7 @@ private fun StringBuilder.appendHints(hints: List<String>) {
 }
 
 private fun StringBuilder.appendValidationFailure(failure: ValidationFailure): StringBuilder {
-    appendLine("= Validation function ${failure.functionName} has failed =")
+    appendLine("= Validation function ${failure.validationFunctionName} has failed =")
     appendExecutionScenario(failure.scenario, showValidationFunctions = true)
     appendln()
     appendln()

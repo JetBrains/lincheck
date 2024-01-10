@@ -11,10 +11,14 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.junit.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
+import java.lang.IllegalStateException
 
 /**
  * Test verifies validation function representation in the trace.
@@ -32,11 +36,6 @@ class ValidationFunctionCallTest {
         if (validateInvoked != 0) {
             error("The validation function should be called only at the end of the scenario")
         }
-    }
-
-    @Validate
-    fun validate() {
-        check(validateInvoked != -1)
     }
 
     @Validate
@@ -94,4 +93,22 @@ class IncorrectResultsFailureWithCorrectValidationFunctionTest {
     fun test() = ModelCheckingOptions()
         .checkImpl(this::class.java)
         .checkLincheckOutput("incorrect_results_with_validation_function.txt")
+}
+
+class MoreThenOneValidationFunctionFailureTest {
+
+    @Operation
+    fun operation() = 1
+
+    @Validate
+    fun firstCheck() {
+    }
+
+    @Validate
+    fun secondCheck() {
+    }
+
+    @Test
+    fun test() = ModelCheckingOptions()
+        .checkFailsWithException<IllegalStateException>(this::class.java, "two_validation_functions_exception.txt")
 }

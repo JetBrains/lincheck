@@ -32,7 +32,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         // Currently, we extract validation functions from testClass structure, so for custom scenarios declared
         // with DSL, we have to set up it when testClass is scanned
         testConfigurations.forEach { cTestConfiguration ->
-            cTestConfiguration.customScenarios.forEach { it.validationFunctions = testStructure.validationFunctions }
+            cTestConfiguration.customScenarios.forEach { it.validationFunction = testStructure.validationFunction }
         }
     }
 
@@ -122,7 +122,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         testCfg.createStrategy(
             testClass = testClass,
             scenario = this,
-            validationFunctions = testStructure.validationFunctions,
+            validationFunction = testStructure.validationFunction,
             stateRepresentationMethod = testStructure.stateRepresentation,
             verifier = verifier
         ).run()

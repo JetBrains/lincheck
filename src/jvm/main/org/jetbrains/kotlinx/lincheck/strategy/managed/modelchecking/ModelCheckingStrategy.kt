@@ -34,13 +34,13 @@ import kotlin.random.*
  * than the number of all possible interleavings on the current depth level.
  */
 internal class ModelCheckingStrategy(
-        testCfg: ModelCheckingCTestConfiguration,
-        testClass: Class<*>,
-        scenario: ExecutionScenario,
-        validationFunctions: List<Actor>,
-        stateRepresentation: Method?,
-        verifier: Verifier
-) : ManagedStrategy(testClass, scenario, verifier, validationFunctions, stateRepresentation, testCfg) {
+    testCfg: ModelCheckingCTestConfiguration,
+    testClass: Class<*>,
+    scenario: ExecutionScenario,
+    validationFunction: Actor?,
+    stateRepresentation: Method?,
+    verifier: Verifier
+) : ManagedStrategy(testClass, scenario, verifier, validationFunction, stateRepresentation, testCfg) {
     // The number of invocations that the strategy is eligible to use to search for an incorrect execution.
     private val maxInvocations = testCfg.invocationsPerIteration
     // The number of already used invocations.

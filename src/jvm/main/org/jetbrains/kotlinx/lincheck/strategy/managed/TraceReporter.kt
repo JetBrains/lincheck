@@ -137,10 +137,7 @@ private fun constructTraceGraph(
     val lastHandledActor = IntArray(scenario.nThreads) { -1 }
     val isValidationFunctionFailure = failure is ValidationFailure
     val actorNodes = Array(scenario.nThreads) { i ->
-        val actorsCount = scenario.threads[i].size + if (i == 0 && failure is ValidationFailure) {
-            // find index of failed function
-            scenario.validationFunctions!!.indexOfFirst { it.method.name == failure.functionName } + 1
-        } else 0
+        val actorsCount = scenario.threads[i].size + if (i == 0 && failure is ValidationFailure) 1 else 0
         Array<ActorNode?>(actorsCount) { null }
     }
     val actorRepresentations = createActorRepresentation(scenario, failure)
@@ -256,15 +253,7 @@ private fun createActorRepresentation(
             val actors = scenario.threads[i].map { it.toString() }.toMutableList()
 
             if (failure is ValidationFailure) {
-                for (validationFunction in scenario.validationFunctions!!) {
-                    val functionName = validationFunction.method.name
-                    if (functionName == failure.functionName) {
-                        actors += "${functionName}(): ${failure.exception::class.simpleName}"
-                        break
-                    } else {
-                        actors += "$functionName()"
-                    }
-                }
+                actors += "${failure.validationFunctionName}(): ${failure.exception::class.simpleName}"
             }
 
             actors
@@ -459,10 +448,34 @@ private fun TraceNode.stateEventRepresentation(iThread: Int, stateRepresentation
 
 private class TraceEventRepresentation(val iThread: Int, val representation: String)
 
+internal fun getObjectName(obj: Any?): String =
+    if (obj != null) {
+        if (obj.javaClass.isAnonymousClass) {
+            obj.javaClass.simpleNameForAnonymous
+        } else {
+            obj.javaClass.simpleName + "@" + getObjectNumber(obj)
+        }
+    } else {
+        "null"
+    }
+
+private val Class<*>.simpleNameForAnonymous: String get() {
+    // Split by the package separator and return the result if this is not an inner class.
+    val withoutPackage = name.substringAfterLast('.')
+    if (!withoutPackage.contains("$")) return withoutPackage
+    // Extract the last named inner class followed by any "$<number>" patterns using regex.
+    val regex = """(.*\$)?([^\$.\d]+(\$\d+)*)""".toRegex()
+    val matchResult = regex.matchEntire(withoutPackage)
+    return matchResult?.groups?.get(2)?.value ?: withoutPackage
+}
+
 // Should be called only during `appendTrace` invocation
 internal fun getObjectNumber(clazz: Class<Any>, obj: Any): Int = objectNumeration
     .computeIfAbsent(clazz) { IdentityHashMap() }
     .computeIfAbsent(obj) { 1 + objectNumeration[clazz]!!.size }
+private fun getObjectNumber(obj: Any): Int = objectNumeration
+    .computeIfAbsent(obj.javaClass) { IdentityHashMap() }
+    .computeIfAbsent(obj) { 1 + objectNumeration[it.javaClass]!!.size }
 
 private val objectNumeration = WeakHashMap<Class<Any>, MutableMap<Any, Int>>()
 

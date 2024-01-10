@@ -99,7 +99,7 @@ class ParallelThreadsRunnerExceptionTest {
             }
         }
         ParallelThreadsRunner(
-            strategy = mockStrategy(scenario), testClass = testClass, validationFunctions = emptyList(),
+            strategy = mockStrategy(scenario), testClass = testClass, validationFunction = null,
             stateRepresentationFunction = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
         ).use { runner ->
             runner.initialize()
@@ -124,7 +124,7 @@ class ParallelThreadsRunnerExceptionTest {
             }
         }
         ParallelThreadsRunner(
-            strategy = mockStrategy(scenario), testClass = testClass, validationFunctions = emptyList(),
+            strategy = mockStrategy(scenario), testClass = testClass, validationFunction = null,
             stateRepresentationFunction = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
         ).use { runner ->
             runner.initialize()
@@ -143,7 +143,7 @@ class ParallelThreadsRunnerExceptionTest {
             }
         }
         ParallelThreadsRunner(
-            strategy = mockStrategy(scenario), testClass = testClass, validationFunctions = emptyList(),
+            strategy = mockStrategy(scenario), testClass = testClass, validationFunction = null,
             stateRepresentationFunction = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
         ).use { runner ->
             runner.initialize()
@@ -162,7 +162,7 @@ class ParallelThreadExecutionExceptionsTest {
             }
         }
         ParallelThreadsRunner(
-            strategy = mockStrategy(scenario), testClass = this::class.java, validationFunctions = emptyList(),
+            strategy = mockStrategy(scenario), testClass = this::class.java, validationFunction = null,
             stateRepresentationFunction = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
         ).use { runner ->
             runner.initialize()

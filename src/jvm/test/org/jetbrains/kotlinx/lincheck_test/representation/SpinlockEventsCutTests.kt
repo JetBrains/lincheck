@@ -227,7 +227,7 @@ class SpinlockInIncorrectResultsWithClocksTest {
                 )
             ),
             postExecution = emptyList(),
-            validationFunctions = emptyList()
+            validationFunction = null
         )
 
     }
