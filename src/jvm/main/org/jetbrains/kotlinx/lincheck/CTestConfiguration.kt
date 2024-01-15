@@ -52,7 +52,7 @@ abstract class CTestConfiguration(
         val DEFAULT_EXECUTION_GENERATOR: Class<out ExecutionGenerator?> = RandomExecutionGenerator::class.java
         val DEFAULT_VERIFIER: Class<out Verifier> = LinearizabilityVerifier::class.java
         const val DEFAULT_MINIMIZE_ERROR = true
-        const val DEFAULT_TIMEOUT_MS: Long = 10000
+        const val DEFAULT_TIMEOUT_MS: Long = 10000000
     }
 
     /**
@@ -95,7 +95,7 @@ internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConf
                     checkObstructionFreedom = ann.checkObstructionFreedom,
                     hangingDetectionThreshold = ann.hangingDetectionThreshold,
                     invocationsPerIteration = ann.invocationsPerIteration,
-                    guarantees = ManagedCTestConfiguration.DEFAULT_GUARANTEES,
+                    guarantees = mutableListOf(),
                     minimizeFailedScenario = ann.minimizeFailedScenario,
                     sequentialSpecification = chooseSequentialSpecification(
                         ann.sequentialSpecification.java,

@@ -25,12 +25,13 @@ internal class LocalObjectManager {
      * Each local object is a key, and its value is a list of objects accessible from it.
      * Note that non-local objects are excluded from this map.
      */
-    private val localObjects = IdentityHashMap<Any, MutableList<Any>>()
+    val localObjects = IdentityHashMap<Any, MutableList<Any>>()
 
     /**
      * Registers a new object as a locally accessible one.
      */
     fun newObject(o: Any) {
+        return
         localObjects[o] = mutableListOf()
     }
 
@@ -39,6 +40,7 @@ internal class LocalObjectManager {
      * If the removing object references other local objects, they are also removed recursively.
      */
     fun deleteLocalObject(o: Any?) {
+        return
         if (o == null) return
         val objects = localObjects.remove(o) ?: return
         objects.forEach { deleteLocalObject(it) }
@@ -47,7 +49,7 @@ internal class LocalObjectManager {
     /**
      * Checks if an object is only locally accessible.
      */
-    fun isLocalObject(o: Any?) = localObjects.containsKey(o)
+    fun isLocalObject(o: Any?) = false // localObjects.containsKey(o)
 
     /**
      * Adds a dependency between the owner object and the dependent object.
@@ -60,6 +62,7 @@ internal class LocalObjectManager {
      * @param dependent The object that depends on the owner.
      */
     fun addDependency(owner: Any, dependent: Any?) {
+        return
         if (dependent == null) return
         val ownerObjects = localObjects[owner]
         if (ownerObjects != null) {

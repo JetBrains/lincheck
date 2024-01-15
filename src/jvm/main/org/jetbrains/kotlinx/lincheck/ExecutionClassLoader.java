@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck;
 
+import kotlin.Unit;
 import org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution;
 
 /**

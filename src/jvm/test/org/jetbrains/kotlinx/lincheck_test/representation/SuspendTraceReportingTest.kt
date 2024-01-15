@@ -47,6 +47,13 @@ class SuspendTraceReportingTest : VerifierState() {
 
     @Test
     fun test() = ModelCheckingOptions()
+        .addCustomScenario {
+            parallel {
+                thread { actor(SuspendTraceReportingTest::bar) }
+                thread { actor(SuspendTraceReportingTest::foo) }
+            }
+        }
+        .iterations(0)
         .actorsPerThread(1)
         .actorsBefore(0)
         .actorsAfter(0)

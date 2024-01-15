@@ -22,8 +22,19 @@ import org.objectweb.asm.*
 import java.lang.instrument.*
 import java.lang.module.*
 import java.security.*
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.util.TraceClassVisitor
+import org.objectweb.asm.util.Textifier
+import java.io.File
+import java.io.PrintWriter
+import java.io.StringWriter
+
+var lastElements: List<String>? = null
 
 internal inline fun <R> withLincheckJavaAgent(transformationMode: TransformationMode, block: () -> R): R {
+//    Class.forName("kotlinx.coroutines.JobNode")
+//    Class.forName("kotlinx.coroutines.JobSupport")
+
     LincheckClassFileTransformer.install(transformationMode)
     return try {
         block()
@@ -33,7 +44,7 @@ internal inline fun <R> withLincheckJavaAgent(transformationMode: Transformation
 }
 
 object LincheckClassFileTransformer : ClassFileTransformer {
-    private val transformedClassesModelChecking = HashMap<Any, ByteArray>()
+     private val transformedClassesModelChecking = HashMap<Any, ByteArray>()
     private val transformedClassesStress = HashMap<Any, ByteArray>()
     private val nonTransformedClasses = HashMap<Any, ByteArray>()
 
@@ -83,6 +94,9 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         protectionDomain: ProtectionDomain?,
         classfileBuffer: ByteArray
     ): ByteArray? {
+        if (className.endsWith("JobSupport")) {
+            Unit
+        }
         runInIgnoredSection {
             if (!shouldTransform(className.canonicalClassName)) return null
             synchronized(LincheckClassFileTransformer) {
@@ -105,6 +119,18 @@ object LincheckClassFileTransformer : ClassFileTransformer {
                 }
             }
         }
+    }
+
+    fun bytecodeToReadableFormat(bytecode: ByteArray): String {
+        val cr = ClassReader(bytecode)
+        val printer = Textifier()
+        val traceClassVisitor = TraceClassVisitor(null, printer, null)
+
+        cr.accept(traceClassVisitor, 0)
+
+        val stringWriter = StringWriter()
+        printer.print(PrintWriter(stringWriter))
+        return stringWriter.toString()
     }
 
     @Suppress("SpellCheckingInspection")

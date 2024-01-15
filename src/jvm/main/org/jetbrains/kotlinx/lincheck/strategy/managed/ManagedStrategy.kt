@@ -74,6 +74,9 @@ abstract class ManagedStrategy(
     // Tracker of acquisitions and releases of monitors.
     private lateinit var monitorTracker: MonitorTracker
 
+    // Tracker of local objects
+    private var localObjectManager = LocalObjectManager()
+
     // InvocationResult that was observed by the strategy during the execution (e.g., a deadlock).
     @Volatile
     protected var suddenInvocationResult: InvocationResult? = null
@@ -97,6 +100,8 @@ abstract class ManagedStrategy(
     private val suspendedFunctionsStack = Array(nThreads) { mutableListOf<Int>() }
 
     private val methodCallTracePointStack = (0 until nThreads + 2).map { mutableListOf<MethodCallTracePoint>() }
+
+    private val userDefinedGuarantees: List<ManagedStrategyGuarantee>? = testCfg.guarantees.ifEmpty { null }
 
 
     override fun run(): LincheckFailure? = runner.use {
@@ -146,6 +151,22 @@ abstract class ManagedStrategy(
     }
 
     // == BASIC STRATEGY METHODS ==
+
+    /**
+     * @return 0 -> None, 1 -> IGNORE, 2 -> TREAT_AS_ATOMIC
+     */
+    override fun methodGuaranteeType(owner: Any?, className: String, methodName: String): Int = runInIgnoredSection {
+        userDefinedGuarantees?.forEach { guarantee ->
+            val ownerName = owner?.javaClass?.canonicalName ?: className
+            if (guarantee.classPredicate(ownerName) && guarantee.methodPredicate(methodName)) {
+                return when (guarantee.type) {
+                    ManagedGuaranteeType.IGNORE -> 1
+                    ManagedGuaranteeType.TREAT_AS_ATOMIC -> 2
+                }
+            }
+        }
+        return 0
+    }
 
     /**
      * Checks whether the [result] is a failing one or is [CompletedInvocationResult]
@@ -847,36 +868,178 @@ abstract class ManagedStrategy(
         codeLocation: Int,
         params: Array<Any?>
     ) {
-        if (owner is AtomicLongFieldUpdater<*> || owner is AtomicIntegerFieldUpdater<*> || owner is AtomicReferenceFieldUpdater<*, *>) {
+        if (collectTrace) {
             runInIgnoredSection {
-                if (collectTrace) {
-                    traceCollector?.addStateRepresentation()
-                    val ownerName = AtomicFields.getAtomicFieldName(owner)
-                    @Suppress("NAME_SHADOWING")
-                    val params = params.drop(1).toTypedArray()
-                    beforeMethodCall(currentThread, codeLocation, ownerName, methodName, params)
-                }
-                beforeAtomicMethodCall(currentThread, codeLocation)
-            }
-        } else if (owner is VarHandle || owner is AtomicReference<*> || owner is AtomicLong || owner is AtomicBoolean
-            || owner is AtomicInteger || owner is AtomicIntegerArray || owner is AtomicLongArray || owner is AtomicReferenceArray<*>
-            || className.contains("Unsafe"))
-        {
-            runInIgnoredSection {
-                if (collectTrace) {
-                    traceCollector?.addStateRepresentation()
-                    beforeMethodCall(currentThread, codeLocation, null, methodName, params)
-                }
-                beforeAtomicMethodCall(currentThread, codeLocation)
-            }
-        } else {
-            if (collectTrace) {
-                runInIgnoredSection {
-                    val params = if (isSuspendFunction(className, methodName, params)) params.dropLast(1).toTypedArray() else params
-                    beforeMethodCall(currentThread, codeLocation, null, methodName, params)
-                }
+                val params =
+                    if (isSuspendFunction(className, methodName, params)) params.dropLast(1).toTypedArray() else params
+                beforeMethodCall(currentThread, codeLocation, null, methodName, params)
             }
         }
+    }
+
+    override fun beforeAtomicMethodCall0(
+        ownerName: String,
+        methodName: String, codeLocation: Int
+    ) = beforeAtomicMethodCallWithParamsIfCollectTrace(ownerName, methodName, codeLocation) {
+        emptyArray()
+    }
+
+    override fun beforeAtomicMethodCall1(
+        ownerName: String,
+        methodName: String,
+        codeLocation: Int,
+        param1: Any?
+    ) = beforeAtomicMethodCallWithParamsIfCollectTrace(ownerName, methodName, codeLocation) {
+        arrayOf(param1)
+    }
+
+    override fun beforeAtomicMethodCall2(
+        ownerName: String,
+        methodName: String,
+        codeLocation: Int,
+        param1: Any?,
+        param2: Any?
+    ) = beforeAtomicMethodCallWithParamsIfCollectTrace(ownerName, methodName, codeLocation) {
+        arrayOf(param1, param2)
+    }
+
+    override fun beforeAtomicMethodCall3(
+        ownerName: String,
+        methodName: String,
+        codeLocation: Int,
+        param1: Any?,
+        param2: Any?,
+        param3: Any?
+    ) = beforeAtomicMethodCallWithParamsIfCollectTrace(ownerName, methodName, codeLocation) {
+        arrayOf(param1, param2, param3)
+    }
+
+    override fun beforeAtomicMethodCall4(
+        ownerName: String,
+        methodName: String,
+        codeLocation: Int,
+        param1: Any?,
+        param2: Any?,
+        param3: Any?,
+        param4: Any?
+    ) = beforeAtomicMethodCallWithParamsIfCollectTrace(ownerName, methodName, codeLocation) {
+        arrayOf(param1, param2, param3, param4)
+    }
+
+    override fun beforeAtomicMethodCall5(
+        ownerName: String,
+        methodName: String,
+        codeLocation: Int,
+        param1: Any?,
+        param2: Any?,
+        param3: Any?,
+        param4: Any?,
+        param5: Any?
+    ) = beforeAtomicMethodCallWithParamsIfCollectTrace(ownerName, methodName, codeLocation) {
+        arrayOf(param1, param2, param3, param4, param5)
+    }
+
+    private inline fun beforeAtomicMethodCallWithParamsIfCollectTrace(
+        ownerName: String,
+        methodName: String,
+        codeLocation: Int, collectParamsAction: () -> Array<Any?>
+    ) {
+        val params = if (collectTrace) collectParamsAction() else emptyArray()
+        beforeAtomicMethodCall(ownerName, methodName, codeLocation, params)
+    }
+
+    override fun beforeAtomicMethodCall(
+        ownerName: String,
+        methodName: String,
+        codeLocation: Int,
+        params: Array<Any?>
+    ) = runInIgnoredSection {
+        if (collectTrace) {
+            traceCollector?.addStateRepresentation()
+            beforeMethodCall(currentThread, codeLocation, null, methodName, params)
+        }
+        beforeAtomicMethodCall(currentThread, codeLocation)
+    }
+
+    override fun beforeAtomicUpdaterMethodCall0(
+        owner: Any, methodName: String, codeLocation: Int
+    ) = beforeAtomicUpdaterMethodCallWithParamsIfCollectTrace(owner, methodName, codeLocation) { emptyArray() }
+
+    override fun beforeAtomicUpdaterMethodCall1(
+        owner: Any, methodName: String, codeLocation: Int, param1: Any?
+    ) = beforeAtomicUpdaterMethodCallWithParamsIfCollectTrace(owner, methodName, codeLocation) {
+        arrayOf(param1)
+    }
+
+    override fun beforeAtomicUpdaterMethodCall2(
+        owner: Any,
+        methodName: String,
+        codeLocation: Int,
+        param1: Any?,
+        param2: Any?
+    ) = beforeAtomicUpdaterMethodCallWithParamsIfCollectTrace(owner, methodName, codeLocation) {
+        arrayOf(param1, param2)
+    }
+
+    override fun beforeAtomicUpdaterMethodCall3(
+        owner: Any,
+        methodName: String,
+        codeLocation: Int,
+        param1: Any?,
+        param2: Any?,
+        param3: Any?
+    ) = beforeAtomicUpdaterMethodCallWithParamsIfCollectTrace(owner, methodName, codeLocation) {
+        arrayOf(param1, param2, param3)
+    }
+
+    override fun beforeAtomicUpdaterMethodCall4(
+        owner: Any,
+        methodName: String,
+        codeLocation: Int,
+        param1: Any?,
+        param2: Any?,
+        param3: Any?,
+        param4: Any?
+    ) = beforeAtomicUpdaterMethodCallWithParamsIfCollectTrace(owner, methodName, codeLocation) {
+        arrayOf(param1, param2, param3, param4)
+    }
+
+    override fun beforeAtomicUpdaterMethodCall5(
+        owner: Any,
+        methodName: String,
+        codeLocation: Int,
+        param1: Any?,
+        param2: Any?,
+        param3: Any?,
+        param4: Any?,
+        param5: Any?
+    ) = beforeAtomicUpdaterMethodCallWithParamsIfCollectTrace(owner, methodName, codeLocation) {
+        arrayOf(param1, param2, param3, param4, param5)
+    }
+
+    private inline fun beforeAtomicUpdaterMethodCallWithParamsIfCollectTrace(
+        owner: Any,
+        methodName: String,
+        codeLocation: Int, collectParamsAction: () -> Array<Any?>
+    ) {
+        val params = if (collectTrace) collectParamsAction() else emptyArray()
+        beforeAtomicUpdaterMethodCall(owner, methodName, codeLocation, params)
+    }
+
+
+    override fun beforeAtomicUpdaterMethodCall(
+        owner: Any,
+        methodName: String,
+        codeLocation: Int,
+        params: Array<Any?>
+    ) = runInIgnoredSection {
+        if (collectTrace) {
+            traceCollector?.addStateRepresentation()
+            val ownerName = AtomicFields.getAtomicFieldName(owner)
+            val paramsWithoutFirstArg = params.drop(1).toTypedArray()
+            beforeMethodCall(currentThread, codeLocation, ownerName, methodName, paramsWithoutFirstArg)
+        }
+        beforeAtomicMethodCall(currentThread, codeLocation)
     }
 
     private fun beforeAtomicMethodCall(iThread: Int, codeLocation: Int) {
@@ -1013,8 +1176,6 @@ abstract class ManagedStrategy(
         }
     }
 
-    private var localObjectManager = LocalObjectManager()
-
     override fun onNewObjectCreation(obj: Any) {
         if (obj is String || obj is Int || obj is Long || obj is Byte || obj is Char || obj is Float || obj is Double) return
         runInIgnoredSection {
@@ -1051,6 +1212,9 @@ abstract class ManagedStrategy(
         fun passCodeLocation(tracePoint: TracePoint?) {
             // tracePoint can be null here if trace is not available, e.g. in case of suspension
             if (tracePoint != null) _trace += tracePoint
+            if (trace.size == 20) { // tracePoint.toString() == "INSTANCE.READ: null at MutexImpl\$LockCont.tryResumeLockWaiter(Mutex.kt:386)") {
+                Unit
+            }
         }
 
         fun addStateRepresentation() {
@@ -1653,3 +1817,11 @@ private const val OBSTRUCTION_FREEDOM_LOCK_VIOLATION_MESSAGE =
 
 private const val OBSTRUCTION_FREEDOM_WAIT_VIOLATION_MESSAGE =
     "The algorithm should be non-blocking, but a wait call is detected"
+
+object Counters {
+    val iterationCounter = AtomicInteger(0)
+
+    fun newIteration() = iterationCounter.incrementAndGet()
+
+    val isPoint: Boolean get() = iterationCounter.get() == 4
+}

@@ -56,6 +56,7 @@ internal class ModelCheckingStrategy(
 
     override fun runImpl(): LincheckFailure? {
         currentInterleaving = root.nextInterleaving() ?: return null
+        var i = 0
         while (usedInvocations < maxInvocations) {
             // run invocation and check its results
             val invocationResult = runInvocation()
@@ -67,6 +68,8 @@ internal class ModelCheckingStrategy(
             checkResult(invocationResult)?.let { return it }
             // get new unexplored interleaving
             currentInterleaving = root.nextInterleaving() ?: break
+            println("Iteration: ${i++}")
+            Counters.newIteration()
         }
         return null
     }
