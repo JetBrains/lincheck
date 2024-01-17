@@ -23,19 +23,17 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consisten
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.kotlinx.lincheck.utils.*
 
-interface AtomicityCheckVerdict : ConsistencyVerdict
+// TODO: override toString()
+class AtomicityViolation(val write1: Event, val write2: Event) : Inconsistency()
 
 // TODO: what should we return as a witness?
-class AtomicityWitness() : AtomicityCheckVerdict, ConsistencyWitness
-class AtomicityViolation(val write1: Event, val write2: Event) : AtomicityCheckVerdict, Inconsistency
-
-class AtomicityConsistencyChecker : IncrementalConsistencyChecker<AtomicThreadEvent> {
+class AtomicityConsistencyChecker : IncrementalConsistencyChecker<AtomicThreadEvent, Unit> {
 
     private var execution: Execution<AtomicThreadEvent> = executionOf()
 
-    override fun check(event: AtomicThreadEvent): AtomicityCheckVerdict {
+    override fun check(event: AtomicThreadEvent): ConsistencyVerdict<Unit> {
         val writeLabel = event.label.refine<WriteAccessLabel> { isExclusive }
-            ?: return AtomicityWitness()
+            ?: return ConsistencyWitness(Unit)
         val location = writeLabel.location
         val readFrom = event.exclusiveReadPart.readsFrom
         val other = execution.find { other ->
@@ -43,11 +41,14 @@ class AtomicityConsistencyChecker : IncrementalConsistencyChecker<AtomicThreadEv
                 isExclusive && this.location == location && other.exclusiveReadPart.readsFrom == readFrom
             }
         }
-        return if (other != null) AtomicityViolation(other, event) else AtomicityWitness()
+        return if (other != null)
+            AtomicityViolation(other, event)
+        else
+            ConsistencyWitness(Unit)
     }
 
-    override fun check(): AtomicityCheckVerdict {
-        return AtomicityWitness()
+    override fun check(): ConsistencyVerdict<Unit> {
+        return ConsistencyWitness(Unit)
     }
 
     override fun reset(execution: Execution<AtomicThreadEvent>) {

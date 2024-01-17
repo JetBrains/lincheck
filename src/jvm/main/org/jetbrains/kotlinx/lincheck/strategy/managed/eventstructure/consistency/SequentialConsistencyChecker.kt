@@ -48,25 +48,25 @@ import kotlin.collections.plus
 import kotlin.collections.set
 import kotlin.collections.toMutableMap
 
-interface SequentialConsistencyVerdict : ConsistencyVerdict
-
-interface SequentialConsistencyViolation : SequentialConsistencyVerdict, Inconsistency
+typealias SequentialConsistencyVerdict = ConsistencyVerdict<SequentialConsistencyWitness>
 
 class SequentialConsistencyWitness(
     val executionOrder: List<AtomicThreadEvent>
-) : SequentialConsistencyVerdict, ConsistencyWitness
-
-class SequentialConsistencyIdleIncrementalCheck : SequentialConsistencyVerdict, ConsistencyWitness
-
-enum class SequentialConsistencyCheckPhase {
-    APPROXIMATION, COHERENCE, REPLAYING
+) {
+    companion object {
+        fun create(executionOrder: List<AtomicThreadEvent>): ConsistencyWitness<SequentialConsistencyWitness> {
+            return ConsistencyWitness(SequentialConsistencyWitness(executionOrder))
+        }
+    }
 }
+
+abstract class SequentialConsistencyViolation : Inconsistency()
 
 class SequentialConsistencyChecker(
     val checkReleaseAcquireConsistency: Boolean = true,
     val approximateSequentialConsistency: Boolean = true,
     val computeCoherenceOrdering: Boolean = true,
-) : ConsistencyChecker<AtomicThreadEvent> {
+) : ConsistencyChecker<AtomicThreadEvent, SequentialConsistencyWitness> {
 
     private val releaseAcquireChecker : ReleaseAcquireConsistencyChecker? =
         if (checkReleaseAcquireConsistency) ReleaseAcquireConsistencyChecker() else null
@@ -80,14 +80,15 @@ class SequentialConsistencyChecker(
         if (releaseAcquireChecker != null) {
             when (val verdict = releaseAcquireChecker.check(execution)) {
                 is ReleaseAcquireInconsistency -> return verdict
-                is ReleaseAcquireConsistencyWitness -> {
+                is ConsistencyWitness -> {
                     // if execution is release/acquire consistent,
                     // the writes-before relation can be used
                     // to refine the execution ordering approximation
-                    executionOrderApproximation = executionOrderApproximation union verdict.writesBeforeRelation
+                    val writesBefore = verdict.witness.writesBefore
+                    executionOrderApproximation = executionOrderApproximation union writesBefore
                     // TODO: combine SC approximation phase with coherence phase
                     if (computeCoherenceOrdering) {
-                        return checkByCoherenceOrdering(execution, verdict.writesBeforeRelation)
+                        return checkByCoherenceOrdering(execution, writesBefore)
                     }
                 }
             }
@@ -127,7 +128,7 @@ class SequentialConsistencyChecker(
             while (stack.isNotEmpty()) {
                 val state = stack.removeLast()
                 if (state.isTerminal) {
-                    return SequentialConsistencyWitness(
+                    return SequentialConsistencyWitness.create(
                         executionOrder = state.history.flatMap { it.events }
                     )
                 }
@@ -145,7 +146,7 @@ class SequentialConsistencyChecker(
     private fun checkByCoherenceOrdering(
         execution: Execution<AtomicThreadEvent>,
         wbRelation: WritesBeforeRelation,
-    ): SequentialConsistencyVerdict {
+    ): ConsistencyVerdict<SequentialConsistencyWitness> {
         wbRelation.generateCoherenceTotalOrderings().forEach { coherence ->
             val extendedCoherence = ExtendedCoherenceRelation.fromCoherenceOrderings(execution, coherence)
             val scOrder = extendedCoherence.computeSequentialConsistencyOrder()
@@ -153,7 +154,7 @@ class SequentialConsistencyChecker(
                 val executionOrder = topologicalSorting(scOrder.asGraph())
                 val replayer = SequentialConsistencyReplayer(1 + execution.maxThreadID)
                 check(replayer.replay(executionOrder) != null)
-                return SequentialConsistencyWitness(executionOrder)
+                return SequentialConsistencyWitness.create(executionOrder)
             }
         }
         return SequentialConsistencyCoherenceViolation()
@@ -161,7 +162,7 @@ class SequentialConsistencyChecker(
 
 }
 
-class SequentialConsistencyCoherenceViolation : SequentialConsistencyViolation {
+class SequentialConsistencyCoherenceViolation : SequentialConsistencyViolation() {
     override fun toString(): String {
         // TODO: what information should we display to help identify the cause of inconsistency?
         return "Sequential consistency coherence violation detected"
@@ -171,7 +172,7 @@ class SequentialConsistencyCoherenceViolation : SequentialConsistencyViolation {
 class IncrementalSequentialConsistencyChecker(
     checkReleaseAcquireConsistency: Boolean = true,
     approximateSequentialConsistency: Boolean = true
-) : IncrementalConsistencyChecker<AtomicThreadEvent> {
+) : IncrementalConsistencyChecker<AtomicThreadEvent, SequentialConsistencyWitness> {
 
     private var execution = executionOf<AtomicThreadEvent>()
 
@@ -199,14 +200,14 @@ class IncrementalSequentialConsistencyChecker(
         }
         // first try to replay according to execution order
         if (checkByExecutionOrderReplaying()) {
-            return SequentialConsistencyWitness(executionOrder)
+            return SequentialConsistencyWitness.create(executionOrder)
         }
         val verdict = sequentialConsistencyChecker.check(execution)
-        if (verdict is SequentialConsistencyViolation)
+        if (verdict is Inconsistency)
             return verdict
-        check(verdict is SequentialConsistencyWitness)
+        check(verdict is ConsistencyWitness)
         // TODO: invent a nicer way to handle blocked dangling requests
-        val (events, blockedRequests) = verdict.executionOrder.partition {
+        val (events, blockedRequests) = verdict.witness.executionOrder.partition {
             !execution.isBlockedDanglingRequest(it)
         }
         _executionOrder.apply {
@@ -215,19 +216,19 @@ class IncrementalSequentialConsistencyChecker(
             addAll(blockedRequests)
         }
         executionOrderEnabled = true
-        return SequentialConsistencyWitness(executionOrder)
+        return SequentialConsistencyWitness.create(executionOrder)
     }
 
     override fun check(event: AtomicThreadEvent): SequentialConsistencyVerdict {
         if (!executionOrderEnabled)
-            return SequentialConsistencyIdleIncrementalCheck()
+            return ConsistencyUnknown
         if (!event.extendsExecutionOrder()) {
             _executionOrder.clear()
             executionOrderEnabled = false
-            return SequentialConsistencyIdleIncrementalCheck()
+            return ConsistencyUnknown
         }
         _executionOrder.add(event)
-        return SequentialConsistencyWitness(executionOrder)
+        return SequentialConsistencyWitness.create(executionOrder)
     }
 
     override fun reset(execution: Execution<AtomicThreadEvent>) {
@@ -264,7 +265,7 @@ class IncrementalSequentialConsistencyChecker(
     }
 }
 
-class SequentialConsistencyReplayViolation : SequentialConsistencyViolation {
+class SequentialConsistencyReplayViolation : SequentialConsistencyViolation() {
     override fun toString(): String {
         // TODO: what information should we display to help identify the cause of inconsistency?
         return "Sequential consistency replay violation detected"
@@ -447,7 +448,7 @@ private class Context(val execution: Execution<HyperThreadEvent>, val covering: 
 
 }
 
-class SequentialConsistencyApproximationInconsistency : SequentialConsistencyViolation {
+class SequentialConsistencyApproximationInconsistency : SequentialConsistencyViolation() {
     override fun toString(): String {
         // TODO: what information should we display to help identify the cause of inconsistency?
         return "Approximate sequential inconsistency detected"

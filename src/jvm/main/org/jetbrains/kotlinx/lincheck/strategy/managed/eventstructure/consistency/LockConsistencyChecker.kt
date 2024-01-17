@@ -23,16 +23,12 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consisten
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.kotlinx.lincheck.utils.*
 
-interface LockConsistencyVerdict : ConsistencyVerdict
+class LockConsistencyViolation(val event1: Event, val event2: Event) : Inconsistency()
 
 // TODO: what should we return as a witness?
-class LockConsistencyWitness : LockConsistencyVerdict, ConsistencyWitness
+class LockConsistencyChecker : ConsistencyChecker<AtomicThreadEvent, Unit> {
 
-class LockConsistencyViolation(val event1: Event, val event2: Event) : LockConsistencyVerdict, SequentialConsistencyViolation
-
-class LockConsistencyChecker : ConsistencyChecker<AtomicThreadEvent> {
-
-    override fun check(execution: Execution<AtomicThreadEvent>): LockConsistencyVerdict {
+    override fun check(execution: Execution<AtomicThreadEvent>): ConsistencyVerdict<Unit> {
         /*
          * We construct a map that maps an unlock (or notify) event to its single matching lock (or wait) event.
          * Because the single initialization event may encode several initial unlock events
@@ -57,7 +53,7 @@ class LockConsistencyChecker : ConsistencyChecker<AtomicThreadEvent> {
             if (other != null)
                 return LockConsistencyViolation(event, other)
         }
-        return LockConsistencyWitness()
+        return ConsistencyWitness(Unit)
     }
 
 }

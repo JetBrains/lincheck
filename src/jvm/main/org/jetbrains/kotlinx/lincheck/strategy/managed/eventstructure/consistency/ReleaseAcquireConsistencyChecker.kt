@@ -24,31 +24,27 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.utils.*
 
-interface ReleaseAcquireConsistencyVerdict : ConsistencyVerdict
-
-interface ReleaseAcquireInconsistency : ReleaseAcquireConsistencyVerdict, SequentialConsistencyViolation
-
-class ReleaseAcquireConsistencyWitness(
-    val writesBeforeRelation: WritesBeforeRelation
-) : ReleaseAcquireConsistencyVerdict, ConsistencyWitness
-
-private class WritesBeforeRelationInconsistency(
-    val writesBeforeRelation: WritesBeforeRelation
-) : ReleaseAcquireInconsistency {
+// TODO: what information should we display to help identify the cause of inconsistency:
+//   a cycle in writes-before relation?
+class ReleaseAcquireInconsistency() : Inconsistency() {
     override fun toString(): String {
         // TODO: what information should we display to help identify the cause of inconsistency?
         return "Release/Acquire inconsistency detected"
     }
 }
 
-class ReleaseAcquireConsistencyChecker : ConsistencyChecker<AtomicThreadEvent> {
+class ReleaseAcquireConsistencyWitness(
+    val writesBefore: WritesBeforeRelation
+)
 
-    override fun check(execution: Execution<AtomicThreadEvent>): ReleaseAcquireConsistencyVerdict {
+class ReleaseAcquireConsistencyChecker : ConsistencyChecker<AtomicThreadEvent, ReleaseAcquireConsistencyWitness> {
+
+    override fun check(execution: Execution<AtomicThreadEvent>): ConsistencyVerdict<ReleaseAcquireConsistencyWitness> {
         val writesBeforeRelation = WritesBeforeRelation(execution)
         return if (writesBeforeRelation.inconsistent || !writesBeforeRelation.isIrreflexive())
-            WritesBeforeRelationInconsistency(writesBeforeRelation)
+            ReleaseAcquireInconsistency()
         else
-            ReleaseAcquireConsistencyWitness(writesBeforeRelation)
+            ConsistencyWitness(ReleaseAcquireConsistencyWitness(writesBeforeRelation))
     }
 
 }

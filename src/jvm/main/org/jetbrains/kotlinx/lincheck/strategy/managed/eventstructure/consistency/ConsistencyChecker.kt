@@ -21,46 +21,39 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
-import org.jetbrains.kotlinx.lincheck.utils.*
 
 /**
  * Represents the verdict of an execution's consistency check.
  */
-interface ConsistencyVerdict
+sealed class ConsistencyVerdict<out W>
 
 /**
  * Represents the verdict of a successful consistency check and carries out witness of the consistency.
  */
-interface ConsistencyWitness : ConsistencyVerdict
+class ConsistencyWitness<W>(val witness: W) : ConsistencyVerdict<W>()
 
 /**
  * Represents an inconsistency in the consistency check of an execution.
  */
-interface Inconsistency : ConsistencyVerdict
+abstract class Inconsistency : ConsistencyVerdict<Nothing>()
 
-// {
-//     /**
-//      * Indicates whether the consistency check was successful,
-//      * that is whether the checked execution is consistent or not.
-//      */
-//     val isConsistent: Boolean
-//
-//     /**
-//      * Returns a textual explanation for the consistency verdict.
-//      * In particular, in case of inconsistency, should return the string describing the reason of inconsistency.
-//      *
-//      * @return The explanation for the consistency verdict if there is one, or null if no explanation is available.
-//      */
-//     fun explain(): String?
-// }
-
+/**
+ * Represents an exception that is thrown when an inconsistency is detected during execution.
+ *
+ * @param inconsistency The inconsistency that caused the exception.
+ */
 class InconsistentExecutionException(val inconsistency: Inconsistency) : Exception(inconsistency.toString())
 
-fun interface ConsistencyChecker<E : ThreadEvent> {
-    fun check(execution: Execution<E>): ConsistencyVerdict
+/**
+ * Represents the case when the consistency of an execution is unknown after the check.
+ */
+object ConsistencyUnknown : ConsistencyVerdict<Nothing>()
+
+fun interface ConsistencyChecker<E : ThreadEvent, W> {
+    fun check(execution: Execution<E>): ConsistencyVerdict<W>
 }
 
-interface IncrementalConsistencyChecker<E : ThreadEvent> {
+interface IncrementalConsistencyChecker<E : ThreadEvent, W> {
     /**
      * Performs incremental consistency check,
      * verifying whether adding the given [event] to the current execution retains execution's consistency.
@@ -73,8 +66,10 @@ interface IncrementalConsistencyChecker<E : ThreadEvent> {
      * @return consistency verdict:
      *  - an instance of [ConsistencyWitness] if the execution remains consistent,
      *  - an instance of [Inconsistency] is the execution becomes inconsistent.
+     *  - an instance of [ConsistencyUnknown] if the consistency check was approximated and
+     *      the exact consistency verdict is unknown
      */
-    fun check(event: E): ConsistencyVerdict
+    fun check(event: E): ConsistencyVerdict<W>
 
     /**
      * Performs full consistency check.
@@ -85,7 +80,7 @@ interface IncrementalConsistencyChecker<E : ThreadEvent> {
      *   otherwise returns non-null [Inconsistency] object
      *   representing the reason of inconsistency.
      */
-    fun check(): ConsistencyVerdict
+    fun check(): ConsistencyVerdict<W>
 
     /**
      * Resets the internal state of consistency checker to [execution].
@@ -93,54 +88,80 @@ interface IncrementalConsistencyChecker<E : ThreadEvent> {
     fun reset(execution: Execution<E>)
 }
 
+typealias ConsistencyWitnessList = List<ConsistencyWitness<*>>
+
 private class AggregatedIncrementalConsistencyChecker<E : ThreadEvent>(
-    val incrementalConsistencyCheckers: List<IncrementalConsistencyChecker<E>>,
-    val consistencyCheckers: List<ConsistencyChecker<E>>,
-) : IncrementalConsistencyChecker<E> {
+    val incrementalConsistencyCheckers: List<IncrementalConsistencyChecker<E, *>>,
+    val consistencyCheckers: List<ConsistencyChecker<E, *>>,
+) : IncrementalConsistencyChecker<E, ConsistencyWitnessList> {
 
     private var execution: Execution<E> = executionOf()
     private var inconsistency: Inconsistency? = null
 
-    override fun check(event: E): ConsistencyVerdict {
+    override fun check(event: E): ConsistencyVerdict<ConsistencyWitnessList> {
         if (inconsistency != null)
             return inconsistency!!
-        val witnesses = mutableListOf<ConsistencyWitness>()
+        var unknown: ConsistencyUnknown? = null
+        val witnesses = mutableListOf<ConsistencyWitness<*>>()
         for (incrementalChecker in incrementalConsistencyCheckers) {
             val verdict = incrementalChecker.check(event)
-            if (verdict is Inconsistency) {
-                inconsistency = verdict
-                return verdict
+            when (verdict) {
+                is ConsistencyWitness -> {
+                    witnesses.add(verdict)
+                }
+                is Inconsistency -> {
+                    inconsistency = verdict
+                    return verdict
+                }
+                is ConsistencyUnknown -> {
+                    unknown = verdict
+                }
             }
-            check(verdict is ConsistencyWitness)
-            witnesses.add(verdict)
         }
         // TODO: implement amortized checks for full-consistency checkers?
-        return AggregatedConsistencyWitness(witnesses)
+        return if (unknown == null)
+            ConsistencyWitness(witnesses)
+        else unknown
     }
 
-    override fun check(): ConsistencyVerdict {
+    override fun check(): ConsistencyVerdict<ConsistencyWitnessList> {
         if (inconsistency != null)
             return inconsistency!!
-        val witnesses = mutableListOf<ConsistencyWitness>()
+        var unknown: ConsistencyUnknown? = null
+        val witnesses = mutableListOf<ConsistencyWitness<*>>()
         for (incrementalChecker in incrementalConsistencyCheckers) {
             val verdict = incrementalChecker.check()
-            if (verdict is Inconsistency) {
-                inconsistency = verdict
-                return verdict
+            when (verdict) {
+                is ConsistencyWitness -> {
+                    witnesses.add(verdict)
+                }
+                is Inconsistency -> {
+                    inconsistency = verdict
+                    return verdict
+                }
+                is ConsistencyUnknown -> {
+                    unknown = verdict
+                }
             }
-            check(verdict is ConsistencyWitness)
-            witnesses.add(verdict)
         }
         for (checker in consistencyCheckers) {
             val verdict = checker.check(execution)
-            if (verdict is Inconsistency) {
-                inconsistency = verdict
-                return verdict
+            when (verdict) {
+                is ConsistencyWitness -> {
+                    witnesses.add(verdict)
+                }
+                is Inconsistency -> {
+                    inconsistency = verdict
+                    return verdict
+                }
+                is ConsistencyUnknown -> {
+                    unknown = verdict
+                }
             }
-            check(verdict is ConsistencyWitness)
-            witnesses.add(verdict)
         }
-        return AggregatedConsistencyWitness(witnesses)
+        return if (unknown == null)
+            ConsistencyWitness(witnesses)
+        else unknown
     }
 
     override fun reset(execution: Execution<E>) {
@@ -154,12 +175,10 @@ private class AggregatedIncrementalConsistencyChecker<E : ThreadEvent>(
 }
 
 fun<E : ThreadEvent> aggregateConsistencyCheckers(
-    incrementalConsistencyCheckers: List<IncrementalConsistencyChecker<E>>,
-    consistencyCheckers: List<ConsistencyChecker<E>>,
-) : IncrementalConsistencyChecker<E> =
+    incrementalConsistencyCheckers: List<IncrementalConsistencyChecker<E, *>>,
+    consistencyCheckers: List<ConsistencyChecker<E, *>>,
+) : IncrementalConsistencyChecker<E, ConsistencyWitnessList> =
     AggregatedIncrementalConsistencyChecker(
         incrementalConsistencyCheckers,
         consistencyCheckers,
     )
-
-class AggregatedConsistencyWitness(val witnesses: List<ConsistencyWitness>) : ConsistencyWitness
