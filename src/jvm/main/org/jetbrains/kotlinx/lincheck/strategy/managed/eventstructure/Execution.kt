@@ -47,7 +47,6 @@ interface Execution<out E : ThreadEvent> : Collection<E> {
 
 interface MutableExecution<E: ThreadEvent> : Execution<E> {
     fun add(event: E)
-    fun cut(tid: ThreadID, pos: Int)
 }
 
 val Execution<*>.threadIDs: Set<ThreadID>
@@ -76,12 +75,6 @@ fun<E : ThreadEvent> Execution<E>.nextEvent(event: E): E? =
         require(events[event.threadPosition] == event)
         events.getOrNull(event.threadPosition + 1)
     }
-
-fun<E : ThreadEvent> MutableExecution<E>.cut(event: E) =
-    cut(event.threadId, event.threadPosition)
-
-fun<E : ThreadEvent> MutableExecution<E>.cutNext(event: E) =
-    cut(event.threadId, 1 + event.threadPosition)
 
 fun<E : ThreadEvent> Execution(nThreads: Int): Execution<E> =
     MutableExecution(nThreads)
@@ -119,12 +112,6 @@ private class ExecutionImpl<E : ThreadEvent>(
         threadMap[event.threadId]!!
             .ensure { event.parent == it.lastOrNull() }
             .also { it.add(event) }
-    }
-
-    override fun cut(tid: ThreadID, pos: Int) {
-        val threadEvents = get(tid) ?: return
-        size -= (threadEvents.size - pos)
-        threadEvents.cut(pos)
     }
 
     override fun equals(other: Any?): Boolean =
@@ -275,8 +262,6 @@ fun SynchronizationAlgebra.aggregator() = object : EventAggregator {
 }
 
 fun ActorAggregator(execution: Execution<AtomicThreadEvent>) = object : EventAggregator {
-
-    // val execution = execution
 
     override fun aggregate(events: List<AtomicThreadEvent>): List<List<AtomicThreadEvent>> {
         var pos = 0

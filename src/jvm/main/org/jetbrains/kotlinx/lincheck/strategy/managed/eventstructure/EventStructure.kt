@@ -149,36 +149,26 @@ class EventStructure(
     }
 
     fun abortExploration() {
-        // _currentExecution = playedFrontier.toExecution()
-        // println("played frontier: ${playedFrontier.mapping}")
-        // TODO: bugfix --- cut threads absent in playedFrontier.mapping.values to 0 !!!
-        for (threadId in currentExecution.threadIDs) {
-            val lastEvent = playedFrontier[threadId]
-            if (lastEvent == null) {
-                _currentExecution.cut(threadId, 0)
+        // we abort the current exploration by resetting the current execution to its replayed part;
+        // however, we need to handle blocking request in a special way --- we include their response part
+        // to detect potential blocking response uniqueness violations
+        // (e.g., two lock events unblocked by the same unlock event)
+        for ((tid, event) in playedFrontier.threadMap.entries) {
+            if (event == null)
                 continue
-            }
-            when {
-                // we handle blocking request in a special way --- we include their response part
-                // in order to detect potential blocking response uniqueness violations
-                // (e.g. two lock events unblocked by the same unlock event)
-                // TODO: too complicated, try to simplify
-                lastEvent.label.isRequest && lastEvent.label.isBlocking -> {
-                    val responseEvent = _currentExecution[lastEvent.threadId, lastEvent.threadPosition + 1]
-                        ?: continue
-                    if (responseEvent.dependencies.any { (it as ThreadEvent) !in playedFrontier }) {
-                        _currentExecution.cut(responseEvent)
-                        continue
-                    }
-                    check(responseEvent.label.isResponse)
-                    _currentExecution.cutNext(responseEvent)
-                }
-                // otherwise just cut last replayed event
-                else -> {
-                    _currentExecution.cutNext(lastEvent)
-                }
-            }
+            if (!(event.label.isRequest && event.label.isBlocking))
+                continue
+            val response = currentExecution[tid, event.threadPosition + 1]
+                ?: continue
+            check(response.label.isResponse)
+            // skip the response if it does not depend on any re-played event
+            if (response.dependencies.any { it !in playedFrontier })
+                continue
+            playedFrontier.update(response)
         }
+        _currentExecution = playedFrontier.toMutableExecution()
+        // TODO: make sure to reset the state of consistency checkers
+        //   and other data structures depending on the execution
     }
 
     private fun rollbackToEvent(predicate: (BacktrackableEvent) -> Boolean): BacktrackableEvent? {
