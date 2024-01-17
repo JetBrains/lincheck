@@ -407,46 +407,30 @@ fun Covering<AtomicThreadEvent>.aggregate(remapping: EventRemapping) =
             .distinct()
     }
 
-abstract class ExecutionRelation<E : ThreadEvent>(
-    val execution: Execution<E>,
-    val respectsProgramOrder: Boolean = true,
-) : Relation<E> {
+// TODO: include parent event in covering (?) and remove `External`
+fun<E : ThreadEvent> Execution<E>.buildExternalCovering(relation: Relation<E>) = object : Covering<E> {
 
-    val indexer = execution.buildIndexer()
-
-    fun buildExternalCovering() = object : Covering<E> {
-
-        init {
-            require(respectsProgramOrder)
-        }
-
-        val relation = this@ExecutionRelation
-
-        private val nThreads = 1 + execution.maxThreadID
-
-        val covering: List<List<E>> = execution.indices.map { index ->
-            val event = indexer[index]
-            val clock = execution.computeVectorClock(event, relation)
-            (0 until nThreads).mapNotNull { tid ->
-                if (tid != event.threadId && clock[tid] != -1)
-                    execution[tid, clock[tid]]
-                else null
-            }
-        }
-
-        override fun invoke(x: E): List<E> =
-            covering[indexer.index(x)]
-
+    // TODO: document this precondition!
+    init {
+        // require(respectsProgramOrder)
     }
 
-}
+    private val execution = this@buildExternalCovering
+    private val indexer = execution.buildIndexer()
 
-fun<E : ThreadEvent> executionRelation(
-    execution: Execution<E>,
-    relation: Relation<E>,
-    respectsProgramOrder: Boolean = true,
-) = object : ExecutionRelation<E>(execution, respectsProgramOrder) {
+    private val nThreads = 1 + maxThreadID
 
-    override fun invoke(x: E, y: E): Boolean = relation(x, y)
+    val covering: List<List<E>> = execution.indices.map { index ->
+        val event = indexer[index]
+        val clock = execution.computeVectorClock(event, relation)
+        (0 until nThreads).mapNotNull { tid ->
+            if (tid != event.threadId && clock[tid] != -1)
+                execution[tid, clock[tid]]
+            else null
+        }
+    }
+
+    override fun invoke(x: E): List<E> =
+        covering[indexer.index(x)]
 
 }

@@ -26,6 +26,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.*
 import org.jetbrains.kotlinx.lincheck.utils.*
 import java.lang.reflect.*
 import kotlin.reflect.KClass
@@ -122,30 +123,33 @@ class EventStructureStrategy(
         var blockedInvocations: Int = 0
             private set
 
+        private var lockConsistencyViolationCount: Int = 0
+
         private var atomicityInconsistenciesCount: Int = 0
 
         private var relAcqInconsistenciesCount: Int = 0
 
-        private var seqCstViolationsCount: IntArray =
-            IntArray(SequentialConsistencyCheckPhase.values().size) { 0 }
+        private var seqCstApproximationInconsistencyCount: Int = 0
+
+        private var seqCstCoherenceViolationCount: Int = 0
+
+        private var seqCstReplayViolationCount: Int = 0
+
+        private val sequentialConsistencyViolationsCount: Int
+            get() =
+                seqCstApproximationInconsistencyCount +
+                seqCstCoherenceViolationCount +
+                seqCstReplayViolationCount
 
         val inconsistentInvocations: Int
             get() =
-                atomicityInconsistenciesCount() +
-                releaseAcquireViolationsCount() +
-                sequentialConsistencyViolationsCount()
+                lockConsistencyViolationCount +
+                atomicityInconsistenciesCount +
+                relAcqInconsistenciesCount +
+                seqCstReplayViolationCount
 
         val totalInvocations: Int
             get() = consistentInvocations + inconsistentInvocations + blockedInvocations
-
-        fun atomicityInconsistenciesCount(): Int =
-            atomicityInconsistenciesCount
-
-        fun releaseAcquireViolationsCount(): Int =
-            relAcqInconsistenciesCount
-
-        fun sequentialConsistencyViolationsCount(phase: SequentialConsistencyCheckPhase? = null): Int =
-            phase?.let { seqCstViolationsCount[it.ordinal] } ?: seqCstViolationsCount.sum()
 
         fun update(result: InvocationResult?, inconsistency: Inconsistency?) {
             if (result is SpinLoopBoundInvocationResult) {
@@ -158,12 +162,18 @@ class EventStructureStrategy(
                 return
             }
             when(inconsistency) {
+                is LockConsistencyViolation ->
+                    lockConsistencyViolationCount++
                 is AtomicityViolation ->
                     atomicityInconsistenciesCount++
-                is ReleaseAcquireConsistencyViolation ->
+                is ReleaseAcquireInconsistency ->
                     relAcqInconsistenciesCount++
-                is SequentialConsistencyViolation ->
-                    seqCstViolationsCount[inconsistency.phase.ordinal]++
+                is SequentialConsistencyApproximationInconsistency ->
+                    seqCstApproximationInconsistencyCount++
+                is SequentialConsistencyCoherenceViolation ->
+                    seqCstCoherenceViolationCount++
+                is SequentialConsistencyReplayViolation ->
+                    seqCstReplayViolationCount++
             }
         }
 
@@ -172,13 +182,13 @@ class EventStructureStrategy(
                 #consistent      = $consistentInvocations    
                 #inconsistent    = $inconsistentInvocations
                 #blocked         = $blockedInvocations
+            #Lock   violations   = $lockConsistencyViolationCount                
             #Atom.  violations   = $atomicityInconsistenciesCount
             #RelAcq violations   = $relAcqInconsistenciesCount
-            #SeqCst violations   = ${sequentialConsistencyViolationsCount()}
-                #prelim. phase   = ${sequentialConsistencyViolationsCount(SequentialConsistencyCheckPhase.PRELIMINARY)}
-                #approx. phase   = ${sequentialConsistencyViolationsCount(SequentialConsistencyCheckPhase.APPROXIMATION)}
-                #coher.  phase   = ${sequentialConsistencyViolationsCount(SequentialConsistencyCheckPhase.COHERENCE)}
-                #replay  phase   = ${sequentialConsistencyViolationsCount(SequentialConsistencyCheckPhase.REPLAYING)}
+            #SeqCst violations   = $sequentialConsistencyViolationsCount
+                #approx. phase   = $seqCstApproximationInconsistencyCount
+                #coher.  phase   = $seqCstCoherenceViolationCount
+                #replay  phase   = $seqCstReplayViolationCount
         """.trimIndent()
 
     }

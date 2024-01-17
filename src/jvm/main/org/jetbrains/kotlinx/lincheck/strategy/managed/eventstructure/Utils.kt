@@ -20,6 +20,8 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
+import org.jetbrains.kotlinx.lincheck.utils.ensureNull
+
 
 fun <K, V> MutableMap<K, V>.update(key: K, default: V, transform: (V) -> V) {
     // TODO: could it be done with a single lookup in a map?
@@ -34,3 +36,20 @@ fun <K, V> MutableMap<K, V>.mergeReduce(other: Map<K, V>, reduce: (V, V) -> V) {
 
 inline fun<T> T.runIf(boolean: Boolean, block: T.() -> T): T =
     if (boolean) block() else this
+
+fun buildIndexer(events: MutableList<AtomicThreadEvent>) = object : Indexer<AtomicThreadEvent> {
+
+    // TODO: perhaps we can maintain event numbers directly in events themself
+    //   and update them during replay?
+    val index: Map<AtomicThreadEvent, Int> =
+        mutableMapOf<AtomicThreadEvent, Int>().apply {
+            events.forEachIndexed { i, event ->
+                put(event, i).ensureNull()
+            }
+        }
+
+    override fun get(i: Int): AtomicThreadEvent = events[i]
+
+    override fun index(x: AtomicThreadEvent): Int = index[x]!!
+
+}

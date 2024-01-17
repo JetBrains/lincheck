@@ -1,7 +1,7 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2022 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2024 JetBrains s.r.o.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -18,19 +18,24 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
+package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency
 
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.kotlinx.lincheck.utils.*
 
-data class AtomicityViolation(val write1: Event, val write2: Event): Inconsistency()
+interface AtomicityCheckVerdict : ConsistencyVerdict
 
-class AtomicityChecker : IncrementalConsistencyChecker<AtomicThreadEvent> {
+// TODO: what should we return as a witness?
+class AtomicityWitness() : AtomicityCheckVerdict, ConsistencyWitness
+class AtomicityViolation(val write1: Event, val write2: Event) : AtomicityCheckVerdict, Inconsistency
+
+class AtomicityConsistencyChecker : IncrementalConsistencyChecker<AtomicThreadEvent> {
 
     private var execution: Execution<AtomicThreadEvent> = executionOf()
 
-    override fun check(event: AtomicThreadEvent): Inconsistency? {
+    override fun check(event: AtomicThreadEvent): AtomicityCheckVerdict {
         val writeLabel = event.label.refine<WriteAccessLabel> { isExclusive }
-            ?: return null
+            ?: return AtomicityWitness()
         val location = writeLabel.location
         val readFrom = event.exclusiveReadPart.readsFrom
         val other = execution.find { other ->
@@ -38,11 +43,11 @@ class AtomicityChecker : IncrementalConsistencyChecker<AtomicThreadEvent> {
                 isExclusive && this.location == location && other.exclusiveReadPart.readsFrom == readFrom
             }
         }
-        return if (other != null) AtomicityViolation(other, event) else null
+        return if (other != null) AtomicityViolation(other, event) else AtomicityWitness()
     }
 
-    override fun check(): Inconsistency? {
-        return null
+    override fun check(): AtomicityCheckVerdict {
+        return AtomicityWitness()
     }
 
     override fun reset(execution: Execution<AtomicThreadEvent>) {

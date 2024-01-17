@@ -22,7 +22,7 @@
 package org.jetbrains.kotlinx.lincheck.runner
 
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.Inconsistency
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.Inconsistency
 
 /**
  * Represents results for invocations, see [Runner.run].

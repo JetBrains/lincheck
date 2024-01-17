@@ -1,7 +1,7 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2022 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2024 JetBrains s.r.o.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -18,22 +18,48 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
+package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency
 
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.utils.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
+import org.jetbrains.kotlinx.lincheck.utils.*
+import kotlin.collections.ArrayDeque
+import kotlin.collections.Iterable
+import kotlin.collections.List
+import kotlin.collections.MutableList
+import kotlin.collections.MutableMap
+import kotlin.collections.all
+import kotlin.collections.arrayListOf
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.filter
+import kotlin.collections.first
+import kotlin.collections.flatMap
+import kotlin.collections.forEach
+import kotlin.collections.get
+import kotlin.collections.isNotEmpty
+import kotlin.collections.iterator
+import kotlin.collections.lastOrNull
+import kotlin.collections.listOf
+import kotlin.collections.mutableListOf
+import kotlin.collections.mutableMapOf
+import kotlin.collections.mutableSetOf
+import kotlin.collections.plus
+import kotlin.collections.set
+import kotlin.collections.toMutableMap
 
-// TODO: what information can we store about the reason of violation?
-class ReleaseAcquireConsistencyViolation: Inconsistency()
+interface SequentialConsistencyVerdict : ConsistencyVerdict
 
-// TODO: what information can we store about the reason of violation?
-data class SequentialConsistencyViolation(
-    val phase: SequentialConsistencyCheckPhase
-) : Inconsistency()
+interface SequentialConsistencyViolation : SequentialConsistencyVerdict, Inconsistency
+
+class SequentialConsistencyWitness(
+    val executionOrder: List<AtomicThreadEvent>
+) : SequentialConsistencyVerdict, ConsistencyWitness
+
+class SequentialConsistencyIdleIncrementalCheck : SequentialConsistencyVerdict, ConsistencyWitness
 
 enum class SequentialConsistencyCheckPhase {
-    PRELIMINARY, APPROXIMATION, COHERENCE, REPLAYING
+    APPROXIMATION, COHERENCE, REPLAYING
 }
 
 class SequentialConsistencyChecker(
@@ -42,37 +68,43 @@ class SequentialConsistencyChecker(
     val computeCoherenceOrdering: Boolean = true,
 ) : ConsistencyChecker<AtomicThreadEvent> {
 
-    var executionOrder: List<AtomicThreadEvent> = listOf()
-        private set
+    private val releaseAcquireChecker : ReleaseAcquireConsistencyChecker? =
+        if (checkReleaseAcquireConsistency) ReleaseAcquireConsistencyChecker() else null
 
-    override fun check(execution: Execution<AtomicThreadEvent>): Inconsistency? {
-        executionOrder = listOf()
-        // calculate writes-before relation if required
-        val wbRelation = if (checkReleaseAcquireConsistency) {
-            WritesBeforeRelation(execution).apply {
-                saturate()?.let { return it }
+    override fun check(execution: Execution<AtomicThreadEvent>): SequentialConsistencyVerdict {
+        // we will gradually approximate the total sequential execution order of events
+        // by a partial order, starting with the partial causality order
+        var executionOrderApproximation : Relation<AtomicThreadEvent> = causalityOrder.lessThan
+        // first try to check release/acquire consistency (it is cheaper) ---
+        // release/acquire inconsistency will also imply violation of sequential consistency,
+        if (releaseAcquireChecker != null) {
+            when (val verdict = releaseAcquireChecker.check(execution)) {
+                is ReleaseAcquireInconsistency -> return verdict
+                is ReleaseAcquireConsistencyWitness -> {
+                    // if execution is release/acquire consistent,
+                    // the writes-before relation can be used
+                    // to refine the execution ordering approximation
+                    executionOrderApproximation = executionOrderApproximation union verdict.writesBeforeRelation
+                    // TODO: combine SC approximation phase with coherence phase
+                    if (computeCoherenceOrdering) {
+                        return checkByCoherenceOrdering(execution, verdict.writesBeforeRelation)
+                    }
+                }
             }
-        } else null
-        // TODO: combine SC approximation phase with coherence phase
-        if (computeCoherenceOrdering) {
-            check(wbRelation != null)
-            return checkByCoherenceOrdering(execution, wbRelation)
         }
-        // calculate additional ordering constraints
-        val orderingRelation = executionRelation(execution, relation =
-            // take happens-before as a base relation
-            causalityOrder.lessThan
-            // take union with writes-before relation
-            union (wbRelation ?: Relation.empty())
-        )
-        // calculate approximation of sequential consistency order if required
-        val scApproximationRelation = if (approximateSequentialConsistency) {
-            SequentialConsistencyRelation(execution, orderingRelation).apply {
-                saturate()?.let { return it }
+        // TODO: combine SC approximation phase with coherence phase (and remove this check)
+        check(!computeCoherenceOrdering)
+        if (approximateSequentialConsistency) {
+            // TODO: embed the execution order approximation relation into the execution instance,
+            //   so that this (and following stages) can be implemented as separate consistency check classes
+            val scApprox = ApproximateSequentialConsistencyRelation(execution, executionOrderApproximation)
+            if (scApprox.inconsistent) {
+                return SequentialConsistencyApproximationInconsistency()
             }
-        } else orderingRelation
+            executionOrderApproximation = scApprox
+        }
         // get dependency covering to guide the search
-        val covering = scApproximationRelation.buildExternalCovering()
+        val covering = execution.buildExternalCovering(executionOrderApproximation)
         // aggregate atomic events before replaying
         val (aggregated, remapping) = execution.aggregate(ThreadAggregationAlgebra.aggregator())
         // check consistency by trying to replay execution using sequentially consistent abstract machine
@@ -82,7 +114,7 @@ class SequentialConsistencyChecker(
     private fun checkByReplaying(
         execution: Execution<HyperThreadEvent>,
         covering: Covering<HyperThreadEvent>
-    ): Inconsistency? {
+    ): SequentialConsistencyVerdict {
         // TODO: this is just a DFS search.
         //  In fact, we can generalize this algorithm to
         //  two arbitrary labelled transition systems by taking their product LTS
@@ -94,11 +126,10 @@ class SequentialConsistencyChecker(
         with(context) {
             while (stack.isNotEmpty()) {
                 val state = stack.removeLast()
-                // TODO: maybe we should return more information than just success
-                //  (e.g. path leading to terminal state)?
                 if (state.isTerminal) {
-                    executionOrder = state.history.flatMap { it.events }
-                    return null
+                    return SequentialConsistencyWitness(
+                        executionOrder = state.history.flatMap { it.events }
+                    )
                 }
                 state.transitions().forEach {
                     val unvisited = visited.add(it)
@@ -107,31 +138,34 @@ class SequentialConsistencyChecker(
                     }
                 }
             }
-            return SequentialConsistencyViolation(
-                phase = SequentialConsistencyCheckPhase.REPLAYING
-            )
+            return SequentialConsistencyReplayViolation()
         }
     }
 
     private fun checkByCoherenceOrdering(
         execution: Execution<AtomicThreadEvent>,
         wbRelation: WritesBeforeRelation,
-    ): Inconsistency? {
+    ): SequentialConsistencyVerdict {
         wbRelation.generateCoherenceTotalOrderings().forEach { coherence ->
             val extendedCoherence = ExtendedCoherenceRelation.fromCoherenceOrderings(execution, coherence)
             val scOrder = extendedCoherence.computeSequentialConsistencyOrder()
             if (scOrder != null) {
-                executionOrder = topologicalSorting(scOrder.asGraph())
+                val executionOrder = topologicalSorting(scOrder.asGraph())
                 val replayer = SequentialConsistencyReplayer(1 + execution.maxThreadID)
                 check(replayer.replay(executionOrder) != null)
-                return null
+                return SequentialConsistencyWitness(executionOrder)
             }
         }
-        return SequentialConsistencyViolation(
-            phase = SequentialConsistencyCheckPhase.COHERENCE
-        )
+        return SequentialConsistencyCoherenceViolation()
     }
 
+}
+
+class SequentialConsistencyCoherenceViolation : SequentialConsistencyViolation {
+    override fun toString(): String {
+        // TODO: what information should we display to help identify the cause of inconsistency?
+        return "Sequential consistency coherence violation detected"
+    }
 }
 
 class IncrementalSequentialConsistencyChecker(
@@ -148,48 +182,52 @@ class IncrementalSequentialConsistencyChecker(
 
     private var executionOrderEnabled = true
 
+    private val lockConsistencyChecker = LockConsistencyChecker()
+
     private val sequentialConsistencyChecker = SequentialConsistencyChecker(
         checkReleaseAcquireConsistency,
         approximateSequentialConsistency,
     )
 
-    override fun check(): Inconsistency? {
+    override fun check(): SequentialConsistencyVerdict {
         // TODO: expensive check???
         // check(execution.enumerationOrderSortedList() == executionOrder.sorted())
 
-        // do basic preliminary checks
-        checkLocks(execution)?.let { return it }
+        // check locks consistency
+        when (val verdict = lockConsistencyChecker.check(execution)) {
+            is LockConsistencyViolation -> return verdict
+        }
         // first try to replay according to execution order
         if (checkByExecutionOrderReplaying()) {
-            return null
+            return SequentialConsistencyWitness(executionOrder)
         }
-        val inconsistency = sequentialConsistencyChecker.check(execution)
-        if (inconsistency == null) {
-            check(sequentialConsistencyChecker.executionOrder.isNotEmpty())
-            // TODO: invent a nicer way to handle blocked dangling requests
-            val (events, blockedRequests) = sequentialConsistencyChecker.executionOrder.partition {
-                !execution.isBlockedDanglingRequest(it)
-            }
-            _executionOrder.apply {
-                clear()
-                addAll(events)
-                addAll(blockedRequests)
-            }
-            executionOrderEnabled = true
+        val verdict = sequentialConsistencyChecker.check(execution)
+        if (verdict is SequentialConsistencyViolation)
+            return verdict
+        check(verdict is SequentialConsistencyWitness)
+        // TODO: invent a nicer way to handle blocked dangling requests
+        val (events, blockedRequests) = verdict.executionOrder.partition {
+            !execution.isBlockedDanglingRequest(it)
         }
-        return inconsistency
+        _executionOrder.apply {
+            clear()
+            addAll(events)
+            addAll(blockedRequests)
+        }
+        executionOrderEnabled = true
+        return SequentialConsistencyWitness(executionOrder)
     }
 
-    override fun check(event: AtomicThreadEvent): Inconsistency? {
+    override fun check(event: AtomicThreadEvent): SequentialConsistencyVerdict {
         if (!executionOrderEnabled)
-            return null
-        if (event.extendsExecutionOrder()) {
-            _executionOrder.add(event)
-        } else {
+            return SequentialConsistencyIdleIncrementalCheck()
+        if (!event.extendsExecutionOrder()) {
             _executionOrder.clear()
             executionOrderEnabled = false
+            return SequentialConsistencyIdleIncrementalCheck()
         }
-        return null
+        _executionOrder.add(event)
+        return SequentialConsistencyWitness(executionOrder)
     }
 
     override fun reset(execution: Execution<AtomicThreadEvent>) {
@@ -208,6 +246,7 @@ class IncrementalSequentialConsistencyChecker(
         return (replayer.replay(executionOrder) != null)
     }
 
+    // TODO: can we get rid of this (by ensuring we always replay atomic list of events atomically)?
     private fun AtomicThreadEvent.extendsExecutionOrder(): Boolean {
         // TODO: this check should be generalized ---
         //   it should be derivable from the aggregation algebra
@@ -223,33 +262,12 @@ class IncrementalSequentialConsistencyChecker(
         }
         return true
     }
+}
 
-    // TODO: move to a separate consistency checker!
-    private fun checkLocks(execution: Execution<AtomicThreadEvent>): Inconsistency? {
-        // maps unlock (or notify) event to its single matching lock (or wait) event;
-        // if lock synchronizes-from initialization event,
-        // then instead maps lock object itself to its first lock event
-        // TODO: generalize and refactor!
-        val mapping = mutableMapOf<Any, Event>()
-        for (event in execution) {
-            (event as AbstractAtomicThreadEvent)
-            if (event.label !is MutexLabel || !event.label.isResponse)
-                continue
-            if (!(event.label is LockLabel || event.label is WaitLabel))
-                continue
-            if (event.label is WaitLabel && (event.notifiedBy.label as NotifyLabel).isBroadcast)
-                continue
-            val key: Any = when (event.syncFrom.label) {
-                is UnlockLabel, is NotifyLabel -> event.syncFrom
-                else -> (event.label as MutexLabel).mutex
-            }
-            if (mapping.put(key, event) != null) {
-                return SequentialConsistencyViolation(
-                    phase = SequentialConsistencyCheckPhase.PRELIMINARY
-                )
-            }
-        }
-        return null
+class SequentialConsistencyReplayViolation : SequentialConsistencyViolation {
+    override fun toString(): String {
+        // TODO: what information should we display to help identify the cause of inconsistency?
+        return "Sequential consistency replay violation detected"
     }
 }
 
@@ -429,25 +447,40 @@ private class Context(val execution: Execution<HyperThreadEvent>, val covering: 
 
 }
 
-private class SequentialConsistencyRelation(
-    execution: Execution<AtomicThreadEvent>,
+class SequentialConsistencyApproximationInconsistency : SequentialConsistencyViolation {
+    override fun toString(): String {
+        // TODO: what information should we display to help identify the cause of inconsistency?
+        return "Approximate sequential inconsistency detected"
+    }
+}
+
+// TODO: rename into "saturated happens-before" relation?
+private class ApproximateSequentialConsistencyRelation(
+    val execution: Execution<AtomicThreadEvent>,
     initialApproximation: Relation<AtomicThreadEvent>
-): ExecutionRelation<AtomicThreadEvent>(execution) {
+) : Relation<AtomicThreadEvent> {
+
+    private val indexer = execution.buildIndexer()
 
     val relation = RelationMatrix(execution, indexer, initialApproximation)
+
+    var inconsistent = false
+        private set
+
+    init {
+        saturate()
+    }
 
     override fun invoke(x: AtomicThreadEvent, y: AtomicThreadEvent): Boolean =
         relation(x, y)
 
-    fun saturate(): SequentialConsistencyViolation? {
+    private fun saturate() {
         do {
             val changed = coherenceClosure() && relation.transitiveClosure()
-            if (!relation.isIrreflexive())
-                return SequentialConsistencyViolation(
-                    phase = SequentialConsistencyCheckPhase.APPROXIMATION
-                )
-        } while (changed)
-        return null
+            if (!relation.isIrreflexive()) {
+                inconsistent = true
+            }
+        } while (changed && !inconsistent)
     }
 
     private fun coherenceClosure(): Boolean {
@@ -476,211 +509,13 @@ private class SequentialConsistencyRelation(
 
 }
 
-private class WritesBeforeRelation(
-    execution: Execution<AtomicThreadEvent>
-): ExecutionRelation<AtomicThreadEvent>(execution) {
-
-    private val readsMap: MutableMap<MemoryLocation, ArrayList<AtomicThreadEvent>> = mutableMapOf()
-
-    private val writesMap: MutableMap<MemoryLocation, ArrayList<AtomicThreadEvent>> = mutableMapOf()
-
-    private val relations: MutableMap<MemoryLocation, RelationMatrix<AtomicThreadEvent>> = mutableMapOf()
-
-    private val rmwChains:  ReadModifyWriteChainsMutableMap = mutableMapOf()
-
-    private var inconsistent = false
-
-    init {
-        initializeWritesBeforeOrder()
-        initializeReadModifyWriteChains()
-    }
-
-    private fun initializeWritesBeforeOrder() {
-        var initEvent: AtomicThreadEvent? = null
-        val allocEvents = mutableListOf<AtomicThreadEvent>()
-        // TODO: refactor once per-kind indexing of events will be implemented
-        for (event in execution) {
-            val label = event.label
-            if (label is InitializationLabel)
-                initEvent = event
-            if (label is ObjectAllocationLabel)
-                allocEvents.add(event)
-            if (label !is MemoryAccessLabel)
-                continue
-            if (label.isRead && label.isResponse) {
-                readsMap.computeIfAbsent(label.location) { arrayListOf() }.apply {
-                    add(event)
-                }
-            }
-            if (label.isWrite) {
-                writesMap.computeIfAbsent(label.location) { arrayListOf() }.apply {
-                    add(event)
-                }
-            }
-        }
-        for ((memId, writes) in writesMap) {
-            if (initEvent!!.label.isWriteAccess(memId))
-                writes.add(initEvent)
-            writes.addAll(allocEvents.filter { it.label.isWriteAccess(memId) })
-            relations[memId] = RelationMatrix(writes, buildIndexer(writes)) { x, y ->
-                causalityOrder.lessThan(x, y)
-            }
-        }
-    }
-
-    private fun initializeReadModifyWriteChains() {
-        val chainsMap : ReadModifyWriteChainsMutableMap = mutableMapOf()
-        for (event in execution.enumerationOrderSortedList()) {
-            val label = event.label
-            if (label !is WriteAccessLabel || !label.isExclusive)
-                continue
-            val readFrom = event.exclusiveReadPart.readsFrom
-            val chain = chainsMap.computeIfAbsent(label.location to readFrom) {
-                mutableListOf(readFrom)
-            }
-            // TODO: this should be detected earlier
-            // check(readFrom == chain.last())
-            if (readFrom != chain.last()) {
-                inconsistent = true
-                return
-            }
-            chain.add(event)
-            chainsMap.put((label.location to event), chain).ensureNull()
-        }
-        for (chain in chainsMap.values) {
-            check(chain.size >= 2)
-            val location = (chain.last().label as WriteAccessLabel).location
-            val relation = relations[location]!!
-            for (i in 0 until chain.size - 1) {
-                relation[chain[i], chain[i + 1]] = true
-            }
-            relation.transitiveClosure()
-        }
-        rmwChains.putAll(chainsMap)
-    }
-
-    private fun<T> RelationMatrix<T>.updateIrrefl(x: T, y: T): Boolean {
-        return if ((x != y) && !this[x, y]) {
-            this[x, y] = true
-            true
-        } else false
-    }
-
-    fun saturate(): ReleaseAcquireConsistencyViolation? {
-        if (inconsistent || !isIrreflexive()) {
-            return ReleaseAcquireConsistencyViolation()
-        }
-        for ((memId, relation) in relations) {
-            val reads = readsMap[memId] ?: continue
-            val writes = writesMap[memId] ?: continue
-            var changed = false
-            readLoop@ for (read in reads) {
-                val readFrom = read.readsFrom
-                val readFromChain = rmwChains[readFrom]
-                writeLoop@ for (write in writes) {
-                    val writeChain = rmwChains[write]
-                    if (causalityOrder.lessThan(write, read)) {
-                        relation.updateIrrefl(write, readFrom).also {
-                            changed = changed || it
-                        }
-                        if ((writeChain != null || readFromChain != null) &&
-                            (writeChain !== readFromChain)) {
-                            relation.updateIrrefl(writeChain?.last() ?: write, readFromChain?.first() ?: readFrom).also {
-                                changed = changed || it
-                            }
-                        }
-                    }
-                }
-            }
-            if (changed) {
-                relation.transitiveClosure()
-                if (!relation.isIrreflexive())
-                    return ReleaseAcquireConsistencyViolation()
-            }
-        }
-        return null
-    }
-
-    override fun invoke(x: AtomicThreadEvent, y: AtomicThreadEvent): Boolean {
-        // TODO: make this code pattern look nicer (it appears several times in codebase)
-        var xloc = (x.label as? WriteAccessLabel)?.location
-        var yloc = (y.label as? WriteAccessLabel)?.location
-        if (xloc == null && yloc != null && x.label.isWriteAccess(yloc))
-            xloc = yloc
-        if (xloc != null && yloc == null && y.label.isWriteAccess(xloc))
-            yloc = xloc
-        return if (xloc != null && xloc == yloc) {
-            relations[xloc]?.get(x, y) ?: false
-        } else false
-    }
-
-    fun isIrreflexive(): Boolean =
-        relations.all { (_, relation) -> relation.isIrreflexive() }
-
-    fun generateCoherenceTotalOrderings(): Sequence<List<List<AtomicThreadEvent>>> {
-        val coherenceOrderings = relations.mapNotNull { (_, relation) ->
-            // TODO: remove this check!
-            if (relation.nodes.size <= 1)
-                return@mapNotNull null
-            topologicalSortings(relation.asGraph()).filter {
-                // filter-out coherence orderings violating atomicity
-                respectsAtomicity(it)
-            }
-        }
-        return coherenceOrderings.cartesianProduct()
-    }
-
-    fun getReadModifyWriteChains(location: MemoryLocation): List<List<AtomicThreadEvent>> {
-        return rmwChains.entries.asSequence()
-            .mapNotNull { (key, chain) ->
-                if (key.first == location) chain else null
-            }
-            .distinct()
-            .toMutableList()
-            .apply {
-                sortBy { chain ->
-                    chain.first()
-                }
-            }
-    }
-
-    private fun respectsAtomicity(coherence: List<AtomicThreadEvent>): Boolean {
-        check(coherence.isNotEmpty())
-        val location = coherence
-            .first { it.label is WriteAccessLabel }
-            .let { (it.label as WriteAccessLabel).location }
-        // atomicity violation occurs when a write event is put in the middle of some rmw chain
-        val chains = getReadModifyWriteChains(location)
-        if (chains.isEmpty())
-            return true
-        var i = 0
-        var pos = 0
-        while (pos + chains[i].size <= coherence.size) {
-            if (coherence[pos] == chains[i].first() &&
-                coherence.subList(pos, pos + chains[i].size) == chains[i]) {
-                pos += chains[i].size
-                if (++i == chains.size)
-                    return true
-            } else {
-                pos++
-            }
-        }
-        return false
-    }
-}
-
-// We use a map from pairs (location, event), because some events
-// (e.g. ObjectAllocation events) can encompass several memory locations simultaneously.
-private typealias ReadModifyWriteChainsMutableMap =
-    MutableMap<Pair<MemoryLocation, AtomicThreadEvent>, MutableList<AtomicThreadEvent>>
-
 private class ExtendedCoherenceRelation(
-    execution: Execution<AtomicThreadEvent>,
-): ExecutionRelation<AtomicThreadEvent>(execution) {
+    val execution: Execution<AtomicThreadEvent>,
+): Relation<AtomicThreadEvent> {
+
+    private val indexer = execution.buildIndexer()
 
     private val relations: MutableMap<MemoryLocation, RelationMatrix<AtomicThreadEvent>> = mutableMapOf()
-
-    private var inconsistent = false
 
     init {
         // TODO: check that reads-from is contained inside the initial approx.
@@ -843,21 +678,4 @@ private class ExtendedCoherenceRelation(
             }
         }
     }
-}
-
-private fun buildIndexer(events: MutableList<AtomicThreadEvent>) = object : Indexer<AtomicThreadEvent> {
-
-    // TODO: perhaps we can maintain event numbers directly in events themself
-    //   and update them during replay?
-    val index: Map<AtomicThreadEvent, Int> =
-        mutableMapOf<AtomicThreadEvent, Int>().apply {
-            events.forEachIndexed { i, event ->
-                put(event, i).ensureNull()
-            }
-        }
-
-    override fun get(i: Int): AtomicThreadEvent = events[i]
-
-    override fun index(x: AtomicThreadEvent): Int = index[x]!!
-
 }
