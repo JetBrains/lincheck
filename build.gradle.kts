@@ -96,6 +96,7 @@ tasks {
     }
     withType<Test> {
         maxParallelForks = 1
+        systemProperty("INTERNAL_TESTS", "true")
     }
 
     withType<Jar> {

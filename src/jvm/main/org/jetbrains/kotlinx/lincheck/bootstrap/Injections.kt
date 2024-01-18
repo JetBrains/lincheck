@@ -251,6 +251,179 @@ internal object Injections {
         sharedEventsTracker.beforeMethodCall(owner, className, methodName, codeLocation, params)
     }
 
+    /**
+     * Due to some strange reason, we can't return our class from here, so we use int-s to encode guarantee types.
+     * @return 0 -> None, 1 -> IGNORE, 2 -> TREAT_AS_ATOMIC
+     */
+    @JvmStatic
+    fun methodGuaranteeType(owner: Any?, className: String, methodName: String): Int {
+        return sharedEventsTracker.methodGuaranteeType(owner, className, methodName)
+    }
+
+    @JvmStatic
+    fun beforeAtomicMethodCall0(ownerName: String, methodName: String, codeLocation: Int) {
+        sharedEventsTracker.beforeAtomicMethodCall0(ownerName, methodName, codeLocation)
+    }
+
+    @JvmStatic
+    fun beforeAtomicMethodCall1(ownerName: String, methodName: String, codeLocation: Int, param1: Any?) {
+        sharedEventsTracker.beforeAtomicMethodCall1(ownerName, methodName, codeLocation, param1)
+    }
+
+    @JvmStatic
+    fun beforeAtomicMethodCall2(
+        ownerName: String,
+        methodName: String,
+        codeLocation: Int,
+        param1: Any?,
+        param2: Any?
+    ) {
+        sharedEventsTracker.beforeAtomicMethodCall2(ownerName, methodName, codeLocation, param1, param2)
+    }
+
+    @JvmStatic
+    fun beforeAtomicMethodCall3(
+        ownerName: String,
+        methodName: String,
+        codeLocation: Int,
+        param1: Any?,
+        param2: Any?,
+        param3: Any?
+    ) {
+        sharedEventsTracker.beforeAtomicMethodCall3(ownerName, methodName, codeLocation, param1, param2, param3)
+    }
+
+    @JvmStatic
+    fun beforeAtomicMethodCall4(
+        ownerName: String,
+        methodName: String,
+        codeLocation: Int,
+        param1: Any?,
+        param2: Any?,
+        param3: Any?,
+        param4: Any?
+    ) {
+        sharedEventsTracker.beforeAtomicMethodCall4(
+            ownerName,
+            methodName,
+            codeLocation,
+            param1,
+            param2,
+            param3,
+            param4
+        )
+    }
+
+    @JvmStatic
+    fun beforeAtomicMethodCall5(
+        ownerName: String,
+        methodName: String,
+        codeLocation: Int,
+        param1: Any?,
+        param2: Any?,
+        param3: Any?,
+        param4: Any?,
+        param5: Any?
+    ) {
+        sharedEventsTracker.beforeAtomicMethodCall5(
+            ownerName,
+            methodName,
+            codeLocation,
+            param1,
+            param2,
+            param3,
+            param4,
+            param5
+        )
+    }
+
+    @JvmStatic
+    fun beforeAtomicMethodCall(ownerName: String, methodName: String, codeLocation: Int, params: Array<Any?>) {
+        sharedEventsTracker.beforeAtomicMethodCall(ownerName, methodName, codeLocation, params)
+    }
+
+
+    /* Atomic Updater methods */
+    @JvmStatic
+    fun beforeAtomicUpdaterMethodCall0(owner: Any?, methodName: String, codeLocation: Int) {
+        sharedEventsTracker.beforeAtomicUpdaterMethodCall0(owner!!, methodName, codeLocation)
+    }
+
+    @JvmStatic
+    fun beforeAtomicUpdaterMethodCall1(owner: Any?, methodName: String, codeLocation: Int, param1: Any?) {
+        sharedEventsTracker.beforeAtomicUpdaterMethodCall1(owner!!, methodName, codeLocation, param1)
+    }
+
+    @JvmStatic
+    fun beforeAtomicUpdaterMethodCall2(
+        owner: Any?,
+        methodName: String,
+        codeLocation: Int,
+        param1: Any?,
+        param2: Any?
+    ) {
+        sharedEventsTracker.beforeAtomicUpdaterMethodCall2(owner!!, methodName, codeLocation, param1, param2)
+    }
+
+    @JvmStatic
+    fun beforeAtomicUpdaterMethodCall3(
+        owner: Any?,
+        methodName: String,
+        codeLocation: Int,
+        param1: Any?,
+        param2: Any?,
+        param3: Any?
+    ) {
+        sharedEventsTracker.beforeAtomicUpdaterMethodCall3(owner!!, methodName, codeLocation, param1, param2, param3)
+    }
+
+    @JvmStatic
+    fun beforeAtomicUpdaterMethodCall4(
+        owner: Any?,
+        methodName: String,
+        codeLocation: Int,
+        param1: Any?,
+        param2: Any?,
+        param3: Any?,
+        param4: Any?
+    ) {
+        sharedEventsTracker.beforeAtomicUpdaterMethodCall4(owner!!,
+            methodName,
+            codeLocation,
+            param1,
+            param2,
+            param3,
+            param4
+        )
+    }
+
+    @JvmStatic
+    fun beforeAtomicUpdaterMethodCall5(
+        owner: Any?,
+        methodName: String,
+        codeLocation: Int,
+        param1: Any?,
+        param2: Any?,
+        param3: Any?,
+        param4: Any?,
+        param5: Any?
+    ) {
+        sharedEventsTracker.beforeAtomicUpdaterMethodCall5(owner!!,
+            methodName,
+            codeLocation,
+            param1,
+            param2,
+            param3,
+            param4,
+            param5
+        )
+    }
+
+    @JvmStatic
+    fun beforeAtomicUpdaterMethodCall(owner: Any?, methodName: String, codeLocation: Int, params: Array<Any?>) {
+        sharedEventsTracker.beforeAtomicUpdaterMethodCall(owner!!, methodName, codeLocation, params)
+    }
+
     @JvmStatic
     fun onMethodCallFinishedSuccessfully(result: Any?) {
         sharedEventsTracker.onMethodCallFinishedSuccessfully(result)

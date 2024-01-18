@@ -101,7 +101,11 @@ internal open class ParallelThreadsRunner(
     protected inner class Completion(private val iThread: Int, private val actorId: Int) : Continuation<Any?> {
         val resWithCont = SuspensionPointResultWithContinuation(null)
 
-        override val context = ParallelThreadRunnerInterceptor(resWithCont) + StoreExceptionHandler() + Job()
+        override var context = ParallelThreadRunnerInterceptor(resWithCont) + StoreExceptionHandler() + Job()
+
+        fun reset() {
+            context = ParallelThreadRunnerInterceptor(resWithCont) + StoreExceptionHandler() + Job()
+        }
 
         override fun resumeWith(result: kotlin.Result<Any?>) = runInIgnoredSection {
             // decrement completed or suspended threads only if the operation was not cancelled and
@@ -147,7 +151,12 @@ internal open class ParallelThreadsRunner(
     private fun reset() = runInIgnoredSection {
         suspensionPointResults.forEach { it.fill(NoResult) }
         completedOrSuspendedThreads.set(0)
-        completions.forEach { it.forEach { it.resWithCont.set(null) } }
+        completions.forEach {
+            it.forEach { completion ->
+                completion.resWithCont.set(null)
+                completion.reset()
+            }
+        }
         completionStatuses = List(scenario.nThreads) { t ->
             AtomicReferenceArray<CompletionStatus>(scenario.parallelExecution[t].size)
         }

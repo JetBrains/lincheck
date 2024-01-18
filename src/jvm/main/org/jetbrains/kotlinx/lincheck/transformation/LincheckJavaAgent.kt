@@ -24,6 +24,9 @@ import java.lang.module.*
 import java.security.*
 
 internal inline fun <R> withLincheckJavaAgent(transformationMode: TransformationMode, block: () -> R): R {
+    Class.forName("kotlin.jvm.internal.ArrayIteratorKt")
+    Class.forName("kotlin.jvm.internal.ArrayIterator")
+
     LincheckClassFileTransformer.install(transformationMode)
     return try {
         block()
@@ -50,9 +53,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         this.transformationMode = transformationMode
         TransformationInjectionsInitializer.initialize()
         instrumentation.addTransformer(this, true)
-        val loadedClasses = instrumentation.allLoadedClasses
-                .filter(instrumentation::isModifiableClass)
-                .filter { shouldTransform(it.name) }
+        val loadedClasses = loadedForInstrumentationClasses()
         try {
             instrumentation.retransformClasses(*loadedClasses.toTypedArray())
         } catch (t: Throwable) {
@@ -67,7 +68,31 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         }
     }
 
+    private fun loadedForInstrumentationClasses(): List<Class<*>> = instrumentation.allLoadedClasses
+        .filter(instrumentation::isModifiableClass)
+        .filter { shouldTransform(it.name) }
+
     internal fun uninstall() {
+        if (System.getProperty("INTERNAL_TESTS") == "true") {
+            val transformedClassesNames = when (this.transformationMode) {
+                STRESS -> transformedClassesStress
+                MODEL_CHECKING -> transformedClassesModelChecking
+            }.keys
+                .map { if (it is Pair<*, *>) it.second.toString() else it.toString() }
+                .map { it.replace("/", ".") }
+                .toHashSet()
+
+            val loadedClasses = instrumentation.allLoadedClasses
+                .filter(instrumentation::isModifiableClass)
+                .filter { shouldTransform(it.name) }
+
+            val untransformedClasses = loadedClasses.filter { it.name !in transformedClassesNames }
+                .filter { !it.name.startsWith("jdk.proxy") }
+
+            check(untransformedClasses.isEmpty()) {
+                "The following classes are not transformed: ${untransformedClasses.joinToString(",")}."
+            }
+        }
         instrumentation.removeTransformer(this)
         val classDefinitions = instrumentation.allLoadedClasses.mapNotNull { clazz ->
             val bytes = nonTransformedClasses[classKey(clazz.classLoader, clazz.name)]
@@ -93,7 +118,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
                 return transformedClasses.computeIfAbsent(classKey(loader, className)) {
                     nonTransformedClasses[classKey(loader, className)] = classfileBuffer
                     val reader = ClassReader(classfileBuffer)
-                    val writer = ClassWriter(reader, ClassWriter.COMPUTE_FRAMES)
+                    val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
                     try {
                         reader.accept(LincheckClassVisitor(transformationMode, writer), ClassReader.SKIP_FRAMES)
                         writer.toByteArray()

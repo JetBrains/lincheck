@@ -51,10 +51,36 @@ internal interface SharedEventsTracker {
     fun beforeMethodCall4(owner: Any?, className: String, methodName: String, codeLocation: Int, param1: Any?, param2: Any?, param3: Any?, param4: Any?)
     fun beforeMethodCall5(owner: Any?, className: String, methodName: String, codeLocation: Int, param1: Any?, param2: Any?, param3: Any?, param4: Any?, param5: Any?)
     fun beforeMethodCall(owner: Any?, className: String, methodName: String, codeLocation: Int, params: Array<Any?>)
+
+    /* Atomic methods */
+    fun beforeAtomicMethodCall0(ownerName: String, methodName: String, codeLocation: Int)
+    fun beforeAtomicMethodCall1(ownerName: String, methodName: String, codeLocation: Int, param1: Any?)
+    fun beforeAtomicMethodCall2(ownerName: String, methodName: String, codeLocation: Int, param1: Any?, param2: Any?)
+    fun beforeAtomicMethodCall3(ownerName: String, methodName: String, codeLocation: Int, param1: Any?, param2: Any?, param3: Any?)
+    fun beforeAtomicMethodCall4(ownerName: String, methodName: String, codeLocation: Int, param1: Any?, param2: Any?, param3: Any?, param4: Any?)
+    fun beforeAtomicMethodCall5(ownerName: String, methodName: String, codeLocation: Int, param1: Any?, param2: Any?, param3: Any?, param4: Any?, param5: Any?)
+
+    fun beforeAtomicMethodCall(ownerName: String, methodName: String, codeLocation: Int, params: Array<Any?>)
+
+    /* Atomic updater methods */
+    fun beforeAtomicUpdaterMethodCall0(owner: Any, methodName: String, codeLocation: Int)
+    fun beforeAtomicUpdaterMethodCall1(owner: Any, methodName: String, codeLocation: Int, param1: Any?)
+    fun beforeAtomicUpdaterMethodCall2(owner: Any, methodName: String, codeLocation: Int, param1: Any?, param2: Any?)
+    fun beforeAtomicUpdaterMethodCall3(owner: Any, methodName: String, codeLocation: Int, param1: Any?, param2: Any?, param3: Any?)
+    fun beforeAtomicUpdaterMethodCall4(owner: Any, methodName: String, codeLocation: Int, param1: Any?, param2: Any?, param3: Any?, param4: Any?)
+    fun beforeAtomicUpdaterMethodCall5(owner: Any, methodName: String, codeLocation: Int, param1: Any?, param2: Any?, param3: Any?, param4: Any?, param5: Any?)
+
+    fun beforeAtomicUpdaterMethodCall(owner: Any, methodName: String, codeLocation: Int, params: Array<Any?>)
+
     fun onMethodCallFinishedSuccessfully(result: Any?)
     fun onMethodCallThrewException(t: Throwable)
 
     fun getThreadLocalRandom(): Random
 
     fun onNewObjectCreation(obj: Any)
+
+    /**
+     * @return 0 -> None, 1 -> IGNORE, 2 -> TREAT_AS_ATOMIC
+     */
+    fun methodGuaranteeType(owner: Any?, className: String, methodName: String): Int
 }

@@ -54,13 +54,6 @@ abstract class ManagedCTestConfiguration(
         const val DEFAULT_ELIMINATE_LOCAL_OBJECTS = true
         const val DEFAULT_HANGING_DETECTION_THRESHOLD = 101
         const val LIVELOCK_EVENTS_THRESHOLD = 10001
-        val DEFAULT_GUARANTEES = listOf( // These classes use WeakHashMap, and thus, their code is non-deterministic.
-            // Non-determinism should not be present in managed executions, but luckily the classes
-            // can be just ignored, so that no thread context switches are added inside their methods.
-            forClasses("kotlinx.coroutines.internal.StackTraceRecoveryKt").allMethods().ignore(),
-            // Some atomic primitives are common and can be analyzed from a higher level of abstraction.
-            forClasses { className: String -> isTrustedPrimitive(className) }.allMethods().treatAsAtomic()
-        )
     }
 
     override val transformationMode get() = MODEL_CHECKING
