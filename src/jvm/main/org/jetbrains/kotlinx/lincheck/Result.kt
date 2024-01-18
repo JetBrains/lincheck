@@ -57,7 +57,7 @@ object Cancelled : Result() {
 }
 
 /**
- * Type of result used if the actor invocation fails with the specified in {@link Operation#handleExceptionsAsResult()} exception [tClazzFullName].
+ * Type of result used if the actor invocation fails with the specified in {@link Operation#handleExceptionsAsResult()} exception [tClassCanonicalName].
  */
 class ExceptionResult private constructor(
     /**
@@ -89,14 +89,14 @@ class ExceptionResult private constructor(
 
 
     companion object {
-        @Suppress("UNCHECKED_CAST")
         @JvmOverloads
         fun create(throwable: Throwable, wasSuspended: Boolean = false) =
-            ExceptionResult(throwable, wasSuspended, throwable::class.java.normalize())
+            ExceptionResult(throwable, wasSuspended, throwable::class.java)
     }
 }
 
 // for byte-code generation
+@Suppress("unused")
 @JvmSynthetic
 fun createExceptionResult(throwable: Throwable) = ExceptionResult.create(throwable, false)
 
