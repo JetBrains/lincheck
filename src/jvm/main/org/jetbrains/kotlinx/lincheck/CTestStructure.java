@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck;
 
+import org.jetbrains.annotations.Nullable;
 import org.jetbrains.kotlinx.lincheck.annotations.*;
 import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.paramgen.*;
@@ -30,17 +31,18 @@ public class CTestStructure {
     public final List<ActorGenerator> actorGenerators;
     public final List<ParameterGenerator<?>> parameterGenerators;
     public final List<OperationGroup> operationGroups;
-    public final List<Method> validationFunctions;
+    @Nullable
+    public final Actor validationFunction;
     public final Method stateRepresentation;
 
     public final RandomProvider randomProvider;
 
     private CTestStructure(List<ActorGenerator> actorGenerators, List<ParameterGenerator<?>> parameterGenerators, List<OperationGroup> operationGroups,
-                           List<Method> validationFunctions, Method stateRepresentation, RandomProvider randomProvider) {
+                           @Nullable Actor validationFunction, Method stateRepresentation, RandomProvider randomProvider) {
         this.actorGenerators = actorGenerators;
         this.parameterGenerators = parameterGenerators;
         this.operationGroups = operationGroups;
-        this.validationFunctions = validationFunctions;
+        this.validationFunction = validationFunction;
         this.stateRepresentation = stateRepresentation;
         this.randomProvider = randomProvider;
     }
@@ -51,7 +53,7 @@ public class CTestStructure {
     public static CTestStructure getFromTestClass(Class<?> testClass) {
         Map<String, OperationGroup> groupConfigs = new HashMap<>();
         List<ActorGenerator> actorGenerators = new ArrayList<>();
-        List<Method> validationFunctions = new ArrayList<>();
+        List<Actor> validationFunctions = new ArrayList<>();
         List<Method> stateRepresentations = new ArrayList<>();
         Class<?> clazz = testClass;
         RandomProvider randomProvider = new RandomProvider();
@@ -71,8 +73,18 @@ public class CTestStructure {
             stateRepresentation = stateRepresentations.get(0);
         // Create StressCTest class configuration
         List<ParameterGenerator<?>> parameterGenerators = new ArrayList<>(parameterGeneratorsMap.values());
+        if (validationFunctions.size() > 1) {
+            throw new IllegalStateException("At most one validation function is allowed, but several were detected: " +
+                    validationFunctions.stream()
+                            .map(actor -> {
+                                Method method = actor.getMethod();
+                                return method.getDeclaringClass().getSimpleName() + "." + method.getName();
+                            })
+                            .collect(Collectors.joining(", ")));
+        }
 
-        return new CTestStructure(actorGenerators, parameterGenerators, new ArrayList<>(groupConfigs.values()), validationFunctions, stateRepresentation, randomProvider);
+        Actor validationFunction = validationFunctions.isEmpty() ? null : validationFunctions.get(0);
+        return new CTestStructure(actorGenerators, parameterGenerators, new ArrayList<>(groupConfigs.values()), validationFunction, stateRepresentation, randomProvider);
     }
 
     private static void readTestStructureFromClass(
@@ -80,7 +92,7 @@ public class CTestStructure {
            Map<String, OperationGroup> groupConfigs,
            List<ActorGenerator> actorGenerators,
            Map<Class<?>, ParameterGenerator<?>> parameterGeneratorsMap,
-           List<Method> validationFunctions,
+           List<Actor> validationFunctions,
            List<Method> stateRepresentations,
            RandomProvider randomProvider
     ) {
@@ -134,7 +146,7 @@ public class CTestStructure {
             if (m.isAnnotationPresent(Validate.class)) {
                 if (m.getParameterCount() != 0)
                     throw new IllegalStateException("Validation function " + m.getName() + " should not have parameters");
-                validationFunctions.add(m);
+                validationFunctions.add(new Actor(m, Collections.emptyList()));
             }
 
             if (m.isAnnotationPresent(StateRepresentation.class)) {

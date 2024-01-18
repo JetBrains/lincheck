@@ -9,6 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
+import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -33,13 +34,13 @@ import kotlin.random.*
  * than the number of all possible interleavings on the current depth level.
  */
 internal class ModelCheckingStrategy(
-        testCfg: ModelCheckingCTestConfiguration,
-        testClass: Class<*>,
-        scenario: ExecutionScenario,
-        validationFunctions: List<Method>,
-        stateRepresentation: Method?,
-        verifier: Verifier
-) : ManagedStrategy(testClass, scenario, verifier, validationFunctions, stateRepresentation, testCfg) {
+    testCfg: ModelCheckingCTestConfiguration,
+    testClass: Class<*>,
+    scenario: ExecutionScenario,
+    validationFunction: Actor?,
+    stateRepresentation: Method?,
+    verifier: Verifier
+) : ManagedStrategy(testClass, scenario, verifier, validationFunction, stateRepresentation, testCfg) {
     // The number of invocations that the strategy is eligible to use to search for an incorrect execution.
     private val maxInvocations = testCfg.invocationsPerIteration
     // The number of already used invocations.
@@ -95,10 +96,12 @@ internal class ModelCheckingStrategy(
     }
 
     override fun beforePart(part: ExecutionPart) {
+        super.beforePart(part)
         val nextThread = when (part) {
             ExecutionPart.INIT -> 0
             ExecutionPart.PARALLEL -> currentInterleaving.chooseThread(0)
             ExecutionPart.POST -> 0
+            ExecutionPart.VALIDATION -> 0
         }
         loopDetector.beforePart(nextThread)
         currentThread = nextThread

@@ -215,8 +215,8 @@ class SpinlockInIncorrectResultsWithClocksTest {
         randomProvider: RandomProvider
     ) : ExecutionGenerator(testCfg, testStructure) {
         override fun nextExecution() = ExecutionScenario(
-            emptyList(),
-            listOf(
+            initExecution = emptyList(),
+            parallelExecution = listOf(
                 listOf(
                     Actor(method = SpinlockInIncorrectResultsWithClocksTest::a.javaMethod!!, arguments = emptyList()),
                     Actor(method = SpinlockInIncorrectResultsWithClocksTest::b.javaMethod!!, arguments = emptyList())
@@ -226,7 +226,8 @@ class SpinlockInIncorrectResultsWithClocksTest {
                     Actor(method = SpinlockInIncorrectResultsWithClocksTest::d.javaMethod!!, arguments = emptyList())
                 )
             ),
-            emptyList()
+            postExecution = emptyList(),
+            validationFunction = null
         )
 
     }

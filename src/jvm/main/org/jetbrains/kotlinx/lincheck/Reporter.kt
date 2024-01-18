@@ -16,6 +16,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import sun.nio.ch.lincheck.*
 import java.io.*
+import kotlin.math.max
 
 class Reporter(private val logLevel: LoggingLevel) {
     private val out: PrintStream = System.out
@@ -155,6 +156,16 @@ internal class TableLayout(
     }
 
     /**
+     * Appends the first column.
+     *
+     * @see columnsToString
+     */
+    fun <T> StringBuilder.appendToFirstColumn(data: T) = apply {
+        val columns = listOf(listOf(data)) + List(columnWidths.size - 1) { emptyList() }
+        appendColumns(columns, columnWidths, transform = null)
+    }
+
+    /**
      * Appends a single column, all other columns are filled blank.
      *
      * @param iCol index of the appended column.
@@ -199,22 +210,57 @@ internal class TableLayout(
 internal fun ExecutionLayout(
     initPart: List<String>,
     parallelPart: List<List<String>>,
-    postPart: List<String>
+    postPart: List<String>,
+    validationFunctionName: String?
 ): TableLayout {
     val size = parallelPart.size
     val threadHeaders = (0 until size).map { "Thread ${it + 1}" }
-    val columnsWidth = parallelPart.mapIndexed { i, actors ->
-        val col = actors + if (i == 0) (initPart + postPart) else listOf()
-        col.maxOfOrNull { it.length } ?: 0
+    val firstThreadNonParallelParts = initPart + postPart + (validationFunctionName?.let { listOf(it) } ?: emptyList())
+    val columnsContent = parallelPart.map { it.toMutableList() }.toMutableList()
+
+    if (columnsContent.isNotEmpty()) {
+        // we don't care about the order as we just want to find the longest string
+        columnsContent.first() += firstThreadNonParallelParts
+    } else {
+        // if the parallel part is empty, we need to add the first column
+        columnsContent + firstThreadNonParallelParts.toMutableList()
     }
-    return TableLayout(threadHeaders, columnsWidth)
+    val columnWidths = columnsContent.map { column -> column.maxOfOrNull { it.length } ?: 0 }
+
+    return TableLayout(threadHeaders, columnWidths)
 }
 
-internal fun StringBuilder.appendExecutionScenario(scenario: ExecutionScenario): StringBuilder {
+/**
+ * Table layout for interleaving.
+ *
+ * @param interleavingSections list of sections. Each section is represented by a list of columns related to threads.
+ * Must be not empty, i.e. contain at leas one section.
+ */
+internal fun ExecutionLayout(
+    nThreads: Int,
+    interleavingSections: List<List<List<String>>>,
+): TableLayout {
+    val columnWidths = MutableList(nThreads) { 0 }
+    val threadHeaders = (0 until nThreads).map { "Thread ${it + 1}" }
+    interleavingSections.forEach { section ->
+        section.mapIndexed { columnIndex, actors ->
+            val maxColumnActorLength = actors.maxOf { it.length }
+            columnWidths[columnIndex] = max(columnWidths[columnIndex], maxColumnActorLength)
+        }
+    }
+
+    return TableLayout(threadHeaders, columnWidths)
+}
+
+internal fun StringBuilder.appendExecutionScenario(
+    scenario: ExecutionScenario,
+    showValidationFunctions: Boolean = false
+): StringBuilder {
     val initPart = scenario.initExecution.map(Actor::toString)
     val postPart = scenario.postExecution.map(Actor::toString)
     val parallelPart = scenario.parallelExecution.map { it.map(Actor::toString) }
-    with(ExecutionLayout(initPart, parallelPart, postPart)) {
+    val validationFunctionName = if (showValidationFunctions) scenario.validationFunction?.let { "${it.method.name}()" } else null
+    with(ExecutionLayout(initPart, parallelPart, postPart, validationFunctionName)) {
         appendSeparatorLine()
         appendHeader()
         appendSeparatorLine()
@@ -226,6 +272,10 @@ internal fun StringBuilder.appendExecutionScenario(scenario: ExecutionScenario):
         appendSeparatorLine()
         if (postPart.isNotEmpty()) {
             appendColumn(0, postPart)
+            appendSeparatorLine()
+        }
+        if (validationFunctionName != null) {
+            appendToFirstColumn(validationFunctionName)
             appendSeparatorLine()
         }
     }
@@ -294,7 +344,7 @@ internal fun StringBuilder.appendExecutionScenarioWithResults(
             ActorWithResult(actor, resultWithClock.result, exceptionStackTraces, clock = resultWithClock.clockOnStart).toString()
         }
     }
-    with(ExecutionLayout(initPart, parallelPart, postPart)) {
+    with(ExecutionLayout(initPart, parallelPart, postPart, validationFunctionName = null)) {
         appendSeparatorLine()
         appendHeader()
         appendSeparatorLine()
@@ -559,8 +609,8 @@ private fun StringBuilder.appendHints(hints: List<String>) {
 }
 
 private fun StringBuilder.appendValidationFailure(failure: ValidationFailure): StringBuilder {
-    appendLine("= Validation function ${failure.functionName} has failed =")
-    appendExecutionScenario(failure.scenario)
+    appendLine("= Validation function ${failure.validationFunctionName} has failed =")
+    appendExecutionScenario(failure.scenario, showValidationFunctions = true)
     appendln()
     appendln()
     appendException(failure.exception)

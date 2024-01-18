@@ -19,7 +19,7 @@ import java.util.concurrent.atomic.*
 abstract class Runner protected constructor(
     protected val strategy: Strategy,
     protected val testClass: Class<*>,
-    protected val validationFunctions: List<Method>,
+    protected val validationFunction: Actor?,
     protected val stateRepresentationFunction: Method?
 ) : Closeable {
     val classLoader = ExecutionClassLoader()
@@ -118,5 +118,5 @@ abstract class Runner protected constructor(
 }
 
 enum class ExecutionPart {
-    INIT, PARALLEL, POST
+    INIT, PARALLEL, POST, VALIDATION
 }

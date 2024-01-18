@@ -14,7 +14,7 @@ import java.lang.reflect.Method
 import kotlin.reflect.jvm.*
 
 /**
- * The actor entity describe the operation with its parameters
+ * The actor entity describe the operation or validation function with its parameters
  * which is executed during the testing.
  *
  * @see Operation

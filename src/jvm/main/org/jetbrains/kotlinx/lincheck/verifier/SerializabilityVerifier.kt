@@ -29,7 +29,7 @@ public class SerializabilityVerifier(
         linerizabilityVerifier.verifyResultsImpl(scenario.converted, results.converted)
 
     private val ExecutionScenario.converted get() = ExecutionScenario(
-        emptyList(), mergeAndFlatten(initExecution, parallelExecution, postExecution), emptyList()
+        emptyList(), mergeAndFlatten(initExecution, parallelExecution, postExecution), emptyList(), validationFunction
     )
 
     private val ExecutionResult.converted: ExecutionResult

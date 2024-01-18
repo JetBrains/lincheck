@@ -39,7 +39,7 @@ abstract class ManagedStrategy(
     private val testClass: Class<*>,
     scenario: ExecutionScenario,
     private val verifier: Verifier,
-    private val validationFunctions: List<Method>,
+    private val validationFunction: Actor?,
     private val stateRepresentationFunction: Method?,
     private val testCfg: ManagedCTestConfiguration
 ) : Strategy(scenario), SharedEventsTracker {
@@ -98,6 +98,8 @@ abstract class ManagedStrategy(
 
     private val methodCallTracePointStack = (0 until nThreads + 2).map { mutableListOf<MethodCallTracePoint>() }
 
+    private fun createRunner(): ManagedStrategyRunner =
+        ManagedStrategyRunner(this, testClass, validationFunction, stateRepresentationFunction, testCfg.timeoutMs, UseClocks.ALWAYS)
     private val userDefinedGuarantees: List<ManagedStrategyGuarantee>? = testCfg.guarantees.ifEmpty { null }
 
 
@@ -145,6 +147,10 @@ abstract class ManagedStrategy(
         suspendedFunctionsStack.forEach { it.clear() }
         randoms.forEachIndexed { i, r -> r.setSeed(i + 239L) }
         localObjectManager = LocalObjectManager()
+    }
+
+    override fun beforePart(part: ExecutionPart) {
+        traceCollector?.passCodeLocation(SectionDelimiterTracePoint(part))
     }
 
     // == BASIC STRATEGY METHODS ==
@@ -1617,9 +1623,9 @@ abstract class ManagedStrategy(
  * to the strategy so that it can known about some required events.
  */
 private class ManagedStrategyRunner(
-    private val managedStrategy: ManagedStrategy, testClass: Class<*>, validationFunctions: List<Method>,
+    private val managedStrategy: ManagedStrategy, testClass: Class<*>, validationFunction: Actor?,
     stateRepresentationMethod: Method?, timeoutMs: Long, useClocks: UseClocks
-) : ParallelThreadsRunner(managedStrategy, testClass, validationFunctions, stateRepresentationMethod, timeoutMs, useClocks) {
+) : ParallelThreadsRunner(managedStrategy, testClass, validationFunction, stateRepresentationMethod, timeoutMs, useClocks) {
     override fun onStart(iThread: Int) = runInIgnoredSection {
         if (currentExecutionPart !== PARALLEL) return
         managedStrategy.onStart(iThread)

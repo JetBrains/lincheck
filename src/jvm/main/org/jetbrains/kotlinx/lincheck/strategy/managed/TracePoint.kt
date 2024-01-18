@@ -11,6 +11,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
+import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import java.math.*
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
@@ -238,6 +239,13 @@ internal class CoroutineCancellationTracePoint(
     }
 }
 
+/**
+ * This trace point that is added to the trace between execution parts (init, parallel, post, validation).
+ */
+internal class SectionDelimiterTracePoint(val executionPart: ExecutionPart): TracePoint(0, -1, emptyList()) {
+    override fun toStringImpl(): String = ""
+}
+
 internal class SpinCycleStartTracePoint(iThread: Int, actorId: Int, callStackTrace: CallStackTrace): TracePoint(iThread, actorId, callStackTrace) {
     override fun toStringImpl() =  "/* The following events repeat infinitely: */"
 }
@@ -266,8 +274,7 @@ private fun adornedStringRepresentation(any: Any?): String {
     // It is better not to use `toString` in general since
     // we usually care about references to certain objects,
     // not about the content inside them.
-    val id = getObjectNumber(any.javaClass, any)
-    return "${any.javaClass.simpleName}@$id"
+    return getObjectName(any)
 }
 
 internal enum class SwitchReason(private val reason: String) {
