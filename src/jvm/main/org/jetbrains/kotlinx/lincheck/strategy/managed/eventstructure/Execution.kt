@@ -20,7 +20,6 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
-import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.utils.*
 
@@ -76,6 +75,7 @@ fun<E : ThreadEvent> Execution<E>.nextEvent(event: E): E? =
         events.getOrNull(event.threadPosition + 1)
     }
 
+// TODO: make default constructor
 fun<E : ThreadEvent> Execution(nThreads: Int): Execution<E> =
     MutableExecution(nThreads)
 
@@ -158,7 +158,7 @@ fun<E : ThreadEvent> Execution<E>.calculateFrontier(clock: VectorClock): Mutable
 
 fun<E : ThreadEvent> Execution<E>.buildIndexer() = object : Indexer<E> {
 
-    private val events = enumerationOrderSortedList()
+    private val events = enumerationOrderSorted()
 
     private val eventIndices = threadMap.mapValues { (_, threadEvents) ->
         List(threadEvents.size) { pos ->
@@ -219,7 +219,10 @@ fun<E : ThreadEvent> Covering<E>.allCoverable(events: List<E>, clock: VectorCloc
 fun<E : ThreadEvent> Covering<E>.firstCoverable(events: List<E>, clock: VectorClock): Boolean =
     coverable(events.first(), clock)
 
-fun<E : ThreadEvent> Execution<E>.enumerationOrderSortedList(): List<E> =
+fun <E : Event> Collection<E>.enumerationOrderSorted(): List<E> =
+    this.sorted()
+
+fun<E : ThreadEvent> Execution<E>.enumerationOrderSorted(): List<E> =
     this.sorted()
 
 // TODO: make an interface instead of type-alias?
@@ -373,6 +376,7 @@ fun Execution<AtomicThreadEvent>.aggregate(
         } else if (parent != null) {
             // effectively squash skipped events into previous hyper event,
             // such representation is convenient for causality clock maintenance
+            // TODO: make sure dependencies of skipped events are propagated correctly
             events.forEach {
                 remapping.put(it, parent).ensureNull()
             }

@@ -65,7 +65,7 @@ interface IncrementalConsistencyChecker<E : ThreadEvent, W> {
      *
      * @return consistency verdict:
      *  - an instance of [ConsistencyWitness] if the execution remains consistent,
-     *  - an instance of [Inconsistency] is the execution becomes inconsistent.
+     *  - an instance of [Inconsistency] if the execution becomes inconsistent.
      *  - an instance of [ConsistencyUnknown] if the consistency check was approximated and
      *      the exact consistency verdict is unknown
      */

@@ -20,22 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
-import org.jetbrains.kotlinx.lincheck.utils.ensureNull
-
-
-fun <K, V> MutableMap<K, V>.update(key: K, default: V, transform: (V) -> V) {
-    // TODO: could it be done with a single lookup in a map?
-    put(key, get(key)?.let(transform) ?: default)
-}
-
-fun <K, V> MutableMap<K, V>.mergeReduce(other: Map<K, V>, reduce: (V, V) -> V) {
-    other.forEach { (key, value) ->
-        update(key, default = value) { reduce(it, value) }
-    }
-}
-
-inline fun<T> T.runIf(boolean: Boolean, block: T.() -> T): T =
-    if (boolean) block() else this
+import org.jetbrains.kotlinx.lincheck.utils.*
 
 fun buildIndexer(events: MutableList<AtomicThreadEvent>) = object : Indexer<AtomicThreadEvent> {
 

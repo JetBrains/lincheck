@@ -24,6 +24,8 @@ infix fun Boolean.implies(other: Boolean): Boolean = !this || other
 
 infix fun Boolean.implies(other: () -> Boolean): Boolean = !this || other()
 
+inline fun<T> T.runIf(boolean: Boolean, block: T.() -> T): T =
+    if (boolean) block() else this
 
 inline fun<reified T> Any?.satisfies(predicate: T.() -> Boolean): Boolean =
     this is T && predicate(this)
@@ -31,7 +33,7 @@ inline fun<reified T> Any?.satisfies(predicate: T.() -> Boolean): Boolean =
 inline fun<reified T> Any?.refine(predicate: T.() -> Boolean): T? =
     if (this is T && predicate(this)) this else null
 
-inline fun<reified T> List<Any?>.reify(): List<T>? {
+inline fun<reified T> List<Any?>.refine(): List<T>? {
     return if (all { it is T }) (this as List<T>) else null
 }
 
@@ -89,6 +91,7 @@ inline fun<T> T.ensure(predicate: (T) -> Boolean, lazyMessage: (T?) -> Any): T {
     return this
 }
 
+
 private fun rangeCheck(size: Int, fromIndex: Int, toIndex: Int) {
     when {
         fromIndex > toIndex -> throw IllegalArgumentException("fromIndex ($fromIndex) is greater than toIndex ($toIndex).")
@@ -120,6 +123,21 @@ fun<T> MutableList<T>.expand(size: Int, defaultValue: T) {
 fun<T> MutableList<T>.cut(index: Int) {
     require(index <= size)
     subList(index, size).clear()
+}
+
+fun <K, V> MutableMap<K, V>.updateInplace(key: K, default: V, apply: V.() -> Unit) {
+    computeIfAbsent(key) { default }.also(apply)
+}
+
+fun <K, V> MutableMap<K, V>.update(key: K, default: V, transform: (V) -> V) {
+    // TODO: could it be done with a single lookup in a map?
+    put(key, get(key)?.let(transform) ?: default)
+}
+
+fun <K, V> MutableMap<K, V>.mergeReduce(other: Map<K, V>, reduce: (V, V) -> V) {
+    other.forEach { (key, value) ->
+        update(key, default = value) { reduce(it, value) }
+    }
 }
 
 fun <T> List<T>.squash(relation: (T, T) -> Boolean): List<List<T>> {

@@ -56,7 +56,7 @@ private typealias ReadModifyWriteChainsMutableMap =
 
 class WritesBeforeRelation(
     val execution: Execution<AtomicThreadEvent>
-): Relation<AtomicThreadEvent> {
+) : Relation<AtomicThreadEvent> {
 
     private val readsMap: MutableMap<MemoryLocation, ArrayList<AtomicThreadEvent>> = mutableMapOf()
 
@@ -111,7 +111,7 @@ class WritesBeforeRelation(
 
     private fun initializeReadModifyWriteChains() {
         val chainsMap : ReadModifyWriteChainsMutableMap = mutableMapOf()
-        for (event in execution.enumerationOrderSortedList()) {
+        for (event in execution.enumerationOrderSorted()) {
             val label = event.label
             if (label !is WriteAccessLabel || !label.isExclusive)
                 continue
@@ -119,7 +119,8 @@ class WritesBeforeRelation(
             val chain = chainsMap.computeIfAbsent(label.location to readFrom) {
                 mutableListOf(readFrom)
             }
-            // TODO: this should be detected earlier
+            // TODO: this should be detected earlier ---
+            //  we need to recalculate rmw chains on execution reset
             // check(readFrom == chain.last())
             if (readFrom != chain.last()) {
                 inconsistent = true

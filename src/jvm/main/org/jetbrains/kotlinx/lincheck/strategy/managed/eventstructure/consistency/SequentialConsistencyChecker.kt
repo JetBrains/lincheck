@@ -98,7 +98,7 @@ class SequentialConsistencyChecker(
         if (approximateSequentialConsistency) {
             // TODO: embed the execution order approximation relation into the execution instance,
             //   so that this (and following stages) can be implemented as separate consistency check classes
-            val scApprox = ApproximateSequentialConsistencyRelation(execution, executionOrderApproximation)
+            val scApprox = SaturatedHappensBeforeRelation(execution, executionOrderApproximation)
             if (scApprox.inconsistent) {
                 return SequentialConsistencyApproximationInconsistency()
             }
@@ -235,7 +235,7 @@ class IncrementalSequentialConsistencyChecker(
         this.execution = execution
         _executionOrder.clear()
         executionOrderEnabled = true
-        for (event in execution.enumerationOrderSortedList()) {
+        for (event in execution.enumerationOrderSorted()) {
             check(event)
         }
     }
@@ -455,8 +455,8 @@ class SequentialConsistencyApproximationInconsistency : SequentialConsistencyVio
     }
 }
 
-// TODO: rename into "saturated happens-before" relation?
-private class ApproximateSequentialConsistencyRelation(
+
+class SaturatedHappensBeforeRelation(
     val execution: Execution<AtomicThreadEvent>,
     initialApproximation: Relation<AtomicThreadEvent>
 ) : Relation<AtomicThreadEvent> {
