@@ -51,7 +51,7 @@ abstract class ManagedStrategy(
     private val runner = ManagedStrategyRunner(
         managedStrategy = this,
         testClass = testClass,
-        validationFunctions = validationFunctions,
+        validationFunction = validationFunction,
         stateRepresentationMethod = stateRepresentationFunction,
         timeoutMs = testCfg.timeoutMs,
         useClocks = UseClocks.ALWAYS

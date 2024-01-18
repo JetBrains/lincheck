@@ -16,6 +16,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import sun.nio.ch.lincheck.*
 import java.lang.reflect.*
 import java.lang.reflect.Method
+import kotlin.collections.HashMap
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.coroutines.*
@@ -56,6 +57,8 @@ internal fun executeActor(
         }
     }
 }
+
+private val methodsCache = HashMap<Class<*>, MutableMap<Method, Method>>()
 
 @Synchronized
 internal fun getMethod(instance: Any, method: Method) = runInIgnoredSection {
