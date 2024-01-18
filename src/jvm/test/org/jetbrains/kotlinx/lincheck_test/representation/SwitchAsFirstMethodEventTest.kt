@@ -20,19 +20,30 @@ import org.junit.*
 /**
  * This test checks that all switches that are the first events in methods are lifted out of the methods in the trace.
  * E.g, instead of
+ *
  * ```
  * actor()
+ * operation()
+ *   ...
  *   method()
  *      switch
  *      READ
  *      ...
+ *   ...
  * ```
  * should be
+ *
+ * it should be
+ *
  * ```
  * actor()
+ * operation()
+ *   ...
  *   switch
  *   method()
+ *      READ
  *      ...
+ *   ...
  * ```
  */
 class SwitchAsFirstMethodEventTest {
