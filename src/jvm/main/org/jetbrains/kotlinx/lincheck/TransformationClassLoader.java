@@ -10,6 +10,10 @@
 
 package org.jetbrains.kotlinx.lincheck;
 
+import com.intellij.rt.coverage.data.ProjectData;
+import com.intellij.rt.coverage.instrument.OfflineCoverageTransformer;
+import com.intellij.rt.coverage.instrumentation.CoverageRuntime;
+import com.intellij.rt.coverage.instrumentation.CoverageTransformer;
 import org.jetbrains.kotlinx.lincheck.runner.*;
 import org.jetbrains.kotlinx.lincheck.strategy.*;
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*;
@@ -48,6 +52,11 @@ public class TransformationClassLoader extends ExecutionClassLoader {
     private Map<String, byte[]> bytecodeCache = null;
     private static final Map<String, byte[]> stressStrategyBytecodeCache = new ConcurrentHashMap<>();
     private static final Map<String, byte[]> modelCheckingStrategyBytecodeCache = new ConcurrentHashMap<>();
+
+    private static final ProjectData projectData = new ProjectData();
+    static {
+        CoverageRuntime.installRuntime(projectData);
+    }
 
     public TransformationClassLoader(Strategy strategy, Runner runner) {
         classTransformers = new ArrayList<>();
@@ -137,7 +146,8 @@ public class TransformationClassLoader extends ExecutionClassLoader {
                     bytes = bytecodeCache.get(name);
                 }
                 if (bytes == null) {
-                    bytes = instrument(originalName(name));
+                    boolean withCoverage = true;
+                    bytes = instrument(originalName(name), withCoverage);
                     if (bytecodeCache != null) {
                         bytecodeCache.put(name, bytes);
                     }
@@ -159,9 +169,36 @@ public class TransformationClassLoader extends ExecutionClassLoader {
      * @return the byte-code of the transformed class.
      * @throws IOException if class could not be read as a resource.
      */
-    private byte[] instrument(String className) throws IOException {
+    private byte[] instrument(String className, boolean withCoverage) throws IOException {
         // Create ClassReader
-        ClassReader cr = new ClassReader(className);
+        final String classCanonicalName = "org.jetbrains.kotlinx.lincheck_test.guide.Counter";
+
+        ClassReader cr;
+
+        if (withCoverage && className.equals(classCanonicalName)) {
+            System.out.println("Start with coverage zone");
+            ClassReader crForCoverage = new ClassReader(className);
+            ClassWriter cwForCoverage = new ClassWriter(crForCoverage, 0);
+
+            crForCoverage.accept(new TraceClassVisitor(cwForCoverage, new PrintWriter(System.out)), ClassReader.EXPAND_FRAMES);
+
+            byte[] originalBytes = cwForCoverage.toByteArray();
+            byte[] coverageBytes =  new CoverageTransformer(projectData, false)
+                        .transform(ClassLoader.getSystemClassLoader(), className, null, null, originalBytes);
+
+            if (coverageBytes != null) {
+                System.out.println("Coverage transformation applied!");
+                cr = new ClassReader(coverageBytes);
+            }
+            else {
+                cr = new ClassReader(className);
+            }
+
+            System.out.println("Finish coverage zone");
+        }
+        else {
+            cr = new ClassReader(className); // -> new ClassReader(InputStream(classWithCoverageApplied))
+        }
         // Construct transformation pipeline:
         // apply the strategy's transformer at first,
         // then the runner's one.
@@ -171,9 +208,10 @@ public class TransformationClassLoader extends ExecutionClassLoader {
         ClassVisitor cv = cw;
         // The code in this comment block verifies the transformed byte-code and prints it for the specified class,
         // you may need to uncomment it for debug purposes under development.
-        // cv = new CheckClassAdapter(cv, false);
-        // if (className.equals(YourClass.class.getCanonicalName()))
-        //   cv = new TraceClassVisitor(cv, new PrintWriter(System.out));
+        cv = new CheckClassAdapter(cv, false);
+         // if (className.equals(YourClass.class.getCanonicalName()))
+        if (className.equals(classCanonicalName))
+           cv = new TraceClassVisitor(cv, new PrintWriter(System.out));
 
         for (Function<ClassVisitor, ClassVisitor> ct : classTransformers)
             cv = ct.apply(cv);
