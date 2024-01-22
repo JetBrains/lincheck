@@ -20,6 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency
 
+import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.kotlinx.lincheck.utils.*
 
@@ -53,6 +54,99 @@ class AtomicityConsistencyChecker : IncrementalConsistencyChecker<AtomicThreadEv
 
     override fun reset(execution: Execution<AtomicThreadEvent>) {
         this.execution = execution
+    }
+
+}
+
+typealias ReadModifyWriteChain = List<AtomicThreadEvent>
+typealias MutableReadModifyWriteChain = MutableList<AtomicThreadEvent>
+
+fun ReadModifyWriteChainsStorage.Entry.isConsistent() = when {
+    // write-part of atomic-read-modify write operation should read-from
+    // the preceding write event in the chain
+    event.label.isExclusiveWriteAccess() ->
+        event.exclusiveReadPart.readsFrom == chain[position - 1]
+    // the other case is a non-exclusive write access,
+    // which should be the first event in the chain
+    // (this is enforced by the `isValid` check in the constructor)
+    else -> true
+}
+
+class ReadModifyWriteChainsStorage {
+
+    abstract class Entry {
+        abstract val event: AtomicThreadEvent
+        abstract val chain: ReadModifyWriteChain
+        abstract val position: Int
+    }
+
+    private data class EntryImpl(
+        override val event: AtomicThreadEvent,
+        override val chain: ReadModifyWriteChain,
+        override val position: Int,
+    ) : Entry() {
+
+        init {
+            require(isValid())
+        }
+
+        private fun isValid(): Boolean = when {
+            // we store only write accesses in the chain
+            !event.label.isWriteAccess() -> false
+            // non-exclusive write access can only be the first one in the chain
+            !event.label.isExclusiveWriteAccess() -> (position == 0) && (event == chain[0])
+            // otherwise, consider entry to be valid
+            else -> true
+        }
+    }
+
+    private val eventChainMap = mutableMapOf<Event, MutableReadModifyWriteChain>()
+
+    private val rmwChainsMap = mutableMapOf<MemoryLocation, MutableList<MutableReadModifyWriteChain>>()
+
+    fun getReadModifyWriteChain(event: Event): ReadModifyWriteChain {
+        return eventChainMap[event] ?: emptyList()
+    }
+
+    fun getReadModifyWriteChains(location: MemoryLocation): List<ReadModifyWriteChain> {
+        return rmwChainsMap[location] ?: emptyList()
+    }
+
+    val sameReadModifyWriteChain = Relation<AtomicThreadEvent> { x, y ->
+        val chain = getReadModifyWriteChain(x)
+        chain.isNotEmpty() && chain == getReadModifyWriteChain(y)
+    }
+
+    fun add(event: AtomicThreadEvent) {
+        val writeLabel = event.label.refine<WriteAccessLabel> { isExclusive }
+            ?: return
+        val location = writeLabel.location
+        val readFrom = event.exclusiveReadPart.readsFrom
+        val chain = eventChainMap[readFrom] ?: arrayListOf()
+        // TODO: handle inconsistency?
+        // if (readFrom != chain.lastOrNull()) {
+        //
+        // }
+        // if the read-from events is not yet mapped to any rmw chain,
+        // then we about to start a new one
+        if (chain.isEmpty()) {
+            check(!readFrom.label.isExclusiveWriteAccess())
+            chain.add(readFrom)
+            rmwChainsMap.updateInplace(location, default = arrayListOf()) {
+                add(chain)
+            }
+        }
+        chain.add(event)
+        eventChainMap[event] = chain
+    }
+
+    fun compute(execution: Execution<AtomicThreadEvent>) {
+
+    }
+
+    fun reset() {
+        eventChainMap.clear()
+        rmwChainsMap.clear()
     }
 
 }
