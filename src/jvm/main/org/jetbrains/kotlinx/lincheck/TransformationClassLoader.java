@@ -93,10 +93,15 @@ public class TransformationClassLoader extends ExecutionClassLoader {
                    !className.equals(ManagedStrategyStateHolder.class.getName())
                ) ||
                className.equals(kotlinx.coroutines.DebugKt.class.getName()) ||
+               className.equals(kotlin.coroutines.CoroutineContext.class.getName()) ||
                className.equals(kotlinx.coroutines.CoroutineContextKt.class.getName()) ||
+               className.equals(kotlinx.coroutines.CoroutineScope.class.getName()) ||
                className.equals(kotlinx.coroutines.CancellableContinuation.class.getName()) ||
                className.equals(kotlinx.coroutines.CoroutineExceptionHandler.class.getName()) ||
-               className.equals(kotlinx.coroutines.CoroutineDispatcher.class.getName());
+               className.equals(kotlinx.coroutines.CoroutineDispatcher.class.getName()) ||
+               className.equals("kotlinx/coroutines/CancelHandler") ||
+               className.equals("kotlinx/coroutines/InternalCompletionHandler") ||
+               className.equals("kotlinx/coroutines/InternalCompletionHandler$UserSupplied");
     }
 
     /**
