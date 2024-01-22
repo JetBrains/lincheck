@@ -560,7 +560,7 @@ private class ExtendedCoherenceRelation(
             val readFrom = read.readsFrom
             writeLoop@for (write in execution) {
                 val rloc = (read.label as ReadAccessLabel).location
-                if (!write.label.isWriteAccess(rloc))
+                if (!write.label.isWriteAccessTo(rloc))
                     continue
                 if (write == readFrom)
                     continue
@@ -610,9 +610,9 @@ private class ExtendedCoherenceRelation(
         // TODO: make this code pattern look nicer (it appears several times in codebase)
         var xloc = (x.label as? MemoryAccessLabel)?.location
         var yloc = (y.label as? MemoryAccessLabel)?.location
-        if (xloc == null && yloc != null && x.label.isWriteAccess(yloc))
+        if (xloc == null && yloc != null && x.label.isWriteAccessTo(yloc))
             xloc = yloc
-        if (xloc != null && yloc == null && y.label.isWriteAccess(xloc))
+        if (xloc != null && yloc == null && y.label.isWriteAccessTo(xloc))
             yloc = xloc
         return if (xloc != null && xloc == yloc) {
             relations[xloc]?.get(x, y) ?: false
@@ -645,9 +645,9 @@ private class ExtendedCoherenceRelation(
                 }
             }
             for ((location, events) in eventsMap) {
-                if (initEvent!!.label.isWriteAccess(location))
+                if (initEvent!!.label.isWriteAccessTo(location))
                     events.add(initEvent)
-                events.addAll(allocEvents.filter { it.label.isWriteAccess(location) })
+                events.addAll(allocEvents.filter { it.label.isWriteAccessTo(location) })
                 extendedCoherence.relations[location] = RelationMatrix(events, buildIndexer(events)) { x, y ->
                     false
                 }

@@ -250,7 +250,7 @@ class InitializationLabel(
     fun asObjectAllocationLabel(objID: ObjectID): ObjectAllocationLabel? =
         objectsAllocations[objID]
 
-    fun isWriteAccess(location: MemoryLocation): Boolean =
+    fun isWriteAccessTo(location: MemoryLocation): Boolean =
         location is StaticFieldMemoryLocation || (location.objID in externalObjects)
 
     fun asWriteAccessLabel(location: MemoryLocation): WriteAccessLabel? {
@@ -497,7 +497,7 @@ data class ObjectAllocationLabel(
         }
     }
 
-    fun isWriteAccess(location: MemoryLocation) =
+    fun isWriteAccessTo(location: MemoryLocation) =
         (location.objID == objID)
 
     fun asWriteAccessLabel(location: MemoryLocation) =
@@ -796,10 +796,16 @@ fun WriteAccessLabel.isValidWritePart(label: ReadModifyWriteAccessLabel): Boolea
     isExclusive == label.isExclusive &&
     writeValue == label.writeValue
 
-fun EventLabel.isWriteAccess(location: MemoryLocation): Boolean = when (this) {
+fun EventLabel.isWriteAccess(): Boolean =
+    this is InitializationLabel || this is ObjectAllocationLabel || this is WriteAccessLabel
+
+fun EventLabel.isExclusiveWriteAccess(): Boolean =
+    (this is WriteAccessLabel) && isExclusive
+
+fun EventLabel.isWriteAccessTo(location: MemoryLocation): Boolean = when (this) {
     is WriteAccessLabel         -> (this.location == location)
-    is ObjectAllocationLabel    -> isWriteAccess(location)
-    is InitializationLabel      -> isWriteAccess(location)
+    is ObjectAllocationLabel    -> isWriteAccessTo(location)
+    is InitializationLabel      -> isWriteAccessTo(location)
     else -> false
 }
 

@@ -100,9 +100,9 @@ class WritesBeforeRelation(
             }
         }
         for ((memId, writes) in writesMap) {
-            if (initEvent!!.label.isWriteAccess(memId))
+            if (initEvent!!.label.isWriteAccessTo(memId))
                 writes.add(initEvent)
-            writes.addAll(allocEvents.filter { it.label.isWriteAccess(memId) })
+            writes.addAll(allocEvents.filter { it.label.isWriteAccessTo(memId) })
             relations[memId] = RelationMatrix(writes, buildIndexer(writes)) { x, y ->
                 causalityOrder.lessThan(x, y)
             }
@@ -183,9 +183,9 @@ class WritesBeforeRelation(
         // TODO: make this code pattern look nicer (it appears several times in codebase)
         var xloc = (x.label as? WriteAccessLabel)?.location
         var yloc = (y.label as? WriteAccessLabel)?.location
-        if (xloc == null && yloc != null && x.label.isWriteAccess(yloc))
+        if (xloc == null && yloc != null && x.label.isWriteAccessTo(yloc))
             xloc = yloc
-        if (xloc != null && yloc == null && y.label.isWriteAccess(xloc))
+        if (xloc != null && yloc == null && y.label.isWriteAccessTo(xloc))
             yloc = xloc
         return if (xloc != null && xloc == yloc) {
             relations[xloc]?.get(x, y) ?: false
