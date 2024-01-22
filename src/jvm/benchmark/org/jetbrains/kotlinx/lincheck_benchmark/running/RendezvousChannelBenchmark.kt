@@ -7,39 +7,39 @@
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.jetbrains.kotlinx.lincheck_test.verifier.linearizability
+package org.jetbrains.kotlinx.lincheck_benchmark.running
 
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
+import org.jetbrains.kotlinx.lincheck.specifications.*
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
-import org.jetbrains.kotlinx.lincheck.specifications.SequentialIntChannelSpecification
-import org.jetbrains.kotlinx.lincheck_test.*
+import org.jetbrains.kotlinx.lincheck_benchmark.AbstractLincheckBenchmark
 
 @ExperimentalCoroutinesApi
 @InternalCoroutinesApi
 @Param(name = "value", gen = IntGen::class, conf = "1:5")
-class RendezvousChannelTest : AbstractLincheckTest() {
+class RendezvousChannelBenchmark : AbstractLincheckBenchmark() {
     private val ch = Channel<Int>()
 
-    @Operation(handleExceptionsAsResult = [ClosedSendChannelException::class])
+    @Operation
     suspend fun send(@Param(name = "value") value: Int) = ch.send(value)
 
-    @Operation(handleExceptionsAsResult = [ClosedReceiveChannelException::class])
+    @Operation
     suspend fun receive() = ch.receive()
 
-    @Operation(handleExceptionsAsResult = [ClosedReceiveChannelException::class])
+    @Operation
     suspend fun receiveOrNull() = ch.receiveCatching().getOrNull()
 
     @Operation
     fun close() = ch.close()
 
     override fun <O : Options<O, *>> O.customize() {
-        sequentialSpecification(SequentialRendezvousIntChannelSpecification::class.java)
         iterations(10)
+        sequentialSpecification(SequentialRendezvousIntChannel::class.java)
     }
 }
 
 @InternalCoroutinesApi
-class SequentialRendezvousIntChannelSpecification : SequentialIntChannelSpecification(capacity = 0)
+class SequentialRendezvousIntChannel : SequentialIntChannelSpecification(capacity = 0)
