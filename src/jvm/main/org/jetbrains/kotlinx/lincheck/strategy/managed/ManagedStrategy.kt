@@ -47,7 +47,6 @@ import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 abstract class ManagedStrategy(
     private val testClass: Class<*>,
     scenario: ExecutionScenario,
-    private val verifier: Verifier,
     private val validationFunction: Actor?,
     private val stateRepresentationFunction: Method?,
     private val testCfg: ManagedCTestConfiguration
@@ -58,6 +57,7 @@ abstract class ManagedStrategy(
     // Runner for scenario invocations,
     // can be replaced with a new one for trace construction.
     internal var runner: ManagedStrategyRunner = createRunner()
+
     // Spin-waiters for each thread
     private val spinners = SpinnerGroup(nThreads)
 
@@ -75,7 +75,7 @@ abstract class ManagedStrategy(
 
     // Current actor id for each thread.
     protected val currentActorId = IntArray(nThreads)
-    
+
     // Detector of loops or hangs (i.e. active locks).
     internal val loopDetector: LoopDetector = LoopDetector(nThreads, testCfg.hangingDetectionThreshold)
 
@@ -133,6 +133,10 @@ abstract class ManagedStrategy(
      */
     private lateinit var callStackContextPerThread: Array<ArrayList<CallContext>>
 
+    override fun close() {
+        runner.close()
+    }
+
     private fun createRunner(): ManagedStrategyRunner =
         ManagedStrategyRunner(
             managedStrategy = this,
@@ -143,20 +147,7 @@ abstract class ManagedStrategy(
             useClocks = UseClocks.ALWAYS
         )
 
-    override fun run(): LincheckFailure? = try {
-        runImpl()
-    } finally {
-        runner.close()
-        // clear the numeration at the end to avoid memory leaks
-        cleanObjectNumeration()
-    }
-
     // == STRATEGY INTERFACE METHODS ==
-
-    /**
-     * This method implements the strategy logic.
-     */
-    protected abstract fun runImpl(): LincheckFailure?
 
     /**
      * This method is invoked before every thread context switch.
@@ -178,9 +169,10 @@ abstract class ManagedStrategy(
     protected abstract fun chooseThread(iThread: Int): Int
 
     /**
-     * Returns all data to the initial state.
+     * Resets all internal data to the initial state and initializes current invocation to be run.
      */
-    protected open fun initializeInvocation() {
+    override fun initializeInvocation() {
+        super.initializeInvocation()
         finished.fill(false)
         isSuspended.fill(false)
         currentActorId.fill(-1)
@@ -193,89 +185,11 @@ abstract class ManagedStrategy(
         localObjectManager = LocalObjectManager()
     }
 
-    override fun beforePart(part: ExecutionPart) {
-        traceCollector?.passCodeLocation(SectionDelimiterTracePoint(part))
-    }
-
-    // == BASIC STRATEGY METHODS ==
-
     /**
-     * Checks whether the [result] is a failing one or is [CompletedInvocationResult]
-     * but the verification fails, and return the corresponding failure.
-     * Returns `null` if the result is correct.
+     * Runs the current invocation.
      */
-    protected fun checkResult(result: InvocationResult): LincheckFailure? = when (result) {
-        is CompletedInvocationResult -> {
-            if (verifier.verifyResults(scenario, result.results)) null
-            else IncorrectResultsFailure(scenario, result.results, collectTrace(result))
-        }
-        // In case the runner detects a deadlock,
-        // some threads can still work with the current strategy instance
-        // and simultaneously adding events to the TraceCollector, which leads to an inconsistent trace.
-        // Therefore, if the runner detects a deadlock, we don’t even try to collect a trace.
-        is RunnerTimeoutInvocationResult -> result.toLincheckFailure(scenario, trace = null)
-        else -> result.toLincheckFailure(scenario, collectTrace(result))
-    }
-
-    /**
-     * Re-runs the last invocation to collect its trace.
-     */
-    private fun collectTrace(failingResult: InvocationResult): Trace? {
-        val detectedByStrategy = suddenInvocationResult != null
-        val canCollectTrace = when {
-            detectedByStrategy -> true // ObstructionFreedomViolationInvocationResult or UnexpectedExceptionInvocationResult
-            failingResult is CompletedInvocationResult -> true
-            failingResult is ValidationFailureInvocationResult -> true
-            else -> false
-        }
-        if (!canCollectTrace) {
-            // Interleaving events can be collected almost always,
-            // except for the strange cases such as Runner's timeout or exceptions in LinCheck.
-            return null
-        }
-
-        collectTrace = true
-        loopDetector.enableReplayMode(
-            failDueToDeadlockInTheEnd =
-                failingResult is ManagedDeadlockInvocationResult ||
-                failingResult is ObstructionFreedomViolationInvocationResult
-        )
-        cleanObjectNumeration()
-
-        runner.close()
-        runner = createRunner()
-        val loggedResults = runInvocation()
-        // In case the runner detects a deadlock, some threads can still be in an active state,
-        // simultaneously adding events to the TraceCollector, which leads to an inconsistent trace.
-        // Therefore, if the runner detects deadlock, we don't even try to collect trace.
-        if (loggedResults is RunnerTimeoutInvocationResult) return null
-        val sameResultTypes = loggedResults.javaClass == failingResult.javaClass
-        val sameResults =
-            loggedResults !is CompletedInvocationResult || failingResult !is CompletedInvocationResult || loggedResults.results == failingResult.results
-        check(sameResultTypes && sameResults) {
-            StringBuilder().apply {
-                appendln("Non-determinism found. Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc).")
-                appendln("== Reporting the first execution without execution trace ==")
-                appendln(failingResult.toLincheckFailure(scenario, null))
-                appendln("== Reporting the second execution ==")
-                appendln(loggedResults.toLincheckFailure(scenario, Trace(traceCollector!!.trace)).toString())
-            }.toString()
-        }
-
-        return Trace(traceCollector!!.trace)
-    }
-
-    fun initializeCallStack(testInstance: Any) {
-        if (collectTrace) {
-            callStackContextPerThread = Array(nThreads) { arrayListOf(CallContext.InstanceCallContext(testInstance)) }
-        }
-    }
-
-    /**
-     * Runs the next invocation with the same [scenario][ExecutionScenario].
-     */
-    protected fun runInvocation(): InvocationResult {
-        initializeInvocation()
+    override fun runInvocation(): InvocationResult {
+        // initializeInvocation()
         val result = runner.run()
         // In case the runner detects a deadlock, some threads can still manipulate the current strategy,
         // so we're not interested in suddenInvocationResult in this case
@@ -292,6 +206,68 @@ abstract class ManagedStrategy(
         return result
     }
 
+    // == BASIC STRATEGY METHODS ==
+
+    override fun beforePart(part: ExecutionPart) {
+        traceCollector?.passCodeLocation(SectionDelimiterTracePoint(part))
+    }
+
+    /**
+     * Re-runs the last invocation to collect its trace.
+     */
+    override fun tryCollectTrace(result: InvocationResult): Trace? {
+        val detectedByStrategy = suddenInvocationResult != null
+        val canCollectTrace = when {
+            detectedByStrategy -> true // ObstructionFreedomViolationInvocationResult or UnexpectedExceptionInvocationResult
+            result is CompletedInvocationResult -> true
+            result is ValidationFailureInvocationResult -> true
+            else -> false
+        }
+        if (!canCollectTrace) {
+            // Interleaving events can be collected almost always,
+            // except for the strange cases such as Runner's timeout or exceptions in LinCheck.
+            return null
+        }
+
+        collectTrace = true
+        loopDetector.enableReplayMode(
+            failDueToDeadlockInTheEnd =
+            result is ManagedDeadlockInvocationResult ||
+                    result is ObstructionFreedomViolationInvocationResult
+        )
+        cleanObjectNumeration()
+
+        runner.close()
+        runner = createRunner()
+        initializeInvocation()
+
+        val loggedResults = runInvocation()
+        // In case the runner detects a deadlock, some threads can still be in an active state,
+        // simultaneously adding events to the TraceCollector, which leads to an inconsistent trace.
+        // Therefore, if the runner detects deadlock, we don't even try to collect trace.
+        if (loggedResults is RunnerTimeoutInvocationResult) return null
+        val sameResultTypes = loggedResults.javaClass == result.javaClass
+        val sameResults =
+            loggedResults !is CompletedInvocationResult || result !is CompletedInvocationResult || loggedResults.results == failingResult.results
+        check(sameResultTypes && sameResults) {
+            StringBuilder().apply {
+                appendln("Non-determinism found. Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc).")
+                appendln("== Reporting the first execution without execution trace ==")
+                appendln(result.toLincheckFailure(scenario, null))
+                appendln("== Reporting the second execution ==")
+                appendln(loggedResults.toLincheckFailure(scenario, Trace(traceCollector!!.trace)).toString())
+            }.toString()
+        }
+
+        return Trace(traceCollector!!.trace)
+    }
+
+    fun initializeCallStack(testInstance: Any) {
+        if (collectTrace) {
+            callStackContextPerThread = Array(nThreads) { arrayListOf(CallContext.InstanceCallContext(testInstance)) }
+        }
+    }
+
     private fun failDueToDeadlock(): Nothing {
         suddenInvocationResult = ManagedDeadlockInvocationResult(runner.collectExecutionResults())
         // Forcibly finish the current execution by throwing an exception.
@@ -299,7 +275,8 @@ abstract class ManagedStrategy(
     }
 
     private fun failDueToLivelock(lazyMessage: () -> String): Nothing {
-        suddenInvocationResult = ObstructionFreedomViolationInvocationResult(lazyMessage(), runner.collectExecutionResults())
+        suddenInvocationResult =
+            ObstructionFreedomViolationInvocationResult(lazyMessage(), runner.collectExecutionResults())
         // Forcibly finish the current execution by throwing an exception.
         throw ForcibleExecutionFinishError
     }
@@ -321,10 +298,11 @@ abstract class ManagedStrategy(
 
     private val concurrentActorCausesBlocking: Boolean
         get() = currentActorId.mapIndexed { iThread, actorId ->
-                    if (iThread != currentThread && actorId >= 0 && !finished[iThread])
-                        scenario.threads[iThread][actorId]
-                    else null
-                }.filterNotNull().any { it.causesBlocking }
+            if (iThread != currentThread && actorId >= 0 && !finished[iThread])
+                scenario.threads[iThread][actorId]
+            else null
+        }.filterNotNull().any { it.causesBlocking }
+
 
     // == EXECUTION CONTROL METHODS ==
 

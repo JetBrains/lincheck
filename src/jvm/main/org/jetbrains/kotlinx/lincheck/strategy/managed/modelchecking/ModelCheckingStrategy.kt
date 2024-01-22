@@ -16,7 +16,6 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanObjectNumeration
-import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.lang.reflect.*
 import kotlin.random.*
 
@@ -41,13 +40,8 @@ internal class ModelCheckingStrategy(
     scenario: ExecutionScenario,
     validationFunction: Actor?,
     stateRepresentation: Method?,
-    verifier: Verifier,
     val replay: Boolean,
-) : ManagedStrategy(testClass, scenario, verifier, validationFunction, stateRepresentation, testCfg) {
-    // The number of invocations that the strategy is eligible to use to search for an incorrect execution.
-    private val maxInvocations = testCfg.invocationsPerIteration
-    // The number of already used invocations.
-    private var usedInvocations = 0
+) : ManagedStrategy(testClass, scenario, validationFunction, stateRepresentation, testCfg) {
     // The maximum number of thread switch choices that strategy should perform
     // (increases when all the interleavings with the current depth are studied).
     private var maxNumberOfSwitches = 0
@@ -58,26 +52,22 @@ internal class ModelCheckingStrategy(
     // The interleaving that will be studied on the next invocation.
     private lateinit var currentInterleaving: Interleaving
 
-    override fun runImpl(): LincheckFailure? {
-        currentInterleaving = root.nextInterleaving() ?: return null
-        while (usedInvocations < maxInvocations) {
-            // run invocation and check its results
-            val invocationResult = runInvocation()
-            if (suddenInvocationResult is SpinCycleFoundAndReplayRequired) {
-                // Restart the current interleaving with
-                // the collected knowledge about the detected spin loop.
+    override fun nextInvocation(): Boolean {
+        currentInterleaving = root.nextInterleaving()
+            ?: return false
+        return true
+    }
+
+    override fun initializeInvocation() {
+        super.initializeInvocation()
+        currentInterleaving.initialize()
+    }
+
+    override fun runInvocation(): InvocationResult {
+        return super.runInvocation().also {
+            if (it is SpinCycleFoundAndReplayRequired)
                 currentInterleaving.rollbackAfterSpinCycleFound()
-                continue
-            }
-            usedInvocations++
-            checkResult(invocationResult)?.let { failure ->
-                runReplayIfPluginEnabled(failure)
-                return failure
-            }
-            // get new unexplored interleaving
-            currentInterleaving = root.nextInterleaving() ?: break
         }
-        return null
     }
 
     /**
@@ -299,11 +289,6 @@ internal class ModelCheckingStrategy(
         check(iThread == currentThread)
         currentInterleaving.newExecutionPosition(iThread)
         return currentInterleaving.isSwitchPosition()
-    }
-
-    override fun initializeInvocation() {
-        currentInterleaving.initialize()
-        super.initializeInvocation()
     }
 
     override fun beforePart(part: ExecutionPart) {
