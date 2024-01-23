@@ -480,6 +480,20 @@ abstract class ManagedStrategy(
 
     // == LISTENING METHODS ==
 
+    internal fun hashCodeDeterministic(obj: Any): Int {
+        val hashCode = obj.hashCode()
+        return if (hashCode == System.identityHashCode(obj)) {
+            identityHashCodeDeterministic(obj)
+        } else {
+            hashCode
+        }
+    }
+
+    internal fun identityHashCodeDeterministic(obj: Any): Int {
+        // TODO: easier to support when `javaagent` is merged
+        return 0
+    }
+
     /**
      * This method is executed before a shared variable read operation.
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].

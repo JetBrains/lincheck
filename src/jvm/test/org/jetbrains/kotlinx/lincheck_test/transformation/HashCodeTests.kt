@@ -20,7 +20,7 @@ import org.junit.*
  * implementations in the model checking mode.
  */
 @ModelCheckingCTest(iterations = 50, invocationsPerIteration = 1000)
-class HashCodeStubTest : VerifierState() {
+class HashCodeStubTest {
     @Volatile
     private var a: Any = Any()
 
@@ -39,6 +39,43 @@ class HashCodeStubTest : VerifierState() {
     fun test() {
         LinChecker.check(this::class.java)
     }
+}
 
-    override fun extractState(): Any = 0 // constant state
+class HashCodeCallSensitivityTest() {
+    @Operation
+    fun operation() {
+        val a: Any = 1
+        val b = 1
+        check(a.hashCode() == b.hashCode())
+    }
+
+    @Test
+    fun test() = ModelCheckingOptions().check(this::class)
+}
+
+class IdentityHashCodeSupportedTest() {
+    @Operation
+    fun operation() {
+        val obj = Any()
+        // Check that System.identityHashCode(..) is analyzed
+        check(obj.hashCode() == System.identityHashCode(obj))
+        // Check that identityHashCode stays the same
+        check(System.identityHashCode(obj) == System.identityHashCode(obj))
+    }
+
+    @Test
+    fun test() = ModelCheckingOptions().check(this::class)
+}
+
+@Ignore // TODO: easier to support when `javaagent` is merged
+class IdentityHashCodeDiffersTest() {
+    @Operation
+    fun operation() {
+        val objects = Array(1000) { Any() }
+        // identityHashCode should differ
+        check(objects.map { it.hashCode() }.distinct().size > 1)
+    }
+
+    @Test
+    fun test() = ModelCheckingOptions().check(this::class)
 }
