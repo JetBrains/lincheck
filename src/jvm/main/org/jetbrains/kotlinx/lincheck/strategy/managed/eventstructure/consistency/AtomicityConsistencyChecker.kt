@@ -72,6 +72,9 @@ fun ReadModifyWriteChainsStorage.Entry.isConsistent() = when {
     else -> true
 }
 
+fun ReadModifyWriteChainsStorage.isConsistent() =
+    entries.all { it.isConsistent() }
+
 class ReadModifyWriteChainsStorage {
 
     abstract class Entry {
@@ -82,7 +85,7 @@ class ReadModifyWriteChainsStorage {
 
     private data class EntryImpl(
         override val event: AtomicThreadEvent,
-        override val chain: ReadModifyWriteChain,
+        override val chain: MutableReadModifyWriteChain,
         override val position: Int,
     ) : Entry() {
 
@@ -90,62 +93,75 @@ class ReadModifyWriteChainsStorage {
             require(isValid())
         }
 
-        private fun isValid(): Boolean = when {
-            // we store only write accesses in the chain
-            !event.label.isWriteAccess() -> false
-            // non-exclusive write access can only be the first one in the chain
-            !event.label.isExclusiveWriteAccess() -> (position == 0) && (event == chain[0])
-            // otherwise, consider entry to be valid
-            else -> true
-        }
+        private fun isValid(): Boolean =
+            chain.isNotEmpty() && when {
+                // we store only write accesses in the chain
+                !event.label.isWriteAccess() -> false
+                // non-exclusive write access can only be the first one in the chain
+                !event.label.isExclusiveWriteAccess() -> (position == 0) && (event == chain[0])
+                // otherwise, consider entry to be valid
+                else -> true
+            }
     }
 
-    private val eventChainMap = mutableMapOf<Event, MutableReadModifyWriteChain>()
+    val entries: Collection<Entry>
+        get() = eventMap.values
+
+    private val eventMap = mutableMapOf<Event, EntryImpl>()
 
     private val rmwChainsMap = mutableMapOf<MemoryLocation, MutableList<MutableReadModifyWriteChain>>()
 
-    fun getReadModifyWriteChain(event: Event): ReadModifyWriteChain {
-        return eventChainMap[event] ?: emptyList()
+    operator fun get(event: Event): Entry? {
+        return eventMap[event]
     }
 
-    fun getReadModifyWriteChains(location: MemoryLocation): List<ReadModifyWriteChain> {
-        return rmwChainsMap[location] ?: emptyList()
+    operator fun get(location: MemoryLocation): List<ReadModifyWriteChain>? {
+        return rmwChainsMap[location]
     }
 
-    val sameReadModifyWriteChain = Relation<AtomicThreadEvent> { x, y ->
-        val chain = getReadModifyWriteChain(x)
-        chain.isNotEmpty() && chain == getReadModifyWriteChain(y)
-    }
+    // val sameReadModifyWriteChain = Relation<AtomicThreadEvent> { x, y ->
+    //     val chain = getReadModifyWriteChain(x)
+    //     chain.isNotEmpty() && chain == getReadModifyWriteChain(y)
+    // }
 
     fun add(event: AtomicThreadEvent) {
         val writeLabel = event.label.refine<WriteAccessLabel> { isExclusive }
             ?: return
         val location = writeLabel.location
         val readFrom = event.exclusiveReadPart.readsFrom
-        val chain = eventChainMap[readFrom] ?: arrayListOf()
-        // TODO: handle inconsistency?
-        // if (readFrom != chain.lastOrNull()) {
-        //
-        // }
-        // if the read-from events is not yet mapped to any rmw chain,
+        val chain = eventMap[readFrom]?.chain?.ensure { it.isNotEmpty() } ?: arrayListOf()
+        // if the read-from event is not yet mapped to any rmw chain,
         // then we about to start a new one
         if (chain.isEmpty()) {
             check(!readFrom.label.isExclusiveWriteAccess())
             chain.add(readFrom)
+            eventMap[readFrom] = EntryImpl(readFrom, chain, position = 0)
             rmwChainsMap.updateInplace(location, default = arrayListOf()) {
                 add(chain)
             }
         }
         chain.add(event)
-        eventChainMap[event] = chain
+        eventMap[event] = EntryImpl(event, chain, position = chain.size - 1)
     }
 
     fun compute(execution: Execution<AtomicThreadEvent>) {
-
+        /* It is important to add events in some causality-compatible order
+         * (such as event enumeration order).
+         * This guarantees the following property: a mapping `w -> c`, where
+         *   - `w` is an exclusive write event from the rmw pair of events (r, w),
+         *   - `c` is a rmw chain to which `w` belongs to,
+         * would be added to the map only after mapping `w' -> c` is added,
+         * where `w'` is the write event from which `r` reads-from.
+         * In particular, for atomic-consistent executions, it implies that
+         * the rmw-chains would be added in their order from the begging of the chain to its end.
+         */
+        for (event in execution.enumerationOrderSorted()) {
+            add(event)
+        }
     }
 
     fun reset() {
-        eventChainMap.clear()
+        eventMap.clear()
         rmwChainsMap.clear()
     }
 
