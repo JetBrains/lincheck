@@ -27,7 +27,7 @@ import org.jetbrains.kotlinx.lincheck.utils.*
 typealias EventIndexClassifier<E, C, K> = (E) -> Pair<C, K>?
 
 interface EventIndex<E : Event, C : Enum<C>, K : Any> {
-    operator fun get(category: C, key: K): Set<E>
+    operator fun get(category: C, key: K): SortedList<E>
 }
 
 interface MutableEventIndex<E : Event, C : Enum<C>, K : Any> : EventIndex<E, C, K> {
@@ -42,7 +42,7 @@ interface MutableEventIndex<E : Event, C : Enum<C>, K : Any> : EventIndex<E, C, 
     }
 
     fun index(events: Collection<E>) {
-        events.forEach { index(it) }
+        events.enumerationOrderSorted().forEach { index(it) }
     }
 
     fun rebuild(events: Collection<E>) {
@@ -72,14 +72,14 @@ class EventIndexImpl<E : Event, C : Enum<C>, K : Any> private constructor(
     override val classifier: EventIndexClassifier<E, C, K>
 ) : MutableEventIndex<E, C, K> {
 
-    private val index = Array<MutableMap<K, MutableSet<E>>>(nCategories) { mutableMapOf() }
+    private val index = Array<MutableMap<K, SortedArrayList<E>>>(nCategories) { mutableMapOf() }
 
-    override operator fun get(category: C, key: K): Set<E> {
-        return index[category.ordinal][key] ?: emptySet()
+    override operator fun get(category: C, key: K): SortedList<E> {
+        return index[category.ordinal][key] ?: sortedArrayListOf()
     }
 
     override fun index(category: C, key: K, event: E) {
-        index[category.ordinal].updateInplace(key, default = linkedSetOf()) { add(event) }
+        index[category.ordinal].updateInplace(key, default = sortedArrayListOf()) { add(event) }
     }
 
     override fun reset() {
@@ -126,15 +126,15 @@ interface AtomicMemoryAccessEventIndex : EventIndex<AtomicThreadEvent, AtomicMem
 
     val locations: Set<MemoryLocation>
 
-    fun getReadRequests(location: MemoryLocation) : Set<AtomicThreadEvent> {
+    fun getReadRequests(location: MemoryLocation) : SortedList<AtomicThreadEvent> {
         return get(AtomicMemoryAccessCategory.ReadRequest, location)
     }
 
-    fun getReadResponses(location: MemoryLocation): Set<AtomicThreadEvent> {
+    fun getReadResponses(location: MemoryLocation): SortedList<AtomicThreadEvent> {
         return get(AtomicMemoryAccessCategory.ReadResponse, location)
     }
 
-    fun getWrites(location: MemoryLocation): Set<AtomicThreadEvent> {
+    fun getWrites(location: MemoryLocation): SortedList<AtomicThreadEvent> {
         return get(AtomicMemoryAccessCategory.Write, location)
     }
 
@@ -177,7 +177,7 @@ private class MutableAtomicMemoryAccessEventIndexImpl(
 
     private val index = MutableEventIndex<AtomicThreadEvent, AtomicMemoryAccessCategory, MemoryLocation>(classifier)
 
-    override fun get(category: AtomicMemoryAccessCategory, key: MemoryLocation): Set<AtomicThreadEvent> =
+    override fun get(category: AtomicMemoryAccessCategory, key: MemoryLocation): SortedList<AtomicThreadEvent> =
         index[category, key]
 
     override fun index(category: AtomicMemoryAccessCategory, key: MemoryLocation, event: AtomicThreadEvent) =

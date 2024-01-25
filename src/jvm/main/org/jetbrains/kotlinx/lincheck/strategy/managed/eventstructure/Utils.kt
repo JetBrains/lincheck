@@ -22,7 +22,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.utils.*
 
-fun buildIndexer(events: MutableList<AtomicThreadEvent>) = object : Indexer<AtomicThreadEvent> {
+fun buildIndexer(events: List<AtomicThreadEvent>) = object : Indexer<AtomicThreadEvent> {
 
     // TODO: perhaps we can maintain event numbers directly in events themself
     //   and update them during replay?

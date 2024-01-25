@@ -41,7 +41,7 @@ class ReleaseAcquireConsistencyChecker : ConsistencyChecker<AtomicThreadEvent, R
 
     override fun check(execution: Execution<AtomicThreadEvent>): ConsistencyVerdict<ReleaseAcquireConsistencyWitness> {
         val writesBeforeRelation = WritesBeforeRelation(execution)
-        return if (writesBeforeRelation.inconsistent || !writesBeforeRelation.isIrreflexive())
+        return if (!writesBeforeRelation.isIrreflexive())
             ReleaseAcquireInconsistency()
         else
             ConsistencyWitness(ReleaseAcquireConsistencyWitness(writesBeforeRelation))
@@ -49,126 +49,65 @@ class ReleaseAcquireConsistencyChecker : ConsistencyChecker<AtomicThreadEvent, R
 
 }
 
-// We use a map from pairs (location, event), because some events
-// (e.g. ObjectAllocation events) can encompass several memory locations simultaneously.
-private typealias ReadModifyWriteChainsMutableMap =
-    MutableMap<Pair<MemoryLocation, AtomicThreadEvent>, MutableList<AtomicThreadEvent>>
-
 class WritesBeforeRelation(
-    val execution: Execution<AtomicThreadEvent>
+    val execution: Execution<AtomicThreadEvent>,
+    val executionIndex: AtomicMemoryAccessEventIndex,
+    val rmwChainsStorage: ReadModifyWriteChainsStorage,
 ) : Relation<AtomicThreadEvent> {
-
-    private val readsMap: MutableMap<MemoryLocation, ArrayList<AtomicThreadEvent>> = mutableMapOf()
-
-    private val writesMap: MutableMap<MemoryLocation, ArrayList<AtomicThreadEvent>> = mutableMapOf()
 
     private val relations: MutableMap<MemoryLocation, RelationMatrix<AtomicThreadEvent>> = mutableMapOf()
 
-    private val rmwChains: ReadModifyWriteChainsMutableMap = mutableMapOf()
+    // TODO: think more about relations API, in particular,
+    //   - provision the fixpoint computations,
+    //   - provision the interplay between different relations
 
-    // TODO: use both for rmw-chains and wb irreflexivity
-    var inconsistent = false
-        private set
+    private var isInitialized = false
+    private var isComputed = false
 
-    init {
-        initializeWritesBeforeOrder()
-        initializeReadModifyWriteChains()
-        saturate()
-    }
-
-    private fun initializeWritesBeforeOrder() {
-        var initEvent: AtomicThreadEvent? = null
-        val allocEvents = mutableListOf<AtomicThreadEvent>()
-        // TODO: refactor once per-kind indexing of events will be implemented
-        for (event in execution) {
-            val label = event.label
-            if (label is InitializationLabel)
-                initEvent = event
-            if (label is ObjectAllocationLabel)
-                allocEvents.add(event)
-            if (label !is MemoryAccessLabel)
-                continue
-            if (label.isRead && label.isResponse) {
-                readsMap.computeIfAbsent(label.location) { arrayListOf() }.apply {
-                    add(event)
-                }
-            }
-            if (label.isWrite) {
-                writesMap.computeIfAbsent(label.location) { arrayListOf() }.apply {
-                    add(event)
-                }
-            }
-        }
-        for ((memId, writes) in writesMap) {
-            if (initEvent!!.label.isWriteAccessTo(memId))
-                writes.add(initEvent)
-            writes.addAll(allocEvents.filter { it.label.isWriteAccessTo(memId) })
-            relations[memId] = RelationMatrix(writes, buildIndexer(writes)) { x, y ->
-                causalityOrder.lessThan(x, y)
-            }
-        }
-    }
-
-    private fun initializeReadModifyWriteChains() {
-        val chainsMap : ReadModifyWriteChainsMutableMap = mutableMapOf()
-        for (event in execution.enumerationOrderSorted()) {
-            val label = event.label
-            if (label !is WriteAccessLabel || !label.isExclusive)
-                continue
-            val readFrom = event.exclusiveReadPart.readsFrom
-            val chain = chainsMap.computeIfAbsent(label.location to readFrom) {
-                mutableListOf(readFrom)
-            }
-            // TODO: this should be detected earlier ---
-            //  we need to recalculate rmw chains on execution reset
-            // check(readFrom == chain.last())
-            if (readFrom != chain.last()) {
-                inconsistent = true
-                return
-            }
-            chain.add(event)
-            chainsMap.put((label.location to event), chain).ensureNull()
-        }
-        for (chain in chainsMap.values) {
-            check(chain.size >= 2)
-            val location = (chain.last().label as WriteAccessLabel).location
-            val relation = relations[location]!!
-            for (i in 0 until chain.size - 1) {
-                relation[chain[i], chain[i + 1]] = true
-            }
-            relation.transitiveClosure()
-        }
-        rmwChains.putAll(chainsMap)
-    }
-
-    private fun<T> RelationMatrix<T>.updateIrrefl(x: T, y: T): Boolean {
-        return if ((x != y) && !this[x, y]) {
-            this[x, y] = true
-            true
-        } else false
-    }
-
-    fun saturate() {
-        if (inconsistent || !isIrreflexive())
+    fun initialize(initialApproximation: Relation<AtomicThreadEvent>) {
+        if (isInitialized)
             return
-        for ((memId, relation) in relations) {
-            val reads = readsMap[memId] ?: continue
-            val writes = writesMap[memId] ?: continue
+        for (location in executionIndex.locations) {
+            val writes = executionIndex.getWrites(location)
+            val relation = RelationMatrix(writes, buildIndexer(writes))
+            // add edges between the writes according to the initial approximation
+            relation.add { x, y ->
+                initialApproximation(x, y)
+                // causalityOrder.lessThan(x, y)
+            }
+            // add edges to order rmw-chains accordingly
+            for (chain in rmwChainsStorage[location].orEmpty()) {
+                relation.addTotalOrdering(chain)
+            }
+            // compute transitive closure
+            relation.transitiveClosure()
+            // set the relation
+            relations[location] = relation
+        }
+        isInitialized = true
+    }
+
+    fun compute() {
+        if (isComputed)
+            return
+        for ((location, relation) in relations) {
             var changed = false
-            readLoop@ for (read in reads) {
+            readLoop@ for (read in executionIndex.getReadResponses(location)) {
                 val readFrom = read.readsFrom
-                val readFromChain = rmwChains[readFrom]
-                writeLoop@ for (write in writes) {
-                    val writeChain = rmwChains[write]
+                val readFromChain = rmwChainsStorage[readFrom]?.chain
+                writeLoop@ for (write in executionIndex.getWrites(location)) {
+                    val writeChain = rmwChainsStorage[write]?.chain
                     if (causalityOrder.lessThan(write, read)) {
                         relation.updateIrrefl(write, readFrom).also {
                             changed = changed || it
                         }
                         if ((writeChain != null || readFromChain != null) &&
-                            (writeChain !== readFromChain)) {
-                            relation.updateIrrefl(writeChain?.last() ?: write, readFromChain?.first() ?: readFrom).also {
-                                changed = changed || it
-                            }
+                            (writeChain !== readFromChain)
+                        ) {
+                            relation.updateIrrefl(writeChain?.last() ?: write, readFromChain?.first() ?: readFrom)
+                                .also {
+                                    changed = changed || it
+                                }
                         }
                     }
                 }
@@ -177,6 +116,20 @@ class WritesBeforeRelation(
                 relation.transitiveClosure()
             }
         }
+        isComputed = true
+    }
+
+    fun reset() {
+        relations.clear()
+        isInitialized = false
+        isComputed = false
+    }
+
+    private fun<T> RelationMatrix<T>.updateIrrefl(x: T, y: T): Boolean {
+        return if ((x != y) && !this[x, y]) {
+            this[x, y] = true
+            true
+        } else false
     }
 
     override fun invoke(x: AtomicThreadEvent, y: AtomicThreadEvent): Boolean {
@@ -208,28 +161,13 @@ class WritesBeforeRelation(
         return coherenceOrderings.cartesianProduct()
     }
 
-    fun getReadModifyWriteChains(location: MemoryLocation): List<List<AtomicThreadEvent>> {
-        return rmwChains.entries.asSequence()
-            .mapNotNull { (key, chain) ->
-                if (key.first == location) chain else null
-            }
-            .distinct()
-            .toMutableList()
-            .apply {
-                sortBy { chain ->
-                    chain.first()
-                }
-            }
-    }
-
     private fun respectsAtomicity(coherence: List<AtomicThreadEvent>): Boolean {
         check(coherence.isNotEmpty())
         val location = coherence
             .first { it.label is WriteAccessLabel }
             .let { (it.label as WriteAccessLabel).location }
         // atomicity violation occurs when a write event is put in the middle of some rmw chain
-        val chains = getReadModifyWriteChains(location)
-        if (chains.isEmpty())
+        val chains = rmwChainsStorage[location]?.ensure { it.isNotEmpty() } ?:
             return true
         var i = 0
         var pos = 0
