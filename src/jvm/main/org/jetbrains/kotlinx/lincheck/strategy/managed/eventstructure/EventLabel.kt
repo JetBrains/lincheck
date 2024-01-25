@@ -802,6 +802,9 @@ fun EventLabel.isWriteAccess(): Boolean =
 fun EventLabel.isExclusiveWriteAccess(): Boolean =
     (this is WriteAccessLabel) && isExclusive
 
+fun EventLabel.isInitializingWriteAccess(): Boolean =
+    this is InitializationLabel || this is ObjectAllocationLabel
+
 fun EventLabel.isWriteAccessTo(location: MemoryLocation): Boolean = when (this) {
     is WriteAccessLabel         -> (this.location == location)
     is ObjectAllocationLabel    -> isWriteAccessTo(location)

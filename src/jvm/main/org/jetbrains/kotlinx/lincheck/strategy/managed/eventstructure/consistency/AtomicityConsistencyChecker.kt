@@ -129,15 +129,31 @@ class ReadModifyWriteChainsStorage {
             ?: return
         val location = writeLabel.location
         val readFrom = event.exclusiveReadPart.readsFrom
-        // TODO: handle reads-from initialization/allocation event
-        val chain = eventMap[readFrom]?.chain?.ensure { it.isNotEmpty() } ?: arrayListOf()
+        val chain = when {
+            /* Because the initialization (or object allocation) event
+             * may encode several initialization writes (e.g., one for each field of an object),
+             * we cannot map this initialization event to a single rmw chain.
+             * Instead, we need to map it to a different rmw chain for each location.
+             * To do so, we can utilize the fact that in such a scenario,
+             * the first chain for a given location has to start with the chain
+             * beginning at the initialization event.
+             */
+            readFrom.label.isInitializingWriteAccess() ->
+                rmwChainsMap[location]?.get(0)?.ensure { it[0] == readFrom } ?: arrayListOf()
+            // otherwise we simply take the chain mapped to the read-from event
+            else ->
+                eventMap[readFrom]?.chain?.ensure { it.isNotEmpty() } ?: arrayListOf()
+        }
         // if the read-from event is not yet mapped to any rmw chain,
         // then we about to start a new one
         if (chain.isEmpty()) {
             check(!readFrom.label.isExclusiveWriteAccess())
             chain.add(readFrom)
-            eventMap[readFrom] = EntryImpl(readFrom, chain, position = 0)
+            if (!readFrom.label.isInitializingWriteAccess()) {
+                eventMap[readFrom] = EntryImpl(readFrom, chain, position = 0)
+            }
             rmwChainsMap.updateInplace(location, default = arrayListOf()) {
+                check(readFrom.label.isInitializingWriteAccess() implies isEmpty())
                 add(chain)
             }
         }
