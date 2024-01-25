@@ -16,7 +16,7 @@ import org.junit.*
 import java.lang.AssertionError
 import kotlin.random.*
 
-@StressCTest(iterations = 1, minimizeFailedScenario = false, requireStateEquivalenceImplCheck = false)
+@StressCTest(iterations = 1, minimizeFailedScenario = false, requireStateEquivalenceImplCheck = false, reproduceWithModelChecking = false)
 class OperationsInAbstractClassTest : AbstractTestClass() {
     @Operation
     fun goodOperation() = 10
