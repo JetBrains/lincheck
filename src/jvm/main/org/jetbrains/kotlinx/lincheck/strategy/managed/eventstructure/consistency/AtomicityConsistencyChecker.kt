@@ -129,6 +129,7 @@ class ReadModifyWriteChainsStorage {
             ?: return
         val location = writeLabel.location
         val readFrom = event.exclusiveReadPart.readsFrom
+        // TODO: handle reads-from initialization/allocation event
         val chain = eventMap[readFrom]?.chain?.ensure { it.isNotEmpty() } ?: arrayListOf()
         // if the read-from event is not yet mapped to any rmw chain,
         // then we about to start a new one

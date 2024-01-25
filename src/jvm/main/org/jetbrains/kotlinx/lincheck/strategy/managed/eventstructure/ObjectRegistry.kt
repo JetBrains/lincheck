@@ -38,6 +38,7 @@ data class ObjectEntry(
         get() = (allocation.label is InitializationLabel)
 }
 
+// TODO: use in EventStructure !!!
 class ObjectRegistry {
 
     private val objectIdIndex = HashMap<ObjectID, ObjectEntry>()
