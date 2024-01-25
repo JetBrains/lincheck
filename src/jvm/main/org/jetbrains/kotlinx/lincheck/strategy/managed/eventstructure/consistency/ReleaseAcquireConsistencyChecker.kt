@@ -37,10 +37,20 @@ class ReleaseAcquireConsistencyWitness(
     val writesBefore: WritesBeforeRelation
 )
 
-class ReleaseAcquireConsistencyChecker : ConsistencyChecker<AtomicThreadEvent, ReleaseAcquireConsistencyWitness> {
+class ReleaseAcquireConsistencyChecker(
+    val objectRegistry: ObjectRegistry,
+) : ConsistencyChecker<AtomicThreadEvent, ReleaseAcquireConsistencyWitness> {
 
     override fun check(execution: Execution<AtomicThreadEvent>): ConsistencyVerdict<ReleaseAcquireConsistencyWitness> {
-        val writesBeforeRelation = WritesBeforeRelation(execution)
+        val executionIndex = MutableAtomicMemoryAccessEventIndex(objectRegistry)
+            .apply { index(execution) }
+        val readModifyWriteChainsStorage = ReadModifyWriteChainsStorage()
+            .apply { compute(execution) }
+        val writesBeforeRelation = WritesBeforeRelation(execution, executionIndex, readModifyWriteChainsStorage)
+            .apply {
+                initialize(causalityOrder.lessThan)
+                compute()
+            }
         return if (!writesBeforeRelation.isIrreflexive())
             ReleaseAcquireInconsistency()
         else

@@ -150,7 +150,7 @@ interface MutableAtomicMemoryAccessEventIndex :
 fun AtomicMemoryAccessEventIndex(objectRegistry: ObjectRegistry): AtomicMemoryAccessEventIndex =
     MutableAtomicMemoryAccessEventIndex(objectRegistry)
 
-fun MutableAtomicMemoryAccessEventIndex(objectRegistry: ObjectRegistry): AtomicMemoryAccessEventIndex =
+fun MutableAtomicMemoryAccessEventIndex(objectRegistry: ObjectRegistry): MutableAtomicMemoryAccessEventIndex =
     MutableAtomicMemoryAccessEventIndexImpl(objectRegistry)
 
 private class MutableAtomicMemoryAccessEventIndexImpl(
