@@ -45,7 +45,6 @@ data class ObjectEntry(
         get() = if (isLocal) allocation.threadId else -1
 }
 
-// TODO: use in EventStructure !!!
 class ObjectRegistry {
 
     private val objectIdIndex = HashMap<ObjectID, ObjectEntry>()

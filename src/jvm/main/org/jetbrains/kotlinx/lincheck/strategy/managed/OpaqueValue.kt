@@ -134,6 +134,8 @@ data class ObjectID(val id: Int): ValueID() {
         "@$id"
 }
 
+internal object STATIC_OBJECT : Any()
+
 // TODO: override `toString` ?
 internal val INVALID_OBJECT_ID = ObjectID(-2)
 internal val STATIC_OBJECT_ID = ObjectID(-1)

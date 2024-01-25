@@ -70,6 +70,18 @@ class EventStructure(
 
     private var pinnedEvents = ExecutionFrontier<AtomicThreadEvent>(this.nThreads)
 
+    /*
+     * Map from blocked dangling events to their responses.
+     * If event is blocked but the corresponding response has not yet arrived then it is mapped to null.
+     */
+    private val danglingEvents = mutableMapOf<AtomicThreadEvent, AtomicThreadEvent?>()
+
+    private val objectRegistry = ObjectRegistry()
+
+    private var nextObjectID = 1 + NULL_OBJECT_ID.id
+
+    private val localWrites = mutableMapOf<MemoryLocation, AtomicThreadEvent>()
+
     private val delayedConsistencyCheckBuffer = mutableListOf<AtomicThreadEvent>()
 
     var detectedInconsistency: Inconsistency? = null
@@ -77,6 +89,7 @@ class EventStructure(
 
     private val sequentialConsistencyChecker =
         IncrementalSequentialConsistencyChecker(
+            objectRegistry = objectRegistry,
             checkReleaseAcquireConsistency = true,
             approximateSequentialConsistency = false
         )
@@ -90,18 +103,6 @@ class EventStructure(
         ),
         listOf(),
     )
-
-    private val objectRegistry = ObjectRegistry()
-
-    private var nextObjectID = 1 + NULL_OBJECT_ID.id
-
-    private val localWrites = mutableMapOf<MemoryLocation, AtomicThreadEvent>()
-
-    /*
-     * Map from blocked dangling events to their responses.
-     * If event is blocked but the corresponding response has not yet arrived then it is mapped to null.
-     */
-    private val danglingEvents = mutableMapOf<AtomicThreadEvent, AtomicThreadEvent?>()
 
     init {
         root = addRootEvent()
@@ -695,8 +696,11 @@ class EventStructure(
             val value = memoryInitializer(location)
             computeValueID(value)
         }
-        return addEvent(initThreadId, label, parent = null, dependencies = emptyList())!!.also {
-            addEventToCurrentExecution(it, visit = false)
+        return addEvent(initThreadId, label, parent = null, dependencies = emptyList())!!.also { event ->
+            val id = STATIC_OBJECT_ID
+            val entry = ObjectEntry(id, STATIC_OBJECT.opaque(), event)
+            objectRegistry.register(entry)
+            addEventToCurrentExecution(event, visit = false)
         }
     }
 

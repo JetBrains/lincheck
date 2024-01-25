@@ -187,10 +187,11 @@ private class MutableAtomicMemoryAccessEventIndexImpl(
         val label = (event.label as? MemoryAccessLabel) ?: return
         val isNewLocation = locations.add(label.location)
         if (isNewLocation) {
-            // if the indexed event is the first memory access to a given location,
-            // then also add the object allocation event to the index for this memory location
-            val objEntry = objectRegistry[label.location.objID]!!
-            index.index(AtomicMemoryAccessCategory.Write, label.location, objEntry.allocation)
+            /* If the indexed event is the first memory access to a given location,
+             * then we also need to add the object allocation event
+             * to the index for this memory location.
+             */
+            index.index(AtomicMemoryAccessCategory.Write, label.location, event.allocation!!)
         }
         index.index(event)
     }
