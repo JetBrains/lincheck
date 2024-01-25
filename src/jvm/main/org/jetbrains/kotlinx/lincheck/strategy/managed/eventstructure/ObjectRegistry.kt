@@ -36,6 +36,13 @@ data class ObjectEntry(
 
     val isExternal: Boolean
         get() = (allocation.label is InitializationLabel)
+
+    // TODO: remove?
+    var isLocal: Boolean =
+        (id != STATIC_OBJECT_ID)
+
+    val localThreadID: ThreadID
+        get() = if (isLocal) allocation.threadId else -1
 }
 
 // TODO: use in EventStructure !!!
@@ -44,14 +51,20 @@ class ObjectRegistry {
     private val objectIdIndex = HashMap<ObjectID, ObjectEntry>()
     private val objectIndex = IdentityHashMap<Any, ObjectEntry>()
 
+    fun register(entry: ObjectEntry) {
+        objectIdIndex.put(entry.id, entry).ensureNull()
+        objectIndex.put(entry.obj.unwrap(), entry).ensureNull()
+    }
+
     operator fun get(id: ObjectID): ObjectEntry? =
         objectIdIndex[id]
 
     operator fun get(obj: Any): ObjectEntry? =
         objectIndex[obj]
 
-    fun register(entry: ObjectEntry) {
-        objectIdIndex.put(entry.id, entry).ensureNull()
-        objectIndex.put(entry.obj.unwrap(), entry).ensureNull()
+    fun retain(predicate: (ObjectEntry) -> Boolean) {
+        objectIdIndex.values.retainAll(predicate)
+        objectIndex.values.retainAll(predicate)
     }
+
 }

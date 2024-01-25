@@ -91,29 +91,7 @@ class EventStructure(
         listOf(),
     )
 
-    // TODO: move to EventIndexer once it will be implemented
-    private data class ObjectEntry(
-        val id: ObjectID,
-        val obj: OpaqueValue,
-        val event: AtomicThreadEvent,
-    ) {
-        init {
-            require(id != NULL_OBJECT_ID)
-            require(event.label is InitializationLabel || event.label is ObjectAllocationLabel)
-        }
-
-        val isExternal: Boolean
-            get() = (event.label is InitializationLabel)
-
-        var isLocal: Boolean =
-            (id != STATIC_OBJECT_ID)
-
-        val localThreadID: ThreadID
-            get() = if (isLocal) event.threadId else -1
-    }
-
-    private val objectIdIndex = HashMap<ObjectID, ObjectEntry>()
-    private val objectIndex = IdentityHashMap<Any, ObjectEntry>()
+    private val objectRegistry = ObjectRegistry()
 
     private var nextObjectID = 1 + NULL_OBJECT_ID.id
 
@@ -216,8 +194,7 @@ class EventStructure(
         // set the replayer state
         replayer = Replayer(sequentialConsistencyChecker.executionOrder)
         // reset object indices --- retain only external events
-        objectIdIndex.values.retainAll { it.isExternal }
-        objectIndex.values.retainAll { it.isExternal }
+        objectRegistry.retain { it.isExternal }
         // reset state of other auxiliary structures
         delayedConsistencyCheckBuffer.clear()
         localWrites.clear()
@@ -364,9 +341,9 @@ class EventStructure(
         }}
         if (causalityViolation)
             return null
-        val allocation = objectIdIndex[label.objID]?.event
+        val allocation = objectRegistry[label.objID]?.allocation
         val source = (label as? WriteAccessLabel)?.writeValue?.let {
-            objectIdIndex[it]?.event
+            objectRegistry[it]?.allocation
         }
         val frontier = currentExecution.toMutableFrontier().apply {
             cut(conflicts)
@@ -471,7 +448,7 @@ class EventStructure(
         }
         // mark the object as non-local if it is accessed from another thread
         if (event.label.objID != NULL_OBJECT_ID && event.label.objID != STATIC_OBJECT_ID) {
-            val objEntry = objectIdIndex[event.label.objID]!!
+            val objEntry = objectRegistry[event.label.objID]!!
             objEntry.isLocal = (objEntry.localThreadID == event.threadId)
             // update latest local write index for a write event
             if (objEntry.isLocal && event.label is WriteAccessLabel) {
@@ -512,7 +489,7 @@ class EventStructure(
     fun getValue(id: ValueID): OpaqueValue? = when (id) {
         NULL_OBJECT_ID -> null
         is PrimitiveID -> id.value.opaque()
-        is ObjectID -> objectIdIndex[id]?.obj
+        is ObjectID -> objectRegistry[id]?.obj
     }
 
     fun getValueID(value: OpaqueValue?): ValueID {
@@ -520,7 +497,7 @@ class EventStructure(
             return NULL_OBJECT_ID
         if (value.isPrimitive)
             return PrimitiveID(value.unwrap())
-        return objectIndex[value.unwrap()]?.id ?: INVALID_OBJECT_ID
+        return objectRegistry[value.unwrap()]?.id ?: INVALID_OBJECT_ID
     }
 
     fun computeValueID(value: OpaqueValue?): ValueID {
@@ -528,25 +505,20 @@ class EventStructure(
             return NULL_OBJECT_ID
         if (value.isPrimitive)
             return PrimitiveID(value.unwrap())
-        objectIndex[value.unwrap()]?.let {
+        objectRegistry[value.unwrap()]?.let {
             return it.id
         }
         val id = ObjectID(nextObjectID++)
         val entry = ObjectEntry(id, value, root)
         val initLabel = (root.label as InitializationLabel)
         val className = value.unwrap().javaClass.simpleName
-        registerObjectEntry(entry)
+        objectRegistry.register(entry)
         initLabel.trackExternalObject(className, id)
         return entry.id
     }
 
-    private fun registerObjectEntry(entry: ObjectEntry) {
-        objectIdIndex.put(entry.id, entry).ensureNull()
-        objectIndex.put(entry.obj.unwrap(), entry).ensureNull()
-    }
-
     fun allocationEvent(id: ObjectID): AtomicThreadEvent? {
-        return objectIdIndex[id]?.event
+        return objectRegistry[id]?.allocation
     }
 
     private val EventLabel.syncType
@@ -581,9 +553,9 @@ class EventStructure(
                 //     it.label is WriteAccessLabel && it.label.location == event.label.location
                 // } ?: root
                 if (label.objID != STATIC_OBJECT_ID) {
-                    val objectEntry = objectIdIndex[label.objID]!!
+                    val objectEntry = objectRegistry[label.objID]!!
                     if (objectEntry.isLocal) {
-                        val write = localWrites.computeIfAbsent(label.location) { objectEntry.event }
+                        val write = localWrites.computeIfAbsent(label.location) { objectEntry.allocation }
                         return listOf(write)
                     }
                 }
@@ -604,7 +576,7 @@ class EventStructure(
             }
             label is WriteAccessLabel -> {
                 if (label.objID != STATIC_OBJECT_ID) {
-                    val objectEntry = objectIdIndex[label.objID]!!
+                    val objectEntry = objectRegistry[label.objID]!!
                     if (objectEntry.isLocal) {
                         return listOf()
                     }
@@ -903,7 +875,7 @@ class EventStructure(
         tryReplayEvent(iThread)?.let { event ->
             val id = event.label.objID
             val entry = ObjectEntry(id, value, event)
-            registerObjectEntry(entry)
+            objectRegistry.register(entry)
             addEventToCurrentExecution(event)
             return event
         }
@@ -920,7 +892,7 @@ class EventStructure(
         val dependencies = listOf<AtomicThreadEvent>()
         return addEvent(iThread, label, parent, dependencies)!!.also { event ->
             val entry = ObjectEntry(id, value, event)
-            registerObjectEntry(entry)
+            objectRegistry.register(entry)
             addEventToCurrentExecution(event)
         }
     }
