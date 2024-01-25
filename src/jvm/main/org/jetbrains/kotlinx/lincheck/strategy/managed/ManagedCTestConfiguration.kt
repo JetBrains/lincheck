@@ -45,6 +45,7 @@ abstract class ManagedCTestConfiguration(
     generatorClass = generatorClass,
     verifierClass = verifierClass,
     minimizeFailedScenario = minimizeFailedScenario,
+    reproduceWithModelChecking = false,
     sequentialSpecification = sequentialSpecification,
     timeoutMs = timeoutMs,
     customScenarios = customScenarios

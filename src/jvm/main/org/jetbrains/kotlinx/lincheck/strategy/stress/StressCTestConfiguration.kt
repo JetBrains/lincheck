@@ -20,7 +20,7 @@ import java.lang.reflect.*
 class StressCTestConfiguration(
     testClass: Class<*>, iterations: Int, threads: Int, actorsPerThread: Int, actorsBefore: Int, actorsAfter: Int,
     generatorClass: Class<out ExecutionGenerator>, verifierClass: Class<out Verifier>,
-    val invocationsPerIteration: Int, minimizeFailedScenario: Boolean,
+    val invocationsPerIteration: Int, minimizeFailedScenario: Boolean, reproduceWithModelChecking: Boolean,
     sequentialSpecification: Class<*>, timeoutMs: Long, customScenarios: List<ExecutionScenario>
 ) : CTestConfiguration(
     testClass = testClass,
@@ -32,6 +32,7 @@ class StressCTestConfiguration(
     generatorClass = generatorClass,
     verifierClass = verifierClass,
     minimizeFailedScenario = minimizeFailedScenario,
+    reproduceWithModelChecking = reproduceWithModelChecking,
     sequentialSpecification = sequentialSpecification,
     timeoutMs = timeoutMs,
     customScenarios = customScenarios

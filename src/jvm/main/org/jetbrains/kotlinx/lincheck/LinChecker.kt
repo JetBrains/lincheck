@@ -13,6 +13,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import kotlin.reflect.*
@@ -71,24 +72,33 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
         val scenariosSize = customScenarios.size + iterations
         scenarios.forEachIndexed { i, scenario ->
             val isCustomScenario = (i < customScenarios.size)
+            var iteration = i
             // For performance reasons, verifier re-uses LTS from previous iterations.
             // This behavior is similar to a memory leak and can potentially cause OutOfMemoryError.
             // This is why we periodically create a new verifier to still have increased performance
             // from re-using LTS and limit the size of potential memory leak.
             // https://github.com/Kotlin/kotlinx-lincheck/issues/124
-            if ((i + 1) % VERIFIER_REFRESH_CYCLE == 0)
+            if (iteration + 1 % VERIFIER_REFRESH_CYCLE == 0)
                 verifier = createVerifier()
             scenario.validate()
-            reporter.logIteration(i + 1, scenariosSize, scenario)
-            var failure = scenario.run(i, this, verifier)
-            if (failure == null)
-                return@forEachIndexed
+            reporter.logIteration(iteration, scenariosSize, scenario)
+            var failure = scenario.run(iteration, this, verifier)
+                ?: return@forEachIndexed
             if (minimizeFailedScenario && !isCustomScenario) {
-                var j = i + 1
                 reporter.logScenarioMinimization(scenario)
+                verifier = createVerifier()
                 failure = failure.minimize { minimizedScenario ->
-                    minimizedScenario.run(j++, this, createVerifier())
+                    minimizedScenario.run(++iteration, this, verifier)
                 }
+            }
+            val isStressMode = (this is StressCTestConfiguration)
+            if (isStressMode && reproduceWithModelChecking) {
+                // stress mode does not support trace reporting, so we attempt to reproduce the failure
+                // with the model checking mode and collect the trace
+                check(failure.trace == null)
+                reporter.logFailureReproduction(failure)
+                verifier = createVerifier()
+                failure = failure.tryReproduceInModelCheckingMode(++iteration, this, verifier) ?: failure
             }
             reporter.logFailedIteration(failure)
             return failure
@@ -109,6 +119,43 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
         )
         return strategy.use {
             it.runIteration(iteration, testCfg.invocationsPerIteration, verifier)
+        }
+    }
+
+    private fun LincheckFailure.tryReproduceInModelCheckingMode(
+        iteration: Int,
+        testCfg: CTestConfiguration,
+        verifier: Verifier
+    ): LincheckFailure? {
+        val modelCheckingConfiguration = ModelCheckingCTestConfiguration(
+            testClass = testCfg.testClass,
+            iterations = testCfg.iterations,
+            invocationsPerIteration = testCfg.invocationsPerIteration,
+            threads = testCfg.threads,
+            actorsPerThread = testCfg.actorsPerThread,
+            actorsBefore = testCfg.actorsBefore,
+            actorsAfter = testCfg.actorsAfter,
+            generatorClass = testCfg.generatorClass,
+            verifierClass = testCfg.verifierClass,
+            sequentialSpecification = testCfg.sequentialSpecification,
+            minimizeFailedScenario = false,
+            timeoutMs = testCfg.timeoutMs,
+            customScenarios = testCfg.customScenarios,
+            checkObstructionFreedom = ManagedCTestConfiguration.DEFAULT_CHECK_OBSTRUCTION_FREEDOM,
+            hangingDetectionThreshold = ManagedCTestConfiguration.DEFAULT_HANGING_DETECTION_THRESHOLD,
+            eliminateLocalObjects = ManagedCTestConfiguration.DEFAULT_ELIMINATE_LOCAL_OBJECTS,
+            guarantees = ManagedCTestConfiguration.DEFAULT_GUARANTEES,
+        )
+        val strategy = modelCheckingConfiguration.createStrategy(
+            testClass = testClass,
+            scenario = scenario,
+            validationFunction = testStructure.validationFunction,
+            stateRepresentationMethod = testStructure.stateRepresentation,
+        )
+        val invocationsPerIteration = testCfg.invocationsPerIteration
+            .coerceAtMost(MODEL_CHECKING_FAILURE_REPRODUCTION_INVOCATIONS_COUNT)
+        return strategy.use {
+            it.runIteration(iteration, invocationsPerIteration, verifier)
         }
     }
 
@@ -193,3 +240,5 @@ fun <O : Options<O, *>> O.check(testClass: Class<*>) = LinChecker.check(testClas
 fun <O : Options<O, *>> O.check(testClass: KClass<*>) = this.check(testClass.java)
 
 internal fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>) = LinChecker(testClass, this).checkImpl()
+
+private const val MODEL_CHECKING_FAILURE_REPRODUCTION_INVOCATIONS_COUNT = 5_000
