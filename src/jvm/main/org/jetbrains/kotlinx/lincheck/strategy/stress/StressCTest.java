@@ -105,6 +105,13 @@ public @interface StressCTest {
     boolean minimizeFailedScenario() default true;
 
     /**
+     * If this feature is enabled and an invalid interleaving has been found,
+     * *lincheck* will try to reproduce the failure with model checking strategy and collect the trace.
+     * Enabled by default.
+     */
+    boolean reproduceWithModelChecking() default true;
+
+    /**
      * The specified class defines the sequential behavior of the testing data structure;
      * it is used by {@link Verifier} to build a labeled transition system,
      * and should have the same methods as the testing data structure.

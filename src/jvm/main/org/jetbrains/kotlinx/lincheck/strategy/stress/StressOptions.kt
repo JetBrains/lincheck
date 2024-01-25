@@ -37,6 +37,7 @@ open class StressOptions : Options<StressOptions, StressCTestConfiguration>() {
             verifierClass = verifier,
             invocationsPerIteration = invocationsPerIteration,
             minimizeFailedScenario = minimizeFailedScenario,
+            reproduceWithModelChecking = reproduceWithModelChecking,
             sequentialSpecification = chooseSequentialSpecification(sequentialSpecification, testClass),
             timeoutMs = timeoutMs,
             customScenarios = customScenarios

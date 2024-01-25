@@ -26,6 +26,7 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     protected var executionGenerator = CTestConfiguration.DEFAULT_EXECUTION_GENERATOR
     protected var verifier = CTestConfiguration.DEFAULT_VERIFIER
     protected var minimizeFailedScenario = CTestConfiguration.DEFAULT_MINIMIZE_ERROR
+    protected var reproduceWithModelChecking = CTestConfiguration.DEFAULT_REPRODUCE_WITH_MODEL_CHECKING
     protected var sequentialSpecification: Class<*>? = null
     protected var timeoutMs: Long = CTestConfiguration.DEFAULT_TIMEOUT_MS
     protected var customScenarios: MutableList<ExecutionScenario> = mutableListOf()
@@ -117,6 +118,10 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
      */
     fun minimizeFailedScenario(minimizeFailedScenario: Boolean): OPT = applyAndCast {
         this.minimizeFailedScenario = minimizeFailedScenario
+    }
+
+    fun reproduceWithModelChecking(reproduceWithModelChecking : Boolean): OPT = applyAndCast {
+        this.reproduceWithModelChecking = reproduceWithModelChecking
     }
 
     abstract fun createTestConfigurations(testClass: Class<*>): CTEST

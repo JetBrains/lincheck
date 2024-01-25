@@ -92,7 +92,7 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
                 }
             }
             val isStressMode = (this is StressCTestConfiguration)
-            if (isStressMode) {
+            if (isStressMode && reproduceWithModelChecking) {
                 // stress mode does not support trace reporting, so we attempt to reproduce the failure
                 // with the model checking mode and collect the trace
                 check(failure.trace == null)
@@ -152,8 +152,10 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
             validationFunction = testStructure.validationFunction,
             stateRepresentationMethod = testStructure.stateRepresentation,
         )
+        val invocationsPerIteration = testCfg.invocationsPerIteration
+            .coerceAtMost(MODEL_CHECKING_FAILURE_REPRODUCTION_INVOCATIONS_COUNT)
         return strategy.use {
-            it.runIteration(iteration, MODEL_CHECKING_FAILURE_REPRODUCTION_INVOCATIONS_COUNT, verifier)
+            it.runIteration(iteration, invocationsPerIteration, verifier)
         }
     }
 
@@ -239,4 +241,4 @@ fun <O : Options<O, *>> O.check(testClass: KClass<*>) = this.check(testClass.jav
 
 internal fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>) = LinChecker(testClass, this).checkImpl()
 
-private const val MODEL_CHECKING_FAILURE_REPRODUCTION_INVOCATIONS_COUNT = 10_000
+private const val MODEL_CHECKING_FAILURE_REPRODUCTION_INVOCATIONS_COUNT = 5_000

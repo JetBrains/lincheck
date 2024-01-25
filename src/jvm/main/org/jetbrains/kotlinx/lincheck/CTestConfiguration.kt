@@ -9,6 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck
 
+import org.jetbrains.kotlinx.lincheck.CTestConfiguration.Companion.DEFAULT_REPRODUCE_WITH_MODEL_CHECKING
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration.Companion.DEFAULT_TIMEOUT_MS
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -33,6 +34,7 @@ abstract class CTestConfiguration(
     val generatorClass: Class<out ExecutionGenerator>,
     val verifierClass: Class<out Verifier>,
     val minimizeFailedScenario: Boolean,
+    val reproduceWithModelChecking: Boolean,
     val sequentialSpecification: Class<*>,
     val timeoutMs: Long,
     val customScenarios: List<ExecutionScenario>
@@ -51,6 +53,7 @@ abstract class CTestConfiguration(
         val DEFAULT_EXECUTION_GENERATOR: Class<out ExecutionGenerator?> = RandomExecutionGenerator::class.java
         val DEFAULT_VERIFIER: Class<out Verifier> = LinearizabilityVerifier::class.java
         const val DEFAULT_MINIMIZE_ERROR = true
+        const val DEFAULT_REPRODUCE_WITH_MODEL_CHECKING = true
         const val DEFAULT_TIMEOUT_MS: Long = 10000
     }
 }
@@ -69,6 +72,7 @@ internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConf
                 verifierClass = ann.verifier.java,
                 invocationsPerIteration = ann.invocationsPerIteration,
                 minimizeFailedScenario = ann.minimizeFailedScenario,
+                reproduceWithModelChecking = ann.reproduceWithModelChecking,
                 sequentialSpecification = chooseSequentialSpecification(ann.sequentialSpecification.java, testClass),
                 timeoutMs = DEFAULT_TIMEOUT_MS,
                 customScenarios = emptyList()
