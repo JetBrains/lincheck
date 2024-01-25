@@ -23,7 +23,7 @@ class Reporter(private val logLevel: LoggingLevel) {
     private val outErr: PrintStream = System.err
 
     fun logIteration(iteration: Int, maxIterations: Int, scenario: ExecutionScenario) = log(INFO) {
-        appendLine("\n= Iteration $iteration / $maxIterations =")
+        appendLine("\n= Iteration ${iteration + 1} / $maxIterations =")
         appendExecutionScenario(scenario)
     }
 
@@ -36,6 +36,10 @@ class Reporter(private val logLevel: LoggingLevel) {
         appendExecutionScenario(scenario)
     }
 
+    fun logFailureReproduction(failure: LincheckFailure) = log(INFO) {
+        appendLine("\nFailure detected, trying to reproduce it and collect the trace:")
+        appendFailure(failure)
+    }
 
     private inline fun log(logLevel: LoggingLevel, crossinline msg: StringBuilder.() -> Unit): Unit = synchronized(this) {
         if (this.logLevel > logLevel) return
