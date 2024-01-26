@@ -46,6 +46,10 @@ class ReleaseAcquireConsistencyChecker(
             .apply { index(execution) }
         val readModifyWriteChainsStorage = ReadModifyWriteChainsStorage()
             .apply { compute(execution) }
+        if (!readModifyWriteChainsStorage.isConsistent()) {
+            // TODO: should return RMW-atomicity violation instead
+            return ReleaseAcquireInconsistency()
+        }
         val writesBeforeRelation = WritesBeforeRelation(execution, executionIndex, readModifyWriteChainsStorage)
             .apply {
                 initialize(causalityOrder.lessThan)
