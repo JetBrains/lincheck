@@ -41,14 +41,13 @@ class SequentialConsistencyWitness(
 abstract class SequentialConsistencyViolation : Inconsistency()
 
 class SequentialConsistencyChecker(
-    val objectRegistry: ObjectRegistry,
     val checkReleaseAcquireConsistency: Boolean = true,
     val approximateSequentialConsistency: Boolean = true,
     val computeCoherenceOrdering: Boolean = true,
 ) : ConsistencyChecker<AtomicThreadEvent, SequentialConsistencyWitness> {
 
     private val releaseAcquireChecker : ReleaseAcquireConsistencyChecker? =
-        if (checkReleaseAcquireConsistency) ReleaseAcquireConsistencyChecker(objectRegistry) else null
+        if (checkReleaseAcquireConsistency) ReleaseAcquireConsistencyChecker() else null
 
     override fun check(execution: Execution<AtomicThreadEvent>): SequentialConsistencyVerdict {
         // we will gradually approximate the total sequential execution order of events
@@ -118,7 +117,6 @@ class SequentialConsistencyCoherenceViolation : SequentialConsistencyViolation()
 }
 
 class IncrementalSequentialConsistencyChecker(
-    objectRegistry: ObjectRegistry,
     checkReleaseAcquireConsistency: Boolean = true,
     approximateSequentialConsistency: Boolean = true
 ) : IncrementalConsistencyChecker<AtomicThreadEvent, SequentialConsistencyWitness> {
@@ -135,7 +133,6 @@ class IncrementalSequentialConsistencyChecker(
     private val lockConsistencyChecker = LockConsistencyChecker()
 
     private val sequentialConsistencyChecker = SequentialConsistencyChecker(
-        objectRegistry,
         checkReleaseAcquireConsistency,
         approximateSequentialConsistency,
     )

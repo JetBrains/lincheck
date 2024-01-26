@@ -89,7 +89,6 @@ class EventStructure(
 
     private val sequentialConsistencyChecker =
         IncrementalSequentialConsistencyChecker(
-            objectRegistry = objectRegistry,
             checkReleaseAcquireConsistency = true,
             approximateSequentialConsistency = false
         )

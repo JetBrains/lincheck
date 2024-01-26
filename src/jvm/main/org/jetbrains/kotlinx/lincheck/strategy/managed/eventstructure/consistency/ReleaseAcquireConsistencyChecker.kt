@@ -37,12 +37,10 @@ class ReleaseAcquireConsistencyWitness(
     val writesBefore: WritesBeforeRelation
 )
 
-class ReleaseAcquireConsistencyChecker(
-    val objectRegistry: ObjectRegistry,
-) : ConsistencyChecker<AtomicThreadEvent, ReleaseAcquireConsistencyWitness> {
+class ReleaseAcquireConsistencyChecker : ConsistencyChecker<AtomicThreadEvent, ReleaseAcquireConsistencyWitness> {
 
     override fun check(execution: Execution<AtomicThreadEvent>): ConsistencyVerdict<ReleaseAcquireConsistencyWitness> {
-        val executionIndex = MutableAtomicMemoryAccessEventIndex(objectRegistry)
+        val executionIndex = MutableAtomicMemoryAccessEventIndex()
             .apply { index(execution) }
         val readModifyWriteChainsStorage = ReadModifyWriteChainsStorage()
             .apply { compute(execution) }

@@ -147,15 +147,13 @@ interface MutableAtomicMemoryAccessEventIndex :
     AtomicMemoryAccessEventIndex,
     MutableEventIndex<AtomicThreadEvent, AtomicMemoryAccessCategory, MemoryLocation>
 
-fun AtomicMemoryAccessEventIndex(objectRegistry: ObjectRegistry): AtomicMemoryAccessEventIndex =
-    MutableAtomicMemoryAccessEventIndex(objectRegistry)
+fun AtomicMemoryAccessEventIndex(): AtomicMemoryAccessEventIndex =
+    MutableAtomicMemoryAccessEventIndex()
 
-fun MutableAtomicMemoryAccessEventIndex(objectRegistry: ObjectRegistry): MutableAtomicMemoryAccessEventIndex =
-    MutableAtomicMemoryAccessEventIndexImpl(objectRegistry)
+fun MutableAtomicMemoryAccessEventIndex(): MutableAtomicMemoryAccessEventIndex =
+    MutableAtomicMemoryAccessEventIndexImpl()
 
-private class MutableAtomicMemoryAccessEventIndexImpl(
-    val objectRegistry: ObjectRegistry
-) : MutableAtomicMemoryAccessEventIndex {
+private class MutableAtomicMemoryAccessEventIndexImpl : MutableAtomicMemoryAccessEventIndex {
 
     override val classifier: AtomicMemoryAccessEventClassifier = { event ->
         val label = (event.label as? MemoryAccessLabel)
