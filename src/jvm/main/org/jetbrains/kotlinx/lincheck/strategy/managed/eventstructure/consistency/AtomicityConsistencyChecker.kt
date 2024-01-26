@@ -135,11 +135,13 @@ class ReadModifyWriteChainsStorage {
              * we cannot map this initialization event to a single rmw chain.
              * Instead, we need to map it to a different rmw chain for each location.
              * To do so, we can utilize the fact that in such a scenario,
-             * the first chain for a given location has to start with the chain
+             * the first chain for a given location may start with the chain
              * beginning at the initialization event.
+             * If the first chain starts with some other event,
+             * it means we are about to create a new chain and insert it at the beginning of the list.
              */
             readFrom.label.isInitializingWriteAccess() ->
-                rmwChainsMap[location]?.get(0)?.ensure { it[0] == readFrom } ?: arrayListOf()
+                rmwChainsMap[location]?.get(0)?.takeIf { it[0] == readFrom } ?: arrayListOf()
             // otherwise we simply take the chain mapped to the read-from event
             else ->
                 eventMap[readFrom]?.chain?.ensure { it.isNotEmpty() } ?: arrayListOf()
@@ -153,8 +155,11 @@ class ReadModifyWriteChainsStorage {
                 eventMap[readFrom] = EntryImpl(readFrom, chain, position = 0)
             }
             rmwChainsMap.updateInplace(location, default = arrayListOf()) {
-                check(readFrom.label.isInitializingWriteAccess() implies isEmpty())
-                add(chain)
+                // we order chains with respect to the enumeration order of their starting events
+                var position = indexOfFirst { readFrom.id < it[0].id }
+                if (position == -1)
+                    position = size
+                add(position, chain)
             }
         }
         chain.add(event)
