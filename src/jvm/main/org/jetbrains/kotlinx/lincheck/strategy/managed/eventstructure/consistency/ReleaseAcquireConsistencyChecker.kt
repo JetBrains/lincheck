@@ -179,15 +179,15 @@ class WritesBeforeRelation(
         var i = 0
         var pos = 0
         while (pos + chains[i].size <= coherence.size) {
-            // TODO: fix this IF (if chain is not a sublist of coherence exit immediately)
-            if (coherence[pos] == chains[i].first() &&
-                coherence.subList(pos, pos + chains[i].size) == chains[i]) {
+            if (coherence[pos] == chains[i].first()) {
+                if (coherence.subList(pos, pos + chains[i].size) != chains[i])
+                    return false
                 pos += chains[i].size
                 if (++i == chains.size)
                     return true
-            } else {
-                pos++
+                continue
             }
+            pos++
         }
         return false
     }
