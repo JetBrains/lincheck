@@ -148,15 +148,9 @@ class WritesBeforeRelation(
 
     override fun invoke(x: AtomicThreadEvent, y: AtomicThreadEvent): Boolean {
         // TODO: make this code pattern look nicer (it appears several times in codebase)
-        var xloc = (x.label as? WriteAccessLabel)?.location
-        var yloc = (y.label as? WriteAccessLabel)?.location
-        if (xloc == null && yloc != null && x.label.isWriteAccessTo(yloc))
-            xloc = yloc
-        if (xloc != null && yloc == null && y.label.isWriteAccessTo(xloc))
-            yloc = xloc
-        return if (xloc != null && xloc == yloc) {
-            relations[xloc]?.get(x, y) ?: false
-        } else false
+        val location = getLocationForSameLocationWriteAccesses(x, y)
+            ?: return false
+        return relations[location]?.get(x, y) ?: false
     }
 
     fun isIrreflexive(): Boolean =

@@ -819,6 +819,13 @@ fun EventLabel.asWriteAccessLabel(location: MemoryLocation): WriteAccessLabel? =
     else -> null
 }
 
+fun EventLabel.isMemoryAccessTo(location: MemoryLocation): Boolean = when (this) {
+    is MemoryAccessLabel        -> (this.location == location)
+    is ObjectAllocationLabel    -> isWriteAccessTo(location)
+    is InitializationLabel      -> isWriteAccessTo(location)
+    else -> false
+}
+
 fun EventLabel.asMemoryAccessLabel(location: MemoryLocation): MemoryAccessLabel? = when (this) {
     is MemoryAccessLabel        -> this.takeIf { it.location == location }
     is ObjectAllocationLabel    -> asWriteAccessLabel(location)

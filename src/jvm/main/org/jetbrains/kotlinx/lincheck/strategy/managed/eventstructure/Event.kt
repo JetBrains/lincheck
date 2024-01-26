@@ -20,6 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
+import org.jetbrains.kotlinx.lincheck.strategy.managed.MemoryLocation
 import org.jetbrains.kotlinx.lincheck.utils.*
 
 typealias EventID = Int
@@ -426,3 +427,27 @@ val causalityOrder: PartialOrder<ThreadEvent> = PartialOrder.ofLessOrEqual { x, 
 }
 
 val causalityCovering: Covering<ThreadEvent> = Covering { it.dependencies }
+
+fun getLocationForSameLocationAccesses(x: Event, y: Event): MemoryLocation? {
+    val xloc = (x.label as? MemoryAccessLabel)?.location
+    val yloc = (y.label as? MemoryAccessLabel)?.location
+    val isSameLocation = when {
+        xloc != null && yloc != null -> xloc == yloc
+        xloc != null -> y.label.isMemoryAccessTo(xloc)
+        yloc != null -> x.label.isMemoryAccessTo(yloc)
+        else -> false
+    }
+    return if (isSameLocation) (xloc ?: yloc) else null
+}
+
+fun getLocationForSameLocationWriteAccesses(x: Event, y: Event): MemoryLocation? {
+    val xloc = (x.label as? WriteAccessLabel)?.location
+    val yloc = (y.label as? WriteAccessLabel)?.location
+    val isSameLocation = when {
+        xloc != null && yloc != null -> xloc == yloc
+        xloc != null -> y.label.isWriteAccessTo(xloc)
+        yloc != null -> x.label.isWriteAccessTo(yloc)
+        else -> false
+    }
+    return if (isSameLocation) (xloc ?: yloc) else null
+}
