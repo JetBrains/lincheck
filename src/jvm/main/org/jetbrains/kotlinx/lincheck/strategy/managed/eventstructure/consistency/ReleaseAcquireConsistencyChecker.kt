@@ -34,7 +34,9 @@ class ReleaseAcquireInconsistency() : Inconsistency() {
 }
 
 class ReleaseAcquireConsistencyWitness(
-    val writesBefore: WritesBeforeRelation
+    val executionIndex: AtomicMemoryAccessEventIndex,
+    val rmwChainsStorage: ReadModifyWriteChainsStorage,
+    val writesBefore: WritesBeforeRelation,
 )
 
 class ReleaseAcquireConsistencyChecker : ConsistencyChecker<AtomicThreadEvent, ReleaseAcquireConsistencyWitness> {
@@ -42,13 +44,13 @@ class ReleaseAcquireConsistencyChecker : ConsistencyChecker<AtomicThreadEvent, R
     override fun check(execution: Execution<AtomicThreadEvent>): ConsistencyVerdict<ReleaseAcquireConsistencyWitness> {
         val executionIndex = MutableAtomicMemoryAccessEventIndex()
             .apply { index(execution) }
-        val readModifyWriteChainsStorage = ReadModifyWriteChainsStorage()
+        val rmwChainsStorage = ReadModifyWriteChainsStorage()
             .apply { compute(execution) }
-        if (!readModifyWriteChainsStorage.isConsistent()) {
+        if (!rmwChainsStorage.isConsistent()) {
             // TODO: should return RMW-atomicity violation instead
             return ReleaseAcquireInconsistency()
         }
-        val writesBeforeRelation = WritesBeforeRelation(execution, executionIndex, readModifyWriteChainsStorage)
+        val writesBeforeRelation = WritesBeforeRelation(execution, executionIndex, rmwChainsStorage)
             .apply {
                 initialize(causalityOrder.lessThan)
                 compute()
@@ -56,7 +58,11 @@ class ReleaseAcquireConsistencyChecker : ConsistencyChecker<AtomicThreadEvent, R
         return if (!writesBeforeRelation.isIrreflexive())
             ReleaseAcquireInconsistency()
         else
-            ConsistencyWitness(ReleaseAcquireConsistencyWitness(writesBeforeRelation))
+            ConsistencyWitness(ReleaseAcquireConsistencyWitness(
+                executionIndex = executionIndex,
+                rmwChainsStorage = rmwChainsStorage,
+                writesBefore = writesBeforeRelation,
+            ))
     }
 
 }
@@ -107,6 +113,7 @@ class WritesBeforeRelation(
             var changed = false
             readLoop@ for (read in executionIndex.getReadResponses(location)) {
                 val readFrom = read.readsFrom
+                // TODO: handle case of chain starting at initialization event
                 val readFromChain = rmwChainsStorage[readFrom]?.chain
                 writeLoop@ for (write in executionIndex.getWrites(location)) {
                     val writeChain = rmwChainsStorage[write]?.chain
@@ -155,40 +162,4 @@ class WritesBeforeRelation(
     fun isIrreflexive(): Boolean =
         relations.all { (_, relation) -> relation.isIrreflexive() }
 
-    fun generateCoherenceTotalOrderings(): Sequence<List<List<AtomicThreadEvent>>> {
-        val coherenceOrderings = relations.mapNotNull { (_, relation) ->
-            // TODO: remove this check!
-            if (relation.nodes.size <= 1)
-                return@mapNotNull null
-            topologicalSortings(relation.asGraph()).filter {
-                // filter-out coherence orderings violating atomicity
-                respectsAtomicity(it)
-            }
-        }
-        return coherenceOrderings.cartesianProduct()
-    }
-
-    private fun respectsAtomicity(coherence: List<AtomicThreadEvent>): Boolean {
-        check(coherence.isNotEmpty())
-        val location = coherence
-            .first { it.label is WriteAccessLabel }
-            .let { (it.label as WriteAccessLabel).location }
-        // atomicity violation occurs when a write event is put in the middle of some rmw chain
-        val chains = rmwChainsStorage[location]?.ensure { it.isNotEmpty() } ?:
-            return true
-        var i = 0
-        var pos = 0
-        while (pos + chains[i].size <= coherence.size) {
-            if (coherence[pos] == chains[i].first()) {
-                if (coherence.subList(pos, pos + chains[i].size) != chains[i])
-                    return false
-                pos += chains[i].size
-                if (++i == chains.size)
-                    return true
-                continue
-            }
-            pos++
-        }
-        return false
-    }
 }

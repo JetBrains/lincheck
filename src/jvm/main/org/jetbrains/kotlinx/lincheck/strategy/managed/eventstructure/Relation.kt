@@ -334,3 +334,20 @@ class RelationMatrix<T>(
     }
 
 }
+
+fun<T> Relation<T>.toGraph(nodes: Collection<T>, enumerator: Enumerator<T>) = object : Graph<T> {
+    private val relation = this@toGraph
+
+    override val nodes: Collection<T>
+        get() = nodes
+
+    private val adjacencyList = Array(nodes.size) { i ->
+        val x = enumerator[i]
+        nodes.filter { y -> relation(x, y) }
+    }
+
+    override fun adjacent(node: T): List<T> {
+        val idx = enumerator[node]
+        return adjacencyList[idx]
+    }
+}

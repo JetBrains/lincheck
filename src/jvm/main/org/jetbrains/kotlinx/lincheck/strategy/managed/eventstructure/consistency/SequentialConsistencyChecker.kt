@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consisten
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
+import org.jetbrains.kotlinx.lincheck.utils.*
 import kotlin.collections.*
 
 
@@ -61,11 +62,13 @@ class SequentialConsistencyChecker(
                     // if execution is release/acquire consistent,
                     // the writes-before relation can be used
                     // to refine the execution ordering approximation
+                    val executionIndex = verdict.witness.executionIndex
+                    val rmwChainsStorage = verdict.witness.rmwChainsStorage
                     val writesBefore = verdict.witness.writesBefore
                     executionOrderApproximation = executionOrderApproximation union writesBefore
                     // TODO: combine SC approximation phase with coherence phase
                     if (computeCoherenceOrdering) {
-                        return checkByCoherenceOrdering(execution, writesBefore)
+                        return checkByCoherenceOrdering(execution, executionIndex, rmwChainsStorage, writesBefore)
                     }
                 }
             }
@@ -91,10 +94,12 @@ class SequentialConsistencyChecker(
 
     private fun checkByCoherenceOrdering(
         execution: Execution<AtomicThreadEvent>,
+        executionIndex: AtomicMemoryAccessEventIndex,
+        rmwChainsStorage: ReadModifyWriteChainsStorage,
         wbRelation: WritesBeforeRelation,
     ): ConsistencyVerdict<SequentialConsistencyWitness> {
-        wbRelation.generateCoherenceTotalOrderings().forEach { coherence ->
-            val extendedCoherence = ExtendedCoherenceRelation.fromCoherenceOrderings(execution, coherence)
+        CoherenceOrder.compute(execution, executionIndex, rmwChainsStorage, wbRelation).forEach { coherence ->
+            val extendedCoherence = ExtendedCoherenceRelation.fromCoherenceOrderings(execution, executionIndex, coherence)
             val scOrder = extendedCoherence.computeSequentialConsistencyOrder()
             if (scOrder != null) {
                 val executionOrder = topologicalSorting(scOrder.asGraph())
@@ -274,6 +279,47 @@ class SaturatedHappensBeforeRelation(
 
 }
 
+typealias CoherenceList = List<AtomicThreadEvent>
+typealias MutableCoherenceList = MutableList<AtomicThreadEvent>
+
+class CoherenceOrder {
+
+    private val coherenceMap = mutableMapOf<MemoryLocation, CoherenceList>()
+
+    operator fun get(location: MemoryLocation): CoherenceList =
+        coherenceMap[location] ?: emptyList()
+
+    companion object {
+        fun compute(
+            execution: Execution<AtomicThreadEvent>,
+            executionIndex: AtomicMemoryAccessEventIndex,
+            rmwChainsStorage: ReadModifyWriteChainsStorage,
+            relation: Relation<AtomicThreadEvent>
+        ): Sequence<CoherenceOrder> {
+            val coherenceOrderings = executionIndex.locations.mapNotNull { location ->
+                val writes = executionIndex.getWrites(location)
+                    // TODO: change the `takeIf` check to WW-racy check
+                    .takeIf { it.size > 1 }
+                    ?: return@mapNotNull null
+                val enumerator = executionIndex.enumerator(AtomicMemoryAccessCategory.Write, location)!!
+                topologicalSortings(relation.toGraph(writes, enumerator)).filter {
+                    rmwChainsStorage.respectful(it)
+                }
+            }
+            return coherenceOrderings.cartesianProduct().map { orderings ->
+                val coherence = CoherenceOrder()
+                for (ordering in orderings) {
+                    val location = ordering
+                        .first { it.label is WriteAccessLabel }
+                        .let { (it.label as WriteAccessLabel).location }
+                    coherence.coherenceMap[location] = ordering
+                }
+                return@map coherence
+            }
+        }
+    }
+}
+
 private class ExtendedCoherenceRelation(
     val execution: Execution<AtomicThreadEvent>,
 ): Relation<AtomicThreadEvent> {
@@ -383,7 +429,8 @@ private class ExtendedCoherenceRelation(
     companion object {
         fun fromCoherenceOrderings(
             execution: Execution<AtomicThreadEvent>,
-            coherence: List<List<AtomicThreadEvent>>,
+            executionIndex: AtomicMemoryAccessEventIndex,
+            coherence: CoherenceOrder,
         ): ExtendedCoherenceRelation {
             val extendedCoherence = ExtendedCoherenceRelation(execution)
             var initEvent: AtomicThreadEvent? = null
@@ -410,11 +457,9 @@ private class ExtendedCoherenceRelation(
                     false
                 }
             }
-            for (ordering in coherence) {
-                check(ordering.isNotEmpty())
-                val write = ordering.first { it.label is WriteAccessLabel }
-                val location = (write.label as WriteAccessLabel).location
-                extendedCoherence.relations[location]!!.addTotalOrdering(ordering)
+            for (location in executionIndex.locations) {
+                extendedCoherence.relations[location]!!
+                    .addTotalOrdering(coherence[location])
             }
             extendedCoherence.addExtendendCoherenceEdges()
             return extendedCoherence

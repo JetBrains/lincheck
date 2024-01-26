@@ -187,4 +187,28 @@ class ReadModifyWriteChainsStorage {
         rmwChainsMap.clear()
     }
 
+    fun respectful(events: List<AtomicThreadEvent>): Boolean {
+        check(events.isNotEmpty())
+        val location = events
+            .first { it.label is WriteAccessLabel }
+            .let { (it.label as WriteAccessLabel).location }
+        val chains = rmwChainsMap[location]?.ensure { it.isNotEmpty() }
+            ?: return true
+        /* atomicity violation occurs when a write event is put in the middle of some rmw chain */
+        var i = 0
+        var pos = 0
+        while (pos + chains[i].size <= events.size) {
+            if (events[pos] == chains[i].first()) {
+                if (events.subList(pos, pos + chains[i].size) != chains[i])
+                    return false
+                pos += chains[i].size
+                if (++i == chains.size)
+                    return true
+                continue
+            }
+            pos++
+        }
+        return false
+    }
+
 }
