@@ -27,7 +27,10 @@ import org.jetbrains.kotlinx.lincheck.utils.*
 typealias EventIndexClassifier<E, C, K> = (E) -> Pair<C, K>?
 
 interface EventIndex<E : Event, C : Enum<C>, K : Any> {
+
     operator fun get(category: C, key: K): SortedList<E>
+
+    fun enumerator(category: C, key: K): Enumerator<E>?
 }
 
 interface MutableEventIndex<E : Event, C : Enum<C>, K : Any> : EventIndex<E, C, K> {
@@ -72,14 +75,41 @@ class EventIndexImpl<E : Event, C : Enum<C>, K : Any> private constructor(
     override val classifier: EventIndexClassifier<E, C, K>
 ) : MutableEventIndex<E, C, K> {
 
-    private val index = Array<MutableMap<K, SortedArrayList<E>>>(nCategories) { mutableMapOf() }
+    // TODO: rename Indexer to Enumerator to avoid confusion?
+    private class EventEnumerator<E : Event> : Enumerator<E> {
+        // TODO: use backing fields!
+        private val _events = sortedArrayListOf<E>()
+        val events: SortedList<E> get() = _events
+
+        // TODO: evaluate whether we need separate index here,
+        //   or using binary search on sorted list would be enough performance-wise
+        private val enumerator = hashMapOf<E, Int>()
+
+        override fun get(i: Int): E =
+            events[i]
+
+        override fun get(x: E): Int =
+            enumerator[x]!!
+
+        fun add(event: E) {
+            val idx = _events.size
+            _events.add(event)
+            enumerator[event] = idx
+        }
+    }
+
+    private val index = Array<MutableMap<K, EventEnumerator<E>>>(nCategories) { mutableMapOf() }
 
     override operator fun get(category: C, key: K): SortedList<E> {
-        return index[category.ordinal][key] ?: sortedArrayListOf()
+        return index[category.ordinal][key]?.events ?: sortedArrayListOf()
     }
 
     override fun index(category: C, key: K, event: E) {
-        index[category.ordinal].updateInplace(key, default = sortedArrayListOf()) { add(event) }
+        index[category.ordinal].updateInplace(key, default = EventEnumerator()) { add(event) }
+    }
+
+    override fun enumerator(category: C, key: K): Enumerator<E>? {
+        return index[category.ordinal][key]
     }
 
     override fun reset() {
@@ -126,17 +156,14 @@ interface AtomicMemoryAccessEventIndex : EventIndex<AtomicThreadEvent, AtomicMem
 
     val locations: Set<MemoryLocation>
 
-    fun getReadRequests(location: MemoryLocation) : SortedList<AtomicThreadEvent> {
-        return get(AtomicMemoryAccessCategory.ReadRequest, location)
-    }
+    fun getReadRequests(location: MemoryLocation) : SortedList<AtomicThreadEvent> =
+        get(AtomicMemoryAccessCategory.ReadRequest, location)
 
-    fun getReadResponses(location: MemoryLocation): SortedList<AtomicThreadEvent> {
-        return get(AtomicMemoryAccessCategory.ReadResponse, location)
-    }
+    fun getReadResponses(location: MemoryLocation): SortedList<AtomicThreadEvent> =
+        get(AtomicMemoryAccessCategory.ReadResponse, location)
 
-    fun getWrites(location: MemoryLocation): SortedList<AtomicThreadEvent> {
-        return get(AtomicMemoryAccessCategory.Write, location)
-    }
+    fun getWrites(location: MemoryLocation): SortedList<AtomicThreadEvent> =
+        get(AtomicMemoryAccessCategory.Write, location)
 
 }
 
@@ -193,6 +220,9 @@ private class MutableAtomicMemoryAccessEventIndexImpl : MutableAtomicMemoryAcces
         }
         index.index(event)
     }
+
+    override fun enumerator(category: AtomicMemoryAccessCategory, key: MemoryLocation): Enumerator<AtomicThreadEvent>? =
+        index.enumerator(category, key)
 
     override fun reset() {
         locations.clear()

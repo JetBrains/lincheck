@@ -81,7 +81,8 @@ class WritesBeforeRelation(
             return
         for (location in executionIndex.locations) {
             val writes = executionIndex.getWrites(location)
-            val relation = RelationMatrix(writes, buildEnumerator(writes))
+            val enumerator = executionIndex.enumerator(AtomicMemoryAccessCategory.Write, location)!!
+            val relation = RelationMatrix(writes, enumerator)
             // add edges between the writes according to the initial approximation
             relation.add { x, y ->
                 initialApproximation(x, y)
