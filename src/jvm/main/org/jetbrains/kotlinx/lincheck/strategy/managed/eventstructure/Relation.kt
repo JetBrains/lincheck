@@ -142,9 +142,9 @@ private fun<T> Graph<T>.initializeTopoSortState(): TopoSortState<T> {
 }
 
 
-interface Indexer<T> {
+interface Enumerator<T> {
 
-    fun index(x: T): Int
+    operator fun get(x: T): Int
 
     operator fun get(i: Int): T
 
@@ -152,7 +152,7 @@ interface Indexer<T> {
 
 class RelationMatrix<T>(
     val nodes: Collection<T>,
-    val indexer: Indexer<T>,
+    val enumerator: Enumerator<T>,
     relation: Relation<T>? = null
 ) : Relation<T> {
 
@@ -172,14 +172,14 @@ class RelationMatrix<T>(
     }
 
     operator fun get(x: T, y: T): Boolean =
-        get(indexer.index(x), indexer.index(y))
+        get(enumerator[x], enumerator[y])
 
     private operator fun set(i: Int, j: Int, value: Boolean) {
         matrix[i][j] = value
     }
 
     operator fun set(x: T, y: T, value: Boolean) =
-        set(indexer.index(x), indexer.index(y), value)
+        set(enumerator[x], enumerator[y], value)
 
     fun change(x: T, y: T, new: Boolean): Boolean {
         val old = this[x, y]
@@ -189,9 +189,9 @@ class RelationMatrix<T>(
 
     fun add(relation: Relation<T>) {
         for (i in 0 until size) {
-            val x = indexer[i]
+            val x = enumerator[i]
             for (j in 0 until size) {
-                this[i, j] = this[i, j] || relation(x, indexer[j])
+                this[i, j] = this[i, j] || relation(x, enumerator[j])
             }
         }
     }
@@ -209,7 +209,7 @@ class RelationMatrix<T>(
     fun remove(relation: Relation<T>) {
         for (i in 0 until size) {
             for (j in 0 until size) {
-                this[i, j] = this[i, j] && !relation(indexer[i], indexer[j])
+                this[i, j] = this[i, j] && !relation(enumerator[i], enumerator[j])
             }
         }
     }
@@ -217,7 +217,7 @@ class RelationMatrix<T>(
     fun filter(relation: Relation<T>) {
         for (i in 0 until size) {
             for (j in 0 until size) {
-                this[i, j] = this[i, j] && relation(indexer[i], indexer[j])
+                this[i, j] = this[i, j] && relation(enumerator[i], enumerator[j])
             }
         }
     }
@@ -239,11 +239,11 @@ class RelationMatrix<T>(
     fun closure(rule: (T, T, T) -> Boolean): Boolean {
         var changed = false
         iLoop@for (i in 0 until size) {
-            val x = indexer[i]
+            val x = enumerator[i]
             jLoop@for (j in 0 until size) {
-                val y = indexer[j]
+                val y = enumerator[j]
                 kLoop@for (k in 0 until size) {
-                    val z = indexer[k]
+                    val z = enumerator[k]
                     if (rule(x, y, z)) {
                         this[i, j] = true
                         changed = true
@@ -302,7 +302,7 @@ class RelationMatrix<T>(
 
         private val adjacencyList = Array<List<T>>(nodes.size) { i ->
             val result = mutableListOf<T>()
-            val indexer = this@RelationMatrix.indexer
+            val indexer = this@RelationMatrix.enumerator
             matrix[i].forEachIndexed { j, b ->
                 if (!b) return@forEachIndexed
                 result.add(indexer[j])
@@ -311,25 +311,25 @@ class RelationMatrix<T>(
         }
 
         override fun adjacent(node: T): List<T> {
-            val idx = this@RelationMatrix.indexer.index(node)
+            val idx = this@RelationMatrix.enumerator[node]
             return adjacencyList[idx]
         }
     }
 
     fun covering() = object : Covering<T> {
 
-        val indexer = this@RelationMatrix.indexer
+        val enumerator = this@RelationMatrix.enumerator
 
         val covering: List<List<T>> = Array(this@RelationMatrix.size) { i ->
-            val x = indexer[i]
+            val x = enumerator[i]
             (0 until size).mapNotNull { j ->
-                val y = indexer[j]
+                val y = enumerator[j]
                 if (this@RelationMatrix[x, y]) y else null
             }
         }.asList()
 
         override fun invoke(x: T): List<T> =
-            covering[indexer.index(x)]
+            covering[enumerator[x]]
 
     }
 

@@ -221,7 +221,7 @@ fun<E : ThreadEvent> Execution<E>.calculateFrontier(clock: VectorClock): Mutable
         mutableExecutionFrontierOf(*it.toTypedArray())
     }
 
-fun<E : ThreadEvent> Execution<E>.buildIndexer() = object : Indexer<E> {
+fun<E : ThreadEvent> Execution<E>.buildEnumerator() = object : Enumerator<E> {
 
     private val events = enumerationOrderSorted()
 
@@ -235,7 +235,7 @@ fun<E : ThreadEvent> Execution<E>.buildIndexer() = object : Indexer<E> {
         return events[i]
     }
 
-    override fun index(x: E): Int {
+    override fun get(x: E): Int {
         return eventIndices[x.threadId]!![x.threadPosition]
     }
 
@@ -470,7 +470,7 @@ fun<E : ThreadEvent> Execution<E>.buildExternalCovering(relation: Relation<E>) =
     }
 
     private val execution = this@buildExternalCovering
-    private val indexer = execution.buildIndexer()
+    private val indexer = execution.buildEnumerator()
 
     private val nThreads = 1 + maxThreadID
 
@@ -485,6 +485,6 @@ fun<E : ThreadEvent> Execution<E>.buildExternalCovering(relation: Relation<E>) =
     }
 
     override fun invoke(x: E): List<E> =
-        covering[indexer.index(x)]
+        covering[indexer[x]]
 
 }

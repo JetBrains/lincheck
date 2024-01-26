@@ -22,7 +22,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.utils.*
 
-fun buildIndexer(events: List<AtomicThreadEvent>) = object : Indexer<AtomicThreadEvent> {
+fun buildEnumerator(events: List<AtomicThreadEvent>) = object : Enumerator<AtomicThreadEvent> {
 
     // TODO: perhaps we can maintain event numbers directly in events themself
     //   and update them during replay?
@@ -35,6 +35,6 @@ fun buildIndexer(events: List<AtomicThreadEvent>) = object : Indexer<AtomicThrea
 
     override fun get(i: Int): AtomicThreadEvent = events[i]
 
-    override fun index(x: AtomicThreadEvent): Int = index[x]!!
+    override fun get(x: AtomicThreadEvent): Int = index[x]!!
 
 }

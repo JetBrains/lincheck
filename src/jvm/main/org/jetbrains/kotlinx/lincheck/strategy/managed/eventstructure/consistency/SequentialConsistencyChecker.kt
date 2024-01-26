@@ -22,7 +22,6 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consisten
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
-import org.jetbrains.kotlinx.lincheck.utils.*
 import kotlin.collections.*
 
 
@@ -226,7 +225,7 @@ class SaturatedHappensBeforeRelation(
     initialApproximation: Relation<AtomicThreadEvent>
 ) : Relation<AtomicThreadEvent> {
 
-    private val indexer = execution.buildIndexer()
+    private val indexer = execution.buildEnumerator()
 
     val relation = RelationMatrix(execution, indexer, initialApproximation)
 
@@ -279,7 +278,7 @@ private class ExtendedCoherenceRelation(
     val execution: Execution<AtomicThreadEvent>,
 ): Relation<AtomicThreadEvent> {
 
-    private val indexer = execution.buildIndexer()
+    private val indexer = execution.buildEnumerator()
 
     private val relations: MutableMap<MemoryLocation, RelationMatrix<AtomicThreadEvent>> = mutableMapOf()
 
@@ -407,7 +406,7 @@ private class ExtendedCoherenceRelation(
                 if (initEvent!!.label.isWriteAccessTo(location))
                     events.add(initEvent)
                 events.addAll(allocEvents.filter { it.label.isWriteAccessTo(location) })
-                extendedCoherence.relations[location] = RelationMatrix(events, buildIndexer(events)) { x, y ->
+                extendedCoherence.relations[location] = RelationMatrix(events, buildEnumerator(events)) { x, y ->
                     false
                 }
             }
