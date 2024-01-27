@@ -99,7 +99,8 @@ class SequentialConsistencyChecker(
         wbRelation: WritesBeforeRelation,
     ): ConsistencyVerdict<SequentialConsistencyWitness> {
         CoherenceOrder.compute(execution, executionIndex, rmwChainsStorage, wbRelation).forEach { coherence ->
-            val extendedCoherence = ExtendedCoherenceRelation.fromCoherenceOrderings(execution, executionIndex, coherence)
+            val extendedCoherence = ExtendedCoherenceOrder(execution, executionIndex, rmwChainsStorage, coherence)
+                .apply { compute() }
             val scOrder = extendedCoherence.computeSequentialConsistencyOrder()
             if (scOrder != null) {
                 val executionOrder = topologicalSorting(scOrder.asGraph())
@@ -320,43 +321,82 @@ class CoherenceOrder {
     }
 }
 
-private class ExtendedCoherenceRelation(
+class ExtendedCoherenceOrder(
     val execution: Execution<AtomicThreadEvent>,
+    val executionIndex: AtomicMemoryAccessEventIndex,
+    val rmwChainsStorage: ReadModifyWriteChainsStorage,
+    val coherence: CoherenceOrder,
 ): Relation<AtomicThreadEvent> {
-
-    private val indexer = execution.buildEnumerator()
 
     private val relations: MutableMap<MemoryLocation, RelationMatrix<AtomicThreadEvent>> = mutableMapOf()
 
-    init {
-        // TODO: check that reads-from is contained inside the initial approx.
+    override fun invoke(x: AtomicThreadEvent, y: AtomicThreadEvent): Boolean {
+        val location = getLocationForSameLocationAccesses(x, y)
+            ?: return false
+        if (!(inField(x) && inField(y)))
+            return false
+        return relations[location]?.get(x, y) ?: false
     }
 
-    // TODO: unify the rules below with `coherenceClosure` rules in the `SequentialConsistencyRelation`
+    private fun inField(x: AtomicThreadEvent): Boolean {
+        return (x.label.isWriteAccess() || x.label is ReadAccessLabel && x.label.isResponse)
+    }
+
+    fun isIrreflexive(): Boolean =
+        relations.all { (_, relation) -> relation.isIrreflexive() }
+
+    fun compute() {
+        initialize()
+        addCoherenceEdges()
+        addReadsFromEdges()
+        addReadsBeforeEdges()
+        addCoherenceReadFromEdges()
+        addReadsBeforeReadsFromEdges()
+    }
+
+    private fun initialize() {
+        for (location in executionIndex.locations) {
+            val events = mutableListOf<AtomicThreadEvent>().apply {
+                addAll(executionIndex.getWrites(location))
+                addAll(executionIndex.getReadResponses(location))
+            }
+            relations[location] = RelationMatrix(events, buildEnumerator(events)) { x, y ->
+                false
+            }
+        }
+    }
+
+    private fun addCoherenceEdges() {
+        for (location in executionIndex.locations) {
+            val relation = relations[location]!!
+            relation.addTotalOrdering(coherence[location])
+        }
+    }
 
     private fun addReadsFromEdges() {
-        readLoop@for (read in execution) {
-            if (!(read.label is ReadAccessLabel && read.label.isResponse))
-                continue
-            val readFrom = read.readsFrom
-            val rloc = (read.label as? ReadAccessLabel)?.location
-            val relation = relations[rloc]!!
-            relation[readFrom, read] = true
+        for (location in executionIndex.locations) {
+            addReadsFromEdges(location)
+        }
+    }
+
+    private fun addReadsFromEdges(location: MemoryLocation) {
+        val relation = relations[location]!!
+        for (read in executionIndex.getReadResponses(location)) {
+            relation[read.readsFrom, read] = true
         }
     }
 
     private fun addReadsBeforeEdges() {
-        readLoop@for (read in execution) {
-            if (!(read.label is ReadAccessLabel && read.label.isResponse))
-                continue
-            val readFrom = read.readsFrom
-            writeLoop@for (write in execution) {
-                val rloc = (read.label as? ReadAccessLabel)?.location
-                val wloc = (write.label as? WriteAccessLabel)?.location
-                if (wloc == null || wloc != rloc || write == readFrom)
-                    continue
-                val relation = relations[rloc]!!
-                if (relation(readFrom, write)) {
+        for (location in executionIndex.locations) {
+            addReadsBeforeEdges(location)
+        }
+    }
+
+    private fun addReadsBeforeEdges(location: MemoryLocation) {
+        val relation = relations[location]!!
+        for (read in executionIndex.getReadResponses(location)) {
+            for (write in executionIndex.getWrites(location)) {
+                if (relation(read.readsFrom, write)) {
                     relation[read, write] = true
                 }
             }
@@ -364,18 +404,16 @@ private class ExtendedCoherenceRelation(
     }
 
     private fun addCoherenceReadFromEdges() {
-        readLoop@for (read in execution) {
-            if (!(read.label is ReadAccessLabel && read.label.isResponse))
-                continue
-            val readFrom = read.readsFrom
-            writeLoop@for (write in execution) {
-                val rloc = (read.label as ReadAccessLabel).location
-                if (!write.label.isWriteAccessTo(rloc))
-                    continue
-                if (write == readFrom)
-                    continue
-                val relation = relations[rloc]!!
-                if (relation(write, readFrom)) {
+        for (location in executionIndex.locations) {
+            addCoherenceReadFromEdges(location)
+        }
+    }
+
+    private fun addCoherenceReadFromEdges(location: MemoryLocation) {
+        val relation = relations[location]!!
+        for (read in executionIndex.getReadResponses(location)) {
+            for (write in executionIndex.getWrites(location)) {
+                if (relation(write, read.readsFrom)) {
                     relation[write, read] = true
                 }
             }
@@ -383,87 +421,30 @@ private class ExtendedCoherenceRelation(
     }
 
     private fun addReadsBeforeReadsFromEdges() {
-        read1Loop@for (read1 in execution) {
-            if (!(read1.label is ReadAccessLabel && read1.label.isResponse))
-                continue
-            read2Loop@for (read2 in execution) {
-                val rloc1 = (read1.label as? ReadAccessLabel)?.location
-                val rloc2 = (read2.label as? ReadAccessLabel)?.location
-                if (rloc2 == null || rloc2 != rloc1 || !read2.label.isResponse)
-                    continue
-                val readFrom = read2.readsFrom
-                val relation = relations[rloc1]!!
-                if (relation[read1, readFrom]) {
+        for (location in executionIndex.locations) {
+            addReadsBeforeReadsFromEdges(location)
+        }
+    }
+
+    private fun addReadsBeforeReadsFromEdges(location: MemoryLocation) {
+        val relation = relations[location]!!
+        for (read1 in executionIndex.getReadResponses(location)) {
+            for (read2 in executionIndex.getReadResponses(location)) {
+                if (relation(read1, read2.readsFrom)) {
                     relation[read1, read2] = true
                 }
             }
         }
     }
 
-    private fun addExtendendCoherenceEdges() {
-        addReadsFromEdges()
-        addReadsBeforeEdges()
-        // addCoherenceReadFromEdges()
-        // addReadsBeforeReadsFromEdges()
-    }
-
     // TODO: move to `SequentialConsistencyRelation`
     fun computeSequentialConsistencyOrder(): RelationMatrix<AtomicThreadEvent>? {
-        val scOrder = RelationMatrix(execution, indexer, causalityOrder.lessThan union this)
+        val enumerator = execution.buildEnumerator()
+        val scOrder = RelationMatrix(execution, enumerator, causalityOrder.lessThan union this)
         // TODO: remove this ad-hoc
         scOrder.addRequestResponseEdges()
         scOrder.transitiveClosure()
         return scOrder.takeIf { it.isIrreflexive() }
-    }
-
-    override fun invoke(x: AtomicThreadEvent, y: AtomicThreadEvent): Boolean {
-        // TODO: make this code pattern look nicer (it appears several times in codebase)
-        val location = getLocationForSameLocationAccesses(x, y)
-            ?: return false
-        return relations[location]?.get(x, y) ?: false
-    }
-
-    fun isIrreflexive(): Boolean =
-        relations.all { (_, relation) -> relation.isIrreflexive() }
-
-    companion object {
-        fun fromCoherenceOrderings(
-            execution: Execution<AtomicThreadEvent>,
-            executionIndex: AtomicMemoryAccessEventIndex,
-            coherence: CoherenceOrder,
-        ): ExtendedCoherenceRelation {
-            val extendedCoherence = ExtendedCoherenceRelation(execution)
-            var initEvent: AtomicThreadEvent? = null
-            val allocEvents = mutableListOf<AtomicThreadEvent>()
-            val eventsMap = mutableMapOf<MemoryLocation, MutableList<AtomicThreadEvent>>()
-            // TODO: refactor once per-kind indexing of events will be implemented
-            for (event in execution) {
-                val label = event.label
-                if (label is InitializationLabel)
-                    initEvent = event
-                if (label is ObjectAllocationLabel)
-                    allocEvents.add(event)
-                if (label !is MemoryAccessLabel)
-                    continue
-                eventsMap.computeIfAbsent(label.location) { arrayListOf() }.apply {
-                    add(event)
-                }
-            }
-            for ((location, events) in eventsMap) {
-                if (initEvent!!.label.isWriteAccessTo(location))
-                    events.add(initEvent)
-                events.addAll(allocEvents.filter { it.label.isWriteAccessTo(location) })
-                extendedCoherence.relations[location] = RelationMatrix(events, buildEnumerator(events)) { x, y ->
-                    false
-                }
-            }
-            for (location in executionIndex.locations) {
-                extendedCoherence.relations[location]!!
-                    .addTotalOrdering(coherence[location])
-            }
-            extendedCoherence.addExtendendCoherenceEdges()
-            return extendedCoherence
-        }
     }
 
     private fun RelationMatrix<AtomicThreadEvent>.addRequestResponseEdges() {
