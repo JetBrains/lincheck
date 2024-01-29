@@ -52,7 +52,7 @@ interface Graph<T> {
     fun adjacent(node: T): List<T>
 }
 
-fun<T> topologicalSorting(graph: Graph<T>): List<T> {
+fun<T> topologicalSorting(graph: Graph<T>): List<T>? {
     val result = mutableListOf<T>()
     val state = graph.initializeTopoSortState()
     val queue: Queue<T> = LinkedList()
@@ -67,6 +67,9 @@ fun<T> topologicalSorting(graph: Graph<T>): List<T> {
             if (--state[it]!!.indegree == 0)
                 queue.add(it)
         }
+    }
+    if (result.size != graph.nodes.size) {
+        return null
     }
     return result
 }
@@ -151,6 +154,7 @@ interface Enumerator<T> {
 }
 
 class RelationMatrix<T>(
+    // TODO: take nodes from the enumerator (?)
     val nodes: Collection<T>,
     val enumerator: Enumerator<T>,
     relation: Relation<T>? = null

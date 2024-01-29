@@ -102,8 +102,8 @@ class SequentialConsistencyChecker(
             val extendedCoherence = ExtendedCoherenceOrder(execution, executionIndex, rmwChainsStorage, coherence)
                 .apply { compute() }
             val scOrder = extendedCoherence.computeSequentialConsistencyOrder()
-            if (scOrder != null) {
-                val executionOrder = topologicalSorting(scOrder.asGraph())
+            val executionOrder = topologicalSorting(scOrder.asGraph())
+            if (executionOrder != null) {
                 val replayer = SequentialConsistencyReplayer(1 + execution.maxThreadID)
                 check(replayer.replay(executionOrder) != null)
                 return SequentialConsistencyWitness.create(executionOrder)
@@ -438,13 +438,15 @@ class ExtendedCoherenceOrder(
     }
 
     // TODO: move to `SequentialConsistencyRelation`
-    fun computeSequentialConsistencyOrder(): RelationMatrix<AtomicThreadEvent>? {
+    fun computeSequentialConsistencyOrder(): RelationMatrix<AtomicThreadEvent> {
         val enumerator = execution.buildEnumerator()
+        // TODO: optimize -- when adding extended-coherence edges iterate only through respective events
         val scOrder = RelationMatrix(execution, enumerator, causalityOrder.lessThan union this)
         // TODO: remove this ad-hoc
         scOrder.addRequestResponseEdges()
-        scOrder.transitiveClosure()
-        return scOrder.takeIf { it.isIrreflexive() }
+        return scOrder
+        // scOrder.transitiveClosure()
+        // return scOrder.takeIf { it.isIrreflexive() }
     }
 
     private fun RelationMatrix<AtomicThreadEvent>.addRequestResponseEdges() {
