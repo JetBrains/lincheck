@@ -34,7 +34,8 @@ class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingC
             sequentialSpecification = chooseSequentialSpecification(sequentialSpecification, testClass),
             timeoutMs = timeoutMs,
             eliminateLocalObjects = eliminateLocalObjects,
-            customScenarios = customScenarios
+            customScenarios = customScenarios,
+            coverageOptions = coverageOptions
         )
     }
 }

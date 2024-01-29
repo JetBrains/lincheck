@@ -10,6 +10,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
 import org.jetbrains.kotlinx.lincheck.Actor
+import org.jetbrains.kotlinx.lincheck.coverage.CoverageOptions
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
@@ -19,12 +20,25 @@ import java.lang.reflect.*
 /**
  * Configuration for [random search][ModelCheckingStrategy] strategy.
  */
-class ModelCheckingCTestConfiguration(testClass: Class<*>, iterations: Int, threads: Int, actorsPerThread: Int, actorsBefore: Int,
-                                      actorsAfter: Int, generatorClass: Class<out ExecutionGenerator>, verifierClass: Class<out Verifier>,
-                                      checkObstructionFreedom: Boolean, hangingDetectionThreshold: Int, invocationsPerIteration: Int,
-                                      guarantees: List<ManagedStrategyGuarantee>, minimizeFailedScenario: Boolean,
-                                      sequentialSpecification: Class<*>, timeoutMs: Long, eliminateLocalObjects: Boolean,
-                                      customScenarios: List<ExecutionScenario>
+class ModelCheckingCTestConfiguration(
+    testClass: Class<*>,
+    iterations: Int,
+    threads: Int,
+    actorsPerThread: Int,
+    actorsBefore: Int,
+    actorsAfter: Int,
+    generatorClass: Class<out ExecutionGenerator>,
+    verifierClass: Class<out Verifier>,
+    checkObstructionFreedom: Boolean,
+    hangingDetectionThreshold: Int,
+    invocationsPerIteration: Int,
+    guarantees: List<ManagedStrategyGuarantee>,
+    minimizeFailedScenario: Boolean,
+    sequentialSpecification: Class<*>,
+    timeoutMs: Long,
+    eliminateLocalObjects: Boolean,
+    customScenarios: List<ExecutionScenario>,
+    coverageOptions: CoverageOptions?
 ) : ManagedCTestConfiguration(
     testClass = testClass,
     iterations = iterations,
@@ -42,7 +56,8 @@ class ModelCheckingCTestConfiguration(testClass: Class<*>, iterations: Int, thre
     sequentialSpecification = sequentialSpecification,
     timeoutMs = timeoutMs,
     eliminateLocalObjects = eliminateLocalObjects,
-    customScenarios = customScenarios
+    customScenarios = customScenarios,
+    coverageOptions = coverageOptions
 ) {
     override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunction: Actor?,
                                 stateRepresentationMethod: Method?, verifier: Verifier): Strategy

@@ -39,7 +39,8 @@ open class StressOptions : Options<StressOptions, StressCTestConfiguration>() {
             minimizeFailedScenario = minimizeFailedScenario,
             sequentialSpecification = chooseSequentialSpecification(sequentialSpecification, testClass),
             timeoutMs = timeoutMs,
-            customScenarios = customScenarios
+            customScenarios = customScenarios,
+            coverageOptions = coverageOptions
         )
     }
 }

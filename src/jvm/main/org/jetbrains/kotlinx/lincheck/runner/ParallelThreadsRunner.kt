@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.runner
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
+import org.jetbrains.kotlinx.lincheck.coverage.CoverageOptions
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.*
@@ -40,8 +41,9 @@ internal open class ParallelThreadsRunner(
     validationFunction: Actor?,
     stateRepresentationFunction: Method?,
     private val timeoutMs: Long, // for deadlock or livelock detection
-    private val useClocks: UseClocks // specifies whether `HBClock`-s should always be used or with some probability
-) : Runner(strategy, testClass, validationFunction, stateRepresentationFunction) {
+    private val useClocks: UseClocks, // specifies whether `HBClock`-s should always be used or with some probability
+    coverageOptions: CoverageOptions? = null
+) : Runner(strategy, testClass, validationFunction, stateRepresentationFunction, coverageOptions) {
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
     private val executor = FixedActiveThreadsExecutor(scenario.nThreads, runnerHash) // should be closed in `close()`
 

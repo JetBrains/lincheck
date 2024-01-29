@@ -11,6 +11,7 @@ package org.jetbrains.kotlinx.lincheck.runner
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
+import org.jetbrains.kotlinx.lincheck.coverage.CoverageOptions
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.objectweb.asm.*
 import java.io.*
@@ -26,7 +27,8 @@ abstract class Runner protected constructor(
     protected val strategy: Strategy,
     private val _testClass: Class<*>, // will be transformed later
     protected val validationFunction: Actor?,
-    protected val stateRepresentationFunction: Method?
+    protected val stateRepresentationFunction: Method?,
+    protected val coverageOptions: CoverageOptions?
 ) : Closeable {
     protected var scenario = strategy.scenario // `strategy.scenario` will be transformed in `initialize`
     protected lateinit var testClass: Class<*> // not available before `initialize` call
@@ -34,7 +36,7 @@ abstract class Runner protected constructor(
     @Suppress("LeakingThis")
     val classLoader: ExecutionClassLoader =
         if (needsTransformation() || strategy.needsTransformation())
-            TransformationClassLoader(strategy, this)
+            TransformationClassLoader(strategy, this, coverageOptions)
         else ExecutionClassLoader()
 
     protected val completedOrSuspendedThreads = AtomicInteger(0)

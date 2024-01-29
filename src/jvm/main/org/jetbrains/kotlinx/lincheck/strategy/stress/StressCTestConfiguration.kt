@@ -10,6 +10,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.stress
 
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.coverage.CoverageOptions
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.lang.reflect.*
@@ -18,10 +19,20 @@ import java.lang.reflect.*
  * Configuration for [stress][StressStrategy] strategy.
  */
 class StressCTestConfiguration(
-    testClass: Class<*>, iterations: Int, threads: Int, actorsPerThread: Int, actorsBefore: Int, actorsAfter: Int,
-    generatorClass: Class<out ExecutionGenerator>, verifierClass: Class<out Verifier>,
-    val invocationsPerIteration: Int, minimizeFailedScenario: Boolean,
-    sequentialSpecification: Class<*>, timeoutMs: Long, customScenarios: List<ExecutionScenario>
+    testClass: Class<*>,
+    iterations: Int,
+    threads: Int,
+    actorsPerThread: Int,
+    actorsBefore: Int,
+    actorsAfter: Int,
+    generatorClass: Class<out ExecutionGenerator>,
+    verifierClass: Class<out Verifier>,
+    val invocationsPerIteration: Int,
+    minimizeFailedScenario: Boolean,
+    sequentialSpecification: Class<*>,
+    timeoutMs: Long,
+    customScenarios: List<ExecutionScenario>,
+    coverageOptions: CoverageOptions?
 ) : CTestConfiguration(
     testClass = testClass,
     iterations = iterations,
@@ -34,7 +45,8 @@ class StressCTestConfiguration(
     minimizeFailedScenario = minimizeFailedScenario,
     sequentialSpecification = sequentialSpecification,
     timeoutMs = timeoutMs,
-    customScenarios = customScenarios
+    customScenarios = customScenarios,
+    coverageOptions = coverageOptions
 ) {
     override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunction: Actor?,
                                 stateRepresentationMethod: Method?, verifier: Verifier) =

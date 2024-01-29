@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
+import org.jetbrains.kotlinx.lincheck.coverage.CoverageOptions
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
@@ -109,8 +110,15 @@ abstract class ManagedStrategy(
         }
     }
 
-    private fun createRunner(): ManagedStrategyRunner =
-        ManagedStrategyRunner(this, testClass, validationFunction, stateRepresentationFunction, testCfg.timeoutMs, UseClocks.ALWAYS)
+    private fun createRunner(): ManagedStrategyRunner = ManagedStrategyRunner(
+        this,
+        testClass,
+        validationFunction,
+        stateRepresentationFunction,
+        testCfg.timeoutMs,
+        UseClocks.ALWAYS,
+        testCfg.coverageOptions
+    )
 
     override fun createTransformer(cv: ClassVisitor): ClassVisitor = ManagedStrategyTransformer(
         cv = cv,
@@ -1212,9 +1220,14 @@ abstract class ManagedStrategy(
  * to the strategy so that it can known about some required events.
  */
 private class ManagedStrategyRunner(
-    private val managedStrategy: ManagedStrategy, testClass: Class<*>, validationFunction: Actor?,
-    stateRepresentationMethod: Method?, timeoutMs: Long, useClocks: UseClocks
-) : ParallelThreadsRunner(managedStrategy, testClass, validationFunction, stateRepresentationMethod, timeoutMs, useClocks) {
+    private val managedStrategy: ManagedStrategy,
+    testClass: Class<*>,
+    validationFunction: Actor?,
+    stateRepresentationMethod: Method?,
+    timeoutMs: Long,
+    useClocks: UseClocks,
+    coverageOptions: CoverageOptions?
+) : ParallelThreadsRunner(managedStrategy, testClass, validationFunction, stateRepresentationMethod, timeoutMs, useClocks, coverageOptions) {
     override fun onStart(iThread: Int) {
         if (currentExecutionPart !== PARALLEL) return
         super.onStart(iThread)
