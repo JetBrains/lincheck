@@ -35,9 +35,8 @@ class CoverageOptions(
     val cf = ClassFinder(listOf(), listOf())
 
     init {
-        // TODO: why does it traverse org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyStateHolder?
         projectData.excludePatterns = listOf(
-            Pattern.compile("org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyStateHolder")
+            Pattern.compile("org\\.jetbrains\\.kotlinx\\.lincheck\\..*") // in order to exclude ManagedStrategyStateHolder
         )
 
         createDataFile()
