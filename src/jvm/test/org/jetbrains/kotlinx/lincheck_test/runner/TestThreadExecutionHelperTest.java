@@ -33,7 +33,7 @@ public class TestThreadExecutionHelperTest {
                 throw new UnsupportedOperationException();
             }
         };
-        runner = new Runner(strategy, ArrayDeque.class, null, null) {
+        runner = new Runner(strategy, ArrayDeque.class, null, null, null) {
             @Override
             public InvocationResult run() {
                 throw new UnsupportedOperationException();

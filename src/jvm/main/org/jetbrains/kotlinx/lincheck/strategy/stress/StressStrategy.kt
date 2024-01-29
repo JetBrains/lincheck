@@ -32,7 +32,8 @@ class StressStrategy(
             validationFunction = validationFunction,
             stateRepresentationFunction = stateRepresentationFunction,
             timeoutMs = testCfg.timeoutMs,
-            useClocks = UseClocks.RANDOM
+            useClocks = UseClocks.RANDOM,
+            coverageOptions = testCfg.coverageOptions
         )
         try {
             runner.initialize()

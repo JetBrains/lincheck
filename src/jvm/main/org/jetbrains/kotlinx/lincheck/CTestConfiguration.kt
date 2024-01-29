@@ -10,6 +10,7 @@
 package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration.Companion.DEFAULT_TIMEOUT_MS
+import org.jetbrains.kotlinx.lincheck.coverage.CoverageOptions
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
@@ -35,7 +36,8 @@ abstract class CTestConfiguration(
     val minimizeFailedScenario: Boolean,
     val sequentialSpecification: Class<*>,
     val timeoutMs: Long,
-    val customScenarios: List<ExecutionScenario>
+    val customScenarios: List<ExecutionScenario>,
+    val coverageOptions: CoverageOptions?
 ) {
     abstract fun createStrategy(
         testClass: Class<*>,
@@ -73,7 +75,8 @@ internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConf
                 minimizeFailedScenario = ann.minimizeFailedScenario,
                 sequentialSpecification = chooseSequentialSpecification(ann.sequentialSpecification.java, testClass),
                 timeoutMs = DEFAULT_TIMEOUT_MS,
-                customScenarios = emptyList()
+                customScenarios = emptyList(),
+                coverageOptions = null
             )
         }
     val modelCheckingConfigurations: List<CTestConfiguration> =
@@ -99,7 +102,8 @@ internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConf
                     ),
                     timeoutMs = DEFAULT_TIMEOUT_MS,
                     eliminateLocalObjects = DEFAULT_ELIMINATE_LOCAL_OBJECTS,
-                    customScenarios = emptyList()
+                    customScenarios = emptyList(),
+                    coverageOptions = null
                 )
             }
     return stressConfigurations + modelCheckingConfigurations
