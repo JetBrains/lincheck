@@ -36,21 +36,20 @@ class CoverageOptions(
 
     init {
         projectData.excludePatterns = listOf(
-            Pattern.compile("org\\.jetbrains\\.kotlinx\\.lincheck\\..*") // in order to exclude ManagedStrategyStateHolder
+            Pattern.compile("org\\.jetbrains\\.kotlinx\\.lincheck\\..*") // added to exclude ManagedStrategyStateHolder
         )
 
         createDataFile()
         CoverageRuntime.installRuntime(projectData)
+    }
 
-        // TODO: replace with regular call after lincheck work finished?
-        Runtime.getRuntime().addShutdownHook(Thread {
-            if (dataFile != null) {
-                println("Saving coverage report to '${dataFile.path}'")
-                CoverageReport(dataFile, false, cf, false).save(projectData)
-            }
+    fun onShutdown() {
+        if (dataFile != null) {
+            println("Saving coverage report to '${dataFile.path}'")
+            CoverageReport(dataFile, false, cf, false).save(projectData)
+        }
 
-            onShutdown?.let { it(projectData) }
-        })
+        onShutdown?.let { it(projectData) }
     }
 
     private fun createDataFile() {
