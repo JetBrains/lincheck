@@ -47,9 +47,11 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
      * @return TestReport with information about concurrent test run.
      */
     internal fun checkImpl(): LincheckFailure? {
+        // TODO: coverage result callback somewhere here
         check(testConfigurations.isNotEmpty()) { "No Lincheck test configuration to run" }
         for (testCfg in testConfigurations) {
             val failure = testCfg.checkImpl()
+            testCfg.coverageOptions?.onShutdown()
             if (failure != null) return failure
         }
         return null
