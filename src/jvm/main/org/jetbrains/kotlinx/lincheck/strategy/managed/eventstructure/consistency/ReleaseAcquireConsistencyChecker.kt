@@ -81,6 +81,13 @@ class WritesBeforeRelation(
     private var isInitialized = false
     private var isComputed = false
 
+    override fun invoke(x: AtomicThreadEvent, y: AtomicThreadEvent): Boolean {
+        // TODO: make this code pattern look nicer (it appears several times in codebase)
+        val location = getLocationForSameLocationWriteAccesses(x, y)
+            ?: return false
+        return relations[location]?.get(x, y) ?: false
+    }
+
     fun initialize(initialApproximation: Relation<AtomicThreadEvent>) {
         if (isInitialized)
             return
@@ -109,27 +116,9 @@ class WritesBeforeRelation(
         if (isComputed)
             return
         for ((location, relation) in relations) {
-            var changed = false
-            readLoop@ for (read in executionIndex.getReadResponses(location)) {
-                val readFrom = read.readsFrom
-                // TODO: handle case of chain starting at initialization event
-                val readFromChain = rmwChainsStorage[readFrom]?.chain
-                writeLoop@ for (write in executionIndex.getWrites(location)) {
-                    val writeChain = rmwChainsStorage[write]?.chain
-                    if (causalityOrder.lessThan(write, read)) {
-                        relation.updateIrrefl(write, readFrom).also {
-                            changed = changed || it
-                        }
-                        if ((writeChain != null || readFromChain != null) &&
-                            (writeChain !== readFromChain)
-                        ) {
-                            relation.updateIrrefl(writeChain?.last() ?: write, readFromChain?.first() ?: readFrom)
-                                .also {
-                                    changed = changed || it
-                                }
-                        }
-                    }
-                }
+            val changed = relation.trackChanges {
+                // TODO: refactor this, make the receiver object obvious
+                compute(location)
             }
             if (changed) {
                 relation.transitiveClosure()
@@ -138,24 +127,38 @@ class WritesBeforeRelation(
         isComputed = true
     }
 
+    private fun compute(location: MemoryLocation) {
+        val relation = relations[location]!!
+        for (read in executionIndex.getReadResponses(location)) {
+            val readFrom = read.readsFrom
+            // TODO: handle case of chain starting at initialization event
+            val readFromChain = rmwChainsStorage[readFrom]?.chain
+            for (write in executionIndex.getWrites(location)) {
+                val writeChain = rmwChainsStorage[write]?.chain
+                // TODO: change this check from `hb` to `rf^?;hb`
+                if (causalityOrder.lessThan(write, read)) {
+                    if (write != readFrom) {
+                        relation[write, readFrom] = true
+                    }
+                    // TODO: add more generic equivalence-closure function
+                    if ((writeChain != null || readFromChain != null) && (writeChain !== readFromChain)) {
+                        relation.updateIrrefl(writeChain?.last() ?: write, readFromChain?.first() ?: readFrom)
+                    }
+                }
+            }
+        }
+    }
+
     fun reset() {
         relations.clear()
         isInitialized = false
         isComputed = false
     }
 
-    private fun<T> RelationMatrix<T>.updateIrrefl(x: T, y: T): Boolean {
-        return if ((x != y) && !this[x, y]) {
+    private fun<T> RelationMatrix<T>.updateIrrefl(x: T, y: T) {
+        if ((x != y) && !this[x, y]) {
             this[x, y] = true
-            true
-        } else false
-    }
-
-    override fun invoke(x: AtomicThreadEvent, y: AtomicThreadEvent): Boolean {
-        // TODO: make this code pattern look nicer (it appears several times in codebase)
-        val location = getLocationForSameLocationWriteAccesses(x, y)
-            ?: return false
-        return relations[location]?.get(x, y) ?: false
+        }
     }
 
     fun isIrreflexive(): Boolean =
