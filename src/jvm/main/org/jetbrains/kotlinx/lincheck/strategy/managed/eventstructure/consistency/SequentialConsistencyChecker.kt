@@ -323,7 +323,7 @@ class ExtendedCoherenceOrder(
     private fun addCoherenceEdges() {
         for (location in executionIndex.locations) {
             val relation = relations[location]!!
-            relation.addTotalOrdering(coherence[location])
+            relation.order(coherence[location])
         }
     }
 
@@ -421,12 +421,13 @@ class SequentialConsistencyOrder(
     }
 
     fun compute() {
-        var changed = !computed
-        while (changed && !inconsistent) {
-            changed = coherenceClosure() && relation.transitiveClosure()
-            if (!relation.isIrreflexive()) {
+        relation.fixpoint {
+            if (!isIrreflexive()) {
                 inconsistent = true
+                return@fixpoint
             }
+            coherenceClosure(executionIndex)
+            transitiveClosure()
         }
         computed = true
     }
@@ -436,32 +437,29 @@ class SequentialConsistencyOrder(
         computed = false
     }
 
-    private fun coherenceClosure(): Boolean {
-        var changed = false
-        for (location in executionIndex.locations) {
-            changed = changed || coherenceClosure(location)
-        }
-        return changed
-    }
+}
 
-    private fun coherenceClosure(location: MemoryLocation): Boolean {
-        var changed = false
-        for (read in executionIndex.getReadResponses(location)) {
-            for (write in executionIndex.getWrites(location)) {
-                val readFrom = read.readsFrom
-                if (write != readFrom && relation(write, read) && !relation(write, readFrom)) {
-                    relation[write, readFrom] = true
-                    changed = true
-                }
-                if (read != write && relation(readFrom, write) && !relation(read, write)) {
-                    relation[read, write] = true
-                    changed = true
-                }
+private fun RelationMatrix<AtomicThreadEvent>.coherenceClosure(executionIndex: AtomicMemoryAccessEventIndex) {
+    for (location in executionIndex.locations) {
+        coherenceClosure(location, executionIndex)
+    }
+}
+
+private fun RelationMatrix<AtomicThreadEvent>.coherenceClosure(
+    location: MemoryLocation,
+    executionIndex: AtomicMemoryAccessEventIndex
+) {
+    val relation = this
+    for (read in executionIndex.getReadResponses(location)) {
+        for (write in executionIndex.getWrites(location)) {
+            if (relation(write, read) && write != read.readsFrom) {
+                relation[write, read.readsFrom] = true
+            }
+            if (relation(read.readsFrom, write)) {
+                relation[read, write] = true
             }
         }
-        return changed
     }
-
 }
 
 class ExecutionOrder(
@@ -486,7 +484,7 @@ class ExecutionOrder(
     fun compute() {
         // TODO: remove this ad-hoc
         addRequestResponseEdges()
-        executionOrder = topologicalSorting(relation.asGraph())
+        executionOrder = topologicalSorting(relation.toGraph())
     }
 
     private fun addRequestResponseEdges() {

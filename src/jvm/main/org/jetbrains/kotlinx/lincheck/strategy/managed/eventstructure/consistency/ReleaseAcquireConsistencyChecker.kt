@@ -22,7 +22,6 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consisten
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
-import org.jetbrains.kotlinx.lincheck.utils.*
 
 // TODO: what information should we display to help identify the cause of inconsistency:
 //   a cycle in writes-before relation?
@@ -96,7 +95,7 @@ class WritesBeforeRelation(
             }
             // add edges to order rmw-chains accordingly
             for (chain in rmwChainsStorage[location].orEmpty()) {
-                relation.addTotalOrdering(chain)
+                relation.order(chain)
             }
             // compute transitive closure
             relation.transitiveClosure()

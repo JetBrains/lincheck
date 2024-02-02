@@ -56,15 +56,16 @@ class RelationMatrix<T>(
     // TODO: take nodes from the enumerator (?)
     val nodes: Collection<T>,
     val enumerator: Enumerator<T>,
-    relation: Relation<T>? = null
 ) : Relation<T> {
 
     private val size = nodes.size
 
     private val matrix = Array(size) { BooleanArray(size) }
 
-    init {
-        relation?.let { add(it) }
+    private var modCount = 0
+
+    constructor(nodes: Collection<T>, enumerator: Enumerator<T>, relation: Relation<T>) : this (nodes, enumerator) {
+        add(relation)
     }
 
     override operator fun invoke(x: T, y: T): Boolean =
@@ -78,17 +79,12 @@ class RelationMatrix<T>(
         get(enumerator[x], enumerator[y])
 
     private operator fun set(i: Int, j: Int, value: Boolean) {
+        modCount += (matrix[i][j] != value).toInt()
         matrix[i][j] = value
     }
 
     operator fun set(x: T, y: T, value: Boolean) =
         set(enumerator[x], enumerator[y], value)
-
-    fun change(x: T, y: T, new: Boolean): Boolean {
-        val old = this[x, y]
-        this[x, y] = new
-        return old != new
-    }
 
     fun add(relation: Relation<T>) {
         for (i in 0 until size) {
@@ -99,7 +95,7 @@ class RelationMatrix<T>(
         }
     }
 
-    fun addTotalOrdering(ordering: List<T>, strict: Boolean = true) {
+    fun order(ordering: List<T>, strict: Boolean = true) {
         for (i in ordering.indices) {
             for (j in i until ordering.size) {
                 if (strict && i == j)
@@ -126,9 +122,9 @@ class RelationMatrix<T>(
     }
 
     private fun swap(i: Int, j: Int) {
-        val bool = this[i, j]
+        val value  = this[i, j]
         this[i, j] = this[j, i]
-        this[j, i] = bool
+        this[j, i] = value
     }
 
     fun transpose() {
@@ -139,43 +135,19 @@ class RelationMatrix<T>(
         }
     }
 
-    fun closure(rule: (T, T, T) -> Boolean): Boolean {
-        var changed = false
-        iLoop@for (i in 0 until size) {
-            val x = enumerator[i]
-            jLoop@for (j in 0 until size) {
-                val y = enumerator[j]
-                kLoop@for (k in 0 until size) {
-                    val z = enumerator[k]
-                    if (rule(x, y, z)) {
-                        this[i, j] = true
-                        changed = true
-                        continue@jLoop
-                    }
-                }
-            }
-        }
-        return changed
-    }
-
-    fun transitiveClosure(): Boolean {
-        var changed = false
+    fun transitiveClosure() {
         kLoop@for (k in 0 until size) {
             iLoop@for (i in 0 until size) {
                 if (!this[i, k])
                     continue@iLoop
                 jLoop@for (j in 0 until size) {
-                    val connected = this[i, j]
-                    this[i, j] = connected || this[k, j]
-                    changed = changed || !connected && this[k, j]
+                    this[i, j] = this[i, j] || this[k, j]
                 }
             }
         }
-        return changed
     }
 
-    fun transitiveReduction(): Boolean {
-        var changed = false
+    fun transitiveReduction() {
         jLoop@for (j in 0 until size) {
             iLoop@for (i in 0 until size) {
                 if (!this[i, j])
@@ -183,12 +155,22 @@ class RelationMatrix<T>(
                 kLoop@for (k in 0 until size) {
                     if (this[i, k] && this[j, k]) {
                         this[i, k] = false
-                        changed = true
                     }
                 }
             }
         }
-        return changed
+    }
+
+    fun fixpoint(block: RelationMatrix<T>.() -> Unit) {
+        do {
+            val changed = trackChanges { block() }
+        } while (changed)
+    }
+
+    fun trackChanges(block: RelationMatrix<T>.() -> Unit): Boolean {
+        val version = modCount
+        block(this)
+        return (version != modCount)
     }
 
     fun isIrreflexive(): Boolean {
@@ -199,42 +181,7 @@ class RelationMatrix<T>(
         return true
     }
 
-    fun asGraph() = object : Graph<T> {
-        override val nodes: Collection<T>
-            get() = this@RelationMatrix.nodes
-
-        private val adjacencyList = Array<List<T>>(nodes.size) { i ->
-            val result = mutableListOf<T>()
-            val indexer = this@RelationMatrix.enumerator
-            matrix[i].forEachIndexed { j, b ->
-                if (!b) return@forEachIndexed
-                result.add(indexer[j])
-            }
-            result
-        }
-
-        override fun adjacent(node: T): List<T> {
-            val idx = this@RelationMatrix.enumerator[node]
-            return adjacencyList[idx]
-        }
-    }
-
-    fun covering() = object : Covering<T> {
-
-        val enumerator = this@RelationMatrix.enumerator
-
-        val covering: List<List<T>> = Array(this@RelationMatrix.size) { i ->
-            val x = enumerator[i]
-            (0 until size).mapNotNull { j ->
-                val y = enumerator[j]
-                if (this@RelationMatrix[x, y]) y else null
-            }
-        }.asList()
-
-        override fun invoke(x: T): List<T> =
-            covering[enumerator[x]]
-
-    }
+    fun toGraph(): Graph<T> = toGraph(nodes, enumerator)
 
 }
 
