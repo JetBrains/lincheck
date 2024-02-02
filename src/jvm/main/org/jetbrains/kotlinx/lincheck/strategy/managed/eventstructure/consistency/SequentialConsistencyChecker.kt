@@ -78,7 +78,13 @@ class SequentialConsistencyChecker(
         if (approximateSequentialConsistency) {
             // TODO: embed the execution order approximation relation into the execution instance,
             //   so that this (and following stages) can be implemented as separate consistency check classes
-            val scApprox = SaturatedHappensBeforeRelation(execution, executionOrderApproximation)
+            val executionIndex = MutableAtomicMemoryAccessEventIndex()
+                .apply { index(execution) }
+            val scApprox = SequentialConsistencyOrder(execution, executionIndex).apply {
+                initialize()
+                refine(executionOrderApproximation)
+                compute()
+            }
             if (scApprox.inconsistent) {
                 return SequentialConsistencyApproximationInconsistency()
             }
@@ -101,8 +107,11 @@ class SequentialConsistencyChecker(
         CoherenceOrder.compute(execution, executionIndex, rmwChainsStorage, wbRelation).forEach { coherence ->
             val extendedCoherence = ExtendedCoherenceOrder(execution, executionIndex, rmwChainsStorage, coherence)
                 .apply { compute() }
-            val scOrder = extendedCoherence.computeSequentialConsistencyOrder()
-            val executionOrder = topologicalSorting(scOrder.asGraph())
+            val executionOrder = ExecutionOrder(execution, executionIndex, extendedCoherence).run {
+                initialize()
+                compute()
+                executionOrder
+            }
             if (executionOrder != null) {
                 val replayer = SequentialConsistencyReplayer(1 + execution.maxThreadID)
                 check(replayer.replay(executionOrder) != null)
@@ -223,61 +232,6 @@ class SequentialConsistencyApproximationInconsistency : SequentialConsistencyVio
         // TODO: what information should we display to help identify the cause of inconsistency?
         return "Approximate sequential inconsistency detected"
     }
-}
-
-
-class SaturatedHappensBeforeRelation(
-    val execution: Execution<AtomicThreadEvent>,
-    initialApproximation: Relation<AtomicThreadEvent>
-) : Relation<AtomicThreadEvent> {
-
-    private val indexer = execution.buildEnumerator()
-
-    val relation = RelationMatrix(execution, indexer, initialApproximation)
-
-    var inconsistent = false
-        private set
-
-    init {
-        saturate()
-    }
-
-    override fun invoke(x: AtomicThreadEvent, y: AtomicThreadEvent): Boolean =
-        relation(x, y)
-
-    private fun saturate() {
-        do {
-            val changed = coherenceClosure() && relation.transitiveClosure()
-            if (!relation.isIrreflexive()) {
-                inconsistent = true
-            }
-        } while (changed && !inconsistent)
-    }
-
-    private fun coherenceClosure(): Boolean {
-        var changed = false
-        readLoop@for (read in execution) {
-            if (!(read.label is ReadAccessLabel && read.label.isResponse))
-                continue
-            val readFrom = read.readsFrom
-            writeLoop@for (write in execution) {
-                val rloc = (read.label as? ReadAccessLabel)?.location
-                val wloc = (write.label as? WriteAccessLabel)?.location
-                if (wloc == null || wloc != rloc)
-                    continue
-                if (write != readFrom && relation(write, read) && !relation(write, readFrom)) {
-                    relation[write, readFrom] = true
-                    changed = true
-                }
-                if (read != write && relation(readFrom, write) && !relation(read, write)) {
-                    relation[read, write] = true
-                    changed = true
-                }
-            }
-        }
-        return changed
-    }
-
 }
 
 typealias CoherenceList = List<AtomicThreadEvent>
@@ -436,33 +390,120 @@ class ExtendedCoherenceOrder(
             }
         }
     }
+}
 
-    // TODO: move to `SequentialConsistencyRelation`
-    fun computeSequentialConsistencyOrder(): RelationMatrix<AtomicThreadEvent> {
-        val enumerator = execution.buildEnumerator()
-        // TODO: optimize -- when adding extended-coherence edges iterate only through respective events
-        val scOrder = RelationMatrix(execution, enumerator, causalityOrder.lessThan union this)
-        // TODO: remove this ad-hoc
-        scOrder.addRequestResponseEdges()
-        return scOrder
-        // scOrder.transitiveClosure()
-        // return scOrder.takeIf { it.isIrreflexive() }
+class SequentialConsistencyOrder(
+    val execution: Execution<AtomicThreadEvent>,
+    val executionIndex: AtomicMemoryAccessEventIndex,
+) : Relation<AtomicThreadEvent> {
+
+    private lateinit var relation: RelationMatrix<AtomicThreadEvent>
+
+    private var initialized = false
+    private var computed = false
+
+    var inconsistent = false
+        private set
+
+    override fun invoke(x: AtomicThreadEvent, y: AtomicThreadEvent): Boolean =
+        relation(x, y)
+
+    fun initialize() {
+        // TODO: optimize -- build the relation only for write and read-response events
+        relation = RelationMatrix(execution, execution.buildEnumerator())
+        initialized = true
+        computed = false
     }
 
-    private fun RelationMatrix<AtomicThreadEvent>.addRequestResponseEdges() {
+    fun refine(relation: Relation<AtomicThreadEvent>) {
+        this.relation.add(relation)
+        computed = false
+    }
+
+    fun compute() {
+        var changed = !computed
+        while (changed && !inconsistent) {
+            changed = coherenceClosure() && relation.transitiveClosure()
+            if (!relation.isIrreflexive()) {
+                inconsistent = true
+            }
+        }
+        computed = true
+    }
+
+    fun reset() {
+        initialized = false
+        computed = false
+    }
+
+    private fun coherenceClosure(): Boolean {
+        var changed = false
+        for (location in executionIndex.locations) {
+            changed = changed || coherenceClosure(location)
+        }
+        return changed
+    }
+
+    private fun coherenceClosure(location: MemoryLocation): Boolean {
+        var changed = false
+        for (read in executionIndex.getReadResponses(location)) {
+            for (write in executionIndex.getWrites(location)) {
+                val readFrom = read.readsFrom
+                if (write != readFrom && relation(write, read) && !relation(write, readFrom)) {
+                    relation[write, readFrom] = true
+                    changed = true
+                }
+                if (read != write && relation(readFrom, write) && !relation(read, write)) {
+                    relation[read, write] = true
+                    changed = true
+                }
+            }
+        }
+        return changed
+    }
+
+}
+
+class ExecutionOrder(
+    val execution: Execution<AtomicThreadEvent>,
+    val executionIndex: AtomicMemoryAccessEventIndex,
+    val extendedCoherence: ExtendedCoherenceOrder,
+) {
+
+    private lateinit var relation: RelationMatrix<AtomicThreadEvent>
+
+    var executionOrder: List<AtomicThreadEvent>? = null
+        private set
+
+    var inconsistent = false
+        private set
+
+    fun initialize() {
+        // TODO: optimize -- when adding extended-coherence edges iterate only through respective events
+        relation = RelationMatrix(execution, execution.buildEnumerator(), causalityOrder.lessThan union extendedCoherence)
+    }
+
+    fun compute() {
+        // TODO: remove this ad-hoc
+        addRequestResponseEdges()
+        executionOrder = topologicalSorting(relation.asGraph())
+    }
+
+    private fun addRequestResponseEdges() {
         for (response in execution) {
             if (!response.label.isResponse)
                 continue
             // put notify event after wait-request
             if (response.label is WaitLabel) {
-                this[response.request!!, response.notifiedBy] = true
+                relation[response.request!!, response.notifiedBy] = true
                 continue
             }
             // otherwise, put request events after dependencies
             for (dependency in response.dependencies) {
                 check(dependency is AtomicThreadEvent)
-                this[dependency, response.request!!] = true
+                relation[dependency, response.request!!] = true
             }
         }
     }
+
 }
