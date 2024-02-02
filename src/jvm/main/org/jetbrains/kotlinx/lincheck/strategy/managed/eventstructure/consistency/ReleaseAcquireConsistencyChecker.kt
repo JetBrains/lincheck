@@ -131,10 +131,9 @@ class WritesBeforeRelation(
         val relation = relations[location]!!
         for (read in executionIndex.getReadResponses(location)) {
             val readFrom = read.readsFrom
-            // TODO: handle case of chain starting at initialization event
-            val readFromChain = rmwChainsStorage[readFrom]?.chain
+            val readFromChain = rmwChainsStorage[location, readFrom]?.chain
             for (write in executionIndex.getWrites(location)) {
-                val writeChain = rmwChainsStorage[write]?.chain
+                val writeChain = rmwChainsStorage[location, write]?.chain
                 // TODO: change this check from `hb` to `rf^?;hb`
                 if (causalityOrder.lessThan(write, read)) {
                     if (write != readFrom) {

@@ -107,11 +107,26 @@ class ReadModifyWriteChainsStorage {
     val entries: Collection<Entry>
         get() = eventMap.values
 
-    private val eventMap = mutableMapOf<Event, EntryImpl>()
+    private val eventMap = mutableMapOf<AtomicThreadEvent, EntryImpl>()
 
     private val rmwChainsMap = mutableMapOf<MemoryLocation, MutableList<MutableReadModifyWriteChain>>()
 
-    operator fun get(event: Event): Entry? {
+    operator fun get(location: MemoryLocation, event: AtomicThreadEvent): Entry? {
+        /* Because the initialization (or object allocation) event
+         * may encode several initialization writes (e.g., one for each field of an object),
+         * we cannot map this initialization event to a single rmw chain.
+         * Instead, we need to map it to a different rmw chain for each location.
+         * To do so, we can utilize the fact that in such a scenario,
+         * the first chain for a given location may start with the chain
+         * beginning at the initialization event.
+         * If the first chain starts with some other event,
+         * it means that initialization event does not belong to any rmw chain.
+         */
+        if (event.label.isInitializingWriteAccess()) {
+            val chain = rmwChainsMap[location]?.get(0)?.takeIf { it[0] == event }
+            return chain?.let { EntryImpl(event, chain, position = 0) }
+        }
+        /* otherwise we simply take the chain mapped to the read-from event */
         return eventMap[event]
     }
 
@@ -129,23 +144,8 @@ class ReadModifyWriteChainsStorage {
             ?: return
         val location = writeLabel.location
         val readFrom = event.exclusiveReadPart.readsFrom
-        val chain = when {
-            /* Because the initialization (or object allocation) event
-             * may encode several initialization writes (e.g., one for each field of an object),
-             * we cannot map this initialization event to a single rmw chain.
-             * Instead, we need to map it to a different rmw chain for each location.
-             * To do so, we can utilize the fact that in such a scenario,
-             * the first chain for a given location may start with the chain
-             * beginning at the initialization event.
-             * If the first chain starts with some other event,
-             * it means we are about to create a new chain and insert it at the beginning of the list.
-             */
-            readFrom.label.isInitializingWriteAccess() ->
-                rmwChainsMap[location]?.get(0)?.takeIf { it[0] == readFrom } ?: arrayListOf()
-            // otherwise we simply take the chain mapped to the read-from event
-            else ->
-                eventMap[readFrom]?.chain?.ensure { it.isNotEmpty() } ?: arrayListOf()
-        }
+        val chain = get(location, readFrom)?.chain?.ensure { it.isNotEmpty() } ?: arrayListOf()
+        check(chain is MutableReadModifyWriteChain)
         // if the read-from event is not yet mapped to any rmw chain,
         // then we about to start a new one
         if (chain.isEmpty()) {
