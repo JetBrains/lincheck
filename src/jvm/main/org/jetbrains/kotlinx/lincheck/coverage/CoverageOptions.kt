@@ -13,50 +13,40 @@ package org.jetbrains.kotlinx.lincheck.coverage
 import com.intellij.rt.coverage.data.ProjectData
 import com.intellij.rt.coverage.instrumentation.CoverageRuntime
 import com.intellij.rt.coverage.util.CoverageReport
-import com.intellij.rt.coverage.util.ProjectDataLoader
 import com.intellij.rt.coverage.util.classFinder.ClassFinder
-import java.io.File
-import java.io.IOException
 import java.util.regex.Pattern
 
 /**
  * Creates object with coverage options.
  *
  * @param branchCoverage flag to run line coverage or branch coverage otherwise.
- * @param dataFile data file to save coverage result.
+ * @param appendUnloaded flag to include classes that were unloaded during execution into coverage report.
  * @param onShutdown callback with coverage results.
+ * @param additionalExcludePatterns patterns to exclude from coverage report.
  */
 class CoverageOptions(
     private val branchCoverage: Boolean = false,
-    private val dataFile: File? = null,
-    private val onShutdown: ((ProjectData) -> Unit)? = null
+    private val appendUnloaded: Boolean = false,
+    private val onShutdown: ((ProjectData) -> Unit)? = null,
+    additionalExcludePatterns: List<Pattern> = listOf(),
 ) {
-    val projectData = ProjectData(dataFile, branchCoverage, null)
-    val cf = ClassFinder(listOf(), listOf())
+    private val excludePatterns = listOf<Pattern>(
+        Pattern.compile("org\\.jetbrains\\.kotlinx\\.lincheck\\..*"), // added to exclude ManagedStrategyStateHolder
+        // TODO: add other patterns to exclude (eg. gradle, junit, kotlinx, maven, ...)
+    ) + additionalExcludePatterns
+    val projectData = ProjectData(null, branchCoverage, null)
+    val cf = ClassFinder(listOf(), excludePatterns)
 
     init {
-        projectData.excludePatterns = listOf(
-            Pattern.compile("org\\.jetbrains\\.kotlinx\\.lincheck\\..*") // added to exclude ManagedStrategyStateHolder
-        )
+        // only allow to insert `__$hits$__[index] = 1` instructions by coverage transformer
+        com.intellij.rt.coverage.util.OptionsUtil.CALCULATE_HITS_COUNT = false
 
-        createDataFile()
+        projectData.excludePatterns = excludePatterns
         CoverageRuntime.installRuntime(projectData)
     }
 
     fun onShutdown() {
-        if (dataFile != null) {
-            println("Saving coverage report to '${dataFile.path}'")
-            CoverageReport(dataFile, false, cf, false).save(projectData)
-        }
-
+        CoverageReport.finalizeCoverage(projectData, appendUnloaded, cf, false);
         onShutdown?.let { it(projectData) }
-    }
-
-    private fun createDataFile() {
-        if (dataFile != null && !dataFile.exists()) {
-            val parentDir = dataFile.parentFile;
-            if (parentDir != null && !parentDir.exists()) parentDir.mkdirs();
-            dataFile.createNewFile();
-        }
     }
 }
