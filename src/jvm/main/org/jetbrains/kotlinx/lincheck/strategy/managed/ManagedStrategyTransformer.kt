@@ -74,7 +74,7 @@ internal class ManagedStrategyTransformer(
         if (constructTraceRepresentation) mv = AFUTrackingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = ManagedStrategyGuaranteeTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = CallStackTraceLoggingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        mv = HashCodeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
+        mv = HashCodeStubTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = UnsafeTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = WaitNotifyTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = ParkUnparkTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
@@ -603,17 +603,23 @@ internal class ManagedStrategyTransformer(
      * which typically returns memory address of the object. There is no guarantee that
      * memory addresses will be the same in different runs.
      */
-    private class HashCodeStubTransformer(val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, adapter) {
-        override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
-            val isAnyHashCodeInvocation = owner == "kotlin/Any" && name == "hashCode"
-            val isObjectHashCodeInvocation = owner == "java/lang/Object" && name == "hashCode"
-            if (isAnyHashCodeInvocation || isObjectHashCodeInvocation) {
-                // instead of calling object.hashCode just return zero
-                adapter.pop() // remove object from the stack
-                adapter.push(0)
-                return
-            }
-            adapter.visitMethodInsn(opcode, owner, name, desc, itf)
+    private inner class HashCodeStubTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
+        override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
+           if (name == "hashCode" && desc == "()I") {
+               val objectLocal = newLocal(OBJECT_TYPE)
+               storeLocal(objectLocal)
+               loadStrategy()
+               loadLocal(objectLocal)
+               invokeVirtual(MANAGED_STRATEGY_TYPE, HASH_CODE_METHOD)
+           } else if (owner == "java/lang/System" && name == "identityHashCode" && desc == "(Ljava/lang/Object;)I") {
+               val objectLocal = newLocal(OBJECT_TYPE)
+               storeLocal(objectLocal)
+               loadStrategy()
+               loadLocal(objectLocal)
+               invokeVirtual(MANAGED_STRATEGY_TYPE, IDENTITY_HASH_CODE_METHOD)
+           } else {
+               visitMethodInsn(opcode, owner, name, desc, itf)
+           }
         }
     }
 
@@ -1317,6 +1323,8 @@ private val AFTER_METHOD_CALL_METHOD = Method.getMethod(ManagedStrategy::afterMe
 private val MAKE_STATE_REPRESENTATION_METHOD = Method.getMethod(ManagedStrategy::addStateRepresentation.javaMethod)
 private val BEFORE_ATOMIC_METHOD_CALL_METHOD = Method.getMethod(ManagedStrategy::beforeAtomicMethodCall.javaMethod)
 private val CREATE_TRACE_POINT_METHOD = Method.getMethod(ManagedStrategy::createTracePoint.javaMethod)
+private val HASH_CODE_METHOD = Method.getMethod(ManagedStrategy::hashCodeDeterministic.javaMethod)
+private val IDENTITY_HASH_CODE_METHOD = Method.getMethod(ManagedStrategy::identityHashCodeDeterministic.javaMethod)
 private val NEW_LOCAL_OBJECT_METHOD = Method.getMethod(ObjectManager::newLocalObject.javaMethod)
 private val DELETE_LOCAL_OBJECT_METHOD = Method.getMethod(ObjectManager::deleteLocalObject.javaMethod)
 private val IS_LOCAL_OBJECT_METHOD = Method.getMethod(ObjectManager::isLocalObject.javaMethod)
