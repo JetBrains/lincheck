@@ -14,6 +14,8 @@ import com.intellij.rt.coverage.data.ProjectData
 import com.intellij.rt.coverage.instrumentation.CoverageRuntime
 import com.intellij.rt.coverage.util.CoverageReport
 import com.intellij.rt.coverage.util.classFinder.ClassFinder
+import com.intellij.rt.coverage.verify.ProjectTargetProcessor
+import com.intellij.rt.coverage.verify.Verifier.CollectedCoverage
 import java.util.regex.Pattern
 
 /**
@@ -27,7 +29,7 @@ import java.util.regex.Pattern
 class CoverageOptions(
     private val branchCoverage: Boolean = false,
     private val appendUnloaded: Boolean = false,
-    private val onShutdown: ((ProjectData) -> Unit)? = null,
+    private val onShutdown: ((ProjectData, CollectedCoverage) -> Unit)? = null,
     additionalExcludePatterns: List<Pattern> = listOf(),
 ) {
     private val excludePatterns = listOf<Pattern>(
@@ -46,7 +48,15 @@ class CoverageOptions(
     }
 
     fun onShutdown() {
-        CoverageReport.finalizeCoverage(projectData, appendUnloaded, cf, false);
-        onShutdown?.let { it(projectData) }
+        if (onShutdown != null) {
+            CoverageReport.finalizeCoverage(projectData, appendUnloaded, cf, false)
+            val coverageResults = CollectedCoverage()
+
+            for (classData in projectData.classesCollection) {
+                coverageResults.add(ProjectTargetProcessor.collectClassCoverage(projectData, classData))
+            }
+
+            onShutdown.let { it(projectData, coverageResults) }
+        }
     }
 }
