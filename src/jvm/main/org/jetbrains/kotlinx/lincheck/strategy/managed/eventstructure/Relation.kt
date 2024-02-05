@@ -62,7 +62,7 @@ class RelationMatrix<T>(
 
     private val matrix = Array(size) { BooleanArray(size) }
 
-    private var modCount = 0
+    private var version = 0
 
     constructor(nodes: Collection<T>, enumerator: Enumerator<T>, relation: Relation<T>) : this (nodes, enumerator) {
         add(relation)
@@ -79,7 +79,7 @@ class RelationMatrix<T>(
         get(enumerator[x], enumerator[y])
 
     private operator fun set(i: Int, j: Int, value: Boolean) {
-        modCount += (matrix[i][j] != value).toInt()
+        version += (matrix[i][j] != value).toInt()
         matrix[i][j] = value
     }
 
@@ -136,6 +136,8 @@ class RelationMatrix<T>(
     }
 
     fun transitiveClosure() {
+        // TODO: optimize -- skip the computation for already transitive relation;
+        //  track this by saving relation version number at the last call to `transitiveClosure`
         kLoop@for (k in 0 until size) {
             iLoop@for (i in 0 until size) {
                 if (!this[i, k])
@@ -183,9 +185,9 @@ class RelationMatrix<T>(
     }
 
     fun trackChanges(block: RelationMatrix<T>.() -> Unit): Boolean {
-        val version = modCount
+        val version = this.version
         block(this)
-        return (version != modCount)
+        return (version != this.version)
     }
 
     fun isIrreflexive(): Boolean {

@@ -98,11 +98,9 @@ class WritesBeforeRelation(
 
     fun compute() {
         for ((location, relation) in relations) {
-            val changed = relation.trackChanges {
+            relation.apply {
                 compute(location)
-            }
-            if (changed) {
-                relation.transitiveClosure()
+                transitiveClosure()
             }
         }
     }
