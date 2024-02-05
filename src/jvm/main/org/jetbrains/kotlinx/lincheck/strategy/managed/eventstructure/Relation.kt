@@ -161,6 +161,21 @@ class RelationMatrix<T>(
         }
     }
 
+    fun equivalenceClosure(equivClassMapping : (T) -> List<T>?) {
+        for (i in 0 until size) {
+            val x = enumerator[i]
+            val xClass = equivClassMapping(x)
+            for (j in 0 until size) {
+                val y = enumerator[j]
+                val yClass = equivClassMapping(y)
+                if (this[x, y] && xClass !== yClass) {
+                    xClass?.forEach { this[it, y] = true }
+                    yClass?.forEach { this[x, it] = true }
+                }
+            }
+        }
+    }
+
     fun fixpoint(block: RelationMatrix<T>.() -> Unit) {
         do {
             val changed = trackChanges { block() }

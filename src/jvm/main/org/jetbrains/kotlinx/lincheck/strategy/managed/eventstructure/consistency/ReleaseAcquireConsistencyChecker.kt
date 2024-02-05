@@ -49,9 +49,9 @@ class ReleaseAcquireConsistencyChecker : ConsistencyChecker<AtomicThreadEvent, R
             // TODO: should return RMW-atomicity violation instead
             return ReleaseAcquireInconsistency()
         }
-        val writesBeforeRelation = WritesBeforeRelation(execution, executionIndex, rmwChainsStorage)
+        val writesBeforeRelation = WritesBeforeRelation(execution, executionIndex, rmwChainsStorage, causalityOrder.lessThan)
             .apply {
-                initialize(causalityOrder.lessThan)
+                initialize()
                 compute()
             }
         return if (!writesBeforeRelation.isIrreflexive())
@@ -70,97 +70,77 @@ class WritesBeforeRelation(
     val execution: Execution<AtomicThreadEvent>,
     val executionIndex: AtomicMemoryAccessEventIndex,
     val rmwChainsStorage: ReadModifyWriteChainsStorage,
+    val happensBefore: Relation<AtomicThreadEvent>,
 ) : Relation<AtomicThreadEvent> {
 
     private val relations: MutableMap<MemoryLocation, RelationMatrix<AtomicThreadEvent>> = mutableMapOf()
 
-    // TODO: think more about relations API, in particular,
-    //   - provision the fixpoint computations,
-    //   - provision the interplay between different relations
-
-    private var isInitialized = false
-    private var isComputed = false
-
     override fun invoke(x: AtomicThreadEvent, y: AtomicThreadEvent): Boolean {
-        // TODO: make this code pattern look nicer (it appears several times in codebase)
         val location = getLocationForSameLocationWriteAccesses(x, y)
             ?: return false
         return relations[location]?.get(x, y) ?: false
     }
 
-    fun initialize(initialApproximation: Relation<AtomicThreadEvent>) {
-        if (isInitialized)
-            return
+    fun isIrreflexive(): Boolean =
+        relations.values.all { it.isIrreflexive() }
+
+    fun initialize() {
         for (location in executionIndex.locations) {
-            val writes = executionIndex.getWrites(location)
-            val enumerator = executionIndex.enumerator(AtomicMemoryAccessCategory.Write, location)!!
-            val relation = RelationMatrix(writes, enumerator)
-            // add edges between the writes according to the initial approximation
-            relation.add { x, y ->
-                initialApproximation(x, y)
-                // causalityOrder.lessThan(x, y)
-            }
-            // add edges to order rmw-chains accordingly
-            for (chain in rmwChainsStorage[location].orEmpty()) {
-                relation.order(chain)
-            }
-            // compute transitive closure
-            relation.transitiveClosure()
-            // set the relation
-            relations[location] = relation
+            initialize(location)
         }
-        isInitialized = true
+    }
+
+    private fun initialize(location: MemoryLocation) {
+        val writes = executionIndex.getWrites(location)
+        val enumerator = executionIndex.enumerator(AtomicMemoryAccessCategory.Write, location)!!
+        relations[location] = RelationMatrix(writes, enumerator)
     }
 
     fun compute() {
-        if (isComputed)
-            return
         for ((location, relation) in relations) {
             val changed = relation.trackChanges {
-                // TODO: refactor this, make the receiver object obvious
                 compute(location)
             }
             if (changed) {
                 relation.transitiveClosure()
             }
         }
-        isComputed = true
     }
 
     private fun compute(location: MemoryLocation) {
+        addHappensBeforeEdges(location)
+        addOverwrittenWriteEdges(location)
+        computeReadModifyWriteChainsClosure(location)
+    }
+
+    private fun addHappensBeforeEdges(location: MemoryLocation) {
         val relation = relations[location]!!
-        for (read in executionIndex.getReadResponses(location)) {
-            val readFrom = read.readsFrom
-            val readFromChain = rmwChainsStorage[location, readFrom]?.chain
-            for (write in executionIndex.getWrites(location)) {
-                val writeChain = rmwChainsStorage[location, write]?.chain
-                // TODO: change this check from `hb` to `rf^?;hb`
-                if (causalityOrder.lessThan(write, read)) {
-                    if (write != readFrom) {
-                        relation[write, readFrom] = true
-                    }
-                    // TODO: add more generic equivalence-closure function
-                    if ((writeChain != null || readFromChain != null) && (writeChain !== readFromChain)) {
-                        relation.updateIrrefl(writeChain?.last() ?: write, readFromChain?.first() ?: readFrom)
-                    }
+        for (write1 in executionIndex.getWrites(location)) {
+            for (write2 in executionIndex.getWrites(location)) {
+                // TODO: also add `rf^?;hb` edges (it is required for any model where `causalityOrder < happensBefore`)
+                if (happensBefore(write1, write2) && write1 != write2) {
+                    relation[write1, write2] = true
                 }
             }
         }
     }
 
-    fun reset() {
-        relations.clear()
-        isInitialized = false
-        isComputed = false
-    }
-
-    private fun<T> RelationMatrix<T>.updateIrrefl(x: T, y: T) {
-        if ((x != y) && !this[x, y]) {
-            this[x, y] = true
+    private fun addOverwrittenWriteEdges(location: MemoryLocation) {
+        val relation = relations[location]!!
+        for (read in executionIndex.getReadResponses(location)) {
+            for (write in executionIndex.getWrites(location)) {
+                // TODO: change this check from `(w,r) \in hb` to `(w,r) \in rf^?;hb`
+                if (happensBefore(write, read) && write != read.readsFrom) {
+                    relation[write, read.readsFrom] = true
+                }
+            }
         }
     }
 
-    fun isIrreflexive(): Boolean =
-        relations.all { (_, relation) -> relation.isIrreflexive() }
+    private fun computeReadModifyWriteChainsClosure(location: MemoryLocation) {
+        relations[location]?.equivalenceClosure { event ->
+            rmwChainsStorage[location, event]?.chain
+        }
+    }
 
 }
