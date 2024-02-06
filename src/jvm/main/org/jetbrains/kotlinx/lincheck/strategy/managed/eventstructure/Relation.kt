@@ -48,6 +48,7 @@ interface Enumerator<T> {
 
     operator fun get(x: T): Int
 
+    // TODO: change to `List` and use it to optimize iteration in `RelationMatrix`?
     operator fun get(i: Int): T
 
 }

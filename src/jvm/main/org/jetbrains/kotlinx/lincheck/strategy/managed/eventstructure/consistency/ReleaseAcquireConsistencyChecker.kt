@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consisten
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.utils.*
 
 // TODO: what information should we display to help identify the cause of inconsistency:
 //   a cycle in writes-before relation?
@@ -41,10 +42,10 @@ class ReleaseAcquireConsistencyWitness(
 class ReleaseAcquireConsistencyChecker : ConsistencyChecker<AtomicThreadEvent, ReleaseAcquireConsistencyWitness> {
 
     override fun check(execution: Execution<AtomicThreadEvent>): ConsistencyVerdict<ReleaseAcquireConsistencyWitness> {
-        val executionIndex = MutableAtomicMemoryAccessEventIndex()
-            .apply { index(execution) }
-        val rmwChainsStorage = ReadModifyWriteChainsStorage()
-            .apply { compute(execution) }
+        val executionIndex = MutableAtomicMemoryAccessEventIndex(execution)
+            .apply { compute() }
+        val rmwChainsStorage = ReadModifyWriteChainsStorage(execution)
+            .apply { compute() }
         if (!rmwChainsStorage.isConsistent()) {
             // TODO: should return RMW-atomicity violation instead
             return ReleaseAcquireInconsistency()
@@ -68,10 +69,10 @@ class ReleaseAcquireConsistencyChecker : ConsistencyChecker<AtomicThreadEvent, R
 
 class WritesBeforeRelation(
     val execution: Execution<AtomicThreadEvent>,
-    val executionIndex: AtomicMemoryAccessEventIndex,
+    val memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
     val rmwChainsStorage: ReadModifyWriteChainsStorage,
     val happensBefore: Relation<AtomicThreadEvent>,
-) : Relation<AtomicThreadEvent> {
+) : Relation<AtomicThreadEvent>, Computable {
 
     private val relations: MutableMap<MemoryLocation, RelationMatrix<AtomicThreadEvent>> = mutableMapOf()
 
@@ -84,19 +85,13 @@ class WritesBeforeRelation(
     fun isIrreflexive(): Boolean =
         relations.values.all { it.isIrreflexive() }
 
-    fun initialize() {
-        for (location in executionIndex.locations) {
+    override fun initialize() {
+        for (location in memoryAccessEventIndex.locations) {
             initialize(location)
         }
     }
 
-    private fun initialize(location: MemoryLocation) {
-        val writes = executionIndex.getWrites(location)
-        val enumerator = executionIndex.enumerator(AtomicMemoryAccessCategory.Write, location)!!
-        relations[location] = RelationMatrix(writes, enumerator)
-    }
-
-    fun compute() {
+    override fun compute() {
         for ((location, relation) in relations) {
             relation.apply {
                 compute(location)
@@ -105,16 +100,26 @@ class WritesBeforeRelation(
         }
     }
 
-    private fun compute(location: MemoryLocation) {
+    override fun reset() {
+        relations.clear()
+    }
+
+    private fun initialize(location: MemoryLocation) {
+        val writes = memoryAccessEventIndex.getWrites(location)
+        val enumerator = memoryAccessEventIndex.enumerator(AtomicMemoryAccessCategory.Write, location)!!
+        relations[location] = RelationMatrix(writes, enumerator)
+    }
+
+    private fun RelationMatrix<AtomicThreadEvent>.compute(location: MemoryLocation) {
         addHappensBeforeEdges(location)
         addOverwrittenWriteEdges(location)
         computeReadModifyWriteChainsClosure(location)
     }
 
-    private fun addHappensBeforeEdges(location: MemoryLocation) {
-        val relation = relations[location]!!
-        for (write1 in executionIndex.getWrites(location)) {
-            for (write2 in executionIndex.getWrites(location)) {
+    private fun RelationMatrix<AtomicThreadEvent>.addHappensBeforeEdges(location: MemoryLocation) {
+        val relation = this
+        for (write1 in memoryAccessEventIndex.getWrites(location)) {
+            for (write2 in memoryAccessEventIndex.getWrites(location)) {
                 // TODO: also add `rf^?;hb` edges (it is required for any model where `causalityOrder < happensBefore`)
                 if (happensBefore(write1, write2) && write1 != write2) {
                     relation[write1, write2] = true
@@ -123,10 +128,10 @@ class WritesBeforeRelation(
         }
     }
 
-    private fun addOverwrittenWriteEdges(location: MemoryLocation) {
-        val relation = relations[location]!!
-        for (read in executionIndex.getReadResponses(location)) {
-            for (write in executionIndex.getWrites(location)) {
+    private fun RelationMatrix<AtomicThreadEvent>.addOverwrittenWriteEdges(location: MemoryLocation) {
+        val relation = this
+        for (read in memoryAccessEventIndex.getReadResponses(location)) {
+            for (write in memoryAccessEventIndex.getWrites(location)) {
                 // TODO: change this check from `(w,r) \in hb` to `(w,r) \in rf^?;hb`
                 if (happensBefore(write, read) && write != read.readsFrom) {
                     relation[write, read.readsFrom] = true
@@ -135,8 +140,8 @@ class WritesBeforeRelation(
         }
     }
 
-    private fun computeReadModifyWriteChainsClosure(location: MemoryLocation) {
-        relations[location]?.equivalenceClosure { event ->
+    private fun RelationMatrix<AtomicThreadEvent>.computeReadModifyWriteChainsClosure(location: MemoryLocation) {
+        this.equivalenceClosure { event ->
             rmwChainsStorage[location, event]?.chain
         }
     }

@@ -75,7 +75,9 @@ fun ReadModifyWriteChainsStorage.Entry.isConsistent() = when {
 fun ReadModifyWriteChainsStorage.isConsistent() =
     entries.all { it.isConsistent() }
 
-class ReadModifyWriteChainsStorage {
+class ReadModifyWriteChainsStorage(
+    val execution: Execution<AtomicThreadEvent>,
+) : Computable {
 
     abstract class Entry {
         abstract val event: AtomicThreadEvent
@@ -134,11 +136,6 @@ class ReadModifyWriteChainsStorage {
         return rmwChainsMap[location]
     }
 
-    // val sameReadModifyWriteChain = Relation<AtomicThreadEvent> { x, y ->
-    //     val chain = getReadModifyWriteChain(x)
-    //     chain.isNotEmpty() && chain == getReadModifyWriteChain(y)
-    // }
-
     fun add(event: AtomicThreadEvent) {
         val writeLabel = event.label.refine<WriteAccessLabel> { isExclusive }
             ?: return
@@ -166,7 +163,7 @@ class ReadModifyWriteChainsStorage {
         eventMap[event] = EntryImpl(event, chain, position = chain.size - 1)
     }
 
-    fun compute(execution: Execution<AtomicThreadEvent>) {
+    override fun compute() {
         /* It is important to add events in some causality-compatible order
          * (such as event enumeration order).
          * This guarantees the following property: a mapping `w -> c`, where
@@ -182,7 +179,7 @@ class ReadModifyWriteChainsStorage {
         }
     }
 
-    fun reset() {
+    override fun reset() {
         eventMap.clear()
         rmwChainsMap.clear()
     }

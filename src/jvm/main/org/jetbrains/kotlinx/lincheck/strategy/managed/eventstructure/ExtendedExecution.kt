@@ -21,8 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.*
-import org.jetbrains.kotlinx.lincheck.utils.SortedList
-import org.jetbrains.kotlinx.lincheck.utils.ThreadMap
+import org.jetbrains.kotlinx.lincheck.utils.*
 
 
 /**
@@ -40,17 +39,6 @@ interface ExtendedExecution : Execution<AtomicThreadEvent> {
      * @see WritesBeforeRelation
      */
     val writesBefore: Relation<AtomicThreadEvent>
-
-    /**
-     * The saturated happens-before (shb) relation of the execution.
-     *
-     * @see SaturatedHappensBeforeRelation
-     */
-    val saturatedHappensBefore : Relation<AtomicThreadEvent>
-
-    // TODO: introduce a special class for this type of relations
-    val approximateExecutionOrder : Relation<AtomicThreadEvent>
-
 }
 
 /**
@@ -62,13 +50,6 @@ interface ExtendedExecution : Execution<AtomicThreadEvent> {
  * rebuilding the auxiliary data structures accordingly.
  */
 interface MutableExtendedExecution : ExtendedExecution, MutableExecution<AtomicThreadEvent> {
-
-    /**
-     * The mutable writes-before (wb) relation of the execution.
-     *
-     * @see WritesBeforeRelation
-     */
-    override val writesBefore: WritesBeforeRelation
 
     /**
      * Resets the mutable execution to contain the new set of events
@@ -83,8 +64,60 @@ interface MutableExtendedExecution : ExtendedExecution, MutableExecution<AtomicT
     fun reset(frontier: ExecutionFrontier<AtomicThreadEvent>)
 }
 
-// class ExtendedExecutionImpl(val nThreads: Int) : ExtendedExecution {
-//
-//     val execution = MutableExecution<AtomicThreadEvent>(nThreads)
-//
-// }
+fun ExtendedExecution(nThreads: Int): ExtendedExecution =
+    MutableExtendedExecution(nThreads)
+
+fun MutableExtendedExecution(nThreads: Int): MutableExtendedExecution =
+    ExtendedExecutionImpl(ResettableExecution(nThreads))
+
+
+private class ExtendedExecutionImpl(
+    val execution: ResettableExecution
+) : MutableExtendedExecution, MutableExecution<AtomicThreadEvent> by execution {
+
+    private val memoryAccessEventIndexComputable = computable { MutableAtomicMemoryAccessEventIndex(execution) }
+
+    private val rmwChainsStorageComputable = computable { ReadModifyWriteChainsStorage(execution) }
+
+    private val writesBeforeComputable =
+        computable {
+            WritesBeforeRelation(
+                execution,
+                memoryAccessEventIndexComputable.value,
+                rmwChainsStorageComputable.value,
+                causalityOrder.lessThan
+            )
+        }
+        .dependsOn(memoryAccessEventIndexComputable)
+        .dependsOn(rmwChainsStorageComputable)
+
+    override val writesBefore: Relation<AtomicThreadEvent> by writesBeforeComputable
+
+    override fun reset(frontier: ExecutionFrontier<AtomicThreadEvent>) {
+        execution.reset(frontier)
+    }
+
+}
+
+private class ResettableExecution(nThreads: Int) : MutableExecution<AtomicThreadEvent> {
+
+    private var execution = MutableExecution<AtomicThreadEvent>(nThreads)
+
+    override val size: Int
+        get() = execution.size
+
+    override val threadMap: ThreadMap<SortedList<AtomicThreadEvent>>
+        get() = execution.threadMap
+
+    override fun isEmpty(): Boolean =
+        execution.isEmpty()
+
+    override fun add(event: AtomicThreadEvent) {
+        execution.add(event)
+    }
+
+    fun reset(frontier: ExecutionFrontier<AtomicThreadEvent>) {
+        execution = frontier.toMutableExecution()
+    }
+
+}

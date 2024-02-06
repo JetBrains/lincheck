@@ -78,7 +78,7 @@ class SequentialConsistencyChecker(
         if (approximateSequentialConsistency) {
             // TODO: embed the execution order approximation relation into the execution instance,
             //   so that this (and following stages) can be implemented as separate consistency check classes
-            val executionIndex = MutableAtomicMemoryAccessEventIndex()
+            val executionIndex = MutableAtomicMemoryAccessEventIndex(execution)
                 .apply { index(execution) }
             val scApprox = SequentialConsistencyOrder(execution, executionIndex).apply {
                 initialize()

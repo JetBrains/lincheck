@@ -172,15 +172,19 @@ typealias AtomicMemoryAccessEventClassifier =
 
 interface MutableAtomicMemoryAccessEventIndex :
     AtomicMemoryAccessEventIndex,
-    MutableEventIndex<AtomicThreadEvent, AtomicMemoryAccessCategory, MemoryLocation>
+    MutableEventIndex<AtomicThreadEvent, AtomicMemoryAccessCategory, MemoryLocation>,
+    Computable
 
-fun AtomicMemoryAccessEventIndex(): AtomicMemoryAccessEventIndex =
-    MutableAtomicMemoryAccessEventIndex()
+fun AtomicMemoryAccessEventIndex(execution: Execution<AtomicThreadEvent>): AtomicMemoryAccessEventIndex =
+    MutableAtomicMemoryAccessEventIndex(execution)
 
-fun MutableAtomicMemoryAccessEventIndex(): MutableAtomicMemoryAccessEventIndex =
-    MutableAtomicMemoryAccessEventIndexImpl()
+fun MutableAtomicMemoryAccessEventIndex(execution: Execution<AtomicThreadEvent>): MutableAtomicMemoryAccessEventIndex =
+    MutableAtomicMemoryAccessEventIndexImpl(execution)
 
-private class MutableAtomicMemoryAccessEventIndexImpl : MutableAtomicMemoryAccessEventIndex {
+private class MutableAtomicMemoryAccessEventIndexImpl(
+    // TODO: remove it once we will have incremental index
+    val execution: Execution<AtomicThreadEvent>
+) : MutableAtomicMemoryAccessEventIndex {
 
     override val classifier: AtomicMemoryAccessEventClassifier = { event ->
         val label = (event.label as? MemoryAccessLabel)
@@ -223,6 +227,10 @@ private class MutableAtomicMemoryAccessEventIndexImpl : MutableAtomicMemoryAcces
 
     override fun enumerator(category: AtomicMemoryAccessCategory, key: MemoryLocation): Enumerator<AtomicThreadEvent>? =
         index.enumerator(category, key)
+
+    override fun compute() {
+        index(execution)
+    }
 
     override fun reset() {
         locations.clear()
