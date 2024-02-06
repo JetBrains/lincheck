@@ -85,7 +85,7 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
     private fun shutdown() {
         // submit the shutdown tasks
         for (i in 0 until nThreads)
-            submitTask(i, SHUTDOWN)
+            submitTask(i, Shutdown)
     }
 
     private fun submitTask(iThread: Int, task: Any) {
@@ -143,7 +143,7 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
     private fun testThreadRunnable(iThread: Int) = Runnable {
         loop@ while (true) {
             val task = getTask(iThread)
-            if (task === SHUTDOWN) return@Runnable
+            if (task === Shutdown) return@Runnable
             tasks[iThread].value = null // reset task
             val threadExecution = task as TestThreadExecution
             check(threadExecution.iThread == iThread)
@@ -154,7 +154,7 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
                 setResult(iThread, wrapped)
                 continue@loop
             }
-            setResult(iThread, DONE)
+            setResult(iThread, Done)
         }
     }
 
@@ -215,5 +215,6 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
 
 private const val SPINNING_LOOP_ITERATIONS_BEFORE_PARK = 1000_000
 
-private val SHUTDOWN = "SHUTDOWN"
-private val DONE = "DONE"
+// These constants are objects for easier debugging.
+private object Shutdown
+private object Done
