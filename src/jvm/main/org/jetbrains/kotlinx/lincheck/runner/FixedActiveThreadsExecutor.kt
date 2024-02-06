@@ -173,13 +173,21 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
         return tasks[iThread].value!!
     }
 
-    private fun setResult(iThread: Int, any: Any) {
-        if (results[iThread].compareAndSet(null, any)) return
-        // CAS failed => a test thread is parked.
-        // Set the result and unpark the waiting thread.
-        val thread = results[iThread].value as Thread
-        results[iThread].value = any
-        LockSupport.unpark(thread)
+    private fun setResult(iThread: Int, result: Any) {
+        results[iThread].loop { curState ->
+            when {
+                curState === Shutdown -> return
+                curState is Thread -> {
+                    results[iThread].value = result
+                    LockSupport.unpark(curState)
+                    return
+                }
+                else -> {
+                    // We might need to replace the old (ignored) result
+                    if (results[iThread].compareAndSet(curState, result)) return
+                }
+            }
+        }
     }
 
     private inline fun spinWait(getter: () -> Any?): Any? {
