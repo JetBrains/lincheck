@@ -67,6 +67,17 @@ class IdentityHashCodeSupportedTest() {
     fun test() = ModelCheckingOptions().check(this::class)
 }
 
+class IdentityHashCodeOnNullTest {
+    @Operation
+    fun hashCodeOnObject() {
+        val o: Any? = null
+        System.identityHashCode(o)
+    }
+
+    @Test
+    fun test() = ModelCheckingOptions().check(this::class)
+}
+
 @Ignore // TODO: easier to support when `javaagent` is merged
 class IdentityHashCodeDiffersTest() {
     @Operation

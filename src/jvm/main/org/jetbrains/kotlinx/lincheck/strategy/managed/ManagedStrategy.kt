@@ -501,7 +501,8 @@ abstract class ManagedStrategy(
         }
     }
 
-    internal fun identityHashCodeDeterministic(obj: Any): Int {
+    internal fun identityHashCodeDeterministic(obj: Any?): Int {
+        if (obj == null) return 0
         // TODO: easier to support when `javaagent` is merged
         return 0
     }
