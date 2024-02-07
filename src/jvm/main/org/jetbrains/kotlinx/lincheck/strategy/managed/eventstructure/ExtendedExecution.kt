@@ -51,6 +51,10 @@ interface ExtendedExecution : Execution<AtomicThreadEvent> {
  */
 interface MutableExtendedExecution : ExtendedExecution, MutableExecution<AtomicThreadEvent> {
 
+    val writesBeforeComputable : ComputableDelegate<WritesBeforeRelation>
+
+    // val extendedCoherenceComputable : ComputableDelegate<ExtendedCoherenceOrder>
+
     /**
      * Resets the mutable execution to contain the new set of events
      * and rebuilds all the auxiliary data structures accordingly.
@@ -79,8 +83,8 @@ private class ExtendedExecutionImpl(
 
     private val rmwChainsStorageComputable = computable { ReadModifyWriteChainsStorage(execution) }
 
-    private val writesBeforeComputable =
-        computable {
+    override val writesBeforeComputable =
+        computable(dependsOn = listOf(memoryAccessEventIndexComputable, rmwChainsStorageComputable)) {
             WritesBeforeRelation(
                 execution,
                 memoryAccessEventIndexComputable.value,
@@ -88,10 +92,13 @@ private class ExtendedExecutionImpl(
                 causalityOrder.lessThan
             )
         }
-        .dependsOn(memoryAccessEventIndexComputable)
-        .dependsOn(rmwChainsStorageComputable)
 
     override val writesBefore: Relation<AtomicThreadEvent> by writesBeforeComputable
+
+    // override val extendedCoherenceComputable =
+    //     computable {
+    //
+    //     }
 
     override fun reset(frontier: ExecutionFrontier<AtomicThreadEvent>) {
         execution.reset(frontier)

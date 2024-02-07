@@ -25,12 +25,28 @@ import kotlin.reflect.KProperty
 interface Computable {
     fun initialize() {}
     fun compute()
+    fun invalidate() {}
     fun reset()
 }
 
-fun<T : Computable> computable(builder: () -> T) = ComputableDelegate(builder())
+fun<T : Computable> computable(dependsOn: List<Computable> = listOf(), builder: () -> T) =
+    ComputableDelegate(builder(), dependsOn)
 
-class ComputableDelegate<T : Computable>(val value: T) : Computable {
+class ComputableDelegate<T : Computable>(
+    val value: T,
+    // by passing list of dependencies in the constructor,
+    // we effectively prevent the creation of cyclic dependencies
+    private val dependencies: List<Computable> = listOf(),
+) : Computable {
+
+    private val followers = mutableListOf<Computable>()
+
+    init {
+        dependencies.forEach { dependency ->
+            if (dependency is ComputableDelegate<*>)
+                dependency.followers.add(this)
+        }
+    }
 
     private enum class State {
         UNSET, INITIALIZED, COMPUTED
@@ -46,8 +62,6 @@ class ComputableDelegate<T : Computable>(val value: T) : Computable {
 
     private val computed: Boolean
         get() = (state.ordinal >= State.COMPUTED.ordinal)
-
-    private var dependencies = mutableListOf<Computable>()
 
     override fun initialize() {
         if (!initialized) {
@@ -65,9 +79,11 @@ class ComputableDelegate<T : Computable>(val value: T) : Computable {
         }
     }
 
-    fun invalidate() {
+    override fun invalidate() {
         if (state == State.COMPUTED) {
+            value.invalidate()
             state = State.INITIALIZED
+            followers.forEach { it.invalidate() }
         }
     }
 
@@ -75,6 +91,7 @@ class ComputableDelegate<T : Computable>(val value: T) : Computable {
         if (!unset) {
             value.reset()
             state = State.UNSET
+            followers.forEach { it.invalidate() }
         }
     }
 
@@ -83,11 +100,5 @@ class ComputableDelegate<T : Computable>(val value: T) : Computable {
         compute()
         return value
     }
-
-    fun addDependency(dependency: Computable) {
-        dependencies.add(dependency)
-    }
 }
 
-fun<T : Computable> ComputableDelegate<T>.dependsOn(dependency: Computable) =
-    apply { addDependency(dependency) }
