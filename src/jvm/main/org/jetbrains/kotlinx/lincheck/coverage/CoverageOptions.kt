@@ -22,13 +22,11 @@ import java.util.regex.Pattern
  * Creates object with coverage options.
  *
  * @param branchCoverage flag to run line coverage or branch coverage otherwise.
- * @param appendUnloaded flag to include classes that were unloaded during execution into coverage report.
  * @param onShutdown callback with coverage results.
- * @param additionalExcludePatterns patterns to exclude from coverage report.
+ * @param additionalExcludePatterns patterns for classnames to exclude from coverage report.
  */
 class CoverageOptions(
     private val branchCoverage: Boolean = false,
-    private val appendUnloaded: Boolean = false,
     private val onShutdown: ((ProjectData, CollectedCoverage) -> Unit)? = null,
     additionalExcludePatterns: List<Pattern> = listOf(),
 ) {
@@ -49,7 +47,7 @@ class CoverageOptions(
 
     fun onShutdown() {
         if (onShutdown != null) {
-            CoverageReport.finalizeCoverage(projectData, appendUnloaded, cf, false)
+            CoverageReport.finalizeCoverage(projectData, false, cf, false)
             val coverageResults = CollectedCoverage()
 
             for (classData in projectData.classesCollection) {
