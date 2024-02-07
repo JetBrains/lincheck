@@ -80,12 +80,11 @@ class SequentialConsistencyChecker(
             //   so that this (and following stages) can be implemented as separate consistency check classes
             val executionIndex = MutableAtomicMemoryAccessEventIndex(execution)
                 .apply { index(execution) }
-            val scApprox = SequentialConsistencyOrder(execution, executionIndex).apply {
+            val scApprox = SequentialConsistencyOrder(execution, executionIndex, executionOrderApproximation).apply {
                 initialize()
-                refine(executionOrderApproximation)
                 compute()
             }
-            if (scApprox.inconsistent) {
+            if (!scApprox.isIrreflexive()) {
                 return SequentialConsistencyApproximationInconsistency()
             }
             executionOrderApproximation = scApprox
@@ -422,72 +421,70 @@ class ExtendedCoherenceOrder(
 
 class SequentialConsistencyOrder(
     val execution: Execution<AtomicThreadEvent>,
-    val executionIndex: AtomicMemoryAccessEventIndex,
-) : Relation<AtomicThreadEvent> {
+    val memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
+    val memoryAccessOrder: Relation<AtomicThreadEvent>,
+) : Relation<AtomicThreadEvent>, Computable {
 
-    private lateinit var relation: RelationMatrix<AtomicThreadEvent>
-
-    private var initialized = false
-    private var computed = false
-
-    var inconsistent = false
-        private set
+    private var relation: RelationMatrix<AtomicThreadEvent>? = null
 
     override fun invoke(x: AtomicThreadEvent, y: AtomicThreadEvent): Boolean =
-        relation(x, y)
+        relation?.invoke(x, y) ?: false
 
-    fun initialize() {
+    // TODO: make cached delegate?
+    private var irreflexive = true
+
+    fun isIrreflexive(): Boolean {
+        return irreflexive
+    }
+
+    override fun initialize() {
         // TODO: optimize -- build the relation only for write and read-response events
         relation = RelationMatrix(execution, execution.buildEnumerator())
-        initialized = true
-        computed = false
     }
 
-    fun refine(relation: Relation<AtomicThreadEvent>) {
-        this.relation.add(relation)
-        computed = false
-    }
-
-    fun compute() {
+    override fun compute() {
+        val relation = this.relation!!
+        relation.add(memoryAccessOrder)
         relation.fixpoint {
+            // TODO: maybe we can remove this check without affecting performance?
             if (!isIrreflexive()) {
-                inconsistent = true
+                irreflexive = false
                 return@fixpoint
             }
-            coherenceClosure(executionIndex)
+            coherenceClosure()
             transitiveClosure()
         }
-        computed = true
     }
 
-    fun reset() {
-        initialized = false
-        computed = false
+    override fun invalidate() {
+        irreflexive = true
     }
 
-}
-
-private fun RelationMatrix<AtomicThreadEvent>.coherenceClosure(executionIndex: AtomicMemoryAccessEventIndex) {
-    for (location in executionIndex.locations) {
-        coherenceClosure(location, executionIndex)
+    override fun reset() {
+        invalidate()
+        relation = null
     }
-}
 
-private fun RelationMatrix<AtomicThreadEvent>.coherenceClosure(
-    location: MemoryLocation,
-    executionIndex: AtomicMemoryAccessEventIndex
-) {
-    val relation = this
-    for (read in executionIndex.getReadResponses(location)) {
-        for (write in executionIndex.getWrites(location)) {
-            if (relation(write, read) && write != read.readsFrom) {
-                relation[write, read.readsFrom] = true
-            }
-            if (relation(read.readsFrom, write)) {
-                relation[read, write] = true
+    private fun RelationMatrix<AtomicThreadEvent>.coherenceClosure() {
+        for (location in memoryAccessEventIndex.locations) {
+            coherenceClosure(location)
+        }
+    }
+
+    private fun RelationMatrix<AtomicThreadEvent>.coherenceClosure(location: MemoryLocation) {
+        val relation = this
+        for (read in memoryAccessEventIndex.getReadResponses(location)) {
+            for (write in memoryAccessEventIndex.getWrites(location)) {
+                if (relation(write, read) && write != read.readsFrom) {
+                    relation[write, read.readsFrom] = true
+                }
+                if (relation(read.readsFrom, write)) {
+                    relation[read, write] = true
+                }
             }
         }
     }
+
 }
 
 class ExecutionOrder(
