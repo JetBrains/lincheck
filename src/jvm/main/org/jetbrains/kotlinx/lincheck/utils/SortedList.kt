@@ -20,25 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck.utils
 
-fun <T> List<T>.isChain(fromIndex : Int = 0, toIndex : Int = size, relation: (T, T) -> Boolean): Boolean {
-    for (i in fromIndex until toIndex - 1) {
-        if (!relation(get(i), get(i + 1)))
-            return false
-    }
-    return true
-}
-
-fun <T : Comparable<T>> List<T>.isSorted(fromIndex : Int = 0, toIndex : Int = size): Boolean =
-    isChain(fromIndex, toIndex) { x, y -> x <= y }
-
-fun<T : Comparable<T>> sortedListOf(vararg elements: T): SortedList<T> =
-    sortedMutableListOf(*elements)
-
-fun<T : Comparable<T>> sortedMutableListOf(vararg elements: T): SortedMutableList<T> =
-    sortedArrayListOf(*elements)
-
-fun<T : Comparable<T>> sortedArrayListOf(vararg elements: T): SortedArrayList<T> =
-    SortedArrayList(elements.asList())
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.Relation
 
 interface SortedList<out T : Comparable<@UnsafeVariance T>> : List<T> {
 
@@ -72,6 +54,36 @@ interface SortedList<out T : Comparable<@UnsafeVariance T>> : List<T> {
 
 interface SortedMutableList<T : Comparable<T>> : MutableList<T>, SortedList<T>
 
+private class SortedListImpl<T : Comparable<T>>(val list: List<T>) : SortedList<T> {
+
+    init {
+        require(list.isSorted())
+    }
+
+    override val size: Int
+        get() = list.size
+
+    override fun isEmpty(): Boolean =
+        list.isEmpty()
+
+    override fun get(index: Int): T =
+        list[index]
+
+    override fun subList(fromIndex: Int, toIndex: Int): SortedList<T> {
+        return SortedListImpl(list.subList(fromIndex, toIndex))
+    }
+
+    override fun iterator(): Iterator<T> =
+        list.iterator()
+
+    override fun listIterator(): ListIterator<T> =
+        list.listIterator()
+
+    override fun listIterator(index: Int): ListIterator<T> =
+        list.listIterator(index)
+
+}
+
 class SortedArrayList<T : Comparable<T>> : ArrayList<T>, SortedMutableList<T> {
 
     constructor() : super()
@@ -88,33 +100,31 @@ class SortedArrayList<T : Comparable<T>> : ArrayList<T>, SortedMutableList<T> {
     }
 
     override fun add(index: Int, element: T) {
-        super.add(index, element).also {
-            check((index - 1 >= 0) implies { get(index - 1) <= get(index) })
-            check((index + 1 < size) implies { get(index) <= get(index + 1) })
-        }
+        require((index - 1 >= 0) implies { get(index - 1) <= element })
+        require((index < size) implies { element <= get(index) })
+        super.add(index, element)
     }
 
     override fun addAll(elements: Collection<T>): Boolean {
         val oldSize = size
-        return super.addAll(elements).also {
-            check(isSorted(fromIndex = oldSize))
+        return super.addAll(elements).ensure {
+            isSorted(fromIndex = oldSize)
         }
     }
 
     override fun addAll(index: Int, elements: Collection<T>): Boolean {
-        return super.addAll(index, elements).also {
+        return super.addAll(index, elements).ensure {
             val lastIndex = index + elements.size
-            check((index - 1 >= 0) implies { get(index - 1) <= get(index) })
-            check((lastIndex + 1 < size) implies { get(lastIndex) <= get(lastIndex + 1) })
-            check(isSorted(fromIndex = index, toIndex = lastIndex))
+            val fromIndex = if (index - 1 >= 0) (index - 1) else index
+            val toIndex = if (lastIndex + 1 < size) (lastIndex + 1) else lastIndex
+            isSorted(fromIndex = fromIndex, toIndex = toIndex)
         }
     }
 
     override fun set(index: Int, element: T): T {
-        return super.set(index, element).also {
-            check((index - 1 >= 0) implies { get(index - 1) <= get(index) })
-            check((index + 1 < size) implies { get(index) <= get(index + 1) })
-        }
+        require((index - 1 >= 0) implies { get(index - 1) <= element })
+        require((index + 1 < size) implies { element <= get(index + 1) })
+        return super.set(index, element)
     }
 
     override fun contains(element: T): Boolean =
@@ -129,4 +139,25 @@ class SortedArrayList<T : Comparable<T>> : ArrayList<T>, SortedMutableList<T> {
     override fun lastIndexOf(element: T): Int =
         super<SortedMutableList>.lastIndexOf(element)
 
+}
+
+fun<T : Comparable<T>> sortedListOf(vararg elements: T): SortedList<T> =
+    SortedListImpl(elements.asList())
+
+fun<T : Comparable<T>> sortedMutableListOf(vararg elements: T): SortedMutableList<T> =
+    sortedArrayListOf(*elements)
+
+fun<T : Comparable<T>> sortedArrayListOf(vararg elements: T): SortedArrayList<T> =
+    SortedArrayList(elements.asList())
+
+
+fun <T : Comparable<T>> List<T>.isSorted(fromIndex : Int = 0, toIndex : Int = size): Boolean =
+    isChain(fromIndex, toIndex) { x, y -> x <= y }
+
+fun <T> List<T>.isChain(fromIndex : Int = 0, toIndex : Int = size, relation: Relation<T>): Boolean {
+    for (i in fromIndex until toIndex - 1) {
+        if (!relation(get(i), get(i + 1)))
+            return false
+    }
+    return true
 }

@@ -75,41 +75,18 @@ class EventIndexImpl<E : Event, C : Enum<C>, K : Any> private constructor(
     override val classifier: EventIndexClassifier<E, C, K>
 ) : MutableEventIndex<E, C, K> {
 
-    // TODO: rename Indexer to Enumerator to avoid confusion?
-    private class EventEnumerator<E : Event> : Enumerator<E> {
-        // TODO: use backing fields!
-        private val _events = sortedArrayListOf<E>()
-        val events: SortedList<E> get() = _events
-
-        // TODO: evaluate whether we need separate index here,
-        //   or using binary search on sorted list would be enough performance-wise
-        private val enumerator = hashMapOf<E, Int>()
-
-        override fun get(i: Int): E =
-            events[i]
-
-        override fun get(x: E): Int =
-            enumerator[x]!!
-
-        fun add(event: E) {
-            val idx = _events.size
-            _events.add(event)
-            enumerator[event] = idx
-        }
-    }
-
-    private val index = Array<MutableMap<K, EventEnumerator<E>>>(nCategories) { mutableMapOf() }
+    private val index = Array<MutableMap<K, SortedMutableList<E>>>(nCategories) { mutableMapOf() }
 
     override operator fun get(category: C, key: K): SortedList<E> {
-        return index[category.ordinal][key]?.events ?: sortedArrayListOf()
+        return index[category.ordinal][key] ?: sortedListOf()
     }
 
     override fun index(category: C, key: K, event: E) {
-        index[category.ordinal].updateInplace(key, default = EventEnumerator()) { add(event) }
+        index[category.ordinal].updateInplace(key, default = sortedMutableListOf()) { add(event) }
     }
 
     override fun enumerator(category: C, key: K): Enumerator<E>? {
-        return index[category.ordinal][key]
+        return index[category.ordinal][key]?.toEnumerator()
     }
 
     override fun reset() {

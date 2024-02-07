@@ -53,6 +53,12 @@ interface Enumerator<T> {
 
 }
 
+fun<T : Comparable<T>> SortedList<T>.toEnumerator(): Enumerator<T> = object : Enumerator<T> {
+    private val list = this@toEnumerator
+    override fun get(i: Int): T = list[i]
+    override fun get(x: T): Int = list.indexOf(x)
+}
+
 class RelationMatrix<T>(
     // TODO: take nodes from the enumerator (?)
     val nodes: Collection<T>,
