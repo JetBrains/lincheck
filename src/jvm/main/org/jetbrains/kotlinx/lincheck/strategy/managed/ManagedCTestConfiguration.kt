@@ -10,6 +10,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.coverage.CoverageOptions
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 
@@ -33,8 +34,8 @@ abstract class ManagedCTestConfiguration(
     sequentialSpecification: Class<*>,
     timeoutMs: Long,
     val eliminateLocalObjects: Boolean,
-
-    customScenarios: List<ExecutionScenario>
+    customScenarios: List<ExecutionScenario>,
+    coverageOptions: CoverageOptions?
 ) : CTestConfiguration(
     testClass = testClass,
     iterations = iterations,
@@ -47,7 +48,8 @@ abstract class ManagedCTestConfiguration(
     minimizeFailedScenario = minimizeFailedScenario,
     sequentialSpecification = sequentialSpecification,
     timeoutMs = timeoutMs,
-    customScenarios = customScenarios
+    customScenarios = customScenarios,
+    coverageOptions = coverageOptions
 ) {
     companion object {
         const val DEFAULT_INVOCATIONS = 10000

@@ -10,6 +10,7 @@
 package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.coverage.CoverageOptions
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 
@@ -29,6 +30,7 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     protected var sequentialSpecification: Class<*>? = null
     protected var timeoutMs: Long = CTestConfiguration.DEFAULT_TIMEOUT_MS
     protected var customScenarios: MutableList<ExecutionScenario> = mutableListOf()
+    protected var coverageOptions: CoverageOptions? = null
 
     /**
      * Number of different test scenarios to be executed
@@ -157,6 +159,13 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
      */
     internal fun invocationTimeout(timeoutMs: Long): OPT = applyAndCast {
         this.timeoutMs = timeoutMs
+    }
+
+    /**
+     * Set coverage options, no options by default.
+     */
+    fun withCoverage(options: CoverageOptions): OPT = applyAndCast {
+        this.coverageOptions = options
     }
 
     companion object {

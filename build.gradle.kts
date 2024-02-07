@@ -44,6 +44,7 @@ kotlin {
             val kotlinxCoroutinesVersion: String by project
             val asmVersion: String by project
             val reflectionsVersion: String by project
+            val coverageVersion: String by project
             dependencies {
                 api("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
                 api("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion")
@@ -52,6 +53,8 @@ kotlin {
                 api("org.ow2.asm:asm-commons:$asmVersion")
                 api("org.ow2.asm:asm-util:$asmVersion")
                 api("org.reflections:reflections:$reflectionsVersion")
+                api("org.jetbrains.intellij.deps:intellij-coverage-agent:$coverageVersion")
+                api("org.jetbrains.intellij.deps:intellij-coverage-reporter:$coverageVersion")
             }
         }
 

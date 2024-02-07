@@ -10,25 +10,35 @@
 
 package org.jetbrains.kotlinx.lincheck;
 
-import org.jetbrains.kotlinx.lincheck.runner.*;
-import org.jetbrains.kotlinx.lincheck.strategy.*;
-import org.jetbrains.kotlinx.lincheck.strategy.managed.*;
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*;
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*;
-import org.objectweb.asm.*;
-import org.objectweb.asm.commons.*;
-import org.objectweb.asm.util.*;
+import com.intellij.rt.coverage.instrumentation.CoverageTransformer;
+import org.jetbrains.kotlinx.lincheck.coverage.CoverageOptions;
+import org.jetbrains.kotlinx.lincheck.runner.Runner;
+import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy;
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyStateHolder;
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategyTransformerKt;
+import org.jetbrains.kotlinx.lincheck.strategy.stress.StressStrategy;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.commons.Remapper;
+import org.objectweb.asm.util.CheckClassAdapter;
+import org.objectweb.asm.util.TraceClassVisitor;
 
-import java.io.*;
-import java.net.*;
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.function.*;
+import java.io.IOException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static org.jetbrains.kotlinx.lincheck.TransformationClassLoader.*;
+import static org.jetbrains.kotlinx.lincheck.TransformationClassLoader.REMAPPED_PACKAGE_INTERNAL_NAME;
 import static org.jetbrains.kotlinx.lincheck.UtilsKt.getCanonicalClassName;
-import static org.objectweb.asm.Opcodes.*;
+import static org.objectweb.asm.Opcodes.ASM9;
+import static org.objectweb.asm.Opcodes.V1_6;
 
 /**
  * This transformer applies required for {@link Strategy} and {@link Runner}
@@ -40,6 +50,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
     public static final int ASM_API = ASM9;
 
     private final List<Function<ClassVisitor, ClassVisitor>> classTransformers;
+    private final CoverageOptions coverageOptions;
     private final Remapper remapper;
 
     // Cache for classloading and frames computing during the transformation.
@@ -49,8 +60,10 @@ public class TransformationClassLoader extends ExecutionClassLoader {
     private static final Map<String, byte[]> stressStrategyBytecodeCache = new ConcurrentHashMap<>();
     private static final Map<String, byte[]> modelCheckingStrategyBytecodeCache = new ConcurrentHashMap<>();
 
-    public TransformationClassLoader(Strategy strategy, Runner runner) {
+
+    public TransformationClassLoader(Strategy strategy, Runner runner, CoverageOptions options) {
         classTransformers = new ArrayList<>();
+        coverageOptions = options;
         // Apply the strategy's transformer at first, then the runner's one.
         if (strategy.needsTransformation()) classTransformers.add(strategy::createTransformer);
         if (runner.needsTransformation()) classTransformers.add(runner::createTransformer);
@@ -61,6 +74,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
                         .map(constructor -> constructor.apply(new TraceClassVisitor(null)))
                         .collect(Collectors.toList())
         );
+
         if (strategy instanceof StressStrategy) {
             bytecodeCache = stressStrategyBytecodeCache;
         } else if (strategy instanceof ManagedStrategy && ((ManagedStrategy) strategy).useBytecodeCache()) {
@@ -70,6 +84,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
 
     public TransformationClassLoader(Function<ClassVisitor, ClassVisitor> classTransformer) {
         this.classTransformers = Collections.singletonList(classTransformer);
+        coverageOptions = null;
         remapper = null;
     }
 
@@ -161,7 +176,32 @@ public class TransformationClassLoader extends ExecutionClassLoader {
      */
     private byte[] instrument(String className) throws IOException {
         // Create ClassReader
-        ClassReader cr = new ClassReader(className);
+        ClassReader cr = null;
+        if (coverageOptions != null) {
+            ClassReader crForCoverage = new ClassReader(className);
+            ClassWriter cwForCoverage = new ClassWriter(crForCoverage, 0);
+
+            crForCoverage.accept(cwForCoverage, ClassReader.EXPAND_FRAMES);
+            // you may need to uncomment it for debug purposes under development.
+            // if (className.equals(YourClass.class.getCanonicalName()))
+            //    crForCoverage.accept(new TraceClassVisitor(cwForCoverage, new PrintWriter(System.out)), ClassReader.EXPAND_FRAMES);
+
+            byte[] originalBytes = cwForCoverage.toByteArray();
+            byte[] coverageBytes =  new CoverageTransformer(
+                    coverageOptions.getProjectData(),
+                    false,
+                    coverageOptions.getCf(),
+                    null
+            ).transform(ClassLoader.getSystemClassLoader(), className, null, null, originalBytes);
+
+            if (coverageBytes != null) {
+                cr = new ClassReader(coverageBytes);
+            }
+        }
+
+        if (cr == null) {
+            cr = new ClassReader(className);
+        }
         // Construct transformation pipeline:
         // apply the strategy's transformer at first,
         // then the runner's one.
@@ -171,9 +211,9 @@ public class TransformationClassLoader extends ExecutionClassLoader {
         ClassVisitor cv = cw;
         // The code in this comment block verifies the transformed byte-code and prints it for the specified class,
         // you may need to uncomment it for debug purposes under development.
-        // cv = new CheckClassAdapter(cv, false);
+        cv = new CheckClassAdapter(cv, false);
         // if (className.equals(YourClass.class.getCanonicalName()))
-        //   cv = new TraceClassVisitor(cv, new PrintWriter(System.out));
+        //    cv = new TraceClassVisitor(cv, new PrintWriter(System.out));
 
         for (Function<ClassVisitor, ClassVisitor> ct : classTransformers)
             cv = ct.apply(cv);
