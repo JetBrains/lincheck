@@ -72,6 +72,10 @@ kotlin {
 java {
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
+    toolchain {
+        val jdkToolchainVersion: String by project
+        languageVersion = JavaLanguageVersion.of(jdkToolchainVersion)
+    }
 }
 
 sourceSets.main {
@@ -93,6 +97,7 @@ tasks {
         maxParallelForks = 1
         maxHeapSize = "6g"
         jvmArgs(
+            "--add-opens", "java.base/java.lang=ALL-UNNAMED",
             "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
             "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED",
             "--add-exports", "java.base/sun.security.action=ALL-UNNAMED"

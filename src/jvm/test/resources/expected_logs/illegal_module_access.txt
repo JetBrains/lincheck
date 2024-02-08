@@ -7,6 +7,7 @@
 
 java.lang.RuntimeException: It seems that you use Java 9+ and the code uses Unsafe or similar constructions that are not accessible from unnamed modules.
 Please add the following lines to your test running configuration:
+--add-opens java.base/java.lang=ALL-UNNAMED
 --add-opens java.base/jdk.internal.misc=ALL-UNNAMED
 --add-exports java.base/jdk.internal.util=ALL-UNNAMED
 --add-exports java.base/sun.security.action=ALL-UNNAMED
