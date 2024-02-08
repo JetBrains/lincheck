@@ -82,6 +82,8 @@ class EventStructure(
 
     private val localWrites = mutableMapOf<MemoryLocation, AtomicThreadEvent>()
 
+    private val memoryAccessEventIndex = MutableAtomicMemoryAccessEventIndex(currentExecution)
+
     private val delayedConsistencyCheckBuffer = mutableListOf<AtomicThreadEvent>()
 
     var detectedInconsistency: Inconsistency? = null
@@ -89,6 +91,7 @@ class EventStructure(
 
     private val sequentialConsistencyChecker =
         IncrementalSequentialConsistencyChecker(
+            memoryAccessEventIndex,
             checkReleaseAcquireConsistency = true,
             approximateSequentialConsistency = false
         )
@@ -172,11 +175,14 @@ class EventStructure(
         consistencyChecker.reset(currentExecution)
         // add new event to current execution
         _currentExecution.add(event)
+        // reset the indices
+        memoryAccessEventIndex.apply { reset(); index(currentExecution) }
         // check new event with the incremental consistency checkers
         checkConsistencyIncrementally(event)
         // do the same for blocked requests
         for (blockedRequest in event.blockedRequests) {
             _currentExecution.add(blockedRequest)
+            memoryAccessEventIndex.index(blockedRequest)
             checkConsistencyIncrementally(blockedRequest)
             // additionally, pin blocked requests if all their predecessors are also blocked ...
             if (blockedRequest.parent == pinnedEvents[blockedRequest.threadId]) {
@@ -476,10 +482,14 @@ class EventStructure(
             delayedConsistencyCheckBuffer.clear()
             return
         }
-        // If we are not in the replay phase and the newly added event is not replayed, then we proceed it as usual.
+        // If we are not in the replay phase and the newly added event is not replayed, then proceed as usual.
+        // Add synchronized events.
         if (event.label.isSend) {
             addSynchronizedEvents(event)
         }
+        // Index the new event.
+        memoryAccessEventIndex.index(event)
+        // Check consistency of the new event.
         val inconsistency = checkConsistencyIncrementally(event)
         if (inconsistency != null) {
             reportInconsistencyCallback(inconsistency)
@@ -530,33 +540,57 @@ class EventStructure(
     private fun EventLabel.synchronize(other: EventLabel) =
         syncAlgebra.synchronize(this, other)
 
-    private fun synchronizationCandidates(event: AtomicThreadEvent): List<AtomicThreadEvent> {
-        // consider all candidates in current execution and apply some general filters
-        val candidates = currentExecution.asSequence()
-            // for send event we filter out ...
-            .runIf(event.label.isSend) { filter {
-                // (1) all of its causal predecessors, because an attempt to synchronize with
-                //     these predecessors will result in causality cycle
-                !causalityOrder.lessThan(it, event) &&
-                // (2) pinned events, because their response part is pinned (i.e. fixed),
-                //     unless pinned event is blocking dangling event
-                (!pinnedEvents.contains(it) || danglingEvents.contains(it))
-            }}
-        val label = event.label
+    private fun synchronizationCandidates(label: EventLabel): Sequence<AtomicThreadEvent> {
+        // TODO: generalize the checks for arbitrary synchronization algebra?
         return when {
-            // for read-request events we search for the last write to the same memory location
-            // in the same thread, and then filter out all causal predecessors of this last write,
-            // because these events are "obsolete" --- reading from them will result in coherence cycle
-            // and will violate consistency
+            // write can synchronize with read-request events
+            label is WriteAccessLabel ->
+                memoryAccessEventIndex.getReadRequests(label.location).asSequence()
+
+            // read-request can synchronize only with write events
+            label is ReadAccessLabel && label.isRequest ->
+                memoryAccessEventIndex.getWrites(label.location).asSequence()
+
+            // read-response cannot synchronize with anything
+            label is ReadAccessLabel && label.isResponse ->
+                sequenceOf()
+
+            // random labels do not synchronize
+            label is RandomLabel -> sequenceOf()
+
+            // otherwise we pessimistically assume that any event can potentially synchronize
+            else -> currentExecution.asSequence()
+        }
+    }
+
+    private fun synchronizationCandidates(event: AtomicThreadEvent): Sequence<AtomicThreadEvent> {
+        val label = event.label
+        // consider all the candidates and apply additional filters
+        val candidates = synchronizationCandidates(label)
+            // for a send event we additionally filter out ...
+            .runIf(event.label.isSend) {
+                filter {
+                    // (1) all of its causal predecessors, because an attempt to synchronize with
+                    //     these predecessors will result in a causality cycle
+                    !causalityOrder.lessThan(it, event) &&
+                    // (2) pinned events, because their response part is pinned (i.e. fixed),
+                    //     unless the pinned event is blocking dangling event
+                    (!pinnedEvents.contains(it) || danglingEvents.contains(it))
+                }
+            }
+        return when {
+            /* For read-request events, we search for the last write to
+             * the same memory location in the same thread.
+             * We then filter out all causal predecessors of this last write,
+             * because these events are "obsolete" ---
+             * reading from them will result in coherence cycle and will violate consistency
+             */
             label is ReadAccessLabel && label.isRequest -> {
-                // val threadLastWrite = currentExecution[event.threadId]?.lastOrNull {
-                //     it.label is WriteAccessLabel && it.label.location == event.label.location
-                // } ?: root
                 if (label.objID != STATIC_OBJECT_ID) {
                     val objectEntry = objectRegistry[label.objID]!!
                     if (objectEntry.isLocal) {
                         val write = localWrites.computeIfAbsent(label.location) { objectEntry.allocation }
-                        return listOf(write)
+                        return sequenceOf(write)
                     }
                 }
                 val threadReads = currentExecution[event.threadId]!!.filter {
@@ -574,31 +608,39 @@ class EventStructure(
                     !staleWrites.any { write -> causalityOrder.lessOrEqual(it, write) }
                 }
             }
+
             label is WriteAccessLabel -> {
                 if (label.objID != STATIC_OBJECT_ID) {
                     val objectEntry = objectRegistry[label.objID]!!
                     if (objectEntry.isLocal) {
-                        return listOf()
+                        return sequenceOf()
                     }
                 }
                 candidates
             }
+
+            // an allocation event, at the point when it is added to the execution,
+            // cannot synchronize with anything
             label is ObjectAllocationLabel -> {
-                return listOf()
+                return sequenceOf()
             }
+
             // re-entry lock-request synchronizes only with object allocation label
             label is LockLabel && event.label.isRequest && label.isReentry -> {
                 candidates.filter { it.label.asObjectAllocationLabel(label.mutex) != null }
             }
+
             // re-entry unlock synchronizes with nothing
             label is UnlockLabel && label.isReentry -> {
-                return listOf(root)
+                return sequenceOf(root)
             }
+
             label is CoroutineSuspendLabel && label.isRequest -> {
                 // filter-out InitializationLabel to prevent creating cancellation response
                 // TODO: refactor!!!
                 candidates.filter { it.label !is InitializationLabel }
             }
+
             // label is CoroutineResumeLabel -> {
             //     val suspendRequest = getBlockedAwaitingRequest(label.threadId).ensure { request ->
             //         (request != null) && request.label is CoroutineSuspendLabel
@@ -606,11 +648,9 @@ class EventStructure(
             //     }!!
             //     return listOf(suspendRequest)
             // }
-            label is RandomLabel ->
-                return listOf()
 
             else -> candidates
-        }.toList()
+        }
     }
 
     /**
@@ -624,9 +664,10 @@ class EventStructure(
      */
     private fun addSynchronizedEvents(event: AtomicThreadEvent): List<AtomicThreadEvent> {
         // TODO: we should maintain an index of read/write accesses to specific memory location
+        val candidates = synchronizationCandidates(event)
         val syncEvents = when (event.label.syncType) {
-            SynchronizationType.Binary -> addBinarySynchronizedEvents(event, synchronizationCandidates(event))
-            SynchronizationType.Barrier -> addBarrierSynchronizedEvents(event, synchronizationCandidates(event))
+            SynchronizationType.Binary -> addBinarySynchronizedEvents(event, candidates)
+            SynchronizationType.Barrier -> addBarrierSynchronizedEvents(event, candidates)
             else -> return listOf()
         }
         // if there are responses to blocked dangling requests, then set the response of one of these requests
@@ -644,11 +685,12 @@ class EventStructure(
 
     private fun addBinarySynchronizedEvents(
         event: AtomicThreadEvent,
-        candidates: Collection<AtomicThreadEvent>
+        candidates: Sequence<AtomicThreadEvent>
     ): List<AtomicThreadEvent> {
         require(event.label.syncType == SynchronizationType.Binary)
         // TODO: sort resulting events according to some strategy?
         return candidates
+            .asIterable()
             .mapNotNull { other ->
                 val syncLab = event.label.synchronize(other.label)
                     ?: return@mapNotNull null
@@ -668,7 +710,7 @@ class EventStructure(
 
     private fun addBarrierSynchronizedEvents(
         event: AtomicThreadEvent,
-        candidates: Collection<AtomicThreadEvent>
+        candidates: Sequence<AtomicThreadEvent>
     ): List<AtomicThreadEvent> {
         require(event.label.syncType == SynchronizationType.Barrier)
         val (syncLab, dependencies) =
@@ -1104,8 +1146,8 @@ class EventStructure(
      */
     fun calculateRacyWrites(
         location: MemoryLocation,
-        observation: ExecutionFrontier<AtomicThreadEvent>)
-    : List<ThreadEvent> {
+        observation: ExecutionFrontier<AtomicThreadEvent>
+    ): List<ThreadEvent> {
         val writes = calculateMemoryLocationView(location, observation).events
         return writes.filter { write ->
             !writes.any { other ->

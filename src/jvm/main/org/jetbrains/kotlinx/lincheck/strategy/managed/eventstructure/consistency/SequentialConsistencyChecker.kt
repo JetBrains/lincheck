@@ -41,13 +41,14 @@ class SequentialConsistencyWitness(
 abstract class SequentialConsistencyViolation : Inconsistency()
 
 class SequentialConsistencyChecker(
+    val memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
     val checkReleaseAcquireConsistency: Boolean = true,
     val approximateSequentialConsistency: Boolean = true,
     val computeCoherenceOrdering: Boolean = true,
 ) : ConsistencyChecker<AtomicThreadEvent, SequentialConsistencyWitness> {
 
     private val releaseAcquireChecker : ReleaseAcquireConsistencyChecker? =
-        if (checkReleaseAcquireConsistency) ReleaseAcquireConsistencyChecker() else null
+        if (checkReleaseAcquireConsistency) ReleaseAcquireConsistencyChecker(memoryAccessEventIndex) else null
 
     override fun check(execution: Execution<AtomicThreadEvent>): SequentialConsistencyVerdict {
         // we will gradually approximate the total sequential execution order of events
@@ -62,13 +63,12 @@ class SequentialConsistencyChecker(
                     // if execution is release/acquire consistent,
                     // the writes-before relation can be used
                     // to refine the execution ordering approximation
-                    val executionIndex = verdict.witness.executionIndex
                     val rmwChainsStorage = verdict.witness.rmwChainsStorage
                     val writesBefore = verdict.witness.writesBefore
                     executionOrderApproximation = executionOrderApproximation union writesBefore
                     // TODO: combine SC approximation phase with coherence phase
                     if (computeCoherenceOrdering) {
-                        return checkByCoherenceOrdering(execution, executionIndex, rmwChainsStorage, writesBefore)
+                        return checkByCoherenceOrdering(execution, memoryAccessEventIndex, rmwChainsStorage, writesBefore)
                     }
                 }
             }
@@ -129,6 +129,7 @@ class SequentialConsistencyCoherenceViolation : SequentialConsistencyViolation()
 }
 
 class IncrementalSequentialConsistencyChecker(
+    val memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
     checkReleaseAcquireConsistency: Boolean = true,
     approximateSequentialConsistency: Boolean = true
 ) : IncrementalConsistencyChecker<AtomicThreadEvent, SequentialConsistencyWitness> {
@@ -145,6 +146,7 @@ class IncrementalSequentialConsistencyChecker(
     private val lockConsistencyChecker = LockConsistencyChecker()
 
     private val sequentialConsistencyChecker = SequentialConsistencyChecker(
+        memoryAccessEventIndex,
         checkReleaseAcquireConsistency,
         approximateSequentialConsistency,
     )
