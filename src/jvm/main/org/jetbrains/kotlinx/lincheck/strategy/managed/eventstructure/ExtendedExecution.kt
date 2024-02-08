@@ -34,11 +34,18 @@ import org.jetbrains.kotlinx.lincheck.utils.*
 interface ExtendedExecution : Execution<AtomicThreadEvent> {
 
     /**
-     * The writes-before (wb) relation of the execution.
+     * The writes-before (wb) order of the execution.
      *
      * @see WritesBeforeRelation
      */
     val writesBefore: Relation<AtomicThreadEvent>
+
+    /**
+     * The coherence (co) order of the execution
+     *
+     * @see CoherenceOrder
+     */
+    val coherenceOrder: Relation<AtomicThreadEvent>
 
     /**
      * The extended coherence (eco) relation of the execution
@@ -66,6 +73,8 @@ interface ExtendedExecution : Execution<AtomicThreadEvent> {
 interface MutableExtendedExecution : ExtendedExecution, MutableExecution<AtomicThreadEvent> {
 
     val writesBeforeComputable : ComputableDelegate<WritesBeforeRelation>
+
+    val coherenceOrderComputable : ComputableDelegate<CoherenceOrder>
 
     val extendedCoherenceComputable : ComputableDelegate<ExtendedCoherenceOrder>
 
@@ -100,8 +109,7 @@ private class ExtendedExecutionImpl(
     private val rmwChainsStorageComputable = computable { ReadModifyWriteChainsStorage(execution) }
 
     override val writesBeforeComputable =
-        // TODO: dependency on rmwChainsStorage can be removed
-        computable(dependsOn = listOf(memoryAccessEventIndexComputable, rmwChainsStorageComputable)) {
+        computable(dependsOn = listOf(memoryAccessEventIndexComputable)) {
             WritesBeforeRelation(
                 execution,
                 memoryAccessEventIndexComputable.value,
@@ -112,6 +120,18 @@ private class ExtendedExecutionImpl(
 
     override val writesBefore: Relation<AtomicThreadEvent> by writesBeforeComputable
 
+    override val coherenceOrderComputable =
+        computable(dependsOn = listOf(memoryAccessEventIndexComputable)) {
+            CoherenceOrder(
+                execution,
+                memoryAccessEventIndexComputable.value,
+                rmwChainsStorageComputable.value,
+                causalityOrder.lessThan union writesBeforeComputable.value, // TODO: add eco or sc?
+            )
+        }
+
+    override val coherenceOrder: Relation<AtomicThreadEvent> by coherenceOrderComputable
+
     override val extendedCoherenceComputable =
         computable(dependsOn = listOf(memoryAccessEventIndexComputable)) {
             ExtendedCoherenceOrder(
@@ -119,6 +139,10 @@ private class ExtendedExecutionImpl(
                 memoryAccessEventIndexComputable.value,
                 causalityOrder.lessThan union writesBeforeComputable.value // TODO: add coherence
             )
+        }.apply {
+            // add reference to coherence order, so once it is computed
+            // it can force-set the extended coherence order
+            coherenceOrderComputable.value.extendedCoherenceOrder = this
         }
 
     override val extendedCoherence: Relation<AtomicThreadEvent> by extendedCoherenceComputable

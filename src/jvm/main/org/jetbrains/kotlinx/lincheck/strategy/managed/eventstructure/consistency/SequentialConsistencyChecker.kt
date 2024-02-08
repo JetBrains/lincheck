@@ -240,8 +240,8 @@ class CoherenceOrder(
     val memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
     val rmwChainsStorage: ReadModifyWriteChainsStorage,
     val writesOrder: Relation<AtomicThreadEvent>,
-    val extendedCoherenceOrder: ComputableDelegate<ExtendedCoherenceOrder>? = null,
-    val executionOrder: ComputableDelegate<ExecutionOrder>? = null,
+    var extendedCoherenceOrder: ComputableDelegate<ExtendedCoherenceOrder>? = null,
+    var executionOrder: ComputableDelegate<ExecutionOrder>? = null,
 ) : Relation<AtomicThreadEvent>, Computable {
 
     var consistent: Boolean = true
