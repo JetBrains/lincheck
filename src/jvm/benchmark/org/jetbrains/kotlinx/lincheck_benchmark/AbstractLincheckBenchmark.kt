@@ -12,29 +12,41 @@
 
 package org.jetbrains.kotlinx.lincheck_benchmark
 
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.LinChecker
+import org.jetbrains.kotlinx.lincheck.LincheckStatisticsTracker
+import org.jetbrains.kotlinx.lincheck.LincheckStrategy
+import org.jetbrains.kotlinx.lincheck.Options
+import org.jetbrains.kotlinx.lincheck.coverage.CoverageOptions
+import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
-import kotlin.reflect.KClass
 import org.junit.Test
+import java.util.regex.Pattern
+import kotlin.reflect.KClass
+import kotlin.reflect.jvm.jvmName
 
 
 abstract class AbstractLincheckBenchmark(
     private vararg val expectedFailures: KClass<out LincheckFailure>
 ) {
 
-    @Test(timeout = TIMEOUT)
-    fun benchmarkWithStressStrategy(): Unit = StressOptions().run {
-        invocationsPerIteration(5_000)
-        configure()
-        runTest()
-    }
+//    @Test(timeout = TIMEOUT)
+//    fun benchmarkWithStressStrategy(): Unit = StressOptions().run {
+//        invocationsPerIteration(5_000)
+//        configure()
+//        runTest()
+//    }
 
     @Test(timeout = TIMEOUT)
     fun benchmarkWithModelCheckingStrategy(): Unit = ModelCheckingOptions().run {
-        invocationsPerIteration(5_000)
-        configure()
+        // invocationsPerIteration(5_000)
+        invocationsPerIteration(20)
+        withCoverage(CoverageOptions(
+            true,
+            listOf(Pattern.compile(AbstractLincheckBenchmark::class.jvmName))
+        ))
+        configureWithCoverage()
+        //configure()
         runTest()
     }
 
@@ -67,6 +79,16 @@ abstract class AbstractLincheckBenchmark(
 
     private fun <O : Options<O, *>> O.configure(): Unit = run {
         iterations(30)
+        threads(3)
+        actorsPerThread(2)
+        actorsBefore(2)
+        actorsAfter(2)
+        minimizeFailedScenario(false)
+        customize()
+    }
+
+    private fun <O : Options<O, *>> O.configureWithCoverage(): Unit = run {
+        iterations(1)
         threads(3)
         actorsPerThread(2)
         actorsBefore(2)

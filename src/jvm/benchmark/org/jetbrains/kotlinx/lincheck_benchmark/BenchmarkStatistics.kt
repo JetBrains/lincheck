@@ -12,13 +12,16 @@
 
 package org.jetbrains.kotlinx.lincheck_benchmark
 
-import org.jetbrains.kotlinx.lincheck.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToStream
+import org.jetbrains.kotlinx.lincheck.LincheckStatistics
+import org.jetbrains.kotlinx.lincheck.LincheckStrategy
+import org.jetbrains.kotlinx.lincheck.invocationsCount
+import org.jetbrains.kotlinx.lincheck.iterationsCount
+import java.io.File
 import kotlin.time.Duration.Companion.nanoseconds
 import kotlin.time.DurationUnit
-import java.io.File
 
 
 typealias BenchmarkID = String
@@ -37,6 +40,7 @@ data class BenchmarkStatistics(
     val invocationsCount: Int,
     val scenariosStatistics: List<ScenarioStatistics>,
     val invocationsRunningTimeNano: LongArray,
+    val coverageStatistics: CoverageStatistics?,
 )
 
 @Serializable
@@ -47,6 +51,12 @@ data class ScenarioStatistics(
     val runningTimeNano: Long,
     val invocationAverageTimeNano: Long,
     val invocationStandardErrorTimeNano: Long,
+)
+
+@Serializable
+data class CoverageStatistics(
+    val lineCoverageRatio: Double,
+    val branchCoverageRatio: Double,
 )
 
 val BenchmarksReport.benchmarkIDs: List<BenchmarkID>
@@ -94,7 +104,11 @@ fun LincheckStatistics.toBenchmarkStatistics(name: String, strategy: LincheckStr
                 invocationAverageTimeNano = invocationAverageTimeNano,
                 invocationStandardErrorTimeNano = invocationStandardErrorTimeNano,
             )
-        }
+        },
+    coverageStatistics =
+        if (coverageResult != null)
+            CoverageStatistics(coverageResult!!.lineCoverage, coverageResult!!.branchCoverage)
+        else null
 )
 
 fun BenchmarksReport.saveJson(filename: String) {
@@ -125,5 +139,10 @@ private fun StringBuilder.appendBenchmarkRunningTime(benchmarkStatistics: Benchm
     with(benchmarkStatistics) {
         val runningTimeMs = runningTimeNano.nanoseconds.toLong(DurationUnit.MILLISECONDS)
         appendLine("${strategy}.${name}.runtime.ms $runningTimeMs")
+
+        if (coverageStatistics != null) {
+            appendLine("${strategy}.${name}.coverage.line ${coverageStatistics.lineCoverageRatio}")
+            appendLine("${strategy}.${name}.coverage.branch ${coverageStatistics.branchCoverageRatio}")
+        }
     }
 }

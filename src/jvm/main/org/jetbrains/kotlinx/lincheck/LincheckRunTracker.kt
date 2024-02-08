@@ -20,6 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck
 
+import org.jetbrains.kotlinx.lincheck.coverage.CoverageResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 
@@ -68,6 +69,9 @@ interface LincheckRunTracker {
      * @param exception the exception that occurred during the invocation or null if no exception occurred.
      */
     fun invocationEnd(iteration: Int, invocation: Int, failure: LincheckFailure? = null, exception: Throwable? = null) {}
+
+    // TODO: add description
+    fun coverageCalculated(coverage: CoverageResult) {}
 
     /**
      * For a composite trackers, encompassing several internal sub-trackers,

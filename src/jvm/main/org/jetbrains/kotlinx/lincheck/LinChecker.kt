@@ -9,13 +9,18 @@
  */
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
-import kotlin.reflect.*
+import org.jetbrains.kotlinx.lincheck.annotations.LogLevel
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.execution.tryMinimize
+import org.jetbrains.kotlinx.lincheck.execution.validate
+import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
+import org.jetbrains.kotlinx.lincheck.strategy.runIteration
+import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.strategy.stress.StressStrategy
+import org.jetbrains.kotlinx.lincheck.verifier.Verifier
+import kotlin.reflect.KClass
 
 /**
  * This class runs concurrent tests.
@@ -52,7 +57,11 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
         check(testConfigurations.isNotEmpty()) { "No Lincheck test configuration to run" }
         for (testCfg in testConfigurations) {
             val failure = testCfg.checkImpl(tracker)
-            testCfg.coverageOptions?.onShutdown()
+            testCfg.coverageOptions?.apply {
+                collectCoverage()
+                onShutdown()
+                tracker?.coverageCalculated(coverageResult!!)
+            }
             if (failure != null)
                 return failure
         }

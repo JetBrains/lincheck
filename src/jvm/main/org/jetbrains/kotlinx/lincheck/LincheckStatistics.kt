@@ -20,6 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck
 
+import org.jetbrains.kotlinx.lincheck.coverage.CoverageResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 
@@ -43,6 +44,9 @@ interface LincheckStatistics {
      *   - [StatisticsGranularity.PER_INVOCATION] --- per each invocation (consumes more memory).
      */
     val granularity: StatisticsGranularity
+
+    // TODO: add description
+    var coverageResult: CoverageResult?
 }
 
 /**
@@ -151,7 +155,8 @@ val LincheckIterationStatistics.averageInvocationTimeNano
 
 
 class LincheckStatisticsTracker(
-    override val granularity: StatisticsGranularity = StatisticsGranularity.PER_ITERATION
+    override val granularity: StatisticsGranularity = StatisticsGranularity.PER_ITERATION,
+    override var coverageResult: CoverageResult? = null
 ) : LincheckStatistics, LincheckRunTracker {
 
     override var runningTimeNano: Long = 0
@@ -208,5 +213,9 @@ class LincheckStatisticsTracker(
         statistics.lastInvocationStartTimeNano = -1L
     }
 
+    override fun coverageCalculated(coverage: CoverageResult) {
+        println("'coverageCalculated' called with coverage: (line: ${coverage.lineCoverage}, branch: ${coverage.branchCoverage})")
+        coverageResult = coverage
+    }
 }
 
