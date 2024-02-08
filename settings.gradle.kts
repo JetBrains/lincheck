@@ -8,9 +8,12 @@ pluginManagement {
     repositories {
         maven(url = "https://maven.pkg.jetbrains.space/kotlin/p/kotlinx/maven")
         mavenCentral()
-        jcenter()
         gradlePluginPortal()
     }
+}
+
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version("0.7.0")
 }
 
 val name: String by settings
