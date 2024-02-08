@@ -33,11 +33,14 @@ fun<T : Computable> computable(dependsOn: List<Computable> = listOf(), builder: 
     ComputableDelegate(builder(), dependsOn)
 
 class ComputableDelegate<T : Computable>(
-    val value: T,
+    value: T,
     // by passing list of dependencies in the constructor,
     // we effectively prevent the creation of cyclic dependencies
     private val dependencies: List<Computable> = listOf(),
 ) : Computable {
+
+    var value = value
+        private set
 
     private val followers = mutableListOf<Computable>()
 
@@ -93,6 +96,12 @@ class ComputableDelegate<T : Computable>(
             state = State.UNSET
             followers.forEach { it.invalidate() }
         }
+    }
+
+    fun setComputed(value: T) {
+        this.value = value
+        state = State.COMPUTED
+        followers.forEach { it.invalidate() }
     }
 
     operator fun getValue(thisRef: Any?, property: KProperty<*>): T {

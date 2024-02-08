@@ -91,6 +91,16 @@ class WritesBeforeRelation(
         }
     }
 
+    private fun initialize(location: MemoryLocation) {
+        val writes = memoryAccessEventIndex.getWrites(location)
+        val enumerator = memoryAccessEventIndex.enumerator(AtomicMemoryAccessCategory.Write, location)!!
+        relations[location] = RelationMatrix(writes, enumerator)
+    }
+
+    override fun reset() {
+        relations.clear()
+    }
+
     override fun compute() {
         for ((location, relation) in relations) {
             relation.apply {
@@ -98,16 +108,6 @@ class WritesBeforeRelation(
                 transitiveClosure()
             }
         }
-    }
-
-    override fun reset() {
-        relations.clear()
-    }
-
-    private fun initialize(location: MemoryLocation) {
-        val writes = memoryAccessEventIndex.getWrites(location)
-        val enumerator = memoryAccessEventIndex.enumerator(AtomicMemoryAccessCategory.Write, location)!!
-        relations[location] = RelationMatrix(writes, enumerator)
     }
 
     private fun RelationMatrix<AtomicThreadEvent>.compute(location: MemoryLocation) {
