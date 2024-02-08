@@ -70,6 +70,10 @@ class PartialOrder<T>(val lessOrEqual: Relation<T>, val lessThan: Relation<T>) {
         }
     }
 
+    fun unordered(x: T, y: T): Boolean {
+        return !lessOrEqual(x, y) && !lessThan(y, x)
+    }
+
     fun<U : T> maxOrNull(x: U, y: U): U? =
         when {
             lessOrEqual(x, y) -> y

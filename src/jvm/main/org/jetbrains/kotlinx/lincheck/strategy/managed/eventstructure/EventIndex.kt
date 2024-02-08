@@ -131,7 +131,13 @@ enum class AtomicMemoryAccessCategory {
 
 interface AtomicMemoryAccessEventIndex : EventIndex<AtomicThreadEvent, AtomicMemoryAccessCategory, MemoryLocation> {
 
-    val locations: Set<MemoryLocation>
+    // TODO: move race status maintenance logic into separate class (?)
+    interface LocationInfo {
+        val isReadWriteRaceFree: Boolean
+        val isWriteWriteRaceFree: Boolean
+    }
+
+    val locationInfo: Map<MemoryLocation, LocationInfo>
 
     fun getReadRequests(location: MemoryLocation) : SortedList<AtomicThreadEvent> =
         get(AtomicMemoryAccessCategory.ReadRequest, location)
@@ -144,13 +150,29 @@ interface AtomicMemoryAccessEventIndex : EventIndex<AtomicThreadEvent, AtomicMem
 
 }
 
-typealias AtomicMemoryAccessEventClassifier =
-    EventIndexClassifier<AtomicThreadEvent, AtomicMemoryAccessCategory, MemoryLocation>
-
 interface MutableAtomicMemoryAccessEventIndex :
     AtomicMemoryAccessEventIndex,
     MutableEventIndex<AtomicThreadEvent, AtomicMemoryAccessCategory, MemoryLocation>,
     Computable
+
+val AtomicMemoryAccessEventIndex.locations: Set<MemoryLocation>
+    get() = locationInfo.keys
+
+val AtomicMemoryAccessEventIndex.LocationInfo.isRaceFree: Boolean
+    get() = isReadWriteRaceFree && isWriteWriteRaceFree
+
+fun AtomicMemoryAccessEventIndex.isWriteWriteRaceFree(location: MemoryLocation): Boolean =
+    locationInfo[location]?.isWriteWriteRaceFree ?: true
+
+fun AtomicMemoryAccessEventIndex.isReadWriteRaceFree(location: MemoryLocation): Boolean =
+    locationInfo[location]?.isReadWriteRaceFree ?: true
+
+fun AtomicMemoryAccessEventIndex.isRaceFree(location: MemoryLocation): Boolean =
+    locationInfo[location]?.isRaceFree ?: true
+
+fun AtomicMemoryAccessEventIndex.getLastWrite(location: MemoryLocation): AtomicThreadEvent? =
+    getWrites(location).lastOrNull()
+
 
 fun AtomicMemoryAccessEventIndex(execution: Execution<AtomicThreadEvent>): AtomicMemoryAccessEventIndex =
     MutableAtomicMemoryAccessEventIndex(execution)
@@ -158,10 +180,25 @@ fun AtomicMemoryAccessEventIndex(execution: Execution<AtomicThreadEvent>): Atomi
 fun MutableAtomicMemoryAccessEventIndex(execution: Execution<AtomicThreadEvent>): MutableAtomicMemoryAccessEventIndex =
     MutableAtomicMemoryAccessEventIndexImpl(execution)
 
+typealias AtomicMemoryAccessEventClassifier =
+        EventIndexClassifier<AtomicThreadEvent, AtomicMemoryAccessCategory, MemoryLocation>
+
 private class MutableAtomicMemoryAccessEventIndexImpl(
     // TODO: remove it once we will have incremental index
     val execution: Execution<AtomicThreadEvent>
 ) : MutableAtomicMemoryAccessEventIndex {
+
+    private data class LocationInfoData(
+        override var isReadWriteRaceFree: Boolean,
+        override var isWriteWriteRaceFree: Boolean,
+    ) : AtomicMemoryAccessEventIndex.LocationInfo {
+        constructor(): this(isReadWriteRaceFree = true, isWriteWriteRaceFree = true)
+    }
+
+    private val _locationInfo = mutableMapOf<MemoryLocation, LocationInfoData>()
+
+    override val locationInfo: Map<MemoryLocation, AtomicMemoryAccessEventIndex.LocationInfo>
+        get() = _locationInfo
 
     override val classifier: AtomicMemoryAccessEventClassifier = { event ->
         val label = (event.label as? MemoryAccessLabel)
@@ -179,8 +216,6 @@ private class MutableAtomicMemoryAccessEventIndexImpl(
         }
     }
 
-    override val locations = mutableSetOf<MemoryLocation>()
-
     private val index = MutableEventIndex<AtomicThreadEvent, AtomicMemoryAccessCategory, MemoryLocation>(classifier)
 
     override fun get(category: AtomicMemoryAccessCategory, key: MemoryLocation): SortedList<AtomicThreadEvent> =
@@ -191,15 +226,58 @@ private class MutableAtomicMemoryAccessEventIndexImpl(
 
     override fun index(event: AtomicThreadEvent) {
         val label = (event.label as? MemoryAccessLabel) ?: return
-        val isNewLocation = locations.add(label.location)
-        if (isNewLocation) {
+        if (label.location !in locations) {
             /* If the indexed event is the first memory access to a given location,
              * then we also need to add the object allocation event
              * to the index for this memory location.
              */
             index.index(AtomicMemoryAccessCategory.Write, label.location, event.allocation!!)
+            /* Also initialize the race status data */
+            _locationInfo[label.location] = LocationInfoData()
         }
+        updateRaceStatus(label.location, event)
         index.index(event)
+    }
+
+    private fun updateRaceStatus(location: MemoryLocation, event: AtomicThreadEvent) {
+        val info = _locationInfo[location]!!
+        if (!info.isWriteWriteRaceFree && !info.isReadWriteRaceFree)
+            return
+        when {
+            event.label is WriteAccessLabel -> {
+                if (info.isWriteWriteRaceFree) {
+                    // to detect write-write race,
+                    // it is sufficient to check only against the latest write event
+                    val lastWrite = getLastWrite(location)!!
+                    info.isWriteWriteRaceFree = causalityOrder.lessThan(lastWrite, event)
+                }
+                if (info.isReadWriteRaceFree) {
+                    // to detect read-write race,
+                    // we need to check against all the read-request events
+                    info.isReadWriteRaceFree = getReadRequests(location).all { read ->
+                        causalityOrder.lessThan(read, event)
+                    }
+                }
+            }
+
+            // in race-free case, to detect read-write race
+            // it is sufficient to check only against the latest write event
+            event.label is ReadAccessLabel && info.isRaceFree -> {
+                val lastWrite = getLastWrite(location)!!
+                if (causalityOrder.lessThan(lastWrite, event))
+                    return
+                check(causalityOrder.unordered(lastWrite, event))
+                info.isReadWriteRaceFree = false
+            }
+
+            // in case when there was already a write-write race, to detect read-write race,
+            // we need to check against all the write events
+            event.label is ReadAccessLabel && info.isReadWriteRaceFree -> {
+                info.isReadWriteRaceFree = getWrites(location).all { write ->
+                    causalityOrder.lessThan(write, event)
+                }
+            }
+        }
     }
 
     override fun enumerator(category: AtomicMemoryAccessCategory, key: MemoryLocation): Enumerator<AtomicThreadEvent>? =
@@ -210,7 +288,7 @@ private class MutableAtomicMemoryAccessEventIndexImpl(
     }
 
     override fun reset() {
-        locations.clear()
+        _locationInfo.clear()
         index.reset()
     }
 

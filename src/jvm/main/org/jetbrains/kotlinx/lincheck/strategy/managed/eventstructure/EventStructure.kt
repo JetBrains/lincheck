@@ -452,15 +452,6 @@ class EventStructure(
         if (event.label.isResponse && event.label.isBlocking && event.parent in danglingEvents) {
             unmarkBlockedDanglingRequest(event.parent!!)
         }
-        // mark the object as non-local if it is accessed from another thread
-        if (event.label.objID != NULL_OBJECT_ID && event.label.objID != STATIC_OBJECT_ID) {
-            val objEntry = objectRegistry[event.label.objID]!!
-            objEntry.isLocal = (objEntry.localThreadID == event.threadId)
-            // update latest local write index for a write event
-            if (objEntry.isLocal && event.label is WriteAccessLabel) {
-                localWrites[event.label.location] = event
-            }
-        }
         // If we are still in replay phase, but the added event is not a replayed event,
         // then save it to delayed events buffer to postpone its further processing.
         if (inReplayPhase()) {
@@ -483,12 +474,12 @@ class EventStructure(
             return
         }
         // If we are not in the replay phase and the newly added event is not replayed, then proceed as usual.
+        // Index the new event.
+        memoryAccessEventIndex.index(event)
         // Add synchronized events.
         if (event.label.isSend) {
             addSynchronizedEvents(event)
         }
-        // Index the new event.
-        memoryAccessEventIndex.index(event)
         // Check consistency of the new event.
         val inconsistency = checkConsistencyIncrementally(event)
         if (inconsistency != null) {
@@ -567,6 +558,8 @@ class EventStructure(
         val label = event.label
         // consider all the candidates and apply additional filters
         val candidates = synchronizationCandidates(label)
+            // take only the events from the current execution
+            .filter { it in currentExecution }
             // for a send event we additionally filter out ...
             .runIf(event.label.isSend) {
                 filter {
@@ -586,11 +579,11 @@ class EventStructure(
              * reading from them will result in coherence cycle and will violate consistency
              */
             label is ReadAccessLabel && label.isRequest -> {
-                if (label.objID != STATIC_OBJECT_ID) {
-                    val objectEntry = objectRegistry[label.objID]!!
-                    if (objectEntry.isLocal) {
-                        val write = localWrites.computeIfAbsent(label.location) { objectEntry.allocation }
-                        return sequenceOf(write)
+                if (label.objID != NULL_OBJECT_ID && label.objID != STATIC_OBJECT_ID) {
+                    // TODO: do we need the previous check?
+                    if (memoryAccessEventIndex.isRaceFree(label.location)) {
+                        val lastWrite = memoryAccessEventIndex.getLastWrite(label.location)!!
+                        return sequenceOf(lastWrite)
                     }
                 }
                 val threadReads = currentExecution[event.threadId]!!.filter {
@@ -610,9 +603,9 @@ class EventStructure(
             }
 
             label is WriteAccessLabel -> {
-                if (label.objID != STATIC_OBJECT_ID) {
-                    val objectEntry = objectRegistry[label.objID]!!
-                    if (objectEntry.isLocal) {
+                if (label.objID != NULL_OBJECT_ID && label.objID != STATIC_OBJECT_ID) {
+                    // TODO: do we need the previous check?
+                    if (memoryAccessEventIndex.isReadWriteRaceFree(label.location)) {
                         return sequenceOf()
                     }
                 }

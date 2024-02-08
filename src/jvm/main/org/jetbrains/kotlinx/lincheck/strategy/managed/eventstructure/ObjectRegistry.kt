@@ -37,12 +37,6 @@ data class ObjectEntry(
     val isExternal: Boolean
         get() = (allocation.label is InitializationLabel)
 
-    // TODO: remove?
-    var isLocal: Boolean =
-        (id != STATIC_OBJECT_ID)
-
-    val localThreadID: ThreadID
-        get() = if (isLocal) allocation.threadId else -1
 }
 
 class ObjectRegistry {
