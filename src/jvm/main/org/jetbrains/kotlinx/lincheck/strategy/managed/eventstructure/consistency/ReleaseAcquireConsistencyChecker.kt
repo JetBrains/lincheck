@@ -85,6 +85,8 @@ class WritesBeforeRelation(
 
     override fun initialize() {
         for (location in memoryAccessEventIndex.locations) {
+            if (memoryAccessEventIndex.isWriteWriteRaceFree(location))
+                continue
             initialize(location)
         }
     }

@@ -103,10 +103,11 @@ class SequentialConsistencyChecker(
         rmwChainsStorage: ReadModifyWriteChainsStorage,
         wbRelation: WritesBeforeRelation,
     ): ConsistencyVerdict<SequentialConsistencyWitness> {
+        val writesOrder = causalityOrder.lessThan union wbRelation
         val executionOrderComputable = computable {
             ExecutionOrder(execution, executionIndex, Relation.empty())
         }
-        val coherence = CoherenceOrder(execution, executionIndex, rmwChainsStorage, wbRelation,
+        val coherence = CoherenceOrder(execution, executionIndex, rmwChainsStorage, writesOrder,
                 executionOrder = executionOrderComputable
             )
             .apply { initialize(); compute() }
@@ -279,8 +280,21 @@ class CoherenceOrder(
 
     override fun compute() {
         check(map.isEmpty())
+        if (memoryAccessEventIndex.locations.all { memoryAccessEventIndex.isWriteWriteRaceFree(it) }) {
+            val extendedCoherence = ExtendedCoherenceOrder(execution, memoryAccessEventIndex, causalityOrder.lessThan)
+                .apply { initialize(); compute() }
+            val executionOrder = ExecutionOrder(execution, memoryAccessEventIndex,
+                approximation = causalityOrder.lessThan union extendedCoherence
+            )
+                .apply { initialize(); compute() }
+            if (!executionOrder.consistent)
+                consistent = false
+            this.extendedCoherenceOrder?.setComputed(extendedCoherence)
+            this.executionOrder?.setComputed(executionOrder)
+            return
+        }
         generate(execution, memoryAccessEventIndex, rmwChainsStorage, writesOrder).forEach { coherence ->
-            val extendedCoherence = ExtendedCoherenceOrder(execution, memoryAccessEventIndex, coherence)
+            val extendedCoherence = ExtendedCoherenceOrder(execution, memoryAccessEventIndex, causalityOrder.lessThan union coherence)
                 .apply { initialize(); compute() }
             val executionOrder = ExecutionOrder(execution, memoryAccessEventIndex,
                     approximation = causalityOrder.lessThan union extendedCoherence
@@ -306,8 +320,9 @@ class CoherenceOrder(
             writesOrder: Relation<AtomicThreadEvent>
         ): Sequence<CoherenceOrder> {
             val coherenceOrderings = memoryAccessEventIndex.locations.mapNotNull { location ->
+                if (memoryAccessEventIndex.isWriteWriteRaceFree(location))
+                    return@mapNotNull null
                 val writes = memoryAccessEventIndex.getWrites(location)
-                    // TODO: change the `takeIf` check to WW-racy check
                     .takeIf { it.size > 1 }
                     ?: return@mapNotNull null
                 val enumerator = memoryAccessEventIndex.enumerator(AtomicMemoryAccessCategory.Write, location)!!
