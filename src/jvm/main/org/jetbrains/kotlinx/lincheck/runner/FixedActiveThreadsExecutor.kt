@@ -199,9 +199,11 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
 
     override fun close() {
         shutdown()
-        if (hangDetected) {
-            for (thread in threads)
-                thread.stop()
+        // Thread.stop() throws UnsupportedOperationException
+        // starting from Java 20.
+        if (hangDetected && majorJavaVersion < 20) {
+            @Suppress("DEPRECATION")
+            threads.forEach { it.stop() }
         }
     }
 
@@ -212,6 +214,8 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
     }
 
 }
+
+private val majorJavaVersion = Runtime.version().version()[0]
 
 private const val SPINNING_LOOP_ITERATIONS_BEFORE_PARK = 1000_000
 
