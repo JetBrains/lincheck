@@ -89,14 +89,14 @@ sourceSets.test {
     }
 }
 
+
 tasks {
     replace("jvmSourcesJar", Jar::class).run {
         from(sourceSets["main"].allSource)
     }
-    withType<Test> {
+
+    fun Test.configureJvmTestCommon() {
         maxParallelForks = 1
-        val runAllTestsInSeparateJVMs: String by project
-        forkEvery = if (runAllTestsInSeparateJVMs.toBoolean()) 1 else 0
         maxHeapSize = "6g"
         jvmArgs(
             "--add-opens", "java.base/java.lang=ALL-UNNAMED",
@@ -104,6 +104,29 @@ tasks {
             "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED",
             "--add-exports", "java.base/sun.security.action=ALL-UNNAMED"
         )
+    }
+
+    val jvmTest = named<Test>("jvmTest") {
+        exclude("**/*IsolatedTest*")
+        configureJvmTestCommon()
+        val runAllTestsInSeparateJVMs: String by project
+        forkEvery = if (runAllTestsInSeparateJVMs.toBoolean()) 1 else 0
+    }
+
+    val jvmTestIsolated = register<Test>("jvmTestIsolated") {
+        group = jvmTest.get().group
+        testClassesDirs = jvmTest.get().testClassesDirs
+        classpath = jvmTest.get().classpath
+        enableAssertions = true
+        testLogging.showStandardStreams = true
+        outputs.upToDateWhen { false } // Always run tests when called
+        include("**/*IsolatedTest*")
+        configureJvmTestCommon()
+        forkEvery = 1
+    }
+
+    check {
+        dependsOn(jvmTestIsolated)
     }
 
     withType<Jar> {
