@@ -15,7 +15,7 @@ plugins {
     java
     kotlin("multiplatform")
     id("maven-publish")
-    id("kotlinx.team.infra") version "0.3.0-dev-64"
+    id("kotlinx.team.infra") version "0.4.0-dev-80"
 }
 
 repositories {
@@ -158,6 +158,18 @@ infra {
 
         libraryRepoUrl = "https://github.com/Kotlin/kotlinx-lincheck"
         sonatype {}
+    }
+}
+
+publishing {
+    project.establishSignDependencies()
+}
+
+fun Project.establishSignDependencies() {
+    // Sign plugin issues and publication:
+    // Establish dependency between 'sign' and 'publish*' tasks.
+    tasks.withType<AbstractPublishToMaven>().configureEach {
+        dependsOn(tasks.withType<Sign>())
     }
 }
 
