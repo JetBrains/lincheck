@@ -95,6 +95,8 @@ tasks {
     }
     withType<Test> {
         maxParallelForks = 1
+        val runAllTestsInSeparateJVMs: String by project
+        forkEvery = if (runAllTestsInSeparateJVMs.toBoolean()) 1 else 0
         maxHeapSize = "6g"
         jvmArgs(
             "--add-opens", "java.base/java.lang=ALL-UNNAMED",
