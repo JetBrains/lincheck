@@ -107,7 +107,12 @@ tasks {
     }
 
     val jvmTest = named<Test>("jvmTest") {
-        exclude("**/*IsolatedTest*")
+        if (System.getProperty("idea.active") != "true") {
+            // We need to be able to run these tests in IntelliJ IDEA.
+            // Unfortunately, the current Gradle support doesn't detect
+            // the `jvmTestIsolated` task.
+            exclude("**/*IsolatedTest*")
+        }
         configureJvmTestCommon()
         val runAllTestsInSeparateJVMs: String by project
         forkEvery = if (runAllTestsInSeparateJVMs.toBoolean()) 1 else 0
