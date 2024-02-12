@@ -250,7 +250,7 @@ abstract class ManagedStrategy(
         if (testCfg.checkObstructionFreedom && !curActorIsBlocking && !concurrentActorCausesBlocking) {
             suddenInvocationResult = ObstructionFreedomViolationInvocationResult(lazyMessage())
             // Forcibly finish the current execution by throwing an exception.
-            throw ForcibleExecutionFinishException
+            throw ForcibleExecutionFinishError
         }
     }
 
@@ -267,7 +267,7 @@ abstract class ManagedStrategy(
     private fun failDueToDeadlock(): Nothing {
         suddenInvocationResult = DeadlockInvocationResult()
         // Forcibly finish the current execution by throwing an exception.
-        throw ForcibleExecutionFinishException
+        throw ForcibleExecutionFinishError
     }
 
     override fun close() {
@@ -383,7 +383,7 @@ abstract class ManagedStrategy(
         // Despite the fact that the corresponding failure will be detected by the runner,
         // the managed strategy can construct a trace to reproduce this failure.
         // Let's then store the corresponding failing result and construct the trace.
-        if (exception === ForcibleExecutionFinishException) return // not a forcible execution finish
+        if (exception === ForcibleExecutionFinishError) return // not a forcible execution finish
         suddenInvocationResult =
             UnexpectedExceptionInvocationResult(wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(exception))
     }
@@ -412,7 +412,7 @@ abstract class ManagedStrategy(
         var i = 0
         while (currentThread != iThread) {
             // Finish forcibly if an error occurred and we already have an `InvocationResult`.
-            if (suddenInvocationResult != null) throw ForcibleExecutionFinishException
+            if (suddenInvocationResult != null) throw ForcibleExecutionFinishError
             if (++i % SPINNING_LOOP_ITERATIONS_BEFORE_YIELD == 0) Thread.yield()
         }
     }
@@ -452,7 +452,7 @@ abstract class ManagedStrategy(
                     // must switch not to get into a deadlock, but there are no threads to switch.
                     suddenInvocationResult = DeadlockInvocationResult()
                     // forcibly finish execution by throwing an exception.
-                    throw ForcibleExecutionFinishException
+                    throw ForcibleExecutionFinishError
                 }
                 setCurrentThread(nextThread)
             }
@@ -482,7 +482,7 @@ abstract class ManagedStrategy(
 
     /**
      * The execution in an ignored section (added by transformer) or not in a test thread must not add switch points.
-     * Additionally, after [ForcibleExecutionFinishException] everything is ignored.
+     * Additionally, after [ForcibleExecutionFinishError] everything is ignored.
      */
     private fun inIgnoredSection(iThread: Int): Boolean =
         !isTestThread(iThread) ||
@@ -863,7 +863,7 @@ abstract class ManagedStrategy(
      * - For instance, if the [currentInterleavingHistory] is [0: 2], [1: 3], [0: 3], [1: 3], [0: 3], ..., [1: 3], [0: 3] and a deadlock is detected,
      * the cycle is identified as [1: 3], [0: 3].
      * This means 2 executions in thread 0 and 3 executions in both threads 1 and 0 will be allowed.
-     * - Execution is halted after the last execution in thread 0 using [ForcibleExecutionFinishException].
+     * - Execution is halted after the last execution in thread 0 using [ForcibleExecutionFinishError].
      * - The logic for tracking executions and switches in replay mode is implemented in [ReplayModeLoopDetectorHelper].
      *
      * Note: An example of this behavior is detailed in the comments of the code itself.
@@ -966,7 +966,7 @@ abstract class ManagedStrategy(
                 }
                 // Replay current interleaving to avoid side effects caused by multiple cycle executions
                 suddenInvocationResult = SpinCycleFoundAndReplayRequired
-                throw ForcibleExecutionFinishException
+                throw ForcibleExecutionFinishError
             }
             if (!detectedFirstTime && detectedEarly) {
                 totalExecutionsCount += hangingDetectionThreshold
@@ -1411,7 +1411,7 @@ private class MonitorTracker(nThreads: Int) {
  * If we just leave it, then the execution will not be halted.
  * If we forcibly pass through all barriers, then we can get another exception due to being in an incorrect state.
  */
-internal object ForcibleExecutionFinishException : RuntimeException() {
+internal object ForcibleExecutionFinishError : Error() {
     // do not create a stack trace -- it simply can be unsafe
     override fun fillInStackTrace() = this
 }
