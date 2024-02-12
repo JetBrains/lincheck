@@ -99,9 +99,9 @@ public class TransformationClassLoader extends ExecutionClassLoader {
                className.equals(kotlinx.coroutines.CancellableContinuation.class.getName()) ||
                className.equals(kotlinx.coroutines.CoroutineExceptionHandler.class.getName()) ||
                className.equals(kotlinx.coroutines.CoroutineDispatcher.class.getName()) ||
-               className.equals("kotlinx/coroutines/CancelHandler") ||
-               className.equals("kotlinx/coroutines/InternalCompletionHandler") ||
-               className.equals("kotlinx/coroutines/InternalCompletionHandler$UserSupplied");
+               className.equals("kotlinx.coroutines.CancelHandler") ||
+               className.equals("kotlinx.coroutines.InternalCompletionHandler") ||
+               className.equals("kotlinx.coroutines.InternalCompletionHandler$UserSupplied");
     }
 
     /**
