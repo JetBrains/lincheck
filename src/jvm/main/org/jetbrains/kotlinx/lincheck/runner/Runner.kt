@@ -148,6 +148,8 @@ abstract class Runner protected constructor(
      */
     override fun close() {}
 
+    abstract fun waitUntilCompleted()
+
     /**
      * @return whether all scenario threads are completed or suspended
      * Used by generated code.

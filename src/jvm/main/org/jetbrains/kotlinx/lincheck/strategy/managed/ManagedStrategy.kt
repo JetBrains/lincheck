@@ -43,7 +43,7 @@ abstract class ManagedStrategy(
     protected val nThreads: Int = scenario.nThreads
     // Runner for scenario invocations,
     // can be replaced with a new one for trace construction.
-    private var runner: ManagedStrategyRunner
+    internal var runner: ManagedStrategyRunner
 
     companion object {
         // Shares location ids between class transformers in order
@@ -283,6 +283,7 @@ abstract class ManagedStrategy(
      * @param codeLocation the byte-code location identifier of the point in code.
      */
     private fun newSwitchPoint(iThread: Int, codeLocation: Int, tracePoint: TracePoint?) {
+        if (suddenInvocationResult != null) throw ForcibleExecutionFinishException
         if (!isTestThread(iThread)) return // can switch only test threads
         if (inIgnoredSection(iThread)) return // cannot suspend in ignored sections
         check(iThread == currentThread)
@@ -1226,7 +1227,7 @@ abstract class ManagedStrategy(
  * This class is a [ParallelThreadsRunner] with some overrides that add callbacks
  * to the strategy so that it can known about some required events.
  */
-private class ManagedStrategyRunner(
+internal class ManagedStrategyRunner(
     private val managedStrategy: ManagedStrategy, testClass: Class<*>, validationFunction: Actor?,
     stateRepresentationMethod: Method?, timeoutMs: Long, useClocks: UseClocks
 ) : ParallelThreadsRunner(managedStrategy, testClass, validationFunction, stateRepresentationMethod, timeoutMs, useClocks) {

@@ -396,6 +396,10 @@ internal open class ParallelThreadsRunner(
         super.close()
         executor.close()
     }
+
+    override fun waitUntilCompleted() {
+        executor.waitUntilAllThreadsWaitForTask()
+    }
 }
 
 internal enum class UseClocks { ALWAYS, RANDOM }

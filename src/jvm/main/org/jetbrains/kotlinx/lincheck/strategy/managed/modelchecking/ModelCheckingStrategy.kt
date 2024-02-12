@@ -62,6 +62,7 @@ internal class ModelCheckingStrategy(
             val invocationResult = runInvocation()
             if (suddenInvocationResult is SpinCycleFoundAndReplayRequired) {
                 currentInterleaving.rollbackAfterSpinCycleFound()
+                runner.waitUntilCompleted()
                 continue
             }
             usedInvocations++

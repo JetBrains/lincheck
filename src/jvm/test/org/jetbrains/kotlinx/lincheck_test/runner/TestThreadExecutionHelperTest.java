@@ -35,6 +35,10 @@ public class TestThreadExecutionHelperTest {
         };
         runner = new Runner(strategy, ArrayDeque.class, null, null) {
             @Override
+            public void waitUntilCompleted() {
+            }
+
+            @Override
             public InvocationResult run() {
                 throw new UnsupportedOperationException();
             }
