@@ -56,13 +56,18 @@ internal class ModelCheckingStrategy(
     private lateinit var currentInterleaving: Interleaving
 
     override fun runImpl(): LincheckFailure? {
+        currentInterleaving = root.nextInterleaving() ?: return null
         while (usedInvocations < maxInvocations) {
-            // get new unexplored interleaving
-            currentInterleaving = root.nextInterleaving() ?: break
             // run invocation and check its results
             val invocationResult = runInvocation()
+            if (suddenInvocationResult is SpinCycleFoundAndReplayRequired) {
+                currentInterleaving.rollbackAfterSpinCycleFound()
+                continue
+            }
             usedInvocations++
             checkResult(invocationResult)?.let { return it }
+            // get new unexplored interleaving
+            currentInterleaving = root.nextInterleaving() ?: break
         }
         return null
     }
