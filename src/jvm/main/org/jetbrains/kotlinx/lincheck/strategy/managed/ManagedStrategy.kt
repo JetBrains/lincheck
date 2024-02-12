@@ -964,11 +964,8 @@ abstract class ManagedStrategy(
                 if (totalExecutionsCount > ManagedCTestConfiguration.LIVELOCK_EVENTS_THRESHOLD) {
                     failDueToDeadlock()
                 }
-                // Replay current interleaving to avoid side effects caused by multiple cycle executions
-                suddenInvocationResult = SpinCycleFoundAndReplayRequired
-                throw ForcibleExecutionFinishException
             }
-            if (!detectedFirstTime && detectedEarly) {
+            if (detectedEarly) {
                 totalExecutionsCount += hangingDetectionThreshold
                 val lastNode = currentInterleavingHistory.last()
                 // spinCyclePeriod may be not 0 only we tried to switch
