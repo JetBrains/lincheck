@@ -301,7 +301,7 @@ internal val String.internalClassName get() = this.replace('.', '/')
 internal fun exceptionCanBeValidExecutionResult(exception: Throwable): Boolean {
     return exception !is ThreadDeath && // used to stop thread in FixedActiveThreadsExecutor by calling thread.stop method
             exception !is InternalLincheckTestUnexpectedException &&
-            exception !is ForcibleExecutionFinishException &&
+            exception !is ForcibleExecutionFinishError &&
             !isIllegalAccessOfUnsafeDueToJavaVersion(exception)
 }
 
