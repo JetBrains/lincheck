@@ -132,7 +132,7 @@ tasks {
             // to balance between slowing down the build because of launching
             // new VM instances periodically and slowing down the build
             // because of the hanging threads in the `*IsolatedTest` ones.
-            ideaActive -> 6
+            ideaActive -> 10
             else -> 0
         }
     }
