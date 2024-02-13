@@ -32,8 +32,8 @@ class CoverageOptions(
 ) {
     private val excludePatterns = listOf<Pattern>(
         Pattern.compile("org\\.jetbrains\\.kotlinx\\.lincheck\\..*"), // added to exclude ManagedStrategyStateHolder
-        Pattern.compile("kotlinx\\.coroutines\\..*"),
-        Pattern.compile("kotlin\\.collections\\..*")
+        //Pattern.compile("kotlinx\\.coroutines\\..*"),
+        //Pattern.compile("kotlin\\.collections\\..*")
         // TODO: add other patterns to exclude (eg. gradle, junit, kotlinx, maven, ...)
     ) + additionalExcludePatterns
     val projectData = ProjectData(null, branchCoverage, null)

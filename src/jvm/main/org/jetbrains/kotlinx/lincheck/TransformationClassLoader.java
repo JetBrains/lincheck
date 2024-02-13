@@ -26,6 +26,7 @@ import org.objectweb.asm.util.CheckClassAdapter;
 import org.objectweb.asm.util.TraceClassVisitor;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -148,9 +149,10 @@ public class TransformationClassLoader extends ExecutionClassLoader {
             }
             try {
                 byte[] bytes = null;
-                if (bytecodeCache != null) {
-                    bytes = bytecodeCache.get(name);
-                }
+                // TODO: uncomment caches here
+//                if (bytecodeCache != null) {
+//                    bytes = bytecodeCache.get(name);
+//                }
                 if (bytes == null) {
                     bytes = instrument(originalName(name));
                     if (bytecodeCache != null) {

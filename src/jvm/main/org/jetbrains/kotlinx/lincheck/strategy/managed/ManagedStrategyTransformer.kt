@@ -78,14 +78,86 @@ internal class ManagedStrategyTransformer(
         mv = UnsafeTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = WaitNotifyTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = ParkUnparkTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        mv = LocalObjectManagingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        mv = SharedVariableAccessMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+
+        // TODO: check if coverage is enabled
+        val lomv = LocalObjectManagingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+        val svmv = SharedVariableAccessMethodTransformer(mname, GeneratorAdapter(lomv, access, mname, desc))
+
+        mv = CoverageBytecodeFilter(
+            GeneratorAdapter(svmv, access, mname, desc),
+            GeneratorAdapter(lomv, access, mname, desc)
+        )
+
         mv = TimeStubTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = RandomTransformer(GeneratorAdapter(mv, access, mname, desc))
         mv = ThreadYieldTransformer(GeneratorAdapter(mv, access, mname, desc))
         return mv
     }
 
+    private class CoverageBytecodeFilter(
+        nextAdapter: GeneratorAdapter,
+        private val afterNextAdapter: GeneratorAdapter?
+    ) : MethodVisitor(ASM_API, nextAdapter) {
+        enum class State {
+            INITIAL, // state for any non-mentioned situations
+            LDC_HITS, // state for [LDC hits array; save hits to local variables)
+            SET_HITS // state for [load hits from local variables; assign value `true` at some index)
+        }
+        private val COVERAGE_HITS_NAME = "__\$hits\$__"
+        private var state = State.INITIAL
+        private var localVariableIndex = -1
+
+        // TODO: For java<11 a group of other instructions used instead of LDC.
+        //  Account for that as well.
+        override fun visitLdcInsn(value: Any) {
+            if (state == State.INITIAL && value is ConstantDynamic && value.name == COVERAGE_HITS_NAME) {
+                //println("__\$hits\$__: visit LDC instruction, aka load hits array")
+                state = State.LDC_HITS
+            }
+            super.visitLdcInsn(value)
+        }
+
+        override fun visitInsn(opcode: Int) {
+            when (opcode) {
+                BASTORE -> if (state == State.SET_HITS) {
+                    //println("__\$hits\$__: perform `BASTORE`, aka end hits[index]=1")
+                    state = State.INITIAL
+
+                    // skip the `SharedVariableAccessMethodTransformer`
+                    afterNextAdapter?.visitInsn(opcode)
+                    return
+                }
+            }
+
+            super.visitInsn(opcode)
+        }
+
+        override fun visitVarInsn(opcode: Int, index: Int) {
+            when (opcode) {
+                ASTORE -> if (state == State.LDC_HITS) {
+                    // Save index in local variables array for `__$hits$__` reference
+                    //println("__\$hits\$__: ASTORE instruction at index '$index', aka store hits to local variables")
+                    state = State.INITIAL
+                    localVariableIndex = index
+                }
+                ALOAD -> if (state == State.INITIAL && localVariableIndex == index) {
+                    // Indicate that `__$hits$__[index] = 1` started
+                    //println("__\$hits\$__: ALOAD instruction at index '$index', aka start hits[index]=1")
+                    state = State.SET_HITS
+                }
+            }
+
+            super.visitVarInsn(opcode, index)
+        }
+
+        override fun visitEnd() {
+            state = State.INITIAL
+            localVariableIndex = -1
+            //println("__\$hits\$__: finish method, reset the state of filter")
+
+            super.visitEnd()
+        }
+    }
 
 
     /**
@@ -1411,12 +1483,14 @@ private fun isFinalField(ownerInternal: String, fieldName: String): Boolean {
         internalName = internalName.substring(REMAPPED_PACKAGE_INTERNAL_NAME.length)
     }
     return try {
+        // TODO: тут юзается рефлекшион, а надо смотреть в байт-коде. Можно тут заиффать на название __$hits$__
         val clazz = Class.forName(internalName.canonicalClassName)
         val field = findField(clazz, fieldName) ?: throw NoSuchFieldException("No $fieldName in ${clazz.name}")
         field.modifiers and Modifier.FINAL == Modifier.FINAL
     } catch (e: ClassNotFoundException) {
         throw RuntimeException(e)
     } catch (e: NoSuchFieldException) {
+        if (fieldName.contains("hits")) return true
         throw RuntimeException(e)
     }
 }
