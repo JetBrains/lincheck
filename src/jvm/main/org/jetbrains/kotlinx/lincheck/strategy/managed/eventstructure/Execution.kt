@@ -256,12 +256,71 @@ fun<E : ThreadEvent> Execution<E>.isBlockedDanglingRequest(event: E): Boolean {
             (event == this[event.threadId]?.last())
 }
 
-fun<E : ThreadEvent> Execution<E>.computeVectorClock(event: E, relation: Relation<E>): VectorClock {
+/**
+ * Computes the backward vector clock for the given event and relation.
+ *
+ * Backward vector clock encodes the position of the last event in each thread,
+ * on which the given event depends on according to the given relation.
+ *
+ * Graphically, this can be illustrated by the following picture:
+ *     e1  e2  e3
+ *      \  |  /
+ *         e
+ *
+ * Formally, for an event `e` and relation `r` the backward vector clock stores
+ * a mapping `tid -> pos` such that `e' = execution[tid, pos]` is
+ * the last event in thread `tid` such that `(e', e) \in r`.
+ *
+ * For the backward vector clock computation algorithm to be correct,
+ * the provided relation should respect the program order in the following sense:
+ *   (x, y) \in r and (z, x) \in po implies (z, y) \in r
+ *
+ *
+ * @param event The event for which to compute the backward vector clock.
+ * @param relation The relation used to determine the causality between events.
+ * @return The computed backward vector clock.
+ */
+fun<E : ThreadEvent> Execution<E>.computeBackwardVectorClock(event: E, relation: Relation<E>): VectorClock {
     check(this is ExecutionImpl<E>)
     val clock = MutableVectorClock(threadMap.capacity)
     for (i in 0 until threadMap.capacity) {
         val threadEvents = get(i) ?: continue
         clock[i] = (threadEvents.binarySearch { !relation(it, event) } - 1)
+            .coerceAtLeast(-1)
+    }
+    return clock
+}
+
+/**
+ * Computes the forward vector clock for the given event and relation.
+ *
+ * Forward vector clock encodes the position of the first event in each thread,
+ * that depends on given event according to the given relation.
+ *
+ * Graphically, this can be illustrated by the following picture:
+ *          e
+ *       /  |  \
+ *     e1  e2  e3
+ *
+ * Formally, for an event `e` and relation `r` the forward vector clock stores
+ * a mapping `tid -> pos` such that `e' = execution[tid, pos]` is
+ * the first event in thread `tid` such that `(e, e') \in r`.
+ *
+ * For the forward vector clock computation algorithm to be correct,
+ * the provided relation should respect the program order in the following sense:
+ *   (x, y) \in r and (y, z) \in po implies (x, z) \in r
+ *
+ *
+ * @param event The event for which to compute the forward vector clock.
+ * @param relation The relation used to determine the causality between events.
+ * @return The computed forward vector clock.
+ */
+fun<E : ThreadEvent> Execution<E>.computeForwardVectorClock(event: E, relation: Relation<E>): VectorClock {
+    check(this is ExecutionImpl<E>)
+    val clock = MutableVectorClock(threadMap.capacity)
+    for (i in 0 until threadMap.capacity) {
+        val threadEvents = get(i) ?: continue
+        clock[i] = (threadEvents.binarySearch { relation(event, it) })
             .coerceAtLeast(-1)
     }
     return clock
@@ -291,6 +350,31 @@ fun<E : ThreadEvent> Execution<E>.enumerationOrderSorted(): List<E> =
     this.sorted()
 
 
+fun<E : ThreadEvent> Relation<E>.toGraph(execution: Execution<E>) = object : Graph<E> {
+    private val relation = this@toGraph
+
+    override val nodes: Collection<E>
+        get() = execution
+
+    private val enumerator = execution.buildEnumerator()
+
+    private val nThreads = 1 + execution.maxThreadID
+
+    private val adjacencyList = Array(nodes.size) { i ->
+        val event = enumerator[i]
+        val clock = execution.computeForwardVectorClock(event, relation)
+        (0 until nThreads).mapNotNull { tid ->
+            if (clock[tid] != -1) execution[tid, clock[tid]] else null
+        }
+    }
+
+    override fun adjacent(node: E): List<E> {
+        val idx = enumerator[node]
+        return adjacencyList[idx]
+    }
+
+}
+
 // TODO: include parent event in covering (?) and remove `External`
 fun<E : ThreadEvent> Execution<E>.buildExternalCovering(relation: Relation<E>) = object : Covering<E> {
 
@@ -300,13 +384,13 @@ fun<E : ThreadEvent> Execution<E>.buildExternalCovering(relation: Relation<E>) =
     }
 
     private val execution = this@buildExternalCovering
-    private val indexer = execution.buildEnumerator()
+    private val enumerator = execution.buildEnumerator()
 
     private val nThreads = 1 + maxThreadID
 
     val covering: List<List<E>> = execution.indices.map { index ->
-        val event = indexer[index]
-        val clock = execution.computeVectorClock(event, relation)
+        val event = enumerator[index]
+        val clock = execution.computeBackwardVectorClock(event, relation)
         (0 until nThreads).mapNotNull { tid ->
             if (tid != event.threadId && clock[tid] != -1)
                 execution[tid, clock[tid]]
@@ -315,6 +399,6 @@ fun<E : ThreadEvent> Execution<E>.buildExternalCovering(relation: Relation<E>) =
     }
 
     override fun invoke(x: E): List<E> =
-        covering[indexer[x]]
+        covering[enumerator[x]]
 
 }
