@@ -39,6 +39,13 @@ inline fun<reified T> List<Any?>.refine(): List<T>? {
     return if (all { it is T }) (this as List<T>) else null
 }
 
+fun <T, R> List<T>.findMapped(transform: (T) -> R?): R? {
+    for (element in this) {
+        transform(element)?.let { return it }
+    }
+    return null
+}
+
 inline fun Boolean.ensure(): Boolean {
     // TODO: add contract?
     // contract {

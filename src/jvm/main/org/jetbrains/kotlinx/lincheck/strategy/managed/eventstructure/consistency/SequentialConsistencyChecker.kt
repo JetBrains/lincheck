@@ -324,9 +324,7 @@ class CoherenceOrder(
             return coherenceOrderings.cartesianProduct().map { coherenceList ->
                 val coherenceOrder = CoherenceOrder(execution, memoryAccessEventIndex, rmwChainsStorage, writesOrder)
                 for (coherence in coherenceList) {
-                    val location = coherence
-                        .first { it.label is WriteAccessLabel }
-                        .let { (it.label as WriteAccessLabel).location }
+                    val location = coherence.getLocationForSameLocationWriteAccesses()!!
                     val enumerator = memoryAccessEventIndex.enumerator(AtomicMemoryAccessCategory.Write, location)!!
                     val positions = MutableList(coherence.size) { 0 }
                     coherence.forEachIndexed { i, write ->

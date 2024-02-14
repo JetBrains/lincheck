@@ -451,3 +451,19 @@ fun getLocationForSameLocationWriteAccesses(x: Event, y: Event): MemoryLocation?
     }
     return if (isSameLocation) (xloc ?: yloc) else null
 }
+
+fun List<Event>.getLocationForSameLocationMemoryAccesses(): MemoryLocation? {
+    val location = this.findMapped { (it.label as? MemoryAccessLabel)?.location }
+        ?: return null
+    return if (all { it.label.isWriteAccessTo(location) })
+        location
+    else null
+}
+
+fun List<Event>.getLocationForSameLocationWriteAccesses(): MemoryLocation? {
+    val location = this.findMapped { (it.label as? WriteAccessLabel)?.location }
+        ?: return null
+    return if (all { it.label.isWriteAccessTo(location) })
+        location
+    else null
+}
