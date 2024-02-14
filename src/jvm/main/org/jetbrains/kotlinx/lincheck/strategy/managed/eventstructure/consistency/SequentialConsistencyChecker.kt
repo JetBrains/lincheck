@@ -281,7 +281,9 @@ class CoherenceOrder(
     override fun compute() {
         check(map.isEmpty())
         generate(execution, memoryAccessEventIndex, rmwChainsStorage, writesOrder).forEach { coherence ->
-            val extendedCoherence = ExtendedCoherenceOrder(execution, memoryAccessEventIndex, causalityOrder.lessThan union coherence)
+            val extendedCoherence = ExtendedCoherenceOrder(execution, memoryAccessEventIndex,
+                    writesOrder = causalityOrder.lessThan union coherence
+                )
                 .apply { initialize(); compute() }
             val executionOrder = ExecutionOrder(execution, memoryAccessEventIndex,
                     approximation = causalityOrder.lessThan union extendedCoherence
@@ -565,9 +567,13 @@ class ExecutionOrder private constructor(
     override fun compute() {
         check(ordering.isEmpty())
         check(relation != null)
+        // TODO: do we need this?
+        //  It seems it is not even a sound way to enforce additional atomicity constraints.
+        //  instead we can ensure additional atomicity constraints
+        //  by reordering some events after topological sorting
         addRequestResponseEdges()
-        // TODO: optimize graph construction
-        val ordering = topologicalSorting(relation!!.toGraph())
+        val graph = execution.buildGraph(relation!!)
+        val ordering = topologicalSorting(graph)
         if (ordering == null) {
             consistent = false
             return
