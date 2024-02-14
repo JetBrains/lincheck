@@ -545,7 +545,21 @@ class ExecutionOrder private constructor(
     var consistent = true
         private set
 
-    private var relation: RelationMatrix<AtomicThreadEvent>? = null
+    private val additionalOrdering = Relation<AtomicThreadEvent> { x, y ->
+        when {
+            // put wait-request before notify event
+            x.label.isRequest && x.label is WaitLabel -> {
+                y == execution.getResponse(x).notifiedBy
+            }
+
+            // put dependencies of response before corresponding request
+            y.label.isRequest && y.label !is ActorLabel -> {
+                x in execution.getResponse(y).dependencies
+            }
+
+            else -> false
+        }
+    }
 
     constructor(
         execution: Execution<AtomicThreadEvent>,
@@ -557,22 +571,14 @@ class ExecutionOrder private constructor(
         TODO("Not yet implemented")
     }
 
-    override fun initialize() {
-        check(ordering.isEmpty())
-        check(relation == null)
-        // TODO: do we need to store the relation as a matrix?
-        relation = RelationMatrix(execution, execution.buildEnumerator(), approximation)
-    }
-
     override fun compute() {
         check(ordering.isEmpty())
-        check(relation != null)
-        // TODO: do we need this?
-        //  It seems it is not even a sound way to enforce additional atomicity constraints.
+        // TODO: although we have to add these additional ordering constraints here,
+        //  it is not a completely sound way to enforce additional atomicity constraints;
         //  instead we can ensure additional atomicity constraints
         //  by reordering some events after topological sorting
-        addRequestResponseEdges()
-        val graph = execution.buildGraph(relation!!)
+        val relation = approximation union additionalOrdering
+        val graph = execution.buildGraph(relation)
         val ordering = topologicalSorting(graph)
         if (ordering == null) {
             consistent = false
@@ -587,26 +593,7 @@ class ExecutionOrder private constructor(
 
     override fun reset() {
         ordering.clear()
-        relation = null
         invalidate()
-    }
-
-    private fun addRequestResponseEdges() {
-        val relation = this.relation!!
-        for (response in execution) {
-            if (!response.label.isResponse)
-                continue
-            // put notify event after wait-request
-            if (response.label is WaitLabel) {
-                relation[response.request!!, response.notifiedBy] = true
-                continue
-            }
-            // otherwise, put request events after dependencies
-            for (dependency in response.dependencies) {
-                check(dependency is AtomicThreadEvent)
-                relation[dependency, response.request!!] = true
-            }
-        }
     }
 
 }

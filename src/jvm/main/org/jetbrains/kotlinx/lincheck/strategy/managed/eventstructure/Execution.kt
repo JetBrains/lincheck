@@ -251,6 +251,13 @@ fun Execution<*>.locations(): Set<MemoryLocation> {
     return locations
 }
 
+fun Execution<AtomicThreadEvent>.getResponse(request: AtomicThreadEvent): AtomicThreadEvent {
+    require(request.label.isRequest && request.label !is ActorLabel)
+    return this[request.threadId, request.threadPosition + 1]!!.ensure {
+        it.isValidResponse(request)
+    }
+}
+
 fun<E : ThreadEvent> Execution<E>.isBlockedDanglingRequest(event: E): Boolean {
     return event.label.isRequest && event.label.isBlocking &&
             (event == this[event.threadId]?.last())
