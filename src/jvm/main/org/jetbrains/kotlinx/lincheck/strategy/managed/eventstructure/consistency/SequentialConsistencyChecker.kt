@@ -576,6 +576,11 @@ class ExecutionOrder private constructor(
         //  instead we can ensure additional atomicity constraints
         //  by reordering some events after topological sorting
         val relation = approximation union additionalOrdering
+        // TODO: optimization --- we can build graph only for a subset of events, excluding:
+        //  - non-blocking request events
+        //  - events accessing race-free locations
+        //  - what else?
+        //  and then insert them back into the topologically sorted list
         val graph = execution.buildGraph(relation)
         val ordering = topologicalSorting(graph)
         if (ordering == null) {
