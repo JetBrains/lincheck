@@ -20,6 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
+import org.jetbrains.kotlinx.lincheck.utils.*
 import java.util.*
 
 // adjacency list is a function that
@@ -111,11 +112,11 @@ private data class TopoSortNodeState(
 private fun<T> Graph<T>.initializeTopoSortState(): TopoSortState<T> {
     val state = mutableMapOf<T, TopoSortNodeState>()
     for (node in nodes) {
-        state[node] = TopoSortNodeState.initial()
-    }
-    for (node in nodes) {
+        state.putIfAbsent(node, TopoSortNodeState.initial())
         for (adjacentNode in adjacent(node)) {
-            state[adjacentNode]!!.indegree++
+            state.updateInplace(adjacentNode, default = TopoSortNodeState.initial()) {
+                indegree++
+            }
         }
     }
     return state
