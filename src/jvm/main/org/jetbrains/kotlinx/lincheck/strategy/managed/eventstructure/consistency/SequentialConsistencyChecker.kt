@@ -548,14 +548,12 @@ class ExecutionOrder private constructor(
     private val additionalOrdering = Relation<AtomicThreadEvent> { x, y ->
         when {
             // put wait-request before notify event
-            x.label.isRequest && x.label is WaitLabel -> {
-                y == execution.getResponse(x).notifiedBy
-            }
+            x.label.isRequest && x.label is WaitLabel &&
+                y == execution.getResponse(x)?.notifiedBy -> true
 
             // put dependencies of response before corresponding request
-            y.label.isRequest && y.label !is ActorLabel -> {
-                x in execution.getResponse(y).dependencies
-            }
+            y.label.isRequest && y.label !is LockLabel && y.label !is ActorLabel &&
+                x in execution.getResponse(y)?.dependencies.orEmpty()-> true
 
             else -> false
         }
