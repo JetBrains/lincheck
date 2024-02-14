@@ -262,7 +262,7 @@ class CoherenceOrder(
         val location = getLocationForSameLocationWriteAccesses(x, y)
             ?: return false
         val (_, positions, enumerator) = map[location]
-            ?: return false
+            ?: return writesOrder(x, y)
         return positions[enumerator[x]] < positions[enumerator[y]]
     }
 
@@ -280,19 +280,6 @@ class CoherenceOrder(
 
     override fun compute() {
         check(map.isEmpty())
-        if (memoryAccessEventIndex.locations.all { memoryAccessEventIndex.isWriteWriteRaceFree(it) }) {
-            val extendedCoherence = ExtendedCoherenceOrder(execution, memoryAccessEventIndex, causalityOrder.lessThan)
-                .apply { initialize(); compute() }
-            val executionOrder = ExecutionOrder(execution, memoryAccessEventIndex,
-                approximation = causalityOrder.lessThan union extendedCoherence
-            )
-                .apply { initialize(); compute() }
-            if (!executionOrder.consistent)
-                consistent = false
-            this.extendedCoherenceOrder?.setComputed(extendedCoherence)
-            this.executionOrder?.setComputed(executionOrder)
-            return
-        }
         generate(execution, memoryAccessEventIndex, rmwChainsStorage, writesOrder).forEach { coherence ->
             val extendedCoherence = ExtendedCoherenceOrder(execution, memoryAccessEventIndex, causalityOrder.lessThan union coherence)
                 .apply { initialize(); compute() }
@@ -323,12 +310,16 @@ class CoherenceOrder(
                 if (memoryAccessEventIndex.isWriteWriteRaceFree(location))
                     return@mapNotNull null
                 val writes = memoryAccessEventIndex.getWrites(location)
-                    .takeIf { it.size > 1 }
-                    ?: return@mapNotNull null
+                    .takeIf { it.size > 1 } ?: return@mapNotNull null
                 val enumerator = memoryAccessEventIndex.enumerator(AtomicMemoryAccessCategory.Write, location)!!
                 topologicalSortings(writesOrder.toGraph(writes, enumerator)).filter {
                     rmwChainsStorage.respectful(it)
                 }
+            }
+            if (coherenceOrderings.isEmpty()) {
+                return sequenceOf(
+                    CoherenceOrder(execution, memoryAccessEventIndex, rmwChainsStorage, writesOrder)
+                )
             }
             return coherenceOrderings.cartesianProduct().map { coherenceList ->
                 val coherenceOrder = CoherenceOrder(execution, memoryAccessEventIndex, rmwChainsStorage, writesOrder)

@@ -77,7 +77,7 @@ class WritesBeforeRelation(
     override fun invoke(x: AtomicThreadEvent, y: AtomicThreadEvent): Boolean {
         val location = getLocationForSameLocationWriteAccesses(x, y)
             ?: return false
-        return relations[location]?.get(x, y) ?: false
+        return relations[location]?.get(x, y) ?: happensBefore(x, y)
     }
 
     fun isIrreflexive(): Boolean =
