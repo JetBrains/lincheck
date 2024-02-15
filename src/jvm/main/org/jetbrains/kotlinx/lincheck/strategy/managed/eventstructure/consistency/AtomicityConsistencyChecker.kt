@@ -25,7 +25,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.kotlinx.lincheck.utils.*
 
 // TODO: override toString()
-class AtomicityViolation(val write1: Event, val write2: Event) : Inconsistency()
+class AtomicityViolation(/*val write1: Event, val write2: Event*/) : Inconsistency()
 
 // TODO: what should we return as a witness?
 class AtomicityConsistencyChecker : IncrementalConsistencyChecker<AtomicThreadEvent, Unit> {
@@ -43,7 +43,7 @@ class AtomicityConsistencyChecker : IncrementalConsistencyChecker<AtomicThreadEv
             }
         }
         return if (other != null)
-            AtomicityViolation(other, event)
+            AtomicityViolation(/*other, event*/)
         else
             ConsistencyWitness(Unit)
     }

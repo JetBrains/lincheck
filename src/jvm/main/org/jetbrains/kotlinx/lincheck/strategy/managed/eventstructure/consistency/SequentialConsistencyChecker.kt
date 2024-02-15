@@ -105,7 +105,7 @@ class SequentialConsistencyChecker(
             initialize(); compute()
         }
         if (!extendedExecution.rmwChainsStorageComputable.value.isConsistent())
-            return ReleaseAcquireInconsistency()
+            return AtomicityViolation()
         extendedExecution.writesBeforeComputable.apply {
             initialize(); compute()
         }

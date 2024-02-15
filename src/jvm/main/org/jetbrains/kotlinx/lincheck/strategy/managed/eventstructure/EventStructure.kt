@@ -100,7 +100,7 @@ class EventStructure(
 
     private val consistencyChecker = aggregateConsistencyCheckers(
         listOf<IncrementalConsistencyChecker<AtomicThreadEvent, *>>(
-            atomicityChecker,
+            // atomicityChecker,
             sequentialConsistencyChecker
         ),
         listOf(),
