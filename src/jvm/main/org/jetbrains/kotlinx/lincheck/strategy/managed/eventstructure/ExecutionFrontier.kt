@@ -48,7 +48,7 @@ fun ExecutionFrontier<*>.getNextPosition(tid: ThreadID): Int =
 
 operator fun<E : ThreadEvent> ExecutionFrontier<E>.contains(event: E): Boolean {
     val lastEvent = get(event.threadId) ?: return false
-    return programOrder.lessOrEqual(event, lastEvent)
+    return programOrder.orEqual(event, lastEvent)
 }
 
 operator fun<E : ThreadEvent> MutableExecutionFrontier<E>.set(tid: ThreadID, event: E?) {

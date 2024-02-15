@@ -416,14 +416,14 @@ class HyperThreadEvent(
 ) : HyperEvent, AbstractThreadEvent(label, parent, dependencies)
 
 
-val programOrder: PartialOrder<ThreadEvent> = PartialOrder.ofLessThan { x, y ->
+val programOrder = Relation<ThreadEvent> { x, y ->
     if (x.threadId != y.threadId || x.threadPosition >= y.threadPosition)
         false
     else (x == y.predNth(y.threadPosition - x.threadPosition))
 }
 
-val causalityOrder: PartialOrder<ThreadEvent> = PartialOrder.ofLessOrEqual { x, y ->
-    y.causalityClock.observes(x.threadId, x.threadPosition)
+val causalityOrder = Relation<ThreadEvent> { x, y ->
+    (x != y) && y.causalityClock.observes(x.threadId, x.threadPosition)
 }
 
 val causalityCovering: Covering<ThreadEvent> = Covering { it.dependencies }

@@ -337,12 +337,12 @@ class EventStructure(
         // Check that parent does not depend on conflicting events.
         if (parent != null) {
             causalityViolation = causalityViolation || conflicts.any { conflict ->
-                causalityOrder.lessOrEqual(conflict, parent)
+                causalityOrder.orEqual(conflict, parent)
             }
         }
         // Also check that dependencies do not causally depend on conflicting events.
         causalityViolation = causalityViolation || conflicts.any { conflict -> dependencies.any { dependency ->
-                causalityOrder.lessOrEqual(conflict, dependency)
+                causalityOrder.orEqual(conflict, dependency)
         }}
         if (causalityViolation)
             return null
@@ -564,7 +564,7 @@ class EventStructure(
                 filter {
                     // (1) all of its causal predecessors, because an attempt to synchronize with
                     //     these predecessors will result in a causality cycle
-                    !causalityOrder.lessThan(it, event) &&
+                    !causalityOrder(it, event) &&
                     // (2) pinned events, because their response part is pinned (i.e. fixed),
                     //     unless the pinned event is blocking dangling event
                     (!pinnedEvents.contains(it) || danglingEvents.contains(it))
@@ -596,8 +596,8 @@ class EventStructure(
                 val racyWrites = calculateRacyWrites(label.location, event.causalityClock.toMutableFrontier())
                 candidates.filter {
                     // !causalityOrder.lessThan(it, threadLastWrite) &&
-                    !racyWrites.any { write -> causalityOrder.lessThan(it, write) } &&
-                    !staleWrites.any { write -> causalityOrder.lessOrEqual(it, write) }
+                    !racyWrites.any { write -> causalityOrder(it, write) } &&
+                    !staleWrites.any { write -> causalityOrder.orEqual(it, write) }
                 }
             }
 
@@ -1143,7 +1143,7 @@ class EventStructure(
         val writes = calculateMemoryLocationView(location, observation).events
         return writes.filter { write ->
             !writes.any { other ->
-                causalityOrder.lessThan(write, other)
+                causalityOrder(write, other)
             }
         }
     }

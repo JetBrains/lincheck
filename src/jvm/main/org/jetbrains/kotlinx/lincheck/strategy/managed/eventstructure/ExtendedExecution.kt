@@ -133,7 +133,7 @@ fun MutableExtendedExecution(nThreads: Int): MutableExtendedExecution =
                 execution,
                 memoryAccessEventIndexComputable.value,
                 readModifyWriteOrderComputable.value,
-                causalityOrder.lessThan
+                causalityOrder
             )
         }
         .dependsOn(memoryAccessEventIndexComputable)
@@ -146,7 +146,7 @@ fun MutableExtendedExecution(nThreads: Int): MutableExtendedExecution =
                 execution,
                 memoryAccessEventIndexComputable.value,
                 readModifyWriteOrderComputable.value,
-                causalityOrder.lessThan union writesBeforeOrderComputable.value, // TODO: add eco or sc?
+                causalityOrder union writesBeforeOrderComputable.value, // TODO: add eco or sc?
             )
         }
         .dependsOn(memoryAccessEventIndexComputable)
@@ -159,7 +159,7 @@ fun MutableExtendedExecution(nThreads: Int): MutableExtendedExecution =
             ExtendedCoherenceOrder(
                 execution,
                 memoryAccessEventIndexComputable.value,
-                causalityOrder.lessThan union writesBeforeOrderComputable.value // TODO: add coherence
+                causalityOrder union writesBeforeOrderComputable.value // TODO: add coherence
             )
         }
         .dependsOn(memoryAccessEventIndexComputable)
@@ -176,7 +176,7 @@ fun MutableExtendedExecution(nThreads: Int): MutableExtendedExecution =
             SequentialConsistencyOrder(
                 execution,
                 memoryAccessEventIndexComputable.value,
-                causalityOrder.lessThan union extendedCoherenceComputable.value,
+                causalityOrder union extendedCoherenceComputable.value,
                 // TODO: refine eco order after sc order computation (?)
             )
         }
@@ -189,7 +189,7 @@ fun MutableExtendedExecution(nThreads: Int): MutableExtendedExecution =
             ExecutionOrder(
                 execution,
                 memoryAccessEventIndexComputable.value,
-                causalityOrder.lessThan union extendedCoherence, // TODO: add sc order
+                causalityOrder union extendedCoherence, // TODO: add sc order
             )
         }
         .dependsOn(memoryAccessEventIndexComputable)

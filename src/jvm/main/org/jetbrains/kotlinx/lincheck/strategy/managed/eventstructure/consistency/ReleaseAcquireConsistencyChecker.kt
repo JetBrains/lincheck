@@ -49,7 +49,7 @@ class ReleaseAcquireConsistencyChecker(
             // TODO: should return RMW-atomicity violation instead
             return ReleaseAcquireInconsistency()
         }
-        val writesBeforeOrder = WritesBeforeOrder(execution, memoryAccessEventIndex, rmwChainsStorage, causalityOrder.lessThan)
+        val writesBeforeOrder = WritesBeforeOrder(execution, memoryAccessEventIndex, rmwChainsStorage, causalityOrder)
             .apply {
                 initialize()
                 compute()

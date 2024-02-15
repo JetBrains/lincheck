@@ -38,6 +38,26 @@ infix fun<T> Relation<T>.intersection(relation: Relation<T>) = Relation<T> { x, 
     this(x, y) && relation(x, y)
 }
 
+fun<T> Relation<T>.orEqual(x: T, y: T): Boolean {
+    return (x == y) || this(x, y)
+}
+
+fun<T> Relation<T>.unordered(x: T, y: T): Boolean {
+    return (x != y) && !this(x, y) && !this(y, x)
+}
+
+fun<T> Relation<T>.maxOrNull(x: T, y: T): T? = when {
+    x == y -> x
+    this(x, y) -> y
+    this(y, x) -> x
+    else -> null
+}
+
+fun<T> Relation<T>.max(x: T, y: T): T =
+    maxOrNull(x, y) ?: throw IncomparableArgumentsException("$x and $y are incomparable")
+
+class IncomparableArgumentsException(message: String): Exception(message)
+
 // covering for each element returns a list of elements on which it depends;
 // in terms of a graph: for each node it returns source nodes of its incoming edges
 fun interface Covering<T> {

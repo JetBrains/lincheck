@@ -70,11 +70,11 @@ class CoherenceOrder(
         check(map.isEmpty())
         generate(execution, memoryAccessEventIndex, rmwChainsStorage, writesOrder).forEach { coherence ->
             val extendedCoherence = ExtendedCoherenceOrder(execution, memoryAccessEventIndex,
-                writesOrder = causalityOrder.lessThan union coherence
+                writesOrder = causalityOrder union coherence
             )
                 .apply { initialize(); compute() }
             val executionOrder = ExecutionOrder(execution, memoryAccessEventIndex,
-                approximation = causalityOrder.lessThan union extendedCoherence
+                approximation = causalityOrder union extendedCoherence
             )
                 .apply { initialize(); compute() }
             if (!executionOrder.consistent)

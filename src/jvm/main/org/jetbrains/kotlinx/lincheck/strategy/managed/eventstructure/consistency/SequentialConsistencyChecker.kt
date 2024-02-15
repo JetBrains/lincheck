@@ -55,7 +55,7 @@ class SequentialConsistencyChecker(
 
         // we will gradually approximate the total sequential execution order of events
         // by a partial order, starting with the partial causality order
-        var executionOrderApproximation : Relation<AtomicThreadEvent> = causalityOrder.lessThan
+        var executionOrderApproximation : Relation<AtomicThreadEvent> = causalityOrder
         // first try to check release/acquire consistency (it is cheaper) ---
         // release/acquire inconsistency will also imply violation of sequential consistency,
         if (releaseAcquireChecker != null) {
@@ -129,7 +129,7 @@ class SequentialConsistencyChecker(
         rmwChainsStorage: ReadModifyWriteOrder,
         wbRelation: WritesBeforeOrder,
     ): ConsistencyVerdict<SequentialConsistencyWitness> {
-        val writesOrder = causalityOrder.lessThan union wbRelation
+        val writesOrder = causalityOrder union wbRelation
         val executionOrderComputable = computable {
             ExecutionOrder(execution, executionIndex, Relation.empty())
         }
