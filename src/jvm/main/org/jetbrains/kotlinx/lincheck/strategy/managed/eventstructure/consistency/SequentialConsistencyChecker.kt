@@ -101,6 +101,11 @@ class SequentialConsistencyChecker(
 
     private fun checkTest(execution: Execution<AtomicThreadEvent>): SequentialConsistencyVerdict {
         val extendedExecution = ExtendedExecutionImpl(ResettableExecution(execution.toFrontier().toMutableExecution()))
+        extendedExecution.rmwChainsStorageComputable.apply {
+            initialize(); compute()
+        }
+        if (!extendedExecution.rmwChainsStorageComputable.value.isConsistent())
+            return ReleaseAcquireInconsistency()
         extendedExecution.writesBeforeComputable.apply {
             initialize(); compute()
         }
