@@ -51,6 +51,8 @@ class SequentialConsistencyChecker(
         if (checkReleaseAcquireConsistency) ReleaseAcquireConsistencyChecker(memoryAccessEventIndex) else null
 
     override fun check(execution: Execution<AtomicThreadEvent>): SequentialConsistencyVerdict {
+        return checkTest(execution)
+
         // we will gradually approximate the total sequential execution order of events
         // by a partial order, starting with the partial causality order
         var executionOrderApproximation : Relation<AtomicThreadEvent> = causalityOrder.lessThan
@@ -95,6 +97,25 @@ class SequentialConsistencyChecker(
         val (aggregated, remapping) = execution.aggregate(ThreadAggregationAlgebra.aggregator())
         // check consistency by trying to replay execution using sequentially consistent abstract machine
         return checkByReplaying(aggregated, covering.aggregate(remapping))
+    }
+
+    private fun checkTest(execution: Execution<AtomicThreadEvent>): SequentialConsistencyVerdict {
+        val extendedExecution = ExtendedExecutionImpl(ResettableExecution(execution.toFrontier().toMutableExecution()))
+        extendedExecution.writesBeforeComputable.apply {
+            initialize(); compute()
+        }
+        if (!extendedExecution.writesBeforeComputable.value.isIrreflexive())
+            return ReleaseAcquireInconsistency()
+        extendedExecution.coherenceOrderComputable.apply {
+            initialize(); compute()
+        }
+        if (!extendedExecution.coherenceOrderComputable.value.consistent)
+            return SequentialConsistencyCoherenceViolation()
+        val executionOrder = extendedExecution.executionOrderComputable.value.ensure { it.consistent }
+        SequentialConsistencyReplayer(1 + execution.maxThreadID).ensure {
+            it.replay(executionOrder) != null
+        }
+        return SequentialConsistencyWitness.create(executionOrder)
     }
 
     private fun checkByCoherenceOrdering(
@@ -243,8 +264,8 @@ class CoherenceOrder(
     val memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
     val rmwChainsStorage: ReadModifyWriteChainsStorage,
     val writesOrder: Relation<AtomicThreadEvent>,
-    var extendedCoherenceOrder: ComputableDelegate<ExtendedCoherenceOrder>? = null,
-    var executionOrder: ComputableDelegate<ExecutionOrder>? = null,
+    var extendedCoherenceOrder: ComputableNode<ExtendedCoherenceOrder>? = null,
+    var executionOrder: ComputableNode<ExecutionOrder>? = null,
 ) : Relation<AtomicThreadEvent>, Computable {
 
     var consistent: Boolean = true

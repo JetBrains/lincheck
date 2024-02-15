@@ -60,6 +60,8 @@ interface ExtendedExecution : Execution<AtomicThreadEvent> {
      * @see SequentialConsistencyOrder
      */
     val sequentialConsistencyOrder: Relation<AtomicThreadEvent>
+
+    val executionOrder: Relation<AtomicThreadEvent>
 }
 
 /**
@@ -72,13 +74,15 @@ interface ExtendedExecution : Execution<AtomicThreadEvent> {
  */
 interface MutableExtendedExecution : ExtendedExecution, MutableExecution<AtomicThreadEvent> {
 
-    val writesBeforeComputable : ComputableDelegate<WritesBeforeRelation>
+    val writesBeforeComputable: ComputableNode<WritesBeforeRelation>
 
-    val coherenceOrderComputable : ComputableDelegate<CoherenceOrder>
+    val coherenceOrderComputable: ComputableNode<CoherenceOrder>
 
-    val extendedCoherenceComputable : ComputableDelegate<ExtendedCoherenceOrder>
+    val extendedCoherenceComputable: ComputableNode<ExtendedCoherenceOrder>
 
-    val sequentialConsistencyOrderComputable : ComputableDelegate<SequentialConsistencyOrder>
+    val sequentialConsistencyOrderComputable: ComputableNode<SequentialConsistencyOrder>
+
+    val executionOrderComputable: ComputableNode<ExecutionOrder>
 
     /**
      * Resets the mutable execution to contain the new set of events
@@ -100,7 +104,7 @@ fun MutableExtendedExecution(nThreads: Int): MutableExtendedExecution =
     ExtendedExecutionImpl(ResettableExecution(nThreads))
 
 
-private class ExtendedExecutionImpl(
+/* private */ class ExtendedExecutionImpl(
     val execution: ResettableExecution
 ) : MutableExtendedExecution, MutableExecution<AtomicThreadEvent> by execution {
 
@@ -108,8 +112,7 @@ private class ExtendedExecutionImpl(
 
     private val rmwChainsStorageComputable = computable { ReadModifyWriteChainsStorage(execution) }
 
-    override val writesBeforeComputable =
-        computable(dependsOn = listOf(memoryAccessEventIndexComputable)) {
+    override val writesBeforeComputable = computable {
             WritesBeforeRelation(
                 execution,
                 memoryAccessEventIndexComputable.value,
@@ -117,11 +120,12 @@ private class ExtendedExecutionImpl(
                 causalityOrder.lessThan
             )
         }
+        .dependsOn(memoryAccessEventIndexComputable)
+        .dependsOn(rmwChainsStorageComputable, soft = true, invalidating = true)
 
     override val writesBefore: Relation<AtomicThreadEvent> by writesBeforeComputable
 
-    override val coherenceOrderComputable =
-        computable(dependsOn = listOf(memoryAccessEventIndexComputable)) {
+    override val coherenceOrderComputable = computable {
             CoherenceOrder(
                 execution,
                 memoryAccessEventIndexComputable.value,
@@ -129,17 +133,22 @@ private class ExtendedExecutionImpl(
                 causalityOrder.lessThan union writesBeforeComputable.value, // TODO: add eco or sc?
             )
         }
+        .dependsOn(memoryAccessEventIndexComputable)
+        .dependsOn(rmwChainsStorageComputable, soft = true, invalidating = true)
+        .dependsOn(writesBeforeComputable, soft = true, invalidating = true)
 
     override val coherenceOrder: Relation<AtomicThreadEvent> by coherenceOrderComputable
 
-    override val extendedCoherenceComputable =
-        computable(dependsOn = listOf(memoryAccessEventIndexComputable)) {
+    override val extendedCoherenceComputable = computable {
             ExtendedCoherenceOrder(
                 execution,
                 memoryAccessEventIndexComputable.value,
                 causalityOrder.lessThan union writesBeforeComputable.value // TODO: add coherence
             )
-        }.apply {
+        }
+        .dependsOn(memoryAccessEventIndexComputable)
+        .dependsOn(writesBeforeComputable, soft = true, invalidating = true)
+        .apply {
             // add reference to coherence order, so once it is computed
             // it can force-set the extended coherence order
             coherenceOrderComputable.value.extendedCoherenceOrder = this
@@ -147,8 +156,7 @@ private class ExtendedExecutionImpl(
 
     override val extendedCoherence: Relation<AtomicThreadEvent> by extendedCoherenceComputable
 
-    override val sequentialConsistencyOrderComputable =
-        computable(dependsOn = listOf(memoryAccessEventIndexComputable, extendedCoherenceComputable)) {
+    override val sequentialConsistencyOrderComputable = computable {
             SequentialConsistencyOrder(
                 execution,
                 memoryAccessEventIndexComputable.value,
@@ -156,8 +164,27 @@ private class ExtendedExecutionImpl(
                 // TODO: refine eco order after sc order computation (?)
             )
         }
+        .dependsOn(memoryAccessEventIndexComputable)
+        .dependsOn(extendedCoherenceComputable, soft = true, invalidating = true)
 
     override val sequentialConsistencyOrder: Relation<AtomicThreadEvent> by sequentialConsistencyOrderComputable
+
+    override val executionOrderComputable = computable {
+            ExecutionOrder(
+                execution,
+                memoryAccessEventIndexComputable.value,
+                causalityOrder.lessThan union extendedCoherence, // TODO: add sc order
+            )
+        }
+        .dependsOn(memoryAccessEventIndexComputable)
+        .dependsOn(extendedCoherenceComputable, soft = true, invalidating = true)
+        .apply {
+            // add reference to coherence order, so once it is computed
+            // it can force-set the execution order
+            coherenceOrderComputable.value.executionOrder = this
+        }
+
+    override val executionOrder: Relation<AtomicThreadEvent> by executionOrderComputable
 
     override fun reset(frontier: ExecutionFrontier<AtomicThreadEvent>) {
         execution.reset(frontier)
@@ -165,9 +192,13 @@ private class ExtendedExecutionImpl(
 
 }
 
-private class ResettableExecution(nThreads: Int) : MutableExecution<AtomicThreadEvent> {
+/* private */ class ResettableExecution(nThreads: Int) : MutableExecution<AtomicThreadEvent> {
 
     private var execution = MutableExecution<AtomicThreadEvent>(nThreads)
+
+    constructor(execution: MutableExecution<AtomicThreadEvent>) : this(0) {
+        this.execution = execution
+    }
 
     override val size: Int
         get() = execution.size

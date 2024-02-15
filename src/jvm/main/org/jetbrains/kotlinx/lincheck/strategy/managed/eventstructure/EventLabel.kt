@@ -224,7 +224,6 @@ enum class LabelType {
  * Init \+ Read^{req}(x) = Read^{rsp}(x, 0)
  * ```
  */
-// TODO: now that we have ObjectAllocationLabel we can get rid of it?
 class InitializationLabel(
     val initThreadID: ThreadID,
     val mainThreadID: ThreadID,
@@ -359,8 +358,6 @@ data class ThreadStartLabel(
         require(isResponse)
         return copy(kind = LabelKind.Receive)
     }
-
-    // TODO: should we override `recipient` of `ThreadStartLabel` to be the thread id of the starting thread?
 
     override fun toString(): String =
         "ThreadStart"
@@ -1113,8 +1110,6 @@ sealed class ParkingEventLabel(
         return "${operationKind}${kindString}${argsString}"
     }
 
-    // TODO: should we override `recipient` of `ParkingLabel` to be the thread id of the parked/unparked thread?
-    // TODO: should we override `index` of `ParkingLabel` to be the thread id of the parked/unparked thread?
 }
 
 /**

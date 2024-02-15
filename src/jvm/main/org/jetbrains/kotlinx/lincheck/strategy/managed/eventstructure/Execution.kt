@@ -294,9 +294,9 @@ fun<E : ThreadEvent> Execution<E>.isBlockedDanglingRequest(event: E): Boolean {
 fun<E : ThreadEvent> Execution<E>.computeBackwardVectorClock(event: E, relation: Relation<E>,
     respectsProgramOrder: Boolean = false
 ): VectorClock {
-    check(this is ExecutionImpl<E>)
-    val clock = MutableVectorClock(threadMap.capacity)
-    for (i in 0 until threadMap.capacity) {
+    val capacity = 1 + this.maxThreadID
+    val clock = MutableVectorClock(capacity)
+    for (i in 0 until capacity) {
         val threadEvents = get(i) ?: continue
         val position = if (respectsProgramOrder) {
             threadEvents.binarySearch { !relation(it, event) }
@@ -339,9 +339,9 @@ fun<E : ThreadEvent> Execution<E>.computeBackwardVectorClock(event: E, relation:
 fun<E : ThreadEvent> Execution<E>.computeForwardVectorClock(event: E, relation: Relation<E>,
     respectsProgramOrder: Boolean = false,
 ): VectorClock {
-    check(this is ExecutionImpl<E>)
-    val clock = MutableVectorClock(threadMap.capacity)
-    for (i in 0 until threadMap.capacity) {
+    val capacity = 1 + this.maxThreadID
+    val clock = MutableVectorClock(capacity)
+    for (i in 0 until capacity) {
         val threadEvents = get(i) ?: continue
         val position = if (respectsProgramOrder) {
             threadEvents.binarySearch { relation(event, it) }
