@@ -22,32 +22,28 @@ import java.util.regex.Pattern
  * Creates object with coverage options.
  *
  * @param branchCoverage flag to run line coverage or branch coverage otherwise.
- * @param additionalExcludePatterns patterns for classnames to exclude from coverage report.
+ * @param excludePatterns patterns for classnames to exclude from coverage report (use can use regex syntax).
  * @param onShutdown callback with coverage results.
  */
 class CoverageOptions(
     private val branchCoverage: Boolean = false,
-    additionalExcludePatterns: List<Pattern> = listOf(),
+    excludePatterns: List<String> = listOf(),
     private val onShutdown: ((ProjectData, CollectedCoverage) -> Unit)? = null,
 ) {
-    private val excludePatterns = listOf<Pattern>(
+    private val excludes = listOf<Pattern>(
         Pattern.compile("org\\.jetbrains\\.kotlinx\\.lincheck\\..*"), // added to exclude ManagedStrategyStateHolder
-        //Pattern.compile("kotlinx\\.coroutines\\..*"),
-        //Pattern.compile("kotlin\\.collections\\..*")
-        // TODO: add other patterns to exclude (eg. gradle, junit, kotlinx, maven, ...)
-    ) + additionalExcludePatterns
+    ) + excludePatterns.map(Pattern::compile)
     val projectData = ProjectData(null, branchCoverage, null)
-    val cf = ClassFinder(listOf(), excludePatterns)
+    val cf = ClassFinder(listOf(), excludes)
     var coverageResult: CoverageResult? = null
     private val collectedCoverage: CollectedCoverage = CollectedCoverage()
 
 
     init {
-        println("Create CoverageOptions object: $this")
         // only allow to insert `__$hits$__[index] = 1` instructions by coverage transformer
         com.intellij.rt.coverage.util.OptionsUtil.CALCULATE_HITS_COUNT = false
 
-        projectData.excludePatterns = excludePatterns
+        projectData.excludePatterns = excludes
         CoverageRuntime.installRuntime(projectData)
         CoverageRuntime.installRuntime(projectData)
     }

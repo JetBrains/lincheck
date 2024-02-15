@@ -70,7 +70,11 @@ interface LincheckRunTracker {
      */
     fun invocationEnd(iteration: Int, invocation: Int, failure: LincheckFailure? = null, exception: Throwable? = null) {}
 
-    // TODO: add description
+    /**
+     * This method is called when test execution finished with enabled coverage calculation.
+     *
+     * @param coverage The object that contains missed and visited lines and branches of tested code.
+     */
     fun coverageCalculated(coverage: CoverageResult) {}
 
     /**

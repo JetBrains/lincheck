@@ -21,7 +21,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.junit.Test
-import java.util.regex.Pattern
 import kotlin.reflect.KClass
 import kotlin.reflect.jvm.jvmName
 
@@ -30,23 +29,17 @@ abstract class AbstractLincheckBenchmark(
     private vararg val expectedFailures: KClass<out LincheckFailure>
 ) {
 
-//    @Test(timeout = TIMEOUT)
-//    fun benchmarkWithStressStrategy(): Unit = StressOptions().run {
-//        invocationsPerIteration(5_000)
-//        configure()
-//        runTest()
-//    }
+    @Test(timeout = TIMEOUT)
+    fun benchmarkWithStressStrategy(): Unit = StressOptions().run {
+        invocationsPerIteration(if (benchmarksReporter.coverageEnabled) 1 else 5_000)
+        configure()
+        runTest()
+    }
 
     @Test(timeout = TIMEOUT)
     fun benchmarkWithModelCheckingStrategy(): Unit = ModelCheckingOptions().run {
-        // invocationsPerIteration(5_000)
-        invocationsPerIteration(20)
-        withCoverage(CoverageOptions(
-            true,
-            listOf(Pattern.compile(AbstractLincheckBenchmark::class.jvmName))
-        ))
-        configureWithCoverage()
-        //configure()
+        invocationsPerIteration(if (benchmarksReporter.coverageEnabled) 1 else 5_000)
+        configure()
         runTest()
     }
 
@@ -84,16 +77,14 @@ abstract class AbstractLincheckBenchmark(
         actorsBefore(2)
         actorsAfter(2)
         minimizeFailedScenario(false)
-        customize()
-    }
 
-    private fun <O : Options<O, *>> O.configureWithCoverage(): Unit = run {
-        iterations(1)
-        threads(3)
-        actorsPerThread(2)
-        actorsBefore(2)
-        actorsAfter(2)
-        minimizeFailedScenario(false)
+        if (benchmarksReporter.coverageEnabled) {
+            withCoverage(CoverageOptions(
+                true,
+                listOf(AbstractLincheckBenchmark::class.jvmName),
+            ))
+        }
+
         customize()
     }
 

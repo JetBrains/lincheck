@@ -55,8 +55,8 @@ data class ScenarioStatistics(
 
 @Serializable
 data class CoverageStatistics(
-    val lineCoverageRatio: Double,
-    val branchCoverageRatio: Double,
+    val lineCoverage: Long,
+    val branchCoverage: Long,
 )
 
 val BenchmarksReport.benchmarkIDs: List<BenchmarkID>
@@ -106,15 +106,18 @@ fun LincheckStatistics.toBenchmarkStatistics(name: String, strategy: LincheckStr
             )
         },
     coverageStatistics =
-        if (coverageResult != null)
-            CoverageStatistics(coverageResult!!.lineCoverage, coverageResult!!.branchCoverage)
+        if (coverage != null) {
+            CoverageStatistics(coverage!!.lineCoverage, coverage!!.branchCoverage)
+        }
         else null
 )
+
+private val jsonFormat = Json { explicitNulls = false }
 
 fun BenchmarksReport.saveJson(filename: String) {
     val file = File("$filename.json")
     file.outputStream().use { outputStream ->
-        Json.encodeToStream(this, outputStream)
+        jsonFormat.encodeToStream(this, outputStream)
     }
 }
 
@@ -141,8 +144,8 @@ private fun StringBuilder.appendBenchmarkRunningTime(benchmarkStatistics: Benchm
         appendLine("${strategy}.${name}.runtime.ms $runningTimeMs")
 
         if (coverageStatistics != null) {
-            appendLine("${strategy}.${name}.coverage.line ${coverageStatistics.lineCoverageRatio}")
-            appendLine("${strategy}.${name}.coverage.branch ${coverageStatistics.branchCoverageRatio}")
+            appendLine("${strategy}.${name}.coverage.line ${coverageStatistics.lineCoverage}")
+            appendLine("${strategy}.${name}.coverage.branch ${coverageStatistics.branchCoverage}")
         }
     }
 }

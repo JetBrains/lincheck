@@ -17,7 +17,8 @@ class CoverageResult(collected: CollectedCoverage) {
     val lineCoverage = calculateCoverage(collected.lineCounter.missed, collected.lineCounter.covered)
     val branchCoverage = calculateCoverage(collected.branchCounter.missed, collected.branchCounter.covered)
 
-    private fun calculateCoverage(missed: Long, covered: Long): Double {
-        return if (missed == 0L) 1.0 else covered.toDouble() / (covered + missed).toDouble()
+    private fun calculateCoverage(missed: Long, covered: Long): Long {
+        return covered
+        //return if (missed == 0L) 1.0 else covered.toDouble() / (covered + missed).toDouble()
     }
 }

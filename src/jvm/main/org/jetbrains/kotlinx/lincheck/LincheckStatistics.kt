@@ -46,7 +46,7 @@ interface LincheckStatistics {
     val granularity: StatisticsGranularity
 
     // TODO: add description
-    var coverageResult: CoverageResult?
+    var coverage: CoverageResult?
 }
 
 /**
@@ -155,12 +155,13 @@ val LincheckIterationStatistics.averageInvocationTimeNano
 
 
 class LincheckStatisticsTracker(
-    override val granularity: StatisticsGranularity = StatisticsGranularity.PER_ITERATION,
-    override var coverageResult: CoverageResult? = null
+    override val granularity: StatisticsGranularity = StatisticsGranularity.PER_ITERATION
 ) : LincheckStatistics, LincheckRunTracker {
 
     override var runningTimeNano: Long = 0
         private set
+
+    override var coverage: CoverageResult? = null
 
     override val iterationsStatistics: Map<Int, LincheckIterationStatistics>
         get() = _iterationsStatistics
@@ -214,8 +215,8 @@ class LincheckStatisticsTracker(
     }
 
     override fun coverageCalculated(coverage: CoverageResult) {
-        println("'coverageCalculated' called with coverage: (line: ${coverage.lineCoverage}, branch: ${coverage.branchCoverage})")
-        coverageResult = coverage
+        println("Coverage calculated: line=${coverage.lineCoverage}, branch=${coverage.branchCoverage}")
+        this.coverage = coverage
     }
 }
 

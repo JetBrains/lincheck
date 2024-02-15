@@ -68,6 +68,7 @@ kotlin {
                 }
                 // pass the properties
                 systemProperty("statisticsGranularity", System.getProperty("statisticsGranularity"))
+                systemProperty("coverageEnabled", System.getProperty("coverageEnabled"))
                 // always re-run test suite
                 outputs.upToDateWhen { false }
             }
