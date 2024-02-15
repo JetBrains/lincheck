@@ -41,6 +41,7 @@ For each benchmark, the following statistics are collected:
 - number of iterations
 - total number of invocations (across all iterations)
 - per-scenario statistics (see below)
+- covered lines and branches (if coverage enabled)
 
 For each scenario within each benchmark, the following statistics are collected:
 - overall running time
@@ -72,9 +73,15 @@ with the `statisticsGranularity` option set to `perInvocation`:
 ./gradlew :jvmBenchmarkSuite -DstatisticsGranularity=perInvocation
 ```
 
+There is also a possibility to enable coverage calculation for this task:
+
+```
+./gradlew :jvmBenchmarkSuite -DcoverageEnabled=true
+```
+
 The `jvmBenchmarkSuite` task produces the following reports:
-- `benchmarks-results.json` - report in JSON format containing all collected statistics
-- `benchmarks-results.txt` - report in simple text format containing only the overall running time of each benchmark
+- `benchmarks-results.json` - report in JSON format containing all collected statistics and covered lines and branches count (if coverage enabled)
+- `benchmarks-results.txt` - report in simple text format containing only the overall running time of each benchmark and covered lines and branches count (if coverage enabled)
 
 These reports can then be uploaded to an external storage, 
 or analyzed locally, using the shipped plotting facilities (see below).
