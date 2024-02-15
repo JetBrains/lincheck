@@ -45,7 +45,9 @@ interface LincheckStatistics {
      */
     val granularity: StatisticsGranularity
 
-    // TODO: add description
+    /**
+     * Coverage result with covered lines and branch, will be non-null if coverage is enabled via VM parameters
+     */
     var coverage: CoverageResult?
 }
 
