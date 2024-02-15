@@ -28,7 +28,7 @@ import org.jetbrains.kotlinx.lincheck.utils.*
 class AtomicityViolation(/*val write1: Event, val write2: Event*/) : Inconsistency()
 
 // TODO: what should we return as a witness?
-class AtomicityConsistencyChecker : IncrementalConsistencyChecker<AtomicThreadEvent, Unit> {
+class AtomicityChecker : IncrementalConsistencyChecker<AtomicThreadEvent, Unit> {
 
     private var execution: Execution<AtomicThreadEvent> = executionOf()
 

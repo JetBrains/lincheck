@@ -24,7 +24,6 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.*
 import org.jetbrains.kotlinx.lincheck.utils.*
-import java.util.*
 import kotlin.reflect.KClass
 
 class EventStructure(
@@ -96,7 +95,7 @@ class EventStructure(
             approximateSequentialConsistency = false
         )
 
-    private val atomicityChecker = AtomicityConsistencyChecker()
+    private val atomicityChecker = AtomicityChecker()
 
     private val consistencyChecker = aggregateConsistencyCheckers(
         listOf<IncrementalConsistencyChecker<AtomicThreadEvent, *>>(
