@@ -34,7 +34,7 @@ class ReleaseAcquireInconsistency() : Inconsistency() {
 }
 
 class ReleaseAcquireConsistencyWitness(
-        val rmwChainsStorage: ReadModifyWriteChainsStorage,
+    val rmwChainsStorage: ReadModifyWriteChainRelation,
     val writesBefore: WritesBeforeRelation,
 )
 
@@ -43,7 +43,7 @@ class ReleaseAcquireConsistencyChecker(
 ) : ConsistencyChecker<AtomicThreadEvent, ReleaseAcquireConsistencyWitness> {
 
     override fun check(execution: Execution<AtomicThreadEvent>): ConsistencyVerdict<ReleaseAcquireConsistencyWitness> {
-        val rmwChainsStorage = ReadModifyWriteChainsStorage(execution)
+        val rmwChainsStorage = ReadModifyWriteChainRelation(execution)
             .apply { compute() }
         if (!rmwChainsStorage.isConsistent()) {
             // TODO: should return RMW-atomicity violation instead
@@ -68,7 +68,7 @@ class ReleaseAcquireConsistencyChecker(
 class WritesBeforeRelation(
     val execution: Execution<AtomicThreadEvent>,
     val memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
-    val rmwChainsStorage: ReadModifyWriteChainsStorage,
+    val rmwChainsStorage: ReadModifyWriteChainRelation,
     val happensBefore: Relation<AtomicThreadEvent>,
 ) : Relation<AtomicThreadEvent>, Computable {
 

@@ -29,7 +29,7 @@ typealias CoherenceList = List<AtomicThreadEvent>
 class CoherenceOrder(
     val execution: Execution<AtomicThreadEvent>,
     val memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
-    val rmwChainsStorage: ReadModifyWriteChainsStorage,
+    val rmwChainsStorage: ReadModifyWriteChainRelation,
     val writesOrder: Relation<AtomicThreadEvent>,
     var extendedCoherenceOrder: ComputableNode<ExtendedCoherenceOrder>? = null,
     var executionOrder: ComputableNode<ExecutionOrder>? = null,
@@ -93,7 +93,7 @@ class CoherenceOrder(
         private fun generate(
             execution: Execution<AtomicThreadEvent>,
             memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
-            rmwChainsStorage: ReadModifyWriteChainsStorage,
+            rmwChainsStorage: ReadModifyWriteChainRelation,
             writesOrder: Relation<AtomicThreadEvent>
         ): Sequence<CoherenceOrder> {
             val coherenceOrderings = memoryAccessEventIndex.locations.mapNotNull { location ->

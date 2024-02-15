@@ -61,7 +61,7 @@ class AtomicityChecker : IncrementalConsistencyChecker<AtomicThreadEvent, Unit> 
 typealias ReadModifyWriteChain = List<AtomicThreadEvent>
 typealias MutableReadModifyWriteChain = MutableList<AtomicThreadEvent>
 
-fun ReadModifyWriteChainsStorage.Entry.isConsistent() = when {
+fun ReadModifyWriteChainRelation.Entry.isConsistent() = when {
     // write-part of atomic-read-modify write operation should read-from
     // the preceding write event in the chain
     event.label.isExclusiveWriteAccess() ->
@@ -72,12 +72,12 @@ fun ReadModifyWriteChainsStorage.Entry.isConsistent() = when {
     else -> true
 }
 
-fun ReadModifyWriteChainsStorage.isConsistent() =
+fun ReadModifyWriteChainRelation.isConsistent() =
     entries.all { it.isConsistent() }
 
-class ReadModifyWriteChainsStorage(
+class ReadModifyWriteChainRelation(
     val execution: Execution<AtomicThreadEvent>,
-) : Computable {
+) : Relation<AtomicThreadEvent>, Computable {
 
     abstract class Entry {
         abstract val event: AtomicThreadEvent
@@ -112,6 +112,14 @@ class ReadModifyWriteChainsStorage(
     private val eventMap = mutableMapOf<AtomicThreadEvent, EntryImpl>()
 
     private val rmwChainsMap = mutableMapOf<MemoryLocation, MutableList<MutableReadModifyWriteChain>>()
+
+    override fun invoke(x: AtomicThreadEvent, y: AtomicThreadEvent): Boolean {
+        if (x.label.isInitializingWriteAccess())
+            return x == eventMap[y]?.chain?.get(0)
+        val xEntry = eventMap[x] ?: return false
+        val yEntry = eventMap[y] ?: return false
+        return (xEntry.chain == yEntry.chain) && (xEntry.position < yEntry.position)
+    }
 
     operator fun get(location: MemoryLocation, event: AtomicThreadEvent): Entry? {
         /* Because the initialization (or object allocation) event

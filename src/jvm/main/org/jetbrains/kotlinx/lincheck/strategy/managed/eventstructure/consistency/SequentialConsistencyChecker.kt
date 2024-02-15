@@ -126,7 +126,7 @@ class SequentialConsistencyChecker(
     private fun checkByCoherenceOrdering(
         execution: Execution<AtomicThreadEvent>,
         executionIndex: AtomicMemoryAccessEventIndex,
-        rmwChainsStorage: ReadModifyWriteChainsStorage,
+        rmwChainsStorage: ReadModifyWriteChainRelation,
         wbRelation: WritesBeforeRelation,
     ): ConsistencyVerdict<SequentialConsistencyWitness> {
         val writesOrder = causalityOrder.lessThan union wbRelation

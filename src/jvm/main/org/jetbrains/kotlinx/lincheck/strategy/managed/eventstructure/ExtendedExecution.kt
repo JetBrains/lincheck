@@ -74,7 +74,7 @@ interface ExtendedExecution : Execution<AtomicThreadEvent> {
  */
 interface MutableExtendedExecution : ExtendedExecution, MutableExecution<AtomicThreadEvent> {
 
-    val rmwChainsStorageComputable: ComputableNode<ReadModifyWriteChainsStorage>
+    val rmwChainsStorageComputable: ComputableNode<ReadModifyWriteChainRelation>
 
     val writesBeforeComputable: ComputableNode<WritesBeforeRelation>
 
@@ -112,7 +112,7 @@ fun MutableExtendedExecution(nThreads: Int): MutableExtendedExecution =
 
     private val memoryAccessEventIndexComputable = computable { MutableAtomicMemoryAccessEventIndex(execution) }
 
-    override val rmwChainsStorageComputable = computable { ReadModifyWriteChainsStorage(execution) }
+    override val rmwChainsStorageComputable = computable { ReadModifyWriteChainRelation(execution) }
 
     override val writesBeforeComputable = computable {
             WritesBeforeRelation(
