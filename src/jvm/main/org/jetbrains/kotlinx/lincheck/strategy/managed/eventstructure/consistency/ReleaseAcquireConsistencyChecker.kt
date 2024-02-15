@@ -34,8 +34,8 @@ class ReleaseAcquireInconsistency() : Inconsistency() {
 }
 
 class ReleaseAcquireConsistencyWitness(
-    val rmwChainsStorage: ReadModifyWriteChainRelation,
-    val writesBefore: WritesBeforeRelation,
+    val rmwChainsStorage: ReadModifyWriteOrder,
+    val writesBefore: WritesBeforeOrder,
 )
 
 class ReleaseAcquireConsistencyChecker(
@@ -43,32 +43,32 @@ class ReleaseAcquireConsistencyChecker(
 ) : ConsistencyChecker<AtomicThreadEvent, ReleaseAcquireConsistencyWitness> {
 
     override fun check(execution: Execution<AtomicThreadEvent>): ConsistencyVerdict<ReleaseAcquireConsistencyWitness> {
-        val rmwChainsStorage = ReadModifyWriteChainRelation(execution)
+        val rmwChainsStorage = ReadModifyWriteOrder(execution)
             .apply { compute() }
         if (!rmwChainsStorage.isConsistent()) {
             // TODO: should return RMW-atomicity violation instead
             return ReleaseAcquireInconsistency()
         }
-        val writesBeforeRelation = WritesBeforeRelation(execution, memoryAccessEventIndex, rmwChainsStorage, causalityOrder.lessThan)
+        val writesBeforeOrder = WritesBeforeOrder(execution, memoryAccessEventIndex, rmwChainsStorage, causalityOrder.lessThan)
             .apply {
                 initialize()
                 compute()
             }
-        return if (!writesBeforeRelation.isIrreflexive())
+        return if (!writesBeforeOrder.isIrreflexive())
             ReleaseAcquireInconsistency()
         else
             ConsistencyWitness(ReleaseAcquireConsistencyWitness(
                 rmwChainsStorage = rmwChainsStorage,
-                writesBefore = writesBeforeRelation,
+                writesBefore = writesBeforeOrder,
             ))
     }
 
 }
 
-class WritesBeforeRelation(
+class WritesBeforeOrder(
     val execution: Execution<AtomicThreadEvent>,
     val memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
-    val rmwChainsStorage: ReadModifyWriteChainRelation,
+    val rmwChainsStorage: ReadModifyWriteOrder,
     val happensBefore: Relation<AtomicThreadEvent>,
 ) : Relation<AtomicThreadEvent>, Computable {
 

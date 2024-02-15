@@ -101,15 +101,15 @@ class SequentialConsistencyChecker(
 
     private fun checkTest(execution: Execution<AtomicThreadEvent>): SequentialConsistencyVerdict {
         val extendedExecution = ExtendedExecutionImpl(ResettableExecution(execution.toFrontier().toMutableExecution()))
-        extendedExecution.rmwChainsStorageComputable.apply {
+        extendedExecution.readModifyWriteOrderComputable.apply {
             initialize(); compute()
         }
-        if (!extendedExecution.rmwChainsStorageComputable.value.isConsistent())
+        if (!extendedExecution.readModifyWriteOrderComputable.value.isConsistent())
             return AtomicityViolation()
-        extendedExecution.writesBeforeComputable.apply {
+        extendedExecution.writesBeforeOrderComputable.apply {
             initialize(); compute()
         }
-        if (!extendedExecution.writesBeforeComputable.value.isIrreflexive())
+        if (!extendedExecution.writesBeforeOrderComputable.value.isIrreflexive())
             return ReleaseAcquireInconsistency()
         extendedExecution.coherenceOrderComputable.apply {
             initialize(); compute()
@@ -126,8 +126,8 @@ class SequentialConsistencyChecker(
     private fun checkByCoherenceOrdering(
         execution: Execution<AtomicThreadEvent>,
         executionIndex: AtomicMemoryAccessEventIndex,
-        rmwChainsStorage: ReadModifyWriteChainRelation,
-        wbRelation: WritesBeforeRelation,
+        rmwChainsStorage: ReadModifyWriteOrder,
+        wbRelation: WritesBeforeOrder,
     ): ConsistencyVerdict<SequentialConsistencyWitness> {
         val writesOrder = causalityOrder.lessThan union wbRelation
         val executionOrderComputable = computable {

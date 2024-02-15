@@ -61,7 +61,7 @@ class AtomicityChecker : IncrementalConsistencyChecker<AtomicThreadEvent, Unit> 
 typealias ReadModifyWriteChain = List<AtomicThreadEvent>
 typealias MutableReadModifyWriteChain = MutableList<AtomicThreadEvent>
 
-fun ReadModifyWriteChainRelation.Entry.isConsistent() = when {
+fun ReadModifyWriteOrder.Entry.isConsistent() = when {
     // write-part of atomic-read-modify write operation should read-from
     // the preceding write event in the chain
     event.label.isExclusiveWriteAccess() ->
@@ -72,10 +72,10 @@ fun ReadModifyWriteChainRelation.Entry.isConsistent() = when {
     else -> true
 }
 
-fun ReadModifyWriteChainRelation.isConsistent() =
+fun ReadModifyWriteOrder.isConsistent() =
     entries.all { it.isConsistent() }
 
-class ReadModifyWriteChainRelation(
+class ReadModifyWriteOrder(
     val execution: Execution<AtomicThreadEvent>,
 ) : Relation<AtomicThreadEvent>, Computable {
 
