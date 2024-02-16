@@ -54,7 +54,7 @@ class ReleaseAcquireConsistencyChecker(
                 initialize()
                 compute()
             }
-        return if (!writesBeforeOrder.isIrreflexive())
+        return if (!writesBeforeOrder.isConsistent())
             ReleaseAcquireInconsistency()
         else
             ConsistencyWitness(ReleaseAcquireConsistencyWitness(
@@ -80,7 +80,10 @@ class WritesBeforeOrder(
         return relations[location]?.get(x, y) ?: happensBefore(x, y)
     }
 
-    fun isIrreflexive(): Boolean =
+    fun isConsistent(): Boolean =
+        isIrreflexive()
+
+    private fun isIrreflexive(): Boolean =
         relations.values.all { it.isIrreflexive() }
 
     override fun initialize() {

@@ -35,8 +35,7 @@ class CoherenceOrder(
     var executionOrder: ComputableNode<ExecutionOrder>? = null,
 ) : Relation<AtomicThreadEvent>, Computable {
 
-    var consistent: Boolean = true
-        private set
+    private var consistent: Boolean = true
 
     private data class Entry(
         val coherence: CoherenceList,
@@ -56,6 +55,9 @@ class CoherenceOrder(
 
     operator fun get(location: MemoryLocation): CoherenceList =
         map[location]?.coherence ?: emptyList()
+
+    fun isConsistent(): Boolean =
+        consistent
 
     override fun invalidate() {
         reset()
@@ -77,7 +79,7 @@ class CoherenceOrder(
                 approximation = causalityOrder union extendedCoherence
             )
                 .apply { initialize(); compute() }
-            if (!executionOrder.consistent)
+            if (!executionOrder.isConsistent())
                 return@forEach
             this.map += coherence.map
             this.extendedCoherenceOrder?.setComputed(extendedCoherence)
@@ -140,12 +142,12 @@ class ExtendedCoherenceOrder(
     override fun invoke(x: AtomicThreadEvent, y: AtomicThreadEvent): Boolean {
         val location = getLocationForSameLocationAccesses(x, y)
             ?: return false
-        if (!(inField(x) && inField(y)))
+        if (!(isWriteOrReadResponse(x) && isWriteOrReadResponse(y)))
             return false
         return relations[location]?.get(x, y) ?: false
     }
 
-    private fun inField(x: AtomicThreadEvent): Boolean {
+    private fun isWriteOrReadResponse(x: AtomicThreadEvent): Boolean {
         return (x.label.isWriteAccess() || x.label is ReadAccessLabel && x.label.isResponse)
     }
 

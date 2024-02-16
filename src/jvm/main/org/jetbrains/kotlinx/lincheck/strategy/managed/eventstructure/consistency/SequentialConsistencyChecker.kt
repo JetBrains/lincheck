@@ -86,7 +86,7 @@ class SequentialConsistencyChecker(
                 initialize()
                 compute()
             }
-            if (!scApprox.isIrreflexive()) {
+            if (!scApprox.isConsistent()) {
                 return SequentialConsistencyApproximationInconsistency()
             }
             executionOrderApproximation = scApprox
@@ -109,18 +109,18 @@ class SequentialConsistencyChecker(
         extendedExecution.writesBeforeOrderComputable.apply {
             initialize(); compute()
         }
-        if (!extendedExecution.writesBeforeOrderComputable.value.isIrreflexive())
+        if (!extendedExecution.writesBeforeOrderComputable.value.isConsistent())
             return ReleaseAcquireInconsistency()
         extendedExecution.coherenceOrderComputable.apply {
             initialize(); compute()
         }
-        if (!extendedExecution.coherenceOrderComputable.value.consistent)
+        if (!extendedExecution.coherenceOrderComputable.value.isConsistent())
             return SequentialConsistencyCoherenceViolation()
-        val executionOrder = extendedExecution.executionOrderComputable.value.ensure { it.consistent }
+        val executionOrder = extendedExecution.executionOrderComputable.value.ensure { it.isConsistent() }
         SequentialConsistencyReplayer(1 + execution.maxThreadID).ensure {
-            it.replay(executionOrder) != null
+            it.replay(executionOrder.ordering) != null
         }
-        return SequentialConsistencyWitness.create(executionOrder)
+        return SequentialConsistencyWitness.create(executionOrder.ordering)
     }
 
     private fun checkByCoherenceOrdering(
@@ -137,13 +137,13 @@ class SequentialConsistencyChecker(
                 executionOrder = executionOrderComputable
             )
             .apply { initialize(); compute() }
-        if (!coherence.consistent)
+        if (!coherence.isConsistent())
             return SequentialConsistencyCoherenceViolation()
-        val executionOrder = executionOrderComputable.value.ensure { it.consistent }
+        val executionOrder = executionOrderComputable.value.ensure { it.isConsistent() }
         SequentialConsistencyReplayer(1 + execution.maxThreadID).ensure {
-            it.replay(executionOrder) != null
+            it.replay(executionOrder.ordering) != null
         }
-        return SequentialConsistencyWitness.create(executionOrder)
+        return SequentialConsistencyWitness.create(executionOrder.ordering)
     }
 
 }
@@ -267,16 +267,16 @@ class SequentialConsistencyOrder(
     val memoryAccessOrder: Relation<AtomicThreadEvent>,
 ) : Relation<AtomicThreadEvent>, Computable {
 
+    // TODO: make cached delegate?
+    private var consistent = true
+
     private var relation: RelationMatrix<AtomicThreadEvent>? = null
 
     override fun invoke(x: AtomicThreadEvent, y: AtomicThreadEvent): Boolean =
         relation?.invoke(x, y) ?: false
 
-    // TODO: make cached delegate?
-    private var irreflexive = true
-
-    fun isIrreflexive(): Boolean {
-        return irreflexive
+    fun isConsistent(): Boolean {
+        return consistent
     }
 
     override fun initialize() {
@@ -290,7 +290,7 @@ class SequentialConsistencyOrder(
         relation.fixpoint {
             // TODO: maybe we can remove this check without affecting performance?
             if (!isIrreflexive()) {
-                irreflexive = false
+                consistent = false
                 return@fixpoint
             }
             coherenceClosure()
@@ -299,7 +299,7 @@ class SequentialConsistencyOrder(
     }
 
     override fun invalidate() {
-        irreflexive = true
+        consistent = true
     }
 
     override fun reset() {
@@ -329,17 +329,20 @@ class SequentialConsistencyOrder(
 
 }
 
-class ExecutionOrder private constructor(
+class ExecutionOrder(
     val execution: Execution<AtomicThreadEvent>,
     val memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
     val approximation: Relation<AtomicThreadEvent>,
-    private val ordering: MutableList<AtomicThreadEvent>,
-) : Relation<AtomicThreadEvent>, List<AtomicThreadEvent> by ordering, Computable {
+) : Relation<AtomicThreadEvent>, Computable {
 
-    var consistent = true
-        private set
+    private var consistent = true
 
-    private val additionalOrdering = Relation<AtomicThreadEvent> { x, y ->
+    private val _ordering = mutableListOf<AtomicThreadEvent>()
+
+    val ordering: List<AtomicThreadEvent>
+        get() = _ordering
+
+    private val constraints = Relation<AtomicThreadEvent> { x, y ->
         when {
             // put wait-request before notify event
             x.label.isRequest && x.label is WaitLabel &&
@@ -353,23 +356,20 @@ class ExecutionOrder private constructor(
         }
     }
 
-    constructor(
-        execution: Execution<AtomicThreadEvent>,
-        memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
-        approximation: Relation<AtomicThreadEvent>,
-    ) : this(execution, memoryAccessEventIndex, approximation, mutableListOf())
-
     override fun invoke(x: AtomicThreadEvent, y: AtomicThreadEvent): Boolean {
         TODO("Not yet implemented")
     }
 
+    fun isConsistent(): Boolean =
+        consistent
+
     override fun compute() {
-        check(ordering.isEmpty())
+        check(_ordering.isEmpty())
         // TODO: although we have to add these additional ordering constraints here,
         //  it is not a completely sound way to enforce additional atomicity constraints;
         //  instead we can ensure additional atomicity constraints
         //  by reordering some events after topological sorting
-        val relation = approximation union additionalOrdering
+        val relation = approximation union constraints
         // TODO: optimization --- we can build graph only for a subset of events, excluding:
         //  - non-blocking request events
         //  - events accessing race-free locations
@@ -381,7 +381,7 @@ class ExecutionOrder private constructor(
             consistent = false
             return
         }
-        this.ordering.addAll(ordering)
+        this._ordering.addAll(ordering)
     }
 
     override fun invalidate() {
@@ -389,7 +389,7 @@ class ExecutionOrder private constructor(
     }
 
     override fun reset() {
-        ordering.clear()
+        _ordering.clear()
         invalidate()
     }
 
