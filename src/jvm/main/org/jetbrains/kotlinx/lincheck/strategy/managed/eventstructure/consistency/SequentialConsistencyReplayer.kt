@@ -27,7 +27,7 @@ import org.jetbrains.kotlinx.lincheck.utils.*
 fun checkByReplaying(
     execution: Execution<HyperThreadEvent>,
     covering: Covering<HyperThreadEvent>
-): SequentialConsistencyVerdict {
+): Inconsistency? {
     // TODO: this is just a DFS search.
     //  In fact, we can generalize this algorithm to
     //  two arbitrary labelled transition systems by taking their product LTS
@@ -40,9 +40,10 @@ fun checkByReplaying(
         while (stack.isNotEmpty()) {
             val state = stack.removeLast()
             if (state.isTerminal) {
-                return SequentialConsistencyWitness.create(
-                    executionOrder = state.history.flatMap { it.events }
-                )
+                return null
+                // return SequentialConsistencyWitness.create(
+                //     executionOrder = state.history.flatMap { it.events }
+                // )
             }
             state.transitions().forEach {
                 val unvisited = visited.add(it)

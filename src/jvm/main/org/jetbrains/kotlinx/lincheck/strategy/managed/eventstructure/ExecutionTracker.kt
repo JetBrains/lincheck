@@ -39,7 +39,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
  *
  * @param E the type of events of the tracked execution.
  */
-interface ExecutionTracker<E : ThreadEvent> {
+interface ExecutionTracker<E : ThreadEvent, X : Execution<E>> {
 
     /**
      * This method is called when a new event is added to the execution.
@@ -55,5 +55,5 @@ interface ExecutionTracker<E : ThreadEvent> {
      *
      * @param execution the execution representing the new set of events after reset.
      */
-    fun onReset(execution: Execution<E>)
+    fun onReset(execution: X)
 }

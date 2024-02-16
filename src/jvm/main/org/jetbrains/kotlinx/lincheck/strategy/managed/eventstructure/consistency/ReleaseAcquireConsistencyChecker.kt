@@ -38,32 +38,32 @@ class ReleaseAcquireConsistencyWitness(
     val writesBefore: WritesBeforeOrder,
 )
 
-class ReleaseAcquireConsistencyChecker(
-    val memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
-) : ConsistencyChecker<AtomicThreadEvent, ReleaseAcquireConsistencyWitness> {
-
-    override fun check(execution: Execution<AtomicThreadEvent>): ConsistencyVerdict<ReleaseAcquireConsistencyWitness> {
-        val rmwChainsStorage = ReadModifyWriteOrder(execution)
-            .apply { compute() }
-        if (!rmwChainsStorage.isConsistent()) {
-            // TODO: should return RMW-atomicity violation instead
-            return ReleaseAcquireInconsistency()
-        }
-        val writesBeforeOrder = WritesBeforeOrder(execution, memoryAccessEventIndex, rmwChainsStorage, causalityOrder)
-            .apply {
-                initialize()
-                compute()
-            }
-        return if (!writesBeforeOrder.isConsistent())
-            ReleaseAcquireInconsistency()
-        else
-            ConsistencyWitness(ReleaseAcquireConsistencyWitness(
-                rmwChainsStorage = rmwChainsStorage,
-                writesBefore = writesBeforeOrder,
-            ))
-    }
-
-}
+// class ReleaseAcquireConsistencyChecker(
+//     val memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
+// ) : ConsistencyChecker<AtomicThreadEvent, ReleaseAcquireConsistencyWitness> {
+//
+//     override fun check(execution: Execution<AtomicThreadEvent>): ConsistencyVerdict<ReleaseAcquireConsistencyWitness> {
+//         val rmwChainsStorage = ReadModifyWriteOrder(execution)
+//             .apply { compute() }
+//         if (!rmwChainsStorage.isConsistent()) {
+//             // TODO: should return RMW-atomicity violation instead
+//             return ReleaseAcquireInconsistency()
+//         }
+//         val writesBeforeOrder = WritesBeforeOrder(execution, memoryAccessEventIndex, rmwChainsStorage, causalityOrder)
+//             .apply {
+//                 initialize()
+//                 compute()
+//             }
+//         return if (!writesBeforeOrder.isConsistent())
+//             ReleaseAcquireInconsistency()
+//         else
+//             ConsistencyWitness(ReleaseAcquireConsistencyWitness(
+//                 rmwChainsStorage = rmwChainsStorage,
+//                 writesBefore = writesBeforeOrder,
+//             ))
+//     }
+//
+// }
 
 class WritesBeforeOrder(
     val execution: Execution<AtomicThreadEvent>,

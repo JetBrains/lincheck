@@ -95,7 +95,7 @@ class EventStructure(
             approximateSequentialConsistency = false
         )
 
-    private val atomicityChecker = AtomicityChecker()
+    // private val atomicityChecker = AtomicityChecker()
 
     private val consistencyChecker = aggregateConsistencyCheckers(
         listOf<IncrementalConsistencyChecker<AtomicThreadEvent, *>>(

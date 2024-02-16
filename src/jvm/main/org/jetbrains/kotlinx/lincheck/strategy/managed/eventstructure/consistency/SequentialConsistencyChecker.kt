@@ -26,33 +26,21 @@ import org.jetbrains.kotlinx.lincheck.utils.*
 import kotlin.collections.*
 
 
-typealias SequentialConsistencyVerdict = ConsistencyVerdict<SequentialConsistencyWitness>
-
-class SequentialConsistencyWitness(
-    val executionOrder: List<AtomicThreadEvent>
-) {
-    companion object {
-        fun create(executionOrder: List<AtomicThreadEvent>): ConsistencyWitness<SequentialConsistencyWitness> {
-            return ConsistencyWitness(SequentialConsistencyWitness(executionOrder))
-        }
-    }
-}
-
 abstract class SequentialConsistencyViolation : Inconsistency()
 
 class SequentialConsistencyChecker(
-    val memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
     val checkReleaseAcquireConsistency: Boolean = true,
     val approximateSequentialConsistency: Boolean = true,
     val computeCoherenceOrdering: Boolean = true,
-) : ConsistencyChecker<AtomicThreadEvent, SequentialConsistencyWitness> {
+) : ConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution> {
 
-    private val releaseAcquireChecker : ReleaseAcquireConsistencyChecker? =
-        if (checkReleaseAcquireConsistency) ReleaseAcquireConsistencyChecker(memoryAccessEventIndex) else null
+    // private val releaseAcquireChecker : ReleaseAcquireConsistencyChecker? =
+    //     if (checkReleaseAcquireConsistency) ReleaseAcquireConsistencyChecker(memoryAccessEventIndex) else null
 
-    override fun check(execution: Execution<AtomicThreadEvent>): SequentialConsistencyVerdict {
+    override fun check(execution: MutableExtendedExecution): Inconsistency? {
         return checkTest(execution)
 
+    /*
         // we will gradually approximate the total sequential execution order of events
         // by a partial order, starting with the partial causality order
         var executionOrderApproximation : Relation<AtomicThreadEvent> = causalityOrder
@@ -97,54 +85,54 @@ class SequentialConsistencyChecker(
         val (aggregated, remapping) = execution.aggregate(ThreadAggregationAlgebra.aggregator())
         // check consistency by trying to replay execution using sequentially consistent abstract machine
         return checkByReplaying(aggregated, covering.aggregate(remapping))
+    */
     }
 
-    private fun checkTest(execution: Execution<AtomicThreadEvent>): SequentialConsistencyVerdict {
-        val extendedExecution = ExtendedExecutionImpl(ResettableExecution(execution.toFrontier().toMutableExecution()))
-        extendedExecution.readModifyWriteOrderComputable.apply {
+    private fun checkTest(execution: MutableExtendedExecution): Inconsistency? {
+        execution.readModifyWriteOrderComputable.apply {
             initialize(); compute()
         }
-        if (!extendedExecution.readModifyWriteOrderComputable.value.isConsistent())
+        if (!execution.readModifyWriteOrderComputable.value.isConsistent())
             return AtomicityViolation()
-        extendedExecution.writesBeforeOrderComputable.apply {
+        execution.writesBeforeOrderComputable.apply {
             initialize(); compute()
         }
-        if (!extendedExecution.writesBeforeOrderComputable.value.isConsistent())
+        if (!execution.writesBeforeOrderComputable.value.isConsistent())
             return ReleaseAcquireInconsistency()
-        extendedExecution.coherenceOrderComputable.apply {
+        execution.coherenceOrderComputable.apply {
             initialize(); compute()
         }
-        if (!extendedExecution.coherenceOrderComputable.value.isConsistent())
+        if (!execution.coherenceOrderComputable.value.isConsistent())
             return SequentialConsistencyCoherenceViolation()
-        val executionOrder = extendedExecution.executionOrderComputable.value.ensure { it.isConsistent() }
+        val executionOrder = execution.executionOrderComputable.value.ensure { it.isConsistent() }
         SequentialConsistencyReplayer(1 + execution.maxThreadID).ensure {
             it.replay(executionOrder.ordering) != null
         }
-        return SequentialConsistencyWitness.create(executionOrder.ordering)
+        return null
     }
 
-    private fun checkByCoherenceOrdering(
-        execution: Execution<AtomicThreadEvent>,
-        executionIndex: AtomicMemoryAccessEventIndex,
-        rmwChainsStorage: ReadModifyWriteOrder,
-        wbRelation: WritesBeforeOrder,
-    ): ConsistencyVerdict<SequentialConsistencyWitness> {
-        val writesOrder = causalityOrder union wbRelation
-        val executionOrderComputable = computable {
-            ExecutionOrder(execution, executionIndex, Relation.empty())
-        }
-        val coherence = CoherenceOrder(execution, executionIndex, rmwChainsStorage, writesOrder,
-                executionOrder = executionOrderComputable
-            )
-            .apply { initialize(); compute() }
-        if (!coherence.isConsistent())
-            return SequentialConsistencyCoherenceViolation()
-        val executionOrder = executionOrderComputable.value.ensure { it.isConsistent() }
-        SequentialConsistencyReplayer(1 + execution.maxThreadID).ensure {
-            it.replay(executionOrder.ordering) != null
-        }
-        return SequentialConsistencyWitness.create(executionOrder.ordering)
-    }
+    // private fun checkByCoherenceOrdering(
+    //     execution: Execution<AtomicThreadEvent>,
+    //     executionIndex: AtomicMemoryAccessEventIndex,
+    //     rmwChainsStorage: ReadModifyWriteOrder,
+    //     wbRelation: WritesBeforeOrder,
+    // ): ConsistencyVerdict<SequentialConsistencyWitness> {
+    //     val writesOrder = causalityOrder union wbRelation
+    //     val executionOrderComputable = computable {
+    //         ExecutionOrder(execution, executionIndex, Relation.empty())
+    //     }
+    //     val coherence = CoherenceOrder(execution, executionIndex, rmwChainsStorage, writesOrder,
+    //             executionOrder = executionOrderComputable
+    //         )
+    //         .apply { initialize(); compute() }
+    //     if (!coherence.isConsistent())
+    //         return SequentialConsistencyCoherenceViolation()
+    //     val executionOrder = executionOrderComputable.value.ensure { it.isConsistent() }
+    //     SequentialConsistencyReplayer(1 + execution.maxThreadID).ensure {
+    //         it.replay(executionOrder.ordering) != null
+    //     }
+    //     return SequentialConsistencyWitness.create(executionOrder.ordering)
+    // }
 
 }
 
@@ -156,100 +144,73 @@ class SequentialConsistencyCoherenceViolation : SequentialConsistencyViolation()
 }
 
 class IncrementalSequentialConsistencyChecker(
-    val memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
+    execution: MutableExtendedExecution,
     checkReleaseAcquireConsistency: Boolean = true,
     approximateSequentialConsistency: Boolean = true
-) : IncrementalConsistencyChecker<AtomicThreadEvent, SequentialConsistencyWitness> {
-
-    private var execution = executionOf<AtomicThreadEvent>()
-
-    private val _executionOrder = mutableListOf<AtomicThreadEvent>()
-
-    val executionOrder: List<AtomicThreadEvent>
-        get() = _executionOrder
-
-    private var executionOrderEnabled = true
-
-    private val lockConsistencyChecker = LockConsistencyChecker()
+) : AbstractIncrementalConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution>(execution) {
 
     private val sequentialConsistencyChecker = SequentialConsistencyChecker(
-        memoryAccessEventIndex,
         checkReleaseAcquireConsistency,
         approximateSequentialConsistency,
     )
 
-    override fun check(): SequentialConsistencyVerdict {
-        // TODO: expensive check???
-        // check(execution.enumerationOrderSortedList() == executionOrder.sorted())
+    override fun doIncrementalCheck(event: AtomicThreadEvent) {
+        val executionOrder = execution.executionOrderComputable.value
+        if (executionOrder.isConsistentExtension(event)) {
+            executionOrder.add(event)
+            return
+        }
+        execution.executionOrderComputable.reset()
+        setUnknownState()
+    }
 
+    override fun doLightweightCheck() {
+        // check by trying to replay execution order
+        val replayer = SequentialConsistencyReplayer(1 + execution.maxThreadID)
+        if (replayer.replay(execution) == null)
+            setUnknownState()
+    }
+
+    override fun doFullCheck() {
         // check locks consistency
-        when (val verdict = lockConsistencyChecker.check(execution)) {
-            is LockConsistencyViolation -> return verdict
-        }
-        // first try to replay according to execution order
-        if (checkByExecutionOrderReplaying()) {
-            return SequentialConsistencyWitness.create(executionOrder)
-        }
-        val verdict = sequentialConsistencyChecker.check(execution)
-        if (verdict is Inconsistency)
-            return verdict
-        check(verdict is ConsistencyWitness)
+        // when (val verdict = lockConsistencyChecker.check(execution)) {
+        //     is LockConsistencyViolation -> return verdict
+        // }
+        inconsistency = sequentialConsistencyChecker.check(execution)
         // TODO: invent a nicer way to handle blocked dangling requests
-        val (events, blockedRequests) = verdict.witness.executionOrder.partition {
-            !execution.isBlockedDanglingRequest(it)
-        }
-        _executionOrder.apply {
-            clear()
-            addAll(events)
-            addAll(blockedRequests)
-        }
-        executionOrderEnabled = true
-        return SequentialConsistencyWitness.create(executionOrder)
+        // val (events, blockedRequests) = executionOrder.partition {
+        //     !execution.isBlockedDanglingRequest(it)
+        // }
+        // _executionOrder.apply {
+        //     clear()
+        //     addAll(events)
+        //     addAll(blockedRequests)
+        // }
     }
 
-    override fun check(event: AtomicThreadEvent): SequentialConsistencyVerdict {
-        if (!executionOrderEnabled)
-            return ConsistencyUnknown
-        if (!event.extendsExecutionOrder()) {
-            _executionOrder.clear()
-            executionOrderEnabled = false
-            return ConsistencyUnknown
-        }
-        _executionOrder.add(event)
-        return SequentialConsistencyWitness.create(executionOrder)
-    }
-
-    override fun reset(execution: Execution<AtomicThreadEvent>) {
-        this.execution = execution
-        _executionOrder.clear()
-        executionOrderEnabled = true
+    override fun doReset() {
+        execution.executionOrderComputable.reset()
         for (event in execution.enumerationOrderSorted()) {
             check(event)
         }
     }
 
-    private fun checkByExecutionOrderReplaying(): Boolean {
-        if (!executionOrderEnabled)
-            return false
-        val replayer = SequentialConsistencyReplayer(1 + execution.maxThreadID)
-        return (replayer.replay(executionOrder) != null)
-    }
+    private fun ExecutionOrder.isConsistentExtension(event: AtomicThreadEvent): Boolean {
+        val last = ordering.lastOrNull()
+        val label = event.label
+        // TODO: for this check to be more robust,
+        //   can we generalize it to work with the arbitrary aggregation algebra?
+        return when {
+            label is ReadAccessLabel && label.isResponse ->
+                // TODO: also check that read reads-from some consistent write:
+                //   e.g. the globally last write, or the last observed write
+                event.isValidResponse(last!!)
 
-    // TODO: can we get rid of this (by ensuring we always replay atomic list of events atomically)?
-    private fun AtomicThreadEvent.extendsExecutionOrder(): Boolean {
-        // TODO: this check should be generalized ---
-        //   it should be derivable from the aggregation algebra
-        if (label is ReadAccessLabel && label.isResponse) {
-            val last = executionOrder.lastOrNull()
-                ?: return false
-            return isValidResponse(last)
+            label is WriteAccessLabel && label.isExclusive ->
+                event.isWritePartOfAtomicUpdate(last!!)
+
+            else -> true
         }
-        if (label is WriteAccessLabel && (label as WriteAccessLabel).isExclusive) {
-            val last = executionOrder.lastOrNull()
-                ?: return false
-            return isWritePartOfAtomicUpdate(last)
-        }
-        return true
     }
 }
 
@@ -361,7 +322,13 @@ class ExecutionOrder(
     }
 
     fun isConsistent(): Boolean =
+        // TODO: embed failure state into ComputableNode state machine?
         consistent
+
+    fun add(event: AtomicThreadEvent) {
+        check(consistent)
+        _ordering.add(event)
+    }
 
     override fun compute() {
         check(_ordering.isEmpty())

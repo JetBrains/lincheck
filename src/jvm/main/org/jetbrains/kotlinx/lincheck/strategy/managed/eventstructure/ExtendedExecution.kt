@@ -81,6 +81,8 @@ interface ExtendedExecution : Execution<AtomicThreadEvent> {
      * @see ExecutionOrder
      */
     val executionOrder: Relation<AtomicThreadEvent>
+
+    val inconsistency: Inconsistency?
 }
 
 /**
@@ -118,6 +120,8 @@ interface MutableExtendedExecution : ExtendedExecution, MutableExecution<AtomicT
      * @see ExecutionFrontier
      */
     fun reset(frontier: ExecutionFrontier<AtomicThreadEvent>)
+
+    fun checkConsistency(): Inconsistency?
 }
 
 fun ExtendedExecution(nThreads: Int): ExtendedExecution =
@@ -207,15 +211,37 @@ fun MutableExtendedExecution(nThreads: Int): MutableExtendedExecution =
 
     override val executionOrder: Relation<AtomicThreadEvent> by executionOrderComputable
 
+    private val consistencyChecker = aggregateConsistencyCheckers(
+        execution = this,
+        listOf<AtomicEventConsistencyChecker>(
+            // atomicityChecker,
+            IncrementalSequentialConsistencyChecker(
+                execution = this,
+                checkReleaseAcquireConsistency = true,
+                approximateSequentialConsistency = false
+            )
+        ),
+        listOf(),
+    )
+
     private val trackers = listOf(
         memoryAccessEventIndex.incrementalTracker(),
-        readModifyWriteOrderComputable.resettingTracker(),
-        writesBeforeOrderComputable.resettingTracker(),
-        coherenceOrderComputable.resettingTracker(),
-        extendedCoherenceComputable.resettingTracker(),
-        sequentialConsistencyOrderComputable.resettingTracker(),
-        executionOrderComputable.resettingTracker(),
+        consistencyChecker.incrementalTracker(),
+
+        // readModifyWriteOrderComputable.resettingTracker(),
+        // writesBeforeOrderComputable.resettingTracker(),
+        // coherenceOrderComputable.resettingTracker(),
+        // extendedCoherenceComputable.resettingTracker(),
+        // sequentialConsistencyOrderComputable.resettingTracker(),
+        // executionOrderComputable.resettingTracker(),
     )
+
+    override val inconsistency: Inconsistency?
+        get() = consistencyChecker.inconsistency
+
+    override fun checkConsistency(): Inconsistency? {
+        return consistencyChecker.check()
+    }
 
     override fun add(event: AtomicThreadEvent) {
         execution.add(event)
@@ -226,7 +252,7 @@ fun MutableExtendedExecution(nThreads: Int): MutableExtendedExecution =
     override fun reset(frontier: ExecutionFrontier<AtomicThreadEvent>) {
         execution.reset(frontier)
         for (tracker in trackers)
-            tracker.onReset(execution)
+            tracker.onReset(this)
     }
 
 }
@@ -258,42 +284,59 @@ fun MutableExtendedExecution(nThreads: Int): MutableExtendedExecution =
 
 }
 
-private fun MutableEventIndex<AtomicThreadEvent, *, *>.incrementalTracker(): ExecutionTracker<AtomicThreadEvent> {
-    return object : ExecutionTracker<AtomicThreadEvent> {
+private typealias ExtendedExecutionTracker = ExecutionTracker<AtomicThreadEvent, MutableExtendedExecution>
+
+private fun MutableEventIndex<AtomicThreadEvent, *, *>.incrementalTracker(): ExtendedExecutionTracker {
+    return object : ExtendedExecutionTracker {
         override fun onAdd(event: AtomicThreadEvent) {
             index(event)
         }
 
-        override fun onReset(execution: Execution<AtomicThreadEvent>) {
+        override fun onReset(execution: MutableExtendedExecution) {
             reset()
             index(execution)
         }
     }
 }
 
-private fun<I> ComputableNode<I>.incrementalTracker(): ExecutionTracker<AtomicThreadEvent>
-    where I : Computable,
-          I : Incremental<AtomicThreadEvent>
-{
-    return object : ExecutionTracker<AtomicThreadEvent> {
+private typealias AtomicEventConsistencyChecker =
+        IncrementalConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution>
+
+private fun AtomicEventConsistencyChecker.incrementalTracker(): ExtendedExecutionTracker {
+    return object : ExtendedExecutionTracker {
         override fun onAdd(event: AtomicThreadEvent) {
-            if (computed) value.add(event)
+            check(event)
         }
 
-        override fun onReset(execution: Execution<AtomicThreadEvent>) {
-            reset()
+        override fun onReset(execution: MutableExtendedExecution) {
+            reset(execution)
         }
     }
 }
 
-private fun ComputableNode<*>.resettingTracker(): ExecutionTracker<AtomicThreadEvent> {
-    return object : ExecutionTracker<AtomicThreadEvent> {
-        override fun onAdd(event: AtomicThreadEvent) {
-            reset()
-        }
-
-        override fun onReset(execution: Execution<AtomicThreadEvent>) {
-            reset()
-        }
-    }
-}
+// private fun<I> ComputableNode<I>.incrementalTracker(): ExecutionTracker<AtomicThreadEvent>
+//     where I : Computable,
+//           I : Incremental<AtomicThreadEvent>
+// {
+//     return object : ExecutionTracker<AtomicThreadEvent> {
+//         override fun onAdd(event: AtomicThreadEvent) {
+//             if (computed) value.add(event)
+//         }
+//
+//         override fun onReset(execution: Execution<AtomicThreadEvent>) {
+//             reset()
+//         }
+//     }
+// }
+//
+// private fun ComputableNode<*>.resettingTracker(): ExecutionTracker<AtomicThreadEvent> {
+//     return object : ExecutionTracker<AtomicThreadEvent> {
+//         override fun onAdd(event: AtomicThreadEvent) {
+//             reset()
+//         }
+//
+//         override fun onReset(execution: Execution<AtomicThreadEvent>) {
+//             reset()
+//         }
+//     }
+// }
