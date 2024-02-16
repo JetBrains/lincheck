@@ -92,7 +92,7 @@ class EventStructureStrategy(
         if (!eventStructure.startNextExploration())
             return null
         var result: InvocationResult? = null
-        var inconsistency: Inconsistency? = eventStructure.detectedInconsistency
+        var inconsistency: Inconsistency? = eventStructure.checkConsistency()
         if (inconsistency == null) {
             result = runInvocation()
             // if invocation was aborted, we also abort the current execution inside event structure
@@ -101,7 +101,7 @@ class EventStructureStrategy(
             }
             // patch clocks
             if (result is CompletedInvocationResult) {
-                patchResultsClock(eventStructure.currentExecution, result.results)
+                patchResultsClock(eventStructure.execution, result.results)
             }
             inconsistency = when (result) {
                 is InconsistentInvocationResult -> result.inconsistency
@@ -352,7 +352,7 @@ class EventStructureStrategy(
     override fun isCoroutineResumed(iThread: Int, iActor: Int): Boolean {
         if (!super.isCoroutineResumed(iThread, iActor))
             return false
-        val resumeEvent = eventStructure.currentExecution.find {
+        val resumeEvent = eventStructure.execution.find {
             it.label.satisfies<CoroutineResumeLabel> { threadId == iThread && actorId == iActor }
         }
         return (resumeEvent != null)
@@ -454,14 +454,14 @@ private class EventStructureMemoryTracker(
 
     override fun dumpMemory() {
         val locations = mutableSetOf<MemoryLocation>()
-        for (event in eventStructure.currentExecution) {
+        for (event in eventStructure.execution) {
             val location = (event.label as? MemoryAccessLabel)?.location
             if (location != null) {
                 locations.add(location)
             }
         }
         for (location in locations) {
-            val finalWrites = eventStructure.calculateRacyWrites(location, eventStructure.currentExecution.toFrontier())
+            val finalWrites = eventStructure.calculateRacyWrites(location, eventStructure.execution.toFrontier())
             // we choose one of the racy final writes non-deterministically and dump it to the memory
             val write = finalWrites.firstOrNull() ?: continue
             val label = write.label.asWriteAccessLabel(location).ensureNotNull()

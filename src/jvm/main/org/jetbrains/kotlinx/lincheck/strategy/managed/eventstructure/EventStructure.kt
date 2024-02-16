@@ -44,8 +44,6 @@ class EventStructure(
 
     val root: AtomicThreadEvent
 
-    // TODO: this pattern is covered by explicit backing fields KEEP
-    //   https://github.com/Kotlin/KEEP/issues/278
     private val _events = sortedMutableListOf<BacktrackableEvent>()
 
     /**
@@ -56,12 +54,10 @@ class EventStructure(
     lateinit var currentExplorationRoot: Event
         private set
 
-    // TODO: this pattern is covered by explicit backing fields KEEP
-    //   https://github.com/Kotlin/KEEP/issues/278
-    private var _currentExecution = MutableExecution<AtomicThreadEvent>(this.nThreads)
+    private var _execution = MutableExtendedExecution(this.nThreads)
 
-    val currentExecution: Execution<AtomicThreadEvent>
-        get() = _currentExecution
+    val execution: ExtendedExecution
+        get() = _execution
 
     private var playedFrontier = MutableExecutionFrontier<AtomicThreadEvent>(this.nThreads)
 
@@ -79,31 +75,7 @@ class EventStructure(
 
     private var nextObjectID = 1 + NULL_OBJECT_ID.id
 
-    private val localWrites = mutableMapOf<MemoryLocation, AtomicThreadEvent>()
-
-    private val memoryAccessEventIndex = MutableAtomicMemoryAccessEventIndex()
-
     private val delayedConsistencyCheckBuffer = mutableListOf<AtomicThreadEvent>()
-
-    var detectedInconsistency: Inconsistency? = null
-        private set
-
-    private val sequentialConsistencyChecker =
-        IncrementalSequentialConsistencyChecker(
-            memoryAccessEventIndex,
-            checkReleaseAcquireConsistency = true,
-            approximateSequentialConsistency = false
-        )
-
-    // private val atomicityChecker = AtomicityChecker()
-
-    private val consistencyChecker = aggregateConsistencyCheckers(
-        listOf<IncrementalConsistencyChecker<AtomicThreadEvent, *>>(
-            // atomicityChecker,
-            sequentialConsistencyChecker
-        ),
-        listOf(),
-    )
 
     init {
         root = addRootEvent()
@@ -121,7 +93,7 @@ class EventStructure(
 
     fun initializeExploration() {
         playedFrontier = MutableExecutionFrontier(nThreads)
-        playedFrontier[initThreadId] = currentExecution[initThreadId]!!.last()
+        playedFrontier[initThreadId] = execution[initThreadId]!!.last()
         replayer.currentEvent.ensure {
             it != null && it.label is InitializationLabel
         }
@@ -138,7 +110,7 @@ class EventStructure(
                 continue
             if (!(event.label.isRequest && event.label.isBlocking))
                 continue
-            val response = currentExecution[tid, event.threadPosition + 1]
+            val response = execution[tid, event.threadPosition + 1]
                 ?: continue
             check(response.label.isResponse)
             // skip the response if it does not depend on any re-played event
@@ -146,9 +118,7 @@ class EventStructure(
                 continue
             playedFrontier.update(response)
         }
-        _currentExecution = playedFrontier.toMutableExecution()
-        // TODO: make sure to reset the state of consistency checkers
-        //   and other data structures depending on the execution
+        _execution.reset(playedFrontier)
     }
 
     private fun rollbackToEvent(predicate: (BacktrackableEvent) -> Boolean): BacktrackableEvent? {
@@ -159,30 +129,20 @@ class EventStructure(
 
     private fun resetExploration(event: BacktrackableEvent) {
         check(event.label is InitializationLabel || event.label.isResponse)
-        // reset consistency check state
-        detectedInconsistency = null
         // reset dangling events
         danglingEvents.clear()
         // set current exploration root
         currentExplorationRoot = event
         // reset current execution
-        _currentExecution = event.frontier.toMutableExecution()
+        _execution.reset(event.frontier)
         // copy pinned events and pin current re-exploration root event
         val pinnedEvents = event.pinnedEvents.copy()
             .apply { set(event.threadId, event) }
-        // reset the internal state of incremental checkers
-        consistencyChecker.reset(currentExecution)
         // add new event to current execution
-        _currentExecution.add(event)
-        // reset the indices
-        memoryAccessEventIndex.apply { reset(); index(currentExecution) }
-        // check new event with the incremental consistency checkers
-        checkConsistencyIncrementally(event)
+        _execution.add(event)
         // do the same for blocked requests
         for (blockedRequest in event.blockedRequests) {
-            _currentExecution.add(blockedRequest)
-            memoryAccessEventIndex.index(blockedRequest)
-            checkConsistencyIncrementally(blockedRequest)
+            _execution.add(blockedRequest)
             // additionally, pin blocked requests if all their predecessors are also blocked ...
             if (blockedRequest.parent == pinnedEvents[blockedRequest.threadId]) {
                 pinnedEvents[blockedRequest.threadId] = blockedRequest
@@ -192,33 +152,22 @@ class EventStructure(
         }
         // set pinned events
         this.pinnedEvents = pinnedEvents.ensure {
-            currentExecution.containsAll(it.events)
+            execution.containsAll(it.events)
         }
-        // check the full consistency of the whole execution
-        checkConsistency()
+        // check consistency of the whole execution
+        _execution.checkConsistency()
         // set the replayer state
-        replayer = Replayer(sequentialConsistencyChecker.executionOrder)
+        val replayOrdering = _execution.executionOrderComputable.value.ordering
+        replayer = Replayer(replayOrdering)
         // reset object indices --- retain only external events
         objectRegistry.retain { it.isExternal }
         // reset state of other auxiliary structures
         delayedConsistencyCheckBuffer.clear()
-        localWrites.clear()
     }
 
     fun checkConsistency(): Inconsistency? {
-        // TODO: set suddenInvocationResult instead of `detectedInconsistency`
-        if (detectedInconsistency == null) {
-            detectedInconsistency = (consistencyChecker.check() as? Inconsistency)
-        }
-        return detectedInconsistency
-    }
-
-    private fun checkConsistencyIncrementally(event: AtomicThreadEvent): Inconsistency? {
-        // TODO: set suddenInvocationResult instead of `detectedInconsistency`
-        if (detectedInconsistency == null) {
-            detectedInconsistency = (consistencyChecker.check(event) as? Inconsistency)
-        }
-        return detectedInconsistency
+        // TODO: set suddenInvocationResult?
+        return _execution.checkConsistency()
     }
 
     private class Replayer(private val executionOrder: List<ThreadEvent>) {
@@ -243,8 +192,8 @@ class EventStructure(
 
     fun inReplayPhase(iThread: Int): Boolean {
         val frontEvent = playedFrontier[iThread]
-            ?.ensure { it in _currentExecution }
-        return (frontEvent != currentExecution.lastEvent(iThread))
+            ?.ensure { it in _execution }
+        return (frontEvent != execution.lastEvent(iThread))
     }
 
     // should only be called in replay phase!
@@ -269,7 +218,7 @@ class EventStructure(
     // TODO: use calculateFrontier
     private fun VectorClock.toMutableFrontier(): MutableExecutionFrontier<AtomicThreadEvent> =
         (0 until nThreads).map { tid ->
-            tid to currentExecution[tid, this[tid]]
+            tid to execution[tid, this[tid]]
         }.let {
             mutableExecutionFrontierOf(*it.toTypedArray())
         }
@@ -350,7 +299,7 @@ class EventStructure(
         val source = (label as? WriteAccessLabel)?.writeValue?.let {
             objectRegistry[it]?.allocation
         }
-        val frontier = currentExecution.toMutableFrontier().apply {
+        val frontier = execution.toMutableFrontier().apply {
             cut(conflicts)
             // for already unblocked dangling requests,
             // also put their responses into the frontier
@@ -404,14 +353,14 @@ class EventStructure(
         val position = parent?.let { it.threadPosition + 1 } ?: 0
         val conflicts = mutableListOf<AtomicThreadEvent>()
         // if the current execution already has an event in given position --- then it is conflict
-        currentExecution[iThread, position]?.also { conflicts.add(it) }
+        execution[iThread, position]?.also { conflicts.add(it) }
         // handle label specific cases
         // TODO: unify this logic for various kinds of labels?
         when {
             // lock-response synchronizing with our unlock is conflict
             label is LockLabel && label.isResponse && !label.isReentry -> run {
                 val unlock = dependencies.first { it.label.asUnlockLabel(label.mutex) != null }
-                currentExecution.forEach { event ->
+                execution.forEach { event ->
                     if (event.label.satisfies<LockLabel> { isResponse && mutex == label.mutex }
                         && event.locksFrom == unlock) {
                         conflicts.add(event)
@@ -423,7 +372,7 @@ class EventStructure(
                 val notify = dependencies.first { it.label is NotifyLabel }
                 if ((notify.label as NotifyLabel).isBroadcast)
                     return@run
-                currentExecution.forEach { event ->
+                execution.forEach { event ->
                     if (event.label.satisfies<WaitLabel> { isResponse && mutex == label.mutex }
                         && event.notifiedBy == notify) {
                         conflicts.add(event)
@@ -444,7 +393,7 @@ class EventStructure(
         val isReplayedEvent = inReplayPhase(event.threadId)
         // Update current execution and replayed frontier.
         if (!isReplayedEvent) {
-            _currentExecution.add(event)
+            _execution.add(event)
         }
         playedFrontier.update(event)
         // Unmark dangling request if its response was added.
@@ -467,20 +416,17 @@ class EventStructure(
                 if (delayedEvent.label.isSend) {
                     addSynchronizedEvents(delayedEvent)
                 }
-                checkConsistencyIncrementally(delayedEvent)
             }
             delayedConsistencyCheckBuffer.clear()
             return
         }
         // If we are not in the replay phase and the newly added event is not replayed, then proceed as usual.
-        // Index the new event.
-        memoryAccessEventIndex.index(event)
         // Add synchronized events.
         if (event.label.isSend) {
             addSynchronizedEvents(event)
         }
         // Check consistency of the new event.
-        val inconsistency = checkConsistencyIncrementally(event)
+        val inconsistency = execution.inconsistency
         if (inconsistency != null) {
             reportInconsistencyCallback(inconsistency)
         }
@@ -535,11 +481,11 @@ class EventStructure(
         return when {
             // write can synchronize with read-request events
             label is WriteAccessLabel ->
-                memoryAccessEventIndex.getReadRequests(label.location).asSequence()
+                execution.memoryAccessEventIndex.getReadRequests(label.location).asSequence()
 
             // read-request can synchronize only with write events
             label is ReadAccessLabel && label.isRequest ->
-                memoryAccessEventIndex.getWrites(label.location).asSequence()
+                execution.memoryAccessEventIndex.getWrites(label.location).asSequence()
 
             // read-response cannot synchronize with anything
             label is ReadAccessLabel && label.isResponse ->
@@ -549,7 +495,7 @@ class EventStructure(
             label is RandomLabel -> sequenceOf()
 
             // otherwise we pessimistically assume that any event can potentially synchronize
-            else -> currentExecution.asSequence()
+            else -> execution.asSequence()
         }
     }
 
@@ -558,7 +504,7 @@ class EventStructure(
         // consider all the candidates and apply additional filters
         val candidates = synchronizationCandidates(label)
             // take only the events from the current execution
-            .filter { it in currentExecution }
+            .filter { it in execution }
             // for a send event we additionally filter out ...
             .runIf(event.label.isSend) {
                 filter {
@@ -580,12 +526,12 @@ class EventStructure(
             label is ReadAccessLabel && label.isRequest -> {
                 if (label.objID != NULL_OBJECT_ID && label.objID != STATIC_OBJECT_ID) {
                     // TODO: do we need the previous check?
-                    if (memoryAccessEventIndex.isRaceFree(label.location)) {
-                        val lastWrite = memoryAccessEventIndex.getLastWrite(label.location)!!
+                    if (execution.memoryAccessEventIndex.isRaceFree(label.location)) {
+                        val lastWrite = execution.memoryAccessEventIndex.getLastWrite(label.location)!!
                         return sequenceOf(lastWrite)
                     }
                 }
-                val threadReads = currentExecution[event.threadId]!!.filter {
+                val threadReads = execution[event.threadId]!!.filter {
                     it.label.isResponse && (it.label as? ReadAccessLabel)?.location == label.location
                 }
                 val lastSeenWrite = threadReads.lastOrNull()?.let { (it as AbstractAtomicThreadEvent).readsFrom }
@@ -604,7 +550,7 @@ class EventStructure(
             label is WriteAccessLabel -> {
                 if (label.objID != NULL_OBJECT_ID && label.objID != STATIC_OBJECT_ID) {
                     // TODO: do we need the previous check?
-                    if (memoryAccessEventIndex.isReadWriteRaceFree(label.location)) {
+                    if (execution.memoryAccessEventIndex.isReadWriteRaceFree(label.location)) {
                         return sequenceOf()
                     }
                 }
@@ -820,7 +766,7 @@ class EventStructure(
 
     fun isBlockedDanglingRequest(request: AtomicThreadEvent): Boolean {
         require(request.label.isRequest && request.label.isBlocking)
-        return currentExecution.isBlockedDanglingRequest(request)
+        return execution.isBlockedDanglingRequest(request)
     }
 
     fun isBlockedAwaitingRequest(request: AtomicThreadEvent): Boolean {
@@ -1116,7 +1062,7 @@ class EventStructure(
     ): ExecutionFrontier<AtomicThreadEvent> =
         observation.threadMap.map { (tid, event) ->
             val lastWrite = event
-                ?.ensure { it in currentExecution }
+                ?.ensure { it in execution }
                 ?.pred(inclusive = true) {
                     it.label.asMemoryAccessLabel(location)?.takeIf { label -> label.isWrite } != null
                 }

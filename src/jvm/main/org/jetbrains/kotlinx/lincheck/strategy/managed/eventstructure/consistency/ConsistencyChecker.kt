@@ -143,6 +143,8 @@ abstract class AbstractIncrementalConsistencyChecker<E : ThreadEvent, X : Execut
 
     final override fun reset(execution: X) {
         this.execution = execution
+        inconsistency = null
+        consistent = true
         doReset()
     }
 
