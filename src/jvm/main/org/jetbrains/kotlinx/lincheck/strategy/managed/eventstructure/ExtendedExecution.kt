@@ -202,8 +202,25 @@ fun MutableExtendedExecution(nThreads: Int): MutableExtendedExecution =
 
     override val executionOrder: Relation<AtomicThreadEvent> by executionOrderComputable
 
+    private val trackers = listOf(
+        readModifyWriteOrderComputable.resettingTracker(),
+        writesBeforeOrderComputable.resettingTracker(),
+        coherenceOrderComputable.resettingTracker(),
+        extendedCoherenceComputable.resettingTracker(),
+        sequentialConsistencyOrderComputable.resettingTracker(),
+        executionOrderComputable.resettingTracker(),
+    )
+
+    override fun add(event: AtomicThreadEvent) {
+        execution.add(event)
+        for (tracker in trackers)
+            tracker.onAdd(event)
+    }
+
     override fun reset(frontier: ExecutionFrontier<AtomicThreadEvent>) {
         execution.reset(frontier)
+        for (tracker in trackers)
+            tracker.onReset(execution)
     }
 
 }
@@ -233,4 +250,44 @@ fun MutableExtendedExecution(nThreads: Int): MutableExtendedExecution =
         execution = frontier.toMutableExecution()
     }
 
+}
+
+private fun MutableEventIndex<AtomicThreadEvent, *, *>.incrementalTracker(): ExecutionTracker<AtomicThreadEvent> {
+    return object : ExecutionTracker<AtomicThreadEvent> {
+        override fun onAdd(event: AtomicThreadEvent) {
+            index(event)
+        }
+
+        override fun onReset(execution: Execution<AtomicThreadEvent>) {
+            reset()
+            index(execution)
+        }
+    }
+}
+
+private fun<I> ComputableNode<I>.incrementalTracker(): ExecutionTracker<AtomicThreadEvent>
+    where I : Computable,
+          I : Incremental<AtomicThreadEvent>
+{
+    return object : ExecutionTracker<AtomicThreadEvent> {
+        override fun onAdd(event: AtomicThreadEvent) {
+            if (computed) value.add(event)
+        }
+
+        override fun onReset(execution: Execution<AtomicThreadEvent>) {
+            reset()
+        }
+    }
+}
+
+private fun ComputableNode<*>.resettingTracker(): ExecutionTracker<AtomicThreadEvent> {
+    return object : ExecutionTracker<AtomicThreadEvent> {
+        override fun onAdd(event: AtomicThreadEvent) {
+            reset()
+        }
+
+        override fun onReset(execution: Execution<AtomicThreadEvent>) {
+            reset()
+        }
+    }
 }

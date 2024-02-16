@@ -29,6 +29,10 @@ interface Computable {
     fun reset()
 }
 
+interface Incremental<T> {
+    fun add(element: T)
+}
+
 fun<T : Computable> computable(builder: () -> T) =
     ComputableNode(builder)
 
@@ -65,13 +69,13 @@ class ComputableNode<T : Computable>(val builder: () -> T) : Computable {
 
     private var state = State.UNSET
 
-    private val unset: Boolean
+    val unset: Boolean
         get() = (state.ordinal == State.UNSET.ordinal)
 
-    private val initialized: Boolean
+    val initialized: Boolean
         get() = (state.ordinal >= State.INITIALIZED.ordinal)
 
-    private val computed: Boolean
+    val computed: Boolean
         get() = (state.ordinal >= State.COMPUTED.ordinal)
 
     override fun initialize() {
