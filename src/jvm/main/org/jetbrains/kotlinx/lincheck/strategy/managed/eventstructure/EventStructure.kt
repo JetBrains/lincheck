@@ -81,7 +81,7 @@ class EventStructure(
 
     private val localWrites = mutableMapOf<MemoryLocation, AtomicThreadEvent>()
 
-    private val memoryAccessEventIndex = MutableAtomicMemoryAccessEventIndex(currentExecution)
+    private val memoryAccessEventIndex = MutableAtomicMemoryAccessEventIndex()
 
     private val delayedConsistencyCheckBuffer = mutableListOf<AtomicThreadEvent>()
 

@@ -34,6 +34,13 @@ import org.jetbrains.kotlinx.lincheck.utils.*
 interface ExtendedExecution : Execution<AtomicThreadEvent> {
 
     /**
+     * Index for memory access events in the extended execution.
+     *
+     * @see AtomicMemoryAccessEventIndex
+     */
+    val memoryAccessEventIndex : AtomicMemoryAccessEventIndex
+
+    /**
      * The read-modify-write order of the execution.
      *
      * @see ReadModifyWriteOrder
@@ -86,6 +93,8 @@ interface ExtendedExecution : Execution<AtomicThreadEvent> {
  */
 interface MutableExtendedExecution : ExtendedExecution, MutableExecution<AtomicThreadEvent> {
 
+    override val memoryAccessEventIndex: MutableAtomicMemoryAccessEventIndex
+
     val readModifyWriteOrderComputable: ComputableNode<ReadModifyWriteOrder>
 
     val writesBeforeOrderComputable: ComputableNode<WritesBeforeOrder>
@@ -122,7 +131,8 @@ fun MutableExtendedExecution(nThreads: Int): MutableExtendedExecution =
     val execution: ResettableExecution
 ) : MutableExtendedExecution, MutableExecution<AtomicThreadEvent> by execution {
 
-    private val memoryAccessEventIndexComputable = computable { MutableAtomicMemoryAccessEventIndex(execution) }
+    override val memoryAccessEventIndex =
+        MutableAtomicMemoryAccessEventIndex().apply { index(execution) }
 
     override val readModifyWriteOrderComputable = computable { ReadModifyWriteOrder(execution) }
 
@@ -131,12 +141,11 @@ fun MutableExtendedExecution(nThreads: Int): MutableExtendedExecution =
     override val writesBeforeOrderComputable = computable {
             WritesBeforeOrder(
                 execution,
-                memoryAccessEventIndexComputable.value,
+                memoryAccessEventIndex,
                 readModifyWriteOrderComputable.value,
                 causalityOrder
             )
         }
-        .dependsOn(memoryAccessEventIndexComputable)
         .dependsOn(readModifyWriteOrderComputable, soft = true, invalidating = true)
 
     override val writesBeforeOrder: Relation<AtomicThreadEvent> by writesBeforeOrderComputable
@@ -144,12 +153,11 @@ fun MutableExtendedExecution(nThreads: Int): MutableExtendedExecution =
     override val coherenceOrderComputable = computable {
             CoherenceOrder(
                 execution,
-                memoryAccessEventIndexComputable.value,
+                memoryAccessEventIndex,
                 readModifyWriteOrderComputable.value,
                 causalityOrder union writesBeforeOrderComputable.value, // TODO: add eco or sc?
             )
         }
-        .dependsOn(memoryAccessEventIndexComputable)
         .dependsOn(readModifyWriteOrderComputable, soft = true, invalidating = true)
         .dependsOn(writesBeforeOrderComputable, soft = true, invalidating = true)
 
@@ -158,11 +166,10 @@ fun MutableExtendedExecution(nThreads: Int): MutableExtendedExecution =
     override val extendedCoherenceComputable = computable {
             ExtendedCoherenceOrder(
                 execution,
-                memoryAccessEventIndexComputable.value,
+                memoryAccessEventIndex,
                 causalityOrder union writesBeforeOrderComputable.value // TODO: add coherence
             )
         }
-        .dependsOn(memoryAccessEventIndexComputable)
         .dependsOn(writesBeforeOrderComputable, soft = true, invalidating = true)
         .apply {
             // add reference to coherence order, so once it is computed
@@ -175,12 +182,11 @@ fun MutableExtendedExecution(nThreads: Int): MutableExtendedExecution =
     override val sequentialConsistencyOrderComputable = computable {
             SequentialConsistencyOrder(
                 execution,
-                memoryAccessEventIndexComputable.value,
+                memoryAccessEventIndex,
                 causalityOrder union extendedCoherenceComputable.value,
                 // TODO: refine eco order after sc order computation (?)
             )
         }
-        .dependsOn(memoryAccessEventIndexComputable)
         .dependsOn(extendedCoherenceComputable, soft = true, invalidating = true)
 
     override val sequentialConsistencyOrder: Relation<AtomicThreadEvent> by sequentialConsistencyOrderComputable
@@ -188,11 +194,10 @@ fun MutableExtendedExecution(nThreads: Int): MutableExtendedExecution =
     override val executionOrderComputable = computable {
             ExecutionOrder(
                 execution,
-                memoryAccessEventIndexComputable.value,
+                memoryAccessEventIndex,
                 causalityOrder union extendedCoherence, // TODO: add sc order
             )
         }
-        .dependsOn(memoryAccessEventIndexComputable)
         .dependsOn(extendedCoherenceComputable, soft = true, invalidating = true)
         .apply {
             // add reference to coherence order, so once it is computed
@@ -203,6 +208,7 @@ fun MutableExtendedExecution(nThreads: Int): MutableExtendedExecution =
     override val executionOrder: Relation<AtomicThreadEvent> by executionOrderComputable
 
     private val trackers = listOf(
+        memoryAccessEventIndex.incrementalTracker(),
         readModifyWriteOrderComputable.resettingTracker(),
         writesBeforeOrderComputable.resettingTracker(),
         coherenceOrderComputable.resettingTracker(),

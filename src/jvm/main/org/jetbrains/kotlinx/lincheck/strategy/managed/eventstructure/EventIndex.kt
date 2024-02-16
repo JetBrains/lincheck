@@ -152,8 +152,7 @@ interface AtomicMemoryAccessEventIndex : EventIndex<AtomicThreadEvent, AtomicMem
 
 interface MutableAtomicMemoryAccessEventIndex :
     AtomicMemoryAccessEventIndex,
-    MutableEventIndex<AtomicThreadEvent, AtomicMemoryAccessCategory, MemoryLocation>,
-    Computable
+    MutableEventIndex<AtomicThreadEvent, AtomicMemoryAccessCategory, MemoryLocation>
 
 val AtomicMemoryAccessEventIndex.locations: Set<MemoryLocation>
     get() = locationInfo.keys
@@ -174,19 +173,16 @@ fun AtomicMemoryAccessEventIndex.getLastWrite(location: MemoryLocation): AtomicT
     getWrites(location).lastOrNull()
 
 
-fun AtomicMemoryAccessEventIndex(execution: Execution<AtomicThreadEvent>): AtomicMemoryAccessEventIndex =
-    MutableAtomicMemoryAccessEventIndex(execution)
+fun AtomicMemoryAccessEventIndex(): AtomicMemoryAccessEventIndex =
+    MutableAtomicMemoryAccessEventIndex()
 
-fun MutableAtomicMemoryAccessEventIndex(execution: Execution<AtomicThreadEvent>): MutableAtomicMemoryAccessEventIndex =
-    MutableAtomicMemoryAccessEventIndexImpl(execution)
+fun MutableAtomicMemoryAccessEventIndex(): MutableAtomicMemoryAccessEventIndex =
+    MutableAtomicMemoryAccessEventIndexImpl()
 
 typealias AtomicMemoryAccessEventClassifier =
         EventIndexClassifier<AtomicThreadEvent, AtomicMemoryAccessCategory, MemoryLocation>
 
-private class MutableAtomicMemoryAccessEventIndexImpl(
-    // TODO: remove it once we will have incremental index
-    val execution: Execution<AtomicThreadEvent>
-) : MutableAtomicMemoryAccessEventIndex {
+private class MutableAtomicMemoryAccessEventIndexImpl : MutableAtomicMemoryAccessEventIndex {
 
     private data class LocationInfoData(
         override var isReadWriteRaceFree: Boolean,
@@ -282,10 +278,6 @@ private class MutableAtomicMemoryAccessEventIndexImpl(
 
     override fun enumerator(category: AtomicMemoryAccessCategory, key: MemoryLocation): Enumerator<AtomicThreadEvent>? =
         index.enumerator(category, key)
-
-    override fun compute() {
-        index(execution)
-    }
 
     override fun reset() {
         _locationInfo.clear()
