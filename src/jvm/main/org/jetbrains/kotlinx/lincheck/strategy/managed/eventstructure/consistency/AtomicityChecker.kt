@@ -27,35 +27,34 @@ import org.jetbrains.kotlinx.lincheck.utils.*
 // TODO: override toString()
 class AtomicityViolation(/*val write1: Event, val write2: Event*/) : Inconsistency()
 
-// class AtomicityChecker : IncrementalConsistencyChecker<AtomicThreadEvent, Unit> {
-//
-//     private var execution: Execution<AtomicThreadEvent> = executionOf()
-//
-//     override fun check(event: AtomicThreadEvent): ConsistencyVerdict<Unit> {
-//         val writeLabel = event.label.refine<WriteAccessLabel> { isExclusive }
-//             ?: return ConsistencyWitness(Unit)
-//         val location = writeLabel.location
-//         val readFrom = event.exclusiveReadPart.readsFrom
-//         val other = execution.find { other ->
-//             other != event && other.label.satisfies<WriteAccessLabel> {
-//                 isExclusive && this.location == location && other.exclusiveReadPart.readsFrom == readFrom
-//             }
-//         }
-//         return if (other != null)
-//             AtomicityViolation(/*other, event*/)
-//         else
-//             ConsistencyWitness(Unit)
-//     }
-//
-//     override fun check(): ConsistencyVerdict<Unit> {
-//         return ConsistencyWitness(Unit)
-//     }
-//
-//     override fun reset(execution: Execution<AtomicThreadEvent>) {
-//         this.execution = execution
-//     }
-//
-// }
+class AtomicityChecker(execution: MutableExtendedExecution) :
+    AbstractIncrementalConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution>(execution) {
+
+    override fun doIncrementalCheck(event: AtomicThreadEvent) {
+        val writeLabel = event.label.refine<WriteAccessLabel> { isExclusive }
+            ?: return
+        val location = writeLabel.location
+        val readFrom = event.exclusiveReadPart.readsFrom
+        val other = execution.find { other ->
+            other != event && other.label.satisfies<WriteAccessLabel> {
+                isExclusive && this.location == location && other.exclusiveReadPart.readsFrom == readFrom
+            }
+        }
+        if (other != null)
+            inconsistency = AtomicityViolation(/*other, event*/)
+    }
+
+    override fun doFullCheck() {
+        // the atomicity checker is fully incremental,
+        // it can detect inconsistencies precisely upon each event addition;
+        // thus we should not reach this point
+        // TODO: make a IncrementalConsistencyChecker subclass with this invariant
+        throw IllegalStateException()
+    }
+
+    override fun doReset() {}
+
+}
 
 typealias ReadModifyWriteChain = List<AtomicThreadEvent>
 typealias MutableReadModifyWriteChain = MutableList<AtomicThreadEvent>

@@ -155,20 +155,21 @@ class IncrementalSequentialConsistencyChecker(
     )
 
     override fun doIncrementalCheck(event: AtomicThreadEvent) {
+        check(execution.executionOrderComputable.computed)
         val executionOrder = execution.executionOrderComputable.value
         if (executionOrder.isConsistentExtension(event)) {
             executionOrder.add(event)
             return
         }
-        execution.executionOrderComputable.reset()
-        setUnknownState()
+        resetExecutionOrder()
     }
 
     override fun doLightweightCheck() {
+        check(execution.executionOrderComputable.computed)
         // check by trying to replay execution order
         val replayer = SequentialConsistencyReplayer(1 + execution.maxThreadID)
         if (replayer.replay(execution) == null)
-            setUnknownState()
+            resetExecutionOrder()
     }
 
     override fun doFullCheck() {
@@ -189,10 +190,17 @@ class IncrementalSequentialConsistencyChecker(
     }
 
     override fun doReset() {
-        execution.executionOrderComputable.reset()
+        execution.executionOrderComputable.apply {
+            reset(); setComputed()
+        }
         for (event in execution.enumerationOrderSorted()) {
             check(event)
         }
+    }
+
+    private fun resetExecutionOrder() {
+        execution.executionOrderComputable.reset()
+        setUnknownState()
     }
 
     private fun ExecutionOrder.isConsistentExtension(event: AtomicThreadEvent): Boolean {

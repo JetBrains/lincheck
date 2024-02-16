@@ -214,7 +214,8 @@ fun MutableExtendedExecution(nThreads: Int): MutableExtendedExecution =
     private val consistencyChecker = aggregateConsistencyCheckers(
         execution = this,
         listOf<AtomicEventConsistencyChecker>(
-            // atomicityChecker,
+            AtomicityChecker(execution = this),
+
             IncrementalSequentialConsistencyChecker(
                 execution = this,
                 checkReleaseAcquireConsistency = true,

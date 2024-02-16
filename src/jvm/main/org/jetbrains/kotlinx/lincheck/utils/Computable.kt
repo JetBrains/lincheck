@@ -126,10 +126,14 @@ class ComputableNode<T : Computable>(val builder: () -> T) : Computable {
         state = State.UNSET
     }
 
-    fun setComputed(value: T) {
-        this._value = value
+    fun setComputed() {
         state = State.COMPUTED
         invalidateSubscribers()
+    }
+
+    fun setComputed(value: T) {
+        this._value = value
+        setComputed()
     }
 
     fun addDependency(dependency: ComputableNode<*>,

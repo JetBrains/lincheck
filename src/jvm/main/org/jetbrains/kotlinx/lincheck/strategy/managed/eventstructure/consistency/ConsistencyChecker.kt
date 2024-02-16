@@ -93,12 +93,16 @@ abstract class AbstractIncrementalConsistencyChecker<E : ThreadEvent, X : Execut
     var inconsistency: Inconsistency? = null
         protected set
 
-    private var consistent = true
+    private var consistent = false
 
     final override val state: ConsistencyCheckerState get() = when {
         consistent -> ConsistencyCheckerState.Consistent
         inconsistency != null -> ConsistencyCheckerState.Inconsistent
         else -> ConsistencyCheckerState.Unknown
+    }
+
+    init {
+        check(state == ConsistencyCheckerState.Unknown)
     }
 
     protected fun setUnknownState() {
