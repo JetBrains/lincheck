@@ -149,6 +149,10 @@ class IncrementalSequentialConsistencyChecker(
     approximateSequentialConsistency: Boolean = true
 ) : AbstractIncrementalConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution>(execution) {
 
+    private val lockConsistencyChecker = LockConsistencyChecker()
+
+    private var lockConsistent: Boolean = true
+
     private val sequentialConsistencyChecker = SequentialConsistencyChecker(
         checkReleaseAcquireConsistency,
         approximateSequentialConsistency,
@@ -161,22 +165,32 @@ class IncrementalSequentialConsistencyChecker(
             executionOrder.add(event)
             return
         }
-        resetExecutionOrder()
+        setUnknownState()
     }
 
     override fun doLightweightCheck() {
         check(execution.executionOrderComputable.computed)
+        // TODO: extract into separate checker
+        inconsistency = lockConsistencyChecker.check(execution)
+        if (inconsistency != null) {
+            setUnknownState()
+            return
+        }
+        lockConsistent = true
         // check by trying to replay execution order
         val replayer = SequentialConsistencyReplayer(1 + execution.maxThreadID)
         if (replayer.replay(execution) == null)
-            resetExecutionOrder()
+            setUnknownState()
     }
 
     override fun doFullCheck() {
-        // check locks consistency
-        // when (val verdict = lockConsistencyChecker.check(execution)) {
-        //     is LockConsistencyViolation -> return verdict
-        // }
+        // TODO: extract into separate checker
+        if (!lockConsistent) {
+            inconsistency = lockConsistencyChecker.check(execution)
+            if (inconsistency != null)
+                return
+        }
+        execution.executionOrderComputable.reset()
         inconsistency = sequentialConsistencyChecker.check(execution)
         // TODO: invent a nicer way to handle blocked dangling requests
         // val (events, blockedRequests) = executionOrder.partition {
@@ -190,6 +204,13 @@ class IncrementalSequentialConsistencyChecker(
     }
 
     override fun doReset() {
+        lockConsistent = false
+
+        execution.readModifyWriteOrderComputable.reset()
+        execution.writesBeforeOrderComputable.reset()
+        execution.coherenceOrderComputable.reset()
+        execution.extendedCoherenceComputable.reset()
+
         execution.executionOrderComputable.apply {
             reset(); setComputed()
         }
@@ -198,10 +219,10 @@ class IncrementalSequentialConsistencyChecker(
         }
     }
 
-    private fun resetExecutionOrder() {
-        execution.executionOrderComputable.reset()
-        setUnknownState()
-    }
+    // private fun resetExecutionOrder() {
+    //     execution.executionOrderComputable.reset()
+    //     setUnknownState()
+    // }
 
     private fun ExecutionOrder.isConsistentExtension(event: AtomicThreadEvent): Boolean {
         val last = ordering.lastOrNull()
