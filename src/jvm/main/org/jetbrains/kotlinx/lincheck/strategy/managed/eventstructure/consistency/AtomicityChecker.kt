@@ -28,7 +28,7 @@ import org.jetbrains.kotlinx.lincheck.utils.*
 class AtomicityViolation(/*val write1: Event, val write2: Event*/) : Inconsistency()
 
 class AtomicityChecker(execution: MutableExtendedExecution) :
-    AbstractIncrementalConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution>(execution) {
+    AbstractFullyIncrementalConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution>(execution) {
 
     override fun doIncrementalCheck(event: AtomicThreadEvent) {
         val writeLabel = event.label.refine<WriteAccessLabel> { isExclusive }
@@ -42,14 +42,6 @@ class AtomicityChecker(execution: MutableExtendedExecution) :
         }
         if (other != null)
             inconsistency = AtomicityViolation(/*other, event*/)
-    }
-
-    override fun doFullCheck() {
-        // the atomicity checker is fully incremental,
-        // it can detect inconsistencies precisely upon each event addition;
-        // thus we should not reach this point
-        // TODO: make a IncrementalConsistencyChecker subclass with this invariant
-        throw IllegalStateException()
     }
 
     override fun doReset() {}

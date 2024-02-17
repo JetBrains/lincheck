@@ -256,6 +256,9 @@ fun MutableExtendedExecution(nThreads: Int): MutableExtendedExecution =
             tracker.onReset(this)
     }
 
+    override fun toString(): String =
+        execution.toString()
+
 }
 
 /* private */ class ResettableExecution(nThreads: Int) : MutableExecution<AtomicThreadEvent> {
@@ -282,6 +285,15 @@ fun MutableExtendedExecution(nThreads: Int): MutableExtendedExecution =
     fun reset(frontier: ExecutionFrontier<AtomicThreadEvent>) {
         execution = frontier.toMutableExecution()
     }
+
+    override fun equals(other: Any?): Boolean =
+        (other is ResettableExecution) && (execution == other.execution)
+
+    override fun hashCode(): Int =
+        execution.hashCode()
+
+    override fun toString(): String =
+        execution.toString()
 
 }
 

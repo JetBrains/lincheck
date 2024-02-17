@@ -94,6 +94,7 @@ abstract class AbstractIncrementalConsistencyChecker<E : ThreadEvent, X : Execut
         protected set
 
     private var consistent = false
+    private var checked = false
 
     final override val state: ConsistencyCheckerState get() = when {
         consistent -> ConsistencyCheckerState.Consistent
@@ -108,9 +109,12 @@ abstract class AbstractIncrementalConsistencyChecker<E : ThreadEvent, X : Execut
     protected fun setUnknownState() {
         check(inconsistency == null)
         consistent = false
+        checked = false
     }
 
     final override fun check(event: E): Inconsistency? {
+        // reset check cache
+        checked = false
         // skip the check if the checker is in unknown state
         if (state == ConsistencyCheckerState.Unknown)
             return null
@@ -124,35 +128,63 @@ abstract class AbstractIncrementalConsistencyChecker<E : ThreadEvent, X : Execut
     protected abstract fun doIncrementalCheck(event: E)
 
     final override fun check(): Inconsistency? {
-        // if the checker is in a consistent state,
-        // do lightweight check before doing full consistency check
-        if (state == ConsistencyCheckerState.Consistent) {
-            doLightweightCheck()
-            // return null if the state remains consistent after lightweight check
-            if (state == ConsistencyCheckerState.Consistent)
-                return null
-        }
         // return inconsistency if it was detected before
         if (state == ConsistencyCheckerState.Inconsistent)
             return inconsistency!!
-        doFullCheck()
+        // return if consistency was already checked
+        if (checked)
+            return null
+        doCheck()
+        checked = true
         consistent = (inconsistency == null)
-        check(state != ConsistencyCheckerState.Unknown)
         return inconsistency
     }
 
-    protected open fun doLightweightCheck() {}
-
-    protected abstract fun doFullCheck()
+    protected abstract fun doCheck()
 
     final override fun reset(execution: X) {
         this.execution = execution
         inconsistency = null
         consistent = true
+        checked = false
         doReset()
     }
 
     protected abstract fun doReset()
+
+}
+
+abstract class AbstractPartialIncrementalConsistencyChecker<E : ThreadEvent, X : Execution<E>>(
+    execution: X,
+    val checker: ConsistencyChecker<E, X>,
+) : AbstractIncrementalConsistencyChecker<E, X>(execution) {
+
+    override fun doCheck() {
+        // if the checker is in a consistent state,
+        // do a lightweight check before falling back to full consistency check
+        doLightweightCheck()
+        if (state == ConsistencyCheckerState.Unknown) {
+            doFullCheck()
+        }
+    }
+
+    protected abstract fun doLightweightCheck()
+
+    private fun doFullCheck() {
+        inconsistency = checker.check(execution)
+    }
+
+}
+
+abstract class AbstractFullyIncrementalConsistencyChecker<E : ThreadEvent, X : Execution<E>>(execution: X)
+    : AbstractIncrementalConsistencyChecker<E, X>(execution) {
+
+    override fun doCheck() {
+        // if a checker is fully incremental,
+        // it can detect inconsistencies precisely upon each event addition;
+        // thus we should not reach this point while being in the unknown state
+        check(state != ConsistencyCheckerState.Unknown)
+    }
 
 }
 
@@ -170,11 +202,9 @@ class AggregatedIncrementalConsistencyChecker<E : ThreadEvent, X : Execution<E>>
             if (incrementalChecker.state == ConsistencyCheckerState.Unknown)
                 setUnknownState()
         }
-        if (consistencyCheckers.isNotEmpty())
-            setUnknownState()
     }
 
-    override fun doFullCheck() {
+    override fun doCheck() {
         for (incrementalChecker in incrementalConsistencyCheckers) {
             inconsistency = incrementalChecker.check()
             if (inconsistency != null)

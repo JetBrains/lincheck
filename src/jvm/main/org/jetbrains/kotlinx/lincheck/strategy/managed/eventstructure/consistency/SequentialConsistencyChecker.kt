@@ -104,7 +104,9 @@ class SequentialConsistencyChecker(
         }
         if (!execution.coherenceOrderComputable.value.isConsistent())
             return SequentialConsistencyCoherenceViolation()
-        val executionOrder = execution.executionOrderComputable.value.ensure { it.isConsistent() }
+        check(execution.executionOrderComputable.computed)
+        val executionOrder = execution.executionOrderComputable.value
+            .ensure { it.isConsistent() }
         SequentialConsistencyReplayer(1 + execution.maxThreadID).ensure {
             it.replay(executionOrder.ordering) != null
         }
@@ -147,70 +149,45 @@ class IncrementalSequentialConsistencyChecker(
     execution: MutableExtendedExecution,
     checkReleaseAcquireConsistency: Boolean = true,
     approximateSequentialConsistency: Boolean = true
-) : AbstractIncrementalConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution>(execution) {
-
-    private val lockConsistencyChecker = LockConsistencyChecker()
-
-    private var lockConsistent: Boolean = true
-
-    private val sequentialConsistencyChecker = SequentialConsistencyChecker(
+) : AbstractPartialIncrementalConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution>(
+    execution = execution,
+    checker = SequentialConsistencyChecker(
         checkReleaseAcquireConsistency,
         approximateSequentialConsistency,
     )
+) {
+
+    private val lockConsistencyChecker = LockConsistencyChecker()
 
     override fun doIncrementalCheck(event: AtomicThreadEvent) {
         check(execution.executionOrderComputable.computed)
+        resetRelations()
         val executionOrder = execution.executionOrderComputable.value
         if (executionOrder.isConsistentExtension(event)) {
             executionOrder.add(event)
-            return
+        } else {
+            setUnknownState()
         }
-        setUnknownState()
     }
 
     override fun doLightweightCheck() {
         check(execution.executionOrderComputable.computed)
         // TODO: extract into separate checker
         inconsistency = lockConsistencyChecker.check(execution)
-        if (inconsistency != null) {
-            setUnknownState()
+        if (inconsistency != null)
             return
-        }
-        lockConsistent = true
         // check by trying to replay execution order
-        val replayer = SequentialConsistencyReplayer(1 + execution.maxThreadID)
-        if (replayer.replay(execution) == null)
-            setUnknownState()
-    }
-
-    override fun doFullCheck() {
-        // TODO: extract into separate checker
-        if (!lockConsistent) {
-            inconsistency = lockConsistencyChecker.check(execution)
-            if (inconsistency != null)
-                return
+        if (state == ConsistencyCheckerState.Consistent) {
+            val replayer = SequentialConsistencyReplayer(1 + execution.maxThreadID)
+            if (replayer.replay(execution) == null) {
+                execution.executionOrderComputable.reset()
+                setUnknownState()
+            }
         }
-        execution.executionOrderComputable.reset()
-        inconsistency = sequentialConsistencyChecker.check(execution)
-        // TODO: invent a nicer way to handle blocked dangling requests
-        // val (events, blockedRequests) = executionOrder.partition {
-        //     !execution.isBlockedDanglingRequest(it)
-        // }
-        // _executionOrder.apply {
-        //     clear()
-        //     addAll(events)
-        //     addAll(blockedRequests)
-        // }
     }
 
     override fun doReset() {
-        lockConsistent = false
-
-        execution.readModifyWriteOrderComputable.reset()
-        execution.writesBeforeOrderComputable.reset()
-        execution.coherenceOrderComputable.reset()
-        execution.extendedCoherenceComputable.reset()
-
+        resetRelations()
         execution.executionOrderComputable.apply {
             reset(); setComputed()
         }
@@ -218,11 +195,6 @@ class IncrementalSequentialConsistencyChecker(
             check(event)
         }
     }
-
-    // private fun resetExecutionOrder() {
-    //     execution.executionOrderComputable.reset()
-    //     setUnknownState()
-    // }
 
     private fun ExecutionOrder.isConsistentExtension(event: AtomicThreadEvent): Boolean {
         val last = ordering.lastOrNull()
@@ -240,6 +212,14 @@ class IncrementalSequentialConsistencyChecker(
 
             else -> true
         }
+    }
+
+    // TODO: move to corresponding individual consistency checkers
+    private fun resetRelations() {
+        execution.readModifyWriteOrderComputable.reset()
+        execution.writesBeforeOrderComputable.reset()
+        execution.coherenceOrderComputable.reset()
+        execution.extendedCoherenceComputable.reset()
     }
 }
 
@@ -335,12 +315,19 @@ class ExecutionOrder(
     private val constraints = Relation<AtomicThreadEvent> { x, y ->
         when {
             // put wait-request before notify event
-            x.label.isRequest && x.label is WaitLabel &&
-                y == execution.getResponse(x)?.notifiedBy -> true
+            x.label.isRequest && x.label is WaitLabel ->
+                (y == execution.getResponse(x)?.notifiedBy)
+
+            // put any event on which wait-request depends before corresponding unlock
+            // y.label is UnlockLabel && (y.label as UnlockLabel).isWaitUnlock -> {
+            //     val wait = execution.nextEvent(y)?.ensure { it.label is WaitLabel && it.label.isRequest }
+            //     if (wait != null) (x != y) && approximation(x, wait) else approximation(x, y)
+            // }
 
             // put dependencies of response before corresponding request
-            y.label.isRequest && y.label !is LockLabel && y.label !is ActorLabel &&
-                x in execution.getResponse(y)?.dependencies.orEmpty()-> true
+            y.label.isRequest && (y.label !is LockLabel && y.label !is WaitLabel && y.label !is ActorLabel)->
+                x in execution.getResponse(y)?.dependencies.orEmpty()
+                // execution.getResponse(y)?.dependencies?.any { z -> approximation(x, (z as AtomicThreadEvent)) } ?: false
 
             else -> false
         }
@@ -372,6 +359,11 @@ class ExecutionOrder(
         //  - what else?
         //  and then insert them back into the topologically sorted list
         val graph = execution.buildGraph(relation)
+        // for (event in execution) {
+        //     println("Event: $event")
+        //     println("    adj: ${graph.adjacent(event)}")
+        //     println()
+        // }
         val ordering = topologicalSorting(graph)
         if (ordering == null) {
             consistent = false
