@@ -89,6 +89,7 @@ class SequentialConsistencyChecker(
     }
 
     private fun checkTest(execution: MutableExtendedExecution): Inconsistency? {
+        check(!execution.executionOrderComputable.computed)
         execution.readModifyWriteOrderComputable.apply {
             initialize(); compute()
         }
@@ -180,9 +181,13 @@ class IncrementalSequentialConsistencyChecker(
         if (state == ConsistencyCheckerState.Consistent) {
             val replayer = SequentialConsistencyReplayer(1 + execution.maxThreadID)
             if (replayer.replay(execution) == null) {
-                execution.executionOrderComputable.reset()
                 setUnknownState()
             }
+        }
+        // if we end up in an unknown state, reset the execution order,
+        // so it can be re-computed by the full consistency check
+        if (state == ConsistencyCheckerState.Unknown) {
+            execution.executionOrderComputable.reset()
         }
     }
 
@@ -192,7 +197,7 @@ class IncrementalSequentialConsistencyChecker(
             reset(); setComputed()
         }
         for (event in execution.enumerationOrderSorted()) {
-            check(event)
+            doIncrementalCheck(event)
         }
     }
 
