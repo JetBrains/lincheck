@@ -318,17 +318,6 @@ class ExecutionOrder(
             x.label.isRequest && x.label is WaitLabel ->
                 (y == execution.getResponse(x)?.notifiedBy)
 
-            // put any event on which wait-request depends before corresponding unlock
-            // y.label is UnlockLabel && (y.label as UnlockLabel).isWaitUnlock -> {
-            //     val wait = execution.nextEvent(y)?.ensure { it.label is WaitLabel && it.label.isRequest }
-            //     if (wait != null) (x != y) && approximation(x, wait) else approximation(x, y)
-            // }
-
-            // put dependencies of response before corresponding request
-            y.label.isRequest && (y.label !is LockLabel && y.label !is WaitLabel && y.label !is ActorLabel)->
-                x in execution.getResponse(y)?.dependencies.orEmpty()
-                // execution.getResponse(y)?.dependencies?.any { z -> approximation(x, (z as AtomicThreadEvent)) } ?: false
-
             else -> false
         }
     }
@@ -348,18 +337,16 @@ class ExecutionOrder(
 
     override fun compute() {
         check(_ordering.isEmpty())
-        // TODO: although we have to add these additional ordering constraints here,
-        //  it is not a completely sound way to enforce additional atomicity constraints;
-        //  instead we can ensure additional atomicity constraints
-        //  by reordering some events after topological sorting
         val relation = approximation union constraints
+        val (aggregatedExecution, _) = execution.aggregate(ThreadAggregationAlgebra.aggregator())
+        val aggregatedRelation = relation.existsLifting()
         // TODO: optimization --- we can build graph only for a subset of events, excluding:
         //  - non-blocking request events
         //  - events accessing race-free locations
         //  - what else?
         //  and then insert them back into the topologically sorted list
-        val graph = execution.buildGraph(relation)
-        // for (event in execution) {
+        val graph = aggregatedExecution.buildGraph(aggregatedRelation)
+        // for (event in aggregatedExecution) {
         //     println("Event: $event")
         //     println("    adj: ${graph.adjacent(event)}")
         //     println()
@@ -369,7 +356,7 @@ class ExecutionOrder(
             consistent = false
             return
         }
-        this._ordering.addAll(ordering)
+        this._ordering.addAll(ordering.flatMap { it.events })
     }
 
     override fun invalidate() {

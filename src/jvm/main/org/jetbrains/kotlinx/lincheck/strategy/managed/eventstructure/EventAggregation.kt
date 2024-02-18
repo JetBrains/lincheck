@@ -183,11 +183,14 @@ fun Execution<AtomicThreadEvent>.aggregate(
     return result to remapping
 }
 
-fun Covering<AtomicThreadEvent>.aggregate(remapping: EventRemapping) =
-    Covering<HyperThreadEvent> { event ->
-        event.events
-            .flatMap { atomicEvent ->
-                this(atomicEvent).mapNotNull { remapping[it] }
-            }
-            .distinct()
-    }
+fun Relation<AtomicThreadEvent>.existsLifting() = Relation<HyperThreadEvent> { x, y ->
+    x.events.any { ex -> ex !in y.events && y.events.any { ey -> this(ex, ey) } }
+}
+
+fun Covering<AtomicThreadEvent>.aggregate(remapping: EventRemapping) = Covering<HyperThreadEvent> { event ->
+    event.events
+        .flatMap { atomicEvent ->
+            this(atomicEvent).mapNotNull { remapping[it] }
+        }
+        .distinct()
+}
