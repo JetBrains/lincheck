@@ -1252,7 +1252,7 @@ data class CoroutineSuspendLabel(
     init {
         require(isRequest || isResponse || isReceive)
         require(promptCancellation implies isRequest)
-        require(cancelled implies isResponse)
+        require(cancelled implies (isResponse || isReceive))
     }
 
     override fun isValidResponse(label: EventLabel): Boolean {
