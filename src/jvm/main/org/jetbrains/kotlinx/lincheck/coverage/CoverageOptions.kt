@@ -45,7 +45,6 @@ class CoverageOptions(
 
         projectData.excludePatterns = excludes
         CoverageRuntime.installRuntime(projectData)
-        CoverageRuntime.installRuntime(projectData)
     }
 
     fun collectCoverage() {
