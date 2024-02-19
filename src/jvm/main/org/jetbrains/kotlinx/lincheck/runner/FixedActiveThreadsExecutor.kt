@@ -144,17 +144,28 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
         loop@ while (true) {
             val task = getTask(iThread)
             if (task === Shutdown) return@Runnable
-            tasks[iThread].value = null // reset task
             val threadExecution = task as TestThreadExecution
             check(threadExecution.iThread == iThread)
             try {
                 threadExecution.run()
             } catch(e: Throwable) {
                 val wrapped = wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(e)
+                tasks[iThread].value = null // reset task
                 setResult(iThread, wrapped)
                 continue@loop
             }
+            tasks[iThread].value = null // reset task
             setResult(iThread, Done)
+        }
+    }
+
+    fun waitUntilAllThreadsFinishTheCurrentTasks() {
+        for (i in 0 until nThreads) {
+            while (true) {
+                val state = tasks[i].value
+                if (state == null || state is Thread || state === Shutdown) break
+                Thread.yield()
+            }
         }
     }
 

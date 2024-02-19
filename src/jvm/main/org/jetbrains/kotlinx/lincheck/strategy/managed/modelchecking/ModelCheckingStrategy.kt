@@ -61,6 +61,11 @@ internal class ModelCheckingStrategy(
             // run invocation and check its results
             val invocationResult = runInvocation()
             if (suddenInvocationResult is SpinCycleFoundAndReplayRequired) {
+                // Ensure that all threads has detected the spin loop
+                // and finished the current interleaving execution.
+                // After that, restart the current interleaving with
+                // the collected knowledge about the detected spin loop.
+                runner.waitUntilAllThreadsFinishTheCurrentTasks()
                 currentInterleaving.rollbackAfterSpinCycleFound()
                 continue
             }

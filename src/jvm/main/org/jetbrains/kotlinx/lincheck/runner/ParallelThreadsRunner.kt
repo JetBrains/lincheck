@@ -392,6 +392,8 @@ internal open class ParallelThreadsRunner(
     override fun constructStateRepresentation() =
         stateRepresentationFunction?.let { getMethod(testInstance, it) }?.invoke(testInstance) as String?
 
+    override fun waitUntilAllThreadsFinishTheCurrentTasks() = executor.waitUntilAllThreadsFinishTheCurrentTasks()
+
     override fun close() {
         super.close()
         executor.close()
