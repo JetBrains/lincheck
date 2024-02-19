@@ -287,7 +287,7 @@ abstract class ManagedStrategy(
         if (inIgnoredSection(iThread)) return // cannot suspend in ignored sections
         // Throw ForcibleExecutionFinishException if the invocation
         // result is already calculated.
-        if (suddenInvocationResult != null) throw ForcibleExecutionFinishException
+        if (suddenInvocationResult != null) throw ForcibleExecutionFinishError
         check(iThread == currentThread)
 
         if (loopDetector.replayModeEnabled) {
