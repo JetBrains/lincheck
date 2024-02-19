@@ -1483,14 +1483,15 @@ private fun isFinalField(ownerInternal: String, fieldName: String): Boolean {
         internalName = internalName.substring(REMAPPED_PACKAGE_INTERNAL_NAME.length)
     }
     return try {
+        // TODO: this line should be refactored
+        if (fieldName.contains("hits")) return true
+
         val clazz = Class.forName(internalName.canonicalClassName)
         val field = findField(clazz, fieldName) ?: throw NoSuchFieldException("No $fieldName in ${clazz.name}")
         field.modifiers and Modifier.FINAL == Modifier.FINAL
     } catch (e: ClassNotFoundException) {
         throw RuntimeException(e)
     } catch (e: NoSuchFieldException) {
-        // TODO: refactor this
-        if (fieldName.contains("hits")) return true
         throw RuntimeException(e)
     }
 }
