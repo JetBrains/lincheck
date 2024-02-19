@@ -38,7 +38,7 @@ abstract class ManagedStrategy(
     private val validationFunction: Actor?,
     private val stateRepresentationFunction: Method?,
     private val testCfg: ManagedCTestConfiguration
-) : Strategy(scenario), Closeable {
+) : Strategy(scenario) {
     // The number of parallel threads.
     protected val nThreads: Int = scenario.nThreads
     // Runner for scenario invocations,
@@ -127,7 +127,11 @@ abstract class ManagedStrategy(
     fun useBytecodeCache(): Boolean =
         !collectTrace && testCfg.eliminateLocalObjects && (testCfg.guarantees == ManagedCTestConfiguration.DEFAULT_GUARANTEES)
 
-    override fun run(): LincheckFailure? = runImpl().also { close() }
+    override fun run(): LincheckFailure? = try {
+        runImpl()
+    } finally {
+        runner.close()
+    }
 
     // == STRATEGY INTERFACE METHODS ==
 
@@ -270,10 +274,6 @@ abstract class ManagedStrategy(
         throw ForcibleExecutionFinishError
     }
 
-    override fun close() {
-        runner.close()
-    }
-
     // == EXECUTION CONTROL METHODS ==
 
     /**
@@ -283,8 +283,11 @@ abstract class ManagedStrategy(
      * @param codeLocation the byte-code location identifier of the point in code.
      */
     private fun newSwitchPoint(iThread: Int, codeLocation: Int, tracePoint: TracePoint?) {
-        if (!isTestThread(iThread)) return // can switch only test threads
+        if (!isTestThread(iThread)) return
         if (inIgnoredSection(iThread)) return // cannot suspend in ignored sections
+        // Throw ForcibleExecutionFinishException if the invocation
+        // result is already calculated.
+        if (suddenInvocationResult != null) throw ForcibleExecutionFinishException
         check(iThread == currentThread)
 
         if (loopDetector.replayModeEnabled) {
@@ -485,9 +488,7 @@ abstract class ManagedStrategy(
      * Additionally, after [ForcibleExecutionFinishError] everything is ignored.
      */
     private fun inIgnoredSection(iThread: Int): Boolean =
-        !isTestThread(iThread) ||
-            ignoredSectionDepth[iThread] > 0 ||
-            suddenInvocationResult != null
+        !isTestThread(iThread) || ignoredSectionDepth[iThread] > 0
 
 
     // == LISTENING METHODS ==
@@ -565,6 +566,12 @@ abstract class ManagedStrategy(
      */
     internal fun beforeLockRelease(iThread: Int, codeLocation: Int, tracePoint: MonitorExitTracePoint?, monitor: Any): Boolean {
         if (!isTestThread(iThread)) return true
+        // We need to be extremely careful with the MONITOREXIT instruction,
+        // as it can be put into a recursive "finally" block, releasing
+        // the lock over and over until the instruction succeeds.
+        // Therefore, we always release the lock in this case,
+        // without tracking the event.
+        if (suddenInvocationResult != null) return false
         if (inIgnoredSection(iThread)) return false
         monitorTracker.releaseMonitor(monitor)
         traceCollector?.passCodeLocation(tracePoint)
