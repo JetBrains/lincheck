@@ -154,12 +154,6 @@ abstract class Runner protected constructor(
      */
     val isParallelExecutionCompleted: Boolean
         get() = completedOrSuspendedThreads.get() == scenario.nThreads
-
-    /**
-     * This function allows waiting until all threads related to the
-     * current/last interleaving finish their work and wait for a new task.
-     */
-    abstract fun waitUntilAllThreadsFinishTheCurrentTasks()
 }
 
 enum class ExecutionPart {

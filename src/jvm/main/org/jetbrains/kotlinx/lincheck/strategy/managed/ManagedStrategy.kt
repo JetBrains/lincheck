@@ -43,8 +43,7 @@ abstract class ManagedStrategy(
     protected val nThreads: Int = scenario.nThreads
     // Runner for scenario invocations,
     // can be replaced with a new one for trace construction.
-    internal var runner: Runner
-        private set
+    private var runner: ManagedStrategyRunner
 
     companion object {
         // Shares location ids between class transformers in order
