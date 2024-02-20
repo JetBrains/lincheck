@@ -259,11 +259,14 @@ abstract class ManagedStrategy(
     }
 
     private val curActorIsBlocking: Boolean
-        get() = scenario.threads[currentThread][currentActorId[currentThread]].blocking
+        get() {
+            val actorId = currentActorId[currentThread]
+            return (actorId >= 0) && scenario.threads[currentThread][actorId].blocking
+        }
 
     private val concurrentActorCausesBlocking: Boolean
         get() = currentActorId.mapIndexed { iThread, actorId ->
-                    if (iThread != currentThread && !finished[iThread])
+                    if (iThread != currentThread && actorId >= 0 && !finished[iThread])
                         scenario.threads[iThread][actorId]
                     else null
                 }.filterNotNull().any { it.causesBlocking }
