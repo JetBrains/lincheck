@@ -38,7 +38,7 @@ abstract class ManagedStrategy(
     private val validationFunction: Actor?,
     private val stateRepresentationFunction: Method?,
     private val testCfg: ManagedCTestConfiguration
-) : Strategy(scenario), Closeable {
+) : Strategy(scenario) {
     // The number of parallel threads.
     protected val nThreads: Int = scenario.nThreads
     // Runner for scenario invocations,
@@ -127,7 +127,11 @@ abstract class ManagedStrategy(
     fun useBytecodeCache(): Boolean =
         !collectTrace && testCfg.eliminateLocalObjects && (testCfg.guarantees == ManagedCTestConfiguration.DEFAULT_GUARANTEES)
 
-    override fun run(): LincheckFailure? = runImpl().also { close() }
+    override fun run(): LincheckFailure? = try {
+        runImpl()
+    } finally {
+        runner.close()
+    }
 
     // == STRATEGY INTERFACE METHODS ==
 
@@ -250,7 +254,7 @@ abstract class ManagedStrategy(
         if (testCfg.checkObstructionFreedom && !curActorIsBlocking && !concurrentActorCausesBlocking) {
             suddenInvocationResult = ObstructionFreedomViolationInvocationResult(lazyMessage())
             // Forcibly finish the current execution by throwing an exception.
-            throw ForcibleExecutionFinishException
+            throw ForcibleExecutionFinishError
         }
     }
 
@@ -267,11 +271,7 @@ abstract class ManagedStrategy(
     private fun failDueToDeadlock(): Nothing {
         suddenInvocationResult = DeadlockInvocationResult()
         // Forcibly finish the current execution by throwing an exception.
-        throw ForcibleExecutionFinishException
-    }
-
-    override fun close() {
-        runner.close()
+        throw ForcibleExecutionFinishError
     }
 
     // == EXECUTION CONTROL METHODS ==
@@ -283,8 +283,11 @@ abstract class ManagedStrategy(
      * @param codeLocation the byte-code location identifier of the point in code.
      */
     private fun newSwitchPoint(iThread: Int, codeLocation: Int, tracePoint: TracePoint?) {
-        if (!isTestThread(iThread)) return // can switch only test threads
+        if (!isTestThread(iThread)) return
         if (inIgnoredSection(iThread)) return // cannot suspend in ignored sections
+        // Throw ForcibleExecutionFinishException if the invocation
+        // result is already calculated.
+        if (suddenInvocationResult != null) throw ForcibleExecutionFinishError
         check(iThread == currentThread)
 
         if (loopDetector.replayModeEnabled) {
@@ -383,7 +386,7 @@ abstract class ManagedStrategy(
         // Despite the fact that the corresponding failure will be detected by the runner,
         // the managed strategy can construct a trace to reproduce this failure.
         // Let's then store the corresponding failing result and construct the trace.
-        if (exception === ForcibleExecutionFinishException) return // not a forcible execution finish
+        if (exception === ForcibleExecutionFinishError) return // not a forcible execution finish
         suddenInvocationResult =
             UnexpectedExceptionInvocationResult(wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(exception))
     }
@@ -412,7 +415,7 @@ abstract class ManagedStrategy(
         var i = 0
         while (currentThread != iThread) {
             // Finish forcibly if an error occurred and we already have an `InvocationResult`.
-            if (suddenInvocationResult != null) throw ForcibleExecutionFinishException
+            if (suddenInvocationResult != null) throw ForcibleExecutionFinishError
             if (++i % SPINNING_LOOP_ITERATIONS_BEFORE_YIELD == 0) Thread.yield()
         }
     }
@@ -452,7 +455,7 @@ abstract class ManagedStrategy(
                     // must switch not to get into a deadlock, but there are no threads to switch.
                     suddenInvocationResult = DeadlockInvocationResult()
                     // forcibly finish execution by throwing an exception.
-                    throw ForcibleExecutionFinishException
+                    throw ForcibleExecutionFinishError
                 }
                 setCurrentThread(nextThread)
             }
@@ -482,15 +485,28 @@ abstract class ManagedStrategy(
 
     /**
      * The execution in an ignored section (added by transformer) or not in a test thread must not add switch points.
-     * Additionally, after [ForcibleExecutionFinishException] everything is ignored.
+     * Additionally, after [ForcibleExecutionFinishError] everything is ignored.
      */
     private fun inIgnoredSection(iThread: Int): Boolean =
-        !isTestThread(iThread) ||
-            ignoredSectionDepth[iThread] > 0 ||
-            suddenInvocationResult != null
+        !isTestThread(iThread) || ignoredSectionDepth[iThread] > 0
 
 
     // == LISTENING METHODS ==
+
+    internal fun hashCodeDeterministic(obj: Any): Int {
+        val hashCode = obj.hashCode()
+        return if (hashCode == System.identityHashCode(obj)) {
+            identityHashCodeDeterministic(obj)
+        } else {
+            hashCode
+        }
+    }
+
+    internal fun identityHashCodeDeterministic(obj: Any?): Int {
+        if (obj == null) return 0
+        // TODO: easier to support when `javaagent` is merged
+        return 0
+    }
 
     /**
      * This method is executed before a shared variable read operation.
@@ -550,6 +566,12 @@ abstract class ManagedStrategy(
      */
     internal fun beforeLockRelease(iThread: Int, codeLocation: Int, tracePoint: MonitorExitTracePoint?, monitor: Any): Boolean {
         if (!isTestThread(iThread)) return true
+        // We need to be extremely careful with the MONITOREXIT instruction,
+        // as it can be put into a recursive "finally" block, releasing
+        // the lock over and over until the instruction succeeds.
+        // Therefore, we always release the lock in this case,
+        // without tracking the event.
+        if (suddenInvocationResult != null) return false
         if (inIgnoredSection(iThread)) return false
         monitorTracker.releaseMonitor(monitor)
         traceCollector?.passCodeLocation(tracePoint)
@@ -848,7 +870,7 @@ abstract class ManagedStrategy(
      * - For instance, if the [currentInterleavingHistory] is [0: 2], [1: 3], [0: 3], [1: 3], [0: 3], ..., [1: 3], [0: 3] and a deadlock is detected,
      * the cycle is identified as [1: 3], [0: 3].
      * This means 2 executions in thread 0 and 3 executions in both threads 1 and 0 will be allowed.
-     * - Execution is halted after the last execution in thread 0 using [ForcibleExecutionFinishException].
+     * - Execution is halted after the last execution in thread 0 using [ForcibleExecutionFinishError].
      * - The logic for tracking executions and switches in replay mode is implemented in [ReplayModeLoopDetectorHelper].
      *
      * Note: An example of this behavior is detailed in the comments of the code itself.
@@ -951,7 +973,7 @@ abstract class ManagedStrategy(
                 }
                 // Replay current interleaving to avoid side effects caused by multiple cycle executions
                 suddenInvocationResult = SpinCycleFoundAndReplayRequired
-                throw ForcibleExecutionFinishException
+                throw ForcibleExecutionFinishError
             }
             if (!detectedFirstTime && detectedEarly) {
                 totalExecutionsCount += hangingDetectionThreshold
@@ -1396,7 +1418,7 @@ private class MonitorTracker(nThreads: Int) {
  * If we just leave it, then the execution will not be halted.
  * If we forcibly pass through all barriers, then we can get another exception due to being in an incorrect state.
  */
-internal object ForcibleExecutionFinishException : RuntimeException() {
+internal object ForcibleExecutionFinishError : Error() {
     // do not create a stack trace -- it simply can be unsafe
     override fun fillInStackTrace() = this
 }

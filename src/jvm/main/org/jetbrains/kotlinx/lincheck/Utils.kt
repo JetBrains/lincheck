@@ -301,7 +301,7 @@ internal val String.internalClassName get() = this.replace('.', '/')
 internal fun exceptionCanBeValidExecutionResult(exception: Throwable): Boolean {
     return exception !is ThreadDeath && // used to stop thread in FixedActiveThreadsExecutor by calling thread.stop method
             exception !is InternalLincheckTestUnexpectedException &&
-            exception !is ForcibleExecutionFinishException &&
+            exception !is ForcibleExecutionFinishError &&
             !isIllegalAccessOfUnsafeDueToJavaVersion(exception)
 }
 
@@ -319,6 +319,7 @@ internal fun isIllegalAccessOfUnsafeDueToJavaVersion(exception: Throwable): Bool
 internal const val ADD_OPENS_MESSAGE =
     "It seems that you use Java 9+ and the code uses Unsafe or similar constructions that are not accessible from unnamed modules.\n" +
             "Please add the following lines to your test running configuration:\n" +
+            "--add-opens java.base/java.lang=ALL-UNNAMED\n" +
             "--add-opens java.base/jdk.internal.misc=ALL-UNNAMED\n" +
             "--add-exports java.base/jdk.internal.util=ALL-UNNAMED\n" +
             "--add-exports java.base/sun.security.action=ALL-UNNAMED"

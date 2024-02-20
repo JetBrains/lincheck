@@ -15,12 +15,11 @@ plugins {
     java
     kotlin("multiplatform")
     id("maven-publish")
-    id("kotlinx.team.infra") version "0.3.0-dev-64"
+    id("kotlinx.team.infra") version "0.4.0-dev-80"
 }
 
 repositories {
     mavenCentral()
-    jcenter()
 }
 
 kotlin {
@@ -73,6 +72,10 @@ kotlin {
 java {
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
+    toolchain {
+        val jdkToolchainVersion: String by project
+        languageVersion = JavaLanguageVersion.of(jdkToolchainVersion)
+    }
 }
 
 sourceSets.main {
@@ -86,17 +89,49 @@ sourceSets.test {
     }
 }
 
+
 tasks {
     replace("jvmSourcesJar", Jar::class).run {
         from(sourceSets["main"].allSource)
     }
-    withType<Test> {
+
+    fun Test.configureJvmTestCommon() {
         maxParallelForks = 1
+        maxHeapSize = "6g"
         jvmArgs(
+            "--add-opens", "java.base/java.lang=ALL-UNNAMED",
             "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
             "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED",
             "--add-exports", "java.base/sun.security.action=ALL-UNNAMED"
         )
+    }
+
+    val jvmTest = named<Test>("jvmTest") {
+        if (System.getProperty("idea.active") != "true") {
+            // We need to be able to run these tests in IntelliJ IDEA.
+            // Unfortunately, the current Gradle support doesn't detect
+            // the `jvmTestIsolated` task.
+            exclude("**/*IsolatedTest*")
+        }
+        configureJvmTestCommon()
+        val runAllTestsInSeparateJVMs: String by project
+        forkEvery = if (runAllTestsInSeparateJVMs.toBoolean()) 1 else 0
+    }
+
+    val jvmTestIsolated = register<Test>("jvmTestIsolated") {
+        group = jvmTest.get().group
+        testClassesDirs = jvmTest.get().testClassesDirs
+        classpath = jvmTest.get().classpath
+        enableAssertions = true
+        testLogging.showStandardStreams = true
+        outputs.upToDateWhen { false } // Always run tests when called
+        include("**/*IsolatedTest*")
+        configureJvmTestCommon()
+        forkEvery = 1
+    }
+
+    check {
+        dependsOn(jvmTestIsolated)
     }
 
     withType<Jar> {
@@ -123,6 +158,18 @@ infra {
 
         libraryRepoUrl = "https://github.com/Kotlin/kotlinx-lincheck"
         sonatype {}
+    }
+}
+
+publishing {
+    project.establishSignDependencies()
+}
+
+fun Project.establishSignDependencies() {
+    // Sign plugin issues and publication:
+    // Establish dependency between 'sign' and 'publish*' tasks.
+    tasks.withType<AbstractPublishToMaven>().configureEach {
+        dependsOn(tasks.withType<Sign>())
     }
 }
 
