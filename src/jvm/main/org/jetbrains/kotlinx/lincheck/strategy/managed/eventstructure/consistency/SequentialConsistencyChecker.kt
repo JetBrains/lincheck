@@ -333,6 +333,8 @@ class ExecutionOrder(
     override fun compute() {
         check(_ordering.isEmpty())
         val relation = approximation union constraints
+        // construct aggregated execution consisting of atomic events
+        // to incorporate the atomicity constraints during the search for topological sorting
         val (aggregatedExecution, _) = execution.aggregate(ThreadAggregationAlgebra.aggregator())
         val aggregatedRelation = relation.existsLifting()
         // TODO: optimization --- we can build graph only for a subset of events, excluding:
@@ -341,11 +343,6 @@ class ExecutionOrder(
         //  - what else?
         //  and then insert them back into the topologically sorted list
         val graph = aggregatedExecution.buildGraph(aggregatedRelation)
-        // for (event in aggregatedExecution) {
-        //     println("Event: $event")
-        //     println("    adj: ${graph.adjacent(event)}")
-        //     println()
-        // }
         val ordering = topologicalSorting(graph)
         if (ordering == null) {
             consistent = false
