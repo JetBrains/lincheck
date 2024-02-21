@@ -31,14 +31,29 @@ abstract class SequentialConsistencyViolation : Inconsistency()
 class SequentialConsistencyChecker(
     val checkReleaseAcquireConsistency: Boolean = true,
     val approximateSequentialConsistency: Boolean = true,
-    val computeCoherenceOrdering: Boolean = true,
+    val checkCoherence: Boolean = true,
 ) : ConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution> {
 
-    // private val releaseAcquireChecker : ReleaseAcquireConsistencyChecker? =
-    //     if (checkReleaseAcquireConsistency) ReleaseAcquireConsistencyChecker(memoryAccessEventIndex) else null
+    private val releaseAcquireChecker : ReleaseAcquireConsistencyChecker? =
+        if (checkReleaseAcquireConsistency) ReleaseAcquireConsistencyChecker() else null
+
+    private val coherenceChecker : CoherenceChecker? =
+        if (checkCoherence) CoherenceChecker() else null
 
     override fun check(execution: MutableExtendedExecution): Inconsistency? {
-        return checkTest(execution)
+        check(!execution.executionOrderComputable.computed)
+        releaseAcquireChecker?.check(execution)
+            ?.let { return it }
+        coherenceChecker?.check(execution)
+            ?.let { return it }
+        check(execution.executionOrderComputable.computed)
+        val executionOrder = execution.executionOrderComputable.value
+            .ensure { it.isConsistent() }
+        SequentialConsistencyReplayer(1 + execution.maxThreadID).ensure {
+            it.replay(executionOrder.ordering) != null
+        }
+        return null
+    }
 
     /*
         // we will gradually approximate the total sequential execution order of events
@@ -86,28 +101,7 @@ class SequentialConsistencyChecker(
         // check consistency by trying to replay execution using sequentially consistent abstract machine
         return checkByReplaying(aggregated, covering.aggregate(remapping))
     */
-    }
 
-    private fun checkTest(execution: MutableExtendedExecution): Inconsistency? {
-        check(!execution.executionOrderComputable.computed)
-        execution.writesBeforeOrderComputable.apply {
-            initialize(); compute()
-        }
-        if (!execution.writesBeforeOrderComputable.value.isConsistent())
-            return ReleaseAcquireInconsistency()
-        execution.coherenceOrderComputable.apply {
-            initialize(); compute()
-        }
-        if (!execution.coherenceOrderComputable.value.isConsistent())
-            return SequentialConsistencyCoherenceViolation()
-        check(execution.executionOrderComputable.computed)
-        val executionOrder = execution.executionOrderComputable.value
-            .ensure { it.isConsistent() }
-        SequentialConsistencyReplayer(1 + execution.maxThreadID).ensure {
-            it.replay(executionOrder.ordering) != null
-        }
-        return null
-    }
 
     // private fun checkByCoherenceOrdering(
     //     execution: Execution<AtomicThreadEvent>,
@@ -134,7 +128,7 @@ class SequentialConsistencyChecker(
 
 }
 
-class SequentialConsistencyCoherenceViolation : SequentialConsistencyViolation() {
+class CoherenceViolation : SequentialConsistencyViolation() {
     override fun toString(): String {
         // TODO: what information should we display to help identify the cause of inconsistency?
         return "Sequential consistency coherence violation detected"
@@ -221,6 +215,7 @@ class IncrementalSequentialConsistencyChecker(
         execution.coherenceOrderComputable.reset()
         execution.extendedCoherenceComputable.reset()
     }
+
 }
 
 

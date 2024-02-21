@@ -26,6 +26,21 @@ import org.jetbrains.kotlinx.lincheck.utils.*
 
 typealias CoherenceList = List<AtomicThreadEvent>
 
+class CoherenceChecker : ConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution> {
+
+    override fun check(execution: MutableExtendedExecution): Inconsistency? {
+        execution.coherenceOrderComputable.apply {
+            initialize()
+            compute()
+        }
+        val coherenceOrder = execution.coherenceOrderComputable.value
+        return if (!coherenceOrder.isConsistent())
+            CoherenceViolation()
+        else null
+    }
+
+}
+
 class CoherenceOrder(
     val execution: Execution<AtomicThreadEvent>,
     val memoryAccessEventIndex: AtomicMemoryAccessEventIndex,

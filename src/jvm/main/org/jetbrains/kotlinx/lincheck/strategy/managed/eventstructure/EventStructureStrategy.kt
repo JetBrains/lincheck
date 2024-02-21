@@ -174,7 +174,7 @@ class EventStructureStrategy(
                     relAcqInconsistenciesCount++
                 is SequentialConsistencyApproximationInconsistency ->
                     seqCstApproximationInconsistencyCount++
-                is SequentialConsistencyCoherenceViolation ->
+                is CoherenceViolation ->
                     seqCstCoherenceViolationCount++
                 is SequentialConsistencyReplayViolation ->
                     seqCstReplayViolationCount++

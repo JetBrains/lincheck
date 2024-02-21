@@ -26,43 +26,26 @@ import org.jetbrains.kotlinx.lincheck.utils.*
 
 // TODO: what information should we display to help identify the cause of inconsistency:
 //   a cycle in writes-before relation?
-class ReleaseAcquireInconsistency() : Inconsistency() {
+class ReleaseAcquireInconsistency : Inconsistency() {
     override fun toString(): String {
         return "Release/Acquire inconsistency detected"
     }
 }
 
-class ReleaseAcquireConsistencyWitness(
-    val rmwChainsStorage: ReadModifyWriteOrder,
-    val writesBefore: WritesBeforeOrder,
-)
+class ReleaseAcquireConsistencyChecker : ConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution> {
 
-// class ReleaseAcquireConsistencyChecker(
-//     val memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
-// ) : ConsistencyChecker<AtomicThreadEvent, ReleaseAcquireConsistencyWitness> {
-//
-//     override fun check(execution: Execution<AtomicThreadEvent>): ConsistencyVerdict<ReleaseAcquireConsistencyWitness> {
-//         val rmwChainsStorage = ReadModifyWriteOrder(execution)
-//             .apply { compute() }
-//         if (!rmwChainsStorage.isConsistent()) {
-//             // TODO: should return RMW-atomicity violation instead
-//             return ReleaseAcquireInconsistency()
-//         }
-//         val writesBeforeOrder = WritesBeforeOrder(execution, memoryAccessEventIndex, rmwChainsStorage, causalityOrder)
-//             .apply {
-//                 initialize()
-//                 compute()
-//             }
-//         return if (!writesBeforeOrder.isConsistent())
-//             ReleaseAcquireInconsistency()
-//         else
-//             ConsistencyWitness(ReleaseAcquireConsistencyWitness(
-//                 rmwChainsStorage = rmwChainsStorage,
-//                 writesBefore = writesBeforeOrder,
-//             ))
-//     }
-//
-// }
+    override fun check(execution: MutableExtendedExecution): Inconsistency? {
+        execution.writesBeforeOrderComputable.apply {
+            initialize()
+            compute()
+        }
+        val writesBeforeOrder = execution.writesBeforeOrderComputable.value
+        return if (!writesBeforeOrder.isConsistent())
+            ReleaseAcquireInconsistency()
+        else null
+    }
+
+}
 
 class WritesBeforeOrder(
     val execution: Execution<AtomicThreadEvent>,
