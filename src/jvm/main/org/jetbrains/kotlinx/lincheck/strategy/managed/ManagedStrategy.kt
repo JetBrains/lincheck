@@ -395,6 +395,7 @@ abstract class ManagedStrategy(
         currentActorId[iThread]++
         callStackTrace[iThread].clear()
         suspendedFunctionsStack[iThread].clear()
+        loopDetector.onActorStart(iThread)
     }
 
     /**
@@ -993,6 +994,11 @@ abstract class ManagedStrategy(
                 }
             }
             return detectedFirstTime || detectedEarly
+        }
+
+        fun onActorStart(iThread: Int) {
+            check(iThread == lastExecutedThread)
+            currentThreadCodeLocationVisitCountMap.clear()
         }
 
         fun onThreadSwitch(iThread: Int) {
