@@ -24,46 +24,42 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.kotlinx.lincheck.utils.*
 
-// TODO: override toString()
-class AtomicityViolation(/*val write1: Event, val write2: Event*/) : Inconsistency()
+// TODO: restore atomicity violation information
+class AtomicityViolation(/*val write1: Event, val write2: Event*/) : Inconsistency() {
+    override fun toString(): String {
+        return "Atomicity violation detected"
+    }
+}
 
 class AtomicityChecker(execution: MutableExtendedExecution) :
     AbstractFullyIncrementalConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution>(execution) {
 
     override fun doIncrementalCheck(event: AtomicThreadEvent) {
-        val writeLabel = event.label.refine<WriteAccessLabel> { isExclusive }
+        check(execution.readModifyWriteOrderComputable.computed)
+        val readModifyWriteOrder = execution.readModifyWriteOrderComputable.value
+        val entry = readModifyWriteOrder.add(event)
             ?: return
-        val location = writeLabel.location
-        val readFrom = event.exclusiveReadPart.readsFrom
-        val other = execution.find { other ->
-            other != event && other.label.satisfies<WriteAccessLabel> {
-                isExclusive && this.location == location && other.exclusiveReadPart.readsFrom == readFrom
-            }
+        if (!entry.isConsistent()) {
+            inconsistency = AtomicityViolation()
         }
-        if (other != null)
-            inconsistency = AtomicityViolation(/*other, event*/)
     }
 
-    override fun doReset() {}
+    override fun doReset() {
+        execution.readModifyWriteOrderComputable.apply {
+            reset()
+            initialize()
+            compute()
+        }
+        val readModifyWriteOrder = execution.readModifyWriteOrderComputable.value
+        if (!readModifyWriteOrder.isConsistent()) {
+            inconsistency = AtomicityViolation()
+        }
+    }
 
 }
 
 typealias ReadModifyWriteChain = List<AtomicThreadEvent>
 typealias MutableReadModifyWriteChain = MutableList<AtomicThreadEvent>
-
-fun ReadModifyWriteOrder.Entry.isConsistent() = when {
-    // write-part of atomic-read-modify write operation should read-from
-    // the preceding write event in the chain
-    event.label.isExclusiveWriteAccess() ->
-        event.exclusiveReadPart.readsFrom == chain[position - 1]
-    // the other case is a non-exclusive write access,
-    // which should be the first event in the chain
-    // (this is enforced by the `isValid` check in the constructor)
-    else -> true
-}
-
-fun ReadModifyWriteOrder.isConsistent() =
-    entries.all { it.isConsistent() }
 
 class ReadModifyWriteOrder(
     val execution: Execution<AtomicThreadEvent>,
@@ -134,9 +130,9 @@ class ReadModifyWriteOrder(
         return rmwChainsMap[location]
     }
 
-    fun add(event: AtomicThreadEvent) {
+    fun add(event: AtomicThreadEvent): Entry? {
         val writeLabel = event.label.refine<WriteAccessLabel> { isExclusive }
-            ?: return
+            ?: return null
         val location = writeLabel.location
         val readFrom = event.exclusiveReadPart.readsFrom
         val chain = get(location, readFrom)?.chain?.ensure { it.isNotEmpty() } ?: arrayListOf()
@@ -158,7 +154,9 @@ class ReadModifyWriteOrder(
             }
         }
         chain.add(event)
-        eventMap[event] = EntryImpl(event, chain, position = chain.size - 1)
+        return EntryImpl(event, chain, position = chain.size - 1).also {
+            eventMap[event] = it
+        }
     }
 
     override fun compute() {
@@ -205,3 +203,17 @@ class ReadModifyWriteOrder(
     }
 
 }
+
+fun ReadModifyWriteOrder.Entry.isConsistent() = when {
+    // write-part of atomic-read-modify write operation should read-from
+    // the preceding write event in the chain
+    event.label.isExclusiveWriteAccess() ->
+        event.exclusiveReadPart.readsFrom == chain[position - 1]
+    // the other case is a non-exclusive write access,
+    // which should be the first event in the chain
+    // (this is enforced by the `isValid` check in the constructor)
+    else -> true
+}
+
+fun ReadModifyWriteOrder.isConsistent() =
+    entries.all { it.isConsistent() }

@@ -90,11 +90,6 @@ class SequentialConsistencyChecker(
 
     private fun checkTest(execution: MutableExtendedExecution): Inconsistency? {
         check(!execution.executionOrderComputable.computed)
-        execution.readModifyWriteOrderComputable.apply {
-            initialize(); compute()
-        }
-        if (!execution.readModifyWriteOrderComputable.value.isConsistent())
-            return AtomicityViolation()
         execution.writesBeforeOrderComputable.apply {
             initialize(); compute()
         }
@@ -222,7 +217,6 @@ class IncrementalSequentialConsistencyChecker(
 
     // TODO: move to corresponding individual consistency checkers
     private fun resetRelations() {
-        execution.readModifyWriteOrderComputable.reset()
         execution.writesBeforeOrderComputable.reset()
         execution.coherenceOrderComputable.reset()
         execution.extendedCoherenceComputable.reset()

@@ -28,7 +28,6 @@ import org.jetbrains.kotlinx.lincheck.utils.*
 //   a cycle in writes-before relation?
 class ReleaseAcquireInconsistency() : Inconsistency() {
     override fun toString(): String {
-        // TODO: what information should we display to help identify the cause of inconsistency?
         return "Release/Acquire inconsistency detected"
     }
 }
