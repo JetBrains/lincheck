@@ -18,7 +18,6 @@ import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.objectweb.asm.*
-import java.io.*
 import java.lang.reflect.*
 import java.util.*
 import kotlin.collections.set
@@ -251,14 +250,14 @@ abstract class ManagedStrategy(
     }
 
     private fun failIfObstructionFreedomIsRequired(lazyMessage: () -> String) {
-        if (testCfg.checkObstructionFreedom && !curActorIsBlocking && !concurrentActorCausesBlocking) {
+        if (testCfg.checkObstructionFreedom && !currentActorIsBlocking && !concurrentActorCausesBlocking) {
             suddenInvocationResult = ObstructionFreedomViolationInvocationResult(lazyMessage())
             // Forcibly finish the current execution by throwing an exception.
             throw ForcibleExecutionFinishError
         }
     }
 
-    private val curActorIsBlocking: Boolean
+    private val currentActorIsBlocking: Boolean
         get() {
             val actorId = currentActorId[currentThread]
             return (actorId >= 0) && scenario.threads[currentThread][actorId].blocking
