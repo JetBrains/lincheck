@@ -582,16 +582,23 @@ private fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockWithDum
                     /* fileName = */ it.fileName,
                     /* lineNumber = */ it.lineNumber
                 )
-            }.map { it.toString() }
-                .filter { stackTraceElementLine -> // Remove all stack trace elements related to lincheck
-                    "org.jetbrains.kotlinx.lincheck.strategy" !in stackTraceElementLine
-                            && "org.jetbrains.kotlinx.lincheck.runner" !in stackTraceElementLine
-                            && "org.jetbrains.kotlinx.lincheck.UtilsKt" !in stackTraceElementLine
-                }.forEach { appendLine("\t$it") }
+            }.run {
+                // Remove all the Lincheck internals only if the program
+                // has hung in the user code. Otherwise, print the full
+                // stack trace for easier debugging.
+                if (isEmpty() || first().isLincheckInternals) {
+                    this
+                } else {
+                    filter { !it.isLincheckInternals }
+                }
+            }.forEach { appendLine("\t$it") }
         }
     }
     return this
 }
+
+private val StackTraceElement.isLincheckInternals get() =
+    this.className.startsWith("org.jetbrains.kotlinx.lincheck.")
 
 private fun StringBuilder.appendIncorrectResultsFailure(
     failure: IncorrectResultsFailure,

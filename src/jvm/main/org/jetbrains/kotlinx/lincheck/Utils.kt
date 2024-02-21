@@ -188,7 +188,14 @@ private inline fun <R> runInIgnoredSection(currentThread: Thread, block: () -> R
 internal fun exceptionCanBeValidExecutionResult(exception: Throwable): Boolean {
     return exception !is ThreadDeath && // used to stop thread in FixedActiveThreadsExecutor by calling thread.stop method
             exception !is InternalLincheckTestUnexpectedException &&
-            exception !is ForcibleExecutionFinishException
+            exception !is ForcibleExecutionFinishError &&
+            !isIllegalAccessOfUnsafeDueToJavaVersion(exception)
+}
+
+internal fun wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(throwable: Throwable): Throwable {
+    if (isIllegalAccessOfUnsafeDueToJavaVersion(throwable)) return RuntimeException(ADD_OPENS_MESSAGE, throwable)
+
+    return throwable
 }
 
 /**

@@ -17,7 +17,6 @@ import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.jetbrains.kotlinx.lincheck_test.*
 import org.junit.*
 
 class ForcibleFinishExceptionInTryBlockTest {
@@ -42,7 +41,7 @@ class ForcibleFinishExceptionInTryBlockTest {
             .threads(2)
         val failure = options.checkImpl(this::class.java)
         check(failure != null) { "the test should fail" }
-        val forcibleFinishExceptionName = ForcibleExecutionFinishException::class.simpleName!!
+        val forcibleFinishExceptionName = ForcibleExecutionFinishError::class.simpleName!!
         check(failure is DeadlockWithDumpFailure) { "$forcibleFinishExceptionName overrode deadlock because of try-finally" }
         val log = StringBuilder().appendFailure(failure).toString()
         check(forcibleFinishExceptionName !in log) {

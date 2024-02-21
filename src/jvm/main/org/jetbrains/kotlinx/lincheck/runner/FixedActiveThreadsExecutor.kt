@@ -79,7 +79,7 @@ internal class FixedActiveThreadsExecutor(private val testName: String, private 
     private fun shutdown() {
         // submit the shutdown tasks
         for (i in 0 until nThreads)
-            submitTask(i, SHUTDOWN)
+            submitTask(i, Shutdown)
     }
 
     private fun submitTask(iThread: Int, task: Any) {
@@ -138,7 +138,7 @@ internal class FixedActiveThreadsExecutor(private val testName: String, private 
         loop@ while (true) {
             val task = runInIgnoredSection {
                 val task = getTask(iThread)
-                if (task === SHUTDOWN) return@Runnable
+                if (task === Shutdown) return@Runnable
                 tasks[iThread].value = null // reset task
                 task
             }
@@ -150,7 +150,7 @@ internal class FixedActiveThreadsExecutor(private val testName: String, private 
                 runInIgnoredSection { setResult(iThread, e) }
                 continue@loop
             }
-            runInIgnoredSection { setResult(iThread, DONE) }
+            runInIgnoredSection { setResult(iThread, Done) }
         }
     }
 
@@ -195,14 +195,19 @@ internal class FixedActiveThreadsExecutor(private val testName: String, private 
 
     override fun close() {
         shutdown()
-        if (hangDetected) {
-            for (thread in threads)
-                thread.stop()
+        // Thread.stop() throws UnsupportedOperationException
+        // starting from Java 20.
+        if (hangDetected && majorJavaVersion < 20) {
+            @Suppress("DEPRECATION")
+            threads.forEach { it.stop() }
         }
     }
 }
 
+private val majorJavaVersion = Runtime.version().version()[0]
+
 private const val SPINNING_LOOP_ITERATIONS_BEFORE_PARK = 1000_000
 
-private val SHUTDOWN = "SHUTDOWN"
-private val DONE = "DONE"
+// These constants are objects for easier debugging.
+private object Shutdown
+private object Done

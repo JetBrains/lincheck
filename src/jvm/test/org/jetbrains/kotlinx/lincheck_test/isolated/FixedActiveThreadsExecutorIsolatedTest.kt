@@ -7,13 +7,13 @@
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.jetbrains.kotlinx.lincheck_test.runner
+package org.jetbrains.kotlinx.lincheck_test.isolated
 
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.junit.*
 import java.util.concurrent.*
 
-class FixedActiveThreadsExecutorTest {
+class FixedActiveThreadsExecutorIsolatedTest {
     @Test
     fun testSubmit() = FixedActiveThreadsExecutor("FixedActiveThreadsExecutorTest.testSubmit", 2).use { executor ->
         val executed = arrayOf(false, false)
