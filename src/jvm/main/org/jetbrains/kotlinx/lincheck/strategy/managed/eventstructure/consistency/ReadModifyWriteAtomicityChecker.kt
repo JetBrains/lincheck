@@ -25,13 +25,13 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.kotlinx.lincheck.utils.*
 
 // TODO: restore atomicity violation information
-class AtomicityViolation(/*val write1: Event, val write2: Event*/) : Inconsistency() {
+class ReadModifyWriteAtomicityViolation(/*val write1: Event, val write2: Event*/) : Inconsistency() {
     override fun toString(): String {
         return "Atomicity violation detected"
     }
 }
 
-class AtomicityChecker(execution: MutableExtendedExecution) :
+class ReadModifyWriteAtomicityChecker(execution: MutableExtendedExecution) :
     AbstractFullyIncrementalConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution>(execution) {
 
     override fun doIncrementalCheck(event: AtomicThreadEvent) {
@@ -40,7 +40,7 @@ class AtomicityChecker(execution: MutableExtendedExecution) :
         val entry = readModifyWriteOrder.add(event)
             ?: return
         if (!entry.isConsistent()) {
-            inconsistency = AtomicityViolation()
+            inconsistency = ReadModifyWriteAtomicityViolation()
         }
     }
 
@@ -52,7 +52,7 @@ class AtomicityChecker(execution: MutableExtendedExecution) :
         }
         val readModifyWriteOrder = execution.readModifyWriteOrderComputable.value
         if (!readModifyWriteOrder.isConsistent()) {
-            inconsistency = AtomicityViolation()
+            inconsistency = ReadModifyWriteAtomicityViolation()
         }
     }
 

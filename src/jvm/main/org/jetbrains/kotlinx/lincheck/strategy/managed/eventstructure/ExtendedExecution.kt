@@ -214,7 +214,7 @@ fun MutableExtendedExecution(nThreads: Int): MutableExtendedExecution =
     private val consistencyChecker = aggregateConsistencyCheckers(
         execution = this,
         listOf<AtomicEventConsistencyChecker>(
-            AtomicityChecker(execution = this),
+            ReadModifyWriteAtomicityChecker(execution = this),
 
             IncrementalSequentialConsistencyChecker(
                 execution = this,
@@ -228,13 +228,6 @@ fun MutableExtendedExecution(nThreads: Int): MutableExtendedExecution =
     private val trackers = listOf(
         memoryAccessEventIndex.incrementalTracker(),
         consistencyChecker.incrementalTracker(),
-
-        // readModifyWriteOrderComputable.resettingTracker(),
-        // writesBeforeOrderComputable.resettingTracker(),
-        // coherenceOrderComputable.resettingTracker(),
-        // extendedCoherenceComputable.resettingTracker(),
-        // sequentialConsistencyOrderComputable.resettingTracker(),
-        // executionOrderComputable.resettingTracker(),
     )
 
     override val inconsistency: Inconsistency?

@@ -168,7 +168,7 @@ class EventStructureStrategy(
             when(inconsistency) {
                 is LockConsistencyViolation ->
                     lockConsistencyViolationCount++
-                is AtomicityViolation ->
+                is ReadModifyWriteAtomicityViolation ->
                     atomicityInconsistenciesCount++
                 is ReleaseAcquireInconsistency ->
                     relAcqInconsistenciesCount++
