@@ -22,7 +22,7 @@ import java.util.regex.Pattern
  * Creates object with coverage options.
  *
  * @param branchCoverage flag to run line coverage or branch coverage otherwise.
- * @param excludePatterns patterns for classnames to exclude from coverage report (use can use regex syntax).
+ * @param excludePatterns patterns for classnames to exclude from coverage report (you can use regex syntax).
  * @param onShutdown callback with coverage results.
  */
 class CoverageOptions(
