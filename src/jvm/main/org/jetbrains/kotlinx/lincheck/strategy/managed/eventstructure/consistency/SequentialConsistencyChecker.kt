@@ -180,7 +180,8 @@ class IncrementalSequentialConsistencyChecker(
         // check by trying to replay execution order
         if (state == ConsistencyCheckerState.Consistent) {
             val replayer = SequentialConsistencyReplayer(1 + execution.maxThreadID)
-            if (replayer.replay(execution) == null) {
+            val executionOrder = execution.executionOrderComputable.value
+            if (replayer.replay(executionOrder.ordering) == null) {
                 setUnknownState()
             }
         }
