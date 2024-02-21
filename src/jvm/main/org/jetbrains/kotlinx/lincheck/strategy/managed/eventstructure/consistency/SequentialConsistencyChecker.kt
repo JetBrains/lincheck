@@ -184,7 +184,10 @@ class IncrementalSequentialConsistencyChecker(
     override fun doReset() {
         resetRelations()
         execution.executionOrderComputable.apply {
-            reset(); setComputed()
+            reset()
+            // set state to `computed`,
+            // so we can push the events into the execution order
+            setComputed()
         }
         for (event in execution.enumerationOrderSorted()) {
             doIncrementalCheck(event)
