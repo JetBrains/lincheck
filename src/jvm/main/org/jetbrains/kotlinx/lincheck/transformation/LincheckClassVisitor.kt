@@ -290,21 +290,29 @@ internal class LincheckClassVisitor(
      * memory addresses will be the same in different runs.
      */
     private inner class DeterministicHashCodeTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
-        override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) =
-            adapter.run {
-                if (owner == "java/lang/Object" && name == "hashCode") {
-                    invokeIfInTestingCode(
-                        original = {
-                            visitMethodInsn(opcode, owner, name, desc, itf)
-                        },
-                        code = {
-                            invokeStatic(Injections::deterministicHashCode)
-                        }
-                    )
-                } else {
-                    visitMethodInsn(opcode, owner, name, desc, itf)
-                }
+        override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
+            if (name == "hashCode" && desc == "()I") {
+                invokeIfInTestingCode(
+                    original = {
+                        visitMethodInsn(opcode, owner, name, desc, itf)
+                    },
+                    code = {
+                        invokeStatic(Injections::hashCodeDeterministic)
+                    }
+                )
+            } else if (owner == "java/lang/System" && name == "identityHashCode" && desc == "(Ljava/lang/Object;)I") {
+                invokeIfInTestingCode(
+                    original = {
+                        visitMethodInsn(opcode, owner, name, desc, itf)
+                    },
+                    code = {
+                        invokeStatic(Injections::identityHashCodeDeterministic)
+                    }
+                )
+            } else {
+                visitMethodInsn(opcode, owner, name, desc, itf)
             }
+        }
     }
 
     /**

@@ -511,7 +511,6 @@ abstract class ManagedStrategy(
         // Therefore, we always release the lock in this case,
         // without tracking the event.
         if (suddenInvocationResult != null) return
-        if (suddenInvocationResult != null) return
         monitorTracker.releaseMonitor(monitor)
         traceCollector?.passCodeLocation(tracePoint)
     }
