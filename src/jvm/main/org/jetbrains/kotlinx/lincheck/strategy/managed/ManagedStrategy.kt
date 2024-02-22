@@ -103,9 +103,6 @@ abstract class ManagedStrategy(
     private val userDefinedGuarantees: List<ManagedStrategyGuarantee>? = testCfg.guarantees.ifEmpty { null }
 
 
-    fun useBytecodeCache(): Boolean =
-        !collectTrace && testCfg.eliminateLocalObjects && (testCfg.guarantees == ManagedCTestConfiguration.DEFAULT_GUARANTEES)
-
     override fun run(): LincheckFailure? = try {
         runImpl()
     } finally {
@@ -271,8 +268,7 @@ abstract class ManagedStrategy(
      * @param codeLocation the byte-code location identifier of the point in code.
      */
     private fun newSwitchPoint(iThread: Int, codeLocation: Int, tracePoint: TracePoint?) {
-        if (!isTestThread(iThread)) return
-        if (inIgnoredSection(iThread)) return // cannot suspend in ignored sections
+        if (Injections.inTestingCode()) return // cannot suspend in ignored sections
         // Throw ForcibleExecutionFinishException if the invocation
         // result is already calculated.
         if (suddenInvocationResult != null) throw ForcibleExecutionFinishError
@@ -490,23 +486,6 @@ abstract class ManagedStrategy(
             emptyList()
         }
 
-    // == LISTENING METHODS ==
-
-    internal fun hashCodeDeterministic(obj: Any): Int {
-        val hashCode = obj.hashCode()
-        return if (hashCode == System.identityHashCode(obj)) {
-            identityHashCodeDeterministic(obj)
-        } else {
-            hashCode
-        }
-    }
-
-    internal fun identityHashCodeDeterministic(obj: Any?): Int {
-        if (obj == null) return 0
-        // TODO: easier to support when `javaagent` is merged
-        return 0
-    }
-
     /**
      * @param codeLocation the byte-code location identifier of this operation.
      * @return whether lock should be actually acquired
@@ -531,7 +510,7 @@ abstract class ManagedStrategy(
         // the lock over and over until the instruction succeeds.
         // Therefore, we always release the lock in this case,
         // without tracking the event.
-        if (suddenInvocationResult != null) return false
+        if (suddenInvocationResult != null) return
         if (suddenInvocationResult != null) return
         monitorTracker.releaseMonitor(monitor)
         traceCollector?.passCodeLocation(tracePoint)

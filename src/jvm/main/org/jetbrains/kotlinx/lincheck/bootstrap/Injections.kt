@@ -450,4 +450,23 @@ internal object Injections {
 
     @JvmStatic
     val VOID_RESULT = Any()
+
+    // == LISTENING METHODS ==
+
+    @JvmStatic
+    fun hashCodeDeterministic(obj: Any): Int {
+        val hashCode = obj.hashCode()
+        return if (hashCode == System.identityHashCode(obj)) {
+            identityHashCodeDeterministic(obj)
+        } else {
+            hashCode
+        }
+    }
+
+    @JvmStatic
+    fun identityHashCodeDeterministic(obj: Any?): Int {
+        if (obj == null) return 0
+        // TODO: easier to support when `javaagent` is merged
+        return 0
+    }
 }

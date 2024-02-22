@@ -177,7 +177,13 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             !className.startsWith("kotlin.ranges.") ||
             className.startsWith("com.intellij.rt.coverage.") ||
             className.startsWith("org.jetbrains.kotlinx.lincheck.") && !className.startsWith("org.jetbrains.kotlinx.lincheck.test.") ||
-            className.startsWith("kotlinx.coroutines.DispatchedTask")
+            className.startsWith("kotlinx.coroutines.DispatchedTask") ||
+            className == kotlin.coroutines.CoroutineContext::javaClass.name ||
+            className == kotlinx.coroutines.CoroutineScope::javaClass.name ||
+            className == kotlinx.coroutines.CoroutineDispatcher::javaClass.name ||
+            className == "kotlinx.coroutines.NotCompleted" ||
+            className == "kotlinx.coroutines.CancelHandler" ||
+            className == "kotlinx.coroutines.CancelHandlerBase"
         ) return false
 
         return true

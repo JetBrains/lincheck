@@ -11,7 +11,7 @@ package org.jetbrains.kotlinx.lincheck
 
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.runner.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ForcibleExecutionFinishException
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ForcibleExecutionFinishError
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import sun.nio.ch.lincheck.*
 import java.lang.reflect.*
@@ -188,14 +188,7 @@ private inline fun <R> runInIgnoredSection(currentThread: Thread, block: () -> R
 internal fun exceptionCanBeValidExecutionResult(exception: Throwable): Boolean {
     return exception !is ThreadDeath && // used to stop thread in FixedActiveThreadsExecutor by calling thread.stop method
             exception !is InternalLincheckTestUnexpectedException &&
-            exception !is ForcibleExecutionFinishError &&
-            !isIllegalAccessOfUnsafeDueToJavaVersion(exception)
-}
-
-internal fun wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(throwable: Throwable): Throwable {
-    if (isIllegalAccessOfUnsafeDueToJavaVersion(throwable)) return RuntimeException(ADD_OPENS_MESSAGE, throwable)
-
-    return throwable
+            exception !is ForcibleExecutionFinishError
 }
 
 /**
