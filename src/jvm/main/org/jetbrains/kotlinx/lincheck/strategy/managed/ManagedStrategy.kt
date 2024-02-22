@@ -395,6 +395,7 @@ abstract class ManagedStrategy(
         currentActorId[iThread]++
         callStackTrace[iThread].clear()
         suspendedFunctionsStack[iThread].clear()
+        loopDetector.onActorStart(iThread)
     }
 
     /**
@@ -993,6 +994,14 @@ abstract class ManagedStrategy(
                 }
             }
             return detectedFirstTime || detectedEarly
+        }
+
+        fun onActorStart(iThread: Int) {
+            check(iThread == lastExecutedThread)
+            // if a thread has reached a new actor, then it means it has made some progress;
+            // therefore, we reset the code location counters,
+            // so that code location hits from a previous actor do not affect subsequent actors
+            currentThreadCodeLocationVisitCountMap.clear()
         }
 
         fun onThreadSwitch(iThread: Int) {
