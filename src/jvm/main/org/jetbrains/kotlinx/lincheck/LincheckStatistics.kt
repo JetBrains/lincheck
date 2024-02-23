@@ -217,7 +217,7 @@ class LincheckStatisticsTracker(
     }
 
     override fun coverageCalculated(coverage: CoverageResult) {
-        println("Coverage calculated: line=${coverage.lineCoverage}, branch=${coverage.branchCoverage}")
+        println("Coverage calculated: line=${coverage.lineCoverage}/${coverage.totalLines}, branch=${coverage.branchCoverage}/${coverage.totalBranches}")
         this.coverage = coverage
     }
 }

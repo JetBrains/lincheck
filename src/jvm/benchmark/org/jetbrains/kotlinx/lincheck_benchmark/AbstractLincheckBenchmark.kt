@@ -80,8 +80,7 @@ abstract class AbstractLincheckBenchmark(
 
         if (benchmarksReporter.coverageEnabled) {
             withCoverage(CoverageOptions(
-                true,
-                listOf(AbstractLincheckBenchmark::class.jvmName),
+                listOf(AbstractLincheckBenchmark::class.jvmName)
             ))
         }
 

@@ -150,9 +150,9 @@ public class TransformationClassLoader extends ExecutionClassLoader {
             try {
                 byte[] bytes = null;
                 // TODO: uncomment caches here
-//                if (bytecodeCache != null) {
-//                    bytes = bytecodeCache.get(name);
-//                }
+                if (bytecodeCache != null) {
+                    bytes = bytecodeCache.get(name);
+                }
                 if (bytes == null) {
                     bytes = instrument(originalName(name));
                     if (bytecodeCache != null) {
@@ -184,16 +184,14 @@ public class TransformationClassLoader extends ExecutionClassLoader {
             ClassWriter cwForCoverage = new ClassWriter(crForCoverage, 0);
 
             crForCoverage.accept(cwForCoverage, ClassReader.EXPAND_FRAMES);
-            // you may need to uncomment it for debug purposes under development.
+            // You may need to uncomment it for debug purposes under development.
             // if (className.equals(YourClass.class.getCanonicalName()))
             //    crForCoverage.accept(new TraceClassVisitor(cwForCoverage, new PrintWriter(System.out)), ClassReader.EXPAND_FRAMES);
 
             byte[] originalBytes = cwForCoverage.toByteArray();
             byte[] coverageBytes =  new CoverageTransformer(
-                    coverageOptions.getProjectData(),
-                    false,
-                    coverageOptions.getCf(),
-                    null
+                    CoverageOptions.Companion.getGlobalProjectData(),
+                    CoverageOptions.Companion.getGlobalProjectContext()
             ).transform(ClassLoader.getSystemClassLoader(), className, null, null, originalBytes);
 
             if (coverageBytes != null) {

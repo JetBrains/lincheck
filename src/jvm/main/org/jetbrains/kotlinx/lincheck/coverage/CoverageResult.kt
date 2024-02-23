@@ -14,11 +14,9 @@ import com.intellij.rt.coverage.verify.Verifier.CollectedCoverage
 
 
 class CoverageResult(collected: CollectedCoverage) {
-    val lineCoverage = calculateCoverage(collected.lineCounter.missed, collected.lineCounter.covered)
-    val branchCoverage = calculateCoverage(collected.branchCounter.missed, collected.branchCounter.covered)
+    val lineCoverage = collected.lineCounter.covered
+    val totalLines = collected.lineCounter.missed + collected.lineCounter.covered
 
-    private fun calculateCoverage(missed: Long, covered: Long): Long {
-        return covered
-        //return if (missed == 0L) 1.0 else covered.toDouble() / (covered + missed).toDouble()
-    }
+    val branchCoverage = collected.branchCounter.covered
+    val totalBranches = collected.branchCounter.missed + collected.branchCounter.covered
 }
