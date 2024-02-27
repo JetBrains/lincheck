@@ -1484,7 +1484,7 @@ private fun isFinalField(ownerInternal: String, fieldName: String): Boolean {
     }
     return try {
         // TODO: this line should be refactored
-        if (fieldName.contains("hits")) return true
+        if (fieldName.contains("__\$hits\$__")) return true
 
         val clazz = Class.forName(internalName.canonicalClassName)
         val field = findField(clazz, fieldName) ?: throw NoSuchFieldException("No $fieldName in ${clazz.name}")

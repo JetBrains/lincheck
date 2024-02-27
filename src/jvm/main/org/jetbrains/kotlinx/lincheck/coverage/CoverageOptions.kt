@@ -15,10 +15,7 @@ import com.intellij.rt.coverage.data.ProjectData
 import com.intellij.rt.coverage.instrumentation.CoverageRuntime
 import com.intellij.rt.coverage.instrumentation.InstrumentationOptions
 import com.intellij.rt.coverage.instrumentation.data.ProjectContext
-import com.intellij.rt.coverage.util.CoverageReport
-import com.intellij.rt.coverage.util.classFinder.ClassFinder
 import com.intellij.rt.coverage.verify.ProjectTargetProcessor
-import com.intellij.rt.coverage.verify.TargetProcessor
 import com.intellij.rt.coverage.verify.Verifier.CollectedCoverage
 import java.util.regex.Pattern
 
@@ -58,8 +55,8 @@ class CoverageOptions(
 
     fun collectCoverage() {
         globalProjectContext.applyHits(globalProjectData)
-        globalProjectContext.finalizeCoverage(globalProjectData)
         val localProjectData = getCoveredClasses()
+        globalProjectContext.finalizeCoverage(localProjectData)
 
         ProjectTargetProcessor().process(localProjectData) { _, coverage ->
             collectedCoverage = coverage
@@ -76,7 +73,6 @@ class CoverageOptions(
      */
     private fun resetCoveredClasses() {
         globalProjectData.classesCollection.forEach { classData ->
-            //classData?.setHitsMask(null)
             classData?.lines?.forEach inner@{
                 if (it == null) return@inner
 
@@ -109,7 +105,9 @@ class CoverageOptions(
                 excludes.none { it.matcher(classData.name).matches() } && // class is not excluded
                 classData.lines.any { it != null && (it as LineData).hits != 0 } // class has at least single line covered
             ) {
-                projectData.addClassData(classData)
+                // we must make full copy of ClassData object, because finalizeCoverage method changes internals of each ClassData object, which is not valid to perform on global ProjectData
+                val copy = projectData.getOrCreateClassData(classData.name)
+                copy.merge(classData)
             }
         }
 

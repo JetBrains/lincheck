@@ -149,7 +149,6 @@ public class TransformationClassLoader extends ExecutionClassLoader {
             }
             try {
                 byte[] bytes = null;
-                // TODO: uncomment caches here
                 if (bytecodeCache != null) {
                     bytes = bytecodeCache.get(name);
                 }
