@@ -41,12 +41,9 @@ class StressCTestConfiguration(
 
     override val instrumentationMode: InstrumentationMode get() = STRESS
 
-    override fun createStrategy(
-        testClass: Class<*>,
-        scenario: ExecutionScenario,
-        validationFunction: Actor?,
-        stateRepresentationMethod: Method?
-    ) = StressStrategy(this, testClass, scenario, validationFunction, stateRepresentationMethod)
+    override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunction: Actor?,
+                                stateRepresentationMethod: Method?) =
+        StressStrategy(this, testClass, scenario, validationFunction, stateRepresentationMethod)
 
     companion object {
         const val DEFAULT_INVOCATIONS = 10000

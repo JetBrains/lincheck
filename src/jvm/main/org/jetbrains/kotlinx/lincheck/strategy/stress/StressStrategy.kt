@@ -31,9 +31,7 @@ class StressStrategy(
         useClocks = UseClocks.RANDOM
     )
 
-    override fun runInvocation(): InvocationResult {
-        return runner.run()
-    }
+    override fun runInvocation(): InvocationResult = runner.run()
 
     override fun close() {
         runner.close()
