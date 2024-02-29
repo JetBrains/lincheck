@@ -15,6 +15,7 @@ package org.jetbrains.kotlinx.lincheck.util
  *
  * This class provides a method [spin], that should be called inside a spin-loop.
  * This method performs a few spin-loop iterations and optionally periodically yields.
+ *
  * For example, a simple spin-lock class can be implemented with the help of the [Spinner] as follows:
  *
  * ```
