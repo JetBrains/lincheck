@@ -13,9 +13,9 @@
 
 
 java.lang.IllegalStateException: Validation works!
-	at org.jetbrains.kotlinx.lincheck_test.representation.ValidationFunctionCallTest.validateWithError(ValidationFunctionTests.kt:45)
-	at org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution8218.run(Unknown Source)
-	at org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.testThreadRunnable$lambda$8(FixedActiveThreadsExecutor.kt:151)
+	at org.jetbrains.kotlinx.lincheck_test.representation.ValidationFunctionCallTest.validateWithError(ValidationFunctionTests.kt:44)
+	at org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution9079.run(Unknown Source)
+	at org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.testThreadRunnable$lambda$7(FixedActiveThreadsExecutor.kt:160)
 	at java.base/java.lang.Thread.run(Thread.java:840)
 
 
