@@ -43,7 +43,7 @@ internal open class ParallelThreadsRunner(
     private val useClocks: UseClocks // specifies whether `HBClock`-s should always be used or with some probability
 ) : Runner(strategy, testClass, validationFunction, stateRepresentationFunction) {
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
-    private val executor = FixedActiveThreadsExecutor(scenario.nThreads, runnerHash) // should be closed in `close()`
+    val executor = FixedActiveThreadsExecutor(scenario.nThreads, runnerHash) // should be closed in `close()`
 
     private lateinit var testInstance: Any
 
@@ -378,7 +378,7 @@ internal open class ParallelThreadsRunner(
         // wait for other threads to start
         var i = 1
         while (uninitializedThreads.get() != 0) {
-            if (i % SPINNING_LOOP_ITERATIONS_BEFORE_YIELD == 0) {
+            if (i % SPINNING_LOOP_ITERATIONS_BEFORE_YIELD == 0 || executor.numberOfThreadsExceedAvailableProcessors) {
                 yieldInvokedInOnStart = true
                 Thread.yield()
             }

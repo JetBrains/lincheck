@@ -108,6 +108,9 @@ abstract class ManagedStrategy(
         }
     }
 
+    private val numberOfThreadsExceedAvailableProcessors =
+        runner.executor.numberOfThreadsExceedAvailableProcessors
+
     private fun createRunner(): ManagedStrategyRunner =
         ManagedStrategyRunner(this, testClass, validationFunction, stateRepresentationFunction, testCfg.timeoutMs, UseClocks.ALWAYS)
 
@@ -422,7 +425,8 @@ abstract class ManagedStrategy(
         while (currentThread != iThread) {
             // Finish forcibly if an error occurred and we already have an `InvocationResult`.
             if (suddenInvocationResult != null) throw ForcibleExecutionFinishError
-            if (++i % SPINNING_LOOP_ITERATIONS_BEFORE_YIELD == 0) Thread.yield()
+            if (++i % SPINNING_LOOP_ITERATIONS_BEFORE_YIELD == 0 || numberOfThreadsExceedAvailableProcessors)
+                Thread.yield()
         }
     }
 
