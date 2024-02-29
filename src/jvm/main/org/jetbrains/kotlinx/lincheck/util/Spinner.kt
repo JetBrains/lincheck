@@ -40,6 +40,10 @@ class Spinner(
     }
 
     fun spin(): Boolean {
+        // spin a few iterations
+        repeat(spinLoopIterationsPerCall) {
+            counter++
+        }
         // if exit limit is approached,
         // reset counter and signal to exit the spin-loop
         if (counter >= exitLimit) {
@@ -48,12 +52,8 @@ class Spinner(
         }
         // if yield limit is approached,
         // then yield and give other threads the possibility to work
-        if (shouldYield && counter % yieldLimit == 0 && counter >= 0) {
+        if (shouldYield && counter % yieldLimit == 0) {
             Thread.yield()
-        }
-        // spin a few iterations
-        repeat(spinLoopIterationsPerCall) {
-            counter++
         }
         return true
     }
@@ -102,6 +102,6 @@ inline fun <T> Spinner.boundedWaitFor(getter: () -> T?): T? {
     return null
 }
 
-private const val SPIN_LOOP_ITERATIONS_PER_CALL : Int = 1 shl 5 // 32
-private const val SPIN_LOOP_ITERATIONS_BEFORE_YIELD : Int = 1 shl 14 // 16,384
-private const val SPIN_LOOP_ITERATIONS_BEFORE_EXIT : Int = 1 shl 20 // 1,048,576
+private const val SPIN_LOOP_ITERATIONS_PER_CALL: Int = 1 shl 5 // 32
+private const val SPIN_LOOP_ITERATIONS_BEFORE_YIELD: Int = 1 shl 14 // 16,384
+private const val SPIN_LOOP_ITERATIONS_BEFORE_EXIT: Int = 1 shl 20 // 1,048,576
