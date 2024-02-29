@@ -44,7 +44,8 @@ class Spinner(val nThreads: Int = -1, shouldYield: Boolean = true) {
 @JvmInline
 value class SpinnerGroup private constructor(private val spinners: Array<Spinner>) {
 
-    constructor(nThreads: Int) : this(spinners = Array(nThreads) { Spinner(nThreads) })
+    constructor(nThreads: Int, shouldYield: Boolean = true)
+            : this(Array(nThreads) { Spinner(nThreads, shouldYield = shouldYield) })
 
     operator fun get(i: Int): Spinner =
         spinners[i]
@@ -58,11 +59,24 @@ inline fun Spinner.wait(condition: () -> Boolean) {
 }
 
 inline fun Spinner.boundedWait(condition: () -> Boolean): Boolean {
+    var result = true
     while (!condition()) {
-        if (!spin()) return condition()
+        if (spin()) continue
+        result = condition()
+        break
     }
     reset()
-    return false
+    return result
+}
+
+inline fun <T> Spinner.boundedWaitFor(getter: () -> T?): T? {
+    boundedWait {
+        val result = getter()
+        if (result != null)
+            return result
+        false
+    }
+    return null
 }
 
 private const val SPINNING_LOOP_ITERATIONS_PER_CALL : Int = 1 shl 5 // 32
