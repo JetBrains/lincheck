@@ -18,6 +18,7 @@ import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.*
 import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner.Completion.*
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.util.*
 import org.objectweb.asm.*
 import java.lang.reflect.*
 import java.util.concurrent.*
@@ -43,7 +44,9 @@ internal open class ParallelThreadsRunner(
     private val useClocks: UseClocks // specifies whether `HBClock`-s should always be used or with some probability
 ) : Runner(strategy, testClass, validationFunction, stateRepresentationFunction) {
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
-    val executor = FixedActiveThreadsExecutor(scenario.nThreads, runnerHash) // should be closed in `close()`
+    private val executor = FixedActiveThreadsExecutor(scenario.nThreads, runnerHash) // should be closed in `close()`
+
+    private val spinners = SpinnerGroup(executor.threads.size)
 
     private lateinit var testInstance: Any
 
@@ -194,22 +197,21 @@ internal open class ParallelThreadsRunner(
     private fun waitAndInvokeFollowUp(iThread: Int, actorId: Int): Result {
         // Coroutine is suspended. Call method so that strategy can learn it.
         afterCoroutineSuspended(iThread)
-        // Tf the suspended method call has a follow-up part after this suspension point,
+        // If the suspended method call has a follow-up part after this suspension point,
         // then wait for the resuming thread to write a result of this suspension point
         // as well as the continuation to be executed by this thread;
         // wait for the final result of the method call otherwise.
         val completion = completions[iThread][actorId]
-        var i = 1
-        while (!isCoroutineResumed(iThread, actorId)) {
-            // Check whether the scenario is completed and the current suspended operation cannot be resumed.
-            if (currentExecutionPart == POST || completedOrSuspendedThreads.get() == scenario.nThreads) {
-                suspensionPointResults[iThread][actorId] = NoResult
-                return Suspended
-            }
-            // Do not call `yield()` until necessary. However, if the number of threads
-            // exceed the number of cores, it is better to call `yield` immediately to avoid starvation.
-            if (i++ % SPINNING_LOOP_ITERATIONS_BEFORE_YIELD == 0 || executor.numberOfThreadsExceedAvailableProcessors){
-                Thread.yield()
+        // Check if the coroutine is already resumed and if not, enter the spin loop.
+        if (!isCoroutineResumed(iThread, actorId)) {
+            spinners[iThread].wait {
+                // Check whether the scenario is completed and the current suspended operation cannot be resumed.
+                if (currentExecutionPart == POST || isParallelExecutionCompleted) {
+                    suspensionPointResults[iThread][actorId] = NoResult
+                    return Suspended
+                }
+                // Wait until coroutine is resumed.
+                isCoroutineResumed(iThread, actorId)
             }
         }
         // Coroutine will be resumed. Call method so that strategy can learn it.
@@ -375,13 +377,7 @@ internal open class ParallelThreadsRunner(
         super.onStart(iThread)
         uninitializedThreads.decrementAndGet() // this thread has finished initialization
         // wait for other threads to start
-        var i = 1
-        while (uninitializedThreads.get() != 0) {
-            if (i % SPINNING_LOOP_ITERATIONS_BEFORE_YIELD == 0 || executor.numberOfThreadsExceedAvailableProcessors) {
-                Thread.yield()
-            }
-            i++
-        }
+        spinners[iThread].wait { uninitializedThreads.get() == 0 }
     }
 
     override fun needsTransformation() = true
@@ -399,5 +395,3 @@ internal open class ParallelThreadsRunner(
 internal enum class UseClocks { ALWAYS, RANDOM }
 
 internal enum class CompletionStatus { CANCELLED, RESUMED }
-
-private const val SPINNING_LOOP_ITERATIONS_BEFORE_YIELD = 100_000
