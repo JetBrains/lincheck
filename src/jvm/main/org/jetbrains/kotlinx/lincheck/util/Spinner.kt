@@ -10,28 +10,51 @@
 
 package org.jetbrains.kotlinx.lincheck.util
 
-class Spinner(val nThreads: Int = -1, shouldYield: Boolean = true) {
+class Spinner(
+    val nThreads: Int = -1,
+    shouldYield: Boolean = true,
+) {
 
     private var counter: Int = 0
 
-    private inline val iterationsCount: Int
-        get() = SPINNING_LOOP_ITERATIONS_PER_CALL
-
-    private val yieldLimit = run {
+    private val shouldSpin: Boolean = run {
         val nProcessors = Runtime.getRuntime().availableProcessors()
-        if (nProcessors < nThreads) 1 else SPINNING_LOOP_ITERATIONS_BEFORE_YIELD
+        (nProcessors >= nThreads)
     }
 
-    val isYielding: Boolean = shouldYield
+    private val spinLoopIterationsPerCall: Int =
+        if (shouldSpin) SPIN_LOOP_ITERATIONS_PER_CALL else 1
+
+    private val yieldLimit = when {
+        shouldYield && shouldSpin -> SPIN_LOOP_ITERATIONS_BEFORE_YIELD
+        shouldYield -> 1
+        else -> -1
+    }
+
+    private inline val shouldYield: Boolean
+        get() = yieldLimit > 0
+
+    private val exitLimit = when {
+        shouldSpin -> SPIN_LOOP_ITERATIONS_BEFORE_EXIT
+        else -> 1
+    }
 
     fun spin(): Boolean {
-        if (counter >= yieldLimit) {
-            if (isYielding)
-                Thread.yield()
+        // if exit limit is approached,
+        // reset counter and signal to exit the spin-loop
+        if (counter >= exitLimit) {
             counter = 0
             return false
         }
-        repeat(iterationsCount) { counter++ }
+        // if yield limit is approached,
+        // then yield and give other threads the possibility to work
+        if (shouldYield && counter % yieldLimit == 0 && counter >= 0) {
+            Thread.yield()
+        }
+        // spin a few iterations
+        repeat(spinLoopIterationsPerCall) {
+            counter++
+        }
         return true
     }
 
@@ -79,5 +102,6 @@ inline fun <T> Spinner.boundedWaitFor(getter: () -> T?): T? {
     return null
 }
 
-private const val SPINNING_LOOP_ITERATIONS_PER_CALL : Int = 1 shl 5 // 32
-private const val SPINNING_LOOP_ITERATIONS_BEFORE_YIELD : Int = 1 shl 14 // 16384
+private const val SPIN_LOOP_ITERATIONS_PER_CALL : Int = 1 shl 5 // 32
+private const val SPIN_LOOP_ITERATIONS_BEFORE_YIELD : Int = 1 shl 14 // 16,384
+private const val SPIN_LOOP_ITERATIONS_BEFORE_EXIT : Int = 1 shl 20 // 1,048,576
