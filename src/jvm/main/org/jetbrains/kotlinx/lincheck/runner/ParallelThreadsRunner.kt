@@ -65,7 +65,6 @@ internal open class ParallelThreadsRunner(
     private fun trySetCancelledStatus(iThread: Int, actorId: Int) = completionStatuses[iThread].compareAndSet(actorId, null, CompletionStatus.CANCELLED)
 
     private val uninitializedThreads = AtomicInteger(scenario.nThreads) // for threads synchronization
-    private var yieldInvokedInOnStart = false
 
     private var initialPartExecution: TestThreadExecution? = null
     private var parallelPartExecutions: Array<TestThreadExecution> = arrayOf()
@@ -379,7 +378,6 @@ internal open class ParallelThreadsRunner(
         var i = 1
         while (uninitializedThreads.get() != 0) {
             if (i % SPINNING_LOOP_ITERATIONS_BEFORE_YIELD == 0 || executor.numberOfThreadsExceedAvailableProcessors) {
-                yieldInvokedInOnStart = true
                 Thread.yield()
             }
             i++
