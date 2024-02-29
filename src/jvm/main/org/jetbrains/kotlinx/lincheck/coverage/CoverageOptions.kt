@@ -10,10 +10,11 @@
 
 package org.jetbrains.kotlinx.lincheck.coverage
 
+import com.intellij.rt.coverage.data.LineData
 import com.intellij.rt.coverage.data.ProjectData
 import com.intellij.rt.coverage.instrumentation.CoverageRuntime
-import com.intellij.rt.coverage.util.CoverageReport
-import com.intellij.rt.coverage.util.classFinder.ClassFinder
+import com.intellij.rt.coverage.instrumentation.InstrumentationOptions
+import com.intellij.rt.coverage.instrumentation.data.ProjectContext
 import com.intellij.rt.coverage.verify.ProjectTargetProcessor
 import com.intellij.rt.coverage.verify.Verifier.CollectedCoverage
 import java.util.regex.Pattern
@@ -21,40 +22,101 @@ import java.util.regex.Pattern
 /**
  * Creates object with coverage options.
  *
- * @param branchCoverage flag to run line coverage or branch coverage otherwise.
+ * @param excludePatterns patterns for classnames to exclude from coverage report (you can use regex syntax).
  * @param onShutdown callback with coverage results.
- * @param additionalExcludePatterns patterns for classnames to exclude from coverage report.
  */
 class CoverageOptions(
-    private val branchCoverage: Boolean = false,
+    excludePatterns: List<String> = listOf(),
     private val onShutdown: ((ProjectData, CollectedCoverage) -> Unit)? = null,
-    additionalExcludePatterns: List<Pattern> = listOf(),
 ) {
-    private val excludePatterns = listOf<Pattern>(
-        Pattern.compile("org\\.jetbrains\\.kotlinx\\.lincheck\\..*"), // added to exclude ManagedStrategyStateHolder
-        // TODO: add other patterns to exclude (eg. gradle, junit, kotlinx, maven, ...)
-    ) + additionalExcludePatterns
-    val projectData = ProjectData(null, branchCoverage, null)
-    val cf = ClassFinder(listOf(), excludePatterns)
+    companion object {
+        var coverageEnabled = false
+        val globalProjectData = ProjectData()
+        val globalProjectContext = ProjectContext(
+            InstrumentationOptions.Builder()
+                .setBranchCoverage(true)
+                .setExcludePatterns(
+                    // added to exclude ManagedStrategyStateHolder
+                    listOf<Pattern>(Pattern.compile("org\\.jetbrains\\.kotlinx\\.lincheck\\..*"))
+                )
+                .setIsCalculateHits(false) // only allow to insert `__$hits$__[index] = 1` instructions by coverage transformer
+                .build()
+        )
+    }
+    var coverageResult: CoverageResult? = null
+    private var collectedCoverage: CollectedCoverage? = null
+    private val excludes = excludePatterns.map(Pattern::compile)
 
     init {
-        // only allow to insert `__$hits$__[index] = 1` instructions by coverage transformer
-        com.intellij.rt.coverage.util.OptionsUtil.CALCULATE_HITS_COUNT = false
+        coverageEnabled = true
+        if (ProjectData.ourProjectData != globalProjectData) {
+            CoverageRuntime.installRuntime(globalProjectData)
+        }
+        resetCoveredClasses()
+    }
 
-        projectData.excludePatterns = excludePatterns
-        CoverageRuntime.installRuntime(projectData)
+    /**
+     * Calculates and stores coverage, method must be called at the end of the test execution in order to get valid results.
+     */
+    fun collectCoverage() {
+        coverageEnabled = false
+        globalProjectContext.applyHits(globalProjectData)
+        val localProjectData = getCoveredClasses()
+        globalProjectContext.finalizeCoverage(localProjectData)
+
+        ProjectTargetProcessor().process(localProjectData) { _, coverage ->
+            collectedCoverage = coverage
+            coverageResult = CoverageResult(coverage)
+        }
     }
 
     fun onShutdown() {
-        if (onShutdown != null) {
-            CoverageReport.finalizeCoverage(projectData, false, cf, false)
-            val coverageResults = CollectedCoverage()
+        onShutdown?.let { it(globalProjectData, collectedCoverage!!) }
+    }
 
-            for (classData in projectData.classesCollection) {
-                coverageResults.add(ProjectTargetProcessor.collectClassCoverage(projectData, classData))
+    /**
+     * Marks all lines, jumps, and switches of previously observed classes as uncovered.
+     */
+    private fun resetCoveredClasses() {
+        globalProjectData.classesCollection.forEach { classData ->
+            classData?.lines?.forEach inner@{
+                if (it == null) return@inner
+
+                val lineData = (it as LineData)
+                lineData.hits = 0
+
+                lineData.jumps?.forEach { jumpData ->
+                    jumpData.trueHits = 0
+                    jumpData.falseHits = 0
+                }
+
+                lineData.switches?.forEach { switchData ->
+                    switchData.hits.fill(0)
+                }
             }
-
-            onShutdown.let { it(projectData, coverageResults) }
         }
+    }
+
+    /**
+     * Returns ProjectData, containing only "interesting" classes stored in globalProjectData.
+     *
+     * "Interesting" implies that class is not excluded, and it has at least a single line visited during last execution.
+     */
+    private fun getCoveredClasses() : ProjectData {
+        val projectData = ProjectData()
+
+        globalProjectData.classesCollection.forEach { classData ->
+            if (
+                classData != null &&
+                excludes.none { it.matcher(classData.name).matches() } && // class is not excluded
+                classData.lines.any { it != null && (it as LineData).hits != 0 } // class has at least single line covered
+            ) {
+                // we must make full copy of ClassData object, because finalizeCoverage method changes internals of each ClassData object, which is not valid to perform on global ProjectData
+                val copy = projectData.getOrCreateClassData(classData.name)
+                copy.merge(classData)
+            }
+        }
+
+        return projectData
     }
 }
