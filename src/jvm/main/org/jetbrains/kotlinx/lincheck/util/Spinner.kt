@@ -44,16 +44,16 @@ class Spinner(
         repeat(spinLoopIterationsPerCall) {
             counter++
         }
+        // if yield limit is approached,
+        // then yield and give other threads the possibility to work
+        if (shouldYield && counter % yieldLimit == 0) {
+            Thread.yield()
+        }
         // if exit limit is approached,
         // reset counter and signal to exit the spin-loop
         if (counter >= exitLimit) {
             counter = 0
             return false
-        }
-        // if yield limit is approached,
-        // then yield and give other threads the possibility to work
-        if (shouldYield && counter % yieldLimit == 0) {
-            Thread.yield()
         }
         return true
     }
