@@ -30,6 +30,7 @@ class CoverageOptions(
     private val onShutdown: ((ProjectData, CollectedCoverage) -> Unit)? = null,
 ) {
     companion object {
+        var coverageEnabled = false
         val globalProjectData = ProjectData()
         val globalProjectContext = ProjectContext(
             InstrumentationOptions.Builder()
@@ -47,13 +48,18 @@ class CoverageOptions(
     private val excludes = excludePatterns.map(Pattern::compile)
 
     init {
+        coverageEnabled = true
         if (ProjectData.ourProjectData != globalProjectData) {
             CoverageRuntime.installRuntime(globalProjectData)
         }
         resetCoveredClasses()
     }
 
+    /**
+     * Calculates and stores coverage, method must be called at the end of the test execution in order to get valid results.
+     */
     fun collectCoverage() {
+        coverageEnabled = false
         globalProjectContext.applyHits(globalProjectData)
         val localProjectData = getCoveredClasses()
         globalProjectContext.finalizeCoverage(localProjectData)

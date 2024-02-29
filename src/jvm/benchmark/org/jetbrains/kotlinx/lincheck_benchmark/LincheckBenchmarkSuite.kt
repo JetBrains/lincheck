@@ -67,7 +67,7 @@ class LincheckBenchmarksReporter {
     }
 
     val coverageEnabled: Boolean = run {
-        val value = when (val value = System.getProperty("coverageEnabled").orEmpty()) {
+        when (val value = System.getProperty("coverageEnabled").orEmpty()) {
             "true", "1" -> true
             "false", "0", "" -> false
 
@@ -77,9 +77,6 @@ class LincheckBenchmarksReporter {
             """.trimIndent()
             )
         }
-
-        println("CoverageEnabled: $value")
-        value
     }
 
     fun registerBenchmark(benchmarkStatistics: BenchmarkStatistics) {
