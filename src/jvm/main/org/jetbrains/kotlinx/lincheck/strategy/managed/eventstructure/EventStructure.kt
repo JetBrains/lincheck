@@ -470,9 +470,6 @@ class EventStructure(
     private val EventLabel.syncType
         get() = syncAlgebra.syncType(this)
 
-    private fun EventLabel.synchronizable(other: EventLabel) =
-        syncAlgebra.synchronizable(this, other)
-
     private fun EventLabel.synchronize(other: EventLabel) =
         syncAlgebra.synchronize(this, other)
 
@@ -657,7 +654,7 @@ class EventStructure(
                     (it to deps + candidateEvent)
                 } ?: (lab to deps)
             }
-        if (syncLab.isBlocking && !syncLab.unblocked)
+        if (syncLab.isBlocking && !syncLab.isUnblocked)
             return listOf()
         // We assume that at most, one of the events participating into synchronization
         // is a request event, and the result of synchronization is a response event.

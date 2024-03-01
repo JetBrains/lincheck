@@ -29,7 +29,7 @@ import kotlin.reflect.KClass
 /**
  * EventLabel is a base class for the hierarchy of classes representing semantic labels
  * of atomic events performed by the program.
- * It includes events such as:
+ * It includes events such as
  * - thread fork, join, start and finish;
  * - reads and writes from/to shared memory;
  * - lock acquisitions and releases;
@@ -39,13 +39,13 @@ import kotlin.reflect.KClass
  * @param kind the kind of this label (see [LabelKind]).
  * @param isBlocking whether this label is blocking.
  *    Load acquire-request and thread join-request/response are examples of blocking labels.
- * @param unblocked whether this blocking label is already unblocked.
+ * @param isUnblocked whether this blocking label is already unblocked.
  *   For example, thread join-response is unblocked when all the threads it waits for have finished.
  */
 sealed class EventLabel(
     open val kind: LabelKind,
     val isBlocking: Boolean = false,
-    val unblocked: Boolean = true,
+    val isUnblocked: Boolean = true,
 ) {
     /**
      * Checks whether this label is send label.
@@ -103,40 +103,9 @@ sealed class EventLabel(
      * Object accesses by the operation represented by the label.
      * For example, for object field memory access labels, this is the accessed object.
      * If a particular subclass of labels does not access any object,
-     * then this property is null.
+     * then this property is equal to [NULL_OBJECT_ID].
      */
     open val objID: ObjectID = NULL_OBJECT_ID
-
-    /**
-     * An index of a label which is used to group semantically similar and
-     * potentially concurrent labels operating on the same object or location.
-     * For example, for object field memory access labels this is the accessed memory location.
-     * Note that [index] and [obj] do not necessarily match. In case of object field memory access labels,
-     * the [index] is a tuple of accessed object, accessed field name and class name,
-     * while [obj] is only the accessed object itself.
-     * If particular subclass of labels does not have natural index
-     * then this property is null.
-     */
-    open val index: Any? = null
-
-    /**
-     * Checks whether this label is valid response to given [label] passed as argument.
-     *
-     * @throws IllegalArgumentException is this is not a response label.
-     */
-    open fun isValidResponse(label: EventLabel): Boolean {
-        require(isResponse)
-        return false
-    }
-
-    /**
-     * Returns response of this label corresponding to the given [label].
-     *
-     * @throws IllegalArgumentException if this is not either request or response label.
-     */
-    open fun getResponse(label: EventLabel): EventLabel? {
-        return null
-    }
 
     /**
      * Checks whether this label is valid receive to given [label].
@@ -158,18 +127,6 @@ sealed class EventLabel(
         require(isResponse)
         return null
     }
-
-    /**
-     * Partial join operation combining semantics of two labels.
-     */
-    open fun join(label: EventLabel): EventLabel? = null
-
-    /**
-     * Checks whether semantics of this label subsumes another label.
-     * Should be consistent with respect to [join] operation:
-     *   if `A join B = C` then `C subsumes A` and `C subsumes B`.
-     */
-    open fun subsumes(label: EventLabel): Boolean = false
 
 }
 
@@ -324,30 +281,6 @@ data class ThreadStartLabel(
         check(isRequest || isResponse || isReceive)
     }
 
-    override fun isValidResponse(label: EventLabel): Boolean {
-        require(isResponse)
-        return when (label) {
-            is ThreadStartLabel ->
-                label.isRequest && threadId == label.threadId
-            else ->
-                label.asThreadForkLabel()
-                    ?.let { threadId in it.forkThreadIds } ?: false
-        }
-    }
-
-    override fun getResponse(label: EventLabel): ThreadStartLabel? = when {
-        (isRequest || isResponse) ->
-            label.asThreadForkLabel()
-                ?.takeIf { isRequest && threadId in it.forkThreadIds }
-                ?.let {
-                    ThreadStartLabel(
-                        kind = LabelKind.Response,
-                        threadId = threadId,
-                    )
-                }
-        else -> null
-    }
-
     override fun isValidReceive(label: EventLabel): Boolean {
         require(isReceive)
         return label is ThreadStartLabel && !label.isReceive
@@ -384,16 +317,6 @@ data class ThreadFinishLabel(
 ) {
     constructor(threadId: Int): this(setOf(threadId))
 
-    override fun join(label: EventLabel): ThreadFinishLabel? =
-        if (label is ThreadFinishLabel)
-            ThreadFinishLabel(finishedThreadIds + label.finishedThreadIds)
-        else null
-
-    override fun subsumes(label: EventLabel): Boolean =
-        if (label is ThreadFinishLabel)
-            finishedThreadIds.containsAll(label.finishedThreadIds)
-        else false
-
     override fun toString(): String =
         "ThreadFinish"
 }
@@ -406,7 +329,7 @@ data class ThreadFinishLabel(
  * [ThreadFinishLabel] to produce another thread join-response label,
  * however the new join label no longer waits for synchronized finished thread.
  *
- * This is blocking label, it becomes [unblocked] when set of
+ * This is blocking label, it becomes [isUnblocked] when set of
  * wait-to-be-join threads becomes empty (see [joinThreadIds]).
  *
  * @param kind the kind of this label: [LabelKind.Request] or [LabelKind.Response].
@@ -423,38 +346,18 @@ data class ThreadJoinLabel(
 
     init {
         require(isRequest || isResponse || isReceive)
-        require(isReceive implies unblocked)
-    }
-
-    override fun isValidResponse(label: EventLabel): Boolean {
-        require(isResponse)
-        return when (label) {
-            is ThreadJoinLabel ->
-                label.joinThreadIds.containsAll(joinThreadIds)
-            is ThreadFinishLabel ->
-                label.finishedThreadIds.all { it !in joinThreadIds }
-            else -> false
-        }
-    }
-
-    override fun getResponse(label: EventLabel): EventLabel? = when {
-        (isRequest || isResponse) && label is ThreadFinishLabel && joinThreadIds.containsAll(label.finishedThreadIds) ->
-            ThreadJoinLabel(
-                kind = LabelKind.Response,
-                joinThreadIds = joinThreadIds - label.finishedThreadIds,
-            )
-        else -> null
+        require(isReceive implies isUnblocked)
     }
 
     override fun isValidReceive(label: EventLabel): Boolean {
         require(isReceive)
         return label is ThreadJoinLabel && !label.isReceive
-                && unblocked && label.unblocked
+                && isUnblocked && label.isUnblocked
     }
 
     override fun getReceive(): EventLabel? {
         require(isResponse)
-        return if (unblocked)
+        return if (isUnblocked)
             copy(kind = LabelKind.Receive)
         else null
     }
@@ -582,12 +485,6 @@ sealed class MemoryAccessLabel(
     override val objID: ObjectID
         get() = location.objID
 
-    /**
-     * Index of a memory access label is equal to accessed memory location.
-     */
-    override val index: Any?
-        get() = location
-
     override fun toString(): String {
         val kindString = when (kind) {
             LabelKind.Send -> ""
@@ -642,38 +539,6 @@ data class ReadAccessLabel(
         get() = value
 
     override val writeValue: ValueID = NULL_OBJECT_ID
-
-    override fun isValidResponse(label: EventLabel): Boolean {
-        require(isResponse)
-        return when (label) {
-            is ReadAccessLabel ->
-                label.isRequest &&
-                kClass == label.kClass &&
-                location == label.location &&
-                isExclusive == label.isExclusive
-
-            else -> label.asWriteAccessLabel(location)?.let {
-                // TODO: also check kClass
-                value == it.value
-            } ?: false
-        }
-    }
-
-    override fun getResponse(label: EventLabel): EventLabel? = when {
-        isRequest ->
-            label.asWriteAccessLabel(location)?.let {
-                // TODO: perform dynamic type-check
-                ReadAccessLabel(
-                    kind = LabelKind.Response,
-                    codeLocation = codeLocation,
-                    location = location,
-                    kClass = kClass,
-                    value = it.value,
-                    isExclusive = isExclusive,
-                )
-            }
-        else -> null
-    }
 
     override fun isValidReceive(label: EventLabel): Boolean {
         require(isReceive)
@@ -861,13 +726,6 @@ sealed class MutexLabel(
      */
     override val objID: ObjectID
         get() = mutex
-
-    /**
-     * Index of a mutex label is the mutex object itself.
-     */
-    override val index: Any?
-        // TODO: get() = mutex
-        get() = null
 
     override fun toString(): String {
         val kindString = when (kind) {
