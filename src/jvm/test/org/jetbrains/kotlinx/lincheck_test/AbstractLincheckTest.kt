@@ -39,6 +39,7 @@ abstract class AbstractLincheckTest(
     }
 
     @Test(timeout = TIMEOUT)
+    // NOTE: please do not rename, the name is used in CI to filter tests
     fun testWithStressStrategy(): Unit = StressOptions().run {
         invocationsPerIteration(5_000)
         commonConfiguration()
@@ -46,6 +47,7 @@ abstract class AbstractLincheckTest(
     }
 
     @Test(timeout = TIMEOUT)
+    // NOTE: please do not rename, the name is used in CI to filter tests
     fun testWithModelCheckingStrategy(): Unit = ModelCheckingOptions().run {
         invocationsPerIteration(1_000)
         commonConfiguration()
