@@ -780,37 +780,6 @@ data class LockLabel(
     val isReentry: Boolean =
         (reentranceDepth - reentranceCount > 0)
 
-    override fun isValidResponse(label: EventLabel): Boolean {
-        require(isResponse)
-        return when (label) {
-            is LockLabel ->
-                label.isRequest
-                && mutex == label.mutex
-                && reentranceDepth == label.reentranceDepth
-                && reentranceCount == label.reentranceCount
-
-            else ->
-                label.asUnlockLabel(mutex)?.let {
-                    !it.isReentry && (isReentry implies it.isInitUnlock)
-                } ?: false
-        }
-    }
-
-    override fun getResponse(label: EventLabel): LockLabel? = when {
-        isRequest ->
-            label.asUnlockLabel(mutex)
-                ?.takeIf { !it.isReentry && (isReentry implies it.isInitUnlock) }
-                ?.let {
-                    LockLabel(
-                        kind = LabelKind.Response,
-                        mutex = mutex,
-                        reentranceDepth = reentranceDepth,
-                        reentranceCount = reentranceCount,
-                    )
-                }
-        else -> null
-    }
-
     override fun toString(): String =
         super.toString()
 }
@@ -876,23 +845,6 @@ data class WaitLabel(
         require(isRequest || isResponse)
         require(isRequest implies !locking)
         require(isResponse implies !unlocking)
-    }
-
-    override fun isValidResponse(label: EventLabel): Boolean {
-        require(isResponse)
-        return when (label) {
-            is WaitLabel ->
-                label.isRequest && mutex == label.mutex
-            else ->
-                label.asNotifyLabel(mutex) != null
-        }
-    }
-
-    override fun getResponse(label: EventLabel): WaitLabel? = when {
-        isRequest -> label.asNotifyLabel(mutex)?.let {
-            WaitLabel(LabelKind.Response, mutex)
-        }
-        else -> null
     }
 
     override fun toString(): String =
@@ -1003,22 +955,6 @@ data class ParkLabel(
         require(isRequest || isResponse || isReceive)
     }
 
-    override fun isValidResponse(label: EventLabel): Boolean {
-        require(isResponse)
-        return when (label) {
-            is ParkingEventLabel ->
-                (label.isRequest || label.isSend) && threadId == label.threadId
-            else -> false
-        }
-    }
-
-    override fun getResponse(label: EventLabel): ParkLabel? = when {
-        isRequest && label is UnparkLabel && threadId == label.threadId ->
-            ParkLabel(LabelKind.Response, threadId)
-        // TODO: provide an option to enable spurious wake-ups
-        else -> null
-    }
-
     override fun isValidReceive(label: EventLabel): Boolean {
         require(isReceive)
         return label is ParkLabel && !label.isReceive
@@ -1111,46 +1047,6 @@ data class CoroutineSuspendLabel(
         require(isRequest || isResponse || isReceive)
         require(promptCancellation implies isRequest)
         require(cancelled implies (isResponse || isReceive))
-    }
-
-    override fun isValidResponse(label: EventLabel): Boolean {
-        require(isResponse)
-        return when (label) {
-            is CoroutineSuspendLabel ->
-                label.isRequest
-                    && (label.promptCancellation implies cancelled)
-                    && threadId == label.threadId
-                    && actorId == label.actorId
-            is CoroutineResumeLabel ->
-                !cancelled
-                    && threadId == label.threadId
-                    && actorId == label.actorId
-            is InitializationLabel ->
-                cancelled
-            else -> false
-        }
-    }
-
-    override fun getResponse(label: EventLabel): CoroutineSuspendLabel? = when {
-        isRequest && !promptCancellation
-            && label is CoroutineResumeLabel
-            && threadId == label.threadId
-            && actorId == label.actorId ->
-                CoroutineSuspendLabel(
-                    kind = LabelKind.Response,
-                    threadId = threadId,
-                    actorId = actorId,
-                )
-
-        isRequest && label is InitializationLabel ->
-            CoroutineSuspendLabel(
-                kind = LabelKind.Response,
-                threadId = threadId,
-                actorId = actorId,
-                cancelled = true,
-            )
-
-        else -> null
     }
 
     override fun isValidReceive(label: EventLabel): Boolean {

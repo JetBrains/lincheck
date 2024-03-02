@@ -20,6 +20,8 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
+import org.jetbrains.kotlinx.lincheck.utils.implies
+
 /**
  * Synchronization algebra describes how event labels can synchronize to form new labels.
  * For example, write access label can synchronize with read-request label to form a read-response label.
@@ -193,7 +195,7 @@ enum class SynchronizationType { Binary, Barrier }
  *     wherein the set of finished thread ids is subtracted from the set of joined thread ids.
  *
  *     ```
- *         TFinish(ts) \+ TJoin^{req/rsp}(ts') = TJoin^rsp(ts' \ ts)
+ *         TFinish(ts) \+ TJoin^{req|rsp}(ts') = TJoin^rsp(ts' \ ts)
  *     ```
  *
  *   - Two thread finish labels synchronize, and their sets of finished thread ids are joined.
@@ -240,13 +242,6 @@ fun ThreadStartLabel.isValidResponse(label: EventLabel): Boolean {
     }
 }
 
-/**
- * Returns the response label for this [ThreadStartLabel]
- * given [label] as a potential sender event label to respond to.
- *
- * @param label the label to respond to.
- * @return the response label if it is valid, null otherwise.
- */
 fun ThreadStartLabel.getResponse(label: EventLabel): ThreadStartLabel? = when {
     isRequest -> label.asThreadForkLabel()
         ?.takeIf { isRequest && threadId in it.forkThreadIds }
@@ -255,11 +250,6 @@ fun ThreadStartLabel.getResponse(label: EventLabel): ThreadStartLabel? = when {
     else -> null
 }
 
-/**
- * Checks whether this [ThreadJoinLabel] is a valid response to the given [label].
- *
- * @see ThreadJoinLabel.getResponse
- */
 fun ThreadJoinLabel.isValidResponse(label: EventLabel): Boolean {
     require(isResponse)
     return when (label) {
@@ -271,13 +261,6 @@ fun ThreadJoinLabel.isValidResponse(label: EventLabel): Boolean {
     }
 }
 
-/**
- * Returns the response label for this [ThreadJoinLabel]
- * given [label] as a potential sender event label to respond to.
- *
- * @param label the label to respond to.
- * @return the response label if it is valid, null otherwise.
- */
 fun ThreadJoinLabel.getResponse(label: EventLabel): EventLabel? = when {
     !isReceive && label is ThreadFinishLabel && joinThreadIds.containsAll(label.finishedThreadIds) ->
         this.copy(
@@ -288,10 +271,6 @@ fun ThreadJoinLabel.getResponse(label: EventLabel): EventLabel? = when {
     else -> null
 }
 
-/**
- * Joins this [ThreadFinishLabel] with the given [label].
- * Defined only if the [label] is also a [ThreadFinishLabel], otherwise returns null.
- */
 fun ThreadFinishLabel.join(label: EventLabel): ThreadFinishLabel? = when {
     (label is ThreadFinishLabel) ->
         this.copy(finishedThreadIds = finishedThreadIds + label.finishedThreadIds)
@@ -312,7 +291,6 @@ fun ThreadFinishLabel.join(label: EventLabel): ThreadFinishLabel? = when {
  *         Write(x, v) \+ Read^req(x) = Read^rsp(x, v)
  *     ```
  */
-
 private val MemoryAccessSynchronizationAlgebra = object : SynchronizationAlgebra {
 
     override fun syncType(label: EventLabel): SynchronizationType? = when(label) {
@@ -329,11 +307,6 @@ private val MemoryAccessSynchronizationAlgebra = object : SynchronizationAlgebra
 
 }
 
-/**
- * Checks whether this [ReadAccessLabel] is a valid response to the given [label].
- *
- * @see ReadAccessLabel.getResponse
- */
 fun ReadAccessLabel.isValidResponse(label: EventLabel): Boolean {
     require(isResponse)
     return when {
@@ -342,6 +315,7 @@ fun ReadAccessLabel.isValidResponse(label: EventLabel): Boolean {
             location == label.location &&
             isExclusive == label.isExclusive
 
+        // TODO: here and in the similar places, remove this branch?
         else -> label.asWriteAccessLabel(location)?.let {
             // TODO: also check kClass
             value == it.value
@@ -349,13 +323,6 @@ fun ReadAccessLabel.isValidResponse(label: EventLabel): Boolean {
     }
 }
 
-/**
- * Returns the response label for this [ReadAccessLabel]
- * given [label] as a potential sender event label to respond to.
- *
- * @param label the label to respond to.
- * @return the response label if it is valid, null otherwise.
- */
 fun ReadAccessLabel.getResponse(label: EventLabel): EventLabel? = when {
     isRequest -> label.asWriteAccessLabel(location)?.let { write ->
         // TODO: perform dynamic type-check
@@ -369,6 +336,24 @@ fun ReadAccessLabel.getResponse(label: EventLabel): EventLabel? = when {
 }
 
 
+/**
+ * Mutex synchronization algebra defines synchronization rules
+ * for different types of mutex event labels.
+ *
+ * The rules are as follows.
+ *
+ *   - Unlock synchronizes with lock-request to the same mutex:
+ *
+ *     ```
+ *         Unlock(m) \+ Lock^req(m) = Lock^rsp(m)
+ *     ```
+ *
+ *   - Notify synchronizes with wait-request on the same mutex:
+ *
+ *     ```
+ *         Notify(m) \+ Wait^req(m) = Wait^rsp(m)
+ *     ```
+ */
 private val MutexSynchronizationAlgebra = object : SynchronizationAlgebra {
 
     override fun syncType(label: EventLabel): SynchronizationType? = when(label) {
@@ -387,6 +372,57 @@ private val MutexSynchronizationAlgebra = object : SynchronizationAlgebra {
 
 }
 
+fun LockLabel.isValidResponse(label: EventLabel): Boolean {
+    require(isResponse)
+    return when {
+        label is LockLabel && label.isRequest ->
+            mutex == label.mutex &&
+            reentranceDepth == label.reentranceDepth &&
+            reentranceCount == label.reentranceCount
+
+        else -> label.asUnlockLabel(mutex)?.let {
+            !it.isReentry && (isReentry implies it.isInitUnlock)
+        } ?: false
+    }
+}
+
+fun LockLabel.getResponse(label: EventLabel): LockLabel? = when {
+    isRequest -> label.asUnlockLabel(mutex)
+        ?.takeIf { !it.isReentry && (isReentry implies it.isInitUnlock) }
+        ?.let { this.copy(kind = LabelKind.Response) }
+
+    else -> null
+}
+
+fun WaitLabel.isValidResponse(label: EventLabel): Boolean {
+    require(isResponse)
+    return when (label) {
+        is WaitLabel ->
+            label.isRequest && mutex == label.mutex
+        else ->
+            label.asNotifyLabel(mutex) != null
+    }
+}
+
+fun WaitLabel.getResponse(label: EventLabel): WaitLabel? = when {
+    isRequest -> label.asNotifyLabel(mutex)?.let {
+        WaitLabel(LabelKind.Response, mutex)
+    }
+    else -> null
+}
+
+/**
+ * Parking synchronization algebra defines synchronization rules
+ * for different types of parking event labels.
+ *
+ * The rules are as follows.
+ *
+ *   - Unpark synchronizes with park-request to the same thread:
+ *
+ *     ```
+ *         Unpark(t) \+ Park^req(t) = Park^rsp(t)
+ *     ```
+ */
 private val ParkingSynchronizationAlgebra = object : SynchronizationAlgebra {
 
     override fun syncType(label: EventLabel): SynchronizationType? = when(label) {
@@ -402,6 +438,42 @@ private val ParkingSynchronizationAlgebra = object : SynchronizationAlgebra {
 
 }
 
+fun ParkLabel.isValidResponse(label: EventLabel): Boolean {
+    require(isResponse)
+    return when (label) {
+        is ParkingEventLabel ->
+            (label.isRequest || label.isSend) && threadId == label.threadId
+        else -> false
+    }
+}
+
+fun ParkLabel.getResponse(label: EventLabel): ParkLabel? = when {
+    isRequest && label is UnparkLabel && threadId == label.threadId ->
+        this.copy(kind = LabelKind.Response)
+
+    // TODO: provide an option to enable spurious wake-ups
+    else -> null
+}
+
+/**
+ * Coroutine synchronization algebra defines synchronization rules
+ * for different types of parking event labels.
+ *
+ * The rules are as follows.
+ *
+ *   - Coroutine resume synchronizes with suspend-request on the same suspension point:
+ *
+ *     ```
+ *         Resume(s) \+ Suspend^req(s) = Suspend^rsp(s)
+ *     ```
+ *
+ *   - Coroutine cancel synchronizes with suspend-request on the same suspension point:
+ *
+ *     ```
+ *         Cancel(s) \+ Suspend^req(s) = Suspend^rsp[cancelled](s)
+ *     ```
+ *
+ */
 private val CoroutineSynchronizationAlgebra = object : SynchronizationAlgebra {
 
     override fun syncType(label: EventLabel): SynchronizationType? = when(label) {
@@ -417,9 +489,55 @@ private val CoroutineSynchronizationAlgebra = object : SynchronizationAlgebra {
 
 }
 
-val AtomicSynchronizationAlgebra = CommutativeSynchronizationAlgebra(object : SynchronizationAlgebra {
+fun CoroutineSuspendLabel.isValidResponse(label: EventLabel): Boolean {
+    require(isResponse)
+    return when (label) {
+        is CoroutineSuspendLabel ->
+            label.isRequest
+                    && (label.promptCancellation implies cancelled)
+                    && threadId == label.threadId
+                    && actorId == label.actorId
 
-    // TODO: generalize this construction to arbitrary list of disjoint algebras (?)
+        is CoroutineResumeLabel ->
+            !cancelled
+                    && threadId == label.threadId
+                    && actorId == label.actorId
+
+        is InitializationLabel ->
+            cancelled
+
+        else -> false
+    }
+}
+
+fun CoroutineSuspendLabel.getResponse(label: EventLabel): CoroutineSuspendLabel? = when {
+    isRequest && !promptCancellation
+              && label is CoroutineResumeLabel
+              && threadId == label.threadId
+              && actorId == label.actorId ->
+        this.copy(kind = LabelKind.Response)
+
+    // TODO: use separate CoroutineCancel label instead of InitializationLabel
+    isRequest && label is InitializationLabel ->
+        this.copy(kind = LabelKind.Response, cancelled = true, promptCancellation = false)
+
+    else -> null
+}
+
+
+/**
+ * Atomic events synchronization algebra is a commutative synchronization algebra
+ * that combines multiple sub-algebras of synchronization.
+ *
+ * In particular, it encompasses the following synchronization algebras:
+ *   - thread synchronization algebra,
+ *   - memory access synchronization algebra,
+ *   - mutex synchronization algebra,
+ *   - parking synchronization algebra,
+ *   - coroutine synchronization algebra.
+ *
+ */
+val AtomicSynchronizationAlgebra = CommutativeSynchronizationAlgebra(object : SynchronizationAlgebra {
 
     override fun syncType(label: EventLabel): SynchronizationType? = when(label) {
         is ThreadEventLabel         -> ThreadSynchronizationAlgebra.syncType(label)
@@ -446,85 +564,24 @@ val AtomicSynchronizationAlgebra = CommutativeSynchronizationAlgebra(object : Sy
 
 })
 
-private val ReceiveAggregationAlgebra = object : SynchronizationAlgebra {
-
-    override fun syncType(label: EventLabel): SynchronizationType? =
-        if (label.isRequest || label.isResponse) SynchronizationType.Binary else null
-
-    override fun synchronize(label: EventLabel, other: EventLabel): EventLabel? = when {
-        label.isRequest && other.isResponse && other.isValidResponse(label) ->
-            other.getReceive()
-        else -> null
-    }
-
+fun EventLabel.isValidResponse(label: EventLabel): Boolean = when (this) {
+    is ThreadStartLabel         -> isValidResponse(label)
+    is ThreadJoinLabel          -> isValidResponse(label)
+    is ReadAccessLabel          -> isValidResponse(label)
+    is LockLabel                -> isValidResponse(label)
+    is WaitLabel                -> isValidResponse(label)
+    is ParkLabel                -> isValidResponse(label)
+    is CoroutineSuspendLabel    -> isValidResponse(label)
+    else                        -> throw IllegalArgumentException()
 }
 
-private val MemoryAccessAggregationAlgebra = object : SynchronizationAlgebra {
-
-    override fun syncType(label: EventLabel): SynchronizationType? = when(label) {
-        is MemoryAccessLabel        -> SynchronizationType.Binary
-        else                        -> null
-    }
-
-    override fun synchronize(label: EventLabel, other: EventLabel): EventLabel? = when {
-        // read request synchronizes with read response
-        label is ReadAccessLabel && label.isRequest && other is ReadAccessLabel && other.isResponse
-                && other.isValidResponse(label) ->
-            other.getReceive()
-
-        // exclusive read response/receive synchronizes with exclusive write
-        label is ReadAccessLabel && (label.isResponse || label.isReceive) && other is WriteAccessLabel ->
-            ReadModifyWriteAccessLabel(label, other)
-
-        // exclusive read request synchronizes with read-modify-write response
-        label is ReadAccessLabel && label.isRequest && other is ReadModifyWriteAccessLabel && other.isResponse
-                && label.isValidReadPart(other) ->
-            other.getReceive()
-
-        else -> null
-    }
-
-}
-
-val MutexAggregationAlgebra = object : SynchronizationAlgebra {
-
-    override fun syncType(label: EventLabel): SynchronizationType? = when (label) {
-        is MutexLabel   -> SynchronizationType.Binary
-        else            -> null
-    }
-
-    // TODO: use `join` and `subsumes` (?)
-    override fun synchronize(label: EventLabel, other: EventLabel): EventLabel? = when {
-        // unlock label can be merged with the subsequent wait request
-        label is UnlockLabel && other is WaitLabel && other.isRequest && !other.unlocking
-                && label.mutex == other.mutex ->
-            WaitLabel(LabelKind.Request, label.mutex, unlocking = true)
-
-        // wait response label can be merged with the subsequent lock request
-        label is WaitLabel && label.isResponse && !label.locking && other is LockLabel && other.isRequest
-                && label.mutex == other.mutex ->
-            WaitLabel(LabelKind.Response, label.mutex, locking = true)
-
-        // TODO: do we need to merge lock request/response (?)
-        else -> null
-    }
-
-}
-
-val ThreadAggregationAlgebra = object : SynchronizationAlgebra {
-
-    override fun syncType(label: EventLabel): SynchronizationType? = when (label) {
-        is MemoryAccessLabel    -> MemoryAccessAggregationAlgebra.syncType(label)
-        is MutexLabel           -> MutexAggregationAlgebra.syncType(label)
-        is ActorLabel           -> null
-        else                    -> ReceiveAggregationAlgebra.syncType(label)
-    }
-
-    override fun synchronize(label: EventLabel, other: EventLabel): EventLabel? = when (label) {
-        is MemoryAccessLabel    -> MemoryAccessAggregationAlgebra.synchronize(label, other)
-        is MutexLabel           -> MutexAggregationAlgebra.synchronize(label, other)
-        is ActorLabel           -> null
-        else                    -> ReceiveAggregationAlgebra.synchronize(label, other)
-    }
-
+fun EventLabel.getResponse(label: EventLabel): EventLabel? = when (this) {
+    is ThreadStartLabel         -> getResponse(label)
+    is ThreadJoinLabel          -> getResponse(label)
+    is ReadAccessLabel          -> getResponse(label)
+    is LockLabel                -> getResponse(label)
+    is WaitLabel                -> getResponse(label)
+    is ParkLabel                -> getResponse(label)
+    is CoroutineSuspendLabel    -> getResponse(label)
+    else                        -> null
 }

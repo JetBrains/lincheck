@@ -35,92 +35,6 @@ interface EventAggregator {
     ): Boolean
 }
 
-fun SynchronizationAlgebra.aggregator() = object : EventAggregator {
-
-    override fun aggregate(events: List<AtomicThreadEvent>): List<List<AtomicThreadEvent>> =
-        events.squash { x, y -> synchronizable(x.label, y.label) }
-
-    override fun label(events: List<AtomicThreadEvent>): EventLabel =
-        synchronize(events).ensureNotNull()
-
-    override fun dependencies(events: List<AtomicThreadEvent>, remapping: EventRemapping): List<HyperThreadEvent> {
-        return events
-            // TODO: should use covering here instead of dependencies?
-            .flatMap { event -> event.dependencies.mapNotNull { remapping[it] } }
-            .distinct()
-    }
-
-    override fun isCoverable(
-        events: List<AtomicThreadEvent>,
-        covering: Covering<ThreadEvent>,
-        clock: VectorClock
-    ): Boolean {
-        return covering.allCoverable(events, clock)
-    }
-
-}
-
-fun ActorAggregator(execution: Execution<AtomicThreadEvent>) = object : EventAggregator {
-
-    override fun aggregate(events: List<AtomicThreadEvent>): List<List<AtomicThreadEvent>> {
-        var pos = 0
-        val result = mutableListOf<List<AtomicThreadEvent>>()
-        while (pos < events.size) {
-            if ((events[pos].label as? ActorLabel)?.actorKind != ActorLabelKind.Start) {
-                result.add(listOf(events[pos++]))
-                continue
-            }
-            val start = events[pos]
-            val end = events.subList(fromIndex = start.threadPosition, toIndex = events.size).find {
-                (it.label as? ActorLabel)?.actorKind == ActorLabelKind.End
-            } ?: break
-            check((start.label as ActorLabel).actor == (end.label as ActorLabel).actor)
-            result.add(events.subList(fromIndex = start.threadPosition, toIndex = end.threadPosition + 1))
-            pos = end.threadPosition + 1
-        }
-        return result
-    }
-
-    override fun label(events: List<AtomicThreadEvent>): EventLabel? {
-        val start = events.first().takeIf {
-            (it.label as? ActorLabel)?.actorKind == ActorLabelKind.Start
-        } ?: return null
-        val end = events.last().ensure {
-            (it.label as? ActorLabel)?.actorKind == ActorLabelKind.End
-        }
-        check((start.label as ActorLabel).actor == (end.label as ActorLabel).actor)
-        return ActorLabel((start.label as ActorLabel).threadId, ActorLabelKind.Span, (start.label as ActorLabel).actor)
-    }
-
-    override fun dependencies(events: List<AtomicThreadEvent>, remapping: EventRemapping): List<HyperThreadEvent> {
-        return events
-            .flatMap { event ->
-                val causalEvents = execution.threadMap.entries.mapNotNull { (tid, thread) ->
-                    if (tid != event.threadId)
-                        thread.getOrNull(event.causalityClock[tid])
-                    else null
-                }
-                causalEvents.mapNotNull { remapping[it] }
-            }
-            // TODO: should use covering here instead of dependencies?
-            .filter {
-                // take the last event before ActorEnd event
-                val last = it.events[it.events.size - 2]
-                events.first().causalityClock.observes(last)
-            }
-            .distinct()
-    }
-
-    override fun isCoverable(
-        events: List<AtomicThreadEvent>,
-        covering: Covering<ThreadEvent>,
-        clock: VectorClock
-    ): Boolean {
-        return covering.firstCoverable(events, clock)
-    }
-
-}
-
 // TODO: unify with Remapping class
 typealias EventRemapping = Map<AtomicThreadEvent, HyperThreadEvent>
 
@@ -193,4 +107,173 @@ fun Covering<AtomicThreadEvent>.aggregate(remapping: EventRemapping) = Covering<
             this(atomicEvent).mapNotNull { remapping[it] }
         }
         .distinct()
+}
+
+fun ActorAggregator(execution: Execution<AtomicThreadEvent>) = object : EventAggregator {
+
+    override fun aggregate(events: List<AtomicThreadEvent>): List<List<AtomicThreadEvent>> {
+        var pos = 0
+        val result = mutableListOf<List<AtomicThreadEvent>>()
+        while (pos < events.size) {
+            if ((events[pos].label as? ActorLabel)?.actorKind != ActorLabelKind.Start) {
+                result.add(listOf(events[pos++]))
+                continue
+            }
+            val start = events[pos]
+            val end = events.subList(fromIndex = start.threadPosition, toIndex = events.size).find {
+                (it.label as? ActorLabel)?.actorKind == ActorLabelKind.End
+            } ?: break
+            check((start.label as ActorLabel).actor == (end.label as ActorLabel).actor)
+            result.add(events.subList(fromIndex = start.threadPosition, toIndex = end.threadPosition + 1))
+            pos = end.threadPosition + 1
+        }
+        return result
+    }
+
+    override fun label(events: List<AtomicThreadEvent>): EventLabel? {
+        val start = events.first().takeIf {
+            (it.label as? ActorLabel)?.actorKind == ActorLabelKind.Start
+        } ?: return null
+        val end = events.last().ensure {
+            (it.label as? ActorLabel)?.actorKind == ActorLabelKind.End
+        }
+        check((start.label as ActorLabel).actor == (end.label as ActorLabel).actor)
+        return ActorLabel((start.label as ActorLabel).threadId, ActorLabelKind.Span, (start.label as ActorLabel).actor)
+    }
+
+    override fun dependencies(events: List<AtomicThreadEvent>, remapping: EventRemapping): List<HyperThreadEvent> {
+        return events
+            .flatMap { event ->
+                val causalEvents = execution.threadMap.entries.mapNotNull { (tid, thread) ->
+                    if (tid != event.threadId)
+                        thread.getOrNull(event.causalityClock[tid])
+                    else null
+                }
+                causalEvents.mapNotNull { remapping[it] }
+            }
+            // TODO: should use covering here instead of dependencies?
+            .filter {
+                // take the last event before ActorEnd event
+                val last = it.events[it.events.size - 2]
+                events.first().causalityClock.observes(last)
+            }
+            .distinct()
+    }
+
+    override fun isCoverable(
+        events: List<AtomicThreadEvent>,
+        covering: Covering<ThreadEvent>,
+        clock: VectorClock
+    ): Boolean {
+        return covering.firstCoverable(events, clock)
+    }
+
+}
+
+fun SynchronizationAlgebra.aggregator() = object : EventAggregator {
+
+    override fun aggregate(events: List<AtomicThreadEvent>): List<List<AtomicThreadEvent>> =
+        events.squash { x, y -> synchronizable(x.label, y.label) }
+
+    override fun label(events: List<AtomicThreadEvent>): EventLabel =
+        synchronize(events).ensureNotNull()
+
+    override fun dependencies(events: List<AtomicThreadEvent>, remapping: EventRemapping): List<HyperThreadEvent> {
+        return events
+            // TODO: should use covering here instead of dependencies?
+            .flatMap { event -> event.dependencies.mapNotNull { remapping[it] } }
+            .distinct()
+    }
+
+    override fun isCoverable(
+        events: List<AtomicThreadEvent>,
+        covering: Covering<ThreadEvent>,
+        clock: VectorClock
+    ): Boolean {
+        return covering.allCoverable(events, clock)
+    }
+
+}
+
+private val ReceiveAggregationAlgebra = object : SynchronizationAlgebra {
+
+    override fun syncType(label: EventLabel): SynchronizationType? =
+        if (label.isRequest || label.isResponse) SynchronizationType.Binary else null
+
+    override fun synchronize(label: EventLabel, other: EventLabel): EventLabel? = when {
+        label.isRequest && other.isResponse && other.isValidResponse(label) ->
+            other.getReceive()
+        else -> null
+    }
+
+}
+
+private val MemoryAccessAggregationAlgebra = object : SynchronizationAlgebra {
+
+    override fun syncType(label: EventLabel): SynchronizationType? = when(label) {
+        is MemoryAccessLabel        -> SynchronizationType.Binary
+        else                        -> null
+    }
+
+    override fun synchronize(label: EventLabel, other: EventLabel): EventLabel? = when {
+        // read request synchronizes with read response
+        label is ReadAccessLabel && label.isRequest && other is ReadAccessLabel && other.isResponse
+                && other.isValidResponse(label) ->
+            other.getReceive()
+
+        // exclusive read response/receive synchronizes with exclusive write
+        label is ReadAccessLabel && (label.isResponse || label.isReceive) && other is WriteAccessLabel ->
+            ReadModifyWriteAccessLabel(label, other)
+
+        // exclusive read request synchronizes with read-modify-write response
+        label is ReadAccessLabel && label.isRequest && other is ReadModifyWriteAccessLabel && other.isResponse
+                && label.isValidReadPart(other) ->
+            other.getReceive()
+
+        else -> null
+    }
+
+}
+
+val MutexAggregationAlgebra = object : SynchronizationAlgebra {
+
+    override fun syncType(label: EventLabel): SynchronizationType? = when (label) {
+        is MutexLabel   -> SynchronizationType.Binary
+        else            -> null
+    }
+
+    // TODO: use `join` and `subsumes` (?)
+    override fun synchronize(label: EventLabel, other: EventLabel): EventLabel? = when {
+        // unlock label can be merged with the subsequent wait request
+        label is UnlockLabel && other is WaitLabel && other.isRequest && !other.unlocking
+                && label.mutex == other.mutex ->
+            WaitLabel(LabelKind.Request, label.mutex, unlocking = true)
+
+        // wait response label can be merged with the subsequent lock request
+        label is WaitLabel && label.isResponse && !label.locking && other is LockLabel && other.isRequest
+                && label.mutex == other.mutex ->
+            WaitLabel(LabelKind.Response, label.mutex, locking = true)
+
+        // TODO: do we need to merge lock request/response (?)
+        else -> null
+    }
+
+}
+
+val ThreadAggregationAlgebra = object : SynchronizationAlgebra {
+
+    override fun syncType(label: EventLabel): SynchronizationType? = when (label) {
+        is MemoryAccessLabel    -> MemoryAccessAggregationAlgebra.syncType(label)
+        is MutexLabel           -> MutexAggregationAlgebra.syncType(label)
+        is ActorLabel           -> null
+        else                    -> ReceiveAggregationAlgebra.syncType(label)
+    }
+
+    override fun synchronize(label: EventLabel, other: EventLabel): EventLabel? = when (label) {
+        is MemoryAccessLabel    -> MemoryAccessAggregationAlgebra.synchronize(label, other)
+        is MutexLabel           -> MutexAggregationAlgebra.synchronize(label, other)
+        is ActorLabel           -> null
+        else                    -> ReceiveAggregationAlgebra.synchronize(label, other)
+    }
+
 }
