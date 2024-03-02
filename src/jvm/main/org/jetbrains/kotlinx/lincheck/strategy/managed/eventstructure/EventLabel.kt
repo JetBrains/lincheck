@@ -27,20 +27,22 @@ import java.util.IdentityHashMap
 import kotlin.reflect.KClass
 
 /**
- * EventLabel is a base class for the hierarchy of classes representing semantic labels
- * of atomic events performed by the program.
+ * EventLabel is a base class for the hierarchy of classes
+ * representing semantic labels of various events performed by the program.
+ *
  * It includes events such as
- * - thread fork, join, start and finish;
+ * - thread fork, join, start, or finish;
  * - reads and writes from/to shared memory;
- * - lock acquisitions and releases;
+ * - mutex locks and unlocks;
  * and other (see subclasses of this class).
  *
  *
- * @param kind the kind of this label (see [LabelKind]).
- * @param isBlocking whether this label is blocking.
- *    Load acquire-request and thread join-request/response are examples of blocking labels.
- * @param isUnblocked whether this blocking label is already unblocked.
+ * @property kind the kind of this label (see [LabelKind]).
+ * @property isBlocking flag indicating that label is blocking.
+ *    Mutex lock and thread join are examples of blocking labels.
+ * @property isUnblocked flag indicating that blocking label is unblocked.
  *   For example, thread join-response is unblocked when all the threads it waits for have finished.
+ *   For non-blocking labels, it should be set to true.
  */
 sealed class EventLabel(
     open val kind: LabelKind,
@@ -72,40 +74,12 @@ sealed class EventLabel(
         get() = (kind == LabelKind.Receive)
 
     /**
-     * Type of the label.
-     *
-     * @see LabelType
-     */
-    val type: LabelType
-        get() = when (this) {
-            is InitializationLabel          -> LabelType.Initialization
-            is ThreadStartLabel             -> LabelType.ThreadStart
-            is ThreadFinishLabel            -> LabelType.ThreadFinish
-            is ThreadForkLabel              -> LabelType.ThreadFork
-            is ThreadJoinLabel              -> LabelType.ThreadJoin
-            is ObjectAllocationLabel        -> LabelType.ObjectAllocation
-            is ReadAccessLabel              -> LabelType.ReadAccess
-            is WriteAccessLabel             -> LabelType.WriteAccess
-            is ReadModifyWriteAccessLabel   -> LabelType.ReadModifyWriteAccess
-            is CoroutineSuspendLabel        -> LabelType.CoroutineSuspend
-            is CoroutineResumeLabel         -> LabelType.CoroutineResume
-            is LockLabel                    -> LabelType.Lock
-            is UnlockLabel                  -> LabelType.Unlock
-            is WaitLabel                    -> LabelType.Wait
-            is NotifyLabel                  -> LabelType.Notify
-            is ParkLabel                    -> LabelType.Park
-            is UnparkLabel                  -> LabelType.Unpark
-            is ActorLabel                   -> LabelType.Actor
-            is RandomLabel                  -> LabelType.Random
-        }
-
-    /**
      * Object accesses by the operation represented by the label.
      * For example, for object field memory access labels, this is the accessed object.
      * If a particular subclass of labels does not access any object,
      * then this property is equal to [NULL_OBJECT_ID].
      */
-    open val objID: ObjectID = NULL_OBJECT_ID
+    open val objectID: ObjectID = NULL_OBJECT_ID
 
 }
 
@@ -123,13 +97,23 @@ sealed class EventLabel(
  */
 enum class LabelKind { Send, Request, Response, Receive }
 
+val LabelKind.repr get() = when (this) {
+    LabelKind.Send -> ""
+    LabelKind.Request -> "^req"
+    LabelKind.Response -> "^rsp"
+    LabelKind.Receive -> ""
+}
+
+/**
+ * Enum class representing different types of event labels.
+ */
 enum class LabelType {
     Initialization,
+    ObjectAllocation,
     ThreadStart,
     ThreadFinish,
     ThreadFork,
     ThreadJoin,
-    ObjectAllocation,
     ReadAccess,
     WriteAccess,
     ReadModifyWriteAccess,
@@ -146,19 +130,45 @@ enum class LabelType {
 }
 
 /**
- * Special label acting as a label of the virtual root event.
+ * Type of the label.
  *
- * Has [LabelKind.Send] kind.
+ * @see LabelType
+ */
+val EventLabel.type: LabelType get() = when (this) {
+    is InitializationLabel          -> LabelType.Initialization
+    is ObjectAllocationLabel        -> LabelType.ObjectAllocation
+    is ThreadStartLabel             -> LabelType.ThreadStart
+    is ThreadFinishLabel            -> LabelType.ThreadFinish
+    is ThreadForkLabel              -> LabelType.ThreadFork
+    is ThreadJoinLabel              -> LabelType.ThreadJoin
+    is ReadAccessLabel              -> LabelType.ReadAccess
+    is WriteAccessLabel             -> LabelType.WriteAccess
+    is ReadModifyWriteAccessLabel   -> LabelType.ReadModifyWriteAccess
+    is CoroutineSuspendLabel        -> LabelType.CoroutineSuspend
+    is CoroutineResumeLabel         -> LabelType.CoroutineResume
+    is LockLabel                    -> LabelType.Lock
+    is UnlockLabel                  -> LabelType.Unlock
+    is WaitLabel                    -> LabelType.Wait
+    is NotifyLabel                  -> LabelType.Notify
+    is ParkLabel                    -> LabelType.Park
+    is UnparkLabel                  -> LabelType.Unpark
+    is ActorLabel                   -> LabelType.Actor
+    is RandomLabel                  -> LabelType.Random
+}
+
+/**
+ * A special label of the virtual root event of every execution.
  *
- * Initialization label can synchronize with various different labels.
- * Usually synchronization of initialization label with some request label
- * results in response label that obtains some default value.
- * For example, synchronizing initialization label with read-request label of integer
- * results in read-response label with value `0`.
+ * Initialization label stores the initial values for:
+ *   - static memory locations, and
+ *   - memory locations of external objects - that is objects
+ *     allocated in the untracked code sections.
  *
- * ```
- * Init \+ Read^{req}(x) = Read^{rsp}(x, 0)
- * ```
+ * @property initThreadID thread id used for the special initial thread;
+ *   this thread should contain only the initialization event itself.
+ * @property mainThreadID thread id of the main thread, starting the execution of a program.
+ * @property memoryInitializer a callback performing a load of the initial values
+ *   of a passed memory location.
  */
 class InitializationLabel(
     val initThreadID: ThreadID,
@@ -169,43 +179,90 @@ class InitializationLabel(
     private val staticMemory =
         HashMap<StaticFieldMemoryLocation, ValueID>()
 
-    private val objectsAllocations =
+    private val _objectsAllocations =
         IdentityHashMap<ObjectID, ObjectAllocationLabel>()
+
+    val objectsAllocations: Map<ObjectID, ObjectAllocationLabel>
+        get() = _objectsAllocations
 
     val externalObjects: Set<ObjectID>
         get() = objectsAllocations.keys
 
+    fun getInitialValue(location: StaticFieldMemoryLocation): ValueID {
+        return staticMemory.computeIfAbsent(location) { memoryInitializer(it) }
+    }
+
     fun trackExternalObject(className: String, objID: ObjectID) {
-        objectsAllocations[objID] = ObjectAllocationLabel(className, objID, memoryInitializer)
+        _objectsAllocations[objID] = ObjectAllocationLabel(className, objID, memoryInitializer)
     }
-
-    fun asThreadForkLabel() =
-        ThreadForkLabel(setOf(mainThreadID))
-
-    fun asObjectAllocationLabel(objID: ObjectID): ObjectAllocationLabel? =
-        objectsAllocations[objID]
-
-    fun isWriteAccessTo(location: MemoryLocation): Boolean =
-        location is StaticFieldMemoryLocation || (location.objID in externalObjects)
-
-    fun asWriteAccessLabel(location: MemoryLocation): WriteAccessLabel? {
-        if (location is StaticFieldMemoryLocation) {
-            return WriteAccessLabel(
-                location = location,
-                value = staticMemory.computeIfAbsent(location) {
-                    memoryInitializer(it)
-                },
-                isExclusive = false,
-                codeLocation = INIT_CODE_LOCATION,
-            )
-        }
-        return asObjectAllocationLabel(location.objID)?.asWriteAccessLabel(location)
-    }
-
-    fun asUnlockLabel(mutex: ObjectID) =
-        asObjectAllocationLabel(mutex)?.asUnlockLabel(mutex)
 
     override fun toString(): String = "Init"
+
+}
+
+fun InitializationLabel.asThreadForkLabel() =
+    ThreadForkLabel(setOf(mainThreadID))
+
+fun InitializationLabel.asObjectAllocationLabel(objID: ObjectID): ObjectAllocationLabel? =
+    objectsAllocations[objID]
+
+fun InitializationLabel.isWriteAccessTo(location: MemoryLocation): Boolean =
+    location is StaticFieldMemoryLocation || (location.objID in externalObjects)
+
+fun InitializationLabel.asWriteAccessLabel(location: MemoryLocation): WriteAccessLabel? = when {
+    location is StaticFieldMemoryLocation ->
+        WriteAccessLabel(
+            location = location,
+            value = getInitialValue(location),
+            codeLocation = INIT_CODE_LOCATION,
+            isExclusive = false,
+        )
+
+    else -> asObjectAllocationLabel(location.objID)?.asWriteAccessLabel(location)
+}
+
+fun InitializationLabel.asUnlockLabel(mutex: ObjectID) =
+    asObjectAllocationLabel(mutex)?.asUnlockLabel(mutex)
+
+private const val INIT_CODE_LOCATION = -1
+
+
+data class ObjectAllocationLabel(
+    val className: String,
+    override val objectID: ObjectID,
+    val memoryInitializer: MemoryIDInitializer,
+) : EventLabel(kind = LabelKind.Send) {
+
+    init {
+        require(objectID != NULL_OBJECT_ID)
+    }
+
+    private val initialValues = HashMap<MemoryLocation, ValueID>()
+
+    private fun initialValue(location: MemoryLocation): ValueID {
+        require(location.objID == objectID)
+        return initialValues.computeIfAbsent(location) { memoryInitializer(it) }
+    }
+
+    fun isWriteAccessTo(location: MemoryLocation) =
+        (location.objID == objectID)
+
+    fun asWriteAccessLabel(location: MemoryLocation) =
+        if (location.objID == objectID)
+            WriteAccessLabel(
+                location = location,
+                value = initialValue(location),
+                isExclusive = false,
+                // TODO: use actual allocation-site code location?
+                codeLocation = INIT_CODE_LOCATION,
+            )
+        else null
+
+    fun asUnlockLabel(mutex: ObjectID) =
+        if (mutex == objectID) UnlockLabel(mutex = objectID, isInitUnlock = true) else null
+
+    override fun toString(): String =
+        "Alloc(${objRepr(className, objectID)})"
 
 }
 
@@ -213,22 +270,21 @@ class InitializationLabel(
  * Base class for all thread event labels.
  *
  * @param kind the kind of this label.
- * @param syncType the synchronization type of this label.
- * @param isBlocking whether this label is blocking.
- * @param unblocked whether this blocking label is already unblocked.
+ * @param isBlocking flag indicating that label is blocking.
+ * @param isUnblocked flag indicating that blocking label is unblocked.
   */
 sealed class ThreadEventLabel(
     kind: LabelKind,
     isBlocking: Boolean = false,
-    unblocked: Boolean = true,
-): EventLabel(kind, isBlocking, unblocked)
+    isUnblocked: Boolean = true,
+): EventLabel(
+    kind = kind,
+    isBlocking = isBlocking,
+    isUnblocked = isUnblocked
+)
 
 /**
  * Label representing fork of a set of threads.
- *
- * Has [LabelKind.Send] kind.
- *
- * Can synchronize with [ThreadStartLabel].
  *
  * @param forkThreadIds a set of thread ids this fork spawns.
  */
@@ -241,15 +297,10 @@ data class ThreadForkLabel(
 }
 
 /**
- * Label of virtual event put into beginning of each thread.
+ * Label of a virtual event put into the beginning of each thread.
  *
- * Can either be of [LabelKind.Request] or response [LabelKind.Response] kind.
- *
- * Thread start-request label can synchronize with [InitializationLabel] (for main thread)
- * or with [ThreadForkLabel] to produce thread start-response.
- *
- * @param kind the kind of this label: [LabelKind.Request] or [LabelKind.Response]..
- * @param threadId thread id of started thread.
+ * @param kind the kind of this label: [LabelKind.Request], [LabelKind.Response] or [LabelKind.Receive].
+ * @param threadId thread id of starting thread.
  */
 data class ThreadStartLabel(
     override val kind: LabelKind,
@@ -257,11 +308,11 @@ data class ThreadStartLabel(
 ): ThreadEventLabel(kind) {
 
     init {
-        check(isRequest || isResponse || isReceive)
+        require(isRequest || isResponse || isReceive)
     }
 
     override fun toString(): String =
-        "ThreadStart"
+        "ThreadStart${kind.repr}"
 }
 
 /**
@@ -281,7 +332,7 @@ data class ThreadFinishLabel(
 ): ThreadEventLabel(
     kind = LabelKind.Send,
     isBlocking = true,
-    unblocked = false,
+    isUnblocked = false,
 ) {
     constructor(threadId: Int): this(setOf(threadId))
 
@@ -309,7 +360,7 @@ data class ThreadJoinLabel(
 ): ThreadEventLabel(
     kind = kind,
     isBlocking = true,
-    unblocked = (kind == LabelKind.Response || kind == LabelKind.Receive) implies joinThreadIds.isEmpty(),
+    isUnblocked = (kind != LabelKind.Request) implies joinThreadIds.isEmpty(),
 ) {
 
     init {
@@ -318,7 +369,7 @@ data class ThreadJoinLabel(
     }
 
     override fun toString(): String =
-        "ThreadJoin(${joinThreadIds})"
+        "ThreadJoin${kind.repr}(${joinThreadIds})"
 }
 
 fun EventLabel.asThreadForkLabel(): ThreadForkLabel? = when (this) {
@@ -333,49 +384,8 @@ fun EventLabel.asThreadEventLabel(): ThreadEventLabel? = when (this) {
     else -> null
 }
 
-data class ObjectAllocationLabel(
-    val className: String,
-    override val objID: ObjectID,
-    val memoryInitializer: MemoryIDInitializer,
-) : EventLabel(kind = LabelKind.Send) {
-
-    init {
-        require(objID != NULL_OBJECT_ID)
-    }
-
-    private val initialValues = HashMap<MemoryLocation, ValueID>()
-
-    private fun initialValue(location: MemoryLocation): ValueID {
-        require(location.objID == objID)
-        return initialValues.computeIfAbsent(location) {
-            memoryInitializer(it)
-        }
-    }
-
-    fun isWriteAccessTo(location: MemoryLocation) =
-        (location.objID == objID)
-
-    fun asWriteAccessLabel(location: MemoryLocation) =
-        if (location.objID == objID)
-            WriteAccessLabel(
-                location = location,
-                value = initialValue(location),
-                isExclusive = false,
-                // TODO: use actual allocation-site code location?
-                codeLocation = INIT_CODE_LOCATION,
-            )
-        else null
-
-    fun asUnlockLabel(mutex: ObjectID) =
-        if (mutex == objID) UnlockLabel(mutex = objID, isInitUnlock = true) else null
-
-    override fun toString(): String =
-        "Alloc(${objRepr(className, objID)})"
-
-}
-
 fun EventLabel.asObjectAllocationLabel(objID: ObjectID): ObjectAllocationLabel? = when (this) {
-    is ObjectAllocationLabel -> takeIf { it.objID == objID }
+    is ObjectAllocationLabel -> takeIf { it.objectID == objID }
     is InitializationLabel -> asObjectAllocationLabel(objID)
     else -> null
 }
@@ -437,23 +447,17 @@ sealed class MemoryAccessLabel(
     /**
      * Recipient of a memory access label is equal to its memory location's object.
      */
-    override val objID: ObjectID
+    override val objectID: ObjectID
         get() = location.objID
 
     override fun toString(): String {
-        val kindString = when (kind) {
-            LabelKind.Send -> ""
-            LabelKind.Request -> "^req"
-            LabelKind.Response -> "^rsp"
-            LabelKind.Receive -> ""
-        }
         val exclString = if (isExclusive) "_ex" else ""
         val argsString = listOfNotNull(
             "$location",
             if (isRead && kind != LabelKind.Request) "$readValue" else null,
             if (isWrite) "$writeValue" else null,
         ).joinToString()
-        return "${accessKind}${kindString}${exclString}(${argsString})"
+        return "${accessKind}${kind.repr}${exclString}(${argsString})"
     }
 
 }
@@ -653,17 +657,11 @@ sealed class MutexLabel(
     /**
      * Recipient of a mutex label is its mutex object.
      */
-    override val objID: ObjectID
+    override val objectID: ObjectID
         get() = mutex
 
     override fun toString(): String {
-        val kindString = when (kind) {
-            LabelKind.Send -> ""
-            LabelKind.Request -> "^req"
-            LabelKind.Response -> "^rsp"
-            LabelKind.Receive -> ""
-        }
-        return "${operationKind}${kindString}($mutex)"
+        return "${operationKind}${kind.repr}($mutex)"
     }
 
 }
@@ -839,14 +837,8 @@ sealed class ParkingEventLabel(
         }
 
     override fun toString(): String {
-        val kindString = when (kind) {
-            LabelKind.Send -> ""
-            LabelKind.Request -> "^req"
-            LabelKind.Response -> "^rsp"
-            LabelKind.Receive -> ""
-        }
         val argsString = if (operationKind == ParkingOperationKind.Unpark) "($threadId)" else ""
-        return "${operationKind}${kindString}${argsString}"
+        return "${operationKind}${kind.repr}${argsString}"
     }
 
 }
@@ -935,14 +927,8 @@ sealed class CoroutineLabel(
             is CoroutineSuspendLabel -> "Suspend"
             is CoroutineResumeLabel  -> "Resume"
         }
-        val kindString = when (kind) {
-            LabelKind.Send -> ""
-            LabelKind.Request -> "^req"
-            LabelKind.Response -> "^rsp"
-            LabelKind.Receive -> ""
-        }
         val cancelled = if (this is CoroutineSuspendLabel && cancelled) "cancelled" else null
-        return "${operationKind}${kindString}(${listOfNotNull(threadId, actorId, cancelled).joinToString()})"
+        return "${operationKind}${kind.repr}(${listOfNotNull(threadId, actorId, cancelled).joinToString()})"
     }
 
 }
@@ -984,5 +970,3 @@ data class CoroutineResumeLabel(
 }
 
 data class RandomLabel(val value: Int): EventLabel(kind = LabelKind.Send)
-
-private const val INIT_CODE_LOCATION = -1

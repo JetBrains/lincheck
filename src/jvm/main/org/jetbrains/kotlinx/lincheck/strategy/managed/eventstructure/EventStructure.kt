@@ -295,7 +295,7 @@ class EventStructure(
         }}
         if (causalityViolation)
             return null
-        val allocation = objectRegistry[label.objID]?.allocation
+        val allocation = objectRegistry[label.objectID]?.allocation
         val source = (label as? WriteAccessLabel)?.writeValue?.let {
             objectRegistry[it]?.allocation
         }
@@ -521,7 +521,7 @@ class EventStructure(
              * reading from them will result in coherence cycle and will violate consistency
              */
             label is ReadAccessLabel && label.isRequest -> {
-                if (label.objID != NULL_OBJECT_ID && label.objID != STATIC_OBJECT_ID) {
+                if (label.objectID != NULL_OBJECT_ID && label.objectID != STATIC_OBJECT_ID) {
                     // TODO: do we need the previous check?
                     if (execution.memoryAccessEventIndex.isRaceFree(label.location)) {
                         val lastWrite = execution.memoryAccessEventIndex.getLastWrite(label.location)!!
@@ -545,7 +545,7 @@ class EventStructure(
             }
 
             label is WriteAccessLabel -> {
-                if (label.objID != NULL_OBJECT_ID && label.objID != STATIC_OBJECT_ID) {
+                if (label.objectID != NULL_OBJECT_ID && label.objectID != STATIC_OBJECT_ID) {
                     // TODO: do we need the previous check?
                     if (execution.memoryAccessEventIndex.isReadWriteRaceFree(label.location)) {
                         return sequenceOf()
@@ -853,7 +853,7 @@ class EventStructure(
 
     fun addObjectAllocationEvent(iThread: Int, value: OpaqueValue): AtomicThreadEvent {
         tryReplayEvent(iThread)?.let { event ->
-            val id = event.label.objID
+            val id = event.label.objectID
             val entry = ObjectEntry(id, value, event)
             objectRegistry.register(entry)
             addEventToCurrentExecution(event)
@@ -861,7 +861,7 @@ class EventStructure(
         }
         val id = ObjectID(nextObjectID++)
         val label = ObjectAllocationLabel(
-            objID = id,
+            objectID = id,
             className = value.unwrap().javaClass.simpleName,
             memoryInitializer = { location ->
                 val initValue = memoryInitializer(location)

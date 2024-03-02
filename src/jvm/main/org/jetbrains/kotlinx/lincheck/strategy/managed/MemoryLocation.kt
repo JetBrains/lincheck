@@ -34,7 +34,7 @@ interface MemoryLocation {
     fun write(valueMapper: ValueMapper, value: Any?)
 }
 
-internal class StaticFieldMemoryLocation(
+class StaticFieldMemoryLocation(
     strategy: ManagedStrategy,
     val className: String,
     val fieldName: String,
@@ -75,7 +75,7 @@ internal class StaticFieldMemoryLocation(
 
 }
 
-internal class ObjectFieldMemoryLocation(
+class ObjectFieldMemoryLocation(
     strategy: ManagedStrategy,
     clazz: Class<*>,
     override val objID: ObjectID,
@@ -125,7 +125,7 @@ internal class ObjectFieldMemoryLocation(
 
 }
 
-internal class ArrayElementMemoryLocation(
+class ArrayElementMemoryLocation(
     strategy: ManagedStrategy,
     clazz: Class<*>,
     override val objID: ObjectID,
@@ -197,7 +197,7 @@ internal class ArrayElementMemoryLocation(
 
 }
 
-internal class AtomicPrimitiveMemoryLocation(
+class AtomicPrimitiveMemoryLocation(
     strategy: ManagedStrategy,
     clazz: Class<*>,
     override val objID: ObjectID,
