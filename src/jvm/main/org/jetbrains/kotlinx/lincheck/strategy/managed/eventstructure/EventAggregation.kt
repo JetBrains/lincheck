@@ -208,6 +208,34 @@ private val ReceiveAggregationAlgebra = object : SynchronizationAlgebra {
 
 }
 
+fun ThreadStartLabel.getReceive(): EventLabel =
+    copy(kind = LabelKind.Receive)
+
+fun ThreadJoinLabel.getReceive(): EventLabel? =
+    if (isUnblocked) copy(kind = LabelKind.Receive) else null
+
+fun ReadAccessLabel.getReceive(): ReadAccessLabel =
+    copy(kind = LabelKind.Receive)
+
+fun ReadModifyWriteAccessLabel.getReceive(): ReadModifyWriteAccessLabel =
+    copy(kind = LabelKind.Receive)
+
+fun ParkLabel.getReceive(): EventLabel =
+    copy(kind = LabelKind.Receive)
+
+fun CoroutineSuspendLabel.getReceive(): EventLabel =
+    copy(kind = LabelKind.Receive)
+
+fun EventLabel.getReceive(): EventLabel? = when (this) {
+    is ThreadStartLabel             -> getReceive()
+    is ThreadJoinLabel              -> getReceive()
+    is ReadAccessLabel              -> getReceive()
+    is ReadModifyWriteAccessLabel   -> getReceive()
+    is ParkLabel                    -> getReceive()
+    is CoroutineSuspendLabel        -> getReceive()
+    else                            -> null
+}
+
 private val MemoryAccessAggregationAlgebra = object : SynchronizationAlgebra {
 
     override fun syncType(label: EventLabel): SynchronizationType? = when(label) {
@@ -223,7 +251,7 @@ private val MemoryAccessAggregationAlgebra = object : SynchronizationAlgebra {
 
         // exclusive read response/receive synchronizes with exclusive write
         label is ReadAccessLabel && (label.isResponse || label.isReceive) && other is WriteAccessLabel ->
-            ReadModifyWriteAccessLabel(label, other)
+            label.getReadModifyWrite(other)
 
         // exclusive read request synchronizes with read-modify-write response
         label is ReadAccessLabel && label.isRequest && other is ReadModifyWriteAccessLabel && other.isResponse
@@ -242,7 +270,6 @@ val MutexAggregationAlgebra = object : SynchronizationAlgebra {
         else            -> null
     }
 
-    // TODO: use `join` and `subsumes` (?)
     override fun synchronize(label: EventLabel, other: EventLabel): EventLabel? = when {
         // unlock label can be merged with the subsequent wait request
         label is UnlockLabel && other is WaitLabel && other.isRequest && !other.unlocking
@@ -263,16 +290,16 @@ val MutexAggregationAlgebra = object : SynchronizationAlgebra {
 val ThreadAggregationAlgebra = object : SynchronizationAlgebra {
 
     override fun syncType(label: EventLabel): SynchronizationType? = when (label) {
+        is ActorLabel           -> null
         is MemoryAccessLabel    -> MemoryAccessAggregationAlgebra.syncType(label)
         is MutexLabel           -> MutexAggregationAlgebra.syncType(label)
-        is ActorLabel           -> null
         else                    -> ReceiveAggregationAlgebra.syncType(label)
     }
 
     override fun synchronize(label: EventLabel, other: EventLabel): EventLabel? = when (label) {
+        is ActorLabel           -> null
         is MemoryAccessLabel    -> MemoryAccessAggregationAlgebra.synchronize(label, other)
         is MutexLabel           -> MutexAggregationAlgebra.synchronize(label, other)
-        is ActorLabel           -> null
         else                    -> ReceiveAggregationAlgebra.synchronize(label, other)
     }
 
