@@ -34,7 +34,7 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
     /**
      * Spinners for each thread used for spin-wait on tasks.
      */
-    private val taskSpinners = SpinnerGroup(nThreads)
+    private val taskSpinners = SpinnerList(nThreads)
 
     /**
      * null, waiting in [submitAndAwait] thread, DONE, or exception
@@ -44,7 +44,7 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
     /**
      * Spinners for each thread used for spin-wait on results.
      */
-    private val resultSpinners = SpinnerGroup(nThreads)
+    private val resultSpinners = SpinnerList(nThreads)
 
     /**
      * This flag is set to `true` when [await] detects a hang.

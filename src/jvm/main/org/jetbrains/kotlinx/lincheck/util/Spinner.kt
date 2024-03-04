@@ -174,27 +174,13 @@ class Spinner(
 }
 
 /**
- * A [SpinnerGroup] represents a group of spinners that can be accessed by their index.
+ * A [SpinnerList] function creates a list of spinners to be used by the specified number of threads.
  * It provides a convenient way to manage multiple spinners together.
+ *
+ * @param nThreads The number of threads in the group.
  */
-@JvmInline
-value class SpinnerGroup private constructor(private val spinners: Array<Spinner>) {
-
-    /**
-     * This constructor creates a spinners group to be used by the specified number of threads.
-     *
-     * @param nThreads The number of threads in the group.
-     * @param shouldYield Determines whether the spin-loop in each Spinner should periodically yield
-     *   to give other threads the opportunity to run.
-     */
-    constructor(nThreads: Int, shouldYield: Boolean = true)
-            : this(Array(nThreads) { Spinner(nThreads, shouldYield = shouldYield) })
-
-    /**
-     * Retrieves the spinner at the specified index.
-     */
-    operator fun get(i: Int): Spinner =
-        spinners[i]
+fun SpinnerList(nThreads: Int): List<Spinner> {
+    return Array(nThreads) { Spinner(nThreads) }.asList()
 }
 
 /**
