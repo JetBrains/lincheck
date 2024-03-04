@@ -12,7 +12,6 @@ package org.jetbrains.kotlinx.lincheck.runner;
 
 import kotlin.coroutines.Continuation;
 import org.jetbrains.kotlinx.lincheck.*;
-import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner.*;
 import org.objectweb.asm.*;
 import org.objectweb.asm.commons.GeneratorAdapter;
 import org.objectweb.asm.commons.Method;
@@ -30,8 +29,6 @@ import static org.objectweb.asm.Type.*;
  */
 public class TestThreadExecutionGenerator {
     private static final Type[] NO_ARGS = new Type[] {};
-
-    private static final Type CLASS_TYPE = getType(Class.class);
     private static final Type OBJECT_TYPE = getType(Object.class);
     private static final Type OBJECT_ARRAY_TYPE = getType(Object[].class);
     private static final Type THROWABLE_TYPE = getType(Throwable.class);

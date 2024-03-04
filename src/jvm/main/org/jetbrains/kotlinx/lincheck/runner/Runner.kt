@@ -34,7 +34,7 @@ abstract class Runner protected constructor(
     @Suppress("LeakingThis")
     val classLoader: ExecutionClassLoader =
         if (needsTransformation() || strategy.needsTransformation())
-            TransformationClassLoader(strategy, this)
+            TransformationClassLoader(strategy)
         else ExecutionClassLoader()
 
     protected val completedOrSuspendedThreads = AtomicInteger(0)
@@ -89,45 +89,45 @@ abstract class Runner protected constructor(
      * This method is invoked by every test thread as the first operation.
      * @param iThread number of invoking thread
      */
-    open fun onStart(iThread: Int) {}
+    abstract fun onStart(iThread: Int)
 
     /**
      * This method is invoked by every test thread as the last operation
      * if no exception has been thrown.
      * @param iThread number of invoking thread
      */
-    open fun onFinish(iThread: Int) {}
+    abstract fun onFinish(iThread: Int)
 
     /**
      * This method is invoked by the corresponding test thread
      * when an unexpected exception is thrown.
      */
-    open fun onFailure(iThread: Int, e: Throwable) {}
+    abstract fun onFailure(iThread: Int, e: Throwable)
 
     /**
      * This method is invoked by the corresponding test thread
      * when the current coroutine suspends.
      * @param iThread number of invoking thread
      */
-    open fun afterCoroutineSuspended(iThread: Int): Unit = throw UnsupportedOperationException("Coroutines are not supported")
+    abstract fun afterCoroutineSuspended(iThread: Int)
 
     /**
      * This method is invoked by the corresponding test thread
      * when the current coroutine is resumed.
      */
-    open fun afterCoroutineResumed(iThread: Int): Unit = throw UnsupportedOperationException("Coroutines are not supported")
+    abstract fun afterCoroutineResumed(iThread: Int)
 
     /**
      * This method is invoked by the corresponding test thread
      * when the current coroutine is cancelled.
      */
-    open fun afterCoroutineCancelled(iThread: Int): Unit = throw UnsupportedOperationException("Coroutines are not supported")
+    abstract fun afterCoroutineCancelled(iThread: Int)
 
     /**
      * Returns `true` if the coroutine corresponding to
      * the actor `actorId` in the thread `iThread` is resumed.
      */
-    open fun isCoroutineResumed(iThread: Int, actorId: Int): Boolean = throw UnsupportedOperationException("Coroutines are not supported")
+    abstract fun isCoroutineResumed(iThread: Int, actorId: Int): Boolean
 
     /**
      * Is invoked before each actor execution from the specified thread.

@@ -10,9 +10,9 @@
 package org.jetbrains.kotlinx.lincheck.runner
 
 import kotlinx.atomicfu.*
-import kotlinx.coroutines.CancellableContinuation
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import sun.nio.ch.lincheck.TestThread
 import java.io.*
 import java.lang.*
 import java.util.concurrent.*
@@ -24,7 +24,7 @@ import java.util.concurrent.locks.*
  * is that this executor keeps the re-using threads "hot" (active) as long as possible,
  * so that they should not be parked and unparked between invocations.
  */
-internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash: Int) : Closeable {
+internal class FixedActiveThreadsExecutor(private val testName: String, private val nThreads: Int, runnerHash: Int) : Closeable {
     /**
      * null, waiting TestThread, Runnable task, or SHUTDOWN
      */
@@ -46,7 +46,7 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
      * Threads used in this runner.
      */
     val threads = Array(nThreads) { iThread ->
-        TestThread(iThread, runnerHash, testThreadRunnable(iThread)).also { it.start() }
+        TestThread(testName, iThread, runnerHash, testThreadRunnable(iThread)).also { it.start() }
     }
 
     val numberOfThreadsExceedAvailableProcessors = Runtime.getRuntime().availableProcessors() < threads.size
@@ -142,19 +142,22 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
 
     private fun testThreadRunnable(iThread: Int) = Runnable {
         loop@ while (true) {
-            val task = getTask(iThread)
-            if (task === Shutdown) return@Runnable
-            tasks[iThread].value = null // reset task
+            val task = runInIgnoredSection {
+                val task = getTask(iThread)
+                if (task === Shutdown) return@Runnable
+                tasks[iThread].value = null // reset task
+                task
+            }
             val threadExecution = task as TestThreadExecution
             check(threadExecution.iThread == iThread)
             try {
                 threadExecution.run()
             } catch(e: Throwable) {
                 val wrapped = wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(e)
-                setResult(iThread, wrapped)
+                runInIgnoredSection { setResult(iThread, wrapped) }
                 continue@loop
             }
-            setResult(iThread, Done)
+            runInIgnoredSection { setResult(iThread, Done) }
         }
     }
 
@@ -205,12 +208,6 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
             @Suppress("DEPRECATION")
             threads.forEach { it.stop() }
         }
-    }
-
-    class TestThread(val iThread: Int, val runnerHash: Int, runnable: Runnable) :
-        Thread(runnable, "FixedActiveThreadsExecutor@$runnerHash-$iThread")
-    {
-        var cont: CancellableContinuation<*>? = null
     }
 
 }

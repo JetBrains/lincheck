@@ -28,14 +28,13 @@ data class Trace(val trace: List<TracePoint>)
  * [callStackTrace] helps to understand whether two events
  * happened in the same, nested, or disjoint methods.
  */
-sealed class TracePoint(val iThread: Int, val actorId: Int, internal val callStackTrace: CallStackTrace) {
+sealed class TracePoint(val iThread: Int, val actorId: Int, callStackTrace: CallStackTrace) {
+    internal val callStackTrace = callStackTrace.toList()
     protected abstract fun toStringImpl(): String
     override fun toString(): String = toStringImpl()
 }
 
 internal typealias CallStackTrace = List<CallStackTraceElement>
-internal typealias TracePointConstructor = (iThread: Int, actorId: Int, CallStackTrace) -> TracePoint
-internal typealias CodeLocationTracePointConstructor = (iThread: Int, actorId: Int, CallStackTrace, StackTraceElement) -> TracePoint
 
 internal class SwitchEventTracePoint(
     iThread: Int, actorId: Int,
@@ -141,7 +140,7 @@ internal class MethodCallTracePoint(
         if (parameters != null)
             append(parameters!!.joinToString(",", transform = ::adornedStringRepresentation))
         append(")")
-        if (returnedValue != NO_VALUE)
+        if (returnedValue != NO_VALUE && returnedValue != VoidResult)
             append(": ${adornedStringRepresentation(returnedValue)}")
         else if (thrownException != null && thrownException != ForcibleExecutionFinishError)
             append(": threw ${thrownException!!.javaClass.simpleName}")

@@ -10,21 +10,22 @@
 
 package org.jetbrains.kotlinx.lincheck;
 
+import kotlin.Unit;
 import org.jetbrains.kotlinx.lincheck.runner.*;
 import org.jetbrains.kotlinx.lincheck.strategy.*;
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*;
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*;
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassVisitor;
+import org.jetbrains.kotlinx.lincheck.transformation.TransformationMode;
 import org.objectweb.asm.*;
 import org.objectweb.asm.commons.*;
-import org.objectweb.asm.util.*;
 
 import java.io.*;
 import java.net.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.*;
-import java.util.stream.Collectors;
 
 import static org.jetbrains.kotlinx.lincheck.TransformationClassLoader.*;
 import static org.jetbrains.kotlinx.lincheck.UtilsKt.getCanonicalClassName;
@@ -49,18 +50,12 @@ public class TransformationClassLoader extends ExecutionClassLoader {
     private static final Map<String, byte[]> stressStrategyBytecodeCache = new ConcurrentHashMap<>();
     private static final Map<String, byte[]> modelCheckingStrategyBytecodeCache = new ConcurrentHashMap<>();
 
-    public TransformationClassLoader(Strategy strategy, Runner runner) {
+    public TransformationClassLoader(Strategy strategy) {
         classTransformers = new ArrayList<>();
         // Apply the strategy's transformer at first, then the runner's one.
-        if (strategy.needsTransformation()) classTransformers.add(strategy::createTransformer);
-        if (runner.needsTransformation()) classTransformers.add(runner::createTransformer);
-        remapper = UtilsKt.getRemapperByTransformers(
-                // create transformers just for their class information
-                classTransformers.stream()
-                        // pass any parameter to Transformer constructors - it won't be used
-                        .map(constructor -> constructor.apply(new TraceClassVisitor(null)))
-                        .collect(Collectors.toList())
-        );
+        TransformationMode transformationMode = strategy instanceof ModelCheckingStrategy ? TransformationMode.MODEL_CHECKING : TransformationMode.STRESS;
+        classTransformers.add((cw) -> new LincheckClassVisitor(transformationMode, cw));
+        remapper = UtilsKt.getRemapperByTransformers(transformationMode);
         if (strategy instanceof StressStrategy) {
             bytecodeCache = stressStrategyBytecodeCache;
         } else if (strategy instanceof ManagedStrategy && ((ManagedStrategy) strategy).useBytecodeCache()) {
@@ -78,7 +73,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
      */
     private static boolean doNotTransform(String className) {
         if (className.startsWith(REMAPPED_PACKAGE_CANONICAL_NAME)) return false;
-        if (ManagedStrategyTransformerKt.isImpossibleToTransformApiClass(className)) return true;
+        if (isImpossibleToTransformApiClass(className)) return true;
         return className.startsWith("sun.") ||
                className.startsWith("java.") ||
                className.startsWith("jdk.internal.") ||
@@ -89,8 +84,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
                ) ||
                className.startsWith("com.intellij.rt.coverage.") ||
                (className.startsWith("org.jetbrains.kotlinx.lincheck.") &&
-                   !className.startsWith("org.jetbrains.kotlinx.lincheck_test.") &&
-                   !className.equals(ManagedStrategyStateHolder.class.getName())
+                   !className.startsWith("org.jetbrains.kotlinx.lincheck_test.")
                ) ||
                className.equals(kotlinx.coroutines.DebugKt.class.getName()) ||
                className.equals(kotlin.coroutines.CoroutineContext.class.getName()) ||
@@ -102,6 +96,16 @@ public class TransformationClassLoader extends ExecutionClassLoader {
                className.equals("kotlinx.coroutines.NotCompleted") ||
                className.equals("kotlinx.coroutines.CancelHandler") ||
                className.equals("kotlinx.coroutines.CancelHandlerBase");
+    }
+
+    /**
+     * Some API classes cannot be transformed due to the [sun.reflect.CallerSensitive] annotation.
+     */
+    public static boolean isImpossibleToTransformApiClass(String className) {
+        return Objects.equals(className, "sun.misc.Unsafe") ||
+                Objects.equals(className, "jdk.internal.misc.Unsafe") ||
+                Objects.equals(className, "java.lang.invoke.VarHandle") ||
+                className.startsWith("java.util.concurrent.atomic.Atomic") && className.endsWith("FieldUpdater");
     }
 
     /**

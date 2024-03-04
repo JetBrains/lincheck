@@ -13,9 +13,10 @@ import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.transformation.TransformationMode
 import org.jetbrains.kotlinx.lincheck.verifier.*
-import org.objectweb.asm.*
 import org.objectweb.asm.commons.*
+import sun.nio.ch.lincheck.TestThread
 import java.io.*
 import java.lang.ref.*
 import java.lang.reflect.*
@@ -143,7 +144,16 @@ internal class StoreExceptionHandler :
 internal fun <T> CancellableContinuation<T>.cancelByLincheck(promptCancellation: Boolean): CancellationResult {
     val exceptionHandler = context[CoroutineExceptionHandler] as StoreExceptionHandler
     exceptionHandler.exception = null
-    val cancelled = cancel(cancellationByLincheckException)
+
+    val currentThread = Thread.currentThread() as? TestThread
+    val inIgnoredSection = currentThread?.inIgnoredSection ?: false
+    currentThread?.inIgnoredSection = false
+    val cancelled = try {
+        cancel(cancellationByLincheckException)
+    } finally {
+        currentThread?.inIgnoredSection = inIgnoredSection
+    }
+
     exceptionHandler.exception?.let {
         throw it.cause!! // let's throw the original exception, ignoring the internal coroutines details
     }
@@ -172,8 +182,8 @@ object CancellableContinuationHolder {
 
 fun storeCancellableContinuation(cont: CancellableContinuation<*>) {
     val t = Thread.currentThread()
-    if (t is FixedActiveThreadsExecutor.TestThread) {
-        t.cont = cont
+    if (t is TestThread) {
+        t.suspendedContinuation = cont
     } else {
         CancellableContinuationHolder.storedLastCancellableCont = cont
     }
@@ -282,17 +292,17 @@ private class CustomObjectInputStream(val loader: ClassLoader, inputStream: Inpu
  * threads that are related to the specified [runner].
  */
 internal fun collectThreadDump(runner: Runner) = Thread.getAllStackTraces().filter { (t, _) ->
-    t is FixedActiveThreadsExecutor.TestThread && t.runnerHash == runner.hashCode()
+    t is TestThread && t.runnerHash == runner.hashCode()
 }
 
 /**
  * This method helps to encapsulate remapper logic from strategy interface.
  * The remapper is determined based on the used transformers.
  */
-internal fun getRemapperByTransformers(classTransformers: List<ClassVisitor>): Remapper? =
-    when {
-        classTransformers.any { it is ManagedStrategyTransformer } -> JavaUtilRemapper()
-        else -> null
+internal fun getRemapperByTransformers(transformationMode: TransformationMode): Remapper? =
+    when(transformationMode) {
+        TransformationMode.MODEL_CHECKING -> JavaUtilRemapper()
+        TransformationMode.STRESS -> null
     }
 
 internal val String.canonicalClassName get() = this.replace('/', '.')
@@ -336,13 +346,20 @@ internal object InternalLincheckTestUnexpectedException : Exception()
  */
 internal class LincheckInternalBugException(cause: Throwable): Exception(cause)
 
-internal fun stackTraceRepresentation(stackTrace: Array<StackTraceElement>): List<String> {
-    return transformStackTraceBackFromRemapped(stackTrace).map { it.toString() }.filter { line ->
-        "org.jetbrains.kotlinx.lincheck.strategy" !in line
-                && "org.jetbrains.kotlinx.lincheck.runner" !in line
-                && "org.jetbrains.kotlinx.lincheck.UtilsKt" !in line
+internal inline fun <R> runInIgnoredSection(block: () -> R): R =
+    runInIgnoredSection(Thread.currentThread(), block)
+
+private inline fun <R> runInIgnoredSection(currentThread: Thread, block: () -> R): R =
+    if (currentThread is TestThread && !currentThread.inIgnoredSection) {
+        currentThread.inIgnoredSection = true
+        try {
+            block()
+        } finally {
+            currentThread.inIgnoredSection = false
+        }
+    } else {
+        block()
     }
-}
 
 internal fun transformStackTraceBackFromRemapped(stackTrace: Array<StackTraceElement>) = stackTrace.map {
     StackTraceElement(it.className.removePrefix(TransformationClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME), it.methodName, it.fileName, it.lineNumber)

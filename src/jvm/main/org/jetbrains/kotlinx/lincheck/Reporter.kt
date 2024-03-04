@@ -12,9 +12,9 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.LoggingLevel.*
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import sun.nio.ch.lincheck.TestThread
 import java.io.*
 import kotlin.math.max
 
@@ -573,7 +573,7 @@ private fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockWithDum
     failure.threadDump?.let { threadDump ->
         // Sort threads to produce same output for the same results
         for ((t, stackTrace) in threadDump.entries.sortedBy { it.key.id }) {
-            val threadNumber = if (t is FixedActiveThreadsExecutor.TestThread) t.iThread.toString() else "?"
+            val threadNumber = (t as? TestThread)?.threadNumber?.toString() ?: "?"
             appendLine("Thread-$threadNumber:")
             stackTrace.map {
                 StackTraceElement(

@@ -14,11 +14,12 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
-import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.*
 import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner.Completion.*
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.objectweb.asm.*
+import sun.nio.ch.lincheck.TestThread
 import java.lang.reflect.*
 import java.util.concurrent.*
 import java.util.concurrent.atomic.*
@@ -42,8 +43,9 @@ internal open class ParallelThreadsRunner(
     private val timeoutMs: Long, // for deadlock or livelock detection
     private val useClocks: UseClocks // specifies whether `HBClock`-s should always be used or with some probability
 ) : Runner(strategy, testClass, validationFunction, stateRepresentationFunction) {
+    private val testName = testClass.simpleName
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
-    private val executor = FixedActiveThreadsExecutor(scenario.nThreads, runnerHash) // should be closed in `close()`
+    private val executor = FixedActiveThreadsExecutor(testName, scenario.nThreads, runnerHash) // should be closed in `close()`
 
     private lateinit var testInstance: Any
 
@@ -85,6 +87,9 @@ internal open class ParallelThreadsRunner(
             *parallelPartExecutions,
             postPartExecution
         )
+        if (strategy is ManagedStrategy) {
+            executor.threads.forEach { it.sharedEventsTracker = strategy }
+        }
         reset()
     }
 
@@ -100,7 +105,7 @@ internal open class ParallelThreadsRunner(
     protected inner class Completion(private val iThread: Int, private val actorId: Int) : Continuation<Any?> {
         val resWithCont = SuspensionPointResultWithContinuation(null)
 
-        override val context = ParallelThreadRunnerInterceptor(resWithCont) + StoreExceptionHandler() + Job()
+        override var context = ParallelThreadRunnerInterceptor(resWithCont) + StoreExceptionHandler() + Job()
 
         override fun resumeWith(result: kotlin.Result<Any?>) {
             // decrement completed or suspended threads only if the operation was not cancelled and
@@ -116,6 +121,10 @@ internal open class ParallelThreadsRunner(
                 // write function's final result
                 suspensionPointResults[iThread][actorId] = createLincheckResult(result, wasSuspended = true)
             }
+        }
+
+        fun reset() {
+            context = ParallelThreadRunnerInterceptor(resWithCont) + StoreExceptionHandler() + Job()
         }
 
         /**
@@ -146,13 +155,18 @@ internal open class ParallelThreadsRunner(
     private fun reset() {
         suspensionPointResults.forEach { it.fill(NoResult) }
         completedOrSuspendedThreads.set(0)
-        completions.forEach { it.forEach { it.resWithCont.set(null) } }
+        completions.forEach {
+            it.forEach { completion ->
+                completion.resWithCont.set(null)
+                completion.reset()
+            }
+        }
         completionStatuses = List(scenario.nThreads) { t ->
             AtomicReferenceArray<CompletionStatus>(scenario.parallelExecution[t].size)
         }
         uninitializedThreads.set(scenario.nThreads)
         // reset stored continuations
-        executor.threads.forEach { it.cont = null }
+        executor.threads.forEach { it.suspendedContinuation = null }
         // reset thread executions
         testThreadExecutions.forEach { it.reset() }
         validationPartExecution?.results?.fill(null)
@@ -172,12 +186,12 @@ internal open class ParallelThreadsRunner(
      * Otherwise if the invoked actor completed without suspension, then it just writes it's final result.
      */
     @Suppress("unused")
-    fun processInvocationResult(res: Any?, iThread: Int, actorId: Int): Result {
+    fun processInvocationResult(res: Any?, iThread: Int, actorId: Int): Result = runInIgnoredSection {
         val actor = scenario.parallelExecution[iThread][actorId]
         val finalResult = if (res === COROUTINE_SUSPENDED) {
             val t = Thread.currentThread() as TestThread
-            val cont = t.cont.also { t.cont = null }
-            if (actor.cancelOnSuspension && cont !== null && cancelByLincheck(cont, actor.promptCancellation) != CANCELLATION_FAILED) {
+            val cont = t.suspendedContinuation.also { t.suspendedContinuation = null }
+            if (actor.cancelOnSuspension && cont !== null && cancelByLincheck(cont as CancellableContinuation<*>, actor.promptCancellation) != CANCELLATION_FAILED) {
                 if (!trySetCancelledStatus(iThread, actorId)) {
                     // already resumed, increment `completedOrSuspendedThreads` back
                     completedOrSuspendedThreads.incrementAndGet()
@@ -191,6 +205,8 @@ internal open class ParallelThreadsRunner(
         suspensionPointResults[iThread][actorId] = NoResult
         return finalResult
     }
+
+    override fun afterCoroutineCancelled(iThread: Int) {}
 
     private fun waitAndInvokeFollowUp(iThread: Int, actorId: Int): Result {
         // Coroutine is suspended. Call method so that strategy can learn it.
@@ -373,7 +389,6 @@ internal open class ParallelThreadsRunner(
 
     override fun onStart(iThread: Int) {
         if (currentExecutionPart !== PARALLEL) return
-        super.onStart(iThread)
         uninitializedThreads.decrementAndGet() // this thread has finished initialization
         // wait for other threads to start
         var i = 1
@@ -395,6 +410,12 @@ internal open class ParallelThreadsRunner(
     override fun close() {
         super.close()
         executor.close()
+    }
+
+    override fun onFinish(iThread: Int) {
+    }
+
+    override fun onFailure(iThread: Int, e: Throwable) {
     }
 }
 
