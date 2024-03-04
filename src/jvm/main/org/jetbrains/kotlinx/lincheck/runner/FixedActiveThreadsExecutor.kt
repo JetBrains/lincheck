@@ -42,9 +42,9 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
     private val results = atomicArrayOfNulls<Any>(nThreads)
 
     /**
-     * Spinners for each thread used for spin-wait on results.
+     * Spinner for spin-wait on results.
      */
-    private val resultSpinners = SpinnerList(nThreads)
+    private val resultSpinner = Spinner(nThreads)
 
     /**
      * This flag is set to `true` when [await] detects a hang.
@@ -131,7 +131,7 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
 
     private fun getResult(iThread: Int, deadline: Long): Any {
         // Active wait for a result during the limited number of loop cycles.
-        val result = resultSpinners[iThread].spinWaitBoundedFor { results[iThread].value }
+        val result = resultSpinner.spinWaitBoundedFor { results[iThread].value }
         if (result != null)
             return result
         // Park with timeout until the result is set or the timeout is passed.
