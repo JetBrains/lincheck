@@ -81,10 +81,7 @@ package org.jetbrains.kotlinx.lincheck.util
  *
  * @constructor Creates an instance of the [Spinner] class.
  */
-class Spinner(
-    val nThreads: Int = -1,
-    shouldYield: Boolean = true,
-) {
+class Spinner(val nThreads: Int = -1) {
 
     /**
      * Counter of performed spin-loop iterations.
@@ -116,16 +113,9 @@ class Spinner(
      * to give other threads the opportunity to run.
      */
     private val yieldLimit = when {
-        shouldYield && shouldSpin -> SPIN_LOOP_ITERATIONS_BEFORE_YIELD
-        shouldYield -> 1
-        else -> -1
+        shouldSpin -> SPIN_LOOP_ITERATIONS_BEFORE_YIELD
+        else -> 1
     }
-
-    /**
-     * Determines whether the spinner should yield to other threads based on the yield limit.
-     */
-    private inline val shouldYield: Boolean
-        get() = yieldLimit > 0
 
     /**
      * The exit limit determines the number of spin-loop iterations
@@ -152,7 +142,7 @@ class Spinner(
         }
         // if yield limit is approached,
         // then yield and give other threads the opportunity to run
-        if (shouldYield && counter % yieldLimit == 0) {
+        if (counter % yieldLimit == 0) {
             Thread.yield()
         }
         // if exit limit is approached,
