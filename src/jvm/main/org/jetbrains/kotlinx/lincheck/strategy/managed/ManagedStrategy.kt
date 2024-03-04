@@ -238,19 +238,25 @@ abstract class ManagedStrategy(
     }
 
     private fun failIfObstructionFreedomIsRequired(lazyMessage: () -> String) {
-        if (testCfg.checkObstructionFreedom && !curActorIsBlocking && !concurrentActorCausesBlocking) {
+        if (testCfg.checkObstructionFreedom && !currentActorIsBlocking && !concurrentActorCausesBlocking) {
             suddenInvocationResult = ObstructionFreedomViolationInvocationResult(lazyMessage())
             // Forcibly finish the current execution by throwing an exception.
             throw ForcibleExecutionFinishError
         }
     }
 
-    private val curActorIsBlocking: Boolean
-        get() = scenario.threads[currentThread][currentActorId[currentThread]].blocking
+    private val currentActorIsBlocking: Boolean
+        get() {
+            val actorId = currentActorId[currentThread]
+            // handle the case when the first actor has not yet started,
+            // see https://github.com/JetBrains/lincheck/pull/277
+            if (actorId < 0) return false
+            return scenario.threads[currentThread][actorId].blocking
+        }
 
     private val concurrentActorCausesBlocking: Boolean
         get() = currentActorId.mapIndexed { iThread, actorId ->
-                    if (iThread != currentThread && !finished[iThread])
+                    if (iThread != currentThread && actorId >= 0 && !finished[iThread])
                         scenario.threads[iThread][actorId]
                     else null
                 }.filterNotNull().any { it.causesBlocking }
