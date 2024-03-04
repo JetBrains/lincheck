@@ -204,7 +204,7 @@ internal open class ParallelThreadsRunner(
         val completion = completions[iThread][actorId]
         // Check if the coroutine is already resumed and if not, enter the spin loop.
         if (!isCoroutineResumed(iThread, actorId)) {
-            spinners[iThread].wait {
+            spinners[iThread].spinWaitUntil {
                 // Check whether the scenario is completed and the current suspended operation cannot be resumed.
                 if (currentExecutionPart == POST || isParallelExecutionCompleted) {
                     suspensionPointResults[iThread][actorId] = NoResult
@@ -377,7 +377,7 @@ internal open class ParallelThreadsRunner(
         super.onStart(iThread)
         uninitializedThreads.decrementAndGet() // this thread has finished initialization
         // wait for other threads to start
-        spinners[iThread].wait { uninitializedThreads.get() == 0 }
+        spinners[iThread].spinWaitUntil { uninitializedThreads.get() == 0 }
     }
 
     override fun needsTransformation() = true

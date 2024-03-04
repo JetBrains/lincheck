@@ -130,8 +130,8 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
     }
 
     private fun getResult(iThread: Int, deadline: Long): Any {
-        // Spin wait for a result during the limited number of loop cycles.
-        val result = resultSpinners[iThread].boundedWaitFor { results[iThread].value }
+        // Active wait for a result during the limited number of loop cycles.
+        val result = resultSpinners[iThread].spinWaitBoundedFor { results[iThread].value }
         if (result != null)
             return result
         // Park with timeout until the result is set or the timeout is passed.
@@ -169,7 +169,7 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
 
     private fun getTask(iThread: Int): Any {
         // Active wait for a task for the limited number of loop cycles.
-        val task = taskSpinners[iThread].boundedWaitFor { tasks[iThread].value }
+        val task = taskSpinners[iThread].spinWaitBoundedFor { tasks[iThread].value }
         if (task != null)
             return task
         // Park until a task is stored into `tasks[iThread]`.

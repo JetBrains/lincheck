@@ -35,11 +35,11 @@ package org.jetbrains.kotlinx.lincheck.util
  *  }
  * ```
  *
- * The `lock` method can be shortened with the help of the [wait] extension method:
+ * The `lock` method can be shortened with the help of the [spinWaitUntil] extension method:
  *
  * ```
  *  fun lock() {
- *      spinner.wait { lock.compareAndSet(false, true) }
+ *      spinner.spinWaitUntil { lock.compareAndSet(false, true) }
  *  }
  * ```
  *
@@ -191,7 +191,7 @@ fun SpinnerList(nThreads: Int): List<Spinner> {
  *
  * @see Spinner
  */
-inline fun Spinner.wait(condition: () -> Boolean) {
+inline fun Spinner.spinWaitUntil(condition: () -> Boolean) {
     while (!condition()) {
         spin()
     }
@@ -209,7 +209,7 @@ inline fun Spinner.wait(condition: () -> Boolean) {
  *
  * @see Spinner
  */
-inline fun Spinner.boundedWait(condition: () -> Boolean): Boolean {
+inline fun Spinner.spinWaitBoundedUntil(condition: () -> Boolean): Boolean {
     var result = true
     while (!condition()) {
         if (spin()) continue
@@ -230,8 +230,8 @@ inline fun Spinner.boundedWait(condition: () -> Boolean): Boolean {
  *
  * @see Spinner
  */
-inline fun <T> Spinner.boundedWaitFor(getter: () -> T?): T? {
-    boundedWait {
+inline fun <T> Spinner.spinWaitBoundedFor(getter: () -> T?): T? {
+    spinWaitBoundedUntil {
         val result = getter()
         if (result != null)
             return result

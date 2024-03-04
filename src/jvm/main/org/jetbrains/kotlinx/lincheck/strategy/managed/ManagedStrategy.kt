@@ -421,7 +421,7 @@ abstract class ManagedStrategy(
      * the execution according to the strategy decision.
      */
     private fun awaitTurn(iThread: Int) {
-        spinners[iThread].wait {
+        spinners[iThread].spinWaitUntil {
             // Finish forcibly if an error occurred and we already have an `InvocationResult`.
             if (suddenInvocationResult != null)
                 throw ForcibleExecutionFinishError
