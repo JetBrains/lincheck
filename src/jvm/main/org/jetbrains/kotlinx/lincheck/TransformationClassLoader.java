@@ -10,8 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck;
 
-import com.intellij.rt.coverage.instrumentation.CoverageTransformer;
 import org.jetbrains.kotlinx.lincheck.coverage.CoverageOptions;
+import org.jetbrains.kotlinx.lincheck.coverage.LincheckCoverageTransformer;
 import org.jetbrains.kotlinx.lincheck.runner.Runner;
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy;
@@ -187,9 +187,10 @@ public class TransformationClassLoader extends ExecutionClassLoader {
             //    crForCoverage.accept(new TraceClassVisitor(cwForCoverage, new PrintWriter(System.out)), ClassReader.EXPAND_FRAMES);
 
             byte[] originalBytes = cwForCoverage.toByteArray();
-            byte[] coverageBytes =  new CoverageTransformer(
+            byte[] coverageBytes =  new LincheckCoverageTransformer(
                     CoverageOptions.Companion.getGlobalProjectData(),
-                    CoverageOptions.Companion.getGlobalProjectContext()
+                    CoverageOptions.Companion.getGlobalProjectContext(),
+                    coverageOptions.getIncludePatterns()
             ).transform(ClassLoader.getSystemClassLoader(), className, null, null, originalBytes);
 
             if (coverageBytes != null) {

@@ -15,19 +15,25 @@ import com.intellij.rt.coverage.data.ProjectData
 import com.intellij.rt.coverage.instrumentation.CoverageRuntime
 import com.intellij.rt.coverage.instrumentation.InstrumentationOptions
 import com.intellij.rt.coverage.instrumentation.data.ProjectContext
+import com.intellij.rt.coverage.util.CoverageReport
 import com.intellij.rt.coverage.verify.ProjectTargetProcessor
 import com.intellij.rt.coverage.verify.Verifier.CollectedCoverage
+import java.io.File
 import java.util.regex.Pattern
 
 /**
  * Creates object with coverage options.
  *
  * @param excludePatterns patterns for classnames to exclude from coverage report (you can use regex syntax).
+ * @param includePatterns patterns for classnames to include to coverage report (you can use regex syntax). This parameter is used to include into report classes from java standard library and other classes that are excluded from transformation by default. Makes sense to add this only to ModelChecking strategy.
+ * @param dataFile file in which coverage report will be saved.
  * @param onShutdown callback with coverage results.
  */
 class CoverageOptions(
     excludePatterns: List<String> = listOf(),
-    private val onShutdown: ((ProjectData, CollectedCoverage) -> Unit)? = null,
+    val includePatterns: List<String> = listOf(),
+    private val dataFile: File? = null,
+    private val onShutdown: ((ProjectData, CoverageResult) -> Unit)? = null,
 ) {
     companion object {
         var coverageEnabled = false
@@ -44,7 +50,6 @@ class CoverageOptions(
         )
     }
     var coverageResult: CoverageResult? = null
-    private var collectedCoverage: CollectedCoverage? = null
     private val excludes = excludePatterns.map(Pattern::compile)
 
     init {
@@ -64,14 +69,18 @@ class CoverageOptions(
         val localProjectData = getCoveredClasses()
         globalProjectContext.finalizeCoverage(localProjectData)
 
+        if (dataFile != null) {
+            println("Save coverage report to ${dataFile.path}")
+            CoverageReport.save(localProjectData, getProjectContextWithDataFile(globalProjectContext.options, dataFile))
+        }
+
         ProjectTargetProcessor().process(localProjectData) { _, coverage ->
-            collectedCoverage = coverage
             coverageResult = CoverageResult(coverage)
         }
     }
 
     fun onShutdown() {
-        onShutdown?.let { it(globalProjectData, collectedCoverage!!) }
+        onShutdown?.let { it(globalProjectData, coverageResult!!) }
     }
 
     /**
@@ -118,5 +127,25 @@ class CoverageOptions(
         }
 
         return projectData
+    }
+
+    private fun getProjectContextWithDataFile(from: InstrumentationOptions, dataFile: File): ProjectContext {
+        val options = InstrumentationOptions.Builder()
+            .setDataFile(dataFile) // set file where to save coverage report
+            .setBranchCoverage(from.isBranchCoverage)
+            .setIsMergeData(from.isMergeData)
+            .setIsCalculateUnloaded(from.isCalculateUnloaded)
+            .setInstructionCoverage(from.isInstructionCoverage)
+            .setIsCalculateHits(from.isCalculateHits)
+            .setSaveSource(from.isSaveSource)
+            .setIncludePatterns(from.includePatterns)
+            .setExcludePatterns(from.excludePatterns)
+            .setIncludeAnnotations(from.includeAnnotations)
+            .setExcludeAnnotations(from.excludeAnnotations)
+            .setSourceMapFile(from.sourceMapFile)
+            .setTestTrackingMode(from.testTrackingMode)
+            .build()
+
+        return ProjectContext(options)
     }
 }
