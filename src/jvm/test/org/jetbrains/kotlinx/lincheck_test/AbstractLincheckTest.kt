@@ -39,7 +39,6 @@ abstract class AbstractLincheckTest(
     }
 
     @Test(timeout = TIMEOUT)
-    // NOTE: please do not rename, the name is used in CI to filter tests
     fun testWithStressStrategy(): Unit = StressOptions().run {
         invocationsPerIteration(5_000)
         commonConfiguration()
@@ -47,7 +46,11 @@ abstract class AbstractLincheckTest(
     }
 
     @Test(timeout = TIMEOUT)
-    // NOTE: please do not rename, the name is used in CI to filter tests
+    // NOTE: please do not rename - the name is used to filter tests on CI in the "single-CPU" configuration:
+    // https://teamcity.jetbrains.com/buildConfiguration/KotlinTools_KotlinxLincheck_BuildLinuxOnJava17OnlyOneCpu
+    // We use this configuration to check the Lincheck's behavior on machines with a single CPU available.
+    // We want to run only model checking tests in this configuration, because stress tests when run on
+    // a single CPU might not detect any bugs.
     fun testWithModelCheckingStrategy(): Unit = ModelCheckingOptions().run {
         invocationsPerIteration(1_000)
         commonConfiguration()
