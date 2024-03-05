@@ -1042,8 +1042,19 @@ abstract class ManagedStrategy(
     private inner class TraceCollector {
         private val _trace = mutableListOf<TracePoint>()
         val trace: List<TracePoint> = _trace
+        @Volatile
+        private var isDone = false
+
+        fun getReadyTrace(): Trace {
+            isDone = true
+            return Trace(trace)
+        }
 
         fun newSwitch(iThread: Int, reason: SwitchReason) {
+            if (isDone) {
+                println("ERROR!")
+                Exception().printStackTrace()
+            }
             _trace += SwitchEventTracePoint(iThread, currentActorId[iThread], reason, callStackTrace[iThread])
         }
 
@@ -1059,23 +1070,41 @@ abstract class ManagedStrategy(
                 actorId = currentActorId[iThread],
                 callStackTrace = spinCycleStartStackTrace
             )
+            if (isDone) {
+                println("ERROR!")
+                Exception().printStackTrace()
+            }
             _trace.add(spinCycleStartPosition, spinCycleStartTracePoint)
         }
 
         fun passCodeLocation(tracePoint: TracePoint?) {
             // tracePoint can be null here if trace is not available, e.g. in case of suspension
-            if (tracePoint != null) _trace += tracePoint
+            if (tracePoint != null) {
+                if (isDone) {
+                    println("ERROR!")
+                    Exception().printStackTrace()
+                }
+                _trace += tracePoint
+            }
         }
 
         fun addStateRepresentation() {
             val stateRepresentation = runner.constructStateRepresentation() ?: return
             // use call stack trace of the previous trace point
             val callStackTrace = callStackTrace[currentThread]
+            if (isDone) {
+                println("ERROR!")
+                Exception().printStackTrace()
+            }
             _trace += StateRepresentationTracePoint(currentThread, currentActorId[currentThread], stateRepresentation, callStackTrace)
 
         }
 
         fun passObstructionFreedomViolationTracePoint(iThread: Int) {
+            if (isDone) {
+                println("ERROR!")
+                Exception().printStackTrace()
+            }
             _trace += ObstructionFreedomViolationExecutionAbortTracePoint(iThread, currentActorId[iThread], _trace.last().callStackTrace)
         }
     }
