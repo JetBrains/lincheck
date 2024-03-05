@@ -17,14 +17,12 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
-import org.objectweb.asm.*
 import sun.nio.ch.lincheck.*
 import sun.nio.ch.lincheck.CodeLocations
 import sun.nio.ch.lincheck.FinalFields
 import sun.nio.ch.lincheck.Injections
 import sun.nio.ch.lincheck.SharedEventsTracker
 import sun.nio.ch.lincheck.TestThread
-import java.io.*
 import java.lang.reflect.*
 import java.util.*
 import kotlin.collections.set
@@ -212,6 +210,7 @@ abstract class ManagedStrategy(
         )
 
         val loggedResults = runInvocation()
+        if (hangDuringCollectTrace) return null
         val sameResultTypes = loggedResults.javaClass == failingResult.javaClass
         val sameResults = loggedResults !is CompletedInvocationResult || failingResult !is CompletedInvocationResult || loggedResults.results == failingResult.results
         check(sameResultTypes && sameResults) {
@@ -233,9 +232,19 @@ abstract class ManagedStrategy(
         initializeInvocation()
         val result = runner.run()
         // Has strategy already determined the invocation result?
-        suddenInvocationResult?.let { return it  }
+        if (result is DeadlockInvocationResult) {
+            hangDuringCollectTrace = true
+            return result
+        }
+        suddenInvocationResult?.let {
+            // Unexpected `ForcibleExecutionFinishError` should be thrown
+            check(result is UnexpectedExceptionInvocationResult)
+            return it
+        }
         return result
     }
+
+    var hangDuringCollectTrace = false
 
     private fun failIfObstructionFreedomIsRequired(lazyMessage: () -> String) {
         if (testCfg.checkObstructionFreedom && !currentActorIsBlocking && !concurrentActorCausesBlocking) {
@@ -1051,10 +1060,6 @@ abstract class ManagedStrategy(
         }
 
         fun newSwitch(iThread: Int, reason: SwitchReason) {
-            if (isDone) {
-                println("ERROR: $iThread! part=${runner.currentExecutionPart}")
-                Exception().printStackTrace()
-            }
             _trace += SwitchEventTracePoint(iThread, currentActorId[iThread], reason, callStackTrace[iThread])
         }
 
@@ -1070,20 +1075,12 @@ abstract class ManagedStrategy(
                 actorId = currentActorId[iThread],
                 callStackTrace = spinCycleStartStackTrace
             )
-            if (isDone) {
-                println("ERROR: $iThread! part=${runner.currentExecutionPart}")
-                Exception().printStackTrace()
-            }
             _trace.add(spinCycleStartPosition, spinCycleStartTracePoint)
         }
 
         fun passCodeLocation(tracePoint: TracePoint?) {
             // tracePoint can be null here if trace is not available, e.g. in case of suspension
             if (tracePoint != null) {
-                if (isDone) {
-                    println("ERROR: ${tracePoint.iThread}! part=${runner.currentExecutionPart}")
-                    Exception().printStackTrace()
-                }
                 _trace += tracePoint
             }
         }
@@ -1092,19 +1089,11 @@ abstract class ManagedStrategy(
             val stateRepresentation = runner.constructStateRepresentation() ?: return
             // use call stack trace of the previous trace point
             val callStackTrace = callStackTrace[currentThread]
-            if (isDone) {
-                println("ERROR!: X part=${runner.currentExecutionPart}")
-                Exception().printStackTrace()
-            }
             _trace += StateRepresentationTracePoint(currentThread, currentActorId[currentThread], stateRepresentation, callStackTrace)
 
         }
 
         fun passObstructionFreedomViolationTracePoint(iThread: Int) {
-            if (isDone) {
-                println("ERROR! $iThread part=${runner.currentExecutionPart}")
-                Exception().printStackTrace()
-            }
             _trace += ObstructionFreedomViolationExecutionAbortTracePoint(iThread, currentActorId[iThread], _trace.last().callStackTrace)
         }
     }
