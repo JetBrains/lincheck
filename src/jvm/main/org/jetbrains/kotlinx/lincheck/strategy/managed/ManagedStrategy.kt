@@ -1052,7 +1052,7 @@ abstract class ManagedStrategy(
 
         fun newSwitch(iThread: Int, reason: SwitchReason) {
             if (isDone) {
-                println("ERROR!")
+                println("ERROR: $iThread! part=${runner.currentExecutionPart}")
                 Exception().printStackTrace()
             }
             _trace += SwitchEventTracePoint(iThread, currentActorId[iThread], reason, callStackTrace[iThread])
@@ -1071,7 +1071,7 @@ abstract class ManagedStrategy(
                 callStackTrace = spinCycleStartStackTrace
             )
             if (isDone) {
-                println("ERROR!")
+                println("ERROR: $iThread! part=${runner.currentExecutionPart}")
                 Exception().printStackTrace()
             }
             _trace.add(spinCycleStartPosition, spinCycleStartTracePoint)
@@ -1081,7 +1081,7 @@ abstract class ManagedStrategy(
             // tracePoint can be null here if trace is not available, e.g. in case of suspension
             if (tracePoint != null) {
                 if (isDone) {
-                    println("ERROR!")
+                    println("ERROR: ${tracePoint.iThread}! part=${runner.currentExecutionPart}")
                     Exception().printStackTrace()
                 }
                 _trace += tracePoint
@@ -1093,7 +1093,7 @@ abstract class ManagedStrategy(
             // use call stack trace of the previous trace point
             val callStackTrace = callStackTrace[currentThread]
             if (isDone) {
-                println("ERROR!")
+                println("ERROR!: X part=${runner.currentExecutionPart}")
                 Exception().printStackTrace()
             }
             _trace += StateRepresentationTracePoint(currentThread, currentActorId[currentThread], stateRepresentation, callStackTrace)
@@ -1102,7 +1102,7 @@ abstract class ManagedStrategy(
 
         fun passObstructionFreedomViolationTracePoint(iThread: Int) {
             if (isDone) {
-                println("ERROR!")
+                println("ERROR! $iThread part=${runner.currentExecutionPart}")
                 Exception().printStackTrace()
             }
             _trace += ObstructionFreedomViolationExecutionAbortTracePoint(iThread, currentActorId[iThread], _trace.last().callStackTrace)
