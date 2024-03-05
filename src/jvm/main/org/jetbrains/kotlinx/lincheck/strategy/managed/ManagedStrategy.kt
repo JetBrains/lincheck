@@ -223,7 +223,7 @@ abstract class ManagedStrategy(
                 appendln(loggedResults.toLincheckFailure(scenario, Trace(traceCollector!!.trace)).toString())
             }.toString()
         }
-        return Trace(traceCollector!!.trace)
+        return traceCollector!!.getReadyTrace()
     }
 
     /**
