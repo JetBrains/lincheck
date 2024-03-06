@@ -99,6 +99,7 @@ class ParallelThreadsRunnerExceptionTest {
             }
         }
         ParallelThreadsRunner(
+            traceCollectionEnabled = false,
             strategy = mockStrategy(scenario), testClass = testClass, validationFunction = null,
             stateRepresentationFunction = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
         ).use { runner ->
@@ -124,6 +125,7 @@ class ParallelThreadsRunnerExceptionTest {
             }
         }
         ParallelThreadsRunner(
+            traceCollectionEnabled = false,
             strategy = mockStrategy(scenario), testClass = testClass, validationFunction = null,
             stateRepresentationFunction = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
         ).use { runner ->
@@ -143,6 +145,7 @@ class ParallelThreadsRunnerExceptionTest {
             }
         }
         ParallelThreadsRunner(
+            traceCollectionEnabled = false,
             strategy = mockStrategy(scenario), testClass = testClass, validationFunction = null,
             stateRepresentationFunction = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
         ).use { runner ->
@@ -162,6 +165,7 @@ class ParallelThreadExecutionExceptionsTest {
             }
         }
         ParallelThreadsRunner(
+            traceCollectionEnabled = false,
             strategy = mockStrategy(scenario), testClass = this::class.java, validationFunction = null,
             stateRepresentationFunction = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
         ).use { runner ->

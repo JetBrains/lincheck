@@ -25,6 +25,7 @@ package sun.nio.ch.lincheck
  * @param block The Runnable object associated with the thread.
  */
 internal class TestThread(
+    val isTraceCollectionThread: Boolean,
     testName: String,
     val threadNumber: Int,
     val runnerHash: Int,

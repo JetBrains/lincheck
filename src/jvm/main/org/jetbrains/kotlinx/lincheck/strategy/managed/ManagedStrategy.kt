@@ -95,7 +95,7 @@ abstract class ManagedStrategy(
     private val userDefinedGuarantees: List<ManagedStrategyGuarantee>? = testCfg.guarantees.ifEmpty { null }
 
     init {
-        runner = createRunner()
+        runner = createRunner(traceCollectionEnabled = false)
         // The managed state should be initialized before еру test class transformation.
         try {
             runner.initialize()
@@ -107,8 +107,8 @@ abstract class ManagedStrategy(
 
     override fun needsTransformation(): Boolean = true
 
-    private fun createRunner(): ManagedStrategyRunner =
-        ManagedStrategyRunner(this, testClass, validationFunction, stateRepresentationFunction, testCfg.timeoutMs, UseClocks.ALWAYS)
+    private fun createRunner(traceCollectionEnabled: Boolean): ManagedStrategyRunner =
+        ManagedStrategyRunner(traceCollectionEnabled, this, testClass, validationFunction, stateRepresentationFunction, testCfg.timeoutMs, UseClocks.ALWAYS)
 
     fun useBytecodeCache(): Boolean =
         !collectTrace && testCfg.eliminateLocalObjects && (testCfg.guarantees == ManagedCTestConfiguration.DEFAULT_GUARANTEES)
@@ -202,7 +202,7 @@ abstract class ManagedStrategy(
         // Replace the current runner with a new one in order to use a new
         // `TransformationClassLoader` with a transformer that inserts the trace collection logic.
         runner.close()
-        runner = createRunner()
+        runner = createRunner(traceCollectionEnabled = true)
         runner.initialize()
 
         loopDetector.enableReplayMode(
@@ -212,7 +212,8 @@ abstract class ManagedStrategy(
         val loggedResults = runInvocation()
         if (hangDuringCollectTrace) return null
         val sameResultTypes = loggedResults.javaClass == failingResult.javaClass
-        val sameResults = loggedResults !is CompletedInvocationResult || failingResult !is CompletedInvocationResult || loggedResults.results == failingResult.results
+        val sameResults =
+            loggedResults !is CompletedInvocationResult || failingResult !is CompletedInvocationResult || loggedResults.results == failingResult.results
         check(sameResultTypes && sameResults) {
             StringBuilder().apply {
                 appendln("Non-determinism found. Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc).")
@@ -222,7 +223,7 @@ abstract class ManagedStrategy(
                 appendln(loggedResults.toLincheckFailure(scenario, Trace(traceCollector!!.trace)).toString())
             }.toString()
         }
-        return traceCollector!!.getReadyTrace()
+        return Trace(traceCollector!!.trace)
     }
 
     /**
@@ -1051,19 +1052,12 @@ abstract class ManagedStrategy(
     private inner class TraceCollector {
         private val _trace = mutableListOf<TracePoint>()
         val trace: List<TracePoint> = _trace
-        @Volatile
-        private var isDone = false
 
-        fun getReadyTrace(): Trace {
-            isDone = true
-            return Trace(trace)
-        }
-
-        fun newSwitch(iThread: Int, reason: SwitchReason) {
+        fun newSwitch(iThread: Int, reason: SwitchReason)= isTraceCollectionThread {
             _trace += SwitchEventTracePoint(iThread, currentActorId[iThread], reason, callStackTrace[iThread])
         }
 
-        fun newActiveLockDetected(iThread: Int, cyclePeriod: Int) {
+        fun newActiveLockDetected(iThread: Int, cyclePeriod: Int) = isTraceCollectionThread{
             val spinCycleStartPosition = _trace.size - cyclePeriod
             val spinCycleStartStackTrace = if (spinCycleStartPosition <= _trace.lastIndex) {
                 _trace[spinCycleStartPosition].callStackTrace
@@ -1078,14 +1072,14 @@ abstract class ManagedStrategy(
             _trace.add(spinCycleStartPosition, spinCycleStartTracePoint)
         }
 
-        fun passCodeLocation(tracePoint: TracePoint?) {
+        fun passCodeLocation(tracePoint: TracePoint?) = isTraceCollectionThread {
             // tracePoint can be null here if trace is not available, e.g. in case of suspension
             if (tracePoint != null) {
                 _trace += tracePoint
             }
         }
 
-        fun addStateRepresentation() {
+        fun addStateRepresentation() = isTraceCollectionThread{
             val stateRepresentation = runner.constructStateRepresentation() ?: return
             // use call stack trace of the previous trace point
             val callStackTrace = callStackTrace[currentThread]
@@ -1093,8 +1087,15 @@ abstract class ManagedStrategy(
 
         }
 
-        fun passObstructionFreedomViolationTracePoint(iThread: Int) {
+        fun passObstructionFreedomViolationTracePoint(iThread: Int) = isTraceCollectionThread {
             _trace += ObstructionFreedomViolationExecutionAbortTracePoint(iThread, currentActorId[iThread], _trace.last().callStackTrace)
+        }
+
+        private inline fun isTraceCollectionThread(action: () -> Unit) {
+            val thread = Thread.currentThread() as? TestThread
+            if (thread == null || thread.isTraceCollectionThread) {
+                action()
+            }
         }
     }
 
@@ -1498,9 +1499,10 @@ abstract class ManagedStrategy(
  * to the strategy so that it can known about some required events.
  */
 private class ManagedStrategyRunner(
+    traceCollectionEnabled: Boolean,
     private val managedStrategy: ManagedStrategy, testClass: Class<*>, validationFunction: Actor?,
     stateRepresentationMethod: Method?, timeoutMs: Long, useClocks: UseClocks
-) : ParallelThreadsRunner(managedStrategy, testClass, validationFunction, stateRepresentationMethod, timeoutMs, useClocks) {
+) : ParallelThreadsRunner(traceCollectionEnabled, managedStrategy, testClass, validationFunction, stateRepresentationMethod, timeoutMs, useClocks) {
     override fun onStart(iThread: Int) = runInIgnoredSection {
         if (currentExecutionPart !== PARALLEL) return
         managedStrategy.onStart(iThread)
