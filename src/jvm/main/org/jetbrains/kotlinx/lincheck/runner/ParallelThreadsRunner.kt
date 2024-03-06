@@ -46,7 +46,7 @@ internal open class ParallelThreadsRunner(
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
     private val executor = FixedActiveThreadsExecutor(scenario.nThreads, runnerHash) // should be closed in `close()`
 
-    private val spinners = SpinnerList(executor.threads.size)
+    private val spinners = SpinnerGroup(executor.threads.size)
 
     private lateinit var testInstance: Any
 

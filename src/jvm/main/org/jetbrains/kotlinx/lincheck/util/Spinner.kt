@@ -76,8 +76,6 @@ package org.jetbrains.kotlinx.lincheck.util
  *
  * @property nThreads If passed, denotes the number of threads in a group that
  *   may wait for a common condition in the spin-loop.
- * @property shouldYield Defines whether the spin-loop should periodically yield to
- *   give other threads the opportunity to run.
  *
  * @constructor Creates an instance of the [Spinner] class.
  */
@@ -112,19 +110,15 @@ class Spinner(val nThreads: Int = -1) {
      * The number of spin-loop iterations before yielding the current thread
      * to give other threads the opportunity to run.
      */
-    private val yieldLimit = when {
-        shouldSpin -> SPIN_LOOP_ITERATIONS_BEFORE_YIELD
-        else -> 1
-    }
+    private val yieldLimit =
+        if (shouldSpin) SPIN_LOOP_ITERATIONS_BEFORE_YIELD else 1
 
     /**
      * The exit limit determines the number of spin-loop iterations
      * after which the spin-loop is advised to exit.
      */
-    private val exitLimit = when {
-        shouldSpin -> SPIN_LOOP_ITERATIONS_BEFORE_EXIT
-        else -> 1
-    }
+    private val exitLimit =
+        if (shouldSpin) SPIN_LOOP_ITERATIONS_BEFORE_EXIT else 1
 
     /**
      * Spins the counter for a few iterations.
@@ -164,12 +158,12 @@ class Spinner(val nThreads: Int = -1) {
 }
 
 /**
- * A [SpinnerList] function creates a list of spinners to be used by the specified number of threads.
+ * A [SpinnerGroup] function creates a list of spinners to be used by the specified number of threads.
  * It provides a convenient way to manage multiple spinners together.
  *
  * @param nThreads The number of threads in the group.
  */
-fun SpinnerList(nThreads: Int): List<Spinner> {
+fun SpinnerGroup(nThreads: Int): List<Spinner> {
     return Array(nThreads) { Spinner(nThreads) }.asList()
 }
 

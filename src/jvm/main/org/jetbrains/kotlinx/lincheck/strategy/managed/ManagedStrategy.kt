@@ -46,7 +46,7 @@ abstract class ManagedStrategy(
     private var runner: ManagedStrategyRunner
 
     // Spin-waiters for each thread
-    private val spinners = SpinnerList(nThreads)
+    private val spinners = SpinnerGroup(nThreads)
 
     companion object {
         // Shares location ids between class transformers in order

@@ -32,9 +32,11 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
     private val tasks = atomicArrayOfNulls<Any>(nThreads)
 
     /**
-     * Spinners for each thread used for spin-wait on tasks.
+     * Spinners for spin-wait on tasks.
+     *
+     * Each thread of the executor manipulates its own spinner.
      */
-    private val taskSpinners = SpinnerList(nThreads)
+    private val taskSpinners = SpinnerGroup(nThreads)
 
     /**
      * null, waiting in [submitAndAwait] thread, DONE, or exception
@@ -43,6 +45,8 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
 
     /**
      * Spinner for spin-wait on results.
+     *
+     * Only the main thread submitting tasks manipulates this spinner.
      */
     private val resultSpinner = Spinner(nThreads)
 
@@ -132,8 +136,7 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
     private fun getResult(iThread: Int, deadline: Long): Any {
         // Active wait for a result during the limited number of loop cycles.
         val result = resultSpinner.spinWaitBoundedFor { results[iThread].value }
-        if (result != null)
-            return result
+        if (result != null) return result
         // Park with timeout until the result is set or the timeout is passed.
         val currentThread = Thread.currentThread()
         if (results[iThread].compareAndSet(null, currentThread)) {
@@ -170,8 +173,7 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
     private fun getTask(iThread: Int): Any {
         // Active wait for a task for the limited number of loop cycles.
         val task = taskSpinners[iThread].spinWaitBoundedFor { tasks[iThread].value }
-        if (task != null)
-            return task
+        if (task != null) return task
         // Park until a task is stored into `tasks[iThread]`.
         val currentThread = Thread.currentThread()
         if (tasks[iThread].compareAndSet(null, currentThread)) {
