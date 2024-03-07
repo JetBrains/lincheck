@@ -27,6 +27,11 @@ class Reporter(private val logLevel: LoggingLevel) {
         appendExecutionScenario(scenario)
     }
 
+    fun logMinimizationIteration(scenario: ExecutionScenario) = log(INFO) {
+        appendLine("\n= Minimized scenario to the following =")
+        appendExecutionScenario(scenario)
+    }
+
     fun logFailedIteration(failure: LincheckFailure) = log(INFO) {
         appendFailure(failure)
     }

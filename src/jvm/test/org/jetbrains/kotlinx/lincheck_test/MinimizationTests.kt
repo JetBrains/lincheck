@@ -59,6 +59,7 @@ class MinimizationTest {
             .actorsBefore(4)
             .actorsAfter(4)
             .invocationsPerIteration(1_000)
+            .logLevel(LoggingLevel.INFO)
         try {
             LinChecker.check(MinimizationTest::class.java, options)
             fail("Should fail with LincheckAssertionError")
@@ -92,6 +93,7 @@ class MinimizationWithExceptionTest {
             .actorsBefore(4)
             .actorsAfter(4)
             .invocationsPerIteration(1_000)
+            .logLevel(LoggingLevel.INFO)
         try {
             LinChecker.check(IncorrectImplementationWithException::class.java, options)
             fail("Should fail with LincheckAssertionError")
@@ -123,6 +125,7 @@ class MinimizationWithExceptionTest {
             .actorsBefore(4)
             .actorsAfter(4)
             .invocationsPerIteration(1_000)
+            .logLevel(LoggingLevel.INFO)
             .sequentialSpecification(SequentialImplementation::class.java)
         try {
             LinChecker.check(CorrectImplementationWithException::class.java, options)

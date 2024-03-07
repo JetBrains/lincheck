@@ -100,6 +100,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         var minimizedFailure = this
         while (true) {
             minimizedFailure = minimizedFailure.scenario.tryMinimize(testCfg) ?: break
+            reporter.logMinimizationIteration(minimizedFailure.scenario)
         }
         return minimizedFailure
     }
