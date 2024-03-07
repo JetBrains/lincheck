@@ -394,7 +394,9 @@ internal class LincheckClassVisitor(
                                     invokeInIgnoredSection {
                                         invokeStatic(Injections::deterministicRandom)
                                         loadLocals(arguments)
-                                        visitMethodInsn(opcode, "java/util/Random", name, desc, itf)
+                                        // Here might be java/util/Random or java/util/random/RandomGenerator
+                                        val randomOwner = if (owner.endsWith("RandomGenerator")) "java/util/random/RandomGenerator" else "java/util/Random"
+                                        visitMethodInsn(opcode, randomOwner, name, desc, itf)
                                     }
                                 },
                                 elseClause = {
