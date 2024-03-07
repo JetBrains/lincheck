@@ -598,7 +598,6 @@ class EventStructure(
      * @return list of added events
      */
     private fun addSynchronizedEvents(event: AtomicThreadEvent): List<AtomicThreadEvent> {
-        // TODO: we should maintain an index of read/write accesses to specific memory location
         val candidates = synchronizationCandidates(event)
         val syncEvents = when (event.label.syncType) {
             SynchronizationType.Binary -> addBinarySynchronizedEvents(event, candidates)
