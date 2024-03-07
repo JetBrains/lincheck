@@ -17,6 +17,7 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.jetbrains.kotlinx.lincheck.util.*
 import org.objectweb.asm.*
 import java.lang.reflect.*
 import java.util.*
@@ -43,6 +44,9 @@ abstract class ManagedStrategy(
     // Runner for scenario invocations,
     // can be replaced with a new one for trace construction.
     private var runner: ManagedStrategyRunner
+
+    // Spin-waiters for each thread
+    private val spinners = SpinnerGroup(nThreads)
 
     companion object {
         // Shares location ids between class transformers in order
@@ -417,12 +421,10 @@ abstract class ManagedStrategy(
      * the execution according to the strategy decision.
      */
     private fun awaitTurn(iThread: Int) {
-        // Wait actively until the thread is allowed to continue
-        var i = 0
-        while (currentThread != iThread) {
+        spinners[iThread].spinWaitUntil {
             // Finish forcibly if an error occurred and we already have an `InvocationResult`.
             if (suddenInvocationResult != null) throw ForcibleExecutionFinishError
-            if (++i % SPINNING_LOOP_ITERATIONS_BEFORE_YIELD == 0) Thread.yield()
+            currentThread == iThread
         }
     }
 
@@ -1438,8 +1440,6 @@ internal object ForcibleExecutionFinishError : Error() {
 }
 
 private const val COROUTINE_SUSPENSION_CODE_LOCATION = -1 // currently the exact place of coroutine suspension is not known
-
-private const val SPINNING_LOOP_ITERATIONS_BEFORE_YIELD = 100_000
 
 private const val OBSTRUCTION_FREEDOM_SPINLOCK_VIOLATION_MESSAGE =
     "The algorithm should be non-blocking, but an active lock is detected"
