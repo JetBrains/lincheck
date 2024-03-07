@@ -156,13 +156,19 @@ val EventLabel.type: LabelType get() = when (this) {
     is RandomLabel                  -> LabelType.Random
 }
 
+
+/* ************************************************************************* */
+/*      Initialization labels                                                */
+/* ************************************************************************* */
+
+
 /**
  * A special label of the virtual root event of every execution.
  *
  * Initialization label stores the initial values for:
  *   - static memory locations, and
- *   - memory locations of external objects - that is objects
- *     allocated in the untracked code sections.
+ *   - memory locations of external objects - these are the objects
+ *     allocated outside the tracked code sections.
  *
  * @property initThreadID thread id used for the special initial thread;
  *   this thread should contain only the initialization event itself.
@@ -200,33 +206,18 @@ class InitializationLabel(
 
 }
 
-fun InitializationLabel.asThreadForkLabel() =
-    ThreadForkLabel(setOf(mainThreadID))
-
-fun InitializationLabel.asObjectAllocationLabel(objID: ObjectID): ObjectAllocationLabel? =
-    objectsAllocations[objID]
-
-fun InitializationLabel.isWriteAccessTo(location: MemoryLocation): Boolean =
-    location is StaticFieldMemoryLocation || (location.objID in externalObjects)
-
-fun InitializationLabel.asWriteAccessLabel(location: MemoryLocation): WriteAccessLabel? = when {
-    location is StaticFieldMemoryLocation ->
-        WriteAccessLabel(
-            location = location,
-            value = getInitialValue(location),
-            codeLocation = INIT_CODE_LOCATION,
-            isExclusive = false,
-        )
-
-    else -> asObjectAllocationLabel(location.objID)?.asWriteAccessLabel(location)
-}
-
 fun InitializationLabel.asUnlockLabel(mutex: ObjectID) =
     asObjectAllocationLabel(mutex)?.asUnlockLabel(mutex)
 
-private const val INIT_CODE_LOCATION = -1
 
-
+/**
+ * Represents a label for object allocation events.
+ *
+ * @property className The name of the class of the allocated object.
+ * @property objectID The ID of the allocated object.
+ * @property memoryInitializer a callback performing a load of the initial values
+ *   of the allocated object's memory locations.
+ */
 data class ObjectAllocationLabel(
     val className: String,
     override val objectID: ObjectID,
@@ -239,32 +230,50 @@ data class ObjectAllocationLabel(
 
     private val initialValues = HashMap<MemoryLocation, ValueID>()
 
-    private fun initialValue(location: MemoryLocation): ValueID {
+    fun getInitialValue(location: MemoryLocation): ValueID {
         require(location.objID == objectID)
         return initialValues.computeIfAbsent(location) { memoryInitializer(it) }
     }
-
-    fun isWriteAccessTo(location: MemoryLocation) =
-        (location.objID == objectID)
-
-    fun asWriteAccessLabel(location: MemoryLocation) =
-        if (location.objID == objectID)
-            WriteAccessLabel(
-                location = location,
-                value = initialValue(location),
-                isExclusive = false,
-                // TODO: use actual allocation-site code location?
-                codeLocation = INIT_CODE_LOCATION,
-            )
-        else null
-
-    fun asUnlockLabel(mutex: ObjectID) =
-        if (mutex == objectID) UnlockLabel(mutex = objectID, isInitUnlock = true) else null
 
     override fun toString(): String =
         "Alloc(${objRepr(className, objectID)})"
 
 }
+
+fun ObjectAllocationLabel.asUnlockLabel(mutex: ObjectID) =
+    if (mutex == objectID) UnlockLabel(mutex = objectID, isInitUnlock = true) else null
+
+/**
+ * Interprets the initialization label as an object allocation label.
+ *
+ * Initialization label is only responsible for storing information about the external objects ---
+ * these are the objects created outside the tracked code sections.
+ * Such objects should be registered via [InitializationLabel.trackExternalObject] method.
+ *
+ * @param objID The ObjectID of an external object.
+ * @return The object allocation label associated with the given ObjectID,
+ *   or null if there is no external object with given id exists.
+ */
+fun InitializationLabel.asObjectAllocationLabel(objID: ObjectID): ObjectAllocationLabel? =
+    objectsAllocations[objID]
+
+/**
+ * Attempts to interpret a given event label as an object allocation label.
+ *
+ * @param objID The ObjectID of the object to match.
+ * @return The [ObjectAllocationLabel] if the label can be interpreted as it, null otherwise.
+ */
+fun EventLabel.asObjectAllocationLabel(objID: ObjectID): ObjectAllocationLabel? = when (this) {
+    is ObjectAllocationLabel -> takeIf { it.objectID == objID }
+    is InitializationLabel -> asObjectAllocationLabel(objID)
+    else -> null
+}
+
+
+/* ************************************************************************* */
+/*      Thread events labels                                                 */
+/* ************************************************************************* */
+
 
 /**
  * Base class for all thread event labels.
@@ -297,6 +306,23 @@ data class ThreadForkLabel(
 }
 
 /**
+ * Interprets the initialization label as a thread fork of the main thread.
+ */
+fun InitializationLabel.asThreadForkLabel() =
+    ThreadForkLabel(setOf(mainThreadID))
+
+/**
+ * Attempts to interpret a given event label as a thread fork label.
+ *
+ * @return The [ThreadForkLabel] if the label can be interpreted as it, null otherwise.
+ */
+fun EventLabel.asThreadForkLabel(): ThreadForkLabel? = when (this) {
+    is ThreadForkLabel -> this
+    is InitializationLabel -> asThreadForkLabel()
+    else -> null
+}
+
+/**
  * Label of a virtual event put into the beginning of each thread.
  *
  * @param kind the kind of this label: [LabelKind.Request], [LabelKind.Response] or [LabelKind.Receive].
@@ -318,11 +344,6 @@ data class ThreadStartLabel(
 /**
  * Label of a virtual event put into the end of each thread.
  *
- * Has [LabelKind.Send] kind.
- *
- * Can synchronize with [ThreadJoinLabel] or another [ThreadFinishLabel].
- * In the latter case the sets of [finishedThreadIds] of two labels are merged in the resulting label.
- *
  * Thread finish label is considered to be always blocked.
  *
  * @param finishedThreadIds set of threads that have been finished.
@@ -343,15 +364,11 @@ data class ThreadFinishLabel(
 /**
  * Label representing join of a set of threads.
  *
- * Can either be of [LabelKind.Request] or response [LabelKind.Response] kind.
- * Both thread join-request and join-response labels can synchronize with
- * [ThreadFinishLabel] to produce another thread join-response label,
- * however the new join label no longer waits for synchronized finished thread.
+ * Thread join label is blocking label.
+ * It is considered unblocked when the set of threads to-be-joined
+ * becomes empty (see [joinThreadIds]).
  *
- * This is blocking label, it becomes [isUnblocked] when set of
- * wait-to-be-join threads becomes empty (see [joinThreadIds]).
- *
- * @param kind the kind of this label: [LabelKind.Request] or [LabelKind.Response].
+ * @param kind the kind of this label: [LabelKind.Request], [LabelKind.Response] or [LabelKind.Receive].
  * @param joinThreadIds set of threads this label awaits to join.
  */
 data class ThreadJoinLabel(
@@ -372,43 +389,43 @@ data class ThreadJoinLabel(
         "ThreadJoin${kind.repr}(${joinThreadIds})"
 }
 
-fun EventLabel.asThreadForkLabel(): ThreadForkLabel? = when (this) {
-    is ThreadForkLabel -> this
-    is InitializationLabel -> asThreadForkLabel()
-    else -> null
-}
-
+/**
+ * Attempts to interpret a given event label as a thread event label.
+ *
+ * @return The [ThreadEventLabel] if the label can be interpreted as it, null otherwise.
+ */
 fun EventLabel.asThreadEventLabel(): ThreadEventLabel? = when (this) {
     is ThreadEventLabel -> this
     is InitializationLabel -> asThreadForkLabel()
     else -> null
 }
 
-fun EventLabel.asObjectAllocationLabel(objID: ObjectID): ObjectAllocationLabel? = when (this) {
-    is ObjectAllocationLabel -> takeIf { it.objectID == objID }
-    is InitializationLabel -> asObjectAllocationLabel(objID)
-    else -> null
-}
+
+/* ************************************************************************* */
+/*      Memory access labels                                                 */
+/* ************************************************************************* */
+
 
 /**
- * Base class of read and write shared memory access event labels.
- * Stores common information about memory access ---
- * such as accessing memory location and read or written value.
+ * Base class of shared memory access labels.
  *
- * @param kind the kind of this label.
- * @param location memory location affected by this memory access.
- * @param value_ written value for write access, read value for read access.
- * @param kClass class of written or read value.
+ * It stores common information about memory accesses ---
+ * such as the accessed memory location and read or written value.
+ *
+ * @param kind The kind of this label.
+ * @param location The accessed memory location.
  * @param isExclusive flag indicating whether this access is exclusive.
  *   Memory accesses obtained as a result of executing atomic read-modify-write
  *   instructions (such as CAS) have this flag set.
+ * @param kClass class of written or read value.
+ * @param codeLocation the code location corresponding to the memory access.
  */
 sealed class MemoryAccessLabel(
     kind: LabelKind,
-    open val codeLocation: Int,
     open val location: MemoryLocation,
-    open val kClass: KClass<*>?,
-    open val isExclusive: Boolean = false
+    open val isExclusive: Boolean = false,
+    open val kClass: KClass<*>? = null,
+    open val codeLocation: Int = UNKNOWN_CODE_LOCATION,
 ): EventLabel(kind) {
 
     /**
@@ -422,30 +439,19 @@ sealed class MemoryAccessLabel(
     abstract val writeValue: ValueID
 
     /**
-     * Kind of memory access of this label:
-     * either [MemoryAccessKind.Write] or [MemoryAccessKind.Read].
-     */
-    val accessKind: MemoryAccessKind
-        get() = when(this) {
-            is WriteAccessLabel -> MemoryAccessKind.Write
-            is ReadAccessLabel -> MemoryAccessKind.Read
-            is ReadModifyWriteAccessLabel -> MemoryAccessKind.ReadModifyWrite
-        }
-
-    /**
-     * Checks whether this memory access is read.
+     * Checks whether this memory access is a read access.
      */
     val isRead: Boolean
         get() = (accessKind == MemoryAccessKind.Read || accessKind == MemoryAccessKind.ReadModifyWrite)
 
     /**
-     * Checks whether this memory access is write.
+     * Checks whether this memory access is a write access.
      */
     val isWrite: Boolean
         get() = (accessKind == MemoryAccessKind.Write || accessKind == MemoryAccessKind.ReadModifyWrite)
 
     /**
-     * Recipient of a memory access label is equal to its memory location's object.
+     * The id of the accessed object.
      */
     override val objectID: ObjectID
         get() = location.objID
@@ -462,40 +468,54 @@ sealed class MemoryAccessLabel(
 
 }
 
+
 /**
  * Kind of memory access.
  *
- * @see MemoryAccessLabel
+ * Memory access can either be a read access, write access, or atomic read-modify-write access
+ * (for example, compare-and-set or atomic increment).
  */
 enum class MemoryAccessKind { Read, Write, ReadModifyWrite }
 
 /**
- * Label denoting read access to shared memory.
+ * Kind of the memory access.
  *
- * @param kind the kind of this label: [LabelKind.Request] or [LabelKind.Response] kind.
- * @param location memory location of this read.
- * @param _value the read value, for read-request label equals to null.
- * @param kClass the class of read value.
- * @param isExclusive exclusive access flag.
+ * @see MemoryAccessKind
+ */
+val MemoryAccessLabel.accessKind: MemoryAccessKind
+    get() = when(this) {
+        is WriteAccessLabel -> MemoryAccessKind.Write
+        is ReadAccessLabel -> MemoryAccessKind.Read
+        is ReadModifyWriteAccessLabel -> MemoryAccessKind.ReadModifyWrite
+    }
+
+
+/**
+ * Label denoting a read access to shared memory.
  *
- * @see MemoryAccessLabel
+ * @param kind The kind of this label: [LabelKind.Request], [LabelKind.Response], or [LabelKind.Receive].
+ * @param location The memory location of this read.
+ * @param readValue The read value; for read-request label should be equal to null.
+ * @param isExclusive Exclusive access flag.
+ * @param kClass The class of read value.
+ * @param codeLocation the code location corresponding to the read access.
  */
 data class ReadAccessLabel(
     override val kind: LabelKind,
-    override val codeLocation: Int,
     override val location: MemoryLocation,
-    val value: ValueID,
+    override val readValue: ValueID,
+    override val isExclusive: Boolean = false,
     override val kClass: KClass<*>? = null,
-    override val isExclusive: Boolean = false
-): MemoryAccessLabel(kind, codeLocation, location, kClass, isExclusive) {
+    override val codeLocation: Int = UNKNOWN_CODE_LOCATION,
+): MemoryAccessLabel(kind, location, isExclusive, kClass, codeLocation) {
 
     init {
         require(isRequest || isResponse || isReceive)
         require(isRequest implies (value == NULL_OBJECT_ID))
     }
 
-    override val readValue: ValueID
-        get() = value
+    val value: ValueID
+        get() = readValue
 
     override val writeValue: ValueID = NULL_OBJECT_ID
 
@@ -504,27 +524,26 @@ data class ReadAccessLabel(
 }
 
 /**
- * Label denoting write access to shared memory.
+ * Label denoting a write access to shared memory.
  *
- * @param location the memory location affected by this write.
- * @param _value the written value.
- * @param kClass the class of written value.
- * @param isExclusive exclusive access flag.
- *
- * @see MemoryAccessLabel
+ * @param location The memory location affected by this write access.
+ * @param writeValue The written value.
+ * @param isExclusive Exclusive access flag.
+ * @param kClass The class of written value.
+ * @param codeLocation the code location corresponding to the write access.
  */
 data class WriteAccessLabel(
-    override val codeLocation: Int,
     override val location: MemoryLocation,
-    val value: ValueID,
+    override val writeValue: ValueID,
+    override val isExclusive: Boolean = false,
     override val kClass: KClass<*>? = null,
-    override val isExclusive: Boolean = false
-): MemoryAccessLabel(LabelKind.Send, codeLocation, location, kClass, isExclusive) {
+    override val codeLocation: Int = UNKNOWN_CODE_LOCATION,
+): MemoryAccessLabel(LabelKind.Send, location, isExclusive, kClass, codeLocation) {
+
+    val value: ValueID
+        get() = writeValue
 
     override val readValue: ValueID = NULL_OBJECT_ID
-
-    override val writeValue: ValueID
-        get() = value
 
     override fun toString(): String =
         super.toString()
@@ -532,24 +551,22 @@ data class WriteAccessLabel(
 
 /**
  * Label denoting read-modify-write (RMW) access to shared memory
- * (e.g. compare-and-swap, get-and-increment, etc).
+ * (for example, compare-and-swap or atomic increment).
  *
- * @param location the memory location affected by this write.
- * @param _readValue the read value.
- * @param _writeValue the written value.
+ * @param location The memory location affected by this access.
+ * @param readValue The read value.
+ * @param writeValue The written value.
  * @param kClass the class of written value.
- * @param isExclusive exclusive access flag.
- *
- * @see MemoryAccessLabel
+ * @param codeLocation the code location corresponding to the memory access.
  */
 data class ReadModifyWriteAccessLabel(
     override val kind: LabelKind,
-    override val codeLocation: Int,
     override val location: MemoryLocation,
     override val readValue: ValueID,
     override val writeValue: ValueID,
     override val kClass: KClass<*>? = null,
-): MemoryAccessLabel(kind, codeLocation, location, kClass, isExclusive = true) {
+    override val codeLocation: Int = UNKNOWN_CODE_LOCATION,
+): MemoryAccessLabel(kind, location, isExclusive = true, kClass, codeLocation) {
 
     init {
         require(kind == LabelKind.Response || kind == LabelKind.Receive)
@@ -559,47 +576,109 @@ data class ReadModifyWriteAccessLabel(
         super.toString()
 }
 
+/**
+ * Attempts to create a read-modify-write (RMW) access label based on read and write labels.
+ *
+ * @param read The read access label.
+ * @param write The write access label.
+ * @return The resulting read-modify-write access label if the read and write labels match, null otherwise.
+ */
 fun ReadModifyWriteAccessLabel(read: ReadAccessLabel, write: WriteAccessLabel): ReadModifyWriteAccessLabel? {
     require(read.kind == LabelKind.Response || read.kind == LabelKind.Receive)
-    return if (read.kClass == write.kClass &&
-               read.location == write.location &&
+    return if (read.location == write.location &&
                read.isExclusive == write.isExclusive &&
-               read.codeLocation == write.codeLocation)
+               read.kClass == write.kClass &&
+               read.codeLocation == write.codeLocation
+    )
         ReadModifyWriteAccessLabel(
             kind = read.kind,
-            codeLocation = read.codeLocation,
-            kClass = read.kClass,
             location = read.location,
             readValue = read.value,
             writeValue = write.value,
+            kClass = read.kClass,
+            codeLocation = read.codeLocation,
         )
     else null
 }
 
+
+/**
+ * Attempts to create a read-modify-write (RMW) access label based on this read label and given write label.
+ *
+ * @param write The write access label.
+ * @return The resulting read-modify-write access label if the read and write labels match, null otherwise.
+ */
 fun ReadAccessLabel.getReadModifyWrite(write: WriteAccessLabel): ReadModifyWriteAccessLabel? =
     ReadModifyWriteAccessLabel(this, write)
 
+/**
+ * Checks whether this read access label is a valid read part of the given read-modify-write access label.
+ *
+ * @param label The read-modify-write label to check against.
+ * @return true if the given label is a valid read part of the RMW, false otherwise.
+ */
 fun ReadAccessLabel.isValidReadPart(label: ReadModifyWriteAccessLabel): Boolean =
     kClass == label.kClass &&
     location == label.location &&
     isExclusive == label.isExclusive &&
     (isResponse implies (readValue == label.readValue))
 
+/**
+ * Checks whether this write access label is a valid write part of the given read-modify-write access label.
+ *
+ * @param label The read-modify-write label to check against.
+ * @return true if the given label is a valid write part of the RMW, false otherwise.
+ */
 fun WriteAccessLabel.isValidWritePart(label: ReadModifyWriteAccessLabel): Boolean =
     kClass == label.kClass &&
     location == label.location &&
     isExclusive == label.isExclusive &&
     writeValue == label.writeValue
 
+/**
+ * Checks whether this label can be interpreted as a write access label.
+ */
 fun EventLabel.isWriteAccess(): Boolean =
     this is InitializationLabel || this is ObjectAllocationLabel || this is WriteAccessLabel
 
+/**
+ * Checks whether this label is exclusive write access label.
+ */
 fun EventLabel.isExclusiveWriteAccess(): Boolean =
     (this is WriteAccessLabel) && isExclusive
 
+/**
+ * Checks whether this label can be interpreted as an initializing write access label.
+ */
 fun EventLabel.isInitializingWriteAccess(): Boolean =
     this is InitializationLabel || this is ObjectAllocationLabel
 
+/**
+ * Checks if the initialization label can be interpreted as a write access to the given memory location.
+ *
+ * Initialization label can represent initializing writes to static memory locations,
+ * as well as field memory locations of external objects.
+ *
+ * @param location The memory location to check for.
+ */
+fun InitializationLabel.isWriteAccessTo(location: MemoryLocation): Boolean =
+    location is StaticFieldMemoryLocation || (location.objID in externalObjects)
+
+/**
+ * Checks if the object allocation label can be interpreted as a write access to the given memory location.
+ *
+ * Object allocation label can represent initializing writes to memory locations of the allocated object.
+ *
+ * @param location The memory location to check for.
+ */
+fun ObjectAllocationLabel.isWriteAccessTo(location: MemoryLocation) =
+    (location.objID == objectID)
+
+/**
+ * Checks if the given event label can be interpreted as a write access to the given memory location.
+ *
+ * @param location The memory location to check for.
+ */
 fun EventLabel.isWriteAccessTo(location: MemoryLocation): Boolean = when (this) {
     is WriteAccessLabel         -> (this.location == location)
     is ObjectAllocationLabel    -> isWriteAccessTo(location)
@@ -607,6 +686,47 @@ fun EventLabel.isWriteAccessTo(location: MemoryLocation): Boolean = when (this) 
     else -> false
 }
 
+/**
+ * Attempts to interpret a given initialization label as a write access label.
+ *
+ * @param location The memory location to match.
+ * @return The [WriteAccessLabel] if the label can be interpreted as it, null otherwise.
+ */
+fun InitializationLabel.asWriteAccessLabel(location: MemoryLocation): WriteAccessLabel? = when {
+    location is StaticFieldMemoryLocation ->
+        WriteAccessLabel(
+            location = location,
+            writeValue = getInitialValue(location),
+            isExclusive = false,
+            codeLocation = INIT_CODE_LOCATION,
+        )
+
+    else -> asObjectAllocationLabel(location.objID)?.asWriteAccessLabel(location)
+}
+
+/**
+ * Attempts to interpret a given object allocation label as a write access label.
+ *
+ * @param location The memory location to match.
+ * @return The [WriteAccessLabel] if the label can be interpreted as it, null otherwise.
+ */
+fun ObjectAllocationLabel.asWriteAccessLabel(location: MemoryLocation): WriteAccessLabel? =
+    if (location.objID == objectID)
+        WriteAccessLabel(
+            location = location,
+            writeValue = getInitialValue(location),
+            isExclusive = false,
+            // TODO: use actual allocation-site code location?
+            codeLocation = INIT_CODE_LOCATION,
+        )
+    else null
+
+/**
+ * Attempts to interpret a given label as a write access label.
+ *
+ * @param location The memory location to match.
+ * @return The [WriteAccessLabel] if the label can be interpreted as it, null otherwise.
+ */
 fun EventLabel.asWriteAccessLabel(location: MemoryLocation): WriteAccessLabel? = when (this) {
     is WriteAccessLabel         -> this.takeIf { it.location == location }
     is ObjectAllocationLabel    -> asWriteAccessLabel(location)
@@ -614,6 +734,11 @@ fun EventLabel.asWriteAccessLabel(location: MemoryLocation): WriteAccessLabel? =
     else -> null
 }
 
+/**
+ * Checks if the given event label can be interpreted as a memory access to the given memory location.
+ *
+ * @param location The memory location to check for.
+ */
 fun EventLabel.isMemoryAccessTo(location: MemoryLocation): Boolean = when (this) {
     is MemoryAccessLabel        -> (this.location == location)
     is ObjectAllocationLabel    -> isWriteAccessTo(location)
@@ -621,12 +746,24 @@ fun EventLabel.isMemoryAccessTo(location: MemoryLocation): Boolean = when (this)
     else -> false
 }
 
+/**
+ * Attempts to interpret a given label as a memory access label.
+ *
+ * @param location The memory location to match.
+ * @return The [MemoryAccessLabel] if the label can be interpreted as it, null otherwise.
+ */
 fun EventLabel.asMemoryAccessLabel(location: MemoryLocation): MemoryAccessLabel? = when (this) {
     is MemoryAccessLabel        -> this.takeIf { it.location == location }
     is ObjectAllocationLabel    -> asWriteAccessLabel(location)
     is InitializationLabel      -> asWriteAccessLabel(location)
     else -> null
 }
+
+
+/* ************************************************************************* */
+/*      Mutex events labels                                                  */
+/* ************************************************************************* */
+
 
 /**
  * Base class of all mutex operations event labels.
@@ -812,6 +949,12 @@ fun EventLabel.asNotifyLabel(mutex: ObjectID): NotifyLabel? = when (this) {
     else -> null
 }
 
+
+/* ************************************************************************* */
+/*      Parking labels                                                       */
+/* ************************************************************************* */
+
+
 /**
  * Base class for park and unpark event labels.
  *
@@ -899,20 +1042,11 @@ data class UnparkLabel(
         super.toString()
 }
 
-// TODO: generalize actor labels to method call/return labels?
-data class ActorLabel(
-    val threadId: ThreadID,
-    val actorKind: ActorLabelKind,
-    val actor: Actor
-) : EventLabel(actorKind.labelKind())
 
-enum class ActorLabelKind { Start, End, Span }
+/* ************************************************************************* */
+/*      Coroutine labels                                                     */
+/* ************************************************************************* */
 
-fun ActorLabelKind.labelKind(): LabelKind = when (this) {
-    ActorLabelKind.Start -> LabelKind.Request
-    ActorLabelKind.End -> LabelKind.Response
-    ActorLabelKind.Span -> LabelKind.Receive
-}
 
 sealed class CoroutineLabel(
     override val kind: LabelKind,
@@ -969,4 +1103,30 @@ data class CoroutineResumeLabel(
 
 }
 
+
+/* ************************************************************************* */
+/*      Miscellaneous                                                        */
+/* ************************************************************************* */
+
+
+// TODO: generalize actor labels to method call/return labels?
+data class ActorLabel(
+    val threadId: ThreadID,
+    val actorKind: ActorLabelKind,
+    val actor: Actor
+) : EventLabel(actorKind.labelKind())
+
+enum class ActorLabelKind { Start, End, Span }
+
+fun ActorLabelKind.labelKind(): LabelKind = when (this) {
+    ActorLabelKind.Start -> LabelKind.Request
+    ActorLabelKind.End -> LabelKind.Response
+    ActorLabelKind.Span -> LabelKind.Receive
+}
+
+
 data class RandomLabel(val value: Int): EventLabel(kind = LabelKind.Send)
+
+
+private const val INIT_CODE_LOCATION = -1
+private const val UNKNOWN_CODE_LOCATION = -2

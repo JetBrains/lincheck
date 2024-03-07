@@ -328,7 +328,7 @@ fun ReadAccessLabel.getResponse(label: EventLabel): EventLabel? = when {
         // TODO: perform dynamic type-check
         this.copy(
             kind = LabelKind.Response,
-            value = write.value,
+            readValue = write.value,
         )
     }
 

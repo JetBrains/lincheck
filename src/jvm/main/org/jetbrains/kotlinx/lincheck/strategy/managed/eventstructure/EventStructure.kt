@@ -881,9 +881,9 @@ class EventStructure(
                       isExclusive: Boolean = false): AtomicThreadEvent {
         val label = WriteAccessLabel(
             location = location,
-            value = computeValueID(value),
-            kClass = kClass,
+            writeValue = computeValueID(value),
             isExclusive = isExclusive,
+            kClass = kClass,
             codeLocation = codeLocation,
         )
         return addSendEvent(iThread, label)
@@ -891,15 +891,15 @@ class EventStructure(
 
     fun addReadEvent(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>,
                      isExclusive: Boolean = false): AtomicThreadEvent {
-        // we first create read-request event with unknown (null) value,
-        // value will be filled later in read-response event
+        // we first create a read-request event with unknown (null) value,
+        // value will be filled later in the read-response event
         val label = ReadAccessLabel(
             kind = LabelKind.Request,
             location = location,
-            value = NULL_OBJECT_ID,
-            kClass = kClass,
+            readValue = NULL_OBJECT_ID,
             isExclusive = isExclusive,
-            codeLocation = codeLocation
+            kClass = kClass,
+            codeLocation = codeLocation,
         )
         val requestEvent = addRequestEvent(iThread, label)
         val (responseEvent, _) = addResponseEvents(requestEvent)
