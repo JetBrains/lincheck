@@ -26,24 +26,24 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistenc
 import org.jetbrains.kotlinx.lincheck.utils.*
 import kotlin.reflect.KClass
 
+
+@SuppressWarnings("WeakerAccess")
 class EventStructure(
     nParallelThreads: Int,
     val memoryInitializer: MemoryInitializer,
-    val loopDetector: LoopDetector,
+    private val loopDetector: LoopDetector,
     // TODO: refactor --- avoid using callbacks!
-    val reportInconsistencyCallback: ReportInconsistencyCallback,
-    val internalThreadSwitchCallback: InternalThreadSwitchCallback,
+    private val reportInconsistencyCallback: ReportInconsistencyCallback,
+    private val internalThreadSwitchCallback: InternalThreadSwitchCallback,
 ) {
     val mainThreadId = nParallelThreads
-    val initThreadId = nParallelThreads + 1
-
+    private val initThreadId = nParallelThreads + 1
     private val maxThreadId = initThreadId
     private val nThreads = maxThreadId + 1
 
-    val syncAlgebra: SynchronizationAlgebra = AtomicSynchronizationAlgebra
-
-    val root: AtomicThreadEvent
-
+    /**
+     * Mutable list of events of the event structure.
+     */
     private val _events = sortedMutableListOf<BacktrackableEvent>()
 
     /**
@@ -51,29 +51,69 @@ class EventStructure(
      */
     val events: SortedList<Event> = _events
 
+    /**
+     * Root event of the whole event structure.
+     * Its label is [InitializationLabel].
+     */
+    @SuppressWarnings("WeakerAccess")
+    val root: AtomicThreadEvent
+
+    /**
+     * The root event of the currently being explored execution.
+     * In other words, it is a choice point that has led to the current exploration.
+     *
+     * The label of this event should be of [LabelKind.Response] kind.
+     */
+    @SuppressWarnings("WeakerAccess")
     lateinit var currentExplorationRoot: Event
         private set
 
+    /**
+     * The mutable execution currently being explored.
+     */
     private var _execution = MutableExtendedExecution(this.nThreads)
 
+    /**
+     * The execution currently being explored.
+     */
     val execution: ExtendedExecution
         get() = _execution
 
+    /**
+     * The frontier representing an already replayed part of the execution currently being explored.
+     */
     private var playedFrontier = MutableExecutionFrontier<AtomicThreadEvent>(this.nThreads)
 
+    /**
+     * An object managing the replay process of the execution currently being explored.
+     */
     private var replayer = Replayer()
 
+    /**
+     * Synchronization algebra used for synchronization of events.
+     */
+    @SuppressWarnings("WeakerAccess")
+    val syncAlgebra: SynchronizationAlgebra = AtomicSynchronizationAlgebra
+
+    /**
+     * The frontier encoding the subset of pinned events of the execution currently being explored.
+     * Pinned events cannot be revisited and thus do not participate in the synchronization
+     * with newly added events.
+     */
     private var pinnedEvents = ExecutionFrontier<AtomicThreadEvent>(this.nThreads)
+
+    /**
+     * The object registry, storing information about all objects
+     * created during the execution currently being explored.
+     */
+    private val objectRegistry = ObjectRegistry()
+
 
     /*
      * Map from blocked dangling events to their responses.
      * If event is blocked but the corresponding response has not yet arrived then it is mapped to null.
      */
     private val danglingEvents = mutableMapOf<AtomicThreadEvent, AtomicThreadEvent?>()
-
-    private val objectRegistry = ObjectRegistry()
-
-    private var nextObjectID = 1 + NULL_OBJECT_ID.id
 
     private val delayedConsistencyCheckBuffer = mutableListOf<AtomicThreadEvent>()
 
@@ -410,7 +450,7 @@ class EventStructure(
         }
         // If we are not in replay phase anymore, but the current event is replayed event,
         // it means that we just finished replay phase (i.e. the given event is the last replayed event).
-        // In this case, we need to proceed all postponed non-replayed events.
+        // In this case, we need to proceed with all postponed non-replayed events.
         if (isReplayedEvent) {
             for (delayedEvent in delayedConsistencyCheckBuffer) {
                 if (delayedEvent.label.isSend) {
@@ -454,7 +494,7 @@ class EventStructure(
         objectRegistry[value.unwrap()]?.let {
             return it.id
         }
-        val id = ObjectID(nextObjectID++)
+        val id = objectRegistry.nextObjectID
         val entry = ObjectEntry(id, value, root)
         val initLabel = (root.label as InitializationLabel)
         val className = value.unwrap().javaClass.simpleName
@@ -858,7 +898,7 @@ class EventStructure(
             addEventToCurrentExecution(event)
             return event
         }
-        val id = ObjectID(nextObjectID++)
+        val id = objectRegistry.nextObjectID
         val label = ObjectAllocationLabel(
             objectID = id,
             className = value.unwrap().javaClass.simpleName,
