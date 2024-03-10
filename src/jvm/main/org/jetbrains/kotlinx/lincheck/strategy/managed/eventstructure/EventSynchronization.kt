@@ -376,19 +376,18 @@ fun LockLabel.isValidResponse(label: EventLabel): Boolean {
     require(isResponse)
     return when {
         label is LockLabel && label.isRequest ->
-            mutex == label.mutex &&
-            reentranceDepth == label.reentranceDepth &&
-            reentranceCount == label.reentranceCount
+            mutexID == label.mutexID &&
+            reentrancyDepth == label.reentrancyDepth
 
-        else -> label.asUnlockLabel(mutex)?.let {
-            !it.isReentry && (isReentry implies it.isInitUnlock)
+        else -> label.asUnlockLabel(mutexID)?.let {
+            !it.isReentry && (isReentry implies it.isInitializingUnlock())
         } ?: false
     }
 }
 
 fun LockLabel.getResponse(label: EventLabel): LockLabel? = when {
-    isRequest -> label.asUnlockLabel(mutex)
-        ?.takeIf { !it.isReentry && (isReentry implies it.isInitUnlock) }
+    isRequest -> label.asUnlockLabel(mutexID)
+        ?.takeIf { isReentry implies label.isInitializingUnlock() }
         ?.let { this.copy(kind = LabelKind.Response) }
 
     else -> null
@@ -398,15 +397,15 @@ fun WaitLabel.isValidResponse(label: EventLabel): Boolean {
     require(isResponse)
     return when (label) {
         is WaitLabel ->
-            label.isRequest && mutex == label.mutex
+            label.isRequest && mutexID == label.mutexID
         else ->
-            label.asNotifyLabel(mutex) != null
+            label.asNotifyLabel(mutexID) != null
     }
 }
 
 fun WaitLabel.getResponse(label: EventLabel): WaitLabel? = when {
-    isRequest -> label.asNotifyLabel(mutex)?.let {
-        WaitLabel(LabelKind.Response, mutex)
+    isRequest -> label.asNotifyLabel(mutexID)?.let {
+        WaitLabel(LabelKind.Response, mutexID)
     }
     else -> null
 }

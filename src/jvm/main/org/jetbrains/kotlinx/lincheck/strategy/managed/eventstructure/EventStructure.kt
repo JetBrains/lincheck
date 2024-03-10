@@ -403,9 +403,9 @@ class EventStructure(
         when {
             // lock-response synchronizing with our unlock is conflict
             label is LockLabel && label.isResponse && !label.isReentry -> run {
-                val unlock = dependencies.first { it.label.asUnlockLabel(label.mutex) != null }
+                val unlock = dependencies.first { it.label.asUnlockLabel(label.mutexID) != null }
                 execution.forEach { event ->
-                    if (event.label.satisfies<LockLabel> { isResponse && mutex == label.mutex }
+                    if (event.label.satisfies<LockLabel> { isResponse && mutexID == label.mutexID }
                         && event.locksFrom == unlock) {
                         conflicts.add(event)
                     }
@@ -417,7 +417,7 @@ class EventStructure(
                 if ((notify.label as NotifyLabel).isBroadcast)
                     return@run
                 execution.forEach { event ->
-                    if (event.label.satisfies<WaitLabel> { isResponse && mutex == label.mutex }
+                    if (event.label.satisfies<WaitLabel> { isResponse && mutexID == label.mutexID }
                         && event.notifiedBy == notify) {
                         conflicts.add(event)
                     }
@@ -540,6 +540,14 @@ class EventStructure(
             label is ReadAccessLabel && label.isResponse ->
                 sequenceOf()
 
+            // re-entry lock-request synchronizes only with initializing unlock
+            (label is LockLabel && label.isReentry) ->
+                sequenceOf(allocationEvent(label.mutexID)!!)
+
+            // re-entry unlock does not participate in synchronization
+            (label is UnlockLabel && label.isReentry) ->
+                sequenceOf()
+
             // random labels do not synchronize
             label is RandomLabel -> sequenceOf()
 
@@ -606,16 +614,6 @@ class EventStructure(
             // that access the allocated object
             label is ObjectAllocationLabel -> {
                 return sequenceOf()
-            }
-
-            // re-entry lock-request synchronizes only with object allocation label
-            label is LockLabel && event.label.isRequest && label.isReentry -> {
-                candidates.filter { it.label.asObjectAllocationLabel(label.mutex) != null }
-            }
-
-            // re-entry unlock synchronizes with nothing
-            label is UnlockLabel && label.isReentry -> {
-                return sequenceOf(root)
             }
 
             label is CoroutineSuspendLabel && label.isRequest -> {
@@ -960,13 +958,15 @@ class EventStructure(
         return responseEvent
     }
 
-    fun addLockRequestEvent(iThread: Int, mutex: OpaqueValue, reentranceDepth: Int = 1, reentranceCount: Int = 1, isWaitLock: Boolean = false): AtomicThreadEvent {
+    fun addLockRequestEvent(iThread: Int, mutex: OpaqueValue,
+                            isReentry: Boolean = false, reentrancyDepth: Int = 1,
+                            isSynthetic: Boolean = false): AtomicThreadEvent {
         val label = LockLabel(
             kind = LabelKind.Request,
-            mutex = computeValueID(mutex) as ObjectID,
-            reentranceDepth = reentranceDepth,
-            reentranceCount = reentranceCount,
-            isWaitLock = isWaitLock,
+            mutexID = computeValueID(mutex) as ObjectID,
+            isReentry = isReentry,
+            reentrancyDepth = reentrancyDepth,
+            isSynthetic = isSynthetic,
         )
         return addRequestEvent(iThread, label)
     }
@@ -976,12 +976,14 @@ class EventStructure(
         return addResponseEvents(lockRequest).first
     }
 
-    fun addUnlockEvent(iThread: Int, mutex: OpaqueValue, reentranceDepth: Int = 1, reentranceCount: Int = 1, isWaitUnlock: Boolean = false): AtomicThreadEvent {
+    fun addUnlockEvent(iThread: Int, mutex: OpaqueValue,
+                       isReentry: Boolean = false, reentrancyDepth: Int = 1,
+                       isSynthetic: Boolean = false): AtomicThreadEvent {
         val label = UnlockLabel(
-            mutex = computeValueID(mutex) as ObjectID,
-            reentranceDepth = reentranceDepth,
-            reentranceCount = reentranceCount,
-            isWaitUnlock = isWaitUnlock,
+            mutexID = computeValueID(mutex) as ObjectID,
+            isReentry = isReentry,
+            reentrancyDepth = reentrancyDepth,
+            isSynthetic = isSynthetic,
         )
         return addSendEvent(iThread, label)
     }
@@ -989,7 +991,7 @@ class EventStructure(
     fun addWaitRequestEvent(iThread: Int, mutex: OpaqueValue): AtomicThreadEvent {
         val label = WaitLabel(
             kind = LabelKind.Request,
-            mutex = computeValueID(mutex) as ObjectID,
+            mutexID = computeValueID(mutex) as ObjectID,
         )
         return addRequestEvent(iThread, label)
 
@@ -1007,7 +1009,7 @@ class EventStructure(
         //   However, if one day we will want to support wait semantics without spurious wake-ups
         //   we will need to revisit this.
         val label = NotifyLabel(
-            mutex = computeValueID(mutex) as ObjectID,
+            mutexID = computeValueID(mutex) as ObjectID,
             isBroadcast = isBroadcast
         )
         return addSendEvent(iThread, label)

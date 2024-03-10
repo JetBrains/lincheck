@@ -46,7 +46,7 @@ class LockConsistencyChecker : ConsistencyChecker<AtomicThreadEvent, MutableExte
                 continue
             val key: Any = when (event.syncFrom.label) {
                 is UnlockLabel, is NotifyLabel -> event.syncFrom
-                else -> label.mutex
+                else -> label.mutexID
             }
             val other = mapping.put(key, event)
             if (other != null)

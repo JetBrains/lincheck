@@ -206,9 +206,6 @@ class InitializationLabel(
 
 }
 
-fun InitializationLabel.asUnlockLabel(mutex: ObjectID) =
-    asObjectAllocationLabel(mutex)?.asUnlockLabel(mutex)
-
 
 /**
  * Represents a label for object allocation events.
@@ -240,8 +237,6 @@ data class ObjectAllocationLabel(
 
 }
 
-fun ObjectAllocationLabel.asUnlockLabel(mutex: ObjectID) =
-    if (mutex == objectID) UnlockLabel(mutex = objectID, isInitUnlock = true) else null
 
 /**
  * Interprets the initialization label as an object allocation label.
@@ -409,7 +404,7 @@ fun EventLabel.asThreadEventLabel(): ThreadEventLabel? = when (this) {
 /**
  * Base class of shared memory access labels.
  *
- * It stores common information about memory accesses ---
+ * It stores common information about memory accesses,
  * such as the accessed memory location and read or written value.
  *
  * @param kind The kind of this label.
@@ -767,82 +762,82 @@ fun EventLabel.asMemoryAccessLabel(location: MemoryLocation): MemoryAccessLabel?
 
 /**
  * Base class of all mutex operations event labels.
+ * 
+ * It stores common information about mutex operations, 
+ * such as the accessed lock object.
  *
- * @param kind the kind of this label.
- * @param mutex id of the mutex to perform operation on.
- * @param isBlocking whether this label is blocking.
- * @param unblocked whether this blocking label is already unblocked.
+ * @param kind The kind of this label.
+ * @param mutexID The id of the mutex object to perform operation on.
+ * @param isBlocking Whether this label is blocking.
+ * @param isUnblocked Whether this blocking label is already unblocked.
  */
 sealed class MutexLabel(
     kind: LabelKind,
-    open val mutex: ObjectID,
+    open val mutexID: ObjectID,
     isBlocking: Boolean = false,
-    unblocked: Boolean = true,
-): EventLabel(kind, isBlocking, unblocked) {
+    isUnblocked: Boolean = true,
+): EventLabel(kind, isBlocking, isUnblocked) {
 
     /**
-     * Kind of mutex operation.
-     */
-    val operationKind: MutexOperationKind
-        get() = when(this) {
-            is LockLabel    -> MutexOperationKind.Lock
-            is UnlockLabel  -> MutexOperationKind.Unlock
-            is WaitLabel    -> MutexOperationKind.Wait
-            is NotifyLabel  -> MutexOperationKind.Notify
-        }
-
-    /**
-     * Recipient of a mutex label is its mutex object.
+     * The id of the accessed object.
      */
     override val objectID: ObjectID
-        get() = mutex
+        get() = mutexID
 
     override fun toString(): String {
-        return "${operationKind}${kind.repr}($mutex)"
+        return "${operationKind}${kind.repr}($mutexID)"
     }
 
 }
 
+
 /**
  * Kind of mutex operation.
  *
- * @see MutexLabel
+ * Mutex operation can either be lock, unlock, wait or notify.
  */
 enum class MutexOperationKind { Lock, Unlock, Wait, Notify }
 
 /**
+ * Kind of mutex operation.
+ * 
+ * @see MutexOperationKind
+ */
+val MutexLabel.operationKind: MutexOperationKind
+    get() = when(this) {
+        is LockLabel    -> MutexOperationKind.Lock
+        is UnlockLabel  -> MutexOperationKind.Unlock
+        is WaitLabel    -> MutexOperationKind.Wait
+        is NotifyLabel  -> MutexOperationKind.Notify
+    }
+
+
+/**
  * Label denoting lock of a mutex.
  *
- * Can either be of [LabelKind.Request] or [LabelKind.Response] kind.
- *
- * Lock-request can synchronize either with [InitializationLabel] or with [UnlockLabel]
- * to produce lock-response label.
- *
- * @param kind the kind of this label: [LabelKind.Request] or [LabelKind.Response].
- * @param mutex_ the locked mutex.
- *
- * @see MutexLabel
+ * @param kind The kind of this label: [LabelKind.Request] or [LabelKind.Response].
+ * @param mutexID The id of the locked mutex object.
+ * @param isReentry Flag indicating whether this lock operation is re-entry lock.
+ * @param reentrancyDepth The re-entrance depth of this lock operation.
+ * @param isSynthetic Flag indicating whether this lock operation is synthetic.
+ *   For example, a wait-response operation can be represented as a wait-response event,
+ *   followed by a synthetic lock operation.
  */
 data class LockLabel(
     override val kind: LabelKind,
-    override val mutex: ObjectID,
-    val reentranceDepth: Int = 1,
-    val reentranceCount: Int = 1,
-    val isWaitLock: Boolean = false,
+    override val mutexID: ObjectID,
+    val isReentry: Boolean = false,
+    val reentrancyDepth: Int = 1,
+    val isSynthetic: Boolean = false,
 ) : MutexLabel(
     kind = kind,
-    mutex = mutex,
+    mutexID = mutexID,
     isBlocking = true,
-    unblocked = (kind != LabelKind.Request),
+    isUnblocked = (kind != LabelKind.Request),
 ) {
     init {
         require(isRequest || isResponse)
-        require(reentranceDepth - reentranceCount >= 0)
-        // TODO: checks for non-reentrant locks
     }
-
-    val isReentry: Boolean =
-        (reentranceDepth - reentranceCount > 0)
 
     override fun toString(): String =
         super.toString()
@@ -851,31 +846,19 @@ data class LockLabel(
 /**
  * Label denoting unlock of a mutex.
  *
- * Has [LabelKind.Send] kind.
- *
- * Can synchronize with request [LockLabel] producing lock-response label.
- *
- * @param mutex_ the unblocked mutex.
- *
- * @see MutexLabel
+ * @param mutexID The id of the locked mutex object.
+ * @param isReentry Flag indicating whether this unlock operation is re-entry lock.
+ * @param reentrancyDepth The re-entrance depth of this unlock operation.
+ * @param isSynthetic Flag indicating whether this lock operation is synthetic.
+ *   For example, a wait-response operation can be represented as a wait-response event,
+ *   followed by a synthetic lock operation.
  */
 data class UnlockLabel(
-    override val mutex: ObjectID,
-    val reentranceDepth: Int = 1,
-    val reentranceCount: Int = 1,
-    // TODO: get rid of this!
-    val isWaitUnlock: Boolean = false,
-    // TODO: get rid of this!
-    val isInitUnlock: Boolean = false,
-) : MutexLabel(LabelKind.Send, mutex) {
-
-    init {
-        // TODO: checks for non-reentrant locks
-        require(reentranceDepth - reentranceCount >= 0)
-    }
-
-    val isReentry: Boolean =
-        (reentranceDepth - reentranceCount > 0)
+    override val mutexID: ObjectID,
+    val isReentry: Boolean = false,
+    val reentrancyDepth: Int = 1,
+    val isSynthetic: Boolean = false,
+) : MutexLabel(LabelKind.Send, mutexID) {
 
     override fun toString(): String =
         super.toString()
@@ -884,31 +867,26 @@ data class UnlockLabel(
 /**
  * Label denoting wait on a mutex.
  *
- * Can either be of [LabelKind.Request] or [LabelKind.Response] kind.
- *
- * Wait-request can synchronize either with [InitializationLabel] or with [NotifyLabel]
- * to produce wait-response label. The former case models spurious wake-ups (disabled currently).
- *
- * @param kind the kind of this label: [LabelKind.Request] or [LabelKind.Response].
- * @param mutex_ the mutex to wait on.
- *
- * @see MutexLabel
+ * @param kind The kind of this label: [LabelKind.Request] or [LabelKind.Response].
+ * @param mutexID The id of the mutex object to wait on.
+ * @param isLocking Flag indicating whether this wait operation also performs lock of the mutex.
+ * @param isUnlocking Flag indicating whether this wait operation also performs unlock of the mutex.
  */
 data class WaitLabel(
     override val kind: LabelKind,
-    override val mutex: ObjectID,
-    val unlocking: Boolean = false,
-    val locking: Boolean = false,
+    override val mutexID: ObjectID,
+    val isLocking: Boolean = false,
+    val isUnlocking: Boolean = false,
 ) : MutexLabel(
     kind = kind,
-    mutex = mutex,
+    mutexID = mutexID,
     isBlocking = true,
-    unblocked = (kind != LabelKind.Request),
+    isUnblocked = (kind != LabelKind.Request),
 ) {
     init {
         require(isRequest || isResponse)
-        require(isRequest implies !locking)
-        require(isResponse implies !unlocking)
+        require(isRequest implies !isLocking)
+        require(isResponse implies !isUnlocking)
     }
 
     override fun toString(): String =
@@ -918,34 +896,74 @@ data class WaitLabel(
 /**
  * Label denoting notification of a mutex.
  *
- * Has [LabelKind.Send] kind.
- *
- * Can synchronize with [WaitLabel] request producing [WaitLabel] response.
- *
- * @param mutex_ notified mutex.
- * @param isBroadcast flag indication that this notification is broadcast,
- *   e.g. caused by notifyAll() method call.
- *
- * @see MutexLabel
+ * @param mutexID The id of the mutex object to notify.
+ * @param isBroadcast Flag indicating that this notification is broadcast,
+ *   that is created by a `notifyAll()` method call.
  */
 data class NotifyLabel(
-    override val mutex: ObjectID,
+    override val mutexID: ObjectID,
     val isBroadcast: Boolean
-) : MutexLabel(LabelKind.Send, mutex) {
+) : MutexLabel(LabelKind.Send, mutexID) {
 
     override fun toString(): String =
         super.toString()
 }
 
-fun EventLabel.asUnlockLabel(mutex: ObjectID): UnlockLabel? = when (this) {
-    is UnlockLabel -> this.takeIf { it.mutex == mutex }
-    is ObjectAllocationLabel -> asUnlockLabel(mutex)
-    is InitializationLabel -> asUnlockLabel(mutex)
+/**
+ * Checks whether this label can be interpreted as an initializing synthetic unlock label.
+ */
+fun EventLabel.isInitializingUnlock(): Boolean =
+    this is InitializationLabel || this is ObjectAllocationLabel
+
+/**
+ * Interprets the initialization label as an unlock label.
+ *
+ * Initialization label can represent the first synthetic unlock label of some external objects.
+ *
+ * @param mutexID The id of an external object on which unlock is performed.
+ * @return The unlock label associated with the given mutex,
+ *   or null if there is no external mutex object with given id exists.
+ */
+fun InitializationLabel.asUnlockLabel(mutexID: ObjectID) =
+    asObjectAllocationLabel(mutexID)?.asUnlockLabel(mutexID)
+
+/**
+ * Interprets the object allocation label as an unlock label.
+ *
+ * Object allocation label can represent the first synthetic unlock label of
+ * the given mutex object.
+ *
+ * @param mutexID The id of an external object on which unlock is performed.
+ * @return The unlock label associated with the given mutex,
+ *   or null if there is no external mutex object with given id exists.
+ */
+fun ObjectAllocationLabel.asUnlockLabel(mutexID: ObjectID) =
+    if (mutexID == objectID) UnlockLabel(mutexID = objectID, isSynthetic = true) else null
+
+
+/**
+ * Attempts to interpret a given label as an unlock label.
+ *
+ * @param mutexID The id of the mutex object to match.
+ * @return The [UnlockLabel] if the label can be interpreted as it, null otherwise.
+ *
+ */
+fun EventLabel.asUnlockLabel(mutexID: ObjectID): UnlockLabel? = when (this) {
+    is UnlockLabel -> this.takeIf { it.mutexID == mutexID }
+    is ObjectAllocationLabel -> asUnlockLabel(mutexID)
+    is InitializationLabel -> asUnlockLabel(mutexID)
     else -> null
 }
 
-fun EventLabel.asNotifyLabel(mutex: ObjectID): NotifyLabel? = when (this) {
-    is NotifyLabel -> this.takeIf { it.mutex == mutex }
+/**
+ * Attempts to interpret a given label a notify label.
+ *
+ * @param mutexID The id of the mutex object to match.
+ * @return The [NotifyLabel] if the label can be interpreted as it, null otherwise.
+ *
+ */
+fun EventLabel.asNotifyLabel(mutexID: ObjectID): NotifyLabel? = when (this) {
+    is NotifyLabel -> this.takeIf { it.mutexID == mutexID }
     else -> null
 }
 

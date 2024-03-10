@@ -486,8 +486,11 @@ private class EventStructureMonitorTracker(
     override fun acquire(iThread: Int, monitor: OpaqueValue): Boolean {
         var lockRequest = eventStructure.getBlockedRequest(iThread)
         if (lockRequest == null) {
-            val depth = monitorTracker.reentranceDepth(iThread, monitor)
-            lockRequest = eventStructure.addLockRequestEvent(iThread, monitor, reentranceDepth = depth + 1)
+            val depth = monitorTracker.reentrancyDepth(iThread, monitor)
+            lockRequest = eventStructure.addLockRequestEvent(iThread, monitor,
+                isReentry = (depth > 0),
+                reentrancyDepth = depth + 1
+            )
         }
         if (eventStructure.inReplayPhase() && !eventStructure.canReplayNextEvent(iThread)) {
             return false
@@ -506,16 +509,19 @@ private class EventStructureMonitorTracker(
     }
 
     override fun release(iThread: Int, monitor: OpaqueValue) {
-        val depth = monitorTracker.reentranceDepth(iThread, monitor)
+        val depth = monitorTracker.reentrancyDepth(iThread, monitor)
         monitorTracker.release(iThread, monitor)
-        eventStructure.addUnlockEvent(iThread, monitor, reentranceDepth = depth)
+        eventStructure.addUnlockEvent(iThread, monitor,
+            isReentry = (depth > 1),
+            reentrancyDepth = depth,
+        )
     }
 
     override fun owner(monitor: OpaqueValue): Int? =
         monitorTracker.owner(monitor)
 
-    override fun reentranceDepth(iThread: Int, monitor: OpaqueValue): Int {
-        return monitorTracker.reentranceDepth(iThread, monitor)
+    override fun reentrancyDepth(iThread: Int, monitor: OpaqueValue): Int {
+        return monitorTracker.reentrancyDepth(iThread, monitor)
     }
 
     override fun wait(iThread: Int, monitor: OpaqueValue): Boolean {
@@ -538,12 +544,11 @@ private class EventStructureMonitorTracker(
             unlockEvent = waitRequestEvent!!.parent!!.ensure { it.label is UnlockLabel }
         }
         if (unlockEvent == null) {
-            val depth = monitorTracker.reentranceDepth(iThread, monitor).ensure { it > 0 }
+            val depth = monitorTracker.reentrancyDepth(iThread, monitor).ensure { it > 0 }
             monitorTracker.release(iThread, monitor, times = depth)
             unlockEvent = eventStructure.addUnlockEvent(iThread, monitor,
-                reentranceDepth = depth,
-                reentranceCount = depth,
-                isWaitUnlock = true,
+                reentrancyDepth = depth,
+                isSynthetic = true,
             )
         }
         if (waitRequestEvent == null) {
@@ -555,21 +560,19 @@ private class EventStructureMonitorTracker(
                 return true
         }
         if (lockRequestEvent == null) {
-            val depth = (unlockEvent.label as UnlockLabel).reentranceDepth
-            val count = (unlockEvent.label as UnlockLabel).reentranceCount
+            val depth = (unlockEvent.label as UnlockLabel).reentrancyDepth
             lockRequestEvent = eventStructure.addLockRequestEvent(iThread, monitor,
-                reentranceDepth = depth,
-                reentranceCount = count,
-                isWaitLock = true,
+                reentrancyDepth = depth,
+                isSynthetic = true,
             )
         }
-        val count = (lockRequestEvent.label as LockLabel).reentranceCount
+        val count = (lockRequestEvent.label as LockLabel).reentrancyDepth
         // if lock is acquired by another thread then postpone addition of lock-response event
         if (!monitorTracker.acquire(iThread, monitor, times = count)) {
             return true
         }
         lockResponseEvent = eventStructure.addLockResponseEvent(lockRequestEvent)
-        // if we cannot add lock-response currently then release the lock and return
+        // if we cannot add lock-response currently, then release the lock and return
         if (lockResponseEvent == null) {
             monitorTracker.release(iThread, monitor, times = count)
         }

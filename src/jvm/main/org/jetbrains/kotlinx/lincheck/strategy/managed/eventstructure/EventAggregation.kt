@@ -272,14 +272,14 @@ val MutexAggregationAlgebra = object : SynchronizationAlgebra {
 
     override fun synchronize(label: EventLabel, other: EventLabel): EventLabel? = when {
         // unlock label can be merged with the subsequent wait request
-        label is UnlockLabel && other is WaitLabel && other.isRequest && !other.unlocking
-                && label.mutex == other.mutex ->
-            WaitLabel(LabelKind.Request, label.mutex, unlocking = true)
+        label is UnlockLabel && other is WaitLabel && other.isRequest && !other.isUnlocking
+                && label.mutexID == other.mutexID ->
+            WaitLabel(LabelKind.Request, label.mutexID, isUnlocking = true)
 
         // wait response label can be merged with the subsequent lock request
-        label is WaitLabel && label.isResponse && !label.locking && other is LockLabel && other.isRequest
-                && label.mutex == other.mutex ->
-            WaitLabel(LabelKind.Response, label.mutex, locking = true)
+        label is WaitLabel && label.isResponse && !label.isLocking && other is LockLabel && other.isRequest
+                && label.mutexID == other.mutexID ->
+            WaitLabel(LabelKind.Response, label.mutexID, isLocking = true)
 
         // TODO: do we need to merge lock request/response (?)
         else -> null

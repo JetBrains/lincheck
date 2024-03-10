@@ -92,33 +92,33 @@ data class SequentialConsistencyReplayer(
             label is LockLabel && label.isRequest ->
                 this
 
-            label is LockLabel && label.isResponse && !label.isWaitLock -> {
-                val monitor = getMonitor(label.mutex)
+            label is LockLabel && label.isResponse && !label.isSynthetic -> {
+                val monitor = getMonitor(label.mutexID)
                 if (this.monitorTracker.canAcquire(event.threadId, monitor)) {
                     this.copy().apply { monitorTracker.acquire(event.threadId, monitor).ensure() }
                 } else null
             }
 
-            label is UnlockLabel && !label.isWaitUnlock ->
-                this.copy().apply { monitorTracker.release(event.threadId, getMonitor(label.mutex)) }
+            label is UnlockLabel && !label.isSynthetic ->
+                this.copy().apply { monitorTracker.release(event.threadId, getMonitor(label.mutexID)) }
 
             label is WaitLabel && label.isRequest ->
-                this.copy().apply { monitorTracker.wait(event.threadId, getMonitor(label.mutex)).ensure() }
+                this.copy().apply { monitorTracker.wait(event.threadId, getMonitor(label.mutexID)).ensure() }
 
             label is WaitLabel && label.isResponse -> {
-                val monitor = getMonitor(label.mutex)
+                val monitor = getMonitor(label.mutexID)
                 if (this.monitorTracker.canAcquire(event.threadId, monitor)) {
                     this.copy().takeIf { !it.monitorTracker.wait(event.threadId, monitor) }
                 } else null
             }
 
             label is NotifyLabel ->
-                this.copy().apply { monitorTracker.notify(event.threadId, getMonitor(label.mutex), label.isBroadcast) }
+                this.copy().apply { monitorTracker.notify(event.threadId, getMonitor(label.mutexID), label.isBroadcast) }
 
             // auxiliary unlock/lock events inserted before/after wait events
-            label is LockLabel && label.isWaitLock ->
+            label is LockLabel && label.isSynthetic ->
                 this
-            label is UnlockLabel && label.isWaitUnlock ->
+            label is UnlockLabel && label.isSynthetic ->
                 this
 
             label is InitializationLabel -> this

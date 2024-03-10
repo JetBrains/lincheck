@@ -45,7 +45,7 @@ interface MonitorTracker {
 
     fun release(iThread: Int, monitor: OpaqueValue, times: Int) {
         require(times > 0)
-        require(reentranceDepth(iThread, monitor) >= times)
+        require(reentrancyDepth(iThread, monitor) >= times)
         repeat(times) {
             release(iThread, monitor)
         }
@@ -56,7 +56,7 @@ interface MonitorTracker {
 
     fun owner(monitor: OpaqueValue): Int?
 
-    fun reentranceDepth(iThread: Int, monitor: OpaqueValue): Int
+    fun reentrancyDepth(iThread: Int, monitor: OpaqueValue): Int
 
     fun wait(iThread: Int, monitor: OpaqueValue): Boolean
 
@@ -122,7 +122,7 @@ class MapMonitorTracker(val nThreads: Int, val allowSpuriousWakeUps: Boolean = f
     override fun owner(monitor: OpaqueValue): Int? =
         acquiredMonitors[monitor]?.iThread
 
-    override fun reentranceDepth(iThread: Int, monitor: OpaqueValue): Int {
+    override fun reentrancyDepth(iThread: Int, monitor: OpaqueValue): Int {
         val info = acquiredMonitors[monitor]?.takeIf { it.iThread == iThread } ?: return 0
         return info.timesAcquired
     }
