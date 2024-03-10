@@ -187,6 +187,8 @@ private class MutableAtomicMemoryAccessEventIndexImpl : MutableAtomicMemoryAcces
     private data class LocationInfoData(
         override var isReadWriteRaceFree: Boolean,
         override var isWriteWriteRaceFree: Boolean,
+        // TODO: also handle case when all accesses are totally ordered,
+        //   i.e. there is no even read-read "races"
     ) : AtomicMemoryAccessEventIndex.LocationInfo {
         constructor(): this(isReadWriteRaceFree = true, isWriteWriteRaceFree = true)
     }

@@ -262,14 +262,6 @@ class EventStructure(
             ?.also { replayer.setNextEvent() }
     }
 
-    // TODO: use calculateFrontier
-    private fun VectorClock.toMutableFrontier(): MutableExecutionFrontier<AtomicThreadEvent> =
-        (0 until nThreads).map { tid ->
-            tid to execution[tid, this[tid]]
-        }.let {
-            mutableExecutionFrontierOf(*it.toTypedArray())
-        }
-
     /* ************************************************************************* */
     /*      Event creation                                                       */
     /* ************************************************************************* */
@@ -311,8 +303,9 @@ class EventStructure(
 
         val pinnedEvents : ExecutionFrontier<AtomicThreadEvent> = pinnedEvents.copy().apply {
             // TODO: can reorder cut and merge?
+            val causalityFrontier = execution.calculateFrontier(causalityClock)
             cut(conflicts)
-            merge(causalityClock.toMutableFrontier())
+            merge(causalityFrontier)
             cutDanglingRequestEvents()
             set(threadId, parent)
         }
@@ -567,7 +560,7 @@ class EventStructure(
                     // (1) all of its causal predecessors, because an attempt to synchronize with
                     //     these predecessors will result in a causality cycle
                     !causalityOrder(it, event) &&
-                    // (2) pinned events, because their response part is pinned (i.e. fixed),
+                    // (2) pinned events, because their response part is pinned,
                     //     unless the pinned event is blocking dangling event
                     (!pinnedEvents.contains(it) || danglingEvents.contains(it))
                 }
@@ -580,12 +573,9 @@ class EventStructure(
              * reading from them will result in coherence cycle and will violate consistency
              */
             label is ReadAccessLabel && label.isRequest -> {
-                if (label.objectID != NULL_OBJECT_ID && label.objectID != STATIC_OBJECT_ID) {
-                    // TODO: do we need the previous check?
-                    if (execution.memoryAccessEventIndex.isRaceFree(label.location)) {
-                        val lastWrite = execution.memoryAccessEventIndex.getLastWrite(label.location)!!
-                        return sequenceOf(lastWrite)
-                    }
+                if (execution.memoryAccessEventIndex.isRaceFree(label.location)) {
+                    val lastWrite = execution.memoryAccessEventIndex.getLastWrite(label.location)!!
+                    return sequenceOf(lastWrite)
                 }
                 val threadReads = execution[event.threadId]!!.filter {
                     it.label.isResponse && (it.label as? ReadAccessLabel)?.location == label.location
@@ -595,7 +585,8 @@ class EventStructure(
                     .map { (it as AbstractAtomicThreadEvent).readsFrom }
                     .filter { it != lastSeenWrite }
                     .distinct()
-                val racyWrites = calculateRacyWrites(label.location, event.causalityClock.toMutableFrontier())
+                val eventFrontier = execution.calculateFrontier(event.causalityClock)
+                val racyWrites = calculateRacyWrites(label.location, eventFrontier)
                 candidates.filter {
                     // !causalityOrder.lessThan(it, threadLastWrite) &&
                     !racyWrites.any { write -> causalityOrder(it, write) } &&
@@ -604,17 +595,15 @@ class EventStructure(
             }
 
             label is WriteAccessLabel -> {
-                if (label.objectID != NULL_OBJECT_ID && label.objectID != STATIC_OBJECT_ID) {
-                    // TODO: do we need the previous check?
-                    if (execution.memoryAccessEventIndex.isReadWriteRaceFree(label.location)) {
-                        return sequenceOf()
-                    }
+                if (execution.memoryAccessEventIndex.isReadWriteRaceFree(label.location)) {
+                    return sequenceOf()
                 }
                 candidates
             }
 
             // an allocation event, at the point when it is added to the execution,
-            // cannot synchronize with anything
+            // cannot synchronize with anything, because there are no events yet
+            // that access the allocated object
             label is ObjectAllocationLabel -> {
                 return sequenceOf()
             }
@@ -634,14 +623,6 @@ class EventStructure(
                 // TODO: refactor!!!
                 candidates.filter { it.label !is InitializationLabel }
             }
-
-            // label is CoroutineResumeLabel -> {
-            //     val suspendRequest = getBlockedAwaitingRequest(label.threadId).ensure { request ->
-            //         (request != null) && request.label is CoroutineSuspendLabel
-            //                 && ((request.label as CoroutineSuspendLabel).actorId == label.actorId)
-            //     }!!
-            //     return listOf(suspendRequest)
-            // }
 
             else -> candidates
         }
