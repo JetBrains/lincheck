@@ -27,7 +27,6 @@ import org.jetbrains.kotlinx.lincheck.utils.*
 import kotlin.reflect.KClass
 
 
-@SuppressWarnings("WeakerAccess")
 class EventStructure(
     nParallelThreads: Int,
     val memoryInitializer: MemoryInitializer,
@@ -121,6 +120,10 @@ class EventStructure(
         root = addRootEvent()
     }
 
+    /* ************************************************************************* */
+    /*      Exploration                                                          */
+    /* ************************************************************************* */
+
     fun startNextExploration(): Boolean {
         loop@while (true) {
             val event = rollbackToEvent { !it.visited }
@@ -210,6 +213,10 @@ class EventStructure(
         return _execution.checkConsistency()
     }
 
+    /* ************************************************************************* */
+    /*      Replaying                                                            */
+    /* ************************************************************************* */
+
     private class Replayer(private val executionOrder: List<ThreadEvent>) {
         private var index: Int = 0
         private val size: Int = executionOrder.size
@@ -262,6 +269,10 @@ class EventStructure(
         }.let {
             mutableExecutionFrontierOf(*it.toTypedArray())
         }
+
+    /* ************************************************************************* */
+    /*      Event creation                                                       */
+    /* ************************************************************************* */
 
     private inner class BacktrackableEvent(
         label: EventLabel,
@@ -472,6 +483,10 @@ class EventStructure(
         }
     }
 
+    /* ************************************************************************* */
+    /*      Object tracking                                                      */
+    /* ************************************************************************* */
+
     fun getValue(id: ValueID): OpaqueValue? = when (id) {
         NULL_OBJECT_ID -> null
         is PrimitiveID -> id.value.opaque()
@@ -506,6 +521,10 @@ class EventStructure(
     fun allocationEvent(id: ObjectID): AtomicThreadEvent? {
         return objectRegistry[id]?.allocation
     }
+
+    /* ************************************************************************* */
+    /*      Synchronization                                                      */
+    /* ************************************************************************* */
 
     private val EventLabel.syncType
         get() = syncAlgebra.syncType(this)
@@ -703,6 +722,10 @@ class EventStructure(
         return listOfNotNull(responseEvent)
     }
 
+    /* ************************************************************************* */
+    /*      Generic event addition utilities (per event kind)                    */
+    /* ************************************************************************* */
+
     private fun addRootEvent(): AtomicThreadEvent {
         // we do not mark root event as visited purposefully;
         // this is just a trick to make the first call to `startNextExploration`
@@ -850,6 +873,10 @@ class EventStructure(
         require(request in danglingEvents)
         return danglingEvents[request]
     }
+
+    /* ************************************************************************* */
+    /*      Specific event addition utilities (per event class)                  */
+    /* ************************************************************************* */
 
     fun addThreadStartEvent(iThread: Int): AtomicThreadEvent {
         val label = ThreadStartLabel(
@@ -1080,6 +1107,10 @@ class EventStructure(
             addEventToCurrentExecution(event)
         }
     }
+
+    /* ************************************************************************* */
+    /*      Miscellaneous                                                        */
+    /* ************************************************************************* */
 
     /**
      * Calculates the view for specific memory location observed at the given point of execution
