@@ -94,7 +94,7 @@ data class SequentialConsistencyReplayer(
 
             label is LockLabel && label.isResponse && !label.isSynthetic -> {
                 val monitor = getMonitor(label.mutexID)
-                if (this.monitorTracker.canAcquire(event.threadId, monitor)) {
+                if (this.monitorTracker.canAcquireMonitor(event.threadId, monitor)) {
                     this.copy().apply { monitorTracker.acquire(event.threadId, monitor).ensure() }
                 } else null
             }
@@ -103,12 +103,12 @@ data class SequentialConsistencyReplayer(
                 this.copy().apply { monitorTracker.release(event.threadId, getMonitor(label.mutexID)) }
 
             label is WaitLabel && label.isRequest ->
-                this.copy().apply { monitorTracker.wait(event.threadId, getMonitor(label.mutexID)).ensure() }
+                this.copy().apply { monitorTracker.waitOnMonitor(event.threadId, getMonitor(label.mutexID)).ensure() }
 
             label is WaitLabel && label.isResponse -> {
                 val monitor = getMonitor(label.mutexID)
-                if (this.monitorTracker.canAcquire(event.threadId, monitor)) {
-                    this.copy().takeIf { !it.monitorTracker.wait(event.threadId, monitor) }
+                if (this.monitorTracker.canAcquireMonitor(event.threadId, monitor)) {
+                    this.copy().takeIf { !it.monitorTracker.waitOnMonitor(event.threadId, monitor) }
                 } else null
             }
 

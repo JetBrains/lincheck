@@ -524,7 +524,7 @@ private class EventStructureMonitorTracker(
         return monitorTracker.reentrancyDepth(iThread, monitor)
     }
 
-    override fun wait(iThread: Int, monitor: OpaqueValue): Boolean {
+    override fun waitOnMonitor(iThread: Int, monitor: OpaqueValue): Boolean {
         var unlockEvent: AtomicThreadEvent? = null
         var waitRequestEvent: AtomicThreadEvent? = null
         var waitResponseEvent: AtomicThreadEvent? = null
