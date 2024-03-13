@@ -768,8 +768,8 @@ fun EventLabel.asMemoryAccessLabel(location: MemoryLocation): MemoryAccessLabel?
  *
  * @param kind The kind of this label.
  * @param mutexID The id of the mutex object to perform operation on.
- * @param isBlocking Whether this label is blocking.
- * @param isUnblocked Whether this blocking label is already unblocked.
+ * @param isBlocking Flag indicating whether this label is blocking.
+ * @param isUnblocked Flag indicating whether this blocking label is already unblocked.
  */
 sealed class MutexLabel(
     kind: LabelKind,
@@ -976,26 +976,17 @@ fun EventLabel.asNotifyLabel(mutexID: ObjectID): NotifyLabel? = when (this) {
 /**
  * Base class for park and unpark event labels.
  *
- * @param kind the kind of this label.
- * @param threadId identifier of parked or unparked thread.
- * @param isBlocking whether this label is blocking.
- * @param unblocked whether this blocking label is already unblocked.
+ * @param kind The kind of this label.
+ * @param threadId The thread id of parked or unparked thread.
+ * @param isBlocking Flag indicating that label is blocking.
+ * @param isUnblocked Flag indicating that blocking label is unblocked.
  */
 sealed class ParkingEventLabel(
     kind: LabelKind,
     open val threadId: Int,
     isBlocking: Boolean = false,
-    unblocked: Boolean = true,
-): EventLabel(kind, isBlocking, unblocked) {
-
-    /**
-     * Kind of mutex operation.
-     */
-    val operationKind: ParkingOperationKind
-        get() = when(this) {
-            is ParkLabel    -> ParkingOperationKind.Park
-            is UnparkLabel  -> ParkingOperationKind.Unpark
-        }
+    isUnblocked: Boolean = true,
+): EventLabel(kind, isBlocking, isUnblocked) {
 
     override fun toString(): String {
         val argsString = if (operationKind == ParkingOperationKind.Unpark) "($threadId)" else ""
@@ -1006,23 +997,25 @@ sealed class ParkingEventLabel(
 
 /**
  * Kind of parking operation.
- *
- * @see ParkingEventLabel
  */
 enum class ParkingOperationKind { Park, Unpark }
 
 /**
- * Label denoting park of a thread.
+ * Kind of parking operation.
  *
- * Can either be of [LabelKind.Request] or [LabelKind.Response] kind.
- *
- * Park-request can synchronize either with [InitializationLabel] or with [UnparkLabel]
- * to produce park-response label. The former case models spurious wake-ups (disabled currently).
+ * @see ParkingOperationKind
+ */
+val ParkingEventLabel.operationKind: ParkingOperationKind
+    get() = when (this) {
+        is ParkLabel    -> ParkingOperationKind.Park
+        is UnparkLabel  -> ParkingOperationKind.Unpark
+    }
+
+/**
+ * Label denoting park operation of a thread.
  *
  * @param kind the kind of this label: [LabelKind.Request] or [LabelKind.Response].
- * @param threadId the identifier of parked thread.
- *
- * @see ParkingEventLabel
+ * @param threadId the thread id of the parked thread.
  */
 data class ParkLabel(
     override val kind: LabelKind,
@@ -1031,7 +1024,7 @@ data class ParkLabel(
     kind = kind,
     threadId = threadId,
     isBlocking = true,
-    unblocked = (kind != LabelKind.Request),
+    isUnblocked = (kind != LabelKind.Request),
 ) {
     init {
         require(isRequest || isResponse || isReceive)
@@ -1042,15 +1035,9 @@ data class ParkLabel(
 }
 
 /**
- * Label denoting unpark of a thread.
+ * Label denoting unpark operation of a thread.
  *
- * Has [LabelKind.Send] kind.
- *
- * Can synchronize with [ParkLabel] request producing park-response label.
- *
- * @param threadId the identifier of unparked thread.
- *
- * @see ParkingEventLabel
+ * @param threadId the thread id of the thread to unpark.
  */
 data class UnparkLabel(
     override val threadId: Int,
@@ -1066,38 +1053,64 @@ data class UnparkLabel(
 /* ************************************************************************* */
 
 
+/**
+ * Base class of all coroutine operations event labels.
+ *
+ * It stores common information about coroutine operation,
+ * such as the thread id and actor id of the coroutine.
+ *
+ * @param kind The kind of this label.
+ * @param threadId The thread id of the coroutine.
+ * @param actorId The actor id of the coroutine.
+ * @param isBlocking Flag indicating whether this label is blocking.
+ * @param isUnblocked Flag indicating whether this blocking label is already unblocked.
+ */
 sealed class CoroutineLabel(
     override val kind: LabelKind,
     open val threadId: Int,
     open val actorId: Int,
     isBlocking: Boolean = false,
-    unblocked: Boolean = true,
-) : EventLabel(kind, isBlocking, unblocked) {
+    isUnblocked: Boolean = true,
+) : EventLabel(kind, isBlocking, isUnblocked) {
 
     override fun toString(): String {
         val operationKind = when (this) {
             is CoroutineSuspendLabel -> "Suspend"
             is CoroutineResumeLabel  -> "Resume"
         }
-        val cancelled = if (this is CoroutineSuspendLabel && cancelled) "cancelled" else null
-        return "${operationKind}${kind.repr}(${listOfNotNull(threadId, actorId, cancelled).joinToString()})"
+        val status = when {
+            this is CoroutineSuspendLabel && !cancelled -> ": resumed"
+            this is CoroutineSuspendLabel &&  cancelled -> ": cancelled"
+            else -> ""
+        }
+        return "${operationKind}${kind.repr}($threadId, $actorId)$status"
     }
 
 }
 
+/**
+ * Label denoting coroutine suspend operation.
+ *
+ * @param kind The kind of this label: [LabelKind.Request] or [LabelKind.Response].
+ * @param threadId The thread id of the coroutine.
+ * @param actorId The actor id of the coroutine.
+ * @param cancelled The flag indicating whether the coroutine was canceled.
+ * @param promptCancellation The flag indicating whether the coroutine is subject
+ *   to the prompt cancellation guarantee.
+ */
 data class CoroutineSuspendLabel(
     override val kind: LabelKind,
     override val threadId: Int,
     override val actorId: Int,
     val cancelled: Boolean = false,
     val promptCancellation: Boolean = false,
-    // TODO: should we also keep resume value and cancellation flag?
+    // TODO: should we also keep resume value?
 ) : CoroutineLabel(
     kind = kind,
     threadId = threadId,
     actorId = actorId,
     isBlocking = true,
-    unblocked = (kind != LabelKind.Request),
+    isUnblocked = (kind != LabelKind.Request),
 ) {
     init {
         require(isRequest || isResponse || isReceive)
@@ -1110,10 +1123,16 @@ data class CoroutineSuspendLabel(
 
 }
 
+/**
+ * Label denoting coroutine resumption operation.
+ *
+ * @param threadId The thread id of the coroutine to be resumed.
+ * @param actorId The actor id of the coroutine to be resumed.
+ */
 data class CoroutineResumeLabel(
     override val threadId: Int,
     override val actorId: Int,
-    // TODO: should we also keep resume value and cancellation flag?
+    // TODO: should we also keep resume value?
 ) : CoroutineLabel(LabelKind.Send, threadId, actorId) {
 
     override fun toString(): String =
@@ -1127,6 +1146,13 @@ data class CoroutineResumeLabel(
 /* ************************************************************************* */
 
 
+/**
+ * Label denoting an actor operation: either start or an end of actor method execution.
+ *
+ * @property threadId The id of the thread on which the actor is executing.
+ * @property actorKind The kind of the actor label (see [ActorLabelKind]).
+ * @property actor The actor descriptor.
+ */
 // TODO: generalize actor labels to method call/return labels?
 data class ActorLabel(
     val threadId: ThreadID,
@@ -1134,17 +1160,34 @@ data class ActorLabel(
     val actor: Actor
 ) : EventLabel(actorKind.labelKind())
 
+/**
+ * Enumeration representing different kinds of actor labels.
+ *
+ * - [Start] is assigned to the label denoting the start of the actor method execution.
+ * - [End] is assigned to the label denoting the end of the actor method execution.
+ * - [Span] is assigned to the composite span event denoting the actor method execution as a whole.
+ */
 enum class ActorLabelKind { Start, End, Span }
 
+/**
+ * Determines the corresponding label kind for a given actor label kind.
+ */
 fun ActorLabelKind.labelKind(): LabelKind = when (this) {
     ActorLabelKind.Start -> LabelKind.Request
     ActorLabelKind.End -> LabelKind.Response
     ActorLabelKind.Span -> LabelKind.Receive
 }
 
-
+/**
+ * Label denoting a call of the random number generator.
+ *
+ * @property value The generated random value.
+ */
 data class RandomLabel(val value: Int): EventLabel(kind = LabelKind.Send)
 
 
+// special code location used for initializing write events
 private const val INIT_CODE_LOCATION = -1
+
+// special code location denoting unknown code location
 private const val UNKNOWN_CODE_LOCATION = -2
