@@ -24,19 +24,17 @@
 
 package org.jetbrains.kotlinx.lincheck.test.strategy.eventstructure
 
-import org.jetbrains.kotlinx.lincheck.Suspended
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.scenario
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import java.util.concurrent.atomic.*
 import java.util.concurrent.locks.LockSupport.*
 import java.lang.invoke.MethodHandles
 import jdk.internal.misc.Unsafe
+// import sun.misc.Unsafe
 import kotlin.coroutines.*
 import kotlinx.coroutines.*
-import org.jetbrains.kotlinx.lincheck.Actor
-import org.jetbrains.kotlinx.lincheck.Cancelled
 import org.junit.Ignore
 import org.junit.Test
 import kotlin.reflect.jvm.javaMethod
@@ -416,7 +414,7 @@ class PrimitivesTest {
         }
 
         fun unsafeRead(): String? {
-            return U.getReference(this, offset) as String?
+            return U.getObject(this, offset) as String?
         }
 
         fun write(value: String?) {
@@ -432,7 +430,7 @@ class PrimitivesTest {
         }
 
         fun unsafeWrite(value: String?) {
-            U.putReference(this, offset, value)
+            U.putObject(this, offset, value)
         }
 
         fun afuCompareAndSet(expected: String?, desired: String?): Boolean {
@@ -444,7 +442,7 @@ class PrimitivesTest {
         }
 
         fun unsafeCompareAndSet(expected: String?, desired: String?): Boolean {
-            return U.compareAndSetReference(this, offset, expected, desired)
+            return U.compareAndSetObject(this, offset, expected, desired)
         }
 
     }
@@ -703,7 +701,7 @@ class PrimitivesTest {
         }
 
         fun writeReference(index: Int, value: String) {
-            U.putReference(referenceArray, (index.toLong() * referenceIndexScale) + referenceArrayOffset, value)
+            U.putObject(referenceArray, (index.toLong() * referenceIndexScale) + referenceArrayOffset, value)
         }
 
         fun readByte(index: Int): Byte {
@@ -723,7 +721,7 @@ class PrimitivesTest {
         }
 
         fun readReference(index: Int): String {
-            return U.getReference(referenceArray, (index.toLong() * referenceIndexScale) + referenceArrayOffset) as String
+            return U.getObject(referenceArray, (index.toLong() * referenceIndexScale) + referenceArrayOffset) as String
         }
 
     }

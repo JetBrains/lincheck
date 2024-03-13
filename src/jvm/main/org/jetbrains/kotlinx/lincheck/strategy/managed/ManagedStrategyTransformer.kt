@@ -1349,7 +1349,7 @@ internal class ManagedStrategyTransformer(
         }
 
         private val typeNames = listOf(
-            "Boolean", "Byte", "Short", "Int", "Long", "Float", "Double", "Reference"
+            "Boolean", "Byte", "Short", "Int", "Long", "Float", "Double", "Reference", "Object"
         )
 
         private val loadAccessModes = listOf(
@@ -1403,6 +1403,7 @@ internal class ManagedStrategyTransformer(
                 "Float"     -> Type.FLOAT_TYPE
                 "Double"    -> Type.DOUBLE_TYPE
                 "Reference" -> OBJECT_TYPE
+                "Object"    -> OBJECT_TYPE
                 else        -> unreachable()
             }
         }
