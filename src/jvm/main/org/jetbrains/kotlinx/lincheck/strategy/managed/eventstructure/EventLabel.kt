@@ -69,22 +69,28 @@ sealed class EventLabel(
         get() = (kind == LabelKind.Send)
 
     /**
-     * Checks whether this label is request label.
+     * Checks whether this label is a request label.
      */
     val isRequest: Boolean
         get() = (kind == LabelKind.Request)
 
     /**
-     * Checks whether this label is response label.
+     * Checks whether this label is a response label.
      */
     val isResponse: Boolean
         get() = (kind == LabelKind.Response)
 
     /**
-     * Checks whether this label is recieve label.
+     * Checks whether this label is a receive label.
      */
     val isReceive: Boolean
         get() = (kind == LabelKind.Receive)
+
+    /**
+     * Checks whether this label is span-related.
+     */
+    val isSpanLabel: Boolean
+        get() = (spanKind != null)
 
     /**
      * Object accesses by the operation represented by the label.

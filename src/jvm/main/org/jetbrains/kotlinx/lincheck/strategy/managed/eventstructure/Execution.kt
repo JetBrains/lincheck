@@ -252,7 +252,8 @@ fun Execution<*>.locations(): Set<MemoryLocation> {
 }
 
 fun Execution<AtomicThreadEvent>.getResponse(request: AtomicThreadEvent): AtomicThreadEvent? {
-    require(request.label.isRequest && request.label !is ActorLabel)
+    // TODO: handle the case of span-start label
+    require(request.label.isRequest && !request.label.isSpanLabel)
     return this[request.threadId, request.threadPosition + 1]?.ensure {
         it.isValidResponse(request)
     }

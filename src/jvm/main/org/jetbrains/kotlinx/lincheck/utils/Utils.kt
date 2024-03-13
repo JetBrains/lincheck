@@ -22,10 +22,15 @@ package org.jetbrains.kotlinx.lincheck.utils
 
 fun Boolean.toInt(): Int = this.compareTo(false)
 
-infix fun Boolean.implies(other: Boolean): Boolean = !this || other
+infix fun Boolean.implies(other: Boolean): Boolean = 
+    !this || other
 
-infix fun Boolean.implies(other: () -> Boolean): Boolean = !this || other()
+infix fun Boolean.implies(other: () -> Boolean): Boolean =
+    !this || other()
 
+infix fun Boolean.equivalent(other: Boolean): Boolean =
+    (this && other) || (!this && !other) 
+    
 inline fun<T> T.runIf(boolean: Boolean, block: T.() -> T): T =
     if (boolean) block() else this
 

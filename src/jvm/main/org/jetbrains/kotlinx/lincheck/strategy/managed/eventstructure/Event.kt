@@ -97,7 +97,7 @@ fun ThreadEvent.threadPrefix(inclusive: Boolean = false, reversed: Boolean = fal
     if (inclusive) {
         events.add(this)
     }
-    // obtain a list of predecessors of given event
+    // obtain a list of predecessors of a given event
     var event: ThreadEvent? = parent
     while (event != null) {
         events.add(event)
@@ -157,7 +157,7 @@ interface AtomicThreadEvent : ThreadEvent, SynchronizedEvent {
  * Applicable only to response and receive events.
  */
 val AtomicThreadEvent.request: AtomicThreadEvent? get() =
-    if (label.isResponse && (label !is ActorLabel)) parent!! else null
+    if (label.isResponse && !label.isSpanLabel) parent!! else null
 
 val AtomicThreadEvent.syncFrom: AtomicThreadEvent get() = run {
     require(label.isResponse)
@@ -391,13 +391,19 @@ abstract class AbstractAtomicThreadEvent(
 ) : AtomicThreadEvent, AbstractThreadEvent(label, parent, dependencies) {
 
     final override val synchronized: List<ThreadEvent> =
-        if (label.isResponse && label !is ActorLabel) (listOf(request!!) + senders) else listOf()
+        if (label.isResponse && !label.isSpanLabel) (listOf(request!!) + senders) else listOf()
 
     override fun validate() {
         super.validate()
-        // require(label.isResponse implies (request != null && senders.isNotEmpty()))
-        // require(!label.isResponse implies (request == null && senders.isEmpty()))
-        // check that read-exclusive label precedes that write-exclusive label
+        // constraints for atomic non-span-related events
+        if (!label.isSpanLabel) {
+            // only the response event should have a corresponding request part
+            require(label.isResponse equivalent (request != null))
+            // response and receive events (and only them) should have a corresponding list
+            // of sender events, with which they synchronize-with
+            require((label.isResponse || label.isReceive) equivalent senders.isNotEmpty())
+        }
+        // read-exclusive label should precede every write-exclusive label
         if (label is WriteAccessLabel && label.isExclusive) {
             require(parent != null)
             require(parent!!.label.satisfies<ReadAccessLabel> {
@@ -408,6 +414,7 @@ abstract class AbstractAtomicThreadEvent(
 
 }
 
+// TODO: rename to SpanEvent
 class HyperThreadEvent(
     label: EventLabel,
     override val parent: HyperThreadEvent?,
