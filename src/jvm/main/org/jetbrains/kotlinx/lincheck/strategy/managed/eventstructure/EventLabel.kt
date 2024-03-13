@@ -36,19 +36,32 @@ import kotlin.reflect.KClass
  * - mutex locks and unlocks;
  * and other (see subclasses of this class).
  *
+ * Some events may form a _span_ - that is a sequence of events.
+ * For example, all events belonging to the execution of a method form a span.
+ * The start of the method execution and the end of method execution are denoted
+ * by two special events - method start event and method exit event respectively.
+ * All the events between these two events are considered to form a method's span.
+ * The span itself can be considered to be a composite event (see [HyperEvent]).
+ * Labels of span-related events, which denote the start of a span, its end,
+ * or the span as a whole, should set [spanKind] accordingly.
+ * 
  *
- * @property kind the kind of this label (see [LabelKind]).
- * @property isBlocking flag indicating that label is blocking.
+ * @property kind The kind of this label (see [LabelKind]).
+ * @property spanKind For span-related events, denotes the kind of the span label (see [SpanLabelKind]),
+ *   null for the non-span-related events.
+ * @property isBlocking Flag indicating that label is blocking.
  *    Mutex lock and thread join are examples of blocking labels.
- * @property isUnblocked flag indicating that blocking label is unblocked.
+ * @property isUnblocked Flag indicating that blocking label is unblocked.
  *   For example, thread join-response is unblocked when all the threads it waits for have finished.
  *   For non-blocking labels, it should be set to true.
  */
 sealed class EventLabel(
     open val kind: LabelKind,
+    open val spanKind: SpanLabelKind? = null,
     val isBlocking: Boolean = false,
     val isUnblocked: Boolean = true,
 ) {
+    
     /**
      * Checks whether this label is send label.
      */
@@ -102,6 +115,25 @@ val LabelKind.repr get() = when (this) {
     LabelKind.Request -> "^req"
     LabelKind.Response -> "^rsp"
     LabelKind.Receive -> ""
+}
+
+/**
+ * Enumeration representing different kinds of span event labels.
+ *
+ * - [Start] is assigned to the label denoting the start of the span.
+ * - [End] is assigned to the label denoting the end of the span.
+ * - [Span] is assigned to the label of composite event
+ *     containing the whole list of events of the span.
+ */
+enum class SpanLabelKind { Start, End, Span }
+
+/**
+ * Determines the corresponding label kind for a given span label kind.
+ */
+fun SpanLabelKind.toLabelKind(): LabelKind = when (this) {
+    SpanLabelKind.Start -> LabelKind.Request
+    SpanLabelKind.End   -> LabelKind.Response
+    SpanLabelKind.Span  -> LabelKind.Receive
 }
 
 /**
@@ -776,7 +808,11 @@ sealed class MutexLabel(
     open val mutexID: ObjectID,
     isBlocking: Boolean = false,
     isUnblocked: Boolean = true,
-): EventLabel(kind, isBlocking, isUnblocked) {
+): EventLabel(
+    kind = kind, 
+    isBlocking = isBlocking, 
+    isUnblocked = isUnblocked
+) {
 
     /**
      * The id of the accessed object.
@@ -986,7 +1022,11 @@ sealed class ParkingEventLabel(
     open val threadId: Int,
     isBlocking: Boolean = false,
     isUnblocked: Boolean = true,
-): EventLabel(kind, isBlocking, isUnblocked) {
+): EventLabel(
+    kind = kind, 
+    isBlocking = isBlocking, 
+    isUnblocked = isUnblocked
+) {
 
     override fun toString(): String {
         val argsString = if (operationKind == ParkingOperationKind.Unpark) "($threadId)" else ""
@@ -1071,7 +1111,11 @@ sealed class CoroutineLabel(
     open val actorId: Int,
     isBlocking: Boolean = false,
     isUnblocked: Boolean = true,
-) : EventLabel(kind, isBlocking, isUnblocked) {
+) : EventLabel(
+    kind = kind, 
+    isBlocking = isBlocking, 
+    isUnblocked = isUnblocked
+) {
 
     override fun toString(): String {
         val operationKind = when (this) {
@@ -1149,34 +1193,19 @@ data class CoroutineResumeLabel(
 /**
  * Label denoting an actor operation: either start or an end of actor method execution.
  *
+ * @property spanKind The kind of the actor label (see [SpanLabelKind]).
  * @property threadId The id of the thread on which the actor is executing.
- * @property actorKind The kind of the actor label (see [ActorLabelKind]).
  * @property actor The actor descriptor.
  */
 // TODO: generalize actor labels to method call/return labels?
 data class ActorLabel(
+    override val spanKind: SpanLabelKind,
     val threadId: ThreadID,
-    val actorKind: ActorLabelKind,
     val actor: Actor
-) : EventLabel(actorKind.labelKind())
-
-/**
- * Enumeration representing different kinds of actor labels.
- *
- * - [Start] is assigned to the label denoting the start of the actor method execution.
- * - [End] is assigned to the label denoting the end of the actor method execution.
- * - [Span] is assigned to the composite span event denoting the actor method execution as a whole.
- */
-enum class ActorLabelKind { Start, End, Span }
-
-/**
- * Determines the corresponding label kind for a given actor label kind.
- */
-fun ActorLabelKind.labelKind(): LabelKind = when (this) {
-    ActorLabelKind.Start -> LabelKind.Request
-    ActorLabelKind.End -> LabelKind.Response
-    ActorLabelKind.Span -> LabelKind.Receive
-}
+) : EventLabel(
+    kind = spanKind.toLabelKind(), 
+    spanKind = spanKind
+)
 
 /**
  * Label denoting a call of the random number generator.

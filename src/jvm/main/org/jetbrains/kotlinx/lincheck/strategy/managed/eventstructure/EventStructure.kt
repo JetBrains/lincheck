@@ -1065,12 +1065,12 @@ class EventStructure(
     }
 
     fun addActorStartEvent(iThread: Int, actor: Actor): AtomicThreadEvent {
-        val label = ActorLabel(iThread, ActorLabelKind.Start, actor)
+        val label = ActorLabel(SpanLabelKind.Start, iThread, actor)
         return addActorEvent(iThread, label)
     }
 
     fun addActorEndEvent(iThread: Int, actor: Actor): AtomicThreadEvent {
-        val label = ActorLabel(iThread, ActorLabelKind.End, actor)
+        val label = ActorLabel(SpanLabelKind.End, iThread, actor)
         return addActorEvent(iThread, label)
     }
 

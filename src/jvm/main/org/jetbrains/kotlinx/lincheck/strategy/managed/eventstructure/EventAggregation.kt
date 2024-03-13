@@ -115,13 +115,13 @@ fun ActorAggregator(execution: Execution<AtomicThreadEvent>) = object : EventAgg
         var pos = 0
         val result = mutableListOf<List<AtomicThreadEvent>>()
         while (pos < events.size) {
-            if ((events[pos].label as? ActorLabel)?.actorKind != ActorLabelKind.Start) {
+            if ((events[pos].label as? ActorLabel)?.spanKind != SpanLabelKind.Start) {
                 result.add(listOf(events[pos++]))
                 continue
             }
             val start = events[pos]
             val end = events.subList(fromIndex = start.threadPosition, toIndex = events.size).find {
-                (it.label as? ActorLabel)?.actorKind == ActorLabelKind.End
+                (it.label as? ActorLabel)?.spanKind == SpanLabelKind.End
             } ?: break
             check((start.label as ActorLabel).actor == (end.label as ActorLabel).actor)
             result.add(events.subList(fromIndex = start.threadPosition, toIndex = end.threadPosition + 1))
@@ -132,13 +132,13 @@ fun ActorAggregator(execution: Execution<AtomicThreadEvent>) = object : EventAgg
 
     override fun label(events: List<AtomicThreadEvent>): EventLabel? {
         val start = events.first().takeIf {
-            (it.label as? ActorLabel)?.actorKind == ActorLabelKind.Start
+            (it.label as? ActorLabel)?.spanKind == SpanLabelKind.Start
         } ?: return null
         val end = events.last().ensure {
-            (it.label as? ActorLabel)?.actorKind == ActorLabelKind.End
+            (it.label as? ActorLabel)?.spanKind == SpanLabelKind.End
         }
         check((start.label as ActorLabel).actor == (end.label as ActorLabel).actor)
-        return ActorLabel((start.label as ActorLabel).threadId, ActorLabelKind.Span, (start.label as ActorLabel).actor)
+        return ActorLabel(SpanLabelKind.Span, (start.label as ActorLabel).threadId, (start.label as ActorLabel).actor)
     }
 
     override fun dependencies(events: List<AtomicThreadEvent>, remapping: EventRemapping): List<HyperThreadEvent> {
