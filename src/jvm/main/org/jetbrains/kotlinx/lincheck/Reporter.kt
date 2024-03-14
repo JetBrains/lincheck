@@ -573,7 +573,7 @@ private fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockWithDum
     failure.threadDump?.let { threadDump ->
         // Sort threads to produce same output for the same results
         for ((t, stackTrace) in threadDump.entries.sortedBy { it.key.id }) {
-            val threadNumber = (t as? TestThread)?.threadNumber?.toString() ?: "?"
+            val threadNumber = (t as? TestThread)?.name ?: "?"
             appendLine("Thread-$threadNumber:")
             stackTrace.map {
                 StackTraceElement(

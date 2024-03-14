@@ -88,6 +88,7 @@ internal open class ParallelThreadsRunner(
             *parallelPartExecutions,
             postPartExecution
         )
+        // In the case of managed checking strategy, we want to track events of the execution
         if (strategy is ManagedStrategy) {
             executor.threads.forEach { it.sharedEventsTracker = strategy }
         }
@@ -413,11 +414,9 @@ internal open class ParallelThreadsRunner(
         executor.close()
     }
 
-    override fun onFinish(iThread: Int) {
-    }
+    override fun onFinish(iThread: Int) {}
 
-    override fun onFailure(iThread: Int, e: Throwable) {
-    }
+    override fun onFailure(iThread: Int, e: Throwable) {}
 }
 
 internal enum class UseClocks { ALWAYS, RANDOM }
