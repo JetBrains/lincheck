@@ -32,19 +32,6 @@ internal class LincheckClassVisitor(
     private var classVersion = 0
     private var fileName: String? = null
 
-    override fun visitField(
-        access: Int,
-        fieldName: String,
-        descriptor: String?,
-        signature: String?,
-        value: Any?
-    ): FieldVisitor {
-        if (access and ACC_FINAL != 0) {
-            FinalFields.addFinalField(className, fieldName)
-        }
-        return super.visitField(access, fieldName, descriptor, signature, value)
-    }
-
     override fun visit(
         version: Int,
         access: Int,
@@ -1330,15 +1317,11 @@ private object CoroutineInternalCallTracker {
     private val coroutineInternalClasses = HashSet<String>()
 
     init {
-        coroutineInternalClasses += "kotlinx/coroutines/CancellableContinuationImpl"
-        coroutineInternalClasses += "kotlin/coroutines/jvm/internal/ContinuationImpl"
         coroutineInternalClasses += "kotlin/coroutines/intrinsics/IntrinsicsKt"
         coroutineInternalClasses += "kotlinx/coroutines/internal/StackTraceRecoveryKt"
     }
 
-    fun isCoroutineInternalClass(internalClassName: String): Boolean =
-        // TODO: should we ignore all coroutine internals?
-        internalClassName in coroutineInternalClasses || internalClassName.startsWith("kotlinx/coroutines/internal/")
+    fun isCoroutineInternalClass(internalClassName: String): Boolean = internalClassName in coroutineInternalClasses
 }
 
 internal enum class TransformationMode {

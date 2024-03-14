@@ -13,7 +13,10 @@
 
 package sun.nio.ch.lincheck
 
+import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.REMAPPED_PACKAGE_INTERNAL_NAME
+import org.jetbrains.kotlinx.lincheck.transformation.canonicalClassName
 import sun.misc.*
+import java.lang.reflect.Field
 import java.lang.reflect.Modifier.*
 import java.util.concurrent.atomic.*
 
@@ -105,23 +108,33 @@ internal object AtomicFields {
  * provides helper functions to add and check final fields.
  */
 internal object FinalFields {
-    private val finalFields = HashSet<String>() // className + SEPARATOR + fieldName
-    private const val SEPARATOR = "$^&*-#"
 
-    /**
-     * Adds a new final field to the set.
-     */
-    fun addFinalField(className: String, fieldName: String) {
-        finalFields.add(className + SEPARATOR + fieldName)
+    fun isFinalField(ownerInternal: String, fieldName: String): Boolean {
+        var internalName = ownerInternal
+        if (internalName.startsWith(REMAPPED_PACKAGE_INTERNAL_NAME)) {
+            internalName = internalName.substring(REMAPPED_PACKAGE_INTERNAL_NAME.length)
+        }
+        return try {
+            val clazz = Class.forName(internalName.canonicalClassName)
+            val field = findField(clazz, fieldName) ?: throw NoSuchFieldException("No $fieldName in ${clazz.name}")
+            (field.modifiers and FINAL) == FINAL
+        } catch (e: ClassNotFoundException) {
+            throw RuntimeException(e)
+        } catch (e: NoSuchFieldException) {
+            throw RuntimeException(e)
+        }
     }
 
-    /**
-     * Checks if the given field of a class is final.
-     *
-     * @param className Name of the class that contains the field.
-     * @param fieldName Name of the field to be checked.
-     * @return `true` if the field is final, `false` otherwise.
-     */
-    fun isFinalField(className: String, fieldName: String) =
-        finalFields.contains(className + SEPARATOR + fieldName)
+    private fun findField(clazz: Class<*>?, fieldName: String): Field? {
+        if (clazz == null) return null
+        val fields = clazz.declaredFields
+        for (field in fields) if (field.name == fieldName) return field
+        // No field found in this class.
+        // Search in super class first, then in interfaces.
+        findField(clazz.superclass, fieldName)?.let { return it }
+        clazz.interfaces.forEach { iClass ->
+            findField(iClass, fieldName)?.let { return it }
+        }
+        return null
+    }
 }
