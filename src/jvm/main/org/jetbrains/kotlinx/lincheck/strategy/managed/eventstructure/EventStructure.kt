@@ -214,55 +214,6 @@ class EventStructure(
     }
 
     /* ************************************************************************* */
-    /*      Replaying                                                            */
-    /* ************************************************************************* */
-
-    private class Replayer(private val executionOrder: List<ThreadEvent>) {
-        private var index: Int = 0
-        private val size: Int = executionOrder.size
-
-        constructor(): this(listOf())
-
-        fun inProgress(): Boolean =
-            (index < size)
-
-        val currentEvent: BacktrackableEvent?
-            get() = if (inProgress()) (executionOrder[index] as? BacktrackableEvent) else null
-
-        fun setNextEvent() {
-            index++
-        }
-    }
-
-    fun inReplayPhase(): Boolean =
-        replayer.inProgress()
-
-    fun inReplayPhase(iThread: Int): Boolean {
-        val frontEvent = playedFrontier[iThread]
-            ?.ensure { it in _execution }
-        return (frontEvent != execution.lastEvent(iThread))
-    }
-
-    // should only be called in replay phase!
-    fun canReplayNextEvent(iThread: Int): Boolean {
-        return iThread == replayer.currentEvent?.threadId
-    }
-
-    private fun tryReplayEvent(iThread: Int): BacktrackableEvent? {
-        if (inReplayPhase() && !canReplayNextEvent(iThread)) {
-            // TODO: can we get rid of this?
-            //   we can try to enforce more ordering invariants by grouping "atomic" events
-            //   and also grouping events for which there is no reason to make switch in-between
-            //   (e.g. `Alloc` followed by a `Write`).
-            do {
-                internalThreadSwitchCallback(iThread, SwitchReason.STRATEGY_SWITCH)
-            } while (inReplayPhase() && !canReplayNextEvent(iThread))
-        }
-        return replayer.currentEvent
-            ?.also { replayer.setNextEvent() }
-    }
-
-    /* ************************************************************************* */
     /*      Event creation                                                       */
     /* ************************************************************************* */
 
@@ -324,20 +275,9 @@ class EventStructure(
         label: EventLabel,
         parent: AtomicThreadEvent?,
         dependencies: List<AtomicThreadEvent>,
-        conflicts: List<AtomicThreadEvent>
     ): BacktrackableEvent? {
-        var causalityViolation = false
-        // Check that parent does not depend on conflicting events.
-        if (parent != null) {
-            causalityViolation = causalityViolation || conflicts.any { conflict ->
-                causalityOrder.orEqual(conflict, parent)
-            }
-        }
-        // Also check that dependencies do not causally depend on conflicting events.
-        causalityViolation = causalityViolation || conflicts.any { conflict -> dependencies.any { dependency ->
-                causalityOrder.orEqual(conflict, dependency)
-        }}
-        if (causalityViolation)
+        val conflicts = getConflictingEvents(iThread, label, parent, dependencies)
+        if (isCausalityViolated(parent, dependencies, conflicts))
             return null
         val allocation = objectRegistry[label.objectID]?.allocation
         val source = (label as? WriteAccessLabel)?.writeValue?.let {
@@ -347,15 +287,7 @@ class EventStructure(
             cut(conflicts)
             // for already unblocked dangling requests,
             // also put their responses into the frontier
-            // TODO: extract this into function
-            for ((request, response) in danglingEvents) {
-                if (request in conflicts || response in conflicts)
-                    continue
-                if (request == this[request.threadId] && response != null &&
-                    response.dependencies.all { it in this }) {
-                    this.update(response)
-                }
-            }
+            addDanglingResponses(conflicts)
         }
         val blockedRequests = frontier.cutDanglingRequestEvents()
             // TODO: perhaps, we should change this to the list of requests to conflicting response events?
@@ -371,24 +303,12 @@ class EventStructure(
             frontier = frontier,
             pinnedEvents = pinnedEvents,
             blockedRequests = blockedRequests,
-        )
-    }
-
-    private fun addEvent(
-        iThread: Int,
-        label: EventLabel,
-        parent: AtomicThreadEvent?,
-        dependencies: List<AtomicThreadEvent>
-    ): BacktrackableEvent? {
-        // TODO: do we really need this invariant?
-        // require(parent !in dependencies)
-        val conflicts = conflictingEvents(iThread, label, parent, dependencies)
-        return createEvent(iThread, label, parent, dependencies, conflicts)?.also { event ->
+        ).also { event ->
             _events.add(event)
         }
     }
 
-    private fun conflictingEvents(
+    private fun getConflictingEvents(
         iThread: Int,
         label: EventLabel,
         parent: AtomicThreadEvent?,
@@ -426,6 +346,36 @@ class EventStructure(
             // TODO: add similar rule for read-exclusive-response?
         }
         return conflicts
+    }
+
+    private fun isCausalityViolated(
+        parent: AtomicThreadEvent?,
+        dependencies: List<AtomicThreadEvent>,
+        conflicts: List<AtomicThreadEvent>,
+    ): Boolean {
+        var causalityViolation = false
+        // Check that parent does not depend on conflicting events.
+        if (parent != null) {
+            causalityViolation = causalityViolation || conflicts.any { conflict ->
+                causalityOrder.orEqual(conflict, parent)
+            }
+        }
+        // Also check that dependencies do not causally depend on conflicting events.
+        causalityViolation = causalityViolation || conflicts.any { conflict -> dependencies.any { dependency ->
+            causalityOrder.orEqual(conflict, dependency)
+        }}
+        return causalityViolation
+    }
+
+    private fun MutableExecutionFrontier<AtomicThreadEvent>.addDanglingResponses(conflicts: List<AtomicThreadEvent>) {
+        for ((request, response) in danglingEvents) {
+            if (request in conflicts || response in conflicts)
+                continue
+            if (request == this[request.threadId] && response != null &&
+                response.dependencies.all { it in this }) {
+                this.update(response)
+            }
+        }
     }
 
     private fun addEventToCurrentExecution(event: BacktrackableEvent, visit: Boolean = true) {
@@ -474,6 +424,55 @@ class EventStructure(
         if (inconsistency != null) {
             reportInconsistencyCallback(inconsistency)
         }
+    }
+
+    /* ************************************************************************* */
+    /*      Replaying                                                            */
+    /* ************************************************************************* */
+
+    private class Replayer(private val executionOrder: List<ThreadEvent>) {
+        private var index: Int = 0
+        private val size: Int = executionOrder.size
+
+        constructor(): this(listOf())
+
+        fun inProgress(): Boolean =
+            (index < size)
+
+        val currentEvent: BacktrackableEvent?
+            get() = if (inProgress()) (executionOrder[index] as? BacktrackableEvent) else null
+
+        fun setNextEvent() {
+            index++
+        }
+    }
+
+    fun inReplayPhase(): Boolean =
+        replayer.inProgress()
+
+    fun inReplayPhase(iThread: Int): Boolean {
+        val frontEvent = playedFrontier[iThread]
+            ?.ensure { it in _execution }
+        return (frontEvent != execution.lastEvent(iThread))
+    }
+
+    // should only be called in replay phase!
+    fun canReplayNextEvent(iThread: Int): Boolean {
+        return iThread == replayer.currentEvent?.threadId
+    }
+
+    private fun tryReplayEvent(iThread: Int): BacktrackableEvent? {
+        if (inReplayPhase() && !canReplayNextEvent(iThread)) {
+            // TODO: can we get rid of this?
+            //   we can try to enforce more ordering invariants by grouping "atomic" events
+            //   and also grouping events for which there is no reason to make switch in-between
+            //   (e.g. `Alloc` followed by a `Write`).
+            do {
+                internalThreadSwitchCallback(iThread, SwitchReason.STRATEGY_SWITCH)
+            } while (inReplayPhase() && !canReplayNextEvent(iThread))
+        }
+        return replayer.currentEvent
+            ?.also { replayer.setNextEvent() }
     }
 
     /* ************************************************************************* */
@@ -676,7 +675,7 @@ class EventStructure(
             }.sortedBy { (_, _, dependency) ->
                 dependency
             }.mapNotNull { (syncLab, parent, dependency) ->
-                addEvent(parent.threadId, syncLab, parent, dependencies = listOf(dependency))
+                createEvent(parent.threadId, syncLab, parent, dependencies = listOf(dependency))
             }
     }
 
@@ -697,7 +696,7 @@ class EventStructure(
         // is a request event, and the result of synchronization is a response event.
         check(syncLab.isResponse)
         val parent = dependencies.first { it.label.isRequest }
-        val responseEvent = addEvent(parent.threadId, syncLab, parent, dependencies.filter { it != parent })
+        val responseEvent = createEvent(parent.threadId, syncLab, parent, dependencies.filter { it != parent })
         return listOfNotNull(responseEvent)
     }
 
@@ -713,7 +712,7 @@ class EventStructure(
             val value = memoryInitializer(location)
             computeValueID(value)
         }
-        return addEvent(initThreadId, label, parent = null, dependencies = emptyList())!!.also { event ->
+        return createEvent(initThreadId, label, parent = null, dependencies = emptyList())!!.also { event ->
             val id = STATIC_OBJECT_ID
             val entry = ObjectEntry(id, STATIC_OBJECT.opaque(), event)
             objectRegistry.register(entry)
@@ -729,7 +728,7 @@ class EventStructure(
             return event
         }
         val parent = playedFrontier[iThread]
-        return addEvent(iThread, label, parent, dependencies)!!.also { event ->
+        return createEvent(iThread, label, parent, dependencies)!!.also { event ->
             addEventToCurrentExecution(event)
         }
     }
@@ -742,7 +741,7 @@ class EventStructure(
             return event
         }
         val parent = playedFrontier[iThread]
-        return addEvent(iThread, label, parent, dependencies = emptyList())!!.also { event ->
+        return createEvent(iThread, label, parent, dependencies = emptyList())!!.also { event ->
             addEventToCurrentExecution(event)
         }
     }
@@ -792,7 +791,7 @@ class EventStructure(
             return event
         }
         val parent = playedFrontier[iThread]
-        return addEvent(iThread, label, parent, dependencies = emptyList())!!.also { event ->
+        return createEvent(iThread, label, parent, dependencies = emptyList())!!.also { event ->
             addEventToCurrentExecution(event)
         }
     }
@@ -915,7 +914,7 @@ class EventStructure(
         )
         val parent = playedFrontier[iThread]
         val dependencies = listOf<AtomicThreadEvent>()
-        return addEvent(iThread, label, parent, dependencies)!!.also { event ->
+        return createEvent(iThread, label, parent, dependencies)!!.also { event ->
             val entry = ObjectEntry(id, value, event)
             objectRegistry.register(entry)
             addEventToCurrentExecution(event)
@@ -1054,7 +1053,7 @@ class EventStructure(
             addEventToCurrentExecution(event)
             return event
         }
-        return addEvent(iThread, label, parent = request, dependencies = listOf(root))!!.also { event ->
+        return createEvent(iThread, label, parent = request, dependencies = listOf(root))!!.also { event ->
             addEventToCurrentExecution(event)
         }
     }
@@ -1086,7 +1085,7 @@ class EventStructure(
     fun addRandomEvent(iThread: Int, generated: Int): AtomicThreadEvent {
         val label = RandomLabel(generated)
         val parent = playedFrontier[iThread]
-        return addEvent(iThread, label, parent, dependencies = emptyList())!!.also { event ->
+        return createEvent(iThread, label, parent, dependencies = emptyList())!!.also { event ->
             addEventToCurrentExecution(event)
         }
     }
