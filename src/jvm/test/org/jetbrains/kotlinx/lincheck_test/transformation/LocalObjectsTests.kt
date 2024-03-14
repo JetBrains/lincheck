@@ -66,6 +66,13 @@ class LocalObjectEliminationTest : VerifierState() {
 }
 
 
+/**
+ * This test checks that despite some object isn't explicitly assigned to some shared value,
+ * is won't be treated like a local object if we wrote it into some shared object using [AtomicReferenceFieldUpdater].
+ *
+ * If we hadn't such check, this test would hang due to infinite spin-loop on a local object operations with
+ * no chances to detect a cycle and switch.
+ */
 class AtomicUpdaterLocalObjectsTest {
 
     companion object {
@@ -150,6 +157,13 @@ class AtomicUpdaterLocalObjectsTest {
 
 }
 
+/**
+ * This test checks that despite some object isn't explicitly assigned to some shared value,
+ * is won't be treated like a local object if we wrote it into some shared object using [Unsafe].
+ *
+ * If we hadn't such check, this test would hang due to infinite spin-loop on a local object operations with
+ * no chances to detect a cycle and switch.
+ */
 class UnsafeLocalObjectsTest {
 
     @Volatile
@@ -222,6 +236,13 @@ class UnsafeLocalObjectsTest {
 
 }
 
+/**
+ * This test checks that despite some object isn't explicitly assigned to some shared value,
+ * is won't be treated like a local object if we wrote it into some shared object using [VarHandle].
+ *
+ * If we hadn't such check, this test would hang due to infinite spin-loop on a local object operations with
+ * no chances to detect a cycle and switch.
+ */
 class VarHandleLocalObjectsTest {
 
     companion object {
