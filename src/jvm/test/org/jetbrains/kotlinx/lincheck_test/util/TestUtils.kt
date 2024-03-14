@@ -69,10 +69,11 @@ private val String.filtered: String get() {
 // - everything from `java.base/` (because code locations may vary between different versions of JVM)
 private val TEST_EXECUTION_TRACE_ELEMENT_REGEX = listOf(
     "(\\W*)at org\\.jetbrains\\.kotlinx\\.lincheck\\.runner\\.TestThreadExecution(\\d+)\\.run\\(Unknown Source\\)",
+    "(\\W*)at org\\.jetbrains\\.kotlinx\\.lincheck\\.runner\\.FixedActiveThreadsExecutor\\.testThreadRunnable\\\$lambda\\\$(\\d+)\\(FixedActiveThreadsExecutor.kt:(\\d+)\\)",
     "(\\W*)at java.base\\/(.*)"
 ).joinToString(separator = ")|(", prefix = "(", postfix = ")").toRegex()
 
-private val LINE_NUMBER_REGEX = Regex(":(\\d+)\\)")
+private val LINE_NUMBER_REGEX = Regex(":(\\d+)")
 
 internal fun getExpectedLogFromResources(testFileName: String): String {
     val resourceName = "expected_logs/$testFileName"
