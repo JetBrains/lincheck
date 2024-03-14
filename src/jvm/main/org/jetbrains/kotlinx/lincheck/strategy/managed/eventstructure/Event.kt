@@ -397,6 +397,11 @@ abstract class AbstractAtomicThreadEvent(
         super.validate()
         // constraints for atomic non-span-related events
         if (!label.isSpanLabel) {
+            // the request event should not follow another request event
+            // because the earlier request should first receive its response
+            require((label.isRequest && parent != null) implies {
+                !parent!!.label.isRequest || parent!!.label.isSpanLabel
+            })
             // only the response event should have a corresponding request part
             require(label.isResponse equivalent (request != null))
             // response and receive events (and only them) should have a corresponding list

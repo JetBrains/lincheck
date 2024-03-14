@@ -255,10 +255,10 @@ class EventStructure(
         val pinnedEvents : ExecutionFrontier<AtomicThreadEvent> = pinnedEvents.copy().apply {
             // TODO: can reorder cut and merge?
             val causalityFrontier = execution.calculateFrontier(causalityClock)
-            cut(conflicts)
             merge(causalityFrontier)
-            cutDanglingRequestEvents()
-            set(threadId, parent)
+            cut(conflicts)
+            cut(getDanglingRequests())
+            cut(this@BacktrackableEvent)
         }
 
         var visited: Boolean = false
@@ -289,10 +289,14 @@ class EventStructure(
             // also put their responses into the frontier
             addDanglingResponses(conflicts)
         }
-        val blockedRequests = frontier.cutDanglingRequestEvents()
+        val danglingRequests = frontier.getDanglingRequests()
+        val blockedRequests = danglingRequests
             // TODO: perhaps, we should change this to the list of requests to conflicting response events?
             .filter { it.label.isBlocking && it != parent && (it.label !is CoroutineSuspendLabel) }
-        frontier[iThread] = parent
+        frontier.apply {
+            cut(danglingRequests)
+            set(iThread, parent)
+        }
         return BacktrackableEvent(
             label = label,
             parent = parent,

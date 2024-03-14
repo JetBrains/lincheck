@@ -69,16 +69,28 @@ fun<E : ThreadEvent> MutableExecutionFrontier<E>.merge(other: ExecutionFrontier<
     }}
 }
 
-// TODO: unify semantics with MutableExecution.cut()
-// TODO: rename?
-inline fun<reified E : ThreadEvent> MutableExecutionFrontier<E>.cut(cutEvents: List<E>) {
-    if (cutEvents.isEmpty())
+fun <E : ThreadEvent> ExecutionFrontier<E>.getDanglingRequests(): List<E>  {
+    return threadMap.mapNotNull { (_, lastEvent) ->
+        lastEvent?.takeIf { it.label.isRequest && !it.label.isSpanLabel }
+    }
+}
+
+inline fun <reified E : ThreadEvent> MutableExecutionFrontier<E>.cut(event: E) {
+    // TODO: optimize for a case of a single event
+    cut(listOf(event))
+}
+
+inline fun <reified E : ThreadEvent> MutableExecutionFrontier<E>.cut(events: List<E>) {
+    if (events.isEmpty())
         return
-    threadMap.forEach { (tid, event) ->
-        // TODO: optimize --- transform cutEvents into vector clock
+    // TODO: optimize --- extract sublist of maximal events having no causal successors,
+    //   to remove them faster without the need to compute vector clocks
+    threadMap.forEach { (tid, lastEvent) ->
+        // find the program-order latest event, not observing any of the cut events
+        // TODO: optimize --- transform events into vector clock
         // TODO: optimize using binary search
-        val pred = event?.pred(inclusive = true) {
-            (it is E) && !cutEvents.any { cutEvent ->
+        val pred = lastEvent?.pred(inclusive = true) {
+            (it is E) && !events.any { cutEvent ->
                 it.causalityClock.observes(cutEvent.threadId, cutEvent.threadPosition)
             }
         }
@@ -117,16 +129,3 @@ inline fun<reified E : ThreadEvent> ExecutionFrontier<E>.toMutableExecution(): M
     }.let {
         mutableExecutionOf(*it.toTypedArray())
     }
-
-fun MutableExecutionFrontier<AtomicThreadEvent>.cutDanglingRequestEvents(): List<AtomicThreadEvent> {
-    val cutEvents = mutableListOf<AtomicThreadEvent>()
-    for (threadId in threadIDs) {
-        val lastEvent = get(threadId) ?: continue
-        if (lastEvent.label.isRequest) {
-            lastEvent.parent?.label?.ensure { !it.isRequest || it is ActorLabel }
-            set(threadId, lastEvent.parent)
-            cutEvents.add(lastEvent)
-        }
-    }
-    return cutEvents
-}
