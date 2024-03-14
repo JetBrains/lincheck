@@ -149,7 +149,7 @@ class AtomicUpdaterLocalObjectsTest {
         nextNode.value = 1
         updateAction(nextNode)
         // If we have a bug and treat nextNode as a local object, we have to insert here some switch points
-        // to catch a moment when `node.value` is just updated to 1
+        // to catch a moment when `node.value` is updated to 1
         flag = true
 
         nextNode.value = 0
