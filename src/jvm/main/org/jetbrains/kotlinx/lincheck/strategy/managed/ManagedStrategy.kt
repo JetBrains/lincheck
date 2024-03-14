@@ -571,8 +571,6 @@ abstract class ManagedStrategy(
     }
 
     override fun beforeReadField(obj: Any, className: String, fieldName: String, codeLocation: Int) = runInIgnoredSection {
-        if (FinalFields.isFinalField(className, fieldName)) return
-
         if (localObjectManager.isLocalObject(obj)) return@runInIgnoredSection
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
@@ -589,8 +587,6 @@ abstract class ManagedStrategy(
     }
 
     override fun beforeReadFieldStatic(className: String, fieldName: String, codeLocation: Int) = runInIgnoredSection {
-        if (FinalFields.isFinalField(className, fieldName)) return
-
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             ReadTracePoint(
