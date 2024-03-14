@@ -12,6 +12,9 @@ package org.jetbrains.kotlinx.lincheck.runner
 import kotlinx.atomicfu.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.util.Spinner
+import org.jetbrains.kotlinx.lincheck.util.SpinnerGroup
+import org.jetbrains.kotlinx.lincheck.util.spinWaitBoundedFor
 import sun.nio.ch.lincheck.TestThread
 import java.io.*
 import java.lang.*
@@ -32,9 +35,23 @@ internal class FixedActiveThreadsExecutor(private val traceCollectionEnabled: Bo
     private val tasks = atomicArrayOfNulls<Any>(nThreads)
 
     /**
+     * Spinners for spin-wait on tasks.
+     *
+     * Each thread of the executor manipulates its own spinner.
+     */
+    private val taskSpinners = SpinnerGroup(nThreads)
+
+    /**
      * null, waiting in [submitAndAwait] thread, DONE, or exception
      */
     private val results = atomicArrayOfNulls<Any>(nThreads)
+
+    /**
+     * Spinner for spin-wait on results.
+     *
+     * Only the main thread submitting tasks manipulates this spinner.
+     */
+    private val resultSpinner = Spinner(nThreads)
 
     /**
      * This flag is set to `true` when [await] detects a hang.
@@ -49,8 +66,6 @@ internal class FixedActiveThreadsExecutor(private val traceCollectionEnabled: Bo
     val threads = Array(nThreads) { iThread ->
         TestThread(traceCollectionEnabled, testName, iThread, runnerHash, testThreadRunnable(iThread)).also { it.start() }
     }
-
-    val numberOfThreadsExceedAvailableProcessors = Runtime.getRuntime().availableProcessors() < threads.size
 
     /**
      * Submits the specified set of [tasks] to this executor
@@ -123,9 +138,8 @@ internal class FixedActiveThreadsExecutor(private val traceCollectionEnabled: Bo
 
     private fun getResult(iThread: Int, deadline: Long): Any {
         // Active wait for a result during the limited number of loop cycles.
-        spinWait { results[iThread].value }?.let {
-            return it
-        }
+        val result = resultSpinner.spinWaitBoundedFor { results[iThread].value }
+        if (result != null) return result
         // Park with timeout until the result is set or the timeout is passed.
         val currentThread = Thread.currentThread()
         if (results[iThread].compareAndSet(null, currentThread)) {
@@ -164,9 +178,8 @@ internal class FixedActiveThreadsExecutor(private val traceCollectionEnabled: Bo
 
     private fun getTask(iThread: Int): Any {
         // Active wait for a task for the limited number of loop cycles.
-        spinWait { tasks[iThread].value }?.let {
-            return it
-        }
+        val task = taskSpinners[iThread].spinWaitBoundedFor { tasks[iThread].value }
+        if (task != null) return task
         // Park until a task is stored into `tasks[iThread]`.
         val currentThread = Thread.currentThread()
         if (tasks[iThread].compareAndSet(null, currentThread)) {
@@ -186,21 +199,6 @@ internal class FixedActiveThreadsExecutor(private val traceCollectionEnabled: Bo
         LockSupport.unpark(thread)
     }
 
-    private inline fun spinWait(getter: () -> Any?): Any? {
-        // Park immediately when the number of threads exceed the number of cores to avoid starvation.
-        val spinningLoopIterations = if (numberOfThreadsExceedAvailableProcessors) {
-            1
-        } else {
-            SPINNING_LOOP_ITERATIONS_BEFORE_PARK
-        }
-        repeat(spinningLoopIterations) {
-            getter()?.let {
-                return it
-            }
-        }
-        return null
-    }
-
     override fun close() {
         shutdown()
         // Thread.stop() throws UnsupportedOperationException
@@ -214,8 +212,6 @@ internal class FixedActiveThreadsExecutor(private val traceCollectionEnabled: Bo
 }
 
 private val majorJavaVersion = Runtime.version().version()[0]
-
-private const val SPINNING_LOOP_ITERATIONS_BEFORE_PARK = 1000_000
 
 // These constants are objects for easier debugging.
 private object Shutdown
