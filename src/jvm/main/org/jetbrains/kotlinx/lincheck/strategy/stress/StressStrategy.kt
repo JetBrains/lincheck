@@ -29,7 +29,6 @@ class StressStrategy(
 
     init {
         runner = ParallelThreadsRunner(
-            traceCollectionEnabled = false,
             strategy = this,
             testClass = testClass,
             validationFunction = validationFunction,

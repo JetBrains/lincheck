@@ -99,9 +99,8 @@ class ParallelThreadsRunnerExceptionTest {
             }
         }
         ParallelThreadsRunner(
-            traceCollectionEnabled = false,
             strategy = mockStrategy(scenario), testClass = testClass, validationFunction = null,
-            stateRepresentationFunction = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
+            stateRepresentationFunction = null, timeoutMs = DEFAULT_TIMEOUT_MS, useClocks = RANDOM
         ).use { runner ->
             runner.initialize()
             val results = (runner.run() as CompletedInvocationResult).results
@@ -125,9 +124,8 @@ class ParallelThreadsRunnerExceptionTest {
             }
         }
         ParallelThreadsRunner(
-            traceCollectionEnabled = false,
             strategy = mockStrategy(scenario), testClass = testClass, validationFunction = null,
-            stateRepresentationFunction = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
+            stateRepresentationFunction = null, timeoutMs = DEFAULT_TIMEOUT_MS, useClocks = RANDOM
         ).use { runner ->
             runner.initialize()
             val results = (runner.run() as CompletedInvocationResult).results
@@ -145,9 +143,8 @@ class ParallelThreadsRunnerExceptionTest {
             }
         }
         ParallelThreadsRunner(
-            traceCollectionEnabled = false,
             strategy = mockStrategy(scenario), testClass = testClass, validationFunction = null,
-            stateRepresentationFunction = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
+            stateRepresentationFunction = null, timeoutMs = DEFAULT_TIMEOUT_MS, useClocks = RANDOM
         ).use { runner ->
             runner.initialize()
             val results = (runner.run() as CompletedInvocationResult).results
@@ -165,9 +162,8 @@ class ParallelThreadExecutionExceptionsTest {
             }
         }
         ParallelThreadsRunner(
-            traceCollectionEnabled = false,
             strategy = mockStrategy(scenario), testClass = this::class.java, validationFunction = null,
-            stateRepresentationFunction = null, useClocks = RANDOM, timeoutMs = DEFAULT_TIMEOUT_MS
+            stateRepresentationFunction = null, timeoutMs = DEFAULT_TIMEOUT_MS, useClocks = RANDOM
         ).use { runner ->
             runner.initialize()
             val results = (runner.run() as UnexpectedExceptionInvocationResult)

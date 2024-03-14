@@ -20,7 +20,6 @@ import java.io.*
 import java.lang.*
 import java.util.concurrent.*
 import java.util.concurrent.locks.*
-import kotlin.Boolean
 
 /**
  * This executor maintains the specified number of threads and is used by
@@ -28,7 +27,7 @@ import kotlin.Boolean
  * is that this executor keeps the re-using threads "hot" (active) as long as possible,
  * so that they should not be parked and unparked between invocations.
  */
-internal class FixedActiveThreadsExecutor(private val traceCollectionEnabled: Boolean, private val testName: String, private val nThreads: Int, runnerHash: Int) : Closeable {
+internal class FixedActiveThreadsExecutor(private val testName: String, private val nThreads: Int, runnerHash: Int) : Closeable {
     /**
      * null, waiting TestThread, Runnable task, or SHUTDOWN
      */
@@ -64,7 +63,7 @@ internal class FixedActiveThreadsExecutor(private val traceCollectionEnabled: Bo
      * Threads used in this runner.
      */
     val threads = Array(nThreads) { iThread ->
-        TestThread(traceCollectionEnabled, testName, iThread, runnerHash, testThreadRunnable(iThread)).also { it.start() }
+        TestThread(testName, iThread, runnerHash, testThreadRunnable(iThread)).also { it.start() }
     }
 
     /**

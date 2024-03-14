@@ -27,7 +27,8 @@ class CompletedInvocationResult(
  * Indicates that the invocation has run into deadlock or livelock.
  */
 class DeadlockInvocationResult(
-    val threadDump: Map<Thread, Array<StackTraceElement>>? = null
+    val threadDump: Map<Thread, Array<StackTraceElement>>? = null,
+    val detectedByRunner: Boolean = false
 ) : InvocationResult()
 
 /**

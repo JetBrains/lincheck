@@ -38,7 +38,6 @@ private typealias SuspensionPointResultWithContinuation = AtomicReference<Pair<k
  * It is pretty useful for stress testing or if you do not care about context switch expenses.
  */
 internal open class ParallelThreadsRunner(
-    traceCollectionEnabled: Boolean,
     strategy: Strategy,
     testClass: Class<*>,
     validationFunction: Actor?,
@@ -48,7 +47,7 @@ internal open class ParallelThreadsRunner(
 ) : Runner(strategy, testClass, validationFunction, stateRepresentationFunction) {
     private val testName = testClass.simpleName
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
-    private val executor = FixedActiveThreadsExecutor(traceCollectionEnabled, testName, scenario.nThreads, runnerHash) // should be closed in `close()`
+    private val executor = FixedActiveThreadsExecutor(testName, scenario.nThreads, runnerHash) // should be closed in `close()`
 
     private val spinners = SpinnerGroup(executor.threads.size)
 
@@ -315,7 +314,7 @@ internal open class ParallelThreadsRunner(
             )
         } catch (e: TimeoutException) {
             val threadDump = collectThreadDump(this)
-            return DeadlockInvocationResult(threadDump)
+            return DeadlockInvocationResult(threadDump, detectedByRunner = true)
         } catch (e: ExecutionException) {
             return UnexpectedExceptionInvocationResult(e.cause!!)
         } finally {
