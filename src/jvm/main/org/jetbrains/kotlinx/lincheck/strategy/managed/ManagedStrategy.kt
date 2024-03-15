@@ -237,6 +237,8 @@ abstract class ManagedStrategy(
                 appendln(loggedResults.toLincheckFailure(scenario, Trace(traceCollector!!.trace)).toString())
             }.toString()
         }
+        if (loggedResults is DeadlockInvocationResult && loggedResults.detectedByRunner) return null
+
         return Trace(traceCollector!!.trace)
     }
 
