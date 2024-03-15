@@ -381,7 +381,10 @@ internal class LincheckClassVisitor(
                                     invokeInIgnoredSection {
                                         invokeStatic(Injections::deterministicRandom)
                                         loadLocals(arguments)
-                                        // Here might be java/util/Random or java/util/random/RandomGenerator
+                                        /*
+                                        In Java 21 RandomGenerator interface was introduced so sometimes data structures
+                                        interact with java.util.Random through this interface.
+                                         */
                                         val randomOwner = if (owner.endsWith("RandomGenerator")) "java/util/random/RandomGenerator" else "java/util/Random"
                                         visitMethodInsn(opcode, randomOwner, name, desc, itf)
                                     }
@@ -688,6 +691,13 @@ internal class LincheckClassVisitor(
         }
     }
 
+    /**
+     * Adds tracking indirect writes to exclude an object from local objects set if necessary.
+     * To achieve it, we track [AtomicReferenceFieldUpdater], [Unsafe] and [VarHandle] write methods.
+     *
+     * For now, for simplicity, we don't check if compareAndSet / compareAndSwap methods actually write value.
+     * We always consider new value as non-local if it was associated with a non-local object.
+     */
     private inner class ObjectAtomicWriteTrackerTransformer(methodName: String, adapter: GeneratorAdapter) :
         ManagedStrategyMethodVisitor(methodName, adapter) {
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) =
@@ -766,21 +776,31 @@ internal class LincheckClassVisitor(
                             val currenValueLocal = newLocal(OBJECT_TYPE)
                             val offsetLocal = newLocal(LONG_TYPE)
                             val receiverLocal = newLocal(OBJECT_TYPE)
-
+                            // STACK: nextValue, currentValue, offset, receiver
                             storeLocal(nextValueLocal)
+                            // STACK: currentValue, offset, receiver
                             storeLocal(currenValueLocal)
+                            // STACK: offset, receiver
                             storeLocal(offsetLocal)
+                            // STACK: receiver
                             storeLocal(receiverLocal)
+                            // STACK: <empty>
 
                             loadLocal(receiverLocal)
+                            // STACK: receiver
                             loadLocal(offsetLocal)
+                            // STACK: offset, receiver
                             loadLocal(currenValueLocal)
+                            // STACK: currentValue, offset, receiver
                             loadLocal(nextValueLocal)
+                            // STACK: nextValue, currentValue, offset, receiver
 
                             visitMethodInsn(opcode, owner, name, desc, itf)
-
+                            // STACK: cas-result
                             loadLocal(receiverLocal)
+                            // STACK: receiver, cas-result
                             loadLocal(nextValueLocal)
+                            // STACK: nextValue, receiver, cas-result
                             invokeStatic(Injections::addDependency)
                         }
                     )
@@ -795,18 +815,27 @@ internal class LincheckClassVisitor(
                             val offsetLocal = newLocal(LONG_TYPE)
                             val receiverLocal = newLocal(OBJECT_TYPE)
 
+                            // STACK: nextValue, offset, receiver
                             storeLocal(nextValueLocal)
+                            // STACK: offset, receiver
                             storeLocal(offsetLocal)
+                            // STACK: receiver
                             storeLocal(receiverLocal)
+                            // STACK: <empty>
 
                             loadLocal(receiverLocal)
+                            // STACK: receiver
                             loadLocal(offsetLocal)
+                            // STACK: offset, receiver
                             loadLocal(nextValueLocal)
+                            // STACK: nextValue, offset, receiver
 
                             visitMethodInsn(opcode, owner, name, desc, itf)
-
+                            // STACK: <empty>
                             loadLocal(receiverLocal)
+                            // STACK: receiver
                             loadLocal(nextValueLocal)
+                            // STACK: nextValue, receiver
                             invokeStatic(Injections::addDependency)
                         }
                     )
@@ -817,6 +846,9 @@ internal class LincheckClassVisitor(
             }
         }
 
+        /**
+         * Process methods like *.compareAndSet(expected, new)
+         */
         private fun GeneratorAdapter.processCompareAndSetMethod(
             name: String,
             opcode: Int,
@@ -831,6 +863,7 @@ internal class LincheckClassVisitor(
                 val argumentTypes = getArgumentTypes(desc)
 
                 if (argumentTypes.size == 3) {
+                    // we are in a single value overload
                     val nextType = argumentTypes.last()
                     val nextValueLocal = newLocal(OBJECT_TYPE)
 
@@ -838,26 +871,35 @@ internal class LincheckClassVisitor(
                     val currenValueLocal = newLocal(OBJECT_TYPE)
 
                     val receiverLocal = newLocal(OBJECT_TYPE)
-
+                    // STACK: nextValue, currentValue, receiver
                     box(nextType)
+                    // STACK: boxedNextValue, currentValue, receiver
                     storeLocal(nextValueLocal)
+                    // STACK: currentValue, receiver
                     box(currentType)
+                    // STACK: boxedCurrentValue, receiver
                     storeLocal(currenValueLocal)
+                    // STACK: receiver
                     storeLocal(receiverLocal)
-
+                    // STACK: <empty>
                     loadLocal(receiverLocal)
+                    // STACK: receiver
                     loadLocal(currenValueLocal)
+                    // STACK: boxedCurrentValue, receiver
                     unbox(currentType)
+                    // STACK: currentValue, receiver
                     loadLocal(nextValueLocal)
+                    // STACK: boxedNextValue, currentValue, receiver
                     unbox(nextType)
-
+                    // STACK: nextValue, currentValue, receiver
                     visitMethodInsn(opcode, owner, name, desc, itf)
-
                     loadLocal(receiverLocal)
+                    // STACK: receiver
                     loadLocal(nextValueLocal)
+                    // STACK: boxedNextValue, receiver
                     invokeStatic(Injections::addDependency)
                 } else {
-                    // array
+                    // we are in an array version overload (with index) *.compareAndSet(index, currentValue, nextValue)
                     val nextType = argumentTypes.last()
                     val nextValueLocal = newLocal(OBJECT_TYPE)
 
@@ -866,30 +908,45 @@ internal class LincheckClassVisitor(
 
                     val indexLocal = newLocal(INT_TYPE)
                     val receiverLocal = newLocal(OBJECT_TYPE)
-
+                    // STACK: nextValue, currentValue, index, receiver
                     box(nextType)
+                    // STACK: boxedNextValue, currentValue, index, receiver
                     storeLocal(nextValueLocal)
+                    // STACK: currentValue, index, receiver
                     box(currentType)
+                    // STACK: boxedCurrentValue, index, receiver
                     storeLocal(currenValueLocal)
+                    // STACK: index, receiver
                     storeLocal(indexLocal)
+                    // STACK: receiver
                     storeLocal(receiverLocal)
-
+                    // STACK: <empty>
                     loadLocal(receiverLocal)
+                    // STACK: receiver
                     loadLocal(indexLocal)
+                    // STACK: index, receiver
                     loadLocal(currenValueLocal)
+                    // STACK: boxedCurrentValue, index, receiver
                     unbox(currentType)
+                    // STACK: currentValue, index, receiver
                     loadLocal(nextValueLocal)
+                    // STACK: boxedNextValue, currentValue, index, receiver
                     unbox(nextType)
-
+                    // STACK: nextValue, currentValue, index, receiver
                     visitMethodInsn(opcode, owner, name, desc, itf)
-
+                    // STACK: cas-result
                     loadLocal(receiverLocal)
+                    // STACK: receiver, cas-result
                     loadLocal(nextValueLocal)
+                    // STACK: boxedNextValue, receiver, cas-result
                     invokeStatic(Injections::addDependency)
                 }
             }
         )
 
+        /**
+         * Process methods like *.set(value) or varHandle.set(value, index)
+         */
         private fun GeneratorAdapter.processSetMethod(
             name: String,
             opcode: Int,
@@ -902,42 +959,62 @@ internal class LincheckClassVisitor(
             },
             code = {
                 val argumentTypes = getArgumentTypes(desc)
+                // we are in a single value overload
                 if (argumentTypes.size == 2) {
+                    // STACK: value, receiver
                     val argumentType = argumentTypes.last()
                     val valueLocal = newLocal(OBJECT_TYPE)
                     val receiverLocal = newLocal(OBJECT_TYPE)
 
+                    // STACK: value, receiver
                     box(argumentType)
                     storeLocal(valueLocal)
+                    // STACK: boxedValue, receiver
                     storeLocal(receiverLocal)
-
+                    // STACK: <empty>
                     loadLocal(receiverLocal)
+                    // STACK: receiver
                     loadLocal(valueLocal)
+                    // STACK: boxedValue, receiver
                     unbox(argumentType)
+                    // STACK: value, receiver
                     visitMethodInsn(opcode, owner, name, desc, itf)
-
+                    // STACK: <empty>
                     loadLocal(receiverLocal)
+                    // STACK: receiver
                     loadLocal(valueLocal)
+                    // STACK: boxedValue, receiver
                     invokeStatic(Injections::addDependency)
-                } else { // array
+                } else {
+                    // we are in an array version overload (with index) varHandle.set(value, index)
                     val argumentType = argumentTypes.last()
                     val valueLocal = newLocal(OBJECT_TYPE)
                     val indexLocal = newLocal(INT_TYPE)
                     val receiverLocal = newLocal(OBJECT_TYPE)
 
+                    // STACK: value, index, receiver
                     box(argumentType)
+                    // STACK: boxedValue, index, receiver
                     storeLocal(valueLocal)
+                    // STACK: index, receiver
                     storeLocal(indexLocal)
+                    // STACK: receiver
                     storeLocal(receiverLocal)
-
+                    // STACK: <empty>
                     loadLocal(receiverLocal)
+                    // STACK: receiver
                     loadLocal(indexLocal)
+                    // STACK: index, receiver
                     loadLocal(valueLocal)
+                    // STACK: boxedValue, index, receiver
                     unbox(argumentType)
+                    // STACK: value, index, receiver
                     visitMethodInsn(opcode, owner, name, desc, itf)
-
+                    // STACK: <empty>
                     loadLocal(receiverLocal)
+                    // STACK: receiver
                     loadLocal(valueLocal)
+                    // STACK: boxedValue, receiver
                     invokeStatic(Injections::addDependency)
                 }
             }
