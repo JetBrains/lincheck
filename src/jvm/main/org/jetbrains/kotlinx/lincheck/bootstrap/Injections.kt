@@ -54,42 +54,42 @@ internal object Injections {
 
     @JvmStatic
     fun lock(monitor: Any, codeLocation: Int) {
-        sharedEventsTracker.lock(monitor, codeLocation)
+        eventTracker.lock(monitor, codeLocation)
     }
 
     @JvmStatic
     fun unlock(monitor: Any, codeLocation: Int) {
-        sharedEventsTracker.unlock(monitor, codeLocation)
+        eventTracker.unlock(monitor, codeLocation)
     }
 
     @JvmStatic
     fun park(codeLocation: Int) {
-        sharedEventsTracker.park(codeLocation)
+        eventTracker.park(codeLocation)
     }
 
     @JvmStatic
     fun unpark(thread: Thread, codeLocation: Int) {
-        sharedEventsTracker.unpark(thread, codeLocation)
+        eventTracker.unpark(thread, codeLocation)
     }
 
     @JvmStatic
     fun wait(monitor: Any, codeLocation: Int) {
-        sharedEventsTracker.wait(monitor, codeLocation, withTimeout = false)
+        eventTracker.wait(monitor, codeLocation, withTimeout = false)
     }
 
     @JvmStatic
     fun waitWithTimeout(monitor: Any, codeLocation: Int) {
-        sharedEventsTracker.wait(monitor, codeLocation, withTimeout = true)
+        eventTracker.wait(monitor, codeLocation, withTimeout = true)
     }
 
     @JvmStatic
     fun notify(monitor: Any, codeLocation: Int) {
-        sharedEventsTracker.notify(monitor, codeLocation, notifyAll = false)
+        eventTracker.notify(monitor, codeLocation, notifyAll = false)
     }
 
     @JvmStatic
     fun notifyAll(monitor: Any, codeLocation: Int) {
-        sharedEventsTracker.notify(monitor, codeLocation, notifyAll = true)
+        eventTracker.notify(monitor, codeLocation, notifyAll = true)
     }
 
     @JvmStatic
@@ -99,7 +99,7 @@ internal object Injections {
 
     @JvmStatic
     fun deterministicRandom(): Random {
-        return sharedEventsTracker.getThreadLocalRandom()
+        return eventTracker.getThreadLocalRandom()
     }
 
     @JvmStatic
@@ -110,94 +110,94 @@ internal object Injections {
     @JvmStatic
     fun beforeReadField(obj: Any?, className: String, fieldName: String, codeLocation: Int) {
         if (obj == null) return // Ignore, NullPointerException will be thrown
-        sharedEventsTracker.beforeReadField(obj, className, fieldName, codeLocation)
+        eventTracker.beforeReadField(obj, className, fieldName, codeLocation)
     }
 
     @JvmStatic
     fun beforeReadFieldStatic(className: String, fieldName: String, codeLocation: Int) {
-        sharedEventsTracker.beforeReadFieldStatic(className, fieldName, codeLocation)
+        eventTracker.beforeReadFieldStatic(className, fieldName, codeLocation)
     }
 
     @JvmStatic
     fun beforeReadArray(array: Any?, index: Int, codeLocation: Int) {
         if (array == null) return // Ignore, NullPointerException will be thrown
-        sharedEventsTracker.beforeReadArrayElement(array, index, codeLocation)
+        eventTracker.beforeReadArrayElement(array, index, codeLocation)
     }
 
     @JvmStatic
     fun afterRead(value: Any?) {
-        sharedEventsTracker.afterRead(value)
+        eventTracker.afterRead(value)
     }
 
     @JvmStatic
     fun afterWrite() {
-        sharedEventsTracker.afterWrite()
+        eventTracker.afterWrite()
     }
 
     @JvmStatic
     fun beforeWriteField(obj: Any?, className: String, fieldName: String, value: Any?, codeLocation: Int) {
         if (obj == null) return // Ignore, NullPointerException will be thrown
-        sharedEventsTracker.beforeWriteField(obj, className, fieldName, value, codeLocation)
+        eventTracker.beforeWriteField(obj, className, fieldName, value, codeLocation)
     }
 
     @JvmStatic
     fun beforeWriteFieldStatic(className: String, fieldName: String, value: Any?, codeLocation: Int) {
-        sharedEventsTracker.beforeWriteFieldStatic(className, fieldName, value, codeLocation)
+        eventTracker.beforeWriteFieldStatic(className, fieldName, value, codeLocation)
     }
 
     @JvmStatic
     fun beforeWriteArray(array: Any?, index: Int, value: Any?, codeLocation: Int) {
         if (array == null) return // Ignore, NullPointerException will be thrown
-        sharedEventsTracker.beforeWriteArrayElement(array, index, value, codeLocation)
+        eventTracker.beforeWriteArrayElement(array, index, value, codeLocation)
     }
 
     // owner == null for static methods
     @JvmStatic
     fun beforeMethodCall(owner: Any?, className: String, methodName: String, codeLocation: Int, params: Array<Any?>) {
-        sharedEventsTracker.beforeMethodCall(owner, className, methodName, codeLocation, params)
+        eventTracker.beforeMethodCall(owner, className, methodName, codeLocation, params)
     }
 
 
     @JvmStatic
     fun beforeAtomicMethodCall(ownerName: String, methodName: String, codeLocation: Int, params: Array<Any?>) {
-        sharedEventsTracker.beforeAtomicMethodCall(ownerName, methodName, codeLocation, params)
+        eventTracker.beforeAtomicMethodCall(ownerName, methodName, codeLocation, params)
     }
 
     @JvmStatic
     fun beforeAtomicUpdaterMethodCall(owner: Any?, methodName: String, codeLocation: Int, params: Array<Any?>) {
-        sharedEventsTracker.beforeAtomicUpdaterMethodCall(owner!!, methodName, codeLocation, params)
+        eventTracker.beforeAtomicUpdaterMethodCall(owner!!, methodName, codeLocation, params)
     }
 
     @JvmStatic
     fun onMethodCallFinishedSuccessfully(result: Any?) {
-        sharedEventsTracker.onMethodCallFinishedSuccessfully(result)
+        eventTracker.onMethodCallFinishedSuccessfully(result)
     }
 
     @JvmStatic
     fun onMethodCallVoidFinishedSuccessfully() {
-        sharedEventsTracker.onMethodCallFinishedSuccessfully(VOID_RESULT)
+        eventTracker.onMethodCallFinishedSuccessfully(VOID_RESULT)
     }
 
     @JvmStatic
     fun onMethodCallThrewException(t: Throwable) {
-        sharedEventsTracker.onMethodCallThrewException(t)
+        eventTracker.onMethodCallThrewException(t)
     }
 
     @JvmStatic
     fun onNewObjectCreation(obj: Any) {
-        sharedEventsTracker.onNewObjectCreation(obj)
+        eventTracker.onNewObjectCreation(obj)
     }
 
     @JvmStatic
-    private val sharedEventsTracker: SharedEventsTracker
-        get() = (Thread.currentThread() as TestThread).sharedEventsTracker!! // should be non-null
+    private val eventTracker: EventTracker
+        get() = (Thread.currentThread() as TestThread).eventTracker!! // should be non-null
 
     @JvmStatic
     val VOID_RESULT = Any()
 
     @JvmStatic
     fun addDependency(receiver: Any, value: Any?) {
-        sharedEventsTracker.addDependency(receiver, value)
+        eventTracker.addDependency(receiver, value)
     }
 
     // == LISTENING METHODS ==

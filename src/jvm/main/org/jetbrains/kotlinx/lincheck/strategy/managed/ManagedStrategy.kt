@@ -22,7 +22,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import sun.nio.ch.lincheck.*
 import sun.nio.ch.lincheck.CodeLocations
 import sun.nio.ch.lincheck.Injections
-import sun.nio.ch.lincheck.SharedEventsTracker
+import sun.nio.ch.lincheck.EventTracker
 import sun.nio.ch.lincheck.TestThread
 import java.lang.reflect.*
 import java.util.*
@@ -43,7 +43,7 @@ abstract class ManagedStrategy(
     private val validationFunction: Actor?,
     private val stateRepresentationFunction: Method?,
     private val testCfg: ManagedCTestConfiguration
-) : Strategy(scenario), SharedEventsTracker {
+) : Strategy(scenario), EventTracker {
     // The number of parallel threads.
     protected val nThreads: Int = scenario.nThreads
     // Runner for scenario invocations,
@@ -707,7 +707,7 @@ abstract class ManagedStrategy(
         if (collectTrace) {
             runInIgnoredSection {
                 // We cannot simply read `thread` as Forcible???Exception can be thrown.
-                val iThread = (Thread.currentThread() as TestThread).threadNumber
+                val iThread = (Thread.currentThread() as TestThread).threadId
                 val tracePoint = methodCallTracePointStack[iThread].removeLast()
                 tracePoint.initializeThrownException(t)
                 afterMethodCall(iThread, tracePoint)

@@ -93,7 +93,7 @@ internal open class ParallelThreadsRunner(
         )
         // In the case of managed checking strategy, we want to track events of the execution
         if (strategy is ManagedStrategy) {
-            executor.threads.forEach { it.sharedEventsTracker = strategy }
+            executor.threads.forEach { it.eventTracker = strategy }
         }
         reset()
     }

@@ -10,7 +10,6 @@
 
 package org.jetbrains.kotlinx.lincheck;
 
-import kotlin.Unit;
 import org.jetbrains.kotlinx.lincheck.runner.*;
 import org.jetbrains.kotlinx.lincheck.strategy.*;
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*;
