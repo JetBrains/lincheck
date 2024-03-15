@@ -16,6 +16,9 @@ package sun.nio.ch.lincheck
 import org.jetbrains.kotlinx.lincheck.runInIgnoredSection
 import java.util.*
 
+/**
+ * Methods of this object are called from the instrumented code.
+ */
 internal object Injections {
     @JvmStatic
     var lastSuspendedCancellableContinuationDuringVerification: Any? = null

@@ -156,22 +156,19 @@ internal class FixedActiveThreadsExecutor(private val testName: String, private 
 
     private fun testThreadRunnable(iThread: Int) = Runnable {
         loop@ while (true) {
-            val task = runInIgnoredSection {
-                val task = getTask(iThread)
-                if (task === Shutdown) return@Runnable
-                tasks[iThread].value = null // reset task
-                task
-            }
+            val task = getTask(iThread)
+            if (task === Shutdown) return@Runnable
+            tasks[iThread].value = null // reset task
             val threadExecution = task as TestThreadExecution
             check(threadExecution.iThread == iThread)
             try {
                 threadExecution.run()
             } catch(e: Throwable) {
                 val wrapped = wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(e)
-                runInIgnoredSection { setResult(iThread, wrapped) }
+                setResult(iThread, wrapped)
                 continue@loop
             }
-            runInIgnoredSection { setResult(iThread, Done) }
+            setResult(iThread, Done)
         }
     }
 
