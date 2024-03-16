@@ -28,8 +28,11 @@ class CompletedInvocationResult(
  */
 class DeadlockInvocationResult(
     val threadDump: Map<Thread, Array<StackTraceElement>>? = null,
-    val detectedByRunner: Boolean = false
 ) : InvocationResult()
+
+class RunnerTimeoutInvocationResult(
+    val threadDump: Map<Thread, Array<StackTraceElement>>,
+): InvocationResult()
 
 /**
  * The invocation has completed with an unexpected exception.

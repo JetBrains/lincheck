@@ -46,11 +46,7 @@ class FixedActiveThreadsExecutorIsolatedTest {
     }
 
     @Test(timeout = 100_000)
-    fun testSubmitTimeout() = FixedActiveThreadsExecutor(
-        "FixedActiveThreadsExecutorTest.testSubmitTimeout",
-        2,
-        0
-    ).use { executor ->
+    fun testSubmitTimeout() = FixedActiveThreadsExecutor("FixedActiveThreadsExecutorTest.testSubmitTimeout", 2, 0).use { executor ->
         val tasks = Array<TestThreadExecution>(2) { iThread ->
             object : TestThreadExecution(iThread) {
                 init {

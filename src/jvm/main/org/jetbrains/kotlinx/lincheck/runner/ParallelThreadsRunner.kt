@@ -71,7 +71,6 @@ internal open class ParallelThreadsRunner(
     private fun trySetCancelledStatus(iThread: Int, actorId: Int) = completionStatuses[iThread].compareAndSet(actorId, null, CompletionStatus.CANCELLED)
 
     private val uninitializedThreads = AtomicInteger(scenario.nThreads) // for threads synchronization
-    private var yieldInvokedInOnStart = false
 
     private var initialPartExecution: TestThreadExecution? = null
     private var parallelPartExecutions: Array<TestThreadExecution> = arrayOf()
@@ -163,6 +162,10 @@ internal open class ParallelThreadsRunner(
         completions.forEach {
             it.forEach { completion ->
                 completion.resWithCont.set(null)
+                // As we're using the same instances of Completion during multiply invocations, it's
+                // context may collect some data,
+                // which lead to non-determinism in a subsequent invocation.
+                // To avoid this, we reset its context.
                 completion.reset()
             }
         }
@@ -314,7 +317,7 @@ internal open class ParallelThreadsRunner(
             )
         } catch (e: TimeoutException) {
             val threadDump = collectThreadDump(this)
-            return DeadlockInvocationResult(threadDump, detectedByRunner = true)
+            return RunnerTimeoutInvocationResult(threadDump)
         } catch (e: ExecutionException) {
             return UnexpectedExceptionInvocationResult(e.cause!!)
         } finally {

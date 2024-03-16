@@ -52,6 +52,8 @@ public class TransformationClassLoader extends ExecutionClassLoader {
     public TransformationClassLoader(Strategy strategy) {
         classTransformers = new ArrayList<>();
         // Apply the strategy's transformer at first, then the runner's one.
+        // TODO: add Strategy.transformationMode property to get rig of this instanceof check
+        //  (now it's impossible due to lack of internal modifier in Java)
         TransformationMode transformationMode = strategy instanceof ModelCheckingStrategy ? TransformationMode.MODEL_CHECKING : TransformationMode.STRESS;
         classTransformers.add((cw) -> new LincheckClassVisitor(transformationMode, cw));
         remapper = UtilsKt.getRemapperByTransformers(transformationMode);
@@ -101,9 +103,9 @@ public class TransformationClassLoader extends ExecutionClassLoader {
      * Some API classes cannot be transformed due to the [sun.reflect.CallerSensitive] annotation.
      */
     public static boolean isImpossibleToTransformApiClass(String className) {
-        return Objects.equals(className, "sun.misc.Unsafe") ||
-                Objects.equals(className, "jdk.internal.misc.Unsafe") ||
-                Objects.equals(className, "java.lang.invoke.VarHandle") ||
+        return className.equals("sun.misc.Unsafe") ||
+                className.equals("jdk.internal.misc.Unsafe") ||
+                className.equals("java.lang.invoke.VarHandle") ||
                 className.startsWith("java.util.concurrent.atomic.Atomic") && className.endsWith("FieldUpdater");
     }
 

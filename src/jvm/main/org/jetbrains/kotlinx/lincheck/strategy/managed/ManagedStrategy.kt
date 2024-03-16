@@ -187,6 +187,10 @@ abstract class ManagedStrategy(
             if (verifier.verifyResults(scenario, result.results)) null
             else IncorrectResultsFailure(scenario, result.results, collectTrace(result))
         }
+        // In case when a runner detects a deadlock, some threads can still work with current strategy
+        // instance and simultaneously add events to the TraceCollector, which leads to an inconsistent trace.
+        // Therefore, if the runner detects deadlock, we don't even try to collect trace.
+        is RunnerTimeoutInvocationResult -> result.toLincheckFailure(scenario, trace = null)
         else -> result.toLincheckFailure(scenario, collectTrace(result))
     }
 
@@ -194,11 +198,6 @@ abstract class ManagedStrategy(
      * Re-runs the last invocation to collect its trace.
      */
     private fun collectTrace(failingResult: InvocationResult): Trace? {
-        // In case when a runner detects a deadlock, some threads can still work with current strategy
-        // instance and simultaneously add events to the TraceCollector, which leads to an inconsistent trace.
-        // Therefore, if the runner detects deadlock, we don't even try to collect trace.
-        if (failingResult is DeadlockInvocationResult && failingResult.detectedByRunner) return null
-
         val detectedByStrategy = suddenInvocationResult != null
         val canCollectTrace = when {
             detectedByStrategy -> true // ObstructionFreedomViolationInvocationResult or UnexpectedExceptionInvocationResult
@@ -237,7 +236,7 @@ abstract class ManagedStrategy(
                 appendln(loggedResults.toLincheckFailure(scenario, Trace(traceCollector!!.trace)).toString())
             }.toString()
         }
-        if (loggedResults is DeadlockInvocationResult && loggedResults.detectedByRunner) return null
+        if (loggedResults is RunnerTimeoutInvocationResult) return null
 
         return Trace(traceCollector!!.trace)
     }
@@ -248,7 +247,7 @@ abstract class ManagedStrategy(
     protected fun runInvocation(): InvocationResult {
         initializeInvocation()
         val result = runner.run()
-        if (result is DeadlockInvocationResult && result.detectedByRunner) {
+        if (result is RunnerTimeoutInvocationResult) {
             return result
         }
         // Has strategy already determined the invocation result?

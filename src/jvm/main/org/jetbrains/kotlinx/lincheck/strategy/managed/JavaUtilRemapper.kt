@@ -10,6 +10,9 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.isImpossibleToTransformApiClass
+import org.jetbrains.kotlinx.lincheck.transformation.NOT_TRANSFORMED_JAVA_UTIL_CLASSES
+import org.jetbrains.kotlinx.lincheck.transformation.TRANSFORMED_JAVA_UTIL_INTERFACES
 import org.objectweb.asm.commons.*
 import org.reflections.*
 import org.reflections.scanners.*
@@ -28,7 +31,7 @@ internal class JavaUtilRemapper : Remapper() {
             // function package is not transformed, because AFU uses it, and thus, there will be transformation problems
             val inFunctionPackage = name.startsWith("java/util/function/")
             // some api classes that provide low-level access can not be transformed
-            val isImpossibleToTransformApi = TransformationClassLoader.isImpossibleToTransformApiClass(normalizedName)
+            val isImpossibleToTransformApi = isImpossibleToTransformApiClass(normalizedName)
             // interfaces are not transformed by default and are in the special set when they should be transformed
             val isTransformedInterface = originalClass.isInterface && originalClass.name.internalClassName in TRANSFORMED_JAVA_UTIL_INTERFACES
             // classes are transformed by default and are in the special set when they should not be transformed
@@ -113,40 +116,3 @@ private val Class<*>.causesTransformationProblem: Boolean get() = when {
     isInterface -> name.internalClassName in TRANSFORMED_JAVA_UTIL_INTERFACES
     else -> name.internalClassName !in NOT_TRANSFORMED_JAVA_UTIL_CLASSES
 }
-
-internal val NOT_TRANSFORMED_JAVA_UTIL_CLASSES = setOf(
-    "java/util/ServiceLoader", // can not be transformed because of access to `SecurityManager`
-    "java/util/concurrent/TimeUnit", // many not transformed interfaces such as `java.util.concurrent.BlockingQueue` use it
-    "java/util/OptionalDouble", // used by `java.util.stream.DoubleStream`. Is an immutable collection
-    "java/util/OptionalLong",
-    "java/util/OptionalInt",
-    "java/util/Optional",
-    "java/util/Locale", // is an immutable class too
-    "java/util/Locale\$Category",
-    "java/util/Locale\$FilteringMode",
-    "java/util/Currency",
-    "java/util/Date",
-    "java/util/Calendar",
-    "java/util/TimeZone",
-    "java/util/DoubleSummaryStatistics", // this class is mutable, but `java.util.stream.DoubleStream` interface better be not transformed
-    "java/util/LongSummaryStatistics",
-    "java/util/IntSummaryStatistics",
-    "java/util/Formatter",
-    "java/util/stream/PipelineHelper",
-    "java/util/Random", // will be thread safe after `RandomTransformer` transformation
-    "java/util/concurrent/ThreadLocalRandom"
-)
-internal val TRANSFORMED_JAVA_UTIL_INTERFACES = setOf(
-    "java/util/concurrent/CompletionStage", // because it uses `java.util.concurrent.CompletableFuture`
-    "java/util/Observer", // uses `java.util.Observable`
-    "java/util/concurrent/RejectedExecutionHandler",
-    "java/util/concurrent/ForkJoinPool\$ForkJoinWorkerThreadFactory",
-    "java/util/jar/Pack200\$Packer",
-    "java/util/jar/Pack200\$Unpacker",
-    "java/util/prefs/PreferencesFactory",
-    "java/util/ResourceBundle\$CacheKeyReference",
-    "java/util/prefs/PreferenceChangeListener",
-    "java/util/prefs/NodeChangeListener",
-    "java/util/logging/Filter",
-    "java/util/spi/ResourceBundleControlProvider"
-)
