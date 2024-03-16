@@ -38,6 +38,7 @@ public class TestThreadExecutionGenerator {
     private static final Method RUNNER_ON_START_METHOD = new Method("onStart", VOID_TYPE, new Type[]{INT_TYPE});
     private static final Method RUNNER_ON_FINISH_METHOD = new Method("onFinish", VOID_TYPE, new Type[]{INT_TYPE});
     private static final Method RUNNER_ON_ACTOR_START = new Method("onActorStart", Type.VOID_TYPE, new Type[]{ Type.INT_TYPE });
+    private static final Method RUNNER_ON_ACTOR_FINISH = new Method("onActorFinish", Type.VOID_TYPE, NO_ARGS);
 
     private static final Type TEST_THREAD_EXECUTION_TYPE = getType(TestThreadExecution.class);
     private static final Method TEST_THREAD_EXECUTION_CONSTRUCTOR;
@@ -250,6 +251,10 @@ public class TestThreadExecutionGenerator {
             // End of try-catch block for all other exceptions
             mv.goTo(skipHandlers);
             mv.visitLabel(skipHandlers);
+            // Invoke runner onActorFinish method
+            mv.loadThis();
+            mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
+            mv.invokeVirtual(RUNNER_TYPE, RUNNER_ON_ACTOR_FINISH);
             // Increment the clock
             mv.loadThis();
             mv.invokeVirtual(TEST_THREAD_EXECUTION_TYPE, TEST_THREAD_EXECUTION_INC_CLOCK);

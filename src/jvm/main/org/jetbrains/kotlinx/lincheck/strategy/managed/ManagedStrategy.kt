@@ -112,12 +112,12 @@ abstract class ManagedStrategy(
 
     private fun createRunner(): ManagedStrategyRunner =
         ManagedStrategyRunner(
-            this,
-            testClass,
-            validationFunction,
-            stateRepresentationFunction,
-            testCfg.timeoutMs,
-            UseClocks.ALWAYS
+            managedStrategy = this,
+            testClass = testClass,
+            validationFunction = validationFunction,
+            stateRepresentationMethod = stateRepresentationFunction,
+            timeoutMs = testCfg.timeoutMs,
+            useClocks = UseClocks.ALWAYS
         )
 
     fun useBytecodeCache(): Boolean =
@@ -225,8 +225,7 @@ abstract class ManagedStrategy(
 
         val loggedResults = runInvocation()
         val sameResultTypes = loggedResults.javaClass == failingResult.javaClass
-        val sameResults =
-            loggedResults !is CompletedInvocationResult || failingResult !is CompletedInvocationResult || loggedResults.results == failingResult.results
+        val sameResults = loggedResults !is CompletedInvocationResult || failingResult !is CompletedInvocationResult || loggedResults.results == failingResult.results
         check(sameResultTypes && sameResults) {
             StringBuilder().apply {
                 appendln("Non-determinism found. Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc).")
@@ -408,13 +407,15 @@ abstract class ManagedStrategy(
     }
 
     override fun onActorStart(iThread: Int) {
-        runInIgnoredSection {
-            currentActorId[iThread]++
-            callStackTrace[iThread].clear()
-            suspendedFunctionsStack[iThread].clear()
-            loopDetector.onActorStart(iThread)
-        }
+        currentActorId[iThread]++
+        callStackTrace[iThread].clear()
+        suspendedFunctionsStack[iThread].clear()
+        loopDetector.onActorStart(iThread)
         (Thread.currentThread() as TestThread).inTestingCode = true
+    }
+
+    override fun onActorFinish() {
+        (Thread.currentThread() as TestThread).inTestingCode = false
     }
 
     /**
@@ -518,12 +519,15 @@ abstract class ManagedStrategy(
         return 0
     }
 
-    // == UTILITY METHODS ==
-
     override fun lock(monitor: Any, codeLocation: Int): Unit = runInIgnoredSection {
         val tracePoint = if (collectTrace) {
             val iThread = currentThread
-            MonitorEnterTracePoint(iThread, currentActorId[iThread], callStackTrace[iThread], CodeLocations.stackTrace(codeLocation))
+            MonitorEnterTracePoint(
+                iThread = iThread,
+                actorId = currentActorId[iThread],
+                callStackTrace = callStackTrace[iThread],
+                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+            )
         } else {
             null
         }
@@ -533,7 +537,12 @@ abstract class ManagedStrategy(
     override fun unlock(monitor: Any, codeLocation: Int): Unit = runInIgnoredSection {
         val tracePoint = if (collectTrace) {
             val iThread = currentThread
-            MonitorExitTracePoint(iThread, currentActorId[iThread], callStackTrace[iThread], CodeLocations.stackTrace(codeLocation))
+            MonitorExitTracePoint(
+                iThread = iThread,
+                actorId = currentActorId[iThread],
+                callStackTrace = callStackTrace[iThread],
+                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+            )
         } else {
             null
         }
@@ -543,7 +552,12 @@ abstract class ManagedStrategy(
     override fun park(codeLocation: Int): Unit = runInIgnoredSection {
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
-            ParkTracePoint(iThread, currentActorId[iThread], callStackTrace[iThread], CodeLocations.stackTrace(codeLocation))
+            ParkTracePoint(
+                iThread = iThread,
+                actorId = currentActorId[iThread],
+                callStackTrace = callStackTrace[iThread],
+                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+            )
         } else {
             null
         }
@@ -553,7 +567,12 @@ abstract class ManagedStrategy(
     override fun unpark(thread: Thread, codeLocation: Int): Unit = runInIgnoredSection {
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
-            UnparkTracePoint(iThread, currentActorId[iThread], callStackTrace[iThread], CodeLocations.stackTrace(codeLocation))
+            UnparkTracePoint(
+                iThread = iThread,
+                actorId = currentActorId[iThread],
+                callStackTrace = callStackTrace[iThread],
+                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+            )
         } else {
             null
         }
@@ -563,7 +582,12 @@ abstract class ManagedStrategy(
     override fun wait(monitor: Any, codeLocation: Int, withTimeout: Boolean): Unit = runInIgnoredSection {
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
-            WaitTracePoint(iThread, currentActorId[iThread], callStackTrace[iThread], CodeLocations.stackTrace(codeLocation))
+            WaitTracePoint(
+                iThread = iThread,
+                actorId = currentActorId[iThread],
+                callStackTrace = callStackTrace[iThread],
+                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+            )
         } else {
             null
         }
@@ -573,7 +597,12 @@ abstract class ManagedStrategy(
     override fun notify(monitor: Any, codeLocation: Int, notifyAll: Boolean): Unit = runInIgnoredSection {
         val tracePoint = if (collectTrace) {
             val iThread = currentThread
-            NotifyTracePoint(iThread, currentActorId[iThread], callStackTrace[iThread], CodeLocations.stackTrace(codeLocation))
+            NotifyTracePoint(
+                iThread = iThread,
+                actorId = currentActorId[iThread],
+                callStackTrace = callStackTrace[iThread],
+                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+            )
         } else {
             null
         }
@@ -585,7 +614,11 @@ abstract class ManagedStrategy(
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             ReadTracePoint(
-                iThread, currentActorId[iThread], callStackTrace[iThread], fieldName, CodeLocations.stackTrace(codeLocation)
+                iThread = iThread,
+                actorId = currentActorId[iThread],
+                callStackTrace = callStackTrace[iThread],
+                fieldName = fieldName,
+                stackTraceElement = CodeLocations.stackTrace(codeLocation)
             )
         } else {
             null
@@ -600,8 +633,11 @@ abstract class ManagedStrategy(
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             ReadTracePoint(
-                iThread, currentActorId[iThread], callStackTrace[iThread],
-                fieldName, CodeLocations.stackTrace(codeLocation)
+                iThread = iThread,
+                actorId = currentActorId[iThread],
+                callStackTrace = callStackTrace[iThread],
+                fieldName = fieldName,
+                stackTraceElement = CodeLocations.stackTrace(codeLocation)
             )
         } else {
             null
@@ -616,8 +652,13 @@ abstract class ManagedStrategy(
         if (localObjectManager.isLocalObject(array)) return@runInIgnoredSection
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
-            ReadTracePoint(iThread, currentActorId[iThread], callStackTrace[iThread],
-                "Array[$index]", CodeLocations.stackTrace(codeLocation))
+            ReadTracePoint(
+                iThread = iThread,
+                actorId = currentActorId[iThread],
+                callStackTrace = callStackTrace[iThread],
+                fieldName = "Array[$index]",
+                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+            )
         } else {
             null
         }
@@ -643,8 +684,13 @@ abstract class ManagedStrategy(
         }
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
-            WriteTracePoint(iThread, currentActorId[iThread], callStackTrace[iThread],
-                fieldName, CodeLocations.stackTrace(codeLocation)).also {
+            WriteTracePoint(
+                iThread = iThread,
+                actorId = currentActorId[iThread],
+                callStackTrace = callStackTrace[iThread],
+                fieldName = fieldName,
+                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+            ).also {
                 it.initializeWrittenValue(value)
             }
         } else {
@@ -658,8 +704,13 @@ abstract class ManagedStrategy(
         localObjectManager.deleteLocalObject(value)
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
-            WriteTracePoint(iThread, currentActorId[iThread], callStackTrace[iThread],
-                fieldName, CodeLocations.stackTrace(codeLocation)).also {
+            WriteTracePoint(
+                iThread = iThread,
+                actorId = currentActorId[iThread],
+                callStackTrace = callStackTrace[iThread],
+                fieldName = fieldName,
+                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+            ).also {
                 it.initializeWrittenValue(value)
             }
         } else {
@@ -675,8 +726,13 @@ abstract class ManagedStrategy(
         }
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
-            WriteTracePoint(iThread, currentActorId[iThread], callStackTrace[iThread],
-                "Array[$index]", CodeLocations.stackTrace(codeLocation)).also {
+            WriteTracePoint(
+                iThread = iThread,
+                actorId = currentActorId[iThread],
+                callStackTrace = callStackTrace[iThread],
+                fieldName = "Array[$index]",
+                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+            ).also {
                 it.initializeWrittenValue(value)
             }
         } else {
@@ -1060,7 +1116,12 @@ abstract class ManagedStrategy(
         val trace: List<TracePoint> = _trace
 
         fun newSwitch(iThread: Int, reason: SwitchReason) {
-            _trace += SwitchEventTracePoint(iThread, currentActorId[iThread], reason, callStackTrace[iThread])
+            _trace += SwitchEventTracePoint(
+                iThread = iThread,
+                actorId = currentActorId[iThread],
+                reason = reason,
+                callStackTrace = callStackTrace[iThread]
+            )
         }
 
         fun newActiveLockDetected(iThread: Int, cyclePeriod: Int) {
@@ -1089,12 +1150,21 @@ abstract class ManagedStrategy(
             val stateRepresentation = runner.constructStateRepresentation() ?: return
             // use call stack trace of the previous trace point
             val callStackTrace = callStackTrace[currentThread]
-            _trace += StateRepresentationTracePoint(currentThread, currentActorId[currentThread], stateRepresentation, callStackTrace)
+            _trace += StateRepresentationTracePoint(
+                iThread = currentThread,
+                actorId = currentActorId[currentThread],
+                stateRepresentation = stateRepresentation,
+                callStackTrace = callStackTrace
+            )
 
         }
 
         fun passObstructionFreedomViolationTracePoint(iThread: Int) {
-            _trace += ObstructionFreedomViolationExecutionAbortTracePoint(iThread, currentActorId[iThread], _trace.last().callStackTrace)
+            _trace += ObstructionFreedomViolationExecutionAbortTracePoint(
+                iThread = iThread,
+                actorId = currentActorId[iThread],
+                callStackTrace = _trace.last().callStackTrace
+            )
         }
     }
 
