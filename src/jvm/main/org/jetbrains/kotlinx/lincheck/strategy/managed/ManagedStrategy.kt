@@ -235,6 +235,9 @@ abstract class ManagedStrategy(
                 appendln(loggedResults.toLincheckFailure(scenario, Trace(traceCollector!!.trace)).toString())
             }.toString()
         }
+        // In case when a runner detects a deadlock, some threads can still be in an active state,
+        // simultaneously add events to the TraceCollector, which leads to an inconsistent trace.
+        // Therefore, if the runner detects deadlock, we don't even try to collect trace.
         if (loggedResults is RunnerTimeoutInvocationResult) return null
 
         return Trace(traceCollector!!.trace)
@@ -297,8 +300,6 @@ abstract class ManagedStrategy(
      * @param codeLocation the byte-code location identifier of the point in code.
      */
     private fun newSwitchPoint(iThread: Int, codeLocation: Int, tracePoint: TracePoint?) {
-        // TODO: check if this check is needed
-        if (Injections.inTestingCode()) return // cannot suspend in ignored sections
         // Throw ForcibleExecutionFinishException if the invocation
         // result is already calculated.
         if (suddenInvocationResult != null) throw ForcibleExecutionFinishError
@@ -385,6 +386,8 @@ abstract class ManagedStrategy(
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
      */
     open fun onFinish(iThread: Int) {
+        // onActorFinish we be called so the statement below is not necessary, but we verify
+        // additionally that we are now in a testing code to avoid bugs
         (Thread.currentThread() as TestThread).inTestingCode = false
         awaitTurn(iThread)
         finished[iThread] = true
@@ -392,11 +395,13 @@ abstract class ManagedStrategy(
         doSwitchCurrentThread(iThread, true)
     }
     /**
-     * This method is executed if an exception has been thrown.
+     * This method is executed if an illegal exception has been thrown (see [org.jetbrains.kotlinx.lincheck.exceptionCanBeValidExecutionResult]).
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
      * @param exception the exception that was thrown
      */
     open fun onFailure(iThread: Int, exception: Throwable) {
+        // This method is called only if exception can't be treated as a normal operation result,
+        // so we exit testing code to avoid trace collection resume or some bizarre bugs
         (Thread.currentThread() as TestThread).inTestingCode = false
         // Despite the fact that the corresponding failure will be detected by the runner,
         // the managed strategy can construct a trace to reproduce this failure.
