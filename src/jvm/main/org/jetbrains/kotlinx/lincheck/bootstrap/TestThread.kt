@@ -21,15 +21,15 @@ package sun.nio.ch.lincheck
  * Note: This class needs to be loaded in the bootstrap class loader, as the transformation requires it.
  *
  * @param testName The name of the test currently being run.
- * @property threadId The index of the thread.
+ * @property iThread The index of the thread.
  * @param block The Runnable object associated with the thread.
  */
 internal class TestThread(
     testName: String,
-    val threadId: Int,
+    val iThread: Int,
     val runnerHash: Int,
     block: Runnable
-) : Thread(block, "Lincheck-${testName}-$threadId") {
+) : Thread(block, "Lincheck-${testName}-$iThread") {
 
     /**
      * The [EventTracker] for tracking shared memory events in the model checking mode.

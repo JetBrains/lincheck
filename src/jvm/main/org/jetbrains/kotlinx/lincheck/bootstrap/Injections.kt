@@ -221,4 +221,19 @@ internal object Injections {
         // TODO: easier to support when `javaagent` is merged
         return 0
     }
+
+    // == PLUGIN ==
+
+    @JvmStatic
+    fun shouldInvokeBeforeEvent(): Boolean {
+        return eventTracker.shouldInvokeBeforeEvent()
+    }
+
+    @JvmStatic
+    fun readNextEventId(): Int {
+        return eventTracker.readNextEventId()
+    }
+
+    @JvmStatic
+    fun currEventTracker(): EventTracker = eventTracker
 }

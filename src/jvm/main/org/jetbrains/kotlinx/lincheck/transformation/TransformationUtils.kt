@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
+import org.jetbrains.kotlinx.lincheck.beforeEvent
 import org.objectweb.asm.*
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
@@ -76,6 +77,21 @@ internal fun GeneratorAdapter.invokeStatic(function: KFunction<*>) {
         }
     }
     invokeStatic(clazz, method)
+}
+
+internal fun GeneratorAdapter.invokeBeforeEvent(type: String) = invokeInIgnoredSection {
+    ifStatement(
+        condition = {
+            invokeStatic(Injections::shouldInvokeBeforeEvent)
+        },
+        ifClause = {
+            invokeStatic(Injections::readNextEventId)
+            push(type)
+            invokeStatic(Injections::currEventTracker)
+            invokeStatic(::beforeEvent)
+        },
+        elseClause = {}
+    )
 }
 
 /**

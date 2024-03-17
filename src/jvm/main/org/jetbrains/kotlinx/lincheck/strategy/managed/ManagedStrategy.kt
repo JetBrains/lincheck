@@ -48,7 +48,7 @@ abstract class ManagedStrategy(
     protected val nThreads: Int = scenario.nThreads
     // Runner for scenario invocations,
     // can be replaced with a new one for trace construction.
-    private var runner: ManagedStrategyRunner
+    internal var runner: ManagedStrategyRunner
     // Spin-waiters for each thread
     private val spinners = SpinnerGroup(nThreads)
 
@@ -76,7 +76,7 @@ abstract class ManagedStrategy(
     // == TRACE CONSTRUCTION FIELDS ==
 
     // Whether an additional information requires for the trace construction should be collected.
-    private var collectTrace = false
+    protected var collectTrace = false
     // Collector of all events in the execution such as thread switches.
     private var traceCollector: TraceCollector? = null // null when `collectTrace` is false
     // Stores the currently executing methods call stack for each thread.
@@ -767,7 +767,7 @@ abstract class ManagedStrategy(
         if (collectTrace) {
             runInIgnoredSection {
                 // We cannot simply read `thread` as Forcible???Exception can be thrown.
-                val iThread = (Thread.currentThread() as TestThread).threadId
+                val iThread = (Thread.currentThread() as TestThread).iThread
                 val tracePoint = methodCallTracePointStack[iThread].removeLast()
                 tracePoint.initializeThrownException(t)
                 afterMethodCall(iThread, tracePoint)
@@ -838,6 +838,11 @@ abstract class ManagedStrategy(
             }
             ManagedGuaranteeType.TREAT_AS_ATOMIC -> {
                 beforeAtomicMethodCall(className, methodName, codeLocation, params)
+                runInIgnoredSection {
+                    if (shouldInvokeBeforeEvent()) {
+                        beforeEvent(readNextEventId(), "method call $methodName", this)
+                    }
+                }
                 enterIgnoredSection()
             }
             null -> {
@@ -1572,7 +1577,7 @@ abstract class ManagedStrategy(
  * This class is a [ParallelThreadsRunner] with some overrides that add callbacks
  * to the strategy so that it can known about some required events.
  */
-private class ManagedStrategyRunner(
+internal class ManagedStrategyRunner(
     private val managedStrategy: ManagedStrategy,
     testClass: Class<*>, validationFunction: Actor?, stateRepresentationMethod: Method?,
     timeoutMs: Long, useClocks: UseClocks

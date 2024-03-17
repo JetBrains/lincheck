@@ -145,6 +145,7 @@ internal class LincheckClassVisitor(
                         code = {
                             loadNewCodeLocationId()
                             invokeStatic(Injections::lock)
+                            invokeBeforeEvent("lock")
                         }
                     )
                 }
@@ -155,6 +156,7 @@ internal class LincheckClassVisitor(
                         code = {
                             loadNewCodeLocationId()
                             invokeStatic(Injections::unlock)
+                            invokeBeforeEvent("unlock")
                         }
                     )
                 }
@@ -428,6 +430,7 @@ internal class LincheckClassVisitor(
                                 pop() // Unsafe
                                 loadNewCodeLocationId()
                                 invokeStatic(Injections::park)
+                                invokeBeforeEvent("park")
                             }
                         )
                     }
@@ -440,6 +443,7 @@ internal class LincheckClassVisitor(
                             code = {
                                 loadNewCodeLocationId()
                                 invokeStatic(Injections::unpark)
+                                invokeBeforeEvent("unpark")
                                 pop() // pop Unsafe object
                             }
                         )
@@ -485,6 +489,7 @@ internal class LincheckClassVisitor(
                             loadNewCodeLocationId()
                             // STACK: className: String, fieldName: String, codeLocation: Int
                             invokeStatic(Injections::beforeReadFieldStatic)
+                            invokeBeforeEvent("SharedVariableRead")
                             // STACK: owner: Object
                             visitFieldInsn(opcode, owner, fieldName, desc)
                             // STACK: value
@@ -506,6 +511,7 @@ internal class LincheckClassVisitor(
                             push(owner)
                             push(fieldName)
                             loadNewCodeLocationId()
+                            invokeBeforeEvent("SharedVariableRead")
                             // STACK: owner: Object, owner: Object, className: String, fieldName: String, codeLocation: Int
                             invokeStatic(Injections::beforeReadField)
                             // STACK: owner: Object
@@ -534,6 +540,7 @@ internal class LincheckClassVisitor(
                             // STACK: value: Object, className: String, fieldName: String, value: Object, codeLocation: Int
                             invokeStatic(Injections::beforeWriteFieldStatic)
                             // STACK: value: Object
+                            invokeBeforeEvent("SharedVariableWrite")
                         }
                     )
                     // STACK: value: Object
@@ -565,6 +572,7 @@ internal class LincheckClassVisitor(
                             // STACK: owner: Object
                             loadLocal(valueLocal)
                             // STACK: owner: Object, value: Object
+                            invokeBeforeEvent("SharedVariableWrite")
                         }
                     )
                     // STACK: owner: Object, value: Object
@@ -625,6 +633,7 @@ internal class LincheckClassVisitor(
                             // STACK: array: Array, index: Int
                             loadLocal(valueLocal)
                             // STACK: array: Array, index: Int, value: Object
+                            invokeBeforeEvent("SharedVariableWrite")
                         }
                     )
                     visitInsn(opcode)
@@ -1257,7 +1266,7 @@ internal class LincheckClassVisitor(
             }
             // STACK: ..., array
             invokeStatic(if (!isAtomicUpdaterMethod) Injections::beforeAtomicMethodCall else Injections::beforeAtomicUpdaterMethodCall)
-
+            invokeBeforeEvent("method call $methodName")
 
             // STACK [INVOKEVIRTUAL]: owner, arguments
             // STACK [INVOKESTATIC]: arguments
@@ -1299,6 +1308,7 @@ internal class LincheckClassVisitor(
                                 code = {
                                     loadNewCodeLocationId()
                                     invokeStatic(Injections::wait)
+                                    invokeBeforeEvent("wait")
                                 }
                             )
                         }
@@ -1312,6 +1322,7 @@ internal class LincheckClassVisitor(
                                     pop2() // timeMillis
                                     loadNewCodeLocationId()
                                     invokeStatic(Injections::waitWithTimeout)
+                                    invokeBeforeEvent("wait")
                                 }
                             )
                         }
@@ -1326,6 +1337,7 @@ internal class LincheckClassVisitor(
                                     pop2() // timeMillis
                                     loadNewCodeLocationId()
                                     invokeStatic(Injections::waitWithTimeout)
+                                    invokeBeforeEvent("wait")
                                 }
                             )
                         }
@@ -1338,6 +1350,7 @@ internal class LincheckClassVisitor(
                                 code = {
                                     loadNewCodeLocationId()
                                     invokeStatic(Injections::notify)
+                                    invokeBeforeEvent("notify")
                                 }
                             )
                         }
@@ -1350,6 +1363,7 @@ internal class LincheckClassVisitor(
                                 code = {
                                     loadNewCodeLocationId()
                                     invokeStatic(Injections::notifyAll)
+                                    invokeBeforeEvent("notify")
                                 }
                             )
                         }

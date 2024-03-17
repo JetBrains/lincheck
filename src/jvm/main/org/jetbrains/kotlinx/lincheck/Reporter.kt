@@ -22,6 +22,9 @@ class Reporter(private val logLevel: LoggingLevel) {
     private val out: PrintStream = System.out
     private val outErr: PrintStream = System.err
 
+    fun logFailedIterationWarn(failure: LincheckFailure) = log(WARN) {
+        appendFailure(failure)
+    }
     fun logIteration(iteration: Int, maxIterations: Int, scenario: ExecutionScenario) = log(INFO) {
         appendLine("\n= Iteration $iteration / $maxIterations =")
         appendExecutionScenario(scenario)
@@ -508,20 +511,20 @@ internal fun actorNodeResultRepresentation(result: Result, exceptionStackTraces:
  * to use this information to numerate them and print their stacktrace with number.
  * @see collectExceptionStackTraces
  */
-private sealed interface ExceptionsProcessingResult
+internal sealed interface ExceptionsProcessingResult
 
 /**
  * Corresponds to the case when we tried to collect exceptions map but found one,
  * that was thrown from Lincheck internally.
  * In that case, we just want to print that exception and don't care about other exceptions.
  */
-private data class InternalLincheckBugResult(val exception: Throwable) :
+internal data class InternalLincheckBugResult(val exception: Throwable) :
     ExceptionsProcessingResult
 
 /**
  * Result of successful collection exceptions to map when no one of them was thrown from Lincheck.
  */
-private data class ExceptionStackTracesResult(val exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>) :
+internal data class ExceptionStackTracesResult(val exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>) :
     ExceptionsProcessingResult
 
 
@@ -536,7 +539,7 @@ private data class ExceptionStackTracesResult(val exceptionStackTraces: Map<Thro
  * @return exceptions stack traces map inside [ExceptionStackTracesResult] or [InternalLincheckBugResult]
  * if some exception occurred due a bug in Lincheck itself
  */
-private fun collectExceptionStackTraces(executionResult: ExecutionResult): ExceptionsProcessingResult {
+internal fun collectExceptionStackTraces(executionResult: ExecutionResult): ExceptionsProcessingResult {
     val exceptionStackTraces = mutableMapOf<Throwable, ExceptionNumberAndStacktrace>()
 
     (executionResult.initResults.asSequence()

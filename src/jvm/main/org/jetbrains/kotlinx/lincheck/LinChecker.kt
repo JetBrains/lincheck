@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import kotlin.reflect.*
 
@@ -48,6 +49,8 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
      */
     internal fun checkImpl(): LincheckFailure? {
         check(testConfigurations.isNotEmpty()) { "No Lincheck test configuration to run" }
+        // We need this call to disable breakpoints until an error has been found
+        ideaPluginEnabled()
         for (testCfg in testConfigurations) {
             val failure = testCfg.checkImpl()
             if (failure != null) return failure
@@ -63,7 +66,10 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             scenario.validate()
             reporter.logIteration(i + 1, customScenarios.size, scenario)
             val failure = scenario.run(this, verifier)
-            if (failure != null) return failure
+            if (failure != null) {
+                runReplay(failure, verifier)
+                return failure
+            }
         }
         var verifier = createVerifier()
         repeat(iterations) { i ->
@@ -80,13 +86,23 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             val failure = scenario.run(this, verifier)
             if (failure != null) {
                 val minimizedFailedIteration = if (!minimizeFailedScenario) failure else failure.minimize(this)
-                reporter.logFailedIteration(minimizedFailedIteration)
+                runReplay(minimizedFailedIteration, verifier)
                 return minimizedFailedIteration
             }
             // Reset the parameter generator ranges to start with the same initial bounds on each scenario generation.
             testStructure.parameterGenerators.forEach { it.reset() }
         }
         return null
+    }
+
+    private fun CTestConfiguration.runReplay(failure: LincheckFailure, verifier: Verifier) {
+        if (ideaPluginEnabled() && this is ModelCheckingCTestConfiguration) {
+            reporter.logFailedIterationWarn(failure)
+            withReplay()
+            failure.scenario.run(this, verifier)
+        } else {
+            reporter.logFailedIteration(failure)
+        }
     }
 
     // Tries to minimize the specified failing scenario to make the error easier to understand.

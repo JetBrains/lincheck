@@ -28,9 +28,9 @@ data class Trace(val trace: List<TracePoint>)
  * [callStackTrace] helps to understand whether two events
  * happened in the same, nested, or disjoint methods.
  */
-sealed class TracePoint(val iThread: Int, val actorId: Int, callStackTrace: CallStackTrace) {
+sealed class TracePoint(val iThread: Int, val actorId: Int, callStackTrace: CallStackTrace, var beforeEventId: Int = -1) {
     internal val callStackTrace = callStackTrace.toList()
-    protected abstract fun toStringImpl(): String
+    abstract fun toStringImpl(): String
     override fun toString(): String = toStringImpl()
 }
 

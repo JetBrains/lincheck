@@ -47,11 +47,11 @@ internal open class ParallelThreadsRunner(
 ) : Runner(strategy, testClass, validationFunction, stateRepresentationFunction) {
     private val testName = testClass.simpleName
     private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
-    private val executor = FixedActiveThreadsExecutor(testName, scenario.nThreads, runnerHash) // should be closed in `close()`
+    internal val executor = FixedActiveThreadsExecutor(testName, scenario.nThreads, runnerHash) // should be closed in `close()`
 
     private val spinners = SpinnerGroup(executor.threads.size)
 
-    private lateinit var testInstance: Any
+    internal lateinit var testInstance: Any
 
     private var suspensionPointResults = List(scenario.nThreads) { t ->
         MutableList<Result>(scenario.threads[t].size) { NoResult }

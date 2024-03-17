@@ -47,4 +47,10 @@ internal interface EventTracker {
 
     fun addDependency(receiver: Any, value: Any?)
     fun afterWrite()
+
+    // plugin
+
+    fun shouldInvokeBeforeEvent(): Boolean
+
+    fun readNextEventId(): Int
 }
