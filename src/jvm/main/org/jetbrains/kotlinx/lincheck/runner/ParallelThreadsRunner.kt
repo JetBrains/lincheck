@@ -127,6 +127,7 @@ internal open class ParallelThreadsRunner(
         }
 
         fun reset() {
+            resWithCont.set(null)
             context = ParallelThreadRunnerInterceptor(resWithCont) + StoreExceptionHandler() + Job()
         }
 
@@ -160,7 +161,6 @@ internal open class ParallelThreadsRunner(
         completedOrSuspendedThreads.set(0)
         completions.forEach {
             it.forEach { completion ->
-                completion.resWithCont.set(null)
                 // As we're using the same instances of Completion during multiply invocations, it's
                 // context may collect some data,
                 // which lead to non-determinism in a subsequent invocation.
