@@ -93,8 +93,11 @@ abstract class ManagedStrategy(
     // We store it as we initialize read value after the point is created so we have to store
     // the trace point somewhere to obtain it later
     private var lastReadTracePoint = ThreadLocal<ReadTracePoint?>()
-    private var randoms = (0 until nThreads + 2).map { Random(it.toLong()) }
+    // Random instances with fixed seeds to replace random calls in instrumented code
+    private var randoms = (0 until nThreads + 2).map { Random(it + 239L) }
+    // Current call stack for a thread, updated during beforeMethodCall and afterMethodCall methods
     private val methodCallTracePointStack = (0 until nThreads + 2).map { mutableListOf<MethodCallTracePoint>() }
+    // Guarantees, specified by used on some methods
     private val userDefinedGuarantees: List<ManagedStrategyGuarantee>? = testCfg.guarantees.ifEmpty { null }
 
     init {
@@ -187,9 +190,10 @@ abstract class ManagedStrategy(
             if (verifier.verifyResults(scenario, result.results)) null
             else IncorrectResultsFailure(scenario, result.results, collectTrace(result))
         }
-        // In case when a runner detects a deadlock, some threads can still work with current strategy
-        // instance and simultaneously add events to the TraceCollector, which leads to an inconsistent trace.
-        // Therefore, if the runner detects deadlock, we don't even try to collect trace.
+        // In case when a runner detects a deadlock,
+        // some threads can still work with the current strategy instance
+        // and simultaneously add events to the TraceCollector, which leads to an inconsistent trace.
+        // Therefore, if the runner detects a deadlock, we don’t even try to collect a trace.
         is RunnerTimeoutInvocationResult -> result.toLincheckFailure(scenario, trace = null)
         else -> result.toLincheckFailure(scenario, collectTrace(result))
     }
@@ -249,6 +253,9 @@ abstract class ManagedStrategy(
     protected fun runInvocation(): InvocationResult {
         initializeInvocation()
         val result = runner.run()
+        // In case when a runner detects a deadlock, some threads can still work with current strategy
+        // and modify strategy, so we're not interested in suddenInvocationResult in this case
+        // and immediately return RunnerTimeoutInvocationResult
         if (result is RunnerTimeoutInvocationResult) {
             return result
         }

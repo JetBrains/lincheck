@@ -55,137 +55,217 @@ internal object Injections {
         return t.inTestingCode && !t.inIgnoredSection
     }
 
+    /**
+     * Called from instrumented code before the lock operation
+     */
     @JvmStatic
     fun lock(monitor: Any, codeLocation: Int) {
         eventTracker.lock(monitor, codeLocation)
     }
 
+    /**
+     * Called from instrumented code before the unlock operation
+     */
     @JvmStatic
     fun unlock(monitor: Any, codeLocation: Int) {
         eventTracker.unlock(monitor, codeLocation)
     }
 
+    /**
+     * Called from the instrumented code before the park operation
+     */
     @JvmStatic
     fun park(codeLocation: Int) {
         eventTracker.park(codeLocation)
     }
 
+    /**
+     * Called from the instrumented code before the unpark operation
+     */
     @JvmStatic
     fun unpark(thread: Thread, codeLocation: Int) {
         eventTracker.unpark(thread, codeLocation)
     }
 
+    /**
+     * Called from the instrumented code before the wait operation
+     */
     @JvmStatic
     fun wait(monitor: Any, codeLocation: Int) {
         eventTracker.wait(monitor, codeLocation, withTimeout = false)
     }
 
+
+    /**
+     * Called from the instrumented code before the wait operation
+     */
     @JvmStatic
     fun waitWithTimeout(monitor: Any, codeLocation: Int) {
         eventTracker.wait(monitor, codeLocation, withTimeout = true)
     }
 
+    /**
+     * Called from the instrumented code before the notify operation
+     */
     @JvmStatic
     fun notify(monitor: Any, codeLocation: Int) {
         eventTracker.notify(monitor, codeLocation, notifyAll = false)
     }
 
+    /**
+     * Called from the instrumented code before the notifyAll operation
+     */
     @JvmStatic
     fun notifyAll(monitor: Any, codeLocation: Int) {
         eventTracker.notify(monitor, codeLocation, notifyAll = true)
     }
 
+    /**
+     * Called from the instrumented code to replace random.nextInt() call with a deterministic value
+     */
     @JvmStatic
     fun nextInt(): Int {
         return runInIgnoredSection { deterministicRandom().nextInt() }
     }
 
+    /**
+     * Called from the instrumented code to get a deterministic random instance
+     */
     @JvmStatic
     fun deterministicRandom(): Random {
         return eventTracker.getThreadLocalRandom()
     }
 
+    /**
+     * Called from the instrumented code to examine if this value is Random
+     */
     @JvmStatic
     fun isRandom(any: Any?): Boolean {
         return any is Random
     }
 
+    /**
+     * Called from the instrumented code before any field read
+     */
     @JvmStatic
     fun beforeReadField(obj: Any?, className: String, fieldName: String, codeLocation: Int) {
         if (obj == null) return // Ignore, NullPointerException will be thrown
         eventTracker.beforeReadField(obj, className, fieldName, codeLocation)
     }
 
+    /**
+     * Called from the instrumented code before any static field read
+     */
     @JvmStatic
     fun beforeReadFieldStatic(className: String, fieldName: String, codeLocation: Int) {
         eventTracker.beforeReadFieldStatic(className, fieldName, codeLocation)
     }
 
+    /**
+     * Called from the instrumented code before any array cell read
+     */
     @JvmStatic
     fun beforeReadArray(array: Any?, index: Int, codeLocation: Int) {
         if (array == null) return // Ignore, NullPointerException will be thrown
         eventTracker.beforeReadArrayElement(array, index, codeLocation)
     }
 
+    /**
+     * Called from the instrumented code after any field read
+     */
     @JvmStatic
     fun afterRead(value: Any?) {
         eventTracker.afterRead(value)
     }
 
+    /**
+     * Called from the instrumented code before any write operation
+     */
     @JvmStatic
     fun afterWrite() {
         eventTracker.afterWrite()
     }
 
+    /**
+     * Called from the instrumented code before any field write
+     */
     @JvmStatic
     fun beforeWriteField(obj: Any?, className: String, fieldName: String, value: Any?, codeLocation: Int) {
         if (obj == null) return // Ignore, NullPointerException will be thrown
         eventTracker.beforeWriteField(obj, className, fieldName, value, codeLocation)
     }
 
+    /**
+     * Called from the instrumented code before any static field write
+     */
     @JvmStatic
     fun beforeWriteFieldStatic(className: String, fieldName: String, value: Any?, codeLocation: Int) {
         eventTracker.beforeWriteFieldStatic(className, fieldName, value, codeLocation)
     }
 
+    /**
+     * Called from the instrumented code before any array cell write
+     */
     @JvmStatic
     fun beforeWriteArray(array: Any?, index: Int, value: Any?, codeLocation: Int) {
         if (array == null) return // Ignore, NullPointerException will be thrown
         eventTracker.beforeWriteArrayElement(array, index, value, codeLocation)
     }
 
-    // owner == null for static methods
+    /**
+     * Called from the instrumented code before any method call
+     *
+     * @param owner is `null` for static methods
+     */
     @JvmStatic
     fun beforeMethodCall(owner: Any?, className: String, methodName: String, codeLocation: Int, params: Array<Any?>) {
         eventTracker.beforeMethodCall(owner, className, methodName, codeLocation, params)
     }
 
 
+    /**
+     * Called from the instrumented code before any atomic method call
+     */
     @JvmStatic
     fun beforeAtomicMethodCall(ownerName: String, methodName: String, codeLocation: Int, params: Array<Any?>) {
         eventTracker.beforeAtomicMethodCall(ownerName, methodName, codeLocation, params)
     }
 
+    /**
+     * Called from the instrumented code before any AtomicFieldUpdater method call
+     */
     @JvmStatic
     fun beforeAtomicUpdaterMethodCall(owner: Any?, methodName: String, codeLocation: Int, params: Array<Any?>) {
         eventTracker.beforeAtomicUpdaterMethodCall(owner!!, methodName, codeLocation, params)
     }
 
+    /**
+     * Called from the instrumented code after any method successful call, i.e., without any exception
+     */
     @JvmStatic
     fun onMethodCallFinishedSuccessfully(result: Any?) {
         eventTracker.onMethodCallFinishedSuccessfully(result)
     }
 
+    /**
+     * Called from the instrumented code after any method that returns void successful call, i.e., without any exception
+     */
     @JvmStatic
     fun onMethodCallVoidFinishedSuccessfully() {
         eventTracker.onMethodCallFinishedSuccessfully(VOID_RESULT)
     }
 
+    /**
+     * Called from the instrumented code after any method call threw an exception
+     */
     @JvmStatic
     fun onMethodCallThrewException(t: Throwable) {
         eventTracker.onMethodCallThrewException(t)
     }
 
+    /**
+     * Called from the instrumented code after any object is created
+     */
     @JvmStatic
     fun onNewObjectCreation(obj: Any) {
         eventTracker.onNewObjectCreation(obj)
