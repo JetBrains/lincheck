@@ -309,8 +309,6 @@ abstract class ManagedStrategy(
      * @param codeLocation the byte-code location identifier of the point in code.
      */
     private fun newSwitchPoint(iThread: Int, codeLocation: Int, tracePoint: TracePoint?) {
-        // TODO: check if this check is needed
-        if (Injections.inTestingCode()) return // cannot suspend in ignored sections
         // Throw ForcibleExecutionFinishException if the invocation
         // result is already calculated.
         if (suddenInvocationResult != null) throw ForcibleExecutionFinishError
