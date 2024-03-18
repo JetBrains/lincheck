@@ -120,25 +120,33 @@ internal object Injections {
      * Called from the instrumented code to replace random.nextInt() call with a deterministic value
      */
     @JvmStatic
-    fun nextInt(): Int {
-        return eventTracker.randomNextInt()
-    }
+    fun nextInt(): Int =
+        eventTracker.randomNextInt()
+
+    /**
+     * Called from the instrumented code to replace random.nextInt() call with a deterministic value
+     */
+    @JvmStatic
+    fun nextInt2(origin: Int, bound: Int): Int =
+        eventTracker.run {
+            runInIgnoredSection {
+                getThreadLocalRandom().nextInt(bound)
+            }
+        }
 
     /**
      * Called from the instrumented code to get a deterministic random instance
      */
     @JvmStatic
-    fun deterministicRandom(): Random {
-        return eventTracker.getThreadLocalRandom()
-    }
+    fun deterministicRandom(): Random =
+        eventTracker.getThreadLocalRandom()
 
     /**
      * Called from the instrumented code to examine if this value is Random
      */
     @JvmStatic
-    fun isRandom(any: Any?): Boolean {
-        return any is Random
-    }
+    fun isRandom(any: Any?): Boolean =
+        any is Random
 
     /**
      * Called from the instrumented code before any field read
@@ -267,13 +275,6 @@ internal object Injections {
         eventTracker.onNewObjectCreation(obj)
     }
 
-    @JvmStatic
-    private val eventTracker: EventTracker
-        get() = (Thread.currentThread() as TestThread).eventTracker!! // should be non-null
-
-    @JvmStatic
-    val VOID_RESULT = Any()
-
     /**
      * Called from the instrumented code after value assigned to any receiver field.
      * Required to track local objects.
@@ -283,8 +284,6 @@ internal object Injections {
     fun addDependency(receiver: Any, value: Any?) {
         eventTracker.addDependency(receiver, value)
     }
-
-    // == LISTENING METHODS ==
 
     /**
      * Called from the instrumented code to replace [java.lang.Object.hashCode] method call with some
@@ -310,4 +309,11 @@ internal object Injections {
         // TODO: easier to support when `javaagent` is merged
         return 0
     }
+
+    @JvmStatic
+    private val eventTracker: EventTracker
+        get() = (Thread.currentThread() as TestThread).eventTracker!! // should be non-null
+
+    @JvmStatic
+    val VOID_RESULT = Any()
 }
