@@ -230,6 +230,10 @@ abstract class ManagedStrategy(
         )
 
         val loggedResults = runInvocation()
+        // In case when a runner detects a deadlock, some threads can still be in an active state,
+        // simultaneously add events to the TraceCollector, which leads to an inconsistent trace.
+        // Therefore, if the runner detects deadlock, we don't even try to collect trace.
+        if (loggedResults is RunnerTimeoutInvocationResult) return null
         val sameResultTypes = loggedResults.javaClass == failingResult.javaClass
         val sameResults = loggedResults !is CompletedInvocationResult || failingResult !is CompletedInvocationResult || loggedResults.results == failingResult.results
         check(sameResultTypes && sameResults) {
@@ -241,10 +245,6 @@ abstract class ManagedStrategy(
                 appendln(loggedResults.toLincheckFailure(scenario, Trace(traceCollector!!.trace)).toString())
             }.toString()
         }
-        // In case when a runner detects a deadlock, some threads can still be in an active state,
-        // simultaneously add events to the TraceCollector, which leads to an inconsistent trace.
-        // Therefore, if the runner detects deadlock, we don't even try to collect trace.
-        if (loggedResults is RunnerTimeoutInvocationResult) return null
 
         return Trace(traceCollector!!.trace)
     }
