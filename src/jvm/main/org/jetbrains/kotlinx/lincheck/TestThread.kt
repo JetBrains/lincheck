@@ -8,17 +8,14 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-// we need to use some "legal" package for the bootstrap class loader
-@file:Suppress("PackageDirectoryMismatch")
+package org.jetbrains.kotlinx.lincheck
 
-package sun.nio.ch.lincheck
+import kotlinx.coroutines.CancellableContinuation
 
 /**
  * When Lincheck runs a test, all threads should be instances of this [TestThread] class.
  * This class provides additional fields and controls for the Lincheck testing framework.
  * It also names the thread based on the test being run for easier debugging and tracking.
- *
- * Note: This class needs to be loaded in the bootstrap class loader, as the transformation requires it.
  *
  * @param testName The name of the test currently being run.
  * @property threadId The index of the thread.
@@ -27,7 +24,6 @@ package sun.nio.ch.lincheck
 internal class TestThread(
     testName: String,
     val threadId: Int,
-    val runnerHash: Int,
     block: Runnable
 ) : Thread(block, "Lincheck-${testName}-$threadId") {
 
@@ -41,6 +37,9 @@ internal class TestThread(
     /**
      * The currently suspended continuation, if present.
      * It's stored here to provide a handle for resumption during testing.
+     *
+     * It's necessary to store it in [Any] type, otherwise as have to load CancellableContinuation class earlier.
+     * But actually [suspendedContinuation] is always of [CancellableContinuation] type.
      */
     @JvmField
     var suspendedContinuation: Any? = null

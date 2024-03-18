@@ -8,12 +8,8 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-// we need to use some "legal" package for the bootstrap class loader
-@file:Suppress("PackageDirectoryMismatch")
+package org.jetbrains.kotlinx.lincheck
 
-package sun.nio.ch.lincheck
-
-import org.jetbrains.kotlinx.lincheck.runInIgnoredSection
 import java.util.*
 
 /**
@@ -125,7 +121,7 @@ internal object Injections {
      */
     @JvmStatic
     fun nextInt(): Int {
-        return runInIgnoredSection { deterministicRandom().nextInt() }
+        return eventTracker.randomNextInt()
     }
 
     /**
@@ -278,6 +274,11 @@ internal object Injections {
     @JvmStatic
     val VOID_RESULT = Any()
 
+    /**
+     * Called from the instrumented code after value assigned to any receiver field.
+     * Required to track local objects.
+     * @see org.jetbrains.kotlinx.lincheck.strategy.managed.LocalObjectManager
+     */
     @JvmStatic
     fun addDependency(receiver: Any, value: Any?) {
         eventTracker.addDependency(receiver, value)
@@ -285,6 +286,10 @@ internal object Injections {
 
     // == LISTENING METHODS ==
 
+    /**
+     * Called from the instrumented code to replace [java.lang.Object.hashCode] method call with some
+     * deterministic value.
+     */
     @JvmStatic
     internal fun hashCodeDeterministic(obj: Any): Int {
         val hashCode = obj.hashCode()
@@ -295,6 +300,10 @@ internal object Injections {
         }
     }
 
+    /**
+     * Called from the instrumented code to replace [java.lang.System.identityHashCode] method call with some
+     * deterministic value.
+     */
     @JvmStatic
     internal fun identityHashCodeDeterministic(obj: Any?): Int {
         if (obj == null) return 0

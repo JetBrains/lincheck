@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
+import org.jetbrains.kotlinx.lincheck.transformation.AtomicFields
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
@@ -19,11 +20,10 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.util.SpinnerGroup
 import org.jetbrains.kotlinx.lincheck.util.spinWaitUntil
 import org.jetbrains.kotlinx.lincheck.verifier.*
-import sun.nio.ch.lincheck.*
-import sun.nio.ch.lincheck.CodeLocations
-import sun.nio.ch.lincheck.Injections
-import sun.nio.ch.lincheck.EventTracker
-import sun.nio.ch.lincheck.TestThread
+import org.jetbrains.kotlinx.lincheck.transformation.CodeLocations
+import org.jetbrains.kotlinx.lincheck.Injections
+import org.jetbrains.kotlinx.lincheck.EventTracker
+import org.jetbrains.kotlinx.lincheck.TestThread
 import java.lang.reflect.*
 import java.util.*
 import kotlin.collections.set
@@ -88,6 +88,8 @@ abstract class ManagedStrategy(
     // used on resumption, and the trace point before and after the suspension
     // correspond to the same method call in the trace.
     private val suspendedFunctionsStack = Array(nThreads) { mutableListOf<Int>() }
+    // Helps to ignore potential switch point in local objects (see LocalObjectManager) to avoid
+    // useless interleavings analysis
     private var localObjectManager = LocalObjectManager()
     // Last read trace point, occurred in the current thread.
     // We store it as we initialize read value after the point is created so we have to store
@@ -307,6 +309,8 @@ abstract class ManagedStrategy(
      * @param codeLocation the byte-code location identifier of the point in code.
      */
     private fun newSwitchPoint(iThread: Int, codeLocation: Int, tracePoint: TracePoint?) {
+        // TODO: check if this check is needed
+        if (Injections.inTestingCode()) return // cannot suspend in ignored sections
         // Throw ForcibleExecutionFinishException if the invocation
         // result is already calculated.
         if (suddenInvocationResult != null) throw ForcibleExecutionFinishError
@@ -755,6 +759,10 @@ abstract class ManagedStrategy(
 
     override fun getThreadLocalRandom(): Random = runInIgnoredSection {
         return randoms[currentThread]
+    }
+
+    override fun randomNextInt(): Int = runInIgnoredSection {
+        getThreadLocalRandom().nextInt()
     }
 
     override fun onMethodCallFinishedSuccessfully(result: Any?) {

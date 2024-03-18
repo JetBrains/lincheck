@@ -11,13 +11,13 @@
 package org.jetbrains.kotlinx.lincheck.transformation
 
 import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.ASM_API
+import org.jetbrains.kotlinx.lincheck.Injections
 import org.jetbrains.kotlinx.lincheck.strategy.managed.JavaUtilRemapper
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
 import org.objectweb.asm.commons.InstructionAdapter.*
-import sun.nio.ch.lincheck.*
 import org.jetbrains.kotlinx.lincheck.transformation.CoroutineInternalCallTracker.isCoroutineInternalClass
 import java.util.*
 
@@ -1117,7 +1117,7 @@ internal class LincheckClassVisitor(
                     name == "<init>" ||
                     owner == "kotlin/jvm/internal/Intrinsics" ||
                     owner == "java/util/Objects" ||
-                    owner == "sun/nio/ch/lincheck/Injections" ||
+                    owner == "org/jetbrains/kotlinx/lincheck/Injections" ||
                     owner == "java/lang/StringBuilder" ||
                     owner == "java/util/Locale" ||
                     owner == "java/lang/String" ||

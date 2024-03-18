@@ -15,7 +15,7 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.util.Spinner
 import org.jetbrains.kotlinx.lincheck.util.SpinnerGroup
 import org.jetbrains.kotlinx.lincheck.util.spinWaitBoundedFor
-import sun.nio.ch.lincheck.TestThread
+import org.jetbrains.kotlinx.lincheck.TestThread
 import java.io.*
 import java.lang.*
 import java.util.concurrent.*
@@ -27,7 +27,7 @@ import java.util.concurrent.locks.*
  * is that this executor keeps the re-using threads "hot" (active) as long as possible,
  * so that they should not be parked and unparked between invocations.
  */
-internal class FixedActiveThreadsExecutor(private val testName: String, private val nThreads: Int, runnerHash: Int) : Closeable {
+internal class FixedActiveThreadsExecutor(private val testName: String, private val nThreads: Int) : Closeable {
     /**
      * null, waiting TestThread, Runnable task, or SHUTDOWN
      */
@@ -63,7 +63,7 @@ internal class FixedActiveThreadsExecutor(private val testName: String, private 
      * Threads used in this runner.
      */
     val threads = Array(nThreads) { iThread ->
-        TestThread(testName, iThread, runnerHash, testThreadRunnable(iThread)).also { it.start() }
+        TestThread(testName, iThread, testThreadRunnable(iThread)).also { it.start() }
     }
 
     /**

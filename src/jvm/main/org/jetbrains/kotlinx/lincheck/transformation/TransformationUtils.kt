@@ -10,10 +10,10 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
+import org.jetbrains.kotlinx.lincheck.Injections
 import org.objectweb.asm.*
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
-import sun.nio.ch.lincheck.*
 import java.io.*
 import kotlin.reflect.*
 import kotlin.reflect.jvm.*

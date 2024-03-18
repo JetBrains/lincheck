@@ -8,10 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-// we need to use some "legal" package for the bootstrap class loader
-@file:Suppress("PackageDirectoryMismatch")
-
-package sun.nio.ch.lincheck
+package org.jetbrains.kotlinx.lincheck
 
 import java.util.*
 
@@ -21,60 +18,121 @@ import java.util.*
 internal interface EventTracker {
 
     /**
-     * Called from instrumented code before the lock operation
+     * @see Injections.lock
      */
     fun lock(monitor: Any, codeLocation: Int)
 
     /**
-     * Called from instrumented code before the unlock operation
+     * @see Injections.unlock
      */
     fun unlock(monitor: Any, codeLocation: Int)
 
     /**
-     * Called from the instrumented code before the park operation
+     * @see Injections.park
      */
     fun park(codeLocation: Int)
 
     /**
-     * Called from the instrumented code before the unpark operation
+     * @see Injections.unpark
      */
     fun unpark(thread: Thread, codeLocation: Int)
 
     /**
-     * Called from the instrumented code before the wait operation
+     * @see Injections.wait
+     * @see Injections.waitWithTimeout
      */
     fun wait(monitor: Any, codeLocation: Int, withTimeout: Boolean)
 
     /**
-     * Called from the instrumented code before the notify or notifyAll operation
+     * @see Injections.notify
+     * @see Injections.notifyAll
      */
     fun notify(monitor: Any, codeLocation: Int, notifyAll: Boolean)
 
     /**
-     * Called from the instrumented code before any field read
+     * @see Injections.beforeReadField
      */
     fun beforeReadField(obj: Any, className: String, fieldName: String, codeLocation: Int)
 
 
+    /**
+     * @see Injections.beforeReadFieldStatic
+     */
     fun beforeReadFieldStatic(className: String, fieldName: String, codeLocation: Int)
+
+    /**
+     * @see Injections.beforeReadArray
+     */
     fun beforeReadArrayElement(array: Any, index: Int, codeLocation: Int)
+
+    /**
+     * @see Injections.afterRead
+     */
     fun afterRead(value: Any?)
 
+
+    /**
+     * @see Injections.beforeWriteField
+     */
     fun beforeWriteField(obj: Any, className: String, fieldName: String, value: Any?, codeLocation: Int)
+
+    /**
+     * @see Injections.beforeReadFieldStatic
+     */
     fun beforeWriteFieldStatic(className: String, fieldName: String, value: Any?, codeLocation: Int)
+
+    /**
+     * @see Injections.beforeWriteArray
+     */
     fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int)
 
+    /**
+     * @see Injections.beforeMethodCall
+     */
     fun beforeMethodCall(owner: Any?, className: String, methodName: String, codeLocation: Int, params: Array<Any?>)
+
+    /**
+     * @see Injections.beforeAtomicMethodCall
+     */
     fun beforeAtomicMethodCall(ownerName: String, methodName: String, codeLocation: Int, params: Array<Any?>)
+
+    /**
+     * @see Injections.beforeAtomicUpdaterMethodCall
+     */
     fun beforeAtomicUpdaterMethodCall(owner: Any, methodName: String, codeLocation: Int, params: Array<Any?>)
 
+    /**
+     * @see Injections.onMethodCallFinishedSuccessfully
+     */
     fun onMethodCallFinishedSuccessfully(result: Any?)
+
+    /**
+     * @see Injections.onMethodCallThrewException
+     */
     fun onMethodCallThrewException(t: Throwable)
 
+    /**
+     * @see Injections.deterministicRandom
+     */
     fun getThreadLocalRandom(): Random
 
+    /**
+     * @see Injections.nextInt
+     */
+    fun randomNextInt(): Int
+
+    /**
+     * @see Injections.onNewObjectCreation
+     */
     fun onNewObjectCreation(obj: Any)
 
+    /**
+     * @see Injections.addDependency
+     */
     fun addDependency(receiver: Any, value: Any?)
+
+    /**
+     * @see Injections.afterWrite
+     */
     fun afterWrite()
 }

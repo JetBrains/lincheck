@@ -61,6 +61,11 @@ public class TestThreadExecutionHelperTest {
             public InvocationResult run() {
                 throw new UnsupportedOperationException();
             }
+
+            @Override
+            public boolean isCurrentRunnerThread(@NotNull Thread thread) {
+                return false;
+            }
         };
         runner.initialize();
     }

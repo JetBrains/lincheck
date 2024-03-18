@@ -157,6 +157,11 @@ abstract class Runner protected constructor(
     override fun close() {}
 
     /**
+     * Determines if this runner manages provided thread.
+     */
+    abstract fun isCurrentRunnerThread(thread: Thread): Boolean
+
+    /**
      * @return whether all scenario threads are completed or suspended
      * Used by generated code.
      */

@@ -21,7 +21,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.util.SpinnerGroup
 import org.jetbrains.kotlinx.lincheck.util.spinWaitUntil
 import org.objectweb.asm.*
-import sun.nio.ch.lincheck.TestThread
+import org.jetbrains.kotlinx.lincheck.TestThread
 import java.lang.reflect.*
 import java.util.concurrent.*
 import java.util.concurrent.atomic.*
@@ -46,8 +46,7 @@ internal open class ParallelThreadsRunner(
     private val useClocks: UseClocks // specifies whether `HBClock`-s should always be used or with some probability
 ) : Runner(strategy, testClass, validationFunction, stateRepresentationFunction) {
     private val testName = testClass.simpleName
-    private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
-    private val executor = FixedActiveThreadsExecutor(testName, scenario.nThreads, runnerHash) // should be closed in `close()`
+    private val executor = FixedActiveThreadsExecutor(testName, scenario.nThreads) // should be closed in `close()`
 
     private val spinners = SpinnerGroup(executor.threads.size)
 
@@ -410,6 +409,10 @@ internal open class ParallelThreadsRunner(
     override fun close() {
         super.close()
         executor.close()
+    }
+
+    override fun isCurrentRunnerThread(thread: Thread): Boolean {
+        return executor.threads.any { it === thread }
     }
 
     override fun onFinish(iThread: Int) {}

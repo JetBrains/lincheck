@@ -14,7 +14,6 @@ import org.jetbrains.kotlinx.lincheck.LoggingLevel.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
-import sun.nio.ch.lincheck.TestThread
 import java.io.*
 import kotlin.math.max
 

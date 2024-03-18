@@ -16,7 +16,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.transformation.TransformationMode
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.objectweb.asm.commons.*
-import sun.nio.ch.lincheck.TestThread
 import java.io.*
 import java.lang.ref.*
 import java.lang.reflect.*
@@ -147,6 +146,9 @@ internal fun <T> CancellableContinuation<T>.cancelByLincheck(promptCancellation:
 
     val currentThread = Thread.currentThread() as? TestThread
     val inIgnoredSection = currentThread?.inIgnoredSection ?: false
+    // We must exit ignored section here if it was entered, because in cancel operation we may
+    // get into a spin-lock and switch to another thread.
+    // This is impossible in an ignored section, so we leave it.
     currentThread?.inIgnoredSection = false
     val cancelled = try {
         cancel(cancellationByLincheckException)
@@ -185,6 +187,7 @@ fun storeCancellableContinuation(cont: CancellableContinuation<*>) {
     if (t is TestThread) {
         t.suspendedContinuation = cont
     } else {
+        // It is used only in the verification phase
         CancellableContinuationHolder.storedLastCancellableCont = cont
     }
 }
@@ -292,7 +295,7 @@ private class CustomObjectInputStream(val loader: ClassLoader, inputStream: Inpu
  * threads that are related to the specified [runner].
  */
 internal fun collectThreadDump(runner: Runner) = Thread.getAllStackTraces().filter { (t, _) ->
-    t is TestThread && t.runnerHash == runner.hashCode()
+    t is TestThread && runner.isCurrentRunnerThread(t)
 }
 
 /**
@@ -346,8 +349,9 @@ internal object InternalLincheckTestUnexpectedException : Exception()
  */
 internal class LincheckInternalBugException(cause: Throwable): Exception(cause)
 
-internal inline fun <R> runInIgnoredSection(block: () -> R): R =
-    runInIgnoredSection(Thread.currentThread(), block)
+internal inline fun<R> ManagedStrategy.runInIgnoredSection(block: () -> R): R =  runInIgnoredSection(Thread.currentThread(), block)
+internal inline fun<R> ParallelThreadsRunner.runInIgnoredSection(block: () -> R): R =  runInIgnoredSection(Thread.currentThread(), block)
+
 
 private inline fun <R> runInIgnoredSection(currentThread: Thread, block: () -> R): R =
     if (currentThread is TestThread && !currentThread.inIgnoredSection) {

@@ -8,13 +8,9 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-// we need to use some "legal" package for the bootstrap class loader
-@file:Suppress("PackageDirectoryMismatch")
-
-package sun.nio.ch.lincheck
+package org.jetbrains.kotlinx.lincheck.transformation
 
 import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.REMAPPED_PACKAGE_INTERNAL_NAME
-import org.jetbrains.kotlinx.lincheck.transformation.canonicalClassName
 import sun.misc.*
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier.*
@@ -104,8 +100,8 @@ internal object AtomicFields {
 
 /**
  * [FinalFields] object is used to track final fields across different classes.
- * It is used to maintain a set of all final fields and
- * provides helper functions to add and check final fields.
+ * As a field may be declared in the parent class, [isFinalField] method recursively traverses all the
+ * hierarchy to find the field and check it.
  */
 internal object FinalFields {
 
