@@ -81,7 +81,8 @@ public class TransformationClassLoader extends ExecutionClassLoader {
                (className.startsWith("kotlin.") &&
                    !className.startsWith("kotlin.collections.") && // transform kotlin collections
                    !(className.startsWith("kotlin.jvm.internal.Array") && className.contains("Iterator")) && // transform kotlin iterator classes
-                   !className.startsWith("kotlin.ranges.") // transform kotlin ranges
+                   !className.startsWith("kotlin.ranges.") && // transform kotlin ranges
+                   !className.equals("kotlin.random.Random$Default") // transform Random.nextInt(..) and similar calls
                ) ||
                className.startsWith("com.intellij.rt.coverage.") ||
                (className.startsWith("org.jetbrains.kotlinx.lincheck.") &&

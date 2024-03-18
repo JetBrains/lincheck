@@ -20,6 +20,7 @@ import org.objectweb.asm.commons.*
 import org.objectweb.asm.commons.InstructionAdapter.*
 import org.jetbrains.kotlinx.lincheck.transformation.CoroutineInternalCallTracker.isCoroutineInternalClass
 import java.util.*
+import java.util.concurrent.ThreadLocalRandom
 
 internal class LincheckClassVisitor(
     private val transformationMode: TransformationMode,
@@ -326,10 +327,6 @@ internal class LincheckClassVisitor(
             }
     }
 
-    private companion object {
-        private val randomMethods = Random::class.java.declaredMethods.map { Method.getMethod(it) }
-    }
-
     /**
      * Makes java.util.Random and all classes that extend it deterministic.
      * In every Random method invocation replaces the owner with Random from ManagedStateHolder.
@@ -363,7 +360,22 @@ internal class LincheckClassVisitor(
                         )
                         return
                     }
-                } else if (isRandomMethod(name, desc)) {
+                    if (name == "nextInt" && desc == "(II)I") {
+                        invokeIfInTestingCode(
+                            original = {
+                                visitMethodInsn(opcode, owner, name, desc, itf)
+                            },
+                            code = {
+                                val arguments = storeArguments(desc)
+                                pop()
+                                loadLocals(arguments)
+                                invokeStatic(Injections::nextInt2)
+                            }
+                        )
+                        return
+                    }
+                }
+                if (isRandomMethod(name, desc)) {
                     invokeIfInTestingCode(
                         original = {
                             visitMethodInsn(opcode, owner, name, desc, itf)
@@ -405,6 +417,11 @@ internal class LincheckClassVisitor(
         private fun isRandomMethod(methodName: String, desc: String): Boolean = randomMethods.any {
             it.name == methodName && it.descriptor == desc
         }
+    }
+
+    private companion object {
+        private val randomMethods =
+            Random::class.java.declaredMethods.map { Method.getMethod(it) }
     }
 
     /**
