@@ -175,14 +175,6 @@ internal object Injections {
     }
 
     /**
-     * Called from the instrumented code before any write operation
-     */
-    @JvmStatic
-    fun afterWrite() {
-        eventTracker.afterWrite()
-    }
-
-    /**
      * Called from the instrumented code before any field write
      */
     @JvmStatic
@@ -206,6 +198,14 @@ internal object Injections {
     fun beforeWriteArray(array: Any?, index: Int, value: Any?, codeLocation: Int) {
         if (array == null) return // Ignore, NullPointerException will be thrown
         eventTracker.beforeWriteArrayElement(array, index, value, codeLocation)
+    }
+
+    /**
+     * Called from the instrumented code before any write operation
+     */
+    @JvmStatic
+    fun afterWrite() {
+        eventTracker.afterWrite()
     }
 
     /**

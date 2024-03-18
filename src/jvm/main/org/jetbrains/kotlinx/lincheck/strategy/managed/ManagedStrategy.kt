@@ -755,6 +755,14 @@ abstract class ManagedStrategy(
         newSwitchPoint(iThread, codeLocation, tracePoint)
     }
 
+    override fun afterWrite() {
+        if (collectTrace) {
+            runInIgnoredSection {
+                traceCollector?.addStateRepresentation()
+            }
+        }
+    }
+
     override fun getThreadLocalRandom(): Random = runInIgnoredSection {
         return randoms[currentThread]
     }
@@ -822,12 +830,6 @@ abstract class ManagedStrategy(
 
     override fun addDependency(receiver: Any, value: Any?) {
         localObjectManager.addDependency(receiver, value)
-    }
-
-    override fun afterWrite()= runInIgnoredSection {
-        if (collectTrace) {
-            traceCollector?.addStateRepresentation()
-        }
     }
 
     override fun beforeMethodCall(
