@@ -20,7 +20,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.util.SpinnerGroup
 import org.jetbrains.kotlinx.lincheck.util.spinWaitUntil
-import org.objectweb.asm.*
 import org.jetbrains.kotlinx.lincheck.TestThread
 import java.lang.reflect.*
 import java.util.concurrent.*
@@ -71,29 +70,22 @@ internal open class ParallelThreadsRunner(
 
     private val uninitializedThreads = AtomicInteger(scenario.nThreads) // for threads synchronization
 
-    private var initialPartExecution: TestThreadExecution? = null
-    private var parallelPartExecutions: Array<TestThreadExecution> = arrayOf()
-    private var postPartExecution: TestThreadExecution? = null
-    private var validationPartExecution: TestThreadExecution? = null
+    private val initialPartExecution: TestThreadExecution? = createInitialPartExecution()
+    private val parallelPartExecutions: Array<TestThreadExecution> = createParallelPartExecutions()
+    private val postPartExecution: TestThreadExecution? = createPostPartExecution()
+    private val validationPartExecution: TestThreadExecution? = createValidationPartExecution(validationFunction)
 
-    private var testThreadExecutions: List<TestThreadExecution> = listOf()
+    private val testThreadExecutions: List<TestThreadExecution> = listOfNotNull(
+        initialPartExecution,
+        *parallelPartExecutions,
+        postPartExecution
+    )
 
-    override fun initialize() {
-        super.initialize()
-        initialPartExecution = createInitialPartExecution()
-        parallelPartExecutions = createParallelPartExecutions()
-        postPartExecution = createPostPartExecution()
-        validationPartExecution = createValidationPartExecution(validationFunction)
-        testThreadExecutions = listOfNotNull(
-            initialPartExecution,
-            *parallelPartExecutions,
-            postPartExecution
-        )
-        // In the case of managed checking strategy, we want to track events of the execution
+    init {
         if (strategy is ManagedStrategy) {
             executor.threads.forEach { it.eventTracker = strategy }
         }
-        reset()
+        resetState()
     }
 
     /**
@@ -156,7 +148,7 @@ internal open class ParallelThreadsRunner(
         }
     }
 
-    private fun reset() {
+    private fun resetState() {
         suspensionPointResults.forEach { it.fill(NoResult) }
         completedOrSuspendedThreads.set(0)
         completions.forEach {
@@ -320,7 +312,7 @@ internal open class ParallelThreadsRunner(
         } catch (e: ExecutionException) {
             return UnexpectedExceptionInvocationResult(e.cause!!)
         } finally {
-            reset()
+            resetState()
         }
     }
 
@@ -399,9 +391,6 @@ internal open class ParallelThreadsRunner(
         // wait for other threads to start
         spinners[iThread].spinWaitUntil { uninitializedThreads.get() == 0 }
     }
-
-    override fun needsTransformation() = true
-    override fun createTransformer(cv: ClassVisitor) = CancellabilitySupportClassTransformer(cv)
 
     override fun constructStateRepresentation() =
         stateRepresentationFunction?.let { getMethod(testInstance, it) }?.invoke(testInstance) as String?

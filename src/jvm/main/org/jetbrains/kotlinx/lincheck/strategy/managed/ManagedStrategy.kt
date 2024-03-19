@@ -101,18 +101,6 @@ abstract class ManagedStrategy(
     // Guarantees, additionally specified by user on some methods.
     private val userDefinedGuarantees: List<ManagedStrategyGuarantee>? = testCfg.guarantees.ifEmpty { null }
 
-    init {
-        // The managed state should be initialized before еnу test class transformation.
-        try {
-            runner.initialize()
-        } catch (t: Throwable) {
-            runner.close()
-            throw t
-        }
-    }
-
-    override fun needsTransformation(): Boolean = true
-
     private fun createRunner(): ManagedStrategyRunner =
         ManagedStrategyRunner(
             managedStrategy = this,
@@ -122,9 +110,6 @@ abstract class ManagedStrategy(
             timeoutMs = testCfg.timeoutMs,
             useClocks = UseClocks.ALWAYS
         )
-
-    fun useBytecodeCache(): Boolean =
-        !collectTrace && testCfg.eliminateLocalObjects && (testCfg.guarantees == ManagedCTestConfiguration.DEFAULT_GUARANTEES)
 
     override fun run(): LincheckFailure? = try {
         runImpl()
@@ -190,7 +175,7 @@ abstract class ManagedStrategy(
             if (verifier.verifyResults(scenario, result.results)) null
             else IncorrectResultsFailure(scenario, result.results, collectTrace(result))
         }
-        // In case when a runner detects a deadlock,
+        // In case the runner detects a deadlock,
         // some threads can still work with the current strategy instance
         // and simultaneously adding events to the TraceCollector, which leads to an inconsistent trace.
         // Therefore, if the runner detects a deadlock, we don’t even try to collect a trace.
@@ -221,7 +206,6 @@ abstract class ManagedStrategy(
         // `TransformationClassLoader` with a transformer that inserts the trace collection logic.
         runner.close()
         runner = createRunner()
-        runner.initialize()
 
         loopDetector.enableReplayMode(
             failDueToDeadlockInTheEnd = failingResult is ManagedDeadlockInvocationResult || failingResult is ObstructionFreedomViolationInvocationResult
@@ -878,7 +862,7 @@ abstract class ManagedStrategy(
     ) = runInIgnoredSection {
         if (collectTrace) {
             traceCollector?.addStateRepresentation()
-            val ownerName = AtomicFields.getAtomicFieldName(owner)
+            val ownerName = AtomicFUNames.getAtomicFieldName(owner)
             val paramsWithoutFirstArg = params.drop(1).toTypedArray()
             beforeMethodCall(currentThread, codeLocation, ownerName, methodName, paramsWithoutFirstArg)
         }

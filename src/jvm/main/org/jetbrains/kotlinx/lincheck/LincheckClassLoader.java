@@ -10,62 +10,64 @@
 
 package org.jetbrains.kotlinx.lincheck;
 
-import org.jetbrains.kotlinx.lincheck.runner.*;
-import org.jetbrains.kotlinx.lincheck.strategy.*;
-import org.jetbrains.kotlinx.lincheck.strategy.managed.*;
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*;
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*;
+import org.jetbrains.kotlinx.lincheck.runner.Runner;
+import org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution;
+import org.jetbrains.kotlinx.lincheck.strategy.Strategy;
+import org.jetbrains.kotlinx.lincheck.strategy.managed.JavaUtilRemapper;
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassVisitor;
 import org.jetbrains.kotlinx.lincheck.transformation.TransformationMode;
-import org.objectweb.asm.*;
-import org.objectweb.asm.commons.*;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.commons.Remapper;
 
-import java.io.*;
-import java.net.*;
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.function.*;
+import java.io.IOException;
+import java.net.URL;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
-import static org.jetbrains.kotlinx.lincheck.TransformationClassLoader.*;
+import static org.jetbrains.kotlinx.lincheck.LincheckClassLoader.ASM_API;
+import static org.jetbrains.kotlinx.lincheck.LincheckClassLoader.REMAPPED_PACKAGE_INTERNAL_NAME;
 import static org.jetbrains.kotlinx.lincheck.UtilsKt.getCanonicalClassName;
-import static org.objectweb.asm.Opcodes.*;
+import static org.jetbrains.kotlinx.lincheck.transformation.TransformationMode.MODEL_CHECKING;
+import static org.objectweb.asm.Opcodes.ASM9;
+import static org.objectweb.asm.Opcodes.V1_6;
 
 /**
  * This transformer applies required for {@link Strategy} and {@link Runner}
  * class transformations and hines them from others.
  */
-public class TransformationClassLoader extends ExecutionClassLoader {
+public class LincheckClassLoader extends ClassLoader {
     public static final String REMAPPED_PACKAGE_INTERNAL_NAME = "org/jetbrains/kotlinx/lincheck/tran$f*rmed/";
     public static final String REMAPPED_PACKAGE_CANONICAL_NAME = getCanonicalClassName(REMAPPED_PACKAGE_INTERNAL_NAME);
     public static final int ASM_API = ASM9;
 
-    private final Function<ClassVisitor, ClassVisitor> classTransformer;
+    private final TransformationMode transformationMode;
     private final Remapper remapper;
 
     // Cache for classloading and frames computing during the transformation.
-    private Map<String, Class<?>> cache = new ConcurrentHashMap<>();
+    private final Map<String, Class<?>> cache = new ConcurrentHashMap<>();
 
-    private Map<String, byte[]> bytecodeCache = null;
-    private static final Map<String, byte[]> stressStrategyBytecodeCache = new ConcurrentHashMap<>();
-    private static final Map<String, byte[]> modelCheckingStrategyBytecodeCache = new ConcurrentHashMap<>();
+    // Shares transformed bytecode between iterations.
+    private static final Map<String, byte[]> stressAndVerificationBytecodeCache = new ConcurrentHashMap<>();
+    private static final Map<String, byte[]> modelCheckingBytecodeCache = new ConcurrentHashMap<>();
 
-    public TransformationClassLoader(Strategy strategy) {
-        // Apply the strategy's transformer at first, then the runner's one.
-        // TODO: add Strategy.transformationMode property to get rig of this instanceof check
-        //  (now it's impossible due to lack of internal modifier in Java)
-        TransformationMode transformationMode = strategy instanceof ModelCheckingStrategy ? TransformationMode.MODEL_CHECKING : TransformationMode.STRESS;
-        classTransformer = (classVisitor) -> new LincheckClassVisitor(transformationMode, classVisitor);
-        remapper = UtilsKt.getRemapperByTransformers(transformationMode);
-        if (strategy instanceof StressStrategy) {
-            bytecodeCache = stressStrategyBytecodeCache;
-        } else if (strategy instanceof ManagedStrategy && ((ManagedStrategy) strategy).useBytecodeCache()) {
-            bytecodeCache = modelCheckingStrategyBytecodeCache;
+    public LincheckClassLoader(TransformationMode transformationMode) {
+        this.transformationMode = transformationMode;
+        remapper = transformationMode == MODEL_CHECKING ? new JavaUtilRemapper() : null;
+    }
+
+    public Map<String, byte[]> getBytecodeCache() {
+        if (transformationMode == MODEL_CHECKING) {
+            return modelCheckingBytecodeCache;
+        } else {
+            return stressAndVerificationBytecodeCache;
         }
     }
 
-    public TransformationClassLoader(Function<ClassVisitor, ClassVisitor> classTransformer) {
-        this.classTransformer = classTransformer;
-        remapper = null;
+    public Class<? extends TestThreadExecution> defineClass(String className, byte[] bytecode) {
+        //noinspection unchecked
+        return (Class<? extends TestThreadExecution>) super.defineClass(className, bytecode, 0, bytecode.length);
     }
 
     /**
@@ -84,9 +86,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
                    !className.equals("kotlin.random.Random$Default") // transform Random.nextInt(..) and similar calls
                ) ||
                className.startsWith("com.intellij.rt.coverage.") ||
-               (className.startsWith("org.jetbrains.kotlinx.lincheck.") &&
-                   !className.startsWith("org.jetbrains.kotlinx.lincheck_test.")
-               ) ||
+               className.startsWith("org.jetbrains.kotlinx.lincheck.") ||
                className.equals(kotlinx.coroutines.DebugKt.class.getName()) ||
                className.equals(kotlin.coroutines.CoroutineContext.class.getName()) ||
                className.equals(kotlinx.coroutines.CoroutineContextKt.class.getName()) ||
@@ -142,15 +142,10 @@ public class TransformationClassLoader extends ExecutionClassLoader {
                 return result;
             }
             try {
-                byte[] bytes = null;
-                if (bytecodeCache != null) {
-                    bytes = bytecodeCache.get(name);
-                }
+                byte[] bytes = getBytecodeCache().get(name);
                 if (bytes == null) {
                     bytes = instrument(originalName(name));
-                    if (bytecodeCache != null) {
-                        bytecodeCache.put(name, bytes);
-                    }
+                    getBytecodeCache().put(name, bytes);
                 }
                 result = defineClass(name, bytes, 0, bytes.length);
                 cache.put(name, result);
@@ -170,23 +165,11 @@ public class TransformationClassLoader extends ExecutionClassLoader {
      * @throws IOException if class could not be read as a resource.
      */
     private byte[] instrument(String className) throws IOException {
-        // Create ClassReader
         ClassReader cr = new ClassReader(className);
-        // Construct transformation pipeline:
-        // apply the strategy's transformer at first,
-        // then the runner's one.
         ClassVersionGetter infoGetter = new ClassVersionGetter();
         cr.accept(infoGetter, 0);
         ClassWriter cw = new TransformationClassWriter(infoGetter.getClassVersion(), remapper);
-        ClassVisitor cv = cw;
-        // The code in this comment block verifies the transformed byte-code and prints it for the specified class,
-        // you may need to uncomment it for debug purposes under development.
-        // cv = new CheckClassAdapter(cv, false);
-        // if (className.equals(YourClass.class.getCanonicalName()))
-        //   cv = new TraceClassVisitor(cv, new PrintWriter(System.out));
-
-        cv = classTransformer.apply(cv);
-        // Get transformed bytecode
+        LincheckClassVisitor cv = new LincheckClassVisitor(transformationMode, cw);
         cr.accept(cv, ClassReader.EXPAND_FRAMES);
         return cw.toByteArray();
     }
@@ -232,7 +215,7 @@ class TransformationClassWriter extends ClassWriter {
 
     /**
      * Returns the name of the specified class before it was transformed.
-     *
+     * <p>
      * Classes from `java.util` package are moved to [TRANSFORMED_PACKAGE_NAME] during transformation,
      * this method changes the package to the original one.
      */
@@ -251,7 +234,7 @@ class ClassVersionGetter extends ClassVisitor {
     private int classVersion;
 
     public ClassVersionGetter() {
-        super(TransformationClassLoader.ASM_API);
+        super(ASM_API);
     }
 
     public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {

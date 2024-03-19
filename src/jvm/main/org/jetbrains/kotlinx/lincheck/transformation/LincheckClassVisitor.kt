@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
-import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.ASM_API
+import org.jetbrains.kotlinx.lincheck.LincheckClassLoader.ASM_API
 import org.jetbrains.kotlinx.lincheck.Injections
 import org.jetbrains.kotlinx.lincheck.strategy.managed.JavaUtilRemapper
 import org.objectweb.asm.*
@@ -19,6 +19,7 @@ import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
 import org.objectweb.asm.commons.InstructionAdapter.*
 import org.jetbrains.kotlinx.lincheck.transformation.CoroutineInternalCallTracker.isCoroutineInternalClass
+import org.jetbrains.kotlinx.lincheck.transformation.TransformationMode.*
 import java.util.*
 
 internal class LincheckClassVisitor(
@@ -26,7 +27,7 @@ internal class LincheckClassVisitor(
     classVisitor: ClassVisitor
 ) : ClassVisitor(
     ASM_API,
-    if (transformationMode == TransformationMode.MODEL_CHECKING) ClassRemapper(classVisitor, JavaUtilRemapper()) else classVisitor
+    if (transformationMode == MODEL_CHECKING) ClassRemapper(classVisitor, JavaUtilRemapper()) else classVisitor
 ) {
     private lateinit var className: String
     private var classVersion = 0
@@ -59,9 +60,8 @@ internal class LincheckClassVisitor(
     ): MethodVisitor {
         var mv = super.visitMethod(access, methodName, desc, signature, exceptions)
         if (access and ACC_NATIVE != 0) return mv
-        if (transformationMode == TransformationMode.STRESS) {
+        if (transformationMode == STRESS || transformationMode == VERIFICATION) {
             return if (methodName != "<clinit>" && methodName != "<init>") {
-                mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
                 CoroutineCancellabilitySupportMethodTransformer(mv, access, methodName, desc)
             } else {
                 mv
@@ -121,9 +121,8 @@ internal class LincheckClassVisitor(
             descriptor: String?,
             isInterface: Boolean
         ) {
-            val isGetResult =
-                ("kotlinx/coroutines/CancellableContinuation" == className || "kotlinx/coroutines/CancellableContinuationImpl" == className)
-                        && "getResult" == methodName
+            val isGetResult = "getResult" == methodName &&
+                    ("kotlinx/coroutines/CancellableContinuation" == className || "kotlinx/coroutines/CancellableContinuationImpl" == className)
             if (isGetResult) {
                 dup()
                 invokeStatic(Injections::storeCancellableContinuation)
@@ -1419,5 +1418,6 @@ private object CoroutineInternalCallTracker {
 
 internal enum class TransformationMode {
     STRESS,
-    MODEL_CHECKING
+    MODEL_CHECKING,
+    VERIFICATION
 }

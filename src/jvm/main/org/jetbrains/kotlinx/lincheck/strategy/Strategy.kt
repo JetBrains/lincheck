@@ -22,8 +22,6 @@ import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 abstract class Strategy protected constructor(
     val scenario: ExecutionScenario
 ) {
-    abstract fun needsTransformation(): Boolean
-
     abstract fun run(): LincheckFailure?
 
     open fun beforePart(part: ExecutionPart) {}

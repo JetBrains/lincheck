@@ -11,7 +11,6 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.Companion.DEFAULT_CHECK_OBSTRUCTION_FREEDOM
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.Companion.DEFAULT_ELIMINATE_LOCAL_OBJECTS
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.Companion.DEFAULT_GUARANTEES
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.Companion.DEFAULT_HANGING_DETECTION_THRESHOLD
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.Companion.DEFAULT_INVOCATIONS
@@ -25,7 +24,6 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
     protected var checkObstructionFreedom = DEFAULT_CHECK_OBSTRUCTION_FREEDOM
     protected var hangingDetectionThreshold = DEFAULT_HANGING_DETECTION_THRESHOLD
     protected val guarantees: MutableList<ManagedStrategyGuarantee> = ArrayList(DEFAULT_GUARANTEES)
-    protected var eliminateLocalObjects: Boolean = DEFAULT_ELIMINATE_LOCAL_OBJECTS
 
     /**
      * Use the specified number of scenario invocations to study interleavings in each iteration.
@@ -62,13 +60,6 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
      */
     fun addGuarantee(guarantee: ManagedStrategyGuarantee): OPT = applyAndCast {
         guarantees.add(guarantee)
-    }
-
-    /**
-     * Internal, DO NOT USE.
-     */
-    internal fun eliminateLocalObjects(eliminateLocalObjects: Boolean) {
-        this.eliminateLocalObjects = eliminateLocalObjects
     }
 
     companion object {

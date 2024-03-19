@@ -17,11 +17,11 @@ import java.util.concurrent.atomic.AtomicLongFieldUpdater
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 
 /**
- * [AtomicFields] is used to map atomic objects to their names (usually, the corresponding field names)
+ * [AtomicFUNames] is used to map atomic objects to their names (usually, the corresponding field names)
  * and class owners. The weak identity hash map ensures that atomic objects are compared using reference
  * equality and does not prevent them from being garbage collected.
  */
-internal object AtomicFields {
+internal object AtomicFUNames {
     private val unsafe: Unsafe = try {
         val unsafeField = Unsafe::class.java.getDeclaredField("theUnsafe")
         unsafeField.isAccessible = true

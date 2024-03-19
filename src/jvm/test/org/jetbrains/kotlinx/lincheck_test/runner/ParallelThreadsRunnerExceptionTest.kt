@@ -102,7 +102,6 @@ class ParallelThreadsRunnerExceptionTest {
             strategy = mockStrategy(scenario), testClass = testClass, validationFunction = null,
             stateRepresentationFunction = null, timeoutMs = DEFAULT_TIMEOUT_MS, useClocks = RANDOM
         ).use { runner ->
-            runner.initialize()
             val results = (runner.run() as CompletedInvocationResult).results
             assertTrue(results.equalsIgnoringClocks(expectedResults))
         }
@@ -127,7 +126,6 @@ class ParallelThreadsRunnerExceptionTest {
             strategy = mockStrategy(scenario), testClass = testClass, validationFunction = null,
             stateRepresentationFunction = null, timeoutMs = DEFAULT_TIMEOUT_MS, useClocks = RANDOM
         ).use { runner ->
-            runner.initialize()
             val results = (runner.run() as CompletedInvocationResult).results
             assertTrue(results.equalsIgnoringClocks(expectedResults))
         }
@@ -146,7 +144,6 @@ class ParallelThreadsRunnerExceptionTest {
             strategy = mockStrategy(scenario), testClass = testClass, validationFunction = null,
             stateRepresentationFunction = null, timeoutMs = DEFAULT_TIMEOUT_MS, useClocks = RANDOM
         ).use { runner ->
-            runner.initialize()
             val results = (runner.run() as CompletedInvocationResult).results
             assertTrue(results.equalsIgnoringClocks(expectedResults))
         }
@@ -165,7 +162,6 @@ class ParallelThreadExecutionExceptionsTest {
             strategy = mockStrategy(scenario), testClass = this::class.java, validationFunction = null,
             stateRepresentationFunction = null, timeoutMs = DEFAULT_TIMEOUT_MS, useClocks = RANDOM
         ).use { runner ->
-            runner.initialize()
             val results = (runner.run() as UnexpectedExceptionInvocationResult)
             val exception = results.exception
 
@@ -181,7 +177,5 @@ class ParallelThreadExecutionExceptionsTest {
 }
 
 fun mockStrategy(scenario: ExecutionScenario) = object : Strategy(scenario) {
-    override fun needsTransformation(): Boolean = false
-
     override fun run(): LincheckFailure? = error("Not yet implemented")
 }

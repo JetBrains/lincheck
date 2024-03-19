@@ -126,6 +126,7 @@ internal object Injections {
     /**
      * Called from the instrumented code to replace random.nextInt() call with a deterministic value
      */
+    @Suppress("UNUSED_PARAMETER")
     @JvmStatic
     fun nextInt2(origin: Int, bound: Int): Int =
         eventTracker.run {
@@ -142,7 +143,7 @@ internal object Injections {
         eventTracker.getThreadLocalRandom()
 
     /**
-     * Called from the instrumented code to examine if this value is Random
+     * Called from the instrumented code to examine if this value is [Random]
      */
     @JvmStatic
     fun isRandom(any: Any?): Boolean =
@@ -228,7 +229,9 @@ internal object Injections {
 
 
     /**
-     * Called from the instrumented code before any atomic method call
+     * Called from the instrumented code before any atomic method call.
+     * This is just an optimization of [beforeMethodCall] for trusted
+     * atomic constructs to avoid wrapping the invocations into try-finally blocks.
      */
     @JvmStatic
     fun beforeAtomicMethodCall(ownerName: String, methodName: String, codeLocation: Int, params: Array<Any?>) {

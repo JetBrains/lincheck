@@ -12,6 +12,8 @@ package org.jetbrains.kotlinx.lincheck.verifier
 
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.Injections.lastSuspendedCancellableContinuationDuringVerification
+import org.jetbrains.kotlinx.lincheck.transformation.TransformationMode
 import org.jetbrains.kotlinx.lincheck.verifier.LTS.*
 import org.jetbrains.kotlinx.lincheck.verifier.OperationType.*
 import java.util.*
@@ -43,7 +45,7 @@ typealias ResumedTickets = Set<Int>
 
 class LTS(sequentialSpecification: Class<*>) {
     // we should transform the specification with `CancellabilitySupportClassTransformer`
-    private val sequentialSpecification: Class<*> = TransformationClassLoader { cv -> CancellabilitySupportClassTransformer(cv)}
+    private val sequentialSpecification: Class<*> = LincheckClassLoader(TransformationMode.VERIFICATION)
                                                     .loadClass(sequentialSpecification.name)!!
 
     /**
@@ -195,7 +197,7 @@ class LTS(sequentialSpecification: Class<*>) {
         continuationsMap: MutableMap<Operation, CancellableContinuation<*>>
     ): Result {
         val prevResumedTickets = resumedOperations.keys.toMutableList()
-        CancellableContinuationHolder.storedLastCancellableCont = null
+        lastSuspendedCancellableContinuationDuringVerification = null
         val res = when (type) {
             REQUEST -> executeActor(externalState, actor, Completion(ticket, actor, resumedOperations))
             FOLLOW_UP -> {
@@ -222,10 +224,12 @@ class LTS(sequentialSpecification: Class<*>) {
             }
         }
         if (res === Suspended) {
-            val cont = CancellableContinuationHolder.storedLastCancellableCont
-            CancellableContinuationHolder.storedLastCancellableCont = null
-            if (cont !== null) continuationsMap[this] = cont
-            // Operation suspended it's execution.
+            val cont = lastSuspendedCancellableContinuationDuringVerification
+            lastSuspendedCancellableContinuationDuringVerification = null
+            if (cont !== null) {
+                continuationsMap[this] = cont as CancellableContinuation<*>
+            }
+            // Operation suspended its execution.
             suspendedOperations.add(this)
         }
         resumedOperations.forEach { (resumedTicket, res) ->

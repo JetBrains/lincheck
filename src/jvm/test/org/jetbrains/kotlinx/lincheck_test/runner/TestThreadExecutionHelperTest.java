@@ -30,11 +30,6 @@ public class TestThreadExecutionHelperTest {
         ExecutionScenario scenario = new ExecutionScenario(emptyList(), emptyList(), emptyList(), null);
         Strategy strategy = new Strategy(scenario) {
             @Override
-            public boolean needsTransformation() {
-                return false;
-            }
-
-            @Override
             public LincheckFailure run() {
                 throw new UnsupportedOperationException();
             }
@@ -72,7 +67,6 @@ public class TestThreadExecutionHelperTest {
                 return false;
             }
         };
-        runner.initialize();
     }
 
     @Test

@@ -576,7 +576,7 @@ private fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockWithDum
             appendLine("Thread-$threadNumber:")
             stackTrace.map {
                 StackTraceElement(
-                    /* declaringClass = */ it.className.removePrefix(TransformationClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME),
+                    /* declaringClass = */ it.className.removePrefix(LincheckClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME),
                     /* methodName = */ it.methodName,
                     /* fileName = */ it.fileName,
                     /* lineNumber = */ it.lineNumber

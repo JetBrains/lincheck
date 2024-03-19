@@ -10,11 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
-import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.REMAPPED_PACKAGE_INTERNAL_NAME
-import sun.misc.*
+import org.jetbrains.kotlinx.lincheck.LincheckClassLoader.REMAPPED_PACKAGE_INTERNAL_NAME
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier.*
-import java.util.concurrent.atomic.*
 
 /**
  * [CodeLocations] object is used to maintain the mapping between unique IDs and code locations.

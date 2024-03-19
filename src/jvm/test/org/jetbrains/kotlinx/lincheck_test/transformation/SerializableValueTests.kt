@@ -13,6 +13,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.transformation.TransformationMode
 import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
 import org.junit.*
 import org.junit.Assert.*
@@ -72,7 +73,7 @@ class SerializableNullResultTest {
     fun test() {
         val a = ValueResult(null)
         val value = ValueHolder(0)
-        val loader = TransformationClassLoader { CancellabilitySupportClassTransformer(it) }
+        val loader = LincheckClassLoader(TransformationMode.STRESS)
         val transformedValue = value.convertForLoader(loader)
         val b = ValueResult(transformedValue)
         // check that no exception was thrown

@@ -10,7 +10,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.TransformationClassLoader.isImpossibleToTransformApiClass
+import org.jetbrains.kotlinx.lincheck.LincheckClassLoader.isImpossibleToTransformApiClass
 import org.jetbrains.kotlinx.lincheck.transformation.NOT_TRANSFORMED_JAVA_UTIL_CLASSES
 import org.jetbrains.kotlinx.lincheck.transformation.TRANSFORMED_JAVA_UTIL_INTERFACES
 import org.objectweb.asm.commons.*
@@ -39,7 +39,7 @@ internal class JavaUtilRemapper : Remapper() {
             // no need to transform enum
             val isEnum = originalClass.isEnum
             if (!isImpossibleToTransformApi && !isException && !inFunctionPackage && !isEnum && (isTransformedClass || isTransformedInterface))
-                return TransformationClassLoader.REMAPPED_PACKAGE_INTERNAL_NAME + name
+                return LincheckClassLoader.REMAPPED_PACKAGE_INTERNAL_NAME + name
         }
         return name
     }
