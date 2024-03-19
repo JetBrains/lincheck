@@ -853,22 +853,15 @@ abstract class ManagedStrategy(
         params: Array<Any?>
     ) = runInIgnoredSection {
         if (collectTrace) {
-            val ownerName = owner?.let { AtomicFieldUpdaterNames.getName(it) }
+            val isAtomicUpdater = owner is AtomicIntegerFieldUpdater<*> || owner is AtomicLongFieldUpdater<*> || owner is AtomicReferenceFieldUpdater<*, *>
+            val ownerName = if (isAtomicUpdater) owner?.let { AtomicFieldUpdaterNames.getName(it) } else null
             // Drop the object instance and offset (in case of Unsafe) from the parameters
             // when using Unsafe, VarHandle, or AtomicFieldUpdater.
             @Suppress("NAME_SHADOWING")
             val params = when {
-                owner is AtomicIntegerFieldUpdater<*> || owner is AtomicLongFieldUpdater<*> || owner is AtomicReferenceFieldUpdater<*, *> || owner is VarHandle -> {
-                    params.drop(1).toTypedArray()
-                }
-
-                owner is Unsafe -> {
-                    params.drop(2).toTypedArray()
-                }
-
-                else -> {
-                    params
-                }
+                isAtomicUpdater || owner is VarHandle -> params.drop(1).toTypedArray()
+                owner is Unsafe -> params.drop(2).toTypedArray()
+                else -> params
             }
             beforeMethodCall(currentThread, codeLocation, ownerName, methodName, params)
         }

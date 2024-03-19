@@ -1113,13 +1113,12 @@ internal class LincheckClassVisitor(
                     owner == "sun/misc/Unsafe" || owner == "jdk/internal/misc/Unsafe" ||
                     owner == "java/lang/invoke/VarHandle"
                 ) {
-                    val isAtomicFUMethod = owner.endsWith("FieldUpdater")
                     invokeIfInTestingCode(
                         original = {
                             visitMethodInsn(opcode, owner, name, desc, itf)
                         },
                         code = {
-                            processAtomicMethodCall(desc, opcode, owner, name, itf, isAtomicFUMethod)
+                            processAtomicMethodCall(desc, opcode, owner, name, itf)
                         }
                     )
                     return
@@ -1222,14 +1221,17 @@ internal class LincheckClassVisitor(
             owner: String,
             name: String,
             itf: Boolean,
-            isAtomicFUMethod: Boolean
         ) {
+            val provideOwnerToBeforeMethodCall = opcode != INVOKESTATIC &&
+                    (owner.endsWith("FieldUpdater") ||
+                    owner == "sun/misc/Unsafe" || owner == "jdk/internal/misc/Unsafe" ||
+                    owner == "java/lang/invoke/VarHandle")
             // STACK [INVOKEVIRTUAL]: owner, arguments
             // STACK [INVOKESTATIC]: arguments
             val argumentLocals = storeArguments(desc)
             // STACK [INVOKEVIRTUAL]: owner
             // STACK [INVOKESTATIC]: <empty>
-            if (isAtomicFUMethod) {
+            if (provideOwnerToBeforeMethodCall) {
                 dup()
             } else {
                 visitInsn(ACONST_NULL)
