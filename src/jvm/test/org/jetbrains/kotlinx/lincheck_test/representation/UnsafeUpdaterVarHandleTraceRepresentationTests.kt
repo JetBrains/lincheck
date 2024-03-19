@@ -18,12 +18,13 @@ import org.junit.Test
 import sun.misc.Unsafe
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.VarHandle
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 
 /**
  * Test checks that in case of a field update using Unsafe we remove receiver and offset arguments from the trace.
  */
-class UnsafeTraceRepresentationTest {
+class SunUnsafeTraceRepresentationTest {
 
     @Volatile
     private var node: Node = Node(1)
@@ -46,7 +47,7 @@ class UnsafeTraceRepresentationTest {
             }
         }
         .checkImpl(this::class.java)
-        .checkLincheckOutput("unsafe_trace.txt")
+        .checkLincheckOutput("sun_unsafe_trace.txt")
 
     private fun actionsJustForTrace() {
         unsafe.compareAndSwapObject(this, offset, node, Node(2))
@@ -62,7 +63,55 @@ class UnsafeTraceRepresentationTest {
             throw RuntimeException(ex)
         }
         val offset =
-            unsafe.objectFieldOffset(UnsafeTraceRepresentationTest::class.java.getDeclaredField("node"))
+            unsafe.objectFieldOffset(SunUnsafeTraceRepresentationTest::class.java.getDeclaredField("node"))
+    }
+}
+
+/**
+ * Test checks that in case of a field update using Unsafe we remove receiver and offset arguments from the trace.
+ */
+class JdkUnsafeTraceRepresentationTest {
+
+    @Volatile
+    private var node: Node = Node(1)
+
+    @Volatile
+    private var counter: Int = 0
+    // We use it just to interact with jdk.internal.misc.Unsafe, which we cannot access directly.
+    private val hashMap = ConcurrentHashMap<Int, Int>()
+
+    @Operation
+    fun increment(): Int {
+        val result = counter++
+        actionsJustForTrace()
+        return result
+    }
+
+    @Test
+    fun test() = ModelCheckingOptions()
+        .addCustomScenario {
+            parallel {
+                thread { actor(::increment) }
+            }
+        }
+        .checkImpl(this::class.java)
+        .checkLincheckOutput("jdk_unsafe_trace.txt")
+
+    private fun actionsJustForTrace() {
+        // Here under the hood we interact with the Unsafe instance.
+        hashMap[1] = 2
+    }
+
+    companion object {
+        val unsafe: Unsafe = try {
+            val unsafeField = Unsafe::class.java.getDeclaredField("theUnsafe")
+            unsafeField.isAccessible = true
+            unsafeField.get(null) as Unsafe
+        } catch (ex: Exception) {
+            throw RuntimeException(ex)
+        }
+        val offset =
+            unsafe.objectFieldOffset(SunUnsafeTraceRepresentationTest::class.java.getDeclaredField("node"))
     }
 }
 
