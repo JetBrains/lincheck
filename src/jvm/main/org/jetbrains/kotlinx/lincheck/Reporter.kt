@@ -414,7 +414,7 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
 
     when (failure) {
         is IncorrectResultsFailure -> appendIncorrectResultsFailure(failure, exceptionStackTraces)
-        is DeadlockWithDumpFailure -> appendDeadlockWithDumpFailure(failure)
+        is DeadlockOrLivelockFailure -> appendDeadlockWithDumpFailure(failure)
         is UnexpectedExceptionFailure -> appendUnexpectedExceptionFailure(failure)
         is ValidationFailure -> when (failure.exception) {
             is LincheckInternalBugException -> appendInternalLincheckBugFailure(failure.exception)
@@ -564,7 +564,7 @@ private fun StringBuilder.appendUnexpectedExceptionFailure(failure: UnexpectedEx
     return this
 }
 
-private fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockWithDumpFailure): StringBuilder {
+private fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockOrLivelockFailure): StringBuilder {
     appendLine("= The execution has hung, see the thread dump =")
     appendExecutionScenario(failure.scenario)
     appendLine()

@@ -15,7 +15,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
 import java.util.concurrent.atomic.AtomicBoolean
 
-class DeadlockOnSynchronizedIsolatedTest : AbstractLincheckTest(DeadlockWithDumpFailure::class) {
+class DeadlockOnSynchronizedIsolatedTest : AbstractLincheckTest(DeadlockOrLivelockFailure::class) {
     private var counter = 0
     private var lock1 = Any()
     private var lock2 = Any()
@@ -46,7 +46,7 @@ class DeadlockOnSynchronizedIsolatedTest : AbstractLincheckTest(DeadlockWithDump
     override fun extractState(): Any = counter
 }
 
-class DeadlockOnSynchronizedWaitIsolatedTest : AbstractLincheckTest(DeadlockWithDumpFailure::class) {
+class DeadlockOnSynchronizedWaitIsolatedTest : AbstractLincheckTest(DeadlockOrLivelockFailure::class) {
     private var lock = Object()
 
     @Operation
@@ -65,7 +65,7 @@ class DeadlockOnSynchronizedWaitIsolatedTest : AbstractLincheckTest(DeadlockWith
     override fun extractState(): Any = 0 // constant
 }
 
-class LiveLockIsolatedTest : AbstractLincheckTest(DeadlockWithDumpFailure::class) {
+class LiveLockIsolatedTest : AbstractLincheckTest(DeadlockOrLivelockFailure::class) {
     private var counter = 0
     private val lock1 = AtomicBoolean(false)
     private val lock2 = AtomicBoolean(false)
