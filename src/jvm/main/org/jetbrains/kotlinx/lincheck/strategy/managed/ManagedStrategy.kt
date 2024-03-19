@@ -93,7 +93,7 @@ abstract class ManagedStrategy(
     // Last read trace point, occurred in the current thread.
     // We store it as we initialize read value after the point is created so we have to store
     // the trace point somewhere to obtain it later.
-    private var lastReadTracePoint = ThreadLocal<ReadTracePoint?>()
+    private var lastReadTracePoint = Array<ReadTracePoint?>(nThreads) { null }
     // Random instances with fixed seeds to replace random calls in instrumented code.
     private var randoms = (0 until nThreads + 2).map { Random(it + 239L) }
     // Current call stack for a thread, updated during beforeMethodCall and afterMethodCall methods.
@@ -516,15 +516,6 @@ abstract class ManagedStrategy(
 
     // == LISTENING METHODS ==
 
-    internal fun hashCodeDeterministic(obj: Any): Int {
-        val hashCode = obj.hashCode()
-        return if (hashCode == System.identityHashCode(obj)) {
-            identityHashCodeDeterministic(obj)
-        } else {
-            hashCode
-        }
-    }
-
     internal fun identityHashCodeDeterministic(obj: Any?): Int {
         if (obj == null) return 0
         // TODO: easier to support when `javaagent` is merged
@@ -636,7 +627,7 @@ abstract class ManagedStrategy(
             null
         }
         if (tracePoint != null) {
-            lastReadTracePoint.set(tracePoint)
+            lastReadTracePoint[iThread] = tracePoint
         }
         newSwitchPoint(iThread, codeLocation, tracePoint)
     }
@@ -655,7 +646,7 @@ abstract class ManagedStrategy(
             null
         }
         if (tracePoint != null) {
-            lastReadTracePoint.set(tracePoint)
+            lastReadTracePoint[iThread] = tracePoint
         }
         newSwitchPoint(iThread, codeLocation, tracePoint)
     }
@@ -675,7 +666,7 @@ abstract class ManagedStrategy(
             null
         }
         if (tracePoint != null) {
-            lastReadTracePoint.set(tracePoint)
+            lastReadTracePoint[iThread] = tracePoint
         }
         newSwitchPoint(iThread, codeLocation, tracePoint)
     }
@@ -683,8 +674,9 @@ abstract class ManagedStrategy(
     override fun afterRead(value: Any?) {
         if (collectTrace) {
             runInIgnoredSection {
-                lastReadTracePoint.get()?.initializeReadValue(value)
-                lastReadTracePoint.set(null)
+                val iThread = currentThread
+                lastReadTracePoint[iThread]?.initializeReadValue(value)
+                lastReadTracePoint[iThread] = null
             }
         }
     }

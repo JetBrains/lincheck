@@ -149,7 +149,7 @@ internal object Injections {
         any is Random
 
     /**
-     * Called from the instrumented code before any field read
+     * Called from the instrumented code before each field read
      */
     @JvmStatic
     fun beforeReadField(obj: Any?, className: String, fieldName: String, codeLocation: Int) {
@@ -175,7 +175,7 @@ internal object Injections {
     }
 
     /**
-     * Called from the instrumented code after any field read
+     * Called from the instrumented code after each field read, while final field reads can be ignored here.
      */
     @JvmStatic
     fun afterRead(value: Any?) {
@@ -183,7 +183,7 @@ internal object Injections {
     }
 
     /**
-     * Called from the instrumented code before any field write
+     * Called from the instrumented code before each field write
      */
     @JvmStatic
     fun beforeWriteField(obj: Any?, className: String, fieldName: String, value: Any?, codeLocation: Int) {
@@ -236,7 +236,9 @@ internal object Injections {
     }
 
     /**
-     * Called from the instrumented code before any AtomicFieldUpdater method call
+     * Called from the instrumented code before any AtomicFieldUpdater method call.
+     * We need this separate method, in addition to [beforeAtomicMethodCall], because we want to
+     * provide the owner name of this field, which requires different logic.
      */
     @JvmStatic
     fun beforeAtomicUpdaterMethodCall(owner: Any?, methodName: String, codeLocation: Int, params: Array<Any?>) {
