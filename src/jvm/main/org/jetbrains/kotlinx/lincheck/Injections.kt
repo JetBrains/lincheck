@@ -234,7 +234,7 @@ internal object Injections {
      */
     @JvmStatic
     fun beforeAtomicMethodCall(owner: Any?, methodName: String, codeLocation: Int, params: Array<Any?>) {
-        eventTracker.beforeAtomicUpdaterMethodCall(owner, methodName, codeLocation, params)
+        eventTracker.beforeAtomicMethodCall(owner, methodName, codeLocation, params)
     }
 
     /**

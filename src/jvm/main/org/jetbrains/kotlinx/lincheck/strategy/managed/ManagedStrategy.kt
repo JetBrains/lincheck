@@ -763,33 +763,6 @@ abstract class ManagedStrategy(
         getThreadLocalRandom().nextInt()
     }
 
-    override fun onMethodCallFinishedSuccessfully(result: Any?) {
-        if (collectTrace) {
-            runInIgnoredSection {
-                val iThread = currentThread
-                val tracePoint = methodCallTracePointStack[iThread].removeLast()
-                tracePoint.initializeReturnedValue(if (result == Injections.VOID_RESULT) VoidResult else result)
-                afterMethodCall(iThread, tracePoint)
-                traceCollector!!.addStateRepresentation()
-            }
-        }
-        leaveIgnoredSectionIfEntered()
-    }
-
-    override fun onMethodCallThrewException(t: Throwable) {
-        if (collectTrace) {
-            runInIgnoredSection {
-                // We cannot simply read `thread` as Forcible???Exception can be thrown.
-                val iThread = (Thread.currentThread() as TestThread).threadId
-                val tracePoint = methodCallTracePointStack[iThread].removeLast()
-                tracePoint.initializeThrownException(t)
-                afterMethodCall(iThread, tracePoint)
-                traceCollector!!.addStateRepresentation()
-            }
-        }
-        leaveIgnoredSectionIfEntered()
-    }
-
     private fun enterIgnoredSection() {
         val thread = (Thread.currentThread() as? TestThread) ?: return
         thread.inIgnoredSection = true
@@ -836,22 +809,31 @@ abstract class ManagedStrategy(
             ManagedGuaranteeType.IGNORE -> {
                 if (collectTrace) {
                     runInIgnoredSection {
-                        val params =
-                            if (isSuspendFunction(className, methodName, params)) params.dropLast(1).toTypedArray() else params
+                        val params = if (isSuspendFunction(className, methodName, params)) {
+                            params.dropLast(1).toTypedArray()
+                        } else {
+                            params
+                        }
                         beforeMethodCall(currentThread, codeLocation, null, methodName, params)
                     }
                 }
                 enterIgnoredSection()
             }
             ManagedGuaranteeType.TREAT_AS_ATOMIC -> {
-                beforeAtomicMethodCall(className, methodName, codeLocation, params)
+                if (collectTrace) {
+                    beforeMethodCall(currentThread, codeLocation, null, methodName, params)
+                }
+                newSwitchPointOnAtomicMethodCall(codeLocation)
                 enterIgnoredSection()
             }
             null -> {
                 if (collectTrace) {
                     runInIgnoredSection {
-                        val params =
-                            if (isSuspendFunction(className, methodName, params)) params.dropLast(1).toTypedArray() else params
+                        val params = if (isSuspendFunction(className, methodName, params)) {
+                            params.dropLast(1).toTypedArray()
+                        } else {
+                            params
+                        }
                         beforeMethodCall(currentThread, codeLocation, null, methodName, params)
                     }
                 }
@@ -860,19 +842,6 @@ abstract class ManagedStrategy(
     }
 
     override fun beforeAtomicMethodCall(
-        ownerName: String,
-        methodName: String,
-        codeLocation: Int,
-        params: Array<Any?>
-    ) = runInIgnoredSection {
-        if (collectTrace) {
-            beforeMethodCall(currentThread, codeLocation, null, methodName, params)
-        }
-        beforeAtomicMethodCall(currentThread, codeLocation)
-    }
-
-
-    override fun beforeAtomicUpdaterMethodCall(
         owner: Any?,
         methodName: String,
         codeLocation: Int,
@@ -884,12 +853,39 @@ abstract class ManagedStrategy(
             val paramsWithoutFirstArg = params.drop(1).toTypedArray()
             beforeMethodCall(currentThread, codeLocation, ownerName, methodName, paramsWithoutFirstArg)
         }
-        beforeAtomicMethodCall(currentThread, codeLocation)
+        newSwitchPointOnAtomicMethodCall(codeLocation)
     }
 
-    private fun beforeAtomicMethodCall(iThread: Int, codeLocation: Int) {
+    override fun onMethodCallFinishedSuccessfully(result: Any?) {
+        if (collectTrace) {
+            runInIgnoredSection {
+                val iThread = currentThread
+                val tracePoint = methodCallTracePointStack[iThread].removeLast()
+                tracePoint.initializeReturnedValue(if (result == Injections.VOID_RESULT) VoidResult else result)
+                afterMethodCall(iThread, tracePoint)
+                traceCollector!!.addStateRepresentation()
+            }
+        }
+        leaveIgnoredSectionIfEntered()
+    }
+
+    override fun onMethodCallThrewException(t: Throwable) {
+        if (collectTrace) {
+            runInIgnoredSection {
+                // We cannot simply read `thread` as Forcible???Exception can be thrown.
+                val iThread = (Thread.currentThread() as TestThread).threadId
+                val tracePoint = methodCallTracePointStack[iThread].removeLast()
+                tracePoint.initializeThrownException(t)
+                afterMethodCall(iThread, tracePoint)
+                traceCollector!!.addStateRepresentation()
+            }
+        }
+        leaveIgnoredSectionIfEntered()
+    }
+
+    private fun newSwitchPointOnAtomicMethodCall(codeLocation: Int) {
         // re-use last call trace point
-        newSwitchPoint(iThread, codeLocation, callStackTrace[iThread].lastOrNull()?.call)
+        newSwitchPoint(currentThread, codeLocation, callStackTrace[currentThread].lastOrNull()?.call)
     }
 
     private fun isSuspendFunction(className: String, methodName: String, params: Array<Any?>) =
