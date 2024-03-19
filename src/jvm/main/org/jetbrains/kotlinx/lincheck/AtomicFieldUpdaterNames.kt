@@ -17,11 +17,11 @@ import java.util.concurrent.atomic.AtomicLongFieldUpdater
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 
 /**
- * [AtomicFUNames] is used to map atomic objects to their names (usually, the corresponding field names)
+ * [AtomicFieldUpdaterNames] is used to map atomic objects to their names (usually, the corresponding field names)
  * and class owners. The weak identity hash map ensures that atomic objects are compared using reference
  * equality and does not prevent them from being garbage collected.
  */
-internal object AtomicFUNames {
+internal object AtomicFieldUpdaterNames {
     private val unsafe: Unsafe = try {
         val unsafeField = Unsafe::class.java.getDeclaredField("theUnsafe")
         unsafeField.isAccessible = true
@@ -30,7 +30,7 @@ internal object AtomicFUNames {
         throw RuntimeException("Can't get the Unsafe instance, please report it to the Lincheck team", ex)
     }
 
-    fun getAtomicFieldName(updater: Any): String? {
+    fun getName(updater: Any): String? {
         if (updater !is AtomicIntegerFieldUpdater<*> && updater !is AtomicLongFieldUpdater<*> && updater !is AtomicReferenceFieldUpdater<*, *>) {
             throw IllegalArgumentException("Provided object is not a recognized Atomic*FieldUpdater type.")
         }

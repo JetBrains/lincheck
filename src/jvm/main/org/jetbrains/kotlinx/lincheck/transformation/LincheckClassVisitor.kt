@@ -90,7 +90,6 @@ internal class LincheckClassVisitor(
         if (access and ACC_SYNCHRONIZED != 0) {
             mv = SynchronizedMethodTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc), classVersion)
         }
-        mv = MethodCallTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
         mv = MonitorEnterAndExitTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
         mv = WaitNotifyTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
         mv = ParkUnparkTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
@@ -102,6 +101,7 @@ internal class LincheckClassVisitor(
             sv.analyzer = aa
             aa
         }
+        mv = MethodCallTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
         mv = DeterministicHashCodeTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
         mv = DeterministicTimeTransformer(GeneratorAdapter(mv, access, methodName, desc))
         mv = DeterministicRandomTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
@@ -1102,11 +1102,9 @@ internal class LincheckClassVisitor(
      */
     private inner class MethodCallTransformer(methodName: String, adapter: GeneratorAdapter) :
         ManagedStrategyMethodVisitor(methodName, adapter) {
-        override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) =
-            adapter.run {
-                // TODO: ignore coroutine internals
+        override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
                 // TODO: ignore safe calls
-                // TODO: do not ignore <init>?
+                // TODO: do not ignore <init>
                 if (isCoroutineInternalClass(owner)) {
                     invokeInIgnoredSection {
                         visitMethodInsn(opcode, owner, name, desc, itf)
@@ -1117,13 +1115,13 @@ internal class LincheckClassVisitor(
                     owner == "sun/misc/Unsafe" || owner == "jdk/internal/misc/Unsafe" ||
                     owner == "java/lang/invoke/VarHandle"
                 ) {
-                    val isAtomicUpdaterMethod = owner.endsWith("FieldUpdater")
+                    val isAtomicFUMethod = owner.endsWith("FieldUpdater")
                     invokeIfInTestingCode(
                         original = {
                             visitMethodInsn(opcode, owner, name, desc, itf)
                         },
                         code = {
-                            processAtomicMethodCall(desc, opcode, owner, name, itf, isAtomicUpdaterMethod)
+                            processAtomicMethodCall(desc, opcode, owner, name, itf, isAtomicFUMethod)
                         }
                     )
                     return
@@ -1226,20 +1224,17 @@ internal class LincheckClassVisitor(
             owner: String,
             name: String,
             itf: Boolean,
-            isAtomicUpdaterMethod: Boolean
+            isAtomicFUMethod: Boolean
         ) {
             // STACK [INVOKEVIRTUAL]: owner, arguments
             // STACK [INVOKESTATIC]: arguments
             val argumentLocals = storeArguments(desc)
             // STACK [INVOKEVIRTUAL]: owner
             // STACK [INVOKESTATIC]: <empty>
-            if (isAtomicUpdaterMethod) {
-                when (opcode) {
-                    INVOKESTATIC -> visitInsn(ACONST_NULL)
-                    else -> dup()
-                }
+            if (isAtomicFUMethod) {
+                dup()
             } else {
-                push(owner)
+                visitInsn(ACONST_NULL)
             }
             // STACK [INVOKEVIRTUAL atomic updater]: owner, owner
             // STACK [INVOKESTATIC atomic updater]: <empty>, null
@@ -1271,7 +1266,7 @@ internal class LincheckClassVisitor(
                 // STACK: ..., array
             }
             // STACK: ..., array
-            invokeStatic(if (!isAtomicUpdaterMethod) Injections::beforeAtomicMethodCall else Injections::beforeAtomicUpdaterMethodCall)
+            invokeStatic(Injections::beforeAtomicMethodCall)
 
 
             // STACK [INVOKEVIRTUAL]: owner, arguments

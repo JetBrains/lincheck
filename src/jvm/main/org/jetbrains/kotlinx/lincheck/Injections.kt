@@ -227,25 +227,14 @@ internal object Injections {
         eventTracker.beforeMethodCall(owner, className, methodName, codeLocation, params)
     }
 
-
     /**
      * Called from the instrumented code before any atomic method call.
      * This is just an optimization of [beforeMethodCall] for trusted
      * atomic constructs to avoid wrapping the invocations into try-finally blocks.
      */
     @JvmStatic
-    fun beforeAtomicMethodCall(ownerName: String, methodName: String, codeLocation: Int, params: Array<Any?>) {
-        eventTracker.beforeAtomicMethodCall(ownerName, methodName, codeLocation, params)
-    }
-
-    /**
-     * Called from the instrumented code before any AtomicFieldUpdater method call.
-     * We need this separate method, in addition to [beforeAtomicMethodCall], because we want to
-     * provide the owner name of this field, which requires different logic.
-     */
-    @JvmStatic
-    fun beforeAtomicUpdaterMethodCall(owner: Any?, methodName: String, codeLocation: Int, params: Array<Any?>) {
-        eventTracker.beforeAtomicUpdaterMethodCall(owner!!, methodName, codeLocation, params)
+    fun beforeAtomicMethodCall(owner: Any?, methodName: String, codeLocation: Int, params: Array<Any?>) {
+        eventTracker.beforeAtomicUpdaterMethodCall(owner, methodName, codeLocation, params)
     }
 
     /**

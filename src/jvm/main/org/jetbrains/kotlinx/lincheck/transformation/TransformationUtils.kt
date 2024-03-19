@@ -134,38 +134,6 @@ internal inline fun GeneratorAdapter.invokeInIgnoredSection(
     )
 }
 
-internal inline fun GeneratorAdapter.invokeInIgnoredSectionWithTryCatch(
-    code: GeneratorAdapter.() -> Unit
-) {
-    invokeStatic(Injections::enterIgnoredSection)
-    val enteredIgnoredSection = newLocal(BOOLEAN_TYPE)
-    storeLocal(enteredIgnoredSection)
-
-    val endLabel = newLabel()
-    val methodCallStartLabel = newLabel()
-    val methodCallEndLabel = newLabel()
-    val handlerExceptionStartLabel = newLabel()
-    val handlerExceptionEndLabel = newLabel()
-    visitTryCatchBlock(methodCallStartLabel, methodCallEndLabel, handlerExceptionStartLabel, null)
-
-    visitLabel(methodCallStartLabel)
-    code()
-    ifStatement(
-        condition = {
-            loadLocal(enteredIgnoredSection)
-        },
-        ifClause = {
-            invokeStatic(Injections::leaveIgnoredSection)
-        },
-        elseClause = {}
-    )
-    visitLabel(methodCallEndLabel)
-    visitLabel(handlerExceptionEndLabel)
-
-
-    visitLabel(endLabel)
-}
-
 internal fun isCoroutineStateMachineClass(internalClassName: String) =
     getSuperclassName(internalClassName) == "kotlin/coroutines/jvm/internal/ContinuationImpl"
 
@@ -178,7 +146,6 @@ private fun getSuperclassName(internalClassName: String): String? {
             internalSuperclassName = superName
         }
     }
-    // Try to find the
     try {
         val classStream: InputStream = ClassLoader.getSystemClassLoader().getResourceAsStream("$internalClassName.class")
             ?: return null

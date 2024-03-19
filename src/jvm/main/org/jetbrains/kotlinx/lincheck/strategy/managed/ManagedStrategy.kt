@@ -494,15 +494,7 @@ abstract class ManagedStrategy(
             emptyList()
         }
 
-    private fun isTestThread(iThread: Int) = iThread < nThreads
-
     // == LISTENING METHODS ==
-
-    internal fun identityHashCodeDeterministic(obj: Any?): Int {
-        if (obj == null) return 0
-        // TODO: easier to support when `javaagent` is merged
-        return 0
-    }
 
     override fun lock(monitor: Any, codeLocation: Int): Unit = runInIgnoredSection {
         val tracePoint = if (collectTrace) {
@@ -516,22 +508,36 @@ abstract class ManagedStrategy(
         } else {
             null
         }
-        beforeLockAcquire(codeLocation, tracePoint, monitor)
+        val iThread = currentThread
+        newSwitchPoint(iThread, codeLocation, tracePoint)
+        // Try to acquire the monitor
+        while (!monitorTracker.acquireMonitor(iThread, monitor)) {
+            failIfObstructionFreedomIsRequired {
+                OBSTRUCTION_FREEDOM_LOCK_VIOLATION_MESSAGE
+            }
+            // Switch to another thread and wait for a moment when the monitor can be acquired
+            switchCurrentThread(iThread, SwitchReason.LOCK_WAIT, true)
+        }
     }
 
     override fun unlock(monitor: Any, codeLocation: Int): Unit = runInIgnoredSection {
-        val tracePoint = if (collectTrace) {
+        // We need to be extremely careful with the MONITOREXIT instruction,
+        // as it can be put into a recursive "finally" block, releasing
+        // the lock over and over until the instruction succeeds.
+        // Therefore, we always release the lock in this case,
+        // without tracking the event.
+        if (suddenInvocationResult != null) return
+        monitorTracker.releaseMonitor(monitor)
+        if (collectTrace) {
             val iThread = currentThread
-            MonitorExitTracePoint(
+            val tracePoint = MonitorExitTracePoint(
                 iThread = iThread,
                 actorId = currentActorId[iThread],
                 callStackTrace = callStackTrace[iThread],
                 stackTraceElement = CodeLocations.stackTrace(codeLocation)
             )
-        } else {
-            null
+            traceCollector!!.passCodeLocation(tracePoint)
         }
-        beforeLockRelease(tracePoint, monitor)
     }
 
     override fun park(codeLocation: Int): Unit = runInIgnoredSection {
@@ -546,22 +552,25 @@ abstract class ManagedStrategy(
         } else {
             null
         }
-        beforePark(iThread, codeLocation, tracePoint)
+        // Instead of fairly supporting the park/unpark semantics,
+        // we simply add a new switch point here, thus, also
+        // emulating spurious wake-ups.
+        newSwitchPoint(iThread, codeLocation, tracePoint)
     }
 
     override fun unpark(thread: Thread, codeLocation: Int): Unit = runInIgnoredSection {
         val iThread = currentThread
-        val tracePoint = if (collectTrace) {
-            UnparkTracePoint(
+        // We don't suspend on `park()` calls to emulate spurious wake-ups,
+        // therefore, no actions are needed.
+        if (collectTrace) {
+            val tracePoint = UnparkTracePoint(
                 iThread = iThread,
                 actorId = currentActorId[iThread],
                 callStackTrace = callStackTrace[iThread],
                 stackTraceElement = CodeLocations.stackTrace(codeLocation)
             )
-        } else {
-            null
+            traceCollector?.passCodeLocation(tracePoint)
         }
-        afterUnpark(iThread, codeLocation, tracePoint, thread)
     }
 
     override fun wait(monitor: Any, codeLocation: Int, withTimeout: Boolean): Unit = runInIgnoredSection {
@@ -576,22 +585,33 @@ abstract class ManagedStrategy(
         } else {
             null
         }
-        beforeWait(iThread, codeLocation, tracePoint, monitor, withTimeout)
+        newSwitchPoint(iThread, codeLocation, tracePoint)
+        failIfObstructionFreedomIsRequired {
+            OBSTRUCTION_FREEDOM_WAIT_VIOLATION_MESSAGE
+        }
+        if (withTimeout) return // timeouts occur instantly
+        while (monitorTracker.waitOnMonitor(iThread, monitor)) {
+            val mustSwitch = monitorTracker.isWaiting(iThread)
+            switchCurrentThread(iThread, SwitchReason.MONITOR_WAIT, mustSwitch)
+        }
     }
 
     override fun notify(monitor: Any, codeLocation: Int, notifyAll: Boolean): Unit = runInIgnoredSection {
-        val tracePoint = if (collectTrace) {
+        if (notifyAll) {
+            monitorTracker.notifyAll(monitor)
+        } else {
+            monitorTracker.notify(monitor)
+        }
+        if (collectTrace) {
             val iThread = currentThread
-            NotifyTracePoint(
+            val tracePoint = NotifyTracePoint(
                 iThread = iThread,
                 actorId = currentActorId[iThread],
                 callStackTrace = callStackTrace[iThread],
                 stackTraceElement = CodeLocations.stackTrace(codeLocation)
             )
-        } else {
-            null
+            traceCollector?.passCodeLocation(tracePoint)
         }
-        beforeNotify(tracePoint, monitor, notifyAll)
     }
 
     override fun beforeReadField(obj: Any, className: String, fieldName: String, codeLocation: Int) = runInIgnoredSection {
@@ -789,6 +809,10 @@ abstract class ManagedStrategy(
         }
     }
 
+    override fun afterFieldAssign(receiver: Any, value: Any?) {
+        localObjectManager.addDependency(receiver, value)
+    }
+
     private fun methodGuaranteeType(owner: Any?, className: String, methodName: String): ManagedGuaranteeType? = runInIgnoredSection {
         userDefinedGuarantees?.forEach { guarantee ->
             val ownerName = owner?.javaClass?.canonicalName ?: className
@@ -798,10 +822,6 @@ abstract class ManagedStrategy(
         }
 
         return null
-    }
-
-    override fun afterFieldAssign(receiver: Any, value: Any?) {
-        localObjectManager.addDependency(receiver, value)
     }
 
     override fun beforeMethodCall(
@@ -853,14 +873,14 @@ abstract class ManagedStrategy(
 
 
     override fun beforeAtomicUpdaterMethodCall(
-        owner: Any,
+        owner: Any?,
         methodName: String,
         codeLocation: Int,
         params: Array<Any?>
     ) = runInIgnoredSection {
         if (collectTrace) {
             traceCollector?.addStateRepresentation()
-            val ownerName = AtomicFUNames.getAtomicFieldName(owner)
+            val ownerName = owner?.let { AtomicFieldUpdaterNames.getName(it) }
             val paramsWithoutFirstArg = params.drop(1).toTypedArray()
             beforeMethodCall(currentThread, codeLocation, ownerName, methodName, paramsWithoutFirstArg)
         }
@@ -905,89 +925,6 @@ abstract class ManagedStrategy(
         }
 
         return null // or throw an exception if a match is mandatory
-    }
-
-
-    /**
-     * @param codeLocation the byte-code location identifier of this operation.
-     * @return whether lock should be actually acquired
-     */
-    internal fun beforeLockAcquire(codeLocation: Int, tracePoint: MonitorEnterTracePoint?, monitor: Any): Boolean {
-        val iThread = currentThread
-        newSwitchPoint(iThread, codeLocation, tracePoint)
-        // Try to acquire the monitor
-        while (!monitorTracker.acquireMonitor(iThread, monitor)) {
-            failIfObstructionFreedomIsRequired {
-                OBSTRUCTION_FREEDOM_LOCK_VIOLATION_MESSAGE
-            }
-            // Switch to another thread and wait for a moment when the monitor can be acquired
-            switchCurrentThread(iThread, SwitchReason.LOCK_WAIT, true)
-        }
-        // The monitor is acquired, finish.
-        return false
-    }
-
-    /**
-     * @return whether lock should be actually released
-     */
-    internal fun beforeLockRelease(tracePoint: MonitorExitTracePoint?, monitor: Any): Boolean {
-        // We need to be extremely careful with the MONITOREXIT instruction,
-        // as it can be put into a recursive "finally" block, releasing
-        // the lock over and over until the instruction succeeds.
-        // Therefore, we always release the lock in this case,
-        // without tracking the event.
-        if (suddenInvocationResult != null) return false
-        monitorTracker.releaseMonitor(monitor)
-        traceCollector?.passCodeLocation(tracePoint)
-        return false
-    }
-
-    /**
-     * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
-     * @param codeLocation the byte-code location identifier of this operation.
-     * @return whether park should be executed
-     */
-    @Suppress("UNUSED_PARAMETER")
-    internal fun beforePark(iThread: Int, codeLocation: Int, tracePoint: ParkTracePoint?) {
-        newSwitchPoint(iThread, codeLocation, tracePoint)
-    }
-
-    /**
-     * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
-     * @param codeLocation the byte-code location identifier of this operation.
-     */
-    @Suppress("UNUSED_PARAMETER")
-    internal fun afterUnpark(iThread: Int, codeLocation: Int, tracePoint: UnparkTracePoint?, thread: Any) {
-        traceCollector?.passCodeLocation(tracePoint)
-    }
-
-    /**
-     * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
-     * @param codeLocation the byte-code location identifier of this operation.
-     * @param withTimeout `true` if is invoked with timeout, `false` otherwise.
-     * @return whether `Object.wait` should be executed
-     */
-    internal fun beforeWait(iThread: Int, codeLocation: Int, tracePoint: WaitTracePoint?, monitor: Any, withTimeout: Boolean) {
-        newSwitchPoint(iThread, codeLocation, tracePoint)
-        failIfObstructionFreedomIsRequired {
-            OBSTRUCTION_FREEDOM_WAIT_VIOLATION_MESSAGE
-        }
-        if (withTimeout) return // timeouts occur instantly
-        while (monitorTracker.waitOnMonitor(iThread, monitor)) {
-            val mustSwitch = monitorTracker.isWaiting(iThread)
-            switchCurrentThread(iThread, SwitchReason.MONITOR_WAIT, mustSwitch)
-        }
-    }
-
-    /**
-     * @return whether `Object.notify` should be executed
-     */
-    internal fun beforeNotify(tracePoint: NotifyTracePoint?, monitor: Any, notifyAll: Boolean) {
-        if (notifyAll)
-            monitorTracker.notifyAll(monitor)
-        else
-            monitorTracker.notify(monitor)
-        traceCollector?.passCodeLocation(tracePoint)
     }
 
     /**
