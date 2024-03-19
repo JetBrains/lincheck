@@ -24,8 +24,13 @@ import org.jetbrains.kotlinx.lincheck.transformation.CodeLocations
 import org.jetbrains.kotlinx.lincheck.Injections
 import org.jetbrains.kotlinx.lincheck.EventTracker
 import org.jetbrains.kotlinx.lincheck.TestThread
+import sun.misc.Unsafe
+import java.lang.invoke.VarHandle
 import java.lang.reflect.*
 import java.util.*
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater
+import java.util.concurrent.atomic.AtomicLongFieldUpdater
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 import kotlin.collections.set
 
 /**
@@ -850,8 +855,23 @@ abstract class ManagedStrategy(
         if (collectTrace) {
             traceCollector?.addStateRepresentation()
             val ownerName = owner?.let { AtomicFieldUpdaterNames.getName(it) }
-            val paramsWithoutFirstArg = params.drop(1).toTypedArray()
-            beforeMethodCall(currentThread, codeLocation, ownerName, methodName, paramsWithoutFirstArg)
+            // Drop the object instance and offset (in case of Unsafe) from the parameters
+            // when using Unsafe, VarHandle, or AtomicFieldUpdater.
+            @Suppress("NAME_SHADOWING")
+            val params = when {
+                owner is AtomicIntegerFieldUpdater<*> || owner is AtomicLongFieldUpdater<*> || owner is AtomicReferenceFieldUpdater<*, *> || owner is VarHandle -> {
+                    params.drop(1).toTypedArray()
+                }
+
+                owner is Unsafe -> {
+                    params.drop(2).toTypedArray()
+                }
+
+                else -> {
+                    params
+                }
+            }
+            beforeMethodCall(currentThread, codeLocation, ownerName, methodName, params)
         }
         newSwitchPointOnAtomicMethodCall(codeLocation)
     }
