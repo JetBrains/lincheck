@@ -860,7 +860,7 @@ abstract class ManagedStrategy(
             @Suppress("NAME_SHADOWING")
             val params = when {
                 isAtomicUpdater || owner is VarHandle -> params.drop(1).toTypedArray()
-                owner is Unsafe -> params.drop(2).toTypedArray()
+                owner is Unsafe || (owner != null && owner::class.java.name == "jdk.internal.misc.Unsafe") -> params.drop(2).toTypedArray()
                 else -> params
             }
             beforeMethodCall(currentThread, codeLocation, ownerName, methodName, params)

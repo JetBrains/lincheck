@@ -1222,7 +1222,11 @@ internal class LincheckClassVisitor(
             name: String,
             itf: Boolean,
         ) {
-            val provideOwnerToBeforeMethodCall = opcode != INVOKESTATIC &&
+            // In cases of Atomic*FieldUpdater, Unsafe and VarHandle we edit
+            // the params list before creating a trace point to remove redundant parameters
+            // as receiver and offset.
+            // To determine how we should process it, we provide owner instance.
+            val provideOwner = opcode != INVOKESTATIC &&
                     (owner.endsWith("FieldUpdater") ||
                     owner == "sun/misc/Unsafe" || owner == "jdk/internal/misc/Unsafe" ||
                     owner == "java/lang/invoke/VarHandle")
@@ -1231,7 +1235,7 @@ internal class LincheckClassVisitor(
             val argumentLocals = storeArguments(desc)
             // STACK [INVOKEVIRTUAL]: owner
             // STACK [INVOKESTATIC]: <empty>
-            if (provideOwnerToBeforeMethodCall) {
+            if (provideOwner) {
                 dup()
             } else {
                 visitInsn(ACONST_NULL)
