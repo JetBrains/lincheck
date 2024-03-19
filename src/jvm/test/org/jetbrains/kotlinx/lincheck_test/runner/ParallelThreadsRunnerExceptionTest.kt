@@ -181,5 +181,7 @@ class ParallelThreadExecutionExceptionsTest {
 }
 
 fun mockStrategy(scenario: ExecutionScenario) = object : Strategy(scenario) {
+    override fun needsTransformation(): Boolean = false
+
     override fun run(): LincheckFailure? = error("Not yet implemented")
 }

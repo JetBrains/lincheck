@@ -44,6 +44,8 @@ class StressStrategy(
         }
     }
 
+    override fun needsTransformation(): Boolean = false
+
     override fun run(): LincheckFailure? {
         runner.use {
             // Run invocations

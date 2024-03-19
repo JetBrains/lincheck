@@ -12,7 +12,6 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
-import org.jetbrains.kotlinx.lincheck.transformation.AtomicFields
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
@@ -48,7 +47,7 @@ abstract class ManagedStrategy(
     protected val nThreads: Int = scenario.nThreads
     // Runner for scenario invocations,
     // can be replaced with a new one for trace construction.
-    private var runner: ManagedStrategyRunner
+    private var runner: ManagedStrategyRunner = createRunner()
     // Spin-waiters for each thread
     private val spinners = SpinnerGroup(nThreads)
 
@@ -89,22 +88,21 @@ abstract class ManagedStrategy(
     // correspond to the same method call in the trace.
     private val suspendedFunctionsStack = Array(nThreads) { mutableListOf<Int>() }
     // Helps to ignore potential switch point in local objects (see LocalObjectManager) to avoid
-    // useless interleavings analysis
+    // useless interleavings analysis.
     private var localObjectManager = LocalObjectManager()
     // Last read trace point, occurred in the current thread.
     // We store it as we initialize read value after the point is created so we have to store
-    // the trace point somewhere to obtain it later
+    // the trace point somewhere to obtain it later.
     private var lastReadTracePoint = ThreadLocal<ReadTracePoint?>()
-    // Random instances with fixed seeds to replace random calls in instrumented code
+    // Random instances with fixed seeds to replace random calls in instrumented code.
     private var randoms = (0 until nThreads + 2).map { Random(it + 239L) }
-    // Current call stack for a thread, updated during beforeMethodCall and afterMethodCall methods
+    // Current call stack for a thread, updated during beforeMethodCall and afterMethodCall methods.
     private val methodCallTracePointStack = (0 until nThreads + 2).map { mutableListOf<MethodCallTracePoint>() }
-    // Guarantees, specified by used on some methods
+    // Guarantees, additionally specified by user on some methods.
     private val userDefinedGuarantees: List<ManagedStrategyGuarantee>? = testCfg.guarantees.ifEmpty { null }
 
     init {
-        runner = createRunner()
-        // The managed state should be initialized before еру test class transformation.
+        // The managed state should be initialized before еnу test class transformation.
         try {
             runner.initialize()
         } catch (t: Throwable) {
@@ -194,7 +192,7 @@ abstract class ManagedStrategy(
         }
         // In case when a runner detects a deadlock,
         // some threads can still work with the current strategy instance
-        // and simultaneously add events to the TraceCollector, which leads to an inconsistent trace.
+        // and simultaneously adding events to the TraceCollector, which leads to an inconsistent trace.
         // Therefore, if the runner detects a deadlock, we don’t even try to collect a trace.
         is RunnerTimeoutInvocationResult -> result.toLincheckFailure(scenario, trace = null)
         else -> result.toLincheckFailure(scenario, collectTrace(result))
@@ -226,12 +224,12 @@ abstract class ManagedStrategy(
         runner.initialize()
 
         loopDetector.enableReplayMode(
-            failDueToDeadlockInTheEnd = failingResult is DeadlockInvocationResult || failingResult is ObstructionFreedomViolationInvocationResult
+            failDueToDeadlockInTheEnd = failingResult is ManagedDeadlockInvocationResult || failingResult is ObstructionFreedomViolationInvocationResult
         )
 
         val loggedResults = runInvocation()
-        // In case when a runner detects a deadlock, some threads can still be in an active state,
-        // simultaneously add events to the TraceCollector, which leads to an inconsistent trace.
+        // In case the runner detects a deadlock, some threads can still be in an active state,
+        // simultaneously adding events to the TraceCollector, which leads to an inconsistent trace.
         // Therefore, if the runner detects deadlock, we don't even try to collect trace.
         if (loggedResults is RunnerTimeoutInvocationResult) return null
         val sameResultTypes = loggedResults.javaClass == failingResult.javaClass
@@ -255,15 +253,15 @@ abstract class ManagedStrategy(
     protected fun runInvocation(): InvocationResult {
         initializeInvocation()
         val result = runner.run()
-        // In case when a runner detects a deadlock, some threads can still work with current strategy
-        // and modify strategy, so we're not interested in suddenInvocationResult in this case
-        // and immediately return RunnerTimeoutInvocationResult
+        // In case the runner detects a deadlock, some threads can still manipulate the current strategy,
+        // so we're not interested in suddenInvocationResult in this case
+        // and immediately return RunnerTimeoutInvocationResult.
         if (result is RunnerTimeoutInvocationResult) {
             return result
         }
         // Has strategy already determined the invocation result?
         suddenInvocationResult?.let {
-            // Unexpected `ForcibleExecutionFinishError` should be thrown
+            // Unexpected `ForcibleExecutionFinishError` should be thrown.
             check(result is UnexpectedExceptionInvocationResult)
             return it
         }
@@ -281,7 +279,7 @@ abstract class ManagedStrategy(
     private val currentActorIsBlocking: Boolean
         get() {
             val actorId = currentActorId[currentThread]
-            // handle the case when the first actor has not yet started,
+            // Handle the case when the first actor has not yet started,
             // see https://github.com/JetBrains/lincheck/pull/277
             if (actorId < 0) return false
             return scenario.threads[currentThread][actorId].blocking
@@ -295,7 +293,7 @@ abstract class ManagedStrategy(
                 }.filterNotNull().any { it.causesBlocking }
 
     private fun failDueToDeadlock(): Nothing {
-        suddenInvocationResult = DeadlockInvocationResult()
+        suddenInvocationResult = ManagedDeadlockInvocationResult
         // Forcibly finish the current execution by throwing an exception.
         throw ForcibleExecutionFinishError
     }
@@ -371,7 +369,7 @@ abstract class ManagedStrategy(
         if (loopDetector.visitCodeLocation(iThread, codeLocation)) {
             if (loopDetector.isSpinLockSwitch) {
                 failIfObstructionFreedomIsRequired {
-                    // Log the last event that caused obstruction freedom violation
+                    // Log the last event that caused obstruction freedom violation.
                     traceCollector?.passCodeLocation(tracePoint)
                     OBSTRUCTION_FREEDOM_SPINLOCK_VIOLATION_MESSAGE
                 }
@@ -396,7 +394,7 @@ abstract class ManagedStrategy(
      */
     open fun onFinish(iThread: Int) {
         // onActorFinish we be called so the statement below is not necessary, but we verify
-        // additionally that we are now in a testing code to avoid bugs
+        // additionally that we are now in a testing code to avoid bugs.
         (Thread.currentThread() as TestThread).inTestingCode = false
         awaitTurn(iThread)
         finished[iThread] = true
@@ -481,12 +479,12 @@ abstract class ManagedStrategy(
         val switchableThreads = switchableThreads(iThread)
         if (switchableThreads.isEmpty()) {
             if (mustSwitch && !finished.all { it }) {
-                // all threads are suspended
+                // All threads are suspended
                 // then switch on any suspended thread to finish it and get SuspendedResult
                 val nextThread = (0 until nThreads).firstOrNull { !finished[it] && isSuspended[it] }
                 if (nextThread == null) {
                     // must switch not to get into a deadlock, but there are no threads to switch.
-                    suddenInvocationResult = DeadlockInvocationResult()
+                    suddenInvocationResult = ManagedDeadlockInvocationResult
                     // forcibly finish execution by throwing an exception.
                     throw ForcibleExecutionFinishError
                 }
@@ -828,7 +826,7 @@ abstract class ManagedStrategy(
         return null
     }
 
-    override fun addDependency(receiver: Any, value: Any?) {
+    override fun afterFieldAssign(receiver: Any, value: Any?) {
         localObjectManager.addDependency(receiver, value)
     }
 
@@ -1064,7 +1062,7 @@ abstract class ManagedStrategy(
         val callStackTrace = callStackTrace[iThread]
         val suspendedMethodStack = suspendedFunctionsStack[iThread]
         val methodId = if (suspendedMethodStack.isNotEmpty()) {
-            // if there was a suspension before, then instead of creating a new identifier
+            // If there was a suspension before, then instead of creating a new identifier,
             // use the one that the suspended call had
             val lastId = suspendedMethodStack.last()
             suspendedMethodStack.removeAt(suspendedMethodStack.lastIndex)
@@ -1072,7 +1070,7 @@ abstract class ManagedStrategy(
         } else {
             methodCallNumber++
         }
-        // code location of the new method call is currently the last
+        // Code location of the new method call is currently the last one
         val tracePoint = MethodCallTracePoint(
             iThread = iThread,
             actorId = currentActorId[iThread],
@@ -1081,7 +1079,6 @@ abstract class ManagedStrategy(
             stackTraceElement = CodeLocations.stackTrace(codeLocation)
         ).also {
             it.initializeParameters(params)
-        }.also {
             it.initializeOwnerName(ownerName)
         }
         methodCallTracePointStack[iThread] += tracePoint
@@ -1591,14 +1588,7 @@ private class ManagedStrategyRunner(
     private val managedStrategy: ManagedStrategy,
     testClass: Class<*>, validationFunction: Actor?, stateRepresentationMethod: Method?,
     timeoutMs: Long, useClocks: UseClocks
-) : ParallelThreadsRunner(
-    managedStrategy,
-    testClass,
-    validationFunction,
-    stateRepresentationMethod,
-    timeoutMs,
-    useClocks
-) {
+) : ParallelThreadsRunner(managedStrategy, testClass, validationFunction, stateRepresentationMethod, timeoutMs, useClocks) {
     override fun onStart(iThread: Int) = runInIgnoredSection {
         if (currentExecutionPart !== PARALLEL) return
         managedStrategy.onStart(iThread)

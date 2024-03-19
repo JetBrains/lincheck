@@ -39,7 +39,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
     public static final String REMAPPED_PACKAGE_CANONICAL_NAME = getCanonicalClassName(REMAPPED_PACKAGE_INTERNAL_NAME);
     public static final int ASM_API = ASM9;
 
-    private final List<Function<ClassVisitor, ClassVisitor>> classTransformers;
+    private final Function<ClassVisitor, ClassVisitor> classTransformer;
     private final Remapper remapper;
 
     // Cache for classloading and frames computing during the transformation.
@@ -50,12 +50,11 @@ public class TransformationClassLoader extends ExecutionClassLoader {
     private static final Map<String, byte[]> modelCheckingStrategyBytecodeCache = new ConcurrentHashMap<>();
 
     public TransformationClassLoader(Strategy strategy) {
-        classTransformers = new ArrayList<>();
         // Apply the strategy's transformer at first, then the runner's one.
         // TODO: add Strategy.transformationMode property to get rig of this instanceof check
         //  (now it's impossible due to lack of internal modifier in Java)
         TransformationMode transformationMode = strategy instanceof ModelCheckingStrategy ? TransformationMode.MODEL_CHECKING : TransformationMode.STRESS;
-        classTransformers.add((cw) -> new LincheckClassVisitor(transformationMode, cw));
+        classTransformer = (classVisitor) -> new LincheckClassVisitor(transformationMode, classVisitor);
         remapper = UtilsKt.getRemapperByTransformers(transformationMode);
         if (strategy instanceof StressStrategy) {
             bytecodeCache = stressStrategyBytecodeCache;
@@ -65,7 +64,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
     }
 
     public TransformationClassLoader(Function<ClassVisitor, ClassVisitor> classTransformer) {
-        this.classTransformers = Collections.singletonList(classTransformer);
+        this.classTransformer = classTransformer;
         remapper = null;
     }
 
@@ -186,8 +185,7 @@ public class TransformationClassLoader extends ExecutionClassLoader {
         // if (className.equals(YourClass.class.getCanonicalName()))
         //   cv = new TraceClassVisitor(cv, new PrintWriter(System.out));
 
-        for (Function<ClassVisitor, ClassVisitor> ct : classTransformers)
-            cv = ct.apply(cv);
+        cv = classTransformer.apply(cv);
         // Get transformed bytecode
         cr.accept(cv, ClassReader.EXPAND_FRAMES);
         return cw.toByteArray();

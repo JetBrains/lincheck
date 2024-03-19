@@ -55,7 +55,7 @@ internal class ObstructionFreedomViolationFailure(
 ) : LincheckFailure(scenario, trace)
 
 internal fun InvocationResult.toLincheckFailure(scenario: ExecutionScenario, trace: Trace? = null) = when (this) {
-    is DeadlockInvocationResult -> DeadlockWithDumpFailure(scenario, threadDump, trace)
+    is ManagedDeadlockInvocationResult -> DeadlockWithDumpFailure(scenario, null, trace)
     is RunnerTimeoutInvocationResult -> DeadlockWithDumpFailure(scenario, threadDump, trace)
     is UnexpectedExceptionInvocationResult -> UnexpectedExceptionFailure(scenario, exception, trace)
     is ValidationFailureInvocationResult -> ValidationFailure(scenario, exception, trace)

@@ -161,8 +161,8 @@ internal open class ParallelThreadsRunner(
         completedOrSuspendedThreads.set(0)
         completions.forEach {
             it.forEach { completion ->
-                // As we're using the same instances of Completion during multiply invocations, it's
-                // context may collect some data,
+                // As we're using the same instances of Completion during multiply invocations,
+                // it's context may collect some data,
                 // which lead to non-determinism in a subsequent invocation.
                 // To avoid this, we reset its context.
                 completion.reset()
@@ -411,9 +411,7 @@ internal open class ParallelThreadsRunner(
         executor.close()
     }
 
-    override fun isCurrentRunnerThread(thread: Thread): Boolean {
-        return executor.threads.any { it === thread }
-    }
+    override fun isCurrentRunnerThread(thread: Thread): Boolean = executor.threads.any { it === thread }
 
     override fun onFinish(iThread: Int) {}
 

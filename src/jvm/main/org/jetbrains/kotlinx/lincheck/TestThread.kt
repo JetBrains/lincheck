@@ -38,7 +38,7 @@ internal class TestThread(
      * The currently suspended continuation, if present.
      * It's stored here to provide a handle for resumption during testing.
      *
-     * It's necessary to store it in [Any] type, otherwise as have to load CancellableContinuation class earlier.
+     * It's necessary to store it in [Any] type, otherwise we would have to load CancellableContinuation class earlier.
      * But actually [suspendedContinuation] is always of [CancellableContinuation] type.
      */
     @JvmField
@@ -54,7 +54,7 @@ internal class TestThread(
     var inTestingCode = false
 
     /**
-     * This flag is used to control the analysis during user's executions.
+     * This flag is used to disable tracking of all code events.
      * If Lincheck enters a code block for which analysis should be disabled,
      * this flag is set to `true`. Notably, such code blocks can be nested,
      * but only the most outer one changes the flag.

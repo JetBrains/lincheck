@@ -20,14 +20,13 @@ import org.objectweb.asm.commons.*
 import org.objectweb.asm.commons.InstructionAdapter.*
 import org.jetbrains.kotlinx.lincheck.transformation.CoroutineInternalCallTracker.isCoroutineInternalClass
 import java.util.*
-import java.util.concurrent.ThreadLocalRandom
 
 internal class LincheckClassVisitor(
     private val transformationMode: TransformationMode,
-    cw: ClassVisitor
+    classVisitor: ClassVisitor
 ) : ClassVisitor(
     ASM_API,
-    if (transformationMode == TransformationMode.MODEL_CHECKING) ClassRemapper(cw, JavaUtilRemapper()) else cw
+    if (transformationMode == TransformationMode.MODEL_CHECKING) ClassRemapper(classVisitor, JavaUtilRemapper()) else classVisitor
 ) {
     private lateinit var className: String
     private var classVersion = 0
@@ -818,7 +817,7 @@ internal class LincheckClassVisitor(
                             // STACK: receiver, cas-result
                             loadLocal(nextValueLocal)
                             // STACK: nextValue, receiver, cas-result
-                            invokeStatic(Injections::addDependency)
+                            invokeStatic(Injections::afterFieldAssign)
                         }
                     )
                 }
@@ -853,7 +852,7 @@ internal class LincheckClassVisitor(
                             // STACK: receiver
                             loadLocal(nextValueLocal)
                             // STACK: nextValue, receiver
-                            invokeStatic(Injections::addDependency)
+                            invokeStatic(Injections::afterFieldAssign)
                         }
                     )
                 }
@@ -914,7 +913,7 @@ internal class LincheckClassVisitor(
                     // STACK: receiver
                     loadLocal(nextValueLocal)
                     // STACK: boxedNextValue, receiver
-                    invokeStatic(Injections::addDependency)
+                    invokeStatic(Injections::afterFieldAssign)
                 } else {
                     // we are in an array version overload (with index) *.compareAndSet(index, currentValue, nextValue)
                     val nextType = argumentTypes.last()
@@ -956,7 +955,7 @@ internal class LincheckClassVisitor(
                     // STACK: receiver, cas-result
                     loadLocal(nextValueLocal)
                     // STACK: boxedNextValue, receiver, cas-result
-                    invokeStatic(Injections::addDependency)
+                    invokeStatic(Injections::afterFieldAssign)
                 }
             }
         )
@@ -1001,7 +1000,7 @@ internal class LincheckClassVisitor(
                     // STACK: receiver
                     loadLocal(valueLocal)
                     // STACK: boxedValue, receiver
-                    invokeStatic(Injections::addDependency)
+                    invokeStatic(Injections::afterFieldAssign)
                 } else {
                     // we are in an array version overload (with index) varHandle.set(value, index)
                     val argumentType = argumentTypes.last()
@@ -1032,7 +1031,7 @@ internal class LincheckClassVisitor(
                     // STACK: receiver
                     loadLocal(valueLocal)
                     // STACK: boxedValue, receiver
-                    invokeStatic(Injections::addDependency)
+                    invokeStatic(Injections::afterFieldAssign)
                 }
             }
         )

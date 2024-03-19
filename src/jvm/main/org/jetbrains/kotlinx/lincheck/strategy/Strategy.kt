@@ -22,7 +22,7 @@ import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 abstract class Strategy protected constructor(
     val scenario: ExecutionScenario
 ) {
-    open fun needsTransformation() = false
+    abstract fun needsTransformation(): Boolean
 
     abstract fun run(): LincheckFailure?
 

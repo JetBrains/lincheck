@@ -54,51 +54,6 @@ internal object CodeLocations {
 }
 
 /**
- * [AtomicFields] is used to map atomic objects to their names (usually, the corresponding field names)
- * and class owners. The weak identity hash map ensures that atomic objects are compared using reference
- * equality and does not prevent them from being garbage collected.
- */
-internal object AtomicFields {
-    private val unsafe: Unsafe = try {
-        val unsafeField = Unsafe::class.java.getDeclaredField("theUnsafe")
-        unsafeField.isAccessible = true
-        unsafeField.get(null) as Unsafe
-    } catch (ex: Exception) {
-        throw RuntimeException(ex)
-    }
-
-    fun getAtomicFieldName(updater: Any): String? {
-        if (updater !is AtomicIntegerFieldUpdater<*> && updater !is AtomicLongFieldUpdater<*> && updater !is AtomicReferenceFieldUpdater<*, *>) {
-            throw IllegalArgumentException("Provided object is not a recognized Atomic*FieldUpdater type.")
-        }
-        // Extract the private offset value and find the matching field.
-        try {
-            // Cannot use neither reflection not MethodHandles.Lookup, as they lead to a warning.
-            val tclassField = updater.javaClass.getDeclaredField("tclass")
-            val targetType = unsafe.getObject(updater, unsafe.objectFieldOffset(tclassField)) as Class<*>
-
-            val offsetField = updater.javaClass.getDeclaredField("offset")
-            val offset = unsafe.getLong(updater, unsafe.objectFieldOffset(offsetField))
-
-            for (field in targetType.declaredFields) {
-                try {
-                    if (isNative(field.modifiers)) continue
-                    val fieldOffset = if (isStatic(field.modifiers)) unsafe.staticFieldOffset(field)
-                    else unsafe.objectFieldOffset(field)
-                    if (fieldOffset == offset) return field.name
-                } catch (t: Throwable) {
-                    t.printStackTrace()
-                }
-            }
-        } catch (t: Throwable) {
-            t.printStackTrace()
-        }
-
-        return null // Field not found
-    }
-}
-
-/**
  * [FinalFields] object is used to track final fields across different classes.
  * As a field may be declared in the parent class, [isFinalField] method recursively traverses all the
  * hierarchy to find the field and check it.

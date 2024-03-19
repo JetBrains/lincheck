@@ -46,5 +46,5 @@ internal interface EventTracker {
     fun randomNextInt(): Int
 
     fun onNewObjectCreation(obj: Any)
-    fun addDependency(receiver: Any, value: Any?)
+    fun afterFieldAssign(receiver: Any, value: Any?)
 }

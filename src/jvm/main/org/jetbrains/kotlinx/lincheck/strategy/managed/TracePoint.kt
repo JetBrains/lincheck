@@ -29,6 +29,8 @@ data class Trace(val trace: List<TracePoint>)
  * happened in the same, nested, or disjoint methods.
  */
 sealed class TracePoint(val iThread: Int, val actorId: Int, callStackTrace: CallStackTrace) {
+    // This field assignment creates a copy of current callStackTrace using .toList()
+    // as CallStackTrace is a mutable list and can be changed after this trace point is created.
     internal val callStackTrace = callStackTrace.toList()
     protected abstract fun toStringImpl(): String
     override fun toString(): String = toStringImpl()

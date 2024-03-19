@@ -278,11 +278,14 @@ internal object Injections {
     /**
      * Called from the instrumented code after value assigned to any receiver field.
      * Required to track local objects.
-     * @see org.jetbrains.kotlinx.lincheck.strategy.managed.LocalObjectManager
+     * @param receiver the object in whose field the entry is made
+     * @param value the value written into [receiver] field
+     *
+     * @see [LocalObjectManager]
      */
     @JvmStatic
-    fun addDependency(receiver: Any, value: Any?) {
-        eventTracker.addDependency(receiver, value)
+    fun afterFieldAssign(receiver: Any, value: Any?) {
+        eventTracker.afterFieldAssign(receiver, value)
     }
 
     /**
