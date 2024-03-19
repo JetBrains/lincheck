@@ -124,7 +124,7 @@ class Spinner(val nThreads: Int = -1) {
      *   for example, to fall back into a blocking synchronization.
      */
     fun spin(): Boolean {
-        // spin a few iterations
+        Thread.onSpinWait()
         counter++
         // if yield limit is approached,
         // then yield and give other threads the opportunity to run
