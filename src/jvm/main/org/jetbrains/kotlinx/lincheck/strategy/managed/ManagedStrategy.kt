@@ -853,7 +853,6 @@ abstract class ManagedStrategy(
         params: Array<Any?>
     ) = runInIgnoredSection {
         if (collectTrace) {
-            traceCollector?.addStateRepresentation()
             val ownerName = owner?.let { AtomicFieldUpdaterNames.getName(it) }
             // Drop the object instance and offset (in case of Unsafe) from the parameters
             // when using Unsafe, VarHandle, or AtomicFieldUpdater.
