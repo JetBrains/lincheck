@@ -30,24 +30,24 @@ internal class LocalObjectManager {
     /**
      * Registers a new object as a locally accessible one.
      */
-    fun newObject(o: Any) {
-        localObjects[o] = mutableListOf()
+    fun registerNewObject(obj: Any) {
+        localObjects[obj] = mutableListOf()
     }
 
     /**
      * Removes the specified local object and its dependencies from the set of local objects.
      * If the removing object references other local objects, they are also removed recursively.
      */
-    fun deleteLocalObject(o: Any?) {
-        if (o == null) return
-        val objects = localObjects.remove(o) ?: return
-        objects.forEach { deleteLocalObject(it) }
+    fun markObjectNonLocal(obj: Any?) {
+        if (obj == null) return
+        val objects = localObjects.remove(obj) ?: return
+        objects.forEach { markObjectNonLocal(it) }
     }
 
     /**
      * Checks if an object is only locally accessible.
      */
-    fun isLocalObject(o: Any?) = localObjects.containsKey(o)
+    fun isLocalObject(obj: Any?) = localObjects.containsKey(obj)
 
     /**
      * Adds a dependency between the owner object and the dependent object.
@@ -56,16 +56,16 @@ internal class LocalObjectManager {
      * If the owner isn't in the local objects map, the method will delete the dependent
      * from the local objects map, making it shared.
      *
-     * @param owner The owner object.
-     * @param dependent The object that depends on the owner.
+     * @param obj The owner object.
+     * @param fieldOrArrayCellValue The object that depends on the owner.
      */
-    fun addDependency(owner: Any, dependent: Any?) {
-        if (dependent == null) return
-        val ownerObjects = localObjects[owner]
+    fun onWriteToObjectFieldOrArrayCell(obj: Any, fieldOrArrayCellValue: Any?) {
+        if (fieldOrArrayCellValue == null) return
+        val ownerObjects = localObjects[obj]
         if (ownerObjects != null) {
-            ownerObjects.add(dependent)
+            ownerObjects.add(fieldOrArrayCellValue)
         } else {
-            deleteLocalObject(dependent)
+            markObjectNonLocal(fieldOrArrayCellValue)
         }
     }
 }

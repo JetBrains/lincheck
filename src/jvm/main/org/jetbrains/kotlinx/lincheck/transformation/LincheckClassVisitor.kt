@@ -814,7 +814,7 @@ internal class LincheckClassVisitor(
                             // STACK: receiver, cas-result
                             loadLocal(nextValueLocal)
                             // STACK: nextValue, receiver, cas-result
-                            invokeStatic(Injections::afterFieldAssign)
+                            invokeStatic(Injections::onWriteToObjectFieldOrArrayCell)
                         }
                     )
                 }
@@ -849,7 +849,7 @@ internal class LincheckClassVisitor(
                             // STACK: receiver
                             loadLocal(nextValueLocal)
                             // STACK: nextValue, receiver
-                            invokeStatic(Injections::afterFieldAssign)
+                            invokeStatic(Injections::onWriteToObjectFieldOrArrayCell)
                         }
                     )
                 }
@@ -910,7 +910,7 @@ internal class LincheckClassVisitor(
                     // STACK: receiver
                     loadLocal(nextValueLocal)
                     // STACK: boxedNextValue, receiver
-                    invokeStatic(Injections::afterFieldAssign)
+                    invokeStatic(Injections::onWriteToObjectFieldOrArrayCell)
                 } else {
                     // we are in an array version overload (with index) *.compareAndSet(index, currentValue, nextValue)
                     val nextType = argumentTypes.last()
@@ -952,7 +952,7 @@ internal class LincheckClassVisitor(
                     // STACK: receiver, cas-result
                     loadLocal(nextValueLocal)
                     // STACK: boxedNextValue, receiver, cas-result
-                    invokeStatic(Injections::afterFieldAssign)
+                    invokeStatic(Injections::onWriteToObjectFieldOrArrayCell)
                 }
             }
         )
@@ -997,7 +997,7 @@ internal class LincheckClassVisitor(
                     // STACK: receiver
                     loadLocal(valueLocal)
                     // STACK: boxedValue, receiver
-                    invokeStatic(Injections::afterFieldAssign)
+                    invokeStatic(Injections::onWriteToObjectFieldOrArrayCell)
                 } else {
                     // we are in an array version overload (with index) varHandle.set(value, index)
                     val argumentType = argumentTypes.last()
@@ -1028,7 +1028,7 @@ internal class LincheckClassVisitor(
                     // STACK: receiver
                     loadLocal(valueLocal)
                     // STACK: boxedValue, receiver
-                    invokeStatic(Injections::afterFieldAssign)
+                    invokeStatic(Injections::onWriteToObjectFieldOrArrayCell)
                 }
             }
         )

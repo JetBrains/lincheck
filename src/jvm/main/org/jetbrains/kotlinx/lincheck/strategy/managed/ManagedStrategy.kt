@@ -689,7 +689,7 @@ abstract class ManagedStrategy(
     }
 
     override fun beforeWriteField(obj: Any, className: String, fieldName: String, value: Any?, codeLocation: Int) = runInIgnoredSection {
-        localObjectManager.addDependency(obj, value)
+        localObjectManager.onWriteToObjectFieldOrArrayCell(obj, value)
         if (localObjectManager.isLocalObject(obj)) {
             return@runInIgnoredSection
         }
@@ -712,7 +712,7 @@ abstract class ManagedStrategy(
 
 
     override fun beforeWriteFieldStatic(className: String, fieldName: String, value: Any?, codeLocation: Int): Unit = runInIgnoredSection {
-        localObjectManager.deleteLocalObject(value)
+        localObjectManager.markObjectNonLocal(value)
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             WriteTracePoint(
@@ -731,7 +731,7 @@ abstract class ManagedStrategy(
     }
 
     override fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int) = runInIgnoredSection {
-        localObjectManager.addDependency(array, value)
+        localObjectManager.onWriteToObjectFieldOrArrayCell(array, value)
         if (localObjectManager.isLocalObject(array)) {
             return@runInIgnoredSection
         }
@@ -783,12 +783,12 @@ abstract class ManagedStrategy(
     override fun onNewObjectCreation(obj: Any) {
         if (obj is String || obj is Int || obj is Long || obj is Byte || obj is Char || obj is Float || obj is Double) return
         runInIgnoredSection {
-            localObjectManager.newObject(obj)
+            localObjectManager.registerNewObject(obj)
         }
     }
 
-    override fun afterFieldAssign(receiver: Any, value: Any?) {
-        localObjectManager.addDependency(receiver, value)
+    override fun onWriteToObjectFieldOrArrayCell(obj: Any, fieldOrArrayCellValue: Any?) {
+        localObjectManager.onWriteToObjectFieldOrArrayCell(obj, fieldOrArrayCellValue)
     }
 
     private fun methodGuaranteeType(owner: Any?, className: String, methodName: String): ManagedGuaranteeType? = runInIgnoredSection {

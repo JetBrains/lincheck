@@ -278,8 +278,8 @@ internal object Injections {
      * @see [LocalObjectManager]
      */
     @JvmStatic
-    fun afterFieldAssign(receiver: Any, value: Any?) {
-        eventTracker.afterFieldAssign(receiver, value)
+    fun onWriteToObjectFieldOrArrayCell(obj: Any, fieldOrArrayCellValue: Any?) {
+        eventTracker.onWriteToObjectFieldOrArrayCell(obj, fieldOrArrayCellValue)
     }
 
     /**

@@ -45,5 +45,5 @@ internal interface EventTracker {
     fun randomNextInt(): Int
 
     fun onNewObjectCreation(obj: Any)
-    fun afterFieldAssign(receiver: Any, value: Any?)
+    fun onWriteToObjectFieldOrArrayCell(obj: Any, fieldOrArrayCellValue: Any?)
 }
