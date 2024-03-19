@@ -68,7 +68,7 @@ internal class LincheckClassVisitor(
             }
         }
         if (methodName == "<clinit>") {
-            mv = WrapMethodInIgnoreSectionTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
+            mv = WrapMethodInIgnoredSectionTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
             return mv
         }
         if (methodName == "<init>") {
@@ -77,7 +77,7 @@ internal class LincheckClassVisitor(
         }
         if (className.contains("ClassLoader")) {
             if (methodName == "loadClass") {
-                mv = WrapMethodInIgnoreSectionTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
+                mv = WrapMethodInIgnoredSectionTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
             }
             return mv
         }
@@ -90,6 +90,7 @@ internal class LincheckClassVisitor(
         if (access and ACC_SYNCHRONIZED != 0) {
             mv = SynchronizedMethodTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc), classVersion)
         }
+        mv = MethodCallTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
         mv = MonitorEnterAndExitTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
         mv = WaitNotifyTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
         mv = ParkUnparkTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
@@ -101,7 +102,6 @@ internal class LincheckClassVisitor(
             sv.analyzer = aa
             aa
         }
-        mv = MethodCallTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
         mv = DeterministicHashCodeTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
         mv = DeterministicTimeTransformer(GeneratorAdapter(mv, access, methodName, desc))
         mv = DeterministicRandomTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
@@ -249,7 +249,7 @@ internal class LincheckClassVisitor(
     }
 
     // TODO: doesn't support exceptions
-    private inner class WrapMethodInIgnoreSectionTransformer(methodName: String, adapter: GeneratorAdapter) :
+    private inner class WrapMethodInIgnoredSectionTransformer(methodName: String, adapter: GeneratorAdapter) :
         ManagedStrategyMethodVisitor(methodName, adapter) {
         private var enteredInIgnoredSectionLocal = 0
 
