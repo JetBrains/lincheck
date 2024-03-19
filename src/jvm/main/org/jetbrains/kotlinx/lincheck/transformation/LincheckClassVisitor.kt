@@ -1128,9 +1128,9 @@ internal class LincheckClassVisitor(
                 }
                 if (
                     name == "<init>" ||
+                    owner.startsWith("org/jetbrains/kotlinx/lincheck/") ||
                     owner == "kotlin/jvm/internal/Intrinsics" ||
                     owner == "java/util/Objects" ||
-                    owner == "org/jetbrains/kotlinx/lincheck/Injections" ||
                     owner == "java/lang/StringBuilder" ||
                     owner == "java/util/Locale" ||
                     owner == "java/lang/String" ||
