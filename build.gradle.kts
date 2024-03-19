@@ -113,6 +113,12 @@ tasks {
             // the `jvmTestIsolated` task.
             exclude("**/*IsolatedTest*")
         }
+        // Do not run JdkUnsafeTraceRepresentationTest on Java 12 or earlier,
+        // as this test relies on specific ConcurrentHashMap implementation.
+        val jdkToolchainVersion: String by project
+        if (jdkToolchainVersion.toInt() < 13) {
+            exclude("**/*JdkUnsafeTraceRepresentationTest*")
+        }
         configureJvmTestCommon()
         val runAllTestsInSeparateJVMs: String by project
         forkEvery = if (runAllTestsInSeparateJVMs.toBoolean()) 1 else 0
