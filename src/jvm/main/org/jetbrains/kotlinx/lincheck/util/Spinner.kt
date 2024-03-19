@@ -253,5 +253,5 @@ inline fun <T> Spinner.spinWaitBoundedFor(getter: () -> T?): T? {
 }
 
 private const val SPIN_LOOP_ITERATIONS_PER_CALL     : Int = 10
-private const val SPIN_LOOP_ITERATIONS_BEFORE_YIELD : Int = 1_000_000
-private const val SPIN_LOOP_ITERATIONS_BEFORE_EXIT  : Int = 100_000_000
+private const val SPIN_LOOP_ITERATIONS_BEFORE_YIELD : Int = 100_000_000
+private const val SPIN_LOOP_ITERATIONS_BEFORE_EXIT  : Int = 1000_000_000
