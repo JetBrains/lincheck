@@ -101,6 +101,12 @@ class Spinner(val nThreads: Int = -1) {
     }
 
     /**
+     * The number of spin-loop iterations to be performed per call to [spin].
+     */
+    private val spinLoopIterationsPerCall: Int =
+        if (shouldSpin) SPIN_LOOP_ITERATIONS_PER_CALL else 1
+
+    /**
      * The number of spin-loop iterations before yielding the current thread
      * to give other threads the opportunity to run.
      */
@@ -124,8 +130,11 @@ class Spinner(val nThreads: Int = -1) {
      *   for example, to fall back into a blocking synchronization.
      */
     fun spin(): Boolean {
+        // perform spin waiting
         Thread.onSpinWait()
-        counter++
+        spinWait()
+        // update the counter
+        counter += spinLoopIterationsPerCall
         // if yield limit is approached,
         // then yield and give other threads the opportunity to run
         if (counter % yieldLimit == 0) {
@@ -138,6 +147,33 @@ class Spinner(val nThreads: Int = -1) {
             return false
         }
         return true
+    }
+
+    /**
+     * Auxiliary variable storing a pseudo-random value,
+     * which is used inside the [spinWait] to perform spin waiting.
+     */
+    private var sink: Long = System.nanoTime()
+
+    /**
+     * Implements a spin waiting procedure.
+     */
+    private fun spinWait() {
+        // Initialize with a pseudo-random number to prevent optimizations.
+        var x = sink
+        // We want to perform few spins while avoiding accesses to the shared memory.
+        // To achieve this, we do some arithmetic operations on a local variable
+        // and try to obfuscate the loop body so that the compiler
+        // would not be able to optimize it out.
+        for (i in spinLoopIterationsPerCall downTo 1) {
+            x += (31 * x + 0xBEEF + i) and (0xFFFFFFFFFFFFFFFL)
+        }
+        // This if statement ensures that the result of the computation
+        // will have a visible side effect and thus will not be optimized,
+        // but at the same time it avoids the actual store on a hot-path.
+        if (x == 0xDEADL) {
+            sink += x
+        }
     }
 
     /**
@@ -216,5 +252,6 @@ inline fun <T> Spinner.spinWaitBoundedFor(getter: () -> T?): T? {
     return null
 }
 
+private const val SPIN_LOOP_ITERATIONS_PER_CALL     : Int = 10
 private const val SPIN_LOOP_ITERATIONS_BEFORE_YIELD : Int = 1_000_000
 private const val SPIN_LOOP_ITERATIONS_BEFORE_EXIT  : Int = 100_000_000
