@@ -101,12 +101,6 @@ class Spinner(val nThreads: Int = -1) {
     }
 
     /**
-     * The number of spin-loop iterations to be performed per call to [spin].
-     */
-    private val spinLoopIterationsPerCall: Int =
-        if (shouldSpin) SPIN_LOOP_ITERATIONS_PER_CALL else 1
-
-    /**
      * The number of spin-loop iterations before yielding the current thread
      * to give other threads the opportunity to run.
      */
@@ -131,9 +125,7 @@ class Spinner(val nThreads: Int = -1) {
      */
     fun spin(): Boolean {
         // spin a few iterations
-        repeat(spinLoopIterationsPerCall) {
-            counter++
-        }
+        counter++
         // if yield limit is approached,
         // then yield and give other threads the opportunity to run
         if (counter % yieldLimit == 0) {
@@ -224,6 +216,5 @@ inline fun <T> Spinner.spinWaitBoundedFor(getter: () -> T?): T? {
     return null
 }
 
-private const val SPIN_LOOP_ITERATIONS_PER_CALL     : Int = 1 shl 5  // 32
-private const val SPIN_LOOP_ITERATIONS_BEFORE_YIELD : Int = 1 shl 14 // 16,384
-private const val SPIN_LOOP_ITERATIONS_BEFORE_EXIT  : Int = 1 shl 20 // 1,048,576
+private const val SPIN_LOOP_ITERATIONS_BEFORE_YIELD : Int = 10_000_000
+private const val SPIN_LOOP_ITERATIONS_BEFORE_EXIT  : Int = 1_000_000_000
