@@ -535,7 +535,9 @@ internal class LincheckClassVisitor(
                 PUTSTATIC -> {
                     // STACK: value: Object
                     invokeIfInTestingCode(
-                        original = {},
+                        original = {
+                            visitFieldInsn(opcode, owner, fieldName, desc)
+                        },
                         code = {
                             val valueType = getType(desc)
                             val valueLocal = newLocal(valueType) // we cannot use DUP as long/double require DUP2
@@ -549,20 +551,19 @@ internal class LincheckClassVisitor(
                             // STACK: value: Object, className: String, fieldName: String, value: Object, codeLocation: Int
                             invokeStatic(Injections::beforeWriteFieldStatic)
                             // STACK: value: Object
+                            visitFieldInsn(opcode, owner, fieldName, desc)
+                            // STACK: <EMPTY>
+                            invokeStatic(Injections::afterWrite)
                         }
-                    )
-                    // STACK: value: Object
-                    visitFieldInsn(opcode, owner, fieldName, desc)
-                    invokeIfInTestingCode(
-                        original = {},
-                        code = { invokeStatic(Injections::afterWrite) }
                     )
                 }
 
                 PUTFIELD -> {
                     // STACK: owner: Object, value: Object
                     invokeIfInTestingCode(
-                        original = {},
+                        original = {
+                            visitFieldInsn(opcode, owner, fieldName, desc)
+                        },
                         code = {
                             val valueType = getType(desc)
                             val valueLocal = newLocal(valueType) // we cannot use DUP as long/double require DUP2
@@ -580,13 +581,10 @@ internal class LincheckClassVisitor(
                             // STACK: owner: Object
                             loadLocal(valueLocal)
                             // STACK: owner: Object, value: Object
+                            visitFieldInsn(opcode, owner, fieldName, desc)
+                            // STACK: <EMPTY>
+                            invokeStatic(Injections::afterWrite)
                         }
-                    )
-                    // STACK: owner: Object, value: Object
-                    visitFieldInsn(opcode, owner, fieldName, desc)
-                    invokeIfInTestingCode(
-                        original = {},
-                        code = { invokeStatic(Injections::afterWrite) }
                     )
                 }
 
@@ -623,7 +621,9 @@ internal class LincheckClassVisitor(
 
                 AASTORE, IASTORE, FASTORE, BASTORE, CASTORE, SASTORE, LASTORE, DASTORE -> {
                     invokeIfInTestingCode(
-                        original = {},
+                        original = {
+                            visitInsn(opcode)
+                        },
                         code = {
                             // STACK: array: Array, index: Int, value: Object
                             val arrayElementType = getArrayElementType(opcode)
@@ -640,12 +640,10 @@ internal class LincheckClassVisitor(
                             // STACK: array: Array, index: Int
                             loadLocal(valueLocal)
                             // STACK: array: Array, index: Int, value: Object
+                            visitInsn(opcode)
+                            // STACK: <EMPTY>
+                            invokeStatic(Injections::afterWrite)
                         }
-                    )
-                    visitInsn(opcode)
-                    invokeIfInTestingCode(
-                        original = {},
-                        code = { invokeStatic(Injections::afterWrite) }
                     )
                 }
 
