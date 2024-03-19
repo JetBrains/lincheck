@@ -866,6 +866,9 @@ abstract class ManagedStrategy(
                 traceCollector!!.addStateRepresentation()
             }
         }
+        // In case the code is now in an "ignore" section due to
+        // an "atomic" or "ignore" guarantee, we need to leave
+        // this "ignore" section.
         leaveIgnoredSectionIfEntered()
     }
 
@@ -880,6 +883,9 @@ abstract class ManagedStrategy(
                 traceCollector!!.addStateRepresentation()
             }
         }
+        // In case the code is now in an "ignore" section due to
+        // an "atomic" or "ignore" guarantee, we need to leave
+        // this "ignore" section.
         leaveIgnoredSectionIfEntered()
     }
 
