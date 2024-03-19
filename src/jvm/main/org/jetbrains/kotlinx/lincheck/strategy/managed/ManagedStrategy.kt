@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
+import org.jetbrains.kotlinx.lincheck.exceptionCanBeValidExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
@@ -98,7 +99,7 @@ abstract class ManagedStrategy(
     private var randoms = (0 until nThreads + 2).map { Random(it + 239L) }
     // Current call stack for a thread, updated during beforeMethodCall and afterMethodCall methods.
     private val methodCallTracePointStack = (0 until nThreads + 2).map { mutableListOf<MethodCallTracePoint>() }
-    // Guarantees, additionally specified by user on some methods.
+    // User-specified guarantees on specific function, which can be considered as atomic or ignored.
     private val userDefinedGuarantees: List<ManagedStrategyGuarantee>? = testCfg.guarantees.ifEmpty { null }
 
     private fun createRunner(): ManagedStrategyRunner =
@@ -377,16 +378,13 @@ abstract class ManagedStrategy(
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
      */
     open fun onFinish(iThread: Int) {
-        // onActorFinish we be called so the statement below is not necessary, but we verify
-        // additionally that we are now in a testing code to avoid bugs.
-        (Thread.currentThread() as TestThread).inTestingCode = false
         awaitTurn(iThread)
         finished[iThread] = true
         loopDetector.onThreadFinish(iThread)
         doSwitchCurrentThread(iThread, true)
     }
     /**
-     * This method is executed if an illegal exception has been thrown (see [org.jetbrains.kotlinx.lincheck.exceptionCanBeValidExecutionResult]).
+     * This method is executed if an illegal exception has been thrown (see [exceptionCanBeValidExecutionResult]).
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
      * @param exception the exception that was thrown
      */

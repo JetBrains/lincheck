@@ -142,9 +142,8 @@ internal fun <T> CancellableContinuation<T>.cancelByLincheck(promptCancellation:
 
     val currentThread = Thread.currentThread() as? TestThread
     val inIgnoredSection = currentThread?.inIgnoredSection ?: false
-    // We must exit ignored section here if it was entered, because in cancel operation we may
-    // get into a spin-lock and switch to another thread.
-    // This is impossible in an ignored section, so we leave it.
+    // We must exit the ignored section here to analyze the cancellation handler logic.
+    // After that, we need to enter the ignored section back.
     currentThread?.inIgnoredSection = false
     val cancelled = try {
         cancel(cancellationByLincheckException)

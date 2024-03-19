@@ -75,7 +75,6 @@ public class LincheckClassLoader extends ClassLoader {
      */
     private static boolean doNotTransform(String className) {
         if (className.startsWith(REMAPPED_PACKAGE_CANONICAL_NAME)) return false;
-        if (isImpossibleToTransformApiClass(className)) return true;
         return className.startsWith("sun.") ||
                className.startsWith("java.") ||
                className.startsWith("jdk.internal.") ||
@@ -97,16 +96,6 @@ public class LincheckClassLoader extends ClassLoader {
                className.equals("kotlinx.coroutines.NotCompleted") ||
                className.equals("kotlinx.coroutines.CancelHandler") ||
                className.equals("kotlinx.coroutines.CancelHandlerBase");
-    }
-
-    /**
-     * Some API classes cannot be transformed due to the [sun.reflect.CallerSensitive] annotation.
-     */
-    public static boolean isImpossibleToTransformApiClass(String className) {
-        return className.equals("sun.misc.Unsafe") ||
-                className.equals("jdk.internal.misc.Unsafe") ||
-                className.equals("java.lang.invoke.VarHandle") ||
-                className.startsWith("java.util.concurrent.atomic.Atomic") && className.endsWith("FieldUpdater");
     }
 
     /**

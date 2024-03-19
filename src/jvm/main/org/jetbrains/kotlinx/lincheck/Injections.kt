@@ -52,7 +52,7 @@ internal object Injections {
     }
 
     /**
-     * Called from instrumented code before the lock operation
+     * Called from instrumented code instead of the MONITORENTER instruction.
      */
     @JvmStatic
     fun lock(monitor: Any, codeLocation: Int) {
@@ -60,7 +60,7 @@ internal object Injections {
     }
 
     /**
-     * Called from instrumented code before the unlock operation
+     * Called from instrumented code instead of the MONITOREXIT instruction.
      */
     @JvmStatic
     fun unlock(monitor: Any, codeLocation: Int) {
@@ -68,7 +68,7 @@ internal object Injections {
     }
 
     /**
-     * Called from the instrumented code before the park operation
+     * Called from the instrumented code instead of `Unsafe.park`.
      */
     @JvmStatic
     fun park(codeLocation: Int) {
@@ -76,7 +76,7 @@ internal object Injections {
     }
 
     /**
-     * Called from the instrumented code before the unpark operation
+     * Called from the instrumented code instead of `Unsafe.unpark`.
      */
     @JvmStatic
     fun unpark(thread: Thread, codeLocation: Int) {
@@ -84,7 +84,7 @@ internal object Injections {
     }
 
     /**
-     * Called from the instrumented code before the wait operation
+     * Called from the instrumented code instead of [Object.wait].
      */
     @JvmStatic
     fun wait(monitor: Any, codeLocation: Int) {
@@ -93,7 +93,7 @@ internal object Injections {
 
 
     /**
-     * Called from the instrumented code before the wait operation
+     * Called from the instrumented code instead of [Object.wait].
      */
     @JvmStatic
     fun waitWithTimeout(monitor: Any, codeLocation: Int) {
@@ -101,7 +101,7 @@ internal object Injections {
     }
 
     /**
-     * Called from the instrumented code before the notify operation
+     * Called from the instrumented code instead of [Object.notify].
      */
     @JvmStatic
     fun notify(monitor: Any, codeLocation: Int) {
@@ -109,7 +109,7 @@ internal object Injections {
     }
 
     /**
-     * Called from the instrumented code before the notifyAll operation
+     * Called from the instrumented code instead of [Object.notify].
      */
     @JvmStatic
     fun notifyAll(monitor: Any, codeLocation: Int) {
@@ -117,14 +117,14 @@ internal object Injections {
     }
 
     /**
-     * Called from the instrumented code to replace random.nextInt() call with a deterministic value
+     * Called from the instrumented code replacing random `int` generation with a deterministic random value.
      */
     @JvmStatic
     fun nextInt(): Int =
         eventTracker.randomNextInt()
 
     /**
-     * Called from the instrumented code to replace random.nextInt() call with a deterministic value
+     * Called from the instrumented code to replace `ThreadLocalRandom.nextInt(origin, bound)` with a deterministic random value.
      */
     @Suppress("UNUSED_PARAMETER")
     @JvmStatic
@@ -136,21 +136,21 @@ internal object Injections {
         }
 
     /**
-     * Called from the instrumented code to get a deterministic random instance
+     * Called from the instrumented code to get a random instance that is deterministic and controlled by Lincheck.
      */
     @JvmStatic
     fun deterministicRandom(): Random =
         eventTracker.getThreadLocalRandom()
 
     /**
-     * Called from the instrumented code to examine if this value is [Random]
+     * Called from the instrumented code to check whether the object is a [Random] instance.
      */
     @JvmStatic
     fun isRandom(any: Any?): Boolean =
         any is Random
 
     /**
-     * Called from the instrumented code before each field read
+     * Called from the instrumented code before each field read.
      */
     @JvmStatic
     fun beforeReadField(obj: Any?, className: String, fieldName: String, codeLocation: Int) {
@@ -159,7 +159,7 @@ internal object Injections {
     }
 
     /**
-     * Called from the instrumented code before any static field read
+     * Called from the instrumented code before any static field read.
      */
     @JvmStatic
     fun beforeReadFieldStatic(className: String, fieldName: String, codeLocation: Int) {
@@ -167,7 +167,7 @@ internal object Injections {
     }
 
     /**
-     * Called from the instrumented code before any array cell read
+     * Called from the instrumented code before any array cell read.
      */
     @JvmStatic
     fun beforeReadArray(array: Any?, index: Int, codeLocation: Int) {
@@ -176,7 +176,7 @@ internal object Injections {
     }
 
     /**
-     * Called from the instrumented code after each field read, while final field reads can be ignored here.
+     * Called from the instrumented code after each field read (final field reads can be ignored here).
      */
     @JvmStatic
     fun afterRead(value: Any?) {
@@ -184,7 +184,7 @@ internal object Injections {
     }
 
     /**
-     * Called from the instrumented code before each field write
+     * Called from the instrumented code before each field write.
      */
     @JvmStatic
     fun beforeWriteField(obj: Any?, className: String, fieldName: String, value: Any?, codeLocation: Int) {
@@ -193,7 +193,7 @@ internal object Injections {
     }
 
     /**
-     * Called from the instrumented code before any static field write
+     * Called from the instrumented code before any static field write.
      */
     @JvmStatic
     fun beforeWriteFieldStatic(className: String, fieldName: String, value: Any?, codeLocation: Int) {
@@ -201,7 +201,7 @@ internal object Injections {
     }
 
     /**
-     * Called from the instrumented code before any array cell write
+     * Called from the instrumented code before any array cell write.
      */
     @JvmStatic
     fun beforeWriteArray(array: Any?, index: Int, value: Any?, codeLocation: Int) {
@@ -210,7 +210,7 @@ internal object Injections {
     }
 
     /**
-     * Called from the instrumented code before any write operation
+     * Called from the instrumented code before any write operation.
      */
     @JvmStatic
     fun afterWrite() {
@@ -218,9 +218,9 @@ internal object Injections {
     }
 
     /**
-     * Called from the instrumented code before any method call
+     * Called from the instrumented code before any method call.
      *
-     * @param owner is `null` for static methods
+     * @param owner is `null` for static methods.
      */
     @JvmStatic
     fun beforeMethodCall(owner: Any?, className: String, methodName: String, codeLocation: Int, params: Array<Any?>) {
@@ -249,7 +249,7 @@ internal object Injections {
     }
 
     /**
-     * Called from the instrumented code after any method successful call, i.e., without any exception
+     * Called from the instrumented code after any method successful call, i.e., without any exception.
      */
     @JvmStatic
     fun onMethodCallFinishedSuccessfully(result: Any?) {
@@ -257,7 +257,7 @@ internal object Injections {
     }
 
     /**
-     * Called from the instrumented code after any method that returns void successful call, i.e., without any exception
+     * Called from the instrumented code after any method that returns void successful call, i.e., without any exception.
      */
     @JvmStatic
     fun onMethodCallVoidFinishedSuccessfully() {
@@ -300,6 +300,11 @@ internal object Injections {
     @JvmStatic
     internal fun hashCodeDeterministic(obj: Any): Int {
         val hashCode = obj.hashCode()
+        // This is a dirty hack to determine whether there is a
+        // custom hashCode() implementation or it is always delegated
+        // to System.identityHashCode(..).
+        // While this code is not robust in theory, it works
+        // fine in practice.
         return if (hashCode == System.identityHashCode(obj)) {
             identityHashCodeDeterministic(obj)
         } else {

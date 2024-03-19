@@ -10,7 +10,6 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.LincheckClassLoader.isImpossibleToTransformApiClass
 import org.jetbrains.kotlinx.lincheck.transformation.NOT_TRANSFORMED_JAVA_UTIL_CLASSES
 import org.jetbrains.kotlinx.lincheck.transformation.TRANSFORMED_JAVA_UTIL_INTERFACES
 import org.objectweb.asm.commons.*
@@ -31,14 +30,14 @@ internal class JavaUtilRemapper : Remapper() {
             // function package is not transformed, because AFU uses it, and thus, there will be transformation problems
             val inFunctionPackage = name.startsWith("java/util/function/")
             // some api classes that provide low-level access can not be transformed
-            val isImpossibleToTransformApi = isImpossibleToTransformApiClass(normalizedName)
+            val isAFU = name.startsWith("java/util/concurrent/atomic/Atomic") && name.endsWith("FieldUpdater")
             // interfaces are not transformed by default and are in the special set when they should be transformed
             val isTransformedInterface = originalClass.isInterface && originalClass.name.internalClassName in TRANSFORMED_JAVA_UTIL_INTERFACES
             // classes are transformed by default and are in the special set when they should not be transformed
             val isTransformedClass = !originalClass.isInterface && originalClass.name.internalClassName !in NOT_TRANSFORMED_JAVA_UTIL_CLASSES
             // no need to transform enum
             val isEnum = originalClass.isEnum
-            if (!isImpossibleToTransformApi && !isException && !inFunctionPackage && !isEnum && (isTransformedClass || isTransformedInterface))
+            if (!isAFU && !isException && !inFunctionPackage && !isEnum && (isTransformedClass || isTransformedInterface))
                 return LincheckClassLoader.REMAPPED_PACKAGE_INTERNAL_NAME + name
         }
         return name
