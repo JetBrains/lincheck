@@ -335,23 +335,10 @@ class LTS(sequentialSpecification: Class<*>) {
  */
 private class StateInfo(
     var state: State,
-    val instance: Any,
+    instance: Any,
     val suspendedOperations: List<Operation>,
     val resumedOperations: List<ResumptionInfo>
 ) {
-    override fun equals(other: Any?): Boolean {
-        if (other !is StateInfo) return false
-        return instance == other.instance &&
-            suspendedOperations.map { it.actor } == other.suspendedOperations.map { it.actor } &&
-            resumedOperations == other.resumedOperations
-    }
-
-    override fun hashCode() = Objects.hash(
-        instance,
-        suspendedOperations.map { it.actor },
-        resumedOperations
-    )
-
     val maxTicket: Int
         get() = max(
             suspendedOperations.maxByOrNull { it.ticket }?.ticket ?: NO_TICKET,
