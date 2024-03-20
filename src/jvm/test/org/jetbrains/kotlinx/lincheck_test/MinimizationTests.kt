@@ -32,7 +32,7 @@ class MinimizationTest {
             .actorsPerThread(4)
             .actorsBefore(4)
             .actorsAfter(4)
-            .invocationsPerIteration(1_000)
+            .invocationsPerIteration(100_000)
             .minimizeFailedScenario(false)
         try {
             LinChecker.check(MinimizationTest::class.java, options)
