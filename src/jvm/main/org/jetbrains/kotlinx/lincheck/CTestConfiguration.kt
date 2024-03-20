@@ -13,7 +13,6 @@ import org.jetbrains.kotlinx.lincheck.CTestConfiguration.Companion.DEFAULT_TIMEO
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration.Companion.DEFAULT_ELIMINATE_LOCAL_OBJECTS
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
@@ -96,7 +95,6 @@ internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConf
                         testClass
                     ),
                     timeoutMs = DEFAULT_TIMEOUT_MS,
-                    eliminateLocalObjects = DEFAULT_ELIMINATE_LOCAL_OBJECTS,
                     customScenarios = emptyList()
                 )
             }

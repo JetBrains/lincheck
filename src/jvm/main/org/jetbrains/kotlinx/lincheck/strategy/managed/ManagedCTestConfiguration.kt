@@ -32,8 +32,6 @@ abstract class ManagedCTestConfiguration(
     minimizeFailedScenario: Boolean,
     sequentialSpecification: Class<*>,
     timeoutMs: Long,
-    val eliminateLocalObjects: Boolean,
-
     customScenarios: List<ExecutionScenario>
 ) : CTestConfiguration(
     testClass = testClass,
@@ -52,7 +50,6 @@ abstract class ManagedCTestConfiguration(
     companion object {
         const val DEFAULT_INVOCATIONS = 10000
         const val DEFAULT_CHECK_OBSTRUCTION_FREEDOM = false
-        const val DEFAULT_ELIMINATE_LOCAL_OBJECTS = true
         const val DEFAULT_HANGING_DETECTION_THRESHOLD = 101
         const val LIVELOCK_EVENTS_THRESHOLD = 10001
         val DEFAULT_GUARANTEES = listOf( // These classes use WeakHashMap, and thus, their code is non-deterministic.

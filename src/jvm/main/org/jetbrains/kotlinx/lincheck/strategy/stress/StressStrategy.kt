@@ -25,24 +25,14 @@ class StressStrategy(
     private val verifier: Verifier
 ) : Strategy(scenario) {
     private val invocations = testCfg.invocationsPerIteration
-    private val runner: Runner
-
-    init {
-        runner = ParallelThreadsRunner(
-            strategy = this,
-            testClass = testClass,
-            validationFunction = validationFunction,
-            stateRepresentationFunction = stateRepresentationFunction,
-            timeoutMs = testCfg.timeoutMs,
-            useClocks = UseClocks.RANDOM
-        )
-        try {
-            runner.initialize()
-        } catch (t: Throwable) {
-            runner.close()
-            throw t
-        }
-    }
+    private val runner = ParallelThreadsRunner(
+        strategy = this,
+        testClass = testClass,
+        validationFunction = validationFunction,
+        stateRepresentationFunction = stateRepresentationFunction,
+        timeoutMs = testCfg.timeoutMs,
+        useClocks = UseClocks.RANDOM
+    )
 
     override fun run(): LincheckFailure? {
         runner.use {

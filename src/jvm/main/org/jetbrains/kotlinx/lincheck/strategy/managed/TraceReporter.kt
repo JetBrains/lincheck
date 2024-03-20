@@ -12,7 +12,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
-import org.jetbrains.kotlinx.lincheck.strategy.DeadlockWithDumpFailure
+import org.jetbrains.kotlinx.lincheck.strategy.DeadlockOrLivelockFailure
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
 import java.util.*
@@ -44,7 +44,7 @@ private fun StringBuilder.appendShortTrace(
     val traceRepresentation = traceGraphToRepresentationList(sectionsFirstNodes, false)
     appendLine(TRACE_TITLE)
     appendTraceRepresentation(failure.scenario, traceRepresentation)
-    if (failure is DeadlockWithDumpFailure) {
+    if (failure is DeadlockOrLivelockFailure) {
         appendLine(ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE)
     }
     appendLine()
@@ -60,7 +60,7 @@ private fun StringBuilder.appendDetailedTrace(
     appendLine(DETAILED_TRACE_TITLE)
     val traceRepresentationVerbose = traceGraphToRepresentationList(sectionsFirstNodes, true)
     appendTraceRepresentation(failure.scenario, traceRepresentationVerbose)
-    if (failure is DeadlockWithDumpFailure) {
+    if (failure is DeadlockOrLivelockFailure) {
         appendLine(ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE)
     }
 }

@@ -12,7 +12,6 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.LoggingLevel.*
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import java.io.*
@@ -415,7 +414,7 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
 
     when (failure) {
         is IncorrectResultsFailure -> appendIncorrectResultsFailure(failure, exceptionStackTraces)
-        is DeadlockWithDumpFailure -> appendDeadlockWithDumpFailure(failure)
+        is DeadlockOrLivelockFailure -> appendDeadlockWithDumpFailure(failure)
         is UnexpectedExceptionFailure -> appendUnexpectedExceptionFailure(failure)
         is ValidationFailure -> when (failure.exception) {
             is LincheckInternalBugException -> appendInternalLincheckBugFailure(failure.exception)
@@ -565,7 +564,7 @@ private fun StringBuilder.appendUnexpectedExceptionFailure(failure: UnexpectedEx
     return this
 }
 
-private fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockWithDumpFailure): StringBuilder {
+private fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockOrLivelockFailure): StringBuilder {
     appendLine("= The execution has hung, see the thread dump =")
     appendExecutionScenario(failure.scenario)
     appendLine()
@@ -573,11 +572,11 @@ private fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockWithDum
     failure.threadDump?.let { threadDump ->
         // Sort threads to produce same output for the same results
         for ((t, stackTrace) in threadDump.entries.sortedBy { it.key.id }) {
-            val threadNumber = if (t is FixedActiveThreadsExecutor.TestThread) t.iThread.toString() else "?"
+            val threadNumber = (t as? TestThread)?.name ?: "?"
             appendLine("Thread-$threadNumber:")
             stackTrace.map {
                 StackTraceElement(
-                    /* declaringClass = */ it.className.removePrefix(TransformationClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME),
+                    /* declaringClass = */ it.className.removePrefix(LincheckClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME),
                     /* methodName = */ it.methodName,
                     /* fileName = */ it.fileName,
                     /* lineNumber = */ it.lineNumber

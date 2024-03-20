@@ -27,7 +27,7 @@ internal class IncorrectResultsFailure(
     trace: Trace? = null
 ) : LincheckFailure(scenario, trace)
 
-internal class DeadlockWithDumpFailure(
+internal class DeadlockOrLivelockFailure(
     scenario: ExecutionScenario,
     // Thread dump is not present in case of model checking
     val threadDump: Map<Thread, Array<StackTraceElement>>?,
@@ -55,7 +55,8 @@ internal class ObstructionFreedomViolationFailure(
 ) : LincheckFailure(scenario, trace)
 
 internal fun InvocationResult.toLincheckFailure(scenario: ExecutionScenario, trace: Trace? = null) = when (this) {
-    is DeadlockInvocationResult -> DeadlockWithDumpFailure(scenario, threadDump, trace)
+    is ManagedDeadlockInvocationResult -> DeadlockOrLivelockFailure(scenario, threadDump = null, trace)
+    is RunnerTimeoutInvocationResult -> DeadlockOrLivelockFailure(scenario, threadDump, trace = null)
     is UnexpectedExceptionInvocationResult -> UnexpectedExceptionFailure(scenario, exception, trace)
     is ValidationFailureInvocationResult -> ValidationFailure(scenario, exception, trace)
     is ObstructionFreedomViolationInvocationResult -> ObstructionFreedomViolationFailure(scenario, reason, trace)

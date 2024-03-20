@@ -14,8 +14,6 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
-import org.objectweb.asm.*
-import org.objectweb.asm.commons.*
 import java.io.*
 import java.lang.ref.*
 import java.lang.reflect.*
@@ -28,8 +26,6 @@ import kotlin.coroutines.intrinsics.*
 fun chooseSequentialSpecification(sequentialSpecificationByUser: Class<*>?, testClass: Class<*>): Class<*> =
     if (sequentialSpecificationByUser === DummySequentialSpecification::class.java || sequentialSpecificationByUser == null) testClass
     else sequentialSpecificationByUser
-
-internal fun executeActor(testInstance: Any, actor: Actor) = executeActor(testInstance, actor, null)
 
 /**
  * Executes the specified actor on the sequential specification instance and returns its result.
@@ -143,7 +139,18 @@ internal class StoreExceptionHandler :
 internal fun <T> CancellableContinuation<T>.cancelByLincheck(promptCancellation: Boolean): CancellationResult {
     val exceptionHandler = context[CoroutineExceptionHandler] as StoreExceptionHandler
     exceptionHandler.exception = null
-    val cancelled = cancel(cancellationByLincheckException)
+
+    val currentThread = Thread.currentThread() as? TestThread
+    val inIgnoredSection = currentThread?.inIgnoredSection ?: false
+    // We must exit the ignored section here to analyze the cancellation handler logic.
+    // After that, we need to enter the ignored section back.
+    currentThread?.inIgnoredSection = false
+    val cancelled = try {
+        cancel(cancellationByLincheckException)
+    } finally {
+        currentThread?.inIgnoredSection = inIgnoredSection
+    }
+
     exceptionHandler.exception?.let {
         throw it.cause!! // let's throw the original exception, ignoring the internal coroutines details
     }
@@ -165,19 +172,6 @@ internal enum class CancellationResult { CANCELLED_BEFORE_RESUMPTION, CANCELLED_
 fun <T> kotlin.Result<T>.cancelledByLincheck() = exceptionOrNull() === cancellationByLincheckException
 
 private val cancellationByLincheckException = Exception("Cancelled by lincheck")
-
-object CancellableContinuationHolder {
-    var storedLastCancellableCont: CancellableContinuation<*>? = null
-}
-
-fun storeCancellableContinuation(cont: CancellableContinuation<*>) {
-    val t = Thread.currentThread()
-    if (t is FixedActiveThreadsExecutor.TestThread) {
-        t.cont = cont
-    } else {
-        CancellableContinuationHolder.storedLastCancellableCont = cont
-    }
-}
 
 internal fun ExecutionScenario.convertForLoader(loader: ClassLoader) = ExecutionScenario(
     initExecution.map {
@@ -220,16 +214,16 @@ internal fun ExecutionResult.convertForLoader(loader: ClassLoader) = ExecutionRe
 
 /**
  * Finds the same method but loaded by the specified (class loader)[loader],
- * the signature can be changed according to the [TransformationClassLoader]'s remapper.
+ * the signature can be changed according to the [LincheckClassLoader]'s remapper.
  */
 private fun Method.convertForLoader(loader: ClassLoader): Method {
-    if (loader !is TransformationClassLoader) return this
+    if (loader !is LincheckClassLoader) return this
     val clazz = declaringClass.convertForLoader(loader)
     val parameterTypes = parameterTypes.map { it.convertForLoader(loader) }
     return clazz.getDeclaredMethod(name, *parameterTypes.toTypedArray())
 }
 
-private fun Class<*>.convertForLoader(loader: TransformationClassLoader): Class<*> =
+private fun Class<*>.convertForLoader(loader: LincheckClassLoader): Class<*> =
     if (isPrimitive) this else loader.loadClass(loader.remapClassName(name))
 
 private fun ResultWithClock.convertForLoader(loader: ClassLoader): ResultWithClock =
@@ -249,7 +243,7 @@ internal fun Any?.convertForLoader(loader: ClassLoader) = when {
     this == null -> null
     this::class.java.classLoader == null -> this // primitive class, no need to convert
     this::class.java.classLoader == loader -> this // already in this loader
-    loader is TransformationClassLoader && !loader.shouldBeTransformed(this.javaClass) -> this
+    loader is LincheckClassLoader && !loader.shouldBeTransformed(this.javaClass) -> this
     this is Serializable -> serialize().run { deserialize(loader) }
     else -> error("The result class should either be always loaded by the system class loader and not be transformed," +
                   " or implement Serializable interface.")
@@ -271,8 +265,8 @@ internal fun ByteArray.deserialize(loader: ClassLoader) = ByteArrayInputStream(t
 private class CustomObjectInputStream(val loader: ClassLoader, inputStream: InputStream) : ObjectInputStream(inputStream) {
     override fun resolveClass(desc: ObjectStreamClass): Class<*> {
         // add `TRANSFORMED_PACKAGE_NAME` prefix in case of TransformationClassLoader and remove otherwise
-        val className = if (loader is TransformationClassLoader) loader.remapClassName(desc.name)
-                        else desc.name.removePrefix(TransformationClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME)
+        val className = if (loader is LincheckClassLoader) loader.remapClassName(desc.name)
+                        else desc.name.removePrefix(LincheckClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME)
         return Class.forName(className, true, loader)
     }
 }
@@ -282,18 +276,8 @@ private class CustomObjectInputStream(val loader: ClassLoader, inputStream: Inpu
  * threads that are related to the specified [runner].
  */
 internal fun collectThreadDump(runner: Runner) = Thread.getAllStackTraces().filter { (t, _) ->
-    t is FixedActiveThreadsExecutor.TestThread && t.runnerHash == runner.hashCode()
+    t is TestThread && runner.isCurrentRunnerThread(t)
 }
-
-/**
- * This method helps to encapsulate remapper logic from strategy interface.
- * The remapper is determined based on the used transformers.
- */
-internal fun getRemapperByTransformers(classTransformers: List<ClassVisitor>): Remapper? =
-    when {
-        classTransformers.any { it is ManagedStrategyTransformer } -> JavaUtilRemapper()
-        else -> null
-    }
 
 internal val String.canonicalClassName get() = this.replace('/', '.')
 internal val String.internalClassName get() = this.replace('.', '/')
@@ -336,16 +320,22 @@ internal object InternalLincheckTestUnexpectedException : Exception()
  */
 internal class LincheckInternalBugException(cause: Throwable): Exception(cause)
 
-internal fun stackTraceRepresentation(stackTrace: Array<StackTraceElement>): List<String> {
-    return transformStackTraceBackFromRemapped(stackTrace).map { it.toString() }.filter { line ->
-        "org.jetbrains.kotlinx.lincheck.strategy" !in line
-                && "org.jetbrains.kotlinx.lincheck.runner" !in line
-                && "org.jetbrains.kotlinx.lincheck.UtilsKt" !in line
-    }
-}
+// We use receivers here in order not to use this function instead of `invokeInIgnoredSection` in the transformation logic.
+@Suppress("UnusedReceiverParameter")
+internal inline fun<R> EventTracker.runInIgnoredSection(block: () -> R): R =  runInIgnoredSection(Thread.currentThread(), block)
+@Suppress("UnusedReceiverParameter")
+internal inline fun<R> ParallelThreadsRunner.runInIgnoredSection(block: () -> R): R =  runInIgnoredSection(Thread.currentThread(), block)
 
-internal fun transformStackTraceBackFromRemapped(stackTrace: Array<StackTraceElement>) = stackTrace.map {
-    StackTraceElement(it.className.removePrefix(TransformationClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME), it.methodName, it.fileName, it.lineNumber)
-}
+private inline fun <R> runInIgnoredSection(currentThread: Thread, block: () -> R): R =
+    if (currentThread is TestThread && !currentThread.inIgnoredSection) {
+        currentThread.inIgnoredSection = true
+        try {
+            block()
+        } finally {
+            currentThread.inIgnoredSection = false
+        }
+    } else {
+        block()
+    }
 
 internal const val LINCHECK_PACKAGE_NAME = "org.jetbrains.kotlinx.lincheck."

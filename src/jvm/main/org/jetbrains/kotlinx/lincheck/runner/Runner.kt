@@ -11,7 +11,11 @@ package org.jetbrains.kotlinx.lincheck.runner
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
+import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.jetbrains.kotlinx.lincheck.transformation.TransformationMode.*
 import org.objectweb.asm.*
 import java.io.*
 import java.lang.reflect.*
@@ -28,28 +32,16 @@ abstract class Runner protected constructor(
     protected val validationFunction: Actor?,
     protected val stateRepresentationFunction: Method?
 ) : Closeable {
-    protected var scenario = strategy.scenario // `strategy.scenario` will be transformed in `initialize`
-    protected lateinit var testClass: Class<*> // not available before `initialize` call
-
-    @Suppress("LeakingThis")
-    val classLoader: ExecutionClassLoader =
-        if (needsTransformation() || strategy.needsTransformation())
-            TransformationClassLoader(strategy, this)
-        else ExecutionClassLoader()
+    val classLoader = LincheckClassLoader(
+        /* transformationMode = */ if (strategy is ModelCheckingStrategy) MODEL_CHECKING else STRESS
+    )
+    protected val scenario: ExecutionScenario = strategy.scenario.convertForLoader(classLoader)
+    protected val testClass: Class<*> = classLoader.loadClass(_testClass.typeName)
 
     protected val completedOrSuspendedThreads = AtomicInteger(0)
 
     var currentExecutionPart: ExecutionPart? = null
         private set
-
-    /**
-     * This method is a part of `Runner` initialization and should be invoked after this runner
-     * creation. It is separated from the constructor to perform the strategy initialization at first.
-     */
-    open fun initialize() {
-        scenario = strategy.scenario.convertForLoader(classLoader)
-        testClass = loadClass(_testClass.typeName)
-    }
 
     /**
      * Returns the current state representation of the test instance constructed via
@@ -62,25 +54,6 @@ abstract class Runner protected constructor(
     open fun constructStateRepresentation(): String? = null
 
     /**
-     * Loads the specified class via this runner' class loader.
-     */
-    private fun loadClass(className: String): Class<*> = classLoader.loadClass(className)
-
-    /**
-     * Creates a transformer required for this runner.
-     * Throws [UnsupportedOperationException] by default.
-     *
-     * @return class visitor which transform the code due to support this runner.
-     */
-    open fun createTransformer(cv: ClassVisitor): ClassVisitor? = null
-
-    /**
-     * This method should return `true` if code transformation
-     * is required for this runner; returns `false` by default.
-     */
-    open fun needsTransformation(): Boolean = false
-
-    /**
      * Runs the next invocation.
      */
     abstract fun run(): InvocationResult
@@ -89,45 +62,45 @@ abstract class Runner protected constructor(
      * This method is invoked by every test thread as the first operation.
      * @param iThread number of invoking thread
      */
-    open fun onStart(iThread: Int) {}
+    abstract fun onStart(iThread: Int)
 
     /**
      * This method is invoked by every test thread as the last operation
      * if no exception has been thrown.
      * @param iThread number of invoking thread
      */
-    open fun onFinish(iThread: Int) {}
+    abstract fun onFinish(iThread: Int)
 
     /**
      * This method is invoked by the corresponding test thread
      * when an unexpected exception is thrown.
      */
-    open fun onFailure(iThread: Int, e: Throwable) {}
+    abstract fun onFailure(iThread: Int, e: Throwable)
 
     /**
      * This method is invoked by the corresponding test thread
      * when the current coroutine suspends.
      * @param iThread number of invoking thread
      */
-    open fun afterCoroutineSuspended(iThread: Int): Unit = throw UnsupportedOperationException("Coroutines are not supported")
+    abstract fun afterCoroutineSuspended(iThread: Int)
 
     /**
      * This method is invoked by the corresponding test thread
      * when the current coroutine is resumed.
      */
-    open fun afterCoroutineResumed(iThread: Int): Unit = throw UnsupportedOperationException("Coroutines are not supported")
+    abstract fun afterCoroutineResumed(iThread: Int)
 
     /**
      * This method is invoked by the corresponding test thread
      * when the current coroutine is cancelled.
      */
-    open fun afterCoroutineCancelled(iThread: Int): Unit = throw UnsupportedOperationException("Coroutines are not supported")
+    abstract fun afterCoroutineCancelled(iThread: Int)
 
     /**
      * Returns `true` if the coroutine corresponding to
      * the actor `actorId` in the thread `iThread` is resumed.
      */
-    open fun isCoroutineResumed(iThread: Int, actorId: Int): Boolean = throw UnsupportedOperationException("Coroutines are not supported")
+    abstract fun isCoroutineResumed(iThread: Int, actorId: Int): Boolean
 
     /**
      * Is invoked before each actor execution from the specified thread.
@@ -135,6 +108,14 @@ abstract class Runner protected constructor(
      */
     fun onActorStart(iThread: Int) {
         strategy.onActorStart(iThread)
+    }
+
+    /**
+     * Is invoked after each actor execution from the specified thread, even if a legal exception was thrown.
+     * The invocations are inserted into the generated code.
+     */
+    fun onActorFinish() {
+        strategy.onActorFinish()
     }
 
     fun beforePart(part: ExecutionPart) {
@@ -147,6 +128,11 @@ abstract class Runner protected constructor(
      * Closes the resources used in this runner.
      */
     override fun close() {}
+
+    /**
+     * Determines if this runner manages provided thread.
+     */
+    abstract fun isCurrentRunnerThread(thread: Thread): Boolean
 
     /**
      * @return whether all scenario threads are completed or suspended
