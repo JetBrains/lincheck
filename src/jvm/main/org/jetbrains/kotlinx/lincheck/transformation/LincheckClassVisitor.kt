@@ -58,6 +58,12 @@ internal class LincheckClassVisitor(
         signature: String?,
         exceptions: Array<String>?
     ): MethodVisitor {
+        if (access and ACC_NATIVE != 0 && methodName == "VMSupportsCS8") {
+            // Replace native method VMSupportsCS8 in AtomicLong with our stub.
+            // TODO: remove this code when javaagents are merged.
+            val mv = super.visitMethod(access xor ACC_NATIVE, methodName, desc, signature, exceptions)
+            return VMSupportsCS8MethodGenerator(GeneratorAdapter(mv, access xor ACC_NATIVE, methodName, desc))
+        }
         var mv = super.visitMethod(access, methodName, desc, signature, exceptions)
         if (access and ACC_NATIVE != 0) return mv
         if (transformationMode == STRESS || transformationMode == VERIFICATION) {
@@ -106,6 +112,21 @@ internal class LincheckClassVisitor(
         mv = DeterministicTimeTransformer(GeneratorAdapter(mv, access, methodName, desc))
         mv = DeterministicRandomTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
         return mv
+    }
+
+    /**
+     * Generates body of a native method `VMSupportsCS8()`.
+     * Native methods in java.util can not be transformed, so we should replace them with stubs.
+     * TODO: remove this code when javaagents are merged.
+     */
+    private class VMSupportsCS8MethodGenerator(val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, null) {
+        override fun visitEnd() = adapter.run {
+            visitCode()
+            push(true) // suppose that we always have CAS for Long
+            returnValue()
+            visitMaxs(1, 0)
+            visitEnd()
+        }
     }
 
     private class CoroutineCancellabilitySupportMethodTransformer(
