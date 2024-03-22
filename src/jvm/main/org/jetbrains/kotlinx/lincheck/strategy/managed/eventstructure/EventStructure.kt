@@ -46,9 +46,14 @@ class EventStructure(
     private val backtrackingPoints = sortedMutableListOf<BacktrackingPoint>()
 
     /**
+     * Mutable list of the event structure events.
+     */
+    private val _events = sortedMutableListOf<AtomicThreadEvent>()
+
+    /**
      * List of the event structure events.
      */
-    // val events: SortedList<Event> =
+    val events: SortedList<AtomicThreadEvent> = _events
 
     /**
      * Root event of the whole event structure.
@@ -166,8 +171,11 @@ class EventStructure(
 
     private fun rollbackTo(predicate: (BacktrackingPoint) -> Boolean): BacktrackingPoint? {
         val idx = backtrackingPoints.indexOfLast(predicate)
+        val backtrackingPoint = backtrackingPoints.getOrNull(idx)
+        val eventIdx = events.indexOfLast { it == backtrackingPoint?.event }
         backtrackingPoints.subList(idx + 1, backtrackingPoints.size).clear()
-        return backtrackingPoints.lastOrNull()
+        _events.subList(eventIdx + 1, events.size).clear()
+        return backtrackingPoint
     }
 
     private fun resetExploration(backtrackingPoint: BacktrackingPoint) {
@@ -249,6 +257,38 @@ class EventStructure(
         }
     }
 
+    private fun createBacktrackingPoint(event: AtomicThreadEvent, conflicts: List<AtomicThreadEvent>) {
+        val frontier = execution.toMutableFrontier().apply {
+            cut(conflicts)
+            // for already unblocked dangling requests,
+            // also put their responses into the frontier
+            addDanglingResponses(conflicts)
+        }
+        val danglingRequests = frontier.getDanglingRequests()
+        val blockedRequests = danglingRequests
+            // TODO: perhaps, we should change this to the list of requests to conflicting response events?
+            .filter { it.label.isBlocking && it != event.parent && (it.label !is CoroutineSuspendLabel) }
+        frontier.apply {
+            cut(danglingRequests)
+            set(event.threadId, event.parent)
+        }
+        val pinnedEvents = pinnedEvents.copy().apply {
+            // TODO: can reorder cut and merge?
+            val causalityFrontier = execution.calculateFrontier(event.causalityClock)
+            merge(causalityFrontier)
+            cut(conflicts)
+            cut(getDanglingRequests())
+            cut(event)
+        }
+        val backtrackingPoint = BacktrackingPoint(
+            event = event,
+            frontier = frontier,
+            pinnedEvents = pinnedEvents,
+            blockedRequests = blockedRequests,
+        )
+        backtrackingPoints.add(backtrackingPoint)
+    }
+
     private fun createEvent(
         iThread: Int,
         label: EventLabel,
@@ -271,38 +311,12 @@ class EventStructure(
             source = source,
             dependencies = listOfNotNull(allocation, source) + dependencies,
         )
-        val frontier = execution.toMutableFrontier().apply {
-            cut(conflicts)
-            // for already unblocked dangling requests,
-            // also put their responses into the frontier
-            addDanglingResponses(conflicts)
+        _events.add(event)
+        // if the event is not visited immediately,
+        // then we create a breakpoint to visit it later
+        if (!visit) {
+            createBacktrackingPoint(event, conflicts)
         }
-        val danglingRequests = frontier.getDanglingRequests()
-        val blockedRequests = danglingRequests
-            // TODO: perhaps, we should change this to the list of requests to conflicting response events?
-            .filter { it.label.isBlocking && it != parent && (it.label !is CoroutineSuspendLabel) }
-        frontier.apply {
-            cut(danglingRequests)
-            set(iThread, parent)
-        }
-        val pinnedEvents = pinnedEvents.copy().apply {
-            // TODO: can reorder cut and merge?
-            val causalityFrontier = execution.calculateFrontier(event.causalityClock)
-            merge(causalityFrontier)
-            cut(conflicts)
-            cut(getDanglingRequests())
-            cut(event)
-        }
-        val backtrackingPoint = BacktrackingPoint(
-            event = event,
-            frontier = frontier,
-            pinnedEvents = pinnedEvents,
-            blockedRequests = blockedRequests,
-        )
-        if (visit) {
-            backtrackingPoint.visit()
-        }
-        backtrackingPoints.add(backtrackingPoint)
         return event
     }
 
