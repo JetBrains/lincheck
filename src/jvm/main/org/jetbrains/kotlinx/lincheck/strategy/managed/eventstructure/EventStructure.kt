@@ -724,8 +724,7 @@ class EventStructure(
         }
     }
 
-    private fun addSendEvent(iThread: Int, label: EventLabel, dependencies: List<AtomicThreadEvent> = listOf()): AtomicThreadEvent {
-        require(label.isSend)
+    private fun addEvent(iThread: Int, label: EventLabel, dependencies: List<AtomicThreadEvent>): AtomicThreadEvent {
         tryReplayEvent(iThread)?.let { event ->
             check(event.label == label)
             addEventToCurrentExecution(event)
@@ -737,17 +736,14 @@ class EventStructure(
         }
     }
 
+    private fun addSendEvent(iThread: Int, label: EventLabel): AtomicThreadEvent {
+        require(label.isSend)
+        return addEvent(iThread, label, listOf())
+    }
+
     private fun addRequestEvent(iThread: Int, label: EventLabel): AtomicThreadEvent {
         require(label.isRequest)
-        tryReplayEvent(iThread)?.let { event ->
-            check(event.label == label)
-            addEventToCurrentExecution(event)
-            return event
-        }
-        val parent = playedFrontier[iThread]
-        return createEvent(iThread, label, parent, dependencies = emptyList())!!.also { event ->
-            addEventToCurrentExecution(event)
-        }
+        return addEvent(iThread, label, listOf())
     }
 
     private fun addResponseEvents(requestEvent: AtomicThreadEvent): Pair<AtomicThreadEvent?, List<AtomicThreadEvent>> {
@@ -788,17 +784,9 @@ class EventStructure(
         return (chosenEvent to responseEvents)
     }
 
-    private fun addActorEvent(iThread: Int, label: ActorLabel): AtomicThreadEvent {
-        tryReplayEvent(iThread)?.let { event ->
-            check(event.label == label)
-            addEventToCurrentExecution(event)
-            return event
-        }
-        val parent = playedFrontier[iThread]
-        return createEvent(iThread, label, parent, dependencies = emptyList())!!.also { event ->
-            addEventToCurrentExecution(event)
-        }
-    }
+    /* ************************************************************************* */
+    /*      Blocking events handling                                             */
+    /* ************************************************************************* */
 
     fun isBlockedRequest(request: AtomicThreadEvent): Boolean {
         require(request.label.isRequest && request.label.isBlocking)
@@ -1069,12 +1057,12 @@ class EventStructure(
 
     fun addActorStartEvent(iThread: Int, actor: Actor): AtomicThreadEvent {
         val label = ActorLabel(SpanLabelKind.Start, iThread, actor)
-        return addActorEvent(iThread, label)
+        return addEvent(iThread, label, dependencies = listOf())
     }
 
     fun addActorEndEvent(iThread: Int, actor: Actor): AtomicThreadEvent {
         val label = ActorLabel(SpanLabelKind.End, iThread, actor)
-        return addActorEvent(iThread, label)
+        return addEvent(iThread, label, dependencies = listOf())
     }
 
     fun tryReplayRandomEvent(iThread: Int): AtomicThreadEvent? {
