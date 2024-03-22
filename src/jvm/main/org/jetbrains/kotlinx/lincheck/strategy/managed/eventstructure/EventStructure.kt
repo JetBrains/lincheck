@@ -43,12 +43,12 @@ class EventStructure(
     /**
      * Mutable list of events of the event structure.
      */
-    private val _events = sortedMutableListOf<BacktrackableEvent>()
+    private val backtrackingPoints = sortedMutableListOf<BacktrackingPoint>()
 
     /**
-     * List of events of the event structure.
+     * List of the event structure events.
      */
-    val events: SortedList<Event> = _events
+    // val events: SortedList<Event> =
 
     /**
      * Root event of the whole event structure.
@@ -126,10 +126,10 @@ class EventStructure(
 
     fun startNextExploration(): Boolean {
         loop@while (true) {
-            val event = rollbackToEvent { !it.visited }
+            val backtrackingPoint = rollbackTo { !it.visited }
                 ?: return false
-            event.visit()
-            resetExploration(event)
+            backtrackingPoint.visit()
+            resetExploration(backtrackingPoint)
             return true
         }
     }
@@ -164,27 +164,30 @@ class EventStructure(
         _execution.reset(playedFrontier)
     }
 
-    private fun rollbackToEvent(predicate: (BacktrackableEvent) -> Boolean): BacktrackableEvent? {
-        val eventIdx = _events.indexOfLast(predicate)
-        _events.subList(eventIdx + 1, _events.size).clear()
-        return _events.lastOrNull()
+    private fun rollbackTo(predicate: (BacktrackingPoint) -> Boolean): BacktrackingPoint? {
+        val idx = backtrackingPoints.indexOfLast(predicate)
+        backtrackingPoints.subList(idx + 1, backtrackingPoints.size).clear()
+        return backtrackingPoints.lastOrNull()
     }
 
-    private fun resetExploration(event: BacktrackableEvent) {
-        check(event.label is InitializationLabel || event.label.isResponse)
+    private fun resetExploration(backtrackingPoint: BacktrackingPoint) {
+        // get the event to backtrack to
+        val event = backtrackingPoint.event.ensure {
+            it.label is InitializationLabel || it.label.isResponse
+        }
         // reset dangling events
         danglingEvents.clear()
         // set current exploration root
         currentExplorationRoot = event
         // reset current execution
-        _execution.reset(event.frontier)
+        _execution.reset(backtrackingPoint.frontier)
         // copy pinned events and pin current re-exploration root event
-        val pinnedEvents = event.pinnedEvents.copy()
+        val pinnedEvents = backtrackingPoint.pinnedEvents.copy()
             .apply { set(event.threadId, event) }
         // add new event to current execution
         _execution.add(event)
         // do the same for blocked requests
-        for (blockedRequest in event.blockedRequests) {
+        for (blockedRequest in backtrackingPoint.blockedRequests) {
             _execution.add(blockedRequest)
             // additionally, pin blocked requests if all their predecessors are also blocked ...
             if (blockedRequest.parent == pinnedEvents[blockedRequest.threadId]) {
@@ -217,49 +220,22 @@ class EventStructure(
     /*      Event creation                                                       */
     /* ************************************************************************* */
 
-    private inner class BacktrackableEvent(
-        label: EventLabel,
-        parent: AtomicThreadEvent?,
-        senders: List<AtomicThreadEvent> = listOf(),
-        allocation: AtomicThreadEvent? = null,
-        source: AtomicThreadEvent? = null,
-        conflicts: List<AtomicThreadEvent> = listOf(),
-        /**
-         * State of the execution frontier at the point when event is created.
-         */
+    /**
+     * Class representing a backtracking point in the exploration of the program's executions.
+     *
+     * @property event The event at which to start a new exploration.
+     * @property frontier The execution frontier at the point when the event was created.
+     * @property pinnedEvents The frontier of pinned events that should not be
+     *   considered for exploration branching.
+     * @property blockedRequests The list of blocked request events.
+     * @property visited Flag to indicate if this backtracking point has been visited.
+     */
+    private class BacktrackingPoint(
+        val event: AtomicThreadEvent,
         val frontier: ExecutionFrontier<AtomicThreadEvent>,
-        /**
-         * Frontier of pinned events.
-         * Pinned events are the events that should not be
-         * considered for branching in an exploration starting from this event.
-         */
-        pinnedEvents: ExecutionFrontier<AtomicThreadEvent>,
-        /**
-         * List of blocked request events.
-         */
+        val pinnedEvents: ExecutionFrontier<AtomicThreadEvent>,
         val blockedRequests: List<AtomicThreadEvent>,
-    ) : AbstractAtomicThreadEvent(
-        label = label,
-        // TODO: get rid of cast
-        parent = (parent as? AbstractAtomicThreadEvent?),
-        senders = senders,
-        allocation = allocation,
-        source = source,
-        dependencies = listOfNotNull(allocation, source) + senders,
-    ) {
-
-        init {
-            validate()
-        }
-
-        val pinnedEvents : ExecutionFrontier<AtomicThreadEvent> = pinnedEvents.copy().apply {
-            // TODO: can reorder cut and merge?
-            val causalityFrontier = execution.calculateFrontier(causalityClock)
-            merge(causalityFrontier)
-            cut(conflicts)
-            cut(getDanglingRequests())
-            cut(this@BacktrackableEvent)
-        }
+    ) : Comparable<BacktrackingPoint> {
 
         var visited: Boolean = false
             private set
@@ -268,6 +244,9 @@ class EventStructure(
             visited = true
         }
 
+        override fun compareTo(other: BacktrackingPoint): Int {
+            return event.id.compareTo(other.event.id)
+        }
     }
 
     private fun createEvent(
@@ -275,7 +254,8 @@ class EventStructure(
         label: EventLabel,
         parent: AtomicThreadEvent?,
         dependencies: List<AtomicThreadEvent>,
-    ): BacktrackableEvent? {
+        visit: Boolean = true,
+    ): AtomicThreadEvent? {
         val conflicts = getConflictingEvents(iThread, label, parent, dependencies)
         if (isCausalityViolated(parent, dependencies, conflicts))
             return null
@@ -283,6 +263,14 @@ class EventStructure(
         val source = (label as? WriteAccessLabel)?.writeValue?.let {
             objectRegistry[it]?.allocation
         }
+        val event = AtomicThreadEventImpl(
+            label = label,
+            parent = parent,
+            senders = dependencies,
+            allocation = allocation,
+            source = source,
+            dependencies = listOfNotNull(allocation, source) + dependencies,
+        )
         val frontier = execution.toMutableFrontier().apply {
             cut(conflicts)
             // for already unblocked dangling requests,
@@ -297,19 +285,25 @@ class EventStructure(
             cut(danglingRequests)
             set(iThread, parent)
         }
-        return BacktrackableEvent(
-            label = label,
-            parent = parent,
-            senders = dependencies,
-            allocation = allocation,
-            source = source,
-            conflicts = conflicts,
+        val pinnedEvents = pinnedEvents.copy().apply {
+            // TODO: can reorder cut and merge?
+            val causalityFrontier = execution.calculateFrontier(event.causalityClock)
+            merge(causalityFrontier)
+            cut(conflicts)
+            cut(getDanglingRequests())
+            cut(event)
+        }
+        val backtrackingPoint = BacktrackingPoint(
+            event = event,
             frontier = frontier,
             pinnedEvents = pinnedEvents,
             blockedRequests = blockedRequests,
-        ).also { event ->
-            _events.add(event)
+        )
+        if (visit) {
+            backtrackingPoint.visit()
         }
+        backtrackingPoints.add(backtrackingPoint)
+        return event
     }
 
     private fun getConflictingEvents(
@@ -382,11 +376,7 @@ class EventStructure(
         }
     }
 
-    private fun addEventToCurrentExecution(event: BacktrackableEvent, visit: Boolean = true) {
-        // Mark event as visited if necessary.
-        if (visit) {
-            event.visit()
-        }
+    private fun addEventToCurrentExecution(event: AtomicThreadEvent) {
         // Check if the added event is replayed event.
         val isReplayedEvent = inReplayPhase(event.threadId)
         // Update current execution and replayed frontier.
@@ -443,8 +433,8 @@ class EventStructure(
         fun inProgress(): Boolean =
             (index < size)
 
-        val currentEvent: BacktrackableEvent?
-            get() = if (inProgress()) (executionOrder[index] as? BacktrackableEvent) else null
+        val currentEvent: AtomicThreadEvent?
+            get() = if (inProgress()) (executionOrder[index] as? AtomicThreadEvent) else null
 
         fun setNextEvent() {
             index++
@@ -465,7 +455,7 @@ class EventStructure(
         return iThread == replayer.currentEvent?.threadId
     }
 
-    private fun tryReplayEvent(iThread: Int): BacktrackableEvent? {
+    private fun tryReplayEvent(iThread: Int): AtomicThreadEvent? {
         if (inReplayPhase() && !canReplayNextEvent(iThread)) {
             // TODO: can we get rid of this?
             //   we can try to enforce more ordering invariants by grouping "atomic" events
@@ -591,9 +581,9 @@ class EventStructure(
                 val threadReads = execution[event.threadId]!!.filter {
                     it.label.isResponse && (it.label as? ReadAccessLabel)?.location == label.location
                 }
-                val lastSeenWrite = threadReads.lastOrNull()?.let { (it as AbstractAtomicThreadEvent).readsFrom }
+                val lastSeenWrite = threadReads.lastOrNull()?.readsFrom
                 val staleWrites = threadReads
-                    .map { (it as AbstractAtomicThreadEvent).readsFrom }
+                    .map { it.readsFrom }
                     .filter { it != lastSeenWrite }
                     .distinct()
                 val eventFrontier = execution.calculateFrontier(event.causalityClock)
@@ -647,11 +637,15 @@ class EventStructure(
         }
         // if there are responses to blocked dangling requests, then set the response of one of these requests
         for (syncEvent in syncEvents) {
-            val requestEvent = (syncEvent.parent as? AtomicThreadEvent)
+            val requestEvent = syncEvent.parent
                 ?.takeIf { it.label.isRequest && it.label.isBlocking }
                 ?: continue
             if (requestEvent in danglingEvents && getUnblockingResponse(requestEvent) == null) {
                 setUnblockingResponse(syncEvent)
+                // mark corresponding backtracking point as visited;
+                // search from the end, because the search event was added recently,
+                // and thus should be located near the end of the list
+                backtrackingPoints.last { it.event == syncEvent }.apply { visit() }
                 break
             }
         }
@@ -679,7 +673,13 @@ class EventStructure(
             }.sortedBy { (_, _, dependency) ->
                 dependency
             }.mapNotNull { (syncLab, parent, dependency) ->
-                createEvent(parent.threadId, syncLab, parent, dependencies = listOf(dependency))
+                createEvent(
+                    iThread = parent.threadId,
+                    label = syncLab,
+                    parent = parent,
+                    dependencies = listOf(dependency),
+                    visit = false,
+                )
             }
     }
 
@@ -700,7 +700,13 @@ class EventStructure(
         // is a request event, and the result of synchronization is a response event.
         check(syncLab.isResponse)
         val parent = dependencies.first { it.label.isRequest }
-        val responseEvent = createEvent(parent.threadId, syncLab, parent, dependencies.filter { it != parent })
+        val responseEvent = createEvent(
+            iThread = parent.threadId,
+            label = syncLab,
+            parent = parent,
+            dependencies = dependencies.filter { it != parent },
+            visit = false,
+        )
         return listOfNotNull(responseEvent)
     }
 
@@ -716,12 +722,13 @@ class EventStructure(
             val value = memoryInitializer(location)
             computeValueID(value)
         }
-        return createEvent(initThreadId, label, parent = null, dependencies = emptyList())!!.also { event ->
-            val id = STATIC_OBJECT_ID
-            val entry = ObjectEntry(id, STATIC_OBJECT.opaque(), event)
-            objectRegistry.register(entry)
-            addEventToCurrentExecution(event, visit = false)
-        }
+        return createEvent(initThreadId, label, parent = null, dependencies = emptyList(), visit = false)!!
+            .also { event ->
+                val id = STATIC_OBJECT_ID
+                val entry = ObjectEntry(id, STATIC_OBJECT.opaque(), event)
+                objectRegistry.register(entry)
+                addEventToCurrentExecution(event)
+            }
     }
 
     private fun addEvent(iThread: Int, label: EventLabel, dependencies: List<AtomicThreadEvent>): AtomicThreadEvent {
@@ -767,7 +774,6 @@ class EventStructure(
                 ?: return (null to listOf())
             check(event.label.isResponse)
             check(event.parent == requestEvent)
-            check(event is BacktrackableEvent)
             addEventToCurrentExecution(event)
             return event to listOf(event)
         }
@@ -779,7 +785,9 @@ class EventStructure(
         // TODO: use some other strategy to select the next event in the current exploration?
         // TODO: check consistency of chosen event!
         val chosenEvent = responseEvents.last().also { event ->
-            addEventToCurrentExecution(event as BacktrackableEvent)
+            check(event == backtrackingPoints.last().event)
+            backtrackingPoints.last().visit()
+            addEventToCurrentExecution(event)
         }
         return (chosenEvent to responseEvents)
     }

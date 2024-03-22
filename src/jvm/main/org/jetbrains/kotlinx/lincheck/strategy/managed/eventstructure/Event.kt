@@ -365,30 +365,30 @@ abstract class AbstractThreadEvent(
 
 }
 
-abstract class AbstractAtomicThreadEvent(
+class AtomicThreadEventImpl(
     label: EventLabel,
-    override val parent: AbstractAtomicThreadEvent?,
+    override val parent: AtomicThreadEvent?,
     /**
      * Sender events corresponding to this event.
      * Applicable only to response events.
      */
-    final override val senders: List<AtomicThreadEvent> = listOf(),
+    override val senders: List<AtomicThreadEvent> = listOf(),
     /**
      * The allocation event for the accessed object.
      * Applicable only to object accessing events.
      */
-    final override val allocation: AtomicThreadEvent? = null,
+    override val allocation: AtomicThreadEvent? = null,
     /**
      * The allocation event for the value produced by this label
      * (for example, written value for write access label).
      */
     // TODO: refactor!
-    final override val source: AtomicThreadEvent? = null,
+    override val source: AtomicThreadEvent? = null,
     /**
      * List of event's dependencies
      */
-    final override val dependencies: List<AtomicThreadEvent> = listOf(),
-) : AtomicThreadEvent, AbstractThreadEvent(label, parent, dependencies) {
+    override val dependencies: List<AtomicThreadEvent> = listOf(),
+) : AtomicThreadEvent, AbstractThreadEvent(label, (parent as AbstractThreadEvent?), dependencies) {
 
     final override val synchronized: List<ThreadEvent> =
         if (label.isResponse && !label.isSpanLabel) (listOf(request!!) + senders) else listOf()

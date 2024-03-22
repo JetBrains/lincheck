@@ -79,7 +79,6 @@ data class SequentialConsistencyReplayer(
 
             label is ReadAccessLabel && label.isResponse ->
                 this.takeIf {
-                    (event as AbstractAtomicThreadEvent)
                     // TODO: do we really need this `if` here?
                     if (event.readsFrom.label is WriteAccessLabel)
                         memoryView[label.location] == event.readsFrom
