@@ -15,6 +15,7 @@ import org.objectweb.asm.*
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
 import java.io.*
+import java.util.concurrent.*
 import kotlin.reflect.*
 import kotlin.reflect.jvm.*
 
@@ -134,8 +135,13 @@ internal inline fun GeneratorAdapter.invokeInIgnoredSection(
     )
 }
 
-internal fun isCoroutineStateMachineClass(internalClassName: String) =
-    getSuperclassName(internalClassName) == "kotlin/coroutines/jvm/internal/ContinuationImpl"
+private val isCoroutineStateMachineClassMap = ConcurrentHashMap<String, Boolean>()
+internal fun isCoroutineStateMachineClass(internalClassName: String): Boolean {
+    if (internalClassName.startsWith("java/")) return false
+    return isCoroutineStateMachineClassMap.computeIfAbsent(internalClassName) {
+        getSuperclassName(internalClassName) == "kotlin/coroutines/jvm/internal/ContinuationImpl"
+    }
+}
 
 private fun getSuperclassName(internalClassName: String): String? {
     class SuperclassClassVisitor : ClassVisitor(ASM_API) {
