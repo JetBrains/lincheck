@@ -24,6 +24,7 @@ import org.jetbrains.kotlinx.lincheck.transformation.CodeLocations
 import org.jetbrains.kotlinx.lincheck.Injections
 import org.jetbrains.kotlinx.lincheck.EventTracker
 import org.jetbrains.kotlinx.lincheck.TestThread
+import org.jetbrains.kotlinx.lincheck.transformation.FinalFields
 import sun.misc.Unsafe
 import java.lang.invoke.VarHandle
 import java.lang.reflect.*
@@ -621,6 +622,8 @@ abstract class ManagedStrategy(
 
     override fun beforeReadField(obj: Any, className: String, fieldName: String, codeLocation: Int) = runInIgnoredSection {
         if (localObjectManager.isLocalObject(obj)) return@runInIgnoredSection
+        if (FinalFields.isFinalField(className, fieldName)) return@runInIgnoredSection
+
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             ReadTracePoint(
@@ -640,6 +643,8 @@ abstract class ManagedStrategy(
     }
 
     override fun beforeReadFieldStatic(className: String, fieldName: String, codeLocation: Int) = runInIgnoredSection {
+        if (FinalFields.isFinalField(className, fieldName)) return@runInIgnoredSection
+
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             ReadTracePoint(

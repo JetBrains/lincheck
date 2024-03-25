@@ -58,13 +58,34 @@ internal object CodeLocations {
  */
 internal object FinalFields {
 
-    fun isFinalField(ownerInternal: String, fieldName: String): Boolean {
-        var internalName = ownerInternal
+    private val finalFields = HashMap<String, Boolean>() // className + SEPARATOR + fieldName
+    private const val SEPARATOR = "$^&*-#"
+
+    /**
+     * Registers field [fieldName] of this class [className] as a final field.
+     */
+    fun addFinalField(className: String, fieldName: String) {
+        val fieldKey = className + SEPARATOR + fieldName
+        finalFields[fieldKey] = true
+    }
+
+    /**
+     * Checks if the given field of a class is final.
+     *
+     * @param className Name of the class that contains the field.
+     * @param fieldName Name of the field to be checked.
+     * @return `true` if the field is final, `false` otherwise.
+     */
+    fun isFinalField(className: String, fieldName: String): Boolean {
+        var internalName = className
         if (internalName.startsWith(REMAPPED_PACKAGE_INTERNAL_NAME)) {
             internalName = internalName.substring(REMAPPED_PACKAGE_INTERNAL_NAME.length)
         }
-        return try {
-            val clazz = Class.forName(internalName.canonicalClassName)
+        val fieldKey = internalName + SEPARATOR + fieldName
+        finalFields[fieldKey]?.let { return it }
+
+        val isFinal = try {
+            val clazz = Class.forName(className.canonicalClassName)
             val field = findField(clazz, fieldName) ?: throw NoSuchFieldException("No $fieldName in ${clazz.name}")
             (field.modifiers and FINAL) == FINAL
         } catch (e: ClassNotFoundException) {
@@ -72,6 +93,9 @@ internal object FinalFields {
         } catch (e: NoSuchFieldException) {
             throw RuntimeException(e)
         }
+        finalFields[fieldKey] = isFinal
+
+        return isFinal
     }
 
     private fun findField(clazz: Class<*>?, fieldName: String): Field? {
