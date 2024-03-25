@@ -11,6 +11,7 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import java.lang.reflect.Method
+import kotlin.coroutines.*
 import kotlin.reflect.jvm.*
 
 /**
@@ -44,4 +45,9 @@ data class Actor @JvmOverloads constructor(
         (if (cancelOnSuspension) "cancel" else "")
 }
 
-fun Method.isSuspendable(): Boolean = kotlinFunction?.isSuspend ?: false
+fun Method.isSuspendable(): Boolean {
+    val paramTypes = parameterTypes
+    if (paramTypes.isEmpty()) return false
+    if (paramTypes.last() != Continuation::class.java) return false
+    return kotlinFunction?.isSuspend ?: false
+}
