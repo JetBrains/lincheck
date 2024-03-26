@@ -513,7 +513,7 @@ internal class LincheckClassVisitor(
         lateinit var analyzer: AnalyzerAdapter
 
         override fun visitFieldInsn(opcode: Int, owner: String, fieldName: String, desc: String) = adapter.run {
-            if (isCoroutineInternalClass(owner) || isCoroutineStateMachineClass(owner)) {
+            if (isCoroutineInternalClass(owner) || isCoroutineStateMachineClass(owner) || FinalFields.isFinalField(owner, fieldName)) {
                 visitFieldInsn(opcode, owner, fieldName, desc)
                 return
             }

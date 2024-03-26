@@ -53,7 +53,7 @@ internal object CodeLocations {
 
 /**
  * [FinalFields] object is used to track final fields across different classes.
- * As a field may be declared in the parent class, [isFinalField] method recursively traverses all the
+ * As a field may be declared in the parent class, [computeIsFinalField] method recursively traverses all the
  * hierarchy to find the field and check it.
  */
 internal object FinalFields {
@@ -69,6 +69,16 @@ internal object FinalFields {
         finalFields[fieldKey] = true
     }
 
+    fun isFinalField(className: String, fieldName: String): Boolean {
+        var internalName = className
+        if (internalName.startsWith(REMAPPED_PACKAGE_INTERNAL_NAME)) {
+            internalName = internalName.substring(REMAPPED_PACKAGE_INTERNAL_NAME.length)
+        }
+        val fieldKey = internalName + SEPARATOR + fieldName
+        return finalFields[fieldKey] ?: false
+    }
+
+
     /**
      * Checks if the given field of a class is final.
      *
@@ -76,7 +86,7 @@ internal object FinalFields {
      * @param fieldName Name of the field to be checked.
      * @return `true` if the field is final, `false` otherwise.
      */
-    fun isFinalField(className: String, fieldName: String): Boolean {
+    fun computeIsFinalField(className: String, fieldName: String): Boolean {
         var internalName = className
         if (internalName.startsWith(REMAPPED_PACKAGE_INTERNAL_NAME)) {
             internalName = internalName.substring(REMAPPED_PACKAGE_INTERNAL_NAME.length)
