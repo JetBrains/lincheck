@@ -23,7 +23,8 @@ class MinimizationTest {
     @Operation
     fun inc() = counter++
 
-    /* This test should find a bug in counter implementation but do not attempt to minimize it.
+    /* This test should find a bug in counter implementation
+     * but do not attempt to minimize it.
      */
     @Test
     fun testWithoutMinimization() {
@@ -32,7 +33,7 @@ class MinimizationTest {
             .actorsPerThread(4)
             .actorsBefore(4)
             .actorsAfter(4)
-            .invocationsPerIteration(1_000)
+            .invocationsPerIteration(INVOCATIONS_COUNT)
             .minimizeFailedScenario(false)
         try {
             LinChecker.check(MinimizationTest::class.java, options)
@@ -58,7 +59,7 @@ class MinimizationTest {
             .actorsPerThread(4)
             .actorsBefore(4)
             .actorsAfter(4)
-            .invocationsPerIteration(1_000)
+            .invocationsPerIteration(INVOCATIONS_COUNT)
         try {
             LinChecker.check(MinimizationTest::class.java, options)
             fail("Should fail with LincheckAssertionError")
@@ -91,7 +92,7 @@ class MinimizationWithExceptionTest {
             .actorsPerThread(4)
             .actorsBefore(4)
             .actorsAfter(4)
-            .invocationsPerIteration(1_000)
+            .invocationsPerIteration(INVOCATIONS_COUNT)
         try {
             LinChecker.check(IncorrectImplementationWithException::class.java, options)
             fail("Should fail with LincheckAssertionError")
@@ -122,7 +123,7 @@ class MinimizationWithExceptionTest {
             .actorsPerThread(4)
             .actorsBefore(4)
             .actorsAfter(4)
-            .invocationsPerIteration(1_000)
+            .invocationsPerIteration(INVOCATIONS_COUNT)
             .sequentialSpecification(SequentialImplementation::class.java)
         try {
             LinChecker.check(CorrectImplementationWithException::class.java, options)
@@ -167,3 +168,5 @@ class MinimizationWithExceptionTest {
         fun exception() = Unit
     }
 }
+
+private const val INVOCATIONS_COUNT = 100_000
