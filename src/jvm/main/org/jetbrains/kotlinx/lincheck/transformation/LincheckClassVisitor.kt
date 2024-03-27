@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.transformation
 
 import org.jetbrains.kotlinx.lincheck.LincheckClassLoader.ASM_API
 import org.jetbrains.kotlinx.lincheck.Injections
+import org.jetbrains.kotlinx.lincheck.LincheckClassLoader
 import org.jetbrains.kotlinx.lincheck.strategy.managed.JavaUtilRemapper
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
@@ -23,6 +24,7 @@ import org.jetbrains.kotlinx.lincheck.transformation.TransformationMode.*
 import java.util.*
 
 internal class LincheckClassVisitor(
+    private val classLoader: LincheckClassLoader,
     private val transformationMode: TransformationMode,
     classVisitor: ClassVisitor
 ) : ClassVisitor(
@@ -32,6 +34,21 @@ internal class LincheckClassVisitor(
     private lateinit var className: String
     private var classVersion = 0
     private var fileName: String? = null
+
+    override fun visitField(
+        access: Int,
+        fieldName: String,
+        descriptor: String?,
+        signature: String?,
+        value: Any?
+    ): FieldVisitor {
+        if (access and ACC_FINAL != 0) {
+            FinalFields.addFinalField(className, fieldName)
+        } else {
+            FinalFields.addMutableField(className, fieldName)
+        }
+        return super.visitField(access, fieldName, descriptor, signature, value)
+    }
 
     override fun visit(
         version: Int,
@@ -500,10 +517,7 @@ internal class LincheckClassVisitor(
         lateinit var analyzer: AnalyzerAdapter
 
         override fun visitFieldInsn(opcode: Int, owner: String, fieldName: String, desc: String) = adapter.run {
-            if (isCoroutineInternalClass(owner) || isCoroutineStateMachineClass(owner) || FinalFields.isFinalField(
-                    owner,
-                    fieldName
-                )
+            if (isCoroutineInternalClass(owner) || isCoroutineStateMachineClass(owner) || FinalFields.isFinalField(classLoader, owner, fieldName)
             ) {
                 visitFieldInsn(opcode, owner, fieldName, desc)
                 return
