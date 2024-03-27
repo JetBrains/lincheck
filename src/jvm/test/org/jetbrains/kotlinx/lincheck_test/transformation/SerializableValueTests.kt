@@ -68,20 +68,6 @@ class SerializableJavaUtilResultIncorrectTest : AbstractLincheckTest(IncorrectRe
     }
 }
 
-class SerializableNullResultTest {
-    @Test
-    fun test() {
-        val a = ValueResult(null)
-        val value = ValueHolder(0)
-        val loader = LincheckClassLoader(TransformationMode.STRESS)
-        val transformedValue = value.convertForLoader(loader)
-        val b = ValueResult(transformedValue)
-        // check that no exception was thrown
-        assertFalse(a == b)
-        assertFalse(b == a)
-    }
-}
-
 @Param(name = "key", gen = ValueHolderGen::class)
 class SerializableParameterTest : AbstractLincheckTest() {
     private val counter = AtomicInteger(0)

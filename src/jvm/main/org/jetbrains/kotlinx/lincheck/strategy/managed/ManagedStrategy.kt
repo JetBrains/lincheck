@@ -12,25 +12,20 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
-import org.jetbrains.kotlinx.lincheck.exceptionCanBeValidExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.util.SpinnerGroup
-import org.jetbrains.kotlinx.lincheck.util.spinWaitUntil
+import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.ensureClassAndAllSuperclassesAreInstrumented
+import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
-import org.jetbrains.kotlinx.lincheck.transformation.CodeLocations
-import org.jetbrains.kotlinx.lincheck.Injections
-import org.jetbrains.kotlinx.lincheck.EventTracker
-import org.jetbrains.kotlinx.lincheck.TestThread
-import sun.misc.Unsafe
-import java.lang.invoke.VarHandle
+import sun.misc.*
+import sun.nio.ch.lincheck.*
+import java.lang.invoke.*
 import java.lang.reflect.*
 import java.util.*
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater
-import java.util.concurrent.atomic.AtomicLongFieldUpdater
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
+import java.util.concurrent.atomic.*
 import kotlin.collections.set
 
 /**
@@ -209,7 +204,6 @@ abstract class ManagedStrategy(
         // Re-transform class constructing trace
         collectTrace = true
         // Replace the current runner with a new one in order to use a new
-        // `TransformationClassLoader` with a transformer that inserts the trace collection logic.
         runner.close()
         runner = createRunner()
 
@@ -401,11 +395,10 @@ abstract class ManagedStrategy(
         // the managed strategy can construct a trace to reproduce this failure.
         // Let's then store the corresponding failing result and construct the trace.
         if (exception === ForcibleExecutionFinishError) return // not a forcible execution finish
-        suddenInvocationResult =
-            UnexpectedExceptionInvocationResult(wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(exception))
+        suddenInvocationResult = UnexpectedExceptionInvocationResult(exception)
     }
 
-    override fun onActorStart(iThread: Int) {
+    override fun onActorStart(iThread: Int) = runInIgnoredSection {
         currentActorId[iThread]++
         callStackTrace[iThread].clear()
         suspendedFunctionsStack[iThread].clear()
@@ -430,7 +423,7 @@ abstract class ManagedStrategy(
      * Waits until the specified thread can continue
      * the execution according to the strategy decision.
      */
-    private fun awaitTurn(iThread: Int) {
+    private fun awaitTurn(iThread: Int) = runInIgnoredSection {
         spinners[iThread].spinWaitUntil {
             // Finish forcibly if an error occurred and we already have an `InvocationResult`.
             if (suddenInvocationResult != null) throw ForcibleExecutionFinishError
@@ -621,6 +614,10 @@ abstract class ManagedStrategy(
 
     override fun beforeReadField(obj: Any, className: String, fieldName: String, codeLocation: Int) = runInIgnoredSection {
         if (localObjectManager.isLocalObject(obj)) return@runInIgnoredSection
+
+        // TODO: remove the isFinal check
+        if (FinalFields.isFinalField(className, fieldName)) return@runInIgnoredSection
+
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             ReadTracePoint(
@@ -640,6 +637,9 @@ abstract class ManagedStrategy(
     }
 
     override fun beforeReadFieldStatic(className: String, fieldName: String, codeLocation: Int) = runInIgnoredSection {
+        // TODO: remove the isFinal check
+        if (FinalFields.isFinalField(className, fieldName)) return@runInIgnoredSection
+
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             ReadTracePoint(
@@ -780,15 +780,23 @@ abstract class ManagedStrategy(
         }
     }
 
-    override fun onNewObjectCreation(obj: Any) {
+    override fun beforeNewObjectCreation(className: String) = runInIgnoredSection {
+        ensureClassAndAllSuperclassesAreInstrumented(className)
+    }
+
+    override fun afterNewObjectCreation(obj: Any) {
         if (obj is String || obj is Int || obj is Long || obj is Byte || obj is Char || obj is Float || obj is Double) return
         runInIgnoredSection {
             localObjectManager.registerNewObject(obj)
         }
     }
 
-    override fun onWriteToObjectFieldOrArrayCell(obj: Any, fieldOrArrayCellValue: Any?) {
-        localObjectManager.onWriteToObjectFieldOrArrayCell(obj, fieldOrArrayCellValue)
+    override fun onWriteToObjectFieldOrArrayCell(receiver: Any, fieldOrArrayCellValue: Any?) = runInIgnoredSection {
+        localObjectManager.onWriteToObjectFieldOrArrayCell(receiver, fieldOrArrayCellValue)
+    }
+
+    override fun onWriteObjectToStaticField(fieldValue: Any?) = runInIgnoredSection {
+        localObjectManager.markObjectNonLocal(fieldValue)
     }
 
     private fun methodGuaranteeType(owner: Any?, className: String, methodName: String): ManagedGuaranteeType? = runInIgnoredSection {
@@ -822,16 +830,29 @@ abstract class ManagedStrategy(
                         beforeMethodCall(currentThread, codeLocation, null, methodName, params)
                     }
                 }
+                // It's important that this method can't be called inside runInIgnoredSection, as the ignored section
+                // flag would be set to false when leaving runInIgnoredSection,
+                // so enterIgnoredSection would have no effect
                 enterIgnoredSection()
             }
             ManagedGuaranteeType.TREAT_AS_ATOMIC -> {
-                if (collectTrace) {
-                    beforeMethodCall(currentThread, codeLocation, null, methodName, params)
+                runInIgnoredSection {
+                    if (collectTrace) {
+                        beforeMethodCall(currentThread, codeLocation, null, methodName, params)
+                    }
+                    newSwitchPointOnAtomicMethodCall(codeLocation)
                 }
-                newSwitchPointOnAtomicMethodCall(codeLocation)
+                // It's important that this method can't be called inside runInIgnoredSection, as the ignored section
+                // flag would be set to false when leaving runInIgnoredSection,
+                // so enterIgnoredSection would have no effect
                 enterIgnoredSection()
             }
             null -> {
+                if (owner == null) {
+                    runInIgnoredSection {
+                        ensureClassAndAllSuperclassesAreInstrumented(className.canonicalClassName)
+                    }
+                }
                 if (collectTrace) {
                     runInIgnoredSection {
                         val params = if (isSuspendFunction(className, methodName, params)) {

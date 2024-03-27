@@ -8,7 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck
+package sun.nio.ch.lincheck
 
 import java.util.*
 
@@ -16,7 +16,7 @@ import java.util.*
  * Methods of this interface are called from the instrumented tested code during model-checking.
  * See [Injections] for the documentation.
  */
-internal interface EventTracker {
+interface EventTracker {
     fun lock(monitor: Any, codeLocation: Int)
     fun unlock(monitor: Any, codeLocation: Int)
 
@@ -44,6 +44,9 @@ internal interface EventTracker {
     fun getThreadLocalRandom(): Random
     fun randomNextInt(): Int
 
-    fun onNewObjectCreation(obj: Any)
-    fun onWriteToObjectFieldOrArrayCell(obj: Any, fieldOrArrayCellValue: Any?)
+    fun beforeNewObjectCreation(className: String)
+    fun afterNewObjectCreation(obj: Any)
+
+    fun onWriteToObjectFieldOrArrayCell(receiver: Any, fieldOrArrayCellValue: Any?)
+    fun onWriteObjectToStaticField(fieldValue: Any?)
 }

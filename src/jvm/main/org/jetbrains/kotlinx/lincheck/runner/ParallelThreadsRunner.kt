@@ -17,10 +17,11 @@ import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner.Completion.*
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
-import org.jetbrains.kotlinx.lincheck.util.SpinnerGroup
-import org.jetbrains.kotlinx.lincheck.util.spinWaitUntil
-import org.jetbrains.kotlinx.lincheck.TestThread
+import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.ensureAllTestInstanceFieldsAreTransformed
+import org.jetbrains.kotlinx.lincheck.util.*
+import sun.nio.ch.lincheck.*
 import java.lang.reflect.*
 import java.util.concurrent.*
 import java.util.concurrent.atomic.*
@@ -102,7 +103,9 @@ internal open class ParallelThreadsRunner(
 
         override var context = ParallelThreadRunnerInterceptor(resWithCont) + StoreExceptionHandler() + Job()
 
-        override fun resumeWith(result: kotlin.Result<Any?>) {
+        // We need to run this code in an ignored section,
+        // as it is called in the testing code but should not be analyzed.
+        override fun resumeWith(result: kotlin.Result<Any?>) = runInIgnoredSection {
             // decrement completed or suspended threads only if the operation was not cancelled and
             // the continuation was not intercepted; it was already decremented before writing `resWithCont` otherwise
             if (!result.cancelledByLincheck()) {
@@ -132,7 +135,10 @@ internal open class ParallelThreadsRunner(
         private inner class ParallelThreadRunnerInterceptor(
             private var resWithCont: SuspensionPointResultWithContinuation
         ) : AbstractCoroutineContextElement(ContinuationInterceptor), ContinuationInterceptor {
-            override fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T> {
+
+            // We need to run this code in an ignored section,
+            // as it is called in the testing code but should not be analyzed.
+            override fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T> = runInIgnoredSection {
                 return Continuation(StoreExceptionHandler() + Job()) { result ->
                     // decrement completed or suspended threads only if the operation was not cancelled
                     if (!result.cancelledByLincheck()) {
@@ -173,6 +179,13 @@ internal open class ParallelThreadsRunner(
 
     private fun createTestInstance() {
         testInstance = testClass.newInstance()
+        // In the model checking mode, we need to ensure
+        // that all the necessary classes and instrumented
+        // after creating a test instance.
+        // TODO: execute this code in a test thread instead.
+        if (strategy is ModelCheckingStrategy) {
+            ensureAllTestInstanceFieldsAreTransformed(testInstance)
+        }
         testThreadExecutions.forEach { it.testInstance = testInstance }
         validationPartExecution?.let { it.testInstance = testInstance }
     }
@@ -207,7 +220,9 @@ internal open class ParallelThreadsRunner(
 
     override fun afterCoroutineCancelled(iThread: Int) {}
 
-    private fun waitAndInvokeFollowUp(iThread: Int, actorId: Int): Result {
+    // We need to run this code in an ignored section,
+    // as it is called in the testing code but should not be analyzed.
+    private fun waitAndInvokeFollowUp(iThread: Int, actorId: Int): Result = runInIgnoredSection {
         // Coroutine is suspended. Call method so that strategy can learn it.
         afterCoroutineSuspended(iThread)
         // If the suspended method call has a follow-up part after this suspension point,
@@ -304,7 +319,7 @@ internal open class ParallelThreadsRunner(
                     afterInitStateRepresentation = afterInitStateRepresentation,
                     afterParallelStateRepresentation = afterParallelStateRepresentation,
                     afterPostStateRepresentation = afterPostStateRepresentation
-                ).convertForLoader(LinChecker::class.java.classLoader)
+                )
             )
         } catch (e: TimeoutException) {
             val threadDump = collectThreadDump(this)
@@ -393,7 +408,7 @@ internal open class ParallelThreadsRunner(
     }
 
     override fun constructStateRepresentation() =
-        stateRepresentationFunction?.let { getMethod(testInstance, it) }?.invoke(testInstance) as String?
+        stateRepresentationFunction?.invoke(testInstance) as String?
 
     override fun close() {
         super.close()
