@@ -206,26 +206,13 @@ internal object FinalFields {
         val finalFields = arrayListOf<String>()
         val mutableFields = arrayListOf<String>()
 
-        override fun visit(
-            version: Int,
-            access: Int,
-            name: String,
-            signature: String?,
-            superName: String?,
-            interfaces: Array<String>?
-        ) {
+        override fun visit(version: Int, access: Int, name: String, signature: String?, superName: String?, interfaces: Array<String>?) {
             superClassName = superName
             implementedInterfaces = interfaces ?: emptyArray()
             super.visit(version, access, name, signature, superName, interfaces)
         }
 
-        override fun visitField(
-            access: Int,
-            name: String,
-            descriptor: String?,
-            signature: String?,
-            value: Any?
-        ): FieldVisitor? {
+        override fun visitField(access: Int, name: String, descriptor: String?, signature: String?, value: Any?): FieldVisitor? {
             if ((access and Opcodes.ACC_FINAL) != 0) {
                 finalFields.add(name)
             } else {
