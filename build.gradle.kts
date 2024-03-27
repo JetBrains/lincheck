@@ -107,7 +107,8 @@ tasks {
     }
 
     val jvmTest = named<Test>("jvmTest") {
-        if (System.getProperty("idea.active") != "true") {
+        val ideaActive = System.getProperty("idea.active") == "true"
+        if (!ideaActive) {
             // We need to be able to run these tests in IntelliJ IDEA.
             // Unfortunately, the current Gradle support doesn't detect
             // the `jvmTestIsolated` task.
@@ -121,7 +122,19 @@ tasks {
         }
         configureJvmTestCommon()
         val runAllTestsInSeparateJVMs: String by project
-        forkEvery = if (runAllTestsInSeparateJVMs.toBoolean()) 1 else 0
+        forkEvery = when {
+            runAllTestsInSeparateJVMs.toBoolean() -> 1
+            // When running `jvmTest` from IntelliJ IDEA, we need to
+            // be able to run `*IsolatedTest`s and isolate these tests
+            // some way. Running all the tests in separate VM instances
+            // significantly slows down the build. Therefore, we run
+            // several tests in the same VM instance instead, trying
+            // to balance between slowing down the build because of launching
+            // new VM instances periodically and slowing down the build
+            // because of the hanging threads in the `*IsolatedTest` ones.
+            ideaActive -> 10
+            else -> 0
+        }
     }
 
     val jvmTestIsolated = register<Test>("jvmTestIsolated") {
