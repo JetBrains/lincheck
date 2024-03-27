@@ -112,3 +112,59 @@ class MoreThenOneValidationFunctionFailureTest {
     fun test() = ModelCheckingOptions()
         .checkFailsWithException<IllegalStateException>(this::class.java, "two_validation_functions_exception.txt")
 }
+
+class ValidationFunctionLivelockTest {
+    var a = 0
+
+    @Operation
+    fun operation() {
+        a = 1
+    }
+
+    @Validate
+    fun validate() {
+        // Lincheck should detect a live-lock in the validation function.
+        repeat(10_000) {
+            a++
+        }
+    }
+
+    @Test
+    fun test() = ModelCheckingOptions()
+        .iterations(1)
+        .invocationsPerIteration(1)
+        .actorsBefore(0)
+        .threads(1)
+        .actorsPerThread(1)
+        .actorsAfter(0)
+        .minimizeFailedScenario(false)
+        .checkImpl(this::class.java)
+        .checkLincheckOutput("validation_function_livelock.txt")
+}
+
+class ValidationFunctionHangsIsolatedTest {
+    var a = 0
+
+    @Operation
+    fun operation() {
+        a = 1
+    }
+
+    @Validate
+    fun validate() {
+        while (true) {}
+    }
+
+    @Test
+    fun test() = ModelCheckingOptions()
+        .iterations(1)
+        .invocationsPerIteration(1)
+        .actorsBefore(0)
+        .threads(1)
+        .actorsPerThread(1)
+        .actorsAfter(0)
+        .invocationTimeout(100)
+        .minimizeFailedScenario(false)
+        .checkImpl(this::class.java)
+        .checkLincheckOutput("validation_function_hangs.txt")
+}
