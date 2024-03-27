@@ -10,6 +10,7 @@
 package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.annotations.*
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
@@ -65,6 +66,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             val failure = scenario.run(this, verifier)
             if (failure != null) return failure
         }
+        checkAtLeastOneMethodIsMarkedAsOperation(testClass)
         var verifier = createVerifier()
         repeat(iterations) { i ->
             // For performance reasons, verifier re-uses LTS from previous iterations.
@@ -135,6 +137,10 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             RandomProvider::class.java
         ).newInstance(this, testStructure, randomProvider)
 
+    private fun checkAtLeastOneMethodIsMarkedAsOperation(testClass: Class<*>) {
+        require (testClass.methods.any { it.isAnnotationPresent(Operation::class.java) }) { NO_METHOD_MARKED_AS_OPERATION_MESSAGE }
+    }
+
     // This companion object is used for backwards compatibility.
     companion object {
         /**
@@ -173,3 +179,6 @@ fun <O : Options<O, *>> O.check(testClass: Class<*>) = LinChecker.check(testClas
 fun <O : Options<O, *>> O.check(testClass: KClass<*>) = this.check(testClass.java)
 
 internal fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>) = LinChecker(testClass, this).checkImpl()
+
+internal const val NO_METHOD_MARKED_AS_OPERATION_MESSAGE =
+    "You should provide information about your data structure operations to make random scenario generation possible. Please see the official guide for more details: https://kotlinlang.org/docs/lincheck-guide.html"
