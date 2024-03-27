@@ -33,6 +33,8 @@ class CoverageOptions(
     excludePatterns: List<String> = listOf(),
     val includePatterns: List<String> = listOf(),
     private val dataFile: File? = null,
+    // TODO: this is now useless, since I am resetting global project data every fuzzing iteration,
+    //  so after last iteration global project data is empty (so remove ProjectData from `onShutdown` callback)
     private val onShutdown: ((ProjectData, CoverageResult) -> Unit)? = null,
 ) {
     companion object {
@@ -61,25 +63,38 @@ class CoverageOptions(
     }
 
     /**
-     * Calculates and stores coverage, method must be called at the end of the test execution in order to get valid results.
+     * Calculates and stores last run coverage. Resets coverage runtime state for future runs.
+     * Method must be called at the end of the test execution in order to get valid results.
+     *
+     * @return representation of covered classes for the latter run.
      */
-    fun collectCoverage() {
-        coverageEnabled = false
+    fun collectCoverage(): ProjectData {
+        // coverageEnabled = false // TODO: delete or what?
+
+        // get coverage for classes that we used during last execution
         globalProjectContext.applyHits(globalProjectData)
         val localProjectData = getCoveredClasses()
         globalProjectContext.finalizeCoverage(localProjectData)
 
+        // save report to file if configured
         if (dataFile != null) {
             println("Save coverage report to ${dataFile.path}")
             CoverageReport.save(localProjectData, getProjectContextWithDataFile(globalProjectContext.options, dataFile))
         }
 
+        // cache the coverage stats for last run
         ProjectTargetProcessor().process(localProjectData) { _, coverage ->
             coverageResult = CoverageResult(coverage)
         }
+
+        // reset coverage runtime for future runs
+        resetCoveredClasses()
+
+        return localProjectData
     }
 
     fun onShutdown() {
+        coverageEnabled = false
         onShutdown?.let { it(globalProjectData, coverageResult!!) }
     }
 
@@ -101,6 +116,7 @@ class CoverageOptions(
 
                 lineData.switches?.forEach { switchData ->
                     switchData.hits.fill(0)
+                    switchData.defaultHits = 0
                 }
             }
         }

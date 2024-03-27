@@ -50,6 +50,9 @@ class ExecutionScenario(
     var validationFunction: Actor?
 ) {
 
+    val size: Int
+        get() = initExecution.size + parallelExecution.sumOf { it.size } + postExecution.size
+
     /**
      * Number of threads used by this execution.
      */

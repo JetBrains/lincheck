@@ -11,6 +11,8 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.fuzzing.Fuzzer
+import org.jetbrains.kotlinx.lincheck.fuzzing.coverage.toCoverage
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import kotlin.reflect.*
@@ -50,13 +52,54 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         // TODO: coverage result callback somewhere here
         check(testConfigurations.isNotEmpty()) { "No Lincheck test configuration to run" }
         for (testCfg in testConfigurations) {
-            val failure = testCfg.checkImpl()
+            val failure =
+                if (testCfg.coverageOptions != null) {
+                    testCfg.fuzzImpl()
+                } else {
+                    testCfg.checkImpl()
+                }
+
+            // val failure = testCfg.checkImpl()
             testCfg.coverageOptions?.apply {
                 collectCoverage()
                 onShutdown()
             }
             if (failure != null) return failure
         }
+        return null
+    }
+
+    private fun CTestConfiguration.fuzzImpl(): LincheckFailure? {
+        val defaultExGen = createExecutionGenerator(testStructure.randomProvider)
+        var verifier = createVerifier()
+        val fuzzer = Fuzzer(customScenarios, defaultExGen)
+        val coverageOptions = coverageOptions!!
+
+        repeat(iterations) { i ->
+            if ((i + 1) % VERIFIER_REFRESH_CYCLE == 0)
+                verifier = createVerifier()
+
+            val scenario = fuzzer.nextScenario()
+            scenario.validate()
+
+            reporter.logIteration(i + 1 + customScenarios.size, iterations, scenario)
+
+            val failure  = scenario.run(this, verifier)
+            val coverage = coverageOptions.collectCoverage().toCoverage()
+
+            fuzzer.handleResult(failure, coverage)
+
+            // Reset the parameter generator ranges to start with the same initial bounds on each scenario generation.
+            testStructure.parameterGenerators.forEach { it.reset() }
+        }
+
+        val failure = fuzzer.getFirstFailure()
+        if (failure != null) {
+            val minimizedFailedIteration = if (!minimizeFailedScenario) failure else failure.minimize(this)
+            reporter.logFailedIteration(minimizedFailedIteration)
+            return minimizedFailedIteration
+        }
+
         return null
     }
 
