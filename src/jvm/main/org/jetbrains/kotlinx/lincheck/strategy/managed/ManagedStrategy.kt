@@ -11,13 +11,14 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicFieldUpdaterNames.getAtomicFieldUpdaterName
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.ensureClassAndAllSuperclassesAreInstrumented
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.ensureClassIsTransformed
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import sun.misc.*
@@ -637,6 +638,10 @@ abstract class ManagedStrategy(
     }
 
     override fun beforeReadFieldStatic(className: String, fieldName: String, codeLocation: Int) = runInIgnoredSection {
+        // We need to ensure all the classes related to the reading object are instrumented.
+        // The following call checks all the static fields.
+        ensureClassIsTransformed(className.canonicalClassName)
+
         // TODO: remove the isFinal check
         if (FinalFields.isFinalField(className, fieldName)) return@runInIgnoredSection
 
@@ -781,7 +786,7 @@ abstract class ManagedStrategy(
     }
 
     override fun beforeNewObjectCreation(className: String) = runInIgnoredSection {
-        ensureClassAndAllSuperclassesAreInstrumented(className)
+        ensureClassIsTransformed(className)
     }
 
     override fun afterNewObjectCreation(obj: Any) {
@@ -850,7 +855,7 @@ abstract class ManagedStrategy(
             null -> {
                 if (owner == null) {
                     runInIgnoredSection {
-                        ensureClassAndAllSuperclassesAreInstrumented(className.canonicalClassName)
+                        ensureClassIsTransformed(className.canonicalClassName)
                     }
                 }
                 if (collectTrace) {
@@ -875,7 +880,7 @@ abstract class ManagedStrategy(
     ) = runInIgnoredSection {
         if (collectTrace) {
             val isAtomicUpdater = owner is AtomicIntegerFieldUpdater<*> || owner is AtomicLongFieldUpdater<*> || owner is AtomicReferenceFieldUpdater<*, *>
-            val ownerName = if (isAtomicUpdater) owner?.let { AtomicFieldUpdaterNames.getName(it) } else null
+            val ownerName = if (isAtomicUpdater) owner?.let { getAtomicFieldUpdaterName(it) } else null
             // Drop the object instance and offset (in case of Unsafe) from the parameters
             // when using Unsafe, VarHandle, or AtomicFieldUpdater.
             @Suppress("NAME_SHADOWING")

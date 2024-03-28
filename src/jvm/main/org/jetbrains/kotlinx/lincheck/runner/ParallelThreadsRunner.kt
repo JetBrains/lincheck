@@ -19,7 +19,7 @@ import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.ensureAllTestInstanceFieldsAreTransformed
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.ensureObjectIsTransformed
 import org.jetbrains.kotlinx.lincheck.util.*
 import sun.nio.ch.lincheck.*
 import java.lang.reflect.*
@@ -177,14 +177,16 @@ internal open class ParallelThreadsRunner(
         validationPartExecution?.results?.fill(null)
     }
 
+    private var ensuredTestInstanceIsTransformed = false
+
     private fun createTestInstance() {
         testInstance = testClass.newInstance()
         // In the model checking mode, we need to ensure
         // that all the necessary classes and instrumented
         // after creating a test instance.
-        // TODO: execute this code in a test thread instead.
-        if (strategy is ModelCheckingStrategy) {
-            ensureAllTestInstanceFieldsAreTransformed(testInstance)
+        if (strategy is ModelCheckingStrategy && !ensuredTestInstanceIsTransformed) {
+            ensureObjectIsTransformed(testInstance)
+            ensuredTestInstanceIsTransformed = true
         }
         testThreadExecutions.forEach { it.testInstance = testInstance }
         validationPartExecution?.let { it.testInstance = testInstance }
