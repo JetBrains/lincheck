@@ -12,7 +12,6 @@ package org.jetbrains.kotlinx.lincheck.transformation
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.FinalFields
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type.*
@@ -483,11 +482,7 @@ internal class LincheckClassVisitor(
         lateinit var analyzer: AnalyzerAdapter
 
         override fun visitFieldInsn(opcode: Int, owner: String, fieldName: String, desc: String) = adapter.run {
-            if (isCoroutineInternalClass(owner) || isCoroutineStateMachineClass(owner) || FinalFields.isFinalField(
-                    owner,
-                    fieldName
-                )
-            ) {
+            if (isCoroutineInternalClass(owner) || isCoroutineStateMachineClass(owner)) {
                 visitFieldInsn(opcode, owner, fieldName, desc)
                 return
             }
