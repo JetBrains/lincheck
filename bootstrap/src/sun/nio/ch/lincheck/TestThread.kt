@@ -8,9 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck
-
-import kotlinx.coroutines.CancellableContinuation
+package sun.nio.ch.lincheck
 
 /**
  * When Lincheck runs a test, all threads should be instances of this [TestThread] class.
@@ -21,10 +19,10 @@ import kotlinx.coroutines.CancellableContinuation
  * @property threadId The index of the thread.
  * @param block The Runnable object associated with the thread.
  */
-internal class TestThread(
-    testName: String,
+class TestThread(
+    testName: String?, // nullable only to avoid using `kotlin.jvm.internal.Intrinsics` for the non-nullability check.
     val threadId: Int,
-    block: Runnable
+    block: Runnable? // nullable only to avoid using `kotlin.jvm.internal.Intrinsics` for the non-nullability check.
 ) : Thread(block, "Lincheck-${testName}-$threadId") {
 
     /**

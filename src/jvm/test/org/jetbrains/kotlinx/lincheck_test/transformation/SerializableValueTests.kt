@@ -13,10 +13,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.transformation.TransformationMode
 import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
-import org.junit.*
-import org.junit.Assert.*
 import java.io.*
 import java.util.concurrent.atomic.*
 
@@ -65,20 +62,6 @@ class SerializableJavaUtilResultIncorrectTest : AbstractLincheckTest(IncorrectRe
         iterations(1)
         actorsBefore(0)
         actorsAfter(0)
-    }
-}
-
-class SerializableNullResultTest {
-    @Test
-    fun test() {
-        val a = ValueResult(null)
-        val value = ValueHolder(0)
-        val loader = LincheckClassLoader(TransformationMode.STRESS)
-        val transformedValue = value.convertForLoader(loader)
-        val b = ValueResult(transformedValue)
-        // check that no exception was thrown
-        assertFalse(a == b)
-        assertFalse(b == a)
     }
 }
 

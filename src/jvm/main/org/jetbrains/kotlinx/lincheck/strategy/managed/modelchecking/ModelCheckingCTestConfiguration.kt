@@ -13,6 +13,8 @@ import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
+import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.lang.reflect.*
 
@@ -43,7 +45,11 @@ class ModelCheckingCTestConfiguration(testClass: Class<*>, iterations: Int, thre
     timeoutMs = timeoutMs,
     customScenarios = customScenarios
 ) {
+
+    override val instrumentationMode: InstrumentationMode get() = MODEL_CHECKING
+
     private var isReplayModeForIdeaPluginEnabled = false
+
     override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunction: Actor?,
                                 stateRepresentationMethod: Method?, verifier: Verifier): Strategy
         = ModelCheckingStrategy(this, testClass, scenario, validationFunction, stateRepresentationMethod, verifier, isReplayModeForIdeaPluginEnabled)

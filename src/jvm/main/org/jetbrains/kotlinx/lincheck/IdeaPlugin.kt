@@ -10,6 +10,8 @@
  */
 
 package org.jetbrains.kotlinx.lincheck
+
+import sun.nio.ch.lincheck.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 

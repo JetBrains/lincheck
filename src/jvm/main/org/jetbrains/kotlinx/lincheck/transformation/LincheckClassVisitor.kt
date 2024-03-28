@@ -10,26 +10,23 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
-import org.jetbrains.kotlinx.lincheck.LincheckClassLoader.ASM_API
-import org.jetbrains.kotlinx.lincheck.Injections
-import org.jetbrains.kotlinx.lincheck.ideaPluginEnabled
-import org.jetbrains.kotlinx.lincheck.strategy.managed.JavaUtilRemapper
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
 import org.objectweb.asm.commons.InstructionAdapter.*
 import org.jetbrains.kotlinx.lincheck.transformation.CoroutineInternalCallTracker.isCoroutineInternalClass
-import org.jetbrains.kotlinx.lincheck.transformation.TransformationMode.*
+import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
+import sun.nio.ch.lincheck.*
+import sun.nio.ch.lincheck.Injections.*
 import java.util.*
 
 internal class LincheckClassVisitor(
-    private val transformationMode: TransformationMode,
-    classVisitor: ClassVisitor,
-) : ClassVisitor(
-    ASM_API,
-    if (transformationMode == MODEL_CHECKING) ClassRemapper(classVisitor, JavaUtilRemapper()) else classVisitor
-) {
+    private val instrumentationMode: InstrumentationMode,
+    classVisitor: ClassVisitor
+) : ClassVisitor(ASM_API, classVisitor) {
     private val ideaPluginEnabled = ideaPluginEnabled()
     private lateinit var className: String
     private var classVersion = 0
@@ -75,15 +72,9 @@ internal class LincheckClassVisitor(
         signature: String?,
         exceptions: Array<String>?
     ): MethodVisitor {
-        if (access and ACC_NATIVE != 0 && methodName == "VMSupportsCS8") {
-            // Replace native method VMSupportsCS8 in AtomicLong with our stub.
-            // TODO: remove this code when javaagents are merged.
-            val mv = super.visitMethod(access xor ACC_NATIVE, methodName, desc, signature, exceptions)
-            return VMSupportsCS8MethodGenerator(GeneratorAdapter(mv, access xor ACC_NATIVE, methodName, desc))
-        }
         var mv = super.visitMethod(access, methodName, desc, signature, exceptions)
         if (access and ACC_NATIVE != 0) return mv
-        if (transformationMode == STRESS || transformationMode == VERIFICATION) {
+        if (instrumentationMode == STRESS) {
             return if (methodName != "<clinit>" && methodName != "<init>") {
                 CoroutineCancellabilitySupportMethodTransformer(mv, access, methodName, desc)
             } else {
@@ -134,21 +125,6 @@ internal class LincheckClassVisitor(
         mv = DeterministicTimeTransformer(GeneratorAdapter(mv, access, methodName, desc))
         mv = DeterministicRandomTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
         return mv
-    }
-
-    /**
-     * Generates body of a native method `VMSupportsCS8()`.
-     * Native methods in java.util can not be transformed, so we should replace them with stubs.
-     * TODO: remove this code when javaagents are merged.
-     */
-    private class VMSupportsCS8MethodGenerator(val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, null) {
-        override fun visitEnd() = adapter.run {
-            visitCode()
-            push(true) // suppose that we always have CAS for Long
-            returnValue()
-            visitMaxs(1, 0)
-            visitEnd()
-        }
     }
 
     private class CoroutineCancellabilitySupportMethodTransformer(
@@ -378,13 +354,18 @@ internal class LincheckClassVisitor(
     /**
      * Makes java.util.Random and all classes that extend it deterministic.
      * In every Random method invocation replaces the owner with Random from ManagedStateHolder.
-     * TODO: Kotlin's random support
      */
     private inner class DeterministicRandomTransformer(methodName: String, adapter: GeneratorAdapter) :
         ManagedStrategyMethodVisitor(methodName, adapter) {
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) =
             adapter.run {
-                if (owner == "java/util/concurrent/ThreadLocalRandom" || owner == "java/util/concurrent/atomic/Striped64") {
+                if (owner == "java/util/concurrent/ThreadLocalRandom" ||
+                    owner == "java/util/concurrent/atomic/Striped64" ||
+                    owner == "java/util/concurrent/atomic/LongAdder" ||
+                    owner == "java/util/concurrent/atomic/DoubleAdder" ||
+                    owner == "java/util/concurrent/atomic/LongAccumulator" ||
+                    owner == "java/util/concurrent/atomic/DoubleAccumulator"
+                ) {
                     if (name == "nextSecondarySeed" || name == "getProbe") { // INVOKESTATIC
                         invokeIfInTestingCode(
                             original = {
@@ -531,10 +512,31 @@ internal class LincheckClassVisitor(
         lateinit var analyzer: AnalyzerAdapter
 
         override fun visitFieldInsn(opcode: Int, owner: String, fieldName: String, desc: String) = adapter.run {
-            if (isCoroutineInternalClass(owner) || isCoroutineStateMachineClass(owner) || FinalFields.isFinalField(owner, fieldName)
-            ) {
+            if (isCoroutineInternalClass(owner) || isCoroutineStateMachineClass(owner)) {
                 visitFieldInsn(opcode, owner, fieldName, desc)
                 return
+            }
+            if (FinalFields.isFinalField(owner, fieldName)) {
+                if (opcode == GETSTATIC) {
+                    invokeIfInTestingCode(
+                        original = {
+                            visitFieldInsn(opcode, owner, fieldName, desc)
+                        },
+                        code = {
+                            // STACK: <empty>
+                            push(owner)
+                            // STACK: className: String, fieldName: String, codeLocation: Int
+                            invokeStatic(Injections::beforeReadFinalFieldStatic)
+                            // STACK: owner: Object
+                            visitFieldInsn(opcode, owner, fieldName, desc)
+                            // STACK: value
+                        }
+                    )
+                    return
+                } else {
+                    visitFieldInsn(opcode, owner, fieldName, desc)
+                    return
+                }
             }
             when (opcode) {
                 GETSTATIC -> {
@@ -1124,7 +1126,7 @@ internal class LincheckClassVisitor(
                             storeLocal(objectLocal)
                             visitMethodInsn(opcode, owner, name, desc, itf)
                             loadLocal(objectLocal)
-                            invokeStatic(Injections::onNewObjectCreation)
+                            invokeStatic(Injections::afterNewObjectCreation)
                         }
                     )
                 } else {
@@ -1139,20 +1141,29 @@ internal class LincheckClassVisitor(
                     original = {},
                     code = {
                         dup()
-                        invokeStatic(Injections::onNewObjectCreation)
+                        invokeStatic(Injections::afterNewObjectCreation)
                     }
                 )
             }
         }
 
         override fun visitTypeInsn(opcode: Int, type: String) = adapter.run {
+            if (opcode == NEW) {
+                invokeIfInTestingCode(
+                    original = {},
+                    code = {
+                        push(type.canonicalClassName)
+                        invokeStatic(Injections::beforeNewObjectCreation)
+                    }
+                )
+            }
             visitTypeInsn(opcode, type)
             if (opcode == ANEWARRAY) {
                 invokeIfInTestingCode(
                     original = {},
                     code = {
                         dup()
-                        invokeStatic(Injections::onNewObjectCreation)
+                        invokeStatic(Injections::afterNewObjectCreation)
                     }
                 )
             }
@@ -1164,7 +1175,7 @@ internal class LincheckClassVisitor(
                 original = {},
                 code = {
                     dup()
-                    invokeStatic(Injections::onNewObjectCreation)
+                    invokeStatic(Injections::afterNewObjectCreation)
                 }
             )
         }
@@ -1176,7 +1187,6 @@ internal class LincheckClassVisitor(
     private inner class MethodCallTransformer(methodName: String, adapter: GeneratorAdapter) :
         ManagedStrategyMethodVisitor(methodName, adapter) {
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
-                // TODO: ignore safe calls
                 // TODO: do not ignore <init>
                 if (isCoroutineInternalClass(owner)) {
                     invokeInIgnoredSection {
@@ -1200,17 +1210,21 @@ internal class LincheckClassVisitor(
                 }
                 if (
                     name == "<init>" ||
+                    owner.startsWith("sun/nio/ch/lincheck/") ||
                     owner.startsWith("org/jetbrains/kotlinx/lincheck/") ||
                     owner == "kotlin/jvm/internal/Intrinsics" ||
                     owner == "java/util/Objects" ||
-                    owner == "java/lang/StringBuilder" ||
-                    owner == "java/util/Locale" ||
                     owner == "java/lang/String" ||
-                    owner == "org/slf4j/helpers/Util" ||
-                    owner == "java/util/Properties" ||
                     owner == "java/lang/Boolean" ||
+                    owner == "java/lang/Long" ||
                     owner == "java/lang/Integer" ||
-                    owner == "java/lang/Long"
+                    owner == "java/lang/Short" ||
+                    owner == "java/lang/Byte" ||
+                    owner == "java/lang/Double" ||
+                    owner == "java/lang/Float" ||
+                    owner == "java/util/Locale" ||
+                    owner == "org/slf4j/helpers/Util" ||
+                    owner == "java/util/Properties"
                 ) {
                     visitMethodInsn(opcode, owner, name, desc, itf)
                     return
@@ -1508,10 +1522,4 @@ private object CoroutineInternalCallTracker {
     }
 
     fun isCoroutineInternalClass(internalClassName: String): Boolean = internalClassName in coroutineInternalClasses
-}
-
-internal enum class TransformationMode {
-    STRESS,
-    MODEL_CHECKING,
-    VERIFICATION
 }

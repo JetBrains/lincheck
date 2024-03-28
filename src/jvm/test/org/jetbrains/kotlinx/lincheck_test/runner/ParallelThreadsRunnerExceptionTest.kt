@@ -16,6 +16,7 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck_test.verifier.*
 import org.junit.*
 import org.junit.Assert.*
@@ -152,7 +153,7 @@ class ParallelThreadsRunnerExceptionTest {
 
 class ParallelThreadExecutionExceptionsTest {
     @Test
-    fun `should fail with unexpected exception results because of classes are not accessible from unnamed modules`() {
+    fun shouldCompleteWithUnexpectedException() {
         val scenario = scenario {
             parallel {
                 thread { actor(::operation) }
@@ -162,17 +163,14 @@ class ParallelThreadExecutionExceptionsTest {
             strategy = mockStrategy(scenario), testClass = this::class.java, validationFunction = null,
             stateRepresentationFunction = null, timeoutMs = DEFAULT_TIMEOUT_MS, useClocks = RANDOM
         ).use { runner ->
-            val results = (runner.run() as UnexpectedExceptionInvocationResult)
-            val exception = results.exception
-
-            assertTrue(results.exception is RuntimeException)
-            assertEquals(ADD_OPENS_MESSAGE, exception.message)
+            val result = runner.run()
+            check(result is CompletedInvocationResult)
         }
     }
 
     @Operation
     fun operation(): Nothing {
-        throw IllegalAccessException("module java.base does not \"opens java.io\" to unnamed module")
+        throw IllegalAccessException("unexpected exception")
     }
 }
 

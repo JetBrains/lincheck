@@ -42,15 +42,17 @@ kotlin {
             val kotlinVersion: String by project
             val kotlinxCoroutinesVersion: String by project
             val asmVersion: String by project
-            val reflectionsVersion: String by project
+            val byteBuddyVersion: String by project
             dependencies {
+                compileOnly(project(":bootstrap"))
                 api("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
                 api("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion")
                 api("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
                 api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutinesVersion")
                 api("org.ow2.asm:asm-commons:$asmVersion")
                 api("org.ow2.asm:asm-util:$asmVersion")
-                api("org.reflections:reflections:$reflectionsVersion")
+                api("net.bytebuddy:byte-buddy:$byteBuddyVersion")
+                api("net.bytebuddy:byte-buddy-agent:$byteBuddyVersion")
             }
         }
 
@@ -61,6 +63,7 @@ kotlin {
             val jctoolsVersion: String by project
             val mockkVersion: String by project
             dependencies {
+                implementation(project(":bootstrap"))
                 implementation("junit:junit:$junitVersion")
                 implementation("org.jctools:jctools-core:$jctoolsVersion")
                 implementation("io.mockk:mockk:${mockkVersion}")
@@ -89,8 +92,17 @@ sourceSets.test {
     }
 }
 
+val bootstrapJar = tasks.register<Copy>("bootstrapJar") {
+    dependsOn(":bootstrap:jar")
+    from(file("${project(":bootstrap").buildDir}/libs/bootstrap.jar"))
+    into(file("$buildDir/processedResources/jvm/main"))
+}
 
 tasks {
+    named("processResources").configure {
+        dependsOn(bootstrapJar)
+    }
+
     replace("jvmSourcesJar", Jar::class).run {
         from(sourceSets["main"].allSource)
     }
@@ -98,12 +110,7 @@ tasks {
     fun Test.configureJvmTestCommon() {
         maxParallelForks = 1
         maxHeapSize = "6g"
-        val extraArgs = mutableListOf(
-            "--add-opens", "java.base/java.lang=ALL-UNNAMED",
-            "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
-            "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED",
-            "--add-exports", "java.base/sun.security.action=ALL-UNNAMED",
-        )
+        val extraArgs = mutableListOf<String>()
         val withEventIdSequentialCheck: String by project
         if (withEventIdSequentialCheck.toBoolean()) {
             extraArgs.add("-Dlincheck.debug.withEventIdSequentialCheck=true")
@@ -159,6 +166,7 @@ tasks {
     }
 
     withType<Jar> {
+        dependsOn(bootstrapJar)
         manifest {
             val inceptionYear: String by project
             val lastCopyrightYear: String by project
@@ -226,4 +234,17 @@ fun XmlProvider.removeAllLicencesExceptOne(licenceName: String) {
             licenseList.remove(licence)
         }
     }
+}
+
+// We need the Lincheck version in the runtime to check compatibility with the Plugin,
+// so we save it into the file in the resources and retrieve in later.
+val versionTxt by tasks.registering {
+    doLast {
+        val version: String by project
+        file("src/commonMain/resources/version.txt").writeText(version)
+    }
+}
+
+tasks.named("processResources") {
+    dependsOn(versionTxt)
 }
