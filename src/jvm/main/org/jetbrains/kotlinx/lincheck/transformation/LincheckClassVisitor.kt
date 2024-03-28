@@ -873,85 +873,118 @@ internal class LincheckClassVisitor(
             },
             code = {
                 val argumentTypes = getArgumentTypes(desc)
+                when (argumentTypes.size) {
+                    2 -> { // Method .compareAndSet(value, nextValue) - used for static VarHandles
+                        // We are in a single value overload
+                        val nextType = argumentTypes.last()
+                        val nextValueLocal = newLocal(OBJECT_TYPE)
 
-                if (argumentTypes.size == 3) {
-                    // we are in a single value overload
-                    val nextType = argumentTypes.last()
-                    val nextValueLocal = newLocal(OBJECT_TYPE)
+                        val currentType = argumentTypes[argumentTypes.lastIndex - 1]
+                        val currenValueLocal = newLocal(OBJECT_TYPE)
 
-                    val currentType = argumentTypes[argumentTypes.lastIndex - 1]
-                    val currenValueLocal = newLocal(OBJECT_TYPE)
+                        // STACK: nextValue, currentValue
+                        box(nextType)
+                        // STACK: boxedNextValue, currentValue
+                        storeLocal(nextValueLocal)
+                        // STACK: currentValue
+                        box(currentType)
+                        // STACK: boxedCurrentValue
+                        storeLocal(currenValueLocal)
+                        // STACK: <empty>
+                        loadLocal(currenValueLocal)
+                        // STACK: boxedCurrentValue
+                        unbox(currentType)
+                        // STACK: currentValue
+                        loadLocal(nextValueLocal)
+                        // STACK: boxedNextValue, currentValue
+                        unbox(nextType)
+                        // STACK: nextValue, currentValue
+                        visitMethodInsn(opcode, owner, name, desc, itf)
+                        // STACK: cas-result
+                        loadLocal(nextValueLocal)
+                        // STACK: cas-result, boxedNextValue
+                        invokeStatic(Injections::onWriteToObjectFieldOrArrayCell)
+                    }
+                    3 -> {
+                        // We are in a single value overload
+                        val nextType = argumentTypes.last()
+                        val nextValueLocal = newLocal(OBJECT_TYPE)
 
-                    val receiverLocal = newLocal(OBJECT_TYPE)
-                    // STACK: nextValue, currentValue, receiver
-                    box(nextType)
-                    // STACK: boxedNextValue, currentValue, receiver
-                    storeLocal(nextValueLocal)
-                    // STACK: currentValue, receiver
-                    box(currentType)
-                    // STACK: boxedCurrentValue, receiver
-                    storeLocal(currenValueLocal)
-                    // STACK: receiver
-                    storeLocal(receiverLocal)
-                    // STACK: <empty>
-                    loadLocal(receiverLocal)
-                    // STACK: receiver
-                    loadLocal(currenValueLocal)
-                    // STACK: boxedCurrentValue, receiver
-                    unbox(currentType)
-                    // STACK: currentValue, receiver
-                    loadLocal(nextValueLocal)
-                    // STACK: boxedNextValue, currentValue, receiver
-                    unbox(nextType)
-                    // STACK: nextValue, currentValue, receiver
-                    visitMethodInsn(opcode, owner, name, desc, itf)
-                    loadLocal(receiverLocal)
-                    // STACK: receiver
-                    loadLocal(nextValueLocal)
-                    // STACK: boxedNextValue, receiver
-                    invokeStatic(Injections::onWriteToObjectFieldOrArrayCell)
-                } else {
-                    // we are in an array version overload (with index) *.compareAndSet(index, currentValue, nextValue)
-                    val nextType = argumentTypes.last()
-                    val nextValueLocal = newLocal(OBJECT_TYPE)
+                        val currentType = argumentTypes[argumentTypes.lastIndex - 1]
+                        val currenValueLocal = newLocal(OBJECT_TYPE)
 
-                    val currentType = argumentTypes[argumentTypes.lastIndex - 1]
-                    val currenValueLocal = newLocal(OBJECT_TYPE)
+                        val receiverLocal = newLocal(OBJECT_TYPE)
+                        // STACK: nextValue, currentValue, receiver
+                        box(nextType)
+                        // STACK: boxedNextValue, currentValue, receiver
+                        storeLocal(nextValueLocal)
+                        // STACK: currentValue, receiver
+                        box(currentType)
+                        // STACK: boxedCurrentValue, receiver
+                        storeLocal(currenValueLocal)
+                        // STACK: receiver
+                        storeLocal(receiverLocal)
+                        // STACK: <empty>
+                        loadLocal(receiverLocal)
+                        // STACK: receiver
+                        loadLocal(currenValueLocal)
+                        // STACK: boxedCurrentValue, receiver
+                        unbox(currentType)
+                        // STACK: currentValue, receiver
+                        loadLocal(nextValueLocal)
+                        // STACK: boxedNextValue, currentValue, receiver
+                        unbox(nextType)
+                        // STACK: nextValue, currentValue, receiver
+                        visitMethodInsn(opcode, owner, name, desc, itf)
+                        loadLocal(receiverLocal)
+                        // STACK: receiver
+                        loadLocal(nextValueLocal)
+                        // STACK: boxedNextValue, receiver
+                        invokeStatic(Injections::onWriteToObjectFieldOrArrayCell)
+                    }
+                    else -> {
+                        // we are in an array version overload (with index) *.compareAndSet(index, currentValue, nextValue)
+                        val nextType = argumentTypes.last()
+                        val nextValueLocal = newLocal(OBJECT_TYPE)
 
-                    val indexLocal = newLocal(INT_TYPE)
-                    val receiverLocal = newLocal(OBJECT_TYPE)
-                    // STACK: nextValue, currentValue, index, receiver
-                    box(nextType)
-                    // STACK: boxedNextValue, currentValue, index, receiver
-                    storeLocal(nextValueLocal)
-                    // STACK: currentValue, index, receiver
-                    box(currentType)
-                    // STACK: boxedCurrentValue, index, receiver
-                    storeLocal(currenValueLocal)
-                    // STACK: index, receiver
-                    storeLocal(indexLocal)
-                    // STACK: receiver
-                    storeLocal(receiverLocal)
-                    // STACK: <empty>
-                    loadLocal(receiverLocal)
-                    // STACK: receiver
-                    loadLocal(indexLocal)
-                    // STACK: index, receiver
-                    loadLocal(currenValueLocal)
-                    // STACK: boxedCurrentValue, index, receiver
-                    unbox(currentType)
-                    // STACK: currentValue, index, receiver
-                    loadLocal(nextValueLocal)
-                    // STACK: boxedNextValue, currentValue, index, receiver
-                    unbox(nextType)
-                    // STACK: nextValue, currentValue, index, receiver
-                    visitMethodInsn(opcode, owner, name, desc, itf)
-                    // STACK: cas-result
-                    loadLocal(receiverLocal)
-                    // STACK: receiver, cas-result
-                    loadLocal(nextValueLocal)
-                    // STACK: boxedNextValue, receiver, cas-result
-                    invokeStatic(Injections::onWriteToObjectFieldOrArrayCell)
+                        val currentType = argumentTypes[argumentTypes.lastIndex - 1]
+                        val currenValueLocal = newLocal(OBJECT_TYPE)
+
+                        val indexLocal = newLocal(INT_TYPE)
+                        val receiverLocal = newLocal(OBJECT_TYPE)
+                        // STACK: nextValue, currentValue, index, receiver
+                        box(nextType)
+                        // STACK: boxedNextValue, currentValue, index, receiver
+                        storeLocal(nextValueLocal)
+                        // STACK: currentValue, index, receiver
+                        box(currentType)
+                        // STACK: boxedCurrentValue, index, receiver
+                        storeLocal(currenValueLocal)
+                        // STACK: index, receiver
+                        storeLocal(indexLocal)
+                        // STACK: receiver
+                        storeLocal(receiverLocal)
+                        // STACK: <empty>
+                        loadLocal(receiverLocal)
+                        // STACK: receiver
+                        loadLocal(indexLocal)
+                        // STACK: index, receiver
+                        loadLocal(currenValueLocal)
+                        // STACK: boxedCurrentValue, index, receiver
+                        unbox(currentType)
+                        // STACK: currentValue, index, receiver
+                        loadLocal(nextValueLocal)
+                        // STACK: boxedNextValue, currentValue, index, receiver
+                        unbox(nextType)
+                        // STACK: nextValue, currentValue, index, receiver
+                        visitMethodInsn(opcode, owner, name, desc, itf)
+                        // STACK: cas-result
+                        loadLocal(receiverLocal)
+                        // STACK: receiver, cas-result
+                        loadLocal(nextValueLocal)
+                        // STACK: boxedNextValue, receiver, cas-result
+                        invokeStatic(Injections::onWriteToObjectFieldOrArrayCell)
+                    }
                 }
             }
         )
@@ -972,62 +1005,84 @@ internal class LincheckClassVisitor(
             code = {
                 val argumentTypes = getArgumentTypes(desc)
                 // we are in a single value overload
-                if (argumentTypes.size == 2) {
-                    // STACK: value, receiver
-                    val argumentType = argumentTypes.last()
-                    val valueLocal = newLocal(OBJECT_TYPE)
-                    val receiverLocal = newLocal(OBJECT_TYPE)
+                when (argumentTypes.size) {
+                    1 -> {
+                        // STACK: value
+                        val argumentType = argumentTypes.last()
+                        val valueLocal = newLocal(OBJECT_TYPE)
+                        // STACK: value
+                        box(argumentType)
+                        // STACK: boxedValue
+                        storeLocal(valueLocal)
+                        // STACK: <empty>
+                        loadLocal(valueLocal)
+                        // STACK: boxedValue
+                        unbox(argumentType)
+                        // STACK: value
+                        visitMethodInsn(opcode, owner, name, desc, itf)
+                        // STACK: <empty>
+                        loadLocal(valueLocal)
+                        // STACK: boxedValue
+                        invokeStatic(Injections::onWriteToObjectFieldOrArrayCell)
+                    }
+                    2 -> {
+                        // STACK: value, receiver
+                        val argumentType = argumentTypes.last()
+                        val valueLocal = newLocal(OBJECT_TYPE)
+                        val receiverLocal = newLocal(OBJECT_TYPE)
 
-                    // STACK: value, receiver
-                    box(argumentType)
-                    storeLocal(valueLocal)
-                    // STACK: boxedValue, receiver
-                    storeLocal(receiverLocal)
-                    // STACK: <empty>
-                    loadLocal(receiverLocal)
-                    // STACK: receiver
-                    loadLocal(valueLocal)
-                    // STACK: boxedValue, receiver
-                    unbox(argumentType)
-                    // STACK: value, receiver
-                    visitMethodInsn(opcode, owner, name, desc, itf)
-                    // STACK: <empty>
-                    loadLocal(receiverLocal)
-                    // STACK: receiver
-                    loadLocal(valueLocal)
-                    // STACK: boxedValue, receiver
-                    invokeStatic(Injections::onWriteToObjectFieldOrArrayCell)
-                } else {
-                    // we are in an array version overload (with index) varHandle.set(value, index)
-                    val argumentType = argumentTypes.last()
-                    val valueLocal = newLocal(OBJECT_TYPE)
-                    val indexLocal = newLocal(INT_TYPE)
-                    val receiverLocal = newLocal(OBJECT_TYPE)
+                        // STACK: value, receiver
+                        box(argumentType)
+                        storeLocal(valueLocal)
+                        // STACK: boxedValue, receiver
+                        storeLocal(receiverLocal)
+                        // STACK: <empty>
+                        loadLocal(receiverLocal)
+                        // STACK: receiver
+                        loadLocal(valueLocal)
+                        // STACK: boxedValue, receiver
+                        unbox(argumentType)
+                        // STACK: value, receiver
+                        visitMethodInsn(opcode, owner, name, desc, itf)
+                        // STACK: <empty>
+                        loadLocal(receiverLocal)
+                        // STACK: receiver
+                        loadLocal(valueLocal)
+                        // STACK: boxedValue, receiver
+                        invokeStatic(Injections::onWriteToObjectFieldOrArrayCell)
+                    }
+                    else -> {
+                        // we are in an array version overload (with index) varHandle.set(value, index)
+                        val argumentType = argumentTypes.last()
+                        val valueLocal = newLocal(OBJECT_TYPE)
+                        val indexLocal = newLocal(INT_TYPE)
+                        val receiverLocal = newLocal(OBJECT_TYPE)
 
-                    // STACK: value, index, receiver
-                    box(argumentType)
-                    // STACK: boxedValue, index, receiver
-                    storeLocal(valueLocal)
-                    // STACK: index, receiver
-                    storeLocal(indexLocal)
-                    // STACK: receiver
-                    storeLocal(receiverLocal)
-                    // STACK: <empty>
-                    loadLocal(receiverLocal)
-                    // STACK: receiver
-                    loadLocal(indexLocal)
-                    // STACK: index, receiver
-                    loadLocal(valueLocal)
-                    // STACK: boxedValue, index, receiver
-                    unbox(argumentType)
-                    // STACK: value, index, receiver
-                    visitMethodInsn(opcode, owner, name, desc, itf)
-                    // STACK: <empty>
-                    loadLocal(receiverLocal)
-                    // STACK: receiver
-                    loadLocal(valueLocal)
-                    // STACK: boxedValue, receiver
-                    invokeStatic(Injections::onWriteToObjectFieldOrArrayCell)
+                        // STACK: value, index, receiver
+                        box(argumentType)
+                        // STACK: boxedValue, index, receiver
+                        storeLocal(valueLocal)
+                        // STACK: index, receiver
+                        storeLocal(indexLocal)
+                        // STACK: receiver
+                        storeLocal(receiverLocal)
+                        // STACK: <empty>
+                        loadLocal(receiverLocal)
+                        // STACK: receiver
+                        loadLocal(indexLocal)
+                        // STACK: index, receiver
+                        loadLocal(valueLocal)
+                        // STACK: boxedValue, index, receiver
+                        unbox(argumentType)
+                        // STACK: value, index, receiver
+                        visitMethodInsn(opcode, owner, name, desc, itf)
+                        // STACK: <empty>
+                        loadLocal(receiverLocal)
+                        // STACK: receiver
+                        loadLocal(valueLocal)
+                        // STACK: boxedValue, receiver
+                        invokeStatic(Injections::onWriteToObjectFieldOrArrayCell)
+                    }
                 }
             }
         )

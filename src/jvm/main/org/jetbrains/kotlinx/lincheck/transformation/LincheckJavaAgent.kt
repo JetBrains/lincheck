@@ -15,6 +15,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.UnsafeHolder.UNSAFE
 import org.objectweb.asm.*
 import java.lang.instrument.*
+import java.lang.invoke.MethodHandles
 import java.lang.module.*
 import java.lang.reflect.*
 import java.lang.reflect.Modifier.*
@@ -50,18 +51,23 @@ object LincheckClassFileTransformer : ClassFileTransformer {
 
     private val instrumentedClasses = HashSet<String>()
 
-    fun ensureClassIsTransformed(className: String) {
+    fun ensureClassAndAllSuperClassesAreTransformed(className: String) {
         if (className in instrumentedClasses) return // already instrumented
-        ensureClassIsTransformed(Class.forName(className), newSetFromMap(IdentityHashMap()))
+        ensureClassAndAllSuperClassesAreTransformed(Class.forName(className), newSetFromMap(IdentityHashMap()))
     }
 
-    fun ensureClassIsTransformed(clazz: Class<*>) {
+    fun ensureClassAndAllSuperClassesAreTransformed(clazz: Class<*>) {
         if (clazz.name in instrumentedClasses) return // already instrumented
-        ensureClassIsTransformed(clazz, newSetFromMap(IdentityHashMap()))
+        ensureClassAndAllSuperClassesAreTransformed(clazz, newSetFromMap(IdentityHashMap()))
     }
 
-    fun ensureObjectIsTransformed(testInstance: Any) =
+    var flag = false
+
+    fun ensureObjectIsTransformed(testInstance: Any) {
+        if (flag) return
+        flag = true
         ensureObjectIsTransformedImpl(testInstance, newSetFromMap(IdentityHashMap()))
+    }
 
     private fun ensureObjectIsTransformedImpl(obj: Any, processedObjects: MutableSet<Any>) {
         if (processedObjects.contains(obj)) return
@@ -69,7 +75,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
 
         var clazz: Class<*> = obj.javaClass
 
-        ensureClassIsTransformed(clazz)
+        ensureClassAndAllSuperClassesAreTransformed(clazz)
 
         while (true) {
             clazz.declaredFields
@@ -81,7 +87,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         }
     }
 
-    private fun ensureClassIsTransformed(clazz: Class<*>, processedObjects: MutableSet<Any>) {
+    private fun ensureClassAndAllSuperClassesAreTransformed(clazz: Class<*>, processedObjects: MutableSet<Any>) {
         if (instrumentation.isModifiableClass(clazz) && shouldTransform(clazz.name, transformationMode)) {
             instrumentedClasses += clazz.name
             println("Retransform! $clazz")
@@ -97,7 +103,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             .forEach { ensureObjectIsTransformedImpl(it, processedObjects) }
         clazz.superclass?.let {
             if (it.name in instrumentedClasses) return // already instrumented
-            ensureClassIsTransformed(it, processedObjects)
+            ensureClassAndAllSuperClassesAreTransformed(it, processedObjects)
         }
     }
 
@@ -236,22 +242,6 @@ internal object TransformationInjectionsInitializer {
 
         val bootstrapJarFile = JarFile(ClassLoader.getSystemResource("bootstrap.jar").file)
         instrumentation.appendToBootstrapClassLoaderSearch(bootstrapJarFile)
-//
-//        ModuleFinder.ofSystem().find("java.base").get().open().use { reader ->
-//            reader.list()
-//                // Filter classes
-//                .filter { it.endsWith(".class") && it != "module-info.class" }
-//                .map { it.removeSuffix(".class").replace("/", ".") }
-//                // Trampoline must not be defined by the bootstrap classloader
-//                .filter { it != "sun.reflect.misc.Trampoline" }
-//                .forEach {
-//                    try {
-//                        Class.forName(it)
-//                    } catch (t: Throwable) {
-//                        throw IllegalStateException("Cannot initialize class $it", t)
-//                    }
-//                }
-//        }
 
         initialized = true
     }

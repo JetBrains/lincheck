@@ -46,7 +46,7 @@ internal open class ParallelThreadsRunner(
     private val useClocks: UseClocks // specifies whether `HBClock`-s should always be used or with some probability
 ) : Runner(strategy, testClass, validationFunction, stateRepresentationFunction) {
     private val testName = testClass.simpleName
-    private val executor = FixedActiveThreadsExecutor(testName, scenario.nThreads) // should be closed in `close()`
+    internal val executor = FixedActiveThreadsExecutor(testName, scenario.nThreads) // should be closed in `close()`
 
     private val spinners = SpinnerGroup(executor.threads.size)
 

@@ -18,7 +18,7 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.ensureClassIsTransformed
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.ensureClassAndAllSuperClassesAreTransformed
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import sun.misc.*
@@ -216,7 +216,12 @@ abstract class ManagedStrategy(
         // In case the runner detects a deadlock, some threads can still be in an active state,
         // simultaneously adding events to the TraceCollector, which leads to an inconsistent trace.
         // Therefore, if the runner detects deadlock, we don't even try to collect trace.
-        if (loggedResults is RunnerTimeoutInvocationResult) return null
+        if (loggedResults is RunnerTimeoutInvocationResult) {
+            StringBuilder()
+                .also { it.appendTrace(DeadlockOrLivelockFailure(scenario, emptyMap(), Trace(traceCollector!!.trace)), null, Trace(traceCollector!!.trace), emptyMap()) }
+                .also { println(it.toString()) }
+            return null
+        }
         val sameResultTypes = loggedResults.javaClass == failingResult.javaClass
         val sameResults = loggedResults !is CompletedInvocationResult || failingResult !is CompletedInvocationResult || loggedResults.results == failingResult.results
         check(sameResultTypes && sameResults) {
@@ -428,6 +433,19 @@ abstract class ManagedStrategy(
         spinners[iThread].spinWaitUntil {
             // Finish forcibly if an error occurred and we already have an `InvocationResult`.
             if (suddenInvocationResult != null) throw ForcibleExecutionFinishError
+            val t = (runner as ParallelThreadsRunner).executor.threads[currentThread]
+            if (t.state == Thread.State.BLOCKED || t.state == Thread.State.WAITING) {
+                println(t.threadId)
+                t.stackTrace.forEach {
+                    println(it)
+                }
+                synchronized(this) {
+                    if (t.threadId == currentThread) {
+                        // We need a deterministic wait to decide
+                        switchCurrentThread(currentThread, SwitchReason.STRATEGY_SWITCH, true)
+                    }
+                }
+            }
             currentThread == iThread
         }
     }
@@ -640,7 +658,7 @@ abstract class ManagedStrategy(
     override fun beforeReadFieldStatic(className: String, fieldName: String, codeLocation: Int) = runInIgnoredSection {
         // We need to ensure all the classes related to the reading object are instrumented.
         // The following call checks all the static fields.
-        ensureClassIsTransformed(className.canonicalClassName)
+        ensureClassAndAllSuperClassesAreTransformed(className.canonicalClassName)
 
         // TODO: remove the isFinal check
         if (FinalFields.isFinalField(className, fieldName)) return@runInIgnoredSection
@@ -786,7 +804,7 @@ abstract class ManagedStrategy(
     }
 
     override fun beforeNewObjectCreation(className: String) = runInIgnoredSection {
-        ensureClassIsTransformed(className)
+        ensureClassAndAllSuperClassesAreTransformed(className)
     }
 
     override fun afterNewObjectCreation(obj: Any) {
@@ -855,7 +873,7 @@ abstract class ManagedStrategy(
             null -> {
                 if (owner == null) {
                     runInIgnoredSection {
-                        ensureClassIsTransformed(className.canonicalClassName)
+                        ensureClassAndAllSuperClassesAreTransformed(className.canonicalClassName)
                     }
                 }
                 if (collectTrace) {
