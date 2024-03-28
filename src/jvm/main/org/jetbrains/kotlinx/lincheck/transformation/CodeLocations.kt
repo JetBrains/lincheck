@@ -10,10 +10,6 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
-import org.jetbrains.kotlinx.lincheck.LincheckClassLoader.REMAPPED_PACKAGE_INTERNAL_NAME
-import java.lang.reflect.Field
-import java.lang.reflect.Modifier.*
-
 /**
  * [CodeLocations] object is used to maintain the mapping between unique IDs and code locations.
  * When Lincheck detects an error in the model checking mode, it provides a detailed interleaving trace.
@@ -48,42 +44,5 @@ internal object CodeLocations {
     @Synchronized
     fun stackTrace(codeLocationId: Int): StackTraceElement {
         return codeLocations[codeLocationId]
-    }
-}
-
-/**
- * [FinalFields] object is used to track final fields across different classes.
- * As a field may be declared in the parent class, [isFinalField] method recursively traverses all the
- * hierarchy to find the field and check it.
- */
-internal object FinalFields {
-
-    fun isFinalField(ownerInternal: String, fieldName: String): Boolean {
-        var internalName = ownerInternal
-        if (internalName.startsWith(REMAPPED_PACKAGE_INTERNAL_NAME)) {
-            internalName = internalName.substring(REMAPPED_PACKAGE_INTERNAL_NAME.length)
-        }
-        return try {
-            val clazz = Class.forName(internalName.canonicalClassName)
-            val field = findField(clazz, fieldName) ?: throw NoSuchFieldException("No $fieldName in ${clazz.name}")
-            (field.modifiers and FINAL) == FINAL
-        } catch (e: ClassNotFoundException) {
-            throw RuntimeException(e)
-        } catch (e: NoSuchFieldException) {
-            throw RuntimeException(e)
-        }
-    }
-
-    private fun findField(clazz: Class<*>?, fieldName: String): Field? {
-        if (clazz == null) return null
-        val fields = clazz.declaredFields
-        for (field in fields) if (field.name == fieldName) return field
-        // No field found in this class.
-        // Search in super class first, then in interfaces.
-        findField(clazz.superclass, fieldName)?.let { return it }
-        clazz.interfaces.forEach { iClass ->
-            findField(iClass, fieldName)?.let { return it }
-        }
-        return null
     }
 }

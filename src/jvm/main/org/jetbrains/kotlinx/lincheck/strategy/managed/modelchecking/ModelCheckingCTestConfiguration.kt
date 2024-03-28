@@ -13,6 +13,8 @@ import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.transformation.TransformationMode
+import org.jetbrains.kotlinx.lincheck.transformation.TransformationMode.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.lang.reflect.*
 
@@ -43,6 +45,9 @@ class ModelCheckingCTestConfiguration(testClass: Class<*>, iterations: Int, thre
     timeoutMs = timeoutMs,
     customScenarios = customScenarios
 ) {
+
+    override val transformationMode: TransformationMode get() = MODEL_CHECKING
+
     override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunction: Actor?,
                                 stateRepresentationMethod: Method?, verifier: Verifier): Strategy
         = ModelCheckingStrategy(this, testClass, scenario, validationFunction, stateRepresentationMethod, verifier)

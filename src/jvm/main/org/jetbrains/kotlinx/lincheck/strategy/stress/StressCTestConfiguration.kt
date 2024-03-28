@@ -11,6 +11,8 @@ package org.jetbrains.kotlinx.lincheck.strategy.stress
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.transformation.TransformationMode
+import org.jetbrains.kotlinx.lincheck.transformation.TransformationMode.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.lang.reflect.*
 
@@ -36,6 +38,9 @@ class StressCTestConfiguration(
     timeoutMs = timeoutMs,
     customScenarios = customScenarios
 ) {
+
+    override val transformationMode: TransformationMode get() = STRESS
+
     override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunction: Actor?,
                                 stateRepresentationMethod: Method?, verifier: Verifier) =
         StressStrategy(this, testClass, scenario, validationFunction, stateRepresentationMethod, verifier)

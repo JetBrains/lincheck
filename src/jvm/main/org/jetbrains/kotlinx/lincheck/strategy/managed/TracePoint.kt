@@ -11,7 +11,6 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
-import org.jetbrains.kotlinx.lincheck.LincheckClassLoader.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import java.math.*
 import kotlin.coroutines.*
@@ -315,7 +314,7 @@ private val Class<out Any>?.isImmutableWithNiceToString get() = this?.canonicalN
         kotlinx.coroutines.internal.Symbol::class.java,
     ).map { it.canonicalName } +
     listOf(
-        REMAPPED_PACKAGE_CANONICAL_NAME + "java.util.Collections.SingletonList",
-        REMAPPED_PACKAGE_CANONICAL_NAME + "java.util.Collections.SingletonMap",
-        REMAPPED_PACKAGE_CANONICAL_NAME + "java.util.Collections.SingletonSet"
+        "java.util.Collections.SingletonList",
+        "java.util.Collections.SingletonMap",
+        "java.util.Collections.SingletonSet"
     )

@@ -42,15 +42,17 @@ kotlin {
             val kotlinVersion: String by project
             val kotlinxCoroutinesVersion: String by project
             val asmVersion: String by project
-            val reflectionsVersion: String by project
+            val byteBuddyVersion: String by project
             dependencies {
+                implementation(project(":bootstrap"))
                 api("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
                 api("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion")
                 api("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
                 api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutinesVersion")
                 api("org.ow2.asm:asm-commons:$asmVersion")
                 api("org.ow2.asm:asm-util:$asmVersion")
-                api("org.reflections:reflections:$reflectionsVersion")
+                api("net.bytebuddy:byte-buddy:$byteBuddyVersion")
+                api("net.bytebuddy:byte-buddy-agent:$byteBuddyVersion")
             }
         }
 
@@ -89,8 +91,17 @@ sourceSets.test {
     }
 }
 
+val bootstrapJar = tasks.register<Copy>("bootstrapJar") {
+    dependsOn(":bootstrap:jar")
+    from(file("${project(":bootstrap").buildDir}/libs/bootstrap.jar"))
+    into(file("$buildDir/processedResources/jvm/main"))
+}
 
 tasks {
+    named("processResources").configure {
+        dependsOn(bootstrapJar)
+    }
+
     replace("jvmSourcesJar", Jar::class).run {
         from(sourceSets["main"].allSource)
     }
@@ -98,12 +109,6 @@ tasks {
     fun Test.configureJvmTestCommon() {
         maxParallelForks = 1
         maxHeapSize = "6g"
-        jvmArgs(
-            "--add-opens", "java.base/java.lang=ALL-UNNAMED",
-            "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
-            "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED",
-            "--add-exports", "java.base/sun.security.action=ALL-UNNAMED"
-        )
     }
 
     val jvmTest = named<Test>("jvmTest") {
