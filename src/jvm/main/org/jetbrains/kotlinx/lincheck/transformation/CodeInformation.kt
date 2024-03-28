@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.transformation
 
 import org.jetbrains.kotlinx.lincheck.LincheckClassLoader.*
+import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.FieldInfo.*
 import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.FinalFieldsVisitor
 import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.addFinalField
 import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.addMutableField
@@ -75,14 +76,14 @@ internal object FinalFields {
     /**
      * Stores a map INTERNAL_CLASS_NAME -> { FIELD_NAME -> IS FINAL } for each processed class.
      */
-    private val classToFieldsMap = HashMap<String, HashMap<String, Boolean>>()
+    private val classToFieldsMap = HashMap<String, HashMap<String, FieldInfo>>()
 
     /**
      * Registers the field [fieldName] as a final field of the class [internalClassName].
      */
     fun addFinalField(internalClassName: String, fieldName: String) {
         val fields = classToFieldsMap.computeIfAbsent(internalClassName) { HashMap() }
-        fields[fieldName] = false
+        fields[fieldName] = FINAL
     }
 
     /**
@@ -90,7 +91,7 @@ internal object FinalFields {
      */
     fun addMutableField(internalClassName: String, fieldName: String) {
         val fields = classToFieldsMap.computeIfAbsent(internalClassName) { HashMap() }
-        fields[fieldName] = true
+        fields[fieldName] = MUTABLE
     }
 
     /**
@@ -99,11 +100,12 @@ internal object FinalFields {
     fun isFinalField(internalClassName: String, fieldName: String): Boolean {
         val fields = classToFieldsMap.computeIfAbsent(internalClassName) { HashMap() }
         // Fast-path, in case we already have information about this field.
-        fields[fieldName]?.let { return it }
+        fields[fieldName]?.let { return it == FINAL }
         // If we haven't processed this class yet, fall back to a slow-path, reading the class byte-code.
         collectFieldInformation(internalClassName, fieldName, fields)
         // Here we must have information about this field, as we scanned all the hierarchy of this class.
-        return fields[fieldName] ?: error("Internal error: can't find field with $fieldName in class $internalClassName")
+        val fieldInfo = fields[fieldName] ?: error("Internal error: can't find field with $fieldName in class $internalClassName")
+        return fieldInfo == FINAL
     }
 
     /**
@@ -114,7 +116,7 @@ internal object FinalFields {
     private fun collectFieldInformation(
         internalClassName: String,
         fieldName: String,
-        fields: MutableMap<String, Boolean>
+        fields: MutableMap<String, FieldInfo>
     ): Boolean {
         // Read the class from classLoader.
         val classReader = getClassReader(internalClassName)
@@ -122,8 +124,8 @@ internal object FinalFields {
         // Scan class.
         classReader.accept(visitor, 0)
         // Store information about all final and mutable fields.
-        visitor.finalFields.forEach { field -> fields[field] = true }
-        visitor.mutableFields.forEach { field -> fields[field] = false }
+        visitor.finalFields.forEach { field -> fields[field] = FINAL }
+        visitor.mutableFields.forEach { field -> fields[field] = MUTABLE }
         // If the field is found - return it.
         if (fieldName in visitor.finalFields || fieldName in visitor.mutableFields) return true
         // If field is not present in this class - search in the superclass recursively.
@@ -211,4 +213,7 @@ internal object FinalFields {
         }
     }
 
+    private enum class FieldInfo {
+        FINAL, MUTABLE
+    }
 }
