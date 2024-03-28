@@ -92,7 +92,7 @@ class ExceptionResult private constructor(
         @Suppress("UNCHECKED_CAST")
         @JvmOverloads
         fun create(throwable: Throwable, wasSuspended: Boolean = false) =
-            ExceptionResult(throwable, wasSuspended, throwable::class.java.normalize())
+            ExceptionResult(throwable, wasSuspended, throwable::class.java)
     }
 }
 

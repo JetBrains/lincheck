@@ -13,30 +13,18 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.jetbrains.kotlinx.lincheck.transformation.*
-import org.jetbrains.kotlinx.lincheck.transformation.TransformationMode.*
-import org.objectweb.asm.*
 import java.io.*
 import java.lang.reflect.*
 import java.util.concurrent.atomic.*
 
-/**
- * Runner determines how to run your concurrent test. In order to support techniques
- * like fibers, it may require code transformation, so that [createTransformer] should
- * provide the corresponding transformer and [needsTransformation] should return `true`.
- */
 abstract class Runner protected constructor(
     protected val strategy: Strategy,
-    private val _testClass: Class<*>, // will be transformed later
+    protected val testClass: Class<*>,
     protected val validationFunction: Actor?,
     protected val stateRepresentationFunction: Method?
 ) : Closeable {
-    val classLoader = LincheckClassLoader(
-        /* transformationMode = */ if (strategy is ModelCheckingStrategy) MODEL_CHECKING else STRESS
-    )
-    protected val scenario: ExecutionScenario = strategy.scenario.convertForLoader(classLoader)
-    protected val testClass: Class<*> = classLoader.loadClass(_testClass.typeName)
+    val classLoader = ExecutionClassLoader()
+    protected val scenario: ExecutionScenario = strategy.scenario
 
     protected val completedOrSuspendedThreads = AtomicInteger(0)
 

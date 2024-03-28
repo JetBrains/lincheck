@@ -12,24 +12,20 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
-import org.jetbrains.kotlinx.lincheck.exceptionCanBeValidExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicFieldUpdaterNames.getAtomicFieldUpdaterName
+import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
-import org.jetbrains.kotlinx.lincheck.transformation.CodeLocations
-import org.jetbrains.kotlinx.lincheck.Injections
-import org.jetbrains.kotlinx.lincheck.EventTracker
-import org.jetbrains.kotlinx.lincheck.TestThread
-import sun.misc.Unsafe
-import java.lang.invoke.VarHandle
+import sun.misc.*
+import sun.nio.ch.lincheck.*
+import java.lang.invoke.*
 import java.lang.reflect.*
 import java.util.*
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater
-import java.util.concurrent.atomic.AtomicLongFieldUpdater
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
+import java.util.concurrent.atomic.*
 import kotlin.collections.set
 
 /**
@@ -50,9 +46,11 @@ abstract class ManagedStrategy(
 ) : Strategy(scenario), EventTracker {
     // The number of parallel threads.
     protected val nThreads: Int = scenario.nThreads
+
     // Runner for scenario invocations,
     // can be replaced with a new one for trace construction.
     private var runner: ManagedStrategyRunner = createRunner()
+
     // Spin-waiters for each thread
     private val spinners = SpinnerGroup(nThreads)
 
@@ -61,12 +59,16 @@ abstract class ManagedStrategy(
     // Which thread is allowed to perform operations?
     @Volatile
     protected var currentThread: Int = 0
+
     // Which threads finished all the operations?
     private val finished = BooleanArray(nThreads) { false }
+
     // Which threads are suspended?
     private val isSuspended = BooleanArray(nThreads) { false }
+
     // Current actor id for each thread.
     protected val currentActorId = IntArray(nThreads)
+
     // Detector of loops or hangs (i.e. active locks).
     protected val loopDetector: LoopDetector = LoopDetector(testCfg.hangingDetectionThreshold)
 
@@ -81,28 +83,37 @@ abstract class ManagedStrategy(
 
     // Whether an additional information requires for the trace construction should be collected.
     private var collectTrace = false
+
     // Collector of all events in the execution such as thread switches.
     private var traceCollector: TraceCollector? = null // null when `collectTrace` is false
+
     // Stores the currently executing methods call stack for each thread.
     private val callStackTrace = Array(nThreads) { mutableListOf<CallStackTraceElement>() }
+
     // Stores the global number of method calls.
     private var methodCallNumber = 0
+
     // In case of suspension, the call stack of the corresponding `suspend`
     // methods is stored here, so that the same method call identifiers are
     // used on resumption, and the trace point before and after the suspension
     // correspond to the same method call in the trace.
     private val suspendedFunctionsStack = Array(nThreads) { mutableListOf<Int>() }
+
     // Helps to ignore potential switch point in local objects (see LocalObjectManager) to avoid
     // useless interleavings analysis.
     private var localObjectManager = LocalObjectManager()
+
     // Last read trace point, occurred in the current thread.
     // We store it as we initialize read value after the point is created so we have to store
     // the trace point somewhere to obtain it later.
     private var lastReadTracePoint = Array<ReadTracePoint?>(nThreads) { null }
+
     // Random instances with fixed seeds to replace random calls in instrumented code.
     private var randoms = (0 until nThreads + 2).map { Random(it + 239L) }
+
     // Current call stack for a thread, updated during beforeMethodCall and afterMethodCall methods.
     private val methodCallTracePointStack = (0 until nThreads + 2).map { mutableListOf<MethodCallTracePoint>() }
+
     // User-specified guarantees on specific function, which can be considered as atomic or ignored.
     private val userDefinedGuarantees: List<ManagedStrategyGuarantee>? = testCfg.guarantees.ifEmpty { null }
 
@@ -208,7 +219,6 @@ abstract class ManagedStrategy(
         // Re-transform class constructing trace
         collectTrace = true
         // Replace the current runner with a new one in order to use a new
-        // `TransformationClassLoader` with a transformer that inserts the trace collection logic.
         runner.close()
         runner = createRunner()
 
@@ -222,7 +232,8 @@ abstract class ManagedStrategy(
         // Therefore, if the runner detects deadlock, we don't even try to collect trace.
         if (loggedResults is RunnerTimeoutInvocationResult) return null
         val sameResultTypes = loggedResults.javaClass == failingResult.javaClass
-        val sameResults = loggedResults !is CompletedInvocationResult || failingResult !is CompletedInvocationResult || loggedResults.results == failingResult.results
+        val sameResults =
+            loggedResults !is CompletedInvocationResult || failingResult !is CompletedInvocationResult || loggedResults.results == failingResult.results
         check(sameResultTypes && sameResults) {
             StringBuilder().apply {
                 appendln("Non-determinism found. Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc).")
@@ -276,10 +287,10 @@ abstract class ManagedStrategy(
 
     private val concurrentActorCausesBlocking: Boolean
         get() = currentActorId.mapIndexed { iThread, actorId ->
-                    if (iThread != currentThread && actorId >= 0 && !finished[iThread])
-                        scenario.threads[iThread][actorId]
-                    else null
-                }.filterNotNull().any { it.causesBlocking }
+            if (iThread != currentThread && actorId >= 0 && !finished[iThread])
+                scenario.threads[iThread][actorId]
+            else null
+        }.filterNotNull().any { it.causesBlocking }
 
     private fun failDueToDeadlock(): Nothing {
         suddenInvocationResult = ManagedDeadlockInvocationResult
@@ -387,6 +398,7 @@ abstract class ManagedStrategy(
         loopDetector.onThreadFinish(iThread)
         doSwitchCurrentThread(iThread, true)
     }
+
     /**
      * This method is executed if an illegal exception has been thrown (see [exceptionCanBeValidExecutionResult]).
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
@@ -400,11 +412,10 @@ abstract class ManagedStrategy(
         // the managed strategy can construct a trace to reproduce this failure.
         // Let's then store the corresponding failing result and construct the trace.
         if (exception === ForcibleExecutionFinishError) return // not a forcible execution finish
-        suddenInvocationResult =
-            UnexpectedExceptionInvocationResult(wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(exception))
+        suddenInvocationResult = UnexpectedExceptionInvocationResult(exception)
     }
 
-    override fun onActorStart(iThread: Int) {
+    override fun onActorStart(iThread: Int) = runInIgnoredSection {
         currentActorId[iThread]++
         callStackTrace[iThread].clear()
         suspendedFunctionsStack[iThread].clear()
@@ -422,14 +433,14 @@ abstract class ManagedStrategy(
      */
     private fun isActive(iThread: Int): Boolean =
         !finished[iThread] &&
-        !monitorTracker.isWaiting(iThread) &&
-        !(isSuspended[iThread] && !runner.isCoroutineResumed(iThread, currentActorId[iThread]))
+                !monitorTracker.isWaiting(iThread) &&
+                !(isSuspended[iThread] && !runner.isCoroutineResumed(iThread, currentActorId[iThread]))
 
     /**
      * Waits until the specified thread can continue
      * the execution according to the strategy decision.
      */
-    private fun awaitTurn(iThread: Int) {
+    private fun awaitTurn(iThread: Int) = runInIgnoredSection {
         spinners[iThread].spinWaitUntil {
             // Finish forcibly if an error occurred and we already have an `InvocationResult`.
             if (suddenInvocationResult != null) throw ForcibleExecutionFinishError
@@ -620,6 +631,7 @@ abstract class ManagedStrategy(
 
     override fun beforeReadField(obj: Any, className: String, fieldName: String, codeLocation: Int) = runInIgnoredSection {
         if (localObjectManager.isLocalObject(obj)) return@runInIgnoredSection
+
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             ReadTracePoint(
@@ -638,7 +650,17 @@ abstract class ManagedStrategy(
         newSwitchPoint(iThread, codeLocation, tracePoint)
     }
 
+    override fun beforeReadFinalFieldStatic(className: String) = runInIgnoredSection {
+        // We need to ensure all the classes related to the reading object are instrumented.
+        // The following call checks all the static fields.
+        LincheckJavaAgent.ensureClassAndAllSuperClassesAreTransformed(className.canonicalClassName)
+    }
+
     override fun beforeReadFieldStatic(className: String, fieldName: String, codeLocation: Int) = runInIgnoredSection {
+        // We need to ensure all the classes related to the reading object are instrumented.
+        // The following call checks all the static fields.
+        LincheckJavaAgent.ensureClassAndAllSuperClassesAreTransformed(className.canonicalClassName)
+
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             ReadTracePoint(
@@ -779,15 +801,23 @@ abstract class ManagedStrategy(
         }
     }
 
-    override fun onNewObjectCreation(obj: Any) {
+    override fun beforeNewObjectCreation(className: String) = runInIgnoredSection {
+        LincheckJavaAgent.ensureClassAndAllSuperClassesAreTransformed(className)
+    }
+
+    override fun afterNewObjectCreation(obj: Any) {
         if (obj is String || obj is Int || obj is Long || obj is Byte || obj is Char || obj is Float || obj is Double) return
         runInIgnoredSection {
             localObjectManager.registerNewObject(obj)
         }
     }
 
-    override fun onWriteToObjectFieldOrArrayCell(obj: Any, fieldOrArrayCellValue: Any?) {
-        localObjectManager.onWriteToObjectFieldOrArrayCell(obj, fieldOrArrayCellValue)
+    override fun onWriteToObjectFieldOrArrayCell(receiver: Any, fieldOrArrayCellValue: Any?) = runInIgnoredSection {
+        localObjectManager.onWriteToObjectFieldOrArrayCell(receiver, fieldOrArrayCellValue)
+    }
+
+    override fun onWriteObjectToStaticField(fieldValue: Any?) = runInIgnoredSection {
+        localObjectManager.markObjectNonLocal(fieldValue)
     }
 
     private fun methodGuaranteeType(owner: Any?, className: String, methodName: String): ManagedGuaranteeType? = runInIgnoredSection {
@@ -821,16 +851,31 @@ abstract class ManagedStrategy(
                         beforeMethodCall(currentThread, codeLocation, null, methodName, params)
                     }
                 }
+                // It's important that this method can't be called inside runInIgnoredSection, as the ignored section
+                // flag would be set to false when leaving runInIgnoredSection,
+                // so enterIgnoredSection would have no effect
                 enterIgnoredSection()
             }
+
             ManagedGuaranteeType.TREAT_AS_ATOMIC -> {
-                if (collectTrace) {
-                    beforeMethodCall(currentThread, codeLocation, null, methodName, params)
+                runInIgnoredSection {
+                    if (collectTrace) {
+                        beforeMethodCall(currentThread, codeLocation, null, methodName, params)
+                    }
+                    newSwitchPointOnAtomicMethodCall(codeLocation)
                 }
-                newSwitchPointOnAtomicMethodCall(codeLocation)
+                // It's important that this method can't be called inside runInIgnoredSection, as the ignored section
+                // flag would be set to false when leaving runInIgnoredSection,
+                // so enterIgnoredSection would have no effect
                 enterIgnoredSection()
             }
+
             null -> {
+                if (owner == null) {
+                    runInIgnoredSection {
+                        LincheckJavaAgent.ensureClassAndAllSuperClassesAreTransformed(className.canonicalClassName)
+                    }
+                }
                 if (collectTrace) {
                     runInIgnoredSection {
                         val params = if (isSuspendFunction(className, methodName, params)) {
@@ -853,7 +898,7 @@ abstract class ManagedStrategy(
     ) = runInIgnoredSection {
         if (collectTrace) {
             val isAtomicUpdater = owner is AtomicIntegerFieldUpdater<*> || owner is AtomicLongFieldUpdater<*> || owner is AtomicReferenceFieldUpdater<*, *>
-            val ownerName = if (isAtomicUpdater) owner?.let { AtomicFieldUpdaterNames.getName(it) } else null
+            val ownerName = if (isAtomicUpdater) owner?.let { getAtomicFieldUpdaterName(it) } else null
             // Drop the object instance and offset (in case of Unsafe) from the parameters
             // when using Unsafe, VarHandle, or AtomicFieldUpdater.
             @Suppress("NAME_SHADOWING")
@@ -1561,7 +1606,7 @@ private class ManagedStrategyRunner(
             if (cancellationResult != CANCELLATION_FAILED)
                 managedStrategy.afterCoroutineCancelled()
             return cancellationResult
-        } catch(e: Throwable) {
+        } catch (e: Throwable) {
             cancellationTracePoint?.initializeException(e)
             throw e // throw further
         }
@@ -1576,10 +1621,12 @@ private class MonitorTracker(nThreads: Int) {
     // Maintains a set of acquired monitors with an information on which thread
     // performed the acquisition and the reentrancy depth.
     private val acquiredMonitors = IdentityHashMap<Any, MonitorAcquiringInfo>()
+
     // Maintains a set of monitors on which each thread is waiting.
     // Note, that a thread can wait on a free monitor if it is waiting for a `notify` call.
     // Stores `null` if thread is not waiting on any monitor.
     private val waitingMonitor = Array<MonitorAcquiringInfo?>(nThreads) { null }
+
     // Stores `true` for the threads which are waiting for a
     // `notify` call on the monitor stored in `acquiringMonitor`.
     private val waitForNotify = BooleanArray(nThreads) { false }

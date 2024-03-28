@@ -10,11 +10,12 @@
 package org.jetbrains.kotlinx.lincheck
 
 import kotlinx.coroutines.*
-import org.jetbrains.kotlinx.lincheck.execution.*
+import sun.nio.ch.lincheck.EventTracker
+import sun.nio.ch.lincheck.TestThread
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer
 import org.jetbrains.kotlinx.lincheck.verifier.*
-import java.io.*
 import java.lang.ref.*
 import java.lang.reflect.*
 import java.lang.reflect.Method
@@ -38,7 +39,6 @@ internal fun executeActor(
     try {
         val m = getMethod(instance, actor.method)
         val args = (if (actor.isSuspendable) actor.arguments + completion else actor.arguments)
-            .map { it.convertForLoader(instance.javaClass.classLoader) }
         val res = m.invoke(instance, *args.toTypedArray())
         return if (m.returnType.isAssignableFrom(Void.TYPE)) VoidResult else createLincheckResult(res)
     } catch (invE: Throwable) {
@@ -60,9 +60,6 @@ internal fun executeActor(
     }
 }
 
-@Suppress("UNCHECKED_CAST")
-internal fun <T> Class<T>.normalize() = LinChecker::class.java.classLoader.loadClass(name) as Class<T>
-
 private val methodsCache = WeakHashMap<Class<*>, WeakHashMap<Method, WeakReference<Method>>>()
 
 /**
@@ -79,7 +76,7 @@ internal fun getMethod(instance: Any, method: Method): Method {
 }
 
 /**
- * Finds a method withe the specified [name] and (parameters)[parameterTypes]
+ * Finds a method with the specified [name] and (parameters)[parameterTypes]
  * ignoring the difference in class loaders for these parameter types.
  */
 private fun Class<out Any>.getMethod(name: String, parameterTypes: Array<Class<out Any>>): Method =
@@ -94,7 +91,7 @@ private fun Class<out Any>.getMethod(name: String, parameterTypes: Array<Class<o
  *
  * Instances of [Throwable] are represented as [ExceptionResult].
  *
- * The special [COROUTINE_SUSPENDED] value returned when some coroutine suspended it's execution
+ * The special [COROUTINE_SUSPENDED] value returned when some coroutine suspended its execution
  * is represented as [NoResult].
  *
  * Success values of [kotlin.Result] instances are represented as either [VoidResult] or [ValueResult].
@@ -105,7 +102,7 @@ internal fun createLincheckResult(res: Any?, wasSuspended: Boolean = false) = wh
     res != null && res is Throwable -> ExceptionResult.create(res, wasSuspended)
     res === COROUTINE_SUSPENDED -> Suspended
     res is kotlin.Result<Any?> -> res.toLinCheckResult(wasSuspended)
-    else -> ValueResult(res.convertForLoader(LinChecker::class.java.classLoader), wasSuspended)
+    else -> ValueResult(res, wasSuspended)
 }
 
 private fun kotlin.Result<Any?>.toLinCheckResult(wasSuspended: Boolean) =
@@ -114,7 +111,7 @@ private fun kotlin.Result<Any?>.toLinCheckResult(wasSuspended: Boolean) =
             is Unit -> if (wasSuspended) SuspendedVoidResult else VoidResult
             // Throwable was returned as a successful result
             is Throwable -> ValueResult(value::class.java, wasSuspended)
-            else -> ValueResult(value.convertForLoader(LinChecker::class.java.classLoader), wasSuspended)
+            else -> ValueResult(value, wasSuspended)
         }
     } else ExceptionResult.create(exceptionOrNull()!!, wasSuspended)
 
@@ -173,104 +170,6 @@ fun <T> kotlin.Result<T>.cancelledByLincheck() = exceptionOrNull() === cancellat
 
 private val cancellationByLincheckException = Exception("Cancelled by lincheck")
 
-internal fun ExecutionScenario.convertForLoader(loader: ClassLoader) = ExecutionScenario(
-    initExecution.map {
-         it.convertForLoader(loader)
-    },
-    parallelExecution.map { actors ->
-        actors.map { a ->
-            a.convertForLoader(loader)
-        }
-    },
-    postExecution.map {
-        it.convertForLoader(loader)
-    },
-    validationFunction = validationFunction
-)
-
-private fun Actor.convertForLoader(loader: ClassLoader): Actor {
-    val args = arguments.map { it.convertForLoader(loader) }
-    // the original `isSuspendable` is used here since `KFunction.isSuspend` fails on transformed classes
-    return Actor(
-        method = method.convertForLoader(loader),
-        arguments = args,
-        cancelOnSuspension = cancelOnSuspension,
-        allowExtraSuspension = allowExtraSuspension,
-        blocking = blocking,
-        causesBlocking = causesBlocking,
-        promptCancellation = promptCancellation,
-        isSuspendable = isSuspendable
-    )
-}
-
-internal fun ExecutionResult.convertForLoader(loader: ClassLoader) = ExecutionResult(
-        initResults.map { it.convertForLoader(loader) },
-        afterInitStateRepresentation,
-        parallelResultsWithClock.map { results -> results.map { it.convertForLoader(loader) } },
-        afterParallelStateRepresentation,
-        postResults.map { it.convertForLoader(loader) },
-        afterPostStateRepresentation
-)
-
-/**
- * Finds the same method but loaded by the specified (class loader)[loader],
- * the signature can be changed according to the [LincheckClassLoader]'s remapper.
- */
-private fun Method.convertForLoader(loader: ClassLoader): Method {
-    if (loader !is LincheckClassLoader) return this
-    val clazz = declaringClass.convertForLoader(loader)
-    val parameterTypes = parameterTypes.map { it.convertForLoader(loader) }
-    return clazz.getDeclaredMethod(name, *parameterTypes.toTypedArray())
-}
-
-private fun Class<*>.convertForLoader(loader: LincheckClassLoader): Class<*> =
-    if (isPrimitive) this else loader.loadClass(loader.remapClassName(name))
-
-private fun ResultWithClock.convertForLoader(loader: ClassLoader): ResultWithClock =
-        ResultWithClock(result.convertForLoader(loader), clockOnStart)
-
-private fun Result.convertForLoader(loader: ClassLoader): Result = when (this) {
-    is ValueResult -> ValueResult(value.convertForLoader(loader), wasSuspended)
-    else -> this // does not need to be transformed
-}
-
-/**
- * Move the value from its current class loader to the specified [loader].
- * For primitive values, does nothing.
- * Non-primitive values need to be [Serializable] for this to succeed.
- */
-internal fun Any?.convertForLoader(loader: ClassLoader) = when {
-    this == null -> null
-    this::class.java.classLoader == null -> this // primitive class, no need to convert
-    this::class.java.classLoader == loader -> this // already in this loader
-    loader is LincheckClassLoader && !loader.shouldBeTransformed(this.javaClass) -> this
-    this is Serializable -> serialize().run { deserialize(loader) }
-    else -> error("The result class should either be always loaded by the system class loader and not be transformed," +
-                  " or implement Serializable interface.")
-}
-
-internal fun Any?.serialize(): ByteArray = ByteArrayOutputStream().use {
-    val oos = ObjectOutputStream(it)
-    oos.writeObject(this)
-    it.toByteArray()
-}
-
-internal fun ByteArray.deserialize(loader: ClassLoader) = ByteArrayInputStream(this).use {
-    CustomObjectInputStream(loader, it).run { readObject() }
-}
-
-/**
- * ObjectInputStream that uses custom class loader.
- */
-private class CustomObjectInputStream(val loader: ClassLoader, inputStream: InputStream) : ObjectInputStream(inputStream) {
-    override fun resolveClass(desc: ObjectStreamClass): Class<*> {
-        // add `TRANSFORMED_PACKAGE_NAME` prefix in case of TransformationClassLoader and remove otherwise
-        val className = if (loader is LincheckClassLoader) loader.remapClassName(desc.name)
-                        else desc.name.removePrefix(LincheckClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME)
-        return Class.forName(className, true, loader)
-    }
-}
-
 /**
  * Collects the current thread dump and keeps only those
  * threads that are related to the specified [runner].
@@ -280,33 +179,12 @@ internal fun collectThreadDump(runner: Runner) = Thread.getAllStackTraces().filt
 }
 
 internal val String.canonicalClassName get() = this.replace('/', '.')
-internal val String.internalClassName get() = this.replace('.', '/')
 
 internal fun exceptionCanBeValidExecutionResult(exception: Throwable): Boolean {
     return exception !is ThreadDeath && // used to stop thread in FixedActiveThreadsExecutor by calling thread.stop method
             exception !is InternalLincheckTestUnexpectedException &&
-            exception !is ForcibleExecutionFinishError &&
-            !isIllegalAccessOfUnsafeDueToJavaVersion(exception)
+            exception !is ForcibleExecutionFinishError
 }
-
-internal fun wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(throwable: Throwable): Throwable {
-    if (isIllegalAccessOfUnsafeDueToJavaVersion(throwable)) return RuntimeException(ADD_OPENS_MESSAGE, throwable)
-
-    return throwable
-}
-
-internal fun isIllegalAccessOfUnsafeDueToJavaVersion(exception: Throwable): Boolean {
-    return exception is IllegalAccessException && exception.message?.contains("to unnamed module") ?: false
-}
-
-
-internal const val ADD_OPENS_MESSAGE =
-    "It seems that you use Java 9+ and the code uses Unsafe or similar constructions that are not accessible from unnamed modules.\n" +
-            "Please add the following lines to your test running configuration:\n" +
-            "--add-opens java.base/java.lang=ALL-UNNAMED\n" +
-            "--add-opens java.base/jdk.internal.misc=ALL-UNNAMED\n" +
-            "--add-exports java.base/jdk.internal.util=ALL-UNNAMED\n" +
-            "--add-exports java.base/sun.security.action=ALL-UNNAMED"
 
 /**
  * Utility exception for test purposes.
@@ -324,7 +202,14 @@ internal class LincheckInternalBugException(cause: Throwable): Exception(cause)
 @Suppress("UnusedReceiverParameter")
 internal inline fun<R> EventTracker.runInIgnoredSection(block: () -> R): R =  runInIgnoredSection(Thread.currentThread(), block)
 @Suppress("UnusedReceiverParameter")
+internal inline fun<R> FixedActiveThreadsExecutor.runInIgnoredSection(block: () -> R): R =  runInIgnoredSection(Thread.currentThread(), block)
+@Suppress("UnusedReceiverParameter")
 internal inline fun<R> ParallelThreadsRunner.runInIgnoredSection(block: () -> R): R =  runInIgnoredSection(Thread.currentThread(), block)
+@Suppress("UnusedReceiverParameter")
+internal inline fun<R> LincheckClassFileTransformer.runInIgnoredSection(block: () -> R): R =  runInIgnoredSection(Thread.currentThread(), block)
+
+@Suppress("UnusedReceiverParameter")
+internal inline fun<R> ExecutionClassLoader.runInIgnoredSection(block: () -> R): R =  runInIgnoredSection(Thread.currentThread(), block)
 
 private inline fun <R> runInIgnoredSection(currentThread: Thread, block: () -> R): R =
     if (currentThread is TestThread && !currentThread.inIgnoredSection) {

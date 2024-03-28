@@ -11,7 +11,7 @@ package org.jetbrains.kotlinx.lincheck_test.isolated
 
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.junit.*
-import org.jetbrains.kotlinx.lincheck.TestThread
+import sun.nio.ch.lincheck.TestThread
 import java.util.concurrent.*
 
 class FixedActiveThreadsExecutorIsolatedTest {

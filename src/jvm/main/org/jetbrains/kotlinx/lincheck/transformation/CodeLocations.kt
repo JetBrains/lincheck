@@ -10,7 +10,6 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
-import org.jetbrains.kotlinx.lincheck.LincheckClassLoader.*
 import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.FieldInfo.*
 import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.FinalFieldsVisitor
 import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.addFinalField
@@ -130,20 +129,18 @@ internal object FinalFields {
         if (fieldName in visitor.finalFields || fieldName in visitor.mutableFields) return true
         // If field is not present in this class - search in the superclass recursively.
         visitor.superClassName?.let { internalSuperClassName ->
-            val internalSuperClassNameNormalized = internalSuperClassName.normalizedClassName
-            val superClassFields = classToFieldsMap.computeIfAbsent(internalSuperClassNameNormalized) { hashMapOf() }
-            val fieldFound = collectFieldInformation(internalSuperClassNameNormalized, fieldName, superClassFields)
+            val superClassFields = classToFieldsMap.computeIfAbsent(internalSuperClassName) { hashMapOf() }
+            val fieldFound = collectFieldInformation(internalSuperClassName, fieldName, superClassFields)
             // Copy all field information found in the superclass to the current class map.
-            addFieldsInfoFromSuperclass(internalSuperClassNameNormalized, internalClassName)
+            addFieldsInfoFromSuperclass(internalSuperClassName, internalClassName)
             if (fieldFound) return true
         }
         // If field is not present in this class - search in the all implemented interfaces recursively.
         visitor.implementedInterfaces.forEach { interfaceName ->
-            val normalizedInterfaceName = interfaceName.normalizedClassName
-            val interfaceFields = classToFieldsMap.computeIfAbsent(normalizedInterfaceName) { hashMapOf() }
-            val fieldFound = collectFieldInformation(normalizedInterfaceName, fieldName, interfaceFields)
+            val interfaceFields = classToFieldsMap.computeIfAbsent(interfaceName) { hashMapOf() }
+            val fieldFound = collectFieldInformation(interfaceName, fieldName, interfaceFields)
             // Copy all field information found in the interface to the current class map.
-            addFieldsInfoFromSuperclass(normalizedInterfaceName, internalClassName)
+            addFieldsInfoFromSuperclass(interfaceName, internalClassName)
             if (fieldFound) return true
         }
         // There is no such field in this class.
@@ -175,15 +172,6 @@ internal object FinalFields {
             }
         }
     }
-
-    private val String.normalizedClassName: String
-        get() {
-            var internalName = this
-            if (internalName.startsWith(REMAPPED_PACKAGE_INTERNAL_NAME)) {
-                internalName = internalName.substring(REMAPPED_PACKAGE_INTERNAL_NAME.length)
-            }
-            return internalName
-        }
 
     /**
      * This visitor collects information about fields, declared in this class,

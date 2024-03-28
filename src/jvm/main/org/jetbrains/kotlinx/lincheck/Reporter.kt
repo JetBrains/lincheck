@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.LoggingLevel.*
+import sun.nio.ch.lincheck.TestThread
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
@@ -576,7 +577,7 @@ private fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockOrLivel
             appendLine("Thread-$threadNumber:")
             stackTrace.map {
                 StackTraceElement(
-                    /* declaringClass = */ it.className.removePrefix(LincheckClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME),
+                    /* declaringClass = */ it.className,
                     /* methodName = */ it.methodName,
                     /* fileName = */ it.fileName,
                     /* lineNumber = */ it.lineNumber
