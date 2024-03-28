@@ -12,8 +12,12 @@ package org.jetbrains.kotlinx.lincheck.transformation
 
 import net.bytebuddy.agent.*
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.UnsafeHolder.UNSAFE
 import org.objectweb.asm.*
 import java.lang.instrument.*
+import java.lang.module.*
+import java.lang.reflect.*
+import java.lang.reflect.Modifier.*
 import java.security.*
 import java.util.*
 import java.util.Collections.*
@@ -46,45 +50,66 @@ object LincheckClassFileTransformer : ClassFileTransformer {
 
     private val instrumentedClasses = HashSet<String>()
 
-    fun ensureClassAndAllSuperclassesAreInstrumented(className: String) {
+    fun ensureClassIsTransformed(className: String) {
         if (className in instrumentedClasses) return // already instrumented
-        ensureClassAndAllSuperclassesAreInstrumentedImpl(Class.forName(className))
+        ensureClassIsTransformed(Class.forName(className), newSetFromMap(IdentityHashMap()))
     }
 
-    fun ensureClassAndAllSuperclassesAreInstrumented(clazz: Class<*>) {
+    fun ensureClassIsTransformed(clazz: Class<*>) {
         if (clazz.name in instrumentedClasses) return // already instrumented
-        ensureClassAndAllSuperclassesAreInstrumentedImpl(clazz)
+        ensureClassIsTransformed(clazz, newSetFromMap(IdentityHashMap()))
     }
 
-    private fun ensureClassAndAllSuperclassesAreInstrumentedImpl(clazz: Class<*>) {
+    fun ensureObjectIsTransformed(testInstance: Any) =
+        ensureObjectIsTransformedImpl(testInstance, newSetFromMap(IdentityHashMap()))
+
+    private fun ensureObjectIsTransformedImpl(obj: Any, processedObjects: MutableSet<Any>) {
+        if (processedObjects.contains(obj)) return
+        processedObjects += obj
+
+        var clazz: Class<*> = obj.javaClass
+
+        ensureClassIsTransformed(clazz)
+
+        while (true) {
+            clazz.declaredFields
+                .filter { !it.type.isPrimitive }
+                .filter { !isStatic(it.modifiers) }
+                .mapNotNull { readFieldViaUnsafe(obj, it) }
+                .forEach { ensureObjectIsTransformedImpl(it, processedObjects) }
+            clazz = clazz.superclass ?: break
+        }
+    }
+
+    private fun ensureClassIsTransformed(clazz: Class<*>, processedObjects: MutableSet<Any>) {
         if (instrumentation.isModifiableClass(clazz) && shouldTransform(clazz.name, transformationMode)) {
             instrumentedClasses += clazz.name
-            println("Retransform $clazz")
+            println("Retransform! $clazz")
             instrumentation.retransformClasses(clazz)
+        } else {
+            return
         }
-        clazz.superclass?.let { ensureClassAndAllSuperclassesAreInstrumented(it) }
-    }
-
-    fun ensureAllTestInstanceFieldsAreTransformed(testInstance: Any) =
-        ensureAllTestInstanceFieldsAreTransformed(testInstance, Collections.newSetFromMap(IdentityHashMap()))
-
-    private fun ensureAllTestInstanceFieldsAreTransformed(obj: Any, processedObjects: MutableSet<Any>) {
-        if (processedObjects.contains(obj)) return
-        ensureClassAndAllSuperclassesAreInstrumented(obj.javaClass)
-        processedObjects += obj
-        var clazz: Class<*>? = obj.javaClass
-        while (clazz != null) {
-            clazz.declaredFields.filter { !it.type.isPrimitive }.forEach { field ->
-                if (field.isAccessible || field.trySetAccessible()) {
-                    val fieldValue = field.get(obj)
-                    if (fieldValue != null) {
-                        ensureAllTestInstanceFieldsAreTransformed(fieldValue, processedObjects)
-                    }
-                }
-            }
-            clazz = clazz.superclass
+        // Traverse static fields.
+        clazz.declaredFields
+            .filter { !it.type.isPrimitive }
+            .filter { isStatic(it.modifiers) }
+            .mapNotNull { readFieldViaUnsafe(null, it) }
+            .forEach { ensureObjectIsTransformedImpl(it, processedObjects) }
+        clazz.superclass?.let {
+            if (it.name in instrumentedClasses) return // already instrumented
+            ensureClassIsTransformed(it, processedObjects)
         }
     }
+
+    private fun readFieldViaUnsafe(obj: Any?, field: Field): Any? =
+        if (isStatic(field.modifiers)) {
+            val base = UNSAFE.staticFieldBase(field)
+            val offset = UNSAFE.staticFieldOffset(field)
+            UNSAFE.getObject(base, offset)
+        } else {
+            val offset = UNSAFE.objectFieldOffset(field)
+            UNSAFE.getObject(obj, offset)
+        }
 
     internal fun install(transformationMode: TransformationMode) {
         this.transformationMode = transformationMode
@@ -211,6 +236,22 @@ internal object TransformationInjectionsInitializer {
 
         val bootstrapJarFile = JarFile(ClassLoader.getSystemResource("bootstrap.jar").file)
         instrumentation.appendToBootstrapClassLoaderSearch(bootstrapJarFile)
+//
+//        ModuleFinder.ofSystem().find("java.base").get().open().use { reader ->
+//            reader.list()
+//                // Filter classes
+//                .filter { it.endsWith(".class") && it != "module-info.class" }
+//                .map { it.removeSuffix(".class").replace("/", ".") }
+//                // Trampoline must not be defined by the bootstrap classloader
+//                .filter { it != "sun.reflect.misc.Trampoline" }
+//                .forEach {
+//                    try {
+//                        Class.forName(it)
+//                    } catch (t: Throwable) {
+//                        throw IllegalStateException("Cannot initialize class $it", t)
+//                    }
+//                }
+//        }
 
         initialized = true
     }
