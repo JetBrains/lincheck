@@ -24,7 +24,6 @@ import org.jetbrains.kotlinx.lincheck.transformation.TransformationMode.*
 import java.util.*
 
 internal class LincheckClassVisitor(
-    private val classLoader: LincheckClassLoader,
     private val transformationMode: TransformationMode,
     classVisitor: ClassVisitor
 ) : ClassVisitor(
@@ -517,7 +516,7 @@ internal class LincheckClassVisitor(
         lateinit var analyzer: AnalyzerAdapter
 
         override fun visitFieldInsn(opcode: Int, owner: String, fieldName: String, desc: String) = adapter.run {
-            if (isCoroutineInternalClass(owner) || isCoroutineStateMachineClass(owner) || FinalFields.isFinalField(classLoader, owner, fieldName)
+            if (isCoroutineInternalClass(owner) || isCoroutineStateMachineClass(owner) || FinalFields.isFinalField(owner, fieldName)
             ) {
                 visitFieldInsn(opcode, owner, fieldName, desc)
                 return

@@ -158,7 +158,7 @@ public class LincheckClassLoader extends ClassLoader {
         ClassVersionGetter infoGetter = new ClassVersionGetter();
         cr.accept(infoGetter, 0);
         ClassWriter cw = new TransformationClassWriter(infoGetter.getClassVersion(), remapper);
-        LincheckClassVisitor cv = new LincheckClassVisitor(this, transformationMode, cw);
+        LincheckClassVisitor cv = new LincheckClassVisitor(transformationMode, cw);
         cr.accept(cv, ClassReader.EXPAND_FRAMES);
         return cw.toByteArray();
     }

@@ -10,7 +10,6 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
-import org.jetbrains.kotlinx.lincheck.LincheckClassLoader
 import org.jetbrains.kotlinx.lincheck.LincheckClassLoader.REMAPPED_PACKAGE_INTERNAL_NAME
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
@@ -105,13 +104,13 @@ internal object FinalFields {
     /**
      * Determines if this field is final or not.
      */
-    fun isFinalField(classLoader: LincheckClassLoader, className: String, fieldName: String): Boolean {
+    fun isFinalField(className: String, fieldName: String): Boolean {
         val internalName = className.normalizedClassName
         val fieldsForClass = finalFields.computeIfAbsent(internalName) { hashMapOf() }
         // Fast-path, in case we have information about this field
         fieldsForClass[fieldName]?.let { return it }
         // If we haven't processed this class yet, fall back to a slow-path, reading byte-code of a class
-        findField(classLoader, internalName, fieldsForClass, fieldName)
+        findField(internalName, fieldsForClass, fieldName)
         // Here we must have information about this field, as we scanned all the hierarchy of this class
         val isFieldFinal = fieldsForClass[fieldName] ?: error("Internal error: can't find field with $fieldName in class $className")
         return isFieldFinal
@@ -143,13 +142,12 @@ internal object FinalFields {
      * If the field is not found, recursively searches in the superclass and implemented interfaces.
      */
     private fun findField(
-        classLoader: ClassLoader,
         type: String,
         typeIsFinalFieldMap: MutableMap<String, Boolean>,
         fieldName: String
     ): Boolean {
         // Read class from classLoader.
-        val classReader = typeInfo(classLoader, type)
+        val classReader = typeInfo(type)
         val visitor = FinalFieldsVisitor()
         // Scan class.
         classReader.accept(visitor, 0)
@@ -162,7 +160,7 @@ internal object FinalFields {
         visitor.superClassName?.let { superName ->
             val normalizedSuperName = superName.normalizedClassName
             val superclassFields = finalFields.computeIfAbsent(normalizedSuperName) { hashMapOf() }
-            val fieldFound = findField(classLoader, normalizedSuperName, superclassFields, fieldName)
+            val fieldFound = findField(normalizedSuperName, superclassFields, fieldName)
             // Copy all field information found in the superclass to the current class map.
             addFieldsInfoFromSuperclass(normalizedSuperName, type)
             if (fieldFound) return true
@@ -171,7 +169,7 @@ internal object FinalFields {
         visitor.implementedInterfaces.forEach { interfaceName ->
             val normalizedInterfaceName = interfaceName.normalizedClassName
             val interfaceFields = finalFields.computeIfAbsent(normalizedInterfaceName) { hashMapOf() }
-            val fieldFound = findField(classLoader, normalizedInterfaceName, interfaceFields, fieldName)
+            val fieldFound = findField(normalizedInterfaceName, interfaceFields, fieldName)
             // Copy all field information found in the interface to the current class map.
             addFieldsInfoFromSuperclass(normalizedInterfaceName, type)
             if (fieldFound) return true
@@ -180,9 +178,9 @@ internal object FinalFields {
         return false
     }
 
-    private fun typeInfo(classLoader: ClassLoader, type: String): ClassReader {
+    private fun typeInfo(type: String): ClassReader {
         val resource = "$type.class"
-        val inputStream = classLoader.getResourceAsStream(resource) ?: error("Cannot create ClassReader for type $type")
+        val inputStream = ClassLoader.getSystemClassLoader().getResourceAsStream(resource) ?: error("Cannot create ClassReader for type $type")
         return inputStream.use { ClassReader(inputStream) }
     }
 
