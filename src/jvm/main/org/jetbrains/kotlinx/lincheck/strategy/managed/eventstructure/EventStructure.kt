@@ -41,11 +41,6 @@ class EventStructure(
     private val nThreads = maxThreadId + 1
 
     /**
-     * Mutable list of events of the event structure.
-     */
-    private val backtrackingPoints = sortedMutableListOf<BacktrackingPoint>()
-
-    /**
      * Mutable list of the event structure events.
      */
     private val _events = sortedMutableListOf<AtomicThreadEvent>()
@@ -71,6 +66,12 @@ class EventStructure(
     @SuppressWarnings("WeakerAccess")
     lateinit var currentExplorationRoot: Event
         private set
+
+    /**
+     * Mutable list of backtracking points.
+     */
+    private val backtrackingPoints = sortedMutableListOf<BacktrackingPoint>()
+
 
     /**
      * The mutable execution currently being explored.
@@ -273,7 +274,6 @@ class EventStructure(
             set(event.threadId, event.parent)
         }
         val pinnedEvents = pinnedEvents.copy().apply {
-            // TODO: can reorder cut and merge?
             val causalityFrontier = execution.calculateFrontier(event.causalityClock)
             merge(causalityFrontier)
             cut(conflicts)
@@ -313,7 +313,7 @@ class EventStructure(
         )
         _events.add(event)
         // if the event is not visited immediately,
-        // then we create a breakpoint to visit it later
+        // then we create a backtracking point to visit it later
         if (!visit) {
             createBacktrackingPoint(event, conflicts)
         }
