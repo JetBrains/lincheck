@@ -480,6 +480,7 @@ class EventStructure(
             } while (inReplayPhase() && !canReplayNextEvent(iThread))
         }
         return replayer.currentEvent
+            ?.ensure { event -> event.dependencies.all { it in playedFrontier } }
             ?.also { replayer.setNextEvent() }
     }
 
@@ -772,13 +773,6 @@ class EventStructure(
         tryReplayEvent(requestEvent.threadId)?.let { event ->
             check(event.label.isResponse)
             check(event.parent == requestEvent)
-            // TODO: refactor & move to other replay-related functions
-            val readyToReplay = event.dependencies.all {
-                dependency -> dependency in playedFrontier
-            }
-            if (!readyToReplay) {
-                return (null to listOf())
-            }
             check(event.label == event.resynchronize(syncAlgebra))
             addEventToCurrentExecution(event)
             return event to listOf(event)
