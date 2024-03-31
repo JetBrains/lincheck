@@ -52,28 +52,43 @@ class Input(
     /** Number of mutations (children) that were produced from this input. */
     private var mutationsPerformed: Long = 0
 
-    /** Number of mutations to perform before mutation thread id change. */
-    private var mutationThreadSwitchRate: Long = 20
+//    /** Number of mutations to perform before mutation thread id change. */
+//    private var mutationThreadSwitchRate: Long = 20
 
     /** Id of thread that is going to be mutated when this input is selected as parent.
      *  This variable changes to some random thread every `mutationThreadSwitchRate` mutations.
      * */
-    var mutationThread: Int = -1 // set to some appropriate thread id in `mutate()` method
+    private var mutationThread: Int = -1 // set to some appropriate thread id in `mutate()` method
 
-    fun mutate(mutator: Mutator): Input {
+    fun mutate(mutator: Mutator, mutationsCount: Int): Input {
         // TODO: add mutation API
-        if (mutationsPerformed % mutationThreadSwitchRate == 0L) {
-            updateMutationThread()
-        }
-        mutationsPerformed++
+        println("Perform mutation: $mutationsCount")
 
-        // TODO: somehow pass the thread id to mutations (but don't create new object instances, maybe)
-        val mutations = mutator.getAvailableMutations(this)
-        val mutatedScenario = mutations.random().mutate(this)
+        var mutatedScenario = scenario
+        println("Before: \n" + mutatedScenario.toString())
+
+        repeat(mutationsCount) {
+//            if (mutationsPerformed % mutationThreadSwitchRate == 0L) {
+//                updateMutationThread()
+//            }
+            updateMutationThread()
+            mutationsPerformed++
+
+            // TODO: somehow pass the thread id to mutations (but don't create new object instances, maybe)
+            val mutations = mutator.getAvailableMutations(mutatedScenario, mutationThread)
+            if (mutations.isNotEmpty()) {
+                mutatedScenario = mutations.random().mutate(mutatedScenario, mutationThread)
+            }
+        }
+
+        println("After: \n" + mutatedScenario.toString())
+
         return Input(mutatedScenario)
     }
 
     private fun updateMutationThread() {
+        // TODO: implement weighted thread id selection
+        //  (the smaller number of mutations performed for some thread the bigger chances of picking it)
         mutationThread = Random.nextInt(scenario.threads.size)
     }
 }

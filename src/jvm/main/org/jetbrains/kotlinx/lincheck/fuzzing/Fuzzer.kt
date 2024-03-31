@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.fuzzing
 
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration
 import org.jetbrains.kotlinx.lincheck.CTestStructure
+import org.jetbrains.kotlinx.lincheck.RandomProvider
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.fuzzing.coverage.Coverage
@@ -21,6 +22,9 @@ import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.Mutator
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import java.util.*
 import kotlin.collections.ArrayDeque
+import kotlin.math.ceil
+import kotlin.math.ln
+import kotlin.math.max
 
 /**
  * Entry point for fuzzing. This class encapsulates all logic related to scenarios fuzzing.
@@ -38,6 +42,8 @@ class Fuzzer(
     /** Includes coverage from failed executions as well */
     private val totalCoverage = Coverage()
     private var totalExecutions = 0
+    /** Includes invalid executions as well */
+    private var maxCoveredBranches = 0
 
     /** Id of input that is going to be mutated to get some interesting children inputs */
     private var currentParentInputIdx = 0
@@ -56,6 +62,8 @@ class Fuzzer(
     private val failures: MutableList<FailedInput> = mutableListOf()
 
     private val mutator = Mutator(testStructure, testConfiguration)
+    private val random = testStructure.randomProvider.createRandom()
+    private val MEAN_MUTATION_COUNT: Double = ceil(testConfiguration.actorsPerThread.toDouble() / 2.0)
 
     init {
         // schedule seed scenarios for execution
@@ -76,7 +84,7 @@ class Fuzzer(
         else {
             // pick something from fuzzing queue
             val parentInput = getCurrentParentInput()
-            currentInput = parentInput.mutate(mutator)
+            currentInput = parentInput.mutate(mutator, sampleGeometric(random, MEAN_MUTATION_COUNT))
             childrenGeneratedForCurrentParentInput++
         }
 
@@ -94,6 +102,7 @@ class Fuzzer(
 
         currentInput!!.executionDurationMs = (Date().time - executionStart!!.time).toInt()
         currentInput!!.coverage = coverage
+        maxCoveredBranches = max(maxCoveredBranches, coverage.branchesCoveredCount())
 
         val newCoverageFound: Boolean = totalCoverage.merge(coverage)
 
@@ -111,13 +120,14 @@ class Fuzzer(
         println(
             "[Fuzzer, ${executionStart!!}] #$totalExecutions: \n" +
             "covered-branches = ${coverage.branchesCoveredCount()} \n" +
+            "max-branches = $maxCoveredBranches \n" +
             "total-branches = ${totalCoverage.branchesCoveredCount()} \n" +
             "sizes [saved/fails/seed] = ${savedInputs.size} / ${failures.size} / ${seedInputs.size} \n"
         )
 
-        if (totalExecutions % 10 == 0) {
-            println("Current scenario (details above):\n " + currentInput!!.scenario.toString())
-        }
+//        if (totalExecutions % 10 == 0) {
+//            println("Current scenario (details above):\n " + currentInput!!.scenario.toString())
+//        }
 
         totalExecutions++
         executionStart = null
@@ -151,6 +161,21 @@ class Fuzzer(
             target *= FAVORITE_PARENT_CHILDREN_MULTIPLIER
         }
         return target
+    }
+
+    /**
+     * Sample from a geometric distribution with given mean.
+     *
+     * Utility method used in implementing mutation operations.
+     *
+     * @param random a pseudo-random number generator
+     * @param mean the mean of the distribution
+     * @return a randomly sampled value
+     */
+    private fun sampleGeometric(random: Random, mean: Double): Int {
+        val p = 1 / mean
+        val uniform = random.nextDouble()
+        return ceil(ln(1 - uniform) / ln(1 - p)).toInt()
     }
 }
 

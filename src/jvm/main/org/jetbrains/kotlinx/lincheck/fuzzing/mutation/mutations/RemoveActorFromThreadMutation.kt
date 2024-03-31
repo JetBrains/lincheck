@@ -10,10 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.fuzzing.mutation.mutations
 
-import org.jetbrains.kotlinx.lincheck.Actor
-import org.jetbrains.kotlinx.lincheck.CTestConfiguration
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.fuzzing.input.Input
 import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.Mutation
 import kotlin.random.Random
 
@@ -23,10 +20,7 @@ import kotlin.random.Random
  * The thread is removed from parallel execution if no actors left in it.
  */
 class RemoveActorFromThreadMutation : Mutation() {
-    override fun mutate(input: Input): ExecutionScenario {
-        val scenario = input.scenario
-        val mutationThreadId = input.mutationThread
-
+    override fun mutate(scenario: ExecutionScenario, mutationThreadId: Int): ExecutionScenario {
 //        val newParallelExecution = mutableListOf<MutableList<Actor>>()
 //        newParallelExecution.addAll(scenario.parallelExecution)
 //
@@ -42,10 +36,13 @@ class RemoveActorFromThreadMutation : Mutation() {
 
         val newParallelExecution = scenario.parallelExecution.mapIndexed { index, actors ->
             if (index == mutationThreadId) {
+                val removedIndex = Random.nextInt(actors.size)
+                println("Mutation: Remove, threadId=$mutationThreadId, index=$removedIndex")
+
                 if (actors.size == 1) return@mapIndexed null
 
                 return@mapIndexed actors.toMutableList().apply {
-                    removeAt(Random.nextInt(actors.size))
+                    removeAt(removedIndex)
                 }
             }
 
@@ -60,10 +57,7 @@ class RemoveActorFromThreadMutation : Mutation() {
         )
     }
 
-    override fun isApplicable(input: Input): Boolean {
-        val scenario = input.scenario
-        val mutationThreadId = input.mutationThread
-
+    override fun isApplicable(scenario: ExecutionScenario, mutationThreadId: Int): Boolean {
         return (mutationThreadId >= 0 &&
                 mutationThreadId < scenario.parallelExecution.size)
     }

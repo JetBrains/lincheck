@@ -10,11 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck.fuzzing.mutation
 
-import org.jetbrains.kotlinx.lincheck.CTestConfiguration
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.fuzzing.input.Input
 
 abstract class Mutation {
-    abstract fun mutate(input: Input): ExecutionScenario
-    open fun isApplicable(input: Input): Boolean = true
+    abstract fun mutate(scenario: ExecutionScenario, mutationThreadId: Int): ExecutionScenario
+    open fun isApplicable(scenario: ExecutionScenario, mutationThreadId: Int): Boolean = true
 }

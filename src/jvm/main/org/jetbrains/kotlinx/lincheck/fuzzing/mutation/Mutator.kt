@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.fuzzing.mutation
 
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration
 import org.jetbrains.kotlinx.lincheck.CTestStructure
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.fuzzing.input.Input
 import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.mutations.AddActorToThreadMutation
 import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.mutations.RemoveActorFromThreadMutation
@@ -25,7 +26,7 @@ class Mutator(
         AddActorToThreadMutation(testStructure, testConfiguration)
     )
 
-    fun getAvailableMutations(input: Input): List<Mutation> {
-        return mutations.filter { it.isApplicable(input) }
+    fun getAvailableMutations(scenario: ExecutionScenario, mutationThread: Int): List<Mutation> {
+        return mutations.filter { it.isApplicable(scenario, mutationThread) }
     }
 }
