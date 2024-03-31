@@ -70,9 +70,13 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     }
 
     private fun CTestConfiguration.fuzzImpl(): LincheckFailure? {
-        val defaultExGen = createExecutionGenerator(testStructure.randomProvider)
         var verifier = createVerifier()
-        val fuzzer = Fuzzer(customScenarios, defaultExGen)
+        val fuzzer = Fuzzer(
+            customScenarios,
+            testStructure,
+            this,
+            createExecutionGenerator(testStructure.randomProvider)
+        )
         val coverageOptions = coverageOptions!!
 
         repeat(iterations) { i ->

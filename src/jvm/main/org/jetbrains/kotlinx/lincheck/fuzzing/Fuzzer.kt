@@ -10,11 +10,14 @@
 
 package org.jetbrains.kotlinx.lincheck.fuzzing
 
+import org.jetbrains.kotlinx.lincheck.CTestConfiguration
+import org.jetbrains.kotlinx.lincheck.CTestStructure
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.fuzzing.coverage.Coverage
 import org.jetbrains.kotlinx.lincheck.fuzzing.input.FailedInput
 import org.jetbrains.kotlinx.lincheck.fuzzing.input.Input
+import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.Mutator
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import java.util.*
 import kotlin.collections.ArrayDeque
@@ -28,6 +31,8 @@ import kotlin.collections.ArrayDeque
  */
 class Fuzzer(
     seedScenarios:  List<ExecutionScenario>,
+    testStructure: CTestStructure,
+    testConfiguration: CTestConfiguration,
     private val defaultExecutionGenerator: ExecutionGenerator
 ) {
     /** Includes coverage from failed executions as well */
@@ -50,6 +55,8 @@ class Fuzzer(
     /** Contains failures that were found during fuzzing. */
     private val failures: MutableList<FailedInput> = mutableListOf()
 
+    private val mutator = Mutator(testStructure, testConfiguration)
+
     init {
         // schedule seed scenarios for execution
         seedScenarios.forEach {
@@ -69,7 +76,7 @@ class Fuzzer(
         else {
             // pick something from fuzzing queue
             val parentInput = getCurrentParentInput()
-            currentInput = parentInput.mutate()
+            currentInput = parentInput.mutate(mutator)
             childrenGeneratedForCurrentParentInput++
         }
 
@@ -85,7 +92,7 @@ class Fuzzer(
                 "`Fuzzer::nextScenario()` must be called beforehand."
             )
 
-        currentInput!!.executionDurationMs = (executionStart!!.time - Date().time).toInt()
+        currentInput!!.executionDurationMs = (Date().time - executionStart!!.time).toInt()
         currentInput!!.coverage = coverage
 
         val newCoverageFound: Boolean = totalCoverage.merge(coverage)
@@ -102,10 +109,15 @@ class Fuzzer(
 
         // TODO: move printing in some logger
         println(
-            "[Fuzzer, ${executionStart!!.time}] #$totalExecutions:" +
-            "covered-branches=${coverage.branchesCoveredCount()} " +
-            "total-branches=${totalCoverage.branchesCoveredCount()}"
+            "[Fuzzer, ${executionStart!!}] #$totalExecutions: \n" +
+            "covered-branches = ${coverage.branchesCoveredCount()} \n" +
+            "total-branches = ${totalCoverage.branchesCoveredCount()} \n" +
+            "sizes [saved/fails/seed] = ${savedInputs.size} / ${failures.size} / ${seedInputs.size} \n"
         )
+
+        if (totalExecutions % 10 == 0) {
+            println("Current scenario (details above):\n " + currentInput!!.scenario.toString())
+        }
 
         totalExecutions++
         executionStart = null
@@ -118,9 +130,9 @@ class Fuzzer(
 
     private fun getCurrentParentInput(): Input {
         val prevParentInput = savedInputs[currentParentInputIdx]
-        val targetChildrenInputs = getTargetChildrenCount(prevParentInput)
+        val targetChildrenCount = getTargetChildrenCount(prevParentInput)
 
-        if (childrenGeneratedForCurrentParentInput >= targetChildrenInputs) {
+        if (childrenGeneratedForCurrentParentInput >= targetChildrenCount) {
             // change parent input to the next one
             currentParentInputIdx = (currentParentInputIdx + 1) % savedInputs.size // TODO: completed cycle over the whole queue
             childrenGeneratedForCurrentParentInput = 0
