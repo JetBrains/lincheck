@@ -12,7 +12,6 @@ package org.jetbrains.kotlinx.lincheck.fuzzing
 
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration
 import org.jetbrains.kotlinx.lincheck.CTestStructure
-import org.jetbrains.kotlinx.lincheck.RandomProvider
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.fuzzing.coverage.Coverage
@@ -61,9 +60,11 @@ class Fuzzer(
     /** Contains failures that were found during fuzzing. */
     private val failures: MutableList<FailedInput> = mutableListOf()
 
-    private val mutator = Mutator(testStructure, testConfiguration)
+    /** Utilities for fuzzing process */
     private val random = testStructure.randomProvider.createRandom()
     private val MEAN_MUTATION_COUNT: Double = ceil(testConfiguration.actorsPerThread.toDouble() / 2.0)
+
+    private val mutator = Mutator(random, testStructure, testConfiguration)
 
     init {
         // schedule seed scenarios for execution
@@ -84,7 +85,7 @@ class Fuzzer(
         else {
             // pick something from fuzzing queue
             val parentInput = getCurrentParentInput()
-            currentInput = parentInput.mutate(mutator, sampleGeometric(random, MEAN_MUTATION_COUNT))
+            currentInput = parentInput.mutate(mutator, sampleGeometric(random, MEAN_MUTATION_COUNT), random)
             childrenGeneratedForCurrentParentInput++
         }
 

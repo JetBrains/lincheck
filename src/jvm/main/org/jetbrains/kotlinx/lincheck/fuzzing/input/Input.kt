@@ -13,7 +13,7 @@ package org.jetbrains.kotlinx.lincheck.fuzzing.input
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.fuzzing.coverage.Coverage
 import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.Mutator
-import kotlin.random.Random
+import java.util.*
 
 /**
  * Class that holds statistics for some program run. It contains coverage, execution time,
@@ -60,7 +60,7 @@ class Input(
      * */
     private var mutationThread: Int = -1 // set to some appropriate thread id in `mutate()` method
 
-    fun mutate(mutator: Mutator, mutationsCount: Int): Input {
+    fun mutate(mutator: Mutator, mutationsCount: Int, random: Random): Input {
         // TODO: add mutation API
         println("Perform mutation: $mutationsCount")
 
@@ -71,13 +71,14 @@ class Input(
 //            if (mutationsPerformed % mutationThreadSwitchRate == 0L) {
 //                updateMutationThread()
 //            }
-            updateMutationThread()
+            updateMutationThread(random)
             mutationsPerformed++
 
             // TODO: somehow pass the thread id to mutations (but don't create new object instances, maybe)
             val mutations = mutator.getAvailableMutations(mutatedScenario, mutationThread)
             if (mutations.isNotEmpty()) {
-                mutatedScenario = mutations.random().mutate(mutatedScenario, mutationThread)
+                val mutationIndex = random.nextInt(mutations.size)
+                mutatedScenario = mutations[mutationIndex].mutate(mutatedScenario, mutationThread)
             }
         }
 
@@ -86,9 +87,9 @@ class Input(
         return Input(mutatedScenario)
     }
 
-    private fun updateMutationThread() {
+    private fun updateMutationThread(random: Random) {
         // TODO: implement weighted thread id selection
         //  (the smaller number of mutations performed for some thread the bigger chances of picking it)
-        mutationThread = Random.nextInt(scenario.threads.size)
+        mutationThread = random.nextInt(scenario.threads.size)
     }
 }

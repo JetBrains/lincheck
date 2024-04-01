@@ -15,17 +15,16 @@ import org.jetbrains.kotlinx.lincheck.CTestConfiguration
 import org.jetbrains.kotlinx.lincheck.CTestStructure
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.Mutation
-import java.util.LinkedList
+import java.util.*
 
 /**
  * Inserts random actor to thread with id `input.mutationThread` in parallel execution.
  */
 class AddActorToThreadMutation(
+    private val random: Random,
     private val testStructure: CTestStructure,
     private val testConfiguration: CTestConfiguration
 ) : Mutation() {
-    private val random = testStructure.randomProvider.createRandom()
-
     override fun mutate(scenario: ExecutionScenario, mutationThreadId: Int): ExecutionScenario {
         val newParallelExecution = mutableListOf<MutableList<Actor>>()
         scenario.parallelExecution.map {
@@ -38,7 +37,9 @@ class AddActorToThreadMutation(
             newParallelExecution[mutationThreadId].size < testConfiguration.actorsPerThread
         ) {
             val generators = testStructure.actorGenerators.filter { !it.useOnce }
-            val actor = generators.random().generate(mutationThreadId + 1, random)
+            val generatorIndex = random.nextInt(generators.size)
+
+            val actor = generators[generatorIndex].generate(mutationThreadId + 1, random)
             val insertBeforeIndex = random.nextInt(newParallelExecution[mutationThreadId].size + 1)
 
             println("Mutation: Add, threadId=$mutationThreadId, actor=${actor.method.name}, insertBefore=$insertBeforeIndex")

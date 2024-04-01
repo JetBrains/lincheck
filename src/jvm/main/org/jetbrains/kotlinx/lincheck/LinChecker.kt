@@ -93,8 +93,9 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
 
             fuzzer.handleResult(failure, coverage)
 
+            // TODO: uncomment??
             // Reset the parameter generator ranges to start with the same initial bounds on each scenario generation.
-            testStructure.parameterGenerators.forEach { it.reset() }
+            // testStructure.parameterGenerators.forEach { it.reset() }
         }
 
         val failure = fuzzer.getFirstFailure()

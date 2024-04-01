@@ -12,14 +12,16 @@ package org.jetbrains.kotlinx.lincheck.fuzzing.mutation.mutations
 
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.Mutation
-import kotlin.random.Random
+import java.util.*
 
 
 /**
  * Removes random actor from thread with id `input.mutationThread` in parallel execution.
  * The thread is removed from parallel execution if no actors left in it.
  */
-class RemoveActorFromThreadMutation : Mutation() {
+class RemoveActorFromThreadMutation(
+    private val random: Random
+) : Mutation() {
     override fun mutate(scenario: ExecutionScenario, mutationThreadId: Int): ExecutionScenario {
 //        val newParallelExecution = mutableListOf<MutableList<Actor>>()
 //        newParallelExecution.addAll(scenario.parallelExecution)
@@ -36,7 +38,7 @@ class RemoveActorFromThreadMutation : Mutation() {
 
         val newParallelExecution = scenario.parallelExecution.mapIndexed { index, actors ->
             if (index == mutationThreadId) {
-                val removedIndex = Random.nextInt(actors.size)
+                val removedIndex = random.nextInt(actors.size)
                 println("Mutation: Remove, threadId=$mutationThreadId, index=$removedIndex")
 
                 if (actors.size == 1) return@mapIndexed null
