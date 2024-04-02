@@ -20,38 +20,36 @@ import java.util.*
 /**
  * Inserts random actor to thread with id `input.mutationThread` in parallel execution.
  */
-class AddActorToThreadMutation(
-    private val random: Random,
+class AddActorToParallelMutation(
+    random: Random,
     private val testStructure: CTestStructure,
     private val testConfiguration: CTestConfiguration
-) : Mutation() {
+) : Mutation(random) {
     override fun mutate(scenario: ExecutionScenario, mutationThreadId: Int): ExecutionScenario {
         val newParallelExecution = mutableListOf<MutableList<Actor>>()
         scenario.parallelExecution.map {
             newParallelExecution.add(it.toMutableList())
         }
 
-        if (
-            mutationThreadId >= 0 &&
-            mutationThreadId < newParallelExecution.size &&
-            newParallelExecution[mutationThreadId].size < testConfiguration.actorsPerThread
-        ) {
-            val generators = testStructure.actorGenerators.filter { !it.useOnce }
-            val generatorIndex = random.nextInt(generators.size)
+        val generators = testStructure.actorGenerators.filter { !it.useOnce }
+        val generatorIndex = random.nextInt(generators.size)
 
-            val actor = generators[generatorIndex].generate(mutationThreadId + 1, random)
-            val insertBeforeIndex = random.nextInt(newParallelExecution[mutationThreadId].size + 1)
+        val actor = generators[generatorIndex].generate(mutationThreadId + 1, random)
+        val insertBeforeIndex = random.nextInt(newParallelExecution[mutationThreadId].size + 1)
 
-            println("Mutation: Add, threadId=$mutationThreadId, actor=${actor.method.name}, insertBefore=$insertBeforeIndex")
-            val newActorsList = mutableListOf<Actor>()
-            for(i in 0..newParallelExecution[mutationThreadId].size) {
-                if (i < insertBeforeIndex) newActorsList.add(newParallelExecution[mutationThreadId][i])
-                else if (i == insertBeforeIndex) newActorsList.add(actor)
-                else newActorsList.add(newParallelExecution[mutationThreadId][i - 1])
-            }
+        println("Mutation: Add, " +
+                "threadId=$mutationThreadId, " +
+                "actor=${actor.method.name}(${actor.arguments.joinToString(", ") { it.toString() }}), " +
+                "insertBefore=$insertBeforeIndex")
 
-            newParallelExecution[mutationThreadId] = newActorsList
+        val newActorsList = mutableListOf<Actor>()
+        for(i in 0..newParallelExecution[mutationThreadId].size) {
+            if (i < insertBeforeIndex) newActorsList.add(newParallelExecution[mutationThreadId][i])
+            else if (i == insertBeforeIndex) newActorsList.add(actor)
+            else newActorsList.add(newParallelExecution[mutationThreadId][i - 1])
         }
+
+        newParallelExecution[mutationThreadId] = newActorsList
 
         return ExecutionScenario(
             scenario.initExecution,

@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.fuzzing
 
+import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration
 import org.jetbrains.kotlinx.lincheck.CTestStructure
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator
@@ -21,6 +22,7 @@ import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.Mutator
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import java.util.*
 import kotlin.collections.ArrayDeque
+import kotlin.collections.ArrayList
 import kotlin.math.ceil
 import kotlin.math.ln
 import kotlin.math.max
@@ -62,8 +64,6 @@ class Fuzzer(
 
     /** Utilities for fuzzing process */
     private val random = testStructure.randomProvider.createRandom()
-    private val MEAN_MUTATION_COUNT: Double = ceil(testConfiguration.actorsPerThread.toDouble() / 2.0)
-
     private val mutator = Mutator(random, testStructure, testConfiguration)
 
     init {
@@ -73,14 +73,34 @@ class Fuzzer(
         }
     }
 
+    private fun getTrimmedParallelPart(randomScenario: ExecutionScenario): List<List<Actor>> {
+        val parallelTrimmed = ArrayList<MutableList<Actor>>()
+        repeat(randomScenario.parallelExecution.size) {
+            parallelTrimmed.add(mutableListOf())
+        }
+
+        parallelTrimmed.forEachIndexed { index, actors ->
+            actors.add(randomScenario.parallelExecution[index][0])
+        }
+        return parallelTrimmed
+    }
+
     fun nextScenario(): ExecutionScenario {
         if (seedInputs.isNotEmpty()) {
             // try using seed input (custom scenario, if present)
             currentInput = seedInputs.removeFirst()
         }
         else if (savedInputs.isEmpty()) {
+            // TODO: bring back random scenario generation
             // if no saved inputs exist, try picking completely random scenario
-            currentInput = Input(defaultExecutionGenerator.nextExecution())
+            val randomScenario = defaultExecutionGenerator.nextExecution()
+            val trimmedScenario = ExecutionScenario(
+                emptyList(),
+                getTrimmedParallelPart(randomScenario),
+                emptyList(),
+                randomScenario.validationFunction
+            )
+            currentInput = Input(trimmedScenario) // defaultExecutionGenerator.nextExecution()
         }
         else {
             // pick something from fuzzing queue
@@ -102,9 +122,13 @@ class Fuzzer(
             )
 
         currentInput!!.executionDurationMs = (Date().time - executionStart!!.time).toInt()
+        if (currentInput!!.coverage.coveredBranchesCount() != 0) {
+            throw RuntimeException("Reassigning coverage that was already calculated")
+        }
         currentInput!!.coverage = coverage
-        maxCoveredBranches = max(maxCoveredBranches, coverage.branchesCoveredCount())
+        maxCoveredBranches = max(maxCoveredBranches, coverage.coveredBranchesCount())
 
+        // update total coverage
         val newCoverageFound: Boolean = totalCoverage.merge(coverage)
 
         if (failure != null) {
@@ -112,26 +136,28 @@ class Fuzzer(
             // save to failed inputs
             failures.add(FailedInput(currentInput!!, failure))
         }
-        else if (newCoverageFound) {
-            // update total coverage and save input if it uncovers new program regions
+        if (newCoverageFound) {
+            // save input if it uncovers new program regions (failed inputs also saved)
+            currentInput!!.favorite = true // set to favorite to generate more children from this input
             savedInputs.add(currentInput!!)
         }
 
         // TODO: move printing in some logger
         println(
             "[Fuzzer, ${executionStart!!}] #$totalExecutions: \n" +
-            "covered-branches = ${coverage.branchesCoveredCount()} \n" +
-            "max-branches = $maxCoveredBranches \n" +
-            "total-branches = ${totalCoverage.branchesCoveredCount()} \n" +
-            "sizes [saved/fails/seed] = ${savedInputs.size} / ${failures.size} / ${seedInputs.size} \n"
+            "covered-edges = ${coverage.coveredBranchesCount()} \n" +
+            "max-edges = $maxCoveredBranches \n" +
+            "total-edges = ${totalCoverage.coveredBranchesCount()} \n" +
+            "sizes [saved (fav)/fails/seed] = ${savedInputs.size} (${savedInputs.count { it.favorite }}) / ${failures.size} / ${seedInputs.size} \n"
         )
-
-//        if (totalExecutions % 10 == 0) {
-//            println("Current scenario (details above):\n " + currentInput!!.scenario.toString())
-//        }
 
         totalExecutions++
         executionStart = null
+
+        // update `favorite` marks on saved inputs
+        if (totalExecutions % FAVORITE_INPUTS_RECALCULATION_RATE == 0) {
+            recalculateFavoriteInputs()
+        }
     }
 
     fun getFirstFailure(): LincheckFailure? {
@@ -161,7 +187,40 @@ class Fuzzer(
         if (parentInput.favorite) {
             target *= FAVORITE_PARENT_CHILDREN_MULTIPLIER
         }
+
         return target
+    }
+
+    /**
+     * Recalculates `favorite` marks for each input from `savedInputs` queue.
+     *
+     * Finds the subset of saved inputs that cover the same number of edges as in `totalCoverage` and marks them as favorite.
+     * Non-favorite inputs are not discarded, but just marked as not favorite
+     * (which decreases the number of children input generated from them)
+     */
+    private fun recalculateFavoriteInputs() {
+        // reset favorites to false
+        val favBefore: Int = savedInputs.count { it.favorite }
+        val favAfter: Int
+
+        savedInputs.forEach { it.favorite = false }
+
+        // attempt to find the subset of inputs that produce the same coverage as `totalCoverage`
+        val tempCoverage = Coverage()
+        val coveredKeys = totalCoverage.coveredBranchesKeys()
+
+        for (key in coveredKeys) {
+            if (tempCoverage.isCovered(key)) continue
+
+            val bestInput: Input = savedInputs.filter { it.coverage.isCovered(key) }.minByOrNull { it.fitness }
+                ?: throw RuntimeException("Key $key is not covered in any saved input but was found in total coverage")
+
+            tempCoverage.merge(bestInput.coverage)
+            bestInput.favorite = true
+        }
+
+        favAfter = savedInputs.count { it.favorite }
+        println("Recalculate favorite inputs: before=$favBefore, after=$favAfter")
     }
 
     /**
@@ -182,4 +241,6 @@ class Fuzzer(
 
 // constants match the JQF implementation
 private const val CHILDREN_INPUTS_GENERATED = 5 // 50
-private const val FAVORITE_PARENT_CHILDREN_MULTIPLIER = 1 // 20
+private const val FAVORITE_PARENT_CHILDREN_MULTIPLIER = 3 // 20
+private const val FAVORITE_INPUTS_RECALCULATION_RATE = 30
+private const val MEAN_MUTATION_COUNT = 4.0 // ceil(testConfiguration.actorsPerThread.toDouble() / 2.0).toInt()

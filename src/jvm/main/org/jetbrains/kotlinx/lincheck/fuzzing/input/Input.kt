@@ -42,18 +42,15 @@ class Input(
      * - mark as covered all keys from this input and set its `favorite` field to `true`.
      * - repeat until all keys will be covered and discard non-favorite selected inputs.
      * */
-    var fitness: Int = 0
+    val fitness: Double
         get() {
-            if (executionDurationMs == -1) return Int.MAX_VALUE
+            if (executionDurationMs == -1) return Double.MAX_VALUE
             // TODO: check formula from AFL
-            return (executionDurationMs / 100) * scenario.size // this is neither AFL, nor JQF implementation
+            return (executionDurationMs.toDouble() / 1000.0) * scenario.size // formula from the head
         }
 
     /** Number of mutations (children) that were produced from this input. */
     private var mutationsPerformed: Long = 0
-
-//    /** Number of mutations to perform before mutation thread id change. */
-//    private var mutationThreadSwitchRate: Long = 20
 
     /** Id of thread that is going to be mutated when this input is selected as parent.
      *  This variable changes to some random thread every `mutationThreadSwitchRate` mutations.
@@ -65,7 +62,7 @@ class Input(
         println("Perform mutation: $mutationsCount")
 
         var mutatedScenario = scenario
-        println("Before: \n" + mutatedScenario.toString())
+        println("Before (fav=${this.favorite}): \n" + mutatedScenario.toString())
 
         repeat(mutationsCount) {
 //            if (mutationsPerformed % mutationThreadSwitchRate == 0L) {

@@ -51,7 +51,8 @@ class CoverageOptions(
                 .build()
         )
     }
-    var coverageResult: CoverageResult? = null
+    private var coverageResult: CoverageResult? = null
+    private var lastRunProjectData: ProjectData? = null
     private val excludes = excludePatterns.map(Pattern::compile)
 
     init {
@@ -85,6 +86,7 @@ class CoverageOptions(
         // cache the coverage stats for last run
         ProjectTargetProcessor().process(localProjectData) { _, coverage ->
             coverageResult = CoverageResult(coverage)
+            lastRunProjectData = localProjectData
         }
 
         // reset coverage runtime for future runs
@@ -95,7 +97,7 @@ class CoverageOptions(
 
     fun onShutdown() {
         coverageEnabled = false
-        onShutdown?.let { it(globalProjectData, coverageResult!!) }
+        onShutdown?.let { it(lastRunProjectData!!, coverageResult!!) }
     }
 
     /**

@@ -132,6 +132,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             reporter.logIteration(i + 1 + customScenarios.size, iterations, scenario)
             val failure = scenario.run(this, verifier)
             if (failure != null) {
+                println("Iteration on failure: $i / $iterations")
                 val minimizedFailedIteration = if (!minimizeFailedScenario) failure else failure.minimize(this)
                 reporter.logFailedIteration(minimizedFailedIteration)
                 return minimizedFailedIteration

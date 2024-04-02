@@ -13,7 +13,6 @@ package org.jetbrains.kotlinx.lincheck.fuzzing.coverage
 import Hashing
 import com.intellij.rt.coverage.data.LineData
 import com.intellij.rt.coverage.data.ProjectData
-import java.util.*
 import kotlin.math.min
 
 class Coverage {
@@ -49,7 +48,15 @@ class Coverage {
         hits[key] += hitCount
     }
 
-    fun branchesCoveredCount(): Int = hits.count { it != 0 }
+    fun isCovered(key: Int): Boolean =
+        if (key >= 0 && key < hits.size)
+            hits[key] != 0
+        else
+            throw IndexOutOfBoundsException("Key '$key' is out of bounds for hits array of length '${hits.size}'")
+
+    fun coveredBranchesCount(): Int = hits.count { it != 0 }
+
+    fun coveredBranchesKeys(): List<Int> = hits.indices.filter { hits[it] != 0 }
 
     fun clear() = hits.fill(0)
 

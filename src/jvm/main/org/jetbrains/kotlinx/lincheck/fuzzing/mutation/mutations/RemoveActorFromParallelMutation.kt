@@ -19,23 +19,8 @@ import java.util.*
  * Removes random actor from thread with id `input.mutationThread` in parallel execution.
  * The thread is removed from parallel execution if no actors left in it.
  */
-class RemoveActorFromThreadMutation(
-    private val random: Random
-) : Mutation() {
+class RemoveActorFromParallelMutation(random: Random) : Mutation(random) {
     override fun mutate(scenario: ExecutionScenario, mutationThreadId: Int): ExecutionScenario {
-//        val newParallelExecution = mutableListOf<MutableList<Actor>>()
-//        newParallelExecution.addAll(scenario.parallelExecution)
-//
-//        if (mutationThreadId >= 0 && mutationThreadId < newParallelExecution.size) {
-//            newParallelExecution[mutationThreadId].toMutableList().apply {
-//                removeAt(Random.nextInt(this.size))
-//            }
-//
-//            if (newParallelExecution[mutationThreadId].isEmpty()) {
-//                newParallelExecution.removeAt(mutationThreadId)
-//            }
-//        }
-
         val newParallelExecution = scenario.parallelExecution.mapIndexed { index, actors ->
             if (index == mutationThreadId) {
                 val removedIndex = random.nextInt(actors.size)
@@ -60,7 +45,11 @@ class RemoveActorFromThreadMutation(
     }
 
     override fun isApplicable(scenario: ExecutionScenario, mutationThreadId: Int): Boolean {
-        return (mutationThreadId >= 0 &&
-                mutationThreadId < scenario.parallelExecution.size)
+        return (
+            mutationThreadId >= 0 &&
+            mutationThreadId < scenario.parallelExecution.size &&
+            // when single or zero thread will exist after removal
+            !(scenario.parallelExecution.size <= 2 && scenario.parallelExecution[mutationThreadId].size == 1)
+        )
     }
 }

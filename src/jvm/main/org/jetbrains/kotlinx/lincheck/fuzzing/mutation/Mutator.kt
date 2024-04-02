@@ -13,9 +13,7 @@ package org.jetbrains.kotlinx.lincheck.fuzzing.mutation
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration
 import org.jetbrains.kotlinx.lincheck.CTestStructure
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.fuzzing.input.Input
-import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.mutations.AddActorToThreadMutation
-import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.mutations.RemoveActorFromThreadMutation
+import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.mutations.*
 import java.util.Random
 
 class Mutator(
@@ -24,8 +22,13 @@ class Mutator(
     testConfiguration: CTestConfiguration
 ) {
     private val mutations = listOf(
-        RemoveActorFromThreadMutation(random),
-        AddActorToThreadMutation(random, testStructure, testConfiguration)
+        AddActorToParallelMutation(random, testStructure, testConfiguration),
+        AddActorToInitMutation(random, testStructure, testConfiguration),
+        AddActorToPostMutation(random, testStructure, testConfiguration),
+
+        RemoveActorFromParallelMutation(random),
+        RemoveActorFromInitMutation(random),
+        RemoveActorFromPostMutation(random),
     )
 
     fun getAvailableMutations(scenario: ExecutionScenario, mutationThread: Int): List<Mutation> {
