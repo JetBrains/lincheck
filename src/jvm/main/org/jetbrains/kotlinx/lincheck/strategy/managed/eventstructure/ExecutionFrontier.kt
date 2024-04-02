@@ -69,6 +69,11 @@ fun<E : ThreadEvent> MutableExecutionFrontier<E>.merge(other: ExecutionFrontier<
     }}
 }
 
+fun<E : ThreadEvent> ExecutionFrontier<E>.isBlockedDanglingRequest(event: E): Boolean =
+    event.label.isRequest &&
+    event.label.isBlocking &&
+    event == this[event.threadId]
+
 fun <E : ThreadEvent> ExecutionFrontier<E>.getDanglingRequests(): List<E>  {
     return threadMap.mapNotNull { (_, lastEvent) ->
         lastEvent?.takeIf { it.label.isRequest && !it.label.isSpanLabel }

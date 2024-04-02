@@ -113,12 +113,59 @@ class EventStructure(
      */
     private val objectRegistry = ObjectRegistry()
 
-
-    /*
-     * Map from blocked dangling events to their responses.
-     * If event is blocked but the corresponding response has not yet arrived then it is mapped to null.
+    /**
+     * For each blocked thread, that is a thread waiting
+     * in some blocking operation like a mutex lock,
+     * stores a descriptor of the blocked event
+     * (see [BlockedEventDescriptor]).
      */
-    private val danglingEvents = mutableMapOf<AtomicThreadEvent, AtomicThreadEvent?>()
+    private val blockedEvents: MutableThreadMap<BlockedEventDescriptor> =
+        ArrayIntMap(this.nThreads)
+
+    /**
+     * Descriptor of a blocked event.
+     *
+     * The thread may become blocked when it issues a request-event
+     * denoting some blocking operation (e.g. mutex lock),
+     * such that the corresponding response-event cannot be created immediately
+     * (for example, because the mutex is already acquired by another thread).
+     *
+     * Therefore, a blocked event is a composite event that may consist of either:
+     *  - a blocked request event alone;
+     *  - or a blocked request event followed by an unblocking response event.
+     * In the latter case, we say that the event becomes effectively unblocked.
+     * The unblocking response is typically created as a result
+     * of synchronization with another event when it is added
+     * to the currently explored [execution].
+     *
+     * However, at the point when the unblocking response is created
+     * the unblocking response may not be added to
+     * the currently explored [execution] immediately.
+     * It is added later when the blocked thread is scheduled again.
+     * At this point the current [BlockedEventDescriptor] is removed
+     * from the [blockedEvents] mapping, and the thread becomes fully unblocked.
+     *
+     * @property request The request part of blocked event.
+     * @property response The response part of the blocked event.
+     */
+    class BlockedEventDescriptor(val request: AtomicThreadEvent) {
+
+        init {
+            require(request.label.isRequest)
+            require(request.label.isBlocking)
+        }
+
+        var response: AtomicThreadEvent? = null
+            private set
+
+        fun setResponse(response: AtomicThreadEvent) {
+            require(response.label.isResponse)
+            require(response.label.isBlocking)
+            require(this.request == response.request)
+            check(this.response == null)
+            this.response = response
+        }
+    }
 
     private val delayedConsistencyCheckBuffer = mutableListOf<AtomicThreadEvent>()
 
@@ -184,8 +231,8 @@ class EventStructure(
         val event = backtrackingPoint.event.ensure {
             it.label is InitializationLabel || it.label.isResponse
         }
-        // reset dangling events
-        danglingEvents.clear()
+        // reset blocked events
+        blockedEvents.clear()
         // set current exploration root
         currentExplorationRoot = event
         // reset current execution
@@ -202,8 +249,8 @@ class EventStructure(
             if (blockedRequest.parent == pinnedEvents[blockedRequest.threadId]) {
                 pinnedEvents[blockedRequest.threadId] = blockedRequest
             }
-            // ... and mark it as dangling
-            markBlockedDanglingRequest(blockedRequest)
+            // ... and also block them
+            blockRequest(blockedRequest)
         }
         // set pinned events
         this.pinnedEvents = pinnedEvents.ensure {
@@ -263,7 +310,7 @@ class EventStructure(
             cut(conflicts)
             // for already unblocked dangling requests,
             // also put their responses into the frontier
-            addDanglingResponses(conflicts)
+            addUnblockingResponses(conflicts)
         }
         val danglingRequests = frontier.getDanglingRequests()
         val blockedRequests = danglingRequests
@@ -379,12 +426,15 @@ class EventStructure(
         return causalityViolation
     }
 
-    private fun MutableExecutionFrontier<AtomicThreadEvent>.addDanglingResponses(conflicts: List<AtomicThreadEvent>) {
-        for ((request, response) in danglingEvents) {
+    private fun MutableExecutionFrontier<AtomicThreadEvent>.addUnblockingResponses(conflicts: List<AtomicThreadEvent>) {
+        for (descriptor in blockedEvents.values) {
+            val request = descriptor.request
+            val response = descriptor.response
+            if (request != this[request.threadId])
+                continue
             if (request in conflicts || response in conflicts)
                 continue
-            if (request == this[request.threadId] && response != null &&
-                response.dependencies.all { it in this }) {
+            if (response != null && response.dependencies.all { it in this }) {
                 this.update(response)
             }
         }
@@ -398,9 +448,9 @@ class EventStructure(
             _execution.add(event)
         }
         playedFrontier.update(event)
-        // Unmark dangling request if its response was added.
-        if (event.label.isResponse && event.label.isBlocking && event.parent in danglingEvents) {
-            unmarkBlockedDanglingRequest(event.parent!!)
+        // Unblock the thread if the unblocking response was added.
+        if (event.label.isResponse && event.label.isBlocking && isBlockedRequest(event.request!!)) {
+            unblockRequest(event.request!!)
         }
         // If we are still in replay phase, but the added event is not a replayed event,
         // then save it to delayed events buffer to postpone its further processing.
@@ -578,7 +628,7 @@ class EventStructure(
                     !causalityOrder(it, event) &&
                     // (2) pinned events, because their response part is pinned,
                     //     unless the pinned event is blocking dangling event
-                    (!pinnedEvents.contains(it) || danglingEvents.contains(it))
+                    (!pinnedEvents.contains(it) || isBlockedRequest(it))
                 }
             }
         return when {
@@ -655,7 +705,7 @@ class EventStructure(
             val requestEvent = syncEvent.parent
                 ?.takeIf { it.label.isRequest && it.label.isBlocking }
                 ?: continue
-            if (requestEvent in danglingEvents && getUnblockingResponse(requestEvent) == null) {
+            if (isBlockedRequest(requestEvent) && getUnblockingResponse(requestEvent) == null) {
                 setUnblockingResponse(syncEvent)
                 // mark corresponding backtracking point as visited;
                 // search from the end, because the search event was added recently,
@@ -777,17 +827,17 @@ class EventStructure(
             addEventToCurrentExecution(event)
             return event to listOf(event)
         }
-        if (requestEvent.label.isBlocking && requestEvent in danglingEvents) {
+        if (requestEvent.label.isBlocking && isBlockedRequest(requestEvent)) {
             val event = getUnblockingResponse(requestEvent)
                 ?: return (null to listOf())
             check(event.label.isResponse)
-            check(event.parent == requestEvent)
+            check(event.request == requestEvent)
             addEventToCurrentExecution(event)
             return event to listOf(event)
         }
         val responseEvents = addSynchronizedEvents(requestEvent)
         if (responseEvents.isEmpty()) {
-            markBlockedDanglingRequest(requestEvent)
+            blockRequest(requestEvent)
             return (null to listOf())
         }
         // TODO: use some other strategy to select the next event in the current exploration?
@@ -804,23 +854,22 @@ class EventStructure(
     /*      Blocking events handling                                             */
     /* ************************************************************************* */
 
-    fun isBlockedRequest(request: AtomicThreadEvent): Boolean {
-        require(request.label.isRequest && request.label.isBlocking)
-        return (request == playedFrontier[request.threadId])
+    private fun isBlockedRequest(request: AtomicThreadEvent): Boolean {
+        return (request == blockedEvents[request.threadId]?.request)
     }
 
-    fun isBlockedDanglingRequest(request: AtomicThreadEvent): Boolean {
-        require(request.label.isRequest && request.label.isBlocking)
-        return execution.isBlockedDanglingRequest(request)
-    }
-
-    fun isBlockedAwaitingRequest(request: AtomicThreadEvent): Boolean {
-        require(isBlockedRequest(request))
+    private fun isBlockedAwaitingRequest(request: AtomicThreadEvent): Boolean {
+        require(playedFrontier.isBlockedDanglingRequest(request))
+        // if we are in replay phase, then the request is blocked
+        // if we cannot replay its response part
         if (inReplayPhase(request.threadId)) {
             return !canReplayNextEvent(request.threadId)
         }
-        if (request in danglingEvents) {
-            return danglingEvents[request] == null
+        // otherwise, the request is blocked if its response part has not yet been added
+        val descriptor = blockedEvents[request.threadId]
+        if (descriptor != null) {
+            check(request == descriptor.request)
+            return (descriptor.response == null)
         }
         return false
     }
@@ -831,33 +880,34 @@ class EventStructure(
     fun getBlockedAwaitingRequest(iThread: Int): AtomicThreadEvent? =
         getBlockedRequest(iThread)?.takeIf { isBlockedAwaitingRequest(it) }
 
-    private fun markBlockedDanglingRequest(request: AtomicThreadEvent) {
-        require(isBlockedDanglingRequest(request))
-        check(request !in danglingEvents)
-        check(danglingEvents.keys.all { it.threadId != request.threadId })
-        danglingEvents.put(request, null).ensureNull()
+    private fun blockRequest(request: AtomicThreadEvent) {
+        require(execution.isBlockedDanglingRequest(request))
+        blockedEvents.put(request.threadId, BlockedEventDescriptor(request)).ensureNull()
     }
 
-    private fun unmarkBlockedDanglingRequest(request: AtomicThreadEvent) {
+    private fun unblockRequest(request: AtomicThreadEvent) {
         require(request.label.isRequest && request.label.isBlocking)
-        require(!isBlockedDanglingRequest(request))
-        require(request in danglingEvents)
-        danglingEvents.remove(request)
+        require(!execution.isBlockedDanglingRequest(request))
+        val descriptor = blockedEvents[request.threadId]
+            ?.ensure { it.request == request }
+            ?: return
+        blockedEvents.remove(request.threadId)
     }
 
     private fun setUnblockingResponse(response: AtomicThreadEvent) {
         require(response.label.isResponse && response.label.isBlocking)
-        val request = response.parent
-            .ensure { it != null }
-            .ensure { isBlockedDanglingRequest(it!!) }
-            .ensure { it in danglingEvents }
-        danglingEvents.put(request!!, response).ensureNull()
+        val descriptor = blockedEvents[response.threadId].ensure {
+            it != null && execution.isBlockedDanglingRequest(it.request)
+        }
+        descriptor!!.setResponse(response)
     }
 
     private fun getUnblockingResponse(request: AtomicThreadEvent): AtomicThreadEvent? {
-        require(isBlockedDanglingRequest(request))
-        require(request in danglingEvents)
-        return danglingEvents[request]
+        require(execution.isBlockedDanglingRequest(request))
+        val descriptor = blockedEvents[request.threadId].ensure {
+            it != null && it.request == request
+        }
+        return descriptor!!.response
     }
 
     /* ************************************************************************* */

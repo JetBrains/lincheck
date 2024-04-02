@@ -259,10 +259,10 @@ fun Execution<AtomicThreadEvent>.getResponse(request: AtomicThreadEvent): Atomic
     }
 }
 
-fun<E : ThreadEvent> Execution<E>.isBlockedDanglingRequest(event: E): Boolean {
-    return event.label.isRequest && event.label.isBlocking &&
-            (event == this[event.threadId]?.last())
-}
+fun<E : ThreadEvent> Execution<E>.isBlockedDanglingRequest(event: E): Boolean =
+    event.label.isRequest &&
+    event.label.isBlocking &&
+    event == this[event.threadId]?.last()
 
 /**
  * Computes the backward vector clock for the given event and relation.

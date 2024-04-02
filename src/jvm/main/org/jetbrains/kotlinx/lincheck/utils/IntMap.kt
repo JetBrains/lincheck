@@ -162,7 +162,7 @@ class ArrayIntMap<T>(capacity: Int) : MutableIntMap<T> {
 
     override fun put(key: Int, value: T): T? {
         val oldValue = get(key)
-        if (key > array.size) {
+        if (key >= array.size) {
             val newCapacity = key + 1
             expand(newCapacity)
         }
