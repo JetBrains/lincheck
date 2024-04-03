@@ -887,27 +887,24 @@ class EventStructure(
         descriptor.setResponse(response)
     }
 
-    fun getBlockedRequest(iThread: Int): AtomicThreadEvent? =
+    fun getPendingBlockingRequest(iThread: Int): AtomicThreadEvent? =
         playedFrontier[iThread]?.takeIf { it.label.isRequest && it.label.isBlocking }
 
-    private fun isBlockedAwaitingRequest(request: AtomicThreadEvent): Boolean {
+    fun isPendingUnblockedRequest(request: AtomicThreadEvent): Boolean {
         require(playedFrontier.isBlockedDanglingRequest(request))
-        // if we are in replay phase, then the request is blocked
-        // if we cannot replay its response part
+        // if we are in replay phase, then the request is unblocked
+        // if we can replay its response part
         if (inReplayPhase(request.threadId)) {
-            return !canReplayNextEvent(request.threadId)
+            return canReplayNextEvent(request.threadId)
         }
-        // otherwise, the request is blocked if its response part has not yet been added
+        // otherwise, the request is unblocked if its response part was already created
         val descriptor = blockedEvents[request.threadId]
         if (descriptor != null) {
             check(request == descriptor.request)
-            return (descriptor.response == null)
+            return (descriptor.response != null)
         }
-        return false
+        return true
     }
-
-    fun getBlockedAwaitingRequest(iThread: Int): AtomicThreadEvent? =
-        getBlockedRequest(iThread)?.takeIf { isBlockedAwaitingRequest(it) }
 
     /* ************************************************************************* */
     /*      Specific event addition utilities (per event class)                  */
@@ -1092,18 +1089,18 @@ class EventStructure(
     }
 
     fun addCoroutineSuspendResponseEvent(iThread: Int, iActor: Int): AtomicThreadEvent {
-        val request = getBlockedRequest(iThread).ensure { event ->
-            (event != null) && event.label.satisfies<CoroutineSuspendLabel> { actorId == iActor }
-        }!!
+        val request = getPendingBlockingRequest(iThread)!!.ensure { event ->
+            event.label.satisfies<CoroutineSuspendLabel> { actorId == iActor }
+        }
         val (response, events) = addResponseEvents(request)
         check(events.size == 1)
         return response!!
     }
 
     fun addCoroutineCancelResponseEvent(iThread: Int, iActor: Int): AtomicThreadEvent {
-        val request = getBlockedRequest(iThread).ensure { event ->
-            (event != null) && event.label.satisfies<CoroutineSuspendLabel> { actorId == iActor }
-        }!!
+        val request = getPendingBlockingRequest(iThread)!!.ensure { event ->
+            event.label.satisfies<CoroutineSuspendLabel> { actorId == iActor }
+        }
         val label = (request.label as CoroutineSuspendLabel).getResponse(root.label)!!
         tryReplayEvent(iThread)?.let { event ->
             check(event.label == label)

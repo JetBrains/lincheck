@@ -484,7 +484,8 @@ private class EventStructureMonitorTracker(
 ) : MonitorTracker {
 
     override fun acquire(iThread: Int, monitor: OpaqueValue): Boolean {
-        var lockRequest = eventStructure.getBlockedRequest(iThread)
+        var lockRequest = eventStructure.getPendingBlockingRequest(iThread)
+            ?.ensure { it.label is LockLabel }
         if (lockRequest == null) {
             val depth = monitorTracker.reentrancyDepth(iThread, monitor)
             lockRequest = eventStructure.addLockRequestEvent(iThread, monitor,
@@ -530,7 +531,7 @@ private class EventStructureMonitorTracker(
         var waitResponseEvent: AtomicThreadEvent? = null
         var lockRequestEvent: AtomicThreadEvent? = null
         var lockResponseEvent: AtomicThreadEvent? = null
-        val blockedEvent = eventStructure.getBlockedRequest(iThread)
+        val blockedEvent = eventStructure.getPendingBlockingRequest(iThread)
         if (blockedEvent != null) {
             check(blockedEvent.label is WaitLabel || blockedEvent.label is LockLabel)
             if (blockedEvent.label is WaitLabel) {
@@ -586,9 +587,10 @@ private class EventStructureMonitorTracker(
     override fun isWaiting(iThread: Int): Boolean {
         if (monitorTracker.isWaiting(iThread))
             return true
-        val blockedEvent = eventStructure.getBlockedAwaitingRequest(iThread)
+        val blockingRequest = eventStructure.getPendingBlockingRequest(iThread)
+            ?.takeIf { (it.label is LockLabel || it.label is WaitLabel) }
             ?: return false
-        return blockedEvent.label is LockLabel || blockedEvent.label is WaitLabel
+        return !eventStructure.isPendingUnblockedRequest(blockingRequest)
     }
 
     override fun reset() {
@@ -606,7 +608,7 @@ private class EventStructureParkingTracker(
     }
 
     override fun waitUnpark(iThread: Int): Boolean {
-        val parkRequest = eventStructure.getBlockedRequest(iThread)
+        val parkRequest = eventStructure.getPendingBlockingRequest(iThread)
             ?.takeIf { it.label is ParkLabel }
             ?: return false
         val parkResponse = eventStructure.addParkResponseEvent(parkRequest)
@@ -618,9 +620,10 @@ private class EventStructureParkingTracker(
     }
 
     override fun isParked(iThread: Int): Boolean {
-        val blockedEvent = eventStructure.getBlockedAwaitingRequest(iThread)
+        val blockingRequest = eventStructure.getPendingBlockingRequest(iThread)
+            ?.takeIf { it.label is ParkLabel }
             ?: return false
-        return blockedEvent.label is ParkLabel
+        return !eventStructure.isPendingUnblockedRequest(blockingRequest)
     }
 
     override fun reset() {}
