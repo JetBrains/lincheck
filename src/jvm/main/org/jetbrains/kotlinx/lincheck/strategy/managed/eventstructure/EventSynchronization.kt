@@ -233,13 +233,8 @@ private val ThreadSynchronizationAlgebra = object : SynchronizationAlgebra {
  */
 fun ThreadStartLabel.isValidResponse(label: EventLabel): Boolean {
     require(isResponse)
-    return when (label) {
-        is ThreadStartLabel ->
-            label.isRequest && threadId == label.threadId
-        else ->
-            label.asThreadForkLabel()
-                ?.let { threadId in it.forkThreadIds } ?: false
-    }
+    require(label.isRequest)
+    return label is ThreadStartLabel && threadId == label.threadId
 }
 
 fun ThreadStartLabel.getResponse(label: EventLabel): ThreadStartLabel? = when {
@@ -252,13 +247,8 @@ fun ThreadStartLabel.getResponse(label: EventLabel): ThreadStartLabel? = when {
 
 fun ThreadJoinLabel.isValidResponse(label: EventLabel): Boolean {
     require(isResponse)
-    return when (label) {
-        is ThreadJoinLabel ->
-            label.joinThreadIds.containsAll(joinThreadIds)
-        is ThreadFinishLabel ->
-            label.finishedThreadIds.all { it !in joinThreadIds }
-        else -> false
-    }
+    require(label.isRequest || label.isResponse)
+    return label is ThreadJoinLabel && label.joinThreadIds.containsAll(joinThreadIds)
 }
 
 fun ThreadJoinLabel.getResponse(label: EventLabel): EventLabel? = when {
@@ -309,18 +299,11 @@ private val MemoryAccessSynchronizationAlgebra = object : SynchronizationAlgebra
 
 fun ReadAccessLabel.isValidResponse(label: EventLabel): Boolean {
     require(isResponse)
-    return when {
-        label is ReadAccessLabel && label.isRequest ->
-            kClass == label.kClass &&
-            location == label.location &&
-            isExclusive == label.isExclusive
-
-        // TODO: here and in the similar places, remove this branch?
-        else -> label.asWriteAccessLabel(location)?.let {
-            // TODO: also check kClass
-            value == it.value
-        } ?: false
-    }
+    require(label.isRequest)
+    return label is ReadAccessLabel &&
+           kClass == label.kClass &&
+           location == label.location &&
+           isExclusive == label.isExclusive
 }
 
 fun ReadAccessLabel.getResponse(label: EventLabel): EventLabel? = when {
@@ -374,15 +357,10 @@ private val MutexSynchronizationAlgebra = object : SynchronizationAlgebra {
 
 fun LockLabel.isValidResponse(label: EventLabel): Boolean {
     require(isResponse)
-    return when {
-        label is LockLabel && label.isRequest ->
-            mutexID == label.mutexID &&
-            reentrancyDepth == label.reentrancyDepth
-
-        else -> label.asUnlockLabel(mutexID)?.let {
-            !it.isReentry && (isReentry implies it.isInitializingUnlock())
-        } ?: false
-    }
+    require(label.isRequest)
+    return label is LockLabel &&
+           mutexID == label.mutexID &&
+           reentrancyDepth == label.reentrancyDepth
 }
 
 fun LockLabel.getResponse(label: EventLabel): LockLabel? = when {
@@ -395,12 +373,8 @@ fun LockLabel.getResponse(label: EventLabel): LockLabel? = when {
 
 fun WaitLabel.isValidResponse(label: EventLabel): Boolean {
     require(isResponse)
-    return when (label) {
-        is WaitLabel ->
-            label.isRequest && mutexID == label.mutexID
-        else ->
-            label.asNotifyLabel(mutexID) != null
-    }
+    require(label.isRequest)
+    return label is WaitLabel && mutexID == label.mutexID
 }
 
 fun WaitLabel.getResponse(label: EventLabel): WaitLabel? = when {
@@ -439,11 +413,8 @@ private val ParkingSynchronizationAlgebra = object : SynchronizationAlgebra {
 
 fun ParkLabel.isValidResponse(label: EventLabel): Boolean {
     require(isResponse)
-    return when (label) {
-        is ParkingEventLabel ->
-            (label.isRequest || label.isSend) && threadId == label.threadId
-        else -> false
-    }
+    require(label.isRequest)
+    return label is ParkingEventLabel && threadId == label.threadId
 }
 
 fun ParkLabel.getResponse(label: EventLabel): ParkLabel? = when {
@@ -490,23 +461,11 @@ private val CoroutineSynchronizationAlgebra = object : SynchronizationAlgebra {
 
 fun CoroutineSuspendLabel.isValidResponse(label: EventLabel): Boolean {
     require(isResponse)
-    return when (label) {
-        is CoroutineSuspendLabel ->
-            label.isRequest
-                    && (label.promptCancellation implies cancelled)
-                    && threadId == label.threadId
-                    && actorId == label.actorId
-
-        is CoroutineResumeLabel ->
-            !cancelled
-                    && threadId == label.threadId
-                    && actorId == label.actorId
-
-        is InitializationLabel ->
-            cancelled
-
-        else -> false
-    }
+    require(label.isRequest)
+    return label is CoroutineSuspendLabel &&
+           threadId == label.threadId &&
+           actorId == label.actorId &&
+           (label.promptCancellation implies cancelled)
 }
 
 fun CoroutineSuspendLabel.getResponse(label: EventLabel): CoroutineSuspendLabel? = when {
