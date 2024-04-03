@@ -114,19 +114,10 @@ class EventStructure(
     private val objectRegistry = ObjectRegistry()
 
     /**
-     * For each blocked thread, that is a thread waiting
-     * in some blocking operation like a mutex lock,
-     * stores a descriptor of the blocked event
-     * (see [BlockedEventDescriptor]).
-     */
-    private val blockedEvents: MutableThreadMap<BlockedEventDescriptor> =
-        ArrayIntMap(this.nThreads)
-
-    /**
-     * Descriptor of a blocked event.
+     * For each blocked thread, stores a descriptor of the blocked event.
      *
      * The thread may become blocked when it issues a request-event
-     * denoting some blocking operation (e.g. mutex lock),
+     * denoting some blocking operation (e.g., mutex lock),
      * such that the corresponding response-event cannot be created immediately
      * (for example, because the mutex is already acquired by another thread).
      *
@@ -144,28 +135,9 @@ class EventStructure(
      * It is added later when the blocked thread is scheduled again.
      * At this point the current [BlockedEventDescriptor] is removed
      * from the [blockedEvents] mapping, and the thread becomes fully unblocked.
-     *
-     * @property request The request part of blocked event.
-     * @property response The response part of the blocked event.
      */
-    class BlockedEventDescriptor(val request: AtomicThreadEvent) {
-
-        init {
-            require(request.label.isRequest)
-            require(request.label.isBlocking)
-        }
-
-        var response: AtomicThreadEvent? = null
-            private set
-
-        fun setResponse(response: AtomicThreadEvent) {
-            require(response.label.isResponse)
-            require(response.label.isBlocking)
-            require(this.request == response.request)
-            check(this.response == null)
-            this.response = response
-        }
-    }
+    private val blockedEvents: MutableThreadMap<BlockedEventDescriptor> =
+        ArrayIntMap(this.nThreads)
 
     private val delayedConsistencyCheckBuffer = mutableListOf<AtomicThreadEvent>()
 
@@ -627,7 +599,7 @@ class EventStructure(
                     //     these predecessors will result in a causality cycle
                     !causalityOrder(it, event) &&
                     // (2) pinned events, because their response part is pinned,
-                    //     unless the pinned event is blocking dangling event
+                    //     unless the pinned event is blocked event
                     (!pinnedEvents.contains(it) || isBlockedRequest(it))
                 }
             }
@@ -702,10 +674,9 @@ class EventStructure(
         }
         // if there are responses to blocked dangling requests, then set the response of one of these requests
         for (syncEvent in syncEvents) {
-            val requestEvent = syncEvent.parent
-                ?.takeIf { it.label.isRequest && it.label.isBlocking }
+            val blockedRequest = syncEvent.parent?.takeIf { isBlockedRequest(it) }
                 ?: continue
-            if (isBlockedRequest(requestEvent) && getUnblockingResponse(requestEvent) == null) {
+            if (!hasUnblockingResponse(blockedRequest)) {
                 setUnblockingResponse(syncEvent)
                 // mark corresponding backtracking point as visited;
                 // search from the end, because the search event was added recently,
@@ -827,7 +798,7 @@ class EventStructure(
             addEventToCurrentExecution(event)
             return event to listOf(event)
         }
-        if (requestEvent.label.isBlocking && isBlockedRequest(requestEvent)) {
+        if (isBlockedRequest(requestEvent)) {
             val event = getUnblockingResponse(requestEvent)
                 ?: return (null to listOf())
             check(event.label.isResponse)
@@ -854,9 +825,70 @@ class EventStructure(
     /*      Blocking events handling                                             */
     /* ************************************************************************* */
 
+    /**
+     * Descriptor of a blocked event.
+     *
+     * @property request The request part of blocked event.
+     * @property response The response part of the blocked event.
+     *
+     * @see [blockedEvents]
+     */
+    class BlockedEventDescriptor(val request: AtomicThreadEvent) {
+
+        init {
+            require(request.label.isRequest)
+            require(request.label.isBlocking)
+        }
+
+        var response: AtomicThreadEvent? = null
+            private set
+
+        fun setResponse(response: AtomicThreadEvent) {
+            require(response.label.isResponse)
+            require(response.label.isBlocking)
+            require(this.request == response.request)
+            check(this.response == null)
+            this.response = response
+        }
+    }
+
     private fun isBlockedRequest(request: AtomicThreadEvent): Boolean {
         return (request == blockedEvents[request.threadId]?.request)
     }
+
+    private fun blockRequest(request: AtomicThreadEvent) {
+        require(execution.isBlockedDanglingRequest(request))
+        blockedEvents.put(request.threadId, BlockedEventDescriptor(request)).ensureNull()
+    }
+
+    private fun unblockRequest(request: AtomicThreadEvent) {
+        require(request.label.isRequest && request.label.isBlocking)
+        require(!execution.isBlockedDanglingRequest(request))
+        check(request == blockedEvents[request.threadId]!!.request)
+        blockedEvents.remove(request.threadId)
+    }
+
+    private fun hasUnblockingResponse(request: AtomicThreadEvent): Boolean {
+        return (getUnblockingResponse(request) != null)
+    }
+
+    private fun getUnblockingResponse(request: AtomicThreadEvent): AtomicThreadEvent? {
+        require(execution.isBlockedDanglingRequest(request))
+        val descriptor = blockedEvents[request.threadId].ensure {
+            it != null && it.request == request
+        }
+        return descriptor!!.response
+    }
+
+    private fun setUnblockingResponse(response: AtomicThreadEvent) {
+        require(response.label.isResponse && response.label.isBlocking)
+        require(execution.isBlockedDanglingRequest(response.request!!))
+        val descriptor = blockedEvents[response.threadId]!!
+        descriptor.setResponse(response)
+    }
+
+    fun getBlockedRequest(iThread: Int): AtomicThreadEvent? =
+        playedFrontier[iThread]?.takeIf { it.label.isRequest && it.label.isBlocking }
 
     private fun isBlockedAwaitingRequest(request: AtomicThreadEvent): Boolean {
         require(playedFrontier.isBlockedDanglingRequest(request))
@@ -874,41 +906,8 @@ class EventStructure(
         return false
     }
 
-    fun getBlockedRequest(iThread: Int): AtomicThreadEvent? =
-        playedFrontier[iThread]?.takeIf { it.label.isRequest && it.label.isBlocking }
-
     fun getBlockedAwaitingRequest(iThread: Int): AtomicThreadEvent? =
         getBlockedRequest(iThread)?.takeIf { isBlockedAwaitingRequest(it) }
-
-    private fun blockRequest(request: AtomicThreadEvent) {
-        require(execution.isBlockedDanglingRequest(request))
-        blockedEvents.put(request.threadId, BlockedEventDescriptor(request)).ensureNull()
-    }
-
-    private fun unblockRequest(request: AtomicThreadEvent) {
-        require(request.label.isRequest && request.label.isBlocking)
-        require(!execution.isBlockedDanglingRequest(request))
-        val descriptor = blockedEvents[request.threadId]
-            ?.ensure { it.request == request }
-            ?: return
-        blockedEvents.remove(request.threadId)
-    }
-
-    private fun setUnblockingResponse(response: AtomicThreadEvent) {
-        require(response.label.isResponse && response.label.isBlocking)
-        val descriptor = blockedEvents[response.threadId].ensure {
-            it != null && execution.isBlockedDanglingRequest(it.request)
-        }
-        descriptor!!.setResponse(response)
-    }
-
-    private fun getUnblockingResponse(request: AtomicThreadEvent): AtomicThreadEvent? {
-        require(execution.isBlockedDanglingRequest(request))
-        val descriptor = blockedEvents[request.threadId].ensure {
-            it != null && it.request == request
-        }
-        return descriptor!!.response
-    }
 
     /* ************************************************************************* */
     /*      Specific event addition utilities (per event class)                  */
