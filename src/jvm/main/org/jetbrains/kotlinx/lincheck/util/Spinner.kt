@@ -87,7 +87,12 @@ class Spinner(val nThreads: Int = -1) {
     private var counter: Int = 0
 
     /**
-     * Counter of performed [spin] calls.
+     * Counter of performed yield calls.
+     */
+    private var yieldCounter: Int = 0
+
+    /**
+     * Number of the current backoff step.
      * It is used to implement the exponential backoff strategy:
      * each subsequent call to the [spin] performs exponentially more
      * iterations of the spin-wait loop.
@@ -111,8 +116,22 @@ class Spinner(val nThreads: Int = -1) {
     /**
      * The number of spin-loop iterations to be performed per call to [spin].
      */
-    private val spinLoopIterationsPerCall: Int
-        get() = (1 shl backoffStep).coerceAtMost(SPIN_LOOP_ITERATIONS_PER_CALL)
+    private val spinLoopIterations: Int
+        get() = (1 shl backoffStep)
+
+    /**
+     * The number of spin-loop iterations before yielding the current thread
+     * to give other threads the opportunity to run.
+     */
+    private val yieldLimit: Int
+        get() = (1 shl SPIN_LOOP_ITERATIONS_BEFORE_YIELD)
+
+    /**
+     * The exit limit determines the number of spin-loop iterations
+     * after which the spin-loop is advised to exit.
+     */
+    private val exitLimit: Int
+        get() = (1 shl SPIN_LOOP_ITERATIONS_BEFORE_EXIT)
 
     /**
      * Spins the counter for a few iterations.
@@ -133,20 +152,19 @@ class Spinner(val nThreads: Int = -1) {
         Thread.onSpinWait()
         spinWait()
         // update the counters
-        counter += spinLoopIterationsPerCall
-        backoffStep += 1
+        counter += spinLoopIterations
+        backoffStep = (backoffStep + 1).coerceAtMost(SPIN_LOOP_ITERATIONS_PER_CALL)
         // if yield limit is approached,
-        // then yield and give other threads the opportunity to run
-        val yieldLimit = SPIN_LOOP_ITERATIONS_BEFORE_YIELD
+        // then yield and give other threads the opportunity to run;
         // we add 1 to counter, because the number of spin-wait loop iterations
         // in the exponential backoff strategy is equal to
         // `sum(2^i) for i=0..n = 2^(n+1) - 1`
-        if ((counter + 1) % yieldLimit == 0) {
+        if (counter >= (1 + yieldCounter) * yieldLimit) {
+            yieldCounter += 1
             Thread.yield()
         }
         // if exit limit is approached,
         // reset counter and signal to exit the spin-loop
-        val exitLimit = SPIN_LOOP_ITERATIONS_BEFORE_EXIT
         if (counter >= exitLimit) {
             reset()
             return false
@@ -170,7 +188,7 @@ class Spinner(val nThreads: Int = -1) {
         // To achieve this, we do some arithmetic operations on a local variable
         // and try to obfuscate the loop body so that the compiler
         // would not be able to optimize it out.
-        for (i in spinLoopIterationsPerCall downTo 1) {
+        for (i in spinLoopIterations downTo 1) {
             x += (31 * x + 0xBEEF + i) and (0xFFFFFFFFFFFFFFFL)
         }
         // This if statement ensures that the result of the computation
@@ -186,6 +204,7 @@ class Spinner(val nThreads: Int = -1) {
      */
     fun reset() {
         counter = 0
+        yieldCounter = 0
         backoffStep = 0
     }
 
@@ -259,24 +278,11 @@ inline fun <T> Spinner.spinWaitBoundedFor(getter: () -> T?): T? {
 }
 
 /* NOTE:
- * spin limit constants should be powers of 2, in order to play nicely with
- * the exponential backoff strategy with the exponent base being 2
+ * spin limit constants should be powers of 2 to play nicely with
+ * the exponential backoff strategy with the exponent base being 2;
+ * here we define them via their exponent number.
  */
 
-
-/**
- * The maximum number of spin-loop iterations to be performed per call to [Spinner.spin].
- */
-private const val SPIN_LOOP_ITERATIONS_PER_CALL : Int = 1 shl 6 // 64
-
-/**
- * The number of spin-loop iterations before yielding the current thread
- * to give other threads the opportunity to run.
- */
-private const val SPIN_LOOP_ITERATIONS_BEFORE_YIELD : Int = 1 shl 14 // 16,384
-
-/**
- * The exit limit determines the number of spin-loop iterations
- * after which the spin-loop is advised to exit.
- */
-private const val SPIN_LOOP_ITERATIONS_BEFORE_EXIT  : Int = 1 shl 20 // 1,048,576
+private const val SPIN_LOOP_ITERATIONS_PER_CALL     : Int = 6   // 2^6 = 64
+private const val SPIN_LOOP_ITERATIONS_BEFORE_YIELD : Int = 14  // 2^14 = 16,384
+private const val SPIN_LOOP_ITERATIONS_BEFORE_EXIT  : Int = 20  // 2^20 = 1,048,576
