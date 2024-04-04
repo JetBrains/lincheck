@@ -50,7 +50,11 @@ internal class FixedActiveThreadsExecutor(private val testName: String, private 
      *
      * Only the main thread submitting tasks manipulates this spinner.
      */
-    private val resultSpinner = Spinner(nThreads)
+    // we set `nThreads + 1` as a number of threads, because
+    // we have `nThreads` of the scenario plus the main thread waiting for the result;
+    // if this number is greater than the number of available CPUs,
+    // the main thread will be parked immediately without spinning
+    private val resultSpinner = Spinner(nThreads + 1)
 
     /**
      * This flag is set to `true` when [await] detects a hang.
