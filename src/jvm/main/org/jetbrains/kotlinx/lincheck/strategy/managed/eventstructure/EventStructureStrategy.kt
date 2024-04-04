@@ -526,7 +526,8 @@ private class EventStructureMonitorTracker(
             return blockingRequest
         // check if it is a re-entrance lock and obtain lock re-entrance depth
         val lockStack = lockStacks[mutexID]
-            ?.ensure { it.isNotEmpty() && (it.last().threadId == iThread) }
+            ?.ensure { it.isNotEmpty() }
+            ?.takeIf { it.last().threadId == iThread }
         val depth = lockStack?.size ?: 0
         // finally, add the new lock-request
         return eventStructure.addLockRequestEvent(iThread, monitor,
@@ -562,6 +563,9 @@ private class EventStructureMonitorTracker(
             // remove last lock-response event from the stack,
             // since we just released the lock one time
             lockStack.removeLast()
+            if (lockStack.isEmpty()) {
+                lockStacks.remove(mutexID)
+            }
         }
     }
 
