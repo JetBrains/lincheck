@@ -82,14 +82,9 @@ package org.jetbrains.kotlinx.lincheck.util
 class Spinner(val nThreads: Int = -1) {
 
     /**
-     * Counter of performed spin-loop iterations.
+     * Counter of performed [spin] calls.
      */
     private var counter: Int = 0
-
-    /**
-     * Counter of performed yield calls.
-     */
-    private var yieldCounter: Int = 0
 
     /**
      * Number of the current backoff step.
@@ -124,14 +119,14 @@ class Spinner(val nThreads: Int = -1) {
      * to give other threads the opportunity to run.
      */
     private val yieldLimit: Int
-        get() = (1 shl SPIN_LOOP_ITERATIONS_BEFORE_YIELD)
+        get() = SPIN_CALLS_BEFORE_YIELD
 
     /**
      * The exit limit determines the number of spin-loop iterations
      * after which the spin-loop is advised to exit.
      */
     private val exitLimit: Int
-        get() = (1 shl SPIN_LOOP_ITERATIONS_BEFORE_EXIT)
+        get() = SPIN_CALLS_BEFORE_EXIT
 
     /**
      * Spins the counter for a few iterations.
@@ -152,12 +147,11 @@ class Spinner(val nThreads: Int = -1) {
         Thread.onSpinWait()
         spinWait()
         // update the counters
-        counter += spinLoopIterations
-        backoffStep = (backoffStep + 1).coerceAtMost(SPIN_LOOP_ITERATIONS_PER_CALL)
+        counter += 1
+        backoffStep = (backoffStep + 1).coerceAtMost(MAX_BACKOFF_STEP)
         // if yield limit is approached,
         // then yield and give other threads the opportunity to run
-        if (counter >= (1 + yieldCounter) * yieldLimit) {
-            yieldCounter += 1
+        if (counter % yieldLimit == 0) {
             Thread.yield()
         }
         // if exit limit is approached,
@@ -201,7 +195,6 @@ class Spinner(val nThreads: Int = -1) {
      */
     fun reset() {
         counter = 0
-        yieldCounter = 0
         backoffStep = 0
     }
 
@@ -274,12 +267,7 @@ inline fun <T> Spinner.spinWaitBoundedFor(getter: () -> T?): T? {
     return null
 }
 
-/* NOTE:
- * spin limit constants should be powers of 2 to play nicely with
- * the exponential backoff strategy with the exponent base being 2;
- * here we define them via their exponent number.
- */
+private const val MAX_BACKOFF_STEP : Int = 6 // 2^6 = 64 spin-loop iteration per call
 
-private const val SPIN_LOOP_ITERATIONS_PER_CALL     : Int = 6   // 2^6  = 64
-private const val SPIN_LOOP_ITERATIONS_BEFORE_YIELD : Int = 20  // 2^20 = 1,048,576
-private const val SPIN_LOOP_ITERATIONS_BEFORE_EXIT  : Int = 26  // 2^26 = 67,108,864
+private const val SPIN_CALLS_BEFORE_YIELD : Int = 10_000
+private const val SPIN_CALLS_BEFORE_EXIT  : Int = 100_000
