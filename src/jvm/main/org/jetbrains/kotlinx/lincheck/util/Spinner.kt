@@ -155,10 +155,7 @@ class Spinner(val nThreads: Int = -1) {
         counter += spinLoopIterations
         backoffStep = (backoffStep + 1).coerceAtMost(SPIN_LOOP_ITERATIONS_PER_CALL)
         // if yield limit is approached,
-        // then yield and give other threads the opportunity to run;
-        // we add 1 to counter, because the number of spin-wait loop iterations
-        // in the exponential backoff strategy is equal to
-        // `sum(2^i) for i=0..n = 2^(n+1) - 1`
+        // then yield and give other threads the opportunity to run
         if (counter >= (1 + yieldCounter) * yieldLimit) {
             yieldCounter += 1
             Thread.yield()
@@ -283,6 +280,6 @@ inline fun <T> Spinner.spinWaitBoundedFor(getter: () -> T?): T? {
  * here we define them via their exponent number.
  */
 
-private const val SPIN_LOOP_ITERATIONS_PER_CALL     : Int = 6   // 2^6 = 64
-private const val SPIN_LOOP_ITERATIONS_BEFORE_YIELD : Int = 14  // 2^14 = 16,384
-private const val SPIN_LOOP_ITERATIONS_BEFORE_EXIT  : Int = 20  // 2^20 = 1,048,576
+private const val SPIN_LOOP_ITERATIONS_PER_CALL     : Int = 6   // 2^6  = 64
+private const val SPIN_LOOP_ITERATIONS_BEFORE_YIELD : Int = 20  // 2^20 = 1,048,576
+private const val SPIN_LOOP_ITERATIONS_BEFORE_EXIT  : Int = 26  // 2^26 = 67,108,864
