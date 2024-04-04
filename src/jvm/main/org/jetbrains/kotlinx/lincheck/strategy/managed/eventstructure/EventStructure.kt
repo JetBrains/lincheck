@@ -36,9 +36,9 @@ class EventStructure(
     private val internalThreadSwitchCallback: InternalThreadSwitchCallback,
 ) {
     val mainThreadId = nParallelThreads
-    private val initThreadId = nParallelThreads + 1
-    private val maxThreadId = initThreadId
-    private val nThreads = maxThreadId + 1
+    val initThreadId = nParallelThreads + 1
+    val maxThreadId = initThreadId
+    val nThreads = maxThreadId + 1
 
     /**
      * Mutable list of the event structure events.

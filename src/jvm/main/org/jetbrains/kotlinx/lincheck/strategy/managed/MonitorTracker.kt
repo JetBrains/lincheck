@@ -29,34 +29,9 @@ interface MonitorTracker {
 
     fun acquire(iThread: Int, monitor: OpaqueValue): Boolean
 
-    fun acquire(iThread: Int, monitor: OpaqueValue, times: Int): Boolean {
-        require(times > 0)
-        if (!acquire(iThread, monitor))
-            return false
-        repeat(times - 1) {
-            acquire(iThread, monitor)
-                // TODO: use ensure
-                .also { check(it) }
-        }
-        return true
-    }
-
     fun release(iThread: Int, monitor: OpaqueValue)
 
-    fun release(iThread: Int, monitor: OpaqueValue, times: Int) {
-        require(times > 0)
-        require(reentrancyDepth(iThread, monitor) >= times)
-        repeat(times) {
-            release(iThread, monitor)
-        }
-    }
-
-    fun canAcquireMonitor(iThread: Int, monitor: OpaqueValue): Boolean =
-        owner(monitor)?.let { it == iThread } ?: true
-
-    fun owner(monitor: OpaqueValue): Int?
-
-    fun reentrancyDepth(iThread: Int, monitor: OpaqueValue): Int
+    fun canAcquireMonitor(iThread: Int, monitor: OpaqueValue): Boolean
 
     fun waitOnMonitor(iThread: Int, monitor: OpaqueValue): Boolean
 
@@ -76,8 +51,9 @@ class MapMonitorTracker(val nThreads: Int, val allowSpuriousWakeUps: Boolean = f
     // Maintains a set of acquired monitors with information on which thread
     // performed the acquisition and the reentrancy depth.
     private val acquiredMonitors = mutableMapOf<OpaqueValue, MonitorAcquiringInfo>()
-    // Maintains a set of acquired monitors with information on which thread
-    // performed the acquisition and the reentrancy depth.
+    // Maintains a set of monitors on which each thread is waiting.
+    // Note that a thread can wait on a free monitor if it is waiting for a `notify` call.
+    // Stores `null` if thread is not waiting on any monitor.
     private val waitingMonitor = Array<MonitorAcquiringInfo?>(nThreads) { null }
     // Stores `true` for the threads which are waiting for a
     // `notify` call on the monitor stored in `waitingMonitor`.
@@ -117,14 +93,6 @@ class MapMonitorTracker(val nThreads: Int, val allowSpuriousWakeUps: Boolean = f
         return info.iThread == iThread
     }
 
-    override fun owner(monitor: OpaqueValue): Int? =
-        acquiredMonitors[monitor]?.iThread
-
-    override fun reentrancyDepth(iThread: Int, monitor: OpaqueValue): Int {
-        val info = acquiredMonitors[monitor]?.takeIf { it.iThread == iThread } ?: return 0
-        return info.timesAcquired
-    }
-
     /**
      * Performs a logical wait, [isWaiting] for the specified thread
      * returns `true` until the corresponding [notify] or [notifyAll] is invoked.
@@ -134,7 +102,7 @@ class MapMonitorTracker(val nThreads: Int, val allowSpuriousWakeUps: Boolean = f
         if (info != null && info.iThread == iThread) {
             /* in case when current thread owns the lock we do not
              * proceed immediately even if spurious wake-ups are allowed,
-             * we release the lock in order to give other thread a chance to acquire it
+             * we release the lock to give another thread a chance to acquire it
              */
             waitForNotify[iThread] = true
             waitingMonitor[iThread] = info
