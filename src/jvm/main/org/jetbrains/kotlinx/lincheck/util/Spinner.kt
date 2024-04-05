@@ -115,4 +115,4 @@ internal fun SpinnerGroup(nThreads: Int): List<Spinner> {
 }
 
 
-const val SPIN_CYCLES_BOUND: Int = 1_000_000
+const val SPIN_CYCLES_BOUND: Int = 10_000_000
