@@ -285,7 +285,7 @@ internal object LincheckJavaAgent {
      * model-checking strategy, we can transform all classes.
      */
     internal val INSTRUMENT_ALL_CLASSES_IN_MODEL_CHECKING_MODE =
-        System.getProperty("lincheck.instrument_all_classes_in_model_checking_mode")?.toBoolean() ?: false
+        System.getProperty("lincheck.instrumentAllClassesInModelCheckingMode")?.toBoolean() ?: false
 }
 
 internal object LincheckClassFileTransformer : ClassFileTransformer {
