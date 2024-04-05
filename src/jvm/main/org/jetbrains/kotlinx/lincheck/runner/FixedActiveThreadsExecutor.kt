@@ -12,9 +12,7 @@ package org.jetbrains.kotlinx.lincheck.runner
 import kotlinx.atomicfu.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.util.Spinner
-import org.jetbrains.kotlinx.lincheck.util.SpinnerGroup
-import org.jetbrains.kotlinx.lincheck.util.spinWaitBoundedFor
+import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.kotlinx.lincheck.TestThread
 import java.io.*
 import java.lang.*
