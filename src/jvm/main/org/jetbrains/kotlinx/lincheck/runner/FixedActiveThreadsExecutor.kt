@@ -163,23 +163,18 @@ internal class FixedActiveThreadsExecutor(private val testName: String, private 
 
     private fun testThreadRunnable(iThread: Int) = Runnable {
         loop@ while (true) {
-            // TODO: do we need the added ignored section here? We should be not in the testing code.
-            val task = runInIgnoredSection {
-                val task = getTask(iThread)
-                if (task === Shutdown) return@Runnable
-                tasks[iThread].value = null // reset task
-                task as TestThreadExecution
-            }
+            val task = getTask(iThread)
+            if (task === Shutdown) return@Runnable
+            tasks[iThread].value = null // reset task
+            task as TestThreadExecution
             check(task.iThread == iThread)
             try {
                 task.run()
             } catch(e: Throwable) {
-                // TODO: do we need the added ignored section here? We should be not in the testing code.
-                runInIgnoredSection { setResult(iThread, e) }
+                setResult(iThread, e)
                 continue@loop
             }
-            // TODO: do we need the added ignored section here? We should be not in the testing code.
-            runInIgnoredSection { setResult(iThread, Done) }
+            setResult(iThread, Done)
         }
     }
 
