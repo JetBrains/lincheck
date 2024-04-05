@@ -40,26 +40,6 @@ internal class Spinner(val nThreads: Int = -1) {
      * Waits in the spin-loop until the given condition is true
      * with periodical yielding to other threads.
      *
-     * For example, the spin-lock can be implemented with
-     * the help of the [spinWaitUntil] as follows:
-     *
-     * ```
-     *  class SpinLock {
-     *      private val lock = AtomicBoolean()
-     *      private val spinner = Spinner()
-     *
-     *      fun lock() {
-     *          spinner.spinWaitUntil {
-     *              lock.compareAndSet(false, true)
-     *          }
-     *      }
-     *
-     *      fun unlock() {
-     *          lock.set(false)
-     *      }
-     *  }
-     * ```
-     *
      * @param condition A lambda function that determines the condition to wait for.
      *   The function should return true when the condition is satisfied, and false otherwise.
      */
@@ -79,37 +59,6 @@ internal class Spinner(val nThreads: Int = -1) {
      * Waits in the spin-loop until the given condition is true.
      * Exits the spin-loop after a certain number of spin-loop iterations ---
      * typically, in this case, one may want to fall back into some blocking synchronization.
-     *
-     * For example, a simple spin-lock that fall-backs into thread parking can be implemented with
-     * the help of the [spinWaitBoundedUntil] as follows:
-     *
-     * ```
-     *  class SimpleQueuedLock {
-     *      private val lock = AtomicBoolean()
-     *      private val queue = ConcurrentLinkedQueue<Thread>()
-     *      private val spinner = Spinner()
-     *
-     *      fun lock() {
-     *          while (true) {
-     *              val locked = spinner.spinWaitBoundedUntil {
-     *                  lock.compareAndSet(false, true)
-     *              }
-     *              if (locked) return
-     *              val thread = Thread.currentThread()
-     *              if (!queue.contains(thread)
-     *                  queue.add(thread)
-     *              LockSupport.park()
-     *          }
-     *      }
-     *
-     *      fun unlock() {
-     *          lock.set(false)
-     *          queue.poll()?.also {
-     *              LockSupport.unpark(it)
-     *          }
-     *      }
-     *  }
-     * ```
      *
      * @param condition A lambda function that determines the condition to wait for.
      *   The function should return true when the condition is satisfied, and false otherwise.
