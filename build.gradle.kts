@@ -49,7 +49,8 @@ kotlin {
                 api("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
                 api("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion")
                 api("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
-                api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutinesVersion")
+                // api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutinesVersion")
+                api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.0")
                 api("org.ow2.asm:asm-commons:$asmVersion")
                 api("org.ow2.asm:asm-util:$asmVersion")
                 api("org.reflections:reflections:$reflectionsVersion")
@@ -66,7 +67,9 @@ kotlin {
             val mockkVersion: String by project
             dependencies {
                 implementation("junit:junit:$junitVersion")
-                implementation("org.jctools:jctools-core:$jctoolsVersion")
+                implementation("org.jctools:jctools-core:3.1.0")
+                implementation("com.googlecode.concurrent-trees:concurrent-trees:2.6.1")
+                //implementation("org.jctools:jctools-core:$jctoolsVersion")
                 implementation("io.mockk:mockk:${mockkVersion}")
             }
         }
@@ -94,6 +97,7 @@ tasks {
         from(sourceSets["main"].allSource)
     }
     withType<Test> {
+        maxHeapSize = "5g"
         maxParallelForks = 1
         jvmArgs(
             "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",

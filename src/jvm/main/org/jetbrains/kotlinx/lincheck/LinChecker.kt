@@ -53,7 +53,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         check(testConfigurations.isNotEmpty()) { "No Lincheck test configuration to run" }
         for (testCfg in testConfigurations) {
             val failure =
-                if (testCfg.coverageOptions != null) {
+                if (testCfg.coverageOptions != null && testCfg.coverageOptions.fuzz) {
                     testCfg.fuzzImpl()
                 } else {
                     testCfg.checkImpl()

@@ -31,6 +31,7 @@ import java.util.regex.Pattern
  */
 class CoverageOptions(
     excludePatterns: List<String> = listOf(),
+    val fuzz: Boolean = false,
     val includePatterns: List<String> = listOf(),
     private val dataFile: File? = null,
     // TODO: this is now useless, since I am resetting global project data every fuzzing iteration,
