@@ -163,18 +163,20 @@ internal class FixedActiveThreadsExecutor(private val testName: String, private 
 
     private fun testThreadRunnable(iThread: Int) = Runnable {
         loop@ while (true) {
-            val task = getTask(iThread)
-            if (task === Shutdown) return@Runnable
-            tasks[iThread].value = null // reset task
-            task as TestThreadExecution
+            val task = runInIgnoredSection {
+                val task = getTask(iThread)
+                if (task === Shutdown) return@Runnable
+                tasks[iThread].value = null // reset task
+                task as TestThreadExecution
+            }
             check(task.iThread == iThread)
             try {
                 task.run()
             } catch(e: Throwable) {
-                setResult(iThread, e)
+                runInIgnoredSection { setResult(iThread, e) }
                 continue@loop
             }
-            setResult(iThread, Done)
+            runInIgnoredSection { setResult(iThread, Done) }
         }
     }
 

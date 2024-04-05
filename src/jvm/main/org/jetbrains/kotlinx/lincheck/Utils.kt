@@ -202,6 +202,8 @@ internal class LincheckInternalBugException(cause: Throwable): Exception(cause)
 @Suppress("UnusedReceiverParameter")
 internal inline fun<R> EventTracker.runInIgnoredSection(block: () -> R): R =  runInIgnoredSection(Thread.currentThread(), block)
 @Suppress("UnusedReceiverParameter")
+internal inline fun<R> FixedActiveThreadsExecutor.runInIgnoredSection(block: () -> R): R =  runInIgnoredSection(Thread.currentThread(), block)
+@Suppress("UnusedReceiverParameter")
 internal inline fun<R> ParallelThreadsRunner.runInIgnoredSection(block: () -> R): R =  runInIgnoredSection(Thread.currentThread(), block)
 @Suppress("UnusedReceiverParameter")
 internal inline fun<R> LincheckClassFileTransformer.runInIgnoredSection(block: () -> R): R =  runInIgnoredSection(Thread.currentThread(), block)
@@ -210,7 +212,7 @@ internal inline fun<R> LincheckClassFileTransformer.runInIgnoredSection(block: (
 internal inline fun<R> ExecutionClassLoader.runInIgnoredSection(block: () -> R): R =  runInIgnoredSection(Thread.currentThread(), block)
 
 private inline fun <R> runInIgnoredSection(currentThread: Thread, block: () -> R): R =
-    if (currentThread is TestThread && !currentThread.inIgnoredSection) {
+    if (currentThread is TestThread && currentThread.inTestingCode && !currentThread.inIgnoredSection) {
         currentThread.inIgnoredSection = true
         try {
             block()
