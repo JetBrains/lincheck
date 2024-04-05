@@ -53,7 +53,8 @@ internal class FixedActiveThreadsExecutor(private val testName: String, private 
     // we set `nThreads + 1` as a number of threads, because
     // we have `nThreads` of the scenario plus the main thread waiting for the result;
     // if this number is greater than the number of available CPUs,
-    // the main thread will be parked immediately without spinning
+    // the main thread will be parked immediately without spinning;
+    // in this case, if `nCPUs = nThreads` all the scenario threads still will be spinning
     private val resultSpinner = Spinner(nThreads + 1)
 
     /**
