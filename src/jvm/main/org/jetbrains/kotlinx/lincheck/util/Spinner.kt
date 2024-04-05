@@ -20,7 +20,7 @@ package org.jetbrains.kotlinx.lincheck.util
  *
  * @constructor Creates an instance of the [Spinner] class.
  */
-class Spinner(val nThreads: Int = -1) {
+internal class Spinner(val nThreads: Int = -1) {
 
     /**
      * Determines whether the spinner should actually spin in a loop,
@@ -62,8 +62,6 @@ class Spinner(val nThreads: Int = -1) {
      *
      * @param condition A lambda function that determines the condition to wait for.
      *   The function should return true when the condition is satisfied, and false otherwise.
-     *
-     * @see Spinner
      */
     inline fun spinWaitUntil(condition: () -> Boolean) {
         var counter = 0
@@ -118,8 +116,6 @@ class Spinner(val nThreads: Int = -1) {
      *
      * @return `true` if the condition is met; `false` if the condition was not met and
      *   the spin-wait loop exited because the bound was reached.
-     *
-     * @see Spinner
      */
     inline fun Spinner.spinWaitBoundedUntil(condition: () -> Boolean): Boolean {
         var counter = 0
@@ -135,28 +131,27 @@ class Spinner(val nThreads: Int = -1) {
         }
         return result
     }
+}
 
-    /**
-     * Waits for the result of the given [getter] function in the spin-loop until the result is not null.
-     * Exits the spin-loop after a certain number of spin-loop iterations.
-     *
-     * @param getter A lambda function that returns the result to wait for.
-     *
-     * @return The result of waiting, or null if
-     *   the spin-wait loop exited because the bound was reached.
-     *
-     * @see Spinner.spinWaitBoundedFor
-     */
-    inline fun <T> spinWaitBoundedFor(getter: () -> T?): T? {
-        spinWaitBoundedUntil {
-            val result = getter()
-            if (result != null)
-                return result
-            false
-        }
-        return null
+/**
+ * Waits for the result of the given [getter] function in the spin-loop until the result is not null.
+ * Exits the spin-loop after a certain number of spin-loop iterations.
+ *
+ * @param getter A lambda function that returns the result to wait for.
+ *
+ * @return The result of waiting, or null if
+ *   the spin-wait loop exited because the bound was reached.
+ *
+ * @see Spinner.spinWaitBoundedFor
+ */
+internal inline fun <T> Spinner.spinWaitBoundedFor(getter: () -> T?): T? {
+    spinWaitBoundedUntil {
+        val result = getter()
+        if (result != null)
+            return result
+        false
     }
-
+    return null
 }
 
 /**
@@ -165,7 +160,8 @@ class Spinner(val nThreads: Int = -1) {
  *
  * @param nThreads The number of threads in the group.
  */
-fun SpinnerGroup(nThreads: Int): List<Spinner> {
+@Suppress("FunctionName")
+internal fun SpinnerGroup(nThreads: Int): List<Spinner> {
     return Array(nThreads) { Spinner(nThreads) }.asList()
 }
 
