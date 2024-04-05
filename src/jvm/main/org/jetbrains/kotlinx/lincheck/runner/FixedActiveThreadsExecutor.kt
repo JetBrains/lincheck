@@ -12,9 +12,7 @@ package org.jetbrains.kotlinx.lincheck.runner
 import kotlinx.atomicfu.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.util.Spinner
-import org.jetbrains.kotlinx.lincheck.util.SpinnerGroup
-import org.jetbrains.kotlinx.lincheck.util.spinWaitBoundedFor
+import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.kotlinx.lincheck.TestThread
 import java.io.*
 import java.lang.*
@@ -50,7 +48,12 @@ internal class FixedActiveThreadsExecutor(private val testName: String, private 
      *
      * Only the main thread submitting tasks manipulates this spinner.
      */
-    private val resultSpinner = Spinner(nThreads)
+    // we set `nThreads + 1` as a number of threads, because
+    // we have `nThreads` of the scenario plus the main thread waiting for the result;
+    // if this number is greater than the number of available CPUs,
+    // the main thread will be parked immediately without spinning;
+    // in this case, if `nCPUs = nThreads` all the scenario threads still will be spinning
+    private val resultSpinner = Spinner(nThreads + 1)
 
     /**
      * This flag is set to `true` when [await] detects a hang.
