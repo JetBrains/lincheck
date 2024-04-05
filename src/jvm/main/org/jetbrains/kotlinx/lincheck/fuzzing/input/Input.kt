@@ -46,7 +46,8 @@ class Input(
         get() {
             if (executionDurationMs == -1) return Double.MAX_VALUE
             // TODO: check formula from AFL
-            return (executionDurationMs.toDouble() / 1000.0) * scenario.size // formula from the head
+            // return (executionDurationMs.toDouble() / 1000.0) * scenario.size // execution time brings non-determinism
+            return 1.0 / scenario.size.toDouble()
         }
 
     /** Number of mutations (children) that were produced from this input. */

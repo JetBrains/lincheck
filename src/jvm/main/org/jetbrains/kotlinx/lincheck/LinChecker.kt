@@ -95,11 +95,14 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
 
             // TODO: uncomment??
             // Reset the parameter generator ranges to start with the same initial bounds on each scenario generation.
-            // testStructure.parameterGenerators.forEach { it.reset() }
+            if ((i + 1) % FUZZER_PARAMS_REFRESH_CYCLE == 0) {
+                testStructure.parameterGenerators.forEach { it.reset() }
+            }
         }
 
         val failure = fuzzer.getFirstFailure()
         if (failure != null) {
+            println("Iteration on failure: ${fuzzer.iterationOfFirstFailure + 1} / $iterations")
             val minimizedFailedIteration = if (!minimizeFailedScenario) failure else failure.minimize(this)
             reporter.logFailedIteration(minimizedFailedIteration)
             return minimizedFailedIteration
@@ -132,7 +135,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             reporter.logIteration(i + 1 + customScenarios.size, iterations, scenario)
             val failure = scenario.run(this, verifier)
             if (failure != null) {
-                println("Iteration on failure: $i / $iterations")
+                println("Iteration on failure: ${i + 1} / $iterations")
                 val minimizedFailedIteration = if (!minimizeFailedScenario) failure else failure.minimize(this)
                 reporter.logFailedIteration(minimizedFailedIteration)
                 return minimizedFailedIteration
@@ -204,6 +207,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         }
 
         private const val VERIFIER_REFRESH_CYCLE = 100
+        private const val FUZZER_PARAMS_REFRESH_CYCLE = 25
     }
 }
 

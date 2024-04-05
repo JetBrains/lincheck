@@ -49,7 +49,7 @@ class RemoveActorFromParallelMutation(random: Random) : Mutation(random) {
             mutationThreadId >= 0 &&
             mutationThreadId < scenario.parallelExecution.size &&
             // when single or zero thread will exist after removal
-            !(scenario.parallelExecution.size <= 2 && scenario.parallelExecution[mutationThreadId].size == 1)
+            scenario.parallelExecution[mutationThreadId].size != 1
         )
     }
 }

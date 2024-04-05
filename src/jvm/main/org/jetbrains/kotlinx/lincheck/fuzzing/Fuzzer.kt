@@ -61,6 +61,7 @@ class Fuzzer(
     private val savedInputs: MutableList<Input> = mutableListOf()
     /** Contains failures that were found during fuzzing. */
     private val failures: MutableList<FailedInput> = mutableListOf()
+    var iterationOfFirstFailure = -1
 
     /** Utilities for fuzzing process */
     private val random = testStructure.randomProvider.createRandom()
@@ -135,6 +136,8 @@ class Fuzzer(
             // TODO: check if failure is unique, then save, otherwise skip
             // save to failed inputs
             failures.add(FailedInput(currentInput!!, failure))
+
+            if (iterationOfFirstFailure == -1) iterationOfFirstFailure = totalExecutions
         }
         if (newCoverageFound) {
             // save input if it uncovers new program regions (failed inputs also saved)
