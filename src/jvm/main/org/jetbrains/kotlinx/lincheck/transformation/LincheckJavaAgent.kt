@@ -175,13 +175,13 @@ internal object LincheckJavaAgent {
      *
      * @param className The name of the class to be transformed.
      */
-    fun ensureClassAndAllSuperClassesAreTransformed(className: String) {
+    fun ensureClassHierarchyIsTransformed(className: String) {
         if (INSTRUMENT_ALL_CLASSES_IN_MODEL_CHECKING_MODE) {
             Class.forName(className)
             return
         }
         if (className in instrumentedClassesInTheModelCheckingMode) return // already instrumented
-        ensureClassAndAllSuperClassesAreTransformed(Class.forName(className), Collections.newSetFromMap(IdentityHashMap()))
+        ensureClassHierarchyIsTransformed(Class.forName(className), Collections.newSetFromMap(IdentityHashMap()))
     }
 
 
@@ -195,7 +195,7 @@ internal object LincheckJavaAgent {
         if (INSTRUMENT_ALL_CLASSES_IN_MODEL_CHECKING_MODE) {
             return
         }
-        ensureObjectIsTransformedImpl(testInstance, Collections.newSetFromMap(IdentityHashMap()))
+        ensureObjectIsTransformed(testInstance, Collections.newSetFromMap(IdentityHashMap()))
     }
 
     /**
@@ -208,7 +208,7 @@ internal object LincheckJavaAgent {
             return
         }
         if (clazz.name in instrumentedClassesInTheModelCheckingMode) return // already instrumented
-        ensureClassAndAllSuperClassesAreTransformed(clazz, Collections.newSetFromMap(IdentityHashMap()))
+        ensureClassHierarchyIsTransformed(clazz, Collections.newSetFromMap(IdentityHashMap()))
     }
 
     /**
@@ -228,7 +228,7 @@ internal object LincheckJavaAgent {
 
         var clazz: Class<*> = obj.javaClass
 
-        ensureClassAndAllSuperClassesAreTransformed(clazz)
+        ensureClassHierarchyIsTransformed(clazz)
 
         while (true) {
             clazz.declaredFields
@@ -236,7 +236,7 @@ internal object LincheckJavaAgent {
                 .filter { !Modifier.isStatic(it.modifiers) }
                 .mapNotNull { readFieldViaUnsafe(obj, it) }
                 .forEach {
-                    ensureObjectIsTransformedImpl(it, processedObjects)
+                    ensureObjectIsTransformed(it, processedObjects)
                 }
             clazz = clazz.superclass ?: break
         }
@@ -248,7 +248,7 @@ internal object LincheckJavaAgent {
      * @param clazz The class to be transformed.
      * @param processedObjects Set of objects that have already been processed to prevent duplicate transformation.
      */
-    private fun ensureClassAndAllSuperClassesAreTransformed(clazz: Class<*>, processedObjects: MutableSet<Any>) {
+    private fun ensureClassHierarchyIsTransformed(clazz: Class<*>, processedObjects: MutableSet<Any>) {
         if (instrumentation.isModifiableClass(clazz) && shouldTransform(clazz.name, instrumentationMode)) {
             instrumentedClassesInTheModelCheckingMode += clazz.name
             instrumentation.retransformClasses(clazz)
@@ -261,11 +261,11 @@ internal object LincheckJavaAgent {
             .filter { Modifier.isStatic(it.modifiers) }
             .mapNotNull { readFieldViaUnsafe(null, it) }
             .forEach {
-                ensureObjectIsTransformedImpl(it, processedObjects)
+                ensureObjectIsTransformed(it, processedObjects)
             }
         clazz.superclass?.let {
             if (it.name in instrumentedClassesInTheModelCheckingMode) return // already instrumented
-            ensureClassAndAllSuperClassesAreTransformed(it, processedObjects)
+            ensureClassHierarchyIsTransformed(it, processedObjects)
         }
     }
 
