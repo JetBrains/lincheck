@@ -653,13 +653,13 @@ abstract class ManagedStrategy(
     override fun beforeReadFinalFieldStatic(className: String) = runInIgnoredSection {
         // We need to ensure all the classes related to the reading object are instrumented.
         // The following call checks all the static fields.
-        LincheckJavaAgent.ensureClassAndAllSuperClassesAreTransformed(className.canonicalClassName)
+        LincheckJavaAgent.ensureClassHierarchyIsTransformed(className.canonicalClassName)
     }
 
     override fun beforeReadFieldStatic(className: String, fieldName: String, codeLocation: Int) = runInIgnoredSection {
         // We need to ensure all the classes related to the reading object are instrumented.
         // The following call checks all the static fields.
-        LincheckJavaAgent.ensureClassAndAllSuperClassesAreTransformed(className.canonicalClassName)
+        LincheckJavaAgent.ensureClassHierarchyIsTransformed(className.canonicalClassName)
 
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
@@ -802,7 +802,7 @@ abstract class ManagedStrategy(
     }
 
     override fun beforeNewObjectCreation(className: String) = runInIgnoredSection {
-        LincheckJavaAgent.ensureClassAndAllSuperClassesAreTransformed(className)
+        LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
     }
 
     override fun afterNewObjectCreation(obj: Any) {
@@ -873,7 +873,7 @@ abstract class ManagedStrategy(
             null -> {
                 if (owner == null) {
                     runInIgnoredSection {
-                        LincheckJavaAgent.ensureClassAndAllSuperClassesAreTransformed(className.canonicalClassName)
+                        LincheckJavaAgent.ensureClassHierarchyIsTransformed(className.canonicalClassName)
                     }
                 }
                 if (collectTrace) {
