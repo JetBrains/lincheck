@@ -203,7 +203,7 @@ internal object LincheckJavaAgent {
      *
      * @param clazz the class to transform
      */
-    private fun ensureClassAndAllSuperClassesAreTransformed(clazz: Class<*>) {
+    private fun ensureClassHierarchyIsTransformed(clazz: Class<*>) {
         if (INSTRUMENT_ALL_CLASSES_IN_MODEL_CHECKING_MODE) {
             return
         }
