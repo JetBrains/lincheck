@@ -871,7 +871,7 @@ abstract class ManagedStrategy(
             }
 
             null -> {
-                if (owner == null) {
+                if (owner == null) { // static method
                     runInIgnoredSection {
                         LincheckJavaAgent.ensureClassHierarchyIsTransformed(className.canonicalClassName)
                     }
