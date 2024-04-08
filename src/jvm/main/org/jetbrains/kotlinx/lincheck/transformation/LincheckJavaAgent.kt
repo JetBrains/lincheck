@@ -173,6 +173,16 @@ internal object LincheckJavaAgent {
     /**
      * Ensures that the specified class and all its superclasses are transformed.
      *
+     * This function is called before creating a new instance of the specified class
+     * or reading a static field of it. It ensures that the whole hierarchy of this class
+     * and the classes of all the static fields (this process is recursive) is transformed.
+     * Notably, some of these classes may not be loaded yet, and invoking the `<cinit>`
+     * during the analysis could cause non-deterministic behaviour (the class initialization
+     * is invoked only once, while Lincheck relies on the events reproducibility).
+     * To eliminate the issue, this function also loads the class before transformation,
+     * thus, initializing it here, in an ignored section of the analysis, re-transforming
+     * the class after that.
+     *
      * @param className The name of the class to be transformed.
      */
     fun ensureClassHierarchyIsTransformed(className: String) {
@@ -188,6 +198,8 @@ internal object LincheckJavaAgent {
     /**
      * Ensures that the given object and all its referenced objects are transformed for Lincheck analysis.
      * If the INSTRUMENT_ALL_CLASSES_IN_MODEL_CHECKING_MODE flag is set to true, no transformation is performed.
+     *
+     * The function is called upon a test instance creation, to ensure that all the classes related to it are transformed.
      *
      * @param testInstance the object to be transformed
      */
