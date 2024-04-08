@@ -218,7 +218,7 @@ internal object LincheckJavaAgent {
      * @param obj The object to be ensured for transformation.
      * @param processedObjects A set of processed objects to avoid infinite recursion.
      */
-    private fun ensureObjectIsTransformedImpl(obj: Any, processedObjects: MutableSet<Any>) {
+    private fun ensureObjectIsTransformed(obj: Any, processedObjects: MutableSet<Any>) {
         if (!instrumentation.isModifiableClass(obj.javaClass) || !shouldTransform(obj.javaClass.name, instrumentationMode)) {
             return
         }
