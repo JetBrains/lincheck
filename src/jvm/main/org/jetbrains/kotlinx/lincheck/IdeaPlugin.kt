@@ -49,6 +49,13 @@ fun ideaPluginEnabled(): Boolean {
 }
 
 /**
+ * This is a marker method for the plugin to detect the Lincheck test start.
+ *
+ * The plugin uses this method to disable breakpoints until a failure is found.
+ */
+fun lincheckVerificationStarted() {}
+
+/**
  * If Debugger needs to replay execution (due to earlier trace point selection), it replaces the result of this
  * method to `true`.
  */
