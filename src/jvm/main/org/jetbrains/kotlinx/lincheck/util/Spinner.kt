@@ -11,16 +11,80 @@
 package org.jetbrains.kotlinx.lincheck.util
 
 /**
- * A spinner implements utility functions for spinning in a loop.
+ * A spinner implements spinning in a loop with optional yielding to other threads.
+ *
+ * This class provides a method [spin], that should be called inside a spin-loop.
+ * This method performs a few spin-loop iterations and optionally periodically yields.
+ *
+ * For example, a simple spin-lock class can be implemented with the help of the [Spinner] as follows:
+ *
+ * ```
+ *  class SpinLock {
+ *      private val lock = AtomicBoolean()
+ *      private val spinner = Spinner()
+ *
+ *      fun lock() {
+ *          while (!lock.compareAndSet(false, true)) {
+*               spinner.spin()
+*           }
+ *      }
+ *
+ *      fun unlock() {
+ *          lock.set(false)
+ *      }
+ *  }
+ * ```
+ *
+ * The `lock` method can be shortened with the help of the [spinWaitUntil] extension method:
+ *
+ * ```
+ *  fun lock() {
+ *      spinner.spinWaitUntil { lock.compareAndSet(false, true) }
+ *  }
+ * ```
+ *
+ * Sometimes, it is useful to fall back into a blocking synchronization if the spin-loop spins for too long.
+ * For this purpose, the [spin] method has a boolean return value.
+ * It returns `true` if the spinning should be continued,
+ * or `false` if it is advised to exit the spin-loop.
+ *
+ * ```
+ *  class SimpleQueuedLock {
+ *      private val lock = AtomicBoolean()
+ *      private val queue = ConcurrentLinkedQueue<Thread>()
+ *      private val spinner = Spinner()
+ *
+ *      fun lock() {
+ *          while (!lock.compareAndSet(false, true)) {
+ *              if (spinner.spin())
+ *                  continue
+ *              val thread = Thread.currentThread()
+ *              if (!queue.contains(thread))
+ *                  queue.add(thread)
+ *              LockSupport.park()
+ *          }
+ *      }
+ *
+ *      fun unlock() {
+ *          lock.set(false)
+ *          queue.poll()?.also {
+ *              LockSupport.unpark(it)
+ *          }
+ *      }
+ *  }
+ * ```
  *
  * @property nThreads If passed, denotes the number of threads in a group that
  *   may wait for a common condition in the spin-loop.
- *   This information is used to check if the number of available CPUs is greater than
- *   the number of threads, and avoid spinning if that is not the case.
  *
  * @constructor Creates an instance of the [Spinner] class.
  */
-internal class Spinner(val nThreads: Int = -1) {
+class Spinner(val nThreads: Int = -1) {
+
+    /**
+     * Counter of performed spin-loop iterations.
+     */
+    private var counter: Int = 0
 
     /**
      * Determines whether the spinner should actually spin in a loop,
@@ -31,69 +95,154 @@ internal class Spinner(val nThreads: Int = -1) {
      * If the number of processors is less than the number of threads,
      * then the spinner should exit the loop immediately.
      */
-    val shouldSpin: Boolean = run {
+    private val shouldSpin: Boolean = run {
         val nProcessors = Runtime.getRuntime().availableProcessors()
         (nProcessors >= nThreads)
     }
 
     /**
-     * Waits in the spin-loop until the given condition is true
-     * with periodical yielding to other threads.
-     *
-     * @param condition A lambda function that determines the condition to wait for.
-     *   The function should return true when the condition is satisfied, and false otherwise.
+     * The number of spin-loop iterations to be performed per call to [spin].
      */
-    inline fun spinWaitUntil(condition: () -> Boolean) {
-        var counter = 0
-        val yieldLimit = 1 + if (shouldSpin) SPIN_CYCLES_BOUND else 0
-        while (!condition()) {
-            Thread.onSpinWait()
-            counter++
-            if (counter % yieldLimit == 0) {
-                Thread.yield()
-            }
+    private val spinLoopIterationsPerCall: Int =
+        if (shouldSpin) SPIN_LOOP_ITERATIONS_PER_CALL else 1
+
+    /**
+     * The number of spin-loop iterations before yielding the current thread
+     * to give other threads the opportunity to run.
+     */
+    private val yieldLimit =
+        if (shouldSpin) SPIN_LOOP_ITERATIONS_BEFORE_YIELD else 1
+
+    /**
+     * The exit limit determines the number of spin-loop iterations
+     * after which the spin-loop is advised to exit.
+     */
+    private val exitLimit =
+        if (shouldSpin) SPIN_LOOP_ITERATIONS_BEFORE_EXIT else 1
+
+    /**
+     * Spins the counter for a few iterations.
+     * In addition, in the case of a yielding spinner, it yields occasionally
+     * to give other threads the opportunity to run.
+     *
+     * @return `true` if the spin-loop should continue;
+     *   `false` if the spin-loop is advised to exit,
+     *   for example, to fall back into a blocking synchronization.
+     */
+    fun spin(): Boolean {
+        // perform spin waiting
+        Thread.onSpinWait()
+        spinWait()
+        // update the counter
+        counter += spinLoopIterationsPerCall
+        // if yield limit is approached,
+        // then yield and give other threads the opportunity to run
+        if (counter % yieldLimit == 0) {
+            Thread.yield()
+        }
+        // if exit limit is approached,
+        // reset counter and signal to exit the spin-loop
+        if (counter >= exitLimit) {
+            counter = 0
+            return false
+        }
+        return true
+    }
+
+    /**
+     * Auxiliary variable storing a pseudo-random value,
+     * which is used inside the [spinWait] to perform spin waiting.
+     */
+    private var sink: Long = System.nanoTime()
+
+    /**
+     * Implements a spin waiting procedure.
+     */
+    private fun spinWait() {
+        // Initialize with a pseudo-random number to prevent optimizations.
+        var x = sink
+        // We want to perform few spins while avoiding accesses to the shared memory.
+        // To achieve this, we do some arithmetic operations on a local variable
+        // and try to obfuscate the loop body so that the compiler
+        // would not be able to optimize it out.
+        for (i in spinLoopIterationsPerCall downTo 1) {
+            x += (31 * x + 0xBEEF + i) and (0xFFFFFFFFFFFFFFFL)
+        }
+        // This if statement ensures that the result of the computation
+        // will have a visible side effect and thus will not be optimized,
+        // but at the same time it avoids the actual store on a hot-path.
+        if (x == 0xDEADL) {
+            sink += x
         }
     }
 
     /**
-     * Waits in the spin-loop until the given condition is true.
-     * Exits the spin-loop after a certain number of spin-loop iterations ---
-     * typically, in this case, one may want to fall back into some blocking synchronization.
-     *
-     * @param condition A lambda function that determines the condition to wait for.
-     *   The function should return true when the condition is satisfied, and false otherwise.
-     *
-     * @return `true` if the condition is met; `false` if the condition was not met and
-     *   the spin-wait loop exited because the bound was reached.
+     * Resets the state of the spinner.
      */
-    inline fun Spinner.spinWaitBoundedUntil(condition: () -> Boolean): Boolean {
-        var counter = 0
-        val exitLimit = if (shouldSpin) SPIN_CYCLES_BOUND else 0
-        var result = true
-        while (!condition()) {
-            if (counter == exitLimit) {
-                result = condition()
-                break
-            }
-            Thread.onSpinWait()
-            counter++
-        }
-        return result
+    fun reset() {
+        counter = 0
     }
+
+}
+
+/**
+ * A [SpinnerGroup] function creates a list of spinners to be used by the specified number of threads.
+ * It provides a convenient way to manage multiple spinners together.
+ *
+ * @param nThreads The number of threads in the group.
+ */
+fun SpinnerGroup(nThreads: Int): List<Spinner> {
+    return Array(nThreads) { Spinner(nThreads) }.asList()
+}
+
+/**
+ * Waits in the spin-loop until the given condition is true.
+ *
+ * @param condition a lambda function that determines the condition to wait for.
+ *   The function should return true when the condition is satisfied, and false otherwise.
+ *
+ * @see Spinner
+ */
+inline fun Spinner.spinWaitUntil(condition: () -> Boolean) {
+    while (!condition()) {
+        spin()
+    }
+    reset()
+}
+
+/**
+ * Waits in the spin-loop until the given condition is true.
+ * Exits the spin-loop after a certain number of spin-loop iterations.
+ *
+ * @param condition a lambda function that determines the condition to wait for.
+ *   The function should return true when the condition is satisfied, and false otherwise.
+
+ * @return `true` if the condition is met; `false` if the condition is not met.
+ *
+ * @see Spinner
+ */
+inline fun Spinner.spinWaitBoundedUntil(condition: () -> Boolean): Boolean {
+    var result = true
+    while (!condition()) {
+        if (spin()) continue
+        result = condition()
+        break
+    }
+    reset()
+    return result
 }
 
 /**
  * Waits for the result of the given [getter] function in the spin-loop until the result is not null.
  * Exits the spin-loop after a certain number of spin-loop iterations.
  *
- * @param getter A lambda function that returns the result to wait for.
+ * @param getter a lambda function that returns the result to wait for.
  *
- * @return The result of waiting, or null if
- *   the spin-wait loop exited because the bound was reached.
+ * @return the result of waiting.
  *
- * @see Spinner.spinWaitBoundedFor
+ * @see Spinner
  */
-internal inline fun <T> Spinner.spinWaitBoundedFor(getter: () -> T?): T? {
+inline fun <T> Spinner.spinWaitBoundedFor(getter: () -> T?): T? {
     spinWaitBoundedUntil {
         val result = getter()
         if (result != null)
@@ -103,16 +252,6 @@ internal inline fun <T> Spinner.spinWaitBoundedFor(getter: () -> T?): T? {
     return null
 }
 
-/**
- * A [SpinnerGroup] function creates a list of spinners to be used by the specified number of threads.
- * It provides a convenient way to manage multiple spinners together.
- *
- * @param nThreads The number of threads in the group.
- */
-@Suppress("FunctionName")
-internal fun SpinnerGroup(nThreads: Int): List<Spinner> {
-    return Array(nThreads) { Spinner(nThreads) }.asList()
-}
-
-
-const val SPIN_CYCLES_BOUND: Int = 1_000_000
+private const val SPIN_LOOP_ITERATIONS_PER_CALL     : Int = 100
+private const val SPIN_LOOP_ITERATIONS_BEFORE_YIELD : Int = 10_000_000
+private const val SPIN_LOOP_ITERATIONS_BEFORE_EXIT  : Int = 100_000_000

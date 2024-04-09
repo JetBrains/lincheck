@@ -26,6 +26,7 @@ import java.net.URL;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static org.jetbrains.kotlinx.lincheck.IdeaPluginKt.ideaPluginEnabled;
 import static org.jetbrains.kotlinx.lincheck.LincheckClassLoader.ASM_API;
 import static org.jetbrains.kotlinx.lincheck.LincheckClassLoader.REMAPPED_PACKAGE_INTERNAL_NAME;
 import static org.jetbrains.kotlinx.lincheck.UtilsKt.getCanonicalClassName;
@@ -158,7 +159,7 @@ public class LincheckClassLoader extends ClassLoader {
         ClassVersionGetter infoGetter = new ClassVersionGetter();
         cr.accept(infoGetter, 0);
         ClassWriter cw = new TransformationClassWriter(infoGetter.getClassVersion(), remapper);
-        LincheckClassVisitor cv = new LincheckClassVisitor(transformationMode, cw);
+        LincheckClassVisitor cv = new LincheckClassVisitor(transformationMode, cw, ideaPluginEnabled());
         cr.accept(cv, ClassReader.EXPAND_FRAMES);
         return cw.toByteArray();
     }

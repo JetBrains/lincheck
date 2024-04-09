@@ -43,7 +43,12 @@ class ModelCheckingCTestConfiguration(testClass: Class<*>, iterations: Int, thre
     timeoutMs = timeoutMs,
     customScenarios = customScenarios
 ) {
+    private var replay = false
     override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunction: Actor?,
                                 stateRepresentationMethod: Method?, verifier: Verifier): Strategy
-        = ModelCheckingStrategy(this, testClass, scenario, validationFunction, stateRepresentationMethod, verifier)
+        = ModelCheckingStrategy(this, testClass, scenario, validationFunction, stateRepresentationMethod, verifier, replay)
+
+    internal fun withReplay() {
+        replay = true
+    }
 }

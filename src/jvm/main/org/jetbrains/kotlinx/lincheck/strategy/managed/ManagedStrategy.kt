@@ -17,12 +17,14 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.kotlinx.lincheck.util.SpinnerGroup
+import org.jetbrains.kotlinx.lincheck.util.spinWaitUntil
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.transformation.CodeLocations
 import org.jetbrains.kotlinx.lincheck.Injections
 import org.jetbrains.kotlinx.lincheck.EventTracker
 import org.jetbrains.kotlinx.lincheck.TestThread
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import sun.misc.Unsafe
 import java.lang.invoke.VarHandle
 import java.lang.reflect.*
@@ -52,7 +54,7 @@ abstract class ManagedStrategy(
     protected val nThreads: Int = scenario.nThreads
     // Runner for scenario invocations,
     // can be replaced with a new one for trace construction.
-    private var runner: ManagedStrategyRunner = createRunner()
+    internal var runner: ManagedStrategyRunner = createRunner()
     // Spin-waiters for each thread
     private val spinners = SpinnerGroup(nThreads)
 
@@ -80,7 +82,7 @@ abstract class ManagedStrategy(
     // == TRACE CONSTRUCTION FIELDS ==
 
     // Whether an additional information requires for the trace construction should be collected.
-    private var collectTrace = false
+    protected var collectTrace = false
     // Collector of all events in the execution such as thread switches.
     private var traceCollector: TraceCollector? = null // null when `collectTrace` is false
     // Stores the currently executing methods call stack for each thread.
@@ -413,6 +415,10 @@ abstract class ManagedStrategy(
     }
 
     override fun onActorFinish() {
+        // This is a hack to guarantee correct stepping in the plugin.
+        // When stepping out to the TestThreadExecution class, stepping continues unproductively.
+        // With this method, we force the debugger to stop at the beginning of the next actor.
+        onThreadSwitchesOrActorFinishes()
         (Thread.currentThread() as TestThread).inTestingCode = false
     }
 
@@ -500,7 +506,7 @@ abstract class ManagedStrategy(
 
     // == LISTENING METHODS ==
 
-    override fun lock(monitor: Any, codeLocation: Int): Unit = runInIgnoredSection {
+    override fun beforeLock(codeLocation: Int): Unit = runInIgnoredSection {
         val tracePoint = if (collectTrace) {
             val iThread = currentThread
             MonitorEnterTracePoint(
@@ -514,9 +520,15 @@ abstract class ManagedStrategy(
         }
         val iThread = currentThread
         newSwitchPoint(iThread, codeLocation, tracePoint)
+    }
+
+    override fun lock(monitor: Any): Unit = runInIgnoredSection {
+        val iThread = currentThread
         // Try to acquire the monitor
         while (!monitorTracker.acquireMonitor(iThread, monitor)) {
             failIfObstructionFreedomIsRequired {
+                // TODO: This might be a false positive when this MONITORENTER call never suspends.
+                // TODO: We can keep it as is until refactoring, as this weird case is an anti-pattern anyway.
                 OBSTRUCTION_FREEDOM_LOCK_VIOLATION_MESSAGE
             }
             // Switch to another thread and wait for a moment when the monitor can be acquired
@@ -577,7 +589,7 @@ abstract class ManagedStrategy(
         }
     }
 
-    override fun wait(monitor: Any, codeLocation: Int, withTimeout: Boolean): Unit = runInIgnoredSection {
+    override fun beforeWait(codeLocation: Int): Unit = runInIgnoredSection {
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             WaitTracePoint(
@@ -590,7 +602,21 @@ abstract class ManagedStrategy(
             null
         }
         newSwitchPoint(iThread, codeLocation, tracePoint)
+    }
+
+    /*
+    TODO: Here Lincheck performs in-optimal switching.
+    Firstly an optional switch point is added before wait, and then adds force switches in case execution cannot continue in this thread.
+    More effective way would be to do force switch in case the thread is blocked (smart order of thread switching is needed),
+    or create a switch point if the switch is really optional.
+
+    Because of this additional switching we had to split this method into two, as the beforeEvent method must be called after the switch point.
+     */
+    override fun wait(monitor: Any, withTimeout: Boolean): Unit = runInIgnoredSection {
+        val iThread = currentThread
         failIfObstructionFreedomIsRequired {
+            // TODO: This might be a false positive when this `wait()` call never suspends.
+            // TODO: We can keep it as is until refactoring, as this weird case is an anti-pattern anyway.
             OBSTRUCTION_FREEDOM_WAIT_VIOLATION_MESSAGE
         }
         if (withTimeout) return // timeouts occur instantly
@@ -618,8 +644,11 @@ abstract class ManagedStrategy(
         }
     }
 
+    /**
+     * Returns `true` if a switch point is created.
+     */
     override fun beforeReadField(obj: Any, className: String, fieldName: String, codeLocation: Int) = runInIgnoredSection {
-        if (localObjectManager.isLocalObject(obj)) return@runInIgnoredSection
+        if (localObjectManager.isLocalObject(obj)) return@runInIgnoredSection false
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             ReadTracePoint(
@@ -636,6 +665,7 @@ abstract class ManagedStrategy(
             lastReadTracePoint[iThread] = tracePoint
         }
         newSwitchPoint(iThread, codeLocation, tracePoint)
+        true
     }
 
     override fun beforeReadFieldStatic(className: String, fieldName: String, codeLocation: Int) = runInIgnoredSection {
@@ -657,8 +687,9 @@ abstract class ManagedStrategy(
         newSwitchPoint(iThread, codeLocation, tracePoint)
     }
 
-    override fun beforeReadArrayElement(array: Any, index: Int, codeLocation: Int) = runInIgnoredSection {
-        if (localObjectManager.isLocalObject(array)) return@runInIgnoredSection
+    /** Returns <code>true</code> if a switch point is created. */
+    override fun beforeReadArrayElement(array: Any, index: Int, codeLocation: Int): Boolean = runInIgnoredSection {
+        if (localObjectManager.isLocalObject(array)) return@runInIgnoredSection false
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             ReadTracePoint(
@@ -675,6 +706,7 @@ abstract class ManagedStrategy(
             lastReadTracePoint[iThread] = tracePoint
         }
         newSwitchPoint(iThread, codeLocation, tracePoint)
+        true
     }
 
     override fun afterRead(value: Any?) {
@@ -687,10 +719,10 @@ abstract class ManagedStrategy(
         }
     }
 
-    override fun beforeWriteField(obj: Any, className: String, fieldName: String, value: Any?, codeLocation: Int) = runInIgnoredSection {
+    override fun beforeWriteField(obj: Any, className: String, fieldName: String, value: Any?, codeLocation: Int): Boolean = runInIgnoredSection {
         localObjectManager.onWriteToObjectFieldOrArrayCell(obj, value)
         if (localObjectManager.isLocalObject(obj)) {
-            return@runInIgnoredSection
+            return@runInIgnoredSection false
         }
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
@@ -707,6 +739,7 @@ abstract class ManagedStrategy(
             null
         }
         newSwitchPoint(iThread, codeLocation, tracePoint)
+        true
     }
 
 
@@ -729,10 +762,10 @@ abstract class ManagedStrategy(
         newSwitchPoint(iThread, codeLocation, tracePoint)
     }
 
-    override fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int) = runInIgnoredSection {
+    override fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int): Boolean = runInIgnoredSection {
         localObjectManager.onWriteToObjectFieldOrArrayCell(array, value)
         if (localObjectManager.isLocalObject(array)) {
-            return@runInIgnoredSection
+            return@runInIgnoredSection false
         }
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
@@ -749,6 +782,7 @@ abstract class ManagedStrategy(
             null
         }
         newSwitchPoint(iThread, codeLocation, tracePoint)
+        true
     }
 
     override fun afterWrite() {
@@ -1084,6 +1118,7 @@ abstract class ManagedStrategy(
             // tracePoint can be null here if trace is not available, e.g. in case of suspension
             if (tracePoint != null) {
                 _trace += tracePoint
+                (this@ManagedStrategy as ModelCheckingStrategy).setBeforeEventId(tracePoint)
             }
         }
 
@@ -1508,7 +1543,7 @@ abstract class ManagedStrategy(
  * This class is a [ParallelThreadsRunner] with some overrides that add callbacks
  * to the strategy so that it can known about some required events.
  */
-private class ManagedStrategyRunner(
+internal class ManagedStrategyRunner(
     private val managedStrategy: ManagedStrategy,
     testClass: Class<*>, validationFunction: Actor?, stateRepresentationMethod: Method?,
     timeoutMs: Long, useClocks: UseClocks

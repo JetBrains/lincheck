@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.transformation
 
 import org.jetbrains.kotlinx.lincheck.Injections
+import org.jetbrains.kotlinx.lincheck.beforeEvent
 import org.objectweb.asm.*
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
@@ -62,6 +63,26 @@ internal fun GeneratorAdapter.loadLocals(locals: IntArray) {
 internal fun GeneratorAdapter.storeTopToLocal(local: Int) {
     storeLocal(local)
     loadLocal(local)
+}
+
+/**
+ * Adds invocation of [beforeEvent] method.
+ * This method **must** be called from the user code, as [beforeEvent] must be called from the user code due to the contract
+ * between the Lincheck IDEA plugin and Lincheck.
+ */
+internal fun GeneratorAdapter.invokeBeforeEvent(debugMessage: String) = invokeInIgnoredSection {
+    ifStatement(
+        condition = {
+            invokeStatic(Injections::shouldInvokeBeforeEvent)
+        },
+        ifClause = {
+            push(debugMessage)
+            invokeStatic(Injections::readNextEventId)
+            push(debugMessage)
+            invokeStatic(::beforeEvent)
+        },
+        elseClause = {}
+    )
 }
 
 // Map for storing the declaring class and method of each function.

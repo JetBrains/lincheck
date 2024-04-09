@@ -51,12 +51,17 @@ internal object Injections {
         return t.inTestingCode && !t.inIgnoredSection
     }
 
+    @JvmStatic
+    fun beforeLock(codeLocation: Int) {
+        eventTracker.beforeLock(codeLocation)
+    }
+
     /**
      * Called from instrumented code instead of the MONITORENTER instruction.
      */
     @JvmStatic
-    fun lock(monitor: Any, codeLocation: Int) {
-        eventTracker.lock(monitor, codeLocation)
+    fun lock(monitor: Any) {
+        eventTracker.lock(monitor)
     }
 
     /**
@@ -83,12 +88,17 @@ internal object Injections {
         eventTracker.unpark(thread, codeLocation)
     }
 
+    @JvmStatic
+    fun beforeWait(codeLocation: Int) {
+        eventTracker.beforeWait(codeLocation)
+    }
+
     /**
      * Called from the instrumented code instead of [Object.wait].
      */
     @JvmStatic
-    fun wait(monitor: Any, codeLocation: Int) {
-        eventTracker.wait(monitor, codeLocation, withTimeout = false)
+    fun wait(monitor: Any) {
+        eventTracker.wait(monitor, withTimeout = false)
     }
 
 
@@ -96,8 +106,8 @@ internal object Injections {
      * Called from the instrumented code instead of [Object.wait].
      */
     @JvmStatic
-    fun waitWithTimeout(monitor: Any, codeLocation: Int) {
-        eventTracker.wait(monitor, codeLocation, withTimeout = true)
+    fun waitWithTimeout(monitor: Any) {
+        eventTracker.wait(monitor, withTimeout = true)
     }
 
     /**
@@ -153,9 +163,9 @@ internal object Injections {
      * Called from the instrumented code before each field read.
      */
     @JvmStatic
-    fun beforeReadField(obj: Any?, className: String, fieldName: String, codeLocation: Int) {
-        if (obj == null) return // Ignore, NullPointerException will be thrown
-        eventTracker.beforeReadField(obj, className, fieldName, codeLocation)
+    fun beforeReadField(obj: Any?, className: String, fieldName: String, codeLocation: Int): Boolean {
+        if (obj == null) return false // Ignore, NullPointerException will be thrown
+        return eventTracker.beforeReadField(obj, className, fieldName, codeLocation)
     }
 
     /**
@@ -170,9 +180,9 @@ internal object Injections {
      * Called from the instrumented code before any array cell read.
      */
     @JvmStatic
-    fun beforeReadArray(array: Any?, index: Int, codeLocation: Int) {
-        if (array == null) return // Ignore, NullPointerException will be thrown
-        eventTracker.beforeReadArrayElement(array, index, codeLocation)
+    fun beforeReadArray(array: Any?, index: Int, codeLocation: Int): Boolean {
+        if (array == null) return false // Ignore, NullPointerException will be thrown
+        return eventTracker.beforeReadArrayElement(array, index, codeLocation)
     }
 
     /**
@@ -187,9 +197,9 @@ internal object Injections {
      * Called from the instrumented code before each field write.
      */
     @JvmStatic
-    fun beforeWriteField(obj: Any?, className: String, fieldName: String, value: Any?, codeLocation: Int) {
-        if (obj == null) return // Ignore, NullPointerException will be thrown
-        eventTracker.beforeWriteField(obj, className, fieldName, value, codeLocation)
+    fun beforeWriteField(obj: Any?, className: String, fieldName: String, value: Any?, codeLocation: Int): Boolean {
+        if (obj == null) return false // Ignore, NullPointerException will be thrown
+        return eventTracker.beforeWriteField(obj, className, fieldName, value, codeLocation)
     }
 
     /**
@@ -204,9 +214,9 @@ internal object Injections {
      * Called from the instrumented code before any array cell write.
      */
     @JvmStatic
-    fun beforeWriteArray(array: Any?, index: Int, value: Any?, codeLocation: Int) {
-        if (array == null) return // Ignore, NullPointerException will be thrown
-        eventTracker.beforeWriteArrayElement(array, index, value, codeLocation)
+    fun beforeWriteArray(array: Any?, index: Int, value: Any?, codeLocation: Int): Boolean {
+        if (array == null) return false // Ignore, NullPointerException will be thrown
+        return eventTracker.beforeWriteArrayElement(array, index, value, codeLocation)
     }
 
     /**
@@ -318,4 +328,17 @@ internal object Injections {
 
     @JvmStatic
     val VOID_RESULT = Any()
+
+    // == PLUGIN ==
+
+    @JvmStatic
+    fun shouldInvokeBeforeEvent(): Boolean {
+        return eventTracker.shouldInvokeBeforeEvent()
+    }
+
+    @Suppress("UNUSED_PARAMETER") // for debug
+    @JvmStatic
+    fun readNextEventId(type: String): Int {
+        return eventTracker.readNextEventId()
+    }
 }

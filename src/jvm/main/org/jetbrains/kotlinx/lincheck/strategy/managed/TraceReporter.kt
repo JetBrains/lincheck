@@ -121,7 +121,7 @@ class TableSectionColumnsRepresentation(
  *
  * @return a list of nodes corresponding to the starting trace event in each section.
  */
-private fun constructTraceGraph(
+internal fun constructTraceGraph(
     failure: LincheckFailure,
     results: ExecutionResult?,
     trace: Trace,
@@ -286,8 +286,8 @@ private fun traceGraphToRepresentationList(
         }
     }
 
-private sealed class TraceNode(
-    protected val iThread: Int,
+internal sealed class TraceNode(
+    val iThread: Int,
     last: TraceNode?,
     val callDepth: Int // for tree indentation
 ) {
@@ -318,11 +318,11 @@ private sealed class TraceNode(
     ): TraceNode?
 }
 
-private class TraceLeafEvent(
+internal class TraceLeafEvent(
     iThread: Int,
     last: TraceNode?,
     callDepth: Int,
-    private val event: TracePoint,
+    internal val event: TracePoint,
     private val lastExecutedEvent: Boolean = false
 ) : TraceNode(iThread, last, callDepth) {
 
@@ -353,7 +353,7 @@ private class TraceLeafEvent(
     }
 }
 
-private abstract class TraceInnerNode(iThread: Int, last: TraceNode?, callDepth: Int) :
+internal abstract class TraceInnerNode(iThread: Int, last: TraceNode?, callDepth: Int) :
     TraceNode(iThread, last, callDepth) {
     override val lastState: String?
         get() = internalEvents.map { it.lastState }.lastOrNull { it != null }
@@ -372,11 +372,11 @@ private abstract class TraceInnerNode(iThread: Int, last: TraceNode?, callDepth:
     }
 }
 
-private class CallNode(
+internal class CallNode(
     iThread: Int,
     last: TraceNode?,
     callDepth: Int,
-    private val call: MethodCallTracePoint
+    internal val call: MethodCallTracePoint
 ) : TraceInnerNode(iThread, last, callDepth) {
     // suspended method contents should be reported
     override fun shouldBeExpanded(verboseTrace: Boolean): Boolean {
@@ -397,11 +397,11 @@ private class CallNode(
         }
 }
 
-private class ActorNode(
+internal class ActorNode(
     iThread: Int,
     last: TraceNode?,
     callDepth: Int,
-    private val actorRepresentation: String,
+    internal val actorRepresentation: String,
     private val resultRepresentation: String?
 ) : TraceInnerNode(iThread, last, callDepth) {
     override fun addRepresentationTo(
@@ -419,11 +419,11 @@ private class ActorNode(
     }
 }
 
-private class ActorResultNode(
+internal class ActorResultNode(
     iThread: Int,
     last: TraceNode?,
     callDepth: Int,
-    private val resultRepresentation: String?
+    internal val resultRepresentation: String?
 ) : TraceNode(iThread, last, callDepth) {
     override val lastState: String? = null
     override val lastInternalEvent: TraceNode = this
@@ -446,7 +446,7 @@ private fun TraceNode.traceIndentation() = TRACE_INDENTATION.repeat(callDepth)
 private fun TraceNode.stateEventRepresentation(iThread: Int, stateRepresentation: String) =
     TraceEventRepresentation(iThread, traceIndentation() + "STATE: $stateRepresentation")
 
-private class TraceEventRepresentation(val iThread: Int, val representation: String)
+internal class TraceEventRepresentation(val iThread: Int, val representation: String)
 
 internal fun getObjectName(obj: Any?): String =
     if (obj != null) {
@@ -482,3 +482,7 @@ private val objectNumeration = WeakHashMap<Class<Any>, MutableMap<Any, Int>>()
 const val TRACE_TITLE = "The following interleaving leads to the error:"
 const val DETAILED_TRACE_TITLE = "Detailed trace:"
 private const val ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE = "All unfinished threads are in deadlock"
+
+internal fun cleanObjectNumeration() {
+    objectNumeration.clear()
+}

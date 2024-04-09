@@ -9,7 +9,8 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
-import org.jetbrains.kotlinx.lincheck.Actor
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.ExceptionNumberAndStacktrace
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -39,7 +40,8 @@ internal class ModelCheckingStrategy(
     scenario: ExecutionScenario,
     validationFunction: Actor?,
     stateRepresentation: Method?,
-    verifier: Verifier
+    verifier: Verifier,
+    val replay: Boolean,
 ) : ManagedStrategy(testClass, scenario, verifier, validationFunction, stateRepresentation, testCfg) {
     // The number of invocations that the strategy is eligible to use to search for an incorrect execution.
     private val maxInvocations = testCfg.invocationsPerIteration
@@ -55,6 +57,36 @@ internal class ModelCheckingStrategy(
     // The interleaving that will be studied on the next invocation.
     private lateinit var currentInterleaving: Interleaving
 
+    private var eventIdProvider = EventCounterProvider()
+
+    private fun nextEventId() = eventIdProvider.nextId().also {
+        if (eventIdSequentialCheck) {
+            if (eventIdProvider.lastVisited + 1 != it) {
+                val lastRead = eventIdProvider.lastRead
+                if (lastRead == null) {
+                    throw IllegalStateException("Create nextEventId $it readNextEventId has never been called")
+                } else {
+                    throw IllegalStateException("Create nextEventId $it but last read event is ${eventIdProvider.lastVisited}", lastRead)
+                }
+            }
+            eventIdProvider.lastIncrement = IllegalStateException("Last incremented value is $it")
+        }
+    }
+
+    internal fun setBeforeEventId(tracePoint: TracePoint) {
+        if (shouldInvokeBeforeEvent()) {
+            // Method calls and atomic method calls share the same trace points
+            if (tracePoint.beforeEventId == -1
+                && tracePoint !is CoroutineCancellationTracePoint
+                && tracePoint !is ObstructionFreedomViolationExecutionAbortTracePoint
+                && tracePoint !is SpinCycleStartTracePoint
+                && tracePoint !is SectionDelimiterTracePoint
+            ) {
+                tracePoint.beforeEventId = nextEventId()
+            }
+        }
+    }
+
     override fun runImpl(): LincheckFailure? {
         currentInterleaving = root.nextInterleaving() ?: return null
         while (usedInvocations < maxInvocations) {
@@ -67,14 +99,159 @@ internal class ModelCheckingStrategy(
                 continue
             }
             usedInvocations++
-            checkResult(invocationResult)?.let { return it }
+            checkResult(invocationResult)?.let { failure ->
+                if (replay && failure.trace != null) {
+                    val trace = extractDebugTrace(failure, failure.trace)
+                    testFailed(
+                        failureType = failure.type,
+                        trace = trace,
+                        version = "2.28",
+                        minimalPluginVersion = MINIMAL_PLUGIN_VERSION
+                    )
+
+                    doReplay()
+                    while (replay()) {
+                        doReplay()
+                    }
+                }
+                return failure
+            }
             // get new unexplored interleaving
             currentInterleaving = root.nextInterleaving() ?: break
         }
         return null
     }
 
+    override fun shouldInvokeBeforeEvent(): Boolean {
+        if (!replay) return false
+        if (!collectTrace) return false
+        val thread = (Thread.currentThread() as? TestThread) ?: return false
+
+        return thread.inIgnoredSection && suddenInvocationResult == null
+    }
+
+    override fun readNextEventId(): Int {
+        if (!shouldInvokeBeforeEvent()) return -1
+        return eventIdProvider.getId().also {
+            if (eventIdSequentialCheck) {
+                if (eventIdProvider.lastVisited + 1 != it) {
+                    val lastIncrement = eventIdProvider.lastIncrement
+                    if (lastIncrement == null) {
+                        throw IllegalStateException("ReadNextEventId is called while nextEventId has never been called")
+                    } else {
+                        throw IllegalStateException("ReadNextEventId $it after previous value ${eventIdProvider.lastVisited}", lastIncrement)
+                    }
+                }
+                eventIdProvider.lastVisited = it
+                eventIdProvider.lastRead = IllegalStateException("Last read value is $it")
+            }
+        }
+    }
+
+    private val LincheckFailure.type: String
+        get() = when (this) {
+            is IncorrectResultsFailure -> "INCORRECT_RESULTS"
+            is ObstructionFreedomViolationFailure -> "OBSTRUCTION_FREEDOM_VIOLATION"
+            is UnexpectedExceptionFailure -> "UNEXPECTED_EXCEPTION"
+            is ValidationFailure -> "VALIDATION_FAILURE"
+            is DeadlockOrLivelockFailure -> "DEADLOCK"
+        }
+
+
+    private fun doReplay(): InvocationResult {
+        cleanObjectNumeration()
+        currentInterleaving = currentInterleaving.copy()
+        eventIdProvider = EventCounterProvider()
+        return runInvocation()
+    }
+
+    /**
+     * | Value                          | Code |
+     * |--------------------------------|------|
+     * | REGULAR                        | 0    |
+     * | ACTOR                          | 1    |
+     * | RESULT                         | 2    |
+     * | SWITCH                         | 3    |
+     * | SPIN_CYCLE_START               | 4    |
+     * | SPIN_CYCLE_SWITCH              | 5    |
+     * | OBSTRUCTION_FREEDOM_VIOLATION  | 6    |
+     */
+    private fun extractDebugTrace(failure: LincheckFailure, trace: Trace): Array<String> {
+        val results = if (failure is IncorrectResultsFailure) failure.results else null
+        val nodesList = constructTraceGraph(failure, results, trace, exceptionsOrEmpty(failure))
+        var sectionIndex = 0
+        var node: TraceNode? = nodesList.firstOrNull()
+        val representations = mutableListOf<String>()
+        while (node != null) {
+            when (node) {
+                is TraceLeafEvent -> {
+                    val event = node.event
+                    val beforeEventId = event.beforeEventId
+                    val representation = event.toStringImpl()
+                    val type = when (event) {
+                        is SwitchEventTracePoint -> {
+                            when (event.reason) {
+                                SwitchReason.ACTIVE_LOCK -> {
+                                    5
+                                }
+                                else -> 3
+                            }
+                        }
+                        is SpinCycleStartTracePoint -> 4
+                        is ObstructionFreedomViolationExecutionAbortTracePoint -> 6
+                        else -> 0
+                    }
+
+                    if (representation.isNotEmpty()) {
+                        representations.add("$type;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation}")
+                    }
+                }
+
+                is CallNode -> {
+                    val beforeEventId = node.call.beforeEventId
+                    val representation = node.call.toStringImpl()
+                    if (representation.isNotEmpty()) {
+                        representations.add("0;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation}")
+                    }
+                }
+
+                is ActorNode -> {
+                    val beforeEventId = -1
+                    val representation = node.actorRepresentation
+                    if (representation.isNotEmpty()) {
+                        representations.add("1;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation}")
+                    }
+                }
+
+                is ActorResultNode -> {
+                    val beforeEventId = -1
+                    val representation = node.resultRepresentation.toString()
+                    representations.add("2;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation}")
+                }
+
+                else -> {}
+            }
+
+            node = node.next
+            if (node == null && sectionIndex != nodesList.lastIndex) {
+                node = nodesList[++sectionIndex]
+            }
+        }
+        return representations.toTypedArray()
+    }
+
+    private fun exceptionsOrEmpty(failure: LincheckFailure): Map<Throwable, ExceptionNumberAndStacktrace> {
+        val results = (failure as? IncorrectResultsFailure)?.results ?: return emptyMap()
+        return when (val result = collectExceptionStackTraces(results)) {
+            is ExceptionStackTracesResult -> result.exceptionStackTraces
+            is InternalLincheckBugResult -> emptyMap()
+        }
+    }
+
     override fun onNewSwitch(iThread: Int, mustSwitch: Boolean) {
+        if (replay && collectTrace) {
+            onThreadSwitchesOrActorFinishes()
+        }
         if (mustSwitch) {
             // Create new execution position if this is a forced switch.
             // All other execution positions are covered by `shouldSwitch` method,
@@ -287,6 +464,9 @@ internal class ModelCheckingStrategy(
                 lastNotInitializedNodeChoices?.add(Choice(ThreadChoosingNode(switchableThreads(iThread)), executionPosition))
             }
         }
+
+        fun copy() = Interleaving(switchPositions, threadSwitchChoices, lastNotInitializedNode)
+
     }
 
     private inner class InterleavingBuilder {
@@ -310,4 +490,14 @@ internal class ModelCheckingStrategy(
 
         fun build() = Interleaving(switchPositions, threadSwitchChoices, lastNoninitializedNode)
     }
+
+    private class EventCounterProvider {
+        var lastVisited = -1
+        var lastIncrement: IllegalStateException? = null
+        var lastRead: IllegalStateException? = null
+        private var lastId = -1
+        fun nextId() = ++lastId
+        fun getId() = lastId
+    }
+
 }
