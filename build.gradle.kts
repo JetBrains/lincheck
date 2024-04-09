@@ -98,12 +98,17 @@ tasks {
     fun Test.configureJvmTestCommon() {
         maxParallelForks = 1
         maxHeapSize = "6g"
-        jvmArgs(
+        val extraArgs = mutableListOf(
             "--add-opens", "java.base/java.lang=ALL-UNNAMED",
             "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
             "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED",
-            "--add-exports", "java.base/sun.security.action=ALL-UNNAMED"
+            "--add-exports", "java.base/sun.security.action=ALL-UNNAMED",
         )
+        val withEventIdSequentialCheck: String by project
+        if (withEventIdSequentialCheck.toBoolean()) {
+            extraArgs.add("-Dlincheck.debug.eventIdSequentialCheck=true")
+        }
+        jvmArgs(extraArgs)
     }
 
     val jvmTest = named<Test>("jvmTest") {
