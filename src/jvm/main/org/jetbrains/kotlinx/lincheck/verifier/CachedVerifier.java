@@ -25,9 +25,13 @@ public abstract class CachedVerifier implements Verifier {
 
     @Override
     public boolean verifyResults(ExecutionScenario scenario, ExecutionResult results) {
-        boolean newResult = previousResults.computeIfAbsent(scenario, s -> new HashSet<>()).add(results);
-        if (!newResult) return true;
-        return verifyResultsImpl(scenario, results);
+        Set<ExecutionResult> executionResults = previousResults.computeIfAbsent(scenario, s -> new HashSet<>());
+        if (executionResults.contains(results)) return true;
+        boolean isValid = verifyResultsImpl(scenario, results);
+        if (isValid) {
+            executionResults.add(results);
+        }
+        return isValid;
     }
 
     public abstract boolean verifyResultsImpl(ExecutionScenario scenario, ExecutionResult results);
