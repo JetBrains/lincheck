@@ -179,6 +179,7 @@ private fun linePlot(
 ) {
     //println("Plotting: data=${data}, markedDots=${markedDots}")
 
+    val labelEachDotRatio = 10
     val plot = letsPlot() +
         labs(title = title, x = xLab, y = yLab) +
         scaleXContinuous(
@@ -195,7 +196,11 @@ private fun linePlot(
         geomLine(data = data, size = 1.0) { x = "x"; y = "y"; color = "type"; group = "type" } +
         geomPoint(data = data, size = 3.0) { x = "x"; y = "y"; color = "type"; group = "type" } +
         geomPoint(data = markedDots, size = 4.0) { x = "x"; y = "y"; color = "type"; group = "type" } +
-        geomText(data = data, labelFormat = "d", size = 5, hjust = 1, vjust = 0) { x = "x"; y = "y"; label = "y" } +
+        geomText(data = mapOf(
+            "x" to data["x"]!!.filterIndexed { index, _ -> index % labelEachDotRatio == 0  },
+            "y" to data["y"]!!.filterIndexed { index, _ -> index % labelEachDotRatio == 0  },
+            "type" to data["type"]!!.filterIndexed { index, _ -> index % labelEachDotRatio == 0  }
+        ), labelFormat = "d", size = 5, hjust = 1, vjust = 0) { x = "x"; y = "y"; label = "y" } +
         geomText(data = markedDots) { color = "type"; group = "type" }
 
     ggsave(plot, filename, path = path)
