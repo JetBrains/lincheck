@@ -13,7 +13,9 @@ package org.jetbrains.kotlinx.lincheck.fuzzing.input
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.fuzzing.coverage.Coverage
 import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.Mutator
+import org.jetbrains.kotlinx.lincheck.fuzzing.util.Sampling
 import java.util.*
+import kotlin.math.floor
 
 /**
  * Class that holds statistics for some program run. It contains coverage, execution time,
@@ -25,6 +27,7 @@ class Input(
     val scenario: ExecutionScenario
 ) {
     var coverage = Coverage()
+    var traceCoverage = Coverage()
     /** Time took for input to be executed by the specified number of Lincheck invocations. */
     var executionDurationMs: Int = -1
 
@@ -42,12 +45,12 @@ class Input(
      * - mark as covered all keys from this input and set its `favorite` field to `true`.
      * - repeat until all keys will be covered and discard non-favorite selected inputs.
      * */
-    val fitness: Double
+    val fitness: Long
         get() {
-            if (executionDurationMs == -1) return Double.MAX_VALUE
+            if (executionDurationMs == -1) return 0
             // TODO: check formula from AFL
             // return (executionDurationMs.toDouble() / 1000.0) * scenario.size // execution time brings non-determinism
-            return 1.0 / scenario.size.toDouble()
+            return scenario.size.toLong() * coverage.coveredBranchesCount().toLong()
         }
 
     /** Number of mutations (children) that were produced from this input. */
@@ -73,11 +76,12 @@ class Input(
             mutationsPerformed++
 
             // TODO: somehow pass the thread id to mutations (but don't create new object instances, maybe)
-            val mutations = mutator.getAvailableMutations(mutatedScenario, mutationThread)
-            if (mutations.isNotEmpty()) {
-                val mutationIndex = random.nextInt(mutations.size)
-                mutatedScenario = mutations[mutationIndex].mutate(mutatedScenario, mutationThread)
-            }
+            // val mutations = mutator.getAvailableMutations(mutatedScenario, mutationThread)
+            // if (mutations.isNotEmpty()) {
+            //     val mutationIndex = random.nextInt(mutations.size)
+            //     mutatedScenario = mutations[mutationIndex].mutate(mutatedScenario, mutationThread)
+            // }
+            mutatedScenario = mutator.getRandomMutation(scenario, mutationThread).mutate(mutatedScenario, mutationThread)
         }
 
         println("After: \n" + mutatedScenario.toString())

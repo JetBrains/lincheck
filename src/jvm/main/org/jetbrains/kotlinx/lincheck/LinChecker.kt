@@ -12,9 +12,16 @@ package org.jetbrains.kotlinx.lincheck
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.fuzzing.Fuzzer
+import org.jetbrains.kotlinx.lincheck.fuzzing.coverage.Coverage
 import org.jetbrains.kotlinx.lincheck.fuzzing.coverage.toCoverage
+import fuzzing.stats.BenchmarkStats
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.Trace
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
+import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.verifier.*
+import kotlin.math.max
 import kotlin.reflect.*
 
 /**
@@ -45,33 +52,52 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         throw LincheckAssertionError(failure)
     }
 
+    fun check(stats: BenchmarkStats = BenchmarkStats()) {
+        val failure = checkImpl(stats) ?: return
+        throw LincheckAssertionError(failure)
+    }
+
     /**
      * @return TestReport with information about concurrent test run.
      */
-    internal fun checkImpl(): LincheckFailure? {
-        // TODO: coverage result callback somewhere here
+    internal fun checkImpl(stats: BenchmarkStats = BenchmarkStats()): LincheckFailure? {
         check(testConfigurations.isNotEmpty()) { "No Lincheck test configuration to run" }
         for (testCfg in testConfigurations) {
+            val startTime = System.currentTimeMillis()
             val failure =
                 if (testCfg.coverageOptions != null && testCfg.coverageOptions.fuzz) {
-                    testCfg.fuzzImpl()
+                    testCfg.fuzzImpl(stats)
                 } else {
-                    testCfg.checkImpl()
+                    testCfg.checkImpl(stats)
                 }
+
 
             // val failure = testCfg.checkImpl()
             testCfg.coverageOptions?.apply {
                 collectCoverage()
                 onShutdown()
             }
+
+            // TODO: update stats
+            stats.iterations = testCfg.iterations
+            stats.invocationsPerIteration =
+                if (testCfg is ModelCheckingCTestConfiguration) testCfg.invocationsPerIteration
+                else (testCfg as StressCTestConfiguration).invocationsPerIteration
+            stats.threads = testCfg.threads
+            stats.actorsPerThread = testCfg.actorsPerThread
+            stats.initActors = testCfg.actorsBefore
+            stats.postActors = testCfg.actorsAfter
+            stats.totalDurationMs = System.currentTimeMillis() - startTime
+
             if (failure != null) return failure
         }
         return null
     }
 
-    private fun CTestConfiguration.fuzzImpl(): LincheckFailure? {
+    private fun CTestConfiguration.fuzzImpl(stats: BenchmarkStats): LincheckFailure? {
         var verifier = createVerifier()
         val fuzzer = Fuzzer(
+            stats,
             customScenarios,
             testStructure,
             this,
@@ -90,8 +116,9 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
 
             val failure  = scenario.run(this, verifier)
             val coverage = coverageOptions.collectCoverage().toCoverage()
+            val traceCoverage = failure.second.toCoverage()
 
-            fuzzer.handleResult(failure, coverage)
+            fuzzer.handleResult(failure.first, coverage, traceCoverage)
 
             // TODO: uncomment??
             // Reset the parameter generator ranges to start with the same initial bounds on each scenario generation.
@@ -111,17 +138,24 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         return null
     }
 
-    private fun CTestConfiguration.checkImpl(): LincheckFailure? {
+    private fun CTestConfiguration.checkImpl(stats: BenchmarkStats): LincheckFailure? {
         val exGen = createExecutionGenerator(testStructure.randomProvider)
         for (i in customScenarios.indices) {
             val verifier = createVerifier()
             val scenario = customScenarios[i]
             scenario.validate()
             reporter.logIteration(i + 1, customScenarios.size, scenario)
-            val failure = scenario.run(this, verifier)
+            val failure = scenario.run(this, verifier).first
             if (failure != null) return failure
         }
         var verifier = createVerifier()
+        var result: LincheckFailure? = null
+        var iter = -1
+
+        // TODO: update stats
+        val totalCoverage = Coverage()
+        var maxCoverage = 0
+
         repeat(iterations) { i ->
             // For performance reasons, verifier re-uses LTS from previous iterations.
             // This behaviour is similar to a memory leak and can potentially cause OutOfMemoryError.
@@ -133,15 +167,38 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             val scenario = exGen.nextExecution()
             scenario.validate()
             reporter.logIteration(i + 1 + customScenarios.size, iterations, scenario)
-            val failure = scenario.run(this, verifier)
-            if (failure != null) {
-                println("Iteration on failure: ${i + 1} / $iterations")
-                val minimizedFailedIteration = if (!minimizeFailedScenario) failure else failure.minimize(this)
-                reporter.logFailedIteration(minimizedFailedIteration)
-                return minimizedFailedIteration
+            val failure = scenario.run(this, verifier).first
+
+            if (failure != null && result == null) {
+                result = failure
+                iter = i
             }
+//            if (failure != null) {
+//                println("Iteration on failure: ${i + 1} / $iterations")
+//                val minimizedFailedIteration = if (!minimizeFailedScenario) failure else failure.minimize(this)
+//                reporter.logFailedIteration(minimizedFailedIteration)
+//                return minimizedFailedIteration
+//            }
             // Reset the parameter generator ranges to start with the same initial bounds on each scenario generation.
             testStructure.parameterGenerators.forEach { it.reset() }
+
+            // TODO: update stats
+            coverageOptions?.apply {
+                val iterationCoverage = collectCoverage().toCoverage()
+                maxCoverage = max(maxCoverage, iterationCoverage.coveredBranchesCount());
+                totalCoverage.merge(iterationCoverage)
+
+                stats.totalFoundCoverage.add(totalCoverage.coveredBranchesCount())
+                stats.iterationFoundCoverage.add(iterationCoverage.coveredBranchesCount())
+                stats.maxIterationFoundCoverage.add(maxCoverage)
+                if (failure != null) stats.failedIterations.add(i + 1)
+            }
+        }
+        if (result != null) {
+            println("Iteration on failure: ${iter + 1} / $iterations")
+            val minimizedFailedIteration: LincheckFailure = if (!minimizeFailedScenario) result!! else result!!.minimize(this)
+            reporter.logFailedIteration(minimizedFailedIteration)
+            return minimizedFailedIteration
         }
         return null
     }
@@ -166,14 +223,14 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         for (i in threads.indices.reversed()) {
             for (j in threads[i].indices.reversed()) {
                 tryMinimize(i, j)
-                    ?.run(testCfg, testCfg.createVerifier())
+                    ?.run(testCfg, testCfg.createVerifier())?.first
                     ?.let { return it }
             }
         }
         return null
     }
 
-    private fun ExecutionScenario.run(testCfg: CTestConfiguration, verifier: Verifier): LincheckFailure? =
+    private fun ExecutionScenario.run(testCfg: CTestConfiguration, verifier: Verifier): Pair<LincheckFailure?, List<Trace>> =
         testCfg.createStrategy(
             testClass = testClass,
             scenario = this,
@@ -202,8 +259,8 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
          */
         @JvmOverloads
         @JvmStatic
-        fun check(testClass: Class<*>, options: Options<*, *>? = null) {
-            LinChecker(testClass, options).check()
+        fun check(testClass: Class<*>, options: Options<*, *>? = null, stats: BenchmarkStats = BenchmarkStats()) {
+            LinChecker(testClass, options).check(stats)
         }
 
         private const val VERIFIER_REFRESH_CYCLE = 100
@@ -219,7 +276,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
  *  LinChecker.check(testClass, options)
  * ```
  */
-fun <O : Options<O, *>> O.check(testClass: Class<*>) = LinChecker.check(testClass, this)
+fun <O : Options<O, *>> O.check(testClass: Class<*>, stats: BenchmarkStats = BenchmarkStats()) = LinChecker.check(testClass, this, stats)
 
 /**
  * This is a short-cut for the following code:
@@ -228,6 +285,6 @@ fun <O : Options<O, *>> O.check(testClass: Class<*>) = LinChecker.check(testClas
  *  LinChecker.check(testClass.java, options)
  * ```
  */
-fun <O : Options<O, *>> O.check(testClass: KClass<*>) = this.check(testClass.java)
+fun <O : Options<O, *>> O.check(testClass: KClass<*>, stats: BenchmarkStats = BenchmarkStats()) = this.check(testClass.java, stats)
 
-internal fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>) = LinChecker(testClass, this).checkImpl()
+internal fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>, stats: BenchmarkStats = BenchmarkStats()) = LinChecker(testClass, this).checkImpl(stats)

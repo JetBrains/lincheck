@@ -13,6 +13,7 @@ import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.Trace
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.lang.reflect.*
 
@@ -45,19 +46,19 @@ class StressStrategy(
         }
     }
 
-    override fun run(): LincheckFailure? {
+    override fun run(): Pair<LincheckFailure?, List<Trace>> /* LincheckFailure? */ {
         runner.use {
             // Run invocations
             for (invocation in 0 until invocations) {
                 when (val ir = runner.run()) {
                     is CompletedInvocationResult -> {
                         if (!verifier.verifyResults(scenario, ir.results))
-                            return IncorrectResultsFailure(scenario, ir.results)
+                            return Pair(IncorrectResultsFailure(scenario, ir.results), emptyList())
                     }
-                    else -> return ir.toLincheckFailure(scenario)
+                    else -> return Pair(ir.toLincheckFailure(scenario), emptyList())
                 }
             }
-            return null
+            return Pair(null, emptyList())
         }
     }
 }

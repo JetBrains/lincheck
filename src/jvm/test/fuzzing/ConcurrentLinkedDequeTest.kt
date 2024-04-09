@@ -11,6 +11,7 @@
 package fuzzing
 
 import fuzzing.utils.AbstractFuzzerBenchmarkTest
+import org.jetbrains.kotlinx.lincheck.LoggingLevel
 import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import java.util.concurrent.ConcurrentLinkedDeque
@@ -38,15 +39,20 @@ class ConcurrentLinkedDequeTest : AbstractFuzzerBenchmarkTest() {
     @Operation
     fun peekLast() = deque.peekLast()
 
-    override fun <O : Options<O, *>> O.customizeModelCheckingCoverage() =
+    override fun <O : Options<O, *>> O.customizeModelCheckingCoverage() {
+        logLevel(LoggingLevel.INFO)
+        iterations(40)
         coverageConfigurationForModelChecking(
             listOf(this@ConcurrentLinkedDequeTest::class.jvmName),
             listOf("java\\.util\\.concurrent.*")
         )
+    }
 
-    override fun <O : Options<O, *>> O.customizeFuzzingCoverage() =
+    override fun <O : Options<O, *>> O.customizeFuzzingCoverage() {
+        iterations(40)
         coverageConfigurationForFuzzing(
             listOf(this@ConcurrentLinkedDequeTest::class.jvmName),
             listOf("java\\.util\\.concurrent.*"),
         )
+    }
 }

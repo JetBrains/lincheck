@@ -52,7 +52,7 @@ class CoverageOptions(
                 .build()
         )
     }
-    private var coverageResult: CoverageResult? = null
+    var coverageResult: CoverageResult? = null
     private var lastRunProjectData: ProjectData? = null
     private val excludes = excludePatterns.map(Pattern::compile)
 

@@ -10,10 +10,13 @@
 
 package fuzzing.utils
 
+import fuzzing.stats.BenchmarkStats
+import fuzzing.stats.TestType
+import fuzzing.stats.benchmarkCollector
+import org.jetbrains.kotlinx.lincheck.LoggingLevel
 import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.coverage.CoverageOptions
-import org.jetbrains.kotlinx.lincheck.fuzzing.coverage.toCoverage
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 import org.junit.Test
@@ -22,21 +25,41 @@ import kotlin.reflect.jvm.jvmName
 abstract class AbstractFuzzerBenchmarkTest {
     @Test(expected = AssertionError::class)
     fun modelCheckingWithCoverageTest() {
-        ModelCheckingOptions().apply {
-            executionConfiguration()
-            customize()
-            customizeModelCheckingCoverage()
-            check(this@AbstractFuzzerBenchmarkTest::class)
+        val stats = BenchmarkStats()
+        try {
+            ModelCheckingOptions().apply {
+                logLevel(LoggingLevel.INFO)
+                executionConfiguration()
+                customize()
+                customizeModelCheckingCoverage()
+                minimizeFailedScenario(false)
+                check(this@AbstractFuzzerBenchmarkTest::class, stats)
+            }
+        } finally {
+            val testName = this@AbstractFuzzerBenchmarkTest::class.jvmName.replace("fuzzing.", "")
+            println("$testName: \n$stats")
+            benchmarkCollector.add(testName, stats)
+            stats.type = TestType.MODEL_CHECKING
+            benchmarkCollector.plotEachAndClear()
         }
     }
 
     @Test(expected = AssertionError::class)
     fun fuzzingWithCoverageTest() {
-        ModelCheckingOptions().apply {
-            executionConfiguration()
-            customize()
-            customizeFuzzingCoverage()
-            check(this@AbstractFuzzerBenchmarkTest::class)
+        val stats = BenchmarkStats()
+        try {
+            ModelCheckingOptions().apply {
+                executionConfiguration()
+                customize()
+                customizeFuzzingCoverage()
+                check(this@AbstractFuzzerBenchmarkTest::class, stats)
+            }
+        }
+        finally {
+            val testName = this@AbstractFuzzerBenchmarkTest::class.jvmName.replace("fuzzing.", "")
+            println("$testName: \n$stats")
+            stats.type = TestType.FUZZING
+            benchmarkCollector.add(testName, stats)
         }
     }
 
@@ -87,13 +110,15 @@ abstract class AbstractFuzzerBenchmarkTest {
             excludePatterns = listOf(AbstractFuzzerBenchmarkTest::class.jvmName) + excludePatterns,
             includePatterns = includePatterns,
             fuzz = fuzz
-        ) { pr, res ->
-            println(
-                "Coverage: " +
-                "edges=${pr.toCoverage().coveredBranchesCount()}, " +
-                "branch=${res.branchCoverage}/${res.totalBranches}, " +
-                "line=${res.lineCoverage}/${res.totalLines}"
-            )
-        })
+        )
+//        { pr, res ->
+//            println(
+//                "Coverage: " +
+//                "edges=${pr.toCoverage().coveredBranchesCount()}, " +
+//                "branch=${res.branchCoverage}/${res.totalBranches}, " +
+//                "line=${res.lineCoverage}/${res.totalLines}"
+//            )
+//        }
+        )
     }
 }

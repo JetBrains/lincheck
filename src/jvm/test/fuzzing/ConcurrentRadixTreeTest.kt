@@ -69,13 +69,15 @@ class ConcurrentRadixTreeTest : AbstractFuzzerBenchmarkTest() {
     }
 
 
-    override fun <O : Options<O, *>> O.customizeModelCheckingCoverage() =
+    override fun <O : Options<O, *>> O.customizeModelCheckingCoverage() {
+        logLevel(LoggingLevel.INFO)
         coverageConfigurationForModelChecking(
             listOf(
                 ConcurrentRadixTreeTest::class.jvmName
             ),
             emptyList()
         )
+    }
 
     override fun <O : Options<O, *>> O.customizeFuzzingCoverage() =
         coverageConfigurationForFuzzing(

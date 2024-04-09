@@ -12,11 +12,13 @@ package fuzzing
 
 import fuzzing.utils.AbstractFuzzerBenchmarkTest
 import kotlinx.atomicfu.atomic
+import org.jetbrains.kotlinx.lincheck.LoggingLevel
 import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.scenario
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
+import org.junit.Test
 import kotlin.reflect.jvm.jvmName
 
 
@@ -56,27 +58,31 @@ class LockFreeSetTest : AbstractFuzzerBenchmarkTest() {
             .addCustomScenario(scenario)
             .invocationsPerIteration(1000000)
             .iterations(0)
+            .logLevel(LoggingLevel.INFO)
             .check(LockFreeSet::class)
     }
 
     override fun <O: Options<O, *>> O.customize() {
         threads(2)
-        actorsPerThread(16)
+        actorsPerThread(13)
         actorsBefore(0)
         actorsAfter(0)
     }
 
-    override fun <O : Options<O, *>> O.customizeModelCheckingCoverage() =
+    override fun <O : Options<O, *>> O.customizeModelCheckingCoverage() {
+        logLevel(LoggingLevel.INFO)
         coverageConfigurationForModelChecking(
             listOf(this@LockFreeSetTest::class.jvmName),
             emptyList()
         )
+    }
 
-    override fun <O : Options<O, *>> O.customizeFuzzingCoverage() =
+    override fun <O : Options<O, *>> O.customizeFuzzingCoverage() {
         coverageConfigurationForFuzzing(
             listOf(this@LockFreeSetTest::class.jvmName),
             emptyList()
         )
+    }
 
 //    @Test(expected = AssertionError::class)
 //    fun test() {

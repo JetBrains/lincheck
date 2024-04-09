@@ -10,9 +10,11 @@
 
 package org.jetbrains.kotlinx.lincheck.fuzzing.coverage
 
-import Hashing
+import org.jetbrains.kotlinx.lincheck.fuzzing.util.Hashing
 import com.intellij.rt.coverage.data.LineData
 import com.intellij.rt.coverage.data.ProjectData
+import org.jetbrains.kotlinx.lincheck.strategy.managed.CodeLocationTracePoint
+import org.jetbrains.kotlinx.lincheck.strategy.managed.Trace
 import kotlin.math.min
 
 class Coverage {
@@ -69,10 +71,13 @@ class Coverage {
             val mask = getBucketMask(hitCount)
             val updated = hits[index] or mask
 
-            if (updated != hits[index]) {
-                changed = true
-            }
+            // only check if previously hits were unset
+            if (hits[index] == 0 && hitCount != 0) changed = true
 
+//            if (updated != hits[index]) {
+//                changed = true
+//            }
+//
             hits[index] = updated
         }
 
@@ -95,6 +100,18 @@ class Coverage {
         }
 
         return mask
+    }
+}
+
+/**
+ * Adds `hitCount` to the covered branch inside `coverage`.
+ *
+ * Branch key is calculated using `lineKey` and `armId`.
+ * */
+private fun registerBranchCoverage(coverage: Coverage, lineKey: Int, armId: Int, hitCount: Int) {
+    if (hitCount != 0) {
+        val branchKey = Hashing.hash1(lineKey.toLong(), armId.toLong(), coverage.size())
+        coverage.increment(branchKey, hitCount)
     }
 }
 
@@ -151,15 +168,26 @@ fun ProjectData.toCoverage(): Coverage {
     return coverage
 }
 
+fun List<Trace>.toCoverage(): Coverage {
+    val coverage = Coverage()
+    var prevKey = 0
+    var currKey = 0
 
-/**
- * Adds `hitCount` to the covered branch inside `coverage`.
- *
- * Branch key is calculated using `lineKey` and `armId`.
- * */
-private fun registerBranchCoverage(coverage: Coverage, lineKey: Int, armId: Int, hitCount: Int) {
-    if (hitCount != 0) {
-        val branchKey = Hashing.hash1(lineKey.toLong(), armId.toLong(), coverage.size())
-        coverage.increment(branchKey, hitCount)
+    forEach {
+        it.trace.filterIsInstance<CodeLocationTracePoint>().forEach { tracePoint ->
+            currKey = Hashing.hash1(
+                tracePoint.stackTraceElement.lineNumber.toLong(),
+                tracePoint.actorId.toLong(),
+                coverage.size()
+            )
+            var key = ((currKey xor prevKey) % coverage.size())
+            if (key < 0) key = (key + coverage.size()) % coverage.size()
+
+            coverage.increment(key, 1)
+
+            prevKey = (currKey shr 1)
+        }
     }
+
+    return coverage
 }

@@ -8,11 +8,21 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+package org.jetbrains.kotlinx.lincheck.fuzzing.util/*
+ * Lincheck
+ *
+ * Copyright (C) 2019 - 2024 JetBrains s.r.o.
+ *
+ * This Source Code Form is subject to the terms of the
+ * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
+ * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 
 /**
  * Utility class for computing bounded hash values.
  *
- * Source: https://github.com/rohanpadhye/JQF/blob/master/fuzz/src/main/java/edu/berkeley/cs/jqf/fuzz/util/Hashing.java
+ * Source: https://github.com/rohanpadhye/JQF/blob/master/fuzz/src/main/java/edu/berkeley/cs/jqf/fuzz/util/org.jetbrains.kotlinx.lincheck.fuzzing.util.Hashing.java
  */
 object Hashing {
     /**

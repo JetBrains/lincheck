@@ -12,6 +12,7 @@ package fuzzing
 
 import fuzzing.CATreeMapAVL.CATreeMapAVL
 import fuzzing.utils.AbstractFuzzerBenchmarkTest
+import org.jetbrains.kotlinx.lincheck.LoggingLevel
 import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
@@ -48,13 +49,15 @@ class CATreeTest : AbstractFuzzerBenchmarkTest() {
             emptyList()
         )
 
-    override fun <O : Options<O, *>> O.customizeFuzzingCoverage() =
+    override fun <O : Options<O, *>> O.customizeFuzzingCoverage() {
+        minimizeFailedScenario(false)
         coverageConfigurationForFuzzing(
             listOf(
                 CATreeTest::class.jvmName
             ),
             emptyList()
         )
+    }
 
     @Operation
     operator fun get(@Param(name = "key") key: Long): Int? = map.get(key)
@@ -77,14 +80,16 @@ class CATreeTest : AbstractFuzzerBenchmarkTest() {
     @Operation
     fun clear() = map.clear()
 
-//    @Test
-//    fun modelCheckingTest() = ModelCheckingOptions()
-//        .iterations(100)
-//        .threads(3)
-//        .actorsPerThread(4)
-//        .invocationsPerIteration(10000)
-//        .actorsBefore(0)
-//        .actorsAfter(0)
+    @Test
+    fun modelCheckingTest() = ModelCheckingOptions()
+        .iterations(100)
+        .minimizeFailedScenario(false)
+        .threads(3)
+        .actorsPerThread(4)
+        .invocationsPerIteration(10000)
+        .actorsBefore(0)
+        .actorsAfter(0)
+        .logLevel(LoggingLevel.INFO)
 //        .withCoverage(CoverageOptions(
 //            excludePatterns = listOf(this::class.jvmName),
 //            fuzz = true
@@ -93,5 +98,5 @@ class CATreeTest : AbstractFuzzerBenchmarkTest() {
 //                    "branch=${res.branchCoverage}/${res.totalBranches}, " +
 //                    "line=${res.lineCoverage}/${res.totalLines}")
 //        })
-//        .check(this::class)
+        .check(this::class)
 }

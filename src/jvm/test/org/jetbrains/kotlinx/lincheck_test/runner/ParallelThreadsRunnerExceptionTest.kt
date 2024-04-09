@@ -16,6 +16,7 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.Trace
 import org.jetbrains.kotlinx.lincheck_test.verifier.*
 import org.junit.*
 import org.junit.Assert.*
@@ -181,5 +182,5 @@ class ParallelThreadExecutionExceptionsTest {
 }
 
 fun mockStrategy(scenario: ExecutionScenario) = object : Strategy(scenario) {
-    override fun run(): LincheckFailure? = error("Not yet implemented")
+    override fun run(): Pair<LincheckFailure?, List<Trace>> = error("Not yet implemented")
 }

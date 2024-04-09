@@ -55,8 +55,10 @@ internal class ModelCheckingStrategy(
     // The interleaving that will be studied on the next invocation.
     private lateinit var currentInterleaving: Interleaving
 
-    override fun runImpl(): LincheckFailure? {
-        currentInterleaving = root.nextInterleaving() ?: return null
+    override fun runImpl(): Pair<LincheckFailure?, List<Trace>> /* LincheckFailure? */ {
+        val traces = mutableListOf<Trace>()
+        currentInterleaving = root.nextInterleaving() ?: return Pair(null, traces)
+
         while (usedInvocations < maxInvocations) {
             // run invocation and check its results
             val invocationResult = runInvocation()
@@ -65,11 +67,12 @@ internal class ModelCheckingStrategy(
                 continue
             }
             usedInvocations++
-            checkResult(invocationResult)?.let { return it }
+            //traces.add(Trace(traceCollector!!.trace))
+            checkResult(invocationResult)?.let { return Pair(it, traces) }
             // get new unexplored interleaving
             currentInterleaving = root.nextInterleaving() ?: break
         }
-        return null
+        return Pair(null, traces) /* null */
     }
 
     override fun onNewSwitch(iThread: Int, mustSwitch: Boolean) {

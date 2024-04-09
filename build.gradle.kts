@@ -45,12 +45,19 @@ kotlin {
             val asmVersion: String by project
             val reflectionsVersion: String by project
             val coverageVersion: String by project
+            val letsPlotVersion: String by project
+            val letsPlotKotlinVersion: String by project
+
             dependencies {
                 api("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
                 api("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion")
                 api("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
-                // api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutinesVersion")
-                api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.0")
+                api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutinesVersion")
+
+                api("org.jetbrains.lets-plot:lets-plot-common:$letsPlotVersion")
+                api("org.jetbrains.lets-plot:lets-plot-kotlin-jvm:$letsPlotKotlinVersion")
+                api("org.jetbrains.lets-plot:lets-plot-image-export:$letsPlotVersion")
+
                 api("org.ow2.asm:asm-commons:$asmVersion")
                 api("org.ow2.asm:asm-util:$asmVersion")
                 api("org.reflections:reflections:$reflectionsVersion")
@@ -97,7 +104,7 @@ tasks {
         from(sourceSets["main"].allSource)
     }
     withType<Test> {
-        maxHeapSize = "5g"
+        maxHeapSize = "6g"
         maxParallelForks = 1
         jvmArgs(
             "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",

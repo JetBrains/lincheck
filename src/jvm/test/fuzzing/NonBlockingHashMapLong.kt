@@ -12,11 +12,13 @@ package fuzzing
 
 import fuzzing.utils.AbstractConcurrentMapTest
 import org.jctools.maps.NonBlockingHashMapLong
+import org.jetbrains.kotlinx.lincheck.LoggingLevel
 import org.jetbrains.kotlinx.lincheck.Options
 import kotlin.reflect.jvm.jvmName
 
 class NonBlockingHashMapLongTest : AbstractConcurrentMapTest<NonBlockingHashMapLong<Int>>(NonBlockingHashMapLong()) {
-    override fun <O : Options<O, *>> O.customizeModelCheckingCoverage() =
+    override fun <O : Options<O, *>> O.customizeModelCheckingCoverage() {
+        logLevel(LoggingLevel.INFO)
         coverageConfigurationForModelChecking(
             listOf(
                 AbstractConcurrentMapTest::class.jvmName,
@@ -24,6 +26,7 @@ class NonBlockingHashMapLongTest : AbstractConcurrentMapTest<NonBlockingHashMapL
             ),
             emptyList()
         )
+    }
 
     override fun <O : Options<O, *>> O.customizeFuzzingCoverage() =
         coverageConfigurationForFuzzing(

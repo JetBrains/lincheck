@@ -8,23 +8,22 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package fuzzing
+package fuzzing.suite
 
+import fuzzing.*
 import org.junit.AfterClass
-import org.junit.Assert.assertEquals
 import org.junit.Before
-import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Suite
 import org.junit.runners.Suite.SuiteClasses
 
 @RunWith(Suite::class)
 @SuiteClasses(
-    ConcurrentLinkedDequeTest::class,
-    LockFreeSetTest::class,
-    NonBlockingHashMapLongTest::class,
-    SnapTreeTest::class,
-    // MutexTest::class, // CPU throttle
+    //ConcurrentLinkedDequeTest::class,
+    //LockFreeSetTest::class,
+    //NonBlockingHashMapLongTest::class,
+    //SnapTreeTest::class,
+    //MutexTest::class, // CPU throttle
     ConcurrentRadixTreeTest::class,
     ConcurrentSuffixTreeTest::class,
     LogicalOrderingAVLTest::class,

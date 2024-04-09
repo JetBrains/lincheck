@@ -86,7 +86,7 @@ abstract class ManagedStrategy(
     // stores a constructor for the corresponding code location.
     private val tracePointConstructors: MutableList<TracePointConstructor> = ArrayList()
     // Collector of all events in the execution such as thread switches.
-    private var traceCollector: TraceCollector? = null // null when `collectTrace` is false
+    protected var traceCollector: TraceCollector? = null // null when `collectTrace` is false
     // Stores the currently executing methods call stack for each thread.
     private val callStackTrace = Array(nThreads) { mutableListOf<CallStackTraceElement>() }
     // Stores the global number of method calls.
@@ -135,14 +135,14 @@ abstract class ManagedStrategy(
     fun useBytecodeCache(): Boolean =
         !collectTrace && testCfg.eliminateLocalObjects && (testCfg.guarantees == ManagedCTestConfiguration.DEFAULT_GUARANTEES)
 
-    override fun run(): LincheckFailure? = runImpl().also { close() }
+    override fun run(): Pair<LincheckFailure?, List<Trace>> /* LincheckFailure? */ = runImpl().also { close() }
 
     // == STRATEGY INTERFACE METHODS ==
 
     /**
      * This method implements the strategy logic.
      */
-    protected abstract fun runImpl(): LincheckFailure?
+    protected abstract fun runImpl(): Pair<LincheckFailure?, List<Trace>> // LincheckFailure?
 
     /**
      * This method is invoked before every thread context switch.
@@ -802,7 +802,7 @@ abstract class ManagedStrategy(
     /**
      * Logs thread events such as thread switches and passed code locations.
      */
-    private inner class TraceCollector {
+    protected inner class TraceCollector {
         private val _trace = mutableListOf<TracePoint>()
         val trace: List<TracePoint> = _trace
 

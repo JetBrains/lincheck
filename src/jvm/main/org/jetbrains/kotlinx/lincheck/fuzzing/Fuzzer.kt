@@ -19,6 +19,8 @@ import org.jetbrains.kotlinx.lincheck.fuzzing.coverage.Coverage
 import org.jetbrains.kotlinx.lincheck.fuzzing.input.FailedInput
 import org.jetbrains.kotlinx.lincheck.fuzzing.input.Input
 import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.Mutator
+import fuzzing.stats.BenchmarkStats
+import org.jetbrains.kotlinx.lincheck.fuzzing.util.Sampling
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import java.util.*
 import kotlin.collections.ArrayDeque
@@ -35,16 +37,18 @@ import kotlin.math.max
  * It is still used even if `seedScenarios` is not empty.
  */
 class Fuzzer(
+    private val stats: BenchmarkStats,
     seedScenarios:  List<ExecutionScenario>,
     testStructure: CTestStructure,
     testConfiguration: CTestConfiguration,
     private val defaultExecutionGenerator: ExecutionGenerator
 ) {
-    /** Includes coverage from failed executions as well */
-    private val totalCoverage = Coverage()
+    private var totalCycles = 0
     private var totalExecutions = 0
-    /** Includes invalid executions as well */
+    private val totalCoverage = Coverage()
+    private val totalTraceCoverage = Coverage()
     private var maxCoveredBranches = 0
+    private var maxCoveredTrace = 0
 
     /** Id of input that is going to be mutated to get some interesting children inputs */
     private var currentParentInputIdx = 0
@@ -58,7 +62,7 @@ class Fuzzer(
     /** Contains initial seeds (eg. custom scenarios, that user may specify), might be empty as well */
     private val seedInputs: ArrayDeque<Input> = ArrayDeque()
     /** Contains main queue of inputs which is used during fuzzing (this does not contain failed inputs, ony valid once) */
-    private val savedInputs: MutableList<Input> = mutableListOf()
+    private var savedInputs: MutableList<Input> = mutableListOf()
     /** Contains failures that were found during fuzzing. */
     private val failures: MutableList<FailedInput> = mutableListOf()
     var iterationOfFirstFailure = -1
@@ -106,7 +110,7 @@ class Fuzzer(
         else {
             // pick something from fuzzing queue
             val parentInput = getCurrentParentInput()
-            currentInput = parentInput.mutate(mutator, sampleGeometric(random, MEAN_MUTATION_COUNT), random)
+            currentInput = parentInput.mutate(mutator, Sampling.sampleGeometric(random, MEAN_MUTATION_COUNT), random)
             childrenGeneratedForCurrentParentInput++
         }
 
@@ -115,7 +119,7 @@ class Fuzzer(
         return currentInput!!.scenario
     }
 
-    fun handleResult(failure: LincheckFailure?, coverage: Coverage) {
+    fun handleResult(failure: LincheckFailure?, coverage: Coverage, traceCoverage: Coverage) {
         if (currentInput == null || executionStart == null)
             throw RuntimeException(
                 "`Fuzzer::handleResult(...)` called with no input selected. " +
@@ -127,10 +131,12 @@ class Fuzzer(
             throw RuntimeException("Reassigning coverage that was already calculated")
         }
         currentInput!!.coverage = coverage
-        maxCoveredBranches = max(maxCoveredBranches, coverage.coveredBranchesCount())
+        currentInput!!.traceCoverage = traceCoverage
 
-        // update total coverage
-        val newCoverageFound: Boolean = totalCoverage.merge(coverage)
+        var coverageUpdated = false
+        var traceCoverageUpdated = false
+        var maxCoverageUpdated = false
+        var maxTraceCoverageUpdated = false
 
         if (failure != null) {
             // TODO: check if failure is unique, then save, otherwise skip
@@ -139,18 +145,51 @@ class Fuzzer(
 
             if (iterationOfFirstFailure == -1) iterationOfFirstFailure = totalExecutions
         }
-        if (newCoverageFound) {
-            // save input if it uncovers new program regions (failed inputs also saved)
-            currentInput!!.favorite = true // set to favorite to generate more children from this input
-            savedInputs.add(currentInput!!)
+        else {
+            coverageUpdated = totalCoverage.merge(coverage)
+            traceCoverageUpdated = totalTraceCoverage.merge(traceCoverage)
+            maxCoverageUpdated = maxCoveredBranches < coverage.coveredBranchesCount()
+            maxTraceCoverageUpdated = maxCoveredTrace < traceCoverage.coveredBranchesCount()
+            val newCoverageFound: Boolean =
+                coverageUpdated ||
+                traceCoverageUpdated ||
+                maxCoverageUpdated ||
+                maxTraceCoverageUpdated
+
+            if (newCoverageFound) {
+                // save input if it uncovers new program regions, or it maximizes single run coverage
+                currentInput!!.favorite = true // set to favorite to generate more children from this input
+
+                maxCoveredBranches = max(maxCoveredBranches, coverage.coveredBranchesCount())
+                maxCoveredTrace = max(maxCoveredTrace, traceCoverage.coveredBranchesCount())
+
+                savedInputs.add(currentInput!!)
+            }
         }
+
+
+        // TODO: updated stats
+        stats.totalFoundCoverage.add(totalCoverage.coveredBranchesCount())
+        stats.iterationFoundCoverage.add(coverage.coveredBranchesCount())
+        stats.maxIterationFoundCoverage.add(maxCoveredBranches)
+        stats.savedInputsCounts.add(savedInputs.size)
+        if (failure != null) stats.failedIterations.add(totalExecutions + 1)
+
 
         // TODO: move printing in some logger
         println(
             "[Fuzzer, ${executionStart!!}] #$totalExecutions: \n" +
+            "============ \n" +
             "covered-edges = ${coverage.coveredBranchesCount()} \n" +
             "max-edges = $maxCoveredBranches \n" +
             "total-edges = ${totalCoverage.coveredBranchesCount()} \n" +
+            "============ \n" +
+            "covered-trace = ${traceCoverage.coveredBranchesCount()} \n" +
+            "max-trace = $maxCoveredTrace \n" +
+            "total-trace = ${totalTraceCoverage.coveredBranchesCount()} \n" +
+            "============ \n" +
+            "mask (c|t|mc|mt): ${if (coverageUpdated) 1 else 0}${if (traceCoverageUpdated) 1 else 0}${if (maxCoverageUpdated) 1 else 0}${if (maxTraceCoverageUpdated) 1 else 0} \n" +
+            "cycles: $totalCycles \n" +
             "sizes [saved (fav)/fails/seed] = ${savedInputs.size} (${savedInputs.count { it.favorite }}) / ${failures.size} / ${seedInputs.size} \n"
         )
 
@@ -160,6 +199,8 @@ class Fuzzer(
         // update `favorite` marks on saved inputs
         if (totalExecutions % FAVORITE_INPUTS_RECALCULATION_RATE == 0) {
             recalculateFavoriteInputs()
+            currentParentInputIdx = 0
+            childrenGeneratedForCurrentParentInput = 0
         }
     }
 
@@ -174,8 +215,13 @@ class Fuzzer(
 
         if (childrenGeneratedForCurrentParentInput >= targetChildrenCount) {
             // change parent input to the next one
-            currentParentInputIdx = (currentParentInputIdx + 1) % savedInputs.size // TODO: completed cycle over the whole queue
+            currentParentInputIdx = (currentParentInputIdx + 1) % savedInputs.size
             childrenGeneratedForCurrentParentInput = 0
+
+            if (currentParentInputIdx == 0) {
+                totalCycles++
+                recalculateFavoriteInputs()
+            }
         }
 
         return savedInputs[currentParentInputIdx]
@@ -198,52 +244,49 @@ class Fuzzer(
      * Recalculates `favorite` marks for each input from `savedInputs` queue.
      *
      * Finds the subset of saved inputs that cover the same number of edges as in `totalCoverage` and marks them as favorite.
-     * Non-favorite inputs are not discarded, but just marked as not favorite
-     * (which decreases the number of children input generated from them)
      */
     private fun recalculateFavoriteInputs() {
         // reset favorites to false
-        val favBefore: Int = savedInputs.count { it.favorite }
-        val favAfter: Int
+        val favoritesBefore: Int = savedInputs.count { it.favorite }
+        val newInputsQueue = mutableListOf<Input>()
 
         savedInputs.forEach { it.favorite = false }
 
-        // attempt to find the subset of inputs that produce the same coverage as `totalCoverage`
+        // attempt to find the subset of inputs that produce the same total coverage
         val tempCoverage = Coverage()
         val coveredKeys = totalCoverage.coveredBranchesKeys()
-
         for (key in coveredKeys) {
             if (tempCoverage.isCovered(key)) continue
 
-            val bestInput: Input = savedInputs.filter { it.coverage.isCovered(key) }.minByOrNull { it.fitness }
+            val bestInput: Input = savedInputs.filter { it.coverage.isCovered(key) }.maxByOrNull { it.fitness }
                 ?: throw RuntimeException("Key $key is not covered in any saved input but was found in total coverage")
 
             tempCoverage.merge(bestInput.coverage)
             bestInput.favorite = true
+            newInputsQueue.add(bestInput)
         }
 
-        favAfter = savedInputs.count { it.favorite }
-        println("Recalculate favorite inputs: before=$favBefore, after=$favAfter")
-    }
+        // attempt to find the subset of inputs that produce the same total trace coverage
+        val tempTraceCoverage = Coverage()
+        val coveredTraceKeys = totalTraceCoverage.coveredBranchesKeys()
+        for (key in coveredTraceKeys) {
+            if (tempTraceCoverage.isCovered(key)) continue
 
-    /**
-     * Sample from a geometric distribution with given mean.
-     *
-     * Utility method used in implementing mutation operations.
-     *
-     * @param random a pseudo-random number generator
-     * @param mean the mean of the distribution
-     * @return a randomly sampled value
-     */
-    private fun sampleGeometric(random: Random, mean: Double): Int {
-        val p = 1 / mean
-        val uniform = random.nextDouble()
-        return ceil(ln(1 - uniform) / ln(1 - p)).toInt()
+            val bestInput: Input = savedInputs.filter { it.traceCoverage.isCovered(key) }.maxByOrNull { it.fitness }
+                ?: throw RuntimeException("Key $key is not covered in any saved input but was found in total trace coverage")
+
+            tempTraceCoverage.merge(bestInput.traceCoverage)
+            bestInput.favorite = true
+            if (!newInputsQueue.contains(bestInput)) newInputsQueue.add(bestInput)
+        }
+
+        savedInputs = newInputsQueue
+        println("Recalculate favorite inputs: before=$favoritesBefore, after=${newInputsQueue.size}")
     }
 }
 
 // constants match the JQF implementation
-private const val CHILDREN_INPUTS_GENERATED = 5 // 50
-private const val FAVORITE_PARENT_CHILDREN_MULTIPLIER = 3 // 20
-private const val FAVORITE_INPUTS_RECALCULATION_RATE = 30
-private const val MEAN_MUTATION_COUNT = 4.0 // ceil(testConfiguration.actorsPerThread.toDouble() / 2.0).toInt()
+private const val CHILDREN_INPUTS_GENERATED = 2 // 50
+private const val FAVORITE_PARENT_CHILDREN_MULTIPLIER = 5 // 20
+private const val FAVORITE_INPUTS_RECALCULATION_RATE = 10
+private const val MEAN_MUTATION_COUNT = 3.0 // ceil(testConfiguration.actorsPerThread.toDouble() / 2.0).toInt()

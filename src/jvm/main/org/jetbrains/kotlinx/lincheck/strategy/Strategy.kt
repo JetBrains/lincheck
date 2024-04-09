@@ -11,6 +11,7 @@ package org.jetbrains.kotlinx.lincheck.strategy
 
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
+import org.jetbrains.kotlinx.lincheck.strategy.managed.Trace
 import org.objectweb.asm.ClassVisitor
 
 /**
@@ -28,7 +29,7 @@ abstract class Strategy protected constructor(
         throw UnsupportedOperationException("$javaClass strategy does not transform classes")
     }
 
-    abstract fun run(): LincheckFailure?
+    abstract fun run(): Pair<LincheckFailure?, List<Trace>> // LincheckFailure?
 
     open fun beforePart(part: ExecutionPart) {}
 

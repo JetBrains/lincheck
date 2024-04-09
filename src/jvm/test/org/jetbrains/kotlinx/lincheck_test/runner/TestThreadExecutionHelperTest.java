@@ -10,10 +10,12 @@
 
 package org.jetbrains.kotlinx.lincheck_test.runner;
 
+import kotlin.Pair;
 import org.jetbrains.kotlinx.lincheck.*;
 import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.runner.*;
 import org.jetbrains.kotlinx.lincheck.strategy.*;
+import org.jetbrains.kotlinx.lincheck.strategy.managed.Trace;
 import org.junit.*;
 
 import java.util.*;
@@ -29,7 +31,7 @@ public class TestThreadExecutionHelperTest {
         ExecutionScenario scenario = new ExecutionScenario(emptyList(), emptyList(), emptyList(), null);
         Strategy strategy = new Strategy(scenario) {
             @Override
-            public LincheckFailure run() {
+            public Pair<LincheckFailure, List<Trace>> run() {
                 throw new UnsupportedOperationException();
             }
         };
