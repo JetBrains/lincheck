@@ -19,7 +19,6 @@ import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.util.SpinnerGroup
-import org.jetbrains.kotlinx.lincheck.util.spinWaitUntil
 import org.jetbrains.kotlinx.lincheck.TestThread
 import java.lang.reflect.*
 import java.util.concurrent.*
