@@ -197,9 +197,9 @@ private fun linePlot(
         geomPoint(data = data, size = 3.0) { x = "x"; y = "y"; color = "type"; group = "type" } +
         geomPoint(data = markedDots, size = 4.0) { x = "x"; y = "y"; color = "type"; group = "type" } +
         geomText(data = mapOf(
-            "x" to data["x"]!!.filterIndexed { index, _ -> index % labelEachDotRatio == 0  },
-            "y" to data["y"]!!.filterIndexed { index, _ -> index % labelEachDotRatio == 0  },
-            "type" to data["type"]!!.filterIndexed { index, _ -> index % labelEachDotRatio == 0  }
+            "x" to data["x"]!!.filterIndexed { index, _ -> (index + 1) % labelEachDotRatio == 0  },
+            "y" to data["y"]!!.filterIndexed { index, _ -> (index + 1) % labelEachDotRatio == 0  },
+            "type" to data["type"]!!.filterIndexed { index, _ -> (index + 1) % labelEachDotRatio == 0  }
         ), labelFormat = "d", size = 5, hjust = 1, vjust = 0) { x = "x"; y = "y"; label = "y" } +
         geomText(data = markedDots) { color = "type"; group = "type" }
 
