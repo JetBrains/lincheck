@@ -113,7 +113,7 @@ abstract class ManagedStrategy(
             testClass = testClass,
             validationFunction = validationFunction,
             stateRepresentationMethod = stateRepresentationFunction,
-            timeoutMs = testCfg.timeoutMs,
+            timeoutMs = getTimeOutMs(this, testCfg.timeoutMs),
             useClocks = UseClocks.ALWAYS
         )
 
@@ -1737,3 +1737,12 @@ private const val OBSTRUCTION_FREEDOM_LOCK_VIOLATION_MESSAGE =
 
 private const val OBSTRUCTION_FREEDOM_WAIT_VIOLATION_MESSAGE =
     "The algorithm should be non-blocking, but a wait call is detected"
+
+/**
+ * With idea plugin enabled, we should not use default Lincheck timeout
+ * as debugging may take more time than default timeout.
+ */
+private const val DEBUGGER_TIMEOUT = 1000L * 60 * 60 * 24 * 365
+
+private fun getTimeOutMs(strategy: ManagedStrategy, defaultTimeOutMs: Long): Long =
+    if (strategy is ModelCheckingStrategy && strategy.replay) DEBUGGER_TIMEOUT else defaultTimeOutMs
