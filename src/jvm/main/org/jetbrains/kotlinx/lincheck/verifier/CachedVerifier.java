@@ -28,6 +28,9 @@ public abstract class CachedVerifier implements Verifier {
         Set<ExecutionResult> executionResults = previousResults.computeIfAbsent(scenario, s -> new HashSet<>());
         if (executionResults.contains(results)) return true;
         boolean isValid = verifyResultsImpl(scenario, results);
+        // We store in previousResults only correct executions.
+        // Otherwise, as we re-use this verifier when doing replay in the Plugin, we could find incorrect execution
+        // in this cache and indicate that incorrect result is correct.
         if (isValid) {
             executionResults.add(results);
         }

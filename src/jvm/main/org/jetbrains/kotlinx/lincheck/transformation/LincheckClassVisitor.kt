@@ -92,7 +92,9 @@ internal class LincheckClassVisitor(
         }
         if (methodName == "<clinit>" ||
             // Debugger implicitly evaluates toString for variables rendering
-            // We need to disable breakpoints in such a case, as the numeration will break
+            // We need to disable breakpoints in such a case, as the numeration will break.
+            // Breakpoints are disabled as we do not instrument toString and enter an ignored section,
+            // so there are no beforeEvents inside.
             ideaPluginEnabled() && methodName == "toString" && desc == "()Ljava/lang/String;") {
             mv = WrapMethodInIgnoredSectionTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
             return mv

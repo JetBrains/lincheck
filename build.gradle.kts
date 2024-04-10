@@ -108,6 +108,8 @@ tasks {
         if (withEventIdSequentialCheck.toBoolean()) {
             extraArgs.add("-Dlincheck.debug.eventIdOrderingCheck=true")
         }
+        val version: String by project
+        extraArgs.add("-Dlincheck.version=$version")
         jvmArgs(extraArgs)
     }
 

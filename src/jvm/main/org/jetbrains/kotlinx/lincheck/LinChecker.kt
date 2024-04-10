@@ -97,8 +97,8 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
 
     /**
      * Enables replay mode and re-runs the failed scenario if Lincheck IDEA plugin is enabled.
-     * Also, this logic cannot be placed only in the strategy code, as we may need to call it with a minimized
-     * scenario.
+     * We cannot initiate the failed interleaving replaying in the strategy code,
+     * as the failing scenario might need to be minimized first.
      */
     private fun CTestConfiguration.runReplayForPlugin(failure: LincheckFailure, verifier: Verifier) {
         if (ideaPluginEnabled() && this is ModelCheckingCTestConfiguration) {

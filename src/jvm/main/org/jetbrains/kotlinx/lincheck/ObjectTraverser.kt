@@ -34,6 +34,8 @@ import kotlin.coroutines.Continuation
 
 /**
  * Traverses an object to enumerate it and all nested objects.
+ * Uses the same a numeration map as TraceReporter via [getObjectNumber] method, so objects have the
+ * same numbers, as they have in the trace.
  */
 internal fun createObjectToNumberMap(obj: Any): Map<Any, Int> {
     val objectNumberMap = hashMapOf<Any, Int>()
@@ -94,11 +96,7 @@ private fun createObjectToNumberMap(obj: Any, processedObjects: MutableSet<Any>,
                     value = (0..value.length()).map { (value as AtomicReferenceArray<*>).get(it) }.toTypedArray()
                 }
 
-                if (value?.javaClass?.canonicalName?.startsWith("java.lang.invoke.") == true) {
-                    // Ignore
-                } else if (value is AtomicReferenceFieldUpdater<*, *> || value is AtomicIntegerFieldUpdater<*> || value is AtomicLongFieldUpdater<*>) {
-                    // Ignore
-                } else if (value is ReentrantLock) {
+                if (value is AtomicReferenceFieldUpdater<*, *> || value is AtomicIntegerFieldUpdater<*> || value is AtomicLongFieldUpdater<*>) {
                     // Ignore
                 } else {
                     if (shouldAnalyseObjectRecursively(value, objectNumberMap)) {

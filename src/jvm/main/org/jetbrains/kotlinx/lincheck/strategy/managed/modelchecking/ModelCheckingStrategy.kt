@@ -75,7 +75,7 @@ internal class ModelCheckingStrategy(
                     testFailed(
                         failureType = failure.type,
                         trace = trace,
-                        version = "2.28",
+                        version = lincheckVersion,
                         minimalPluginVersion = MINIMAL_PLUGIN_VERSION
                     )
 
@@ -453,5 +453,13 @@ internal class ModelCheckingStrategy(
         }
 
         fun build() = Interleaving(switchPositions, threadSwitchChoices, lastNoninitializedNode)
+    }
+
+    companion object {
+        /**
+         * We provide lincheck version to [testFailed] method to the plugin be able to
+         * determine if this version is compatible with the plugin version.
+         */
+        private val lincheckVersion = System.getProperty("lincheck.version")
     }
 }
