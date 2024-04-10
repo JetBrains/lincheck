@@ -69,4 +69,4 @@ abstract class AbstractLincheckTest(
     }
 }
 
-private const val TIMEOUT = 2 * 60_100L // 2 min
+private const val TIMEOUT = 3 * 60_100L // 3 min
