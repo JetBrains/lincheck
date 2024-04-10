@@ -70,26 +70,36 @@ internal class ModelCheckingStrategy(
             }
             usedInvocations++
             checkResult(invocationResult)?.let { failure ->
-                if (replay && failure.trace != null) {
-                    val trace = extractDebugTrace(failure, failure.trace)
-                    testFailed(
-                        failureType = failure.type,
-                        trace = trace,
-                        version = lincheckVersion,
-                        minimalPluginVersion = MINIMAL_PLUGIN_VERSION
-                    )
-
-                    doReplay()
-                    while (shouldReplayInterleaving()) {
-                        doReplay()
-                    }
-                }
+                runReplayIfPluginEnabled(failure)
                 return failure
             }
             // get new unexplored interleaving
             currentInterleaving = root.nextInterleaving() ?: break
         }
         return null
+    }
+
+    /**
+     * If the plugin enabled and the failure has a trace, passes information about
+     * the trace and the failure to the Plugin and run re-run execution to debug it.
+     */
+    private fun runReplayIfPluginEnabled(failure: LincheckFailure) {
+        if (replay && failure.trace != null) {
+            // extract trace representation in the appropriate view
+            val trace = constructTraceForPlugin(failure, failure.trace)
+            // provide all information about the failed test to the debugger
+            testFailed(
+                failureType = failure.type,
+                trace = trace,
+                version = lincheckVersion,
+                minimalPluginVersion = MINIMAL_PLUGIN_VERSION
+            )
+            // replay execution while it's needed
+            doReplay()
+            while (shouldReplayInterleaving()) {
+                doReplay()
+            }
+        }
     }
 
     override fun shouldInvokeBeforeEvent(): Boolean {
@@ -101,6 +111,12 @@ internal class ModelCheckingStrategy(
     }
 
 
+    /**
+     * We provide information about the failure type to the Plugin, but
+     * due to difficulties with passing objects like LincheckFailure (as class versions may vary),
+     * we use its string representation.
+     * The Plugin uses this information to show the failure type to a user.
+     */
     private val LincheckFailure.type: String
         get() = when (this) {
             is IncorrectResultsFailure -> "INCORRECT_RESULTS"
@@ -140,7 +156,7 @@ internal class ModelCheckingStrategy(
      * | SPIN_CYCLE_SWITCH              | 5    |
      * | OBSTRUCTION_FREEDOM_VIOLATION  | 6    |
      */
-    private fun extractDebugTrace(failure: LincheckFailure, trace: Trace): Array<String> {
+    private fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Array<String> {
         val results = if (failure is IncorrectResultsFailure) failure.results else null
         val nodesList = constructTraceGraph(failure, results, trace, collectExceptionsOrEmpty(failure))
         var sectionIndex = 0

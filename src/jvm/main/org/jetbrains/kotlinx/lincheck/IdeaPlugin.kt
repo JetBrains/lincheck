@@ -102,8 +102,8 @@ fun visualizeInstance(
 }
 
 /**
- * The Debugger creates a breakpoint inside this method to know when the thread is switched.
- * Step-over expects that the next suspension point is in the same thread.
+ * The Debugger creates a breakpoint on this method call to know when the thread is switched.
+ * The following "step over" call expects that the next suspension point is in the same thread.
  * So we have to track if a thread is changed by Lincheck to interrupt stepping,
  * otherwise the debugger skips all breakpoints in the thread desired by Lincheck.
  */
@@ -114,7 +114,7 @@ fun onThreadSwitchesOrActorFinishes() {}
 /**
  * Internal property to check that trace point IDs are in a strict sequential order.
  */
-internal val eventIdStrictOrderingCheck = System.getProperty("lincheck.debug.eventIdOrderingCheck") != null
+internal val eventIdStrictOrderingCheck = System.getProperty("lincheck.debug.withEventIdSequentialCheck") != null
 
 private fun visualize(strategyObject: Any) = runCatching {
     val strategy = strategyObject as ModelCheckingStrategy
@@ -140,7 +140,7 @@ private fun visualize(strategyObject: Any) = runCatching {
 private fun createObjectToNumberMapAsArray(testObject: Any): Array<Any> {
     val resultArray = arrayListOf<Any>()
 
-    val numbersMap = createObjectToNumberMap(testObject)
+    val numbersMap = enumerateObjects(testObject)
     numbersMap.forEach { (any, objectNumber) ->
         resultArray.add(any)
         resultArray.add(objectNumber)

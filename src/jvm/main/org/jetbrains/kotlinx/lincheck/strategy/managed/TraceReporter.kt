@@ -474,8 +474,7 @@ internal fun getObjectNumber(clazz: Class<Any>, obj: Any): Int = objectNumeratio
     .computeIfAbsent(clazz) { IdentityHashMap() }
     .computeIfAbsent(obj) { 1 + objectNumeration[clazz]!!.size }
 
-private val objectNumeration = WeakHashMap<Class<Any>, MutableMap<Any, Int>>()
-    @Synchronized get
+private val objectNumeration = Collections.synchronizedMap(WeakHashMap<Class<Any>, MutableMap<Any, Int>>())
 
 const val TRACE_TITLE = "The following interleaving leads to the error:"
 const val DETAILED_TRACE_TITLE = "Detailed trace:"

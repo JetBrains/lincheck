@@ -62,7 +62,13 @@ internal abstract class CodeLocationTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
     protected val stackTraceElement: StackTraceElement
-) : TracePoint(iThread, actorId, callStackTrace)
+) : TracePoint(iThread, actorId, callStackTrace) {
+
+    protected abstract fun toStringCompact(): String
+    override fun toStringImpl(withLocation: Boolean): String {
+        return toStringCompact() + if (withLocation) " at ${stackTraceElement.shorten()}" else ""
+    }
+}
 
 internal class StateRepresentationTracePoint(
     iThread: Int, actorId: Int,
@@ -91,14 +97,11 @@ internal class ReadTracePoint(
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
     private var value: Any? = null
 
-    override fun toStringImpl(withLocation: Boolean): String = StringBuilder().apply {
+    override fun toStringCompact(): String = StringBuilder().apply {
         if (fieldName != null)
             append("$fieldName.")
         append("READ")
         append(": ${adornedStringRepresentation(value)}")
-        if (withLocation) {
-            append(" at ${stackTraceElement.shorten()}")
-        }
     }.toString()
 
     fun initializeReadValue(value: Any?) {
@@ -114,15 +117,12 @@ internal class WriteTracePoint(
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
     private var value: Any? = null
 
-    override fun toStringImpl(withLocation: Boolean): String  = StringBuilder().apply {
+    override fun toStringCompact(): String  = StringBuilder().apply {
         if (fieldName != null)
             append("$fieldName.")
         append("WRITE(")
         append(adornedStringRepresentation(value))
         append(")")
-        if (withLocation) {
-            append(" at ${stackTraceElement.shorten()}")
-        }
     }.toString()
 
     fun initializeWrittenValue(value: Any?) {
@@ -143,7 +143,7 @@ internal class MethodCallTracePoint(
 
     val wasSuspended get() = returnedValue === COROUTINE_SUSPENDED
 
-    override fun toStringImpl(withLocation: Boolean): String = StringBuilder().apply {
+    override fun toStringCompact(): String = StringBuilder().apply {
         if (ownerName != null)
             append("$ownerName.")
         append("$methodName(")
@@ -154,9 +154,6 @@ internal class MethodCallTracePoint(
             append(": ${adornedStringRepresentation(returnedValue)}")
         else if (thrownException != null && thrownException != ForcibleExecutionFinishError)
             append(": threw ${thrownException!!.javaClass.simpleName}")
-        if (withLocation) {
-            append(" at ${stackTraceElement.shorten()}")
-        }
     }.toString()
 
     fun initializeReturnedValue(value: Any?) {
@@ -182,7 +179,7 @@ internal class MonitorEnterTracePoint(
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    override fun toStringImpl(withLocation: Boolean): String = "MONITORENTER at " + stackTraceElement.shorten()
+    override fun toStringCompact(): String = "MONITORENTER"
 }
 
 internal class MonitorExitTracePoint(
@@ -190,7 +187,7 @@ internal class MonitorExitTracePoint(
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    override fun toStringImpl(withLocation: Boolean): String = "MONITOREXIT" + if (withLocation) " at " + stackTraceElement.shorten() else ""
+    override fun toStringCompact(): String = "MONITOREXIT"
 }
 
 internal class WaitTracePoint(
@@ -198,7 +195,7 @@ internal class WaitTracePoint(
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    override fun toStringImpl(withLocation: Boolean): String = "WAIT" + if (withLocation) " at " + stackTraceElement.shorten() else ""
+    override fun toStringCompact(): String = "WAIT"
 }
 
 internal class NotifyTracePoint(
@@ -206,7 +203,7 @@ internal class NotifyTracePoint(
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    override fun toStringImpl(withLocation: Boolean): String = "NOTIFY" + if (withLocation) " at " + stackTraceElement.shorten() else ""
+    override fun toStringCompact(): String = "NOTIFY"
 }
 
 internal class ParkTracePoint(
@@ -214,7 +211,7 @@ internal class ParkTracePoint(
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    override fun toStringImpl(withLocation: Boolean): String = "PARK" + if (withLocation) " at " + stackTraceElement.shorten() else ""
+    override fun toStringCompact(): String = "PARK"
 }
 
 internal class UnparkTracePoint(
@@ -222,7 +219,7 @@ internal class UnparkTracePoint(
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    override fun toStringImpl(withLocation: Boolean): String = "UNPARK" +  if (withLocation) " at " + stackTraceElement.shorten() else ""
+    override fun toStringCompact(): String = "UNPARK"
 }
 
 internal class CoroutineCancellationTracePoint(

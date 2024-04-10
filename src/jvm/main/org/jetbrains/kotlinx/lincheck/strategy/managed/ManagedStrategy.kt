@@ -1845,7 +1845,7 @@ private const val OBSTRUCTION_FREEDOM_WAIT_VIOLATION_MESSAGE =
  * With idea plugin enabled, we should not use default Lincheck timeout
  * as debugging may take more time than default timeout.
  */
-private const val DEBUGGER_TIMEOUT = 1000L * 60 * 60 * 24 * 365
+private const val INFINITE_TIMEOUT = 1000L * 60 * 60 * 24 * 365
 
 private fun getTimeOutMs(strategy: ManagedStrategy, defaultTimeOutMs: Long): Long =
-    if (strategy is ModelCheckingStrategy && strategy.replay) DEBUGGER_TIMEOUT else defaultTimeOutMs
+    if (strategy is ModelCheckingStrategy && strategy.replay) INFINITE_TIMEOUT else defaultTimeOutMs

@@ -43,12 +43,12 @@ class ModelCheckingCTestConfiguration(testClass: Class<*>, iterations: Int, thre
     timeoutMs = timeoutMs,
     customScenarios = customScenarios
 ) {
-    private var replay = false
+    private var isReplayModeForIdeaPluginEnabled = false
     override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunction: Actor?,
                                 stateRepresentationMethod: Method?, verifier: Verifier): Strategy
-        = ModelCheckingStrategy(this, testClass, scenario, validationFunction, stateRepresentationMethod, verifier, replay)
+        = ModelCheckingStrategy(this, testClass, scenario, validationFunction, stateRepresentationMethod, verifier, isReplayModeForIdeaPluginEnabled)
 
     internal fun enableReplayModeForIdeaPlugin() {
-        replay = true
+        isReplayModeForIdeaPluginEnabled = true
     }
 }

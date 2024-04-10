@@ -29,17 +29,17 @@ import java.math.BigDecimal
 import java.math.BigInteger
 import java.util.*
 import java.util.concurrent.atomic.*
-import java.util.concurrent.locks.ReentrantLock
 import kotlin.coroutines.Continuation
 
 /**
  * Traverses an object to enumerate it and all nested objects.
+ * Enumeration is required for the Plugin as we want to see on the diagram if some object was replaced by a new one.
  * Uses the same a numeration map as TraceReporter via [getObjectNumber] method, so objects have the
  * same numbers, as they have in the trace.
  */
-internal fun createObjectToNumberMap(obj: Any): Map<Any, Int> {
+internal fun enumerateObjects(obj: Any): Map<Any, Int> {
     val objectNumberMap = hashMapOf<Any, Int>()
-    createObjectToNumberMap(obj, Collections.newSetFromMap(IdentityHashMap()), objectNumberMap)
+    enumerateObjects(obj, Collections.newSetFromMap(IdentityHashMap()), objectNumberMap)
 
     return objectNumberMap
 }
@@ -51,7 +51,7 @@ internal fun createObjectToNumberMap(obj: Any): Map<Any, Int> {
  * @param processedObjects a set of already processed objects. Required in case of cyclic references.
  * @param objectNumberMap result enumeration map
  */
-private fun createObjectToNumberMap(obj: Any, processedObjects: MutableSet<Any>, objectNumberMap: MutableMap<Any, Int>) {
+private fun enumerateObjects(obj: Any, processedObjects: MutableSet<Any>, objectNumberMap: MutableMap<Any, Int>) {
     if (!processedObjects.add(obj)) return
     val objectNumber = getObjectNumber(obj.javaClass, obj)
     objectNumberMap[obj] = objectNumber
@@ -59,7 +59,7 @@ private fun createObjectToNumberMap(obj: Any, processedObjects: MutableSet<Any>,
     var clazz: Class<*>? = obj.javaClass
     if (clazz!!.isArray) {
         if (obj is Array<*>) {
-            obj.forEach { element -> element?.let { createObjectToNumberMap(it, processedObjects, objectNumberMap) } }
+            obj.forEach { element -> element?.let { enumerateObjects(it, processedObjects, objectNumberMap) } }
         }
         return
     }
@@ -101,7 +101,7 @@ private fun createObjectToNumberMap(obj: Any, processedObjects: MutableSet<Any>,
                 } else {
                     if (shouldAnalyseObjectRecursively(value, objectNumberMap)) {
                         if (value != null) {
-                            createObjectToNumberMap(value, processedObjects, objectNumberMap)
+                            enumerateObjects(value, processedObjects, objectNumberMap)
                         }
                     }
                 }
