@@ -64,6 +64,7 @@ abstract class AbstractLincheckTest(
         actorsPerThread(2)
         actorsAfter(2)
         minimizeFailedScenario(false)
+        logLevel(LoggingLevel.INFO)
         customize()
     }
 }
