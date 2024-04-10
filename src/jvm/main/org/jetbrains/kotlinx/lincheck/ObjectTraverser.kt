@@ -22,7 +22,6 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.LincheckClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME
 import org.jetbrains.kotlinx.lincheck.strategy.managed.getObjectNumber
-import org.jetbrains.kotlinx.lincheck.transformation.UnsafeHolder
 import sun.misc.Unsafe
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
@@ -36,7 +35,7 @@ import kotlin.coroutines.Continuation
 /**
  * Traverses an object to enumerate it and all nested objects.
  */
-fun createObjectToNumberMap(obj: Any): Map<Any, Int> {
+internal fun createObjectToNumberMap(obj: Any): Map<Any, Int> {
     val objectNumberMap = hashMapOf<Any, Int>()
     createObjectToNumberMap(obj, Collections.newSetFromMap(IdentityHashMap()), objectNumberMap)
 

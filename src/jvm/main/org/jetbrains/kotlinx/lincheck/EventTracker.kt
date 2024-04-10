@@ -49,9 +49,8 @@ internal interface EventTracker {
     fun onNewObjectCreation(obj: Any)
     fun onWriteToObjectFieldOrArrayCell(obj: Any, fieldOrArrayCellValue: Any?)
 
-    // plugin
+    // Methods required for the plugin integration
 
     fun shouldInvokeBeforeEvent(): Boolean
-
-    fun readNextEventId(): Int
+    fun getNextEventId(): Int
 }

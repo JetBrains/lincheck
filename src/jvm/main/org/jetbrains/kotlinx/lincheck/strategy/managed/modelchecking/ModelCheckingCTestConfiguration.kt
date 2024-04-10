@@ -48,7 +48,7 @@ class ModelCheckingCTestConfiguration(testClass: Class<*>, iterations: Int, thre
                                 stateRepresentationMethod: Method?, verifier: Verifier): Strategy
         = ModelCheckingStrategy(this, testClass, scenario, validationFunction, stateRepresentationMethod, verifier, replay)
 
-    internal fun withReplay() {
+    internal fun enableReplayModeForIdeaPlugin() {
         replay = true
     }
 }

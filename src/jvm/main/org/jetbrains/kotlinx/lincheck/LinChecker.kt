@@ -66,7 +66,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             reporter.logIteration(i + 1, customScenarios.size, scenario)
             val failure = scenario.run(this, verifier)
             if (failure != null) {
-                runReplay(failure, verifier)
+                runReplayForPlugin(failure, verifier)
                 return failure
             }
         }
@@ -86,7 +86,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             if (failure != null) {
                 val minimizedFailedIteration = if (!minimizeFailedScenario) failure else failure.minimize(this)
                 reporter.logFailedIteration(minimizedFailedIteration)
-                runReplay(minimizedFailedIteration, verifier)
+                runReplayForPlugin(minimizedFailedIteration, verifier)
                 return minimizedFailedIteration
             }
             // Reset the parameter generator ranges to start with the same initial bounds on each scenario generation.
@@ -100,10 +100,10 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
      * Also, this logic cannot be placed only in the strategy code, as we may need to call it with a minimized
      * scenario.
      */
-    private fun CTestConfiguration.runReplay(failure: LincheckFailure, verifier: Verifier) {
+    private fun CTestConfiguration.runReplayForPlugin(failure: LincheckFailure, verifier: Verifier) {
         if (ideaPluginEnabled() && this is ModelCheckingCTestConfiguration) {
             reporter.logFailedIteration(failure, loggingLevel = LoggingLevel.WARN)
-            withReplay()
+            enableReplayModeForIdeaPlugin()
             failure.scenario.run(this, verifier)
         } else {
             reporter.logFailedIteration(failure)

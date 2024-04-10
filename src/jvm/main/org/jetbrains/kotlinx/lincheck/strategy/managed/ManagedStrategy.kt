@@ -521,6 +521,14 @@ abstract class ManagedStrategy(
         newSwitchPoint(iThread, codeLocation, tracePoint)
     }
 
+    /*
+   TODO: Here Lincheck performs in-optimal switching.
+   Firstly an optional switch point is added before lock, and then adds force switches in case execution cannot continue in this thread.
+   More effective way would be to do force switch in case the thread is blocked (smart order of thread switching is needed),
+   or create a switch point if the switch is really optional.
+
+   Because of this additional switching we had to split this method into two, as the beforeEvent method must be called after the switch point.
+    */
     override fun lock(monitor: Any): Unit = runInIgnoredSection {
         val iThread = currentThread
         // Try to acquire the monitor

@@ -60,7 +60,7 @@ internal class ModelCheckingStrategy(
     private var eventIdProvider = EventCounterProvider()
 
     private fun nextEventId() = eventIdProvider.nextId().also {
-        if (eventIdSequentialCheck) {
+        if (eventIdStrictOrderingCheck) {
             if (eventIdProvider.lastVisited + 1 != it) {
                 val lastRead = eventIdProvider.lastRead
                 if (lastRead == null) {
@@ -76,13 +76,13 @@ internal class ModelCheckingStrategy(
     internal fun setBeforeEventId(tracePoint: TracePoint) {
         if (shouldInvokeBeforeEvent()) {
             // Method calls and atomic method calls share the same trace points
-            if (tracePoint.beforeEventId == -1
+            if (tracePoint.eventId == -1
                 && tracePoint !is CoroutineCancellationTracePoint
                 && tracePoint !is ObstructionFreedomViolationExecutionAbortTracePoint
                 && tracePoint !is SpinCycleStartTracePoint
                 && tracePoint !is SectionDelimiterTracePoint
             ) {
-                tracePoint.beforeEventId = nextEventId()
+                tracePoint.eventId = nextEventId()
             }
         }
     }
@@ -110,7 +110,7 @@ internal class ModelCheckingStrategy(
                     )
 
                     doReplay()
-                    while (replay()) {
+                    while (shouldReplayInterleaving()) {
                         doReplay()
                     }
                 }
@@ -130,10 +130,10 @@ internal class ModelCheckingStrategy(
         return thread.inIgnoredSection && suddenInvocationResult == null
     }
 
-    override fun readNextEventId(): Int {
+    override fun getNextEventId(): Int {
         if (!shouldInvokeBeforeEvent()) return -1
         return eventIdProvider.getId().also {
-            if (eventIdSequentialCheck) {
+            if (eventIdStrictOrderingCheck) {
                 if (eventIdProvider.lastVisited + 1 != it) {
                     val lastIncrement = eventIdProvider.lastIncrement
                     if (lastIncrement == null) {
@@ -176,7 +176,7 @@ internal class ModelCheckingStrategy(
      * | SPIN_CYCLE_SWITCH              | 5    |
      * | OBSTRUCTION_FREEDOM_VIOLATION  | 6    |
      */
-    private fun extractDebugTrace(failure: LincheckFailure, trace: Trace): Array<String> {
+    fun extractDebugTrace(failure: LincheckFailure, trace: Trace): Array<String> {
         val results = if (failure is IncorrectResultsFailure) failure.results else null
         val nodesList = constructTraceGraph(failure, results, trace, exceptionsOrEmpty(failure))
         var sectionIndex = 0
@@ -186,8 +186,8 @@ internal class ModelCheckingStrategy(
             when (node) {
                 is TraceLeafEvent -> {
                     val event = node.event
-                    val beforeEventId = event.beforeEventId
-                    val representation = event.toStringImpl()
+                    val beforeEventId = event.eventId
+                    val representation = event.toStringImpl(withLocation = false)
                     val type = when (event) {
                         is SwitchEventTracePoint -> {
                             when (event.reason) {
@@ -208,8 +208,8 @@ internal class ModelCheckingStrategy(
                 }
 
                 is CallNode -> {
-                    val beforeEventId = node.call.beforeEventId
-                    val representation = node.call.toStringImpl()
+                    val beforeEventId = node.call.eventId
+                    val representation = node.call.toStringImpl(withLocation = false)
                     if (representation.isNotEmpty()) {
                         representations.add("0;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation}")
                     }

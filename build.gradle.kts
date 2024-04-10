@@ -106,7 +106,7 @@ tasks {
         )
         val withEventIdSequentialCheck: String by project
         if (withEventIdSequentialCheck.toBoolean()) {
-            extraArgs.add("-Dlincheck.debug.eventIdSequentialCheck=true")
+            extraArgs.add("-Dlincheck.debug.eventIdOrderingCheck=true")
         }
         jvmArgs(extraArgs)
     }

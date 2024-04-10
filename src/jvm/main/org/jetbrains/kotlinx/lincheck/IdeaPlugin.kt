@@ -18,10 +18,10 @@ const val MINIMAL_PLUGIN_VERSION = "0.0.1"
 // ============== This methods are used by debugger from IDEA plugin to communicate with Lincheck ============== //
 
 /**
- * Invoked from the strategy [ModelCheckingStrategy] when Lincheck found a bug.
- * The Debugger creates a breakpoint on this method, so when it's called, debugger receives all the information about the
+ * Invoked from the strategy [ModelCheckingStrategy] when Lincheck finds a bug.
+ * The debugger creates a breakpoint on this method, so when it's called, the debugger receives all the information about the
  * failed test.
- * This method is called first, to provide all required information,
+ * When a failure is found this method is called to provide all required information (trace points, failure type),
  * then [beforeEvent] method is called on each trace point.
  *
  * @param failureType string representation of the failure type.
@@ -45,7 +45,7 @@ fun testFailed(
  */
 fun ideaPluginEnabled(): Boolean {
     // treat as enabled in tests if we want so
-    return eventIdSequentialCheck
+    return eventIdStrictOrderingCheck
 }
 
 /**
@@ -56,55 +56,65 @@ fun ideaPluginEnabled(): Boolean {
 fun lincheckVerificationStarted() {}
 
 /**
- * If Debugger needs to replay execution (due to earlier trace point selection), it replaces the result of this
+ * If the debugger needs to replay the execution (due to earlier trace point selection), it replaces the result of this
  * method to `true`.
  */
-fun replay(): Boolean {
+fun shouldReplayInterleaving(): Boolean {
     return false // should be replaced with `true` to replay the failure
 }
 
 /**
- * This method is called on every trace point shown to the user.
+ * This method is called on every trace point shown to the user,
+ * but before the actual event, such as the read/write/MONITORENTER/MONITOREXIT/, etc.
  * The Debugger creates a breakpoint inside this method and if [eventId] is the selected one, the breakpoint is triggered.
+ * Then the debugger performs step-out action, so we appear in the user's code.
+ * That's why this method **must** be called from a user-code, not from a nested function.
  *
  * @param eventId id of this trace point. Consistent with `trace`, provided in [testFailed] method.
  * @param type type of this event, just for debugging.
  */
 @Suppress("UNUSED_PARAMETER", "unused")
 fun beforeEvent(eventId: Int, type: String) {
-    if (needVisualization()) {
-        val strategy = (Thread.currentThread() as? TestThread)?.eventTracker ?: return
-        visualize(strategy)
-    }
+    val strategy = (Thread.currentThread() as? TestThread)?.eventTracker ?: return
+    visualize(strategy)
 }
 
-fun needVisualization(): Boolean = false // may be replaced with 'true' in plugin
 
 /**
  * This method receives all information about the test object instance to visualize.
  * The Debugger creates a breakpoint inside this method and uses this method parameters to create the diagram.
  *
- * We pass Maps as Arrays due to difficulties with passing objects to the debugger (class version, etc.).
+ * We pass Maps as Arrays due to difficulties with passing objects (java.util.Map) to the debugger
+ * (class version, etc.).
  *
- * @param testObject tested data structure.
+ * @param testInstance tested data structure.
  * @param numbersArrayMap an array structured like [Object, objectNumber, Object, objectNumber, ...]. Represents a `Map<Any, Int>`.
  * @param threadsArrayMap an array structured like [Thread, threadId, Thread, threadId, ...]. Represents a `Map<Any, Int>`.
  * @param threadToLincheckThreadIdMap an array structured like [CancellableContinuation, threadId, CancellableContinuation, threadId, ...]. Represents a `Map<Any, Int>`.
  */
 @Suppress("UNUSED_PARAMETER")
 fun visualizeInstance(
-    testObject: Any,
+    testInstance: Any,
     numbersArrayMap: Array<Any>,
     threadsArrayMap: Array<Any>,
     threadToLincheckThreadIdMap: Array<Any>
 ) {
 }
 
+/**
+ * The Debugger creates a breakpoint inside this method to know when the thread is switched.
+ * Step-over expects that the next suspension point is in the same thread.
+ * So we have to track if a thread is changed by Lincheck to interrupt stepping,
+ * otherwise the debugger skips all breakpoints in the thread desired by Lincheck.
+ */
 fun onThreadSwitchesOrActorFinishes() {}
 
 // ======================================================================================================== //
 
-internal val eventIdSequentialCheck = System.getProperty("lincheck.debug.eventIdSequentialCheck") != null
+/**
+ * Internal property to check that trace point IDs are in a strict sequential order.
+ */
+internal val eventIdStrictOrderingCheck = System.getProperty("lincheck.debug.eventIdOrderingCheck") != null
 
 private fun visualize(strategyObject: Any) = runCatching {
     val strategy = strategyObject as ModelCheckingStrategy
@@ -112,11 +122,11 @@ private fun visualize(strategyObject: Any) = runCatching {
     val testObject = runner.testInstance
     val threads = runner.executor.threads
 
-    val labelsMap = createObjectToNumberMapAsArray(testObject)
+    val objectToNumberMap = createObjectToNumberMapAsArray(testObject)
     val continuationToLincheckThreadIdMap = createContinuationToThreadIdMap(threads)
     val threadToLincheckThreadIdMap = createThreadToLincheckThreadIdMap(threads)
 
-    visualizeInstance(testObject, labelsMap, continuationToLincheckThreadIdMap, threadToLincheckThreadIdMap)
+    visualizeInstance(testObject, objectToNumberMap, continuationToLincheckThreadIdMap, threadToLincheckThreadIdMap)
 }
 
 

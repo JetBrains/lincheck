@@ -13,6 +13,7 @@ package org.jetbrains.kotlinx.lincheck.transformation
 import org.jetbrains.kotlinx.lincheck.LincheckClassLoader.ASM_API
 import org.jetbrains.kotlinx.lincheck.Injections
 import org.jetbrains.kotlinx.lincheck.LincheckClassLoader
+import org.jetbrains.kotlinx.lincheck.ideaPluginEnabled
 import org.jetbrains.kotlinx.lincheck.strategy.managed.JavaUtilRemapper
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
@@ -26,7 +27,6 @@ import java.util.*
 internal class LincheckClassVisitor(
     private val transformationMode: TransformationMode,
     classVisitor: ClassVisitor,
-    private val ideaPluginEnabled: Boolean
 ) : ClassVisitor(
     ASM_API,
     if (transformationMode == MODEL_CHECKING) ClassRemapper(classVisitor, JavaUtilRemapper()) else classVisitor
@@ -631,9 +631,13 @@ internal class LincheckClassVisitor(
                             loadNewCodeLocationId()
                             // STACK: owner: Object, owner: Object, fieldName: String, fieldName: String, value: Object, codeLocation: Int
                             invokeStatic(Injections::beforeWriteField)
-                            ifStatement(condition = { /* already on stack */ }, ifClause = {
-                                invokeBeforeEventIfPluginEnabled("write field")
-                            }, elseClause = {})
+                            ifStatement(
+                                condition = { /* already on stack */ },
+                                ifClause = {
+                                    invokeBeforeEventIfPluginEnabled("write field")
+                                },
+                                elseClause = {}
+                            )
                             // STACK: owner: Object
                             loadLocal(valueLocal)
                             // STACK: owner: Object, value: Object
@@ -666,9 +670,13 @@ internal class LincheckClassVisitor(
                             loadNewCodeLocationId()
                             // STACK: array: Array, index: Int, array: Array, index: Int, codeLocation: Int
                             invokeStatic(Injections::beforeReadArray)
-                            ifStatement(condition = { /* already on stack */ }, ifClause = {
-                                invokeBeforeEventIfPluginEnabled("read array")
-                            }, elseClause = {})
+                            ifStatement(
+                                condition = { /* already on stack */ },
+                                ifClause = {
+                                    invokeBeforeEventIfPluginEnabled("read array")
+                                },
+                                elseClause = {}
+                            )
                             // STACK: array: Array, index: Int
                             visitInsn(opcode)
                             // STACK: value
@@ -696,9 +704,13 @@ internal class LincheckClassVisitor(
                             loadNewCodeLocationId()
                             // STACK: array: Array, index: Int, array: Array, index: Int, value: Object, codeLocation: Int
                             invokeStatic(Injections::beforeWriteArray)
-                            ifStatement(condition = { /* already on stack */ }, ifClause = {
-                                invokeBeforeEventIfPluginEnabled("write array")
-                            }, elseClause = {})
+                            ifStatement(
+                                condition = { /* already on stack */ },
+                                ifClause = {
+                                    invokeBeforeEventIfPluginEnabled("write array")
+                                },
+                                elseClause = {}
+                            )
                             // STACK: array: Array, index: Int
                             loadLocal(valueLocal)
                             // STACK: array: Array, index: Int, value: Object
@@ -1478,7 +1490,7 @@ internal class LincheckClassVisitor(
      * @param type type of the event, needed just for debugging.
      */
     private fun GeneratorAdapter.invokeBeforeEventIfPluginEnabled(type: String) {
-        if (ideaPluginEnabled) {
+        if (ideaPluginEnabled()) {
             invokeBeforeEvent(type)
         }
     }
