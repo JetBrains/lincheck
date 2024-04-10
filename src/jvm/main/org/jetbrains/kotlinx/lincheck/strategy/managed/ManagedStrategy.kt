@@ -106,6 +106,8 @@ abstract class ManagedStrategy(
     private val methodCallTracePointStack = (0 until nThreads + 2).map { mutableListOf<MethodCallTracePoint>() }
     // User-specified guarantees on specific function, which can be considered as atomic or ignored.
     private val userDefinedGuarantees: List<ManagedStrategyGuarantee>? = testCfg.guarantees.ifEmpty { null }
+    // Utility class for the plugin integration to provide ids for each trace point
+    private var eventIdProvider = EventIdProvider()
 
     private fun createRunner(): ManagedStrategyRunner =
         ManagedStrategyRunner(
@@ -1085,6 +1087,35 @@ abstract class ManagedStrategy(
         return constructor(iThread, actorId, callStackTrace.getOrNull(iThread)?.toList() ?: emptyList())
     }
 
+    /**
+     * This method is called before [beforeEvent] method call to provide current event (trace point) id.
+     */
+    override fun getEventId(): Int {
+        if (!shouldInvokeBeforeEvent()) return -1
+        return eventIdProvider.currentId()
+    }
+
+    /**
+     * Set eventId of the [tracePoint] right after it is added to the trace.
+     */
+    private fun setBeforeEventId(tracePoint: TracePoint) {
+        if (shouldInvokeBeforeEvent()) {
+            // Method calls and atomic method calls share the same trace points
+            if (tracePoint.eventId == -1
+                && tracePoint !is CoroutineCancellationTracePoint
+                && tracePoint !is ObstructionFreedomViolationExecutionAbortTracePoint
+                && tracePoint !is SpinCycleStartTracePoint
+                && tracePoint !is SectionDelimiterTracePoint
+            ) {
+                tracePoint.eventId = eventIdProvider.nextId()
+            }
+        }
+    }
+
+    protected fun resetEventIdProvider() {
+        eventIdProvider = EventIdProvider()
+    }
+
     // == UTILITY METHODS ==
 
     /**
@@ -1125,7 +1156,7 @@ abstract class ManagedStrategy(
             // tracePoint can be null here if trace is not available, e.g. in case of suspension
             if (tracePoint != null) {
                 _trace += tracePoint
-                (this@ManagedStrategy as ModelCheckingStrategy).setBeforeEventId(tracePoint)
+                setBeforeEventId(tracePoint)
             }
         }
 
@@ -1456,6 +1487,70 @@ abstract class ManagedStrategy(
         }
 
     }
+
+    /**
+     * Utility class to set trace point ids for the Lincheck Plugin.
+     *
+     * It's methods have the following contract:
+     *
+     * [nextId] must be called first of after [currentId] call,
+     *
+     * [currentId] must be called only after [nextId] call.
+     */
+    private class EventIdProvider {
+
+        /**
+         * ID of the previous event.
+         */
+        private var lastId = -1
+
+        // The properties below are needed only for debug purposes to provide an informative message
+        // if ids are now strictly sequential.
+        private var lastVisited = -1
+        private var lastGeneratedId: Int? = null
+        private var lastIdReturnedAsCurrent: Int? = null
+
+        /**
+         * Generates the id for the next trace point.
+         */
+        fun nextId(): Int {
+            val nextId = ++lastId
+            if (eventIdStrictOrderingCheck) {
+                if (lastVisited + 1 != nextId) {
+                    val lastRead = lastIdReturnedAsCurrent
+                    if (lastRead == null) {
+                        error("Create nextEventId $nextId readNextEventId has never been called")
+                    } else {
+                        error("Create nextEventId $nextId but last read event is $lastVisited, last read value is $lastIdReturnedAsCurrent")
+                    }
+                }
+                lastGeneratedId = nextId
+            }
+            return nextId
+        }
+
+        /**
+         * Returns the last generated id.
+         * Also, if [eventIdStrictOrderingCheck] is enabled, checks that
+         */
+        fun currentId(): Int {
+            val id = lastId
+            if (eventIdStrictOrderingCheck) {
+                if (lastVisited + 1 != id) {
+                    val lastIncrement = lastGeneratedId
+                    if (lastIncrement == null) {
+                        error("ReadNextEventId is called while nextEventId has never been called")
+                    } else {
+                        error("ReadNextEventId $id after previous value $lastVisited, last incremented value is $lastIncrement")
+                    }
+                }
+                lastVisited = id
+                lastIdReturnedAsCurrent = id
+            }
+            return id
+        }
+    }
+
 
     /**
      * Helper class to halt execution on replay (trace collection phase) and to switch thread early on spin-cycles

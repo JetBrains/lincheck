@@ -453,7 +453,7 @@ internal fun getObjectName(obj: Any?): String =
         if (obj.javaClass.isAnonymousClass) {
             obj.javaClass.simpleNameForAnonymous
         } else {
-            obj.javaClass.simpleName + "@" + getObjectNumber(obj)
+            obj.javaClass.simpleName + "@" + getObjectNumber(obj.javaClass, obj)
         }
     } else {
         "null"
@@ -473,11 +473,9 @@ private val Class<*>.simpleNameForAnonymous: String get() {
 internal fun getObjectNumber(clazz: Class<Any>, obj: Any): Int = objectNumeration
     .computeIfAbsent(clazz) { IdentityHashMap() }
     .computeIfAbsent(obj) { 1 + objectNumeration[clazz]!!.size }
-private fun getObjectNumber(obj: Any): Int = objectNumeration
-    .computeIfAbsent(obj.javaClass) { IdentityHashMap() }
-    .computeIfAbsent(obj) { 1 + objectNumeration[it.javaClass]!!.size }
 
 private val objectNumeration = WeakHashMap<Class<Any>, MutableMap<Any, Int>>()
+    @Synchronized get
 
 const val TRACE_TITLE = "The following interleaving leads to the error:"
 const val DETAILED_TRACE_TITLE = "Detailed trace:"

@@ -57,36 +57,6 @@ internal class ModelCheckingStrategy(
     // The interleaving that will be studied on the next invocation.
     private lateinit var currentInterleaving: Interleaving
 
-    private var eventIdProvider = EventCounterProvider()
-
-    private fun nextEventId() = eventIdProvider.nextId().also {
-        if (eventIdStrictOrderingCheck) {
-            if (eventIdProvider.lastVisited + 1 != it) {
-                val lastRead = eventIdProvider.lastRead
-                if (lastRead == null) {
-                    throw IllegalStateException("Create nextEventId $it readNextEventId has never been called")
-                } else {
-                    throw IllegalStateException("Create nextEventId $it but last read event is ${eventIdProvider.lastVisited}", lastRead)
-                }
-            }
-            eventIdProvider.lastIncrement = IllegalStateException("Last incremented value is $it")
-        }
-    }
-
-    internal fun setBeforeEventId(tracePoint: TracePoint) {
-        if (shouldInvokeBeforeEvent()) {
-            // Method calls and atomic method calls share the same trace points
-            if (tracePoint.eventId == -1
-                && tracePoint !is CoroutineCancellationTracePoint
-                && tracePoint !is ObstructionFreedomViolationExecutionAbortTracePoint
-                && tracePoint !is SpinCycleStartTracePoint
-                && tracePoint !is SectionDelimiterTracePoint
-            ) {
-                tracePoint.eventId = nextEventId()
-            }
-        }
-    }
-
     override fun runImpl(): LincheckFailure? {
         currentInterleaving = root.nextInterleaving() ?: return null
         while (usedInvocations < maxInvocations) {
@@ -130,23 +100,6 @@ internal class ModelCheckingStrategy(
         return thread.inIgnoredSection && suddenInvocationResult == null
     }
 
-    override fun getNextEventId(): Int {
-        if (!shouldInvokeBeforeEvent()) return -1
-        return eventIdProvider.getId().also {
-            if (eventIdStrictOrderingCheck) {
-                if (eventIdProvider.lastVisited + 1 != it) {
-                    val lastIncrement = eventIdProvider.lastIncrement
-                    if (lastIncrement == null) {
-                        throw IllegalStateException("ReadNextEventId is called while nextEventId has never been called")
-                    } else {
-                        throw IllegalStateException("ReadNextEventId $it after previous value ${eventIdProvider.lastVisited}", lastIncrement)
-                    }
-                }
-                eventIdProvider.lastVisited = it
-                eventIdProvider.lastRead = IllegalStateException("Last read value is $it")
-            }
-        }
-    }
 
     private val LincheckFailure.type: String
         get() = when (this) {
@@ -161,11 +114,22 @@ internal class ModelCheckingStrategy(
     private fun doReplay(): InvocationResult {
         cleanObjectNumeration()
         currentInterleaving = currentInterleaving.copy()
-        eventIdProvider = EventCounterProvider()
+        resetEventIdProvider()
         return runInvocation()
     }
 
     /**
+     * Transforms failure trace to the array of string to pass it to the debugger.
+     * (due to difficulties with passing objects like List and TracePoint, as class versions may vary)
+     *
+     * Each trace point is transformed into the line of type:
+     * "type,iThread,callDepth,shouldBeExpanded,eventId,representation".
+     *
+     * Later, when [testFailed] breakpoint is triggered debugger parses these lines back to trace points.
+     *
+     * To help the plugin to create execution view, we provide a type for each trace point.
+     * Below are the codes of trace point types.
+     *
      * | Value                          | Code |
      * |--------------------------------|------|
      * | REGULAR                        | 0    |
@@ -176,9 +140,9 @@ internal class ModelCheckingStrategy(
      * | SPIN_CYCLE_SWITCH              | 5    |
      * | OBSTRUCTION_FREEDOM_VIOLATION  | 6    |
      */
-    fun extractDebugTrace(failure: LincheckFailure, trace: Trace): Array<String> {
+    private fun extractDebugTrace(failure: LincheckFailure, trace: Trace): Array<String> {
         val results = if (failure is IncorrectResultsFailure) failure.results else null
-        val nodesList = constructTraceGraph(failure, results, trace, exceptionsOrEmpty(failure))
+        val nodesList = constructTraceGraph(failure, results, trace, collectExceptionsOrEmpty(failure))
         var sectionIndex = 0
         var node: TraceNode? = nodesList.firstOrNull()
         val representations = mutableListOf<String>()
@@ -186,7 +150,7 @@ internal class ModelCheckingStrategy(
             when (node) {
                 is TraceLeafEvent -> {
                     val event = node.event
-                    val beforeEventId = event.eventId
+                    val eventId = event.eventId
                     val representation = event.toStringImpl(withLocation = false)
                     val type = when (event) {
                         is SwitchEventTracePoint -> {
@@ -203,7 +167,7 @@ internal class ModelCheckingStrategy(
                     }
 
                     if (representation.isNotEmpty()) {
-                        representations.add("$type;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation}")
+                        representations.add("$type;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${eventId};${representation}")
                     }
                 }
 
@@ -240,7 +204,7 @@ internal class ModelCheckingStrategy(
         return representations.toTypedArray()
     }
 
-    private fun exceptionsOrEmpty(failure: LincheckFailure): Map<Throwable, ExceptionNumberAndStacktrace> {
+    private fun collectExceptionsOrEmpty(failure: LincheckFailure): Map<Throwable, ExceptionNumberAndStacktrace> {
         val results = (failure as? IncorrectResultsFailure)?.results ?: return emptyMap()
         return when (val result = collectExceptionStackTraces(results)) {
             is ExceptionStackTracesResult -> result.exceptionStackTraces
@@ -490,14 +454,4 @@ internal class ModelCheckingStrategy(
 
         fun build() = Interleaving(switchPositions, threadSwitchChoices, lastNoninitializedNode)
     }
-
-    private class EventCounterProvider {
-        var lastVisited = -1
-        var lastIncrement: IllegalStateException? = null
-        var lastRead: IllegalStateException? = null
-        private var lastId = -1
-        fun nextId() = ++lastId
-        fun getId() = lastId
-    }
-
 }

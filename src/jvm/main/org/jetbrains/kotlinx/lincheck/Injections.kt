@@ -365,6 +365,6 @@ internal object Injections {
     @Suppress("UNUSED_PARAMETER") // for debug
     @JvmStatic
     fun getNextEventId(type: String): Int {
-        return eventTracker.getNextEventId()
+        return eventTracker.getEventId()
     }
 }

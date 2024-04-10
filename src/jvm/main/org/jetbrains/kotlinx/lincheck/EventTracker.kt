@@ -52,5 +52,5 @@ internal interface EventTracker {
     // Methods required for the plugin integration
 
     fun shouldInvokeBeforeEvent(): Boolean
-    fun getNextEventId(): Int
+    fun getEventId(): Int
 }
