@@ -11,6 +11,8 @@
 package fuzzing.stats
 
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.*
 import kotlin.io.path.Path
 
 class BenchmarkStats(
@@ -75,10 +77,12 @@ class BenchmarkCollector {
     }
 
     fun plotEachAndClear() {
+        val dir = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(Date())
+
         tests.forEach { (testName, results) ->
             // apart plotting
             results.forEach {
-                val path = Path(System.getProperty("user.dir"), "/lets-plot-images/${testName}/single/")
+                val path = Path(System.getProperty("user.dir"), "/lets-plot-images/${testName}/single/$dir/")
                 val file = File(path.toString())
                 if (!file.exists()) file.mkdirs()
 
@@ -90,7 +94,7 @@ class BenchmarkCollector {
             }
 
             // merged plotting
-            val path = Path(System.getProperty("user.dir"), "/lets-plot-images/${testName}/merged/")
+            val path = Path(System.getProperty("user.dir"), "/lets-plot-images/${testName}/merged/$dir/")
             val file = File(path.toString())
             if (!file.exists()) file.mkdirs()
 

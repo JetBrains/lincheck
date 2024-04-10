@@ -181,6 +181,7 @@ private fun linePlot(
 
     val labelEachDotRatio = 10
     val plot = letsPlot() +
+        //ggsize(1200, 1800) +
         labs(title = title, x = xLab, y = yLab) +
         scaleXContinuous(
             breaks = xScale,
