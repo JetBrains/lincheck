@@ -269,6 +269,10 @@ private fun adornedStringRepresentation(any: Any?): String {
     // have trivial `toString` implementation, which is used here.
     if (any == null || any.javaClass.isImmutableWithNiceToString)
         return any.toString()
+    // For enum types, we can always display their name.
+    if (any.javaClass.isEnum) {
+        return (any as Enum<*>).name
+    }
     // simplified representation for Continuations
     // (we usually do not really care about details).
     if (any is Continuation<*>)
