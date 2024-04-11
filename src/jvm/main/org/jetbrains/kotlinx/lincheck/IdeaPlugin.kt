@@ -73,7 +73,7 @@ fun shouldReplayInterleaving(): Boolean {
  * @param eventId id of this trace point. Consistent with `trace`, provided in [testFailed] method.
  * @param type type of this event, just for debugging.
  */
-@Suppress("UNUSED_PARAMETER", "unused")
+@Suppress("UNUSED_PARAMETER")
 fun beforeEvent(eventId: Int, type: String) {
     val strategy = (Thread.currentThread() as? TestThread)?.eventTracker ?: return
     visualize(strategy)
