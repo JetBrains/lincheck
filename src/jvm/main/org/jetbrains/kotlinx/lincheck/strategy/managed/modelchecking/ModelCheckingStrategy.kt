@@ -478,8 +478,6 @@ internal class ModelCheckingStrategy(
          * We provide lincheck version to [testFailed] method to the plugin be able to
          * determine if this version is compatible with the plugin version.
          */
-        private val lincheckVersion by lazy {
-            LinChecker::class.java.getResource("/version.txt")?.readText() ?: "UNKNOWN"
-        }
+        private val lincheckVersion by lazy { this::class.java.`package`.implementationVersion }
     }
 }

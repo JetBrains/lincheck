@@ -162,10 +162,13 @@ tasks {
         manifest {
             val inceptionYear: String by project
             val lastCopyrightYear: String by project
+            val version: String by project
             attributes(
                 "Copyright" to
                         "Copyright (C) 2015 - 2019 Devexperts, LLC\n                                " +
-                        "Copyright (C) $inceptionYear - $lastCopyrightYear JetBrains, s.r.o."
+                        "Copyright (C) $inceptionYear - $lastCopyrightYear JetBrains, s.r.o.",
+                // This attribute let us get the version from the code.
+                "Implementation-Version" to version
             )
         }
     }
@@ -223,16 +226,4 @@ fun XmlProvider.removeAllLicencesExceptOne(licenceName: String) {
             licenseList.remove(licence)
         }
     }
-}
-// We need the Lincheck version in the runtime to check compatibility with the Plugin,
-// so we save it into the file in the resources and retrieve in later.
-val versionTxt by tasks.registering {
-    doLast {
-        val version: String by project
-        file("src/commonMain/resources/version.txt").writeText(version)
-    }
-}
-
-tasks.named("processResources") {
-    dependsOn(versionTxt)
 }
