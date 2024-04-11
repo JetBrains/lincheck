@@ -31,6 +31,7 @@ internal class LincheckClassVisitor(
     ASM_API,
     if (transformationMode == MODEL_CHECKING) ClassRemapper(classVisitor, JavaUtilRemapper()) else classVisitor
 ) {
+    private val ideaPluginEnabled = ideaPluginEnabled()
     private lateinit var className: String
     private var classVersion = 0
     private var fileName: String? = null
@@ -95,7 +96,7 @@ internal class LincheckClassVisitor(
             // We need to disable breakpoints in such a case, as the numeration will break.
             // Breakpoints are disabled as we do not instrument toString and enter an ignored section,
             // so there are no beforeEvents inside.
-            ideaPluginEnabled() && methodName == "toString" && desc == "()Ljava/lang/String;") {
+            ideaPluginEnabled && methodName == "toString" && desc == "()Ljava/lang/String;") {
             mv = WrapMethodInIgnoredSectionTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
             return mv
         }
@@ -1491,7 +1492,7 @@ internal class LincheckClassVisitor(
      * @param type type of the event, needed just for debugging.
      */
     private fun GeneratorAdapter.invokeBeforeEventIfPluginEnabled(type: String) {
-        if (ideaPluginEnabled()) {
+        if (ideaPluginEnabled) {
             invokeBeforeEvent(type)
         }
     }

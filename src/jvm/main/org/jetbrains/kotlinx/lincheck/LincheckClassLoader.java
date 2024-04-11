@@ -26,7 +26,6 @@ import java.net.URL;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static org.jetbrains.kotlinx.lincheck.IdeaPluginKt.ideaPluginEnabled;
 import static org.jetbrains.kotlinx.lincheck.LincheckClassLoader.ASM_API;
 import static org.jetbrains.kotlinx.lincheck.LincheckClassLoader.REMAPPED_PACKAGE_INTERNAL_NAME;
 import static org.jetbrains.kotlinx.lincheck.UtilsKt.getCanonicalClassName;
