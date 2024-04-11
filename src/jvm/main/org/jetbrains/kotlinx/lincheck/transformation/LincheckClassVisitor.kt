@@ -12,7 +12,6 @@ package org.jetbrains.kotlinx.lincheck.transformation
 
 import org.jetbrains.kotlinx.lincheck.LincheckClassLoader.ASM_API
 import org.jetbrains.kotlinx.lincheck.Injections
-import org.jetbrains.kotlinx.lincheck.LincheckClassLoader
 import org.jetbrains.kotlinx.lincheck.ideaPluginEnabled
 import org.jetbrains.kotlinx.lincheck.strategy.managed.JavaUtilRemapper
 import org.objectweb.asm.*
@@ -1255,6 +1254,7 @@ internal class LincheckClassVisitor(
                         }
                         // STACK: ..., array
                         invokeStatic(Injections::beforeMethodCall)
+                        invokeBeforeEventIfPluginEnabled("method call $methodName", setMethodEventId = true)
                         // STACK [INVOKEVIRTUAL]: owner, arguments
                         // STACK [INVOKESTATIC]: arguments
                         val methodCallEndLabel = newLabel()
@@ -1490,10 +1490,11 @@ internal class LincheckClassVisitor(
     /**
      * Adds to user byte-code `beforeEvent` method invocation if IDEA plugin is enabled.
      * @param type type of the event, needed just for debugging.
+     * @param setMethodEventId a flag that identifies that method call event id set is required
      */
-    private fun GeneratorAdapter.invokeBeforeEventIfPluginEnabled(type: String) {
+    private fun GeneratorAdapter.invokeBeforeEventIfPluginEnabled(type: String, setMethodEventId: Boolean = false) {
         if (ideaPluginEnabled) {
-            invokeBeforeEvent(type)
+            invokeBeforeEvent(type, setMethodEventId)
         }
     }
 }

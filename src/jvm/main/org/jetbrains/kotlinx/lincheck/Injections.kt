@@ -367,4 +367,9 @@ internal object Injections {
     fun getNextEventId(type: String): Int {
         return eventTracker.getEventId()
     }
+
+    @JvmStatic
+    fun setLastMethodCallEventId() {
+        eventTracker.setLastMethodCallEventId()
+    }
 }

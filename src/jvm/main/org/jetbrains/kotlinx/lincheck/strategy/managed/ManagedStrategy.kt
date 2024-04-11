@@ -1096,6 +1096,15 @@ abstract class ManagedStrategy(
     }
 
     /**
+     * This method generates and sets separate event id for the last method call.
+     * Method call trace points are not added to the event list by default, so their event ids are not set otherwise.
+     */
+    override fun setLastMethodCallEventId() {
+        val lastMethodCall: MethodCallTracePoint = callStackTrace[currentThread].lastOrNull()?.call ?: return
+        setBeforeEventId(lastMethodCall)
+    }
+
+    /**
      * Set eventId of the [tracePoint] right after it is added to the trace.
      */
     private fun setBeforeEventId(tracePoint: TracePoint) {

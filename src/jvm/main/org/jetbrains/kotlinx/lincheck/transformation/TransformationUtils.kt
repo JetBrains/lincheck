@@ -69,13 +69,18 @@ internal fun GeneratorAdapter.storeTopToLocal(local: Int) {
  * Adds invocation of [beforeEvent] method.
  * This method **must** be called from the user code, as [beforeEvent] must be called from the user code due to the contract
  * between the Lincheck IDEA plugin and Lincheck.
+ *
+ * @param setMethodEventId a flag that identifies that method call event id set is required
  */
-internal fun GeneratorAdapter.invokeBeforeEvent(debugMessage: String) = invokeInIgnoredSection {
+internal fun GeneratorAdapter.invokeBeforeEvent(debugMessage: String, setMethodEventId: Boolean) = invokeInIgnoredSection {
     ifStatement(
         condition = {
             invokeStatic(Injections::shouldInvokeBeforeEvent)
         },
         ifClause = {
+            if (setMethodEventId) {
+                invokeStatic(Injections::setLastMethodCallEventId)
+            }
             push(debugMessage)
             invokeStatic(Injections::getNextEventId)
             push(debugMessage)

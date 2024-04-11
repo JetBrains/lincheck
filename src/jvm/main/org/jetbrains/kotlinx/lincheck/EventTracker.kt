@@ -53,4 +53,5 @@ internal interface EventTracker {
 
     fun shouldInvokeBeforeEvent(): Boolean
     fun getEventId(): Int
+    fun setLastMethodCallEventId()
 }
