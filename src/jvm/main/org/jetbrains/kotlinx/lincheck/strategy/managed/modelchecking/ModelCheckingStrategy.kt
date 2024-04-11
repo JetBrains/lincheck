@@ -103,11 +103,13 @@ internal class ModelCheckingStrategy(
     }
 
     override fun shouldInvokeBeforeEvent(): Boolean {
-        if (!replay) return false
-        if (!collectTrace) return false
-        val thread = (Thread.currentThread() as? TestThread) ?: return false
-
-        return thread.inIgnoredSection && suddenInvocationResult == null
+        // We do not check `inIgnoredSection` here because this method is called from instrumented code
+        // that should be invoked only outside the ignored section.
+        // However, we cannot add `!inIgnoredSection` check here
+        // as the instrumented code might call `enterIgnoredSection` just before this call.
+        return replay && collectTrace &&
+                Thread.currentThread() is TestThread &&
+                suddenInvocationResult == null
     }
 
 

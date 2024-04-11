@@ -1090,10 +1090,7 @@ abstract class ManagedStrategy(
     /**
      * This method is called before [beforeEvent] method call to provide current event (trace point) id.
      */
-    override fun getEventId(): Int {
-        if (!shouldInvokeBeforeEvent()) return -1
-        return eventIdProvider.currentId()
-    }
+    override fun getEventId(): Int = eventIdProvider.currentId()
 
     /**
      * This method generates and sets separate event id for the last method call.
