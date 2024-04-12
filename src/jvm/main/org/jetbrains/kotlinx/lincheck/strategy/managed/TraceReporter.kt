@@ -453,7 +453,7 @@ internal fun getObjectName(obj: Any?): String =
         if (obj.javaClass.isAnonymousClass) {
             obj.javaClass.simpleNameForAnonymous
         } else {
-            obj.javaClass.simpleName + "@" + getObjectNumber(obj.javaClass, obj)
+            obj.javaClass.simpleName + "#" + getObjectNumber(obj.javaClass, obj)
         }
     } else {
         "null"
