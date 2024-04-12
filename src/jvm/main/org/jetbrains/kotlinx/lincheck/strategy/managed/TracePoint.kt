@@ -27,13 +27,16 @@ data class Trace(val trace: List<TracePoint>)
  *
  * [callStackTrace] helps to understand whether two events
  * happened in the same, nested, or disjoint methods.
+ *
+ * @property eventId id of the trace point, used by the Lincheck IDEA Plugin.
+ * It is set only in case the plugin is enabled.
  */
-sealed class TracePoint(val iThread: Int, val actorId: Int, callStackTrace: CallStackTrace) {
+sealed class TracePoint(val iThread: Int, val actorId: Int, callStackTrace: CallStackTrace, var eventId: Int = -1) {
     // This field assignment creates a copy of current callStackTrace using .toList()
     // as CallStackTrace is a mutable list and can be changed after this trace point is created.
     internal val callStackTrace = callStackTrace.toList()
-    protected abstract fun toStringImpl(): String
-    override fun toString(): String = toStringImpl()
+    internal abstract fun toStringImpl(withLocation: Boolean): String
+    override fun toString(): String = toStringImpl(withLocation = true)
 }
 
 internal typealias CallStackTrace = List<CallStackTraceElement>
@@ -43,7 +46,7 @@ internal class SwitchEventTracePoint(
     val reason: SwitchReason,
     callStackTrace: CallStackTrace
 ) : TracePoint(iThread, actorId, callStackTrace) {
-    override fun toStringImpl(): String {
+    override fun toStringImpl(withLocation: Boolean): String {
         val reason = reason.toString()
         return "switch" + if (reason.isEmpty()) "" else " (reason: $reason)"
     }
@@ -59,14 +62,20 @@ internal abstract class CodeLocationTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
     protected val stackTraceElement: StackTraceElement
-) : TracePoint(iThread, actorId, callStackTrace)
+) : TracePoint(iThread, actorId, callStackTrace) {
+
+    protected abstract fun toStringCompact(): String
+    override fun toStringImpl(withLocation: Boolean): String {
+        return toStringCompact() + if (withLocation) " at ${stackTraceElement.shorten()}" else ""
+    }
+}
 
 internal class StateRepresentationTracePoint(
     iThread: Int, actorId: Int,
     val stateRepresentation: String,
     callStackTrace: CallStackTrace
 ) : TracePoint(iThread, actorId, callStackTrace) {
-    override fun toStringImpl(): String = "STATE: $stateRepresentation"
+    override fun toStringImpl(withLocation: Boolean): String = "STATE: $stateRepresentation"
 }
 
 /**
@@ -77,7 +86,7 @@ internal class ObstructionFreedomViolationExecutionAbortTracePoint(
     actorId: Int,
     callStackTrace: CallStackTrace
 ): TracePoint(iThread, actorId, callStackTrace) {
-    override fun toStringImpl(): String = "/* An active lock was detected */"
+    override fun toStringImpl(withLocation: Boolean): String = "/* An active lock was detected */"
 }
 
 internal class ReadTracePoint(
@@ -88,12 +97,11 @@ internal class ReadTracePoint(
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
     private var value: Any? = null
 
-    override fun toStringImpl(): String = StringBuilder().apply {
+    override fun toStringCompact(): String = StringBuilder().apply {
         if (fieldName != null)
             append("$fieldName.")
         append("READ")
         append(": ${adornedStringRepresentation(value)}")
-        append(" at ${stackTraceElement.shorten()}")
     }.toString()
 
     fun initializeReadValue(value: Any?) {
@@ -109,12 +117,12 @@ internal class WriteTracePoint(
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
     private var value: Any? = null
 
-    override fun toStringImpl(): String  = StringBuilder().apply {
+    override fun toStringCompact(): String  = StringBuilder().apply {
         if (fieldName != null)
             append("$fieldName.")
         append("WRITE(")
         append(adornedStringRepresentation(value))
-        append(") at ${stackTraceElement.shorten()}")
+        append(")")
     }.toString()
 
     fun initializeWrittenValue(value: Any?) {
@@ -135,7 +143,7 @@ internal class MethodCallTracePoint(
 
     val wasSuspended get() = returnedValue === COROUTINE_SUSPENDED
 
-    override fun toStringImpl(): String = StringBuilder().apply {
+    override fun toStringCompact(): String = StringBuilder().apply {
         if (ownerName != null)
             append("$ownerName.")
         append("$methodName(")
@@ -146,7 +154,6 @@ internal class MethodCallTracePoint(
             append(": ${adornedStringRepresentation(returnedValue)}")
         else if (thrownException != null && thrownException != ForcibleExecutionFinishError)
             append(": threw ${thrownException!!.javaClass.simpleName}")
-        append(" at ${stackTraceElement.shorten()}")
     }.toString()
 
     fun initializeReturnedValue(value: Any?) {
@@ -172,7 +179,7 @@ internal class MonitorEnterTracePoint(
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    override fun toStringImpl(): String = "MONITORENTER at " + stackTraceElement.shorten()
+    override fun toStringCompact(): String = "MONITORENTER"
 }
 
 internal class MonitorExitTracePoint(
@@ -180,7 +187,7 @@ internal class MonitorExitTracePoint(
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    override fun toStringImpl(): String = "MONITOREXIT at " + stackTraceElement.shorten()
+    override fun toStringCompact(): String = "MONITOREXIT"
 }
 
 internal class WaitTracePoint(
@@ -188,7 +195,7 @@ internal class WaitTracePoint(
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    override fun toStringImpl(): String = "WAIT at " + stackTraceElement.shorten()
+    override fun toStringCompact(): String = "WAIT"
 }
 
 internal class NotifyTracePoint(
@@ -196,7 +203,7 @@ internal class NotifyTracePoint(
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    override fun toStringImpl(): String = "NOTIFY at " + stackTraceElement.shorten()
+    override fun toStringCompact(): String = "NOTIFY"
 }
 
 internal class ParkTracePoint(
@@ -204,7 +211,7 @@ internal class ParkTracePoint(
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    override fun toStringImpl(): String = "PARK at " + stackTraceElement.shorten()
+    override fun toStringCompact(): String = "PARK"
 }
 
 internal class UnparkTracePoint(
@@ -212,7 +219,7 @@ internal class UnparkTracePoint(
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    override fun toStringImpl(): String = "UNPARK at " + stackTraceElement.shorten()
+    override fun toStringCompact(): String = "UNPARK"
 }
 
 internal class CoroutineCancellationTracePoint(
@@ -230,7 +237,7 @@ internal class CoroutineCancellationTracePoint(
         this.exception = e
     }
 
-    override fun toStringImpl(): String {
+    override fun toStringImpl(withLocation: Boolean): String {
         if (exception != null) return "EXCEPTION WHILE CANCELLATION"
         // Do not throw exception when lateinit field is not initialized.
         if (!::cancellationResult.isInitialized) return "<cancellation result not available>"
@@ -246,11 +253,11 @@ internal class CoroutineCancellationTracePoint(
  * This trace point that is added to the trace between execution parts (init, parallel, post, validation).
  */
 internal class SectionDelimiterTracePoint(val executionPart: ExecutionPart): TracePoint(0, -1, emptyList()) {
-    override fun toStringImpl(): String = ""
+    override fun toStringImpl(withLocation: Boolean): String = ""
 }
 
 internal class SpinCycleStartTracePoint(iThread: Int, actorId: Int, callStackTrace: CallStackTrace): TracePoint(iThread, actorId, callStackTrace) {
-    override fun toStringImpl() =  "/* The following events repeat infinitely: */"
+    override fun toStringImpl(withLocation: Boolean) =  "/* The following events repeat infinitely: */"
 }
 
 /**

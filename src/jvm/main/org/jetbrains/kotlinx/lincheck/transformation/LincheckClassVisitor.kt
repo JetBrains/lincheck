@@ -12,7 +12,7 @@ package org.jetbrains.kotlinx.lincheck.transformation
 
 import org.jetbrains.kotlinx.lincheck.LincheckClassLoader.ASM_API
 import org.jetbrains.kotlinx.lincheck.Injections
-import org.jetbrains.kotlinx.lincheck.LincheckClassLoader
+import org.jetbrains.kotlinx.lincheck.ideaPluginEnabled
 import org.jetbrains.kotlinx.lincheck.strategy.managed.JavaUtilRemapper
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
@@ -25,11 +25,12 @@ import java.util.*
 
 internal class LincheckClassVisitor(
     private val transformationMode: TransformationMode,
-    classVisitor: ClassVisitor
+    classVisitor: ClassVisitor,
 ) : ClassVisitor(
     ASM_API,
     if (transformationMode == MODEL_CHECKING) ClassRemapper(classVisitor, JavaUtilRemapper()) else classVisitor
 ) {
+    private val ideaPluginEnabled = ideaPluginEnabled()
     private lateinit var className: String
     private var classVersion = 0
     private var fileName: String? = null
@@ -89,7 +90,12 @@ internal class LincheckClassVisitor(
                 mv
             }
         }
-        if (methodName == "<clinit>") {
+        if (methodName == "<clinit>" ||
+            // Debugger implicitly evaluates toString for variables rendering
+            // We need to disable breakpoints in such a case, as the numeration will break.
+            // Breakpoints are disabled as we do not instrument toString and enter an ignored section,
+            // so there are no beforeEvents inside.
+            ideaPluginEnabled && methodName == "toString" && desc == "()Ljava/lang/String;") {
             mv = WrapMethodInIgnoredSectionTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
             return mv
         }
@@ -180,6 +186,8 @@ internal class LincheckClassVisitor(
                         original = { monitorEnter() },
                         code = {
                             loadNewCodeLocationId()
+                            invokeStatic(Injections::beforeLock)
+                            invokeBeforeEventIfPluginEnabled("lock")
                             invokeStatic(Injections::lock)
                         }
                     )
@@ -191,6 +199,7 @@ internal class LincheckClassVisitor(
                         code = {
                             loadNewCodeLocationId()
                             invokeStatic(Injections::unlock)
+                            invokeBeforeEventIfPluginEnabled("unlock")
                         }
                     )
                 }
@@ -226,6 +235,8 @@ internal class LincheckClassVisitor(
                 code = {
                     loadSynchronizedMethodMonitorOwner()
                     loadNewCodeLocationId()
+                    invokeStatic(Injections::beforeLock)
+                    invokeBeforeEventIfPluginEnabled("lock")
                     invokeStatic(Injections::lock)
                 }
             )
@@ -240,6 +251,7 @@ internal class LincheckClassVisitor(
                     loadSynchronizedMethodMonitorOwner()
                     loadNewCodeLocationId()
                     invokeStatic(Injections::unlock)
+                    invokeBeforeEventIfPluginEnabled("unlock")
                     loadSynchronizedMethodMonitorOwner()
                     monitorEnter()
                 }
@@ -258,6 +270,7 @@ internal class LincheckClassVisitor(
                             loadSynchronizedMethodMonitorOwner()
                             loadNewCodeLocationId()
                             invokeStatic(Injections::unlock)
+                            invokeBeforeEventIfPluginEnabled("unlock")
                             loadSynchronizedMethodMonitorOwner()
                             monitorEnter()
                         }
@@ -480,6 +493,7 @@ internal class LincheckClassVisitor(
                                 pop() // Unsafe
                                 loadNewCodeLocationId()
                                 invokeStatic(Injections::park)
+                                invokeBeforeEventIfPluginEnabled("park")
                             }
                         )
                     }
@@ -493,6 +507,7 @@ internal class LincheckClassVisitor(
                                 loadNewCodeLocationId()
                                 invokeStatic(Injections::unpark)
                                 pop() // pop Unsafe object
+                                invokeBeforeEventIfPluginEnabled("unpark")
                             }
                         )
                     }
@@ -534,6 +549,7 @@ internal class LincheckClassVisitor(
                             loadNewCodeLocationId()
                             // STACK: className: String, fieldName: String, codeLocation: Int
                             invokeStatic(Injections::beforeReadFieldStatic)
+                            invokeBeforeEventIfPluginEnabled("read static field")
                             // STACK: owner: Object
                             visitFieldInsn(opcode, owner, fieldName, desc)
                             // STACK: value
@@ -557,6 +573,9 @@ internal class LincheckClassVisitor(
                             loadNewCodeLocationId()
                             // STACK: owner: Object, owner: Object, className: String, fieldName: String, codeLocation: Int
                             invokeStatic(Injections::beforeReadField)
+                            ifStatement(condition = { /* already on stack */ }, ifClause = {
+                                invokeBeforeEventIfPluginEnabled("read field")
+                            }, elseClause = {})
                             // STACK: owner: Object
                             visitFieldInsn(opcode, owner, fieldName, desc)
                             // STACK: value
@@ -584,6 +603,7 @@ internal class LincheckClassVisitor(
                             loadNewCodeLocationId()
                             // STACK: value: Object, className: String, fieldName: String, value: Object, codeLocation: Int
                             invokeStatic(Injections::beforeWriteFieldStatic)
+                            invokeBeforeEventIfPluginEnabled("write static field")
                             // STACK: value: Object
                             visitFieldInsn(opcode, owner, fieldName, desc)
                             // STACK: <EMPTY>
@@ -612,6 +632,13 @@ internal class LincheckClassVisitor(
                             loadNewCodeLocationId()
                             // STACK: owner: Object, owner: Object, fieldName: String, fieldName: String, value: Object, codeLocation: Int
                             invokeStatic(Injections::beforeWriteField)
+                            ifStatement(
+                                condition = { /* already on stack */ },
+                                ifClause = {
+                                    invokeBeforeEventIfPluginEnabled("write field")
+                                },
+                                elseClause = {}
+                            )
                             // STACK: owner: Object
                             loadLocal(valueLocal)
                             // STACK: owner: Object, value: Object
@@ -644,6 +671,13 @@ internal class LincheckClassVisitor(
                             loadNewCodeLocationId()
                             // STACK: array: Array, index: Int, array: Array, index: Int, codeLocation: Int
                             invokeStatic(Injections::beforeReadArray)
+                            ifStatement(
+                                condition = { /* already on stack */ },
+                                ifClause = {
+                                    invokeBeforeEventIfPluginEnabled("read array")
+                                },
+                                elseClause = {}
+                            )
                             // STACK: array: Array, index: Int
                             visitInsn(opcode)
                             // STACK: value
@@ -671,6 +705,13 @@ internal class LincheckClassVisitor(
                             loadNewCodeLocationId()
                             // STACK: array: Array, index: Int, array: Array, index: Int, value: Object, codeLocation: Int
                             invokeStatic(Injections::beforeWriteArray)
+                            ifStatement(
+                                condition = { /* already on stack */ },
+                                ifClause = {
+                                    invokeBeforeEventIfPluginEnabled("write array")
+                                },
+                                elseClause = {}
+                            )
                             // STACK: array: Array, index: Int
                             loadLocal(valueLocal)
                             // STACK: array: Array, index: Int, value: Object
@@ -1213,6 +1254,7 @@ internal class LincheckClassVisitor(
                         }
                         // STACK: ..., array
                         invokeStatic(Injections::beforeMethodCall)
+                        invokeBeforeEventIfPluginEnabled("method call $methodName", setMethodEventId = true)
                         // STACK [INVOKEVIRTUAL]: owner, arguments
                         // STACK [INVOKESTATIC]: arguments
                         val methodCallEndLabel = newLabel()
@@ -1305,7 +1347,7 @@ internal class LincheckClassVisitor(
             }
             // STACK: ..., array
             invokeStatic(Injections::beforeAtomicMethodCall)
-
+            invokeBeforeEventIfPluginEnabled("atomic method call $methodName")
 
             // STACK [INVOKEVIRTUAL]: owner, arguments
             // STACK [INVOKESTATIC]: arguments
@@ -1346,6 +1388,8 @@ internal class LincheckClassVisitor(
                                 },
                                 code = {
                                     loadNewCodeLocationId()
+                                    invokeStatic(Injections::beforeWait)
+                                    invokeBeforeEventIfPluginEnabled("wait")
                                     invokeStatic(Injections::wait)
                                 }
                             )
@@ -1359,6 +1403,8 @@ internal class LincheckClassVisitor(
                                 code = {
                                     pop2() // timeMillis
                                     loadNewCodeLocationId()
+                                    invokeStatic(Injections::beforeWait)
+                                    invokeBeforeEventIfPluginEnabled("wait 1")
                                     invokeStatic(Injections::waitWithTimeout)
                                 }
                             )
@@ -1373,6 +1419,8 @@ internal class LincheckClassVisitor(
                                     pop() // timeNanos
                                     pop2() // timeMillis
                                     loadNewCodeLocationId()
+                                    invokeStatic(Injections::beforeWait)
+                                    invokeBeforeEventIfPluginEnabled("wait 2")
                                     invokeStatic(Injections::waitWithTimeout)
                                 }
                             )
@@ -1386,6 +1434,7 @@ internal class LincheckClassVisitor(
                                 code = {
                                     loadNewCodeLocationId()
                                     invokeStatic(Injections::notify)
+                                    invokeBeforeEventIfPluginEnabled("notify")
                                 }
                             )
                         }
@@ -1398,6 +1447,7 @@ internal class LincheckClassVisitor(
                                 code = {
                                     loadNewCodeLocationId()
                                     invokeStatic(Injections::notifyAll)
+                                    invokeBeforeEventIfPluginEnabled("notifyAll")
                                 }
                             )
                         }
@@ -1434,6 +1484,17 @@ internal class LincheckClassVisitor(
         override fun visitLineNumber(line: Int, start: Label) {
             lineNumber = line
             super.visitLineNumber(line, start)
+        }
+    }
+
+    /**
+     * Adds to user byte-code `beforeEvent` method invocation if IDEA plugin is enabled.
+     * @param type type of the event, needed just for debugging.
+     * @param setMethodEventId a flag that identifies that method call event id set is required
+     */
+    private fun GeneratorAdapter.invokeBeforeEventIfPluginEnabled(type: String, setMethodEventId: Boolean = false) {
+        if (ideaPluginEnabled) {
+            invokeBeforeEvent(type, setMethodEventId)
         }
     }
 }

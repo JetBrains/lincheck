@@ -17,12 +17,13 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.kotlinx.lincheck.util.SpinnerGroup
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.transformation.CodeLocations
 import org.jetbrains.kotlinx.lincheck.Injections
 import org.jetbrains.kotlinx.lincheck.EventTracker
 import org.jetbrains.kotlinx.lincheck.TestThread
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import sun.misc.Unsafe
 import java.lang.invoke.VarHandle
 import java.lang.reflect.*
@@ -52,7 +53,7 @@ abstract class ManagedStrategy(
     protected val nThreads: Int = scenario.nThreads
     // Runner for scenario invocations,
     // can be replaced with a new one for trace construction.
-    private var runner: ManagedStrategyRunner = createRunner()
+    internal var runner: ManagedStrategyRunner = createRunner()
     // Spin-waiters for each thread
     private val spinners = SpinnerGroup(nThreads)
 
@@ -80,7 +81,7 @@ abstract class ManagedStrategy(
     // == TRACE CONSTRUCTION FIELDS ==
 
     // Whether an additional information requires for the trace construction should be collected.
-    private var collectTrace = false
+    protected var collectTrace = false
     // Collector of all events in the execution such as thread switches.
     private var traceCollector: TraceCollector? = null // null when `collectTrace` is false
     // Stores the currently executing methods call stack for each thread.
@@ -105,6 +106,8 @@ abstract class ManagedStrategy(
     private val methodCallTracePointStack = (0 until nThreads + 2).map { mutableListOf<MethodCallTracePoint>() }
     // User-specified guarantees on specific function, which can be considered as atomic or ignored.
     private val userDefinedGuarantees: List<ManagedStrategyGuarantee>? = testCfg.guarantees.ifEmpty { null }
+    // Utility class for the plugin integration to provide ids for each trace point
+    private var eventIdProvider = EventIdProvider()
 
     private fun createRunner(): ManagedStrategyRunner =
         ManagedStrategyRunner(
@@ -112,7 +115,7 @@ abstract class ManagedStrategy(
             testClass = testClass,
             validationFunction = validationFunction,
             stateRepresentationMethod = stateRepresentationFunction,
-            timeoutMs = testCfg.timeoutMs,
+            timeoutMs = getTimeOutMs(this, testCfg.timeoutMs),
             useClocks = UseClocks.ALWAYS
         )
 
@@ -413,6 +416,10 @@ abstract class ManagedStrategy(
     }
 
     override fun onActorFinish() {
+        // This is a hack to guarantee correct stepping in the plugin.
+        // When stepping out to the TestThreadExecution class, stepping continues unproductively.
+        // With this method, we force the debugger to stop at the beginning of the next actor.
+        onThreadSwitchesOrActorFinishes()
         (Thread.currentThread() as TestThread).inTestingCode = false
     }
 
@@ -500,7 +507,7 @@ abstract class ManagedStrategy(
 
     // == LISTENING METHODS ==
 
-    override fun lock(monitor: Any, codeLocation: Int): Unit = runInIgnoredSection {
+    override fun beforeLock(codeLocation: Int): Unit = runInIgnoredSection {
         val tracePoint = if (collectTrace) {
             val iThread = currentThread
             MonitorEnterTracePoint(
@@ -514,9 +521,23 @@ abstract class ManagedStrategy(
         }
         val iThread = currentThread
         newSwitchPoint(iThread, codeLocation, tracePoint)
+    }
+
+    /*
+   TODO: Here Lincheck performs in-optimal switching.
+   Firstly an optional switch point is added before lock, and then adds force switches in case execution cannot continue in this thread.
+   More effective way would be to do force switch in case the thread is blocked (smart order of thread switching is needed),
+   or create a switch point if the switch is really optional.
+
+   Because of this additional switching we had to split this method into two, as the beforeEvent method must be called after the switch point.
+    */
+    override fun lock(monitor: Any): Unit = runInIgnoredSection {
+        val iThread = currentThread
         // Try to acquire the monitor
         while (!monitorTracker.acquireMonitor(iThread, monitor)) {
             failIfObstructionFreedomIsRequired {
+                // TODO: This might be a false positive when this MONITORENTER call never suspends.
+                // TODO: We can keep it as is until refactoring, as this weird case is an anti-pattern anyway.
                 OBSTRUCTION_FREEDOM_LOCK_VIOLATION_MESSAGE
             }
             // Switch to another thread and wait for a moment when the monitor can be acquired
@@ -577,7 +598,7 @@ abstract class ManagedStrategy(
         }
     }
 
-    override fun wait(monitor: Any, codeLocation: Int, withTimeout: Boolean): Unit = runInIgnoredSection {
+    override fun beforeWait(codeLocation: Int): Unit = runInIgnoredSection {
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             WaitTracePoint(
@@ -590,7 +611,21 @@ abstract class ManagedStrategy(
             null
         }
         newSwitchPoint(iThread, codeLocation, tracePoint)
+    }
+
+    /*
+    TODO: Here Lincheck performs in-optimal switching.
+    Firstly an optional switch point is added before wait, and then adds force switches in case execution cannot continue in this thread.
+    More effective way would be to do force switch in case the thread is blocked (smart order of thread switching is needed),
+    or create a switch point if the switch is really optional.
+
+    Because of this additional switching we had to split this method into two, as the beforeEvent method must be called after the switch point.
+     */
+    override fun wait(monitor: Any, withTimeout: Boolean): Unit = runInIgnoredSection {
+        val iThread = currentThread
         failIfObstructionFreedomIsRequired {
+            // TODO: This might be a false positive when this `wait()` call never suspends.
+            // TODO: We can keep it as is until refactoring, as this weird case is an anti-pattern anyway.
             OBSTRUCTION_FREEDOM_WAIT_VIOLATION_MESSAGE
         }
         if (withTimeout) return // timeouts occur instantly
@@ -618,8 +653,11 @@ abstract class ManagedStrategy(
         }
     }
 
+    /**
+     * Returns `true` if a switch point is created.
+     */
     override fun beforeReadField(obj: Any, className: String, fieldName: String, codeLocation: Int) = runInIgnoredSection {
-        if (localObjectManager.isLocalObject(obj)) return@runInIgnoredSection
+        if (localObjectManager.isLocalObject(obj)) return@runInIgnoredSection false
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             ReadTracePoint(
@@ -636,6 +674,7 @@ abstract class ManagedStrategy(
             lastReadTracePoint[iThread] = tracePoint
         }
         newSwitchPoint(iThread, codeLocation, tracePoint)
+        true
     }
 
     override fun beforeReadFieldStatic(className: String, fieldName: String, codeLocation: Int) = runInIgnoredSection {
@@ -657,8 +696,9 @@ abstract class ManagedStrategy(
         newSwitchPoint(iThread, codeLocation, tracePoint)
     }
 
-    override fun beforeReadArrayElement(array: Any, index: Int, codeLocation: Int) = runInIgnoredSection {
-        if (localObjectManager.isLocalObject(array)) return@runInIgnoredSection
+    /** Returns <code>true</code> if a switch point is created. */
+    override fun beforeReadArrayElement(array: Any, index: Int, codeLocation: Int): Boolean = runInIgnoredSection {
+        if (localObjectManager.isLocalObject(array)) return@runInIgnoredSection false
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             ReadTracePoint(
@@ -675,6 +715,7 @@ abstract class ManagedStrategy(
             lastReadTracePoint[iThread] = tracePoint
         }
         newSwitchPoint(iThread, codeLocation, tracePoint)
+        true
     }
 
     override fun afterRead(value: Any?) {
@@ -687,10 +728,10 @@ abstract class ManagedStrategy(
         }
     }
 
-    override fun beforeWriteField(obj: Any, className: String, fieldName: String, value: Any?, codeLocation: Int) = runInIgnoredSection {
+    override fun beforeWriteField(obj: Any, className: String, fieldName: String, value: Any?, codeLocation: Int): Boolean = runInIgnoredSection {
         localObjectManager.onWriteToObjectFieldOrArrayCell(obj, value)
         if (localObjectManager.isLocalObject(obj)) {
-            return@runInIgnoredSection
+            return@runInIgnoredSection false
         }
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
@@ -707,6 +748,7 @@ abstract class ManagedStrategy(
             null
         }
         newSwitchPoint(iThread, codeLocation, tracePoint)
+        true
     }
 
 
@@ -729,10 +771,10 @@ abstract class ManagedStrategy(
         newSwitchPoint(iThread, codeLocation, tracePoint)
     }
 
-    override fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int) = runInIgnoredSection {
+    override fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int): Boolean = runInIgnoredSection {
         localObjectManager.onWriteToObjectFieldOrArrayCell(array, value)
         if (localObjectManager.isLocalObject(array)) {
-            return@runInIgnoredSection
+            return@runInIgnoredSection false
         }
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
@@ -749,6 +791,7 @@ abstract class ManagedStrategy(
             null
         }
         newSwitchPoint(iThread, codeLocation, tracePoint)
+        true
     }
 
     override fun afterWrite() {
@@ -1044,6 +1087,41 @@ abstract class ManagedStrategy(
         return constructor(iThread, actorId, callStackTrace.getOrNull(iThread)?.toList() ?: emptyList())
     }
 
+    /**
+     * This method is called before [beforeEvent] method call to provide current event (trace point) id.
+     */
+    override fun getEventId(): Int = eventIdProvider.currentId()
+
+    /**
+     * This method generates and sets separate event id for the last method call.
+     * Method call trace points are not added to the event list by default, so their event ids are not set otherwise.
+     */
+    override fun setLastMethodCallEventId() {
+        val lastMethodCall: MethodCallTracePoint = callStackTrace[currentThread].lastOrNull()?.call ?: return
+        setBeforeEventId(lastMethodCall)
+    }
+
+    /**
+     * Set eventId of the [tracePoint] right after it is added to the trace.
+     */
+    private fun setBeforeEventId(tracePoint: TracePoint) {
+        if (shouldInvokeBeforeEvent()) {
+            // Method calls and atomic method calls share the same trace points
+            if (tracePoint.eventId == -1
+                && tracePoint !is CoroutineCancellationTracePoint
+                && tracePoint !is ObstructionFreedomViolationExecutionAbortTracePoint
+                && tracePoint !is SpinCycleStartTracePoint
+                && tracePoint !is SectionDelimiterTracePoint
+            ) {
+                tracePoint.eventId = eventIdProvider.nextId()
+            }
+        }
+    }
+
+    protected fun resetEventIdProvider() {
+        eventIdProvider = EventIdProvider()
+    }
+
     // == UTILITY METHODS ==
 
     /**
@@ -1084,6 +1162,7 @@ abstract class ManagedStrategy(
             // tracePoint can be null here if trace is not available, e.g. in case of suspension
             if (tracePoint != null) {
                 _trace += tracePoint
+                setBeforeEventId(tracePoint)
             }
         }
 
@@ -1416,6 +1495,70 @@ abstract class ManagedStrategy(
     }
 
     /**
+     * Utility class to set trace point ids for the Lincheck Plugin.
+     *
+     * It's methods have the following contract:
+     *
+     * [nextId] must be called first of after [currentId] call,
+     *
+     * [currentId] must be called only after [nextId] call.
+     */
+    private class EventIdProvider {
+
+        /**
+         * ID of the previous event.
+         */
+        private var lastId = -1
+
+        // The properties below are needed only for debug purposes to provide an informative message
+        // if ids are now strictly sequential.
+        private var lastVisited = -1
+        private var lastGeneratedId: Int? = null
+        private var lastIdReturnedAsCurrent: Int? = null
+
+        /**
+         * Generates the id for the next trace point.
+         */
+        fun nextId(): Int {
+            val nextId = ++lastId
+            if (eventIdStrictOrderingCheck) {
+                if (lastVisited + 1 != nextId) {
+                    val lastRead = lastIdReturnedAsCurrent
+                    if (lastRead == null) {
+                        error("Create nextEventId $nextId readNextEventId has never been called")
+                    } else {
+                        error("Create nextEventId $nextId but last read event is $lastVisited, last read value is $lastIdReturnedAsCurrent")
+                    }
+                }
+                lastGeneratedId = nextId
+            }
+            return nextId
+        }
+
+        /**
+         * Returns the last generated id.
+         * Also, if [eventIdStrictOrderingCheck] is enabled, checks that
+         */
+        fun currentId(): Int {
+            val id = lastId
+            if (eventIdStrictOrderingCheck) {
+                if (lastVisited + 1 != id) {
+                    val lastIncrement = lastGeneratedId
+                    if (lastIncrement == null) {
+                        error("ReadNextEventId is called while nextEventId has never been called")
+                    } else {
+                        error("ReadNextEventId $id after previous value $lastVisited, last incremented value is $lastIncrement")
+                    }
+                }
+                lastVisited = id
+                lastIdReturnedAsCurrent = id
+            }
+            return id
+        }
+    }
+
+
+    /**
      * Helper class to halt execution on replay (trace collection phase) and to switch thread early on spin-cycles
      */
     private inner class ReplayModeLoopDetectorHelper(
@@ -1508,7 +1651,7 @@ abstract class ManagedStrategy(
  * This class is a [ParallelThreadsRunner] with some overrides that add callbacks
  * to the strategy so that it can known about some required events.
  */
-private class ManagedStrategyRunner(
+internal class ManagedStrategyRunner(
     private val managedStrategy: ManagedStrategy,
     testClass: Class<*>, validationFunction: Actor?, stateRepresentationMethod: Method?,
     timeoutMs: Long, useClocks: UseClocks
@@ -1703,3 +1846,12 @@ private const val OBSTRUCTION_FREEDOM_LOCK_VIOLATION_MESSAGE =
 
 private const val OBSTRUCTION_FREEDOM_WAIT_VIOLATION_MESSAGE =
     "The algorithm should be non-blocking, but a wait call is detected"
+
+/**
+ * With idea plugin enabled, we should not use default Lincheck timeout
+ * as debugging may take more time than default timeout.
+ */
+private const val INFINITE_TIMEOUT = 1000L * 60 * 60 * 24 * 365
+
+private fun getTimeOutMs(strategy: ManagedStrategy, defaultTimeOutMs: Long): Long =
+    if (strategy is ModelCheckingStrategy && strategy.replay) INFINITE_TIMEOUT else defaultTimeOutMs

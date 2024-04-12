@@ -17,23 +17,25 @@ import java.util.*
  * See [Injections] for the documentation.
  */
 internal interface EventTracker {
-    fun lock(monitor: Any, codeLocation: Int)
+    fun beforeLock(codeLocation: Int)
+    fun lock(monitor: Any)
     fun unlock(monitor: Any, codeLocation: Int)
 
     fun park(codeLocation: Int)
     fun unpark(thread: Thread, codeLocation: Int)
 
-    fun wait(monitor: Any, codeLocation: Int, withTimeout: Boolean)
+    fun wait(monitor: Any, withTimeout: Boolean)
+    fun beforeWait(codeLocation: Int)
     fun notify(monitor: Any, codeLocation: Int, notifyAll: Boolean)
 
-    fun beforeReadField(obj: Any, className: String, fieldName: String, codeLocation: Int)
+    fun beforeReadField(obj: Any, className: String, fieldName: String, codeLocation: Int): Boolean
     fun beforeReadFieldStatic(className: String, fieldName: String, codeLocation: Int)
-    fun beforeReadArrayElement(array: Any, index: Int, codeLocation: Int)
+    fun beforeReadArrayElement(array: Any, index: Int, codeLocation: Int): Boolean
     fun afterRead(value: Any?)
 
-    fun beforeWriteField(obj: Any, className: String, fieldName: String, value: Any?, codeLocation: Int)
+    fun beforeWriteField(obj: Any, className: String, fieldName: String, value: Any?, codeLocation: Int): Boolean
     fun beforeWriteFieldStatic(className: String, fieldName: String, value: Any?, codeLocation: Int)
-    fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int)
+    fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int): Boolean
     fun afterWrite()
 
     fun beforeMethodCall(owner: Any?, className: String, methodName: String, codeLocation: Int, params: Array<Any?>)
@@ -46,4 +48,10 @@ internal interface EventTracker {
 
     fun onNewObjectCreation(obj: Any)
     fun onWriteToObjectFieldOrArrayCell(obj: Any, fieldOrArrayCellValue: Any?)
+
+    // Methods required for the plugin integration
+
+    fun shouldInvokeBeforeEvent(): Boolean
+    fun getEventId(): Int
+    fun setLastMethodCallEventId()
 }

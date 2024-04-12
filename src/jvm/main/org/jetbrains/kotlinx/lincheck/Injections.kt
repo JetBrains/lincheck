@@ -52,11 +52,23 @@ internal object Injections {
     }
 
     /**
-     * Called from instrumented code instead of the MONITORENTER instruction.
+     * See [org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy.lock] for the explanation
+     * why we have beforeLock method.
+     *
+     * Creates a trace point which is used in the subsequent [beforeEvent] method call.
      */
     @JvmStatic
-    fun lock(monitor: Any, codeLocation: Int) {
-        eventTracker.lock(monitor, codeLocation)
+    fun beforeLock(codeLocation: Int) {
+        eventTracker.beforeLock(codeLocation)
+    }
+
+    /**
+     * Called from instrumented code instead of the MONITORENTER instruction, but after [beforeEvent] method call,
+     * if the plugin is enabled.
+     */
+    @JvmStatic
+    fun lock(monitor: Any) {
+        eventTracker.lock(monitor)
     }
 
     /**
@@ -84,20 +96,33 @@ internal object Injections {
     }
 
     /**
-     * Called from the instrumented code instead of [Object.wait].
+     * See [org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy.wait] for the explanation
+     * why we have beforeWait method.
+     *
+     * Creates a trace point which is used in the subsequent [beforeEvent] method call.
      */
     @JvmStatic
-    fun wait(monitor: Any, codeLocation: Int) {
-        eventTracker.wait(monitor, codeLocation, withTimeout = false)
+    fun beforeWait(codeLocation: Int) {
+        eventTracker.beforeWait(codeLocation)
+    }
+
+    /**
+     * Called from the instrumented code instead of [Object.wait], but after [beforeEvent] method call,
+     * if the plugin is enabled.
+     */
+    @JvmStatic
+    fun wait(monitor: Any) {
+        eventTracker.wait(monitor, withTimeout = false)
     }
 
 
     /**
-     * Called from the instrumented code instead of [Object.wait].
+     * Called from the instrumented code instead of [Object.wait] with timeout, but after [beforeEvent] method call,
+     * if the plugin is enabled.
      */
     @JvmStatic
-    fun waitWithTimeout(monitor: Any, codeLocation: Int) {
-        eventTracker.wait(monitor, codeLocation, withTimeout = true)
+    fun waitWithTimeout(monitor: Any) {
+        eventTracker.wait(monitor, withTimeout = true)
     }
 
     /**
@@ -151,11 +176,13 @@ internal object Injections {
 
     /**
      * Called from the instrumented code before each field read.
+     *
+     * @return whether the trace point was created
      */
     @JvmStatic
-    fun beforeReadField(obj: Any?, className: String, fieldName: String, codeLocation: Int) {
-        if (obj == null) return // Ignore, NullPointerException will be thrown
-        eventTracker.beforeReadField(obj, className, fieldName, codeLocation)
+    fun beforeReadField(obj: Any?, className: String, fieldName: String, codeLocation: Int): Boolean {
+        if (obj == null) return false // Ignore, NullPointerException will be thrown
+        return eventTracker.beforeReadField(obj, className, fieldName, codeLocation)
     }
 
     /**
@@ -168,11 +195,13 @@ internal object Injections {
 
     /**
      * Called from the instrumented code before any array cell read.
+     *
+     * @return whether the trace point was created
      */
     @JvmStatic
-    fun beforeReadArray(array: Any?, index: Int, codeLocation: Int) {
-        if (array == null) return // Ignore, NullPointerException will be thrown
-        eventTracker.beforeReadArrayElement(array, index, codeLocation)
+    fun beforeReadArray(array: Any?, index: Int, codeLocation: Int): Boolean {
+        if (array == null) return false // Ignore, NullPointerException will be thrown
+        return eventTracker.beforeReadArrayElement(array, index, codeLocation)
     }
 
     /**
@@ -185,11 +214,13 @@ internal object Injections {
 
     /**
      * Called from the instrumented code before each field write.
+     *
+     * @return whether the trace point was created
      */
     @JvmStatic
-    fun beforeWriteField(obj: Any?, className: String, fieldName: String, value: Any?, codeLocation: Int) {
-        if (obj == null) return // Ignore, NullPointerException will be thrown
-        eventTracker.beforeWriteField(obj, className, fieldName, value, codeLocation)
+    fun beforeWriteField(obj: Any?, className: String, fieldName: String, value: Any?, codeLocation: Int): Boolean {
+        if (obj == null) return false // Ignore, NullPointerException will be thrown
+        return eventTracker.beforeWriteField(obj, className, fieldName, value, codeLocation)
     }
 
     /**
@@ -202,11 +233,13 @@ internal object Injections {
 
     /**
      * Called from the instrumented code before any array cell write.
+     *
+     * @return whether the trace point was created
      */
     @JvmStatic
-    fun beforeWriteArray(array: Any?, index: Int, value: Any?, codeLocation: Int) {
-        if (array == null) return // Ignore, NullPointerException will be thrown
-        eventTracker.beforeWriteArrayElement(array, index, value, codeLocation)
+    fun beforeWriteArray(array: Any?, index: Int, value: Any?, codeLocation: Int): Boolean {
+        if (array == null) return false // Ignore, NullPointerException will be thrown
+        return eventTracker.beforeWriteArrayElement(array, index, value, codeLocation)
     }
 
     /**
@@ -318,4 +351,25 @@ internal object Injections {
 
     @JvmStatic
     val VOID_RESULT = Any()
+
+    // == Methods required for the IDEA Plugin integration ==
+
+    @JvmStatic
+    fun shouldInvokeBeforeEvent(): Boolean {
+        return eventTracker.shouldInvokeBeforeEvent()
+    }
+
+    /**
+     * @param type type of the next event. Used only for debug purposes.
+     */
+    @Suppress("UNUSED_PARAMETER") // for debug
+    @JvmStatic
+    fun getNextEventId(type: String): Int {
+        return eventTracker.getEventId()
+    }
+
+    @JvmStatic
+    fun setLastMethodCallEventId() {
+        eventTracker.setLastMethodCallEventId()
+    }
 }

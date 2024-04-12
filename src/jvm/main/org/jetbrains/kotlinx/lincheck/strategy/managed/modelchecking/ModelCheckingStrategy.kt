@@ -9,7 +9,8 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
-import org.jetbrains.kotlinx.lincheck.Actor
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.ExceptionNumberAndStacktrace
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -39,7 +40,8 @@ internal class ModelCheckingStrategy(
     scenario: ExecutionScenario,
     validationFunction: Actor?,
     stateRepresentation: Method?,
-    verifier: Verifier
+    verifier: Verifier,
+    val replay: Boolean,
 ) : ManagedStrategy(testClass, scenario, verifier, validationFunction, stateRepresentation, testCfg) {
     // The number of invocations that the strategy is eligible to use to search for an incorrect execution.
     private val maxInvocations = testCfg.invocationsPerIteration
@@ -67,14 +69,171 @@ internal class ModelCheckingStrategy(
                 continue
             }
             usedInvocations++
-            checkResult(invocationResult)?.let { return it }
+            checkResult(invocationResult)?.let { failure ->
+                runReplayIfPluginEnabled(failure)
+                return failure
+            }
             // get new unexplored interleaving
             currentInterleaving = root.nextInterleaving() ?: break
         }
         return null
     }
 
+    /**
+     * If the plugin enabled and the failure has a trace, passes information about
+     * the trace and the failure to the Plugin and run re-run execution to debug it.
+     */
+    private fun runReplayIfPluginEnabled(failure: LincheckFailure) {
+        if (replay && failure.trace != null) {
+            // extract trace representation in the appropriate view
+            val trace = constructTraceForPlugin(failure, failure.trace)
+            // provide all information about the failed test to the debugger
+            testFailed(
+                failureType = failure.type,
+                trace = trace,
+                version = lincheckVersion,
+                minimalPluginVersion = MINIMAL_PLUGIN_VERSION
+            )
+            // replay execution while it's needed
+            doReplay()
+            while (shouldReplayInterleaving()) {
+                doReplay()
+            }
+        }
+    }
+
+    override fun shouldInvokeBeforeEvent(): Boolean {
+        // We do not check `inIgnoredSection` here because this method is called from instrumented code
+        // that should be invoked only outside the ignored section.
+        // However, we cannot add `!inIgnoredSection` check here
+        // as the instrumented code might call `enterIgnoredSection` just before this call.
+        return replay && collectTrace &&
+                Thread.currentThread() is TestThread &&
+                suddenInvocationResult == null
+    }
+
+
+    /**
+     * We provide information about the failure type to the Plugin, but
+     * due to difficulties with passing objects like LincheckFailure (as class versions may vary),
+     * we use its string representation.
+     * The Plugin uses this information to show the failure type to a user.
+     */
+    private val LincheckFailure.type: String
+        get() = when (this) {
+            is IncorrectResultsFailure -> "INCORRECT_RESULTS"
+            is ObstructionFreedomViolationFailure -> "OBSTRUCTION_FREEDOM_VIOLATION"
+            is UnexpectedExceptionFailure -> "UNEXPECTED_EXCEPTION"
+            is ValidationFailure -> "VALIDATION_FAILURE"
+            is DeadlockOrLivelockFailure -> "DEADLOCK"
+        }
+
+
+    private fun doReplay(): InvocationResult {
+        cleanObjectNumeration()
+        currentInterleaving = currentInterleaving.copy()
+        resetEventIdProvider()
+        return runInvocation()
+    }
+
+    /**
+     * Transforms failure trace to the array of string to pass it to the debugger.
+     * (due to difficulties with passing objects like List and TracePoint, as class versions may vary)
+     *
+     * Each trace point is transformed into the line of type:
+     * "type,iThread,callDepth,shouldBeExpanded,eventId,representation".
+     *
+     * Later, when [testFailed] breakpoint is triggered debugger parses these lines back to trace points.
+     *
+     * To help the plugin to create execution view, we provide a type for each trace point.
+     * Below are the codes of trace point types.
+     *
+     * | Value                          | Code |
+     * |--------------------------------|------|
+     * | REGULAR                        | 0    |
+     * | ACTOR                          | 1    |
+     * | RESULT                         | 2    |
+     * | SWITCH                         | 3    |
+     * | SPIN_CYCLE_START               | 4    |
+     * | SPIN_CYCLE_SWITCH              | 5    |
+     * | OBSTRUCTION_FREEDOM_VIOLATION  | 6    |
+     */
+    private fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Array<String> {
+        val results = if (failure is IncorrectResultsFailure) failure.results else null
+        val nodesList = constructTraceGraph(failure, results, trace, collectExceptionsOrEmpty(failure))
+        var sectionIndex = 0
+        var node: TraceNode? = nodesList.firstOrNull()
+        val representations = mutableListOf<String>()
+        while (node != null) {
+            when (node) {
+                is TraceLeafEvent -> {
+                    val event = node.event
+                    val eventId = event.eventId
+                    val representation = event.toStringImpl(withLocation = false)
+                    val type = when (event) {
+                        is SwitchEventTracePoint -> {
+                            when (event.reason) {
+                                SwitchReason.ACTIVE_LOCK -> {
+                                    5
+                                }
+                                else -> 3
+                            }
+                        }
+                        is SpinCycleStartTracePoint -> 4
+                        is ObstructionFreedomViolationExecutionAbortTracePoint -> 6
+                        else -> 0
+                    }
+
+                    if (representation.isNotEmpty()) {
+                        representations.add("$type;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${eventId};${representation}")
+                    }
+                }
+
+                is CallNode -> {
+                    val beforeEventId = node.call.eventId
+                    val representation = node.call.toStringImpl(withLocation = false)
+                    if (representation.isNotEmpty()) {
+                        representations.add("0;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation}")
+                    }
+                }
+
+                is ActorNode -> {
+                    val beforeEventId = -1
+                    val representation = node.actorRepresentation
+                    if (representation.isNotEmpty()) {
+                        representations.add("1;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation}")
+                    }
+                }
+
+                is ActorResultNode -> {
+                    val beforeEventId = -1
+                    val representation = node.resultRepresentation.toString()
+                    representations.add("2;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation}")
+                }
+
+                else -> {}
+            }
+
+            node = node.next
+            if (node == null && sectionIndex != nodesList.lastIndex) {
+                node = nodesList[++sectionIndex]
+            }
+        }
+        return representations.toTypedArray()
+    }
+
+    private fun collectExceptionsOrEmpty(failure: LincheckFailure): Map<Throwable, ExceptionNumberAndStacktrace> {
+        val results = (failure as? IncorrectResultsFailure)?.results ?: return emptyMap()
+        return when (val result = collectExceptionStackTraces(results)) {
+            is ExceptionStackTracesResult -> result.exceptionStackTraces
+            is InternalLincheckBugResult -> emptyMap()
+        }
+    }
+
     override fun onNewSwitch(iThread: Int, mustSwitch: Boolean) {
+        if (replay && collectTrace) {
+            onThreadSwitchesOrActorFinishes()
+        }
         if (mustSwitch) {
             // Create new execution position if this is a forced switch.
             // All other execution positions are covered by `shouldSwitch` method,
@@ -287,6 +446,9 @@ internal class ModelCheckingStrategy(
                 lastNotInitializedNodeChoices?.add(Choice(ThreadChoosingNode(switchableThreads(iThread)), executionPosition))
             }
         }
+
+        fun copy() = Interleaving(switchPositions, threadSwitchChoices, lastNotInitializedNode)
+
     }
 
     private inner class InterleavingBuilder {
@@ -309,5 +471,13 @@ internal class ModelCheckingStrategy(
         }
 
         fun build() = Interleaving(switchPositions, threadSwitchChoices, lastNoninitializedNode)
+    }
+
+    companion object {
+        /**
+         * We provide lincheck version to [testFailed] method to the plugin be able to
+         * determine if this version is compatible with the plugin version.
+         */
+        private val lincheckVersion by lazy { this::class.java.`package`.implementationVersion }
     }
 }

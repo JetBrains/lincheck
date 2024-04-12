@@ -18,7 +18,7 @@ import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner.Completion.*
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
-import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.kotlinx.lincheck.util.SpinnerGroup
 import org.jetbrains.kotlinx.lincheck.TestThread
 import java.lang.reflect.*
 import java.util.concurrent.*
@@ -44,11 +44,11 @@ internal open class ParallelThreadsRunner(
     private val useClocks: UseClocks // specifies whether `HBClock`-s should always be used or with some probability
 ) : Runner(strategy, testClass, validationFunction, stateRepresentationFunction) {
     private val testName = testClass.simpleName
-    private val executor = FixedActiveThreadsExecutor(testName, scenario.nThreads) // should be closed in `close()`
+    internal val executor = FixedActiveThreadsExecutor(testName, scenario.nThreads) // should be closed in `close()`
 
     private val spinners = SpinnerGroup(executor.threads.size)
 
-    private lateinit var testInstance: Any
+    internal lateinit var testInstance: Any
 
     private var suspensionPointResults = List(scenario.nThreads) { t ->
         MutableList<Result>(scenario.threads[t].size) { NoResult }
@@ -269,11 +269,13 @@ internal open class ParallelThreadsRunner(
                 beforePart(INIT)
                 timeout -= executor.submitAndAwait(arrayOf(it), timeout)
             }
+            onThreadSwitchesOrActorFinishes()
             val afterInitStateRepresentation = constructStateRepresentation()
             // Execute the parallel part.
             beforePart(PARALLEL)
             timeout -= executor.submitAndAwait(parallelPartExecutions, timeout)
             val afterParallelStateRepresentation: String? = constructStateRepresentation()
+            onThreadSwitchesOrActorFinishes()
             // Execute the post part.
             postPartExecution?.let {
                 beforePart(POST)
