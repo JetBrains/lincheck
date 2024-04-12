@@ -21,6 +21,7 @@
 package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.getObjectNumber
+import org.jetbrains.kotlinx.lincheck.transformation.UnsafeHolder
 import sun.misc.Unsafe
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
