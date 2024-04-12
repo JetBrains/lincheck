@@ -17,8 +17,6 @@ import org.junit.Test
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
 import org.jetbrains.kotlinx.lincheck.actor
-import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
-import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
 
 // Test for early scenario verification completion: follow-up part resumes suspended operation.
 class ResumingFollowUpTest {
@@ -56,18 +54,16 @@ class ResumingFollowUpTest {
 
     @Test
     fun testEarlyScenarioCompletion() {
-        withLincheckJavaAgent(InstrumentationMode.STRESS) {
-            verify(ResumingFollowUpTest::class.java, LinearizabilityVerifier::class.java, {
-                parallel {
-                    thread {
-                        operation(actor(f), ValueResult("OK", wasSuspended = true))
-                    }
-                    thread {
-                        operation(actor(b, 1), ValueResult(true))
-                        operation(actor(afterB), Suspended) // should be S + 42
-                    }
+        verify(ResumingFollowUpTest::class.java, LinearizabilityVerifier::class.java, {
+            parallel {
+                thread {
+                    operation(actor(f), ValueResult("OK", wasSuspended = true))
                 }
-            }, false)
-        }
+                thread {
+                    operation(actor(b, 1), ValueResult(true))
+                    operation(actor(afterB), Suspended) // should be S + 42
+                }
+            }
+        }, false)
     }
 }
