@@ -14,6 +14,7 @@ import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.verifier.LTS.*
 import org.jetbrains.kotlinx.lincheck.verifier.OperationType.*
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import sun.nio.ch.lincheck.Injections.lastSuspendedCancellableContinuationDuringVerification
 import java.util.*
 import kotlin.coroutines.*
@@ -264,7 +265,14 @@ class LTS(private val sequentialSpecification: Class<*>) {
         ).intern(null) { _, _ -> initialState }
     }
 
-    private fun createInitialStateInstance() = sequentialSpecification.newInstance()
+    private fun createInitialStateInstance(): Any {
+        return sequentialSpecification.newInstance().also {
+            // because the sequential version of data structure used for verification
+            // may differ from the original parallel version, we need to ensure
+            // that the sequential class is instrumented
+            LincheckJavaAgent.ensureObjectIsTransformed(it)
+        }
+    }
 
     private fun StateInfo.computeRemappingFunction(old: StateInfo): RemappingFunction? {
         if (maxTicket == NO_TICKET) return null
