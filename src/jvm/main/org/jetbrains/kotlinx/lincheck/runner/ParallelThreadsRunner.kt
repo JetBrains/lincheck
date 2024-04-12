@@ -140,14 +140,16 @@ internal open class ParallelThreadsRunner(
             // as it is called in the testing code but should not be analyzed.
             override fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T> = runInIgnoredSection {
                 return Continuation(StoreExceptionHandler() + Job()) { result ->
-                    // decrement completed or suspended threads only if the operation was not cancelled
-                    if (!result.cancelledByLincheck()) {
-                        completedOrSuspendedThreads.decrementAndGet()
-                        if (!trySetResumedStatus(iThread, actorId)) {
-                            // already cancelled via prompt cancellation, increment the counter back
-                            completedOrSuspendedThreads.incrementAndGet()
+                    runInIgnoredSection {
+                        // decrement completed or suspended threads only if the operation was not cancelled
+                        if (!result.cancelledByLincheck()) {
+                            completedOrSuspendedThreads.decrementAndGet()
+                            if (!trySetResumedStatus(iThread, actorId)) {
+                                // already cancelled via prompt cancellation, increment the counter back
+                                completedOrSuspendedThreads.incrementAndGet()
+                            }
+                            resWithCont.set(result to continuation as Continuation<Any?>)
                         }
-                        resWithCont.set(result to continuation as Continuation<Any?>)
                     }
                 }
             }
