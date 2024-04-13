@@ -11,6 +11,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
 import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.fuzzing.coverage.HappensBeforeSummary
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
@@ -55,9 +56,9 @@ internal class ModelCheckingStrategy(
     // The interleaving that will be studied on the next invocation.
     private lateinit var currentInterleaving: Interleaving
 
-    override fun runImpl(): Pair<LincheckFailure?, List<Trace>> /* LincheckFailure? */ {
-        val traces = mutableListOf<Trace>()
-        currentInterleaving = root.nextInterleaving() ?: return Pair(null, traces)
+    override fun runImpl(): Pair<LincheckFailure?, List<HappensBeforeSummary>> /* LincheckFailure? */ {
+        val traces = mutableSetOf<HappensBeforeSummary>()
+        currentInterleaving = root.nextInterleaving() ?: return Pair(null, traces.toList())
 
         while (usedInvocations < maxInvocations) {
             // run invocation and check its results
@@ -67,12 +68,19 @@ internal class ModelCheckingStrategy(
                 continue
             }
             usedInvocations++
-            //traces.add(Trace(traceCollector!!.trace))
-            checkResult(invocationResult)?.let { return Pair(it, traces) }
+            checkResult(invocationResult)?.let { return Pair(it, traces.toList()) }
+            if (invocationResult is CompletedInvocationResult) {
+                traces.add(
+                    HappensBeforeSummary(scenario, invocationResult.results.threadsResultsWithClock)
+                )
+            }
+
             // get new unexplored interleaving
             currentInterleaving = root.nextInterleaving() ?: break
+
+            if (usedInvocations % 500 == 0) println("Invocation: ${usedInvocations}/${maxInvocations}")
         }
-        return Pair(null, traces) /* null */
+        return Pair(null, traces.toList()) /* null */
     }
 
     override fun onNewSwitch(iThread: Int, mustSwitch: Boolean) {

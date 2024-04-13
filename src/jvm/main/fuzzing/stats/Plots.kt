@@ -14,6 +14,7 @@ import org.jetbrains.letsPlot.export.ggsave
 import org.jetbrains.letsPlot.geom.geomLine
 import org.jetbrains.letsPlot.geom.geomPoint
 import org.jetbrains.letsPlot.geom.geomText
+import org.jetbrains.letsPlot.ggsize
 import org.jetbrains.letsPlot.label.labs
 import org.jetbrains.letsPlot.letsPlot
 import org.jetbrains.letsPlot.scale.scaleColorDiscrete
@@ -181,7 +182,7 @@ private fun linePlot(
 
     val labelEachDotRatio = 10
     val plot = letsPlot() +
-        //ggsize(1200, 1800) +
+        ggsize(1800, 1200) +
         labs(title = title, x = xLab, y = yLab) +
         scaleXContinuous(
             breaks = xScale,

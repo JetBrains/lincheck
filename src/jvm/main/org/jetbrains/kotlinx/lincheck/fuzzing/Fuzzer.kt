@@ -41,7 +41,7 @@ class Fuzzer(
     seedScenarios:  List<ExecutionScenario>,
     testStructure: CTestStructure,
     testConfiguration: CTestConfiguration,
-    private val defaultExecutionGenerator: ExecutionGenerator
+    internal val defaultExecutionGenerator: ExecutionGenerator
 ) {
     private var totalCycles = 0
     private var totalExecutions = 0
@@ -61,15 +61,15 @@ class Fuzzer(
 
     /** Contains initial seeds (eg. custom scenarios, that user may specify), might be empty as well */
     private val seedInputs: ArrayDeque<Input> = ArrayDeque()
-    /** Contains main queue of inputs which is used during fuzzing (this does not contain failed inputs, ony valid once) */
-    private var savedInputs: MutableList<Input> = mutableListOf()
+    /** Contains main queue of inputs which is used during fuzzing (this does not contain failed inputs, only valid once) */
+    internal var savedInputs: MutableList<Input> = mutableListOf()
     /** Contains failures that were found during fuzzing. */
     private val failures: MutableList<FailedInput> = mutableListOf()
     var iterationOfFirstFailure = -1
 
     /** Utilities for fuzzing process */
-    private val random = testStructure.randomProvider.createRandom()
-    private val mutator = Mutator(random, testStructure, testConfiguration)
+    internal val random = testStructure.randomProvider.createRandom()
+    private val mutator = Mutator(this, testStructure, testConfiguration)
 
     init {
         // schedule seed scenarios for execution
@@ -99,13 +99,13 @@ class Fuzzer(
             // TODO: bring back random scenario generation
             // if no saved inputs exist, try picking completely random scenario
             val randomScenario = defaultExecutionGenerator.nextExecution()
-            val trimmedScenario = ExecutionScenario(
-                emptyList(),
-                getTrimmedParallelPart(randomScenario),
-                emptyList(),
-                randomScenario.validationFunction
-            )
-            currentInput = Input(trimmedScenario) // defaultExecutionGenerator.nextExecution()
+//            val trimmedScenario = ExecutionScenario(
+//                emptyList(),
+//                getTrimmedParallelPart(randomScenario),
+//                emptyList(),
+//                randomScenario.validationFunction
+//            )
+            currentInput = Input(randomScenario) // defaultExecutionGenerator.nextExecution()
         }
         else {
             // pick something from fuzzing queue
@@ -119,7 +119,7 @@ class Fuzzer(
         return currentInput!!.scenario
     }
 
-    fun handleResult(failure: LincheckFailure?, coverage: Coverage, traceCoverage: Coverage) {
+    fun handleResult(failure: LincheckFailure?, coverage: Coverage, traceCoverage: List<Coverage>) {
         if (currentInput == null || executionStart == null)
             throw RuntimeException(
                 "`Fuzzer::handleResult(...)` called with no input selected. " +
@@ -131,7 +131,10 @@ class Fuzzer(
             throw RuntimeException("Reassigning coverage that was already calculated")
         }
         currentInput!!.coverage = coverage
-        currentInput!!.traceCoverage = traceCoverage
+        currentInput!!.traceCoverage = traceCoverage.fold(Coverage()) { acc, trace ->
+            acc.merge(trace)
+            acc
+        }
 
         var coverageUpdated = false
         var traceCoverageUpdated = false
@@ -147,9 +150,9 @@ class Fuzzer(
         }
         else {
             coverageUpdated = totalCoverage.merge(coverage)
-            traceCoverageUpdated = totalTraceCoverage.merge(traceCoverage)
+            traceCoverageUpdated = totalTraceCoverage.merge(currentInput!!.traceCoverage)
             maxCoverageUpdated = maxCoveredBranches < coverage.coveredBranchesCount()
-            maxTraceCoverageUpdated = maxCoveredTrace < traceCoverage.coveredBranchesCount()
+            maxTraceCoverageUpdated = maxCoveredTrace < currentInput!!.traceCoverage.coveredBranchesCount()
             val newCoverageFound: Boolean =
                 coverageUpdated ||
                 traceCoverageUpdated ||
@@ -161,7 +164,7 @@ class Fuzzer(
                 currentInput!!.favorite = true // set to favorite to generate more children from this input
 
                 maxCoveredBranches = max(maxCoveredBranches, coverage.coveredBranchesCount())
-                maxCoveredTrace = max(maxCoveredTrace, traceCoverage.coveredBranchesCount())
+                maxCoveredTrace = max(maxCoveredTrace, currentInput!!.traceCoverage.coveredBranchesCount())
 
                 savedInputs.add(currentInput!!)
             }
@@ -184,7 +187,7 @@ class Fuzzer(
             "max-edges = $maxCoveredBranches \n" +
             "total-edges = ${totalCoverage.coveredBranchesCount()} \n" +
             "============ \n" +
-            "covered-trace = ${traceCoverage.coveredBranchesCount()} \n" +
+            "covered-trace = ${currentInput!!.traceCoverage.coveredBranchesCount()} \n" +
             "max-trace = $maxCoveredTrace \n" +
             "total-trace = ${totalTraceCoverage.coveredBranchesCount()} \n" +
             "============ \n" +
@@ -286,7 +289,7 @@ class Fuzzer(
 }
 
 // constants match the JQF implementation
-private const val CHILDREN_INPUTS_GENERATED = 2 // 50
-private const val FAVORITE_PARENT_CHILDREN_MULTIPLIER = 5 // 20
+private const val CHILDREN_INPUTS_GENERATED = 3 // 50
+private const val FAVORITE_PARENT_CHILDREN_MULTIPLIER = 2 // 20
 private const val FAVORITE_INPUTS_RECALCULATION_RATE = 10
 private const val MEAN_MUTATION_COUNT = 3.0 // ceil(testConfiguration.actorsPerThread.toDouble() / 2.0).toInt()

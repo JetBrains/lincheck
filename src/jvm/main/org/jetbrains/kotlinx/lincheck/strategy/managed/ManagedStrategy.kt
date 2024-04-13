@@ -14,6 +14,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.coverage.CoverageOptions
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.fuzzing.coverage.HappensBeforeSummary
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -135,14 +136,14 @@ abstract class ManagedStrategy(
     fun useBytecodeCache(): Boolean =
         !collectTrace && testCfg.eliminateLocalObjects && (testCfg.guarantees == ManagedCTestConfiguration.DEFAULT_GUARANTEES)
 
-    override fun run(): Pair<LincheckFailure?, List<Trace>> /* LincheckFailure? */ = runImpl().also { close() }
+    override fun run(): Pair<LincheckFailure?, List<HappensBeforeSummary>> /* LincheckFailure? */ = runImpl().also { close() }
 
     // == STRATEGY INTERFACE METHODS ==
 
     /**
      * This method implements the strategy logic.
      */
-    protected abstract fun runImpl(): Pair<LincheckFailure?, List<Trace>> // LincheckFailure?
+    protected abstract fun runImpl(): Pair<LincheckFailure?, List<HappensBeforeSummary>> // LincheckFailure?
 
     /**
      * This method is invoked before every thread context switch.

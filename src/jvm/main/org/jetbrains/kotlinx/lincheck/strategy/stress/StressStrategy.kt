@@ -11,6 +11,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.stress
 
 import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.fuzzing.coverage.HappensBeforeSummary
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.Trace
@@ -46,7 +47,7 @@ class StressStrategy(
         }
     }
 
-    override fun run(): Pair<LincheckFailure?, List<Trace>> /* LincheckFailure? */ {
+    override fun run(): Pair<LincheckFailure?, List<HappensBeforeSummary>> /* LincheckFailure? */ {
         runner.use {
             // Run invocations
             for (invocation in 0 until invocations) {

@@ -13,18 +13,24 @@ package org.jetbrains.kotlinx.lincheck.fuzzing.mutation
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration
 import org.jetbrains.kotlinx.lincheck.CTestStructure
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.fuzzing.Fuzzer
 import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.mutations.*
 import java.util.Random
 
 class Mutator(
-    private val random: Random,
+    // private val random: Random,
+    fuzzer: Fuzzer,
     testStructure: CTestStructure,
     testConfiguration: CTestConfiguration
 ) {
+    private val random = fuzzer.random
     private val mutations = listOf(
         AddActorToParallelMutation(random, testStructure, testConfiguration),
         ReplaceActorInParallelMutation(random, testStructure),
         // RemoveActorFromParallelMutation(random),
+
+        CrossProductMutation(random, fuzzer.savedInputs),
+        RandomInputMutation(random, fuzzer.defaultExecutionGenerator),
 
         AddActorToInitMutation(random, testStructure, testConfiguration),
         AddActorToPostMutation(random, testStructure, testConfiguration),
@@ -45,12 +51,16 @@ class Mutator(
             scenario,
             mutationThread
         )
-        val otherMutations = getAvailableMutations(
-            mutations.filter { !parallelMutations.contains(it) },
+        val globalMutations = getAvailableMutations(
+            listOf(mutations[2], mutations[3]),
             scenario,
             mutationThread
         )
-
+        val otherMutations = getAvailableMutations(
+            mutations.filter { !parallelMutations.contains(it) && !globalMutations.contains(it) },
+            scenario,
+            mutationThread
+        )
         // println("Parallel mutations: ${parallelMutations.size}, non-parallel mutations: ${otherMutations.size}")
 
         return if (
@@ -59,7 +69,12 @@ class Mutator(
         ) {
             // pick mutation to parallel part
             parallelMutations[random.nextInt(parallelMutations.size)]
-        } else {
+        }
+        else if (p <= GLOBAL_PART_MUTATION_THRESHOLD && globalMutations.isNotEmpty()) {
+            // pick global mutation
+            globalMutations[random.nextInt(globalMutations.size)]
+        }
+        else {
             // pick mutation to init or post part
             otherMutations[random.nextInt(otherMutations.size)]
         }
@@ -70,4 +85,5 @@ class Mutator(
     }
 }
 
-private const val PARALLEL_PART_MUTATION_THRESHOLD: Double = 0.8
+private const val PARALLEL_PART_MUTATION_THRESHOLD: Double = 0.6
+private const val GLOBAL_PART_MUTATION_THRESHOLD: Double = 0.9

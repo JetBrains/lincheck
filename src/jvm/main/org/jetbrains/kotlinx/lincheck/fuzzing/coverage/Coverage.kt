@@ -168,26 +168,44 @@ fun ProjectData.toCoverage(): Coverage {
     return coverage
 }
 
-fun List<Trace>.toCoverage(): Coverage {
+fun HappensBeforeSummary.toCoverage(): Coverage {
     val coverage = Coverage()
-    var prevKey = 0
-    var currKey = 0
-
-    forEach {
-        it.trace.filterIsInstance<CodeLocationTracePoint>().forEach { tracePoint ->
-            currKey = Hashing.hash1(
-                tracePoint.stackTraceElement.lineNumber.toLong(),
-                tracePoint.actorId.toLong(),
+    pairs.forEach { (threadId, timeline) ->
+        timeline.forEach { (before, after) ->
+            val edgeKey = Hashing.hash1(
+                before.method.hashCode().toLong(),
+                after.method.hashCode().toLong(),
                 coverage.size()
             )
-            var key = ((currKey xor prevKey) % coverage.size())
-            if (key < 0) key = (key + coverage.size()) % coverage.size()
+            val key = Hashing.hash1(threadId.toLong(), edgeKey.toLong(), coverage.size())
 
             coverage.increment(key, 1)
-
-            prevKey = (currKey shr 1)
         }
     }
 
     return coverage
 }
+
+//fun List<Trace>.toCoverage(): Coverage {
+//    val coverage = Coverage()
+//    var prevKey = 0
+//    var currKey = 0
+//
+//    forEach {
+//        it.trace.filterIsInstance<CodeLocationTracePoint>().forEach { tracePoint ->
+//            currKey = Hashing.hash1(
+//                tracePoint.stackTraceElement.lineNumber.toLong(),
+//                tracePoint.actorId.toLong(),
+//                coverage.size()
+//            )
+//            var key = ((currKey xor prevKey) % coverage.size())
+//            if (key < 0) key = (key + coverage.size()) % coverage.size()
+//
+//            coverage.increment(key, 1)
+//
+//            prevKey = (currKey shr 1)
+//        }
+//    }
+//
+//    return coverage
+//}

@@ -15,6 +15,7 @@ import org.jetbrains.kotlinx.lincheck.fuzzing.Fuzzer
 import org.jetbrains.kotlinx.lincheck.fuzzing.coverage.Coverage
 import org.jetbrains.kotlinx.lincheck.fuzzing.coverage.toCoverage
 import fuzzing.stats.BenchmarkStats
+import org.jetbrains.kotlinx.lincheck.fuzzing.coverage.HappensBeforeSummary
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.Trace
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
@@ -116,7 +117,10 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
 
             val failure  = scenario.run(this, verifier)
             val coverage = coverageOptions.collectCoverage().toCoverage()
-            val traceCoverage = failure.second.toCoverage()
+            println("Traces count: ${failure.second.size}")
+            val traceCoverage = failure.second.map {
+                it.toCoverage()
+            }
 
             fuzzer.handleResult(failure.first, coverage, traceCoverage)
 
@@ -230,7 +234,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         return null
     }
 
-    private fun ExecutionScenario.run(testCfg: CTestConfiguration, verifier: Verifier): Pair<LincheckFailure?, List<Trace>> =
+    private fun ExecutionScenario.run(testCfg: CTestConfiguration, verifier: Verifier): Pair<LincheckFailure?, List<HappensBeforeSummary>> =
         testCfg.createStrategy(
             testClass = testClass,
             scenario = this,
