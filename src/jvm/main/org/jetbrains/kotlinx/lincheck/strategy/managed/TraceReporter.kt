@@ -25,13 +25,17 @@ internal fun StringBuilder.appendTrace(
     trace: Trace,
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
 ) {
+    // reset objects numeration
+    cleanObjectNumeration()
+
     val startTraceGraphNode = constructTraceGraph(failure, results, trace, exceptionStackTraces)
 
     appendShortTrace(startTraceGraphNode, failure)
     appendExceptionsStackTracesBlock(exceptionStackTraces)
     appendDetailedTrace(startTraceGraphNode, failure)
 
-    objectNumeration.clear() // clear the numeration at the end to avoid memory leaks
+    // clear the numeration at the end to avoid memory leaks
+    cleanObjectNumeration()
 }
 
 /**

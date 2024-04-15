@@ -15,8 +15,8 @@ The following interleaving leads to the error:
 |                |   innerClass.READ: InnerClass#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:39)      |
 |                |   innerClass.READ: InnerClass#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:40)      |
 |                |   otherInnerClass.READ: InnerClass#2 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:41) |
-|                |   primitiveArray.READ: int[]#2 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:42)       |
-|                |   objectArray.READ: String[]#2 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:43)       |
+|                |   primitiveArray.READ: int[]#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:42)       |
+|                |   objectArray.READ: String[]#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:43)       |
 |                |   counter.READ: 0 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:44)                    |
 |                |   switch                                                                                                                 |
 | operation(): 0 |                                                                                                                          |
@@ -34,8 +34,8 @@ Detailed trace:
 |                                                                                                                          |   innerClass.READ: InnerClass#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:39)      |
 |                                                                                                                          |   innerClass.READ: InnerClass#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:40)      |
 |                                                                                                                          |   otherInnerClass.READ: InnerClass#2 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:41) |
-|                                                                                                                          |   primitiveArray.READ: int[]#2 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:42)       |
-|                                                                                                                          |   objectArray.READ: String[]#2 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:43)       |
+|                                                                                                                          |   primitiveArray.READ: int[]#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:42)       |
+|                                                                                                                          |   objectArray.READ: String[]#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:43)       |
 |                                                                                                                          |   counter.READ: 0 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:44)                    |
 |                                                                                                                          |   switch                                                                                                                 |
 | operation(): 0                                                                                                           |                                                                                                                          |
@@ -44,8 +44,8 @@ Detailed trace:
 |   innerClass.READ: InnerClass#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:39)      |                                                                                                                          |
 |   innerClass.READ: InnerClass#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:40)      |                                                                                                                          |
 |   otherInnerClass.READ: InnerClass#2 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:41) |                                                                                                                          |
-|   primitiveArray.READ: int[]#2 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:42)       |                                                                                                                          |
-|   objectArray.READ: String[]#2 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:43)       |                                                                                                                          |
+|   primitiveArray.READ: int[]#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:42)       |                                                                                                                          |
+|   objectArray.READ: String[]#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:43)       |                                                                                                                          |
 |   counter.READ: 0 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:44)                    |                                                                                                                          |
 |   counter.WRITE(1) at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:44)                   |                                                                                                                          |
 |   result: 0                                                                                                              |                                                                                                                          |
