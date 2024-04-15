@@ -44,6 +44,6 @@ class CoroutineCancellationTraceReportingTest : VerifierState() {
         actorsAfter(0)
     }
         .checkImpl(this::class.java)
-        .checkLincheckOutput( "coroutine_cancellation.txt")
+        .checkLincheckOutput("coroutine_cancellation.txt")
 
 }

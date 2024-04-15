@@ -239,16 +239,3 @@ fun XmlProvider.removeAllLicencesExceptOne(licenceName: String) {
         }
     }
 }
-
-// We need the Lincheck version in the runtime to check compatibility with the Plugin,
-// so we save it into the file in the resources and retrieve in later.
-val versionTxt by tasks.registering {
-    doLast {
-        val version: String by project
-        file("src/commonMain/resources/version.txt").writeText(version)
-    }
-}
-
-tasks.named("processResources") {
-    dependsOn(versionTxt)
-}
