@@ -11,7 +11,6 @@
 package org.jetbrains.kotlinx.lincheck.transformation
 
 import sun.nio.ch.lincheck.Injections
-import org.jetbrains.kotlinx.lincheck.beforeEvent
 import org.objectweb.asm.*
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
@@ -85,7 +84,7 @@ internal fun GeneratorAdapter.invokeBeforeEvent(debugMessage: String, setMethodE
             push(debugMessage)
             invokeStatic(Injections::getNextEventId)
             push(debugMessage)
-            invokeStatic(::beforeEvent)
+            invokeStatic(Injections::beforeEvent)
         },
         elseClause = {}
     )

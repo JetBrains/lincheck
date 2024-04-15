@@ -356,6 +356,10 @@ public class Injections {
         return getEventTracker().shouldInvokeBeforeEvent();
     }
 
+    public static void beforeEvent(int eventId, String type) {
+        getEventTracker().beforeEvent(eventId, type);
+    }
+
     /**
      * @param type type of the next event. Used only for debug purposes.
      */

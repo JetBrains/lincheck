@@ -56,6 +56,7 @@ interface EventTracker {
     // Methods required for the plugin integration
 
     fun shouldInvokeBeforeEvent(): Boolean
+    fun beforeEvent(eventId: Int, type: String)
     fun getEventId(): Int
     fun setLastMethodCallEventId()
 }

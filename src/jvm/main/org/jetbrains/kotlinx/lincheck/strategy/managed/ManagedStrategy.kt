@@ -9,8 +9,8 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.beforeEvent as ideaPluginBeforeEvent
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
@@ -24,6 +24,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicFieldUpdaterNames.g
 import sun.nio.ch.lincheck.*
 import java.lang.invoke.*
 import sun.misc.Unsafe
+import kotlinx.coroutines.*
 import java.util.concurrent.atomic.*
 import java.lang.reflect.*
 import java.util.*
@@ -1128,6 +1129,10 @@ abstract class ManagedStrategy(
         val iThread = currentThread
         val actorId = currentActorId.getOrElse(iThread) { Int.MIN_VALUE }
         return constructor(iThread, actorId, callStackTrace.getOrNull(iThread)?.toList() ?: emptyList())
+    }
+
+    override fun beforeEvent(eventId: Int, type: String) {
+        ideaPluginBeforeEvent(eventId, type)
     }
 
     /**
