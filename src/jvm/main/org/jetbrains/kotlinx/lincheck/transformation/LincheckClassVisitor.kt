@@ -91,11 +91,16 @@ internal class LincheckClassVisitor(
             }
         }
         if (methodName == "<clinit>" ||
+            // Ignore coroutine internals unrelated to testing.
+            className == "kotlinx/coroutines/CancellableContinuationImpl" && methodName == "initCancellability" ||
+            className == "kotlinx/coroutines/CancellableContinuationImpl" && methodName == "detachChildIfNonResuable" ||
+            className == "kotlinx/coroutines/CancellableContinuationImpl" && methodName == "dispatchResume" ||
             // Debugger implicitly evaluates toString for variables rendering
             // We need to disable breakpoints in such a case, as the numeration will break.
             // Breakpoints are disabled as we do not instrument toString and enter an ignored section,
             // so there are no beforeEvents inside.
-            ideaPluginEnabled && methodName == "toString" && desc == "()Ljava/lang/String;") {
+            ideaPluginEnabled && methodName == "toString" && desc == "()Ljava/lang/String;")
+        {
             mv = WrapMethodInIgnoredSectionTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
             return mv
         }
