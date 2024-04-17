@@ -1184,9 +1184,11 @@ internal class LincheckClassVisitor(
                     }
                     return
                 }
-                if (owner.startsWith("java/util/concurrent/") && (owner.contains("Atomic")) ||
-                    owner == "sun/misc/Unsafe" || owner == "jdk/internal/misc/Unsafe" ||
-                    owner == "java/lang/invoke/VarHandle"
+                if (owner == "sun/misc/Unsafe" ||
+                    owner == "jdk/internal/misc/Unsafe" ||
+                    owner == "java/lang/invoke/VarHandle" ||
+                    owner.startsWith("java/util/concurrent/") && (owner.contains("Atomic")) ||
+                    owner.startsWith("kotlinx/atomicfu/") && (owner.contains("Atomic"))
                 ) {
                     invokeIfInTestingCode(
                         original = {
