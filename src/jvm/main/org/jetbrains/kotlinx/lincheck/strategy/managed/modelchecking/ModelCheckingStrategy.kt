@@ -144,12 +144,13 @@ internal class ModelCheckingStrategy(
      * to the plugin with a flag, indicating if an internal bug was the cause of the failure, or not.
      */
     private fun collectExceptionsForPlugin(failure: LincheckFailure): ExceptionProcessingResult {
-        val results: ExecutionResult = (failure as? IncorrectResultsFailure)?.results ?: return ExceptionProcessingResult(emptyArray(), isInternalBugOccurred = false)
-
+        val results: ExecutionResult = (failure as? IncorrectResultsFailure)?.results
+            ?: return ExceptionProcessingResult(emptyArray(), isInternalBugOccurred = false)
         return when (val exceptionsProcessingResult = collectExceptionStackTraces(results)) {
             // If some exception was thrown from the Lincheck itself, we'll ask for bug reporting
-            is InternalLincheckBugResult -> ExceptionProcessingResult(arrayOf(exceptionsProcessingResult.exception.text), isInternalBugOccurred = true)
-
+            is InternalLincheckBugResult ->
+                ExceptionProcessingResult(arrayOf(exceptionsProcessingResult.exception.text), isInternalBugOccurred = true)
+            // Otherwise collect all the exceptions
             is ExceptionStackTracesResult -> {
                 exceptionsProcessingResult.exceptionStackTraces.entries
                     .sortedBy { (_, numberAndStackTrace) -> numberAndStackTrace.number }
