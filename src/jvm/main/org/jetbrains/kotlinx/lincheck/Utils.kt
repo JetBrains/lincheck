@@ -271,6 +271,12 @@ private class CustomObjectInputStream(val loader: ClassLoader, inputStream: Inpu
     }
 }
 
+internal val Throwable.text: String get() {
+    val writer = StringWriter()
+    printStackTrace(PrintWriter(writer))
+    return writer.buffer.toString()
+}
+
 /**
  * Collects the current thread dump and keeps only those
  * threads that are related to the specified [runner].

@@ -10,7 +10,6 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.ExceptionNumberAndStacktrace
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -85,16 +84,19 @@ internal class ModelCheckingStrategy(
      */
     private fun runReplayIfPluginEnabled(failure: LincheckFailure) {
         if (replay && failure.trace != null) {
-            // extract trace representation in the appropriate view
+            // Extract trace representation in the appropriate view.
             val trace = constructTraceForPlugin(failure, failure.trace)
-            // provide all information about the failed test to the debugger
+            // Collect and analyze the exceptions thrown.
+            val (exceptionsRepresentation, internalBugOccurred) = collectExceptionsForPlugin(failure)
+            // Provide all information about the failed test to the debugger.
             testFailed(
-                failureType = failure.type,
+                failureType = if (internalBugOccurred) "INTERNAL_BUG" else failure.type,
                 trace = trace,
                 version = lincheckVersion,
-                minimalPluginVersion = MINIMAL_PLUGIN_VERSION
+                minimalPluginVersion = MINIMAL_PLUGIN_VERSION,
+                exceptions = exceptionsRepresentation
             )
-            // replay execution while it's needed
+            // Replay execution while it's needed.
             doReplay()
             while (shouldReplayInterleaving()) {
                 doReplay()
@@ -135,6 +137,43 @@ internal class ModelCheckingStrategy(
         resetEventIdProvider()
         return runInvocation()
     }
+
+    /**
+     * Processes the exceptions was thrown during the execution.
+     * @return exceptions string representation to pass
+     * to the plugin with a flag, indicating if an internal bug was the cause of the failure, or not.
+     */
+    private fun collectExceptionsForPlugin(failure: LincheckFailure): ExceptionProcessingResult {
+        val results: ExecutionResult = (failure as? IncorrectResultsFailure)?.results ?: return ExceptionProcessingResult(emptyArray(), isInternalBugOccurred = false)
+
+        return when (val exceptionsProcessingResult = collectExceptionStackTraces(results)) {
+            // If some exception was thrown from the Lincheck itself, we'll ask for bug reporting
+            is InternalLincheckBugResult -> ExceptionProcessingResult(arrayOf(exceptionsProcessingResult.exception.text), isInternalBugOccurred = true)
+
+            is ExceptionStackTracesResult -> {
+                exceptionsProcessingResult.exceptionStackTraces.entries
+                    .sortedBy { (_, numberAndStackTrace) -> numberAndStackTrace.number }
+                    .map { (exception, numberAndStackTrace) ->
+                        val header = exception::class.java.canonicalName + ": " + exception.message
+                        header + numberAndStackTrace.stackTrace.joinToString("") { "\n\tat $it" }
+                    }
+                    .let { ExceptionProcessingResult(it.toTypedArray(), isInternalBugOccurred = false) }
+            }
+        }
+    }
+
+    /**
+     * Result of creating string representations of exceptions
+     * thrown during the execution before passing them to the plugin.
+     *
+     * @param exceptionsRepresentation string representation of all the exceptions
+     * @param isInternalBugOccurred a flag indicating that the exception is caused by a bug in the Lincheck.
+     */
+    @Suppress("ArrayInDataClass")
+    private data class ExceptionProcessingResult(
+        val exceptionsRepresentation: Array<String>,
+        val isInternalBugOccurred: Boolean
+    )
 
     /**
      * Transforms failure trace to the array of string to pass it to the debugger.

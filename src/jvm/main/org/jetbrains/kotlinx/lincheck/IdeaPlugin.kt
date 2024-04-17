@@ -25,18 +25,20 @@ const val MINIMAL_PLUGIN_VERSION = "0.0.1"
  * then [beforeEvent] method is called on each trace point.
  *
  * @param failureType string representation of the failure type.
- * (`INCORRECT_RESULTS`, `OBSTRUCTION_FREEDOM_VIOLATION`, `UNEXPECTED_EXCEPTION`, `VALIDATION_FAILURE`, `DEADLOCK`).
+ * (`INCORRECT_RESULTS`, `OBSTRUCTION_FREEDOM_VIOLATION`, `UNEXPECTED_EXCEPTION`, `VALIDATION_FAILURE`, `DEADLOCK` or `INTERNAL_BUG`).
  * @param trace failed test trace, where each trace point is represented as a string
  * (because it's the easiest way to provide some information to the debugger).
  * @param version current Lincheck version
  * @param minimalPluginVersion minimal compatible plugin version
+ * @param exceptions representation of the exceptions with their stacktrace occurred during the execution
  */
 @Suppress("UNUSED_PARAMETER")
 fun testFailed(
     failureType: String,
     trace: Array<String>,
     version: String?,
-    minimalPluginVersion: String
+    minimalPluginVersion: String,
+    exceptions: Array<String>
 ) {
 }
 
