@@ -18,7 +18,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.util.Random
 
-class ExpandingRangeGeneratorTest {
+// This test should be isolated, as the mockK library
+// may change some coroutine test output
+// (though, have no idea how exactly).
+class ExpandingRangeGeneratorIsolatedTest {
 
     @Test
     fun `generator should expand generated values range and than generate values from it`() {

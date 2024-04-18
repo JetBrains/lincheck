@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import kotlin.reflect.*
@@ -47,12 +48,15 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     /**
      * @return TestReport with information about concurrent test run.
      */
+    @Synchronized // never run Lincheck tests in parallel
     internal fun checkImpl(): LincheckFailure? {
         check(testConfigurations.isNotEmpty()) { "No Lincheck test configuration to run" }
         lincheckVerificationStarted()
         for (testCfg in testConfigurations) {
-            val failure = testCfg.checkImpl()
-            if (failure != null) return failure
+            withLincheckJavaAgent(testCfg.instrumentationMode) {
+                val failure = testCfg.checkImpl()
+                if (failure != null) return failure
+            }
         }
         return null
     }

@@ -8,9 +8,9 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck
+package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import sun.misc.Unsafe
+import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder.UNSAFE
 import java.lang.reflect.Modifier
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater
 import java.util.concurrent.atomic.AtomicLongFieldUpdater
@@ -22,15 +22,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
  * equality and does not prevent them from being garbage collected.
  */
 internal object AtomicFieldUpdaterNames {
-    private val unsafe: Unsafe = try {
-        val unsafeField = Unsafe::class.java.getDeclaredField("theUnsafe")
-        unsafeField.isAccessible = true
-        unsafeField.get(null) as Unsafe
-    } catch (ex: Exception) {
-        throw RuntimeException("Can't get the Unsafe instance, please report it to the Lincheck team", ex)
-    }
-
-    fun getName(updater: Any): String? {
+    fun getAtomicFieldUpdaterName(updater: Any): String? {
         if (updater !is AtomicIntegerFieldUpdater<*> && updater !is AtomicLongFieldUpdater<*> && updater !is AtomicReferenceFieldUpdater<*, *>) {
             throw IllegalArgumentException("Provided object is not a recognized Atomic*FieldUpdater type.")
         }
@@ -38,16 +30,16 @@ internal object AtomicFieldUpdaterNames {
         try {
             // Cannot use neither reflection not MethodHandles.Lookup, as they lead to a warning.
             val tclassField = updater.javaClass.getDeclaredField("tclass")
-            val targetType = unsafe.getObject(updater, unsafe.objectFieldOffset(tclassField)) as Class<*>
+            val targetType = UNSAFE.getObject(updater, UNSAFE.objectFieldOffset(tclassField)) as Class<*>
 
             val offsetField = updater.javaClass.getDeclaredField("offset")
-            val offset = unsafe.getLong(updater, unsafe.objectFieldOffset(offsetField))
+            val offset = UNSAFE.getLong(updater, UNSAFE.objectFieldOffset(offsetField))
 
             for (field in targetType.declaredFields) {
                 try {
                     if (Modifier.isNative(field.modifiers)) continue
-                    val fieldOffset = if (Modifier.isStatic(field.modifiers)) unsafe.staticFieldOffset(field)
-                    else unsafe.objectFieldOffset(field)
+                    val fieldOffset = if (Modifier.isStatic(field.modifiers)) UNSAFE.staticFieldOffset(field)
+                    else UNSAFE.objectFieldOffset(field)
                     if (fieldOffset == offset) return field.name
                 } catch (t: Throwable) {
                     t.printStackTrace()

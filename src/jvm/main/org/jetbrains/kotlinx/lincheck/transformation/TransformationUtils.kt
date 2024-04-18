@@ -10,12 +10,12 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
-import org.jetbrains.kotlinx.lincheck.Injections
-import org.jetbrains.kotlinx.lincheck.beforeEvent
+import sun.nio.ch.lincheck.Injections
 import org.objectweb.asm.*
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
 import java.io.*
+import java.util.*
 import java.util.concurrent.*
 import kotlin.reflect.*
 import kotlin.reflect.jvm.*
@@ -84,7 +84,7 @@ internal fun GeneratorAdapter.invokeBeforeEvent(debugMessage: String, setMethodE
             push(debugMessage)
             invokeStatic(Injections::getNextEventId)
             push(debugMessage)
-            invokeStatic(::beforeEvent)
+            invokeStatic(Injections::beforeEvent)
         },
         elseClause = {}
     )
@@ -164,6 +164,7 @@ internal inline fun GeneratorAdapter.invokeInIgnoredSection(
 private val isCoroutineStateMachineClassMap = ConcurrentHashMap<String, Boolean>()
 internal fun isCoroutineStateMachineClass(internalClassName: String): Boolean {
     if (internalClassName.startsWith("java/")) return false
+    if (internalClassName.startsWith("kotlin/") && !internalClassName.startsWith("kotlin/coroutines/")) return false
     return isCoroutineStateMachineClassMap.computeIfAbsent(internalClassName) {
         getSuperclassName(internalClassName) == "kotlin/coroutines/jvm/internal/ContinuationImpl"
     }
@@ -193,46 +194,6 @@ private fun getSuperclassName(internalClassName: String): String? {
 
 internal const val ASM_API = Opcodes.ASM9
 
-// Converts the internal JVM name to a canonical one
-internal val String.canonicalClassName get() = this.replace('/', '.')
-
 internal val STRING_TYPE = getType(String::class.java)
 internal val CLASS_TYPE = getType(Class::class.java)
 internal val CLASS_FOR_NAME_METHOD = Method("forName", CLASS_TYPE, arrayOf(STRING_TYPE))
-
-internal val NOT_TRANSFORMED_JAVA_UTIL_CLASSES = setOf(
-    "java/util/ServiceLoader", // can not be transformed because of access to `SecurityManager`
-    "java/util/concurrent/TimeUnit", // many not transformed interfaces such as `java.util.concurrent.BlockingQueue` use it
-    "java/util/OptionalDouble", // used by `java.util.stream.DoubleStream`. Is an immutable collection
-    "java/util/OptionalLong",
-    "java/util/OptionalInt",
-    "java/util/Optional",
-    "java/util/Locale", // is an immutable class too
-    "java/util/Locale\$Category",
-    "java/util/Locale\$FilteringMode",
-    "java/util/Currency",
-    "java/util/Date",
-    "java/util/Calendar",
-    "java/util/TimeZone",
-    "java/util/DoubleSummaryStatistics", // this class is mutable, but `java.util.stream.DoubleStream` interface better be not transformed
-    "java/util/LongSummaryStatistics",
-    "java/util/IntSummaryStatistics",
-    "java/util/Formatter",
-    "java/util/stream/PipelineHelper",
-    "java/util/Random", // will be thread safe after `RandomTransformer` transformation
-    "java/util/concurrent/ThreadLocalRandom"
-)
-internal val TRANSFORMED_JAVA_UTIL_INTERFACES = setOf(
-    "java/util/concurrent/CompletionStage", // because it uses `java.util.concurrent.CompletableFuture`
-    "java/util/Observer", // uses `java.util.Observable`
-    "java/util/concurrent/RejectedExecutionHandler",
-    "java/util/concurrent/ForkJoinPool\$ForkJoinWorkerThreadFactory",
-    "java/util/jar/Pack200\$Packer",
-    "java/util/jar/Pack200\$Unpacker",
-    "java/util/prefs/PreferencesFactory",
-    "java/util/ResourceBundle\$CacheKeyReference",
-    "java/util/prefs/PreferenceChangeListener",
-    "java/util/prefs/NodeChangeListener",
-    "java/util/logging/Filter",
-    "java/util/spi/ResourceBundleControlProvider"
-)
