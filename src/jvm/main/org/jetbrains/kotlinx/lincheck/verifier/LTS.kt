@@ -267,9 +267,9 @@ class LTS(private val sequentialSpecification: Class<*>) {
 
     private fun createInitialStateInstance(): Any {
         return sequentialSpecification.newInstance().also {
-            // because the sequential version of data structure used for verification
-            // may differ from the original parallel version, we need to ensure
-            // that the sequential class is instrumented
+            // the sequential version of the data structure used for verification
+            // may differ from the original parallel version,
+            // in this case we need to ensure that the sequential class is also instrumented
             LincheckJavaAgent.ensureObjectIsTransformed(it)
         }
     }
