@@ -52,6 +52,7 @@ abstract class AbstractFuzzerBenchmarkTest {
                 executionConfiguration()
                 customize()
                 customizeFuzzingCoverage()
+                minimizeFailedScenario(false)
                 check(this@AbstractFuzzerBenchmarkTest::class, stats)
             }
         }
@@ -94,6 +95,8 @@ abstract class AbstractFuzzerBenchmarkTest {
         iterations(100)
         threads(3)
         actorsPerThread(4)
+        actorsBefore(1)
+        actorsAfter(1)
         when (this) {
             // Smart cast as invocations are not a general property
             is StressOptions -> invocationsPerIteration(10000)

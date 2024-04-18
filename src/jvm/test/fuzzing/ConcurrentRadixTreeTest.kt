@@ -36,7 +36,7 @@ class ConcurrentRadixTreeTest : AbstractFuzzerBenchmarkTest() {
     @Operation
     fun put(@Param(name = "key") key: String, value: Int) = if (key.length != 0) radixTree.put(key, value).toString() else 0
 
-    //@Test(expected = AssertionError::class)
+    //@Test //(expected = AssertionError::class)
     fun knownFailingTest() {
         // Fails as expected
         val scenario = scenario {

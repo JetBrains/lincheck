@@ -41,7 +41,6 @@ class ConcurrentLinkedDequeTest : AbstractFuzzerBenchmarkTest() {
 
     override fun <O : Options<O, *>> O.customizeModelCheckingCoverage() {
         logLevel(LoggingLevel.INFO)
-        iterations(40)
         coverageConfigurationForModelChecking(
             listOf(this@ConcurrentLinkedDequeTest::class.jvmName),
             listOf("java\\.util\\.concurrent.*")
@@ -49,7 +48,6 @@ class ConcurrentLinkedDequeTest : AbstractFuzzerBenchmarkTest() {
     }
 
     override fun <O : Options<O, *>> O.customizeFuzzingCoverage() {
-        iterations(40)
         coverageConfigurationForFuzzing(
             listOf(this@ConcurrentLinkedDequeTest::class.jvmName),
             listOf("java\\.util\\.concurrent.*"),

@@ -28,7 +28,8 @@ class NonBlockingHashMapLongTest : AbstractConcurrentMapTest<NonBlockingHashMapL
         )
     }
 
-    override fun <O : Options<O, *>> O.customizeFuzzingCoverage() =
+    override fun <O : Options<O, *>> O.customizeFuzzingCoverage() {
+        // iterations(50)
         coverageConfigurationForFuzzing(
             listOf(
                 AbstractConcurrentMapTest::class.jvmName,
@@ -36,4 +37,5 @@ class NonBlockingHashMapLongTest : AbstractConcurrentMapTest<NonBlockingHashMapL
             ),
             emptyList()
         )
+    }
 }

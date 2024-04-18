@@ -51,7 +51,8 @@ class SnapTreeTest : AbstractConcurrentMapTest<SnapTreeMap<Long, Int>>(SnapTreeM
             .check(this::class)
     }
 
-    override fun <O : Options<O, *>> O.customizeModelCheckingCoverage() =
+    override fun <O : Options<O, *>> O.customizeModelCheckingCoverage() {
+        //iterations(50)
         coverageConfigurationForModelChecking(
             listOf(
                 AbstractConcurrentMapTest::class.jvmName,
@@ -59,8 +60,10 @@ class SnapTreeTest : AbstractConcurrentMapTest<SnapTreeMap<Long, Int>>(SnapTreeM
             ),
             emptyList()
         )
+    }
 
-    override fun <O : Options<O, *>> O.customizeFuzzingCoverage() =
+    override fun <O : Options<O, *>> O.customizeFuzzingCoverage() {
+        iterations(100)
         coverageConfigurationForFuzzing(
             listOf(
                 AbstractConcurrentMapTest::class.jvmName,
@@ -68,6 +71,7 @@ class SnapTreeTest : AbstractConcurrentMapTest<SnapTreeMap<Long, Int>>(SnapTreeM
             ),
             emptyList()
         )
+    }
 
 //    override fun <O : Options<O, *>> O.customize() {
 //        //logLevel(LoggingLevel.INFO)

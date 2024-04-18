@@ -10,11 +10,17 @@
 
 package fuzzing.stats
 
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.encodeToStream
+import org.jetbrains.kotlinx.lincheck.fuzzing.coverage.HappensBeforeSummary
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.io.path.Path
 
+@Serializable
 class BenchmarkStats(
     var type: TestType? = null,
 
@@ -29,15 +35,17 @@ class BenchmarkStats(
     // execution time
     var totalDurationMs: Long = 0,
 
-    // total coverage existing
-//    var totalDetectedCoverageBranches: Long = 0,
-//    var totalDetectedCoverageLines: Long = 0,
-
     // coverage metric per iteration
     val failedIterations: MutableList<Int> = mutableListOf(),
     val totalFoundCoverage: MutableList<Int> = mutableListOf(),
     val iterationFoundCoverage: MutableList<Int> = mutableListOf(),
     val maxIterationFoundCoverage: MutableList<Int> = mutableListOf(),
+
+    // trace metric per iteration
+    val distinctTraces: MutableList<Int> = mutableListOf(),
+    val totalHappensBeforePairs: MutableList<Int> = mutableListOf(),
+    val iterationHappensBeforePairs: MutableList<Int> = mutableListOf(),
+    val maxIterationHappensBeforePairs: MutableList<Int> = mutableListOf(),
 
     // for fuzzer only
     val savedInputsCounts: MutableList<Int> = mutableListOf(),
@@ -55,11 +63,30 @@ class BenchmarkStats(
                 "\ttotalFoundCoverage=${totalFoundCoverage.size} \n" +
                 "\titerationFoundCoverage=${iterationFoundCoverage.size} \n" +
                 "\tmaxIterationFoundCoverage=${maxIterationFoundCoverage.size} \n" +
+                "\tdistinctTraces=${distinctTraces.size} \n" +
+                "\ttotalHappensBeforePairs=${totalHappensBeforePairs.size} \n" +
+                "\titerationHappensBeforePairs=${iterationHappensBeforePairs.size} \n" +
+                "\tmaxIterationHappensBeforePairs=${maxIterationHappensBeforePairs.size} \n" +
                 "\tsavedInputsCount=${savedInputsCounts.size} \n" +
                 "\tfailedIterations=${failedIterations.size} \n" +
             ") \n" +
             "Coverage: edges=${if (totalFoundCoverage.isNotEmpty()) totalFoundCoverage.last() else 0}"
         )
+    }
+
+    @OptIn(ExperimentalSerializationApi::class)
+    fun saveJson(dirPath: String) {
+        val dir = File(dirPath)
+        if (!dir.exists()) dir.mkdirs()
+
+        val file = File(Path(
+            dirPath,
+            (if (type == TestType.MODEL_CHECKING) "model-checking" else "fuzzing") + ".json"
+        ).toString())
+
+        file.outputStream().use { outputStream ->
+            Json.encodeToStream(this, outputStream)
+        }
     }
 }
 
@@ -80,6 +107,13 @@ class BenchmarkCollector {
         val dir = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(Date())
 
         tests.forEach { (testName, results) ->
+            // save as json
+            results.forEach {
+                it.saveJson(
+                    Path(System.getProperty("user.dir"), "/lets-plot-images/${testName}/json/$dir/").toString()
+                )
+            }
+
             // apart plotting
             results.forEach {
                 val path = Path(System.getProperty("user.dir"), "/lets-plot-images/${testName}/single/$dir/")

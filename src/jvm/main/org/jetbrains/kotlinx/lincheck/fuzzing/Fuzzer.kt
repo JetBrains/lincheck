@@ -20,6 +20,8 @@ import org.jetbrains.kotlinx.lincheck.fuzzing.input.FailedInput
 import org.jetbrains.kotlinx.lincheck.fuzzing.input.Input
 import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.Mutator
 import fuzzing.stats.BenchmarkStats
+import org.jetbrains.kotlinx.lincheck.fuzzing.coverage.HappensBeforeSummary
+import org.jetbrains.kotlinx.lincheck.fuzzing.coverage.toCoverage
 import org.jetbrains.kotlinx.lincheck.fuzzing.util.Sampling
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import java.util.*
@@ -49,6 +51,7 @@ class Fuzzer(
     private val totalTraceCoverage = Coverage()
     private var maxCoveredBranches = 0
     private var maxCoveredTrace = 0
+    private val traces = mutableSetOf<HappensBeforeSummary>()
 
     /** Id of input that is going to be mutated to get some interesting children inputs */
     private var currentParentInputIdx = 0
@@ -119,7 +122,7 @@ class Fuzzer(
         return currentInput!!.scenario
     }
 
-    fun handleResult(failure: LincheckFailure?, coverage: Coverage, traceCoverage: List<Coverage>) {
+    fun handleResult(failure: LincheckFailure?, coverage: Coverage, traceCoverage: List<HappensBeforeSummary>) {
         if (currentInput == null || executionStart == null)
             throw RuntimeException(
                 "`Fuzzer::handleResult(...)` called with no input selected. " +
@@ -130,8 +133,9 @@ class Fuzzer(
         if (currentInput!!.coverage.coveredBranchesCount() != 0) {
             throw RuntimeException("Reassigning coverage that was already calculated")
         }
+        traces.addAll(traceCoverage)
         currentInput!!.coverage = coverage
-        currentInput!!.traceCoverage = traceCoverage.fold(Coverage()) { acc, trace ->
+        currentInput!!.traceCoverage = traceCoverage.map { it.toCoverage() }.fold(Coverage()) { acc, trace ->
             acc.merge(trace)
             acc
         }
@@ -148,7 +152,7 @@ class Fuzzer(
 
             if (iterationOfFirstFailure == -1) iterationOfFirstFailure = totalExecutions
         }
-        else {
+        //else {
             coverageUpdated = totalCoverage.merge(coverage)
             traceCoverageUpdated = totalTraceCoverage.merge(currentInput!!.traceCoverage)
             maxCoverageUpdated = maxCoveredBranches < coverage.coveredBranchesCount()
@@ -168,7 +172,7 @@ class Fuzzer(
 
                 savedInputs.add(currentInput!!)
             }
-        }
+        //}
 
 
         // TODO: updated stats
@@ -177,7 +181,10 @@ class Fuzzer(
         stats.maxIterationFoundCoverage.add(maxCoveredBranches)
         stats.savedInputsCounts.add(savedInputs.size)
         if (failure != null) stats.failedIterations.add(totalExecutions + 1)
-
+        stats.totalHappensBeforePairs.add(totalTraceCoverage.coveredBranchesCount())
+        stats.iterationHappensBeforePairs.add(currentInput!!.traceCoverage.coveredBranchesCount())
+        stats.maxIterationHappensBeforePairs.add(maxCoveredTrace)
+        stats.distinctTraces.add(traces.size)
 
         // TODO: move printing in some logger
         println(
@@ -190,6 +197,7 @@ class Fuzzer(
             "covered-trace = ${currentInput!!.traceCoverage.coveredBranchesCount()} \n" +
             "max-trace = $maxCoveredTrace \n" +
             "total-trace = ${totalTraceCoverage.coveredBranchesCount()} \n" +
+            "traces = ${traces.size} \n" +
             "============ \n" +
             "mask (c|t|mc|mt): ${if (coverageUpdated) 1 else 0}${if (traceCoverageUpdated) 1 else 0}${if (maxCoverageUpdated) 1 else 0}${if (maxTraceCoverageUpdated) 1 else 0} \n" +
             "cycles: $totalCycles \n" +

@@ -40,9 +40,9 @@ fun plotSingle(
         filename = "${filename + if (test.type == TestType.MODEL_CHECKING) "-model-checking" else "-fuzzing"}-total-coverage.png",
         path = path,
         data = mapOf(
-            "x" to mutableListOf<Int>().apply { addAll((1..test.iterations).toList()) },
+            "x" to mutableListOf<Int>().apply { addAll((1..test.totalFoundCoverage.size).toList()) },
             "y" to test.totalFoundCoverage,
-            "type" to List(test.iterations) { test.type!!.toString() }
+            "type" to List(test.totalFoundCoverage.size) { test.type!!.toString() }
         ),
         markedDots = mapOf(
             "x" to test.failedIterations,
@@ -60,9 +60,9 @@ fun plotSingle(
         filename = "${filename + if (test.type == TestType.MODEL_CHECKING) "-model-checking" else "-fuzzing"}-max-coverage.png",
         path = path,
         data = mapOf(
-            "x" to mutableListOf<Int>().apply { addAll((1..test.iterations).toList()) },
+            "x" to mutableListOf<Int>().apply { addAll((1..test.maxIterationFoundCoverage.size).toList()) },
             "y" to test.maxIterationFoundCoverage,
-            "type" to List(test.iterations) { test.type!!.toString() }
+            "type" to List(test.maxIterationFoundCoverage.size) { test.type!!.toString() }
         ),
         markedDots = mapOf(
             "x" to test.failedIterations,
@@ -80,9 +80,9 @@ fun plotSingle(
         filename = "${filename + if (test.type == TestType.MODEL_CHECKING) "-model-checking" else "-fuzzing"}-coverage.png",
         path = path,
         data = mapOf(
-            "x" to mutableListOf<Int>().apply { addAll((1..test.iterations).toList()) },
+            "x" to mutableListOf<Int>().apply { addAll((1..test.iterationFoundCoverage.size).toList()) },
             "y" to test.iterationFoundCoverage,
-            "type" to List(test.iterations) { test.type!!.toString() }
+            "type" to List(test.iterationFoundCoverage.size) { test.type!!.toString() }
         ),
         markedDots = mapOf(
             "x" to test.failedIterations,
@@ -92,6 +92,66 @@ fun plotSingle(
         title = "Coverage per iteration ($statInfo)",
         xLab = "Iteration",
         yLab = "Covered edges count",
+        xScale = xScale
+    )
+
+    // trace total
+    linePlot(
+        filename = "${filename + if (test.type == TestType.MODEL_CHECKING) "-model-checking" else "-fuzzing"}-total-hb-pairs.png",
+        path = path,
+        data = mapOf(
+            "x" to mutableListOf<Int>().apply { addAll((1..test.totalHappensBeforePairs.size).toList()) },
+            "y" to test.totalHappensBeforePairs,
+            "type" to List(test.totalHappensBeforePairs.size) { test.type!!.toString() }
+        ),
+        title = "Total hb-pairs per iteration ($statInfo)",
+        xLab = "Iteration",
+        yLab = "Total covered hb-pairs count",
+        xScale = xScale
+    )
+
+    // trace max
+    linePlot(
+        filename = "${filename + if (test.type == TestType.MODEL_CHECKING) "-model-checking" else "-fuzzing"}-max-hb-pairs.png",
+        path = path,
+        data = mapOf(
+            "x" to mutableListOf<Int>().apply { addAll((1..test.maxIterationHappensBeforePairs.size).toList()) },
+            "y" to test.maxIterationHappensBeforePairs,
+            "type" to List(test.maxIterationHappensBeforePairs.size) { test.type!!.toString() }
+        ),
+        title = "Max hb-pairs per iteration ($statInfo)",
+        xLab = "Iteration",
+        yLab = "Max covered hb-pairs count",
+        xScale = xScale
+    )
+
+    // trace per iteration
+    linePlot(
+        filename = "${filename + if (test.type == TestType.MODEL_CHECKING) "-model-checking" else "-fuzzing"}-hb-pairs.png",
+        path = path,
+        data = mapOf(
+            "x" to mutableListOf<Int>().apply { addAll((1..test.iterationHappensBeforePairs.size).toList()) },
+            "y" to test.iterationHappensBeforePairs,
+            "type" to List(test.iterationHappensBeforePairs.size) { test.type!!.toString() }
+        ),
+        title = "hb-pairs per iteration ($statInfo)",
+        xLab = "Iteration",
+        yLab = "Covered hb-pairs count",
+        xScale = xScale
+    )
+
+    // distinct traces
+    linePlot(
+        filename = "${filename + if (test.type == TestType.MODEL_CHECKING) "-model-checking" else "-fuzzing"}-traces.png",
+        path = path,
+        data = mapOf(
+            "x" to mutableListOf<Int>().apply { addAll((1..test.distinctTraces.size).toList()) },
+            "y" to test.distinctTraces,
+            "type" to List(test.distinctTraces.size) { test.type!!.toString() }
+        ),
+        title = "Distinct traces ($statInfo)",
+        xLab = "Iteration",
+        yLab = "Distinct traces count",
         xScale = xScale
     )
 }
@@ -108,9 +168,9 @@ fun plotMerged(
         filename = "$filename-total-coverage.png",
         path = path,
         data = mapOf(
-            "x" to mutableListOf<Int>().apply { tests.forEach { addAll((1..it.iterations).toList()) } },
+            "x" to mutableListOf<Int>().apply { tests.forEach { addAll((1..it.totalFoundCoverage.size).toList()) } },
             "y" to tests.map { it.totalFoundCoverage }.flatten(),
-            "type" to tests.map { test -> List(test.iterations) { test.type!!.toString() } }.flatten()
+            "type" to tests.map { test -> List(test.totalFoundCoverage.size) { test.type!!.toString() } }.flatten()
         ),
         markedDots = mapOf(
             "x" to tests.map { it.failedIterations }.flatten(),
@@ -128,9 +188,9 @@ fun plotMerged(
         filename = "$filename-max-coverage.png",
         path = path,
         data = mapOf(
-            "x" to mutableListOf<Int>().apply { tests.forEach { addAll((1..it.iterations).toList()) } },
+            "x" to mutableListOf<Int>().apply { tests.forEach { addAll((1..it.maxIterationFoundCoverage.size).toList()) } },
             "y" to tests.map { it.maxIterationFoundCoverage }.flatten(),
-            "type" to tests.map { test -> List(test.iterations) { test.type!!.toString() } }.flatten()
+            "type" to tests.map { test -> List(test.maxIterationFoundCoverage.size) { test.type!!.toString() } }.flatten()
         ),
         markedDots = mapOf(
             "x" to tests.map { it.failedIterations }.flatten(),
@@ -148,9 +208,9 @@ fun plotMerged(
         filename = "$filename-coverage.png",
         path = path,
         data = mapOf(
-            "x" to mutableListOf<Int>().apply { tests.forEach { addAll((1..it.iterations).toList()) } },
+            "x" to mutableListOf<Int>().apply { tests.forEach { addAll((1..it.iterationFoundCoverage.size).toList()) } },
             "y" to tests.map { it.iterationFoundCoverage }.flatten(),
-            "type" to tests.map { test -> List(test.iterations) { test.type!!.toString() } }.flatten()
+            "type" to tests.map { test -> List(test.iterationFoundCoverage.size) { test.type!!.toString() } }.flatten()
         ),
         markedDots = mapOf(
             "x" to tests.map { it.failedIterations }.flatten(),
@@ -160,6 +220,66 @@ fun plotMerged(
         title = "Coverage per iteration",
         xLab = "Iteration",
         yLab = "Covered edges count",
+        xScale = xScale
+    )
+
+    // trace total
+    linePlot(
+        filename = "$filename-total-hb-pairs.png",
+        path = path,
+        data = mapOf(
+            "x" to mutableListOf<Int>().apply { tests.forEach { addAll((1..it.totalHappensBeforePairs.size).toList()) } },
+            "y" to tests.map { it.totalHappensBeforePairs }.flatten(),
+            "type" to tests.map { test -> List(test.totalHappensBeforePairs.size) { test.type!!.toString() } }.flatten()
+        ),
+        title = "Total hb-pairs per iteration",
+        xLab = "Iteration",
+        yLab = "Total hb-pairs count",
+        xScale = xScale
+    )
+
+    // trace max
+    linePlot(
+        filename = "$filename-max-hb-pairs.png",
+        path = path,
+        data = mapOf(
+            "x" to mutableListOf<Int>().apply { tests.forEach { addAll((1..it.maxIterationHappensBeforePairs.size).toList()) } },
+            "y" to tests.map { it.maxIterationHappensBeforePairs }.flatten(),
+            "type" to tests.map { test -> List(test.maxIterationHappensBeforePairs.size) { test.type!!.toString() } }.flatten()
+        ),
+        title = "Max hb-pairs per iteration",
+        xLab = "Iteration",
+        yLab = "Max hb-pairs count",
+        xScale = xScale
+    )
+
+    // trace per iteration
+    linePlot(
+        filename = "$filename-hb-pairs.png",
+        path = path,
+        data = mapOf(
+            "x" to mutableListOf<Int>().apply { tests.forEach { addAll((1..it.iterationHappensBeforePairs.size).toList()) } },
+            "y" to tests.map { it.iterationHappensBeforePairs }.flatten(),
+            "type" to tests.map { test -> List(test.iterationHappensBeforePairs.size) { test.type!!.toString() } }.flatten()
+        ),
+        title = "hb-pairs per iteration",
+        xLab = "Iteration",
+        yLab = "hb-pairs count",
+        xScale = xScale
+    )
+
+    // distinct traces
+    linePlot(
+        filename = "$filename-traces.png",
+        path = path,
+        data = mapOf(
+            "x" to mutableListOf<Int>().apply { tests.forEach { addAll((1..it.distinctTraces.size).toList()) } },
+            "y" to tests.map { it.distinctTraces }.flatten(),
+            "type" to tests.map { test -> List(test.distinctTraces.size) { test.type!!.toString() } }.flatten()
+        ),
+        title = "Distinct traces",
+        xLab = "Iteration",
+        yLab = "Distinct traces count",
         xScale = xScale
     )
 }
@@ -172,7 +292,7 @@ private fun linePlot(
     filename: String,
     path: String? = null,
     data: Map<String, List<Any>>,
-    markedDots: Map<String, List<Any>>,
+    markedDots: Map<String, List<Any>> = mapOf("x" to emptyList(), "y" to emptyList(), "type" to emptyList()),
     title: String = "Line plot",
     xLab: String,
     yLab: String,

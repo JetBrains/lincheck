@@ -20,7 +20,7 @@ class HappensBeforeSummary(
     scenario: ExecutionScenario,
     hbClocks: List<List<ResultWithClock>>
 ) {
-    val pairs: MutableMap<Int, MutableSet<Pair<Actor, Actor>>> = mutableMapOf()
+    val pairs: MutableMap<Int, Set<Pair<Actor, Actor>>> = mutableMapOf()
 
     init {
         val timelines: MutableMap<Pair<Int, Int>, ThreadTimeline> = mutableMapOf() // { threadId, operationsCompleted } -> ThreadTimeline
@@ -58,12 +58,22 @@ class HappensBeforeSummary(
             }
         }
 
+        val sortedRelations: MutableList<Set<Pair<Actor, Actor>>> = mutableListOf()
         for (threadId in 0 until scenario.nThreads) {
             val completedOperations =
                 scenario.parallelExecution[threadId].size +
                 if (threadId == 0) scenario.initExecution.size + scenario.postExecution.size else 0
 
-            pairs[threadId] = timelines[Pair(threadId, completedOperations)]!!.pairs
+            sortedRelations.add(timelines[Pair(threadId, completedOperations)]!!.pairs)
+            //pairs[threadId] = timelines[Pair(threadId, completedOperations)]!!.pairs
+        }
+
+        sortedRelations.sortBy { st ->
+            st.joinToString(".") { it.first.method.name + "." + it.second.method.name }
+        }
+
+        sortedRelations.forEachIndexed { index, st ->
+            pairs[index] = st
         }
     }
 
@@ -85,8 +95,8 @@ class HappensBeforeSummary(
     }
 
     private fun check(
-        from: MutableMap<Int, MutableSet<Pair<Actor, Actor>>>,
-        to: MutableMap<Int, MutableSet<Pair<Actor, Actor>>>
+        from: MutableMap<Int, Set<Pair<Actor, Actor>>>,
+        to: MutableMap<Int, Set<Pair<Actor, Actor>>>
     ): Boolean {
         from.forEach { (key, actors) ->
             if (!to.contains(key)) return false
@@ -114,7 +124,12 @@ class HappensBeforeSummary(
 
 private class ThreadTimeline(val threadId: Int) {
     val events: MutableSet<Actor> = mutableSetOf()
-    val pairs: MutableSet<Pair<Actor, Actor>> = mutableSetOf()
+    val pairs: MutableSet<Pair<Actor, Actor>> = TreeSet { a, b ->
+        // sort pairs lexicographically
+        val lexA = a.first.method.name + "." + a.second.method.name
+        val lexB = b.first.method.name + "." + b.second.method.name
+        lexA.compareTo(lexB)
+    }
 
     /** Inserts happens-before edge with all observed events in the timeline */
     fun update(actor: Actor) {

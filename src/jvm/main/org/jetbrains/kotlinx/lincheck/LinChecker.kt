@@ -64,6 +64,16 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     internal fun checkImpl(stats: BenchmarkStats = BenchmarkStats()): LincheckFailure? {
         check(testConfigurations.isNotEmpty()) { "No Lincheck test configuration to run" }
         for (testCfg in testConfigurations) {
+            // save stats
+            stats.iterations = testCfg.iterations
+            stats.invocationsPerIteration =
+                if (testCfg is ModelCheckingCTestConfiguration) testCfg.invocationsPerIteration
+                else (testCfg as StressCTestConfiguration).invocationsPerIteration
+            stats.threads = testCfg.threads
+            stats.actorsPerThread = testCfg.actorsPerThread
+            stats.initActors = testCfg.actorsBefore
+            stats.postActors = testCfg.actorsAfter
+
             val startTime = System.currentTimeMillis()
             val failure =
                 if (testCfg.coverageOptions != null && testCfg.coverageOptions.fuzz) {
@@ -80,14 +90,6 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             }
 
             // TODO: update stats
-            stats.iterations = testCfg.iterations
-            stats.invocationsPerIteration =
-                if (testCfg is ModelCheckingCTestConfiguration) testCfg.invocationsPerIteration
-                else (testCfg as StressCTestConfiguration).invocationsPerIteration
-            stats.threads = testCfg.threads
-            stats.actorsPerThread = testCfg.actorsPerThread
-            stats.initActors = testCfg.actorsBefore
-            stats.postActors = testCfg.actorsAfter
             stats.totalDurationMs = System.currentTimeMillis() - startTime
 
             if (failure != null) return failure
@@ -118,11 +120,8 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             val failure  = scenario.run(this, verifier)
             val coverage = coverageOptions.collectCoverage().toCoverage()
             println("Traces count: ${failure.second.size}")
-            val traceCoverage = failure.second.map {
-                it.toCoverage()
-            }
 
-            fuzzer.handleResult(failure.first, coverage, traceCoverage)
+            fuzzer.handleResult(failure.first, coverage, failure.second)
 
             // TODO: uncomment??
             // Reset the parameter generator ranges to start with the same initial bounds on each scenario generation.
@@ -158,7 +157,10 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
 
         // TODO: update stats
         val totalCoverage = Coverage()
+        val totalTrace = Coverage()
         var maxCoverage = 0
+        var maxTrace = 0
+        val traces = mutableSetOf<HappensBeforeSummary>()
 
         repeat(iterations) { i ->
             // For performance reasons, verifier re-uses LTS from previous iterations.
@@ -171,7 +173,8 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             val scenario = exGen.nextExecution()
             scenario.validate()
             reporter.logIteration(i + 1 + customScenarios.size, iterations, scenario)
-            val failure = scenario.run(this, verifier).first
+            val results = scenario.run(this, verifier)
+            val failure = results.first
 
             if (failure != null && result == null) {
                 result = failure
@@ -187,6 +190,10 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             testStructure.parameterGenerators.forEach { it.reset() }
 
             // TODO: update stats
+            println("total coverage = ${totalCoverage.coveredBranchesCount()}")
+            println("traces = ${traces.size}")
+
+            traces.addAll(results.second)
             coverageOptions?.apply {
                 val iterationCoverage = collectCoverage().toCoverage()
                 maxCoverage = max(maxCoverage, iterationCoverage.coveredBranchesCount());
@@ -197,6 +204,17 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
                 stats.maxIterationFoundCoverage.add(maxCoverage)
                 if (failure != null) stats.failedIterations.add(i + 1)
             }
+
+            val trace = results.second.fold(Coverage()) { acc, trace ->
+                acc.merge(trace.toCoverage())
+                acc
+            }
+            totalTrace.merge(trace)
+            maxTrace = max(maxTrace, trace.coveredBranchesCount())
+            stats.totalHappensBeforePairs.add(totalTrace.coveredBranchesCount())
+            stats.iterationHappensBeforePairs.add(trace.coveredBranchesCount())
+            stats.maxIterationHappensBeforePairs.add(maxTrace)
+            stats.distinctTraces.add(traces.size)
         }
         if (result != null) {
             println("Iteration on failure: ${iter + 1} / $iterations")

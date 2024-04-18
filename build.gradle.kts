@@ -5,8 +5,10 @@ import org.gradle.jvm.tasks.Jar
 // atomicfu
 buildscript {
     val atomicfuVersion: String by project
+    val serializationPluginVersion: String by project
     dependencies {
         classpath("org.jetbrains.kotlinx:atomicfu-gradle-plugin:$atomicfuVersion")
+        classpath("org.jetbrains.kotlin:kotlin-serialization:$serializationPluginVersion")
     }
 }
 apply(plugin = "kotlinx-atomicfu")
@@ -16,6 +18,7 @@ plugins {
     kotlin("multiplatform")
     id("maven-publish")
     id("kotlinx.team.infra") version "0.3.0-dev-64"
+    kotlin("plugin.serialization") version "1.4.21"
 }
 
 repositories {
@@ -47,6 +50,7 @@ kotlin {
             val coverageVersion: String by project
             val letsPlotVersion: String by project
             val letsPlotKotlinVersion: String by project
+            val serializationVersion: String by project
 
             dependencies {
                 api("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
@@ -54,6 +58,7 @@ kotlin {
                 api("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
                 api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutinesVersion")
 
+                api("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
                 api("org.jetbrains.lets-plot:lets-plot-common:$letsPlotVersion")
                 api("org.jetbrains.lets-plot:lets-plot-kotlin-jvm:$letsPlotKotlinVersion")
                 api("org.jetbrains.lets-plot:lets-plot-image-export:$letsPlotVersion")
@@ -104,7 +109,7 @@ tasks {
         from(sourceSets["main"].allSource)
     }
     withType<Test> {
-        maxHeapSize = "6g"
+        maxHeapSize = "10g"
         maxParallelForks = 1
         jvmArgs(
             "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",

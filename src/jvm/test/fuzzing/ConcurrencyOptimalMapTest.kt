@@ -22,21 +22,25 @@ class ConcurrencyOptimalMapTest : AbstractFuzzerBenchmarkTest() {
         actorsBefore(0)
     }
 
-    override fun <O : Options<O, *>> O.customizeModelCheckingCoverage() =
+    override fun <O : Options<O, *>> O.customizeModelCheckingCoverage() {
+        //iterations(10)
         coverageConfigurationForModelChecking(
             listOf(
                 ConcurrencyOptimalMapTest::class.jvmName
             ),
             emptyList()
         )
+    }
 
-    override fun <O : Options<O, *>> O.customizeFuzzingCoverage() =
+    override fun <O : Options<O, *>> O.customizeFuzzingCoverage() {
+        //iterations(10)
         coverageConfigurationForFuzzing(
             listOf(
                 ConcurrencyOptimalMapTest::class.jvmName
             ),
             emptyList()
         )
+    }
 
 //    @Test
 //    fun modelCheckingTestLong() {
