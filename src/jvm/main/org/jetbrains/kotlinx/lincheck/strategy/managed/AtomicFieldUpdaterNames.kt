@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import org.jetbrains.kotlinx.lincheck.transformation.UnsafeHolder.UNSAFE
+import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder.UNSAFE
 import java.lang.reflect.Modifier
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater
 import java.util.concurrent.atomic.AtomicLongFieldUpdater
