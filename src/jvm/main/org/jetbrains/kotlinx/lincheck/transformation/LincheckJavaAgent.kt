@@ -19,7 +19,8 @@ import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumen
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentationMode
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentedClassesInTheModelCheckingMode
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.INSTRUMENT_ALL_CLASSES_IN_MODEL_CHECKING_MODE
-import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
+import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
+import sun.misc.Unsafe
 import org.objectweb.asm.*
 import java.io.*
 import java.lang.instrument.*
@@ -247,7 +248,7 @@ internal object LincheckJavaAgent {
             clazz.declaredFields
                 .filter { !it.type.isPrimitive }
                 .filter { !Modifier.isStatic(it.modifiers) }
-                .mapNotNull { readFieldViaUnsafe(obj, it) }
+                .mapNotNull { readFieldViaUnsafe(obj, it, Unsafe::getObject) }
                 .forEach {
                     ensureObjectIsTransformed(it, processedObjects)
                 }
@@ -272,7 +273,7 @@ internal object LincheckJavaAgent {
         clazz.declaredFields
             .filter { !it.type.isPrimitive }
             .filter { Modifier.isStatic(it.modifiers) }
-            .mapNotNull { readFieldViaUnsafe(null, it) }
+            .mapNotNull { readFieldViaUnsafe(null, it, Unsafe::getObject) }
             .forEach {
                 ensureObjectIsTransformed(it, processedObjects)
             }
@@ -281,16 +282,6 @@ internal object LincheckJavaAgent {
             ensureClassHierarchyIsTransformed(it, processedObjects)
         }
     }
-
-    private fun readFieldViaUnsafe(obj: Any?, field: Field): Any? =
-        if (Modifier.isStatic(field.modifiers)) {
-            val base = UnsafeHolder.UNSAFE.staticFieldBase(field)
-            val offset = UnsafeHolder.UNSAFE.staticFieldOffset(field)
-            UnsafeHolder.UNSAFE.getObject(base, offset)
-        } else {
-            val offset = UnsafeHolder.UNSAFE.objectFieldOffset(field)
-            UnsafeHolder.UNSAFE.getObject(obj, offset)
-        }
 
     /**
      * FOR TEST PURPOSE ONLY!
