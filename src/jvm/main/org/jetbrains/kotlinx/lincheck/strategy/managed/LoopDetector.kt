@@ -10,7 +10,6 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import org.jetbrains.kotlinx.lincheck.strategy.managed.LoopDetectorDecision.*
 import java.util.ArrayList
 
 /**
@@ -121,19 +120,64 @@ internal class LoopDetector(
     }
 
     /**
-     * Returns `true` if a loop or a hang is detected, `false` otherwise.
+     * The `Decision` sealed class represents the different decisions
+     * that can be made by the loop detector.
      */
-    fun visitCodeLocation(iThread: Int, codeLocation: Int): LoopDetectorDecision {
+    sealed class Decision {
+        /**
+         * This decision is returned when no livelock is detected,
+         * and no further actions are required.
+         */
+        data object Idle : Decision()
+        /**
+         * This decision is returned when the execution has generated
+         * a total number of events exceeding the predefined threshold.
+         */
+        data object EventsThresholdReached : Decision()
+
+        /**
+         * This decision is returned when the live-lock is detected for the first time,
+         * in this case, a replay is required to cut the later spin-loop iterations.
+         */
+        data object LivelockReplayRequired : Decision()
+
+        /**
+         * This decision is returned when global live-lock is detected decisively,
+         * and the execution has to be aborted with the failure.
+         *
+         * @property cyclePeriod The period of the spin-loop cycle.
+         */
+        data class  LivelockFailureDetected(val cyclePeriod: Int) : Decision()
+
+        /**
+         * This decision is returned when a single thread enters a live-lock,
+         * and a switch to other threads is required to see if they can unblock the execution.
+         *
+         * @property cyclePeriod The period of the spin-loop cycle.
+         */
+        data class  LivelockThreadSwitch(val cyclePeriod: Int) : Decision()
+    }
+
+    /**
+     * Updates the internal state of the loop detector to account for
+     * the fact that thread [iThread] hits [codeLocation].
+     *
+     * The loop detector performs checks if the live-lock occurred,
+     * and returns its decision.
+     *
+     * @see LoopDetector.Decision
+     */
+    fun visitCodeLocation(iThread: Int, codeLocation: Int): Decision {
         threadsRan[iThread] = true
         replayModeLoopDetectorHelper?.let {
-            return if (it.shouldSwitch()) it.isActiveLockNode() else IDLE
+            return if (it.shouldSwitch()) it.detectLivelock() else Decision.Idle
         }
         // Increase the total number of happened operations for live-lock detection
         totalExecutionsCount++
         // Have the thread changed? Reset the counters in this case.
         check(lastExecutedThread == iThread) { "reset expected!" }
         // Ignore coroutine suspension code locations.
-        if (codeLocation == COROUTINE_SUSPENSION_CODE_LOCATION) return IDLE
+        if (codeLocation == COROUTINE_SUSPENSION_CODE_LOCATION) return Decision.Idle
         // Increment the number of times the specified code location is visited.
         val count = currentThreadCodeLocationVisitCountMap.getOrDefault(codeLocation, 0) + 1
         currentThreadCodeLocationVisitCountMap[codeLocation] = count
@@ -147,10 +191,10 @@ internal class LoopDetector(
             registerCycle()
             // Enormous operations count considered as total spin lock
             if (totalExecutionsCount > ManagedCTestConfiguration.LIVELOCK_EVENTS_THRESHOLD) {
-                return EVENTS_THRESHOLD_REACHED
+                return Decision.EventsThresholdReached
             }
             // Replay current interleaving to avoid side effects caused by multiple cycle executions
-            return LIVELOCK_REPLAY_REQUIRED
+            return Decision.LivelockReplayRequired
         }
         if (!detectedFirstTime && detectedEarly) {
             totalExecutionsCount += hangingDetectionThreshold
@@ -166,11 +210,14 @@ internal class LoopDetector(
             }
             // Enormous operations count considered as total spin lock
             if (totalExecutionsCount > ManagedCTestConfiguration.LIVELOCK_EVENTS_THRESHOLD) {
-                return EVENTS_THRESHOLD_REACHED
+                return Decision.EventsThresholdReached
             }
         }
         val cyclePeriod = replayModeCurrentCyclePeriod
-        return if (detectedFirstTime || detectedEarly) LIVELOCK_THREAD_SWITCH(cyclePeriod) else IDLE
+        return if (detectedFirstTime || detectedEarly)
+            Decision.LivelockThreadSwitch(cyclePeriod)
+        else
+            Decision.Idle
     }
 
     fun onActorStart(iThread: Int) {
@@ -326,18 +373,10 @@ internal class LoopDetector(
 
 }
 
-sealed class LoopDetectorDecision {
-    data object IDLE : LoopDetectorDecision()
-    data object LIVELOCK_REPLAY_REQUIRED : LoopDetectorDecision()
-    data object EVENTS_THRESHOLD_REACHED : LoopDetectorDecision()
-    data class  LIVELOCK_FAILURE_DETECTED(val cyclePeriod: Int) : LoopDetectorDecision()
-    data class  LIVELOCK_THREAD_SWITCH(val cyclePeriod: Int) : LoopDetectorDecision()
-}
-
-fun LoopDetectorDecision.isLiveLockDetected() = when (this) {
-    is LIVELOCK_THREAD_SWITCH,
-    is LIVELOCK_REPLAY_REQUIRED,
-    is LIVELOCK_FAILURE_DETECTED -> true
+internal fun LoopDetector.Decision.isLivelockDetected() = when (this) {
+    is LoopDetector.Decision.LivelockThreadSwitch,
+    is LoopDetector.Decision.LivelockReplayRequired,
+    is LoopDetector.Decision.LivelockFailureDetected -> true
     else -> false
 }
 
@@ -351,18 +390,6 @@ private class ReplayModeLoopDetectorHelper(
      */
     private val failDueToDeadlockInTheEnd: Boolean,
 ) {
-
-    fun isActiveLockNode(): LoopDetectorDecision {
-        val cyclePeriod = interleavingHistory[currentInterleavingNodeIndex].spinCyclePeriod
-        if (currentInterleavingNodeIndex == interleavingHistory.lastIndex && failDueToDeadlockInTheEnd) {
-            // Fail if we ran into cycle,
-            // this cycle node is the last node in the replayed interleaving,
-            // and we have to fail at the end of the execution
-            // traceCollector.newActiveLockDetected(currentThread, cyclePeriod)
-            return LIVELOCK_FAILURE_DETECTED(cyclePeriod)
-        }
-        return if (cyclePeriod != 0) LIVELOCK_THREAD_SWITCH(cyclePeriod) else IDLE
-    }
 
     /**
      * Cycle period if is occurred in during current thread switch or 0 if no spin-cycle happened
@@ -424,5 +451,20 @@ private class ReplayModeLoopDetectorHelper(
         }
         val historyNode = interleavingHistory[currentInterleavingNodeIndex]
         return (executionsPerformedInCurrentThread > historyNode.spinCyclePeriod + historyNode.executions)
+    }
+
+    fun detectLivelock(): LoopDetector.Decision {
+        val cyclePeriod = interleavingHistory[currentInterleavingNodeIndex].spinCyclePeriod
+        if (currentInterleavingNodeIndex == interleavingHistory.lastIndex && failDueToDeadlockInTheEnd) {
+            // Fail if we ran into cycle,
+            // this cycle node is the last node in the replayed interleaving,
+            // and we have to fail at the end of the execution
+            // traceCollector.newActiveLockDetected(currentThread, cyclePeriod)
+            return LoopDetector.Decision.LivelockFailureDetected(cyclePeriod)
+        }
+        return if (cyclePeriod != 0)
+            LoopDetector.Decision.LivelockThreadSwitch(cyclePeriod)
+        else
+            LoopDetector.Decision.Idle
     }
 }

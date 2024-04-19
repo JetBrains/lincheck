@@ -351,13 +351,13 @@ abstract class ManagedStrategy(
         // check if live-lock is detected
         val decision = loopDetector.visitCodeLocation(iThread, codeLocation)
         // if we reached maximum number of events threshold, then fail immediately
-        if (decision == LoopDetectorDecision.EVENTS_THRESHOLD_REACHED) {
+        if (decision == LoopDetector.Decision.EventsThresholdReached) {
             failDueToDeadlock()
         }
         // if any kind of live-lock was detected, check for obstruction-freedom violation
-        if (decision.isLiveLockDetected()) {
+        if (decision.isLivelockDetected()) {
             failIfObstructionFreedomIsRequired {
-                if (decision is LoopDetectorDecision.LIVELOCK_FAILURE_DETECTED) {
+                if (decision is LoopDetector.Decision.LivelockFailureDetected) {
                     if (decision.cyclePeriod != 0) {
                         traceCollector?.newActiveLockDetected(iThread, decision.cyclePeriod)
                     }
@@ -372,19 +372,19 @@ abstract class ManagedStrategy(
             }
         }
         // if live-lock failure was detected, then fail immediately
-        if (decision is LoopDetectorDecision.LIVELOCK_FAILURE_DETECTED) {
+        if (decision is LoopDetector.Decision.LivelockFailureDetected) {
             traceCollector?.newActiveLockDetected(iThread, decision.cyclePeriod)
             traceCollector?.newSwitch(currentThread, SwitchReason.ACTIVE_LOCK)
             failDueToDeadlock()
         }
         // if live-lock was detected, and replay was requested,
         // then abort current execution and start the replay
-        if (decision is LoopDetectorDecision.LIVELOCK_REPLAY_REQUIRED) {
+        if (decision is LoopDetector.Decision.LivelockReplayRequired) {
             suddenInvocationResult = SpinCycleFoundAndReplayRequired
             throw ForcibleExecutionFinishError
         }
         // if the current thread in a live-lock, then try to switch to another thread
-        if (decision is LoopDetectorDecision.LIVELOCK_THREAD_SWITCH) {
+        if (decision is LoopDetector.Decision.LivelockThreadSwitch) {
             traceCollector?.newActiveLockDetected(iThread, decision.cyclePeriod)
             switchCurrentThread(iThread, SwitchReason.ACTIVE_LOCK)
             if (!loopDetector.replayModeEnabled) {
