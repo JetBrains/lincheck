@@ -357,12 +357,6 @@ abstract class ManagedStrategy(
         if (decision == LoopDetectorDecision.EVENTS_THRESHOLD_REACHED) {
             failDueToDeadlock()
         }
-        // if live-lock was detected, and replay was requested,
-        // then abort current execution and start the replay
-        if (decision == LoopDetectorDecision.LIVELOCK_REPLAY_REQUIRED) {
-            suddenInvocationResult = SpinCycleFoundAndReplayRequired
-            throw ForcibleExecutionFinishError
-        }
         // if any kind of live-lock was detected, check for obstruction-freedom violation
         if (decision.isLiveLockDetected()) {
             failIfObstructionFreedomIsRequired {
@@ -381,6 +375,12 @@ abstract class ManagedStrategy(
         if (decision == LoopDetectorDecision.LIVELOCK_FAILURE_DETECTED) {
             traceCollector?.newSwitch(currentThread, SwitchReason.ACTIVE_LOCK)
             failDueToDeadlock()
+        }
+        // if live-lock was detected, and replay was requested,
+        // then abort current execution and start the replay
+        if (decision == LoopDetectorDecision.LIVELOCK_REPLAY_REQUIRED) {
+            suddenInvocationResult = SpinCycleFoundAndReplayRequired
+            throw ForcibleExecutionFinishError
         }
         // if the current thread in a live-lock, then try to switch to another thread
         if (decision == LoopDetectorDecision.LIVELOCK_THREAD_SWITCH) {
