@@ -93,9 +93,11 @@ internal class LoopDetector(
      */
     private var replayModeLoopDetectorHelper: ReplayModeLoopDetectorHelper? = null
 
-    val replayModeCurrentCyclePeriod: Int get() = replayModeLoopDetectorHelper?.currentCyclePeriod ?: 0
+    private val replayModeCurrentCyclePeriod: Int
+        get() = replayModeLoopDetectorHelper?.currentCyclePeriod ?: 0
 
-    val replayModeEnabled: Boolean get() = replayModeLoopDetectorHelper != null
+    val replayModeEnabled: Boolean
+        get() = replayModeLoopDetectorHelper != null
 
     fun enableReplayMode(failDueToDeadlockInTheEnd: Boolean) {
         val contextSwitchesBeforeHalt =
