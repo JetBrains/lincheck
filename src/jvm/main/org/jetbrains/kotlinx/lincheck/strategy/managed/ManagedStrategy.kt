@@ -388,7 +388,8 @@ abstract class ManagedStrategy(
         }
         // if the current thread in a live-lock, then try to switch to another thread
         if (decision is LoopDetectorDecision.LIVELOCK_THREAD_SWITCH) {
-            switchCurrentThreadDueToActiveLock(iThread, decision.cyclePeriod)
+            traceCollector?.newActiveLockDetected(iThread, decision.cyclePeriod)
+            switchCurrentThread(iThread, SwitchReason.ACTIVE_LOCK)
             if (!loopDetector.replayModeEnabled) {
                 loopDetector.initializeFirstCodeLocationAfterSwitch(codeLocation)
             }
@@ -488,20 +489,6 @@ abstract class ManagedStrategy(
     private fun switchCurrentThread(iThread: Int, reason: SwitchReason = SwitchReason.STRATEGY_SWITCH, mustSwitch: Boolean = false) {
         traceCollector?.newSwitch(iThread, reason)
         doSwitchCurrentThread(iThread, mustSwitch)
-        awaitTurn(iThread)
-    }
-
-    /**
-     * A regular context thread switch to another thread.
-     */
-    private fun switchCurrentThreadDueToActiveLock(
-        iThread: Int, cyclePeriod: Int
-    ) {
-        traceCollector?.let {
-            it.newActiveLockDetected(iThread, cyclePeriod)
-            it.newSwitch(iThread, SwitchReason.ACTIVE_LOCK)
-        }
-        doSwitchCurrentThread(iThread, false)
         awaitTurn(iThread)
     }
 
