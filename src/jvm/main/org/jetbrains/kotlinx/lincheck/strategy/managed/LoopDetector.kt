@@ -49,7 +49,7 @@ internal class LoopDetector(
     private val nThreads: Int,
     private val hangingDetectionThreshold: Int
 ) {
-    private var lastExecutedThread = -1// no last thread
+    private var lastExecutedThread = -1 // no last thread
 
     /**
      * Map, which helps us to determine how many times current thread visits some code location.

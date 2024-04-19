@@ -121,8 +121,6 @@ abstract class ManagedStrategy(
     // Utility class for the plugin integration to provide ids for each trace point
     private var eventIdProvider = EventIdProvider()
 
-    private var failDueToDeadlockInTheEndWhenCollectTrace: Boolean = false
-
     private fun createRunner(): ManagedStrategyRunner =
         ManagedStrategyRunner(
             managedStrategy = this,
@@ -173,10 +171,7 @@ abstract class ManagedStrategy(
         isSuspended.fill(false)
         currentActorId.fill(-1)
         monitorTracker = MonitorTracker(nThreads)
-        if (collectTrace) {
-            traceCollector = TraceCollector()
-            loopDetector.enableReplayMode(failDueToDeadlockInTheEndWhenCollectTrace)
-        }
+        traceCollector = if (collectTrace) TraceCollector() else null
         suddenInvocationResult = null
         callStackTrace.forEach { it.clear() }
         suspendedFunctionsStack.forEach { it.clear() }
@@ -219,19 +214,21 @@ abstract class ManagedStrategy(
             failingResult is ValidationFailureInvocationResult -> true
             else -> false
         }
-
         if (!canCollectTrace) {
             // Interleaving events can be collected almost always,
             // except for the strange cases such as Runner's timeout or exceptions in LinCheck.
             return null
         }
-        // Re-transform class constructing trace
+
         collectTrace = true
-        // Replace the current runner with a new one in order to use a new
+        loopDetector.enableReplayMode(
+            failDueToDeadlockInTheEnd =
+                failingResult is ManagedDeadlockInvocationResult ||
+                failingResult is ObstructionFreedomViolationInvocationResult
+        )
+
         runner.close()
         runner = createRunner()
-        failDueToDeadlockInTheEndWhenCollectTrace = failingResult is ManagedDeadlockInvocationResult || failingResult is ObstructionFreedomViolationInvocationResult
-
         val loggedResults = runInvocation()
         // In case the runner detects a deadlock, some threads can still be in an active state,
         // simultaneously adding events to the TraceCollector, which leads to an inconsistent trace.
