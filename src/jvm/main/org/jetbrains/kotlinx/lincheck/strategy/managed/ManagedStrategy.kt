@@ -1189,7 +1189,7 @@ abstract class ManagedStrategy(
     /**
      * Logs thread events such as thread switches and passed code locations.
      */
-    internal inner class TraceCollector {
+    private inner class TraceCollector {
         private val _trace = mutableListOf<TracePoint>()
         val trace: List<TracePoint> = _trace
 
@@ -1507,7 +1507,7 @@ internal object ForcibleExecutionFinishError : Error() {
 
 internal const val COROUTINE_SUSPENSION_CODE_LOCATION = -1 // currently the exact place of coroutine suspension is not known
 
-internal const val OBSTRUCTION_FREEDOM_SPINLOCK_VIOLATION_MESSAGE =
+private const val OBSTRUCTION_FREEDOM_SPINLOCK_VIOLATION_MESSAGE =
     "The algorithm should be non-blocking, but an active lock is detected"
 
 private const val OBSTRUCTION_FREEDOM_LOCK_VIOLATION_MESSAGE =
