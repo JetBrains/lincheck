@@ -384,7 +384,6 @@ abstract class ManagedStrategy(
         }
         // if the current thread in a live-lock, then try to switch to another thread
         if (decision == LoopDetectorDecision.LIVELOCK_THREAD_SWITCH) {
-            // check(loopDetector.replayModeEnabled)
             switchCurrentThreadDueToActiveLock(iThread, loopDetector.replayModeCurrentCyclePeriod)
             if (!loopDetector.replayModeEnabled) {
                 loopDetector.initializeFirstCodeLocationAfterSwitch(codeLocation)

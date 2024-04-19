@@ -127,11 +127,7 @@ internal class LoopDetector(
     fun visitCodeLocation(iThread: Int, codeLocation: Int): LoopDetectorDecision {
         threadsRan[iThread] = true
         replayModeLoopDetectorHelper?.let {
-            if (!it.shouldSwitch()) return IDLE
-            return when (val activeLockNode = it.isActiveLockNode(iThread)) {
-                is NeedToFailDueToDeadlock -> LIVELOCK_FAILURE_DETECTED
-                is NormalReplayModeHelperResult -> if (it.shouldSwitch() && activeLockNode.isActiveLockNode) return LIVELOCK_THREAD_SWITCH else IDLE
-            }
+            return if (it.shouldSwitch()) it.isActiveLockNode(iThread) else IDLE
         }
         // Increase the total number of happened operations for live-lock detection
         totalExecutionsCount++
@@ -346,10 +342,6 @@ fun LoopDetectorDecision.isLiveLockDetected() = when (this) {
     else -> false
 }
 
-sealed interface ReplayModeHelperResult
-data object NeedToFailDueToDeadlock: ReplayModeHelperResult
-data class NormalReplayModeHelperResult(val isActiveLockNode: Boolean): ReplayModeHelperResult
-
 /**
  * Helper class to halt execution on replay (trace collection phase) and to switch thread early on spin-cycles
  */
@@ -362,16 +354,23 @@ private class ReplayModeLoopDetectorHelper(
     private val failDueToDeadlockInTheEnd: Boolean,
 ) {
 
-    fun isActiveLockNode(currentThread: Int): ReplayModeHelperResult {
+    fun isActiveLockNode(currentThread: Int): LoopDetectorDecision {
         if (currentInterleavingNodeIndex == interleavingHistory.lastIndex) {
             // Fail if we ran into cycle,
             // this cycle node is the last node in the replayed interleaving,
             // and we have to fail at the end of the execution
             if (failDueToDeadlockInTheEnd) {
-                return failDueToDeadlock(currentThread)
+                val cyclePeriod = interleavingHistory[currentInterleavingNodeIndex].spinCyclePeriod
+                if (cyclePeriod != 0) {
+                    traceCollector.newActiveLockDetected(currentThread, cyclePeriod)
+                }
+                return LIVELOCK_FAILURE_DETECTED
             }
         }
-        return NormalReplayModeHelperResult(interleavingHistory[currentInterleavingNodeIndex].spinCyclePeriod != 0)
+        return if (interleavingHistory[currentInterleavingNodeIndex].spinCyclePeriod != 0)
+            LIVELOCK_THREAD_SWITCH
+        else
+            IDLE
     }
 
     /**
@@ -434,13 +433,5 @@ private class ReplayModeLoopDetectorHelper(
         }
         val historyNode = interleavingHistory[currentInterleavingNodeIndex]
         return (executionsPerformedInCurrentThread > historyNode.spinCyclePeriod + historyNode.executions)
-    }
-
-    private fun failDueToDeadlock(currentThread: Int): NeedToFailDueToDeadlock {
-        val cyclePeriod = interleavingHistory[currentInterleavingNodeIndex].spinCyclePeriod
-        if (cyclePeriod != 0) {
-            traceCollector.newActiveLockDetected(currentThread, cyclePeriod)
-        }
-        return NeedToFailDueToDeadlock
     }
 }
