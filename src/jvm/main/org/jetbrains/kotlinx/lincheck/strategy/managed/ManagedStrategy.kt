@@ -69,9 +69,6 @@ abstract class ManagedStrategy(
 
     // Current actor id for each thread.
     protected val currentActorId = IntArray(nThreads)
-
-    // Collector of all events in the execution such as thread switches.
-    private var traceCollector: TraceCollector? = null // null when `collectTrace` is false
     
     // Detector of loops or hangs (i.e. active locks).
     internal val loopDetector: LoopDetector = LoopDetector(nThreads, testCfg.hangingDetectionThreshold)
@@ -87,6 +84,9 @@ abstract class ManagedStrategy(
 
     // Whether an additional information requires for the trace construction should be collected.
     protected var collectTrace = false
+
+    // Collector of all events in the execution such as thread switches.
+    private var traceCollector: TraceCollector? = null // null when `collectTrace` is false
 
     // Stores the currently executing methods call stack for each thread.
     private val callStackTrace = Array(nThreads) { mutableListOf<CallStackTraceElement>() }
@@ -175,7 +175,7 @@ abstract class ManagedStrategy(
         monitorTracker = MonitorTracker(nThreads)
         if (collectTrace) {
             traceCollector = TraceCollector()
-            loopDetector.enableReplayMode(failDueToDeadlockInTheEndWhenCollectTrace, traceCollector!!)
+            loopDetector.enableReplayMode(failDueToDeadlockInTheEndWhenCollectTrace)
         }
         suddenInvocationResult = null
         callStackTrace.forEach { it.clear() }
@@ -360,7 +360,10 @@ abstract class ManagedStrategy(
         // if any kind of live-lock was detected, check for obstruction-freedom violation
         if (decision.isLiveLockDetected()) {
             failIfObstructionFreedomIsRequired {
-                if (decision == LoopDetectorDecision.LIVELOCK_FAILURE_DETECTED) {
+                if (decision is LoopDetectorDecision.LIVELOCK_FAILURE_DETECTED) {
+                    if (decision.cyclePeriod != 0) {
+                        traceCollector?.newActiveLockDetected(iThread, decision.cyclePeriod)
+                    }
                     // if failure is detected, add a special obstruction-freedom violation
                     // trace point to account for that
                     traceCollector?.passObstructionFreedomViolationTracePoint(currentThread)
@@ -372,19 +375,20 @@ abstract class ManagedStrategy(
             }
         }
         // if live-lock failure was detected, then fail immediately
-        if (decision == LoopDetectorDecision.LIVELOCK_FAILURE_DETECTED) {
+        if (decision is LoopDetectorDecision.LIVELOCK_FAILURE_DETECTED) {
+            traceCollector?.newActiveLockDetected(iThread, decision.cyclePeriod)
             traceCollector?.newSwitch(currentThread, SwitchReason.ACTIVE_LOCK)
             failDueToDeadlock()
         }
         // if live-lock was detected, and replay was requested,
         // then abort current execution and start the replay
-        if (decision == LoopDetectorDecision.LIVELOCK_REPLAY_REQUIRED) {
+        if (decision is LoopDetectorDecision.LIVELOCK_REPLAY_REQUIRED) {
             suddenInvocationResult = SpinCycleFoundAndReplayRequired
             throw ForcibleExecutionFinishError
         }
         // if the current thread in a live-lock, then try to switch to another thread
-        if (decision == LoopDetectorDecision.LIVELOCK_THREAD_SWITCH) {
-            switchCurrentThreadDueToActiveLock(iThread, loopDetector.replayModeCurrentCyclePeriod)
+        if (decision is LoopDetectorDecision.LIVELOCK_THREAD_SWITCH) {
+            switchCurrentThreadDueToActiveLock(iThread, decision.cyclePeriod)
             if (!loopDetector.replayModeEnabled) {
                 loopDetector.initializeFirstCodeLocationAfterSwitch(codeLocation)
             }

@@ -98,7 +98,7 @@ internal class LoopDetector(
 
     val replayModeEnabled: Boolean get() = replayModeLoopDetectorHelper != null
 
-    fun enableReplayMode(failDueToDeadlockInTheEnd: Boolean, traceCollector: ManagedStrategy.TraceCollector) {
+    fun enableReplayMode(failDueToDeadlockInTheEnd: Boolean) {
         val contextSwitchesBeforeHalt =
             findMaxPrefixLengthWithNoCycleOnSuffix(currentInterleavingHistory)?.let { it.executionsBeforeCycle + it.cyclePeriod }
                 ?: currentInterleavingHistory.size
@@ -108,7 +108,6 @@ internal class LoopDetector(
         loopTrackingCursor.clear()
 
         replayModeLoopDetectorHelper = ReplayModeLoopDetectorHelper(
-            traceCollector = traceCollector,
             interleavingHistory = spinCycleInterleavingHistory,
             failDueToDeadlockInTheEnd = failDueToDeadlockInTheEnd
         )
@@ -127,7 +126,7 @@ internal class LoopDetector(
     fun visitCodeLocation(iThread: Int, codeLocation: Int): LoopDetectorDecision {
         threadsRan[iThread] = true
         replayModeLoopDetectorHelper?.let {
-            return if (it.shouldSwitch()) it.isActiveLockNode(iThread) else IDLE
+            return if (it.shouldSwitch()) it.isActiveLockNode() else IDLE
         }
         // Increase the total number of happened operations for live-lock detection
         totalExecutionsCount++
@@ -167,11 +166,11 @@ internal class LoopDetector(
             }
             // Enormous operations count considered as total spin lock
             if (totalExecutionsCount > ManagedCTestConfiguration.LIVELOCK_EVENTS_THRESHOLD) {
-//                failDueToDeadlock()
                 return EVENTS_THRESHOLD_REACHED
             }
         }
-        return if (detectedFirstTime || detectedEarly) LIVELOCK_THREAD_SWITCH else IDLE
+        val cyclePeriod = replayModeCurrentCyclePeriod
+        return if (detectedFirstTime || detectedEarly) LIVELOCK_THREAD_SWITCH(cyclePeriod) else IDLE
     }
 
     fun onActorStart(iThread: Int) {
@@ -327,18 +326,18 @@ internal class LoopDetector(
 
 }
 
-enum class LoopDetectorDecision {
-    IDLE,
-    LIVELOCK_THREAD_SWITCH,
-    LIVELOCK_REPLAY_REQUIRED,
-    LIVELOCK_FAILURE_DETECTED,
-    EVENTS_THRESHOLD_REACHED,
+sealed class LoopDetectorDecision {
+    data object IDLE : LoopDetectorDecision()
+    data object LIVELOCK_REPLAY_REQUIRED : LoopDetectorDecision()
+    data object EVENTS_THRESHOLD_REACHED : LoopDetectorDecision()
+    data class  LIVELOCK_FAILURE_DETECTED(val cyclePeriod: Int) : LoopDetectorDecision()
+    data class  LIVELOCK_THREAD_SWITCH(val cyclePeriod: Int) : LoopDetectorDecision()
 }
 
 fun LoopDetectorDecision.isLiveLockDetected() = when (this) {
-    LIVELOCK_THREAD_SWITCH,
-    LIVELOCK_REPLAY_REQUIRED,
-    LIVELOCK_FAILURE_DETECTED -> true
+    is LIVELOCK_THREAD_SWITCH,
+    is LIVELOCK_REPLAY_REQUIRED,
+    is LIVELOCK_FAILURE_DETECTED -> true
     else -> false
 }
 
@@ -346,7 +345,6 @@ fun LoopDetectorDecision.isLiveLockDetected() = when (this) {
  * Helper class to halt execution on replay (trace collection phase) and to switch thread early on spin-cycles
  */
 private class ReplayModeLoopDetectorHelper(
-    private val traceCollector: ManagedStrategy.TraceCollector,
     private val interleavingHistory: List<InterleavingHistoryNode>,
     /**
      * Should we fail with deadlock failure when all events in the current interleaving are completed
@@ -354,23 +352,16 @@ private class ReplayModeLoopDetectorHelper(
     private val failDueToDeadlockInTheEnd: Boolean,
 ) {
 
-    fun isActiveLockNode(currentThread: Int): LoopDetectorDecision {
-        if (currentInterleavingNodeIndex == interleavingHistory.lastIndex) {
+    fun isActiveLockNode(): LoopDetectorDecision {
+        val cyclePeriod = interleavingHistory[currentInterleavingNodeIndex].spinCyclePeriod
+        if (currentInterleavingNodeIndex == interleavingHistory.lastIndex && failDueToDeadlockInTheEnd) {
             // Fail if we ran into cycle,
             // this cycle node is the last node in the replayed interleaving,
             // and we have to fail at the end of the execution
-            if (failDueToDeadlockInTheEnd) {
-                val cyclePeriod = interleavingHistory[currentInterleavingNodeIndex].spinCyclePeriod
-                if (cyclePeriod != 0) {
-                    traceCollector.newActiveLockDetected(currentThread, cyclePeriod)
-                }
-                return LIVELOCK_FAILURE_DETECTED
-            }
+            // traceCollector.newActiveLockDetected(currentThread, cyclePeriod)
+            return LIVELOCK_FAILURE_DETECTED(cyclePeriod)
         }
-        return if (interleavingHistory[currentInterleavingNodeIndex].spinCyclePeriod != 0)
-            LIVELOCK_THREAD_SWITCH
-        else
-            IDLE
+        return if (cyclePeriod != 0) LIVELOCK_THREAD_SWITCH(cyclePeriod) else IDLE
     }
 
     /**
