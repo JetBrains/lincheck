@@ -9,7 +9,6 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.beforeEvent as ideaPluginBeforeEvent
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
@@ -275,11 +274,21 @@ abstract class ManagedStrategy(
         return result
     }
 
+    private fun failDueToDeadlock(): Nothing {
+        suddenInvocationResult = ManagedDeadlockInvocationResult
+        // Forcibly finish the current execution by throwing an exception.
+        throw ForcibleExecutionFinishError
+    }
+    
+    private fun failDueToLivelock(lazyMessage: () -> String): Nothing {
+        suddenInvocationResult = ObstructionFreedomViolationInvocationResult(lazyMessage())
+        // Forcibly finish the current execution by throwing an exception.
+        throw ForcibleExecutionFinishError
+    }
+
     private fun failIfObstructionFreedomIsRequired(lazyMessage: () -> String) {
         if (testCfg.checkObstructionFreedom && !currentActorIsBlocking && !concurrentActorCausesBlocking) {
-            suddenInvocationResult = ObstructionFreedomViolationInvocationResult(lazyMessage())
-            // Forcibly finish the current execution by throwing an exception.
-            throw ForcibleExecutionFinishError
+            failDueToLivelock(lazyMessage)
         }
     }
 
@@ -298,12 +307,6 @@ abstract class ManagedStrategy(
                         scenario.threads[iThread][actorId]
                     else null
                 }.filterNotNull().any { it.causesBlocking }
-
-    private fun failDueToDeadlock(): Nothing {
-        suddenInvocationResult = ManagedDeadlockInvocationResult
-        // Forcibly finish the current execution by throwing an exception.
-        throw ForcibleExecutionFinishError
-    }
 
     // == EXECUTION CONTROL METHODS ==
 
@@ -348,31 +351,40 @@ abstract class ManagedStrategy(
             else ->
                 (runner.currentExecutionPart == PARALLEL) && shouldSwitch(iThread)
         }
-        // check if spin-lock is detected
-        val spinLockDetectionResult = loopDetector.visitCodeLocation(iThread, codeLocation)
-        val spinLockDetected = when (spinLockDetectionResult) {
-            LoopDetectionResult.ENORMOUS_OPERATIONS_SPIN_LOCK_DETECTED -> failDueToDeadlock()
-            LoopDetectionResult.FAIL_DUE_TO_REPLAYED_SPIN_LOCK -> {
-                failIfObstructionFreedomIsRequired {
-                    traceCollector?.passObstructionFreedomViolationTracePoint(currentThread)
-                    OBSTRUCTION_FREEDOM_SPINLOCK_VIOLATION_MESSAGE
-                }
-                traceCollector?.newSwitch(currentThread, SwitchReason.ACTIVE_LOCK)
-                failDueToDeadlock()
-            }
-            LoopDetectionResult.SPIN_LOCK_FOUND_REPLAY_REQUIRED -> {
-                suddenInvocationResult = SpinCycleFoundAndReplayRequired
-                throw ForcibleExecutionFinishError
-            }
-            LoopDetectionResult.SPIN_LOCK_FOUND_AGAIN_MUST_SWITCH -> true
-            LoopDetectionResult.NO_LOOP -> false
+        // check if live-lock is detected
+        val decision = loopDetector.visitCodeLocation(iThread, codeLocation)
+        // if we reached maximum number of events threshold, then fail immediately
+        if (decision == LoopDetectorDecision.EVENTS_THRESHOLD_REACHED) {
+            failDueToDeadlock()
         }
-        if (spinLockDetected) {
+        // if live-lock was detected, and replay was requested,
+        // then abort current execution and start the replay
+        if (decision == LoopDetectorDecision.LIVELOCK_REPLAY_REQUIRED) {
+            suddenInvocationResult = SpinCycleFoundAndReplayRequired
+            throw ForcibleExecutionFinishError
+        }
+        // if any kind of live-lock was detected, check for obstruction-freedom violation
+        if (decision.isLiveLockDetected()) {
             failIfObstructionFreedomIsRequired {
-                // Log the last event that caused obstruction freedom violation.
-                traceCollector?.passCodeLocation(tracePoint)
+                if (decision == LoopDetectorDecision.LIVELOCK_FAILURE_DETECTED) {
+                    // if failure is detected, add a special obstruction-freedom violation
+                    // trace point to account for that
+                    traceCollector?.passObstructionFreedomViolationTracePoint(currentThread)
+                } else {
+                    // otherwise log the last event that caused obstruction-freedom violation
+                    traceCollector?.passCodeLocation(tracePoint)
+                }
                 OBSTRUCTION_FREEDOM_SPINLOCK_VIOLATION_MESSAGE
             }
+        }
+        // if live-lock failure was detected, then fail immediately
+        if (decision == LoopDetectorDecision.LIVELOCK_FAILURE_DETECTED) {
+            traceCollector?.newSwitch(currentThread, SwitchReason.ACTIVE_LOCK)
+            failDueToDeadlock()
+        }
+        // if the current thread in a live-lock, then try to switch to another thread
+        if (decision == LoopDetectorDecision.LIVELOCK_THREAD_SWITCH) {
+            // check(loopDetector.replayModeEnabled)
             switchCurrentThreadDueToActiveLock(iThread, loopDetector.replayModeCurrentCyclePeriod)
             if (!loopDetector.replayModeEnabled) {
                 loopDetector.initializeFirstCodeLocationAfterSwitch(codeLocation)
@@ -380,6 +392,7 @@ abstract class ManagedStrategy(
             traceCollector?.passCodeLocation(tracePoint)
             return
         }
+        // if strategy requested thread switch, then do it
         if (shouldSwitch) {
             switchCurrentThread(iThread, SwitchReason.STRATEGY_SWITCH)
             if (!loopDetector.replayModeEnabled) {

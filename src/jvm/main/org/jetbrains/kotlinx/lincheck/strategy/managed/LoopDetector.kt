@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import org.jetbrains.kotlinx.lincheck.strategy.managed.LoopDetectionResult.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.LoopDetectorDecision.*
 import java.util.ArrayList
 
 /**
@@ -124,13 +124,13 @@ internal class LoopDetector(
     /**
      * Returns `true` if a loop or a hang is detected, `false` otherwise.
      */
-    fun visitCodeLocation(iThread: Int, codeLocation: Int): LoopDetectionResult {
+    fun visitCodeLocation(iThread: Int, codeLocation: Int): LoopDetectorDecision {
         threadsRan[iThread] = true
         replayModeLoopDetectorHelper?.let {
-            if (!it.shouldSwitch()) return NO_LOOP
+            if (!it.shouldSwitch()) return IDLE
             return when (val activeLockNode = it.isActiveLockNode(iThread)) {
-                is NeedToFailDueToDeadlock -> FAIL_DUE_TO_REPLAYED_SPIN_LOCK
-                is NormalReplayModeHelperResult -> if (it.shouldSwitch() && activeLockNode.isActiveLockNode) return SPIN_LOCK_FOUND_AGAIN_MUST_SWITCH else NO_LOOP
+                is NeedToFailDueToDeadlock -> LIVELOCK_FAILURE_DETECTED
+                is NormalReplayModeHelperResult -> if (it.shouldSwitch() && activeLockNode.isActiveLockNode) return LIVELOCK_THREAD_SWITCH else IDLE
             }
         }
         // Increase the total number of happened operations for live-lock detection
@@ -138,7 +138,7 @@ internal class LoopDetector(
         // Have the thread changed? Reset the counters in this case.
         check(lastExecutedThread == iThread) { "reset expected!" }
         // Ignore coroutine suspension code locations.
-        if (codeLocation == COROUTINE_SUSPENSION_CODE_LOCATION) return NO_LOOP
+        if (codeLocation == COROUTINE_SUSPENSION_CODE_LOCATION) return IDLE
         // Increment the number of times the specified code location is visited.
         val count = currentThreadCodeLocationVisitCountMap.getOrDefault(codeLocation, 0) + 1
         currentThreadCodeLocationVisitCountMap[codeLocation] = count
@@ -152,10 +152,10 @@ internal class LoopDetector(
             registerCycle()
             // Enormous operations count considered as total spin lock
             if (totalExecutionsCount > ManagedCTestConfiguration.LIVELOCK_EVENTS_THRESHOLD) {
-                return ENORMOUS_OPERATIONS_SPIN_LOCK_DETECTED
+                return EVENTS_THRESHOLD_REACHED
             }
             // Replay current interleaving to avoid side effects caused by multiple cycle executions
-            return SPIN_LOCK_FOUND_REPLAY_REQUIRED
+            return LIVELOCK_REPLAY_REQUIRED
         }
         if (!detectedFirstTime && detectedEarly) {
             totalExecutionsCount += hangingDetectionThreshold
@@ -172,10 +172,10 @@ internal class LoopDetector(
             // Enormous operations count considered as total spin lock
             if (totalExecutionsCount > ManagedCTestConfiguration.LIVELOCK_EVENTS_THRESHOLD) {
 //                failDueToDeadlock()
-                return ENORMOUS_OPERATIONS_SPIN_LOCK_DETECTED
+                return EVENTS_THRESHOLD_REACHED
             }
         }
-        return if (detectedFirstTime || detectedEarly) SPIN_LOCK_FOUND_AGAIN_MUST_SWITCH else NO_LOOP
+        return if (detectedFirstTime || detectedEarly) LIVELOCK_THREAD_SWITCH else IDLE
     }
 
     fun onActorStart(iThread: Int) {
@@ -331,12 +331,19 @@ internal class LoopDetector(
 
 }
 
-enum class LoopDetectionResult {
-    ENORMOUS_OPERATIONS_SPIN_LOCK_DETECTED,
-    FAIL_DUE_TO_REPLAYED_SPIN_LOCK,
-    SPIN_LOCK_FOUND_REPLAY_REQUIRED,
-    SPIN_LOCK_FOUND_AGAIN_MUST_SWITCH,
-    NO_LOOP
+enum class LoopDetectorDecision {
+    IDLE,
+    LIVELOCK_THREAD_SWITCH,
+    LIVELOCK_REPLAY_REQUIRED,
+    LIVELOCK_FAILURE_DETECTED,
+    EVENTS_THRESHOLD_REACHED,
+}
+
+fun LoopDetectorDecision.isLiveLockDetected() = when (this) {
+    LIVELOCK_THREAD_SWITCH,
+    LIVELOCK_REPLAY_REQUIRED,
+    LIVELOCK_FAILURE_DETECTED -> true
+    else -> false
 }
 
 sealed interface ReplayModeHelperResult
