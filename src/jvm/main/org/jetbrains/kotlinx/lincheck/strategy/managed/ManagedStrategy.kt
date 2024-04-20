@@ -983,7 +983,7 @@ abstract class ManagedStrategy(
         newSwitchPointOnAtomicMethodCall(codeLocation)
     }
 
-    override fun onMethodCallFinishedSuccessfully(result: Any?) {
+    override fun onMethodCallReturn(result: Any?) {
         if (collectTrace) {
             runInIgnoredSection {
                 val iThread = currentThread
@@ -1003,7 +1003,7 @@ abstract class ManagedStrategy(
         leaveIgnoredSectionIfEntered()
     }
 
-    override fun onMethodCallThrewException(t: Throwable) {
+    override fun onMethodCallException(t: Throwable) {
         if (collectTrace) {
             runInIgnoredSection {
                 // We cannot simply read `thread` as Forcible???Exception can be thrown.

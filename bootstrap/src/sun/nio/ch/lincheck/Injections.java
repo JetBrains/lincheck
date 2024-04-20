@@ -269,22 +269,22 @@ public class Injections {
     /**
      * Called from the instrumented code after any method successful call, i.e., without any exception.
      */
-    public static void onMethodCallFinishedSuccessfully(Object result) {
-        getEventTracker().onMethodCallFinishedSuccessfully(result);
+    public static void onMethodCallReturn(Object result) {
+        getEventTracker().onMethodCallReturn(result);
     }
 
     /**
      * Called from the instrumented code after any method that returns void successful call, i.e., without any exception.
      */
-    public static void onMethodCallVoidFinishedSuccessfully() {
-        getEventTracker().onMethodCallFinishedSuccessfully(VOID_RESULT);
+    public static void onMethodCallReturnVoid() {
+        getEventTracker().onMethodCallReturn(VOID_RESULT);
     }
 
     /**
      * Called from the instrumented code after any method call threw an exception
      */
-    public static void onMethodCallThrewException(Throwable t) {
-        getEventTracker().onMethodCallThrewException(t);
+    public static void onMethodCallException(Throwable t) {
+        getEventTracker().onMethodCallException(t);
     }
 
     /**

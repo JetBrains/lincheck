@@ -41,8 +41,8 @@ interface EventTracker {
 
     fun beforeMethodCall(owner: Any?, className: String, methodName: String, codeLocation: Int, params: Array<Any?>)
     fun beforeAtomicMethodCall(owner: Any?, className: String, methodName: String, codeLocation: Int, params: Array<Any?>)
-    fun onMethodCallFinishedSuccessfully(result: Any?)
-    fun onMethodCallThrewException(t: Throwable)
+    fun onMethodCallReturn(result: Any?)
+    fun onMethodCallException(t: Throwable)
 
     fun getThreadLocalRandom(): Random
     fun randomNextInt(): Int
