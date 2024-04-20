@@ -28,9 +28,10 @@ internal class LincheckClassVisitor(
     classVisitor: ClassVisitor
 ) : ClassVisitor(ASM_API, classVisitor) {
     private val ideaPluginEnabled = ideaPluginEnabled()
-    private lateinit var className: String
     private var classVersion = 0
-    private var fileName: String? = null
+
+    private lateinit var fileName: String
+    private lateinit var className: String
 
     override fun visitField(
         access: Int,
@@ -81,22 +82,25 @@ internal class LincheckClassVisitor(
                 mv
             }
         }
+        val createAdapter : (MethodVisitor) -> GeneratorAdapter = {
+            GeneratorAdapter(it, access, methodName, desc)
+        }
         if (methodName == "<clinit>" ||
             // Debugger implicitly evaluates toString for variables rendering
             // We need to disable breakpoints in such a case, as the numeration will break.
             // Breakpoints are disabled as we do not instrument toString and enter an ignored section,
             // so there are no beforeEvents inside.
             ideaPluginEnabled && methodName == "toString" && desc == "()Ljava/lang/String;") {
-            mv = WrapMethodInIgnoredSectionTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
+            mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, createAdapter(mv))
             return mv
         }
         if (methodName == "<init>") {
-            mv = ObjectCreationTrackerTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
+            mv = ObjectCreationTrackerTransformer(fileName, className, methodName, createAdapter(mv))
             return mv
         }
         if (className.contains("ClassLoader")) {
             if (methodName == "loadClass") {
-                mv = WrapMethodInIgnoredSectionTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
+                mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, createAdapter(mv))
             }
             return mv
         }
@@ -107,23 +111,23 @@ internal class LincheckClassVisitor(
         mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
         mv = CoroutineCancellabilitySupportMethodTransformer(mv, access, methodName, desc)
         if (access and ACC_SYNCHRONIZED != 0) {
-            mv = SynchronizedMethodTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc), classVersion)
+            mv = SynchronizedMethodTransformer(fileName, className, methodName, createAdapter(mv), classVersion)
         }
-        mv = MethodCallTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
-        mv = MonitorEnterAndExitTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
-        mv = WaitNotifyTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
-        mv = ParkUnparkTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
-        mv = ObjectCreationTrackerTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
-        mv = ObjectAtomicWriteTrackerTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
+        mv = MethodCallTransformer(fileName, className, methodName, createAdapter(mv))
+        mv = MonitorEnterAndExitTransformer(fileName, className, methodName, createAdapter(mv))
+        mv = WaitNotifyTransformer(fileName, className, methodName, createAdapter(mv))
+        mv = ParkUnparkTransformer(fileName, className, methodName, createAdapter(mv))
+        mv = ObjectCreationTrackerTransformer(fileName, className, methodName, createAdapter(mv))
+        mv = ObjectAtomicWriteTrackerTransformer(fileName, className, methodName, createAdapter(mv))
         mv = run {
-            val sv = SharedVariableAccessMethodTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
+            val sv = SharedVariableAccessMethodTransformer(fileName, className, methodName, createAdapter(mv))
             val aa = AnalyzerAdapter(className, access, methodName, desc, sv)
             sv.analyzer = aa
             aa
         }
-        mv = DeterministicHashCodeTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
-        mv = DeterministicTimeTransformer(GeneratorAdapter(mv, access, methodName, desc))
-        mv = DeterministicRandomTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc))
+        mv = DeterministicHashCodeTransformer(fileName, className, methodName, createAdapter(mv))
+        mv = DeterministicTimeTransformer(createAdapter(mv))
+        mv = DeterministicRandomTransformer(fileName, className, methodName, createAdapter(mv))
         return mv
     }
 
@@ -153,8 +157,12 @@ internal class LincheckClassVisitor(
     /**
      * Adds invocations of ManagedStrategy methods before monitorenter and monitorexit instructions
      */
-    private inner class MonitorEnterAndExitTransformer(mname: String, adapter: GeneratorAdapter) :
-        ManagedStrategyMethodVisitor(mname, adapter) {
+    private inner class MonitorEnterAndExitTransformer(
+        fileName: String,
+        className: String,
+        methodName: String,
+        adapter: GeneratorAdapter,
+    ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
         override fun visitInsn(opcode: Int) = adapter.run {
             when (opcode) {
                 MONITORENTER -> {
@@ -189,11 +197,13 @@ internal class LincheckClassVisitor(
      * Replace "method(...) {...}" with "method(...) {synchronized(this) {...} }"
      */
     private inner class SynchronizedMethodTransformer(
+        fileName: String,
+        className: String,
         methodName: String,
-        mv: GeneratorAdapter,
+        adapter: GeneratorAdapter,
         private val classVersion: Int
-    ) : ManagedStrategyMethodVisitor(methodName, mv) {
-        private val isStatic: Boolean = adapter.access and ACC_STATIC != 0
+    ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
+        private val isStatic: Boolean = this.adapter.access and ACC_STATIC != 0
         private val tryLabel = Label()
         private val catchLabel = Label()
 
@@ -275,8 +285,12 @@ internal class LincheckClassVisitor(
     }
 
     // TODO: doesn't support exceptions
-    private inner class WrapMethodInIgnoredSectionTransformer(methodName: String, adapter: GeneratorAdapter) :
-        ManagedStrategyMethodVisitor(methodName, adapter) {
+    private inner class WrapMethodInIgnoredSectionTransformer(
+        fileName: String,
+        className: String,
+        methodName: String,
+        adapter: GeneratorAdapter,
+    ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
         private var enteredInIgnoredSectionLocal = 0
 
         override fun visitCode() = adapter.run {
@@ -306,8 +320,12 @@ internal class LincheckClassVisitor(
      * which typically returns memory address of the object. There is no guarantee that
      * memory addresses will be the same in different runs.
      */
-    private inner class DeterministicHashCodeTransformer(methodName: String, adapter: GeneratorAdapter) :
-        ManagedStrategyMethodVisitor(methodName, adapter) {
+    private inner class DeterministicHashCodeTransformer(
+        fileName: String,
+        className: String,
+        methodName: String,
+        adapter: GeneratorAdapter,
+    ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) =
             adapter.run {
                 if (name == "hashCode" && desc == "()I") {
@@ -355,8 +373,13 @@ internal class LincheckClassVisitor(
      * Makes java.util.Random and all classes that extend it deterministic.
      * In every Random method invocation replaces the owner with Random from ManagedStateHolder.
      */
-    private inner class DeterministicRandomTransformer(methodName: String, adapter: GeneratorAdapter) :
-        ManagedStrategyMethodVisitor(methodName, adapter) {
+    private inner class DeterministicRandomTransformer(
+        fileName: String,
+        className: String,
+        methodName: String,
+        adapter: GeneratorAdapter,
+    ) :
+        ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) =
             adapter.run {
                 if (owner == "java/util/concurrent/ThreadLocalRandom" ||
@@ -456,8 +479,12 @@ internal class LincheckClassVisitor(
     /**
      * Adds invocations of ManagedStrategy methods before park and after unpark calls
      */
-    private inner class ParkUnparkTransformer(methodName: String, mv: GeneratorAdapter) :
-        ManagedStrategyMethodVisitor(methodName, mv) {
+    private inner class ParkUnparkTransformer(
+        fileName: String,
+        className: String,
+        methodName: String,
+        adapter: GeneratorAdapter
+    ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) =
             adapter.run {
                 val isPark = isUnsafe(owner) && name == "park"
@@ -506,8 +533,12 @@ internal class LincheckClassVisitor(
     /**
      * Adds invocations of ManagedStrategy methods before reads and writes of shared variables
      */
-    private inner class SharedVariableAccessMethodTransformer(methodName: String, adapter: GeneratorAdapter) :
-        ManagedStrategyMethodVisitor(methodName, adapter) {
+    private inner class SharedVariableAccessMethodTransformer(
+        fileName: String,
+        className: String,
+        methodName: String,
+        adapter: GeneratorAdapter,
+    ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
 
         lateinit var analyzer: AnalyzerAdapter
 
@@ -788,8 +819,12 @@ internal class LincheckClassVisitor(
      * For now, for simplicity, we don't check if compareAndSet / compareAndSwap methods actually write value.
      * We always consider new value as non-local if it was associated with a non-local object.
      */
-    private inner class ObjectAtomicWriteTrackerTransformer(methodName: String, adapter: GeneratorAdapter) :
-        ManagedStrategyMethodVisitor(methodName, adapter) {
+    private inner class ObjectAtomicWriteTrackerTransformer(
+        fileName: String,
+        className: String,
+        methodName: String,
+        adapter: GeneratorAdapter,
+    ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) =
             adapter.run {
                 when (owner) {
@@ -1123,8 +1158,12 @@ internal class LincheckClassVisitor(
         )
     }
 
-    private inner class ObjectCreationTrackerTransformer(methodName: String, adapter: GeneratorAdapter) :
-        ManagedStrategyMethodVisitor(methodName, adapter) {
+    private inner class ObjectCreationTrackerTransformer(
+        fileName: String,
+        className: String,
+        methodName: String,
+        adapter: GeneratorAdapter
+    ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) =
             adapter.run {
                 if (name == "<init>" && owner == "java/lang/Object") {
@@ -1196,8 +1235,12 @@ internal class LincheckClassVisitor(
     /**
      * Adds strategy method invocations before and after method calls.
      */
-    private inner class MethodCallTransformer(methodName: String, adapter: GeneratorAdapter) :
-        ManagedStrategyMethodVisitor(methodName, adapter) {
+    private inner class MethodCallTransformer(
+        fileName: String,
+        className: String,
+        methodName: String,
+        adapter: GeneratorAdapter,
+    ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
                 // TODO: do not ignore <init>
                 if (isCoroutineInternalClass(owner)) {
@@ -1413,8 +1456,12 @@ internal class LincheckClassVisitor(
     /**
      * Adds invocations of ManagedStrategy methods before wait and after notify calls
      */
-    private inner class WaitNotifyTransformer(methodName: String, mv: GeneratorAdapter) :
-        ManagedStrategyMethodVisitor(methodName, mv) {
+    private inner class WaitNotifyTransformer(
+        fileName: String,
+        className: String,
+        methodName: String,
+        adapter: GeneratorAdapter,
+    ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) =
             adapter.run {
                 if (opcode == INVOKEVIRTUAL) {
@@ -1507,24 +1554,6 @@ internal class LincheckClassVisitor(
         private fun isNotifyAll(mname: String, desc: String) = mname == "notifyAll" && desc == "()V"
     }
 
-    private open inner class ManagedStrategyMethodVisitor(
-        protected val methodName: String,
-        val adapter: GeneratorAdapter
-    ) : MethodVisitor(ASM_API, adapter) {
-        private var lineNumber = 0
-
-        protected fun loadNewCodeLocationId() {
-            val stackTraceElement = StackTraceElement(className, methodName, fileName, lineNumber)
-            val codeLocationId = CodeLocations.newCodeLocation(stackTraceElement)
-            adapter.push(codeLocationId)
-        }
-
-        override fun visitLineNumber(line: Int, start: Label) {
-            lineNumber = line
-            super.visitLineNumber(line, start)
-        }
-    }
-
     /**
      * Adds to user byte-code `beforeEvent` method invocation if IDEA plugin is enabled.
      * @param type type of the event, needed just for debugging.
@@ -1534,6 +1563,26 @@ internal class LincheckClassVisitor(
         if (ideaPluginEnabled) {
             invokeBeforeEvent(type, setMethodEventId)
         }
+    }
+}
+
+internal open class ManagedStrategyMethodVisitor(
+    protected val fileName: String,
+    protected val className: String,
+    protected val methodName: String,
+    val adapter: GeneratorAdapter
+) : MethodVisitor(ASM_API, adapter) {
+    private var lineNumber = 0
+
+    protected fun loadNewCodeLocationId() {
+        val stackTraceElement = StackTraceElement(className, methodName, fileName, lineNumber)
+        val codeLocationId = CodeLocations.newCodeLocation(stackTraceElement)
+        adapter.push(codeLocationId)
+    }
+
+    override fun visitLineNumber(line: Int, start: Label) {
+        lineNumber = line
+        super.visitLineNumber(line, start)
     }
 }
 
