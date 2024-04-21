@@ -12,65 +12,69 @@ package org.jetbrains.kotlinx.lincheck.fuzzing.mutation
 
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration
 import org.jetbrains.kotlinx.lincheck.CTestStructure
+import org.jetbrains.kotlinx.lincheck.execution.ActorGenerator
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.fuzzing.Fuzzer
 import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.mutations.*
 import java.util.Random
 
 class Mutator(
-    // private val random: Random,
     fuzzer: Fuzzer,
     testStructure: CTestStructure,
     testConfiguration: CTestConfiguration
 ) {
     private val random = fuzzer.random
+//    private val generatorsUsage: MutableMap<ActorGenerator, Int> = LinkedHashMap<ActorGenerator, Int>().apply {
+//        testStructure.actorGenerators.forEach {
+//            put(it, 0)
+//        }
+//    }
     private val mutations = listOf(
-        AddActorToParallelMutation(random, testStructure, testConfiguration),
-        ReplaceActorInParallelMutation(random, testStructure),
+        // AddActorToParallelMutation(random, testStructure, testConfiguration),
         // RemoveActorFromParallelMutation(random),
+        ReplaceActorInParallelMutation(random, testStructure),
 
         CrossProductMutation(random, fuzzer.savedInputs),
         RandomInputMutation(random, fuzzer.defaultExecutionGenerator),
 
-        AddActorToInitMutation(random, testStructure, testConfiguration),
-        AddActorToPostMutation(random, testStructure, testConfiguration),
+        // AddActorToInitMutation(random, testStructure, testConfiguration),
+        // AddActorToPostMutation(random, testStructure, testConfiguration),
         ReplaceActorInInitMutation(random, testStructure),
         ReplaceActorInPostMutation(random, testStructure, testConfiguration),
         // RemoveActorFromInitMutation(random),
         // RemoveActorFromPostMutation(random),
     )
 
-    fun getAvailableMutations(scenario: ExecutionScenario, mutationThread: Int): List<Mutation> {
-        return getAvailableMutations(mutations, scenario, mutationThread)
-    }
+//    fun getAvailableMutations(scenario: ExecutionScenario, mutationThread: Int): List<Mutation> {
+//        return getAvailableMutations(mutations, scenario, mutationThread)
+//    }
 
-    fun getRandomMutation(scenario: ExecutionScenario, mutationThread: Int): Mutation {
+    fun getRandomMutation(scenario: ExecutionScenario, mutationThread: Int, mutationNumber: Int): Mutation {
         val p = random.nextDouble()
         val parallelMutations = getAvailableMutations(
-            listOf(mutations[0], mutations[1]),
+            listOf(mutations[0]),
             scenario,
             mutationThread
         )
         val globalMutations = getAvailableMutations(
-            listOf(mutations[2], mutations[3]),
+            mutableListOf(mutations[1]).apply {
+                // add random scenario mutation if it is the first mutation in sequence
+                if (mutationNumber == 0) add(mutations[2])
+          },
             scenario,
             mutationThread
         )
         val otherMutations = getAvailableMutations(
-            mutations.filter { !parallelMutations.contains(it) && !globalMutations.contains(it) },
+            mutations.subList(3, mutations.size),
             scenario,
             mutationThread
         )
-        // println("Parallel mutations: ${parallelMutations.size}, non-parallel mutations: ${otherMutations.size}")
 
-        return if (
-            (p <= PARALLEL_PART_MUTATION_THRESHOLD && parallelMutations.isNotEmpty()) ||
-            otherMutations.isEmpty()
-        ) {
+        return if (p <= PARALLEL_PART_MUTATION_THRESHOLD && parallelMutations.isNotEmpty()) {
             // pick mutation to parallel part
             parallelMutations[random.nextInt(parallelMutations.size)]
         }
-        else if (p <= GLOBAL_PART_MUTATION_THRESHOLD && globalMutations.isNotEmpty()) {
+        else if (p <= GLOBAL_PART_MUTATION_THRESHOLD && globalMutations.isNotEmpty() || otherMutations.isEmpty()) {
             // pick global mutation
             globalMutations[random.nextInt(globalMutations.size)]
         }
@@ -85,5 +89,5 @@ class Mutator(
     }
 }
 
-private const val PARALLEL_PART_MUTATION_THRESHOLD: Double = 0.6
-private const val GLOBAL_PART_MUTATION_THRESHOLD: Double = 0.9
+private const val PARALLEL_PART_MUTATION_THRESHOLD: Double = 0.65
+private const val GLOBAL_PART_MUTATION_THRESHOLD: Double = 0.85

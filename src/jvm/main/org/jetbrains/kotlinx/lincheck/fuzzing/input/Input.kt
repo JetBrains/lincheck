@@ -26,8 +26,12 @@ import kotlin.math.floor
 class Input(
     val scenario: ExecutionScenario
 ) {
+    /** Coverage produced by input */
     var coverage = Coverage()
+    /** Number of happens-before pairs produced by all traces of input */
     var traceCoverage = Coverage()
+    /** New concurrent traces that input generated */
+    var totalNewTraces = 0
     /** Time took for input to be executed by the specified number of Lincheck invocations. */
     var executionDurationMs: Int = -1
 
@@ -45,12 +49,16 @@ class Input(
      * - mark as covered all keys from this input and set its `favorite` field to `true`.
      * - repeat until all keys will be covered and discard non-favorite selected inputs.
      * */
-    val fitness: Long
+    val coverageFitness: Long
         get() {
             if (executionDurationMs == -1) return 0
-            // TODO: check formula from AFL
-            // return (executionDurationMs.toDouble() / 1000.0) * scenario.size // execution time brings non-determinism
             return scenario.size.toLong() * coverage.coveredBranchesCount().toLong()
+        }
+
+    val traceFitness: Long
+        get() {
+            if (executionDurationMs == -1) return 0
+            return traceCoverage.coveredBranchesCount().toLong() * totalNewTraces
         }
 
     /** Number of mutations (children) that were produced from this input. */
@@ -62,8 +70,7 @@ class Input(
     private var mutationThread: Int = -1 // set to some appropriate thread id in `mutate()` method
 
     fun mutate(mutator: Mutator, mutationsCount: Int, random: Random): Input {
-        // TODO: add mutation API
-        println("Perform mutation: $mutationsCount")
+        println("Perform mutations: $mutationsCount")
 
         var mutatedScenario = scenario
         println("Before (fav=${this.favorite}): \n" + mutatedScenario.toString())
@@ -75,13 +82,14 @@ class Input(
             updateMutationThread(random)
             mutationsPerformed++
 
-            // TODO: somehow pass the thread id to mutations (but don't create new object instances, maybe)
             // val mutations = mutator.getAvailableMutations(mutatedScenario, mutationThread)
             // if (mutations.isNotEmpty()) {
             //     val mutationIndex = random.nextInt(mutations.size)
             //     mutatedScenario = mutations[mutationIndex].mutate(mutatedScenario, mutationThread)
             // }
-            mutatedScenario = mutator.getRandomMutation(scenario, mutationThread).mutate(mutatedScenario, mutationThread)
+            mutatedScenario = mutator
+                    .getRandomMutation(mutatedScenario, mutationThread, it)
+                    .mutate(mutatedScenario, mutationThread)
         }
 
         println("After: \n" + mutatedScenario.toString())

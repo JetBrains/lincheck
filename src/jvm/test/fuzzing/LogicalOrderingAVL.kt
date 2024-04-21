@@ -35,7 +35,8 @@ class LogicalOrderingAVLTest : IntIntAbstractConcurrentMapTest<LogicalOrderingAV
 //        })
 //    }
 
-    override fun <O : Options<O, *>> O.customizeModelCheckingCoverage() =
+    override fun <O : Options<O, *>> O.customizeModelCheckingCoverage() {
+        iterations(100)
         coverageConfigurationForModelChecking(
             listOf(
                 IntIntAbstractConcurrentMapTest::class.jvmName,
@@ -43,8 +44,10 @@ class LogicalOrderingAVLTest : IntIntAbstractConcurrentMapTest<LogicalOrderingAV
             ),
             emptyList()
         )
+    }
 
-    override fun <O : Options<O, *>> O.customizeFuzzingCoverage() =
+    override fun <O : Options<O, *>> O.customizeFuzzingCoverage() {
+        iterations(100)
         coverageConfigurationForFuzzing(
             listOf(
                 IntIntAbstractConcurrentMapTest::class.jvmName,
@@ -52,4 +55,5 @@ class LogicalOrderingAVLTest : IntIntAbstractConcurrentMapTest<LogicalOrderingAV
             ),
             emptyList()
         )
+    }
 }

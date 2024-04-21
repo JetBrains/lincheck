@@ -10,25 +10,21 @@
 
 package org.jetbrains.kotlinx.lincheck.fuzzing
 
-import org.jetbrains.kotlinx.lincheck.Actor
+import fuzzing.stats.BenchmarkStats
 import org.jetbrains.kotlinx.lincheck.CTestConfiguration
 import org.jetbrains.kotlinx.lincheck.CTestStructure
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.fuzzing.coverage.Coverage
+import org.jetbrains.kotlinx.lincheck.fuzzing.coverage.HappensBeforeSummary
+import org.jetbrains.kotlinx.lincheck.fuzzing.coverage.toCoverage
 import org.jetbrains.kotlinx.lincheck.fuzzing.input.FailedInput
 import org.jetbrains.kotlinx.lincheck.fuzzing.input.Input
 import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.Mutator
-import fuzzing.stats.BenchmarkStats
-import org.jetbrains.kotlinx.lincheck.fuzzing.coverage.HappensBeforeSummary
-import org.jetbrains.kotlinx.lincheck.fuzzing.coverage.toCoverage
 import org.jetbrains.kotlinx.lincheck.fuzzing.util.Sampling
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import java.util.*
 import kotlin.collections.ArrayDeque
-import kotlin.collections.ArrayList
-import kotlin.math.ceil
-import kotlin.math.ln
 import kotlin.math.max
 
 /**
@@ -61,7 +57,6 @@ class Fuzzer(
     private var currentInput: Input? = null
     private var executionStart: Date? = null
 
-
     /** Contains initial seeds (eg. custom scenarios, that user may specify), might be empty as well */
     private val seedInputs: ArrayDeque<Input> = ArrayDeque()
     /** Contains main queue of inputs which is used during fuzzing (this does not contain failed inputs, only valid once) */
@@ -81,17 +76,17 @@ class Fuzzer(
         }
     }
 
-    private fun getTrimmedParallelPart(randomScenario: ExecutionScenario): List<List<Actor>> {
-        val parallelTrimmed = ArrayList<MutableList<Actor>>()
-        repeat(randomScenario.parallelExecution.size) {
-            parallelTrimmed.add(mutableListOf())
-        }
-
-        parallelTrimmed.forEachIndexed { index, actors ->
-            actors.add(randomScenario.parallelExecution[index][0])
-        }
-        return parallelTrimmed
-    }
+//    private fun getTrimmedParallelPart(randomScenario: ExecutionScenario): List<List<Actor>> {
+//        val parallelTrimmed = ArrayList<MutableList<Actor>>()
+//        repeat(randomScenario.parallelExecution.size) {
+//            parallelTrimmed.add(mutableListOf())
+//        }
+//
+//        parallelTrimmed.forEachIndexed { index, actors ->
+//            actors.add(randomScenario.parallelExecution[index][0])
+//        }
+//        return parallelTrimmed
+//    }
 
     fun nextScenario(): ExecutionScenario {
         if (seedInputs.isNotEmpty()) {
@@ -133,17 +128,25 @@ class Fuzzer(
         if (currentInput!!.coverage.coveredBranchesCount() != 0) {
             throw RuntimeException("Reassigning coverage that was already calculated")
         }
+
+        val prevTracesCount = traces.size
+        val averageTraceDiff = prevTracesCount.toDouble() / (totalExecutions + 1.0)
+        val traceCountAddedDiff: Double
+
+        var coverageUpdated = false
+        var traceCoverageUpdated = false
+        var maxCoverageUpdated = false
+        var maxTraceCoverageUpdated = false
+
         traces.addAll(traceCoverage)
         currentInput!!.coverage = coverage
         currentInput!!.traceCoverage = traceCoverage.map { it.toCoverage() }.fold(Coverage()) { acc, trace ->
             acc.merge(trace)
             acc
         }
+        currentInput!!.totalNewTraces = traces.size - prevTracesCount
+        traceCountAddedDiff = max(0.0, currentInput!!.totalNewTraces.toDouble() - averageTraceDiff)
 
-        var coverageUpdated = false
-        var traceCoverageUpdated = false
-        var maxCoverageUpdated = false
-        var maxTraceCoverageUpdated = false
 
         if (failure != null) {
             // TODO: check if failure is unique, then save, otherwise skip
@@ -152,27 +155,29 @@ class Fuzzer(
 
             if (iterationOfFirstFailure == -1) iterationOfFirstFailure = totalExecutions
         }
-        //else {
-            coverageUpdated = totalCoverage.merge(coverage)
-            traceCoverageUpdated = totalTraceCoverage.merge(currentInput!!.traceCoverage)
-            maxCoverageUpdated = maxCoveredBranches < coverage.coveredBranchesCount()
-            maxTraceCoverageUpdated = maxCoveredTrace < currentInput!!.traceCoverage.coveredBranchesCount()
-            val newCoverageFound: Boolean =
-                coverageUpdated ||
-                traceCoverageUpdated ||
-                maxCoverageUpdated ||
-                maxTraceCoverageUpdated
 
-            if (newCoverageFound) {
-                // save input if it uncovers new program regions, or it maximizes single run coverage
-                currentInput!!.favorite = true // set to favorite to generate more children from this input
+        coverageUpdated = totalCoverage.merge(coverage)
+        traceCoverageUpdated =
+            totalTraceCoverage.merge(currentInput!!.traceCoverage) ||
+            (traceCountAddedDiff > 0.0 && traceCountAddedDiff / averageTraceDiff + random.nextDouble() > 0.7)
+        maxCoverageUpdated = maxCoveredBranches < coverage.coveredBranchesCount()
+        maxTraceCoverageUpdated = maxCoveredTrace < currentInput!!.traceCoverage.coveredBranchesCount()
 
-                maxCoveredBranches = max(maxCoveredBranches, coverage.coveredBranchesCount())
-                maxCoveredTrace = max(maxCoveredTrace, currentInput!!.traceCoverage.coveredBranchesCount())
+        val newInputFound: Boolean =
+            coverageUpdated ||
+            traceCoverageUpdated ||
+            maxCoverageUpdated ||
+            maxTraceCoverageUpdated
 
-                savedInputs.add(currentInput!!)
-            }
-        //}
+        if (newInputFound) {
+            // save input if it uncovers new program regions, or it maximizes single run coverage
+            // currentInput!!.favorite = true // set to favorite to generate more children from this input
+
+            maxCoveredBranches = max(maxCoveredBranches, coverage.coveredBranchesCount())
+            maxCoveredTrace = max(maxCoveredTrace, currentInput!!.traceCoverage.coveredBranchesCount())
+
+            savedInputs.add(currentInput!!)
+        }
 
 
         // TODO: updated stats
@@ -197,7 +202,7 @@ class Fuzzer(
             "covered-trace = ${currentInput!!.traceCoverage.coveredBranchesCount()} \n" +
             "max-trace = $maxCoveredTrace \n" +
             "total-trace = ${totalTraceCoverage.coveredBranchesCount()} \n" +
-            "traces = ${traces.size} \n" +
+            "traces (avg/new) = ${traces.size} ($averageTraceDiff / ${currentInput!!.totalNewTraces}) \n" +
             "============ \n" +
             "mask (c|t|mc|mt): ${if (coverageUpdated) 1 else 0}${if (traceCoverageUpdated) 1 else 0}${if (maxCoverageUpdated) 1 else 0}${if (maxTraceCoverageUpdated) 1 else 0} \n" +
             "cycles: $totalCycles \n" +
@@ -269,7 +274,7 @@ class Fuzzer(
         for (key in coveredKeys) {
             if (tempCoverage.isCovered(key)) continue
 
-            val bestInput: Input = savedInputs.filter { it.coverage.isCovered(key) }.maxByOrNull { it.fitness }
+            val bestInput: Input = savedInputs.filter { it.coverage.isCovered(key) }.maxByOrNull { it.coverageFitness }
                 ?: throw RuntimeException("Key $key is not covered in any saved input but was found in total coverage")
 
             tempCoverage.merge(bestInput.coverage)
@@ -277,13 +282,13 @@ class Fuzzer(
             newInputsQueue.add(bestInput)
         }
 
-        // attempt to find the subset of inputs that produce the same total trace coverage
+        // attempt to find the subset of inputs that produce the same total happens-before pairs coverage
         val tempTraceCoverage = Coverage()
         val coveredTraceKeys = totalTraceCoverage.coveredBranchesKeys()
         for (key in coveredTraceKeys) {
             if (tempTraceCoverage.isCovered(key)) continue
 
-            val bestInput: Input = savedInputs.filter { it.traceCoverage.isCovered(key) }.maxByOrNull { it.fitness }
+            val bestInput: Input = savedInputs.filter { it.traceCoverage.isCovered(key) }.maxByOrNull { it.traceFitness }
                 ?: throw RuntimeException("Key $key is not covered in any saved input but was found in total trace coverage")
 
             tempTraceCoverage.merge(bestInput.traceCoverage)
@@ -296,8 +301,7 @@ class Fuzzer(
     }
 }
 
-// constants match the JQF implementation
-private const val CHILDREN_INPUTS_GENERATED = 3 // 50
-private const val FAVORITE_PARENT_CHILDREN_MULTIPLIER = 2 // 20
-private const val FAVORITE_INPUTS_RECALCULATION_RATE = 10
-private const val MEAN_MUTATION_COUNT = 3.0 // ceil(testConfiguration.actorsPerThread.toDouble() / 2.0).toInt()
+private const val CHILDREN_INPUTS_GENERATED = 3
+private const val FAVORITE_PARENT_CHILDREN_MULTIPLIER = 2
+private const val FAVORITE_INPUTS_RECALCULATION_RATE = 15
+private const val MEAN_MUTATION_COUNT = 4.0
