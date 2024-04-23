@@ -89,9 +89,11 @@ internal class ModelCheckingStrategy(
             val trace = constructTraceForPlugin(failure, failure.trace)
             // Collect and analyze the exceptions thrown.
             val (exceptionsRepresentation, internalBugOccurred) = collectExceptionsForPlugin(failure)
+            // If an internal bug occurred - print it on the console, no need to debug it.
+            if (internalBugOccurred) return
             // Provide all information about the failed test to the debugger.
             testFailed(
-                failureType = if (internalBugOccurred) "INTERNAL_BUG" else failure.type,
+                failureType = failure.type,
                 trace = trace,
                 version = lincheckVersion,
                 minimalPluginVersion = MINIMAL_PLUGIN_VERSION,
@@ -145,8 +147,11 @@ internal class ModelCheckingStrategy(
      * to the plugin with a flag, indicating if an internal bug was the cause of the failure, or not.
      */
     private fun collectExceptionsForPlugin(failure: LincheckFailure): ExceptionProcessingResult {
-        val results: ExecutionResult = (failure as? IncorrectResultsFailure)?.results
-            ?: return ExceptionProcessingResult(emptyArray(), isInternalBugOccurred = false)
+        val results: ExecutionResult = when (failure) {
+            is IncorrectResultsFailure -> (failure as? IncorrectResultsFailure)?.results ?: return ExceptionProcessingResult(emptyArray(), isInternalBugOccurred = false)
+            is ValidationFailure -> return ExceptionProcessingResult(arrayOf(failure.exception.text), isInternalBugOccurred = false)
+            else -> return ExceptionProcessingResult(emptyArray(), isInternalBugOccurred = false)
+        }
         return when (val exceptionsProcessingResult = collectExceptionStackTraces(results)) {
             // If some exception was thrown from the Lincheck itself, we'll ask for bug reporting
             is InternalLincheckBugResult ->
@@ -264,6 +269,9 @@ internal class ModelCheckingStrategy(
     }
 
     private fun collectExceptionsOrEmpty(failure: LincheckFailure): Map<Throwable, ExceptionNumberAndStacktrace> {
+        if (failure is ValidationFailure) {
+            return mapOf(failure.exception to ExceptionNumberAndStacktrace(1, failure.exception.stackTrace.toList()))
+        }
         val results = (failure as? IncorrectResultsFailure)?.results ?: return emptyMap()
         return when (val result = collectExceptionStackTraces(results)) {
             is ExceptionStackTracesResult -> result.exceptionStackTraces

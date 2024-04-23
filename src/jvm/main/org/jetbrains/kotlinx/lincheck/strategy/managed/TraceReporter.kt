@@ -131,6 +131,7 @@ internal fun constructTraceGraph(
     trace: Trace,
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
 ): List<TraceNode> {
+    val resultProvider = ExecutionResultsProvider(results, failure)
     val scenario = failure.scenario
     val tracePoints = trace.trace
     // last events that were executed for each thread. It is either thread finish events or events before crash
@@ -176,7 +177,7 @@ internal fun constructTraceGraph(
                     last = lastNode,
                     callDepth = 0,
                     actorRepresentation = actorRepresentations[iThread][nextActor],
-                    resultRepresentation = results[iThread, nextActor]
+                    resultRepresentation = resultProvider[iThread, nextActor]
                         ?.let { actorNodeResultRepresentation(it, exceptionStackTraces) }
                 )
             }
@@ -209,7 +210,7 @@ internal fun constructTraceGraph(
     for (iThread in actorNodes.indices) {
         for (actorId in actorNodes[iThread].indices) {
             var actorNode = actorNodes[iThread][actorId]
-            val actorResult = results[iThread, actorId]
+            val actorResult = resultProvider[iThread, actorId]
             // in case of empty trace, we want to show at least the actor nodes themselves;
             // however, no actor nodes will be created by the code above, so we need to create them explicitly here.
             if (actorNode == null && actorResult != null) {
@@ -229,7 +230,7 @@ internal fun constructTraceGraph(
             // insert an ActorResultNode between the last actor event and the next event after it
             val lastEvent = actorNode.lastInternalEvent
             val lastEventNext = lastEvent.next
-            val result = results[iThread, actorId]
+            val result = resultProvider[iThread, actorId]
             val resultRepresentation = result?.let { resultRepresentation(result, exceptionStackTraces) }
             val resultNode = ActorResultNode(
                 iThread = iThread,
@@ -251,6 +252,44 @@ internal fun constructTraceGraph(
 }
 
 /**
+ * Helper class to provider execution results, including a validation function result
+ */
+private class ExecutionResultsProvider(result: ExecutionResult?, failure: LincheckFailure) {
+
+    /**
+     * A map of type Map<threadId -> Map<actorId, Result>>
+     */
+    private val threadNumberToActorResultMap: Map<Int, Map<Int, Result>>
+
+    init {
+        // If the results of the failure are present, then just collect them to a map.
+        // In that case, we know that the failure reason is not validation function, so we ignore it.
+        threadNumberToActorResultMap = if (result != null) {
+            result.threadsResults
+                .mapIndexed { tId, actors ->
+                    tId to actors.mapIndexed { actorId, result ->
+                        actorId to result
+                    }.toMap()
+                }.toMap()
+        } else if (failure is ValidationFailure) {
+            // If validation function is the reason if the failure then the only result we're interested in
+            // is the validation function exception.
+            mapOf(0 to mapOf(firstThreadActorCount(failure) to ExceptionResult.create(failure.exception, false)))
+        } else {
+            emptyMap()
+        }
+    }
+
+    operator fun get(iThread: Int, actorId: Int): Result? {
+        return threadNumberToActorResultMap[iThread]?.get(actorId)
+    }
+
+    private fun firstThreadActorCount(failure: ValidationFailure): Int =
+        failure.scenario.initExecution.size + failure.scenario.parallelExecution[0].size + failure.scenario.postExecution.size
+
+}
+
+/**
  * Creates united actors representation, including invoked actors and validation functions.
  * In output construction, we treat validation function call like a regular actor for unification.
  */
@@ -263,7 +302,7 @@ private fun createActorRepresentation(
             val actors = scenario.threads[i].map { it.toString() }.toMutableList()
 
             if (failure is ValidationFailure) {
-                actors += "${failure.validationFunctionName}(): ${failure.exception::class.simpleName}"
+                actors += "${failure.validationFunctionName}()"
             }
 
             actors
