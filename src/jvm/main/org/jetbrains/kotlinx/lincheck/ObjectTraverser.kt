@@ -90,7 +90,7 @@ private fun enumerateObjects(obj: Any, processedObjects: MutableSet<Any>, object
                 }
 
                 if (value is AtomicIntegerArray) {
-                    value = (0 until  value.length()).map { (value as AtomicIntegerArray).get(it) }.toIntArray()
+                    value = (0 until value.length()).map { (value as AtomicIntegerArray).get(it) }.toIntArray()
                 }
                 if (value is AtomicReferenceArray<*>) {
                     value = (0 until value.length()).map { (value as AtomicReferenceArray<*>).get(it) }.toTypedArray()
