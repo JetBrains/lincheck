@@ -12,10 +12,10 @@ package org.jetbrains.kotlinx.lincheck.verifier
 
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.Injections.lastSuspendedCancellableContinuationDuringVerification
-import org.jetbrains.kotlinx.lincheck.transformation.TransformationMode
 import org.jetbrains.kotlinx.lincheck.verifier.LTS.*
 import org.jetbrains.kotlinx.lincheck.verifier.OperationType.*
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
+import sun.nio.ch.lincheck.Injections.lastSuspendedCancellableContinuationDuringVerification
 import java.util.*
 import kotlin.coroutines.*
 import kotlin.math.*
@@ -43,11 +43,7 @@ typealias ResumedTickets = Set<Int>
  * Practically, Kotlin implementation of such operations via suspend functions is supported.
  */
 
-class LTS(sequentialSpecification: Class<*>) {
-    // we should transform the specification with `CancellabilitySupportClassTransformer`
-    private val sequentialSpecification: Class<*> = LincheckClassLoader(TransformationMode.VERIFICATION)
-                                                    .loadClass(sequentialSpecification.name)!!
-
+class LTS(private val sequentialSpecification: Class<*>) {
     /**
      * Cache with all LTS states in order to reuse the equivalent ones.
      * Equivalency relation among LTS states is defined by the [StateInfo] class.
@@ -269,7 +265,14 @@ class LTS(sequentialSpecification: Class<*>) {
         ).intern(null) { _, _ -> initialState }
     }
 
-    private fun createInitialStateInstance() = sequentialSpecification.newInstance()
+    private fun createInitialStateInstance(): Any {
+        return sequentialSpecification.newInstance().also {
+            // the sequential version of the data structure used for verification
+            // may differ from the original parallel version,
+            // in this case we need to ensure that the sequential class is also instrumented
+            LincheckJavaAgent.ensureObjectIsTransformed(it)
+        }
+    }
 
     private fun StateInfo.computeRemappingFunction(old: StateInfo): RemappingFunction? {
         if (maxTicket == NO_TICKET) return null

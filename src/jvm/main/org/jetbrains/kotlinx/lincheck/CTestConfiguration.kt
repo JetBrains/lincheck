@@ -15,6 +15,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
 import java.lang.reflect.*
@@ -36,6 +37,12 @@ abstract class CTestConfiguration(
     val timeoutMs: Long,
     val customScenarios: List<ExecutionScenario>
 ) {
+
+    /**
+     * Specifies the transformation required for this strategy.
+     */
+    internal abstract val instrumentationMode: InstrumentationMode
+
     abstract fun createStrategy(
         testClass: Class<*>, scenario: ExecutionScenario, validationFunction: Actor?,
         stateRepresentationMethod: Method?, verifier: Verifier

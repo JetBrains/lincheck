@@ -10,10 +10,12 @@
  */
 
 package org.jetbrains.kotlinx.lincheck
+
+import sun.nio.ch.lincheck.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 
-const val MINIMAL_PLUGIN_VERSION = "0.0.1"
+const val MINIMAL_PLUGIN_VERSION = "0.2"
 
 // ============== This methods are used by debugger from IDEA plugin to communicate with Lincheck ============== //
 

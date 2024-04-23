@@ -20,8 +20,8 @@
 
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.LincheckClassLoader.REMAPPED_PACKAGE_CANONICAL_NAME
 import org.jetbrains.kotlinx.lincheck.strategy.managed.getObjectNumber
+import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
 import sun.misc.Unsafe
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
@@ -119,37 +119,25 @@ private fun readField(obj: Any?, field: Field): Any? {
         return readFieldViaUnsafe(obj, field, Unsafe::getObject)
     }
     return when (field.type) {
-        Boolean::class.javaPrimitiveType -> readFieldViaUnsafe(obj, field, Unsafe::getBoolean)
-        Byte::class.javaPrimitiveType -> readFieldViaUnsafe(obj, field, Unsafe::getByte)
-        Char::class.javaPrimitiveType -> readFieldViaUnsafe(obj, field, Unsafe::getChar)
-        Short::class.javaPrimitiveType -> readFieldViaUnsafe(obj, field, Unsafe::getShort)
-        Int::class.javaPrimitiveType -> readFieldViaUnsafe(obj, field, Unsafe::getInt)
-        Long::class.javaPrimitiveType -> readFieldViaUnsafe(obj, field, Unsafe::getLong)
-        Double::class.javaPrimitiveType -> readFieldViaUnsafe(obj, field, Unsafe::getDouble)
-        Float::class.javaPrimitiveType -> readFieldViaUnsafe(obj, field, Unsafe::getFloat)
-        else -> error("No more types expected")
+        Boolean::class.javaPrimitiveType    -> readFieldViaUnsafe(obj, field, Unsafe::getBoolean)
+        Byte::class.javaPrimitiveType       -> readFieldViaUnsafe(obj, field, Unsafe::getByte)
+        Char::class.javaPrimitiveType       -> readFieldViaUnsafe(obj, field, Unsafe::getChar)
+        Short::class.javaPrimitiveType      -> readFieldViaUnsafe(obj, field, Unsafe::getShort)
+        Int::class.javaPrimitiveType        -> readFieldViaUnsafe(obj, field, Unsafe::getInt)
+        Long::class.javaPrimitiveType       -> readFieldViaUnsafe(obj, field, Unsafe::getLong)
+        Double::class.javaPrimitiveType     -> readFieldViaUnsafe(obj, field, Unsafe::getDouble)
+        Float::class.javaPrimitiveType      -> readFieldViaUnsafe(obj, field, Unsafe::getFloat)
+        else                                -> error("No more types expected")
     }
 }
-
-
-private inline fun <T> readFieldViaUnsafe(obj: Any?, field: Field, extractMethod: Unsafe.(Any?, Long) -> T): T =
-    if (Modifier.isStatic(field.modifiers)) {
-        val base = UnsafeHolder.UNSAFE.staticFieldBase(field)
-        val offset = UnsafeHolder.UNSAFE.staticFieldOffset(field)
-        UnsafeHolder.UNSAFE.extractMethod(base, offset)
-    } else {
-        val offset = UnsafeHolder.UNSAFE.objectFieldOffset(field)
-        UnsafeHolder.UNSAFE.extractMethod(obj, offset)
-    }
-
 
 private fun isAtomic(value: Any?): Boolean {
     if (value == null) return false
     return value.javaClass.canonicalName.let {
-        it == REMAPPED_PACKAGE_CANONICAL_NAME + "java.util.concurrent.atomic.AtomicInteger" ||
-                it == REMAPPED_PACKAGE_CANONICAL_NAME + "java.util.concurrent.atomic.AtomicLong" ||
-                it == REMAPPED_PACKAGE_CANONICAL_NAME + "java.util.concurrent.atomic.AtomicReference" ||
-                it == REMAPPED_PACKAGE_CANONICAL_NAME + "java.util.concurrent.atomic.AtomicBoolean"
+        it == "java.util.concurrent.atomic.AtomicInteger" ||
+        it == "java.util.concurrent.atomic.AtomicLong" ||
+        it == "java.util.concurrent.atomic.AtomicReference" ||
+        it == "java.util.concurrent.atomic.AtomicBoolean"
     }
 }
 

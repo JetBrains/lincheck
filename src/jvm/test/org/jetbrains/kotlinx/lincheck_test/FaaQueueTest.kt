@@ -33,7 +33,7 @@ class FaaQueueTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
 
     override fun <O : Options<O, *>> O.customize() {
         if (this is StressOptions) {
-            invocationsPerIteration(1_000_000)
+            invocationsPerIteration(10_000_000)
             iterations(0)
         }
         addCustomScenario {

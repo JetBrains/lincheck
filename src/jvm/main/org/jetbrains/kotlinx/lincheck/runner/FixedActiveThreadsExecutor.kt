@@ -13,7 +13,7 @@ import kotlinx.atomicfu.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.util.*
-import org.jetbrains.kotlinx.lincheck.TestThread
+import sun.nio.ch.lincheck.TestThread
 import java.io.*
 import java.lang.*
 import java.util.concurrent.*
@@ -163,19 +163,20 @@ internal class FixedActiveThreadsExecutor(private val testName: String, private 
 
     private fun testThreadRunnable(iThread: Int) = Runnable {
         loop@ while (true) {
-            val task = getTask(iThread)
-            if (task === Shutdown) return@Runnable
-            tasks[iThread].value = null // reset task
-            val threadExecution = task as TestThreadExecution
-            check(threadExecution.iThread == iThread)
+            val task = runInIgnoredSection {
+                val task = getTask(iThread)
+                if (task === Shutdown) return@Runnable
+                tasks[iThread].value = null // reset task
+                task as TestThreadExecution
+            }
+            check(task.iThread == iThread)
             try {
-                threadExecution.run()
+                task.run()
             } catch(e: Throwable) {
-                val wrapped = wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(e)
-                setResult(iThread, wrapped)
+                runInIgnoredSection { setResult(iThread, e) }
                 continue@loop
             }
-            setResult(iThread, Done)
+            runInIgnoredSection { setResult(iThread, Done) }
         }
     }
 

@@ -11,6 +11,7 @@ package org.jetbrains.kotlinx.lincheck_test.verifier
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 
 /**
@@ -42,10 +43,12 @@ fun verify(
     block: ExecutionBuilder.() -> Unit,
     correct: Boolean
 ) {
-    val (scenario, results) = scenarioWithResults(block)
-    val verifier = verifierClass.getConstructor(Class::class.java).newInstance(testClass)
-    val res = verifier.verifyResults(scenario, results)
-    assert(res == correct)
+    withLincheckJavaAgent(InstrumentationMode.STRESS) {
+        val (scenario, results) = scenarioWithResults(block)
+        val verifier = verifierClass.getConstructor(Class::class.java).newInstance(testClass)
+        val res = verifier.verifyResults(scenario, results)
+        assert(res == correct)
+    }
 }
 
 fun scenarioWithResults(
