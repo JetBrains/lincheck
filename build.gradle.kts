@@ -119,6 +119,7 @@ tasks {
         if (withEventIdSequentialCheck.toBoolean()) {
             extraArgs.add("-Dlincheck.debug.withEventIdSequentialCheck=true")
         }
+        extraArgs.add("-Dlincheck.version=$version")
         jvmArgs(extraArgs)
     }
 
