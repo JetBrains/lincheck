@@ -236,7 +236,7 @@ internal fun constructTraceGraph(
                 last = lastEvent,
                 callDepth = actorNode.callDepth + 1,
                 resultRepresentation = resultRepresentation,
-                exceptionNumberIfExceptionResult = if (result is ExceptionResult) exceptionStackTraces[result.throwable]!!.number else null
+                exceptionNumberIfExceptionResult = if (result is ExceptionResult) exceptionStackTraces[result.throwable]?.number else null
             )
             actorNode.addInternalEvent(resultNode)
             resultNode.next = lastEventNext
