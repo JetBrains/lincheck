@@ -16,6 +16,8 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer
 import org.jetbrains.kotlinx.lincheck.verifier.*
+import java.io.PrintWriter
+import java.io.StringWriter
 import java.lang.ref.*
 import java.lang.reflect.*
 import java.lang.reflect.Method
@@ -184,6 +186,12 @@ internal fun exceptionCanBeValidExecutionResult(exception: Throwable): Boolean {
     return exception !is ThreadDeath && // used to stop thread in FixedActiveThreadsExecutor by calling thread.stop method
             exception !is InternalLincheckTestUnexpectedException &&
             exception !is ForcibleExecutionFinishError
+}
+
+internal val Throwable.text: String get() {
+    val writer = StringWriter()
+    printStackTrace(PrintWriter(writer))
+    return writer.buffer.toString()
 }
 
 /**

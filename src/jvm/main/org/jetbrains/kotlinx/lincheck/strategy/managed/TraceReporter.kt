@@ -131,6 +131,7 @@ internal fun constructTraceGraph(
     trace: Trace,
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
 ): List<TraceNode> {
+    val resultProvider = ExecutionResultsProvider(results, failure)
     val scenario = failure.scenario
     val tracePoints = trace.trace
     // last events that were executed for each thread. It is either thread finish events or events before crash
@@ -176,7 +177,7 @@ internal fun constructTraceGraph(
                     last = lastNode,
                     callDepth = 0,
                     actorRepresentation = actorRepresentations[iThread][nextActor],
-                    resultRepresentation = results[iThread, nextActor]
+                    resultRepresentation = resultProvider[iThread, nextActor]
                         ?.let { actorNodeResultRepresentation(it, exceptionStackTraces) }
                 )
             }
@@ -209,7 +210,7 @@ internal fun constructTraceGraph(
     for (iThread in actorNodes.indices) {
         for (actorId in actorNodes[iThread].indices) {
             var actorNode = actorNodes[iThread][actorId]
-            val actorResult = results[iThread, actorId]
+            val actorResult = resultProvider[iThread, actorId]
             // in case of empty trace, we want to show at least the actor nodes themselves;
             // however, no actor nodes will be created by the code above, so we need to create them explicitly here.
             if (actorNode == null && actorResult != null) {
@@ -229,9 +230,15 @@ internal fun constructTraceGraph(
             // insert an ActorResultNode between the last actor event and the next event after it
             val lastEvent = actorNode.lastInternalEvent
             val lastEventNext = lastEvent.next
-            val result = results[iThread, actorId]
+            val result = resultProvider[iThread, actorId]
             val resultRepresentation = result?.let { resultRepresentation(result, exceptionStackTraces) }
-            val resultNode = ActorResultNode(iThread, lastEvent, actorNode.callDepth + 1, resultRepresentation)
+            val resultNode = ActorResultNode(
+                iThread = iThread,
+                last = lastEvent,
+                callDepth = actorNode.callDepth + 1,
+                resultRepresentation = resultRepresentation,
+                exceptionNumberIfExceptionResult = if (result is ExceptionResult) exceptionStackTraces[result.throwable]?.number else null
+            )
             actorNode.addInternalEvent(resultNode)
             resultNode.next = lastEventNext
         }
@@ -242,6 +249,43 @@ internal fun constructTraceGraph(
     }
 
     return traceGraphNodesSections.map { it.first() }
+}
+
+/**
+ * Helper class to provider execution results, including a validation function result
+ */
+private class ExecutionResultsProvider(result: ExecutionResult?, failure: LincheckFailure) {
+
+    /**
+     * A map of type Map<(threadId, actorId) -> Result>
+     */
+    private val threadNumberToActorResultMap: Map<Pair<Int, Int>, Result> = when {
+        // If the results of the failure are present, then just collect them to a map.
+        // In that case, we know that the failure reason is not validation function, so we ignore it.
+        (result != null) -> {
+            result.threadsResults
+                .flatMapIndexed { tId, actors -> actors.flatMapIndexed { actorId, result ->
+                    listOf((tId to actorId) to result)
+                }}
+                .toMap()
+        }
+
+        // If validation function is the reason if the failure then the only result we're interested in
+        // is the validation function exception.
+        failure is ValidationFailure -> {
+            mapOf((0 to firstThreadActorCount(failure)) to ExceptionResult.create(failure.exception, false))
+        }
+
+        else -> emptyMap()
+    }
+
+    operator fun get(iThread: Int, actorId: Int): Result? {
+        return threadNumberToActorResultMap[iThread to actorId]
+    }
+
+    private fun firstThreadActorCount(failure: ValidationFailure): Int =
+        failure.scenario.initExecution.size + failure.scenario.parallelExecution[0].size + failure.scenario.postExecution.size
+
 }
 
 /**
@@ -257,16 +301,13 @@ private fun createActorRepresentation(
             val actors = scenario.threads[i].map { it.toString() }.toMutableList()
 
             if (failure is ValidationFailure) {
-                actors += "${failure.validationFunctionName}(): ${failure.exception::class.simpleName}"
+                actors += "${failure.validationFunctionName}()"
             }
 
             actors
         } else scenario.threads[i].map { it.toString() }
     }
 }
-
-private operator fun ExecutionResult?.get(iThread: Int, actorId: Int): Result? =
-    this?.threadsResults?.get(iThread)?.get(actorId)
 
 /**
  * Create a new trace node and add it to the end of the list.
@@ -427,7 +468,11 @@ internal class ActorResultNode(
     iThread: Int,
     last: TraceNode?,
     callDepth: Int,
-    internal val resultRepresentation: String?
+    internal val resultRepresentation: String?,
+    /**
+     * This value presents only if an exception was the actor result.
+     */
+    internal val exceptionNumberIfExceptionResult: Int?
 ) : TraceNode(iThread, last, callDepth) {
     override val lastState: String? = null
     override val lastInternalEvent: TraceNode = this
