@@ -310,9 +310,6 @@ private fun createActorRepresentation(
     }
 }
 
-private operator fun ExecutionResult?.get(iThread: Int, actorId: Int): Result? =
-    this?.threadsResults?.get(iThread)?.get(actorId)
-
 /**
  * Create a new trace node and add it to the end of the list.
  */
