@@ -248,7 +248,7 @@ internal class ModelCheckingStrategy(
                 is ActorResultNode -> {
                     val beforeEventId = -1
                     val representation = node.resultRepresentation.toString()
-                    representations.add("2;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation}")
+                    representations.add("2;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};${node.exceptionNumberIfExceptionResult ?: -1}")
                 }
 
                 else -> {}

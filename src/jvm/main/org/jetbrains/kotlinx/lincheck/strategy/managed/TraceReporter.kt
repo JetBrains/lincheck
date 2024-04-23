@@ -227,7 +227,13 @@ internal fun constructTraceGraph(
             val lastEventNext = lastEvent.next
             val result = results[iThread, actorId]
             val resultRepresentation = result?.let { resultRepresentation(result, exceptionStackTraces) }
-            val resultNode = ActorResultNode(iThread, lastEvent, actorNode.callDepth + 1, resultRepresentation)
+            val resultNode = ActorResultNode(
+                iThread = iThread,
+                last = lastEvent,
+                callDepth = actorNode.callDepth + 1,
+                resultRepresentation = resultRepresentation,
+                exceptionNumberIfExceptionResult = if (result is ExceptionResult) exceptionStackTraces[result.throwable]!!.number else null
+            )
             actorNode.addInternalEvent(resultNode)
             resultNode.next = lastEventNext
         }
@@ -423,7 +429,11 @@ internal class ActorResultNode(
     iThread: Int,
     last: TraceNode?,
     callDepth: Int,
-    internal val resultRepresentation: String?
+    internal val resultRepresentation: String?,
+    /**
+     * This value presents only if an exception was the actor result.
+     */
+    internal val exceptionNumberIfExceptionResult: Int?
 ) : TraceNode(iThread, last, callDepth) {
     override val lastState: String? = null
     override val lastInternalEvent: TraceNode = this
