@@ -257,31 +257,30 @@ internal fun constructTraceGraph(
 private class ExecutionResultsProvider(result: ExecutionResult?, failure: LincheckFailure) {
 
     /**
-     * A map of type Map<threadId -> Map<actorId, Result>>
+     * A map of type Map<(threadId, actorId) -> Result>
      */
-    private val threadNumberToActorResultMap: Map<Int, Map<Int, Result>> = when {
+    private val threadNumberToActorResultMap: Map<Pair<Int, Int>, Result> = when {
         // If the results of the failure are present, then just collect them to a map.
         // In that case, we know that the failure reason is not validation function, so we ignore it.
         (result != null) -> {
             result.threadsResults
-                .mapIndexed { tId, actors ->
-                    tId to actors.mapIndexed { actorId, result ->
-                        actorId to result
-                    }.toMap()
-                }.toMap()
+                .flatMapIndexed { tId, actors -> actors.flatMapIndexed { actorId, result ->
+                    listOf((tId to actorId) to result)
+                }}
+                .toMap()
         }
 
         // If validation function is the reason if the failure then the only result we're interested in
         // is the validation function exception.
         failure is ValidationFailure -> {
-            mapOf(0 to mapOf(firstThreadActorCount(failure) to ExceptionResult.create(failure.exception, false)))
+            mapOf((0 to firstThreadActorCount(failure)) to ExceptionResult.create(failure.exception, false))
         }
 
         else -> emptyMap()
     }
 
     operator fun get(iThread: Int, actorId: Int): Result? {
-        return threadNumberToActorResultMap[iThread]?.get(actorId)
+        return threadNumberToActorResultMap[iThread to actorId]
     }
 
     private fun firstThreadActorCount(failure: ValidationFailure): Int =
