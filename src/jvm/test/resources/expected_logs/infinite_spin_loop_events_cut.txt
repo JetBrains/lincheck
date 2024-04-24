@@ -2,40 +2,44 @@
 | ------------------- |
 | Thread 1 | Thread 2 |
 | ------------------- |
-| one()    |          |
-| one()    |          |
-| one()    |          |
-| one()    |          |
+| one(): 1 |          |
+| one(): 1 |          |
+| one(): 1 |          |
+| one(): 1 |          |
+| two(): 2 |          |
+| ------------------- |
+| two()    | two(): 2 |
+| two()    | two(): 2 |
+| two()    | two(): 2 |
+| two()    | one(): 1 |
+| one()    | one(): 1 |
+| ------------------- |
+| two()    |          |
+| two()    |          |
+| two()    |          |
+| two()    |          |
 | two()    |          |
 | ------------------- |
-| two()    | two()    |
-| two()    | two()    |
-| two()    | two()    |
-| two()    | one()    |
-| one()    | one()    |
-| ------------------- |
-| two()    |          |
-| two()    |          |
-| two()    |          |
-| two()    |          |
-| two()    |          |
-| ------------------- |
+
+---
+All operations above the horizontal line | ----- | happen before those below the line
+---
 
 
 The following interleaving leads to the error:
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                Thread 1                                                |                                             Thread 2                                             |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| one()                                                                                                  |                                                                                                  |
-| one()                                                                                                  |                                                                                                  |
-| one()                                                                                                  |                                                                                                  |
-| one()                                                                                                  |                                                                                                  |
-| two()                                                                                                  |                                                                                                  |
+| one(): 1                                                                                               |                                                                                                  |
+| one(): 1                                                                                               |                                                                                                  |
+| one(): 1                                                                                               |                                                                                                  |
+| one(): 1                                                                                               |                                                                                                  |
+| two(): 2                                                                                               |                                                                                                  |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                                        | two()                                                                                            |
-|                                                                                                        | two()                                                                                            |
-|                                                                                                        | two()                                                                                            |
-|                                                                                                        | one()                                                                                            |
+|                                                                                                        | two(): 2                                                                                         |
+|                                                                                                        | two(): 2                                                                                         |
+|                                                                                                        | two(): 2                                                                                         |
+|                                                                                                        | one(): 1                                                                                         |
 |                                                                                                        |   compareAndSet(false,true): true at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:136) |
 |                                                                                                        |   compareAndSet(false,true): true at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:139) |
 |                                                                                                        |   switch                                                                                         |
@@ -48,7 +52,8 @@ The following interleaving leads to the error:
 |     switch (reason: active lock detected)                                                              |                                                                                                  |
 |                                                                                                        |   set(false) at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:142)                      |
 |                                                                                                        |   set(false) at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:143)                      |
-|                                                                                                        | one()                                                                                            |
+|                                                                                                        |   result: 1                                                                                      |
+|                                                                                                        | one(): 1                                                                                         |
 |     /* The following events repeat infinitely: */                                                      |                                                                                                  |
 |     get(): true at SpinlockEventsCutInfiniteLoopTest.meaninglessActions(SpinlockEventsCutTests.kt:88)  |                                                                                                  |
 |     set(false) at SpinlockEventsCutInfiniteLoopTest.meaninglessActions(SpinlockEventsCutTests.kt:89)   |                                                                                                  |
@@ -60,48 +65,56 @@ Detailed trace:
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                Thread 1                                                |                                             Thread 2                                             |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| one()                                                                                                  |                                                                                                  |
+| one(): 1                                                                                               |                                                                                                  |
 |   compareAndSet(false,true): true at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:136)       |                                                                                                  |
 |   compareAndSet(false,true): true at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:139)       |                                                                                                  |
 |   set(false) at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:142)                            |                                                                                                  |
 |   set(false) at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:143)                            |                                                                                                  |
-| one()                                                                                                  |                                                                                                  |
+|   result: 1                                                                                            |                                                                                                  |
+| one(): 1                                                                                               |                                                                                                  |
 |   compareAndSet(false,true): true at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:136)       |                                                                                                  |
 |   compareAndSet(false,true): true at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:139)       |                                                                                                  |
 |   set(false) at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:142)                            |                                                                                                  |
 |   set(false) at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:143)                            |                                                                                                  |
-| one()                                                                                                  |                                                                                                  |
+|   result: 1                                                                                            |                                                                                                  |
+| one(): 1                                                                                               |                                                                                                  |
 |   compareAndSet(false,true): true at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:136)       |                                                                                                  |
 |   compareAndSet(false,true): true at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:139)       |                                                                                                  |
 |   set(false) at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:142)                            |                                                                                                  |
 |   set(false) at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:143)                            |                                                                                                  |
-| one()                                                                                                  |                                                                                                  |
+|   result: 1                                                                                            |                                                                                                  |
+| one(): 1                                                                                               |                                                                                                  |
 |   compareAndSet(false,true): true at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:136)       |                                                                                                  |
 |   compareAndSet(false,true): true at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:139)       |                                                                                                  |
 |   set(false) at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:142)                            |                                                                                                  |
 |   set(false) at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:143)                            |                                                                                                  |
-| two()                                                                                                  |                                                                                                  |
+|   result: 1                                                                                            |                                                                                                  |
+| two(): 2                                                                                               |                                                                                                  |
 |   compareAndSet(false,true): true at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:150)       |                                                                                                  |
 |   compareAndSet(false,true): true at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:153)       |                                                                                                  |
 |   set(false) at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:156)                            |                                                                                                  |
 |   set(false) at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:157)                            |                                                                                                  |
+|   result: 2                                                                                            |                                                                                                  |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                                        | two()                                                                                            |
+|                                                                                                        | two(): 2                                                                                         |
 |                                                                                                        |   compareAndSet(false,true): true at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:150) |
 |                                                                                                        |   compareAndSet(false,true): true at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:153) |
 |                                                                                                        |   set(false) at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:156)                      |
 |                                                                                                        |   set(false) at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:157)                      |
-|                                                                                                        | two()                                                                                            |
+|                                                                                                        |   result: 2                                                                                      |
+|                                                                                                        | two(): 2                                                                                         |
 |                                                                                                        |   compareAndSet(false,true): true at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:150) |
 |                                                                                                        |   compareAndSet(false,true): true at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:153) |
 |                                                                                                        |   set(false) at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:156)                      |
 |                                                                                                        |   set(false) at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:157)                      |
-|                                                                                                        | two()                                                                                            |
+|                                                                                                        |   result: 2                                                                                      |
+|                                                                                                        | two(): 2                                                                                         |
 |                                                                                                        |   compareAndSet(false,true): true at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:150) |
 |                                                                                                        |   compareAndSet(false,true): true at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:153) |
 |                                                                                                        |   set(false) at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:156)                      |
 |                                                                                                        |   set(false) at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:157)                      |
-|                                                                                                        | one()                                                                                            |
+|                                                                                                        |   result: 2                                                                                      |
+|                                                                                                        | one(): 1                                                                                         |
 |                                                                                                        |   compareAndSet(false,true): true at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:136) |
 |                                                                                                        |   compareAndSet(false,true): true at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:139) |
 |                                                                                                        |   switch                                                                                         |
@@ -114,11 +127,13 @@ Detailed trace:
 |     switch (reason: active lock detected)                                                              |                                                                                                  |
 |                                                                                                        |   set(false) at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:142)                      |
 |                                                                                                        |   set(false) at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:143)                      |
-|                                                                                                        | one()                                                                                            |
+|                                                                                                        |   result: 1                                                                                      |
+|                                                                                                        | one(): 1                                                                                         |
 |                                                                                                        |   compareAndSet(false,true): true at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:136) |
 |                                                                                                        |   compareAndSet(false,true): true at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:139) |
 |                                                                                                        |   set(false) at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:142)                      |
 |                                                                                                        |   set(false) at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:143)                      |
+|                                                                                                        |   result: 1                                                                                      |
 |     /* The following events repeat infinitely: */                                                      |                                                                                                  |
 |     get(): true at SpinlockEventsCutInfiniteLoopTest.meaninglessActions(SpinlockEventsCutTests.kt:88)  |                                                                                                  |
 |     set(false) at SpinlockEventsCutInfiniteLoopTest.meaninglessActions(SpinlockEventsCutTests.kt:89)   |                                                                                                  |

@@ -259,24 +259,21 @@ private class ExecutionResultsProvider(result: ExecutionResult?, failure: Linche
     /**
      * A map of type Map<(threadId, actorId) -> Result>
      */
-    private val threadNumberToActorResultMap: Map<Pair<Int, Int>, Result> = when {
-        // If the results of the failure are present, then just collect them to a map.
-        // In that case, we know that the failure reason is not validation function, so we ignore it.
-        (result != null) -> {
-            result.threadsResults
+    private val threadNumberToActorResultMap: Map<Pair<Int, Int>, Result>
+
+    init {
+        val results = hashMapOf<Pair<Int, Int>, Result>()
+        if (result != null) {
+            results += result.threadsResults
                 .flatMapIndexed { tId, actors -> actors.flatMapIndexed { actorId, result ->
                     listOf((tId to actorId) to result)
                 }}
                 .toMap()
         }
-
-        // If validation function is the reason if the failure then the only result we're interested in
-        // is the validation function exception.
-        failure is ValidationFailure -> {
-            mapOf((0 to firstThreadActorCount(failure)) to ExceptionResult.create(failure.exception, false))
+        if (failure is ValidationFailure) {
+            results[0 to firstThreadActorCount(failure)] = ExceptionResult.create(failure.exception, false)
         }
-
-        else -> emptyMap()
+        threadNumberToActorResultMap = results
     }
 
     operator fun get(iThread: Int, actorId: Int): Result? {

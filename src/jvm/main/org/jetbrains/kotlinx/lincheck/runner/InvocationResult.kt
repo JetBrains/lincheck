@@ -27,20 +27,22 @@ class CompletedInvocationResult(
 /**
  * Indicates that the invocation has run into deadlock or livelock found by [ManagedStrategy].
  */
-data object ManagedDeadlockInvocationResult : InvocationResult()
+class ManagedDeadlockInvocationResult(val results: ExecutionResult) : InvocationResult()
 
 /**
  * The invocation was not completed after timeout and runner halted the execution.
  */
 class RunnerTimeoutInvocationResult(
     val threadDump: Map<Thread, Array<StackTraceElement>>,
+    val results: ExecutionResult
 ): InvocationResult()
 
 /**
  * The invocation has completed with an unexpected exception.
  */
 class UnexpectedExceptionInvocationResult(
-    val exception: Throwable
+    val exception: Throwable,
+    val results: ExecutionResult
 ) : InvocationResult()
 
 /**
@@ -50,7 +52,8 @@ class UnexpectedExceptionInvocationResult(
  */
 class ValidationFailureInvocationResult(
     val scenario: ExecutionScenario,
-    val exception: Throwable
+    val exception: Throwable,
+    val results: ExecutionResult
 ) : InvocationResult()
 
 /**
@@ -58,10 +61,11 @@ class ValidationFailureInvocationResult(
  * but an invocation that hangs has been found.
  */
 class ObstructionFreedomViolationInvocationResult(
-    val reason: String
+    val reason: String,
+    val results: ExecutionResult
 ) : InvocationResult()
 
 /**
  * Indicates that spin-cycle has been found for the first time and replay of current interleaving is required.
  */
-object SpinCycleFoundAndReplayRequired: InvocationResult()
+data object SpinCycleFoundAndReplayRequired: InvocationResult()
