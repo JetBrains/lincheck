@@ -186,32 +186,25 @@ internal class AtomicFieldUpdaterMethodTransformer(
             visitMethodInsn(opcode, owner, name, desc, itf)
             return
         }
-        when (name) {
-            // TODO: getAndSet should be handled separately
-            "set", "lazySet", "getAndSet" -> {
-                invokeIfInTestingCode(
-                    original = {
-                        visitMethodInsn(opcode, owner, name, desc, itf)
-                    },
-                    code = {
+        invokeIfInTestingCode(
+            original = {
+                visitMethodInsn(opcode, owner, name, desc, itf)
+            },
+            code = {
+                when (name) {
+                    // TODO: getAndSet should be handled separately
+                    "set", "lazySet", "getAndSet" -> {
                         processSetFieldMethod(name, opcode, owner, desc, itf)
                     }
-                )
-            }
-            "compareAndSet", "weakCompareAndSet" -> {
-                invokeIfInTestingCode(
-                    original = {
-                        visitMethodInsn(opcode, owner, name, desc, itf)
-                    },
-                    code = {
+                    "compareAndSet", "weakCompareAndSet" -> {
                         processCompareAndSetFieldMethod(name, opcode, owner, desc, itf)
                     }
-                )
+                    else -> {
+                        visitMethodInsn(opcode, owner, name, desc, itf)
+                    }
+                }
             }
-            else -> {
-                visitMethodInsn(opcode, owner, name, desc, itf)
-            }
-        }
+        )
     }
 
 }
