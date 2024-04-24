@@ -15,31 +15,29 @@ import org.jetbrains.kotlinx.lincheck.CTestConfiguration
 import org.jetbrains.kotlinx.lincheck.CTestStructure
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.Mutation
+import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.MutationPolicy
 import java.util.*
 
 /**
  * Replaces some actor with random in thread with id `input.mutationThread` in parallel execution.
  */
 class ReplaceActorInParallelMutation(
-    random: Random,
-    private val testStructure: CTestStructure
-) : Mutation(random) {
+    policy: MutationPolicy
+) : Mutation(policy) {
     override fun mutate(scenario: ExecutionScenario, mutationThreadId: Int): ExecutionScenario {
+        val random = policy.random
         val newParallelExecution = mutableListOf<MutableList<Actor>>()
         scenario.parallelExecution.map {
             newParallelExecution.add(it.toMutableList())
         }
 
-        val generators = testStructure.actorGenerators.filter { !it.useOnce }
-        var generatorIndex = random.nextInt(generators.size)
-
-        var actor = generators[generatorIndex].generate(mutationThreadId + 1, random)
         val replaceAtIndex = random.nextInt(newParallelExecution[mutationThreadId].size)
+        var actor: Actor
 
-        while (actor.method.name == newParallelExecution[mutationThreadId][replaceAtIndex].method.name) {
-            generatorIndex = random.nextInt(generators.size)
-            actor = generators[generatorIndex].generate(mutationThreadId + 1, random)
+        do {
+            actor = policy.getActorGenerator { !it.useOnce }.generate(mutationThreadId + 1, random)
         }
+        while (actor.method.name == newParallelExecution[mutationThreadId][replaceAtIndex].method.name)
 
         println("Mutation: Replace, " +
                 "threadId=$mutationThreadId, " +

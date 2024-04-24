@@ -20,7 +20,7 @@ import java.util.Random
  * using [parameter generators][ParameterGenerator].
  */
 class ActorGenerator(
-    private val method: Method,
+    val method: Method,
     private val parameterGenerators: List<ParameterGenerator<*>>,
     val useOnce: Boolean,
     cancellableOnSuspension: Boolean,

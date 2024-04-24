@@ -12,14 +12,15 @@ package org.jetbrains.kotlinx.lincheck.fuzzing.mutation.mutations
 
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.Mutation
+import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.MutationPolicy
 import java.util.*
 
 /**
  * Removes random actor from post execution part of scenario.
  */
-class RemoveActorFromPostMutation(random: Random) : Mutation(random) {
+class RemoveActorFromPostMutation(policy: MutationPolicy) : Mutation(policy) {
     override fun mutate(scenario: ExecutionScenario, mutationThreadId: Int): ExecutionScenario {
-        val removedIndex = random.nextInt(scenario.postExecution.size)
+        val removedIndex = policy.random.nextInt(scenario.postExecution.size)
         println("Mutation: RemovePost, index=$removedIndex")
 
         return ExecutionScenario(

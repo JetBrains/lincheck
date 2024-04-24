@@ -70,9 +70,10 @@ class Input(
     private var mutationThread: Int = -1 // set to some appropriate thread id in `mutate()` method
 
     fun mutate(mutator: Mutator, mutationsCount: Int, random: Random): Input {
-        println("Perform mutations: $mutationsCount")
-
+        mutator.refreshPolicy()
         var mutatedScenario = scenario
+
+        println("Perform mutations: $mutationsCount")
         println("Before (fav=${this.favorite}): \n" + mutatedScenario.toString())
 
         repeat(mutationsCount) {

@@ -16,6 +16,7 @@ import org.jetbrains.kotlinx.lincheck.CTestStructure
 import org.jetbrains.kotlinx.lincheck.execution.ActorGenerator
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.Mutation
+import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.MutationPolicy
 import java.util.*
 import java.util.stream.Collectors
 import kotlin.collections.ArrayList
@@ -25,10 +26,11 @@ import kotlin.collections.ArrayList
  * Replaces random actor in init execution part of scenario.
  */
 class ReplaceActorInInitMutation(
-    random: Random,
+    policy: MutationPolicy,
     private val testStructure: CTestStructure
-) : Mutation(random) {
+) : Mutation(policy) {
     override fun mutate(scenario: ExecutionScenario, mutationThreadId: Int): ExecutionScenario {
+        val random = policy.random
         val newInitExecution = mutableListOf<Actor>()
 
         val generators = testStructure.actorGenerators.filter { !it.useOnce && !it.isSuspendable }

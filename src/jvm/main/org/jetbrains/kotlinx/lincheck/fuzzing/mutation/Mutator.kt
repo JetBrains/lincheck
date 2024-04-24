@@ -24,30 +24,30 @@ class Mutator(
     testConfiguration: CTestConfiguration
 ) {
     private val random = fuzzer.random
-//    private val generatorsUsage: MutableMap<ActorGenerator, Int> = LinkedHashMap<ActorGenerator, Int>().apply {
-//        testStructure.actorGenerators.forEach {
-//            put(it, 0)
-//        }
-//    }
+    private val policy = MutationPolicy(fuzzer, testStructure)
     private val mutations = listOf(
-        // AddActorToParallelMutation(random, testStructure, testConfiguration),
-        // RemoveActorFromParallelMutation(random),
-        ReplaceActorInParallelMutation(random, testStructure),
+        // AddActorToParallelMutation(policy, testStructure, testConfiguration),
+        // RemoveActorFromParallelMutation(policy),
+        ReplaceActorInParallelMutation(policy),
 
-        CrossProductMutation(random, fuzzer.savedInputs),
-        RandomInputMutation(random, fuzzer.defaultExecutionGenerator),
+        CrossProductMutation(policy, fuzzer.savedInputs),
+        RandomInputMutation(policy, fuzzer.defaultExecutionGenerator),
 
-        // AddActorToInitMutation(random, testStructure, testConfiguration),
-        // AddActorToPostMutation(random, testStructure, testConfiguration),
-        ReplaceActorInInitMutation(random, testStructure),
-        ReplaceActorInPostMutation(random, testStructure, testConfiguration),
-        // RemoveActorFromInitMutation(random),
-        // RemoveActorFromPostMutation(random),
+        // AddActorToInitMutation(policy, testStructure, testConfiguration),
+        // AddActorToPostMutation(policy, testStructure, testConfiguration),
+        ReplaceActorInInitMutation(policy, testStructure),
+        ReplaceActorInPostMutation(policy, testStructure, testConfiguration),
+        // RemoveActorFromInitMutation(policy),
+        // RemoveActorFromPostMutation(policy),
     )
 
 //    fun getAvailableMutations(scenario: ExecutionScenario, mutationThread: Int): List<Mutation> {
 //        return getAvailableMutations(mutations, scenario, mutationThread)
 //    }
+
+    fun refreshPolicy() = policy.refresh()
+
+    fun updatePolicy(reward: Double) = policy.update(reward)
 
     fun getRandomMutation(scenario: ExecutionScenario, mutationThread: Int, mutationNumber: Int): Mutation {
         val p = random.nextDouble()

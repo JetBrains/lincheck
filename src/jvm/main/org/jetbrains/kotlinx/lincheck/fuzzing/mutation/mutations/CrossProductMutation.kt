@@ -13,13 +13,15 @@ package org.jetbrains.kotlinx.lincheck.fuzzing.mutation.mutations
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.fuzzing.input.Input
 import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.Mutation
+import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.MutationPolicy
 import java.util.*
 
 class CrossProductMutation(
-    random: Random,
+    policy: MutationPolicy,
     private val savedInputs: List<Input>
-) : Mutation(random) {
+) : Mutation(policy) {
     override fun mutate(scenario: ExecutionScenario, mutationThreadId: Int): ExecutionScenario {
+        val random = policy.random
         val crossInputId  = random.nextInt(savedInputs.size)
         val crossInput    = savedInputs[crossInputId]
         var crossThreadId = random.nextInt(crossInput.scenario.parallelExecution.size)

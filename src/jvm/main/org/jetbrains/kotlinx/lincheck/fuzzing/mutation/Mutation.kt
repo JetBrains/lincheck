@@ -14,7 +14,7 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import java.util.Random
 
 abstract class Mutation(
-    protected val random: Random
+    protected val policy: MutationPolicy
 ) {
     abstract fun mutate(scenario: ExecutionScenario, mutationThreadId: Int): ExecutionScenario
     open fun isApplicable(scenario: ExecutionScenario, mutationThreadId: Int): Boolean = true

@@ -16,6 +16,7 @@ import org.jetbrains.kotlinx.lincheck.CTestStructure
 import org.jetbrains.kotlinx.lincheck.execution.ActorGenerator
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.Mutation
+import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.MutationPolicy
 import java.util.*
 
 
@@ -23,11 +24,12 @@ import java.util.*
  * Replaces random actor in post execution part of scenario.
  */
 class ReplaceActorInPostMutation(
-    random: Random,
+    policy: MutationPolicy,
     private val testStructure: CTestStructure,
     private val testConfiguration: CTestConfiguration
-) : Mutation(random) {
+) : Mutation(policy) {
     override fun mutate(scenario: ExecutionScenario, mutationThreadId: Int): ExecutionScenario {
+        val random = policy.random
         val newPostExecution = mutableListOf<Actor>()
 
         val generators = testStructure.operationGroups

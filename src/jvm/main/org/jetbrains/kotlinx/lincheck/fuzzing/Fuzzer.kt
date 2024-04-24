@@ -137,6 +137,7 @@ class Fuzzer(
         var traceCoverageUpdated = false
         var maxCoverageUpdated = false
         var maxTraceCoverageUpdated = false
+        var traceCountAverageIncreasedSufficiently = false
 
         traces.addAll(traceCoverage)
         currentInput!!.coverage = coverage
@@ -157,17 +158,17 @@ class Fuzzer(
         }
 
         coverageUpdated = totalCoverage.merge(coverage)
-        traceCoverageUpdated =
-            totalTraceCoverage.merge(currentInput!!.traceCoverage) ||
-            (traceCountAddedDiff > 0.0 && traceCountAddedDiff / averageTraceDiff + random.nextDouble() > 0.7)
+        traceCoverageUpdated = totalTraceCoverage.merge(currentInput!!.traceCoverage)
         maxCoverageUpdated = maxCoveredBranches < coverage.coveredBranchesCount()
         maxTraceCoverageUpdated = maxCoveredTrace < currentInput!!.traceCoverage.coveredBranchesCount()
+        traceCountAverageIncreasedSufficiently = (traceCountAddedDiff > 0.0 && traceCountAddedDiff / averageTraceDiff + random.nextDouble() > 0.7)
 
         val newInputFound: Boolean =
             coverageUpdated ||
             traceCoverageUpdated ||
             maxCoverageUpdated ||
-            maxTraceCoverageUpdated
+            maxTraceCoverageUpdated ||
+            traceCountAverageIncreasedSufficiently
 
         if (newInputFound) {
             // save input if it uncovers new program regions, or it maximizes single run coverage
@@ -176,11 +177,21 @@ class Fuzzer(
             maxCoveredBranches = max(maxCoveredBranches, coverage.coveredBranchesCount())
             maxCoveredTrace = max(maxCoveredTrace, currentInput!!.traceCoverage.coveredBranchesCount())
 
-            savedInputs.add(currentInput!!)
+            mutator.updatePolicy(
+                reward =
+                    0.4 * (if (coverageUpdated) 1 else 0) +
+                    0.4 * (if (traceCoverageUpdated) 1 else 0) +
+                    0.1 * (if (traceCountAverageIncreasedSufficiently) 1 else 0) +
+                    0.05 * (if (maxCoverageUpdated) 1 else 0) +
+                    0.05 * (if (maxTraceCoverageUpdated) 1 else 0)
+            )
+
+            if (failure == null) {
+                savedInputs.add(currentInput!!)
+            }
         }
 
 
-        // TODO: updated stats
         stats.totalFoundCoverage.add(totalCoverage.coveredBranchesCount())
         stats.iterationFoundCoverage.add(coverage.coveredBranchesCount())
         stats.maxIterationFoundCoverage.add(maxCoveredBranches)
@@ -204,7 +215,7 @@ class Fuzzer(
             "total-trace = ${totalTraceCoverage.coveredBranchesCount()} \n" +
             "traces (avg/new) = ${traces.size} ($averageTraceDiff / ${currentInput!!.totalNewTraces}) \n" +
             "============ \n" +
-            "mask (c|t|mc|mt): ${if (coverageUpdated) 1 else 0}${if (traceCoverageUpdated) 1 else 0}${if (maxCoverageUpdated) 1 else 0}${if (maxTraceCoverageUpdated) 1 else 0} \n" +
+            "mask (c|t|mc|mt|ta): ${if (coverageUpdated) 1 else 0}${if (traceCoverageUpdated) 1 else 0}${if (maxCoverageUpdated) 1 else 0}${if (maxTraceCoverageUpdated) 1 else 0}${if (traceCountAverageIncreasedSufficiently) 1 else 0} \n" +
             "cycles: $totalCycles \n" +
             "sizes [saved (fav)/fails/seed] = ${savedInputs.size} (${savedInputs.count { it.favorite }}) / ${failures.size} / ${seedInputs.size} \n"
         )
@@ -274,12 +285,15 @@ class Fuzzer(
         for (key in coveredKeys) {
             if (tempCoverage.isCovered(key)) continue
 
-            val bestInput: Input = savedInputs.filter { it.coverage.isCovered(key) }.maxByOrNull { it.coverageFitness }
-                ?: throw RuntimeException("Key $key is not covered in any saved input but was found in total coverage")
+            val bestInput: Input? = savedInputs.filter { it.coverage.isCovered(key) }.maxByOrNull { it.coverageFitness }
+                //?: throw RuntimeException("Key $key is not covered in any saved input but was found in total coverage")
 
-            tempCoverage.merge(bestInput.coverage)
-            bestInput.favorite = true
-            newInputsQueue.add(bestInput)
+            if (bestInput != null) {
+                // bestInput is not a failed input
+                tempCoverage.merge(bestInput.coverage)
+                bestInput.favorite = true
+                newInputsQueue.add(bestInput)
+            }
         }
 
         // attempt to find the subset of inputs that produce the same total happens-before pairs coverage
@@ -288,12 +302,16 @@ class Fuzzer(
         for (key in coveredTraceKeys) {
             if (tempTraceCoverage.isCovered(key)) continue
 
-            val bestInput: Input = savedInputs.filter { it.traceCoverage.isCovered(key) }.maxByOrNull { it.traceFitness }
-                ?: throw RuntimeException("Key $key is not covered in any saved input but was found in total trace coverage")
+            val bestInput: Input? =
+                savedInputs.filter { it.traceCoverage.isCovered(key) }.maxByOrNull { it.traceFitness }
+            //?: throw RuntimeException("Key $key is not covered in any saved input but was found in total trace coverage")
 
-            tempTraceCoverage.merge(bestInput.traceCoverage)
-            bestInput.favorite = true
-            if (!newInputsQueue.contains(bestInput)) newInputsQueue.add(bestInput)
+            if (bestInput != null) {
+                // bestInput is not a failed input
+                tempTraceCoverage.merge(bestInput.traceCoverage)
+                bestInput.favorite = true
+                if (!newInputsQueue.contains(bestInput)) newInputsQueue.add(bestInput)
+            }
         }
 
         savedInputs = newInputsQueue

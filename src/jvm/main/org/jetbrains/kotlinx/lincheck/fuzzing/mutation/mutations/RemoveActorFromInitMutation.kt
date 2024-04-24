@@ -12,14 +12,15 @@ package org.jetbrains.kotlinx.lincheck.fuzzing.mutation.mutations
 
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.Mutation
+import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.MutationPolicy
 import java.util.*
 
 /**
  * Removes random actor from init execution part of scenario.
  */
-class RemoveActorFromInitMutation(random: Random) : Mutation(random) {
+class RemoveActorFromInitMutation(policy: MutationPolicy) : Mutation(policy) {
     override fun mutate(scenario: ExecutionScenario, mutationThreadId: Int): ExecutionScenario {
-        val removedIndex = random.nextInt(scenario.initExecution.size)
+        val removedIndex = policy.random.nextInt(scenario.initExecution.size)
         println("Mutation: RemoveInit, index=$removedIndex")
 
         return ExecutionScenario(

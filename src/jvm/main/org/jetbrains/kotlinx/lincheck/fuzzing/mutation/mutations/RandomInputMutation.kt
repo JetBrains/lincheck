@@ -13,12 +13,13 @@ package org.jetbrains.kotlinx.lincheck.fuzzing.mutation.mutations
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.Mutation
+import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.MutationPolicy
 import java.util.*
 
 class RandomInputMutation(
-    random: Random,
+    policy: MutationPolicy,
     private val generator: ExecutionGenerator
-) : Mutation(random) {
+) : Mutation(policy) {
     override fun mutate(scenario: ExecutionScenario, mutationThreadId: Int): ExecutionScenario {
         println("Mutation: Random")
         return generator.nextExecution()
