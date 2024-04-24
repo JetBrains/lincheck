@@ -117,7 +117,7 @@ internal class SharedVariableAccessMethodTransformer(
                     code = {
                         val valueType = getType(desc)
                         val valueLocal = newLocal(valueType) // we cannot use DUP as long/double require DUP2
-                        storeTopToLocal(valueLocal)
+                        copyLocal(valueLocal)
                         // STACK: value: Object
                         push(owner)
                         push(fieldName)
@@ -254,7 +254,7 @@ internal class SharedVariableAccessMethodTransformer(
     private fun GeneratorAdapter.invokeAfterRead(valueType: Type) {
         // STACK: value
         val resultLocal = newLocal(valueType)
-        storeTopToLocal(resultLocal)
+        copyLocal(resultLocal)
         loadLocal(resultLocal)
         // STACK: value, value
         box(valueType)

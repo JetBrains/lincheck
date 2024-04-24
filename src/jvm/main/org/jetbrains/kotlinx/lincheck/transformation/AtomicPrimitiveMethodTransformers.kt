@@ -28,27 +28,16 @@ internal open class AtomicPrimitiveMethodTransformer(
      * Process methods like *.set(receiver, value)
      */
     protected fun processSetFieldMethod(name: String, opcode: Int, owner: String, desc: String, itf: Boolean) = adapter.run {
+        // STACK: receiver, value
         val argumentTypes = Type.getArgumentTypes(desc)
-        val argumentType = argumentTypes.last()
-        val valueLocal = newLocal(OBJECT_TYPE)
-        val receiverLocal = newLocal(OBJECT_TYPE)
-        // STACK: value, receiver
-        box(argumentType)
-        storeLocal(valueLocal)
-        // STACK: boxedValue, receiver
-        storeLocal(receiverLocal)
-        // STACK: <empty>
-        loadLocal(receiverLocal)
-        // STACK: receiver
-        loadLocal(valueLocal)
-        // STACK: boxedValue, receiver
-        unbox(argumentType)
-        // STACK: value, receiver
+        val argumentLocals = copyLocals(
+            valueTypes = argumentTypes,
+            localTypes = arrayOf(OBJECT_TYPE, OBJECT_TYPE),
+        )
+        // STACK: receiver, value
         visitMethodInsn(opcode, owner, name, desc, itf)
         // STACK: <empty>
-        loadLocal(receiverLocal)
-        // STACK: receiver
-        loadLocal(valueLocal)
+        loadLocals(argumentLocals)
         // STACK: boxedValue, receiver
         invokeStatic(Injections::onWriteToObjectFieldOrArrayCell)
     }

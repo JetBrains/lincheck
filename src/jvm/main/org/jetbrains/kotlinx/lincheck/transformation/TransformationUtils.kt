@@ -20,29 +20,15 @@ import java.util.concurrent.*
 import kotlin.reflect.*
 import kotlin.reflect.jvm.*
 
+
 /**
- * This method is responsible for storing arguments of the method.
+ * Copies the top value of the stack to a local variable and reloads it onto the stack.
  *
- * Before execution:
- * STACK: param_1 param_2 ... param_n
- *
- * After execution:
- * STACK: (empty)
- *
- * @param methodDescriptor String representation of method's descriptor
- * @return Array of local variables containing arguments.
+ * @param local Index of the local variable.
  */
-internal fun GeneratorAdapter.storeArguments(methodDescriptor: String): IntArray {
-    val argumentTypes = getArgumentTypes(methodDescriptor)
-    val locals = IntArray(argumentTypes.size)
-
-    // Store all arguments in reverse order
-    for (i in argumentTypes.indices.reversed()) {
-        locals[i] = newLocal(argumentTypes[i])
-        storeLocal(locals[i], argumentTypes[i])
-    }
-
-    return locals
+internal fun GeneratorAdapter.copyLocal(local: Int) {
+    storeLocal(local)
+    loadLocal(local)
 }
 
 /**
@@ -51,19 +37,113 @@ internal fun GeneratorAdapter.storeArguments(methodDescriptor: String): IntArray
  * @param locals Array of local variables.
  */
 internal fun GeneratorAdapter.loadLocals(locals: IntArray) {
-    for (local in locals)
+    for (local in locals) {
         loadLocal(local)
+    }
 }
 
 /**
- * Stores the top value of the stack to a local variable and reloads it onto the stack.
+ * Stores N top values from the stack in the local variables.
  *
- * @param local Index of the local variable.
+ * Before execution:
+ * STACK: value_1, value_2, ... value_n
+ *
+ * After execution:
+ * STACK: (empty)
+ *
+ * @param valueTypes List of types of values to be stored.
+ * @param localTypes If passed, denotes the desired types of local variables.
+ *   The type of the local value can be the same as the type of the actual value on the stack,
+ *   or it can be its boxed variant.
+ * @return Array of local variables containing arguments.
  */
-internal fun GeneratorAdapter.storeTopToLocal(local: Int) {
-    storeLocal(local)
-    loadLocal(local)
+internal fun GeneratorAdapter.storeLocals(
+    valueTypes: Array<Type>,
+    localTypes: Array<Type> = valueTypes
+): IntArray {
+    val locals = IntArray(valueTypes.size)
+    // Store values in reverse order
+    for (i in valueTypes.indices.reversed()) {
+        val valueType = valueTypes[i]
+        val localType = localTypes[i]
+        locals[i] = newLocal(localType)
+        if (valueType != localType) {
+            check(localType.requiresBoxing)
+            box(valueType)
+        }
+        storeLocal(locals[i], localType)
+    }
+    return locals
 }
+
+/**
+ * Copies N top values from the stack in the local variables.
+ *
+ * Before execution:
+ * STACK: param_1, param_2, ... param_n
+ *
+ * After execution:
+ * STACK: param_1, param_2, ... param_n
+ *
+ * @param valueTypes List of types of values to be stored.
+ * @param localTypes If passed, denotes the desired types of local variables.
+ *   The type of the local value can be the same as the type of the actual value on the stack,
+ *   or it can be its boxed variant.
+ * @return Array of local variables containing arguments.
+ */
+internal fun GeneratorAdapter.copyLocals(
+    valueTypes: Array<Type>,
+    localTypes: Array<Type> = valueTypes
+): IntArray {
+    val locals = storeLocals(valueTypes, localTypes)
+    locals.forEachIndexed { i, local ->
+        val valueType = valueTypes[i]
+        val localType = localTypes[i]
+        loadLocal(local)
+        if (valueType != localType) {
+            check(localType.requiresBoxing)
+            unbox(valueType)
+        }
+    }
+    return locals
+}
+
+/**
+ * Stores arguments of the method in the local variables.
+ *
+ * Before execution:
+ * STACK: param_1, param_2, ... param_n
+ *
+ * After execution:
+ * STACK: (empty)
+ *
+ * @param methodDescriptor String representation of the method's descriptor.
+ * @return Array of local variables containing arguments.
+ */
+internal fun GeneratorAdapter.storeArguments(methodDescriptor: String): IntArray {
+    val argumentTypes = getArgumentTypes(methodDescriptor)
+    return storeLocals(argumentTypes)
+}
+
+/**
+ * Copies arguments of the method in the local variables.
+ *
+ * Before execution:
+ * STACK: param_1, param_2, ... param_n
+ *
+ * After execution:
+ * STACK: param_1, param_2, ... param_n
+ *
+ * @param methodDescriptor String representation of the method's descriptor.
+ * @return Array of local variables containing arguments.
+ */
+internal fun GeneratorAdapter.copyArguments(methodDescriptor: String): IntArray {
+    val argumentTypes = getArgumentTypes(methodDescriptor)
+    return copyLocals(argumentTypes)
+}
+
+private val Type.requiresBoxing: Boolean get() =
+    (sort == OBJECT || sort == ARRAY)
 
 /**
  * Adds invocation of [beforeEvent] method.
