@@ -13,8 +13,8 @@ package org.jetbrains.kotlinx.lincheck.transformation
 import org.objectweb.asm.Type
 import org.objectweb.asm.Type.INT_TYPE
 import org.objectweb.asm.Type.LONG_TYPE
-import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
+import org.objectweb.asm.commons.GeneratorAdapter
 import sun.nio.ch.lincheck.Injections
 
 internal open class AtomicPrimitiveMethodTransformer(
@@ -37,8 +37,8 @@ internal open class AtomicPrimitiveMethodTransformer(
         // STACK: receiver, value
         visitMethodInsn(opcode, owner, name, desc, itf)
         // STACK: <empty>
-        loadLocals(argumentLocals)
-        // STACK: boxedValue, receiver
+        loadLocals(argumentLocals, argumentTypes)
+        // STACK: receiver, value
         invokeStatic(Injections::onWriteToObjectFieldOrArrayCell)
     }
 
@@ -46,182 +46,104 @@ internal open class AtomicPrimitiveMethodTransformer(
      * Process methods like *.set(receiver, index, value)
      */
     protected fun processSetArrayElementMethod(name: String, opcode: Int, owner: String, desc: String, itf: Boolean) = adapter.run {
+        // STACK: receiver, index, value
         val argumentTypes = Type.getArgumentTypes(desc)
-        val argumentType = argumentTypes.last()
-        val valueLocal = newLocal(OBJECT_TYPE)
-        val indexLocal = newLocal(INT_TYPE)
-        val receiverLocal = newLocal(OBJECT_TYPE)
-        // STACK: value, index, receiver
-        box(argumentType)
-        // STACK: boxedValue, index, receiver
-        storeLocal(valueLocal)
-        // STACK: index, receiver
-        storeLocal(indexLocal)
-        // STACK: receiver
-        storeLocal(receiverLocal)
-        // STACK: <empty>
-        loadLocal(receiverLocal)
-        // STACK: receiver
-        loadLocal(indexLocal)
-        // STACK: index, receiver
-        loadLocal(valueLocal)
-        // STACK: boxedValue, index, receiver
-        unbox(argumentType)
-        // STACK: value, index, receiver
+        val argumentLocals = copyLocals(
+            valueTypes = argumentTypes,
+            localTypes = arrayOf(OBJECT_TYPE, INT_TYPE, OBJECT_TYPE),
+        )
+        // STACK: receiver, index, value
         visitMethodInsn(opcode, owner, name, desc, itf)
         // STACK: <empty>
-        loadLocal(receiverLocal)
-        // STACK: receiver
-        loadLocal(valueLocal)
-        // STACK: boxedValue, receiver
+        // loadLocals(argumentLocals, argumentTypes)
+        loadLocal(argumentLocals[0])
+        loadLocal(argumentLocals[2])
+        // STACK: receiver, value
         invokeStatic(Injections::onWriteToObjectFieldOrArrayCell)
     }
 
     /**
-     * Process methods like *.compareAndSet(receiver, expected, desired)
+     * Process methods like *.compareAndSet(receiver, expectedValue, desiredValue)
      */
     protected fun processCompareAndSetFieldMethod(name: String, opcode: Int, owner: String, desc: String, itf: Boolean) = adapter.run {
+        // STACK: receiver, expectedValue, newValue
         val argumentTypes = Type.getArgumentTypes(desc)
-        val nextType = argumentTypes.last()
-        val nextValueLocal = newLocal(OBJECT_TYPE)
-        val currentType = argumentTypes[argumentTypes.lastIndex - 1]
-        val currenValueLocal = newLocal(OBJECT_TYPE)
-        val receiverLocal = newLocal(OBJECT_TYPE)
-        // STACK: nextValue, currentValue, receiver
-        box(nextType)
-        // STACK: boxedNextValue, currentValue, receiver
-        storeLocal(nextValueLocal)
-        // STACK: currentValue, receiver
-        box(currentType)
-        // STACK: boxedCurrentValue, receiver
-        storeLocal(currenValueLocal)
-        // STACK: receiver
-        storeLocal(receiverLocal)
-        // STACK: <empty>
-        loadLocal(receiverLocal)
-        // STACK: receiver
-        loadLocal(currenValueLocal)
-        // STACK: boxedCurrentValue, receiver
-        unbox(currentType)
-        // STACK: currentValue, receiver
-        loadLocal(nextValueLocal)
-        // STACK: boxedNextValue, currentValue, receiver
-        unbox(nextType)
-        // STACK: nextValue, currentValue, receiver
+        val argumentLocals = copyLocals(
+            valueTypes = argumentTypes,
+            localTypes = arrayOf(OBJECT_TYPE, OBJECT_TYPE, OBJECT_TYPE),
+        )
+        // STACK: receiver, expectedValue, newValue
         visitMethodInsn(opcode, owner, name, desc, itf)
-        loadLocal(receiverLocal)
-        // STACK: receiver
-        loadLocal(nextValueLocal)
-        // STACK: boxedNextValue, receiver
+        // STACK: cas-result
+        // loadLocals(argumentLocals, argumentTypes)
+        loadLocal(argumentLocals[0])
+        loadLocal(argumentLocals[2])
+        // STACK: cas-result, receiver, newValue
         invokeStatic(Injections::onWriteToObjectFieldOrArrayCell)
+        // STACK: cas-result
     }
 
     /**
-     * Process methods like *.compareAndSet(receiver, index, expected, desired)
+     * Process methods like *.compareAndSet(receiver, index, expectedValue, desiredValue)
      */
     protected fun processCompareAndSetArrayElementMethod(name: String, opcode: Int, owner: String, desc: String, itf: Boolean) = adapter.run {
+        // STACK: receiver, index, expectedValue, newValue
         val argumentTypes = Type.getArgumentTypes(desc)
-        val nextType = argumentTypes.last()
-        val nextValueLocal = newLocal(OBJECT_TYPE)
-        val currentType = argumentTypes[argumentTypes.lastIndex - 1]
-        val currenValueLocal = newLocal(OBJECT_TYPE)
-        val indexLocal = newLocal(INT_TYPE)
-        val receiverLocal = newLocal(OBJECT_TYPE)
-        // STACK: nextValue, currentValue, index, receiver
-        box(nextType)
-        // STACK: boxedNextValue, currentValue, index, receiver
-        storeLocal(nextValueLocal)
-        // STACK: currentValue, index, receiver
-        box(currentType)
-        // STACK: boxedCurrentValue, index, receiver
-        storeLocal(currenValueLocal)
-        // STACK: index, receiver
-        storeLocal(indexLocal)
-        // STACK: receiver
-        storeLocal(receiverLocal)
-        // STACK: <empty>
-        loadLocal(receiverLocal)
-        // STACK: receiver
-        loadLocal(indexLocal)
-        // STACK: index, receiver
-        loadLocal(currenValueLocal)
-        // STACK: boxedCurrentValue, index, receiver
-        unbox(currentType)
-        // STACK: currentValue, index, receiver
-        loadLocal(nextValueLocal)
-        // STACK: boxedNextValue, currentValue, index, receiver
-        unbox(nextType)
-        // STACK: nextValue, currentValue, index, receiver
+        val argumentLocals = copyLocals(
+            valueTypes = argumentTypes,
+            localTypes = arrayOf(OBJECT_TYPE, INT_TYPE, OBJECT_TYPE, OBJECT_TYPE),
+        )
+        // STACK: receiver, index, expectedValue, newValue
         visitMethodInsn(opcode, owner, name, desc, itf)
-        // STACK: cas-result
-        loadLocal(receiverLocal)
-        // STACK: receiver, cas-result
-        loadLocal(nextValueLocal)
-        // STACK: boxedNextValue, receiver, cas-result
+        // STACK: casResult
+        // loadLocals(argumentLocals, argumentTypes)
+        loadLocal(argumentLocals[0])
+        loadLocal(argumentLocals[3])
+        // STACK: cas-result, receiver, newValue
         invokeStatic(Injections::onWriteToObjectFieldOrArrayCell)
+        // STACK: cas-result
     }
 
     /**
-     * Process methods like *.compareAndSet(receiver, offset, expected, desired)
+     * Process methods like *.compareAndSet(receiver, offset, expectedValue, newValue)
      */
     protected fun processCompareAndSetByOffsetMethod(name: String, opcode: Int, owner: String, desc: String, itf: Boolean) = adapter.run {
-        val nextValueLocal = newLocal(OBJECT_TYPE)
-        val currenValueLocal = newLocal(OBJECT_TYPE)
-        val offsetLocal = newLocal(LONG_TYPE)
-        val receiverLocal = newLocal(OBJECT_TYPE)
-        // STACK: nextValue, currentValue, offset, receiver
-        storeLocal(nextValueLocal)
-        // STACK: currentValue, offset, receiver
-        storeLocal(currenValueLocal)
-        // STACK: offset, receiver
-        storeLocal(offsetLocal)
-        // STACK: receiver
-        storeLocal(receiverLocal)
-        // STACK: <empty>
-        loadLocal(receiverLocal)
-        // STACK: receiver
-        loadLocal(offsetLocal)
-        // STACK: offset, receiver
-        loadLocal(currenValueLocal)
-        // STACK: currentValue, offset, receiver
-        loadLocal(nextValueLocal)
-        // STACK: nextValue, currentValue, offset, receiver
+        // STACK: receiver, offset, expectedValue, newValue
+        val argumentTypes = Type.getArgumentTypes(desc)
+        val argumentLocals = copyLocals(
+            valueTypes = argumentTypes,
+            localTypes = arrayOf(OBJECT_TYPE, LONG_TYPE, OBJECT_TYPE, OBJECT_TYPE),
+        )
+        // STACK: receiver, offset, expectedValue, newValue
         visitMethodInsn(opcode, owner, name, desc, itf)
-        // STACK: cas-result
-        loadLocal(receiverLocal)
-        // STACK: receiver, cas-result
-        loadLocal(nextValueLocal)
-        // STACK: nextValue, receiver, cas-result
+        // STACK: casResult
+        // loadLocals(argumentLocals, argumentTypes)
+        loadLocal(argumentLocals[0])
+        loadLocal(argumentLocals[3])
+        // STACK: cas-result, receiver, nextValue
         invokeStatic(Injections::onWriteToObjectFieldOrArrayCell)
+        // STACK: cas-result
     }
 
     /**
-     * Process methods like *.getAndSet(receiver, offset, expected, desired)
+     * Process methods like *.getAndSet(receiver, offset, newValue)
      */
     protected fun processGetAndSetByOffsetMethod(name: String, opcode: Int, owner: String, desc: String, itf: Boolean) = adapter.run {
-        val nextValueLocal = newLocal(OBJECT_TYPE)
-        val offsetLocal = newLocal(LONG_TYPE)
-        val receiverLocal = newLocal(OBJECT_TYPE)
-        // STACK: nextValue, offset, receiver
-        storeLocal(nextValueLocal)
-        // STACK: offset, receiver
-        storeLocal(offsetLocal)
-        // STACK: receiver
-        storeLocal(receiverLocal)
-        // STACK: <empty>
-        loadLocal(receiverLocal)
-        // STACK: receiver
-        loadLocal(offsetLocal)
-        // STACK: offset, receiver
-        loadLocal(nextValueLocal)
-        // STACK: nextValue, offset, receiver
+        // STACK: receiver, offset, newValue
+        val argumentTypes = Type.getArgumentTypes(desc)
+        val argumentLocals = copyLocals(
+            valueTypes = argumentTypes,
+            localTypes = arrayOf(OBJECT_TYPE, LONG_TYPE, OBJECT_TYPE),
+        )
+        // STACK: receiver, offset, newValue
         visitMethodInsn(opcode, owner, name, desc, itf)
-        // STACK: <empty>
-        loadLocal(receiverLocal)
-        // STACK: receiver
-        loadLocal(nextValueLocal)
-        // STACK: nextValue, receiver
+        // STACK: oldValue
+        // loadLocals(argumentLocals, argumentTypes)
+        loadLocal(argumentLocals[0])
+        loadLocal(argumentLocals[2])
+        // STACK: oldValue, receiver, newValue
         invokeStatic(Injections::onWriteToObjectFieldOrArrayCell)
+        // STACK: oldValue
     }
 
 }

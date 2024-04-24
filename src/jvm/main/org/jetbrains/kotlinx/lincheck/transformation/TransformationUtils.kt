@@ -14,6 +14,7 @@ import sun.nio.ch.lincheck.Injections
 import org.objectweb.asm.*
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
+import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import java.io.*
 import java.util.*
 import java.util.concurrent.*
@@ -35,10 +36,23 @@ internal fun GeneratorAdapter.copyLocal(local: Int) {
  * Loads all local variables into the stack.
  *
  * @param locals Array of local variables.
+ * @param valueTypes If not-null, denotes an array of types of values that should be put onto stack.
+ *   The type of the local value can be the same as the type of the actual value on the stack,
+ *   or it can be its boxed variant.
  */
-internal fun GeneratorAdapter.loadLocals(locals: IntArray) {
-    for (local in locals) {
+internal fun GeneratorAdapter.loadLocals(locals: IntArray, valueTypes: Array<Type>? = null) {
+    locals.forEachIndexed { i, local ->
         loadLocal(local)
+        if (valueTypes != null) {
+            val valueType = valueTypes[i]
+            val localType = getLocalType(local)
+            if (valueType != localType) {
+                check(localType == OBJECT_TYPE)
+                if (valueType.requiresBoxing) {
+                    unbox(valueType)
+                }
+            }
+        }
     }
 }
 
@@ -68,8 +82,10 @@ internal fun GeneratorAdapter.storeLocals(
         val localType = localTypes[i]
         locals[i] = newLocal(localType)
         if (valueType != localType) {
-            check(localType.requiresBoxing)
-            box(valueType)
+            check(localType == OBJECT_TYPE)
+            if (valueType.requiresBoxing) {
+                box(valueType)
+            }
         }
         storeLocal(locals[i], localType)
     }
@@ -101,8 +117,10 @@ internal fun GeneratorAdapter.copyLocals(
         val localType = localTypes[i]
         loadLocal(local)
         if (valueType != localType) {
-            check(localType.requiresBoxing)
-            unbox(valueType)
+            check(localType == OBJECT_TYPE)
+            if (valueType.requiresBoxing) {
+                unbox(valueType)
+            }
         }
     }
     return locals
@@ -142,8 +160,8 @@ internal fun GeneratorAdapter.copyArguments(methodDescriptor: String): IntArray 
     return copyLocals(argumentTypes)
 }
 
-private val Type.requiresBoxing: Boolean get() =
-    (sort == OBJECT || sort == ARRAY)
+private val Type.requiresBoxing: Boolean
+    get() = !(sort == OBJECT || sort == ARRAY)
 
 /**
  * Adds invocation of [beforeEvent] method.
