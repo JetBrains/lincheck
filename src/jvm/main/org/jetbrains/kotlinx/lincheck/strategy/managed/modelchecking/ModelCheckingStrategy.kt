@@ -205,7 +205,7 @@ internal class ModelCheckingStrategy(
      * | OBSTRUCTION_FREEDOM_VIOLATION  | 6    |
      */
     private fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Array<String> {
-        val results = if (failure is IncorrectResultsFailure) failure.results else null
+        val results = failure.results
         val nodesList = constructTraceGraph(failure, results, trace, collectExceptionsOrEmpty(failure))
         var sectionIndex = 0
         var node: TraceNode? = nodesList.firstOrNull()
