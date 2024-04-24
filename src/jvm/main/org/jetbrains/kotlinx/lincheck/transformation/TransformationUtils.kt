@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.transformation
 
 import sun.nio.ch.lincheck.Injections
 import org.objectweb.asm.*
+import org.objectweb.asm.Opcodes.ANEWARRAY
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
@@ -158,6 +159,38 @@ internal fun GeneratorAdapter.storeArguments(methodDescriptor: String): IntArray
 internal fun GeneratorAdapter.copyArguments(methodDescriptor: String): IntArray {
     val argumentTypes = getArgumentTypes(methodDescriptor)
     return copyLocals(argumentTypes)
+}
+
+/**
+ * Pushes onto the stack an array consisting of values stored in the local variables.
+ *
+ * Before execution:
+ * STACK: (empty)
+ *
+ * After execution:
+ * STACK: array
+ *
+ * @param locals Local variables which values are stored in the stack.
+ */
+internal fun GeneratorAdapter.pushArray(locals: IntArray) {
+    // STACK: <empty>
+    push(locals.size)
+    // STACK: arraySize
+    visitTypeInsn(ANEWARRAY, OBJECT_TYPE.internalName)
+    // STACK: array
+    for (i in locals.indices) {
+        // STACK: array
+        dup()
+        // STACK: array, array
+        push(i)
+        // STACK: array, array, index
+        loadLocal(locals[i])
+        // STACK: array, array, index, value[index]
+        box(getLocalType(locals[i]))
+        arrayStore(OBJECT_TYPE)
+        // STACK: array
+    }
+    // STACK: array
 }
 
 private val Type.requiresBoxing: Boolean

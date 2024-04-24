@@ -66,10 +66,10 @@ internal class MethodCallTransformer(
         val endLabel = newLabel()
         val methodCallStartLabel = newLabel()
         // STACK [INVOKEVIRTUAL]: owner, arguments
-        // STACK [INVOKESTATIC]: arguments
+        // STACK [INVOKESTATIC] :        arguments
         val argumentLocals = storeArguments(desc)
         // STACK [INVOKEVIRTUAL]: owner
-        // STACK [INVOKESTATIC]: <empty>
+        // STACK [INVOKESTATIC] : <empty>
         when (opcode) {
             INVOKESTATIC -> visitInsn(ACONST_NULL)
             else -> dup()
@@ -78,55 +78,38 @@ internal class MethodCallTransformer(
         push(name)
         loadNewCodeLocationId()
         // STACK [INVOKEVIRTUAL]: owner, owner, className, methodName, codeLocation
-        // STACK [INVOKESTATIC]:         null, className, methodName, codeLocation
-        val argumentTypes = Type.getArgumentTypes(desc)
-        push(argumentLocals.size) // size of the array
-        visitTypeInsn(ANEWARRAY, OBJECT_TYPE.internalName)
-        // STACK: ..., array
-        for (i in argumentLocals.indices) {
-            // STACK: ..., array
-            dup()
-            // STACK: ..., array, array
-            push(i)
-            // STACK: ..., array, array, index
-            loadLocal(argumentLocals[i])
-            // STACK: ..., array, array, index, argument[index]
-            box(argumentTypes[i])
-            arrayStore(OBJECT_TYPE)
-            // STACK: ..., array
-        }
-        // STACK: ..., array
+        // STACK [INVOKESTATIC]:         null , className, methodName, codeLocation
+        pushArray(argumentLocals)
+        // STACK: ..., argumentsArray
         invokeStatic(Injections::beforeMethodCall)
         invokeBeforeEventIfPluginEnabled("method call $methodName", setMethodEventId = true)
         // STACK [INVOKEVIRTUAL]: owner, arguments
-        // STACK [INVOKESTATIC]: arguments
+        // STACK [INVOKESTATIC] :        arguments
         val methodCallEndLabel = newLabel()
         val handlerExceptionStartLabel = newLabel()
-        val handlerExceptionEndLabel = newLabel()
         visitTryCatchBlock(methodCallStartLabel, methodCallEndLabel, handlerExceptionStartLabel, null)
         visitLabel(methodCallStartLabel)
         loadLocals(argumentLocals)
         visitMethodInsn(opcode, owner, name, desc, itf)
         visitLabel(methodCallEndLabel)
         // STACK [INVOKEVIRTUAL]: owner, arguments
-        // STACK [INVOKESTATIC]: arguments
+        // STACK [INVOKESTATIC] :        arguments
         processMethodCallResult(desc)
-        // STACK: value
-        goTo(handlerExceptionEndLabel)
+        // STACK: result
+        goTo(endLabel)
         visitLabel(handlerExceptionStartLabel)
         dup()
         invokeStatic(Injections::onMethodCallException)
         throwException()
-        visitLabel(handlerExceptionEndLabel)
-        // STACK: value
         visitLabel(endLabel)
+        // STACK: result
     }
 
     private fun processAtomicMethodCall(desc: String, opcode: Int, owner: String, name: String, itf: Boolean) = adapter.run {
-        // In cases of Atomic*FieldUpdater, Unsafe and VarHandle we edit
-        // the params list before creating a trace point to remove redundant parameters
-        // as receiver and offset.
-        // To determine how we should process it, we provide owner instance.
+        // In the cases of Atomic*FieldUpdater, Unsafe and VarHandle we edit
+        // the params list before creating a trace point
+        // to remove redundant parameters as receiver and offset.
+        // To determine how we should process it, we provide the owner instance.
         val provideOwner = opcode != INVOKESTATIC && (
             owner == "sun/misc/Unsafe" ||
             owner == "jdk/internal/misc/Unsafe" ||
@@ -134,70 +117,57 @@ internal class MethodCallTransformer(
             owner.endsWith("FieldUpdater")
         )
         // STACK [INVOKEVIRTUAL]: owner, arguments
-        // STACK [INVOKESTATIC]: arguments
+        // STACK [INVOKESTATIC] :        arguments
         val argumentLocals = storeArguments(desc)
         // STACK [INVOKEVIRTUAL]: owner
-        // STACK [INVOKESTATIC]: <empty>
+        // STACK [INVOKESTATIC] : <empty>
         if (provideOwner) {
             dup()
         } else {
             visitInsn(ACONST_NULL)
         }
         // STACK [INVOKEVIRTUAL atomic updater]: owner, owner
-        // STACK [INVOKESTATIC atomic updater]: <empty>, null
-        // STACK [INVOKEVIRTUAL atomic]: owner, ownerName
-        // STACK [INVOKESTATIC atomic]: <empty>, ownerName
+        // STACK [INVOKESTATIC  atomic updater]:        null
+        // STACK [INVOKEVIRTUAL atomic]:                owner
+        // STACK [INVOKESTATIC  atomic]:                <empty>
         push(name)
         loadNewCodeLocationId()
         // STACK [INVOKEVIRTUAL atomic updater]: owner, owner, methodName, codeLocation
-        // STACK [INVOKESTATIC atomic updater]:         null, methodName, codeLocation
-        // STACK [INVOKEVIRTUAL atomic]: owner, ownerName, methodName, codeLocation
-        // STACK [INVOKESTATIC atomic]:         ownerName, methodName, codeLocation
-        // TODO: extract to a method that creates and fills an array
-        val argumentTypes = Type.getArgumentTypes(desc)
-        push(argumentLocals.size) // size of the array
-        visitTypeInsn(ANEWARRAY, OBJECT_TYPE.internalName)
-        // STACK: ..., array
-        for (i in argumentLocals.indices) {
-            // STACK: ..., array
-            dup()
-            // STACK: ..., array, array
-            push(i)
-            // STACK: ..., array, array, index
-            loadLocal(argumentLocals[i])
-            // STACK: ..., array, array, index, argument[index]
-            box(argumentTypes[i])
-            arrayStore(OBJECT_TYPE)
-            // STACK: ..., array
-        }
-        // STACK: ..., array
+        // STACK [INVOKESTATIC  atomic updater]:        null , methodName, codeLocation
+        // STACK [INVOKEVIRTUAL atomic]:                owner, methodName, codeLocation
+        // STACK [INVOKESTATIC  atomic]:                       methodName, codeLocation
+        pushArray(argumentLocals)
+        // STACK: ..., argumentsArray
         invokeStatic(Injections::beforeAtomicMethodCall)
         invokeBeforeEventIfPluginEnabled("atomic method call $methodName")
-        // STACK [INVOKEVIRTUAL]: owner, arguments
-        // STACK [INVOKESTATIC]: arguments
+        // STACK [INVOKEVIRTUAL]: owner
+        // STACK [INVOKESTATIC] : <empty>
         loadLocals(argumentLocals)
+        // STACK [INVOKEVIRTUAL]: owner, arguments
+        // STACK [INVOKESTATIC] :        arguments
         invokeInIgnoredSection {
             visitMethodInsn(opcode, owner, name, desc, itf)
         }
-        // STACK [INVOKEVIRTUAL]: owner, arguments
-        // STACK [INVOKESTATIC]: arguments
+        // STACK: result
         processMethodCallResult(desc)
-        // STACK: value
+        // STACK: result
     }
 
     private fun processMethodCallResult(desc: String) = adapter.run {
-        // STACK [INVOKEVIRTUAL]: owner, arguments
-        // STACK [INVOKESTATIC]: arguments
+        // STACK: result?
         val resultType = Type.getReturnType(desc)
         if (resultType == VOID_TYPE) {
+            // STACK: <empty>
             invokeStatic(Injections::onMethodCallReturnVoid)
+            // STACK: <empty>
         } else {
+            // STACK: result
             val resultLocal = newLocal(resultType)
-            storeLocal(resultLocal)
-            loadLocal(resultLocal)
+            copyLocal(resultLocal)
             box(resultType)
             invokeStatic(Injections::onMethodCallReturn)
             loadLocal(resultLocal)
+            // STACK: result
         }
     }
 
