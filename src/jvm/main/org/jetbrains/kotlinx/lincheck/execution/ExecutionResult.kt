@@ -13,9 +13,7 @@ import org.jetbrains.kotlinx.lincheck.*
 
 /**
  * This class represents a result of [ExecutionScenario] execution.
- * If the execution is completed, all the result parts should have the exact dimensions of the scenario.
- * However, in case there were some unfinished actors, the size of the [initResults], [parallelResultsWithClock],
- * and [postResults] may be less than in the scenario.
+ * All the result parts should have the same dimensions as the scenario.
  */
 data class ExecutionResult(
     /**

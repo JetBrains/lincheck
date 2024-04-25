@@ -12,8 +12,9 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
-import org.jetbrains.kotlinx.lincheck.strategy.DeadlockOrLivelockFailure
+import org.jetbrains.kotlinx.lincheck.strategy.ManagedDeadlockFailure
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
+import org.jetbrains.kotlinx.lincheck.strategy.TimeoutDeadlockFailure
 import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
 import java.util.*
 import kotlin.math.*
@@ -21,7 +22,7 @@ import kotlin.math.*
 @Synchronized // we should avoid concurrent executions to keep `objectNumeration` consistent
 internal fun StringBuilder.appendTrace(
     failure: LincheckFailure,
-    results: ExecutionResult?,
+    results: ExecutionResult,
     trace: Trace,
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
 ) {
@@ -48,7 +49,7 @@ private fun StringBuilder.appendShortTrace(
     val traceRepresentation = traceGraphToRepresentationList(sectionsFirstNodes, false)
     appendLine(TRACE_TITLE)
     appendTraceRepresentation(failure.scenario, traceRepresentation)
-    if (failure is DeadlockOrLivelockFailure) {
+    if (failure is ManagedDeadlockFailure || failure is TimeoutDeadlockFailure) {
         appendLine(ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE)
     }
     appendLine()
@@ -64,7 +65,7 @@ private fun StringBuilder.appendDetailedTrace(
     appendLine(DETAILED_TRACE_TITLE)
     val traceRepresentationVerbose = traceGraphToRepresentationList(sectionsFirstNodes, true)
     appendTraceRepresentation(failure.scenario, traceRepresentationVerbose)
-    if (failure is DeadlockOrLivelockFailure) {
+    if (failure is ManagedDeadlockFailure || failure is TimeoutDeadlockFailure) {
         appendLine(ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE)
     }
 }
@@ -127,7 +128,7 @@ class TableSectionColumnsRepresentation(
  */
 internal fun constructTraceGraph(
     failure: LincheckFailure,
-    results: ExecutionResult?,
+    results: ExecutionResult,
     trace: Trace,
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
 ): List<TraceNode> {
@@ -178,7 +179,7 @@ internal fun constructTraceGraph(
                     callDepth = 0,
                     actorRepresentation = actorRepresentations[iThread][nextActor],
                     resultRepresentation = resultProvider[iThread, nextActor]
-                        ?.let { actorNodeResultRepresentation(it, exceptionStackTraces) }
+                        ?.let { actorNodeResultRepresentation(it, failure, exceptionStackTraces) }
                 )
             }
             actorNodes[iThread][nextActor] = actorNode
@@ -211,6 +212,7 @@ internal fun constructTraceGraph(
         for (actorId in actorNodes[iThread].indices) {
             var actorNode = actorNodes[iThread][actorId]
             val actorResult = resultProvider[iThread, actorId]
+            if (actorResult is NotFinished) break
             // in case of empty trace, we want to show at least the actor nodes themselves;
             // however, no actor nodes will be created by the code above, so we need to create them explicitly here.
             if (actorNode == null && actorResult != null) {
@@ -220,7 +222,7 @@ internal fun constructTraceGraph(
                     last = lastNode,
                     callDepth = 0,
                     actorRepresentation = actorRepresentations[iThread][actorId],
-                    resultRepresentation = actorNodeResultRepresentation(actorResult, exceptionStackTraces)
+                    resultRepresentation = actorNodeResultRepresentation(actorResult, failure, exceptionStackTraces)
                 )
                 actorNodes[iThread][actorId] = actorNode
                 traceGraphNodes += actorNode

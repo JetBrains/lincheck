@@ -130,7 +130,7 @@ internal class ModelCheckingStrategy(
             is ObstructionFreedomViolationFailure -> "OBSTRUCTION_FREEDOM_VIOLATION"
             is UnexpectedExceptionFailure -> "UNEXPECTED_EXCEPTION"
             is ValidationFailure -> "VALIDATION_FAILURE"
-            is DeadlockOrLivelockFailure -> "DEADLOCK"
+            is ManagedDeadlockFailure, is TimeoutDeadlockFailure -> "DEADLOCK"
         }
 
 

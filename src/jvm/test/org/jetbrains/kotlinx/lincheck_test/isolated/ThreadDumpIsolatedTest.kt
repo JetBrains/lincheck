@@ -27,8 +27,8 @@ class ThreadDumpIsolatedTest {
                 .invocationsPerIteration(100_000)
                 .invocationTimeout(100)
             val failure = options.checkImpl(DeadlockOnSynchronizedIsolatedTest::class.java)
-            check(failure is DeadlockOrLivelockFailure) { "${DeadlockOrLivelockFailure::class.simpleName} was expected but ${failure?.javaClass} was obtained" }
-            check(failure.threadDump!!.size == 2) { "thread dump for 2 threads expected, but for ${failure.threadDump.size} threads was detected" }
+            check(failure is TimeoutDeadlockFailure) { "${ManagedDeadlockFailure::class.simpleName} was expected but ${failure?.javaClass} was obtained" }
+            check(failure.threadDump.size == 2) { "thread dump for 2 threads expected, but for ${failure.threadDump.size} threads was detected" }
         }
     }
 }

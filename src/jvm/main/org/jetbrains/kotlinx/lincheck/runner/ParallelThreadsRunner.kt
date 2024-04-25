@@ -336,25 +336,50 @@ internal open class ParallelThreadsRunner(
         afterParallelStateRepresentation: String?,
         afterPostStateRepresentation: String?
     ): ExecutionResult {
-        // We also collect results in case when some actors have not finished due to some reasons
-        // (execution has hung or unexpected exception).
-        // Therefore, some results may be null as corresponding actors won't finish.
-        // To process them correctly and pass only ready results, we do `takeWhile { it != null }` to cut off
-        // suffix with `null` results.
+        val initResults = initialPartExecution?.results?.let { collectExecutionResults(it, INIT) }.orEmpty()
+        val parallelResultsWithClock = parallelPartExecutions.map { execution ->
+            collectExecutionResults(execution.results, PARALLEL).zip(execution.clocks).map {
+                ResultWithClock(it.first, HBClock(it.second.clone()))
+            }
+        }
+        val postResults = postPartExecution?.results?.let { collectExecutionResults(it, POST) }.orEmpty()
+
         return ExecutionResult(
-            initResults = initialPartExecution?.results?.toList()?.takeWhile { it != null }.orEmpty(),
-            parallelResultsWithClock = parallelPartExecutions.map { execution ->
-                execution.results.takeWhile { it != null }.zip(execution.clocks).map {
-                    ResultWithClock(it.first, HBClock(it.second.clone()))
-                }
-            },
-            postResults = postPartExecution?.results?.toList()?.takeWhile { it != null }.orEmpty(),
+            initResults = initResults,
+            parallelResultsWithClock = parallelResultsWithClock,
+            postResults = postResults,
             afterInitStateRepresentation = afterInitStateRepresentation,
             afterParallelStateRepresentation = afterParallelStateRepresentation,
             afterPostStateRepresentation = afterPostStateRepresentation
         )
     }
 
+    /**
+     * Composes a list of execution results from a raw array representation.
+     * When execution is finished in a normal way we have all non-nullable [TestThreadExecution.results].
+     * But when the execution has hung, results for some actors may be not set.
+     * This method checks if we have some unset results and if so, it replaces the first one as [NotFinished],
+     * and the rest as [NotStarted].
+     *
+     * @param executionPart indicates what execution part this result correspond to
+     */
+    private fun collectExecutionResults(rawResults: Array<Result?>, executionPart: ExecutionPart): List<Result> {
+        // If execution ended in the init part, then all actors after it was not started.
+        if (currentExecutionPart == INIT && executionPart != INIT) return List(rawResults.size) { NotStarted }
+        // If execution ended in the parallel part, then all actors after it was not started.
+        if (currentExecutionPart == PARALLEL && executionPart == POST) return List(rawResults.size) { NotStarted }
+        // Find the first unset result - it means this actor was started but not finished.
+        val nullFirstNotSetResultIndex = rawResults.indexOfFirst { it == null }
+        // If all actors have corresponding results, then no fixes needed.
+        if (nullFirstNotSetResultIndex == -1) return rawResults.map { it!! }
+        val result = rawResults.filterNotNull().toMutableList()
+        result += NotFinished
+        // After the hanged one, no actors were started.
+        repeat(rawResults.size - (nullFirstNotSetResultIndex + 1)) {
+            result += NotStarted
+        }
+        return result
+    }
 
     private fun createInitialPartExecution() =
         if (scenario.initExecution.isNotEmpty()) {
