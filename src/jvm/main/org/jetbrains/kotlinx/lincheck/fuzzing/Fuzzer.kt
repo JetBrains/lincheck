@@ -50,8 +50,9 @@ class Fuzzer(
     private var maxCoveredTrace = 0
     private val traces = mutableSetOf<HappensBeforeSummary>()
 
-    /** Id of input that is going to be mutated to get some interesting children inputs */
-    private var currentParentInputIdx = 0
+    ///** Id of input that is going to be mutated to get some interesting children inputs */
+    //private var currentParentInputIdx = 0
+    private var currentParentInput: Input? = null
     /** Number of children for current parent input that were already generated */
     private var childrenGeneratedForCurrentParentInput = 0
     /** Input that is going to be run by `Fuzzer` class user */
@@ -179,12 +180,12 @@ class Fuzzer(
             maxCoveredBranches = max(maxCoveredBranches, coverage.coveredBranchesCount())
             maxCoveredTrace = max(maxCoveredTrace, currentInput!!.traceCoverage.coveredBranchesCount())
 
-            val rewardFactor: Double = 1.0
+            val rewardFactor: Double = 0.5
             mutator.updatePolicy(
                 reward =
-                    0.4 * (if (coverageUpdated) rewardFactor else 0.0) +
-                    0.4 * (if (traceCountAverageIncreasedSufficiently) rewardFactor else 0.0) +
-                    0.1 * (if (traceCoverageUpdated) rewardFactor else 0.0) +
+                    0.5 * (if (coverageUpdated) rewardFactor else 0.0) +
+                    0.2 * (if (traceCountAverageIncreasedSufficiently) rewardFactor else 0.0) +
+                    0.2 * (if (traceCoverageUpdated) rewardFactor else 0.0) +
                     0.05 * (if (maxCoverageUpdated) rewardFactor else 0.0) +
                     0.05 * (if (maxTraceCoverageUpdated) rewardFactor else 0.0)
             )
@@ -229,9 +230,11 @@ class Fuzzer(
 
         // update `favorite` marks on saved inputs
         if (totalExecutions % FAVORITE_INPUTS_RECALCULATION_RATE == 0) {
-            recalculateFavoriteInputs()
-            currentParentInputIdx = 0
+            //currentParentInputIdx = 0
+            currentParentInput = null
             childrenGeneratedForCurrentParentInput = 0
+            savedInputs.forEach { it.usedAsParentDuringCycle = false }
+            recalculateFavoriteInputs()
         }
     }
 
@@ -241,21 +244,27 @@ class Fuzzer(
     }
 
     private fun getCurrentParentInput(): Input {
-        val prevParentInput = savedInputs[currentParentInputIdx]
-        val targetChildrenCount = getTargetChildrenCount(prevParentInput)
+        //val targetChildrenCount = getTargetChildrenCount(currentParentInput!!)
+        val getBestParentInput: () -> Input? =
+                { savedInputs.filter { !it.usedAsParentDuringCycle }.maxByOrNull { it.coverageFitness } }
 
-        if (childrenGeneratedForCurrentParentInput >= targetChildrenCount) {
+        if (currentParentInput == null || childrenGeneratedForCurrentParentInput >= getTargetChildrenCount(currentParentInput!!)) {
             // change parent input to the next one
-            currentParentInputIdx = (currentParentInputIdx + 1) % savedInputs.size
+            //currentParentInputIdx = (currentParentInputIdx + 1) % savedInputs.size
+            currentParentInput?.usedAsParentDuringCycle = true
+            currentParentInput = getBestParentInput()
             childrenGeneratedForCurrentParentInput = 0
 
-            if (currentParentInputIdx == 0) {
+            if (currentParentInput == null) {
                 totalCycles++
+                savedInputs.forEach { it.usedAsParentDuringCycle = false }
                 recalculateFavoriteInputs()
+                currentParentInput = getBestParentInput()
             }
         }
 
-        return savedInputs[currentParentInputIdx]
+        return currentParentInput!!
+        //return savedInputs[currentParentInputIdx]
     }
 
     private fun getTargetChildrenCount(parentInput: Input): Int {

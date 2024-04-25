@@ -103,6 +103,19 @@ class BenchmarkCollector {
         tests[testName]!!.add(stats)
     }
 
+    fun saveJsonEachAndClear() {
+        val dir = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(Date())
+        tests.forEach { (testName, results) ->
+            // save as json
+            results.forEach {
+                it.saveJson(
+                    Path(System.getProperty("user.dir"), "/lets-plot-images/${testName}/json/$dir/").toString()
+                )
+            }
+        }
+        tests.clear()
+    }
+
     fun plotEachAndClear() {
         val dir = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(Date())
 

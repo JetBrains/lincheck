@@ -61,6 +61,9 @@ class Input(
             return traceCoverage.coveredBranchesCount().toLong() * totalNewTraces
         }
 
+    /** Shows if input was already used for children generation during current queue-cycle */
+    var usedAsParentDuringCycle = false
+
     /** Number of mutations (children) that were produced from this input. */
     private var mutationsPerformed: Long = 0
 
