@@ -24,12 +24,12 @@ import org.junit.runners.Suite.SuiteClasses
     //NonBlockingHashMapLongTest::class,
     //SnapTreeTest::class,
     //MutexTest::class, // CPU throttle
-    ConcurrentRadixTreeTest::class,
-    ConcurrentSuffixTreeTest::class,
-    LogicalOrderingAVLTest::class,
-    ConcurrencyOptimalMapTest::class,
-    AbstractQueueSynchronizerTest::class, // does not work (NoSuchMethodException: fuzzing.SemaphoreSequential.acquire() during minimization)
-    CATreeTest::class
+    //ConcurrentRadixTreeTest::class,
+    //LogicalOrderingAVLTest::class,
+    //ConcurrencyOptimalMapTest::class,
+    //ConcurrentSuffixTreeTest::class, // org.objectweb.asm.ClassTooLargeException: Class too large: kotlin/collections/ArraysKt___ArraysKt
+    //AbstractQueueSynchronizerTest::class, // does not work (NoSuchMethodException: fuzzing.SemaphoreSequential.acquire() during minimization)
+    //CATreeTest::class
 )
 class FuzzerBenchmarksSuite {
     @Before

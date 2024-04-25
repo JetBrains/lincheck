@@ -38,9 +38,10 @@ abstract class AbstractFuzzerBenchmarkTest {
         } finally {
             val testName = this@AbstractFuzzerBenchmarkTest::class.jvmName.replace("fuzzing.", "")
             println("$testName: \n$stats")
-            benchmarkCollector.add(testName, stats)
             stats.type = TestType.MODEL_CHECKING
+            benchmarkCollector.add(testName, stats)
             benchmarkCollector.plotEachAndClear()
+            //benchmarkCollector.saveJsonEachAndClear()
         }
     }
 
@@ -61,6 +62,7 @@ abstract class AbstractFuzzerBenchmarkTest {
             println("$testName: \n$stats")
             stats.type = TestType.FUZZING
             benchmarkCollector.add(testName, stats)
+            //benchmarkCollector.saveJsonEachAndClear()
         }
     }
 
