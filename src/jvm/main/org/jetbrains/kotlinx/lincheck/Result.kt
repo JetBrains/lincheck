@@ -135,7 +135,7 @@ data object NotFinished: Result() {
 }
 
 /**
- * Type of result used if the actor wasn't event started.
+ * Type of result used if the actor wasn't even started.
  */
 data object NotStarted: Result() {
     override val wasSuspended: Boolean get() = false
