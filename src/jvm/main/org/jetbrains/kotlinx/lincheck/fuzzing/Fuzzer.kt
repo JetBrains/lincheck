@@ -44,6 +44,7 @@ class Fuzzer(
     private var totalCycles = 0
     private var totalExecutions = 0
     private val totalCoverage = Coverage()
+    private val validTotalCoverage = Coverage()
     private val totalTraceCoverage = Coverage()
     private var maxCoveredBranches = 0
     private var maxCoveredTrace = 0
@@ -157,7 +158,8 @@ class Fuzzer(
             if (iterationOfFirstFailure == -1) iterationOfFirstFailure = totalExecutions
         }
 
-        coverageUpdated = totalCoverage.merge(coverage)
+        val validCoverageUpdated = (failure == null && validTotalCoverage.merge(coverage))
+        coverageUpdated = totalCoverage.merge(coverage) || validCoverageUpdated
         traceCoverageUpdated = totalTraceCoverage.merge(currentInput!!.traceCoverage)
         maxCoverageUpdated = maxCoveredBranches < coverage.coveredBranchesCount()
         maxTraceCoverageUpdated = maxCoveredTrace < currentInput!!.traceCoverage.coveredBranchesCount()
@@ -177,13 +179,14 @@ class Fuzzer(
             maxCoveredBranches = max(maxCoveredBranches, coverage.coveredBranchesCount())
             maxCoveredTrace = max(maxCoveredTrace, currentInput!!.traceCoverage.coveredBranchesCount())
 
+            val rewardFactor: Double = 1.0
             mutator.updatePolicy(
                 reward =
-                    0.4 * (if (coverageUpdated) 1 else 0) +
-                    0.4 * (if (traceCoverageUpdated) 1 else 0) +
-                    0.1 * (if (traceCountAverageIncreasedSufficiently) 1 else 0) +
-                    0.05 * (if (maxCoverageUpdated) 1 else 0) +
-                    0.05 * (if (maxTraceCoverageUpdated) 1 else 0)
+                    0.4 * (if (coverageUpdated) rewardFactor else 0.0) +
+                    0.4 * (if (traceCountAverageIncreasedSufficiently) rewardFactor else 0.0) +
+                    0.1 * (if (traceCoverageUpdated) rewardFactor else 0.0) +
+                    0.05 * (if (maxCoverageUpdated) rewardFactor else 0.0) +
+                    0.05 * (if (maxTraceCoverageUpdated) rewardFactor else 0.0)
             )
 
             if (failure == null) {
@@ -209,6 +212,7 @@ class Fuzzer(
             "covered-edges = ${coverage.coveredBranchesCount()} \n" +
             "max-edges = $maxCoveredBranches \n" +
             "total-edges = ${totalCoverage.coveredBranchesCount()} \n" +
+            "valid-edges = ${validTotalCoverage.coveredBranchesCount()} \n" +
             "============ \n" +
             "covered-trace = ${currentInput!!.traceCoverage.coveredBranchesCount()} \n" +
             "max-trace = $maxCoveredTrace \n" +
