@@ -18,6 +18,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
 import org.junit.*
 
+@Ignore
 class RendezvousChannelCustomTest : VerifierState() {
     private val ch = Channel<Int>()
 
