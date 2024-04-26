@@ -117,7 +117,10 @@ internal object LincheckJavaAgent {
         if (instrumentationMode == STRESS || INSTRUMENT_ALL_CLASSES_IN_MODEL_CHECKING_MODE) {
             // Re-transform the already loaded classes.
             // New classes will be transformed automatically.
+            val startTime = System.currentTimeMillis()
             instrumentation.retransformClasses(*getLoadedClassesToInstrument().toTypedArray())
+            val endTime: Long = System.currentTimeMillis()
+            println("Transformation time: ${endTime - startTime} ms")
         }
     }
 
