@@ -192,8 +192,16 @@ internal object LincheckJavaAgent {
             Class.forName(className)
             return
         }
-        if (className in instrumentedClassesInTheModelCheckingMode) return // already instrumented
-        ensureClassHierarchyIsTransformed(Class.forName(className), Collections.newSetFromMap(IdentityHashMap()))
+        // exit early if class is already instrumented
+        if (className in instrumentedClassesInTheModelCheckingMode) {
+            return
+        }
+        val clazz = Class.forName(className)
+        // also exit early if the class should not be instrumented
+        if (!instrumentation.isModifiableClass(clazz) || !shouldTransform(clazz.name, instrumentationMode)) {
+            return
+        }
+        ensureClassHierarchyIsTransformed(clazz, Collections.newSetFromMap(IdentityHashMap()))
     }
 
 
