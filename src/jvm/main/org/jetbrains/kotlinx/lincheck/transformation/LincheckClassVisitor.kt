@@ -22,6 +22,7 @@ import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
 import sun.nio.ch.lincheck.*
 import sun.nio.ch.lincheck.Injections.*
 import java.util.*
+import kotlin.collections.HashSet
 
 internal class LincheckClassVisitor(
     private val instrumentationMode: InstrumentationMode,
@@ -76,7 +77,7 @@ internal class LincheckClassVisitor(
         if (access and ACC_NATIVE != 0) return mv
         if (instrumentationMode == STRESS) {
             return if (methodName != "<clinit>" && methodName != "<init>") {
-                CoroutineCancellabilitySupportMethodTransformer(mv, access, methodName, desc)
+                CoroutineCancellabilitySupportMethodTransformer(mv, access, className, methodName, desc)
             } else {
                 mv
             }
@@ -105,7 +106,7 @@ internal class LincheckClassVisitor(
         }
         mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
         mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
-        mv = CoroutineCancellabilitySupportMethodTransformer(mv, access, methodName, desc)
+        mv = CoroutineCancellabilitySupportMethodTransformer(mv, access, className, methodName, desc)
         if (access and ACC_SYNCHRONIZED != 0) {
             mv = SynchronizedMethodTransformer(methodName, GeneratorAdapter(mv, access, methodName, desc), classVersion)
         }
@@ -130,9 +131,11 @@ internal class LincheckClassVisitor(
     private class CoroutineCancellabilitySupportMethodTransformer(
         mv: MethodVisitor,
         access: Int,
+        val className: String?,
         methodName: String?,
         desc: String?
     ) : AdviceAdapter(ASM_API, mv, access, methodName, desc) {
+
         override fun visitMethodInsn(
             opcodeAndSource: Int,
             className: String?,
@@ -143,11 +146,15 @@ internal class LincheckClassVisitor(
             val isGetResult = "getResult" == methodName &&
                     ("kotlinx/coroutines/CancellableContinuation" == className || "kotlinx/coroutines/CancellableContinuationImpl" == className)
             if (isGetResult) {
+                this.className?.canonicalClassName?.let {
+                    coroutineCallingClasses += it.canonicalClassName
+                }
                 dup()
                 invokeStatic(Injections::storeCancellableContinuation)
             }
             super.visitMethodInsn(opcodeAndSource, className, methodName, descriptor, isInterface)
         }
+
     }
 
     /**
@@ -1525,3 +1532,5 @@ private object CoroutineInternalCallTracker {
 
     fun isCoroutineInternalClass(internalClassName: String): Boolean = internalClassName in coroutineInternalClasses
 }
+
+internal val coroutineCallingClasses = HashSet<String>()

@@ -15,6 +15,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.nonTransformedClasses
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.shouldTransform
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.transformedClassesStress
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentation
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentationMode
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentedClassesInTheModelCheckingMode
@@ -146,6 +147,12 @@ internal object LincheckJavaAgent {
         instrumentation.allLoadedClasses
             .filter(instrumentation::isModifiableClass)
             .filter { shouldTransform(it.name, instrumentationMode) }
+            .filter {
+                if (instrumentationMode == STRESS) {
+                    !transformedClassesStress.containsKey(it.name) ||
+                    it.name in coroutineCallingClasses
+                } else true
+            }
 
     /**
      * Detaches [LincheckClassFileTransformer] from this JVM instance and re-transforms
@@ -310,8 +317,8 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
      * Notice that the transformation depends on the [InstrumentationMode].
      * Additionally, this object caches bytes of non-transformed classes.
      */
-    private val transformedClassesModelChecking = ConcurrentHashMap<Any, ByteArray>()
-    private val transformedClassesStress = ConcurrentHashMap<Any, ByteArray>()
+    val transformedClassesModelChecking = ConcurrentHashMap<Any, ByteArray>()
+    val transformedClassesStress = ConcurrentHashMap<Any, ByteArray>()
     val nonTransformedClasses = ConcurrentHashMap<Any, ByteArray>()
 
     private val transformedClassesCache
@@ -323,17 +330,20 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
     override fun transform(
         loader: ClassLoader?, className: String, classBeingRedefined: Class<*>?, protectionDomain: ProtectionDomain?, classBytes: ByteArray
     ): ByteArray? = runInIgnoredSection {
-        if (instrumentationMode == MODEL_CHECKING && !INSTRUMENT_ALL_CLASSES_IN_MODEL_CHECKING_MODE) {
-            // In the model checking mode, we transform classes lazily,
-            // once they are used in the testing code.
-            if (className.canonicalClassName !in instrumentedClassesInTheModelCheckingMode) return null
-        } else {
-            if (!shouldTransform(className.canonicalClassName, instrumentationMode)) return null
+        if (!shouldTransform(className.canonicalClassName, instrumentationMode)) {
+            return null
+        }
+        // In the model checking mode, we transform classes lazily,
+        // once they are used in the testing code.
+        if (instrumentationMode == MODEL_CHECKING &&
+            !INSTRUMENT_ALL_CLASSES_IN_MODEL_CHECKING_MODE &&
+            className.canonicalClassName !in instrumentedClassesInTheModelCheckingMode) {
+            return null
         }
         return transformImpl(loader, className, classBytes)
     }
 
-    private fun transformImpl(loader: ClassLoader?, className: String, classBytes: ByteArray): ByteArray = transformedClassesCache.computeIfAbsent(className) {
+    private fun transformImpl(loader: ClassLoader?, className: String, classBytes: ByteArray): ByteArray = transformedClassesCache.computeIfAbsent(className.canonicalClassName) {
         nonTransformedClasses[className] = classBytes
         val reader = ClassReader(classBytes)
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
