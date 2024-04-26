@@ -524,7 +524,7 @@ internal class LincheckClassVisitor(
                         },
                         code = {
                             // STACK: <empty>
-                            push(owner)
+                            push(owner.canonicalClassName)
                             // STACK: className: String, fieldName: String, codeLocation: Int
                             invokeStatic(Injections::beforeReadFinalFieldStatic)
                             // STACK: owner: Object
@@ -546,7 +546,7 @@ internal class LincheckClassVisitor(
                         },
                         code = {
                             // STACK: <empty>
-                            push(owner)
+                            push(owner.canonicalClassName)
                             push(fieldName)
                             loadNewCodeLocationId()
                             // STACK: className: String, fieldName: String, codeLocation: Int
@@ -1247,7 +1247,7 @@ internal class LincheckClassVisitor(
                             INVOKESTATIC -> visitInsn(ACONST_NULL)
                             else -> dup()
                         }
-                        push(owner)
+                        push(owner.canonicalClassName)
                         push(name)
                         loadNewCodeLocationId()
                         // STACK [INVOKEVIRTUAL]: owner, owner, className, methodName, codeLocation

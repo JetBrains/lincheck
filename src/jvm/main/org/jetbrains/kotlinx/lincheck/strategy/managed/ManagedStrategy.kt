@@ -702,13 +702,13 @@ abstract class ManagedStrategy(
     override fun beforeReadFinalFieldStatic(className: String) = runInIgnoredSection {
         // We need to ensure all the classes related to the reading object are instrumented.
         // The following call checks all the static fields.
-        LincheckJavaAgent.ensureClassHierarchyIsTransformed(className.canonicalClassName)
+        LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
     }
 
     override fun beforeReadFieldStatic(className: String, fieldName: String, codeLocation: Int) = runInIgnoredSection {
         // We need to ensure all the classes related to the reading object are instrumented.
         // The following call checks all the static fields.
-        LincheckJavaAgent.ensureClassHierarchyIsTransformed(className.canonicalClassName)
+        LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
 
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
@@ -926,7 +926,7 @@ abstract class ManagedStrategy(
             null -> {
                 if (owner == null) { // static method
                     runInIgnoredSection {
-                        LincheckJavaAgent.ensureClassHierarchyIsTransformed(className.canonicalClassName)
+                        LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
                     }
                 }
                 if (collectTrace) {
@@ -1006,7 +1006,7 @@ abstract class ManagedStrategy(
     private fun isSuspendFunction(className: String, methodName: String, params: Array<Any?>) =
         try {
             // While this code is inefficient, it is called only when an error is detected.
-            getMethod(className.canonicalClassName, methodName, params)?.isSuspendable() ?: false
+            getMethod(className, methodName, params)?.isSuspendable() ?: false
         } catch (t: Throwable) {
             // Something went wrong. Ignore it, as the error might lead only
             // to an extra "<cont>" in the method call line in the trace.
