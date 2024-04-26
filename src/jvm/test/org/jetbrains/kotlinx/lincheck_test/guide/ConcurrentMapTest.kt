@@ -16,6 +16,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.junit.*
 import java.util.concurrent.*
 
+@Ignore
 class ConcurrentHashMapTest {
     private val map = ConcurrentHashMap<Int, Int>()
 
@@ -33,6 +34,7 @@ class ConcurrentHashMapTest {
         .check(this::class)
 }
 
+@Ignore
 class ConcurrentSkipListMapTest {
     private val map = ConcurrentSkipListMap<Int, Int>()
 

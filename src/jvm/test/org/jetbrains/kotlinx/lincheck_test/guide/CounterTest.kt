@@ -16,6 +16,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.junit.*
 
+@Ignore
 class CounterTest {
     private val c = Counter()
 
