@@ -52,7 +52,6 @@ class MSQueueBlocking {
     )
 }
 
-@Ignore
 class ObstructionFreedomViolationTest  {
     private val q = MSQueueBlocking()
 

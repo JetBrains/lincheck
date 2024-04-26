@@ -16,7 +16,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.junit.*
 import java.util.concurrent.*
 
-@Ignore
 class ConcurrentLinkedDequeTest {
     private val deque = ConcurrentLinkedDeque<Int>()
 

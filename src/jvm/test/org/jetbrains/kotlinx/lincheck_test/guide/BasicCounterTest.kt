@@ -24,7 +24,6 @@ class Counter {
     fun get() = value
 }
 
-@Ignore
 class BasicCounterTest {
     private val c = Counter() // initial state
 
