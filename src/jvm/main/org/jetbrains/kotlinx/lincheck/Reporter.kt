@@ -45,7 +45,7 @@ class Reporter(private val logLevel: LoggingLevel) {
     }
 }
 
-@JvmField val DEFAULT_LOG_LEVEL = WARN
+@JvmField val DEFAULT_LOG_LEVEL = INFO
 enum class LoggingLevel {
     INFO, WARN
 }

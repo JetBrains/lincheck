@@ -124,6 +124,10 @@ tasks {
     }
 
     val jvmTest = named<Test>("jvmTest") {
+        testLogging {
+            events("passed", "skipped", "failed")
+            showStandardStreams = true
+        }
         val ideaActive = System.getProperty("idea.active") == "true"
         if (!ideaActive) {
             // We need to be able to run these tests in IntelliJ IDEA.
