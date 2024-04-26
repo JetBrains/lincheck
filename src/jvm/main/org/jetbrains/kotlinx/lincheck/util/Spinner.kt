@@ -31,10 +31,10 @@ internal class Spinner(val nThreads: Int = -1) {
      * If the number of processors is less than the number of threads,
      * then the spinner should exit the loop immediately.
      */
-    val shouldSpin: Boolean = run {
+    val shouldSpin: Boolean = false /* run {
         val nProcessors = Runtime.getRuntime().availableProcessors()
         (nProcessors >= nThreads)
-    }
+    } */
 
     /**
      * Waits in the spin-loop until the given condition is true
