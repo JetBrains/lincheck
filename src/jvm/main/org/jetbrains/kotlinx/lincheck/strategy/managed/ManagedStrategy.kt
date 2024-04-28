@@ -767,33 +767,16 @@ abstract class ManagedStrategy(
         }
     }
 
-    override fun beforeWriteField(obj: Any, className: String, fieldName: String, value: Any?, codeLocation: Int): Boolean = runInIgnoredSection {
-        localObjectManager.onWriteToObjectFieldOrArrayCell(obj, value)
-        if (localObjectManager.isLocalObject(obj)) {
-            return@runInIgnoredSection false
-        }
-        val iThread = currentThread
-        val tracePoint = if (collectTrace) {
-            WriteTracePoint(
-                ownerRepresentation = findOwnerName(obj),
-                iThread = iThread,
-                actorId = currentActorId[iThread],
-                callStackTrace = callStackTrace[iThread],
-                fieldName = fieldName,
-                stackTraceElement = CodeLocations.stackTrace(codeLocation)
-            ).also {
-                it.initializeWrittenValue(adornedStringRepresentation(value))
-            }
+    override fun beforeWriteField(obj: Any, className: String, fieldName: String, value: Any?, codeLocation: Int,
+                                  isStatic: Boolean, isFinal: Boolean): Boolean = runInIgnoredSection {
+        if (isStatic) {
+            localObjectManager.markObjectNonLocal(value)
         } else {
-            null
+            localObjectManager.onWriteToObjectFieldOrArrayCell(obj, value)
+            if (localObjectManager.isLocalObject(obj)) {
+                return@runInIgnoredSection false
+            }
         }
-        newSwitchPoint(iThread, codeLocation, tracePoint)
-        true
-    }
-
-
-    override fun beforeWriteFieldStatic(className: String, fieldName: String, value: Any?, codeLocation: Int): Unit = runInIgnoredSection {
-        localObjectManager.markObjectNonLocal(value)
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             WriteTracePoint(
@@ -810,6 +793,7 @@ abstract class ManagedStrategy(
             null
         }
         newSwitchPoint(iThread, codeLocation, tracePoint)
+        return@runInIgnoredSection true
     }
 
     override fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int): Boolean = runInIgnoredSection {

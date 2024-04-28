@@ -39,6 +39,7 @@ internal class SharedVariableAccessMethodTransformer(
         }
         when (opcode) {
             GETSTATIC -> {
+                // STACK: <empty>
                 invokeIfInTestingCode(
                     original = {
                         visitFieldInsn(opcode, owner, fieldName, desc)
@@ -49,15 +50,17 @@ internal class SharedVariableAccessMethodTransformer(
                         push(owner)
                         push(fieldName)
                         loadNewCodeLocationId()
-                        // STACK: null, className, fieldName, codeLocation
                         push(true) // isStatic
                         push(FinalFields.isFinalField(owner, fieldName)) // isFinal
                         // STACK: null, className, fieldName, codeLocation, isStatic, isFinal
                         invokeStatic(Injections::beforeReadField)
                         // STACK: isTracePointCreated
-                        ifStatement(condition = { /* already on stack */ }, ifClause = {
-                            invokeBeforeEventIfPluginEnabled("read static field")
-                        }, elseClause = {})
+                        ifStatement(
+                            condition = { /* already on stack */ },
+                            ifClause = {
+                                invokeBeforeEventIfPluginEnabled("read static field")
+                            },
+                            elseClause = {})
                         // STACK: <empty>
                         visitFieldInsn(opcode, owner, fieldName, desc)
                         // STACK: value
@@ -68,6 +71,7 @@ internal class SharedVariableAccessMethodTransformer(
             }
 
             GETFIELD -> {
+                // STACK: obj
                 invokeIfInTestingCode(
                     original = {
                         visitFieldInsn(opcode, owner, fieldName, desc)
@@ -79,15 +83,18 @@ internal class SharedVariableAccessMethodTransformer(
                         push(owner)
                         push(fieldName)
                         loadNewCodeLocationId()
-                        // STACK: obj, obj, className, fieldName, codeLocation
                         push(false) // isStatic
                         push(FinalFields.isFinalField(owner, fieldName)) // isFinal
                         // STACK: obj, obj, className, fieldName, codeLocation, isStatic, isFinal
                         invokeStatic(Injections::beforeReadField)
                         // STACK: obj, isTracePointCreated
-                        ifStatement(condition = { /* already on stack */ }, ifClause = {
-                            invokeBeforeEventIfPluginEnabled("read field")
-                        }, elseClause = {})
+                        ifStatement(
+                            condition = { /* already on stack */ },
+                            ifClause = {
+                                invokeBeforeEventIfPluginEnabled("read field")
+                            },
+                            elseClause = {}
+                        )
                         // STACK: obj
                         visitFieldInsn(opcode, owner, fieldName, desc)
                         // STACK: value
@@ -98,7 +105,7 @@ internal class SharedVariableAccessMethodTransformer(
             }
 
             PUTSTATIC -> {
-                // STACK: value: Object
+                // STACK: value
                 invokeIfInTestingCode(
                     original = {
                         visitFieldInsn(opcode, owner, fieldName, desc)
@@ -107,25 +114,35 @@ internal class SharedVariableAccessMethodTransformer(
                         val valueType = getType(desc)
                         val valueLocal = newLocal(valueType) // we cannot use DUP as long/double require DUP2
                         copyLocal(valueLocal)
-                        // STACK: value: Object
+                        // STACK: value
+                        pushNull()
                         push(owner)
                         push(fieldName)
                         loadLocal(valueLocal)
                         box(valueType)
                         loadNewCodeLocationId()
-                        // STACK: value: Object, className: String, fieldName: String, value: Object, codeLocation: Int
-                        invokeStatic(Injections::beforeWriteFieldStatic)
-                        invokeBeforeEventIfPluginEnabled("write static field")
-                        // STACK: value: Object
+                        push(true) // isStatic
+                        push(FinalFields.isFinalField(owner, fieldName)) // isFinal
+                        // STACK: value, null, className, fieldName, value, codeLocation, isStatic, isFinal
+                        invokeStatic(Injections::beforeWriteField)
+                        // STACK: isTracePointCreated
+                        ifStatement(
+                            condition = { /* already on stack */ },
+                            ifClause = {
+                                invokeBeforeEventIfPluginEnabled("write static field")
+                            },
+                            elseClause = {}
+                        )
+                        // STACK: value
                         visitFieldInsn(opcode, owner, fieldName, desc)
-                        // STACK: <EMPTY>
+                        // STACK: <empty>
                         invokeStatic(Injections::afterWrite)
                     }
                 )
             }
 
             PUTFIELD -> {
-                // STACK: owner: Object, value: Object
+                // STACK: obj, value
                 invokeIfInTestingCode(
                     original = {
                         visitFieldInsn(opcode, owner, fieldName, desc)
@@ -134,16 +151,19 @@ internal class SharedVariableAccessMethodTransformer(
                         val valueType = getType(desc)
                         val valueLocal = newLocal(valueType) // we cannot use DUP as long/double require DUP2
                         storeLocal(valueLocal)
-                        // STACK: owner: Object
+                        // STACK: obj
                         dup()
-                        // STACK: owner: Object, owner: Object
-                        push(className)
+                        // STACK: obj, obj
+                        push(owner)
                         push(fieldName)
                         loadLocal(valueLocal)
                         box(valueType)
                         loadNewCodeLocationId()
-                        // STACK: owner: Object, owner: Object, fieldName: String, fieldName: String, value: Object, codeLocation: Int
+                        push(false) // isStatic
+                        push(FinalFields.isFinalField(owner, fieldName)) // isFinal
+                        // STACK: obj, obj, className, fieldName, value, codeLocation, isStatic, isFinal
                         invokeStatic(Injections::beforeWriteField)
+                        // STACK: isTracePointCreated
                         ifStatement(
                             condition = { /* already on stack */ },
                             ifClause = {
@@ -151,11 +171,11 @@ internal class SharedVariableAccessMethodTransformer(
                             },
                             elseClause = {}
                         )
-                        // STACK: owner: Object
+                        // STACK: obj
                         loadLocal(valueLocal)
-                        // STACK: owner: Object, value: Object
+                        // STACK: obj, value
                         visitFieldInsn(opcode, owner, fieldName, desc)
-                        // STACK: <EMPTY>
+                        // STACK: <empty>
                         invokeStatic(Injections::afterWrite)
                     }
                 )
