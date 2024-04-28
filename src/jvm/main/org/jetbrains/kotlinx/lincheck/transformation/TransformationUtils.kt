@@ -24,6 +24,19 @@ import kotlin.reflect.jvm.*
 
 
 /**
+ * Generates bytecode to push a null value onto the stack.
+ *
+ * Before execution:
+ * STACK: <empty>
+ *
+ * After execution:
+ * STACK: null
+ */
+internal fun GeneratorAdapter.pushNull() {
+    visitInsn(Opcodes.ACONST_NULL)
+}
+
+/**
  * Copies the top value of the stack to a local variable and reloads it onto the stack.
  *
  * @param local Index of the local variable.
@@ -64,7 +77,7 @@ internal fun GeneratorAdapter.loadLocals(locals: IntArray, valueTypes: Array<Typ
  * STACK: value_1, value_2, ... value_n
  *
  * After execution:
- * STACK: (empty)
+ * STACK: <empty>
  *
  * @param valueTypes List of types of values to be stored.
  * @param localTypes If passed, denotes the desired types of local variables.

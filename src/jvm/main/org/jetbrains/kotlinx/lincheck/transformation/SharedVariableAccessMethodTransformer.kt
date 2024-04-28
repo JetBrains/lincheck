@@ -37,28 +37,6 @@ internal class SharedVariableAccessMethodTransformer(
             visitFieldInsn(opcode, owner, fieldName, desc)
             return
         }
-        if (FinalFields.isFinalField(owner, fieldName)) {
-            if (opcode == GETSTATIC) {
-                invokeIfInTestingCode(
-                    original = {
-                        visitFieldInsn(opcode, owner, fieldName, desc)
-                    },
-                    code = {
-                        // STACK: <empty>
-                        push(owner)
-                        // STACK: className: String, fieldName: String, codeLocation: Int
-                        invokeStatic(Injections::beforeReadFinalFieldStatic)
-                        // STACK: owner: Object
-                        visitFieldInsn(opcode, owner, fieldName, desc)
-                        // STACK: value
-                    }
-                )
-                return
-            } else {
-                visitFieldInsn(opcode, owner, fieldName, desc)
-                return
-            }
-        }
         when (opcode) {
             GETSTATIC -> {
                 invokeIfInTestingCode(
@@ -67,13 +45,20 @@ internal class SharedVariableAccessMethodTransformer(
                     },
                     code = {
                         // STACK: <empty>
+                        pushNull()
                         push(owner)
                         push(fieldName)
                         loadNewCodeLocationId()
-                        // STACK: className: String, fieldName: String, codeLocation: Int
-                        invokeStatic(Injections::beforeReadFieldStatic)
-                        invokeBeforeEventIfPluginEnabled("read static field")
-                        // STACK: owner: Object
+                        // STACK: null, className, fieldName, codeLocation
+                        push(true) // isStatic
+                        push(FinalFields.isFinalField(owner, fieldName)) // isFinal
+                        // STACK: null, className, fieldName, codeLocation, isStatic, isFinal
+                        invokeStatic(Injections::beforeReadField)
+                        // STACK: isTracePointCreated
+                        ifStatement(condition = { /* already on stack */ }, ifClause = {
+                            invokeBeforeEventIfPluginEnabled("read static field")
+                        }, elseClause = {})
+                        // STACK: <empty>
                         visitFieldInsn(opcode, owner, fieldName, desc)
                         // STACK: value
                         invokeAfterRead(getType(desc))
@@ -88,18 +73,22 @@ internal class SharedVariableAccessMethodTransformer(
                         visitFieldInsn(opcode, owner, fieldName, desc)
                     },
                     code = {
-                        // STACK: owner: Object
+                        // STACK: obj
                         dup()
-                        // STACK: owner: Object, owner: Object
+                        // STACK: obj, obj
                         push(owner)
                         push(fieldName)
                         loadNewCodeLocationId()
-                        // STACK: owner: Object, owner: Object, className: String, fieldName: String, codeLocation: Int
+                        // STACK: obj, obj, className, fieldName, codeLocation
+                        push(false) // isStatic
+                        push(FinalFields.isFinalField(owner, fieldName)) // isFinal
+                        // STACK: obj, obj, className, fieldName, codeLocation, isStatic, isFinal
                         invokeStatic(Injections::beforeReadField)
+                        // STACK: obj, isTracePointCreated
                         ifStatement(condition = { /* already on stack */ }, ifClause = {
                             invokeBeforeEventIfPluginEnabled("read field")
                         }, elseClause = {})
-                        // STACK: owner: Object
+                        // STACK: obj
                         visitFieldInsn(opcode, owner, fieldName, desc)
                         // STACK: value
                         invokeAfterRead(getType(desc))

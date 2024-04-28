@@ -29,9 +29,8 @@ interface EventTracker {
     fun wait(monitor: Any, withTimeout: Boolean)
     fun notify(monitor: Any, codeLocation: Int, notifyAll: Boolean)
 
-    fun beforeReadField(obj: Any, className: String, fieldName: String, codeLocation: Int): Boolean
-    fun beforeReadFieldStatic(className: String, fieldName: String, codeLocation: Int)
-    fun beforeReadFinalFieldStatic(className: String)
+    fun beforeReadField(obj: Any?, className: String, fieldName: String, codeLocation: Int,
+                        isStatic: Boolean, isFinal: Boolean): Boolean
     fun beforeReadArrayElement(array: Any, index: Int, codeLocation: Int): Boolean
     fun afterRead(value: Any?)
 

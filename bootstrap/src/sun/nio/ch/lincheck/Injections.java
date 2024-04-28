@@ -176,25 +176,10 @@ public class Injections {
      *
      * @return whether the trace point was created
      */
-    public static boolean beforeReadField(Object obj, String className, String fieldName, int codeLocation) {
-        if (obj == null) return false; // Ignore, NullPointerException will be thrown
-        return getEventTracker().beforeReadField(obj, className, fieldName, codeLocation);
-    }
-
-    /**
-     * Called from the instrumented code before any public static field read.
-     */
-    public static void beforeReadFieldStatic(String className, String fieldName, int codeLocation) {
-        getEventTracker().beforeReadFieldStatic(className, fieldName, codeLocation);
-    }
-
-    /**
-     * Called from the instrumented code before any public static field read.
-     * We need to track such reads to ensure that the corresponding objects
-     * are instrumented.
-     */
-    public static void beforeReadFinalFieldStatic(String className) {
-        getEventTracker().beforeReadFinalFieldStatic(className);
+    public static boolean beforeReadField(Object obj, String className, String fieldName, int codeLocation,
+                                          boolean isStatic, boolean isFinal) {
+        if (obj == null && !isStatic) return false; // Ignore, NullPointerException will be thrown
+        return getEventTracker().beforeReadField(obj, className, fieldName, codeLocation, isStatic, isFinal);
     }
 
     /**
