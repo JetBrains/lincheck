@@ -17,6 +17,7 @@ import java.util.*
  * See [Injections] for the documentation.
  */
 interface EventTracker {
+
     fun beforeLock(codeLocation: Int)
     fun lock(monitor: Any)
     fun unlock(monitor: Any, codeLocation: Int)
@@ -24,8 +25,8 @@ interface EventTracker {
     fun park(codeLocation: Int)
     fun unpark(thread: Thread, codeLocation: Int)
 
-    fun wait(monitor: Any, withTimeout: Boolean)
     fun beforeWait(codeLocation: Int)
+    fun wait(monitor: Any, withTimeout: Boolean)
     fun notify(monitor: Any, codeLocation: Int, notifyAll: Boolean)
 
     fun beforeReadField(obj: Any, className: String, fieldName: String, codeLocation: Int): Boolean
