@@ -19,7 +19,7 @@ import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransforme
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentation
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentationMode
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentedClasses
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.INSTRUMENT_ALL_CLASSES_IN_MODEL_CHECKING_MODE
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.INSTRUMENT_ALL_CLASSES
 import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
 import sun.misc.Unsafe
 import org.objectweb.asm.*
@@ -116,7 +116,7 @@ internal object LincheckJavaAgent {
         // option to enable the global transformation in the model checking mode
         // for testing purposes.
         when {
-            INSTRUMENT_ALL_CLASSES_IN_MODEL_CHECKING_MODE -> {
+            INSTRUMENT_ALL_CLASSES -> {
                 // Re-transform the already loaded classes.
                 // New classes will be transformed automatically.
                 instrumentation.retransformClasses(*getLoadedClassesToInstrument().toTypedArray())
@@ -172,7 +172,7 @@ internal object LincheckJavaAgent {
         val classDefinitions = getLoadedClassesToInstrument()
             .filter {
                 // Filter classes that were transformed by Lincheck and should be restored.
-                if (!INSTRUMENT_ALL_CLASSES_IN_MODEL_CHECKING_MODE) {
+                if (!INSTRUMENT_ALL_CLASSES) {
                     it.name in instrumentedClasses
                 } else true
             }.mapNotNull { clazz ->
@@ -203,7 +203,7 @@ internal object LincheckJavaAgent {
      * @param className The name of the class to be transformed.
      */
     fun ensureClassHierarchyIsTransformed(className: String) {
-        if (INSTRUMENT_ALL_CLASSES_IN_MODEL_CHECKING_MODE) {
+        if (INSTRUMENT_ALL_CLASSES) {
             Class.forName(className)
             return
         }
@@ -221,7 +221,7 @@ internal object LincheckJavaAgent {
      * @param testInstance the object to be transformed
      */
     fun ensureObjectIsTransformed(testInstance: Any) {
-        if (INSTRUMENT_ALL_CLASSES_IN_MODEL_CHECKING_MODE) {
+        if (INSTRUMENT_ALL_CLASSES) {
             return
         }
         ensureObjectIsTransformed(testInstance, Collections.newSetFromMap(IdentityHashMap()))
@@ -233,7 +233,7 @@ internal object LincheckJavaAgent {
      * @param clazz the class to transform
      */
     private fun ensureClassHierarchyIsTransformed(clazz: Class<*>) {
-        if (INSTRUMENT_ALL_CLASSES_IN_MODEL_CHECKING_MODE) {
+        if (INSTRUMENT_ALL_CLASSES) {
             return
         }
         if (clazz.name in instrumentedClasses) return // already instrumented
@@ -300,11 +300,10 @@ internal object LincheckJavaAgent {
 
     /**
      * FOR TEST PURPOSE ONLY!
-     * To test the byte-code transformation correctness for the
-     * model-checking strategy, we can transform all classes.
+     * To test the byte-code transformation correctness, we can transform all classes.
      */
-    internal val INSTRUMENT_ALL_CLASSES_IN_MODEL_CHECKING_MODE =
-        System.getProperty("lincheck.instrumentAllClassesInModelCheckingMode")?.toBoolean() ?: false
+    internal val INSTRUMENT_ALL_CLASSES =
+        System.getProperty("lincheck.instrumentAllClasses")?.toBoolean() ?: false
 }
 
 internal object LincheckClassFileTransformer : ClassFileTransformer {
@@ -334,7 +333,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         // In the model checking mode, we transform classes lazily,
         // once they are used in the testing code.
         if (instrumentationMode == MODEL_CHECKING &&
-            !INSTRUMENT_ALL_CLASSES_IN_MODEL_CHECKING_MODE &&
+            !INSTRUMENT_ALL_CLASSES &&
             className.canonicalClassName !in instrumentedClasses) {
             return null
         }
