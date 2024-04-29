@@ -83,7 +83,7 @@ internal object LincheckJavaAgent {
     private var isBootstrapJarAddedToClasspath = false
 
     /**
-     * TODO
+     * Names of the classes that were instrumented since the last agent installation.
      */
     val instrumentedClasses = HashSet<String>()
 
@@ -107,21 +107,19 @@ internal object LincheckJavaAgent {
         // allowing already loaded classes re-transformation.
         instrumentation.addTransformer(LincheckClassFileTransformer, true)
         // The transformation logic depends on the testing strategy.
-        // In the stress testing mode, Lincheck needs to track coroutine suspensions,
-        // so it processes all classes (including those that are already loaded),
-        // and looks for suspension points. In case of the model checking, Lincheck
-        // could also process all the classes, but it would lead to a significant
-        // performance degradation. Instead, in the model checking mode, Lincheck
-        // processes classes lazily, only when they are used. However, we have an
-        // option to enable the global transformation in the model checking mode
-        // for testing purposes.
         when {
+            // If an option to enable transformation of all classes is explicitly set,
+            // then we re-transform all the classes
+            // (this option is used for testing purposes).
             INSTRUMENT_ALL_CLASSES -> {
                 // Re-transform the already loaded classes.
                 // New classes will be transformed automatically.
                 instrumentation.retransformClasses(*getLoadedClassesToInstrument().toTypedArray())
             }
 
+            // In the stress testing mode, Lincheck needs to track coroutine suspensions.
+            // As an optimization, we remember the set of loaded classes that actually
+            // have suspension points, so later we can re-transform only those classes.
             instrumentationMode == STRESS -> {
                 check(instrumentedClasses.isEmpty())
                 val classes = getLoadedClassesToInstrument().filter {
@@ -134,6 +132,7 @@ internal object LincheckJavaAgent {
                 instrumentedClasses.addAll(classes.map { it.name })
             }
 
+            // In the model checking mode, Lincheck processes classes lazily, only when they are used.
             instrumentationMode == MODEL_CHECKING -> {}
         }
     }
@@ -332,8 +331,8 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         }
         // In the model checking mode, we transform classes lazily,
         // once they are used in the testing code.
-        if (instrumentationMode == MODEL_CHECKING &&
-            !INSTRUMENT_ALL_CLASSES &&
+        if (!INSTRUMENT_ALL_CLASSES &&
+            instrumentationMode == MODEL_CHECKING &&
             className.canonicalClassName !in instrumentedClasses) {
             return null
         }
