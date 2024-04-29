@@ -173,7 +173,9 @@ internal object LincheckJavaAgent {
                 // Filter classes that were transformed by Lincheck and should be restored.
                 if (!INSTRUMENT_ALL_CLASSES) {
                     it.name in instrumentedClasses
-                } else true
+                } else {
+                    true
+                }
             }.mapNotNull { clazz ->
                 // For each class, get its original bytecode.
                 val bytes = nonTransformedClasses[clazz.name]
