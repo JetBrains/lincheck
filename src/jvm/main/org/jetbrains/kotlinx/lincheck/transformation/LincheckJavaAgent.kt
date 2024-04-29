@@ -13,11 +13,12 @@ package org.jetbrains.kotlinx.lincheck.transformation
 import net.bytebuddy.agent.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.nonTransformedClasses
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.shouldTransform
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.transformedClassesStress
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.nonTransformedClasses
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentation
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentationMode
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentedClassesInTheModelCheckingMode
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentedClasses
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.INSTRUMENT_ALL_CLASSES_IN_MODEL_CHECKING_MODE
 import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
 import sun.misc.Unsafe
@@ -84,7 +85,7 @@ internal object LincheckJavaAgent {
     /**
      * TODO
      */
-    val instrumentedClassesInTheModelCheckingMode = HashSet<String>()
+    val instrumentedClasses = HashSet<String>()
 
     /**
      * Dynamically attaches [LincheckClassFileTransformer] to this JVM instance.
@@ -114,10 +115,26 @@ internal object LincheckJavaAgent {
         // processes classes lazily, only when they are used. However, we have an
         // option to enable the global transformation in the model checking mode
         // for testing purposes.
-        if (instrumentationMode == STRESS || INSTRUMENT_ALL_CLASSES_IN_MODEL_CHECKING_MODE) {
-            // Re-transform the already loaded classes.
-            // New classes will be transformed automatically.
-            instrumentation.retransformClasses(*getLoadedClassesToInstrument().toTypedArray())
+        when {
+            INSTRUMENT_ALL_CLASSES_IN_MODEL_CHECKING_MODE -> {
+                // Re-transform the already loaded classes.
+                // New classes will be transformed automatically.
+                instrumentation.retransformClasses(*getLoadedClassesToInstrument().toTypedArray())
+            }
+
+            instrumentationMode == STRESS -> {
+                check(instrumentedClasses.isEmpty())
+                val classes = getLoadedClassesToInstrument().filter {
+                    // new classes that were loaded after the latest STRESS mode re-transformation
+                    !transformedClassesStress.containsKey(it.name) ||
+                    // old classes that were already loaded before and have coroutine method calls inside
+                    it.name in coroutineCallingClasses
+                }
+                instrumentation.retransformClasses(*classes.toTypedArray())
+                instrumentedClasses.addAll(classes.map { it.name })
+            }
+
+            instrumentationMode == MODEL_CHECKING -> {}
         }
     }
 
@@ -139,7 +156,7 @@ internal object LincheckJavaAgent {
         instrumentation.appendToBootstrapClassLoaderSearch(JarFile(tempBootstrapJarFile))
     }
 
-    private fun getLoadedClassesToInstrument() =
+    private fun getLoadedClassesToInstrument(): List<Class<*>> =
         instrumentation.allLoadedClasses
             .filter(instrumentation::isModifiableClass)
             .filter { shouldTransform(it.name, instrumentationMode) }
@@ -155,11 +172,9 @@ internal object LincheckJavaAgent {
         val classDefinitions = getLoadedClassesToInstrument()
             .filter {
                 // Filter classes that were transformed by Lincheck and should be restored.
-                if (instrumentationMode == MODEL_CHECKING || !INSTRUMENT_ALL_CLASSES_IN_MODEL_CHECKING_MODE) {
-                    it.name in instrumentedClassesInTheModelCheckingMode
-                } else {
-                    true
-                }
+                if (!INSTRUMENT_ALL_CLASSES_IN_MODEL_CHECKING_MODE) {
+                    it.name in instrumentedClasses
+                } else true
             }.mapNotNull { clazz ->
                 // For each class, get its original bytecode.
                 val bytes = nonTransformedClasses[clazz.name]
@@ -169,7 +184,7 @@ internal object LincheckJavaAgent {
         // using the original bytecodes collected previously.
         instrumentation.redefineClasses(*classDefinitions.toTypedArray())
         // Clear the set of classes instrumented in the model checking mode.
-        instrumentedClassesInTheModelCheckingMode.clear()
+        instrumentedClasses.clear()
     }
 
     /**
@@ -192,7 +207,7 @@ internal object LincheckJavaAgent {
             Class.forName(className)
             return
         }
-        if (className in instrumentedClassesInTheModelCheckingMode) return // already instrumented
+        if (className in instrumentedClasses) return // already instrumented
         ensureClassHierarchyIsTransformed(Class.forName(className), Collections.newSetFromMap(IdentityHashMap()))
     }
 
@@ -221,7 +236,7 @@ internal object LincheckJavaAgent {
         if (INSTRUMENT_ALL_CLASSES_IN_MODEL_CHECKING_MODE) {
             return
         }
-        if (clazz.name in instrumentedClassesInTheModelCheckingMode) return // already instrumented
+        if (clazz.name in instrumentedClasses) return // already instrumented
         ensureClassHierarchyIsTransformed(clazz, Collections.newSetFromMap(IdentityHashMap()))
     }
 
@@ -264,7 +279,7 @@ internal object LincheckJavaAgent {
      */
     private fun ensureClassHierarchyIsTransformed(clazz: Class<*>, processedObjects: MutableSet<Any>) {
         if (instrumentation.isModifiableClass(clazz) && shouldTransform(clazz.name, instrumentationMode)) {
-            instrumentedClassesInTheModelCheckingMode += clazz.name
+            instrumentedClasses += clazz.name
             instrumentation.retransformClasses(clazz)
         } else {
             return
@@ -278,7 +293,7 @@ internal object LincheckJavaAgent {
                 ensureObjectIsTransformed(it, processedObjects)
             }
         clazz.superclass?.let {
-            if (it.name in instrumentedClassesInTheModelCheckingMode) return // already instrumented
+            if (it.name in instrumentedClasses) return // already instrumented
             ensureClassHierarchyIsTransformed(it, processedObjects)
         }
     }
@@ -299,8 +314,8 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
      * Notice that the transformation depends on the [InstrumentationMode].
      * Additionally, this object caches bytes of non-transformed classes.
      */
-    private val transformedClassesModelChecking = ConcurrentHashMap<Any, ByteArray>()
-    private val transformedClassesStress = ConcurrentHashMap<Any, ByteArray>()
+    val transformedClassesModelChecking = ConcurrentHashMap<Any, ByteArray>()
+    val transformedClassesStress = ConcurrentHashMap<Any, ByteArray>()
     val nonTransformedClasses = ConcurrentHashMap<Any, ByteArray>()
 
     private val transformedClassesCache
@@ -312,17 +327,21 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
     override fun transform(
         loader: ClassLoader?, className: String, classBeingRedefined: Class<*>?, protectionDomain: ProtectionDomain?, classBytes: ByteArray
     ): ByteArray? = runInIgnoredSection {
-        if (instrumentationMode == MODEL_CHECKING && !INSTRUMENT_ALL_CLASSES_IN_MODEL_CHECKING_MODE) {
-            // In the model checking mode, we transform classes lazily,
-            // once they are used in the testing code.
-            if (className.canonicalClassName !in instrumentedClassesInTheModelCheckingMode) return null
-        } else {
-            if (!shouldTransform(className.canonicalClassName, instrumentationMode)) return null
+        // If the class should not be transformed, return immediately.
+        if (!shouldTransform(className.canonicalClassName, instrumentationMode)) {
+            return null
+        }
+        // In the model checking mode, we transform classes lazily,
+        // once they are used in the testing code.
+        if (instrumentationMode == MODEL_CHECKING &&
+            !INSTRUMENT_ALL_CLASSES_IN_MODEL_CHECKING_MODE &&
+            className.canonicalClassName !in instrumentedClasses) {
+            return null
         }
         return transformImpl(loader, className, classBytes)
     }
 
-    private fun transformImpl(loader: ClassLoader?, className: String, classBytes: ByteArray): ByteArray = transformedClassesCache.computeIfAbsent(className) {
+    private fun transformImpl(loader: ClassLoader?, className: String, classBytes: ByteArray): ByteArray = transformedClassesCache.computeIfAbsent(className.canonicalClassName) {
         nonTransformedClasses[className] = classBytes
         val reader = ClassReader(classBytes)
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)

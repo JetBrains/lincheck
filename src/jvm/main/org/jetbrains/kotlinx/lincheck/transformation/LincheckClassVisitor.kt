@@ -18,6 +18,9 @@ import org.objectweb.asm.commons.*
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.*
 import sun.nio.ch.lincheck.*
+import sun.nio.ch.lincheck.Injections.*
+import java.util.*
+import kotlin.collections.HashSet
 
 internal class LincheckClassVisitor(
     private val instrumentationMode: InstrumentationMode,
@@ -73,7 +76,7 @@ internal class LincheckClassVisitor(
         if (access and ACC_NATIVE != 0) return mv
         if (instrumentationMode == STRESS) {
             return if (methodName != "<clinit>" && methodName != "<init>") {
-                CoroutineCancellabilitySupportTransformer(mv, access, methodName, desc)
+                CoroutineCancellabilitySupportTransformer(mv, access, className, methodName, desc)
             } else {
                 mv
             }
@@ -103,7 +106,7 @@ internal class LincheckClassVisitor(
         }
         mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
         mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
-        mv = CoroutineCancellabilitySupportTransformer(mv, access, methodName, desc)
+        mv = CoroutineCancellabilitySupportTransformer(mv, access, className, methodName, desc)
         if (access and ACC_SYNCHRONIZED != 0) {
             mv = SynchronizedMethodTransformer(fileName, className, methodName, mv.newAdapter(), classVersion)
         }
@@ -193,3 +196,5 @@ private class WrapMethodInIgnoredSectionTransformer(
         visitInsn(opcode)
     }
 }
+
+internal val coroutineCallingClasses = HashSet<String>()
