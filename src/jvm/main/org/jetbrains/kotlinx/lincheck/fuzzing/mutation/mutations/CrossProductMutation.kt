@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.fuzzing.mutation.mutations
 
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.fuzzing.input.FailedInput
 import org.jetbrains.kotlinx.lincheck.fuzzing.input.Input
 import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.Mutation
 import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.MutationPolicy
@@ -18,12 +19,15 @@ import java.util.*
 
 class CrossProductMutation(
     policy: MutationPolicy,
-    private val savedInputs: List<Input>
+    private val savedInputs: List<Input>,
+    private val failures: List<FailedInput>
 ) : Mutation(policy) {
     override fun mutate(scenario: ExecutionScenario, mutationThreadId: Int): ExecutionScenario {
         val random = policy.random
-        val crossInputId  = random.nextInt(savedInputs.size)
-        val crossInput    = savedInputs[crossInputId]
+        val crossInputId  = random.nextInt(savedInputs.size + failures.size)
+        val crossInput    =
+            if (crossInputId < savedInputs.size) savedInputs[crossInputId]
+            else failures[crossInputId - savedInputs.size].input
         var crossThreadId = random.nextInt(crossInput.scenario.parallelExecution.size)
         while (crossThreadId == mutationThreadId && crossInput.scenario == scenario)
             crossThreadId = random.nextInt(crossInput.scenario.parallelExecution.size)

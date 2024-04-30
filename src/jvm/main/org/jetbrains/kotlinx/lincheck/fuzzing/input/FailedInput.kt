@@ -12,7 +12,7 @@ package org.jetbrains.kotlinx.lincheck.fuzzing.input
 
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 
-internal data class FailedInput(
+data class FailedInput(
     val input: Input,
     val error: LincheckFailure
 )

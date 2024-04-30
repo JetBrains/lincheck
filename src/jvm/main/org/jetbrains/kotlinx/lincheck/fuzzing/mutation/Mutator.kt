@@ -30,7 +30,7 @@ class Mutator(
         // RemoveActorFromParallelMutation(policy),
         ReplaceActorInParallelMutation(policy),
 
-        CrossProductMutation(policy, fuzzer.savedInputs),
+        CrossProductMutation(policy, fuzzer.savedInputs, fuzzer.failures),
         RandomInputMutation(policy, fuzzer.defaultExecutionGenerator),
 
         // AddActorToInitMutation(policy, testStructure, testConfiguration),

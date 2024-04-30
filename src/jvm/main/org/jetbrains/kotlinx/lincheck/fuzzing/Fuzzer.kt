@@ -64,7 +64,7 @@ class Fuzzer(
     /** Contains main queue of inputs which is used during fuzzing (this does not contain failed inputs, only valid once) */
     internal var savedInputs: MutableList<Input> = mutableListOf()
     /** Contains failures that were found during fuzzing. */
-    private val failures: MutableList<FailedInput> = mutableListOf()
+    internal val failures: MutableList<FailedInput> = mutableListOf()
     var iterationOfFirstFailure = -1
 
     /** Utilities for fuzzing process */
@@ -106,6 +106,7 @@ class Fuzzer(
 //                randomScenario.validationFunction
 //            )
             currentInput = Input(randomScenario) // defaultExecutionGenerator.nextExecution()
+            println("Generated scenario:\n$randomScenario")
         }
         else {
             // pick something from fuzzing queue
@@ -133,7 +134,6 @@ class Fuzzer(
 
         val prevTracesCount = traces.size
         val averageTraceDiff = prevTracesCount.toDouble() / (totalExecutions + 1.0)
-        val traceCountAddedDiff: Double
 
         var coverageUpdated = false
         var traceCoverageUpdated = false
@@ -148,7 +148,7 @@ class Fuzzer(
             acc
         }
         currentInput!!.totalNewTraces = traces.size - prevTracesCount
-        traceCountAddedDiff = max(0.0, currentInput!!.totalNewTraces.toDouble() - averageTraceDiff)
+        val traceCountAddedDiff: Double = max(0.0, currentInput!!.totalNewTraces.toDouble() - averageTraceDiff)
 
 
         if (failure != null) {
@@ -180,13 +180,13 @@ class Fuzzer(
             maxCoveredBranches = max(maxCoveredBranches, coverage.coveredBranchesCount())
             maxCoveredTrace = max(maxCoveredTrace, currentInput!!.traceCoverage.coveredBranchesCount())
 
-            val rewardFactor: Double = 0.5
+            val rewardFactor: Double = 0.3
             mutator.updatePolicy(
                 reward =
-                    0.5 * (if (coverageUpdated) rewardFactor else 0.0) +
-                    0.2 * (if (traceCountAverageIncreasedSufficiently) rewardFactor else 0.0) +
-                    0.2 * (if (traceCoverageUpdated) rewardFactor else 0.0) +
-                    0.05 * (if (maxCoverageUpdated) rewardFactor else 0.0) +
+                    0.6 * (if (coverageUpdated) rewardFactor else 0.0) +
+                    0.2 * (if (maxCoverageUpdated) rewardFactor else 0.0) +
+                    0.1 * (if (traceCountAverageIncreasedSufficiently) rewardFactor else 0.0) +
+                    0.05 * (if (traceCoverageUpdated) rewardFactor else 0.0) +
                     0.05 * (if (maxTraceCoverageUpdated) rewardFactor else 0.0)
             )
 
