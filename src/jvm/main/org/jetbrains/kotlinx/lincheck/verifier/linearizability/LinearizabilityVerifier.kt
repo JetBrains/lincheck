@@ -44,7 +44,8 @@ class LinearizabilityContext : VerifierContext {
             return null
         val actorId = executed[threadId]
         val actor = scenario.threads[threadId][actorId]
-        val expectedResult = results.threadsResults[threadId][actorId]
+        // null result is not impossible here as if the execution has hung, we won't check its result
+        val expectedResult = results.threadsResults[threadId][actorId]!!
         // Check whether the operation has been suspended and should be followed by cancellation
         val ticket = tickets[threadId]
         val promptCancel = actor.promptCancellation && ticket != NO_TICKET && expectedResult === Cancelled

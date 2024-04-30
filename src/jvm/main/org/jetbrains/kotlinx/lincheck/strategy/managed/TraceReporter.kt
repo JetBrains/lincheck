@@ -12,8 +12,9 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
+import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.ManagedDeadlockFailure
-import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
+import org.jetbrains.kotlinx.lincheck.strategy.ObstructionFreedomViolationFailure
 import org.jetbrains.kotlinx.lincheck.strategy.TimeoutDeadlockFailure
 import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
 import java.util.*
@@ -178,8 +179,7 @@ internal fun constructTraceGraph(
                     last = lastNode,
                     callDepth = 0,
                     actorRepresentation = actorRepresentations[iThread][nextActor],
-                    resultRepresentation = resultProvider[iThread, nextActor]
-                        ?.let { actorNodeResultRepresentation(it, failure, exceptionStackTraces) }
+                    resultRepresentation = actorNodeResultRepresentation(resultProvider[iThread, nextActor], failure, exceptionStackTraces)
                 )
             }
             actorNodes[iThread][nextActor] = actorNode
@@ -212,7 +212,6 @@ internal fun constructTraceGraph(
         for (actorId in actorNodes[iThread].indices) {
             var actorNode = actorNodes[iThread][actorId]
             val actorResult = resultProvider[iThread, actorId]
-            if (actorResult is NotFinished) break
             // in case of empty trace, we want to show at least the actor nodes themselves;
             // however, no actor nodes will be created by the code above, so we need to create them explicitly here.
             if (actorNode == null && actorResult != null) {
@@ -253,6 +252,20 @@ internal fun constructTraceGraph(
     return traceGraphNodesSections.map { it.first() }
 }
 
+private fun actorNodeResultRepresentation(result: Result?, failure: LincheckFailure, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): String? {
+    // We don't mark actors that violated obstruction freedom as hung.
+    if (result == null && failure is ObstructionFreedomViolationFailure) return null
+    return when (result) {
+        null -> "<hung>"
+        is ExceptionResult -> {
+            val exceptionNumberRepresentation = exceptionStackTraces[result.throwable]?.let { " #${it.number}" } ?: ""
+            "$result$exceptionNumberRepresentation"
+        }
+        is VoidResult -> null // don't print
+        else -> result.toString()
+    }
+}
+
 /**
  * Helper class to provider execution results, including a validation function result
  */
@@ -261,10 +274,10 @@ private class ExecutionResultsProvider(result: ExecutionResult?, failure: Linche
     /**
      * A map of type Map<(threadId, actorId) -> Result>
      */
-    private val threadNumberToActorResultMap: Map<Pair<Int, Int>, Result>
+    private val threadNumberToActorResultMap: Map<Pair<Int, Int>, Result?>
 
     init {
-        val results = hashMapOf<Pair<Int, Int>, Result>()
+        val results = hashMapOf<Pair<Int, Int>, Result?>()
         if (result != null) {
             results += result.threadsResults
                 .flatMapIndexed { tId, actors -> actors.flatMapIndexed { actorId, result ->

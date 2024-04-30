@@ -124,19 +124,3 @@ internal data class ResumedResult(val contWithSuspensionPointRes: Pair<Continuat
     lateinit var resumedActor: Actor
     lateinit var by: Actor
 }
-
-/**
- * Type of result used if the actor was started but didn't finish.
- */
-data object NotFinished: Result() {
-    override val wasSuspended: Boolean get() = false
-
-    override fun toString(): String = "<hung>"
-}
-
-/**
- * Type of result used if the actor wasn't even started.
- */
-data object NotStarted: Result() {
-    override val wasSuspended: Boolean get() = false
-}
