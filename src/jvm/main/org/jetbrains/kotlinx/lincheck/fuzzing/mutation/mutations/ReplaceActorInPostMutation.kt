@@ -52,9 +52,8 @@ class ReplaceActorInPostMutation(
 
         for(i in 0 until scenario.postExecution.size) {
             newPostExecution.add(
-                if (i < replaceAtIndex) scenario.postExecution[i]
-                else if (i == replaceAtIndex) actor
-                else scenario.postExecution[i - 1]
+                if (i == replaceAtIndex) actor
+                else scenario.postExecution[i]
             )
         }
 

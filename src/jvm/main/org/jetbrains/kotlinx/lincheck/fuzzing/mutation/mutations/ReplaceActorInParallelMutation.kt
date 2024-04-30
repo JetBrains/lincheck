@@ -46,9 +46,8 @@ class ReplaceActorInParallelMutation(
 
         val newActorsList = mutableListOf<Actor>()
         for (i in 0 until newParallelExecution[mutationThreadId].size) {
-            if (i < replaceAtIndex) newActorsList.add(newParallelExecution[mutationThreadId][i])
-            else if (i == replaceAtIndex) newActorsList.add(actor)
-            else newActorsList.add(newParallelExecution[mutationThreadId][i - 1])
+            if (i == replaceAtIndex) newActorsList.add(actor)
+            else newActorsList.add(newParallelExecution[mutationThreadId][i])
         }
 
         newParallelExecution[mutationThreadId] = newActorsList

@@ -50,9 +50,8 @@ class ReplaceActorInInitMutation(
 
         for(i in 0 until scenario.initExecution.size) {
             newInitExecution.add(
-                if (i < replaceAtIndex) scenario.initExecution[i]
-                else if (i == replaceAtIndex) actor
-                else scenario.initExecution[i - 1]
+                if (i == replaceAtIndex) actor
+                else scenario.initExecution[i]
             )
         }
 
