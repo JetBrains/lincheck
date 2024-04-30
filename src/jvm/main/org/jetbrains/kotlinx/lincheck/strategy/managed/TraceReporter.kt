@@ -11,8 +11,10 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.strategy.DeadlockWithDumpFailure
+import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
+import org.jetbrains.kotlinx.lincheck.strategy.DeadlockOrLivelockFailure
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
+import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
 import java.util.*
 import kotlin.math.*
 
@@ -23,81 +25,114 @@ internal fun StringBuilder.appendTrace(
     trace: Trace,
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
 ) {
-    val startTraceGraphNode = constructTraceGraph(failure.scenario, results, trace, exceptionStackTraces)
+    // reset objects numeration
+    cleanObjectNumeration()
+
+    val startTraceGraphNode = constructTraceGraph(failure, results, trace, exceptionStackTraces)
 
     appendShortTrace(startTraceGraphNode, failure)
     appendExceptionsStackTracesBlock(exceptionStackTraces)
     appendDetailedTrace(startTraceGraphNode, failure)
 
-    objectNumeration.clear() // clear the numeration at the end to avoid memory leaks
+    // clear the numeration at the end to avoid memory leaks
+    cleanObjectNumeration()
 }
 
+/**
+ * @param sectionsFirstNodes a list of first nodes in each scenario section
+ */
 private fun StringBuilder.appendShortTrace(
-    startTraceGraphNode: TraceNode?,
+    sectionsFirstNodes: List<TraceNode>,
     failure: LincheckFailure
 ) {
-    val traceRepresentation = traceGraphToRepresentationList(startTraceGraphNode, false)
+    val traceRepresentation = traceGraphToRepresentationList(sectionsFirstNodes, false)
     appendLine(TRACE_TITLE)
     appendTraceRepresentation(failure.scenario, traceRepresentation)
-    if (failure is DeadlockWithDumpFailure) {
+    if (failure is DeadlockOrLivelockFailure) {
         appendLine(ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE)
     }
     appendLine()
 }
 
+/**
+ * @param sectionsFirstNodes a list of first nodes in each scenario section
+ */
 private fun StringBuilder.appendDetailedTrace(
-    startTraceGraphNode: TraceNode?,
+    sectionsFirstNodes: List<TraceNode>,
     failure: LincheckFailure
 ) {
     appendLine(DETAILED_TRACE_TITLE)
-    val traceRepresentationVerbose = traceGraphToRepresentationList(startTraceGraphNode, true)
+    val traceRepresentationVerbose = traceGraphToRepresentationList(sectionsFirstNodes, true)
     appendTraceRepresentation(failure.scenario, traceRepresentationVerbose)
-    if (failure is DeadlockWithDumpFailure) {
+    if (failure is DeadlockOrLivelockFailure) {
         appendLine(ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE)
     }
 }
 
 private fun StringBuilder.appendTraceRepresentation(
     scenario: ExecutionScenario,
-    traceRepresentation: List<TraceEventRepresentation>
+    traceRepresentation: List<List<TraceEventRepresentation>>
 ) {
     val traceRepresentationSplitted = splitToColumns(scenario.nThreads, traceRepresentation)
-    with(ExecutionLayout(listOf(), traceRepresentationSplitted, listOf())) {
+    with(ExecutionLayout(scenario.nThreads, traceRepresentationSplitted.map { it.columns })) {
         appendSeparatorLine()
         appendHeader()
         appendSeparatorLine()
-        appendColumns(traceRepresentationSplitted)
-        appendSeparatorLine()
+        traceRepresentationSplitted.forEach { section ->
+            appendColumns(section.columns)
+            appendSeparatorLine()
+        }
     }
 }
 
 /**
  * Convert trace events to the final form of a matrix of strings.
  */
-private fun splitToColumns(nThreads: Int, traceRepresentation: List<TraceEventRepresentation>): List<List<String>> {
-    val result = List(nThreads) { mutableListOf<String>() }
-    for (event in traceRepresentation) {
-        val columnId = event.iThread
-        // write message in an appropriate column
-        result[columnId].add(event.representation)
-        val neededSize = result[columnId].size
-        // establish columns size equals
-        for (column in result)
-            if (column.size != neededSize)
-                column.add("")
+private fun splitToColumns(nThreads: Int, traceRepresentation:  List<List<TraceEventRepresentation>>): List<TableSectionColumnsRepresentation> {
+    return traceRepresentation.map { sectionRepresentation ->
+        val result = List(nThreads) { mutableListOf<String>() }
+        for (event in sectionRepresentation) {
+            val columnId = event.iThread
+            // write message in an appropriate column
+            result[columnId].add(event.representation)
+            val neededSize = result[columnId].size
+            // establish columns size equals
+            for (column in result)
+                if (column.size != neededSize)
+                    column.add("")
+        }
+        TableSectionColumnsRepresentation(result)
     }
-    return result
 }
 
 /**
+ * Represents a column list representation of any table section (init, parallel, post, validation).
+ */
+class TableSectionColumnsRepresentation(
+    /**
+     * List of column representation.
+     */
+    val columns: List<List<String>>
+)
+
+/**
  * Constructs a trace graph based on the provided [trace].
- * Returns the node corresponding to the starting trace event.
+ * Trace is divided into several sections with init, parallel, post and validation parts.
  *
  * A trace graph consists of two types of edges:
  * `next` edges form a single-directed list in which the order of events is the same as in [trace].
  * `internalEvents` edges form a directed forest.
+ *
+ * @return a list of nodes corresponding to the starting trace event in each section.
  */
-private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionResult?, trace: Trace, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): TraceNode? {
+internal fun constructTraceGraph(
+    failure: LincheckFailure,
+    results: ExecutionResult?,
+    trace: Trace,
+    exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
+): List<TraceNode> {
+    val resultProvider = ExecutionResultsProvider(results, failure)
+    val scenario = failure.scenario
     val tracePoints = trace.trace
     // last events that were executed for each thread. It is either thread finish events or events before crash
     val lastExecutedEvents = IntArray(scenario.nThreads) { iThread ->
@@ -105,21 +140,35 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
     }
     // last actor that was handled for each thread
     val lastHandledActor = IntArray(scenario.nThreads) { -1 }
-    // actor nodes for each actor in each thread
+    val isValidationFunctionFailure = failure is ValidationFailure
     val actorNodes = Array(scenario.nThreads) { i ->
-        Array<ActorNode?>(scenario.threads[i].size) { null }
+        val actorsCount = scenario.threads[i].size + if (i == 0 && failure is ValidationFailure) 1 else 0
+        Array<ActorNode?>(actorsCount) { null }
     }
+    val actorRepresentations = createActorRepresentation(scenario, failure)
     // call nodes for each method call
     val callNodes = mutableMapOf<Int, CallNode>()
     // all trace nodes in order corresponding to `tracePoints`
-    val traceGraphNodes = mutableListOf<TraceNode>()
+    val traceGraphNodesSections = arrayListOf<MutableList<TraceNode>>()
+    var traceGraphNodes = arrayListOf<TraceNode>()
 
     for (eventId in tracePoints.indices) {
         val event = tracePoints[eventId]
+        if (event is SectionDelimiterTracePoint) {
+            if (event.executionPart == ExecutionPart.VALIDATION) {
+                // we don't need validation function trace if the cause of the failure is not a validation function failure
+                if (!isValidationFunctionFailure) break
+            }
+            if (traceGraphNodes.isNotEmpty()) {
+                traceGraphNodesSections += traceGraphNodes
+                traceGraphNodes = arrayListOf()
+            }
+            continue
+        }
         val iThread = event.iThread
         val actorId = event.actorId
         // add all actors that started since the last event
-        while (lastHandledActor[iThread] < min(actorId, scenario.threads[iThread].lastIndex)) {
+        while (lastHandledActor[iThread] < min(actorId, actorNodes[iThread].lastIndex)) {
             val nextActor = ++lastHandledActor[iThread]
             // create new actor node actor
             val actorNode = traceGraphNodes.createAndAppend { lastNode ->
@@ -127,8 +176,8 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
                     iThread = iThread,
                     last = lastNode,
                     callDepth = 0,
-                    actor = scenario.threads[iThread][nextActor],
-                    resultRepresentation = results[iThread, nextActor]
+                    actorRepresentation = actorRepresentations[iThread][nextActor],
+                    resultRepresentation = resultProvider[iThread, nextActor]
                         ?.let { actorNodeResultRepresentation(it, exceptionStackTraces) }
                 )
             }
@@ -161,7 +210,7 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
     for (iThread in actorNodes.indices) {
         for (actorId in actorNodes[iThread].indices) {
             var actorNode = actorNodes[iThread][actorId]
-            val actorResult = results[iThread, actorId]
+            val actorResult = resultProvider[iThread, actorId]
             // in case of empty trace, we want to show at least the actor nodes themselves;
             // however, no actor nodes will be created by the code above, so we need to create them explicitly here.
             if (actorNode == null && actorResult != null) {
@@ -170,29 +219,95 @@ private fun constructTraceGraph(scenario: ExecutionScenario, results: ExecutionR
                     iThread = iThread,
                     last = lastNode,
                     callDepth = 0,
-                    actor = scenario.threads[iThread][actorId],
+                    actorRepresentation = actorRepresentations[iThread][actorId],
                     resultRepresentation = actorNodeResultRepresentation(actorResult, exceptionStackTraces)
                 )
                 actorNodes[iThread][actorId] = actorNode
-                traceGraphNodes.add(actorNode)
+                traceGraphNodes += actorNode
             }
             if (actorNode == null)
                 continue
             // insert an ActorResultNode between the last actor event and the next event after it
             val lastEvent = actorNode.lastInternalEvent
             val lastEventNext = lastEvent.next
-            val result = results[iThread, actorId]
+            val result = resultProvider[iThread, actorId]
             val resultRepresentation = result?.let { resultRepresentation(result, exceptionStackTraces) }
-            val resultNode = ActorResultNode(iThread, lastEvent, actorNode.callDepth + 1, resultRepresentation)
+            val resultNode = ActorResultNode(
+                iThread = iThread,
+                last = lastEvent,
+                callDepth = actorNode.callDepth + 1,
+                resultRepresentation = resultRepresentation,
+                exceptionNumberIfExceptionResult = if (result is ExceptionResult) exceptionStackTraces[result.throwable]?.number else null
+            )
             actorNode.addInternalEvent(resultNode)
             resultNode.next = lastEventNext
         }
     }
-    return traceGraphNodes.firstOrNull()
+    // add last section
+    if (traceGraphNodes.isNotEmpty()) {
+        traceGraphNodesSections += traceGraphNodes
+    }
+
+    return traceGraphNodesSections.map { it.first() }
 }
 
-private operator fun ExecutionResult?.get(iThread: Int, actorId: Int): Result? =
-    this?.threadsResults?.get(iThread)?.get(actorId)
+/**
+ * Helper class to provider execution results, including a validation function result
+ */
+private class ExecutionResultsProvider(result: ExecutionResult?, failure: LincheckFailure) {
+
+    /**
+     * A map of type Map<(threadId, actorId) -> Result>
+     */
+    private val threadNumberToActorResultMap: Map<Pair<Int, Int>, Result> = when {
+        // If the results of the failure are present, then just collect them to a map.
+        // In that case, we know that the failure reason is not validation function, so we ignore it.
+        (result != null) -> {
+            result.threadsResults
+                .flatMapIndexed { tId, actors -> actors.flatMapIndexed { actorId, result ->
+                    listOf((tId to actorId) to result)
+                }}
+                .toMap()
+        }
+
+        // If validation function is the reason if the failure then the only result we're interested in
+        // is the validation function exception.
+        failure is ValidationFailure -> {
+            mapOf((0 to firstThreadActorCount(failure)) to ExceptionResult.create(failure.exception, false))
+        }
+
+        else -> emptyMap()
+    }
+
+    operator fun get(iThread: Int, actorId: Int): Result? {
+        return threadNumberToActorResultMap[iThread to actorId]
+    }
+
+    private fun firstThreadActorCount(failure: ValidationFailure): Int =
+        failure.scenario.initExecution.size + failure.scenario.parallelExecution[0].size + failure.scenario.postExecution.size
+
+}
+
+/**
+ * Creates united actors representation, including invoked actors and validation functions.
+ * In output construction, we treat validation function call like a regular actor for unification.
+ */
+private fun createActorRepresentation(
+    scenario: ExecutionScenario,
+    failure: LincheckFailure
+): Array<List<String>> {
+    return Array(scenario.nThreads) { i ->
+        if (i == 0) {
+            val actors = scenario.threads[i].map { it.toString() }.toMutableList()
+
+            if (failure is ValidationFailure) {
+                actors += "${failure.validationFunctionName}()"
+            }
+
+            actors
+        } else scenario.threads[i].map { it.toString() }
+    }
+}
 
 /**
  * Create a new trace node and add it to the end of the list.
@@ -200,20 +315,24 @@ private operator fun ExecutionResult?.get(iThread: Int, actorId: Int): Result? =
 private fun <T : TraceNode> MutableList<TraceNode>.createAndAppend(constructor: (lastNode: TraceNode?) -> T): T =
     constructor(lastOrNull()).also { add(it) }
 
+/**
+ * @param sectionsFirstNodes a list of first nodes in each scenario section
+ */
 private fun traceGraphToRepresentationList(
-    startNode: TraceNode?,
+    sectionsFirstNodes: List<TraceNode>,
     verboseTrace: Boolean
-): List<TraceEventRepresentation> {
-    var curNode: TraceNode? = startNode
-    val traceRepresentation = mutableListOf<TraceEventRepresentation>()
-    while (curNode != null) {
-        curNode = curNode.addRepresentationTo(traceRepresentation, verboseTrace)
+): List<List<TraceEventRepresentation>> =
+    sectionsFirstNodes.map { firstNodeInSection ->
+        buildList {
+            var curNode: TraceNode? = firstNodeInSection
+            while (curNode != null) {
+                curNode = curNode.addRepresentationTo(this, verboseTrace)
+            }
+        }
     }
-    return traceRepresentation
-}
 
-private sealed class TraceNode(
-    protected val iThread: Int,
+internal sealed class TraceNode(
+    val iThread: Int,
     last: TraceNode?,
     val callDepth: Int // for tree indentation
 ) {
@@ -244,11 +363,11 @@ private sealed class TraceNode(
     ): TraceNode?
 }
 
-private class TraceLeafEvent(
+internal class TraceLeafEvent(
     iThread: Int,
     last: TraceNode?,
     callDepth: Int,
-    private val event: TracePoint,
+    internal val event: TracePoint,
     private val lastExecutedEvent: Boolean = false
 ) : TraceNode(iThread, last, callDepth) {
 
@@ -279,7 +398,7 @@ private class TraceLeafEvent(
     }
 }
 
-private abstract class TraceInnerNode(iThread: Int, last: TraceNode?, callDepth: Int) :
+internal abstract class TraceInnerNode(iThread: Int, last: TraceNode?, callDepth: Int) :
     TraceNode(iThread, last, callDepth) {
     override val lastState: String?
         get() = internalEvents.map { it.lastState }.lastOrNull { it != null }
@@ -298,11 +417,11 @@ private abstract class TraceInnerNode(iThread: Int, last: TraceNode?, callDepth:
     }
 }
 
-private class CallNode(
+internal class CallNode(
     iThread: Int,
     last: TraceNode?,
     callDepth: Int,
-    private val call: MethodCallTracePoint
+    internal val call: MethodCallTracePoint
 ) : TraceInnerNode(iThread, last, callDepth) {
     // suspended method contents should be reported
     override fun shouldBeExpanded(verboseTrace: Boolean): Boolean {
@@ -323,18 +442,18 @@ private class CallNode(
         }
 }
 
-private class ActorNode(
+internal class ActorNode(
     iThread: Int,
     last: TraceNode?,
     callDepth: Int,
-    private val actor: Actor,
+    internal val actorRepresentation: String,
     private val resultRepresentation: String?
 ) : TraceInnerNode(iThread, last, callDepth) {
     override fun addRepresentationTo(
         traceRepresentation: MutableList<TraceEventRepresentation>,
         verboseTrace: Boolean
     ): TraceNode? {
-        val actorRepresentation = "$actor" + if (resultRepresentation != null) ": $resultRepresentation" else ""
+        val actorRepresentation = actorRepresentation + if (resultRepresentation != null) ": $resultRepresentation" else ""
         traceRepresentation.add(TraceEventRepresentation(iThread, actorRepresentation))
         return if (!shouldBeExpanded(verboseTrace)) {
             lastState?.let { traceRepresentation.add(stateEventRepresentation(iThread, it)) }
@@ -345,11 +464,15 @@ private class ActorNode(
     }
 }
 
-private class ActorResultNode(
+internal class ActorResultNode(
     iThread: Int,
     last: TraceNode?,
     callDepth: Int,
-    private val resultRepresentation: String?
+    internal val resultRepresentation: String?,
+    /**
+     * This value presents only if an exception was the actor result.
+     */
+    internal val exceptionNumberIfExceptionResult: Int?
 ) : TraceNode(iThread, last, callDepth) {
     override val lastState: String? = null
     override val lastInternalEvent: TraceNode = this
@@ -372,15 +495,40 @@ private fun TraceNode.traceIndentation() = TRACE_INDENTATION.repeat(callDepth)
 private fun TraceNode.stateEventRepresentation(iThread: Int, stateRepresentation: String) =
     TraceEventRepresentation(iThread, traceIndentation() + "STATE: $stateRepresentation")
 
-private class TraceEventRepresentation(val iThread: Int, val representation: String)
+internal class TraceEventRepresentation(val iThread: Int, val representation: String)
+
+internal fun getObjectName(obj: Any?): String =
+    if (obj != null) {
+        if (obj.javaClass.isAnonymousClass) {
+            obj.javaClass.simpleNameForAnonymous
+        } else {
+            obj.javaClass.simpleName + "#" + getObjectNumber(obj.javaClass, obj)
+        }
+    } else {
+        "null"
+    }
+
+private val Class<*>.simpleNameForAnonymous: String get() {
+    // Split by the package separator and return the result if this is not an inner class.
+    val withoutPackage = name.substringAfterLast('.')
+    if (!withoutPackage.contains("$")) return withoutPackage
+    // Extract the last named inner class followed by any "$<number>" patterns using regex.
+    val regex = """(.*\$)?([^\$.\d]+(\$\d+)*)""".toRegex()
+    val matchResult = regex.matchEntire(withoutPackage)
+    return matchResult?.groups?.get(2)?.value ?: withoutPackage
+}
 
 // Should be called only during `appendTrace` invocation
 internal fun getObjectNumber(clazz: Class<Any>, obj: Any): Int = objectNumeration
     .computeIfAbsent(clazz) { IdentityHashMap() }
     .computeIfAbsent(obj) { 1 + objectNumeration[clazz]!!.size }
 
-private val objectNumeration = WeakHashMap<Class<Any>, MutableMap<Any, Int>>()
+private val objectNumeration = Collections.synchronizedMap(WeakHashMap<Class<Any>, MutableMap<Any, Int>>())
 
 const val TRACE_TITLE = "The following interleaving leads to the error:"
 const val DETAILED_TRACE_TITLE = "Detailed trace:"
 private const val ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE = "All unfinished threads are in deadlock"
+
+internal fun cleanObjectNumeration() {
+    objectNumeration.clear()
+}

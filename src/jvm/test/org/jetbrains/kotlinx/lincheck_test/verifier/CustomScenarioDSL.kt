@@ -11,10 +11,8 @@ package org.jetbrains.kotlinx.lincheck_test.verifier
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
-import java.lang.IllegalStateException
-import kotlin.reflect.KFunction
-import kotlin.reflect.jvm.javaMethod
 
 /**
  * Kotlin DSL for defining custom scenarios and corresponding expected results.
@@ -45,10 +43,12 @@ fun verify(
     block: ExecutionBuilder.() -> Unit,
     correct: Boolean
 ) {
-    val (scenario, results) = scenarioWithResults(block)
-    val verifier = verifierClass.getConstructor(Class::class.java).newInstance(testClass)
-    val res = verifier.verifyResults(scenario, results)
-    assert(res == correct)
+    withLincheckJavaAgent(InstrumentationMode.STRESS) {
+        val (scenario, results) = scenarioWithResults(block)
+        val verifier = verifierClass.getConstructor(Class::class.java).newInstance(testClass)
+        val res = verifier.verifyResults(scenario, results)
+        assert(res == correct)
+    }
 }
 
 fun scenarioWithResults(
@@ -94,9 +94,10 @@ class ExecutionBuilder {
             parallelResults.add(it.map { it.result })
         }
         return ExecutionScenario(
-            initial.map { it.actor },
-            parallelExecution,
-            post.map { it.actor }
+            initExecution = initial.map { it.actor },
+            parallelExecution = parallelExecution,
+            postExecution = post.map { it.actor },
+            validationFunction = null
         ) to ExecutionResult(
             initial.map { it.result },
             parallelResults.map { it.withEmptyClock(parallelExecution.size) },

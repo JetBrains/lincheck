@@ -16,6 +16,29 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.Assert.*
 
 /**
+ * Checks output when Lincheck run fails with an exception and don't return [LincheckFailure]
+ * internally.
+ * This happens when the configuration of the test is incorrect.
+ * @param expectedOutputFile name of file stored in resources/expected_logs, storing the expected lincheck output.
+ */
+internal inline fun <reified E: Exception> Options<*, *>.checkFailsWithException(testClass: Class<*>, expectedOutputFile: String) {
+    try {
+        LinChecker(testClass, this).check()
+    } catch (e: Exception) {
+        assertTrue(
+            "Exception of type ${E::class.simpleName} expected, but ${e::class.simpleName} was thrown.\n $e",
+            e is E
+        )
+        val actualOutput = e.message ?: ""
+        val expectedOutput = getExpectedLogFromResources(expectedOutputFile)
+
+        if (actualOutput.filtered != expectedOutput.filtered) {
+            assertEquals(expectedOutput, actualOutput)
+        }
+    }
+}
+
+/**
  * Checks that failure output matches the expected one stored in a file.
  *
  * @param expectedOutputFile name of file stored in resources/expected_logs, storing the expected lincheck output.
@@ -46,10 +69,11 @@ private val String.filtered: String get() {
 // - everything from `java.base/` (because code locations may vary between different versions of JVM)
 private val TEST_EXECUTION_TRACE_ELEMENT_REGEX = listOf(
     "(\\W*)at org\\.jetbrains\\.kotlinx\\.lincheck\\.runner\\.TestThreadExecution(\\d+)\\.run\\(Unknown Source\\)",
+    "(\\W*)at org\\.jetbrains\\.kotlinx\\.lincheck\\.runner\\.FixedActiveThreadsExecutor\\.testThreadRunnable\\\$lambda\\\$(\\d+)\\(FixedActiveThreadsExecutor.kt:(\\d+)\\)",
     "(\\W*)at java.base\\/(.*)"
 ).joinToString(separator = ")|(", prefix = "(", postfix = ")").toRegex()
 
-private val LINE_NUMBER_REGEX = Regex(":(\\d+)\\)")
+private val LINE_NUMBER_REGEX = Regex(":(\\d+)")
 
 internal fun getExpectedLogFromResources(testFileName: String): String {
     val resourceName = "expected_logs/$testFileName"

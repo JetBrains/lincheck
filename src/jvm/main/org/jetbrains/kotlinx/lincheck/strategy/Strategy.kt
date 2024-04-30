@@ -11,7 +11,6 @@ package org.jetbrains.kotlinx.lincheck.strategy
 
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
-import org.objectweb.asm.ClassVisitor
 
 /**
  * Implementation of this class describes how to run the generated execution.
@@ -23,11 +22,6 @@ import org.objectweb.asm.ClassVisitor
 abstract class Strategy protected constructor(
     val scenario: ExecutionScenario
 ) {
-    open fun needsTransformation() = false
-    open fun createTransformer(cv: ClassVisitor): ClassVisitor {
-        throw UnsupportedOperationException("$javaClass strategy does not transform classes")
-    }
-
     abstract fun run(): LincheckFailure?
 
     open fun beforePart(part: ExecutionPart) {}
@@ -36,4 +30,9 @@ abstract class Strategy protected constructor(
      * Is invoked before each actor execution.
      */
     open fun onActorStart(iThread: Int) {}
+
+    /**
+     * Is invoked after each actor execution, even if a legal exception was thrown
+     */
+    open fun onActorFinish() {}
 }

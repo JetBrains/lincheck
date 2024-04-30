@@ -1,0 +1,36 @@
+= Invalid execution results =
+| ------------------------------- |
+|    Thread 1    |    Thread 2    |
+| ------------------------------- |
+| operation(): 0 | operation(): 0 |
+| ------------------------------- |
+
+The following interleaving leads to the error:
+| ----------------------------------------------------------------------------------------------------- |
+|    Thread 1    |                                       Thread 2                                       |
+| ----------------------------------------------------------------------------------------------------- |
+|                | operation(): 0                                                                       |
+|                |   x.WRITE(VALUE_2) at EnumRepresentationTest.operation(EnumRepresentationTest.kt:25) |
+|                |   counter.READ: 0 at EnumRepresentationTest.operation(EnumRepresentationTest.kt:26)  |
+|                |   switch                                                                             |
+| operation(): 0 |                                                                                      |
+|                |   counter.WRITE(1) at EnumRepresentationTest.operation(EnumRepresentationTest.kt:26) |
+|                |   result: 0                                                                          |
+| ----------------------------------------------------------------------------------------------------- |
+
+Detailed trace:
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                       Thread 1                                       |                                       Thread 2                                       |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                      | operation(): 0                                                                       |
+|                                                                                      |   x.WRITE(VALUE_2) at EnumRepresentationTest.operation(EnumRepresentationTest.kt:25) |
+|                                                                                      |   counter.READ: 0 at EnumRepresentationTest.operation(EnumRepresentationTest.kt:26)  |
+|                                                                                      |   switch                                                                             |
+| operation(): 0                                                                       |                                                                                      |
+|   x.WRITE(VALUE_2) at EnumRepresentationTest.operation(EnumRepresentationTest.kt:25) |                                                                                      |
+|   counter.READ: 0 at EnumRepresentationTest.operation(EnumRepresentationTest.kt:26)  |                                                                                      |
+|   counter.WRITE(1) at EnumRepresentationTest.operation(EnumRepresentationTest.kt:26) |                                                                                      |
+|   result: 0                                                                          |                                                                                      |
+|                                                                                      |   counter.WRITE(1) at EnumRepresentationTest.operation(EnumRepresentationTest.kt:26) |
+|                                                                                      |   result: 0                                                                          |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

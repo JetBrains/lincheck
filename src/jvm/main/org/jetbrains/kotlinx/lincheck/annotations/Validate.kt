@@ -13,15 +13,12 @@ import kotlin.annotation.AnnotationRetention.*
 import kotlin.annotation.AnnotationTarget.*
 
 /**
- * It is possible in **lincheck** to add the validation of the testing data structure invariants,
- * which is implemented via functions that can be executed multiple times during execution
- * when there is no running operation in an intermediate state (e.g., in the stress mode
- * they are invoked after each of the init and post part operations and after the whole parallel part).
- * Thus, these functions should not modify the data structure.
+ * It is possible to check the data structure consistency at the end of the execution
+ * by specifying a validation function that is called at the end of each scenario.
+ * At most one validation function is allowed.
  *
- * Validation functions should be marked with this annotation, should not have arguments,
- * and should not return anything (in other words, the returning type is `void`).
- * In case the testing data structure is in an invalid state, they should throw exceptions
+ * The validation function should be marked with this annotation and have no arguments.
+ * In case the testing data structure is in an invalid state, it should throw an exception.
  * ([AssertionError] or [IllegalStateException] are the preferable ones).
  */
 @Retention(RUNTIME)

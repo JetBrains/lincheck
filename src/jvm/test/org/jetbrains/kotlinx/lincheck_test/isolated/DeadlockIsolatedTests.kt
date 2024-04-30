@@ -7,7 +7,7 @@
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.jetbrains.kotlinx.lincheck_test.runner
+package org.jetbrains.kotlinx.lincheck_test.isolated
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
@@ -15,7 +15,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
 import java.util.concurrent.atomic.AtomicBoolean
 
-class DeadlockOnSynchronizedTest : AbstractLincheckTest(DeadlockWithDumpFailure::class) {
+class DeadlockOnSynchronizedIsolatedTest : AbstractLincheckTest(DeadlockOrLivelockFailure::class) {
     private var counter = 0
     private var lock1 = Any()
     private var lock2 = Any()
@@ -46,7 +46,7 @@ class DeadlockOnSynchronizedTest : AbstractLincheckTest(DeadlockWithDumpFailure:
     override fun extractState(): Any = counter
 }
 
-class DeadlockOnSynchronizedWaitTest : AbstractLincheckTest(DeadlockWithDumpFailure::class) {
+class DeadlockOnSynchronizedWaitIsolatedTest : AbstractLincheckTest(DeadlockOrLivelockFailure::class) {
     private var lock = Object()
 
     @Operation
@@ -65,7 +65,7 @@ class DeadlockOnSynchronizedWaitTest : AbstractLincheckTest(DeadlockWithDumpFail
     override fun extractState(): Any = 0 // constant
 }
 
-class LiveLockTest : AbstractLincheckTest(DeadlockWithDumpFailure::class) {
+class LiveLockIsolatedTest : AbstractLincheckTest(DeadlockOrLivelockFailure::class) {
     private var counter = 0
     private val lock1 = AtomicBoolean(false)
     private val lock2 = AtomicBoolean(false)

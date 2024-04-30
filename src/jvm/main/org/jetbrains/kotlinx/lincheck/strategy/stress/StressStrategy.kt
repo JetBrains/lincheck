@@ -9,6 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.stress
 
+import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -19,29 +20,19 @@ class StressStrategy(
     testCfg: StressCTestConfiguration,
     testClass: Class<*>,
     scenario: ExecutionScenario,
-    validationFunctions: List<Method>,
+    validationFunction: Actor?,
     stateRepresentationFunction: Method?,
     private val verifier: Verifier
 ) : Strategy(scenario) {
     private val invocations = testCfg.invocationsPerIteration
-    private val runner: Runner
-
-    init {
-        runner = ParallelThreadsRunner(
-            strategy = this,
-            testClass = testClass,
-            validationFunctions = validationFunctions,
-            stateRepresentationFunction = stateRepresentationFunction,
-            timeoutMs = testCfg.timeoutMs,
-            useClocks = UseClocks.RANDOM
-        )
-        try {
-            runner.initialize()
-        } catch (t: Throwable) {
-            runner.close()
-            throw t
-        }
-    }
+    private val runner = ParallelThreadsRunner(
+        strategy = this,
+        testClass = testClass,
+        validationFunction = validationFunction,
+        stateRepresentationFunction = stateRepresentationFunction,
+        timeoutMs = testCfg.timeoutMs,
+        useClocks = UseClocks.RANDOM
+    )
 
     override fun run(): LincheckFailure? {
         runner.use {

@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.runner;
 
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.kotlinx.lincheck.*;
 import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.runner.*;
@@ -26,20 +27,46 @@ public class TestThreadExecutionHelperTest {
 
     @Before
     public void setUp() {
-        ExecutionScenario scenario = new ExecutionScenario(emptyList(), emptyList(), emptyList());
+        ExecutionScenario scenario = new ExecutionScenario(emptyList(), emptyList(), emptyList(), null);
         Strategy strategy = new Strategy(scenario) {
             @Override
             public LincheckFailure run() {
                 throw new UnsupportedOperationException();
             }
         };
-        runner = new Runner(strategy, ArrayDeque.class, emptyList(), null) {
+        runner = new Runner(strategy, ArrayDeque.class, null, null) {
+            @Override
+            public boolean isCoroutineResumed(int iThread, int actorId) {
+                return false;
+            }
+
+            @Override
+            public void afterCoroutineCancelled(int iThread) {}
+
+            @Override
+            public void afterCoroutineResumed(int iThread) {}
+
+            @Override
+            public void afterCoroutineSuspended(int iThread) {}
+
+            @Override
+            public void onFailure(int iThread, @NotNull Throwable e) {}
+
+            @Override
+            public void onFinish(int iThread) {}
+
+            @Override
+            public void onStart(int iThread) {}
             @Override
             public InvocationResult run() {
                 throw new UnsupportedOperationException();
             }
+
+            @Override
+            public boolean isCurrentRunnerThread(@NotNull Thread thread) {
+                return false;
+            }
         };
-        runner.initialize();
     }
 
     @Test

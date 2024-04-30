@@ -7,5 +7,5 @@ java.lang.IllegalStateException: Internal bug
 	at org.jetbrains.kotlinx.lincheck.util.InternalLincheckExceptionEmulator.throwException(InternalLincheckExceptionEmulator.kt:23)
 	at org.jetbrains.kotlinx.lincheck_test.representation.InternalLincheckBugTest.operation2(InternalLincheckBugTest.kt:38)
 	at org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution301.run(Unknown Source)
-	at org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.testThreadRunnable$lambda-8(FixedActiveThreadsExecutor.kt:149)
+	at org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.testThreadRunnable$lambda$8(FixedActiveThreadsExecutor.kt:149)
 	at java.base/java.lang.Thread.run(Thread.java:833)

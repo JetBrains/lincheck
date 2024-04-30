@@ -17,10 +17,11 @@ verifies that the results of each invocation satisfy the required correctness pr
 
 Please see the [official tutorial](https://kotlinlang.org/docs/lincheck-guide.html) that showcases Lincheck features through examples.
 
-You may also be interested in the following public talks:
+You may also be interested in the following resources:
 
-* "How we test concurrent algorithms in Kotlin Coroutines" by Nikita Koval: [Video](https://youtu.be/jZqkWfa11Js). KotlinConf 2023
-* "Lincheck: Testing concurrency on the JVM" workshop by Maria Sokolova: [Part 1](https://www.youtube.com/watch?v=YNtUK9GK4pA), [Part 2](https://www.youtube.com/watch?v=EW7mkAOErWw). Hydra 2021
+* ["Lincheck: A Practical Framework for Testing Concurrent Data Structures on JVM"](https://link.springer.com/content/pdf/10.1007/978-3-031-37706-8_8.pdf?pdf=inline%20link) paper by N. Koval, A. Fedorov, M. Sokolova, D. Tsitelov, and D. Alistarh published at CAV '23.
+* ["How we test concurrent algorithms in Kotlin Coroutines"](https://youtu.be/jZqkWfa11Js) talk by Nikita Koval at KotlinConf '23. 
+* "Lincheck: Testing concurrency on the JVM" workshop ([Part 1](https://www.youtube.com/watch?v=YNtUK9GK4pA), [Part 2](https://www.youtube.com/watch?v=EW7mkAOErWw)) by Maria Sokolova at Hydra '21.
 
 ## Using in Your Project
 
@@ -33,34 +34,9 @@ repositories {
 
 dependencies {
    // Lincheck dependency
-   testImplementation("org.jetbrains.kotlinx:lincheck:2.23")
+   testImplementation("org.jetbrains.kotlinx:lincheck:2.30")
 }
 ```
-
-### Java 9+ 
-To use model checking strategy for Java 9 and later, add the following JVM properties:
-
-```text
---add-opens java.base/jdk.internal.misc=ALL-UNNAMED
---add-exports java.base/jdk.internal.util=ALL-UNNAMED
---add-exports java.base/sun.security.action=ALL-UNNAMED
-```
-
-They are required if the testing code uses classes from the `java.util` package since
-some of them use `jdk.internal.misc.Unsafe` or similar internal classes under the hood.
-
-If you use Gradle, add the following lines to `build.gradle.kts`:
-
-```
-tasks.withType<Test> {
-    jvmArgs(
-        "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED", 
-        "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED", 
-        "--add-exports", "java.base/sun.security.action=ALL-UNNAMED"
-    )
-}
-```
-
 
 ## Example 
 

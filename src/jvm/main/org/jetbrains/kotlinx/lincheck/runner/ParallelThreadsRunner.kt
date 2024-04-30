@@ -13,12 +13,15 @@ import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.*
+import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner.Completion.*
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
-import org.objectweb.asm.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
+import org.jetbrains.kotlinx.lincheck.util.*
+import sun.nio.ch.lincheck.*
 import java.lang.reflect.*
 import java.util.concurrent.*
 import java.util.concurrent.atomic.*
@@ -37,15 +40,17 @@ private typealias SuspensionPointResultWithContinuation = AtomicReference<Pair<k
 internal open class ParallelThreadsRunner(
     strategy: Strategy,
     testClass: Class<*>,
-    validationFunctions: List<Method>,
+    validationFunction: Actor?,
     stateRepresentationFunction: Method?,
     private val timeoutMs: Long, // for deadlock or livelock detection
     private val useClocks: UseClocks // specifies whether `HBClock`-s should always be used or with some probability
-) : Runner(strategy, testClass, validationFunctions, stateRepresentationFunction) {
-    private val runnerHash = this.hashCode() // helps to distinguish this runner threads from others
-    private val executor = FixedActiveThreadsExecutor(scenario.nThreads, runnerHash) // should be closed in `close()`
+) : Runner(strategy, testClass, validationFunction, stateRepresentationFunction) {
+    private val testName = testClass.simpleName
+    internal val executor = FixedActiveThreadsExecutor(testName, scenario.nThreads) // should be closed in `close()`
 
-    private lateinit var testInstance: Any
+    private val spinners = SpinnerGroup(executor.threads.size)
+
+    internal lateinit var testInstance: Any
 
     private var suspensionPointResults = List(scenario.nThreads) { t ->
         MutableList<Result>(scenario.threads[t].size) { NoResult }
@@ -65,28 +70,23 @@ internal open class ParallelThreadsRunner(
     private fun trySetCancelledStatus(iThread: Int, actorId: Int) = completionStatuses[iThread].compareAndSet(actorId, null, CompletionStatus.CANCELLED)
 
     private val uninitializedThreads = AtomicInteger(scenario.nThreads) // for threads synchronization
-    private var yieldInvokedInOnStart = false
 
-    var currentExecutionPart: ExecutionPart? = null
-        private set
+    private val initialPartExecution: TestThreadExecution? = createInitialPartExecution()
+    private val parallelPartExecutions: Array<TestThreadExecution> = createParallelPartExecutions()
+    private val postPartExecution: TestThreadExecution? = createPostPartExecution()
+    private val validationPartExecution: TestThreadExecution? = createValidationPartExecution(validationFunction)
 
-    private var initialPartExecution: InitTestThreadExecution? = null
-    private var parallelPartExecutions: Array<TestThreadExecution> = arrayOf()
-    private var postPartExecution: PostTestThreadExecution? = null
+    private val testThreadExecutions: List<TestThreadExecution> = listOfNotNull(
+        initialPartExecution,
+        *parallelPartExecutions,
+        postPartExecution
+    )
 
-    private var testThreadExecutions: List<TestThreadExecution> = listOf()
-
-    override fun initialize() {
-        super.initialize()
-        initialPartExecution = createInitialPartExecution()
-        parallelPartExecutions = createParallelPartExecutions()
-        postPartExecution = createPostPartExecution()
-        testThreadExecutions = listOfNotNull(
-            initialPartExecution,
-            *parallelPartExecutions,
-            postPartExecution
-        )
-        reset()
+    init {
+        if (strategy is ManagedStrategy) {
+            executor.threads.forEach { it.eventTracker = strategy }
+        }
+        resetState()
     }
 
     /**
@@ -101,9 +101,11 @@ internal open class ParallelThreadsRunner(
     protected inner class Completion(private val iThread: Int, private val actorId: Int) : Continuation<Any?> {
         val resWithCont = SuspensionPointResultWithContinuation(null)
 
-        override val context = ParallelThreadRunnerInterceptor(resWithCont) + StoreExceptionHandler() + Job()
+        override var context = ParallelThreadRunnerInterceptor(resWithCont) + StoreExceptionHandler() + Job()
 
-        override fun resumeWith(result: kotlin.Result<Any?>) {
+        // We need to run this code in an ignored section,
+        // as it is called in the testing code but should not be analyzed.
+        override fun resumeWith(result: kotlin.Result<Any?>) = runInIgnoredSection {
             // decrement completed or suspended threads only if the operation was not cancelled and
             // the continuation was not intercepted; it was already decremented before writing `resWithCont` otherwise
             if (!result.cancelledByLincheck()) {
@@ -119,6 +121,11 @@ internal open class ParallelThreadsRunner(
             }
         }
 
+        fun reset() {
+            resWithCont.set(null)
+            context = ParallelThreadRunnerInterceptor(resWithCont) + StoreExceptionHandler() + Job()
+        }
+
         /**
          * When suspended actor is resumed by another thread
          * [ParallelThreadRunnerInterceptor.interceptContinuation] is called to intercept it's continuation.
@@ -128,41 +135,63 @@ internal open class ParallelThreadsRunner(
         private inner class ParallelThreadRunnerInterceptor(
             private var resWithCont: SuspensionPointResultWithContinuation
         ) : AbstractCoroutineContextElement(ContinuationInterceptor), ContinuationInterceptor {
-            override fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T> {
+
+            // We need to run this code in an ignored section,
+            // as it is called in the testing code but should not be analyzed.
+            override fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T> = runInIgnoredSection {
                 return Continuation(StoreExceptionHandler() + Job()) { result ->
-                    // decrement completed or suspended threads only if the operation was not cancelled
-                    if (!result.cancelledByLincheck()) {
-                        completedOrSuspendedThreads.decrementAndGet()
-                        if (!trySetResumedStatus(iThread, actorId)) {
-                            // already cancelled via prompt cancellation, increment the counter back
-                            completedOrSuspendedThreads.incrementAndGet()
+                    runInIgnoredSection {
+                        // decrement completed or suspended threads only if the operation was not cancelled
+                        if (!result.cancelledByLincheck()) {
+                            completedOrSuspendedThreads.decrementAndGet()
+                            if (!trySetResumedStatus(iThread, actorId)) {
+                                // already cancelled via prompt cancellation, increment the counter back
+                                completedOrSuspendedThreads.incrementAndGet()
+                            }
+                            resWithCont.set(result to continuation as Continuation<Any?>)
                         }
-                        resWithCont.set(result to continuation as Continuation<Any?>)
                     }
                 }
             }
         }
     }
 
-    private fun reset() {
+    private fun resetState() {
         suspensionPointResults.forEach { it.fill(NoResult) }
         completedOrSuspendedThreads.set(0)
-        completions.forEach { it.forEach { it.resWithCont.set(null) } }
+        completions.forEach {
+            it.forEach { completion ->
+                // As we're using the same instances of Completion during multiply invocations,
+                // it's context may collect some data,
+                // which lead to non-determinism in a subsequent invocation.
+                // To avoid this, we reset its context.
+                completion.reset()
+            }
+        }
         completionStatuses = List(scenario.nThreads) { t ->
             AtomicReferenceArray<CompletionStatus>(scenario.parallelExecution[t].size)
         }
         uninitializedThreads.set(scenario.nThreads)
         // reset stored continuations
-        executor.threads.forEach { it.cont = null }
-        // reset phase
-        currentExecutionPart = null
+        executor.threads.forEach { it.suspendedContinuation = null }
         // reset thread executions
         testThreadExecutions.forEach { it.reset() }
+        validationPartExecution?.results?.fill(null)
     }
+
+    private var ensuredTestInstanceIsTransformed = false
 
     private fun createTestInstance() {
         testInstance = testClass.newInstance()
+        // In the model checking mode, we need to ensure
+        // that all the necessary classes and instrumented
+        // after creating a test instance.
+        if (strategy is ModelCheckingStrategy && !ensuredTestInstanceIsTransformed) {
+            LincheckJavaAgent.ensureObjectIsTransformed(testInstance)
+            ensuredTestInstanceIsTransformed = true
+        }
         testThreadExecutions.forEach { it.testInstance = testInstance }
+        validationPartExecution?.let { it.testInstance = testInstance }
     }
 
     /**
@@ -173,12 +202,12 @@ internal open class ParallelThreadsRunner(
      * Otherwise if the invoked actor completed without suspension, then it just writes it's final result.
      */
     @Suppress("unused")
-    fun processInvocationResult(res: Any?, iThread: Int, actorId: Int): Result {
+    fun processInvocationResult(res: Any?, iThread: Int, actorId: Int): Result = runInIgnoredSection {
         val actor = scenario.parallelExecution[iThread][actorId]
         val finalResult = if (res === COROUTINE_SUSPENDED) {
             val t = Thread.currentThread() as TestThread
-            val cont = t.cont.also { t.cont = null }
-            if (actor.cancelOnSuspension && cont !== null && cancelByLincheck(cont, actor.promptCancellation) != CANCELLATION_FAILED) {
+            val cont = t.suspendedContinuation.also { t.suspendedContinuation = null }
+            if (actor.cancelOnSuspension && cont !== null && cancelByLincheck(cont as CancellableContinuation<*>, actor.promptCancellation) != CANCELLATION_FAILED) {
                 if (!trySetCancelledStatus(iThread, actorId)) {
                     // already resumed, increment `completedOrSuspendedThreads` back
                     completedOrSuspendedThreads.incrementAndGet()
@@ -193,25 +222,28 @@ internal open class ParallelThreadsRunner(
         return finalResult
     }
 
-    private fun waitAndInvokeFollowUp(iThread: Int, actorId: Int): Result {
+    override fun afterCoroutineCancelled(iThread: Int) {}
+
+    // We need to run this code in an ignored section,
+    // as it is called in the testing code but should not be analyzed.
+    private fun waitAndInvokeFollowUp(iThread: Int, actorId: Int): Result = runInIgnoredSection {
         // Coroutine is suspended. Call method so that strategy can learn it.
         afterCoroutineSuspended(iThread)
-        // Tf the suspended method call has a follow-up part after this suspension point,
+        // If the suspended method call has a follow-up part after this suspension point,
         // then wait for the resuming thread to write a result of this suspension point
         // as well as the continuation to be executed by this thread;
         // wait for the final result of the method call otherwise.
         val completion = completions[iThread][actorId]
-        var i = 1
-        while (!isCoroutineResumed(iThread, actorId)) {
-            // Check whether the scenario is completed and the current suspended operation cannot be resumed.
-            if (completedOrSuspendedThreads.get() == scenario.nThreads) {
-                suspensionPointResults[iThread][actorId] = NoResult
-                return Suspended
-            }
-            // Do not call `yield()` until necessary. However, if the number of threads
-            // exceed the number of cores, it is better to call `yield` immediately to avoid starvation.
-            if (i++ % SPINNING_LOOP_ITERATIONS_BEFORE_YIELD == 0 || executor.numberOfThreadsExceedAvailableProcessors){
-                Thread.yield()
+        // Check if the coroutine is already resumed and if not, enter the spin loop.
+        if (!isCoroutineResumed(iThread, actorId)) {
+            spinners[iThread].spinWaitUntil {
+                // Check whether the scenario is completed and the current suspended operation cannot be resumed.
+                if (currentExecutionPart == POST || isParallelExecutionCompleted) {
+                    suspensionPointResults[iThread][actorId] = NoResult
+                    return Suspended
+                }
+                // Wait until coroutine is resumed.
+                isCoroutineResumed(iThread, actorId)
             }
         }
         // Coroutine will be resumed. Call method so that strategy can learn it.
@@ -228,9 +260,12 @@ internal open class ParallelThreadsRunner(
 
     /**
      * This method is used for communication between `ParallelThreadsRunner` and `ManagedStrategy` via overriding,
-     * so that runner do not know about managed strategy details.
+     * so that runner does not know about managed strategy details.
      */
-    internal open fun <T> cancelByLincheck(cont: CancellableContinuation<T>, promptCancellation: Boolean): CancellationResult =
+    internal open fun <T> cancelByLincheck(
+        cont: CancellableContinuation<T>,
+        promptCancellation: Boolean
+    ): CancellationResult =
         cont.cancelByLincheck(promptCancellation)
 
     override fun afterCoroutineSuspended(iThread: Int) {
@@ -247,28 +282,37 @@ internal open class ParallelThreadsRunner(
     override fun run(): InvocationResult {
         try {
             var timeout = timeoutMs * 1_000_000
-            // create new tested class instance
+            // Create a new testing class instance.
             createTestInstance()
-            // execute initial part
-            initialPartExecution?.run {
-                currentExecutionPart = ExecutionPart.INIT
-                beforePart(ExecutionPart.INIT)
-                timeout -= executor.submitAndAwait(arrayOf(this), timeout)
-                validationFailure?.let { return it }
+            // Execute the initial part.
+            initialPartExecution?.let {
+                beforePart(INIT)
+                timeout -= executor.submitAndAwait(arrayOf(it), timeout)
             }
-            // execute parallel part
-            currentExecutionPart = ExecutionPart.PARALLEL
-            beforePart(ExecutionPart.PARALLEL)
+            onThreadSwitchesOrActorFinishes()
+            val afterInitStateRepresentation = constructStateRepresentation()
+            // Execute the parallel part.
+            beforePart(PARALLEL)
             timeout -= executor.submitAndAwait(parallelPartExecutions, timeout)
-            // execute post part
-            postPartExecution?.run {
-                currentExecutionPart = ExecutionPart.POST
-                beforePart(ExecutionPart.POST)
-                timeout -= executor.submitAndAwait(arrayOf(this), timeout)
-                validationFailure?.let { return it }
+            val afterParallelStateRepresentation: String? = constructStateRepresentation()
+            onThreadSwitchesOrActorFinishes()
+            // Execute the post part.
+            postPartExecution?.let {
+                beforePart(POST)
+                timeout -= executor.submitAndAwait(arrayOf(it), timeout)
             }
-            // Combine the results and convert them for the standard class loader (if of non-primitive types).
-            // We do not want the byte-code transformation to be known outside of runner and strategy classes.
+            val afterPostStateRepresentation = constructStateRepresentation()
+            // Execute validation functions
+            validationPartExecution?.let { validationPart ->
+                beforePart(VALIDATION)
+                executor.submitAndAwait(arrayOf(validationPart), timeout)
+                val validationResult = validationPart.results.single()
+                if (validationResult is ExceptionResult) {
+                    return ValidationFailureInvocationResult(scenario, validationResult.throwable)
+                }
+            }
+            // Combine the results and convert them for the standard class loader (if they are of non-primitive types).
+            // We do not want the transformed code to be reachable outside of the runner and strategy classes.
             return CompletedInvocationResult(
                 ExecutionResult(
                     initResults = initialPartExecution?.results?.toList().orEmpty(),
@@ -278,128 +322,61 @@ internal open class ParallelThreadsRunner(
                         }
                     },
                     postResults = postPartExecution?.results?.toList().orEmpty(),
-                    afterInitStateRepresentation = initialPartExecution?.stateRepresentation,
-                    afterParallelStateRepresentation = postPartExecution?.afterParallelStateRepresentation,
-                    afterPostStateRepresentation = postPartExecution?.afterPostStateRepresentation
-                ).convertForLoader(LinChecker::class.java.classLoader)
+                    afterInitStateRepresentation = afterInitStateRepresentation,
+                    afterParallelStateRepresentation = afterParallelStateRepresentation,
+                    afterPostStateRepresentation = afterPostStateRepresentation
+                )
             )
         } catch (e: TimeoutException) {
             val threadDump = collectThreadDump(this)
-            return DeadlockInvocationResult(threadDump)
+            return RunnerTimeoutInvocationResult(threadDump)
         } catch (e: ExecutionException) {
             return UnexpectedExceptionInvocationResult(e.cause!!)
         } finally {
-            reset()
+            resetState()
         }
     }
 
-    private val hasNonTrivialInitialPart: Boolean =
-        scenario.initExecution.isNotEmpty() ||
-        validationFunctions.isNotEmpty() ||
-        stateRepresentationFunction != null
 
     private fun createInitialPartExecution() =
-        if (hasNonTrivialInitialPart) InitTestThreadExecution() else null
-
-    inner class InitTestThreadExecution : TestThreadExecution(INIT_THREAD_ID) {
-
-        var validationFailure: ValidationFailureInvocationResult? = null
-
-        var stateRepresentation: String? = null
-
-        init {
-            initialize(nActors = scenario.initExecution.size, nThreads = 0)
-        }
-
-        override fun run() {
-            scenario.initExecution.mapIndexed { i, actor ->
-                onActorStart(INIT_THREAD_ID)
-                results[i] = executeActor(testInstance, actor)
-                executeInIgnoredSection {
-                    executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
-                        validationFailure = ValidationFailureInvocationResult(
-                            ExecutionScenario(
-                                scenario.initExecution.subList(0, i + 1),
-                                emptyList(),
-                                emptyList()
-                            ),
-                            functionName,
-                            exception
-                        )
-                    }
-                }
+        if (scenario.initExecution.isNotEmpty()) {
+            TestThreadExecutionGenerator.create(this, INIT_THREAD_ID,
+                scenario.initExecution,
+                emptyList(),
+                false
+            ).apply {
+                initialize(
+                    nActors = scenario.initExecution.size,
+                    nThreads = 1,
+                )
+                allThreadExecutions = arrayOf(this)
             }
-            stateRepresentation = constructStateRepresentation()
+        } else {
+            null
         }
-    }
-
-    private val hasNonTrivialPostPart: Boolean =
-        scenario.postExecution.isNotEmpty() ||
-        validationFunctions.isNotEmpty() ||
-        stateRepresentationFunction != null
 
     private fun createPostPartExecution() =
-        if (hasNonTrivialPostPart) PostTestThreadExecution() else null
-
-    inner class PostTestThreadExecution : TestThreadExecution(POST_THREAD_ID) {
-
-        var validationFailure: ValidationFailureInvocationResult? = null
-
-        var afterParallelStateRepresentation: String? = null
-        var afterPostStateRepresentation: String? = null
-
-        init {
-            initialize(nActors = scenario.postExecution.size, nThreads = 0)
-        }
-
-        override fun run() {
-            // (1): execute validation functions and construct state representation after parallel part
-            executeInIgnoredSection {
-                executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
-                    validationFailure = ValidationFailureInvocationResult(
-                        ExecutionScenario(
-                            scenario.initExecution,
-                            scenario.parallelExecution,
-                            emptyList()
-                        ),
-                        functionName,
-                        exception
-                    )
-                }
-            }
-            afterParallelStateRepresentation = constructStateRepresentation()
-            if (validationFailure != null)
-                return
-            // (2): execute post part and validation functions, then construct state representation after post part
+        if (scenario.postExecution.isNotEmpty()) {
             val dummyCompletion = Continuation<Any?>(EmptyCoroutineContext) {}
-            var suspended = false
-            scenario.postExecution.mapIndexed { i, actor ->
-                results[i] = if (suspended) {
-                    NoResult
-                } else {
-                    // post part may contain suspendable actors if there aren't any in the parallel part,
-                    // invoke with dummy continuation
-                    onActorStart(POST_THREAD_ID)
-                    executeActor(testInstance, actor, dummyCompletion).also {
-                        suspended = it === Suspended
-                    }
-                }
-                executeInIgnoredSection {
-                    executeValidationFunctions(testInstance, validationFunctions) { functionName, exception ->
-                        validationFailure = ValidationFailureInvocationResult(
-                            ExecutionScenario(
-                                scenario.initExecution,
-                                scenario.parallelExecution,
-                                scenario.postExecution.subList(0, i + 1)
-                            ),
-                            functionName,
-                            exception
-                        )
-                    }
-                }
+            TestThreadExecutionGenerator.create(this, POST_THREAD_ID,
+                scenario.postExecution,
+                Array(scenario.postExecution.size) { dummyCompletion }.toList(),
+                scenario.hasSuspendableActors
+            ).apply {
+                initialize(
+                    nActors = scenario.postExecution.size,
+                    nThreads = 1,
+                )
+                allThreadExecutions = arrayOf(this)
             }
-            afterPostStateRepresentation = constructStateRepresentation()
+        } else {
+            null
         }
+
+    private fun createValidationPartExecution(validationFunction: Actor?): TestThreadExecution? {
+        if (validationFunction == null) return null
+        return TestThreadExecutionGenerator.create(this, VALIDATION_THREAD_ID, listOf(validationFunction), emptyList(), false)
+            .also { it.initialize(nActors = 1, nThreads = 1) }
     }
 
     private fun createParallelPartExecutions(): Array<TestThreadExecution> = Array(scenario.nThreads) { iThread ->
@@ -430,44 +407,27 @@ internal open class ParallelThreadsRunner(
     }
 
     override fun onStart(iThread: Int) {
-        super.onStart(iThread)
+        if (currentExecutionPart !== PARALLEL) return
         uninitializedThreads.decrementAndGet() // this thread has finished initialization
         // wait for other threads to start
-        var i = 1
-        while (uninitializedThreads.get() != 0) {
-            if (i % SPINNING_LOOP_ITERATIONS_BEFORE_YIELD == 0) {
-                yieldInvokedInOnStart = true
-                Thread.yield()
-            }
-            i++
-        }
+        spinners[iThread].spinWaitUntil { uninitializedThreads.get() == 0 }
     }
 
-    override fun needsTransformation() = true
-    override fun createTransformer(cv: ClassVisitor) = CancellabilitySupportClassTransformer(cv)
-
     override fun constructStateRepresentation() =
-        stateRepresentationFunction?.let{ getMethod(testInstance, it) }?.invoke(testInstance) as String?
+        stateRepresentationFunction?.invoke(testInstance) as String?
 
     override fun close() {
         super.close()
         executor.close()
     }
 
-    private inline fun executeInIgnoredSection(action: () -> Unit) {
-        if (strategy is ManagedStrategy) {
-            strategy.enterIgnoredSection()
-            action()
-            strategy.leaveIgnoredSection()
-        }
-        else {
-            action()
-        }
-    }
+    override fun isCurrentRunnerThread(thread: Thread): Boolean = executor.threads.any { it === thread }
+
+    override fun onFinish(iThread: Int) {}
+
+    override fun onFailure(iThread: Int, e: Throwable) {}
 }
 
 internal enum class UseClocks { ALWAYS, RANDOM }
 
 internal enum class CompletionStatus { CANCELLED, RESUMED }
-
-private const val SPINNING_LOOP_ITERATIONS_BEFORE_YIELD = 100_000

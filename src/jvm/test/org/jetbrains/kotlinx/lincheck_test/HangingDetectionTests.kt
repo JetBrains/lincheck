@@ -13,7 +13,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 
-class HangingInParallelPartTest : AbstractLincheckTest(DeadlockWithDumpFailure::class) {
+class HangingInParallelPartIsolatedTest : AbstractLincheckTest(DeadlockOrLivelockFailure::class) {
 
     @Operation
     fun hang() {
@@ -40,7 +40,7 @@ class HangingInParallelPartTest : AbstractLincheckTest(DeadlockWithDumpFailure::
 
 }
 
-class HangingInInitPartTest : AbstractLincheckTest(DeadlockWithDumpFailure::class) {
+class HangingInInitPartIsolatedTest : AbstractLincheckTest(DeadlockOrLivelockFailure::class) {
 
     @Operation
     fun hang() {
@@ -70,7 +70,7 @@ class HangingInInitPartTest : AbstractLincheckTest(DeadlockWithDumpFailure::clas
 
 }
 
-class HangingInPostPartTest : AbstractLincheckTest(DeadlockWithDumpFailure::class) {
+class HangingInPostPartIsolatedTest : AbstractLincheckTest(DeadlockOrLivelockFailure::class) {
 
     @Operation
     fun hang() {

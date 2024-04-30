@@ -10,9 +10,10 @@
 package org.jetbrains.kotlinx.lincheck.runner
 
 import kotlinx.atomicfu.*
-import kotlinx.coroutines.CancellableContinuation
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.util.*
+import sun.nio.ch.lincheck.TestThread
 import java.io.*
 import java.lang.*
 import java.util.concurrent.*
@@ -24,16 +25,35 @@ import java.util.concurrent.locks.*
  * is that this executor keeps the re-using threads "hot" (active) as long as possible,
  * so that they should not be parked and unparked between invocations.
  */
-internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash: Int) : Closeable {
+internal class FixedActiveThreadsExecutor(private val testName: String, private val nThreads: Int) : Closeable {
     /**
      * null, waiting TestThread, Runnable task, or SHUTDOWN
      */
     private val tasks = atomicArrayOfNulls<Any>(nThreads)
 
     /**
+     * Spinners for spin-wait on tasks.
+     *
+     * Each thread of the executor manipulates its own spinner.
+     */
+    private val taskSpinners = SpinnerGroup(nThreads)
+
+    /**
      * null, waiting in [submitAndAwait] thread, DONE, or exception
      */
     private val results = atomicArrayOfNulls<Any>(nThreads)
+
+    /**
+     * Spinner for spin-wait on results.
+     *
+     * Only the main thread submitting tasks manipulates this spinner.
+     */
+    // we set `nThreads + 1` as a number of threads, because
+    // we have `nThreads` of the scenario plus the main thread waiting for the result;
+    // if this number is greater than the number of available CPUs,
+    // the main thread will be parked immediately without spinning;
+    // in this case, if `nCPUs = nThreads` all the scenario threads still will be spinning
+    private val resultSpinner = Spinner(nThreads + 1)
 
     /**
      * This flag is set to `true` when [await] detects a hang.
@@ -46,10 +66,12 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
      * Threads used in this runner.
      */
     val threads = Array(nThreads) { iThread ->
-        TestThread(iThread, runnerHash, testThreadRunnable(iThread)).also { it.start() }
+        TestThread(
+            testName = testName,
+            threadId = iThread,
+            block = testThreadRunnable(iThread)
+        ).also { it.start() }
     }
-
-    val numberOfThreadsExceedAvailableProcessors = Runtime.getRuntime().availableProcessors() < threads.size
 
     /**
      * Submits the specified set of [tasks] to this executor
@@ -85,7 +107,7 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
     private fun shutdown() {
         // submit the shutdown tasks
         for (i in 0 until nThreads)
-            submitTask(i, SHUTDOWN)
+            submitTask(i, Shutdown)
     }
 
     private fun submitTask(iThread: Int, task: Any) {
@@ -122,9 +144,8 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
 
     private fun getResult(iThread: Int, deadline: Long): Any {
         // Active wait for a result during the limited number of loop cycles.
-        spinWait { results[iThread].value }?.let {
-            return it
-        }
+        val result = resultSpinner.spinWaitBoundedFor { results[iThread].value }
+        if (result != null) return result
         // Park with timeout until the result is set or the timeout is passed.
         val currentThread = Thread.currentThread()
         if (results[iThread].compareAndSet(null, currentThread)) {
@@ -142,27 +163,27 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
 
     private fun testThreadRunnable(iThread: Int) = Runnable {
         loop@ while (true) {
-            val task = getTask(iThread)
-            if (task === SHUTDOWN) return@Runnable
-            tasks[iThread].value = null // reset task
-            val threadExecution = task as TestThreadExecution
-            check(threadExecution.iThread == iThread)
+            val task = runInIgnoredSection {
+                val task = getTask(iThread)
+                if (task === Shutdown) return@Runnable
+                tasks[iThread].value = null // reset task
+                task as TestThreadExecution
+            }
+            check(task.iThread == iThread)
             try {
-                threadExecution.run()
+                task.run()
             } catch(e: Throwable) {
-                val wrapped = wrapInvalidAccessFromUnnamedModuleExceptionWithDescription(e)
-                setResult(iThread, wrapped)
+                runInIgnoredSection { setResult(iThread, e) }
                 continue@loop
             }
-            setResult(iThread, DONE)
+            runInIgnoredSection { setResult(iThread, Done) }
         }
     }
 
     private fun getTask(iThread: Int): Any {
         // Active wait for a task for the limited number of loop cycles.
-        spinWait { tasks[iThread].value }?.let {
-            return it
-        }
+        val task = taskSpinners[iThread].spinWaitBoundedFor { tasks[iThread].value }
+        if (task != null) return task
         // Park until a task is stored into `tasks[iThread]`.
         val currentThread = Thread.currentThread()
         if (tasks[iThread].compareAndSet(null, currentThread)) {
@@ -182,38 +203,20 @@ internal class FixedActiveThreadsExecutor(private val nThreads: Int, runnerHash:
         LockSupport.unpark(thread)
     }
 
-    private inline fun spinWait(getter: () -> Any?): Any? {
-        // Park immediately when the number of threads exceed the number of cores to avoid starvation.
-        val spinningLoopIterations = if (numberOfThreadsExceedAvailableProcessors) {
-            1
-        } else {
-            SPINNING_LOOP_ITERATIONS_BEFORE_PARK
-        }
-        repeat(spinningLoopIterations) {
-            getter()?.let {
-                return it
-            }
-        }
-        return null
-    }
-
     override fun close() {
         shutdown()
-        if (hangDetected) {
-            for (thread in threads)
-                thread.stop()
+        // Thread.stop() throws UnsupportedOperationException
+        // starting from Java 20.
+        if (hangDetected && majorJavaVersion < 20) {
+            @Suppress("DEPRECATION")
+            threads.forEach { it.stop() }
         }
-    }
-
-    class TestThread(val iThread: Int, val runnerHash: Int, runnable: Runnable) :
-        Thread(runnable, "FixedActiveThreadsExecutor@$runnerHash-$iThread")
-    {
-        var cont: CancellableContinuation<*>? = null
     }
 
 }
 
-private const val SPINNING_LOOP_ITERATIONS_BEFORE_PARK = 1000_000
+private val majorJavaVersion = Runtime.version().version()[0]
 
-private val SHUTDOWN = "SHUTDOWN"
-private val DONE = "DONE"
+// These constants are objects for easier debugging.
+private object Shutdown
+private object Done

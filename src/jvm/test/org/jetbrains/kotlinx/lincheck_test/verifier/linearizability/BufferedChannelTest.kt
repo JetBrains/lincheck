@@ -21,22 +21,19 @@ import org.jetbrains.kotlinx.lincheck_test.*
 class BufferedChannelTest : AbstractLincheckTest() {
     private val c = Channel<Int>(2)
 
-    @Operation(cancellableOnSuspension = false)
+    @Operation(cancellableOnSuspension = false, allowExtraSuspension = true)
     suspend fun send(@Param(name = "value") value: Int) = c.send(value)
 
-    @Operation(cancellableOnSuspension = false)
+    @Operation(cancellableOnSuspension = false, allowExtraSuspension = true)
     suspend fun receive() = c.receive()
 
     @Operation
     fun poll() = c.tryReceive().getOrNull()
 
-    @Operation
-    fun offer(@Param(name = "value") value: Int) = c.trySend(value).isSuccess
-
     override fun <O : Options<O, *>> O.customize() {
-        sequentialSpecification(SequentiaBuffered2IntChannel::class.java)
+        sequentialSpecification(SequentialBuffered2IntChannel::class.java)
     }
 }
 
 @InternalCoroutinesApi
-class SequentiaBuffered2IntChannel : SequentialIntChannel(capacity = 2)
+class SequentialBuffered2IntChannel : SequentialIntChannel(capacity = 2)

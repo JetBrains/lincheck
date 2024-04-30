@@ -11,6 +11,7 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.ideaPluginEnabled
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
@@ -50,7 +51,10 @@ class CapturedValueRepresentationTest : VerifierState() {
         actorsPerThread(1)
     }
         .checkImpl(this::class.java)
-        .checkLincheckOutput("captured_value.txt")
+        // We choose the expected output in that way because when plugin is enabled, we traverse
+        // the test object on each beforeEvent call, so it sees additional objects of some type
+        // and numeration changes.
+        .checkLincheckOutput(if (ideaPluginEnabled()) "captured_value_plugin.txt" else  "captured_value.txt")
 
     override fun extractState(): Any = counter
 

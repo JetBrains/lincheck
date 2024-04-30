@@ -48,7 +48,7 @@ class QuiescentConsistencyVerifier(sequentialSpecification: Class<*>) : Verifier
                 }
             }
         }
-        ExecutionScenario(initExecution, parallelExecutionConverted, postExecution)
+        ExecutionScenario(initExecution, parallelExecutionConverted, postExecution, validationFunction)
     }
 
     private fun ExecutionResult.convert(originalScenario: ExecutionScenario, newThreads: Int): ExecutionResult {

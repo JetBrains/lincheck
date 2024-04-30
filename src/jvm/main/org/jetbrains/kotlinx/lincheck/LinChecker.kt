@@ -13,6 +13,8 @@ import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import kotlin.reflect.*
 
@@ -29,6 +31,11 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         reporter = Reporter(logLevel)
         testConfigurations = if (options != null) listOf(options.createTestConfigurations(testClass))
                              else createFromTestClassAnnotations(testClass)
+        // Currently, we extract validation functions from testClass structure, so for custom scenarios declared
+        // with DSL, we have to set up it when testClass is scanned
+        testConfigurations.forEach { cTestConfiguration ->
+            cTestConfiguration.customScenarios.forEach { it.validationFunction = testStructure.validationFunction }
+        }
     }
 
     /**
@@ -42,11 +49,15 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     /**
      * @return TestReport with information about concurrent test run.
      */
+    @Synchronized // never run Lincheck tests in parallel
     internal fun checkImpl(): LincheckFailure? {
         check(testConfigurations.isNotEmpty()) { "No Lincheck test configuration to run" }
+        lincheckVerificationStarted()
         for (testCfg in testConfigurations) {
-            val failure = testCfg.checkImpl()
-            if (failure != null) return failure
+            withLincheckJavaAgent(testCfg.instrumentationMode) {
+                val failure = testCfg.checkImpl()
+                if (failure != null) return failure
+            }
         }
         return null
     }
@@ -59,7 +70,10 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             scenario.validate()
             reporter.logIteration(i + 1, customScenarios.size, scenario)
             val failure = scenario.run(this, verifier)
-            if (failure != null) return failure
+            if (failure != null) {
+                runReplayForPlugin(failure, verifier)
+                return failure
+            }
         }
         checkAtLeastOneMethodIsMarkedAsOperation(testClass)
         var verifier = createVerifier()
@@ -78,12 +92,28 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
             if (failure != null) {
                 val minimizedFailedIteration = if (!minimizeFailedScenario) failure else failure.minimize(this)
                 reporter.logFailedIteration(minimizedFailedIteration)
+                runReplayForPlugin(minimizedFailedIteration, verifier)
                 return minimizedFailedIteration
             }
             // Reset the parameter generator ranges to start with the same initial bounds on each scenario generation.
             testStructure.parameterGenerators.forEach { it.reset() }
         }
         return null
+    }
+
+    /**
+     * Enables replay mode and re-runs the failed scenario if Lincheck IDEA plugin is enabled.
+     * We cannot initiate the failed interleaving replaying in the strategy code,
+     * as the failing scenario might need to be minimized first.
+     */
+    private fun CTestConfiguration.runReplayForPlugin(failure: LincheckFailure, verifier: Verifier) {
+        if (ideaPluginEnabled() && this is ModelCheckingCTestConfiguration) {
+            reporter.logFailedIteration(failure, loggingLevel = LoggingLevel.WARN)
+            enableReplayModeForIdeaPlugin()
+            failure.scenario.run(this, verifier)
+        } else {
+            reporter.logFailedIteration(failure)
+        }
     }
 
     // Tries to minimize the specified failing scenario to make the error easier to understand.
@@ -117,7 +147,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         testCfg.createStrategy(
             testClass = testClass,
             scenario = this,
-            validationFunctions = testStructure.validationFunctions,
+            validationFunction = testStructure.validationFunction,
             stateRepresentationMethod = testStructure.stateRepresentation,
             verifier = verifier
         ).run()

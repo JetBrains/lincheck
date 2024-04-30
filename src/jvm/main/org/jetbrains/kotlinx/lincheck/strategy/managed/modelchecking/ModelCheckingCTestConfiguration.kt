@@ -9,9 +9,12 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
+import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
+import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.lang.reflect.*
 
@@ -22,7 +25,7 @@ class ModelCheckingCTestConfiguration(testClass: Class<*>, iterations: Int, thre
                                       actorsAfter: Int, generatorClass: Class<out ExecutionGenerator>, verifierClass: Class<out Verifier>,
                                       checkObstructionFreedom: Boolean, hangingDetectionThreshold: Int, invocationsPerIteration: Int,
                                       guarantees: List<ManagedStrategyGuarantee>, minimizeFailedScenario: Boolean,
-                                      sequentialSpecification: Class<*>, timeoutMs: Long, eliminateLocalObjects: Boolean,
+                                      sequentialSpecification: Class<*>, timeoutMs: Long,
                                       customScenarios: List<ExecutionScenario>
 ) : ManagedCTestConfiguration(
     testClass = testClass,
@@ -40,10 +43,18 @@ class ModelCheckingCTestConfiguration(testClass: Class<*>, iterations: Int, thre
     minimizeFailedScenario = minimizeFailedScenario,
     sequentialSpecification = sequentialSpecification,
     timeoutMs = timeoutMs,
-    eliminateLocalObjects = eliminateLocalObjects,
     customScenarios = customScenarios
 ) {
-    override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Method>,
+
+    override val instrumentationMode: InstrumentationMode get() = MODEL_CHECKING
+
+    private var isReplayModeForIdeaPluginEnabled = false
+
+    override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunction: Actor?,
                                 stateRepresentationMethod: Method?, verifier: Verifier): Strategy
-        = ModelCheckingStrategy(this, testClass, scenario, validationFunctions, stateRepresentationMethod, verifier)
+        = ModelCheckingStrategy(this, testClass, scenario, validationFunction, stateRepresentationMethod, verifier, isReplayModeForIdeaPluginEnabled)
+
+    internal fun enableReplayModeForIdeaPlugin() {
+        isReplayModeForIdeaPluginEnabled = true
+    }
 }

@@ -10,6 +10,7 @@
 package org.jetbrains.kotlinx.lincheck.runner
 
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 
 /**
  * Represents results for invocations, see [Runner.run].
@@ -24,11 +25,16 @@ class CompletedInvocationResult(
 ) : InvocationResult()
 
 /**
- * Indicates that the invocation has run into deadlock or livelock.
+ * Indicates that the invocation has run into deadlock or livelock found by [ManagedStrategy].
  */
-class DeadlockInvocationResult(
-    val threadDump: Map<Thread, Array<StackTraceElement>>? = null
-) : InvocationResult()
+data object ManagedDeadlockInvocationResult : InvocationResult()
+
+/**
+ * The invocation was not completed after timeout and runner halted the execution.
+ */
+class RunnerTimeoutInvocationResult(
+    val threadDump: Map<Thread, Array<StackTraceElement>>,
+): InvocationResult()
 
 /**
  * The invocation has completed with an unexpected exception.
@@ -44,7 +50,6 @@ class UnexpectedExceptionInvocationResult(
  */
 class ValidationFailureInvocationResult(
     val scenario: ExecutionScenario,
-    val functionName: String,
     val exception: Throwable
 ) : InvocationResult()
 
