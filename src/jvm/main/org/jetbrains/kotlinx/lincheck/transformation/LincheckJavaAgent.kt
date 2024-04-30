@@ -123,10 +123,11 @@ internal object LincheckJavaAgent {
             instrumentationMode == STRESS -> {
                 check(instrumentedClasses.isEmpty())
                 val classes = getLoadedClassesToInstrument().filter {
+                    val canonicalClassName = it.name
                     // new classes that were loaded after the latest STRESS mode re-transformation
-                    !transformedClassesStress.containsKey(it.name) ||
+                    !transformedClassesStress.containsKey(canonicalClassName) ||
                     // old classes that were already loaded before and have coroutine method calls inside
-                    it.name in coroutineCallingClasses
+                    canonicalClassName in coroutineCallingClasses
                 }
                 instrumentation.retransformClasses(*classes.toTypedArray())
                 instrumentedClasses.addAll(classes.map { it.name })
@@ -201,15 +202,15 @@ internal object LincheckJavaAgent {
      * thus, initializing it here, in an ignored section of the analysis, re-transforming
      * the class after that.
      *
-     * @param className The name of the class to be transformed.
+     * @param canonicalClassName The name of the class to be transformed.
      */
-    fun ensureClassHierarchyIsTransformed(className: String) {
+    fun ensureClassHierarchyIsTransformed(canonicalClassName: String) {
         if (INSTRUMENT_ALL_CLASSES) {
-            Class.forName(className)
+            Class.forName(canonicalClassName)
             return
         }
-        if (className in instrumentedClasses) return // already instrumented
-        ensureClassHierarchyIsTransformed(Class.forName(className), Collections.newSetFromMap(IdentityHashMap()))
+        if (canonicalClassName in instrumentedClasses) return // already instrumented
+        ensureClassHierarchyIsTransformed(Class.forName(canonicalClassName), Collections.newSetFromMap(IdentityHashMap()))
     }
 
 
@@ -325,31 +326,39 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         }
 
     override fun transform(
-        loader: ClassLoader?, className: String, classBeingRedefined: Class<*>?, protectionDomain: ProtectionDomain?, classBytes: ByteArray
+        loader: ClassLoader?,
+        internalClassName: String,
+        classBeingRedefined: Class<*>?,
+        protectionDomain: ProtectionDomain?,
+        classBytes: ByteArray
     ): ByteArray? = runInIgnoredSection {
         // If the class should not be transformed, return immediately.
-        if (!shouldTransform(className.canonicalClassName, instrumentationMode)) {
+        if (!shouldTransform(internalClassName.canonicalClassName, instrumentationMode)) {
             return null
         }
         // In the model checking mode, we transform classes lazily,
         // once they are used in the testing code.
         if (!INSTRUMENT_ALL_CLASSES &&
             instrumentationMode == MODEL_CHECKING &&
-            className.canonicalClassName !in instrumentedClasses) {
+            internalClassName.canonicalClassName !in instrumentedClasses) {
             return null
         }
-        return transformImpl(loader, className, classBytes)
+        return transformImpl(loader, internalClassName, classBytes)
     }
 
-    private fun transformImpl(loader: ClassLoader?, className: String, classBytes: ByteArray): ByteArray = transformedClassesCache.computeIfAbsent(className.canonicalClassName) {
-        nonTransformedClasses[className] = classBytes
+    private fun transformImpl(
+        loader: ClassLoader?,
+        internalClassName: String,
+        classBytes: ByteArray
+    ): ByteArray = transformedClassesCache.computeIfAbsent(internalClassName.canonicalClassName) {
+        nonTransformedClasses[internalClassName.canonicalClassName] = classBytes
         val reader = ClassReader(classBytes)
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
         try {
             reader.accept(LincheckClassVisitor(instrumentationMode, writer), ClassReader.SKIP_FRAMES)
             writer.toByteArray()
         } catch (e: Throwable) {
-            System.err.println("Unable to transform $className")
+            System.err.println("Unable to transform $internalClassName")
             e.printStackTrace()
             classBytes
         }
