@@ -315,9 +315,9 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
      * Notice that the transformation depends on the [InstrumentationMode].
      * Additionally, this object caches bytes of non-transformed classes.
      */
-    val transformedClassesModelChecking = ConcurrentHashMap<Any, ByteArray>()
-    val transformedClassesStress = ConcurrentHashMap<Any, ByteArray>()
-    val nonTransformedClasses = ConcurrentHashMap<Any, ByteArray>()
+    val transformedClassesModelChecking = ConcurrentHashMap<String, ByteArray>()
+    val transformedClassesStress = ConcurrentHashMap<String, ByteArray>()
+    val nonTransformedClasses = ConcurrentHashMap<String, ByteArray>()
 
     private val transformedClassesCache
         get() = when (instrumentationMode) {
