@@ -15,7 +15,7 @@ import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.ManagedDeadlockFailure
 import org.jetbrains.kotlinx.lincheck.strategy.ObstructionFreedomViolationFailure
-import org.jetbrains.kotlinx.lincheck.strategy.TimeoutDeadlockFailure
+import org.jetbrains.kotlinx.lincheck.strategy.TimeoutFailure
 import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
 import java.util.*
 import kotlin.math.*
@@ -50,7 +50,7 @@ private fun StringBuilder.appendShortTrace(
     val traceRepresentation = traceGraphToRepresentationList(sectionsFirstNodes, false)
     appendLine(TRACE_TITLE)
     appendTraceRepresentation(failure.scenario, traceRepresentation)
-    if (failure is ManagedDeadlockFailure || failure is TimeoutDeadlockFailure) {
+    if (failure is ManagedDeadlockFailure || failure is TimeoutFailure) {
         appendLine(ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE)
     }
     appendLine()
@@ -66,7 +66,7 @@ private fun StringBuilder.appendDetailedTrace(
     appendLine(DETAILED_TRACE_TITLE)
     val traceRepresentationVerbose = traceGraphToRepresentationList(sectionsFirstNodes, true)
     appendTraceRepresentation(failure.scenario, traceRepresentationVerbose)
-    if (failure is ManagedDeadlockFailure || failure is TimeoutDeadlockFailure) {
+    if (failure is ManagedDeadlockFailure || failure is TimeoutFailure) {
         appendLine(ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE)
     }
 }

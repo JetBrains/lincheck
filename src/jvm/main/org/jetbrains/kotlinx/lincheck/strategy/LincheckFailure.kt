@@ -34,7 +34,7 @@ internal class ManagedDeadlockFailure(
     trace: Trace? = null
 ) : LincheckFailure(scenario,results, trace)
 
-internal class TimeoutDeadlockFailure(
+internal class TimeoutFailure(
     scenario: ExecutionScenario,
     results: ExecutionResult,
     val threadDump: Map<Thread, Array<StackTraceElement>>,
@@ -65,7 +65,7 @@ internal class ObstructionFreedomViolationFailure(
 
 internal fun InvocationResult.toLincheckFailure(scenario: ExecutionScenario, trace: Trace? = null) = when (this) {
     is ManagedDeadlockInvocationResult -> ManagedDeadlockFailure(scenario, results, trace)
-    is RunnerTimeoutInvocationResult -> TimeoutDeadlockFailure(scenario, results, threadDump)
+    is RunnerTimeoutInvocationResult -> TimeoutFailure(scenario, results, threadDump)
     is UnexpectedExceptionInvocationResult -> UnexpectedExceptionFailure(scenario, results, exception, trace)
     is ValidationFailureInvocationResult -> ValidationFailure(scenario, results, exception, trace)
     is ObstructionFreedomViolationInvocationResult -> ObstructionFreedomViolationFailure(scenario, results, reason, trace)
