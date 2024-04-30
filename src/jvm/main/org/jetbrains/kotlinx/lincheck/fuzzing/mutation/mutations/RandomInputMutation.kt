@@ -20,7 +20,7 @@ class RandomInputMutation(
     policy: MutationPolicy,
     private val generator: ExecutionGenerator
 ) : Mutation(policy) {
-    override fun mutate(scenario: ExecutionScenario, mutationThreadId: Int): ExecutionScenario {
+    override fun mutate(scenario: ExecutionScenario): ExecutionScenario {
         println("Mutation: Random")
         return generator.nextExecution()
     }

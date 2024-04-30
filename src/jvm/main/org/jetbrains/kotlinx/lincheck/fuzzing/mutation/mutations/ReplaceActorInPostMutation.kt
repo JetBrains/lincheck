@@ -28,23 +28,23 @@ class ReplaceActorInPostMutation(
     private val testStructure: CTestStructure,
     private val testConfiguration: CTestConfiguration
 ) : Mutation(policy) {
-    override fun mutate(scenario: ExecutionScenario, mutationThreadId: Int): ExecutionScenario {
-        val random = policy.random
+    override fun mutate(scenario: ExecutionScenario): ExecutionScenario {
         val newPostExecution = mutableListOf<Actor>()
 
+        // TODO: move this generation to policy
         val generators = testStructure.operationGroups
             .filter { it.nonParallel }
             .flatMap { it.actors.filter { actor -> !actor.useOnce } }
             .distinct() + testStructure.actorGenerators
-        var generatorIndex = random.nextInt(generators.size)
 
-        var actor = generators[generatorIndex].generate(testConfiguration.threads + 1, random)
-        val replaceAtIndex = random.nextInt(scenario.postExecution.size)
+        val replaceAtIndex = policy.getUniquePostActorPosition(scenario)
+        var actor: Actor
 
-        while (actor.method.name == scenario.postExecution[replaceAtIndex].method.name) {
-            generatorIndex = random.nextInt(generators.size)
-            actor = generators[generatorIndex].generate(testConfiguration.threads + 1, random)
+        do {
+            val generatorIndex = policy.random.nextInt(generators.size)
+            actor = generators[generatorIndex].generate(testConfiguration.threads + 1, policy.random)
         }
+        while (actor.method.name == scenario.postExecution[replaceAtIndex].method.name)
 
         println("Mutation: ReplacePost, " +
                 "actor=${actor.method.name}(${actor.arguments.joinToString(", ") { it.toString() }}), " +

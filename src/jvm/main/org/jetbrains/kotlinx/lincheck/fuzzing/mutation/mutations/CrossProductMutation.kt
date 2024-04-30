@@ -22,13 +22,15 @@ class CrossProductMutation(
     private val savedInputs: List<Input>,
     private val failures: List<FailedInput>
 ) : Mutation(policy) {
-    override fun mutate(scenario: ExecutionScenario, mutationThreadId: Int): ExecutionScenario {
+    override fun mutate(scenario: ExecutionScenario): ExecutionScenario {
         val random = policy.random
         val crossInputId  = random.nextInt(savedInputs.size + failures.size)
         val crossInput    =
             if (crossInputId < savedInputs.size) savedInputs[crossInputId]
             else failures[crossInputId - savedInputs.size].input
+        val mutationThreadId = random.nextInt(scenario.parallelExecution.size)
         var crossThreadId = random.nextInt(crossInput.scenario.parallelExecution.size)
+
         while (crossThreadId == mutationThreadId && crossInput.scenario == scenario)
             crossThreadId = random.nextInt(crossInput.scenario.parallelExecution.size)
 

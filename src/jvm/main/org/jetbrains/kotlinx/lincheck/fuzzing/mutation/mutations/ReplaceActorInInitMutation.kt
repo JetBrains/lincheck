@@ -29,20 +29,18 @@ class ReplaceActorInInitMutation(
     policy: MutationPolicy,
     private val testStructure: CTestStructure
 ) : Mutation(policy) {
-    override fun mutate(scenario: ExecutionScenario, mutationThreadId: Int): ExecutionScenario {
-        val random = policy.random
+    override fun mutate(scenario: ExecutionScenario): ExecutionScenario {
         val newInitExecution = mutableListOf<Actor>()
-
         val generators = testStructure.actorGenerators.filter { !it.useOnce && !it.isSuspendable }
-        var generatorIndex = random.nextInt(generators.size)
 
-        var actor = generators[generatorIndex].generate(0, random)
-        val replaceAtIndex = random.nextInt(scenario.initExecution.size)
+        val replaceAtIndex = policy.getUniqueInitActorPosition(scenario)
+        var actor: Actor
 
-        while (actor.method.name == scenario.initExecution[replaceAtIndex].method.name) {
-            generatorIndex = random.nextInt(generators.size)
-            actor = generators[generatorIndex].generate(0, random)
+        do {
+            val generatorIndex = policy.random.nextInt(generators.size)
+            actor = generators[generatorIndex].generate(0, policy.random)
         }
+        while (actor.method.name == scenario.initExecution[replaceAtIndex].method.name)
 
         println("Mutation: ReplaceInit, " +
                 "actor=${actor.method.name}(${actor.arguments.joinToString(", ") { it.toString() }}), " +

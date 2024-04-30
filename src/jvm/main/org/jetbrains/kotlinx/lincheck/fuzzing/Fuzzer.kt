@@ -111,7 +111,7 @@ class Fuzzer(
         else {
             // pick something from fuzzing queue
             val parentInput = getCurrentParentInput()
-            currentInput = parentInput.mutate(mutator, Sampling.sampleGeometric(random, MEAN_MUTATION_COUNT), random)
+            currentInput = parentInput.mutate(mutator, MEAN_MUTATION_COUNT) // Sampling.sampleGeometric(random, MEAN_MUTATION_COUNT), random
             childrenGeneratedForCurrentParentInput++
         }
 
@@ -181,7 +181,7 @@ class Fuzzer(
             maxCoveredTrace = max(maxCoveredTrace, currentInput!!.traceCoverage.coveredBranchesCount())
 
             val rewardFactor: Double = 0.3
-            mutator.updatePolicy(
+            mutator.updateGeneratorsWeights(
                 reward =
                     0.6 * (if (coverageUpdated) rewardFactor else 0.0) +
                     0.2 * (if (maxCoverageUpdated) rewardFactor else 0.0) +

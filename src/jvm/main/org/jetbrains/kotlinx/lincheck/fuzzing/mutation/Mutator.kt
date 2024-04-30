@@ -16,7 +16,9 @@ import org.jetbrains.kotlinx.lincheck.execution.ActorGenerator
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.fuzzing.Fuzzer
 import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.mutations.*
+import org.jetbrains.kotlinx.lincheck.fuzzing.util.Sampling
 import java.util.Random
+import kotlin.math.min
 
 class Mutator(
     fuzzer: Fuzzer,
@@ -24,70 +26,89 @@ class Mutator(
     testConfiguration: CTestConfiguration
 ) {
     private val random = fuzzer.random
-    private val policy = MutationPolicy(fuzzer, testStructure)
+    private val policy = MutationPolicy(random, testStructure)
     private val mutations = listOf(
-        // AddActorToParallelMutation(policy, testStructure, testConfiguration),
-        // RemoveActorFromParallelMutation(policy),
         ReplaceActorInParallelMutation(policy),
 
         CrossProductMutation(policy, fuzzer.savedInputs, fuzzer.failures),
         RandomInputMutation(policy, fuzzer.defaultExecutionGenerator),
 
-        // AddActorToInitMutation(policy, testStructure, testConfiguration),
-        // AddActorToPostMutation(policy, testStructure, testConfiguration),
         ReplaceActorInInitMutation(policy, testStructure),
         ReplaceActorInPostMutation(policy, testStructure, testConfiguration),
-        // RemoveActorFromInitMutation(policy),
-        // RemoveActorFromPostMutation(policy),
     )
 
-//    fun getAvailableMutations(scenario: ExecutionScenario, mutationThread: Int): List<Mutation> {
-//        return getAvailableMutations(mutations, scenario, mutationThread)
-//    }
+    fun mutate(scenario: ExecutionScenario, meanMutationsCount: Double): ExecutionScenario {
+        policy.refresh()
 
-    fun refreshPolicy() = policy.refresh()
-
-    fun updatePolicy(reward: Double) = policy.update(reward)
-
-    fun getRandomMutation(scenario: ExecutionScenario, mutationThread: Int, mutationNumber: Int): Mutation {
-        val p = random.nextDouble()
-        val parallelMutations = getAvailableMutations(
-            listOf(mutations[0]),
-            scenario,
-            mutationThread
-        )
-        val globalMutations = getAvailableMutations(
-            mutableListOf(mutations[1]).apply {
-                // add random scenario mutation if it is the first mutation in sequence
-                if (mutationNumber == 0) add(mutations[2])
-          },
-            scenario,
-            mutationThread
-        )
-        val otherMutations = getAvailableMutations(
-            mutations.subList(3, mutations.size),
-            scenario,
-            mutationThread
-        )
-
-        return if (p <= PARALLEL_PART_MUTATION_THRESHOLD && parallelMutations.isNotEmpty()) {
-            // pick mutation to parallel part
-            parallelMutations[random.nextInt(parallelMutations.size)]
+        // picking random scenario
+        if (shouldPickRandom()) {
+            println("Perform mutations: 1 (random)")
+            return mutations[2].mutate(scenario)
         }
-        else if (p <= GLOBAL_PART_MUTATION_THRESHOLD && globalMutations.isNotEmpty() || otherMutations.isEmpty()) {
-            // pick global mutation
-            globalMutations[random.nextInt(globalMutations.size)]
+
+        // applying modifications to the passed scenario
+        var mutationsCount = min(
+            Sampling.sampleGeometric(random, meanMutationsCount),
+            scenario.nThreads + scenario.size // max number of crosses and replaces
+        )
+        val crossesCount =
+            if (shouldPickCross(scenario, mutationsCount)) {
+                if (mutationsCount > scenario.size) scenario.nThreads
+                else 1 + random.nextInt(scenario.nThreads)
+            }
+            else 0
+        var mutatedScenario = scenario
+
+        println("Perform mutations: $mutationsCount (cross=$crossesCount, replace=${mutationsCount - crossesCount})")
+
+        repeat(mutationsCount) {
+            mutatedScenario =
+                if (it < crossesCount) applyCrossMutation(mutatedScenario) // apply 'cross' mutation
+                else applyReplaceMutation(mutatedScenario) // apply 'replace' mutation
+        }
+
+        return mutatedScenario
+    }
+
+    fun updateGeneratorsWeights(reward: Double) = policy.updateGeneratorsWeights(reward)
+
+    private fun applyCrossMutation(scenario: ExecutionScenario): ExecutionScenario = mutations[1].mutate(scenario)
+    private fun applyReplaceMutation(scenario: ExecutionScenario): ExecutionScenario {
+        if (shouldPickNonParallelReplace(scenario)) {
+            val nonParallelReplaceMutations = mutableListOf<Mutation>().apply {
+                if (policy.hasUniqueInitPositions(scenario)) add(mutations[3])
+                if (policy.hasUniquePostPositions(scenario)) add(mutations[4])
+            }
+
+            return nonParallelReplaceMutations[random.nextInt(nonParallelReplaceMutations.size)]
+                .mutate(scenario)
         }
         else {
-            // pick mutation to init or post part
-            otherMutations[random.nextInt(otherMutations.size)]
+            return mutations[0].mutate(scenario)
         }
     }
 
-    private fun getAvailableMutations(mutations: List<Mutation>, scenario: ExecutionScenario, mutationThread: Int): List<Mutation> {
-        return mutations.filter { it.isApplicable(scenario, mutationThread) }
+    private fun shouldPickRandom(): Boolean = random.nextDouble() < RANDOM_MUTATION_PROBABILITY
+    private fun shouldPickCross(scenario: ExecutionScenario, totalMutations: Int): Boolean {
+        return (
+            scenario.size < totalMutations ||
+            random.nextDouble() < CROSS_MUTATION_PROBABILITY
+        )
+    }
+    private fun shouldPickNonParallelReplace(scenario: ExecutionScenario): Boolean {
+        return(
+            (
+                (policy.hasUniqueInitPositions(scenario) || policy.hasUniquePostPositions(scenario)) &&
+                random.nextDouble() < NON_PARALLEL_REPLACE_MUTATION_PROBABILITY
+            ) ||
+            !policy.hasUniqueParallelPositions(scenario)
+        )
     }
 }
 
-private const val PARALLEL_PART_MUTATION_THRESHOLD: Double = 0.65
-private const val GLOBAL_PART_MUTATION_THRESHOLD: Double = 0.85
+//private const val PARALLEL_PART_MUTATION_THRESHOLD: Double = 0.65
+//private const val GLOBAL_PART_MUTATION_THRESHOLD: Double = 0.85
+
+private const val RANDOM_MUTATION_PROBABILITY = 0.1
+private const val CROSS_MUTATION_PROBABILITY = 0.1
+private const val NON_PARALLEL_REPLACE_MUTATION_PROBABILITY = 0.05

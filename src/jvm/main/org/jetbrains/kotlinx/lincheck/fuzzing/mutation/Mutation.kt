@@ -16,6 +16,6 @@ import java.util.Random
 abstract class Mutation(
     protected val policy: MutationPolicy
 ) {
-    abstract fun mutate(scenario: ExecutionScenario, mutationThreadId: Int): ExecutionScenario
+    abstract fun mutate(scenario: ExecutionScenario): ExecutionScenario
     open fun isApplicable(scenario: ExecutionScenario, mutationThreadId: Int): Boolean = true
 }

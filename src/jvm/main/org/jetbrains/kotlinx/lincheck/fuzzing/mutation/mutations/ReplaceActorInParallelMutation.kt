@@ -19,23 +19,25 @@ import org.jetbrains.kotlinx.lincheck.fuzzing.mutation.MutationPolicy
 import java.util.*
 
 /**
- * Replaces some actor with random in thread with id `input.mutationThread` in parallel execution.
+ * Replaces some actor with random one in parallel execution.
  */
 class ReplaceActorInParallelMutation(
     policy: MutationPolicy
 ) : Mutation(policy) {
-    override fun mutate(scenario: ExecutionScenario, mutationThreadId: Int): ExecutionScenario {
-        val random = policy.random
+    override fun mutate(scenario: ExecutionScenario): ExecutionScenario {
         val newParallelExecution = mutableListOf<MutableList<Actor>>()
         scenario.parallelExecution.map {
             newParallelExecution.add(it.toMutableList())
         }
 
-        val replaceAtIndex = random.nextInt(newParallelExecution[mutationThreadId].size)
+        val position = policy.getUniqueParallelActorPosition(scenario)
+        val mutationThreadId = position.first
+        val replaceAtIndex = position.second
+
         var actor: Actor
 
         do {
-            actor = policy.getActorGenerator { !it.useOnce }.generate(mutationThreadId + 1, random)
+            actor = policy.getActorGenerator { !it.useOnce }.generate(mutationThreadId + 1, policy.random)
         }
         while (actor.method.name == newParallelExecution[mutationThreadId][replaceAtIndex].method.name)
 
