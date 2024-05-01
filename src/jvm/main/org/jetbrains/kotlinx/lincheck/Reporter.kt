@@ -212,7 +212,7 @@ internal fun ExecutionLayout(
     postPart: List<String>,
     validationFunctionName: String?
 ): TableLayout {
-    val size = parallelPart.size
+    val size = max(1, parallelPart.size)
     val threadHeaders = (0 until size).map { "Thread ${it + 1}" }
     val firstThreadNonParallelParts = initPart + postPart + (validationFunctionName?.let { listOf(it) } ?: emptyList())
     val columnsContent = parallelPart.map { it.toMutableList() }.toMutableList()
@@ -222,7 +222,7 @@ internal fun ExecutionLayout(
         columnsContent.first() += firstThreadNonParallelParts
     } else {
         // if the parallel part is empty, we need to add the first column
-        columnsContent + firstThreadNonParallelParts.toMutableList()
+        columnsContent += firstThreadNonParallelParts.toMutableList()
     }
     val columnWidths = columnsContent.map { column -> column.maxOfOrNull { it.length } ?: 0 }
 
@@ -313,8 +313,10 @@ internal fun StringBuilder.appendExecutionScenarioWithResults(
             appendWrappedLine("STATE: ${executionResult.afterInitStateRepresentation}")
             appendSeparatorLine()
         }
-        appendColumns(parallelPart)
-        appendSeparatorLine()
+        if (parallelPart.isNotEmpty()) {
+            appendColumns(parallelPart)
+            appendSeparatorLine()
+        }
         if (executionResult.afterParallelStateRepresentation != null) {
             appendWrappedLine("STATE: ${executionResult.afterParallelStateRepresentation}")
             appendSeparatorLine()
