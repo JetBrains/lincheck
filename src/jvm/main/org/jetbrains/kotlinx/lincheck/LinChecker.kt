@@ -286,7 +286,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         }
 
         private const val VERIFIER_REFRESH_CYCLE = 100
-        private const val FUZZER_PARAMS_REFRESH_CYCLE = 25
+        private const val FUZZER_PARAMS_REFRESH_CYCLE = 14
     }
 }
 
