@@ -272,13 +272,13 @@ abstract class ManagedStrategy(
     }
 
     private fun failDueToDeadlock(): Nothing {
-        suddenInvocationResult = ManagedDeadlockInvocationResult
+        suddenInvocationResult = ManagedDeadlockInvocationResult(runner.collectExecutionResults())
         // Forcibly finish the current execution by throwing an exception.
         throw ForcibleExecutionFinishError
     }
     
     private fun failDueToLivelock(lazyMessage: () -> String): Nothing {
-        suddenInvocationResult = ObstructionFreedomViolationInvocationResult(lazyMessage())
+        suddenInvocationResult = ObstructionFreedomViolationInvocationResult(lazyMessage(), runner.collectExecutionResults())
         // Forcibly finish the current execution by throwing an exception.
         throw ForcibleExecutionFinishError
     }
@@ -440,7 +440,7 @@ abstract class ManagedStrategy(
         // the managed strategy can construct a trace to reproduce this failure.
         // Let's then store the corresponding failing result and construct the trace.
         if (exception === ForcibleExecutionFinishError) return // not a forcible execution finish
-        suddenInvocationResult = UnexpectedExceptionInvocationResult(exception)
+        suddenInvocationResult = UnexpectedExceptionInvocationResult(exception, runner.collectExecutionResults())
     }
 
     override fun onActorStart(iThread: Int) = runInIgnoredSection {
@@ -499,7 +499,7 @@ abstract class ManagedStrategy(
                 val nextThread = (0 until nThreads).firstOrNull { !finished[it] && isSuspended[it] }
                 if (nextThread == null) {
                     // must switch not to get into a deadlock, but there are no threads to switch.
-                    suddenInvocationResult = ManagedDeadlockInvocationResult
+                    suddenInvocationResult = ManagedDeadlockInvocationResult(runner.collectExecutionResults())
                     // forcibly finish execution by throwing an exception.
                     throw ForcibleExecutionFinishError
                 }

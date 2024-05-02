@@ -20,7 +20,7 @@ data class ExecutionResult(
      * Results of the initial sequential part of the execution.
      * @see ExecutionScenario.initExecution
      */
-    val initResults: List<Result>,
+    val initResults: List<Result?>,
     /**
      * State representation at the end of the init part.
      */
@@ -38,13 +38,13 @@ data class ExecutionResult(
      * Results of the last sequential part of the execution.
      * @see ExecutionScenario.postExecution
      */
-    val postResults: List<Result>,
+    val postResults: List<Result?>,
     /**
      * State representation at the end of the scenario.
      */
     val afterPostStateRepresentation: String?
 ) {
-    constructor(initResults: List<Result>, parallelResultsWithClock: List<List<ResultWithClock>>, postResults: List<Result>) :
+    constructor(initResults: List<Result?>, parallelResultsWithClock: List<List<ResultWithClock>>, postResults: List<Result?>) :
         this(initResults, null, parallelResultsWithClock, null, postResults, null)
 
     /**
@@ -139,10 +139,10 @@ val ExecutionResult.withEmptyClocks: ExecutionResult get() = ExecutionResult(
     this.afterPostStateRepresentation
 )
 
-val ExecutionResult.parallelResults: List<List<Result>> get() =
+val ExecutionResult.parallelResults: List<List<Result?>> get() =
     parallelResultsWithClock.map { it.map { r -> r.result } }
 
-val ExecutionResult.threadsResults: List<List<Result>> get() =
+val ExecutionResult.threadsResults: List<List<Result?>> get() =
     threadsResultsWithClock.map { it.map { r -> r.result } }
 
 // for tests

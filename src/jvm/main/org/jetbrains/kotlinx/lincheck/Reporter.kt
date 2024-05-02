@@ -212,7 +212,7 @@ internal fun ExecutionLayout(
     postPart: List<String>,
     validationFunctionName: String?
 ): TableLayout {
-    val size = parallelPart.size
+    val size = max(1, parallelPart.size)
     val threadHeaders = (0 until size).map { "Thread ${it + 1}" }
     val firstThreadNonParallelParts = initPart + postPart + (validationFunctionName?.let { listOf(it) } ?: emptyList())
     val columnsContent = parallelPart.map { it.toMutableList() }.toMutableList()
@@ -222,7 +222,7 @@ internal fun ExecutionLayout(
         columnsContent.first() += firstThreadNonParallelParts
     } else {
         // if the parallel part is empty, we need to add the first column
-        columnsContent + firstThreadNonParallelParts.toMutableList()
+        columnsContent += firstThreadNonParallelParts.toMutableList()
     }
     val columnWidths = columnsContent.map { column -> column.maxOfOrNull { it.length } ?: 0 }
 
@@ -281,40 +281,16 @@ internal fun StringBuilder.appendExecutionScenario(
     return this
 }
 
-private data class ActorWithResult(
-    val actor: Actor,
-    val result: Result,
-    val clock: HBClock? = null,
-    val exceptionInfo: ExceptionNumberAndStacktrace? = null
-) {
-    init {
-        require(exceptionInfo == null || result is ExceptionResult)
-    }
-
-    constructor(actor: Actor, result: Result,
-                exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>,
-                clock: HBClock? = null,
-    ) : this(actor, result, clock, result.exceptionInfo(exceptionStackTraces))
-
-    override fun toString(): String =
-        "${actor}: $result" +
-                (exceptionInfo?.let { " #${it.number}" } ?: "") +
-                (clock?.takeIf { !it.empty }?.let { " $it" } ?: "")
-
-}
-
-internal fun Result.exceptionInfo(exceptionMap: Map<Throwable, ExceptionNumberAndStacktrace>): ExceptionNumberAndStacktrace? =
-    (this as? ExceptionResult)?.let { exceptionMap[it.throwable] }
-
 private fun<T, U> requireEqualSize(x: List<T>, y: List<U>, lazyMessage: () -> String) {
     require(x.size == y.size) { "${lazyMessage()} (${x.size} != ${y.size})" }
 }
 
 internal fun StringBuilder.appendExecutionScenarioWithResults(
-    scenario: ExecutionScenario,
-    executionResult: ExecutionResult,
+    failure: LincheckFailure,
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>,
 ): StringBuilder {
+    val scenario = failure.scenario
+    val executionResult = failure.results
     requireEqualSize(scenario.parallelExecution, executionResult.parallelResults) {
         "Different numbers of threads and matching results found"
     }
@@ -324,26 +300,8 @@ internal fun StringBuilder.appendExecutionScenarioWithResults(
     requireEqualSize(scenario.postExecution, executionResult.postResults) {
         "Different numbers of actors and matching results found"
     }
-    for (i in scenario.parallelExecution.indices) {
-        requireEqualSize(scenario.parallelExecution[i], executionResult.parallelResults[i]) {
-            "Different numbers of actors and matching results found"
-        }
-    }
-    val initPart = scenario.initExecution.zip(executionResult.initResults) {
-        actor, result -> ActorWithResult(actor, result, exceptionStackTraces).toString()
-    }
-    val postPart = scenario.postExecution.zip(executionResult.postResults) {
-        actor, result -> ActorWithResult(actor, result, exceptionStackTraces).toString()
-    }
-    var hasClocks = false
-    val parallelPart = scenario.parallelExecution.mapIndexed { i, actors ->
-        actors.zip(executionResult.parallelResultsWithClock[i]) { actor, resultWithClock ->
-            if (!resultWithClock.clockOnStart.empty)
-                hasClocks = true
-            ActorWithResult(actor, resultWithClock.result, exceptionStackTraces, clock = resultWithClock.clockOnStart).toString()
-        }
-    }
-    with(ExecutionLayout(initPart, parallelPart, postPart, validationFunctionName = null)) {
+    val (initPart, parallelPart, postPart, validationFunctionName, hasClocks) = executionResultsRepresentation(failure, exceptionStackTraces)
+    with(ExecutionLayout(initPart, parallelPart, postPart, validationFunctionName)) {
         appendSeparatorLine()
         appendHeader()
         appendSeparatorLine()
@@ -355,8 +313,10 @@ internal fun StringBuilder.appendExecutionScenarioWithResults(
             appendWrappedLine("STATE: ${executionResult.afterInitStateRepresentation}")
             appendSeparatorLine()
         }
-        appendColumns(parallelPart)
-        appendSeparatorLine()
+        if (parallelPart.isNotEmpty()) {
+            appendColumns(parallelPart)
+            appendSeparatorLine()
+        }
         if (executionResult.afterParallelStateRepresentation != null) {
             appendWrappedLine("STATE: ${executionResult.afterParallelStateRepresentation}")
             appendSeparatorLine()
@@ -367,6 +327,10 @@ internal fun StringBuilder.appendExecutionScenarioWithResults(
         }
         if (executionResult.afterPostStateRepresentation != null && postPart.isNotEmpty()) {
             appendWrappedLine("STATE: ${executionResult.afterPostStateRepresentation}")
+            appendSeparatorLine()
+        }
+        if (validationFunctionName != null) {
+            appendToFirstColumn(validationFunctionName)
             appendSeparatorLine()
         }
     }
@@ -398,9 +362,9 @@ internal fun StringBuilder.appendExecutionScenarioWithResults(
 }
 
 internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilder {
-    val results: ExecutionResult? = (failure as? IncorrectResultsFailure)?.results
+    val results: ExecutionResult = failure.results
     // If a result is present - collect exceptions stack traces to print them
-    val exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace> = results?.let {
+    val exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace> = results.let {
         when (val exceptionsProcessingResult = collectExceptionStackTraces(results)) {
             // If some exception was thrown from the Lincheck itself, we ask for bug reporting
             is InternalLincheckBugResult -> {
@@ -410,17 +374,18 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
 
             is ExceptionStackTracesResult -> exceptionsProcessingResult.exceptionStackTraces
         }
-    } ?: emptyMap()
+    }
 
     when (failure) {
         is IncorrectResultsFailure -> appendIncorrectResultsFailure(failure, exceptionStackTraces)
-        is DeadlockOrLivelockFailure -> appendDeadlockWithDumpFailure(failure)
-        is UnexpectedExceptionFailure -> appendUnexpectedExceptionFailure(failure)
+        is TimeoutFailure -> appendTimeoutDeadlockWithDumpFailure(failure, exceptionStackTraces)
+        is UnexpectedExceptionFailure -> appendUnexpectedExceptionFailure(failure, exceptionStackTraces)
         is ValidationFailure -> when (failure.exception) {
             is LincheckInternalBugException -> appendInternalLincheckBugFailure(failure.exception)
-            else ->  appendValidationFailure(failure)
+            else ->  appendValidationFailure(failure, exceptionStackTraces)
         }
-        is ObstructionFreedomViolationFailure -> appendObstructionFreedomViolationFailure(failure)
+        is ObstructionFreedomViolationFailure -> appendObstructionFreedomViolationFailure(failure, exceptionStackTraces)
+        is ManagedDeadlockFailure -> appendManagedDeadlockWithDumpFailure(failure, exceptionStackTraces)
     }
     if (failure.trace != null) {
         appendLine()
@@ -429,6 +394,109 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
         appendExceptionsStackTracesBlock(exceptionStackTraces)
     }
     return this
+}
+
+private data class ExecutionResultsRepresentationData(
+    val initPart: List<String>,
+    val parallelPart: List<List<String>>,
+    val postPart: List<String>,
+    val validationFunctionRepresentation: String?,
+    val hasClocks: Boolean
+)
+
+private fun executionResultsRepresentation(
+    failure: LincheckFailure,
+    exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
+): ExecutionResultsRepresentationData {
+    val results = failure.results
+    val scenario = failure.scenario
+
+    val initActorData = results.initResults.zip(scenario.initExecution).map { (result, actor) ->
+        ResultActorData(actor, result, exceptionStackTraces, null)
+    }
+    val isIncorrectResultsFailure = failure is IncorrectResultsFailure
+    var hasClock = false
+    val parallelActorData = scenario.parallelExecution.mapIndexed { i, actors ->
+        actors.zip(results.parallelResultsWithClock[i]) { actor, resultWithClock ->
+            val hbClock = if (isIncorrectResultsFailure) resultWithClock.clockOnStart else null
+            if (hbClock != null && !hbClock.empty) {
+                hasClock = true
+            }
+            ResultActorData(actor, resultWithClock.result, exceptionStackTraces, hbClock)
+        }
+    }
+    hasClock = isIncorrectResultsFailure && hasClock
+    val postActorData = results.postResults.zip(scenario.postExecution).map { (result, actor) ->
+        ResultActorData(actor, result, exceptionStackTraces, null)
+    }
+    var executionHung: Boolean
+    val (initialExecutionHung, initialActorRepresentation) = executionResultsRepresentation(initActorData, failure)
+    executionHung = initialExecutionHung
+
+    val parallelActorRepresentation = if (executionHung) emptyList() else {
+        parallelActorData.map { actors ->
+            val (threadExecutionHung, representation) = executionResultsRepresentation(actors, failure)
+            executionHung = executionHung || threadExecutionHung
+            representation
+        }
+    }
+
+    val postActorRepresentation = if (executionHung) emptyList() else executionResultsRepresentation(postActorData, failure).second
+
+    val validationFunctionName = if (failure is ValidationFailure) {
+        scenario.validationFunction?.let { "${it.method.name}(): ${failure.exception::class.simpleName}" }
+    } else null
+
+    return ExecutionResultsRepresentationData(
+        initPart = initialActorRepresentation,
+        parallelPart = parallelActorRepresentation,
+        postPart = postActorRepresentation,
+        validationFunctionRepresentation = validationFunctionName,
+        hasClocks = hasClock
+    )
+}
+
+
+private data class ResultActorData(
+    val actor: Actor,
+    val result: Result?,
+    val exceptionInfo: ExceptionNumberAndStacktrace? = null,
+    val hbClock: HBClock? = null
+) {
+    constructor(actor: Actor, result: Result?, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>, hbClock: HBClock?)
+            : this(actor, result, (result as? ExceptionResult)?.let { exceptionStackTraces[it.throwable] }, hbClock)
+
+    override fun toString(): String {
+        return "${actor}${result.toString().let { ": $it" } ?: ""}" +
+                (exceptionInfo?.let { " #${it.number}" } ?: "") +
+                (hbClock?.takeIf { !it.empty }?.let { " $it" } ?: "")
+    }
+}
+
+/**
+ * Composes actor results representation.
+ *
+ * @return a pair of a flag, indicating if execution has hung on one of these actors,
+ * and a representations of non-null present results.
+ * If some actors have hung, the first of them
+ * is represented as <hung>, others are ignored.
+ */
+private fun executionResultsRepresentation(results: List<ResultActorData>, failure: LincheckFailure): Pair<Boolean, List<String>> {
+    val representation = mutableListOf<String>()
+    for (actorWithResult in results) {
+        if (actorWithResult.result == null) {
+            // We don't mark actors that violated obstruction freedom as hung.
+            if (failure is ObstructionFreedomViolationFailure) {
+                representation += "${actorWithResult.actor}"
+                return true to representation
+            }
+            representation += "${actorWithResult.actor}: <hung>"
+            return true to representation
+        }
+        representation += actorWithResult.toString()
+    }
+
+    return false to representation
 }
 
 internal fun StringBuilder.appendExceptionsStackTracesBlock(exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>) {
@@ -452,7 +520,9 @@ internal fun StringBuilder.appendExceptionsStackTraces(exceptionStackTraces: Map
     return this
 }
 
-fun StringBuilder.appendInternalLincheckBugFailure(exception: Throwable) {
+private fun StringBuilder.appendInternalLincheckBugFailure(
+    exception: Throwable,
+) {
     appendLine(
         """
         Wow! You've caught a bug in Lincheck.
@@ -487,17 +557,6 @@ internal fun resultRepresentation(result: Result, exceptionStackTraces: Map<Thro
             val exceptionNumberRepresentation = exceptionStackTraces[result.throwable]?.let { " #${it.number}" } ?: ""
             "$result$exceptionNumberRepresentation"
         }
-        else -> result.toString()
-    }
-}
-
-internal fun actorNodeResultRepresentation(result: Result, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): String? {
-    return when (result) {
-        is ExceptionResult -> {
-            val exceptionNumberRepresentation = exceptionStackTraces[result.throwable]?.let { " #${it.number}" } ?: ""
-            "$result$exceptionNumberRepresentation"
-        }
-        is VoidResult -> null // don't print
         else -> result.toString()
     }
 }
@@ -556,42 +615,55 @@ internal fun collectExceptionStackTraces(executionResult: ExecutionResult): Exce
     return ExceptionStackTracesResult(exceptionStackTraces)
 }
 
-private fun StringBuilder.appendUnexpectedExceptionFailure(failure: UnexpectedExceptionFailure): StringBuilder {
+private fun StringBuilder.appendUnexpectedExceptionFailure(
+    failure: UnexpectedExceptionFailure,
+    exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
+): StringBuilder {
     appendLine("= The execution failed with an unexpected exception =")
-    appendExecutionScenario(failure.scenario)
+    appendExecutionScenarioWithResults(failure, exceptionStackTraces)
     appendLine()
     appendException(failure.exception)
     return this
 }
 
-private fun StringBuilder.appendDeadlockWithDumpFailure(failure: DeadlockOrLivelockFailure): StringBuilder {
-    appendLine("= The execution has hung, see the thread dump =")
-    appendExecutionScenario(failure.scenario)
+private fun StringBuilder.appendManagedDeadlockWithDumpFailure(
+    failure: LincheckFailure,
+    exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
+): StringBuilder {
+    appendLine("= The execution has hung =")
+    appendExecutionScenarioWithResults(failure, exceptionStackTraces)
     appendLine()
-    // We don't save thread dump in model checking mode, for now it is present only in stress testing
-    failure.threadDump?.let { threadDump ->
-        // Sort threads to produce same output for the same results
-        for ((t, stackTrace) in threadDump.entries.sortedBy { it.key.id }) {
-            val threadNumber = (t as? TestThread)?.name ?: "?"
-            appendLine("Thread-$threadNumber:")
-            stackTrace.map {
-                StackTraceElement(
-                    /* declaringClass = */ it.className,
-                    /* methodName = */ it.methodName,
-                    /* fileName = */ it.fileName,
-                    /* lineNumber = */ it.lineNumber
-                )
-            }.run {
-                // Remove all the Lincheck internals only if the program
-                // has hung in the user code. Otherwise, print the full
-                // stack trace for easier debugging.
-                if (isEmpty() || first().isLincheckInternals) {
-                    this
-                } else {
-                    filter { !it.isLincheckInternals }
-                }
-            }.forEach { appendLine("\t$it") }
-        }
+    return this
+}
+
+private fun StringBuilder.appendTimeoutDeadlockWithDumpFailure(
+    failure: TimeoutFailure,
+    exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
+): StringBuilder {
+    appendLine("= The execution has hung, see the thread dump =")
+    appendExecutionScenarioWithResults(failure, exceptionStackTraces)
+    appendLine()
+    // Sort threads to produce same output for the same results
+    for ((t, stackTrace) in failure.threadDump.entries.sortedBy { it.key.id }) {
+        val threadNumber = (t as? TestThread)?.name ?: "?"
+        appendLine("Thread-$threadNumber:")
+        stackTrace.map {
+            StackTraceElement(
+                /* declaringClass = */ it.className,
+                /* methodName = */ it.methodName,
+                /* fileName = */ it.fileName,
+                /* lineNumber = */ it.lineNumber
+            )
+        }.run {
+            // Remove all the Lincheck internals only if the program
+            // has hung in the user code. Otherwise, print the full
+            // stack trace for easier debugging.
+            if (isEmpty() || first().isLincheckInternals) {
+                this
+            } else {
+                filter { !it.isLincheckInternals }
+            }
+        }.forEach { appendLine("\t$it") }
     }
     return this
 }
@@ -604,7 +676,7 @@ private fun StringBuilder.appendIncorrectResultsFailure(
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>,
 ): StringBuilder {
     appendLine("= Invalid execution results =")
-    appendExecutionScenarioWithResults(failure.scenario, failure.results, exceptionStackTraces)
+    appendExecutionScenarioWithResults(failure, exceptionStackTraces)
     return this
 }
 
@@ -614,18 +686,24 @@ private fun StringBuilder.appendHints(hints: List<String>) {
     }
 }
 
-private fun StringBuilder.appendValidationFailure(failure: ValidationFailure): StringBuilder {
+private fun StringBuilder.appendValidationFailure(
+    failure: ValidationFailure,
+    exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
+): StringBuilder {
     appendLine("= Validation function ${failure.validationFunctionName} has failed =")
-    appendExecutionScenario(failure.scenario, showValidationFunctions = true)
+    appendExecutionScenarioWithResults(failure, exceptionStackTraces)
     appendln()
     appendln()
     appendException(failure.exception)
     return this
 }
 
-private fun StringBuilder.appendObstructionFreedomViolationFailure(failure: ObstructionFreedomViolationFailure): StringBuilder {
+private fun StringBuilder.appendObstructionFreedomViolationFailure(
+    failure: ObstructionFreedomViolationFailure,
+    exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
+): StringBuilder {
     appendLine("= ${failure.reason} =")
-    appendExecutionScenario(failure.scenario)
+    appendExecutionScenarioWithResults(failure, exceptionStackTraces)
     return this
 }
 

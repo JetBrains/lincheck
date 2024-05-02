@@ -16,6 +16,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 
 sealed class LincheckFailure(
     val scenario: ExecutionScenario,
+    val results: ExecutionResult,
     val trace: Trace?
 ) {
     override fun toString() = StringBuilder().appendFailure(this).toString()
@@ -23,43 +24,51 @@ sealed class LincheckFailure(
 
 internal class IncorrectResultsFailure(
     scenario: ExecutionScenario,
-    val results: ExecutionResult,
+    results: ExecutionResult,
     trace: Trace? = null
-) : LincheckFailure(scenario, trace)
+) : LincheckFailure(scenario, results, trace)
 
-internal class DeadlockOrLivelockFailure(
+internal class ManagedDeadlockFailure(
     scenario: ExecutionScenario,
-    // Thread dump is not present in case of model checking
-    val threadDump: Map<Thread, Array<StackTraceElement>>?,
+    results: ExecutionResult,
     trace: Trace? = null
-) : LincheckFailure(scenario, trace)
+) : LincheckFailure(scenario,results, trace)
+
+internal class TimeoutFailure(
+    scenario: ExecutionScenario,
+    results: ExecutionResult,
+    val threadDump: Map<Thread, Array<StackTraceElement>>,
+) : LincheckFailure(scenario,results, null)
 
 internal class UnexpectedExceptionFailure(
     scenario: ExecutionScenario,
+    results: ExecutionResult,
     val exception: Throwable,
     trace: Trace? = null
-) : LincheckFailure(scenario, trace)
+) : LincheckFailure(scenario,results, trace)
 
 internal class ValidationFailure(
     scenario: ExecutionScenario,
+    results: ExecutionResult,
     val exception: Throwable,
     trace: Trace? = null
-) : LincheckFailure(scenario, trace) {
+) : LincheckFailure(scenario,results, trace) {
     val validationFunctionName: String = scenario.validationFunction!!.method.name
 }
 
 internal class ObstructionFreedomViolationFailure(
     scenario: ExecutionScenario,
+    results: ExecutionResult,
     val reason: String,
     trace: Trace? = null
-) : LincheckFailure(scenario, trace)
+) : LincheckFailure(scenario, results, trace)
 
 internal fun InvocationResult.toLincheckFailure(scenario: ExecutionScenario, trace: Trace? = null) = when (this) {
-    is ManagedDeadlockInvocationResult -> DeadlockOrLivelockFailure(scenario, threadDump = null, trace)
-    is RunnerTimeoutInvocationResult -> DeadlockOrLivelockFailure(scenario, threadDump, trace = null)
-    is UnexpectedExceptionInvocationResult -> UnexpectedExceptionFailure(scenario, exception, trace)
-    is ValidationFailureInvocationResult -> ValidationFailure(scenario, exception, trace)
-    is ObstructionFreedomViolationInvocationResult -> ObstructionFreedomViolationFailure(scenario, reason, trace)
+    is ManagedDeadlockInvocationResult -> ManagedDeadlockFailure(scenario, results, trace)
+    is RunnerTimeoutInvocationResult -> TimeoutFailure(scenario, results, threadDump)
+    is UnexpectedExceptionInvocationResult -> UnexpectedExceptionFailure(scenario, results, exception, trace)
+    is ValidationFailureInvocationResult -> ValidationFailure(scenario, results, exception, trace)
+    is ObstructionFreedomViolationInvocationResult -> ObstructionFreedomViolationFailure(scenario, results, reason, trace)
     is CompletedInvocationResult -> IncorrectResultsFailure(scenario, results, trace)
     else -> error("Unexpected invocation result type: ${this.javaClass.simpleName}")
 }

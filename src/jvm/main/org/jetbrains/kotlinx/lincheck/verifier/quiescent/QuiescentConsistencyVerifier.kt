@@ -64,7 +64,8 @@ class QuiescentConsistencyVerifier(sequentialSpecification: Class<*>) : Verifier
                 val r = parallelResultsWithClock[t][i]
                 if (a.isQuiescentConsistent) {
                     clockMapping[t].add(clockMapping[t][i])
-                    parallelResults.add(mutableListOf(r.result.withEmptyClock(newThreads)))
+                    // null result is not impossible here as if the execution has hung, we won't check its result
+                    parallelResults.add(mutableListOf(r.result!!.withEmptyClock(newThreads)))
                 } else {
                     clockMapping[t].add(clockMapping[t][i] + 1)
                     val c = IntArray(newThreads) { 0 }

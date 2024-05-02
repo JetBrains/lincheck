@@ -31,8 +31,8 @@ data class HBClock(val clock: IntArray) {
 fun emptyClock(size: Int) = HBClock(emptyClockArray(size))
 fun emptyClockArray(size: Int) = IntArray(size) { 0 }
 
-data class ResultWithClock(val result: Result, val clockOnStart: HBClock)
+data class ResultWithClock(val result: Result?, val clockOnStart: HBClock)
 
 fun Result.withEmptyClock(threads: Int) = ResultWithClock(this, emptyClock(threads))
 fun List<Result>.withEmptyClock(threads: Int): List<ResultWithClock> = map { it.withEmptyClock(threads) }
-fun List<ResultWithClock>.withEmptyClock() = map { it.result.withEmptyClock(it.clockOnStart.threads) }
+fun List<ResultWithClock>.withEmptyClock() = mapNotNull { it.result?.withEmptyClock(it.clockOnStart.threads) }

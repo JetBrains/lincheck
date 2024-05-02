@@ -308,34 +308,45 @@ internal open class ParallelThreadsRunner(
                 executor.submitAndAwait(arrayOf(validationPart), timeout)
                 val validationResult = validationPart.results.single()
                 if (validationResult is ExceptionResult) {
-                    return ValidationFailureInvocationResult(scenario, validationResult.throwable)
+                    return ValidationFailureInvocationResult(scenario, validationResult.throwable, collectExecutionResults())
                 }
             }
             // Combine the results and convert them for the standard class loader (if they are of non-primitive types).
             // We do not want the transformed code to be reachable outside of the runner and strategy classes.
-            return CompletedInvocationResult(
-                ExecutionResult(
-                    initResults = initialPartExecution?.results?.toList().orEmpty(),
-                    parallelResultsWithClock = parallelPartExecutions.map { execution ->
-                        execution.results.zip(execution.clocks).map {
-                            ResultWithClock(it.first, HBClock(it.second.clone()))
-                        }
-                    },
-                    postResults = postPartExecution?.results?.toList().orEmpty(),
-                    afterInitStateRepresentation = afterInitStateRepresentation,
-                    afterParallelStateRepresentation = afterParallelStateRepresentation,
-                    afterPostStateRepresentation = afterPostStateRepresentation
-                )
-            )
+            return CompletedInvocationResult(collectExecutionResults(afterInitStateRepresentation, afterParallelStateRepresentation, afterPostStateRepresentation))
         } catch (e: TimeoutException) {
             val threadDump = collectThreadDump(this)
-            return RunnerTimeoutInvocationResult(threadDump)
+            return RunnerTimeoutInvocationResult(threadDump, collectExecutionResults())
         } catch (e: ExecutionException) {
-            return UnexpectedExceptionInvocationResult(e.cause!!)
+            return UnexpectedExceptionInvocationResult(e.cause!!, collectExecutionResults())
         } finally {
             resetState()
         }
     }
+
+    /**
+     * This method is called when we have some execution result other than [CompletedInvocationResult].
+     */
+    fun collectExecutionResults(): ExecutionResult {
+        return collectExecutionResults(null, null, null)
+    }
+
+    private fun collectExecutionResults(
+        afterInitStateRepresentation: String?,
+        afterParallelStateRepresentation: String?,
+        afterPostStateRepresentation: String?
+    ) = ExecutionResult(
+        initResults = initialPartExecution?.results?.toList().orEmpty(),
+        parallelResultsWithClock = parallelPartExecutions.map { execution ->
+            execution.results.zip(execution.clocks).map {
+                ResultWithClock(it.first, HBClock(it.second.clone()))
+            }
+        },
+        postResults = postPartExecution?.results?.toList().orEmpty(),
+        afterInitStateRepresentation = afterInitStateRepresentation,
+        afterParallelStateRepresentation = afterParallelStateRepresentation,
+        afterPostStateRepresentation = afterPostStateRepresentation
+    )
 
 
     private fun createInitialPartExecution() =
