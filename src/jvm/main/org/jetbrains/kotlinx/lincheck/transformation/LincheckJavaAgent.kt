@@ -177,7 +177,8 @@ internal object LincheckJavaAgent {
                 } else {
                     true
                 }
-            }.mapNotNull { clazz ->
+            }
+            .mapNotNull { clazz ->
                 // For each class, get its original bytecode.
                 val bytes = nonTransformedClasses[clazz.name]
                 bytes?.let { ClassDefinition(clazz, it) }
@@ -351,7 +352,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         internalClassName: String,
         classBytes: ByteArray
     ): ByteArray = transformedClassesCache.computeIfAbsent(internalClassName.canonicalClassName) {
-        nonTransformedClasses[internalClassName.canonicalClassName] = classBytes
+        nonTransformedClasses.putIfAbsent(internalClassName.canonicalClassName, classBytes.copyOf())
         val reader = ClassReader(classBytes)
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
         try {
