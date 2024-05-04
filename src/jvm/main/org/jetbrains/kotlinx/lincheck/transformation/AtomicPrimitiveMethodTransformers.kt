@@ -199,12 +199,13 @@ internal class VarHandleMethodTransformer(
                 val argumentCount = Type.getArgumentCount(desc)
                 when (name) {
                     // TODO: getAndSet should be handled separately
-                    "set", "setVolatile", "setRelease", "setOpaque", "getAndSet" -> when (argumentCount) {
+                    "set", "setVolatile", "setRelease", "setOpaque",
+                    "getAndSet", "getAndSetAcquire", "getAndSetRelease" -> when (argumentCount) {
                         2 -> processSetFieldMethod(name, opcode, owner, desc, itf)
                         3 -> processSetArrayElementMethod(name, opcode, owner, desc, itf)
                         else -> throw IllegalStateException()
                     }
-                    "compareAndSet",  "weakCompareAndSet",
+                    "compareAndSet", "weakCompareAndSet",
                     "weakCompareAndSetRelease", "weakCompareAndSetAcquire", "weakCompareAndSetPlain",
                     "compareAndExchange", "compareAndExchangeAcquire", "compareAndExchangeRelease" -> when (argumentCount) {
                         3 -> processCompareAndSetFieldMethod(name, opcode, owner, desc, itf)
@@ -239,10 +240,15 @@ internal class UnsafeMethodTransformer(
             },
             code = {
                 when (name) {
-                    "compareAndSwapObject" -> {
+                    "compareAndSwapObject",
+                    "compareAndSetReference", "weakCompareAndSetReference",
+                    "weakCompareAndSetReferenceRelease", "weakCompareAndSetReferenceAcquire", "weakCompareAndSetReferencePlain",
+                    "compareAndExchangeReference", "compareAndExchangeReferenceAcquire", "compareAndExchangeReferenceRelease" -> {
                         processCompareAndSetByOffsetMethod(name, opcode, owner, desc, itf)
                     }
-                    "getAndSetObject" -> {
+                    "putObject", "putObjectVolatile", "getAndSetObject",
+                    "putReference", "putReferenceVolatile", "putReferenceRelease", "putReferenceOpaque",
+                    "getAndSetReference", "getAndSetReferenceAcquire", "getAndSetReferenceRelease" -> {
                         processGetAndSetByOffsetMethod(name, opcode, owner, desc, itf)
                     }
                     else -> {
