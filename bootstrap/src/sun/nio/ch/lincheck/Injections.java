@@ -228,6 +228,19 @@ public class Injections {
     }
 
     /**
+     * Called from the instrumented code after atomic write is performed through either
+     * the AtomicXXXFieldUpdater, VarHandle, or Unsafe APIs.
+     * Incorporates all atomic methods that can set the field (or array element) of an object,
+     * such as `set`, `compareAndSet`, `compareAndExchange`, etc.
+     *
+     * @param obj The object to which field (or array element) the value is set.
+     * @param value The value written into [obj] field (or array element).
+     */
+    public static void afterAtomicSet(Object obj, Object value) {
+        getEventTracker().afterAtomicSet(obj, value);
+    }
+
+    /**
      * Called from the instrumented code before any method call.
      *
      * @param owner is `null` for public static methods.
@@ -278,18 +291,6 @@ public class Injections {
      */
     public static void afterNewObjectCreation(Object obj) {
         getEventTracker().afterNewObjectCreation(obj);
-    }
-
-    /**
-     * Called from the instrumented code after value assigned to any receiver field.
-     * Required to track local objects.
-     *
-     * @param receiver              the object in whose field the entry is made
-     * @param fieldOrArrayCellValue the value written into [receiver] field
-     * @see [LocalObjectManager]
-     */
-    public static void onWriteToObjectFieldOrArrayCell(Object receiver, Object fieldOrArrayCellValue) {
-        getEventTracker().onWriteToObjectFieldOrArrayCell(receiver, fieldOrArrayCellValue);
     }
 
     /**

@@ -39,7 +39,7 @@ internal open class AtomicPrimitiveMethodTransformer(
         // STACK: <empty>
         loadLocals(argumentLocals, argumentTypes)
         // STACK: receiver, value
-        invokeStatic(Injections::onWriteToObjectFieldOrArrayCell)
+        invokeStatic(Injections::afterAtomicSet)
     }
 
     /**
@@ -55,11 +55,10 @@ internal open class AtomicPrimitiveMethodTransformer(
         // STACK: receiver, index, value
         visitMethodInsn(opcode, owner, name, desc, itf)
         // STACK: <empty>
-        // loadLocals(argumentLocals, argumentTypes)
         loadLocal(argumentLocals[0])
         loadLocal(argumentLocals[2])
         // STACK: receiver, value
-        invokeStatic(Injections::onWriteToObjectFieldOrArrayCell)
+        invokeStatic(Injections::afterAtomicSet)
     }
 
     /**
@@ -75,11 +74,10 @@ internal open class AtomicPrimitiveMethodTransformer(
         // STACK: receiver, expectedValue, newValue
         visitMethodInsn(opcode, owner, name, desc, itf)
         // STACK: cas-result
-        // loadLocals(argumentLocals, argumentTypes)
         loadLocal(argumentLocals[0])
         loadLocal(argumentLocals[2])
         // STACK: cas-result, receiver, newValue
-        invokeStatic(Injections::onWriteToObjectFieldOrArrayCell)
+        invokeStatic(Injections::afterAtomicSet)
         // STACK: cas-result
     }
 
@@ -96,11 +94,10 @@ internal open class AtomicPrimitiveMethodTransformer(
         // STACK: receiver, index, expectedValue, newValue
         visitMethodInsn(opcode, owner, name, desc, itf)
         // STACK: casResult
-        // loadLocals(argumentLocals, argumentTypes)
         loadLocal(argumentLocals[0])
         loadLocal(argumentLocals[3])
         // STACK: cas-result, receiver, newValue
-        invokeStatic(Injections::onWriteToObjectFieldOrArrayCell)
+        invokeStatic(Injections::afterAtomicSet)
         // STACK: cas-result
     }
 
@@ -117,11 +114,10 @@ internal open class AtomicPrimitiveMethodTransformer(
         // STACK: receiver, offset, expectedValue, newValue
         visitMethodInsn(opcode, owner, name, desc, itf)
         // STACK: casResult
-        // loadLocals(argumentLocals, argumentTypes)
         loadLocal(argumentLocals[0])
         loadLocal(argumentLocals[3])
         // STACK: cas-result, receiver, nextValue
-        invokeStatic(Injections::onWriteToObjectFieldOrArrayCell)
+        invokeStatic(Injections::afterAtomicSet)
         // STACK: cas-result
     }
 
@@ -138,11 +134,10 @@ internal open class AtomicPrimitiveMethodTransformer(
         // STACK: receiver, offset, newValue
         visitMethodInsn(opcode, owner, name, desc, itf)
         // STACK: oldValue
-        // loadLocals(argumentLocals, argumentTypes)
         loadLocal(argumentLocals[0])
         loadLocal(argumentLocals[2])
         // STACK: oldValue, receiver, newValue
-        invokeStatic(Injections::onWriteToObjectFieldOrArrayCell)
+        invokeStatic(Injections::afterAtomicSet)
         // STACK: oldValue
     }
 

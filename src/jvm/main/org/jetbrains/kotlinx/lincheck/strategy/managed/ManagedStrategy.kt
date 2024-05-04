@@ -832,6 +832,10 @@ abstract class ManagedStrategy(
         }
     }
 
+    override fun afterAtomicSet(obj: Any, value: Any?) = runInIgnoredSection {
+        localObjectManager.onWriteToObjectFieldOrArrayCell(obj, value)
+    }
+
     override fun getThreadLocalRandom(): Random = runInIgnoredSection {
         return randoms[currentThread]
     }
@@ -861,14 +865,6 @@ abstract class ManagedStrategy(
         runInIgnoredSection {
             localObjectManager.registerNewObject(obj)
         }
-    }
-
-    override fun onWriteToObjectFieldOrArrayCell(receiver: Any, fieldOrArrayCellValue: Any?) = runInIgnoredSection {
-        localObjectManager.onWriteToObjectFieldOrArrayCell(receiver, fieldOrArrayCellValue)
-    }
-
-    override fun onWriteObjectToStaticField(fieldValue: Any?) = runInIgnoredSection {
-        localObjectManager.markObjectNonLocal(fieldValue)
     }
 
     private fun methodGuaranteeType(owner: Any?, className: String, methodName: String): ManagedGuaranteeType? = runInIgnoredSection {

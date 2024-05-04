@@ -29,6 +29,9 @@ interface EventTracker {
     fun wait(monitor: Any, withTimeout: Boolean)
     fun notify(monitor: Any, codeLocation: Int, notifyAll: Boolean)
 
+    fun beforeNewObjectCreation(className: String)
+    fun afterNewObjectCreation(obj: Any)
+
     fun beforeReadField(obj: Any?, className: String, fieldName: String, codeLocation: Int,
                         isStatic: Boolean, isFinal: Boolean): Boolean
     fun beforeReadArrayElement(array: Any, index: Int, codeLocation: Int): Boolean
@@ -39,6 +42,8 @@ interface EventTracker {
     fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int): Boolean
     fun afterWrite()
 
+    fun afterAtomicSet(obj: Any, value: Any?)
+
     fun beforeMethodCall(owner: Any?, className: String, methodName: String, codeLocation: Int, params: Array<Any?>)
     fun beforeAtomicMethodCall(owner: Any?, className: String, methodName: String, codeLocation: Int, params: Array<Any?>)
     fun onMethodCallReturn(result: Any?)
@@ -46,12 +51,6 @@ interface EventTracker {
 
     fun getThreadLocalRandom(): Random
     fun randomNextInt(): Int
-
-    fun beforeNewObjectCreation(className: String)
-    fun afterNewObjectCreation(obj: Any)
-
-    fun onWriteToObjectFieldOrArrayCell(receiver: Any, fieldOrArrayCellValue: Any?)
-    fun onWriteObjectToStaticField(fieldValue: Any?)
 
     // Methods required for the plugin integration
 
