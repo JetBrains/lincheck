@@ -777,6 +777,10 @@ abstract class ManagedStrategy(
                 return@runInIgnoredSection false
             }
         }
+        // Optimization: do not track final field writes
+        if (isFinal) {
+            return@runInIgnoredSection false
+        }
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             WriteTracePoint(
