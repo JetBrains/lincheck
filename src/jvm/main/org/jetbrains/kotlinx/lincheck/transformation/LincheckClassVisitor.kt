@@ -15,7 +15,6 @@ import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
-import org.objectweb.asm.commons.InstructionAdapter.*
 import org.jetbrains.kotlinx.lincheck.transformation.CoroutineInternalCallTracker.isCoroutineInternalClass
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.*
@@ -115,7 +114,7 @@ internal class LincheckClassVisitor(
         mv = MethodCallTransformer(fileName, className, methodName, createAdapter(mv))
         mv = MonitorTransformer(fileName, className, methodName, createAdapter(mv))
         mv = WaitNotifyTransformer(fileName, className, methodName, createAdapter(mv))
-        mv = ParkUnparkTransformer(fileName, className, methodName, createAdapter(mv))
+        mv = ParkingTransformer(fileName, className, methodName, createAdapter(mv))
         mv = ObjectCreationTransformer(fileName, className, methodName, createAdapter(mv))
         mv = UnsafeMethodTransformer(fileName, className, methodName, createAdapter(mv))
         mv = AtomicFieldUpdaterMethodTransformer(fileName, className, methodName, createAdapter(mv))
@@ -160,59 +159,6 @@ internal class LincheckClassVisitor(
             }
             visitInsn(opcode)
         }
-    }
-
-    /**
-     * Adds invocations of ManagedStrategy methods before park and after unpark calls
-     */
-    private inner class ParkUnparkTransformer(
-        fileName: String,
-        className: String,
-        methodName: String,
-        adapter: GeneratorAdapter
-    ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
-        override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) =
-            adapter.run {
-                val isPark = isUnsafe(owner) && name == "park"
-                val isUnpark = isUnsafe(owner) && name == "unpark"
-                when {
-                    isPark -> {
-                        invokeIfInTestingCode(
-                            original = {
-                                visitMethodInsn(opcode, owner, name, desc, itf)
-                            },
-                            code = {
-                                pop2() // time
-                                pop() // isAbsolute
-                                pop() // Unsafe
-                                loadNewCodeLocationId()
-                                invokeStatic(Injections::park)
-                                invokeBeforeEventIfPluginEnabled("park")
-                            }
-                        )
-                    }
-
-                    isUnpark -> {
-                        invokeIfInTestingCode(
-                            original = {
-                                visitMethodInsn(opcode, owner, name, desc, itf)
-                            },
-                            code = {
-                                loadNewCodeLocationId()
-                                invokeStatic(Injections::unpark)
-                                pop() // pop Unsafe object
-                                invokeBeforeEventIfPluginEnabled("unpark")
-                            }
-                        )
-                    }
-
-                    else -> {
-                        visitMethodInsn(opcode, owner, name, desc, itf)
-                    }
-                }
-            }
-
-        private fun isUnsafe(owner: String) = owner == "sun/misc/Unsafe" || owner == "jdk/internal/misc/Unsafe"
     }
 
 }
