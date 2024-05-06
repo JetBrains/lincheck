@@ -131,36 +131,6 @@ internal class LincheckClassVisitor(
         return mv
     }
 
-    // TODO: doesn't support exceptions
-    private inner class WrapMethodInIgnoredSectionTransformer(
-        fileName: String,
-        className: String,
-        methodName: String,
-        adapter: GeneratorAdapter,
-    ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
-        private var enteredInIgnoredSectionLocal = 0
-
-        override fun visitCode() = adapter.run {
-            enteredInIgnoredSectionLocal = newLocal(BOOLEAN_TYPE)
-            invokeStatic(Injections::enterIgnoredSection)
-            storeLocal(enteredInIgnoredSectionLocal)
-            visitCode()
-        }
-
-        override fun visitInsn(opcode: Int) = adapter.run {
-            when (opcode) {
-                ARETURN, DRETURN, FRETURN, IRETURN, LRETURN, RETURN -> {
-                    ifStatement(
-                        condition = { loadLocal(enteredInIgnoredSectionLocal) },
-                        ifClause = { invokeStatic(Injections::leaveIgnoredSection) },
-                        elseClause = {}
-                    )
-                }
-            }
-            visitInsn(opcode)
-        }
-    }
-
 }
 
 internal open class ManagedStrategyMethodVisitor(
@@ -195,6 +165,36 @@ internal open class ManagedStrategyMethodVisitor(
     override fun visitLineNumber(line: Int, start: Label) {
         lineNumber = line
         super.visitLineNumber(line, start)
+    }
+}
+
+// TODO: doesn't support exceptions
+private class WrapMethodInIgnoredSectionTransformer(
+    fileName: String,
+    className: String,
+    methodName: String,
+    adapter: GeneratorAdapter,
+) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
+    private var enteredInIgnoredSectionLocal = 0
+
+    override fun visitCode() = adapter.run {
+        enteredInIgnoredSectionLocal = newLocal(BOOLEAN_TYPE)
+        invokeStatic(Injections::enterIgnoredSection)
+        storeLocal(enteredInIgnoredSectionLocal)
+        visitCode()
+    }
+
+    override fun visitInsn(opcode: Int) = adapter.run {
+        when (opcode) {
+            ARETURN, DRETURN, FRETURN, IRETURN, LRETURN, RETURN -> {
+                ifStatement(
+                    condition = { loadLocal(enteredInIgnoredSectionLocal) },
+                    ifClause = { invokeStatic(Injections::leaveIgnoredSection) },
+                    elseClause = {}
+                )
+            }
+        }
+        visitInsn(opcode)
     }
 }
 
