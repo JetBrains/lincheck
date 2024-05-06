@@ -37,7 +37,7 @@ interface EventTracker {
     fun beforeReadArrayElement(array: Any, index: Int, codeLocation: Int): Boolean
     fun afterRead(value: Any?)
 
-    fun beforeWriteField(obj: Any, className: String, fieldName: String, value: Any?, codeLocation: Int,
+    fun beforeWriteField(obj: Any?, className: String, fieldName: String, value: Any?, codeLocation: Int,
                          isStatic: Boolean, isFinal: Boolean): Boolean
     fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int): Boolean
     fun afterWrite()

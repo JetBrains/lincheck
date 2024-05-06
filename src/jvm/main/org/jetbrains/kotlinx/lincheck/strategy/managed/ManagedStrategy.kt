@@ -767,11 +767,11 @@ abstract class ManagedStrategy(
         }
     }
 
-    override fun beforeWriteField(obj: Any, className: String, fieldName: String, value: Any?, codeLocation: Int,
+    override fun beforeWriteField(obj: Any?, className: String, fieldName: String, value: Any?, codeLocation: Int,
                                   isStatic: Boolean, isFinal: Boolean): Boolean = runInIgnoredSection {
         if (isStatic) {
             localObjectManager.markObjectNonLocal(value)
-        } else {
+        } else if (obj != null) {
             localObjectManager.onWriteToObjectFieldOrArrayCell(obj, value)
             if (localObjectManager.isLocalObject(obj)) {
                 return@runInIgnoredSection false
