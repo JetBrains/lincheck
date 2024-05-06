@@ -832,8 +832,8 @@ abstract class ManagedStrategy(
         }
     }
 
-    override fun afterAtomicSet(obj: Any, value: Any?) = runInIgnoredSection {
-        localObjectManager.onWriteToObjectFieldOrArrayCell(obj, value)
+    override fun afterReflectiveSetter(receiver: Any, value: Any?) = runInIgnoredSection {
+        localObjectManager.onWriteToObjectFieldOrArrayCell(receiver, value)
     }
 
     override fun getThreadLocalRandom(): Random = runInIgnoredSection {

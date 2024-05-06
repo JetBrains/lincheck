@@ -23,8 +23,8 @@ import sun.nio.ch.lincheck.Injections
  * [ReflectiveSharedMemoryAccessTransformer] tracks shared memory accesses performed via `AtomicFieldUpdater` (AFU) API,
  * injecting invocations of corresponding [EventTracker] methods.
  *
- * In particular, [EventTracker.afterAtomicSet] method is injected to track changes
- * in the objects' graph topology caused by a write to field through AFU.
+ * In particular, [EventTracker.afterReflectiveSetter] method is injected to track changes
+ * in the objects' graph topology caused by a write to a field through AFU.
  */
 internal class AtomicFieldUpdaterMethodTransformer(
     fileName: String,
@@ -34,7 +34,6 @@ internal class AtomicFieldUpdaterMethodTransformer(
 ) : ReflectiveSharedMemoryAccessTransformer(fileName, className, methodName, adapter) {
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
-        // TODO: handle other field updaters
         if (owner != "java/util/concurrent/atomic/AtomicReferenceFieldUpdater") {
             visitMethodInsn(opcode, owner, name, desc, itf)
             return
@@ -45,7 +44,6 @@ internal class AtomicFieldUpdaterMethodTransformer(
             },
             code = {
                 when (name) {
-                    // TODO: getAndSet should be handled separately
                     "set", "lazySet", "getAndSet" -> {
                         processSetFieldMethod(name, opcode, owner, desc, itf)
                     }
@@ -66,8 +64,8 @@ internal class AtomicFieldUpdaterMethodTransformer(
  * [VarHandleMethodTransformer] tracks shared memory accesses performed via `VarHandle` (VH) API,
  * injecting invocations of corresponding [EventTracker] methods.
  *
- * In particular, [EventTracker.afterAtomicSet] method is injected to track changes
- * in the object graph topology caused by a write to field (or array element) through VH.
+ * In particular, [EventTracker.afterReflectiveSetter] method is injected to track changes
+ * in the object graph topology caused by a write to a field (or array element) through VH.
  */
 internal class VarHandleMethodTransformer(
     fileName: String,
@@ -88,7 +86,6 @@ internal class VarHandleMethodTransformer(
             code = {
                 val argumentCount = Type.getArgumentCount(desc)
                 when (name) {
-                    // TODO: getAndSet should be handled separately
                     "set", "setVolatile", "setRelease", "setOpaque",
                     "getAndSet", "getAndSetAcquire", "getAndSetRelease" -> when (argumentCount) {
                         2 -> processSetFieldMethod(name, opcode, owner, desc, itf)
@@ -116,8 +113,8 @@ internal class VarHandleMethodTransformer(
  * [ReflectiveSharedMemoryAccessTransformer] tracks shared memory accesses performed via `Unsafe` API,
  * injecting invocations of corresponding [EventTracker] methods.
  *
- * In particular, [EventTracker.afterAtomicSet] method is injected to track changes
- * in the objects' graph topology caused by a write to field (or array element) through Unsafe.
+ * In particular, [EventTracker.afterReflectiveSetter] method is injected to track changes
+ * in the objects' graph topology caused by a write to a field (or array element) through Unsafe.
  */
 internal class UnsafeMethodTransformer(
     fileName: String,
@@ -180,7 +177,7 @@ internal open class ReflectiveSharedMemoryAccessTransformer(
         // STACK: <empty>
         loadLocals(argumentLocals, argumentTypes)
         // STACK: receiver, value
-        invokeStatic(Injections::afterAtomicSet)
+        invokeStatic(Injections::afterReflectiveSetter)
     }
 
     /**
@@ -199,7 +196,7 @@ internal open class ReflectiveSharedMemoryAccessTransformer(
         loadLocal(argumentLocals[0])
         loadLocal(argumentLocals[2])
         // STACK: receiver, value
-        invokeStatic(Injections::afterAtomicSet)
+        invokeStatic(Injections::afterReflectiveSetter)
     }
 
     /**
@@ -218,7 +215,7 @@ internal open class ReflectiveSharedMemoryAccessTransformer(
         loadLocal(argumentLocals[0])
         loadLocal(argumentLocals[2])
         // STACK: cas-result, receiver, newValue
-        invokeStatic(Injections::afterAtomicSet)
+        invokeStatic(Injections::afterReflectiveSetter)
         // STACK: cas-result
     }
 
@@ -238,7 +235,7 @@ internal open class ReflectiveSharedMemoryAccessTransformer(
         loadLocal(argumentLocals[0])
         loadLocal(argumentLocals[3])
         // STACK: cas-result, receiver, newValue
-        invokeStatic(Injections::afterAtomicSet)
+        invokeStatic(Injections::afterReflectiveSetter)
         // STACK: cas-result
     }
 
@@ -258,7 +255,7 @@ internal open class ReflectiveSharedMemoryAccessTransformer(
         loadLocal(argumentLocals[0])
         loadLocal(argumentLocals[3])
         // STACK: cas-result, receiver, nextValue
-        invokeStatic(Injections::afterAtomicSet)
+        invokeStatic(Injections::afterReflectiveSetter)
         // STACK: cas-result
     }
 
@@ -278,7 +275,7 @@ internal open class ReflectiveSharedMemoryAccessTransformer(
         loadLocal(argumentLocals[0])
         loadLocal(argumentLocals[2])
         // STACK: oldValue, receiver, newValue
-        invokeStatic(Injections::afterAtomicSet)
+        invokeStatic(Injections::afterReflectiveSetter)
         // STACK: oldValue
     }
 

@@ -233,11 +233,11 @@ public class Injections {
      * Incorporates all atomic methods that can set the field (or array element) of an object,
      * such as `set`, `compareAndSet`, `compareAndExchange`, etc.
      *
-     * @param obj The object to which field (or array element) the value is set.
-     * @param value The value written into [obj] field (or array element).
+     * @param receiver The object to which field (or array element) the value is set.
+     * @param value The value written into [receiver] field (or array element).
      */
-    public static void afterAtomicSet(Object obj, Object value) {
-        getEventTracker().afterAtomicSet(obj, value);
+    public static void afterReflectiveSetter(Object receiver, Object value) {
+        getEventTracker().afterReflectiveSetter(receiver, value);
     }
 
     /**
