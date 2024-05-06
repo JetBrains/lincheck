@@ -132,29 +132,6 @@ internal class LincheckClassVisitor(
         return mv
     }
 
-    private class CoroutineCancellabilitySupportTransformer(
-        mv: MethodVisitor,
-        access: Int,
-        methodName: String?,
-        desc: String?
-    ) : AdviceAdapter(ASM_API, mv, access, methodName, desc) {
-        override fun visitMethodInsn(
-            opcodeAndSource: Int,
-            className: String?,
-            methodName: String?,
-            descriptor: String?,
-            isInterface: Boolean
-        ) {
-            val isGetResult = "getResult" == methodName &&
-                    ("kotlinx/coroutines/CancellableContinuation" == className || "kotlinx/coroutines/CancellableContinuationImpl" == className)
-            if (isGetResult) {
-                dup()
-                invokeStatic(Injections::storeCancellableContinuation)
-            }
-            super.visitMethodInsn(opcodeAndSource, className, methodName, descriptor, isInterface)
-        }
-    }
-
     // TODO: doesn't support exceptions
     private inner class WrapMethodInIgnoredSectionTransformer(
         fileName: String,
