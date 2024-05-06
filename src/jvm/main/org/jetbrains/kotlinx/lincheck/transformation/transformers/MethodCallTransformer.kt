@@ -11,7 +11,6 @@
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.*
-import org.jetbrains.kotlinx.lincheck.transformation.CoroutineInternalCallTracker.isCoroutineInternalClass
 import org.jetbrains.kotlinx.lincheck.transformation.ManagedStrategyMethodVisitor
 import org.jetbrains.kotlinx.lincheck.transformation.invokeIfInTestingCode
 import org.jetbrains.kotlinx.lincheck.transformation.invokeInIgnoredSection

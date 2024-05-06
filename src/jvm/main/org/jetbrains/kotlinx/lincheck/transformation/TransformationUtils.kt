@@ -306,6 +306,7 @@ internal inline fun GeneratorAdapter.invokeInIgnoredSection(
 }
 
 private val isCoroutineStateMachineClassMap = ConcurrentHashMap<String, Boolean>()
+
 internal fun isCoroutineStateMachineClass(internalClassName: String): Boolean {
     if (internalClassName.startsWith("java/")) return false
     if (internalClassName.startsWith("kotlin/") && !internalClassName.startsWith("kotlin/coroutines/")) return false
@@ -313,6 +314,10 @@ internal fun isCoroutineStateMachineClass(internalClassName: String): Boolean {
         getSuperclassName(internalClassName) == "kotlin/coroutines/jvm/internal/ContinuationImpl"
     }
 }
+
+internal fun isCoroutineInternalClass(internalClassName: String): Boolean =
+    internalClassName == "kotlin/coroutines/intrinsics/IntrinsicsKt" ||
+    internalClassName == "kotlinx/coroutines/internal/StackTraceRecoveryKt"
 
 private fun getSuperclassName(internalClassName: String): String? {
     class SuperclassClassVisitor : ClassVisitor(ASM_API) {

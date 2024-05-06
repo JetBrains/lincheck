@@ -15,11 +15,9 @@ import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
-import org.jetbrains.kotlinx.lincheck.transformation.CoroutineInternalCallTracker.isCoroutineInternalClass
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.*
 import sun.nio.ch.lincheck.*
-import java.util.*
 
 internal class LincheckClassVisitor(
     private val instrumentationMode: InstrumentationMode,
@@ -196,15 +194,4 @@ private class WrapMethodInIgnoredSectionTransformer(
         }
         visitInsn(opcode)
     }
-}
-
-internal object CoroutineInternalCallTracker {
-    private val coroutineInternalClasses = HashSet<String>()
-
-    init {
-        coroutineInternalClasses += "kotlin/coroutines/intrinsics/IntrinsicsKt"
-        coroutineInternalClasses += "kotlinx/coroutines/internal/StackTraceRecoveryKt"
-    }
-
-    fun isCoroutineInternalClass(internalClassName: String): Boolean = internalClassName in coroutineInternalClasses
 }
