@@ -76,7 +76,7 @@ internal class LincheckClassVisitor(
         if (access and ACC_NATIVE != 0) return mv
         if (instrumentationMode == STRESS) {
             return if (methodName != "<clinit>" && methodName != "<init>") {
-                CoroutineCancellabilitySupportMethodTransformer(mv, access, methodName, desc)
+                CoroutineCancellabilitySupportTransformer(mv, access, methodName, desc)
             } else {
                 mv
             }
@@ -108,7 +108,7 @@ internal class LincheckClassVisitor(
         }
         mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
         mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
-        mv = CoroutineCancellabilitySupportMethodTransformer(mv, access, methodName, desc)
+        mv = CoroutineCancellabilitySupportTransformer(mv, access, methodName, desc)
         if (access and ACC_SYNCHRONIZED != 0) {
             mv = SynchronizedMethodTransformer(fileName, className, methodName, createAdapter(mv), classVersion)
         }
@@ -121,7 +121,7 @@ internal class LincheckClassVisitor(
         mv = AtomicFieldUpdaterMethodTransformer(fileName, className, methodName, createAdapter(mv))
         mv = VarHandleMethodTransformer(fileName, className, methodName, createAdapter(mv))
         mv = run {
-            val sv = SharedVariableAccessMethodTransformer(fileName, className, methodName, createAdapter(mv))
+            val sv = SharedVariableAccessTransformer(fileName, className, methodName, createAdapter(mv))
             val aa = AnalyzerAdapter(className, access, methodName, desc, sv)
             sv.analyzer = aa
             aa
@@ -132,7 +132,7 @@ internal class LincheckClassVisitor(
         return mv
     }
 
-    private class CoroutineCancellabilitySupportMethodTransformer(
+    private class CoroutineCancellabilitySupportTransformer(
         mv: MethodVisitor,
         access: Int,
         methodName: String?,

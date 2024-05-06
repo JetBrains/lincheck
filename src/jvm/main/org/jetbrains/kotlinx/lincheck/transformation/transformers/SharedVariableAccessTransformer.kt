@@ -25,10 +25,10 @@ import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import sun.nio.ch.lincheck.*
 
 /**
- * [SharedVariableAccessMethodTransformer] tracks reads and writes to plain or volatile shared variables,
+ * [SharedVariableAccessTransformer] tracks reads and writes to plain or volatile shared variables,
  * injecting invocations of corresponding [EventTracker] methods.
  */
-internal class SharedVariableAccessMethodTransformer(
+internal class SharedVariableAccessTransformer(
     fileName: String,
     className: String,
     methodName: String,
