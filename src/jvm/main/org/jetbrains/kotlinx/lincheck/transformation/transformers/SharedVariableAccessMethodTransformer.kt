@@ -8,9 +8,14 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.transformation
+package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
+import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.transformation.CoroutineInternalCallTracker.isCoroutineInternalClass
+import org.jetbrains.kotlinx.lincheck.transformation.FinalFields
+import org.jetbrains.kotlinx.lincheck.transformation.ManagedStrategyMethodVisitor
+import org.jetbrains.kotlinx.lincheck.transformation.invokeIfInTestingCode
+import org.jetbrains.kotlinx.lincheck.transformation.isCoroutineStateMachineClass
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.Type.*
