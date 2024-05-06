@@ -120,7 +120,7 @@ internal class LincheckClassVisitor(
         mv = AtomicFieldUpdaterMethodTransformer(fileName, className, methodName, createAdapter(mv))
         mv = VarHandleMethodTransformer(fileName, className, methodName, createAdapter(mv))
         mv = run {
-            val sv = SharedVariableAccessTransformer(fileName, className, methodName, createAdapter(mv))
+            val sv = SharedMemoryAccessTransformer(fileName, className, methodName, createAdapter(mv))
             val aa = AnalyzerAdapter(className, access, methodName, desc, sv)
             sv.analyzer = aa
             aa

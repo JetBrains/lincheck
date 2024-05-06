@@ -10,25 +10,21 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
-import org.jetbrains.kotlinx.lincheck.transformation.*
-import org.jetbrains.kotlinx.lincheck.transformation.CoroutineInternalCallTracker.isCoroutineInternalClass
-import org.jetbrains.kotlinx.lincheck.transformation.FinalFields
-import org.jetbrains.kotlinx.lincheck.transformation.ManagedStrategyMethodVisitor
-import org.jetbrains.kotlinx.lincheck.transformation.invokeIfInTestingCode
-import org.jetbrains.kotlinx.lincheck.transformation.isCoroutineStateMachineClass
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.AnalyzerAdapter
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
+import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.jetbrains.kotlinx.lincheck.transformation.CoroutineInternalCallTracker.isCoroutineInternalClass
 import sun.nio.ch.lincheck.*
 
 /**
- * [SharedVariableAccessTransformer] tracks reads and writes to plain or volatile shared variables,
+ * [SharedMemoryAccessTransformer] tracks reads and writes to plain or volatile shared variables,
  * injecting invocations of corresponding [EventTracker] methods.
  */
-internal class SharedVariableAccessTransformer(
+internal class SharedMemoryAccessTransformer(
     fileName: String,
     className: String,
     methodName: String,
