@@ -94,7 +94,7 @@ internal class LincheckClassVisitor(
             return mv
         }
         if (methodName == "<init>") {
-            mv = ObjectCreationTrackerTransformer(fileName, className, methodName, createAdapter(mv))
+            mv = ObjectCreationTransformer(fileName, className, methodName, createAdapter(mv))
             return mv
         }
         if (className.contains("ClassLoader")) {
@@ -116,7 +116,7 @@ internal class LincheckClassVisitor(
         mv = MonitorTransformer(fileName, className, methodName, createAdapter(mv))
         mv = WaitNotifyTransformer(fileName, className, methodName, createAdapter(mv))
         mv = ParkUnparkTransformer(fileName, className, methodName, createAdapter(mv))
-        mv = ObjectCreationTrackerTransformer(fileName, className, methodName, createAdapter(mv))
+        mv = ObjectCreationTransformer(fileName, className, methodName, createAdapter(mv))
         mv = UnsafeMethodTransformer(fileName, className, methodName, createAdapter(mv))
         mv = AtomicFieldUpdaterMethodTransformer(fileName, className, methodName, createAdapter(mv))
         mv = VarHandleMethodTransformer(fileName, className, methodName, createAdapter(mv))
@@ -398,80 +398,6 @@ internal class LincheckClassVisitor(
             }
 
         private fun isUnsafe(owner: String) = owner == "sun/misc/Unsafe" || owner == "jdk/internal/misc/Unsafe"
-    }
-
-    private inner class ObjectCreationTrackerTransformer(
-        fileName: String,
-        className: String,
-        methodName: String,
-        adapter: GeneratorAdapter
-    ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
-        override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) =
-            adapter.run {
-                if (name == "<init>" && owner == "java/lang/Object") {
-                    invokeIfInTestingCode(
-                        original = {
-                            visitMethodInsn(opcode, owner, name, desc, itf)
-                        },
-                        code = {
-                            val objectLocal = newLocal(OBJECT_TYPE)
-                            dup()
-                            storeLocal(objectLocal)
-                            visitMethodInsn(opcode, owner, name, desc, itf)
-                            loadLocal(objectLocal)
-                            invokeStatic(Injections::afterNewObjectCreation)
-                        }
-                    )
-                } else {
-                    visitMethodInsn(opcode, owner, name, desc, itf)
-                }
-            }
-
-        override fun visitIntInsn(opcode: Int, operand: Int) = adapter.run {
-            adapter.visitIntInsn(opcode, operand)
-            if (opcode == NEWARRAY) {
-                invokeIfInTestingCode(
-                    original = {},
-                    code = {
-                        dup()
-                        invokeStatic(Injections::afterNewObjectCreation)
-                    }
-                )
-            }
-        }
-
-        override fun visitTypeInsn(opcode: Int, type: String) = adapter.run {
-            if (opcode == NEW) {
-                invokeIfInTestingCode(
-                    original = {},
-                    code = {
-                        push(type.canonicalClassName)
-                        invokeStatic(Injections::beforeNewObjectCreation)
-                    }
-                )
-            }
-            visitTypeInsn(opcode, type)
-            if (opcode == ANEWARRAY) {
-                invokeIfInTestingCode(
-                    original = {},
-                    code = {
-                        dup()
-                        invokeStatic(Injections::afterNewObjectCreation)
-                    }
-                )
-            }
-        }
-
-        override fun visitMultiANewArrayInsn(descriptor: String?, numDimensions: Int) = adapter.run {
-            visitMultiANewArrayInsn(descriptor, numDimensions)
-            invokeIfInTestingCode(
-                original = {},
-                code = {
-                    dup()
-                    invokeStatic(Injections::afterNewObjectCreation)
-                }
-            )
-        }
     }
 
 }
