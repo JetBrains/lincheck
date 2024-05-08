@@ -10,8 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import org.jetbrains.kotlinx.lincheck.findFieldNameByOffset
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder.UNSAFE
-import java.lang.reflect.Modifier
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater
 import java.util.concurrent.atomic.AtomicLongFieldUpdater
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
@@ -22,7 +22,8 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
  * equality and does not prevent them from being garbage collected.
  */
 internal object AtomicFieldUpdaterNames {
-    fun getAtomicFieldUpdaterName(updater: Any): String? {
+
+    internal fun getAtomicFieldUpdaterName(updater: Any): String? {
         if (updater !is AtomicIntegerFieldUpdater<*> && updater !is AtomicLongFieldUpdater<*> && updater !is AtomicReferenceFieldUpdater<*, *>) {
             throw IllegalArgumentException("Provided object is not a recognized Atomic*FieldUpdater type.")
         }
@@ -35,16 +36,7 @@ internal object AtomicFieldUpdaterNames {
             val offsetField = updater.javaClass.getDeclaredField("offset")
             val offset = UNSAFE.getLong(updater, UNSAFE.objectFieldOffset(offsetField))
 
-            for (field in targetType.declaredFields) {
-                try {
-                    if (Modifier.isNative(field.modifiers)) continue
-                    val fieldOffset = if (Modifier.isStatic(field.modifiers)) UNSAFE.staticFieldOffset(field)
-                    else UNSAFE.objectFieldOffset(field)
-                    if (fieldOffset == offset) return field.name
-                } catch (t: Throwable) {
-                    t.printStackTrace()
-                }
-            }
+            return findFieldNameByOffset(targetType, offset)
         } catch (t: Throwable) {
             t.printStackTrace()
         }

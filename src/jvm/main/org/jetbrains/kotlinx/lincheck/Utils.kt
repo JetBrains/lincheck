@@ -15,6 +15,7 @@ import sun.nio.ch.lincheck.TestThread
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer
+import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.io.PrintWriter
 import java.io.StringWriter
@@ -192,6 +193,38 @@ internal val Throwable.text: String get() {
     val writer = StringWriter()
     printStackTrace(PrintWriter(writer))
     return writer.buffer.toString()
+}
+
+/**
+ * Returns all found fields in the hierarchy.
+ * Multiple fields with the same name and the same type may be returned
+ * if they appear in the subclass and a parent class.
+ */
+internal val Class<*>.allDeclaredFieldWithSuperclasses get(): List<Field> {
+    val fields: MutableList<Field> = ArrayList<Field>()
+    var currentClass: Class<*>? = this
+    while (currentClass != null) {
+        val declaredFields: Array<Field> = currentClass.declaredFields
+        fields.addAll(declaredFields)
+        currentClass = currentClass.superclass
+    }
+    return fields
+}
+
+internal fun findFieldNameByOffset(targetType: Class<*>, offset: Long): String? {
+    // Extract the private offset value and find the matching field.
+    for (field in targetType.declaredFields) {
+        try {
+            if (Modifier.isNative(field.modifiers)) continue
+            val fieldOffset = if (Modifier.isStatic(field.modifiers)) UnsafeHolder.UNSAFE.staticFieldOffset(field)
+            else UnsafeHolder.UNSAFE.objectFieldOffset(field)
+            if (fieldOffset == offset) return field.name
+        } catch (t: Throwable) {
+            t.printStackTrace()
+        }
+    }
+
+    return null // Field not found
 }
 
 /**

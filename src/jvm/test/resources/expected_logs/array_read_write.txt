@@ -6,37 +6,37 @@
 | ------------------------------- |
 
 The following interleaving leads to the error:
-| -------------------------------------------------------------------------------------------------------------------------- |
-|    Thread 1    |                                                 Thread 2                                                  |
-| -------------------------------------------------------------------------------------------------------------------------- |
-|                | increment(): 0                                                                                            |
-|                |   Array[0].READ: 0 at ArrayReadWriteRepresentationTest.increment(ArrayReadWriteRepresentationTest.kt:26)  |
-|                |   Array[0].WRITE(1) at ArrayReadWriteRepresentationTest.increment(ArrayReadWriteRepresentationTest.kt:27) |
-|                |   counter.READ: 0 at ArrayReadWriteRepresentationTest.increment(ArrayReadWriteRepresentationTest.kt:28)   |
-|                |   switch                                                                                                  |
-| increment(): 0 |                                                                                                           |
-|                |   counter.WRITE(1) at ArrayReadWriteRepresentationTest.increment(ArrayReadWriteRepresentationTest.kt:28)  |
-|                |   Array[1].WRITE(0) at ArrayReadWriteRepresentationTest.increment(ArrayReadWriteRepresentationTest.kt:29) |
-|                |   result: 0                                                                                               |
-| -------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------------------------------------------------- |
+|    Thread 1    |                                                    Thread 2                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------- |
+|                | increment(): 0                                                                                                 |
+|                |   IntArray#1[0].READ: 0 at ArrayReadWriteRepresentationTest.increment(ArrayReadWriteRepresentationTest.kt:30)  |
+|                |   IntArray#1[0].WRITE(1) at ArrayReadWriteRepresentationTest.increment(ArrayReadWriteRepresentationTest.kt:31) |
+|                |   counter.READ: 0 at ArrayReadWriteRepresentationTest.increment(ArrayReadWriteRepresentationTest.kt:32)        |
+|                |   switch                                                                                                       |
+| increment(): 0 |                                                                                                                |
+|                |   counter.WRITE(1) at ArrayReadWriteRepresentationTest.increment(ArrayReadWriteRepresentationTest.kt:32)       |
+|                |   IntArray#1[1].WRITE(0) at ArrayReadWriteRepresentationTest.increment(ArrayReadWriteRepresentationTest.kt:33) |
+|                |   result: 0                                                                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------- |
 
 Detailed trace:
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                 Thread 1                                                  |                                                 Thread 2                                                  |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                                           | increment(): 0                                                                                            |
-|                                                                                                           |   Array[0].READ: 0 at ArrayReadWriteRepresentationTest.increment(ArrayReadWriteRepresentationTest.kt:26)  |
-|                                                                                                           |   Array[0].WRITE(1) at ArrayReadWriteRepresentationTest.increment(ArrayReadWriteRepresentationTest.kt:27) |
-|                                                                                                           |   counter.READ: 0 at ArrayReadWriteRepresentationTest.increment(ArrayReadWriteRepresentationTest.kt:28)   |
-|                                                                                                           |   switch                                                                                                  |
-| increment(): 0                                                                                            |                                                                                                           |
-|   Array[0].READ: 1 at ArrayReadWriteRepresentationTest.increment(ArrayReadWriteRepresentationTest.kt:26)  |                                                                                                           |
-|   Array[0].WRITE(2) at ArrayReadWriteRepresentationTest.increment(ArrayReadWriteRepresentationTest.kt:27) |                                                                                                           |
-|   counter.READ: 0 at ArrayReadWriteRepresentationTest.increment(ArrayReadWriteRepresentationTest.kt:28)   |                                                                                                           |
-|   counter.WRITE(1) at ArrayReadWriteRepresentationTest.increment(ArrayReadWriteRepresentationTest.kt:28)  |                                                                                                           |
-|   Array[1].WRITE(0) at ArrayReadWriteRepresentationTest.increment(ArrayReadWriteRepresentationTest.kt:29) |                                                                                                           |
-|   result: 0                                                                                               |                                                                                                           |
-|                                                                                                           |   counter.WRITE(1) at ArrayReadWriteRepresentationTest.increment(ArrayReadWriteRepresentationTest.kt:28)  |
-|                                                                                                           |   Array[1].WRITE(0) at ArrayReadWriteRepresentationTest.increment(ArrayReadWriteRepresentationTest.kt:29) |
-|                                                                                                           |   result: 0                                                                                               |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                    Thread 1                                                    |                                                    Thread 2                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                                | increment(): 0                                                                                                 |
+|                                                                                                                |   IntArray#1[0].READ: 0 at ArrayReadWriteRepresentationTest.increment(ArrayReadWriteRepresentationTest.kt:30)  |
+|                                                                                                                |   IntArray#1[0].WRITE(1) at ArrayReadWriteRepresentationTest.increment(ArrayReadWriteRepresentationTest.kt:31) |
+|                                                                                                                |   counter.READ: 0 at ArrayReadWriteRepresentationTest.increment(ArrayReadWriteRepresentationTest.kt:32)        |
+|                                                                                                                |   switch                                                                                                       |
+| increment(): 0                                                                                                 |                                                                                                                |
+|   IntArray#1[0].READ: 1 at ArrayReadWriteRepresentationTest.increment(ArrayReadWriteRepresentationTest.kt:30)  |                                                                                                                |
+|   IntArray#1[0].WRITE(2) at ArrayReadWriteRepresentationTest.increment(ArrayReadWriteRepresentationTest.kt:31) |                                                                                                                |
+|   counter.READ: 0 at ArrayReadWriteRepresentationTest.increment(ArrayReadWriteRepresentationTest.kt:32)        |                                                                                                                |
+|   counter.WRITE(1) at ArrayReadWriteRepresentationTest.increment(ArrayReadWriteRepresentationTest.kt:32)       |                                                                                                                |
+|   IntArray#1[1].WRITE(0) at ArrayReadWriteRepresentationTest.increment(ArrayReadWriteRepresentationTest.kt:33) |                                                                                                                |
+|   result: 0                                                                                                    |                                                                                                                |
+|                                                                                                                |   counter.WRITE(1) at ArrayReadWriteRepresentationTest.increment(ArrayReadWriteRepresentationTest.kt:32)       |
+|                                                                                                                |   IntArray#1[1].WRITE(0) at ArrayReadWriteRepresentationTest.increment(ArrayReadWriteRepresentationTest.kt:33) |
+|                                                                                                                |   result: 0                                                                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

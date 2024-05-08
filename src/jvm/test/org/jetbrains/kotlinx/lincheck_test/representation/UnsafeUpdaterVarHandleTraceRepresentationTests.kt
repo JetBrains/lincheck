@@ -16,8 +16,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelChecki
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
 import org.junit.Test
 import sun.misc.Unsafe
-import java.lang.invoke.MethodHandles
-import java.lang.invoke.VarHandle
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 
@@ -27,7 +25,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 class SunUnsafeTraceRepresentationTest {
 
     @Volatile
-    private var node: Node = Node(1)
+    private var node: IntWrapper = IntWrapper(1)
 
     @Volatile
     private var counter: Int = 0
@@ -50,8 +48,8 @@ class SunUnsafeTraceRepresentationTest {
         .checkLincheckOutput("sun_unsafe_trace.txt")
 
     private fun actionsJustForTrace() {
-        unsafe.compareAndSwapObject(this, offset, node, Node(2))
-        unsafe.getAndSetObject(this, offset, Node(3))
+        unsafe.compareAndSwapObject(this, offset, node, IntWrapper(2))
+        unsafe.getAndSetObject(this, offset, IntWrapper(3))
     }
 
     companion object {
@@ -71,9 +69,6 @@ class SunUnsafeTraceRepresentationTest {
  * Test checks that in case of a field update using Unsafe we remove receiver and offset arguments from the trace.
  */
 class JdkUnsafeTraceRepresentationTest {
-
-    @Volatile
-    private var node: Node = Node(1)
 
     @Volatile
     private var counter: Int = 0
@@ -101,18 +96,6 @@ class JdkUnsafeTraceRepresentationTest {
         // Here under the hood we interact with the Unsafe instance.
         hashMap[1] = 2
     }
-
-    companion object {
-        val unsafe: Unsafe = try {
-            val unsafeField = Unsafe::class.java.getDeclaredField("theUnsafe")
-            unsafeField.isAccessible = true
-            unsafeField.get(null) as Unsafe
-        } catch (ex: Exception) {
-            throw RuntimeException(ex)
-        }
-        val offset =
-            unsafe.objectFieldOffset(SunUnsafeTraceRepresentationTest::class.java.getDeclaredField("node"))
-    }
 }
 
 /**
@@ -122,7 +105,7 @@ class JdkUnsafeTraceRepresentationTest {
 class AtomicUpdaterTraceRepresentationTest {
 
     @Volatile
-    private var node: Node = Node(1)
+    private var node: IntWrapper = IntWrapper(1)
 
     @Volatile
     private var counter: Int = 0
@@ -145,59 +128,18 @@ class AtomicUpdaterTraceRepresentationTest {
         .checkLincheckOutput("atomic_updater_trace.txt")
 
     private fun actionsJustForTrace() {
-        nodeUpdater.compareAndSet(this, node, Node(4))
-        nodeUpdater.set(this, Node(5))
+        nodeUpdater.compareAndSet(this, node, IntWrapper(4))
+        nodeUpdater.set(this, IntWrapper(5))
     }
 
     companion object {
-        val nodeUpdater: AtomicReferenceFieldUpdater<AtomicUpdaterTraceRepresentationTest, Node> =
+        val nodeUpdater: AtomicReferenceFieldUpdater<AtomicUpdaterTraceRepresentationTest, IntWrapper> =
             AtomicReferenceFieldUpdater.newUpdater(
                 AtomicUpdaterTraceRepresentationTest::class.java,
-                Node::class.java,
+                IntWrapper::class.java,
                 "node"
             )
     }
 }
 
-/**
- * Test checks that in case of a field update using VarHandle we remove receiver argument from the trace.
- */
-class VarHandleTraceRepresentationTest {
-
-    @Volatile
-    private var node: Node = Node(1)
-
-    @Volatile
-    private var counter: Int = 0
-
-    @Operation
-    fun increment(): Int {
-        val result = counter++
-        actionsJustForTrace()
-        return result
-    }
-
-    @Test
-    fun test() = ModelCheckingOptions()
-        .addCustomScenario {
-            parallel {
-                thread { actor(::increment) }
-            }
-        }
-        .checkImpl(this::class.java)
-        .checkLincheckOutput("varhandle_trace.txt")
-
-    private fun actionsJustForTrace() {
-        nodeHandle.compareAndSet(this, node, Node(6))
-        nodeHandle.set(this, Node(7))
-    }
-
-   companion object {
-       val nodeHandle: VarHandle = MethodHandles.lookup()
-           .`in`(VarHandleTraceRepresentationTest::class.java)
-           .findVarHandle(VarHandleTraceRepresentationTest::class.java, "node", Node::class.java)
-
-   }
-}
-
-data class Node(val value: Int)
+data class IntWrapper(val value: Int)

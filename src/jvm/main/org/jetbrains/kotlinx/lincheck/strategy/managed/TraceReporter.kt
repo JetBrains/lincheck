@@ -27,17 +27,11 @@ internal fun StringBuilder.appendTrace(
     trace: Trace,
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
 ) {
-    // reset objects numeration
-    cleanObjectNumeration()
-
     val startTraceGraphNode = constructTraceGraph(failure, results, trace, exceptionStackTraces)
 
     appendShortTrace(startTraceGraphNode, failure)
     appendExceptionsStackTracesBlock(exceptionStackTraces)
     appendDetailedTrace(startTraceGraphNode, failure)
-
-    // clear the numeration at the end to avoid memory leaks
-    cleanObjectNumeration()
 }
 
 /**
@@ -509,38 +503,6 @@ private fun TraceNode.stateEventRepresentation(iThread: Int, stateRepresentation
 
 internal class TraceEventRepresentation(val iThread: Int, val representation: String)
 
-internal fun getObjectName(obj: Any?): String =
-    if (obj != null) {
-        if (obj.javaClass.isAnonymousClass) {
-            obj.javaClass.simpleNameForAnonymous
-        } else {
-            obj.javaClass.simpleName + "#" + getObjectNumber(obj.javaClass, obj)
-        }
-    } else {
-        "null"
-    }
-
-private val Class<*>.simpleNameForAnonymous: String get() {
-    // Split by the package separator and return the result if this is not an inner class.
-    val withoutPackage = name.substringAfterLast('.')
-    if (!withoutPackage.contains("$")) return withoutPackage
-    // Extract the last named inner class followed by any "$<number>" patterns using regex.
-    val regex = """(.*\$)?([^\$.\d]+(\$\d+)*)""".toRegex()
-    val matchResult = regex.matchEntire(withoutPackage)
-    return matchResult?.groups?.get(2)?.value ?: withoutPackage
-}
-
-// Should be called only during `appendTrace` invocation
-internal fun getObjectNumber(clazz: Class<Any>, obj: Any): Int = objectNumeration
-    .computeIfAbsent(clazz) { IdentityHashMap() }
-    .computeIfAbsent(obj) { 1 + objectNumeration[clazz]!!.size }
-
-private val objectNumeration = Collections.synchronizedMap(WeakHashMap<Class<Any>, MutableMap<Any, Int>>())
-
 const val TRACE_TITLE = "The following interleaving leads to the error:"
 const val DETAILED_TRACE_TITLE = "Detailed trace:"
 private const val ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE = "All unfinished threads are in deadlock"
-
-internal fun cleanObjectNumeration() {
-    objectNumeration.clear()
-}
