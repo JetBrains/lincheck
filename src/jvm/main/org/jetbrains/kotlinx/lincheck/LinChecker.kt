@@ -47,18 +47,26 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     }
 
     /**
-     * @return TestReport with information about concurrent test run.
+     * Runs Lincheck to check the tested class under given configurations.
+     *
+     * @param cont Optional continuation taking [LincheckFailure] as an argument.
+     *   The continuation is run in the context when Lincheck java-agent is still attached.
+     * @return [LincheckFailure] if a failure is discovered, null otherwise.
      */
     @Synchronized // never run Lincheck tests in parallel
-    internal fun checkImpl(): LincheckFailure? {
+    internal fun checkImpl(cont: LincheckFailureContinuation? = null): LincheckFailure? {
         check(testConfigurations.isNotEmpty()) { "No Lincheck test configuration to run" }
         lincheckVerificationStarted()
         for (testCfg in testConfigurations) {
             withLincheckJavaAgent(testCfg.instrumentationMode) {
                 val failure = testCfg.checkImpl()
-                if (failure != null) return failure
+                if (failure != null) {
+                    if (cont != null) cont(failure)
+                    return failure
+                }
             }
         }
+        if (cont != null) cont(null)
         return null
     }
 
@@ -203,6 +211,36 @@ fun <O : Options<O, *>> O.check(testClass: Class<*>) = LinChecker.check(testClas
  */
 fun <O : Options<O, *>> O.check(testClass: KClass<*>) = this.check(testClass.java)
 
-internal fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>) = LinChecker(testClass, this).checkImpl()
+/**
+ * Runs Lincheck to check the tested class under given configurations.
+ *
+ * @param testClass Tested class.
+ * @return [LincheckFailure] if a failure is discovered, null otherwise.
+ */
+internal fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>): LincheckFailure? =
+    LinChecker(testClass, this).checkImpl()
+
+/**
+ * Runs Lincheck to check the tested class under given configurations.
+ *
+ * Takes the [LincheckFailureContinuation] as an argument.
+ * This is required due to current limitations of our testing infrastructure.
+ * Some tests need to inspect the internals of the failure object
+ * (for example, the stack traces of exceptions thrown during the execution).
+ * However, because Lincheck dynamically installs java-agent and then uninstalls it,
+ * this process can invalidate some internal state of the failure object
+ * (for example, the source code mapping information in the stack traces is typically lost).
+ * To overcome this problem, we run the continuation in the context when Lincheck java-agent is still attached.
+ *
+ * @param testClass Tested class.
+ * @param cont Continuation taking [LincheckFailure] as an argument.
+ *   The continuation is run in the context when Lincheck java-agent is still attached.
+ * @return [LincheckFailure] if a failure is discovered, null otherwise.
+ */
+internal fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>, cont: LincheckFailureContinuation) {
+    LinChecker(testClass, this).checkImpl(cont)
+}
+
+internal typealias LincheckFailureContinuation = (LincheckFailure?) -> Unit
 
 internal const val NO_OPERATION_ERROR_MESSAGE = "You must specify at least one operation to test. Please refer to the user guide: https://kotlinlang.org/docs/introduction.html"

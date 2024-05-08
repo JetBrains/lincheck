@@ -64,6 +64,7 @@ class InterleavingAnalysisPresentInSpinCycleFirstIterationTest {
                 thread { actor(InterleavingAnalysisPresentInSpinCycleFirstIterationTest::spinLock) }
             }
         }
-        .checkImpl(this::class.java)
-        .checkLincheckOutput("switch_in_the_middle_of_spin_cycle_causes_error.txt")
+        .checkImpl(this::class.java) { failure ->
+            failure.checkLincheckOutput("switch_in_the_middle_of_spin_cycle_causes_error.txt")
+        }
 }
