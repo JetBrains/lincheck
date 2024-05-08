@@ -1330,18 +1330,19 @@ internal class LincheckClassVisitor(
             // the params list before creating a trace point to remove redundant parameters
             // as receiver and offset.
             // To determine how we should process it, we provide owner instance.
+            val isVarHandleOrAtomicReference = (owner == "java/lang/invoke/VarHandle" ||
+                    owner == "java/util/concurrent/atomic/AtomicLong" ||
+                    owner == "java/util/concurrent/atomic/AtomicInteger" ||
+                    owner == "java/util/concurrent/atomic/AtomicBoolean" ||
+                    (owner == "java/util/concurrent/atomic/AtomicReference") ||
+                    owner == "java/util/concurrent/atomic/AtomicReferenceArray" ||
+                    owner == "java/util/concurrent/atomic/AtomicIntegerArray" ||
+                    owner == "java/util/concurrent/atomic/AtomicLongArray") && name != "<init>"
             val provideOwner = opcode != INVOKESTATIC &&
                     (owner.endsWith("FieldUpdater") ||
-                            owner == "sun/misc/Unsafe" || owner == "jdk/internal/misc/Unsafe" ||
-                            ((owner == "java/lang/invoke/VarHandle" ||
-                                    owner == "java/util/concurrent/atomic/AtomicLong" ||
-                                    owner == "java/util/concurrent/atomic/AtomicInteger" ||
-                                    owner == "java/util/concurrent/atomic/AtomicBoolean" ||
-                                    (owner == "java/util/concurrent/atomic/AtomicReference") ||
-                                    owner == "java/util/concurrent/atomic/AtomicReferenceArray" ||
-                                    owner == "java/util/concurrent/atomic/AtomicIntegerArray" ||
-                                    owner == "java/util/concurrent/atomic/AtomicLongArray") && name != "<init>")
-                            )
+                            owner == "sun/misc/Unsafe" ||
+                            owner == "jdk/internal/misc/Unsafe" ||
+                            isVarHandleOrAtomicReference)
 
             // STACK [INVOKEVIRTUAL]: owner, arguments
             // STACK [INVOKESTATIC]: arguments
