@@ -184,7 +184,9 @@ internal open class ParallelThreadsRunner(
     private fun createTestInstance() {
         testInstance = testClass.newInstance()
         if (strategy is ModelCheckingStrategy) {
-            // We pass the test instance to initialize 
+            // We pass the test instance to the strategy to initialize the call stack.
+            // It should be done here as we create the test instance in the `run` method in the runner, after
+            // `initializeInvocation` method call of ManagedStrategy.
             strategy.initializeCallStack(testInstance)
             // In the model checking mode, we need to ensure
             // that all the necessary classes and instrumented
