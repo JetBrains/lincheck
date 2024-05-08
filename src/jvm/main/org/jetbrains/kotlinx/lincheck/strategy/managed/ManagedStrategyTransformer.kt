@@ -386,7 +386,7 @@ internal class ManagedStrategyTransformer(
                         super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
                     }
                 in atomicUpdateMethods ->
-                    visitAtomicUpdateMethod(AtomicUpdateMethodDescriptor.fromName(name), locationState, innerDescriptor) {
+                    visitAtomicUpdateMethod(AtomicUpdateMethodDescriptor.fromName(name), locationState, descriptor, innerDescriptor) {
                         super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
                     }
                 else ->
@@ -476,13 +476,19 @@ internal class ManagedStrategyTransformer(
         }
 
         private fun parseDescriptorFromMethod(owner: String, name: String, desc: String): String {
-            return if ("get" in name) {
-                Type.getReturnType(desc).descriptor
-            } else {
-                val types = Type.getArgumentTypes(desc)
-                if (types.isEmpty())
-                    throw IllegalStateException("Unknown atomic primitive $owner $name")
-                types.last().descriptor
+            return when {
+                "getAndAdd" in name -> {
+                    Type.getArgumentTypes(desc)[1].descriptor
+                }
+                "get" in name -> {
+                    Type.getReturnType(desc).descriptor
+                }
+                else -> {
+                    val types = Type.getArgumentTypes(desc)
+                    if (types.isEmpty())
+                        throw IllegalStateException("Unknown atomic primitive $owner $name")
+                    types.last().descriptor
+                }
             }
         }
 
@@ -531,22 +537,24 @@ internal class ManagedStrategyTransformer(
         }
 
         // STACK: [location args ...], [value args ...] -> method result
-        protected fun visitAtomicUpdateMethod(methodDescriptor: AtomicUpdateMethodDescriptor, locationState: MemoryLocationState, descriptor: String,
+        protected fun visitAtomicUpdateMethod(methodDescriptor: AtomicUpdateMethodDescriptor, locationState: MemoryLocationState,
+                                              descriptor: String, valueDescriptor: String,
                                               performMethod: () -> Unit) = adapter.run {
-            val valueType = Type.getType(descriptor)
+            val valueType = Type.getType(valueDescriptor)
+            val returnType = Type.getReturnType(descriptor)
             val codeLocationLocal = newCodeLocationLocal()
             val tracePointLocal = newTracePointLocal()
             invokeBeforeSharedVariableRead(locationState.locationName, codeLocationLocal, tracePointLocal)
             interceptIfMemoryTrackingEnabled(performMethod) {
                 if (methodDescriptor.isIncrement()) {
-                    when (descriptor) {
+                    when (valueDescriptor) {
                         "I" -> push(1)
                         "J" -> push(1L)
                         else -> throw IllegalStateException()
                     }
                 }
                 if (methodDescriptor.isDecrement()) {
-                    when (descriptor) {
+                    when (valueDescriptor) {
                         "I" -> push(-1)
                         "J" -> push(-1L)
                         else -> throw IllegalStateException()
@@ -558,7 +566,10 @@ internal class ManagedStrategyTransformer(
                 } else null
                 locationState.store()
                 invokeOnAtomicMethod(methodDescriptor, locationState, cmpValueLocal, updValueLocal, valueType, codeLocationLocal)
-                if (methodDescriptor.returnsReadValue()) {
+                if (methodDescriptor.returnsReadValue() && returnType == Type.VOID_TYPE) {
+                    pop()
+                }
+                if (methodDescriptor.returnsReadValue() && returnType != Type.VOID_TYPE) {
                     unboxOrCast(valueType)
                 }
             }
@@ -1242,7 +1253,7 @@ internal class ManagedStrategyTransformer(
                     super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
                 }
 
-                in unsafeAtomicUpdateMethods -> visitAtomicUpdateMethod(name) {
+                in unsafeAtomicUpdateMethods -> visitAtomicUpdateMethod(name, descriptor) {
                     super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
                 }
 
@@ -1338,14 +1349,14 @@ internal class ManagedStrategyTransformer(
         }
 
         // STACK: obj, offset, [value args ...] -> method result
-        private fun visitAtomicUpdateMethod(methodName: String, emitMethod: () -> Unit) = adapter.run {
+        private fun visitAtomicUpdateMethod(methodName: String, descriptor: String, emitMethod: () -> Unit) = adapter.run {
             val methodDescriptor = AtomicUpdateMethodDescriptor.fromName(methodName
                 .removeTypeName()
                 .removeAccessMode()
             )
             val locationState = UnsafeAccessMemoryLocationState(adapter)
             val accessType = getAccessType(methodName)
-            visitAtomicUpdateMethod(methodDescriptor, locationState, accessType.descriptor, emitMethod)
+            visitAtomicUpdateMethod(methodDescriptor, locationState, descriptor, accessType.descriptor, emitMethod)
         }
 
         private val typeNames = listOf(
