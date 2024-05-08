@@ -15,13 +15,13 @@ The following interleaving leads to the error:
 | ---------------------------------------------------------------------------------------------------------------------------- |
 |                | operation(): 3                                                                                              |
 |                |   counter.READ: AtomicInteger#1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:35) |
-|                |   incrementAndGet(): 1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:35)          |
+|                |   counter.incrementAndGet(): 1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:35)  |
 |                |   STATE: 1                                                                                                  |
 |                |   counter.READ: AtomicInteger#1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:36) |
 |                |   switch                                                                                                    |
 | operation(): 2 |                                                                                                             |
 | STATE: 3       |                                                                                                             |
-|                |   getAndIncrement(): 3 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:36)          |
+|                |   counter.getAndIncrement(): 3 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:36)  |
 |                |   STATE: 4                                                                                                  |
 |                |   result: 3                                                                                                 |
 | ---------------------------------------------------------------------------------------------------------------------------- |
@@ -32,19 +32,19 @@ Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                                                             | operation(): 3                                                                                              |
 |                                                                                                             |   counter.READ: AtomicInteger#1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:35) |
-|                                                                                                             |   incrementAndGet(): 1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:35)          |
+|                                                                                                             |   counter.incrementAndGet(): 1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:35)  |
 |                                                                                                             |   STATE: 1                                                                                                  |
 |                                                                                                             |   counter.READ: AtomicInteger#1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:36) |
 |                                                                                                             |   switch                                                                                                    |
 | operation(): 2                                                                                              |                                                                                                             |
 |   counter.READ: AtomicInteger#1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:35) |                                                                                                             |
-|   incrementAndGet(): 2 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:35)          |                                                                                                             |
+|   counter.incrementAndGet(): 2 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:35)  |                                                                                                             |
 |   STATE: 2                                                                                                  |                                                                                                             |
 |   counter.READ: AtomicInteger#1 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:36) |                                                                                                             |
-|   getAndIncrement(): 2 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:36)          |                                                                                                             |
+|   counter.getAndIncrement(): 2 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:36)  |                                                                                                             |
 |   STATE: 3                                                                                                  |                                                                                                             |
 |   result: 2                                                                                                 |                                                                                                             |
-|                                                                                                             |   getAndIncrement(): 3 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:36)          |
+|                                                                                                             |   counter.getAndIncrement(): 3 at ModelCheckingStateReportingTest.operation(StateRepresentationTest.kt:36)  |
 |                                                                                                             |   STATE: 4                                                                                                  |
 |                                                                                                             |   result: 3                                                                                                 |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -262,8 +262,8 @@ public class Injections {
      * This is just an optimization of [beforeMethodCall] for trusted
      * atomic constructs to avoid wrapping the invocations into try-finally blocks.
      */
-    public static void beforeAtomicMethodCall(Object owner, String methodName, int codeLocation, Object[] params) {
-        getEventTracker().beforeAtomicMethodCall(owner, methodName, codeLocation, params);
+    public static void beforeAtomicMethodCall(Object owner, String className, String methodName, int codeLocation, Object[] params) {
+        getEventTracker().beforeAtomicMethodCall(owner, className, methodName, codeLocation, params);
     }
 
     /**

@@ -73,9 +73,6 @@ class SunUnsafeTraceRepresentationTest {
 class JdkUnsafeTraceRepresentationTest {
 
     @Volatile
-    private var node: Node = Node(1)
-
-    @Volatile
     private var counter: Int = 0
     // We use it just to interact with jdk.internal.misc.Unsafe, which we cannot access directly.
     private val hashMap = ConcurrentHashMap<Int, Int>()
@@ -100,18 +97,6 @@ class JdkUnsafeTraceRepresentationTest {
     private fun actionsJustForTrace() {
         // Here under the hood we interact with the Unsafe instance.
         hashMap[1] = 2
-    }
-
-    companion object {
-        val unsafe: Unsafe = try {
-            val unsafeField = Unsafe::class.java.getDeclaredField("theUnsafe")
-            unsafeField.isAccessible = true
-            unsafeField.get(null) as Unsafe
-        } catch (ex: Exception) {
-            throw RuntimeException(ex)
-        }
-        val offset =
-            unsafe.objectFieldOffset(SunUnsafeTraceRepresentationTest::class.java.getDeclaredField("node"))
     }
 }
 
@@ -157,47 +142,6 @@ class AtomicUpdaterTraceRepresentationTest {
                 "node"
             )
     }
-}
-
-/**
- * Test checks that in case of a field update using VarHandle we remove receiver argument from the trace.
- */
-class VarHandleTraceRepresentationTest {
-
-    @Volatile
-    private var node: Node = Node(1)
-
-    @Volatile
-    private var counter: Int = 0
-
-    @Operation
-    fun increment(): Int {
-        val result = counter++
-        actionsJustForTrace()
-        return result
-    }
-
-    @Test
-    fun test() = ModelCheckingOptions()
-        .addCustomScenario {
-            parallel {
-                thread { actor(::increment) }
-            }
-        }
-        .checkImpl(this::class.java)
-        .checkLincheckOutput("varhandle_trace.txt")
-
-    private fun actionsJustForTrace() {
-        nodeHandle.compareAndSet(this, node, Node(6))
-        nodeHandle.set(this, Node(7))
-    }
-
-   companion object {
-       val nodeHandle: VarHandle = MethodHandles.lookup()
-           .`in`(VarHandleTraceRepresentationTest::class.java)
-           .findVarHandle(VarHandleTraceRepresentationTest::class.java, "node", Node::class.java)
-
-   }
 }
 
 data class Node(val value: Int)

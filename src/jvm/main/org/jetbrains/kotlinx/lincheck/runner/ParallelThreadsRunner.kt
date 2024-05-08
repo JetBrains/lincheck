@@ -186,9 +186,12 @@ internal open class ParallelThreadsRunner(
         // In the model checking mode, we need to ensure
         // that all the necessary classes and instrumented
         // after creating a test instance.
-        if (strategy is ModelCheckingStrategy && !ensuredTestInstanceIsTransformed) {
-            LincheckJavaAgent.ensureObjectIsTransformed(testInstance)
-            ensuredTestInstanceIsTransformed = true
+        if (strategy is ModelCheckingStrategy) {
+            strategy.initializeCallStack(testInstance)
+            if (!ensuredTestInstanceIsTransformed) {
+                LincheckJavaAgent.ensureObjectIsTransformed(testInstance)
+                ensuredTestInstanceIsTransformed = true
+            }
         }
         testThreadExecutions.forEach { it.testInstance = testInstance }
         validationPartExecution?.let { it.testInstance = testInstance }

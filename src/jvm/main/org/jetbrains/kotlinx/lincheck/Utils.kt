@@ -194,6 +194,17 @@ internal val Throwable.text: String get() {
     return writer.buffer.toString()
 }
 
+internal val Class<*>.allDeclaredFieldWithSuperclasses get(): List<Field> {
+    val fields: MutableList<Field> = ArrayList<Field>()
+    var currentClass: Class<*>? = this
+    while (currentClass != null) {
+        val declaredFields: Array<Field> = currentClass.declaredFields
+        fields.addAll(declaredFields)
+        currentClass = currentClass.superclass
+    }
+    return fields
+}
+
 /**
  * Utility exception for test purposes.
  * When this exception is thrown by an operation, it will halt testing with [UnexpectedExceptionInvocationResult].

@@ -89,43 +89,54 @@ internal class ObstructionFreedomViolationExecutionAbortTracePoint(
 }
 
 internal class ReadTracePoint(
+    private val ownerRepresentation: String?,
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
-    private val fieldName: String?,
+    private val fieldName: String,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    private var value: Any? = null
+    private lateinit var valueRepresentation: String
 
     override fun toStringCompact(): String = StringBuilder().apply {
-        if (fieldName != null)
+        if (ownerRepresentation != null) {
+            append("$ownerRepresentation.$fieldName.")
+        } else {
             append("$fieldName.")
+        }
         append("READ")
-        append(": ${adornedStringRepresentation(value)}")
+        append(": $valueRepresentation")
     }.toString()
 
-    fun initializeReadValue(value: Any?) {
-        this.value = value
+    fun initializeReadValue(value: String) {
+        this.valueRepresentation = value
+        if (value == "StubClass#19") {
+            Unit
+        }
     }
 }
 
 internal class WriteTracePoint(
+    private val ownerRepresentation: String?,
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
-    private val fieldName: String?,
+    private val fieldName: String,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    private var value: Any? = null
+    private lateinit var valueRepresentation: String
 
     override fun toStringCompact(): String  = StringBuilder().apply {
-        if (fieldName != null)
+        if (ownerRepresentation != null) {
+            append("$ownerRepresentation.$fieldName.")
+        } else {
             append("$fieldName.")
+        }
         append("WRITE(")
-        append(adornedStringRepresentation(value))
+        append(valueRepresentation)
         append(")")
     }.toString()
 
-    fun initializeWrittenValue(value: Any?) {
-        this.value = value
+    fun initializeWrittenValue(value: String) {
+        this.valueRepresentation = value
     }
 }
 
@@ -135,43 +146,63 @@ internal class MethodCallTracePoint(
     private val methodName: String,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    private var returnedValue: Any? = NO_VALUE
+    private var returnedValue: ReturnedValueResult = ReturnedValueResult.NoValue
     private var thrownException: Throwable? = null
-    private var parameters: Array<Any?>? = null
+    private var parameters: List<String>? = null
     private var ownerName: String? = null
 
-    val wasSuspended get() = returnedValue === COROUTINE_SUSPENDED
+    val wasSuspended get() = returnedValue == ReturnedValueResult.CoroutineSuspended
 
     override fun toStringCompact(): String = StringBuilder().apply {
         if (ownerName != null)
             append("$ownerName.")
         append("$methodName(")
-        if (parameters != null)
-            append(parameters!!.joinToString(",", transform = ::adornedStringRepresentation))
+        val parameters = parameters
+        if (parameters != null) {
+            append(parameters.joinToString(","))
+        }
         append(")")
-        if (returnedValue != NO_VALUE && returnedValue != VoidResult)
-            append(": ${adornedStringRepresentation(returnedValue)}")
-        else if (thrownException != null && thrownException != ForcibleExecutionFinishError)
+        val returnedValue = returnedValue
+        if (returnedValue is ReturnedValueResult.ValueResult) {
+            append(": ${returnedValue.valueRepresentation}")
+        } else if (returnedValue is ReturnedValueResult.CoroutineSuspended) {
+            append(": COROUTINE_SUSPENDED")
+        } else if (thrownException != null && thrownException != ForcibleExecutionFinishError) {
             append(": threw ${thrownException!!.javaClass.simpleName}")
+        }
     }.toString()
 
-    fun initializeReturnedValue(value: Any?) {
-        this.returnedValue = value
+    fun initializeVoidReturnedValue() {
+        returnedValue = ReturnedValueResult.VoidResult
+    }
+
+    fun initializeCoroutineSuspendedResult() {
+        returnedValue = ReturnedValueResult.CoroutineSuspended
+    }
+
+    fun initializeReturnedValue(valueRepresentation: String) {
+        returnedValue = ReturnedValueResult.ValueResult(valueRepresentation)
     }
 
     fun initializeThrownException(exception: Throwable) {
         this.thrownException = exception
     }
 
-    fun initializeParameters(parameters: Array<Any?>) {
+    fun initializeParameters(parameters: List<String>) {
         this.parameters = parameters
     }
 
-    fun initializeOwnerName(ownerName: String?) {
+    fun initializeOwnerName(ownerName: String) {
         this.ownerName = ownerName
     }
 }
-private val NO_VALUE = Any()
+
+private sealed interface ReturnedValueResult {
+    data object NoValue: ReturnedValueResult
+    data object VoidResult: ReturnedValueResult
+    data object CoroutineSuspended: ReturnedValueResult
+    data class ValueResult(val valueRepresentation: String): ReturnedValueResult
+}
 
 internal class MonitorEnterTracePoint(
     iThread: Int, actorId: Int,
@@ -270,26 +301,6 @@ private fun StackTraceElement.shorten(): String {
     return stackTraceElement
 }
 
-private fun adornedStringRepresentation(any: Any?): String {
-    // Primitive types (and several others) are immutable and
-    // have trivial `toString` implementation, which is used here.
-    if (any == null || any.javaClass.isImmutableWithNiceToString)
-        return any.toString()
-    // For enum types, we can always display their name.
-    if (any.javaClass.isEnum) {
-        return (any as Enum<*>).name
-    }
-    // simplified representation for Continuations
-    // (we usually do not really care about details).
-    if (any is Continuation<*>)
-        return "<cont>"
-    // Instead of java.util.HashMap$Node@3e2a56 show Node@1.
-    // It is better not to use `toString` in general since
-    // we usually care about references to certain objects,
-    // not about the content inside them.
-    return getObjectName(any)
-}
-
 internal enum class SwitchReason(private val reason: String) {
     MONITOR_WAIT("wait on monitor"),
     LOCK_WAIT("lock is already acquired"),
@@ -307,25 +318,3 @@ internal enum class SwitchReason(private val reason: String) {
  * Suspended method calls have the same [identifier] before and after suspension, but different [call] points.
  */
 internal class CallStackTraceElement(val call: MethodCallTracePoint, val identifier: Int)
-
-@Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
-private val Class<out Any>?.isImmutableWithNiceToString get() = this?.canonicalName in
-    listOf(
-        java.lang.Integer::class.java,
-        java.lang.Long::class.java,
-        java.lang.Short::class.java,
-        java.lang.Double::class.java,
-        java.lang.Float::class.java,
-        java.lang.Character::class.java,
-        java.lang.Byte::class.java,
-        java.lang.Boolean::class.java,
-        java.lang.String::class.java,
-        BigInteger::class.java,
-        BigDecimal::class.java,
-        kotlinx.coroutines.internal.Symbol::class.java,
-    ).map { it.canonicalName } +
-    listOf(
-        "java.util.Collections.SingletonList",
-        "java.util.Collections.SingletonMap",
-        "java.util.Collections.SingletonSet"
-    )

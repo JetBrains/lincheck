@@ -20,15 +20,20 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicFieldUpdaterNames.getAtomicFieldUpdaterName
 import sun.nio.ch.lincheck.*
-import java.lang.invoke.*
-import sun.misc.Unsafe
 import kotlinx.coroutines.*
-import java.util.concurrent.atomic.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicFieldUpdaterNames.getAtomicFieldUpdaterName
+import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectNumerator.adornedStringRepresentation
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectNumerator.cleanObjectNumeration
+import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
+import java.lang.invoke.VarHandle
 import java.lang.reflect.*
 import java.util.*
+import java.util.concurrent.atomic.*
 import kotlin.collections.set
+import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 
 /**
  * This is an abstraction for all managed strategies, which encapsulated
@@ -121,6 +126,12 @@ abstract class ManagedStrategy(
     // Utility class for the plugin integration to provide ids for each trace point
     private var eventIdProvider = EventIdProvider()
 
+    /**
+     * Current method call context (static or instance).
+     * Initialized and used only in the trace collecting stage.
+     */
+    private lateinit var callStackContextPerThread: Array<ArrayList<CallContext>>
+
     private fun createRunner(): ManagedStrategyRunner =
         ManagedStrategyRunner(
             managedStrategy = this,
@@ -135,6 +146,8 @@ abstract class ManagedStrategy(
         runImpl()
     } finally {
         runner.close()
+        // clear the numeration at the end to avoid memory leaks
+        cleanObjectNumeration()
     }
 
     // == STRATEGY INTERFACE METHODS ==
@@ -226,6 +239,7 @@ abstract class ManagedStrategy(
                 failingResult is ManagedDeadlockInvocationResult ||
                 failingResult is ObstructionFreedomViolationInvocationResult
         )
+        cleanObjectNumeration()
 
         runner.close()
         runner = createRunner()
@@ -248,6 +262,12 @@ abstract class ManagedStrategy(
         }
 
         return Trace(traceCollector!!.trace)
+    }
+
+    fun initializeCallStack(testInstance: Any) {
+        if (collectTrace) {
+            callStackContextPerThread = Array(nThreads) { arrayListOf(CallContext.InstanceCallContext(testInstance)) }
+        }
     }
 
     /**
@@ -276,7 +296,7 @@ abstract class ManagedStrategy(
         // Forcibly finish the current execution by throwing an exception.
         throw ForcibleExecutionFinishError
     }
-    
+
     private fun failDueToLivelock(lazyMessage: () -> String): Nothing {
         suddenInvocationResult = ObstructionFreedomViolationInvocationResult(lazyMessage(), runner.collectExecutionResults())
         // Forcibly finish the current execution by throwing an exception.
@@ -683,6 +703,7 @@ abstract class ManagedStrategy(
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             ReadTracePoint(
+                ownerRepresentation = findOwnerName(obj),
                 iThread = iThread,
                 actorId = currentActorId[iThread],
                 callStackTrace = callStackTrace[iThread],
@@ -713,6 +734,7 @@ abstract class ManagedStrategy(
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             ReadTracePoint(
+                ownerRepresentation = simpleClassName(className),
                 iThread = iThread,
                 actorId = currentActorId[iThread],
                 callStackTrace = callStackTrace[iThread],
@@ -734,10 +756,11 @@ abstract class ManagedStrategy(
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             ReadTracePoint(
+                ownerRepresentation = null,
                 iThread = iThread,
                 actorId = currentActorId[iThread],
                 callStackTrace = callStackTrace[iThread],
-                fieldName = "Array[$index]",
+                fieldName = "${adornedStringRepresentation(array)}[$index]",
                 stackTraceElement = CodeLocations.stackTrace(codeLocation)
             )
         } else {
@@ -754,7 +777,7 @@ abstract class ManagedStrategy(
         if (collectTrace) {
             runInIgnoredSection {
                 val iThread = currentThread
-                lastReadTracePoint[iThread]?.initializeReadValue(value)
+                lastReadTracePoint[iThread]?.initializeReadValue(adornedStringRepresentation(value))
                 lastReadTracePoint[iThread] = null
             }
         }
@@ -768,13 +791,14 @@ abstract class ManagedStrategy(
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             WriteTracePoint(
+                ownerRepresentation = findOwnerName(obj),
                 iThread = iThread,
                 actorId = currentActorId[iThread],
                 callStackTrace = callStackTrace[iThread],
                 fieldName = fieldName,
                 stackTraceElement = CodeLocations.stackTrace(codeLocation)
             ).also {
-                it.initializeWrittenValue(value)
+                it.initializeWrittenValue(adornedStringRepresentation(value))
             }
         } else {
             null
@@ -789,13 +813,14 @@ abstract class ManagedStrategy(
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             WriteTracePoint(
+                ownerRepresentation = simpleClassName(className),
                 iThread = iThread,
                 actorId = currentActorId[iThread],
                 callStackTrace = callStackTrace[iThread],
                 fieldName = fieldName,
                 stackTraceElement = CodeLocations.stackTrace(codeLocation)
             ).also {
-                it.initializeWrittenValue(value)
+                it.initializeWrittenValue(adornedStringRepresentation(value))
             }
         } else {
             null
@@ -811,13 +836,14 @@ abstract class ManagedStrategy(
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             WriteTracePoint(
+                ownerRepresentation = null,
                 iThread = iThread,
                 actorId = currentActorId[iThread],
                 callStackTrace = callStackTrace[iThread],
-                fieldName = "Array[$index]",
+                fieldName = "${adornedStringRepresentation(array)}[$index]",
                 stackTraceElement = CodeLocations.stackTrace(codeLocation)
             ).also {
-                it.initializeWrittenValue(value)
+                it.initializeWrittenValue(adornedStringRepresentation(value))
             }
         } else {
             null
@@ -901,7 +927,7 @@ abstract class ManagedStrategy(
                         } else {
                             params
                         }
-                        beforeMethodCall(currentThread, codeLocation, null, methodName, params)
+                        beforeMethodCall(owner, currentThread, codeLocation, className, methodName, params)
                     }
                 }
                 // It's important that this method can't be called inside runInIgnoredSection, as the ignored section
@@ -913,7 +939,7 @@ abstract class ManagedStrategy(
             ManagedGuaranteeType.TREAT_AS_ATOMIC -> {
                 runInIgnoredSection {
                     if (collectTrace) {
-                        beforeMethodCall(currentThread, codeLocation, null, methodName, params)
+                        beforeMethodCall(owner, currentThread, codeLocation, className, methodName, params)
                     }
                     newSwitchPointOnAtomicMethodCall(codeLocation)
                 }
@@ -936,7 +962,7 @@ abstract class ManagedStrategy(
                         } else {
                             params
                         }
-                        beforeMethodCall(currentThread, codeLocation, null, methodName, params)
+                        beforeMethodCall(owner, currentThread, codeLocation, className, methodName, params)
                     }
                 }
             }
@@ -945,22 +971,13 @@ abstract class ManagedStrategy(
 
     override fun beforeAtomicMethodCall(
         owner: Any?,
+        className: String,
         methodName: String,
         codeLocation: Int,
         params: Array<Any?>
     ) = runInIgnoredSection {
         if (collectTrace) {
-            val isAtomicUpdater = owner is AtomicIntegerFieldUpdater<*> || owner is AtomicLongFieldUpdater<*> || owner is AtomicReferenceFieldUpdater<*, *>
-            val ownerName = if (isAtomicUpdater) owner?.let { getAtomicFieldUpdaterName(it) } else null
-            // Drop the object instance and offset (in case of Unsafe) from the parameters
-            // when using Unsafe, VarHandle, or AtomicFieldUpdater.
-            @Suppress("NAME_SHADOWING")
-            val params = when {
-                isAtomicUpdater || owner is VarHandle -> params.drop(1).toTypedArray()
-                owner is Unsafe || (owner != null && owner::class.java.name == "jdk.internal.misc.Unsafe") -> params.drop(2).toTypedArray()
-                else -> params
-            }
-            beforeMethodCall(currentThread, codeLocation, ownerName, methodName, params)
+            beforeMethodCall(owner, currentThread, codeLocation, className, methodName, params)
         }
         newSwitchPointOnAtomicMethodCall(codeLocation)
     }
@@ -970,7 +987,11 @@ abstract class ManagedStrategy(
             runInIgnoredSection {
                 val iThread = currentThread
                 val tracePoint = methodCallTracePointStack[iThread].removeLast()
-                tracePoint.initializeReturnedValue(if (result == Injections.VOID_RESULT) VoidResult else result)
+                when (result) {
+                    Injections.VOID_RESULT -> tracePoint.initializeVoidReturnedValue()
+                    COROUTINE_SUSPENDED -> tracePoint.initializeCoroutineSuspendedResult()
+                    else -> tracePoint.initializeReturnedValue(adornedStringRepresentation(result))
+                }
                 afterMethodCall(iThread, tracePoint)
                 traceCollector!!.addStateRepresentation()
             }
@@ -1080,7 +1101,14 @@ abstract class ManagedStrategy(
      * @param codeLocation the byte-code location identifier of this invocation
      * @param iThread number of invoking thread
      */
-    private fun beforeMethodCall(iThread: Int, codeLocation: Int, ownerName: String?, methodName: String, params: Array<Any?>) {
+    private fun beforeMethodCall(
+        owner: Any?,
+        iThread: Int,
+        codeLocation: Int,
+        className: String,
+        methodName: String,
+        params: Array<Any?>,
+    ) {
         val callStackTrace = callStackTrace[iThread]
         val suspendedMethodStack = suspendedFunctionsStack[iThread]
         val methodId = if (suspendedMethodStack.isNotEmpty()) {
@@ -1093,18 +1121,208 @@ abstract class ManagedStrategy(
             methodCallNumber++
         }
         // Code location of the new method call is currently the last one
+        val tracePoint = createBeforeMethodCallTracePoint(owner, iThread, className, methodName, params, codeLocation)
+        methodCallTracePointStack[iThread] += tracePoint
+        callStackTrace.add(CallStackTraceElement(tracePoint, methodId))
+        if (owner == null) {
+            beforeStaticMethodCall()
+        } else {
+            beforeInstanceMethodCall(owner)
+        }
+    }
+
+    private fun createBeforeMethodCallTracePoint(
+        owner: Any?,
+        iThread: Int,
+        className: String,
+        methodName: String,
+        params: Array<Any?>,
+        codeLocation: Int
+    ): MethodCallTracePoint {
+        val callStackTrace = callStackTrace[iThread]
         val tracePoint = MethodCallTracePoint(
             iThread = iThread,
             actorId = currentActorId[iThread],
             callStackTrace = callStackTrace,
             methodName = methodName,
             stackTraceElement = CodeLocations.stackTrace(codeLocation)
-        ).also {
-            it.initializeParameters(params)
-            it.initializeOwnerName(ownerName)
+        )
+        if (owner is VarHandle) {
+            return initializeVarHandleMethodCallTracePoint(tracePoint, owner, params)
         }
-        methodCallTracePointStack[iThread] += tracePoint
-        callStackTrace.add(CallStackTraceElement(tracePoint, methodId))
+        if (owner is AtomicIntegerFieldUpdater<*> || owner is AtomicLongFieldUpdater<*> || owner is AtomicReferenceFieldUpdater<*, *>) {
+            return initializeAtomicUpdaterMethodCallTracePoint(tracePoint, owner, params)
+        }
+        if (isAtomicReference(owner)) {
+            return initializeAtomicReferenceMethodCallTracePoint(tracePoint, owner!!, params)
+        }
+        if (isUnsafe(owner)) {
+            return initializeUnsafeMethodCallTracePoint(tracePoint, owner!!, params)
+        }
+
+        tracePoint.initializeParameters(params.map { adornedStringRepresentation(it) })
+
+        val ownerName = if (owner != null) findOwnerName(owner) else simpleClassName(className)
+        if (ownerName != null) {
+            tracePoint.initializeOwnerName(ownerName)
+        }
+
+        return tracePoint
+    }
+
+    private fun simpleClassName(className: String) = className.takeLastWhile { it != '/' }
+
+    private fun initializeUnsafeMethodCallTracePoint(
+        tracePoint: MethodCallTracePoint,
+        receiver: Any,
+        params: Array<Any?>
+    ): MethodCallTracePoint {
+        when (val unsafeMethodName = UnsafeNames.getMethodCallType(params)) {
+            is UnsafeArrayMethod -> {
+                val owner = "${adornedStringRepresentation(unsafeMethodName.array)}[${unsafeMethodName.index}]"
+                tracePoint.initializeOwnerName(owner)
+                tracePoint.initializeParameters(unsafeMethodName.parametersToPresent.map { adornedStringRepresentation(it) })
+            }
+            is UnsafeName.TreatAsDefaultMethod -> {
+                tracePoint.initializeOwnerName(adornedStringRepresentation(receiver))
+                tracePoint.initializeParameters(params.map { adornedStringRepresentation(it) })
+            }
+            is UnsafeInstanceMethod -> {
+                val ownerName = findOwnerName(unsafeMethodName.owner)
+                val owner = ownerName?.let { "$ownerName.${unsafeMethodName.fieldName}" } ?: unsafeMethodName.fieldName
+                tracePoint.initializeOwnerName(owner)
+                tracePoint.initializeParameters(unsafeMethodName.parametersToPresent.map { adornedStringRepresentation(it) })
+            }
+            is UnsafeStaticMethod -> {
+                tracePoint.initializeOwnerName("${unsafeMethodName.clazz.simpleName}.${unsafeMethodName.fieldName}")
+                tracePoint.initializeParameters(unsafeMethodName.parametersToPresent.map { adornedStringRepresentation(it) })
+            }
+        }
+
+        return tracePoint
+    }
+
+    private fun initializeAtomicReferenceMethodCallTracePoint(
+        tracePoint: MethodCallTracePoint,
+        receiver: Any,
+        params: Array<Any?>
+    ): MethodCallTracePoint {
+        when (val atomicReferenceInfo = AtomicReferenceNames.getMethodCallType(runner.testInstance, receiver, params)) {
+            is AtomicArrayMethod -> {
+                tracePoint.initializeOwnerName("${adornedStringRepresentation(atomicReferenceInfo.atomicArray)}[${atomicReferenceInfo.atomicArray}]")
+                tracePoint.initializeParameters(params.drop(1).map { adornedStringRepresentation(it) })
+            }
+            is InstanceFieldAtomicArrayMethod -> {
+                val receiverName = findOwnerName(atomicReferenceInfo.owner)
+                tracePoint.initializeOwnerName((receiverName?.let { "$it." } ?: "") + "${atomicReferenceInfo.fieldName}[${atomicReferenceInfo.index}]")
+                tracePoint.initializeParameters(params.drop(1).map { adornedStringRepresentation(it) })
+            }
+            AtomicReferenceMethodType.TreatAsDefaultMethod -> {
+                tracePoint.initializeOwnerName(adornedStringRepresentation(receiver))
+                tracePoint.initializeParameters(params.map { adornedStringRepresentation(it) })
+            }
+            is AtomicReferenceInstanceMethod -> {
+                val receiverName = findOwnerName(atomicReferenceInfo.owner)
+                tracePoint.initializeOwnerName(receiverName?.let { "$it.${atomicReferenceInfo.fieldName}" } ?: atomicReferenceInfo.fieldName)
+                tracePoint.initializeParameters(params.map { adornedStringRepresentation(it) })
+            }
+            is AtomicReferenceStaticMethod ->  {
+                tracePoint.initializeOwnerName("${atomicReferenceInfo.ownerClass.simpleName}.${atomicReferenceInfo.fieldName}")
+                tracePoint.initializeParameters(params.map { adornedStringRepresentation(it) })
+            }
+            is StaticFieldAtomicArrayMethod -> {
+                tracePoint.initializeOwnerName("${atomicReferenceInfo.ownerClass.simpleName}.${atomicReferenceInfo.fieldName}[${atomicReferenceInfo.index}]")
+                tracePoint.initializeParameters(params.drop(1).map { adornedStringRepresentation(it) })
+            }
+        }
+        return tracePoint
+    }
+
+    private fun initializeVarHandleMethodCallTracePoint(
+        tracePoint: MethodCallTracePoint,
+        varHandle: VarHandle,
+        parameters: Array<Any?>,
+    ): MethodCallTracePoint {
+        when (val varHandleMethodType = VarHandleNames.varHandleMethodType(varHandle, parameters)) {
+            is ArrayVarHandleMethod -> {
+                tracePoint.initializeOwnerName("${adornedStringRepresentation(varHandleMethodType.array)}[${varHandleMethodType.index}]")
+                tracePoint.initializeParameters(varHandleMethodType.parameters.map { adornedStringRepresentation(it) })
+            }
+            VarHandleMethodType.TreatAsDefaultMethod -> {
+                tracePoint.initializeOwnerName(adornedStringRepresentation(varHandle))
+                tracePoint.initializeParameters(parameters.map { adornedStringRepresentation(it) })
+            }
+            is InstanceVarHandleMethod -> {
+                val receiverName = findOwnerName(varHandleMethodType.owner)
+                tracePoint.initializeOwnerName(receiverName?.let { "$it.${varHandleMethodType.fieldName}" } ?: varHandleMethodType.fieldName)
+                tracePoint.initializeParameters(varHandleMethodType.parameters.map { adornedStringRepresentation(it) })
+            }
+            is StaticVarHandleMethod -> {
+                tracePoint.initializeOwnerName("${varHandleMethodType.ownerClass.simpleName}.${varHandleMethodType.fieldName}")
+                tracePoint.initializeParameters(varHandleMethodType.parameters.map { adornedStringRepresentation(it) })
+            }
+        }
+
+        return tracePoint
+    }
+
+    private fun initializeAtomicUpdaterMethodCallTracePoint(
+        tracePoint: MethodCallTracePoint,
+        atomicUpdater: Any,
+        parameters: Array<Any?>,
+    ): MethodCallTracePoint {
+        getAtomicFieldUpdaterName(atomicUpdater)?.let { tracePoint.initializeOwnerName(it) }
+        tracePoint.initializeParameters(parameters.drop(1).map { adornedStringRepresentation(it) })
+        return tracePoint
+    }
+
+    private fun isAtomicReference(receiver: Any?) = receiver is AtomicReference<*> ||
+            receiver is AtomicLong ||
+            receiver is AtomicInteger ||
+            receiver is AtomicBoolean ||
+            receiver is AtomicIntegerArray ||
+            receiver is AtomicReferenceArray<*> ||
+            receiver is AtomicLongArray
+
+    private fun isUnsafe(receiver: Any?): Boolean {
+        if (receiver == null) return false
+        val className = receiver::class.java.name
+        return className == "sun.misc.Unsafe" || className == "jdk.internal.misc.Unsafe"
+    }
+
+    /**
+     * Returns beautiful string representation of the [owner].
+     * If the [owner] is `this` of the current method, then returns `null`.
+     */
+    private fun findOwnerName(owner: Any): String? {
+        if (isOwnerCurrentContext(owner)) return null
+        return adornedStringRepresentation(owner)
+    }
+
+    /**
+     * Checks if [owner] is the current `this` in the current method context.
+     */
+    private fun isOwnerCurrentContext(owner: Any): Boolean {
+        return when (val callContext = callStackContextPerThread[currentThread].last()) {
+            is CallContext.InstanceCallContext -> callContext.instance === owner
+            is CallContext.StaticCallContext -> false
+        }
+    }
+
+    /* Methods to control the current call context. */
+
+    private fun beforeStaticMethodCall() {
+        callStackContextPerThread[currentThread].add(CallContext.StaticCallContext)
+    }
+
+    private fun beforeInstanceMethodCall(receiver: Any) {
+        callStackContextPerThread[currentThread].add(CallContext.InstanceCallContext(receiver))
+    }
+
+    private fun afterExitMethod() {
+        val currentContext = callStackContextPerThread[currentThread]
+        currentContext.removeLast()
+        check(currentContext.isNotEmpty()) { "Context cannot be empty" }
     }
 
     /**
@@ -1114,6 +1332,7 @@ abstract class ManagedStrategy(
      * @param tracePoint the corresponding trace point for the invocation
      */
     private fun afterMethodCall(iThread: Int, tracePoint: MethodCallTracePoint) {
+        afterExitMethod()
         val callStackTrace = callStackTrace[iThread]
         if (tracePoint.wasSuspended) {
             // if a method call is suspended, save its identifier to reuse for continuation resuming
@@ -1312,6 +1531,20 @@ abstract class ManagedStrategy(
         }
     }
 
+    /**
+     * Current method context in a call stack.
+     */
+    sealed interface CallContext {
+        /**
+         * Indicates that current method is static.
+         */
+        data object StaticCallContext: CallContext
+
+        /**
+         * Indicates that method is called on the instance.
+         */
+        data class InstanceCallContext(val instance: Any): CallContext
+    }
 }
 
 /**

@@ -1,0 +1,44 @@
+= Invalid execution results =
+| ------------------------------- |
+|    Thread 1    |    Thread 2    |
+| ------------------------------- |
+| increment(): 0 | increment(): 0 |
+| ------------------------------- |
+
+The following interleaving leads to the error:
+| -------------------------------------------------------------------------------------------- |
+|    Thread 1    |                                  Thread 2                                   |
+| -------------------------------------------------------------------------------------------- |
+|                | increment(): 0                                                              |
+|                |   counter.READ: 0 at BaseFailingTest.increment(BaseFailingTest.kt:30)       |
+|                |   switch                                                                    |
+| increment(): 0 |                                                                             |
+|                |   counter.WRITE(1) at BaseFailingTest.increment(BaseFailingTest.kt:30)      |
+|                |   actionsJustForTrace() at BaseFailingTest.increment(BaseFailingTest.kt:31) |
+|                |   result: 0                                                                 |
+| -------------------------------------------------------------------------------------------- |
+
+Detailed trace:
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                         Thread 1                                                                         |                                                                         Thread 2                                                                         |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                                                                          | increment(): 0                                                                                                                                           |
+|                                                                                                                                                          |   counter.READ: 0 at BaseFailingTest.increment(BaseFailingTest.kt:30)                                                                                    |
+|                                                                                                                                                          |   switch                                                                                                                                                 |
+| increment(): 0                                                                                                                                           |                                                                                                                                                          |
+|   counter.READ: 0 at BaseFailingTest.increment(BaseFailingTest.kt:30)                                                                                    |                                                                                                                                                          |
+|   counter.WRITE(1) at BaseFailingTest.increment(BaseFailingTest.kt:30)                                                                                   |                                                                                                                                                          |
+|   actionsJustForTrace() at BaseFailingTest.increment(BaseFailingTest.kt:31)                                                                              |                                                                                                                                                          |
+|     atomicReference1.READ: AtomicReference#1 at AtomicReferencesFromMultipleFieldsTest.actionsJustForTrace(AtomicReferencesNamesTests.kt:72)             |                                                                                                                                                          |
+|     atomicReference2.READ: AtomicReference#1 at AtomicReferencesFromMultipleFieldsTest.actionsJustForTrace(AtomicReferencesNamesTests.kt:72)             |                                                                                                                                                          |
+|     AtomicReference#1.get(): Node#1 at AtomicReferencesFromMultipleFieldsTest.actionsJustForTrace(AtomicReferencesNamesTests.kt:72)                      |                                                                                                                                                          |
+|     AtomicReference#1.compareAndSet(Node#1,Node#2): true at AtomicReferencesFromMultipleFieldsTest.actionsJustForTrace(AtomicReferencesNamesTests.kt:72) |                                                                                                                                                          |
+|   result: 0                                                                                                                                              |                                                                                                                                                          |
+|                                                                                                                                                          |   counter.WRITE(1) at BaseFailingTest.increment(BaseFailingTest.kt:30)                                                                                   |
+|                                                                                                                                                          |   actionsJustForTrace() at BaseFailingTest.increment(BaseFailingTest.kt:31)                                                                              |
+|                                                                                                                                                          |     atomicReference1.READ: AtomicReference#1 at AtomicReferencesFromMultipleFieldsTest.actionsJustForTrace(AtomicReferencesNamesTests.kt:72)             |
+|                                                                                                                                                          |     atomicReference2.READ: AtomicReference#1 at AtomicReferencesFromMultipleFieldsTest.actionsJustForTrace(AtomicReferencesNamesTests.kt:72)             |
+|                                                                                                                                                          |     AtomicReference#1.get(): Node#2 at AtomicReferencesFromMultipleFieldsTest.actionsJustForTrace(AtomicReferencesNamesTests.kt:72)                      |
+|                                                                                                                                                          |     AtomicReference#1.compareAndSet(Node#2,Node#3): true at AtomicReferencesFromMultipleFieldsTest.actionsJustForTrace(AtomicReferencesNamesTests.kt:72) |
+|                                                                                                                                                          |   result: 0                                                                                                                                              |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

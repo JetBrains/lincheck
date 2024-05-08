@@ -34,3 +34,19 @@ internal inline fun <T> readFieldViaUnsafe(obj: Any?, field: Field, getter: Unsa
         return UnsafeHolder.UNSAFE.getter(obj, offset)
     }
 }
+
+internal fun findFieldNameByOffset(targetType: Class<*>, offset: Long): String? {
+    // Extract the private offset value and find the matching field.
+    for (field in targetType.declaredFields) {
+        try {
+            if (Modifier.isNative(field.modifiers)) continue
+            val fieldOffset = if (Modifier.isStatic(field.modifiers)) UnsafeHolder.UNSAFE.staticFieldOffset(field)
+            else UnsafeHolder.UNSAFE.objectFieldOffset(field)
+            if (fieldOffset == offset) return field.name
+        } catch (t: Throwable) {
+            t.printStackTrace()
+        }
+    }
+
+    return null // Field not found
+}

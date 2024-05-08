@@ -20,7 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.strategy.managed.getObjectNumber
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectNumerator.getObjectNumber
 import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
 import sun.misc.Unsafe
 import java.lang.reflect.Field
