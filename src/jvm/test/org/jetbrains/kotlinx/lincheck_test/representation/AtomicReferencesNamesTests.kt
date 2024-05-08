@@ -25,7 +25,7 @@ class AtomicReferencesNamesTest : BaseFailingTest("atomic_references_names_trace
 
     private var wrapper = AtomicReferenceWrapper()
 
-    override fun actionsJustForTrace() {
+    override fun actionsForTrace() {
         atomicReference.compareAndSet(atomicReference.get(), Node(2))
         atomicReference.set(Node(3))
 
@@ -94,7 +94,7 @@ class AtomicReferencesFromMultipleFieldsTest : BaseFailingTest("atomic_reference
         atomicReference2 = ref
     }
 
-    override fun actionsJustForTrace() {
+    override fun actionsForTrace() {
         atomicReference1.compareAndSet(atomicReference2.get(), Node(2))
     }
 

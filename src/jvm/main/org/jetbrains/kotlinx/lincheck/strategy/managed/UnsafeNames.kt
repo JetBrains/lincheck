@@ -10,9 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import org.jetbrains.kotlinx.lincheck.findFieldNameByOffset
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
-import org.jetbrains.kotlinx.lincheck.util.findFieldNameByOffset
 
 /**
  * Helper object to provide the field name and the owner of the Unsafe method call.

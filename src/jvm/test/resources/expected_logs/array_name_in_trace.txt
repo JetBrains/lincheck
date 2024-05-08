@@ -6,17 +6,17 @@
 | ------------------------------- |
 
 The following interleaving leads to the error:
-| -------------------------------------------------------------------------------------------- |
-|    Thread 1    |                                  Thread 2                                   |
-| -------------------------------------------------------------------------------------------- |
-|                | increment(): 0                                                              |
-|                |   counter.READ: 0 at BaseFailingTest.increment(BaseFailingTest.kt:30)       |
-|                |   switch                                                                    |
-| increment(): 0 |                                                                             |
-|                |   counter.WRITE(1) at BaseFailingTest.increment(BaseFailingTest.kt:30)      |
-|                |   actionsJustForTrace() at BaseFailingTest.increment(BaseFailingTest.kt:31) |
-|                |   result: 0                                                                 |
-| -------------------------------------------------------------------------------------------- |
+| ---------------------------------------------------------------------------------------- |
+|    Thread 1    |                                Thread 2                                 |
+| ---------------------------------------------------------------------------------------- |
+|                | increment(): 0                                                          |
+|                |   counter.READ: 0 at BaseFailingTest.increment(BaseFailingTest.kt:30)   |
+|                |   switch                                                                |
+| increment(): 0 |                                                                         |
+|                |   counter.WRITE(1) at BaseFailingTest.increment(BaseFailingTest.kt:30)  |
+|                |   actionsForTrace() at BaseFailingTest.increment(BaseFailingTest.kt:31) |
+|                |   result: 0                                                             |
+| ---------------------------------------------------------------------------------------- |
 
 Detailed trace:
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -28,8 +28,8 @@ Detailed trace:
 | increment(): 0                                                                                                                        |                                                                                                                                       |
 |   counter.READ: 0 at BaseFailingTest.increment(BaseFailingTest.kt:30)                                                                 |                                                                                                                                       |
 |   counter.WRITE(1) at BaseFailingTest.increment(BaseFailingTest.kt:30)                                                                |                                                                                                                                       |
-|   actionsJustForTrace() at BaseFailingTest.increment(BaseFailingTest.kt:31)                                                           |                                                                                                                                       |
-|     readActions() at ArrayNameInTraceRepresentationTest.actionsJustForTrace(OwnerNameInTraceRepresentationTests.kt:69)                |                                                                                                                                       |
+|   actionsForTrace() at BaseFailingTest.increment(BaseFailingTest.kt:31)                                                               |                                                                                                                                       |
+|     readActions() at ArrayNameInTraceRepresentationTest.actionsForTrace(OwnerNameInTraceRepresentationTests.kt:69)                    |                                                                                                                                       |
 |       intArray.READ: IntArray#1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:74)          |                                                                                                                                       |
 |       IntArray#1[0].READ: 1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:74)              |                                                                                                                                       |
 |       shortArray.READ: ShortArray#1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:75)      |                                                                                                                                       |
@@ -43,7 +43,7 @@ Detailed trace:
 |       FloatArray#1[0].READ: 1.0 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:80)          |                                                                                                                                       |
 |       DoubleArray#1[0].READ: 1.0 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:81)         |                                                                                                                                       |
 |       LongArray#1[0].READ: 1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:82)             |                                                                                                                                       |
-|     writeActions() at ArrayNameInTraceRepresentationTest.actionsJustForTrace(OwnerNameInTraceRepresentationTests.kt:70)               |                                                                                                                                       |
+|     writeActions() at ArrayNameInTraceRepresentationTest.actionsForTrace(OwnerNameInTraceRepresentationTests.kt:70)                   |                                                                                                                                       |
 |       intArray.READ: IntArray#1 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:86)         |                                                                                                                                       |
 |       IntArray#1[0].WRITE(0) at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:86)            |                                                                                                                                       |
 |       shortArray.READ: ShortArray#1 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:87)     |                                                                                                                                       |
@@ -59,8 +59,8 @@ Detailed trace:
 |       LongArray#1[0].WRITE(0) at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:94)           |                                                                                                                                       |
 |   result: 0                                                                                                                           |                                                                                                                                       |
 |                                                                                                                                       |   counter.WRITE(1) at BaseFailingTest.increment(BaseFailingTest.kt:30)                                                                |
-|                                                                                                                                       |   actionsJustForTrace() at BaseFailingTest.increment(BaseFailingTest.kt:31)                                                           |
-|                                                                                                                                       |     readActions() at ArrayNameInTraceRepresentationTest.actionsJustForTrace(OwnerNameInTraceRepresentationTests.kt:69)                |
+|                                                                                                                                       |   actionsForTrace() at BaseFailingTest.increment(BaseFailingTest.kt:31)                                                               |
+|                                                                                                                                       |     readActions() at ArrayNameInTraceRepresentationTest.actionsForTrace(OwnerNameInTraceRepresentationTests.kt:69)                    |
 |                                                                                                                                       |       intArray.READ: IntArray#1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:74)          |
 |                                                                                                                                       |       IntArray#1[0].READ: 0 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:74)              |
 |                                                                                                                                       |       shortArray.READ: ShortArray#1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:75)      |
@@ -74,7 +74,7 @@ Detailed trace:
 |                                                                                                                                       |       FloatArray#1[0].READ: 0.0 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:80)          |
 |                                                                                                                                       |       DoubleArray#1[0].READ: 0.0 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:81)         |
 |                                                                                                                                       |       LongArray#1[0].READ: 0 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:82)             |
-|                                                                                                                                       |     writeActions() at ArrayNameInTraceRepresentationTest.actionsJustForTrace(OwnerNameInTraceRepresentationTests.kt:70)               |
+|                                                                                                                                       |     writeActions() at ArrayNameInTraceRepresentationTest.actionsForTrace(OwnerNameInTraceRepresentationTests.kt:70)                   |
 |                                                                                                                                       |       intArray.READ: IntArray#1 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:86)         |
 |                                                                                                                                       |       IntArray#1[0].WRITE(0) at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:86)            |
 |                                                                                                                                       |       shortArray.READ: ShortArray#1 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:87)     |

@@ -24,8 +24,8 @@ import sun.nio.ch.lincheck.*
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicFieldUpdaterNames.getAtomicFieldUpdaterName
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectNumerator.adornedStringRepresentation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectNumerator.cleanObjectNumeration
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.adornedStringRepresentation
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanObjectNumeration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
 import java.lang.invoke.VarHandle

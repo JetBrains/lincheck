@@ -16,8 +16,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelChecki
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
 import org.junit.Test
 import sun.misc.Unsafe
-import java.lang.invoke.MethodHandles
-import java.lang.invoke.VarHandle
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 
@@ -27,7 +25,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 class SunUnsafeTraceRepresentationTest {
 
     @Volatile
-    private var node: Node = Node(1)
+    private var node: IntWrapper = IntWrapper(1)
 
     @Volatile
     private var counter: Int = 0
@@ -50,8 +48,8 @@ class SunUnsafeTraceRepresentationTest {
         .checkLincheckOutput("sun_unsafe_trace.txt")
 
     private fun actionsJustForTrace() {
-        unsafe.compareAndSwapObject(this, offset, node, Node(2))
-        unsafe.getAndSetObject(this, offset, Node(3))
+        unsafe.compareAndSwapObject(this, offset, node, IntWrapper(2))
+        unsafe.getAndSetObject(this, offset, IntWrapper(3))
     }
 
     companion object {
@@ -107,7 +105,7 @@ class JdkUnsafeTraceRepresentationTest {
 class AtomicUpdaterTraceRepresentationTest {
 
     @Volatile
-    private var node: Node = Node(1)
+    private var node: IntWrapper = IntWrapper(1)
 
     @Volatile
     private var counter: Int = 0
@@ -130,18 +128,18 @@ class AtomicUpdaterTraceRepresentationTest {
         .checkLincheckOutput("atomic_updater_trace.txt")
 
     private fun actionsJustForTrace() {
-        nodeUpdater.compareAndSet(this, node, Node(4))
-        nodeUpdater.set(this, Node(5))
+        nodeUpdater.compareAndSet(this, node, IntWrapper(4))
+        nodeUpdater.set(this, IntWrapper(5))
     }
 
     companion object {
-        val nodeUpdater: AtomicReferenceFieldUpdater<AtomicUpdaterTraceRepresentationTest, Node> =
+        val nodeUpdater: AtomicReferenceFieldUpdater<AtomicUpdaterTraceRepresentationTest, IntWrapper> =
             AtomicReferenceFieldUpdater.newUpdater(
                 AtomicUpdaterTraceRepresentationTest::class.java,
-                Node::class.java,
+                IntWrapper::class.java,
                 "node"
             )
     }
 }
 
-data class Node(val value: Int)
+data class IntWrapper(val value: Int)

@@ -18,7 +18,7 @@ import kotlin.coroutines.Continuation
 /**
  * Helps to assign number to an object and to create its beautiful representation to provide to the trace.
  */
-object ObjectNumerator {
+object ObjectLabelFactory {
 
     private val objectNumeration = Collections.synchronizedMap(WeakHashMap<Class<Any>, MutableMap<Any, Int>>())
 

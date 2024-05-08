@@ -10,8 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import org.jetbrains.kotlinx.lincheck.findFieldNameByOffset
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
-import org.jetbrains.kotlinx.lincheck.util.findFieldNameByOffset
 import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
 import sun.misc.Unsafe
 import java.lang.invoke.VarHandle
@@ -131,17 +131,20 @@ internal object VarHandleNames {
         }
     }
 
+    // RunCatching because VarHandle class can be not found due to a java version.
     @Suppress("SameParameterValue")
     private fun instanceNameExtractor(vararg varHandleClassNames: String) =
-        varHandleClassNames.map { VarHandleInstanceNameExtractor(it) }
+        varHandleClassNames.mapNotNull { runCatching { VarHandleInstanceNameExtractor(it) }.getOrNull() }
 
+    // RunCatching because VarHandle class can be not found due to a java version.
     @Suppress("SameParameterValue")
     private fun staticNameExtractor(vararg varHandleClassNames: String) =
-        varHandleClassNames.map { VarHandleStaticNameExtractor(it) }
+        varHandleClassNames.mapNotNull { runCatching { VarHandleStaticNameExtractor(it) }.getOrNull() }
 
+    // RunCatching because VarHandle class can be not found due to a java version.
     @Suppress("SameParameterValue")
     private fun arrayNameExtractor(vararg varHandleClassNames: String) =
-        varHandleClassNames.map { VarHandeArrayNameExtractor(it) }
+        varHandleClassNames.mapNotNull { runCatching { VarHandeArrayNameExtractor(it) }.getOrNull() }
 
 }
 

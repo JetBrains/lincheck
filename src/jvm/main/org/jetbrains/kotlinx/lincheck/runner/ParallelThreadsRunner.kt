@@ -183,11 +183,12 @@ internal open class ParallelThreadsRunner(
 
     private fun createTestInstance() {
         testInstance = testClass.newInstance()
-        // In the model checking mode, we need to ensure
-        // that all the necessary classes and instrumented
-        // after creating a test instance.
         if (strategy is ModelCheckingStrategy) {
+            // We pass the test instance to initialize 
             strategy.initializeCallStack(testInstance)
+            // In the model checking mode, we need to ensure
+            // that all the necessary classes and instrumented
+            // after creating a test instance.
             if (!ensuredTestInstanceIsTransformed) {
                 LincheckJavaAgent.ensureObjectIsTransformed(testInstance)
                 ensuredTestInstanceIsTransformed = true

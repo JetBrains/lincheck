@@ -13,138 +13,26 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.VarHandle
 
-class VarHandleRepresentationTest: BaseFailingTest("varhandle_representation.txt") {
+class VarHandleReferenceRepresentationTest : BaseFailingTest("var_handle/varhandle_reference_representation.txt") {
 
     @Volatile
-    private var node = Node(1)
-    @Volatile
-    private var intNumber: Int = 1
-    @Volatile
-    private var longNumber: Long = 1L
-    @Volatile
-    private var shortNumber: Short = (1).toShort()
-    @Volatile
-    private var byteNumber: Byte = (1).toByte()
-    @Volatile
-    private var charNumber: Char = '1'
-    @Volatile
-    private var boolFlag: Boolean = false
-    @Volatile
-    private var doubleNumber: Double = 1.0
-    @Volatile
-    private var floatNumber: Float = 1f
+    private var wrapper = IntWrapper(1)
+    private var array = Array(10) { IntWrapper(it) }
+    private val valueWrapper = Wrapper()
 
-    /* Arrays */
-    private var nodeArray = Array(10) { Node(it) }
-    private var intArray = IntArray(10) { it }
-    private var longArray = LongArray(10) { it.toLong() }
-    private var shortArray = ShortArray(10) { it.toShort() }
-    private var byteArray = ByteArray(10) { it.toByte() }
-    private var charArray = CharArray(10) { it.toChar() }
-    private var boolArray = BooleanArray(10) { false }
-    private var doubleArray = DoubleArray(10) { it.toDouble() }
-    private var floatArray = FloatArray(10) { it.toFloat() }
-
-    private val wrapper = Wrapper()
-
-
-    override fun actionsJustForTrace() {
-        instanceFieldHandles()
-        staticFieldHandles()
-        arrayFieldHandles()
-        otherInstanceVarHandle()
-    }
-
-    private fun otherInstanceVarHandle() {
-        wrapperValueHandle.compareAndSet(wrapper, 1, 2)
-        wrapperValueHandle.set(wrapper, 3)
-    }
-
-    private fun instanceFieldHandles() {
-        nodeHandle.compareAndSet(this, node, Node(2))
-        nodeHandle.set(this, Node(3))
-
-        intNumberHandle.compareAndSet(this, intNumber, 2)
-        intNumberHandle.set(this, 3)
-
-        longNumberHandle.compareAndSet(this, longNumber, 2L)
-        longNumberHandle.set(this, 3L)
-
-        shortNumberHandle.compareAndSet(this, shortNumber, (2).toShort())
-        shortNumberHandle.set(this, (3).toShort())
-
-        byteNumberHandle.compareAndSet(this, byteNumber, (2).toByte())
-        byteNumberHandle.set(this, (1).toByte())
-
-        charNumberHandle.compareAndSet(this, charNumber, '2')
-        charNumberHandle.set(this, '1')
-
-        booleanNumberHandle.compareAndSet(this, boolFlag, true)
-        booleanNumberHandle.set(this, false)
-
-        doubleNumberHandle.compareAndSet(this, doubleNumber, 2.0)
-        doubleNumberHandle.set(this, 3.0)
-
-        floatNumberHandle.compareAndSet(this, floatNumber, 2.0F)
-        floatNumberHandle.set(this, 3.0F)
-    }
-
-    private fun staticFieldHandles() {
-        staticNodeHandle.compareAndSet(node, Node(2))
-        staticNodeHandle.set(Node(3))
-
-        staticIntNumberHandle.compareAndSet(staticIntNumber, 2)
-        staticIntNumberHandle.set(3)
-
-        staticLongNumberHandle.compareAndSet(staticLongNumber, 2L)
-        staticLongNumberHandle.set(3L)
-
-        staticShortNumberHandle.compareAndSet(staticShortNumber, (2).toShort())
-        staticShortNumberHandle.set((3).toShort())
-
-        staticByteNumberHandle.compareAndSet(staticByteNumber, (2).toByte())
-        staticByteNumberHandle.set((1).toByte())
-
-        staticCharNumberHandle.compareAndSet(staticCharNumber, '2')
-        staticCharNumberHandle.set('1')
-
-        staticBooleanNumberHandle.compareAndSet(staticBoolFlag, true)
-        staticBooleanNumberHandle.set(false)
-
-        staticDoubleNumberHandle.compareAndSet(staticDoubleNumber, 2.0)
-        staticDoubleNumberHandle.set(3.0)
-
-        staticFloatNumberHandle.compareAndSet(staticFloatNumber, 2.0F)
-        staticFloatNumberHandle.set(3.0F)
-    }
-
-    private fun arrayFieldHandles() {
-        nodeArrayHandle.compareAndSet(nodeArray, 1, Node(1), Node(2))
-        nodeArrayHandle.set(nodeArray, 1, Node(1))
-
-        intArrayHandle.compareAndSet(intArray, 1, 1, 1)
-        intArrayHandle.set(intArray, 1, 1)
-
-        longArrayHandle.compareAndSet(longArray, 1, 1L, 3L)
-        longArrayHandle.set(longArray, 1, 2L)
-
-        shortArrayHandle.compareAndSet(shortArray, 1, (1).toShort(), (2).toShort())
-        shortArrayHandle.set(shortArray, 1, (4).toShort())
-
-        byteArrayHandle.compareAndSet(byteArray, 1, (2).toByte(), (3).toByte())
-        byteArrayHandle.set(byteArray, 1, (4).toByte())
-
-        charArrayHandle.compareAndSet(charArray, 1, '1', '2')
-        charArrayHandle.set(charArray, 1, '3')
-
-        booleanArrayHandle.compareAndSet(boolArray, 1, false, true)
-        booleanArrayHandle.set(boolArray, 1, true)
-
-        doubleArrayHandle.compareAndSet(doubleArray, 1, 1.0, 2.0)
-        doubleArrayHandle.set(doubleArray, 1, 3.0)
-
-        floatArrayHandle.compareAndSet(floatArray, 1, 1f, 2f)
-        floatArrayHandle.set(floatArray, 1, 3f)
+    override fun actionsForTrace() {
+        // Instance object field operation.
+        nodeHandle.compareAndSet(this, wrapper, IntWrapper(2))
+        nodeHandle.set(this, IntWrapper(3))
+        // Static object field operation.
+        staticNodeHandle.compareAndSet(wrapper, IntWrapper(2))
+        staticNodeHandle.set(IntWrapper(3))
+        // Array object field operation.
+        nodeArrayHandle.compareAndSet(array, 1, IntWrapper(1), IntWrapper(2))
+        nodeArrayHandle.set(array, 1, IntWrapper(1))
+        // Another object field operation.
+        wrapperValueHandle.compareAndSet(valueWrapper, 1, 2)
+        wrapperValueHandle.set(valueWrapper, 3)
     }
 
     class Wrapper {
@@ -153,122 +41,313 @@ class VarHandleRepresentationTest: BaseFailingTest("varhandle_representation.txt
         var value: Int = 1
     }
 
-
     companion object {
+        @Suppress("unused")
         @Volatile
         @JvmStatic
-        private var staticNode = Node(1)
-
-        @Volatile
-        @JvmStatic
-        private var staticIntNumber: Int = 1
-
-        @Volatile
-        @JvmStatic
-        private var staticLongNumber: Long = 1L
-
-        @Volatile
-        @JvmStatic
-        private var staticShortNumber: Short = (1).toShort()
-
-        @Volatile
-        @JvmStatic
-        private var staticByteNumber: Byte = (1).toByte()
-
-        @Volatile
-        @JvmStatic
-        private var staticCharNumber: Char = '1'
-
-        @Volatile
-        @JvmStatic
-        private var staticBoolFlag: Boolean = false
-
-        @Volatile
-        @JvmStatic
-        private var staticDoubleNumber: Double = 1.0
-
-        @Volatile
-        @JvmStatic
-        private var staticFloatNumber: Float = 1f
-
-        /* Instance VarHandles */
+        private var staticWrapper = IntWrapper(1)
 
         val nodeHandle: VarHandle = MethodHandles.lookup()
-            .`in`(VarHandleRepresentationTest::class.java)
-            .findVarHandle(VarHandleRepresentationTest::class.java, "node", Node::class.java)
-        val intNumberHandle: VarHandle = MethodHandles.lookup()
-            .`in`(VarHandleRepresentationTest::class.java)
-            .findVarHandle(VarHandleRepresentationTest::class.java, "intNumber", Int::class.java)
-        val longNumberHandle: VarHandle = MethodHandles.lookup()
-            .`in`(VarHandleRepresentationTest::class.java)
-            .findVarHandle(VarHandleRepresentationTest::class.java, "longNumber", Long::class.java)
-        val shortNumberHandle: VarHandle = MethodHandles.lookup()
-            .`in`(VarHandleRepresentationTest::class.java)
-            .findVarHandle(VarHandleRepresentationTest::class.java, "shortNumber", Short::class.java)
-        val byteNumberHandle: VarHandle = MethodHandles.lookup()
-            .`in`(VarHandleRepresentationTest::class.java)
-            .findVarHandle(VarHandleRepresentationTest::class.java, "byteNumber", Byte::class.java)
-        val charNumberHandle: VarHandle = MethodHandles.lookup()
-            .`in`(VarHandleRepresentationTest::class.java)
-            .findVarHandle(VarHandleRepresentationTest::class.java, "charNumber", Char::class.java)
-        val booleanNumberHandle: VarHandle = MethodHandles.lookup()
-            .`in`(VarHandleRepresentationTest::class.java)
-            .findVarHandle(VarHandleRepresentationTest::class.java, "boolFlag", Boolean::class.java)
-        val doubleNumberHandle: VarHandle = MethodHandles.lookup()
-            .`in`(VarHandleRepresentationTest::class.java)
-            .findVarHandle(VarHandleRepresentationTest::class.java, "doubleNumber", Double::class.java)
-        val floatNumberHandle: VarHandle = MethodHandles.lookup()
-            .`in`(VarHandleRepresentationTest::class.java)
-            .findVarHandle(VarHandleRepresentationTest::class.java, "floatNumber", Float::class.java)
-
-        /* Static VarHandles */
-
+            .`in`(VarHandleReferenceRepresentationTest::class.java)
+            .findVarHandle(VarHandleReferenceRepresentationTest::class.java, "wrapper", IntWrapper::class.java)
         val staticNodeHandle: VarHandle = MethodHandles.lookup()
-            .`in`(VarHandleRepresentationTest::class.java)
-            .findStaticVarHandle(VarHandleRepresentationTest::class.java, "staticNode", Node::class.java)
-        val staticIntNumberHandle: VarHandle = MethodHandles.lookup()
-            .`in`(VarHandleRepresentationTest::class.java)
-            .findStaticVarHandle(VarHandleRepresentationTest::class.java, "staticIntNumber", Int::class.java)
-        val staticLongNumberHandle: VarHandle = MethodHandles.lookup()
-            .`in`(VarHandleRepresentationTest::class.java)
-            .findStaticVarHandle(VarHandleRepresentationTest::class.java, "staticLongNumber", Long::class.java)
-        val staticShortNumberHandle: VarHandle =
-            MethodHandles.lookup()
-                .`in`(VarHandleRepresentationTest::class.java)
-                .findStaticVarHandle(VarHandleRepresentationTest::class.java, "staticShortNumber", Short::class.java)
-        val staticByteNumberHandle: VarHandle = MethodHandles.lookup()
-            .`in`(VarHandleRepresentationTest::class.java)
-            .findStaticVarHandle(VarHandleRepresentationTest::class.java, "staticByteNumber", Byte::class.java)
-        val staticCharNumberHandle: VarHandle = MethodHandles.lookup()
-            .`in`(VarHandleRepresentationTest::class.java)
-            .findStaticVarHandle(VarHandleRepresentationTest::class.java, "staticCharNumber", Char::class.java)
-        val staticBooleanNumberHandle: VarHandle =
-            MethodHandles.lookup()
-                .`in`(VarHandleRepresentationTest::class.java)
-                .findStaticVarHandle(VarHandleRepresentationTest::class.java, "staticBoolFlag", Boolean::class.java)
-        val staticDoubleNumberHandle: VarHandle =
-            MethodHandles.lookup()
-                .`in`(VarHandleRepresentationTest::class.java)
-                .findStaticVarHandle(VarHandleRepresentationTest::class.java, "staticDoubleNumber", Double::class.java)
-        val staticFloatNumberHandle: VarHandle =
-            MethodHandles.lookup()
-                .`in`(VarHandleRepresentationTest::class.java)
-                .findStaticVarHandle(VarHandleRepresentationTest::class.java, "staticFloatNumber", Float::class.java)
-
-        /* Array handles */
+            .`in`(VarHandleReferenceRepresentationTest::class.java)
+            .findStaticVarHandle(VarHandleReferenceRepresentationTest::class.java, "staticWrapper", IntWrapper::class.java)
         val nodeArrayHandle: VarHandle = MethodHandles.arrayElementVarHandle(Array::class.java)
-        val intArrayHandle: VarHandle = MethodHandles.arrayElementVarHandle(IntArray::class.java)
-        val longArrayHandle: VarHandle = MethodHandles.arrayElementVarHandle(LongArray::class.java)
-        val shortArrayHandle: VarHandle = MethodHandles.arrayElementVarHandle(ShortArray::class.java)
-        val byteArrayHandle: VarHandle = MethodHandles.arrayElementVarHandle(ByteArray::class.java)
-        val charArrayHandle: VarHandle = MethodHandles.arrayElementVarHandle(CharArray::class.java)
-        val booleanArrayHandle: VarHandle = MethodHandles.arrayElementVarHandle(BooleanArray::class.java)
-        val doubleArrayHandle: VarHandle = MethodHandles.arrayElementVarHandle(DoubleArray::class.java)
-        val floatArrayHandle: VarHandle = MethodHandles.arrayElementVarHandle(FloatArray::class.java)
-
-        /* Other class VarHandle */
         val wrapperValueHandle: VarHandle = MethodHandles.lookup()
             .`in`(Wrapper::class.java)
             .findVarHandle(Wrapper::class.java, "value", Int::class.java)
+    }
+}
+
+class VarHandleIntRepresentationTest : BaseFailingTest("var_handle/varhandle_int_representation.txt") {
+
+    @Volatile
+    private var number: Int = 1
+    private var array = IntArray(10) { it }
+
+    override fun actionsForTrace() {
+        numberHandle.compareAndSet(this, number, 2)
+        numberHandle.set(this, 3)
+
+        staticNumberHandle.compareAndSet(staticNumber, 2)
+        staticNumberHandle.set(3)
+
+        arrayHandle.compareAndSet(array, 1, 1, 1)
+        arrayHandle.set(array, 1, 1)
+    }
+
+    companion object {
+
+        @Volatile
+        @JvmStatic
+        private var staticNumber: Int = 1
+
+        val numberHandle: VarHandle = MethodHandles.lookup()
+            .`in`(VarHandleIntRepresentationTest::class.java)
+            .findVarHandle(VarHandleIntRepresentationTest::class.java, "number", Int::class.java)
+
+        val staticNumberHandle: VarHandle = MethodHandles.lookup()
+            .`in`(VarHandleIntRepresentationTest::class.java)
+            .findStaticVarHandle(VarHandleIntRepresentationTest::class.java, "staticNumber", Int::class.java)
+
+        val arrayHandle: VarHandle = MethodHandles.arrayElementVarHandle(IntArray::class.java)
+    }
+}
+
+class VarHandleShortRepresentationTest : BaseFailingTest("var_handle/varhandle_short_representation.txt") {
+
+    @Volatile
+    private var number: Short = (1).toShort()
+    private var array = ShortArray(10) { it.toShort() }
+
+    override fun actionsForTrace() {
+        numberHandle.compareAndSet(this, number, (1).toShort())
+        numberHandle.set(this, (2).toShort())
+
+        staticNumberHandle.compareAndSet(staticNumber, (1).toShort())
+        staticNumberHandle.set((3).toShort())
+
+        arrayHandle.compareAndSet(array, 1, (3).toShort(), (1).toShort())
+        arrayHandle.set(array, 1, (2).toShort())
+    }
+
+    companion object {
+
+        @Volatile
+        @JvmStatic
+        private var staticNumber: Short = (2).toShort()
+
+        val numberHandle: VarHandle = MethodHandles.lookup()
+            .`in`(VarHandleShortRepresentationTest::class.java)
+            .findVarHandle(VarHandleShortRepresentationTest::class.java, "number", Short::class.java)
+
+        val staticNumberHandle: VarHandle = MethodHandles.lookup()
+            .`in`(VarHandleShortRepresentationTest::class.java)
+            .findStaticVarHandle(VarHandleShortRepresentationTest::class.java, "staticNumber", Short::class.java)
+
+        val arrayHandle: VarHandle = MethodHandles.arrayElementVarHandle(ShortArray::class.java)
+    }
+}
+
+
+
+class VarHandleByteRepresentationTest : BaseFailingTest("var_handle/varhandle_byte_representation.txt") {
+
+    @Volatile
+    private var number: Byte = (1).toByte()
+    private var array = ByteArray(10) { it.toByte() }
+
+    override fun actionsForTrace() {
+        numberHandle.compareAndSet(this, number, (1).toByte())
+        numberHandle.set(this, (2).toByte())
+
+        staticNumberHandle.compareAndSet(staticNumber, (1).toByte())
+        staticNumberHandle.set((3).toByte())
+
+        arrayHandle.compareAndSet(array, 1, (3).toByte(), (1).toByte())
+        arrayHandle.set(array, 1, (2).toByte())
+    }
+
+    companion object {
+
+        @Volatile
+        @JvmStatic
+        private var staticNumber: Byte = (2).toByte()
+
+        val numberHandle: VarHandle = MethodHandles.lookup()
+            .`in`(VarHandleByteRepresentationTest::class.java)
+            .findVarHandle(VarHandleByteRepresentationTest::class.java, "number", Byte::class.java)
+
+        val staticNumberHandle: VarHandle = MethodHandles.lookup()
+            .`in`(VarHandleByteRepresentationTest::class.java)
+            .findStaticVarHandle(VarHandleByteRepresentationTest::class.java, "staticNumber", Byte::class.java)
+
+        val arrayHandle: VarHandle = MethodHandles.arrayElementVarHandle(ByteArray::class.java)
+    }
+}
+
+
+
+class VarHandleCharRepresentationTest : BaseFailingTest("var_handle/varhandle_char_representation.txt") {
+
+    @Volatile
+    private var number: Char = '1'
+    private var array = CharArray(10) { it.toChar() }
+
+    override fun actionsForTrace() {
+        numberHandle.compareAndSet(this, number, '1')
+        numberHandle.set(this, '2')
+
+        staticNumberHandle.compareAndSet(staticNumber, '1')
+        staticNumberHandle.set('3')
+
+        arrayHandle.compareAndSet(array, 1, '3', '1')
+        arrayHandle.set(array, 1, '2')
+    }
+
+    companion object {
+
+        @Volatile
+        @JvmStatic
+        private var staticNumber: Char = '2'
+
+        val numberHandle: VarHandle = MethodHandles.lookup()
+            .`in`(VarHandleCharRepresentationTest::class.java)
+            .findVarHandle(VarHandleCharRepresentationTest::class.java, "number", Char::class.java)
+
+        val staticNumberHandle: VarHandle = MethodHandles.lookup()
+            .`in`(VarHandleCharRepresentationTest::class.java)
+            .findStaticVarHandle(VarHandleCharRepresentationTest::class.java, "staticNumber", Char::class.java)
+
+        val arrayHandle: VarHandle = MethodHandles.arrayElementVarHandle(CharArray::class.java)
+    }
+}
+
+
+
+class VarHandleBooleanRepresentationTest : BaseFailingTest("var_handle/varhandle_boolean_representation.txt") {
+
+    @Volatile
+    private var number: Boolean = false
+    private var array = BooleanArray(10) { false }
+
+    override fun actionsForTrace() {
+        numberHandle.compareAndSet(this, number, false)
+        numberHandle.set(this, true)
+
+        staticNumberHandle.compareAndSet(staticNumber, false)
+        staticNumberHandle.set(false)
+
+        arrayHandle.compareAndSet(array, 1, false, false)
+        arrayHandle.set(array, 1, true)
+    }
+
+    companion object {
+
+        @Volatile
+        @JvmStatic
+        private var staticNumber: Boolean = true
+
+        val numberHandle: VarHandle = MethodHandles.lookup()
+            .`in`(VarHandleBooleanRepresentationTest::class.java)
+            .findVarHandle(VarHandleBooleanRepresentationTest::class.java, "number", Boolean::class.java)
+
+        val staticNumberHandle: VarHandle = MethodHandles.lookup()
+            .`in`(VarHandleBooleanRepresentationTest::class.java)
+            .findStaticVarHandle(VarHandleBooleanRepresentationTest::class.java, "staticNumber", Boolean::class.java)
+
+        val arrayHandle: VarHandle = MethodHandles.arrayElementVarHandle(BooleanArray::class.java)
+    }
+}
+
+
+
+class VarHandleLongRepresentationTest : BaseFailingTest("var_handle/varhandle_long_representation.txt") {
+
+    @Volatile
+    private var number: Long = 1L
+    private var array = LongArray(10) { it.toLong() }
+
+    override fun actionsForTrace() {
+        numberHandle.compareAndSet(this, number, 1L)
+        numberHandle.set(this, 2L)
+
+        staticNumberHandle.compareAndSet(staticNumber, 1L)
+        staticNumberHandle.set(3L)
+
+        arrayHandle.compareAndSet(array, 1, 3L, 1L)
+        arrayHandle.set(array, 1, 2L)
+    }
+
+    companion object {
+
+        @Volatile
+        @JvmStatic
+        private var staticNumber: Long = 2L
+
+        val numberHandle: VarHandle = MethodHandles.lookup()
+            .`in`(VarHandleLongRepresentationTest::class.java)
+            .findVarHandle(VarHandleLongRepresentationTest::class.java, "number", Long::class.java)
+
+        val staticNumberHandle: VarHandle = MethodHandles.lookup()
+            .`in`(VarHandleLongRepresentationTest::class.java)
+            .findStaticVarHandle(VarHandleLongRepresentationTest::class.java, "staticNumber", Long::class.java)
+
+        val arrayHandle: VarHandle = MethodHandles.arrayElementVarHandle(LongArray::class.java)
+    }
+}
+
+
+
+class VarHandleFloatRepresentationTest : BaseFailingTest("var_handle/varhandle_float_representation.txt") {
+
+    @Volatile
+    private var number: Float = 1f
+    private var array = FloatArray(10) { it.toFloat() }
+
+    override fun actionsForTrace() {
+        numberHandle.compareAndSet(this, number, 1f)
+        numberHandle.set(this, 2f)
+
+        staticNumberHandle.compareAndSet(staticNumber, 1f)
+        staticNumberHandle.set(3f)
+
+        arrayHandle.compareAndSet(array, 1, 3f, 1f)
+        arrayHandle.set(array, 1, 2f)
+    }
+
+    companion object {
+
+        @Volatile
+        @JvmStatic
+        private var staticNumber: Float = 2f
+
+        val numberHandle: VarHandle = MethodHandles.lookup()
+            .`in`(VarHandleFloatRepresentationTest::class.java)
+            .findVarHandle(VarHandleFloatRepresentationTest::class.java, "number", Float::class.java)
+
+        val staticNumberHandle: VarHandle = MethodHandles.lookup()
+            .`in`(VarHandleFloatRepresentationTest::class.java)
+            .findStaticVarHandle(VarHandleFloatRepresentationTest::class.java, "staticNumber", Float::class.java)
+
+        val arrayHandle: VarHandle = MethodHandles.arrayElementVarHandle(FloatArray::class.java)
+    }
+}
+
+
+
+class VarHandleDoubleRepresentationTest : BaseFailingTest("var_handle/varhandle_double_representation.txt") {
+
+    @Volatile
+    private var number: Double = 1.0
+    private var array = DoubleArray(10) { it.toDouble() }
+
+    override fun actionsForTrace() {
+        numberHandle.compareAndSet(this, number, 1.0)
+        numberHandle.set(this, 2.0)
+
+        staticNumberHandle.compareAndSet(staticNumber, 1.0)
+        staticNumberHandle.set(3.0)
+
+        arrayHandle.compareAndSet(array, 1, 3.0, 1.0)
+        arrayHandle.set(array, 1, 2.0)
+    }
+
+    companion object {
+
+        @Volatile
+        @JvmStatic
+        private var staticNumber: Double = 2.0
+
+        val numberHandle: VarHandle = MethodHandles.lookup()
+            .`in`(VarHandleDoubleRepresentationTest::class.java)
+            .findVarHandle(VarHandleDoubleRepresentationTest::class.java, "number", Double::class.java)
+
+        val staticNumberHandle: VarHandle = MethodHandles.lookup()
+            .`in`(VarHandleDoubleRepresentationTest::class.java)
+            .findStaticVarHandle(VarHandleDoubleRepresentationTest::class.java, "staticNumber", Double::class.java)
+
+        val arrayHandle: VarHandle = MethodHandles.arrayElementVarHandle(DoubleArray::class.java)
     }
 }

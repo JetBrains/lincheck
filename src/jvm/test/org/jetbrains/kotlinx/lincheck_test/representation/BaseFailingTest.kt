@@ -18,7 +18,7 @@ import org.junit.Test
 
 /**
  * Failing test that checks that output using [outputFileName].
- * The goal is to place the logic to check trace in the [actionsJustForTrace] method.
+ * The goal is to place the logic to check trace in the [actionsForTrace] method.
  */
 abstract class BaseFailingTest(private val outputFileName: String) {
 
@@ -28,14 +28,14 @@ abstract class BaseFailingTest(private val outputFileName: String) {
     @Operation
     fun increment(): Int {
         val result = counter++
-        actionsJustForTrace()
+        actionsForTrace()
         return result
     }
 
     /**
      * Implement me and place the logic to check its trace.
      */
-    abstract fun actionsJustForTrace()
+    abstract fun actionsForTrace()
 
     @Test
     fun test() = ModelCheckingOptions()

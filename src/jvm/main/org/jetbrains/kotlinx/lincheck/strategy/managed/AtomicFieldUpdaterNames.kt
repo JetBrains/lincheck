@@ -10,8 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import org.jetbrains.kotlinx.lincheck.findFieldNameByOffset
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder.UNSAFE
-import org.jetbrains.kotlinx.lincheck.util.findFieldNameByOffset
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater
 import java.util.concurrent.atomic.AtomicLongFieldUpdater
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
@@ -24,6 +24,9 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 internal object AtomicFieldUpdaterNames {
 
     internal fun getAtomicFieldUpdaterName(updater: Any): String? {
+        if (updater !is AtomicIntegerFieldUpdater<*> && updater !is AtomicLongFieldUpdater<*> && updater !is AtomicReferenceFieldUpdater<*, *>) {
+            throw IllegalArgumentException("Provided object is not a recognized Atomic*FieldUpdater type.")
+        }
         // Extract the private offset value and find the matching field.
         try {
             // Cannot use neither reflection not MethodHandles.Lookup, as they lead to a warning.
