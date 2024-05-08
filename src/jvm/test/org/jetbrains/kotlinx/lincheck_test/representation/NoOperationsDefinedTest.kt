@@ -16,7 +16,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelChecki
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Test
-import java.lang.IllegalArgumentException
 
 /**
  * This class is used to test the exception message when no operations are defined in a tested class.
@@ -25,7 +24,7 @@ class NoOperationsDefinedTest {
 
     @Test
     fun test() {
-        val exception = assertThrows(IllegalArgumentException::class.java) { ModelCheckingOptions().check(this::class) }
+        val exception = assertThrows(IllegalStateException::class.java) { ModelCheckingOptions().check(this::class) }
         assertEquals(NO_OPERATION_ERROR_MESSAGE, exception.message)
     }
 

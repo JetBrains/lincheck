@@ -163,7 +163,7 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         ).newInstance(this, testStructure, randomProvider)
 
     private fun checkAtLeastOneMethodIsMarkedAsOperation(testClass: Class<*>) {
-        require (testClass.methods.any { it.isAnnotationPresent(Operation::class.java) }) { NO_OPERATION_ERROR_MESSAGE }
+        check (testClass.methods.any { it.isAnnotationPresent(Operation::class.java) }) { NO_OPERATION_ERROR_MESSAGE }
     }
 
     // This companion object is used for backwards compatibility.
@@ -205,4 +205,4 @@ fun <O : Options<O, *>> O.check(testClass: KClass<*>) = this.check(testClass.jav
 
 internal fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>) = LinChecker(testClass, this).checkImpl()
 
-internal const val NO_OPERATION_ERROR_MESSAGE = "You should provide at least one operation to check. Please see the official guide: https://kotlinlang.org/docs/introduction.html"
+internal const val NO_OPERATION_ERROR_MESSAGE = "You must specify at least one operation to test. Please refer to the user guide: https://kotlinlang.org/docs/introduction.html"
