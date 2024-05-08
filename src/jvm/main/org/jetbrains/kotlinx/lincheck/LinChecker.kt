@@ -42,8 +42,9 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
      * @throws LincheckAssertionError if the testing data structure is incorrect.
      */
     fun check() {
-        val failure = checkImpl() ?: return
-        throw LincheckAssertionError(failure)
+        checkImpl { failure ->
+            if (failure != null) throw LincheckAssertionError(failure)
+        }
     }
 
     /**
