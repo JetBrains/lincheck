@@ -90,6 +90,9 @@ internal object AtomicReferenceNames {
     private fun findObjectField(testObject: Any?, value: Any, visitedObjects: MutableSet<Any>): TraverseResult {
         if (testObject == null) return NotFound
         var fieldName: AtomicReferenceOwnerWithName? = null
+        // We take all the fields from the hierarchy.
+        // If two or more fields match (===) the AtomicReference object, we fall back to the default behavior,
+        // so there is no problem that we can receive some fields of the same name and the same type.
         for (field in testObject::class.java.allDeclaredFieldWithSuperclasses) {
             if (field.type.isPrimitive || !field.trySetAccessible()) continue
             val fieldValue = field.get(testObject)

@@ -195,6 +195,11 @@ internal val Throwable.text: String get() {
     return writer.buffer.toString()
 }
 
+/**
+ * Returns all found fields in the hierarchy.
+ * Multiple fields with the same name and the same type may be returned
+ * if they appear in the subclass and a parent class.
+ */
 internal val Class<*>.allDeclaredFieldWithSuperclasses get(): List<Field> {
     val fields: MutableList<Field> = ArrayList<Field>()
     var currentClass: Class<*>? = this
