@@ -14,6 +14,7 @@ import kotlinx.atomicfu.AtomicArray
 import kotlinx.atomicfu.AtomicBooleanArray
 import kotlinx.atomicfu.AtomicIntArray
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.OwnerWithName.*
 import java.util.*
 import java.util.concurrent.atomic.AtomicIntegerArray
 import java.util.concurrent.atomic.AtomicLongArray
@@ -37,13 +38,13 @@ internal object AtomicReferenceNames {
         return if (receiverAndName != null) {
             if (isAtomicArrayIndexMethodCall(atomicReference, parameters)) {
                 when (receiverAndName) {
-                    is OwnerWithName.InstanceOwnerWithName -> InstanceFieldAtomicArrayMethod(receiverAndName.owner, receiverAndName.fieldName, parameters[0] as Int)
-                    is OwnerWithName.StaticOwnerWithName -> StaticFieldAtomicArrayMethod(receiverAndName.clazz, receiverAndName.fieldName, parameters[0] as Int)
+                    is InstanceOwnerWithName -> InstanceFieldAtomicArrayMethod(receiverAndName.owner, receiverAndName.fieldName, parameters[0] as Int)
+                    is StaticOwnerWithName -> StaticFieldAtomicArrayMethod(receiverAndName.clazz, receiverAndName.fieldName, parameters[0] as Int)
                 }
             } else {
                 when (receiverAndName) {
-                    is OwnerWithName.InstanceOwnerWithName -> AtomicReferenceInstanceMethod(receiverAndName.owner, receiverAndName.fieldName)
-                    is OwnerWithName.StaticOwnerWithName -> AtomicReferenceStaticMethod(receiverAndName.clazz, receiverAndName.fieldName)
+                    is InstanceOwnerWithName -> AtomicReferenceInstanceMethod(receiverAndName.owner, receiverAndName.fieldName)
+                    is StaticOwnerWithName -> AtomicReferenceStaticMethod(receiverAndName.clazz, receiverAndName.fieldName)
                 }
             }
         } else {

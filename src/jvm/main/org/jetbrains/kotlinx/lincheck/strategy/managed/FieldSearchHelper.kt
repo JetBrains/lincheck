@@ -30,12 +30,13 @@ import java.util.concurrent.atomic.AtomicReferenceArray
 internal object FieldSearchHelper {
 
     /**
-     * Determines if the [reference] is stored in the only one field of the [testObject] and this
-     * field is final. In other cases returns `null`.
+     * Determines if the [value] is stored in the only one field of the [testObject] and this
+     * field is final.
+     * In case the [value] is not found or accessible by multiple fields, the function returns `null`.
      */
-    internal fun findFinalFieldWithOwner(testObject: Any, reference: Any): OwnerWithName? = runCatching {
+    internal fun findFinalFieldWithOwner(testObject: Any, value: Any): OwnerWithName? = runCatching {
         val visitedObjects: MutableSet<Any> = Collections.newSetFromMap(IdentityHashMap())
-        return when (val result = findObjectField(testObject, reference, visitedObjects)) {
+        return when (val result = findObjectField(testObject, value, visitedObjects)) {
             is FieldName -> result.field
             MultipleFieldsMatching, NotFound, FoundInNonFinalField -> null
         }
