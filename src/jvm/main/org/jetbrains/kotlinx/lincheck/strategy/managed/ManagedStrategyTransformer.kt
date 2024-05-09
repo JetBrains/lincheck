@@ -2267,7 +2267,6 @@ private val WAIT_TRACE_POINT_TYPE = Type.getType(WaitTracePoint::class.java)
 private val NOTIFY_TRACE_POINT_TYPE = Type.getType(NotifyTracePoint::class.java)
 private val PARK_TRACE_POINT_TYPE = Type.getType(ParkTracePoint::class.java)
 private val UNPARK_TRACE_POINT_TYPE = Type.getType(UnparkTracePoint::class.java)
-private val UTILS_KT_TYPE = Type.getType("Lorg/jetbrains/kotlinx/lincheck/UtilsKt;")
 
 private val CURRENT_THREAD_NUMBER_METHOD = Method.getMethod(ManagedStrategy::currentThreadNumber.javaMethod)
 private val ON_OBJECT_ALLOCATION_METHOD = Method.getMethod(ManagedStrategy::onObjectAllocation.javaMethod)
@@ -2325,7 +2324,6 @@ private val REGISTER_UNSAFE_FIELD_OFFSET_BY_NAME = Method.getMethod(MemoryLocati
 private val REGISTER_UNSAFE_FIELD_OFFSET_BY_REFLECTION = Method.getMethod(MemoryLocationLabeler::registerUnsafeFieldOffsetByReflection.javaMethod)
 private val REGISTER_UNSAFE_ARRAY_BASE_OFFSET = Method.getMethod(MemoryLocationLabeler::registerUnsafeArrayBaseOffset.javaMethod)
 private val REGISTER_UNSAFE_ARRAY_INDEX_SCALE = Method.getMethod(MemoryLocationLabeler::registerUnsafeArrayIndexScale.javaMethod)
-private val GET_KCLASS_FROM_DESCRIPTOR = Method.getMethod(::getKClassFromDescriptor.javaMethod)
 
 private val WRITE_KEYWORDS = listOf("set", "put", "swap", "exchange")
 

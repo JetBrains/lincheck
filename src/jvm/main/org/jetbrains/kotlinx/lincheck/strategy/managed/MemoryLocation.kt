@@ -20,9 +20,11 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import org.jetbrains.kotlinx.lincheck.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import java.lang.reflect.*
+import kotlin.reflect.KClass
 import java.lang.reflect.Array as ReflectArray
 
 
@@ -40,6 +42,9 @@ interface MemoryLocation {
     fun read(valueMapper: ValueMapper): Any?
     fun write(value: Any?, valueMapper: ValueMapper)
 }
+
+val MemoryLocation.kClass: KClass<*>
+    get() = getKClassFromDescriptor(type.descriptor)
 
 class StaticFieldMemoryLocation(
     strategy: ManagedStrategy,
@@ -70,7 +75,7 @@ class StaticFieldMemoryLocation(
         return (other is StaticFieldMemoryLocation)
                 && (className == other.className)
                 && (fieldName == other.fieldName)
-                && (type == other.type)
+                && (kClass == other.kClass)
     }
 
     override fun hashCode(): Int {
@@ -120,7 +125,7 @@ class ObjectFieldMemoryLocation(
                 && (objID == other.objID)
                 && (className == other.className)
                 && (fieldName == other.fieldName)
-                && (type == other.type)
+                && (kClass == other.kClass)
     }
 
     override fun hashCode(): Int {
@@ -195,7 +200,7 @@ class ArrayElementMemoryLocation(
         return (other is ArrayElementMemoryLocation)
                 && (objID == other.objID)
                 && (index == other.index)
-                && (type == other.type)
+                && (kClass == other.kClass)
     }
 
     override fun hashCode(): Int {
@@ -250,7 +255,7 @@ class AtomicPrimitiveMemoryLocation(
             return true
         return (other is AtomicPrimitiveMemoryLocation)
                 && (objID == other.objID)
-                && (type == other.type)
+                && (kClass == other.kClass)
     }
 
     override fun hashCode(): Int {

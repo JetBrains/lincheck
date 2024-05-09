@@ -342,7 +342,15 @@ private fun Type.getKClass(): KClass<*> = when (sort) {
     Type.DOUBLE  -> Double::class
     Type.CHAR    -> Char::class
     Type.BOOLEAN -> Boolean::class
-    Type.OBJECT  -> Any::class
+    Type.OBJECT  -> { when (this) {
+        INT_TYPE_BOXED      -> Int::class
+        BYTE_TYPE_BOXED     -> Byte::class
+        SHORT_TYPE_BOXED    -> Short::class
+        LONG_TYPE_BOXED     -> Long::class
+        CHAR_TYPE_BOXED     -> Char::class
+        BOOLEAN_TYPE_BOXED  -> Boolean::class
+        else                -> Any::class
+    }}
     Type.ARRAY   -> { when (elementType.sort) {
         Type.INT     -> IntArray::class
         Type.BYTE    -> ByteArray::class
@@ -356,4 +364,12 @@ private fun Type.getKClass(): KClass<*> = when (sort) {
     }}
     else -> throw IllegalArgumentException()
 }
+
+private val INT_TYPE_BOXED      = Type.getType("Ljava/lang/Integer")
+private val LONG_TYPE_BOXED     = Type.getType("Ljava/lang/Long")
+private val SHORT_TYPE_BOXED    = Type.getType("Ljava/lang/Short")
+private val BYTE_TYPE_BOXED     = Type.getType("Ljava/lang/Byte")
+private val CHAR_TYPE_BOXED     = Type.getType("Ljava/lang/Character")
+private val BOOLEAN_TYPE_BOXED  = Type.getType("Ljava/lang/Boolean")
+
 
