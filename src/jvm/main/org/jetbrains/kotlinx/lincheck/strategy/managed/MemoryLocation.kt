@@ -44,7 +44,7 @@ interface MemoryLocation {
 }
 
 val MemoryLocation.kClass: KClass<*>
-    get() = getKClassFromDescriptor(type.descriptor)
+    get() = type.getKClass()
 
 class StaticFieldMemoryLocation(
     strategy: ManagedStrategy,

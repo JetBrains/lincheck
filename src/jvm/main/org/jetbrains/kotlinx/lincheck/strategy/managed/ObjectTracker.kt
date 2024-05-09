@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import org.jetbrains.kotlinx.lincheck.utils.*
 import org.objectweb.asm.Type
 import java.util.*
+import kotlin.reflect.KClass
 
 abstract class ObjectTracker {
 
@@ -37,6 +38,9 @@ abstract class ObjectTracker {
     abstract fun reset()
 
 }
+
+fun ObjectTracker.getOrRegisterObjectID(obj: OpaqueValue?): ObjectID =
+    if (obj == null) NULL_OBJECT_ID else getOrRegisterObjectID(obj)
 
 fun ObjectTracker.getValue(type: Type, id: ValueID): OpaqueValue? = when (type.sort) {
     Type.LONG       -> id.opaque()
@@ -74,8 +78,44 @@ fun ObjectTracker.getOrRegisterValueID(type: Type, value: OpaqueValue?): ValueID
     }
 }
 
-fun ObjectTracker.getOrRegisterObjectID(obj: OpaqueValue?): ObjectID =
-    if (obj == null) NULL_OBJECT_ID else getOrRegisterObjectID(obj)
+internal fun Type.getKClass(): KClass<*> = when (sort) {
+    Type.INT     -> Int::class
+    Type.BYTE    -> Byte::class
+    Type.SHORT   -> Short::class
+    Type.LONG    -> Long::class
+    Type.FLOAT   -> Float::class
+    Type.DOUBLE  -> Double::class
+    Type.CHAR    -> Char::class
+    Type.BOOLEAN -> Boolean::class
+    Type.OBJECT  -> { when (this) {
+        INT_TYPE_BOXED      -> Int::class
+        BYTE_TYPE_BOXED     -> Byte::class
+        SHORT_TYPE_BOXED    -> Short::class
+        LONG_TYPE_BOXED     -> Long::class
+        CHAR_TYPE_BOXED     -> Char::class
+        BOOLEAN_TYPE_BOXED  -> Boolean::class
+        else                -> Any::class
+    }}
+    Type.ARRAY   -> { when (elementType.sort) {
+        Type.INT     -> IntArray::class
+        Type.BYTE    -> ByteArray::class
+        Type.SHORT   -> ShortArray::class
+        Type.LONG    -> LongArray::class
+        Type.FLOAT   -> FloatArray::class
+        Type.DOUBLE  -> DoubleArray::class
+        Type.CHAR    -> CharArray::class
+        Type.BOOLEAN -> BooleanArray::class
+        else         -> Array::class
+    }}
+    else -> throw IllegalArgumentException()
+}
+
+private val INT_TYPE_BOXED      = Type.getType("Ljava/lang/Integer")
+private val LONG_TYPE_BOXED     = Type.getType("Ljava/lang/Long")
+private val SHORT_TYPE_BOXED    = Type.getType("Ljava/lang/Short")
+private val BYTE_TYPE_BOXED     = Type.getType("Ljava/lang/Byte")
+private val CHAR_TYPE_BOXED     = Type.getType("Ljava/lang/Character")
+private val BOOLEAN_TYPE_BOXED  = Type.getType("Ljava/lang/Boolean")
 
 
 internal class PlainObjectTracker : ObjectTracker() {

@@ -114,6 +114,11 @@ class EventStructure(
     private val objectRegistry = ObjectRegistry()
 
     /**
+     * Object tracker.
+     */
+    val objectTracker: ObjectTracker = EventStructureObjectTracker()
+
+    /**
      * For each blocked thread, stores a descriptor of the blocked event.
      *
      * The thread may become blocked when it issues a request-event
@@ -510,39 +515,35 @@ class EventStructure(
     /*      Object tracking                                                      */
     /* ************************************************************************* */
 
-    fun getObject(id: ObjectID): OpaqueValue? {
-        return objectRegistry[id]?.obj
-    }
+    private inner class EventStructureObjectTracker : ObjectTracker() {
 
-    fun getObjectID(obj: OpaqueValue): ValueID {
-        return objectRegistry[obj.unwrap()]?.id ?: INVALID_OBJECT_ID
-    }
-
-    fun getOrRegisterObject(obj: OpaqueValue): ValueID {
-        objectRegistry[obj.unwrap()]?.let {
-            return it.id
+        override fun registerObject(iThread: Int, obj: OpaqueValue): ObjectID {
+            return addObjectAllocationEvent(iThread, obj).label.objectID
         }
-        val id = objectRegistry.nextObjectID
-        val entry = ObjectEntry(id, obj, root)
-        val initLabel = (root.label as InitializationLabel)
-        val className = obj.unwrap().javaClass.simpleName
-        objectRegistry.register(entry)
-        initLabel.trackExternalObject(className, id)
-        return entry.id
-    }
 
-    fun computeValueID(type: Type, value: OpaqueValue?): ValueID {
-        // TODO: get rid of copy-paste with [ObjectTracker.getOrRegisterObjectID]
-        if (value == null) return NULL_OBJECT_ID
-        return when (type.sort) {
-            Type.LONG       -> (value.unwrap() as Long)
-            Type.INT        -> (value.unwrap() as Int).toLong()
-            Type.BYTE       -> (value.unwrap() as Byte).toLong()
-            Type.SHORT      -> (value.unwrap() as Short).toLong()
-            Type.CHAR       -> (value.unwrap() as Char).toLong()
-            Type.BOOLEAN    -> (value.unwrap() as Boolean).toInt().toLong()
-            else            -> getOrRegisterObject(value)
+        override fun getOrRegisterObjectID(obj: OpaqueValue): ObjectID {
+            objectRegistry[obj.unwrap()]?.let {
+                return it.id
+            }
+            val id = objectRegistry.nextObjectID
+            val entry = ObjectEntry(id, obj, root)
+            val initLabel = (root.label as InitializationLabel)
+            val className = obj.unwrap().javaClass.simpleName
+            objectRegistry.register(entry)
+            initLabel.trackExternalObject(className, id)
+            return entry.id
         }
+
+        override fun getObjectID(obj: OpaqueValue): ObjectID {
+            return objectRegistry[obj.unwrap()]?.id ?: INVALID_OBJECT_ID
+        }
+
+        override fun getObject(id: ObjectID): OpaqueValue? {
+            return objectRegistry[id]?.obj
+        }
+
+        override fun reset() {}
+
     }
 
     fun allocationEvent(id: ObjectID): AtomicThreadEvent? {
@@ -760,7 +761,7 @@ class EventStructure(
         // to pick the root event as the next event to explore from.
         val label = InitializationLabel(initThreadId, mainThreadId) { location ->
             val value = memoryInitializer(location)
-            computeValueID(location.type, value)
+            objectTracker.getOrRegisterValueID(location.type, value)
         }
         return createEvent(initThreadId, label, parent = null, dependencies = emptyList(), visit = false)!!
             .also { event ->
@@ -967,7 +968,7 @@ class EventStructure(
             className = value.unwrap().javaClass.simpleName,
             memoryInitializer = { location ->
                 val initValue = memoryInitializer(location)
-                computeValueID(location.type, initValue)
+                objectTracker.getOrRegisterValueID(location.type, initValue)
             },
         )
         val parent = playedFrontier[iThread]
@@ -983,7 +984,7 @@ class EventStructure(
                       isExclusive: Boolean = false): AtomicThreadEvent {
         val label = WriteAccessLabel(
             location = location,
-            writeValue = computeValueID(location.type, value),
+            writeValue = objectTracker.getOrRegisterValueID(location.type, value),
             isExclusive = isExclusive,
             codeLocation = codeLocation,
         )
@@ -1018,7 +1019,7 @@ class EventStructure(
                             isSynthetic: Boolean = false): AtomicThreadEvent {
         val label = LockLabel(
             kind = LabelKind.Request,
-            mutexID = getOrRegisterObject(mutex),
+            mutexID = objectTracker.getOrRegisterObjectID(mutex),
             isReentry = isReentry,
             reentrancyDepth = reentrancyDepth,
             isSynthetic = isSynthetic,
@@ -1035,7 +1036,7 @@ class EventStructure(
                        isReentry: Boolean = false, reentrancyDepth: Int = 1,
                        isSynthetic: Boolean = false): AtomicThreadEvent {
         val label = UnlockLabel(
-            mutexID = getOrRegisterObject(mutex),
+            mutexID = objectTracker.getOrRegisterObjectID(mutex),
             isReentry = isReentry,
             reentrancyDepth = reentrancyDepth,
             isSynthetic = isSynthetic,
@@ -1046,7 +1047,7 @@ class EventStructure(
     fun addWaitRequestEvent(iThread: Int, mutex: OpaqueValue): AtomicThreadEvent {
         val label = WaitLabel(
             kind = LabelKind.Request,
-            mutexID = getOrRegisterObject(mutex),
+            mutexID = objectTracker.getOrRegisterObjectID(mutex),
         )
         return addRequestEvent(iThread, label)
 
@@ -1064,7 +1065,7 @@ class EventStructure(
         //   However, if one day we will want to support wait semantics without spurious wake-ups
         //   we will need to revisit this.
         val label = NotifyLabel(
-            mutexID = getOrRegisterObject(mutex),
+            mutexID = objectTracker.getOrRegisterObjectID(mutex),
             isBroadcast = isBroadcast,
         )
         return addSendEvent(iThread, label)
