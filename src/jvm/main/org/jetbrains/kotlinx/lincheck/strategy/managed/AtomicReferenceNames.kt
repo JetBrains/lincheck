@@ -13,11 +13,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import kotlinx.atomicfu.AtomicArray
 import kotlinx.atomicfu.AtomicBooleanArray
 import kotlinx.atomicfu.AtomicIntArray
-import org.jetbrains.kotlinx.lincheck.allDeclaredFieldWithSuperclasses
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceNames.AtomicReferenceOwnerWithName.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceNames.TraverseResult.*
-import java.lang.reflect.Modifier
 import java.util.*
 import java.util.concurrent.atomic.AtomicIntegerArray
 import java.util.concurrent.atomic.AtomicLongArray
@@ -37,17 +33,17 @@ internal object AtomicReferenceNames {
         atomicReference: Any,
         parameters: Array<Any?>
     ): AtomicReferenceMethodType {
-        val receiverAndName = getAtomicReferenceReceiverAndName(testObject, atomicReference)
+        val receiverAndName = FieldSearchHelper.findFinalFieldWithOwner(testObject, atomicReference)
         return if (receiverAndName != null) {
             if (isAtomicArrayIndexMethodCall(atomicReference, parameters)) {
                 when (receiverAndName) {
-                    is InstanceOwnerWithName -> InstanceFieldAtomicArrayMethod(receiverAndName.receiver, receiverAndName.fieldName, parameters[0] as Int)
-                    is StaticOwnerWithName -> StaticFieldAtomicArrayMethod(receiverAndName.clazz, receiverAndName.fieldName, parameters[0] as Int)
+                    is OwnerWithName.InstanceOwnerWithName -> InstanceFieldAtomicArrayMethod(receiverAndName.owner, receiverAndName.fieldName, parameters[0] as Int)
+                    is OwnerWithName.StaticOwnerWithName -> StaticFieldAtomicArrayMethod(receiverAndName.clazz, receiverAndName.fieldName, parameters[0] as Int)
                 }
             } else {
                 when (receiverAndName) {
-                    is InstanceOwnerWithName -> AtomicReferenceInstanceMethod(receiverAndName.receiver, receiverAndName.fieldName)
-                    is StaticOwnerWithName -> AtomicReferenceStaticMethod(receiverAndName.clazz, receiverAndName.fieldName)
+                    is OwnerWithName.InstanceOwnerWithName -> AtomicReferenceInstanceMethod(receiverAndName.owner, receiverAndName.fieldName)
+                    is OwnerWithName.StaticOwnerWithName -> AtomicReferenceStaticMethod(receiverAndName.clazz, receiverAndName.fieldName)
                 }
             }
         } else {
@@ -69,70 +65,7 @@ internal object AtomicReferenceNames {
                 atomicReference is AtomicBooleanArray
     }
 
-    private fun getAtomicReferenceReceiverAndName(testObject: Any, reference: Any): AtomicReferenceOwnerWithName? =
-        runCatching {
-            val visitedObjects: MutableSet<Any> = Collections.newSetFromMap(IdentityHashMap())
-            return when (val result = findObjectField(testObject, reference, visitedObjects)) {
-                is FieldName -> result.fieldName
-                MultipleFieldsMatching, NotFound -> null
-            }
-        }.getOrElse { exception ->
-            exception.printStackTrace()
-            null
-        }
 
-    private sealed interface TraverseResult {
-        data object NotFound : TraverseResult
-        data class FieldName(val fieldName: AtomicReferenceOwnerWithName) : TraverseResult
-        data object MultipleFieldsMatching : TraverseResult
-    }
-
-    private fun findObjectField(testObject: Any?, value: Any, visitedObjects: MutableSet<Any>): TraverseResult {
-        if (testObject == null) return NotFound
-        var fieldName: AtomicReferenceOwnerWithName? = null
-        // We take all the fields from the hierarchy.
-        // If two or more fields match (===) the AtomicReference object, we fall back to the default behavior,
-        // so there is no problem that we can receive some fields of the same name and the same type.
-        for (field in testObject::class.java.allDeclaredFieldWithSuperclasses) {
-            if (field.type.isPrimitive || !field.trySetAccessible()) continue
-            val fieldValue = field.get(testObject)
-
-            if (fieldValue in visitedObjects) continue
-            visitedObjects += testObject
-
-            if (fieldValue === value) {
-                if (fieldName != null) return MultipleFieldsMatching
-
-                fieldName = if (Modifier.isStatic(field.modifiers)) {
-                    StaticOwnerWithName(field.name, testObject::class.java)
-                } else {
-                    InstanceOwnerWithName(field.name, testObject)
-                }
-                continue
-            }
-            when (val result = findObjectField(fieldValue, value, visitedObjects)) {
-                is FieldName -> {
-                    if (fieldName != null) {
-                        return MultipleFieldsMatching
-                    } else {
-                        fieldName = result.fieldName
-                    }
-                }
-
-                MultipleFieldsMatching -> return result
-                NotFound -> {}
-            }
-        }
-        return if (fieldName != null) FieldName(fieldName) else NotFound
-    }
-
-    private sealed class AtomicReferenceOwnerWithName(val fieldName: String) {
-        class StaticOwnerWithName(fieldName: String, val clazz: Class<*>) :
-            AtomicReferenceOwnerWithName(fieldName)
-
-        class InstanceOwnerWithName(fieldName: String, val receiver: Any) :
-            AtomicReferenceOwnerWithName(fieldName)
-    }
 }
 
 /**

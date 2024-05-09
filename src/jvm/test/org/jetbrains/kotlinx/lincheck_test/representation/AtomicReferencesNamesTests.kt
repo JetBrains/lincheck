@@ -14,16 +14,16 @@ import java.util.concurrent.atomic.*
 
 class AtomicReferencesNamesTest : BaseFailingTest("atomic_references_names_trace.txt") {
 
-    private var atomicReference = AtomicReference(Node(1))
-    private var atomicInteger = AtomicInteger(0)
-    private var atomicLong = AtomicLong(0L)
-    private var atomicBoolean = AtomicBoolean(true)
+    private val atomicReference = AtomicReference(Node(1))
+    private val atomicInteger = AtomicInteger(0)
+    private val atomicLong = AtomicLong(0L)
+    private val atomicBoolean = AtomicBoolean(true)
 
-    private var atomicReferenceArray = AtomicReferenceArray(arrayOf(Node(1)))
-    private var atomicIntegerArray = AtomicIntegerArray(intArrayOf(0))
-    private var atomicLongArray = AtomicLongArray(longArrayOf(0L))
+    private val atomicReferenceArray = AtomicReferenceArray(arrayOf(Node(1)))
+    private val atomicIntegerArray = AtomicIntegerArray(intArrayOf(0))
+    private val atomicLongArray = AtomicLongArray(longArrayOf(0L))
 
-    private var wrapper = AtomicReferenceWrapper()
+    private val wrapper = AtomicReferenceWrapper()
 
     override fun actionsForTrace() {
         atomicReference.compareAndSet(atomicReference.get(), Node(2))
