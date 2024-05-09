@@ -24,6 +24,7 @@ import sun.nio.ch.lincheck.*
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicFieldUpdaterNames.getAtomicFieldUpdaterName
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.FieldSearchHelper.findFinalFieldWithOwner
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.adornedStringRepresentation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanObjectNumeration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
@@ -1293,10 +1294,23 @@ abstract class ManagedStrategy(
     /**
      * Returns beautiful string representation of the [owner].
      * If the [owner] is `this` of the current method, then returns `null`.
+     * Otherwise, we try to find if this [owner] is stored in only one field in the testObject
+     * and this field is final. If such field is found we construct beautiful representation for
+     * this field owner (if it's not a current `this`, again) and the field name.
+     * Otherwise, return beautiful representation for the provided [owner].
      */
     private fun findOwnerName(owner: Any): String? {
+        // If the current owner is this - no owner needed.
         if (isOwnerCurrentContext(owner)) return null
-        return adornedStringRepresentation(owner)
+        val fieldWithOwner = findFinalFieldWithOwner(runner.testInstance, owner) ?: return adornedStringRepresentation(owner)
+        // If such a field is found - construct representation with its owner and name.
+        return if (fieldWithOwner is OwnerWithName.InstanceOwnerWithName) {
+            val fieldOwner = fieldWithOwner.owner
+            val fieldName = fieldWithOwner.fieldName
+            if (!isOwnerCurrentContext(fieldOwner)) {
+                "${adornedStringRepresentation(fieldOwner)}.$fieldName"
+            } else fieldName
+        } else null
     }
 
     /**

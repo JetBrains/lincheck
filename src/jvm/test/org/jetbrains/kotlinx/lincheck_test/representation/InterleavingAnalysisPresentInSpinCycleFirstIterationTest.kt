@@ -28,10 +28,10 @@ import java.util.concurrent.atomic.AtomicInteger
 class InterleavingAnalysisPresentInSpinCycleFirstIterationTest {
 
     // Counter thar causes spin-lock in spinLock operation
-    private var counter = AtomicInteger(0)
+    private val counter = AtomicInteger(0)
     // Trigger to increment and decrement in spin-cycle to check in causeSpinLock operation
-    private var shouldAlwaysBeZero = AtomicInteger(0)
-    private var illegalInterleavingFound = AtomicBoolean(false)
+    private val shouldAlwaysBeZero = AtomicInteger(0)
+    private val illegalInterleavingFound = AtomicBoolean(false)
 
     @Operation
     fun causeSpinLock() {
