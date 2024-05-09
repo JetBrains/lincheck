@@ -22,6 +22,8 @@ package org.jetbrains.kotlinx.lincheck.utils
 
 fun Boolean.toInt(): Int = this.compareTo(false)
 
+fun Int.toBoolean() = (this == 1)
+
 infix fun Boolean.implies(other: Boolean): Boolean = 
     !this || other
 

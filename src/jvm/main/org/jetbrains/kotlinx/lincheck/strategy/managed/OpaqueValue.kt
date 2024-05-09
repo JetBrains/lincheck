@@ -118,25 +118,12 @@ fun Any?.toOpaqueString(): String {
 fun Any.isPrimitive(): Boolean =
     (this::class.javaPrimitiveType != null)
 
-sealed class ValueID
+typealias ValueID = Long
+typealias ObjectID = Long
 
-data class PrimitiveID(val value: Any): ValueID() {
-    init {
-        require(value.isPrimitive())
-    }
-
-    override fun toString(): String =
-        value.toString()
-}
-
-data class ObjectID(val id: Int): ValueID() {
-    override fun toString(): String =
-        "@$id"
-}
-
-internal object STATIC_OBJECT : Any()
+internal object StaticObject : Any()
 
 // TODO: override `toString` ?
-internal val INVALID_OBJECT_ID = ObjectID(-2)
-internal val STATIC_OBJECT_ID = ObjectID(-1)
-internal val NULL_OBJECT_ID = ObjectID(0)
+internal const val INVALID_OBJECT_ID = -2L
+internal const val STATIC_OBJECT_ID = -1L
+internal const val NULL_OBJECT_ID = 0L

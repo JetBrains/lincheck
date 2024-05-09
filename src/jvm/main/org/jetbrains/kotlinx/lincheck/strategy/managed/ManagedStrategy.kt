@@ -87,6 +87,8 @@ abstract class ManagedStrategy(
     // Detector of loops or hangs (i.e. active locks).
     protected abstract val loopDetector: LoopDetector
 
+    // Tracker of objects.
+    protected abstract val objectTracker: ObjectTracker
     // Tracker of shared memory accesses.
     protected abstract val memoryTracker: MemoryTracker
     // Tracker of acquisitions and releases of monitors.
@@ -121,7 +123,7 @@ abstract class ManagedStrategy(
 
     protected val memoryInitializer: MemoryInitializer = { location ->
         runUntracking(currentThreadNumber()) {
-            location.read(memoryTracker::getValue)?.opaque()
+            location.read { objectTracker.getValue(location.kClass, it) }?.opaque()
         }
     }
 
@@ -476,16 +478,16 @@ abstract class ManagedStrategy(
     private fun inIgnoredSection(iThread: Int): Boolean =
         !isTestThread(iThread) || ignoredSectionDepth[iThread] > 0 || suddenInvocationResult != null
 
-    fun getValue(id: ValueID): Any? {
-        return memoryTracker.getValue(id)?.unwrap()
+    fun getValue(kClass: KClass<*>, id: ValueID): Any? {
+        return objectTracker.getValue(kClass, id)?.unwrap()
     }
 
     fun getValueID(value: Any?): ValueID {
-        return memoryTracker.getValueID(value?.opaque())
+        return objectTracker.getValueID(value?.opaque())
     }
 
-    fun computeValueID(value: Any?): ValueID {
-        return memoryTracker.computeValueID(value?.opaque())
+    fun getOrRegisterObject(obj: Any?): ObjectID {
+        return objectTracker.getOrRegisterObjectID(obj?.opaque())
     }
 
     // == LISTENING METHODS ==
@@ -493,18 +495,18 @@ abstract class ManagedStrategy(
     internal fun onObjectAllocation(iThread: Int, obj: Any) {
         if (!shouldTrackMemory(iThread))
             return
-        memoryTracker.objectAllocation(iThread, obj.opaque())
+        objectTracker.registerObject(iThread, obj.opaque())
     }
 
     // TODO: should take initialized `Class` as well
     internal fun onObjectInitialization(iThread: Int, obj: Any) {
         if (!shouldTrackMemory(iThread))
             return
-        val id = memoryTracker.getValueID(obj.opaque()).ensure {
+        val id = objectTracker.getValueID(obj.opaque()).ensure {
             it != NULL_OBJECT_ID
         }
         if (id == INVALID_OBJECT_ID) {
-            memoryTracker.objectAllocation(iThread, obj.opaque())
+            objectTracker.registerObject(iThread, obj.opaque())
         }
     }
 

@@ -41,17 +41,17 @@ data class ObjectEntry(
 
 class ObjectRegistry {
 
-    private var objectCounter = 0
+    private var objectCounter = 0L
 
     private val objectIdIndex = HashMap<ObjectID, ObjectEntry>()
     private val objectIndex = IdentityHashMap<Any, ObjectEntry>()
 
     val nextObjectID: ObjectID
-        get() = ObjectID(1 + objectCounter)
+        get() = 1 + objectCounter
 
     fun register(entry: ObjectEntry) {
         check(entry.id != NULL_OBJECT_ID)
-        check(entry.id.id <= objectCounter + 1)
+        check(entry.id <= objectCounter + 1)
         objectIdIndex.put(entry.id, entry).ensureNull()
         objectIndex.put(entry.obj.unwrap(), entry).ensureNull()
         if (entry.id != STATIC_OBJECT_ID) {

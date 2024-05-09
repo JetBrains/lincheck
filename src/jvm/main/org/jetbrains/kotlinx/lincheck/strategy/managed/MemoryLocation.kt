@@ -22,22 +22,24 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import java.lang.reflect.*
 import java.lang.reflect.Array as ReflectArray
-import java.util.concurrent.atomic.*
+import kotlin.reflect.KClass
 
 
 typealias ValueMapper = (ValueID) -> OpaqueValue?
 
 interface MemoryLocation {
     val objID: ObjectID
+    val kClass: KClass<*>
 
     fun read(valueMapper: ValueMapper): Any?
-    fun write(valueMapper: ValueMapper, value: Any?)
+    fun write(value: Any?, valueMapper: ValueMapper)
 }
 
 class StaticFieldMemoryLocation(
     strategy: ManagedStrategy,
     val className: String,
     val fieldName: String,
+    override val kClass: KClass<*>,
 ) : MemoryLocation {
 
     override val objID: ObjectID = STATIC_OBJECT_ID
@@ -52,7 +54,7 @@ class StaticFieldMemoryLocation(
         return field.get(null)
     }
 
-    override fun write(valueMapper: ValueMapper, value: Any?) {
+    override fun write(value: Any?, valueMapper: ValueMapper) {
         field.set(null, value)
     }
 
@@ -81,6 +83,7 @@ class ObjectFieldMemoryLocation(
     override val objID: ObjectID,
     val className: String,
     val fieldName: String,
+    override val kClass: KClass<*>,
 ) : MemoryLocation {
 
     init {
@@ -99,7 +102,7 @@ class ObjectFieldMemoryLocation(
         return field.get(valueMapper(objID)?.unwrap())
     }
 
-    override fun write(valueMapper: ValueMapper, value: Any?) {
+    override fun write(value: Any?, valueMapper: ValueMapper) {
         field.set(valueMapper(objID)?.unwrap(), value)
     }
 
@@ -130,6 +133,7 @@ class ArrayElementMemoryLocation(
     clazz: Class<*>,
     override val objID: ObjectID,
     val index: Int,
+    override val kClass: KClass<*>,
 ) : MemoryLocation {
 
     init {
@@ -169,7 +173,7 @@ class ArrayElementMemoryLocation(
         return getMethod!!.invoke(valueMapper(objID)?.unwrap(), index)
     }
 
-    override fun write(valueMapper: ValueMapper, value: Any?) {
+    override fun write(value: Any?, valueMapper: ValueMapper) {
         if (isPlainArray) {
             ReflectArray.set(valueMapper(objID)?.unwrap(), index, value)
             return
@@ -201,6 +205,7 @@ class AtomicPrimitiveMemoryLocation(
     strategy: ManagedStrategy,
     clazz: Class<*>,
     override val objID: ObjectID,
+    override val kClass: KClass<*>,
 ) : MemoryLocation {
 
     init {
@@ -227,7 +232,7 @@ class AtomicPrimitiveMemoryLocation(
         return getMethod.invoke(valueMapper(objID)?.unwrap())
     }
 
-    override fun write(valueMapper: ValueMapper, value: Any?) {
+    override fun write(value: Any?, valueMapper: ValueMapper) {
         setMethod.invoke(valueMapper(objID)?.unwrap(), value)
     }
 

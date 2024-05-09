@@ -75,12 +75,14 @@ internal class ModelCheckingStrategy(
         resetOnThreadSwitch = true,
     )
 
+    // Tracker of objects.
+    override val objectTracker: ObjectTracker = PlainObjectTracker()
     // Tracker of shared memory accesses.
-    override var memoryTracker: MemoryTracker = PlainMemoryTracker(memoryInitializer)
+    override val memoryTracker: MemoryTracker = PlainMemoryTracker(objectTracker, memoryInitializer)
     // Tracker of monitors operations.
-    override var monitorTracker: MonitorTracker = MapMonitorTracker(nThreads)
+    override val monitorTracker: MonitorTracker = MapMonitorTracker(nThreads)
     // Tracker of thread parking.
-    override var parkingTracker: ParkingTracker = PlainParkingTracker(nThreads, allowSpuriousWakeUps = true)
+    override val parkingTracker: ParkingTracker = PlainParkingTracker(nThreads, allowSpuriousWakeUps = true)
 
 
     override fun runImpl(): LincheckFailure? {
