@@ -20,16 +20,22 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import org.objectweb.asm.Type
+import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import java.lang.reflect.*
 import java.lang.reflect.Array as ReflectArray
-import kotlin.reflect.KClass
 
 
-typealias ValueMapper = (KClass<*>, ValueID) -> OpaqueValue?
+typealias ValueMapper = (Type, ValueID) -> OpaqueValue?
 
 interface MemoryLocation {
     val objID: ObjectID
-    val kClass: KClass<*>
+
+    // TODO: decide if we really want to expose ASM Type here,
+    //   or we should use some other type:
+    //   - kClass (there is a problem with boxed and primitive types being represented by the same kClass)
+    //   - custom enum class (?)
+    val type: Type
 
     fun read(valueMapper: ValueMapper): Any?
     fun write(value: Any?, valueMapper: ValueMapper)
@@ -39,7 +45,7 @@ class StaticFieldMemoryLocation(
     strategy: ManagedStrategy,
     val className: String,
     val fieldName: String,
-    override val kClass: KClass<*>,
+    override val type: Type,
 ) : MemoryLocation {
 
     override val objID: ObjectID = STATIC_OBJECT_ID
@@ -64,7 +70,7 @@ class StaticFieldMemoryLocation(
         return (other is StaticFieldMemoryLocation)
                 && (className == other.className)
                 && (fieldName == other.fieldName)
-                && (kClass == other.kClass)
+                && (type == other.type)
     }
 
     override fun hashCode(): Int {
@@ -84,7 +90,7 @@ class ObjectFieldMemoryLocation(
     override val objID: ObjectID,
     val className: String,
     val fieldName: String,
-    override val kClass: KClass<*>,
+    override val type: Type,
 ) : MemoryLocation {
 
     init {
@@ -100,11 +106,11 @@ class ObjectFieldMemoryLocation(
     }
 
     override fun read(valueMapper: ValueMapper): Any? {
-        return field.get(valueMapper(Any::class, objID)?.unwrap())
+        return field.get(valueMapper(OBJECT_TYPE, objID)?.unwrap())
     }
 
     override fun write(value: Any?, valueMapper: ValueMapper) {
-        field.set(valueMapper(Any::class, objID)?.unwrap(), value)
+        field.set(valueMapper(OBJECT_TYPE, objID)?.unwrap(), value)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -114,7 +120,7 @@ class ObjectFieldMemoryLocation(
                 && (objID == other.objID)
                 && (className == other.className)
                 && (fieldName == other.fieldName)
-                && (kClass == other.kClass)
+                && (type == other.type)
     }
 
     override fun hashCode(): Int {
@@ -135,7 +141,7 @@ class ArrayElementMemoryLocation(
     clazz: Class<*>,
     override val objID: ObjectID,
     val index: Int,
-    override val kClass: KClass<*>,
+    override val type: Type,
 ) : MemoryLocation {
 
     init {
@@ -170,17 +176,17 @@ class ArrayElementMemoryLocation(
 
     override fun read(valueMapper: ValueMapper): Any? {
         if (isPlainArray) {
-            return ReflectArray.get(valueMapper(Any::class, objID)?.unwrap(), index)
+            return ReflectArray.get(valueMapper(OBJECT_TYPE, objID)?.unwrap(), index)
         }
-        return getMethod!!.invoke(valueMapper(Any::class, objID)?.unwrap(), index)
+        return getMethod!!.invoke(valueMapper(OBJECT_TYPE, objID)?.unwrap(), index)
     }
 
     override fun write(value: Any?, valueMapper: ValueMapper) {
         if (isPlainArray) {
-            ReflectArray.set(valueMapper(Any::class, objID)?.unwrap(), index, value)
+            ReflectArray.set(valueMapper(OBJECT_TYPE, objID)?.unwrap(), index, value)
             return
         }
-        setMethod!!.invoke(valueMapper(Any::class, objID)?.unwrap(), index, value)
+        setMethod!!.invoke(valueMapper(OBJECT_TYPE, objID)?.unwrap(), index, value)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -189,7 +195,7 @@ class ArrayElementMemoryLocation(
         return (other is ArrayElementMemoryLocation)
                 && (objID == other.objID)
                 && (index == other.index)
-                && (kClass == other.kClass)
+                && (type == other.type)
     }
 
     override fun hashCode(): Int {
@@ -208,7 +214,7 @@ class AtomicPrimitiveMemoryLocation(
     strategy: ManagedStrategy,
     clazz: Class<*>,
     override val objID: ObjectID,
-    override val kClass: KClass<*>,
+    override val type: Type,
 ) : MemoryLocation {
 
     init {
@@ -232,11 +238,11 @@ class AtomicPrimitiveMemoryLocation(
     }
 
     override fun read(valueMapper: ValueMapper): Any? {
-        return getMethod.invoke(valueMapper(Any::class, objID)?.unwrap())
+        return getMethod.invoke(valueMapper(OBJECT_TYPE, objID)?.unwrap())
     }
 
     override fun write(value: Any?, valueMapper: ValueMapper) {
-        setMethod.invoke(valueMapper(Any::class, objID)?.unwrap(), value)
+        setMethod.invoke(valueMapper(OBJECT_TYPE, objID)?.unwrap(), value)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -244,7 +250,7 @@ class AtomicPrimitiveMemoryLocation(
             return true
         return (other is AtomicPrimitiveMemoryLocation)
                 && (objID == other.objID)
-                && (kClass == other.kClass)
+                && (type == other.type)
     }
 
     override fun hashCode(): Int {

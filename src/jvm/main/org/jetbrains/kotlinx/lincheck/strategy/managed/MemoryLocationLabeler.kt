@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.utils.*
+import org.objectweb.asm.Type
 import java.lang.reflect.*
 import java.util.*
 import java.util.concurrent.atomic.*
@@ -36,55 +37,49 @@ internal class MemoryLocationLabeler {
     private val unsafeArrayDescriptorByClassMap = mutableMapOf<Class<*>, UnsafeArrayAccessDescriptor>()
 
     fun labelStaticField(strategy: ManagedStrategy, className: String, fieldName: String, descriptor: String): MemoryLocation =
-        StaticFieldMemoryLocation(strategy, className, fieldName, getKClassFromDescriptor(descriptor))
+        StaticFieldMemoryLocation(strategy, className, fieldName, Type.getType(descriptor))
 
     fun labelObjectField(strategy: ManagedStrategy, obj: Any, className: String, fieldName: String, descriptor: String): MemoryLocation {
         val id = strategy.getOrRegisterObject(obj)
-        val kClass = getKClassFromDescriptor(descriptor)
-        return ObjectFieldMemoryLocation(strategy, obj.javaClass, id, className, fieldName, kClass)
+        return ObjectFieldMemoryLocation(strategy, obj.javaClass, id, className, fieldName, Type.getType(descriptor))
     }
 
     fun labelArrayElement(strategy: ManagedStrategy, array: Any, position: Int, descriptor: String): MemoryLocation {
         val id = strategy.getOrRegisterObject(array)
-        val kClass = getKClassFromDescriptor(descriptor)
-        return ArrayElementMemoryLocation(strategy, array.javaClass, id, position, kClass)
+        return ArrayElementMemoryLocation(strategy, array.javaClass, id, position, Type.getType(descriptor))
     }
 
     fun labelAtomicPrimitive(strategy: ManagedStrategy, primitive: Any, descriptor: String): MemoryLocation {
         val id = strategy.getOrRegisterObject(primitive)
-        val kClass = getKClassFromDescriptor(descriptor)
-        return AtomicPrimitiveMemoryLocation(strategy, primitive.javaClass, id, kClass)
+        return AtomicPrimitiveMemoryLocation(strategy, primitive.javaClass, id, Type.getType(descriptor))
     }
 
     fun labelAtomicReflectionFieldAccess(strategy: ManagedStrategy, reflection: Any, obj: Any, descriptor: String): MemoryLocation {
         val id = strategy.getOrRegisterObject(obj)
-        val kClass = getKClassFromDescriptor(descriptor)
         val reflectionDescriptor = lookupAtomicReflectionDescriptor(reflection) as AtomicReflectionFieldAccessDescriptor
         return ObjectFieldMemoryLocation(strategy, obj.javaClass, id,
             reflectionDescriptor.className,
             reflectionDescriptor.fieldName,
-            kClass
+            Type.getType(descriptor)
         )
     }
 
     fun labelAtomicReflectionArrayAccess(strategy: ManagedStrategy, reflection: Any, array: Any, index: Int, descriptor: String): MemoryLocation {
         check(lookupAtomicReflectionDescriptor(reflection) is AtomicReflectionArrayAccessDescriptor)
         val id = strategy.getOrRegisterObject(array)
-        val kClass = getKClassFromDescriptor(descriptor)
-        return ArrayElementMemoryLocation(strategy, array.javaClass, id, index, kClass)
+        return ArrayElementMemoryLocation(strategy, array.javaClass, id, index, Type.getType(descriptor))
     }
 
     fun labelUnsafeAccess(strategy: ManagedStrategy, unsafe: Any, obj: Any, offset: Long, descriptor: String): MemoryLocation {
         val id = strategy.getOrRegisterObject(obj)
-        val kClass = getKClassFromDescriptor(descriptor)
         if (isArrayObject(obj)) {
             val unsafeDescriptor = lookupUnsafeArrayDescriptor(strategy, obj)
             val index = (offset - unsafeDescriptor.baseOffset) shr unsafeDescriptor.indexShift
-            return ArrayElementMemoryLocation(strategy, obj.javaClass, id, index.toInt(), kClass)
+            return ArrayElementMemoryLocation(strategy, obj.javaClass, id, index.toInt(), Type.getType(descriptor))
         }
         val className = normalizeClassName(strategy, obj.javaClass.name)
         val fieldName = lookupFieldNameByOffset(strategy, obj, offset)
-        return ObjectFieldMemoryLocation(strategy, obj.javaClass, id, className, fieldName, kClass)
+        return ObjectFieldMemoryLocation(strategy, obj.javaClass, id, className, fieldName, Type.getType(descriptor))
     }
 
     fun getAtomicReflectionName(reflection: Any): String {

@@ -24,7 +24,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.*
 import org.jetbrains.kotlinx.lincheck.utils.*
-import kotlin.reflect.KClass
+import org.objectweb.asm.Type
 
 
 class EventStructure(
@@ -531,16 +531,17 @@ class EventStructure(
         return entry.id
     }
 
-    fun computeValueID(value: OpaqueValue?): ValueID {
+    fun computeValueID(type: Type, value: OpaqueValue?): ValueID {
+        // TODO: get rid of copy-paste with [ObjectTracker.getOrRegisterObjectID]
         if (value == null) return NULL_OBJECT_ID
-        return when (val unwrapped = value.unwrap()) {
-            is Long     -> unwrapped
-            is Int      -> unwrapped.toLong()
-            is Byte     -> unwrapped.toLong()
-            is Short    -> unwrapped.toLong()
-            is Char     -> unwrapped.toLong()
-            is Boolean  -> unwrapped.toInt().toLong()
-            else        -> getOrRegisterObject(value)
+        return when (type.sort) {
+            Type.LONG       -> (value.unwrap() as Long)
+            Type.INT        -> (value.unwrap() as Int).toLong()
+            Type.BYTE       -> (value.unwrap() as Byte).toLong()
+            Type.SHORT      -> (value.unwrap() as Short).toLong()
+            Type.CHAR       -> (value.unwrap() as Char).toLong()
+            Type.BOOLEAN    -> (value.unwrap() as Boolean).toInt().toLong()
+            else            -> getOrRegisterObject(value)
         }
     }
 
@@ -759,7 +760,7 @@ class EventStructure(
         // to pick the root event as the next event to explore from.
         val label = InitializationLabel(initThreadId, mainThreadId) { location ->
             val value = memoryInitializer(location)
-            computeValueID(value)
+            computeValueID(location.type, value)
         }
         return createEvent(initThreadId, label, parent = null, dependencies = emptyList(), visit = false)!!
             .also { event ->
@@ -966,7 +967,7 @@ class EventStructure(
             className = value.unwrap().javaClass.simpleName,
             memoryInitializer = { location ->
                 val initValue = memoryInitializer(location)
-                computeValueID(initValue)
+                computeValueID(location.type, initValue)
             },
         )
         val parent = playedFrontier[iThread]
@@ -982,7 +983,7 @@ class EventStructure(
                       isExclusive: Boolean = false): AtomicThreadEvent {
         val label = WriteAccessLabel(
             location = location,
-            writeValue = computeValueID(value),
+            writeValue = computeValueID(location.type, value),
             isExclusive = isExclusive,
             codeLocation = codeLocation,
         )

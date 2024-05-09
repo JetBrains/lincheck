@@ -29,6 +29,8 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.utils.*
+import org.objectweb.asm.Type
+import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import org.objectweb.asm.*
 import java.io.*
 import java.lang.reflect.*
@@ -478,12 +480,8 @@ abstract class ManagedStrategy(
     private fun inIgnoredSection(iThread: Int): Boolean =
         !isTestThread(iThread) || ignoredSectionDepth[iThread] > 0 || suddenInvocationResult != null
 
-    fun getValue(kClass: KClass<*>, id: ValueID): Any? {
-        return objectTracker.getValue(kClass, id)?.unwrap()
-    }
-
-    fun getValueID(value: Any?): ValueID {
-        return objectTracker.getValueID(value?.opaque())
+    fun getValue(type: Type, id: ValueID): Any? {
+        return objectTracker.getValue(type, id)?.unwrap()
     }
 
     fun getOrRegisterObject(obj: Any?): ObjectID {
@@ -502,7 +500,7 @@ abstract class ManagedStrategy(
     internal fun onObjectInitialization(iThread: Int, obj: Any) {
         if (!shouldTrackMemory(iThread))
             return
-        val id = objectTracker.getValueID(obj.opaque())
+        val id = objectTracker.getValueID(OBJECT_TYPE, obj.opaque())
         if (id == INVALID_OBJECT_ID) {
             objectTracker.registerObject(iThread, obj.opaque())
         }

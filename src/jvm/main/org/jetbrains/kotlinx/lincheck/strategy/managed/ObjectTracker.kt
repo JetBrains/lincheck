@@ -21,8 +21,8 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.utils.*
+import org.objectweb.asm.Type
 import java.util.*
-import kotlin.reflect.KClass
 
 abstract class ObjectTracker {
 
@@ -38,39 +38,39 @@ abstract class ObjectTracker {
 
 }
 
-fun ObjectTracker.getValue(kClass: KClass<*>, id: ValueID): OpaqueValue? = when (kClass) {
-    Long::class     -> id.opaque()
-    Int::class      -> id.toInt().opaque()
-    Byte::class     -> id.toByte().opaque()
-    Short::class    -> id.toShort().opaque()
-    Char::class     -> id.toChar().opaque()
-    Boolean::class  -> id.toInt().toBoolean().opaque()
+fun ObjectTracker.getValue(type: Type, id: ValueID): OpaqueValue? = when (type.sort) {
+    Type.LONG       -> id.opaque()
+    Type.INT        -> id.toInt().opaque()
+    Type.BYTE       -> id.toByte().opaque()
+    Type.SHORT      -> id.toShort().opaque()
+    Type.CHAR       -> id.toChar().opaque()
+    Type.BOOLEAN    -> id.toInt().toBoolean().opaque()
     else            -> getObject(id)
 }
 
-fun ObjectTracker.getValueID(value: OpaqueValue?): ValueID {
+fun ObjectTracker.getValueID(type: Type, value: OpaqueValue?): ValueID {
     if (value == null) return NULL_OBJECT_ID
-    return when (val unwrapped = value.unwrap()) {
-        is Long     -> unwrapped
-        is Int      -> unwrapped.toLong()
-        is Byte     -> unwrapped.toLong()
-        is Short    -> unwrapped.toLong()
-        is Char     -> unwrapped.toLong()
-        is Boolean  -> unwrapped.toInt().toLong()
-        else        -> getObjectID(value)
+    return when (type.sort) {
+        Type.LONG       -> (value.unwrap() as Long)
+        Type.INT        -> (value.unwrap() as Int).toLong()
+        Type.BYTE       -> (value.unwrap() as Byte).toLong()
+        Type.SHORT      -> (value.unwrap() as Short).toLong()
+        Type.CHAR       -> (value.unwrap() as Char).toLong()
+        Type.BOOLEAN    -> (value.unwrap() as Boolean).toInt().toLong()
+        else            -> getObjectID(value)
     }
 }
 
-fun ObjectTracker.getOrRegisterValueID(value: OpaqueValue?): ValueID {
+fun ObjectTracker.getOrRegisterValueID(type: Type, value: OpaqueValue?): ValueID {
     if (value == null) return NULL_OBJECT_ID
-    return when (val unwrapped = value.unwrap()) {
-        is Long     -> unwrapped
-        is Int      -> unwrapped.toLong()
-        is Byte     -> unwrapped.toLong()
-        is Short    -> unwrapped.toLong()
-        is Char     -> unwrapped.toLong()
-        is Boolean  -> unwrapped.toInt().toLong()
-        else        -> getOrRegisterObjectID(value)
+    return when (type.sort) {
+        Type.LONG       -> (value.unwrap() as Long)
+        Type.INT        -> (value.unwrap() as Int).toLong()
+        Type.BYTE       -> (value.unwrap() as Byte).toLong()
+        Type.SHORT      -> (value.unwrap() as Short).toLong()
+        Type.CHAR       -> (value.unwrap() as Char).toLong()
+        Type.BOOLEAN    -> (value.unwrap() as Boolean).toInt().toLong()
+        else            -> getOrRegisterObjectID(value)
     }
 }
 

@@ -63,15 +63,15 @@ internal class PlainMemoryTracker(
     private val memory = HashMap<MemoryLocation, ValueID>()
 
     override fun writeValue(iThread: Int, codeLocation: Int, location: MemoryLocation, value: OpaqueValue?) {
-        memory[location] = objectTracker.getOrRegisterValueID(value)
+        memory[location] = objectTracker.getOrRegisterValueID(location.type, value)
     }
 
     override fun readValue(iThread: Int, codeLocation: Int, location: MemoryLocation): OpaqueValue? {
         val valueID = memory.computeIfAbsent(location) {
             val value = memoryInitializer(it)
-            objectTracker.getOrRegisterValueID(value)
+            objectTracker.getOrRegisterValueID(location.type, value)
         }
-        return objectTracker.getValue(location.kClass, valueID)
+        return objectTracker.getValue(location.type, valueID)
     }
 
     override fun compareAndSet(

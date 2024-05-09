@@ -422,7 +422,7 @@ private class EventStructureMemoryTracker(
     private fun performRead(iThread: Int, codeLocation: Int, location: MemoryLocation, isExclusive: Boolean = false): OpaqueValue? {
         val readEvent = eventStructure.addReadEvent(iThread, codeLocation, location, isExclusive)
         val valueID = (readEvent.label as ReadAccessLabel).value
-        return objectTracker.getValue(location.kClass, valueID)
+        return objectTracker.getValue(location.type, valueID)
     }
 
     override fun writeValue(iThread: Int, codeLocation: Int, location: MemoryLocation, value: OpaqueValue?) {
@@ -486,7 +486,7 @@ private class EventStructureMemoryTracker(
             // we choose one of the racy final writes non-deterministically and dump it to the memory
             val write = finalWrites.firstOrNull() ?: continue
             val label = write.label.asWriteAccessLabel(location).ensureNotNull()
-            val value = objectTracker.getValue(location.kClass, label.value)
+            val value = objectTracker.getValue(location.type, label.value)
             location.write(value?.unwrap(), objectTracker::getValue)
         }
     }
