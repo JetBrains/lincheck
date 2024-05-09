@@ -198,9 +198,11 @@ fun SynchronizationAlgebra.aggregator() = object : EventAggregator {
 private val ReceiveAggregationAlgebra = object : SynchronizationAlgebra {
 
     override fun syncType(label: EventLabel): SynchronizationType? =
-        if (label.isRequest || label.isResponse) SynchronizationType.Binary else null
+        if (!label.isSpanLabel && (label.isRequest || label.isResponse)) SynchronizationType.Binary else null
 
     override fun synchronize(label: EventLabel, other: EventLabel): EventLabel? = when {
+        label.isSpanLabel || other.isSpanLabel ->
+            null
         label.isRequest && other.isResponse && other.isValidResponse(label) ->
             other.getReceive()
         else -> null
