@@ -522,7 +522,7 @@ class EventStructure(
         }
 
         override fun getOrRegisterObjectID(obj: OpaqueValue): ObjectID {
-            objectRegistry[obj.unwrap()]?.let {
+            objectRegistry[obj]?.let {
                 return it.id
             }
             val id = objectRegistry.nextObjectID
@@ -535,7 +535,7 @@ class EventStructure(
         }
 
         override fun getObjectID(obj: OpaqueValue): ObjectID {
-            return objectRegistry[obj.unwrap()]?.id ?: INVALID_OBJECT_ID
+            return objectRegistry[obj]?.id ?: INVALID_OBJECT_ID
         }
 
         override fun getObject(id: ObjectID): OpaqueValue? {

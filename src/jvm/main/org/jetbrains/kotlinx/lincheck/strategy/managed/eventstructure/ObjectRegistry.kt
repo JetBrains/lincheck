@@ -70,8 +70,8 @@ class ObjectRegistry {
     operator fun get(id: ObjectID): ObjectEntry? =
         objectIdIndex[id]
 
-    operator fun get(obj: Any): ObjectEntry? =
-        if (obj.isPrimitive()) primitiveIndex[obj] else objectIndex[obj]
+    operator fun get(obj: OpaqueValue): ObjectEntry? =
+        if (obj.isPrimitive) primitiveIndex[obj.unwrap()] else objectIndex[obj.unwrap()]
 
     fun retain(predicate: (ObjectEntry) -> Boolean) {
         objectIdIndex.values.retainAll(predicate)
