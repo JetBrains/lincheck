@@ -10,11 +10,17 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import kotlinx.atomicfu.AtomicArray
+import kotlinx.atomicfu.AtomicRef
 import org.jetbrains.kotlinx.lincheck.allDeclaredFieldWithSuperclasses
 import org.jetbrains.kotlinx.lincheck.strategy.managed.FieldSearchHelper.TraverseResult.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.OwnerWithName.*
+import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
+import sun.misc.Unsafe
 import java.lang.reflect.Modifier
 import java.util.*
+import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.atomic.AtomicReferenceArray
 
 
 /**
@@ -52,8 +58,8 @@ internal object FieldSearchHelper {
         // If two or more fields match (===) the AtomicReference object, we fall back to the default behavior,
         // so there is no problem that we can receive some fields of the same name and the same type.
         for (field in testObject::class.java.allDeclaredFieldWithSuperclasses) {
-            if (field.type.isPrimitive || !field.trySetAccessible()) continue
-            val fieldValue = field.get(testObject)
+            if (field.type.isPrimitive) continue
+            val fieldValue = readFieldViaUnsafe(testObject, field, Unsafe::getObject)
 
             if (fieldValue in visitedObjects) continue
             visitedObjects += testObject
@@ -69,6 +75,7 @@ internal object FieldSearchHelper {
                 }
                 continue
             }
+            if (fieldValue is AtomicReference<*> || fieldValue is AtomicReferenceArray<*> || fieldValue is AtomicRef<*> || fieldValue is AtomicArray<*>) continue
             when (val result = findObjectField(fieldValue, value, visitedObjects)) {
                 is FieldName -> {
                     if (fieldName != null) {
