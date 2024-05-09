@@ -25,7 +25,7 @@ import java.lang.reflect.Array as ReflectArray
 import kotlin.reflect.KClass
 
 
-typealias ValueMapper = (ValueID) -> OpaqueValue?
+typealias ValueMapper = (KClass<*>, ValueID) -> OpaqueValue?
 
 interface MemoryLocation {
     val objID: ObjectID
@@ -100,11 +100,11 @@ class ObjectFieldMemoryLocation(
     }
 
     override fun read(valueMapper: ValueMapper): Any? {
-        return field.get(valueMapper(objID)?.unwrap())
+        return field.get(valueMapper(Any::class, objID)?.unwrap())
     }
 
     override fun write(value: Any?, valueMapper: ValueMapper) {
-        field.set(valueMapper(objID)?.unwrap(), value)
+        field.set(valueMapper(Any::class, objID)?.unwrap(), value)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -170,17 +170,17 @@ class ArrayElementMemoryLocation(
 
     override fun read(valueMapper: ValueMapper): Any? {
         if (isPlainArray) {
-            return ReflectArray.get(valueMapper(objID)?.unwrap(), index)
+            return ReflectArray.get(valueMapper(Any::class, objID)?.unwrap(), index)
         }
-        return getMethod!!.invoke(valueMapper(objID)?.unwrap(), index)
+        return getMethod!!.invoke(valueMapper(Any::class, objID)?.unwrap(), index)
     }
 
     override fun write(value: Any?, valueMapper: ValueMapper) {
         if (isPlainArray) {
-            ReflectArray.set(valueMapper(objID)?.unwrap(), index, value)
+            ReflectArray.set(valueMapper(Any::class, objID)?.unwrap(), index, value)
             return
         }
-        setMethod!!.invoke(valueMapper(objID)?.unwrap(), index, value)
+        setMethod!!.invoke(valueMapper(Any::class, objID)?.unwrap(), index, value)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -232,11 +232,11 @@ class AtomicPrimitiveMemoryLocation(
     }
 
     override fun read(valueMapper: ValueMapper): Any? {
-        return getMethod.invoke(valueMapper(objID)?.unwrap())
+        return getMethod.invoke(valueMapper(Any::class, objID)?.unwrap())
     }
 
     override fun write(value: Any?, valueMapper: ValueMapper) {
-        setMethod.invoke(valueMapper(objID)?.unwrap(), value)
+        setMethod.invoke(valueMapper(Any::class, objID)?.unwrap(), value)
     }
 
     override fun equals(other: Any?): Boolean {

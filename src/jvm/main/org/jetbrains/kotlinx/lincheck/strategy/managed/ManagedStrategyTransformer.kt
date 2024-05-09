@@ -613,22 +613,20 @@ internal class ManagedStrategyTransformer(
 
         // STACK: (empty) -> read value
         private fun invokeOnSharedVariableRead(locationState: MemoryLocationState, valueType: Type, codeLocationLocal: Int) = adapter.run {
-            loadStrategy()                              // STACK: strategy
-            loadCurrentThreadNumber()                   // STACK: strategy, threadId
-            invokeLabelMemoryLocation(locationState)    // STACK: strategy, threadId, location
-            invokeGetKClassFromType(valueType)          // STACK: strategy, threadId, location, kClass
-            loadLocal(codeLocationLocal)                // STACK: strategy, threadId, location, kClass, codeloc
+            loadStrategy()                                          // STACK: strategy
+            loadCurrentThreadNumber()                               // STACK: strategy, threadId
+            invokeLabelMemoryLocation(locationState, valueType)     // STACK: strategy, threadId, location
+            loadLocal(codeLocationLocal)                            // STACK: strategy, threadId, location, codeloc
             invokeVirtual(MANAGED_STRATEGY_TYPE, ON_SHARED_VARIABLE_READ_METHOD)
         }
 
         // STACK: (empty) -> (empty)
         private fun invokeOnSharedVariableWrite(locationState: MemoryLocationState, valueLocal: Int, valueType: Type, codeLocationLocal: Int) = adapter.run {
-            loadStrategy()                                  // STACK: strategy
-            loadCurrentThreadNumber()                       // STACK: strategy, threadId
-            invokeLabelMemoryLocation(locationState)        // STACK: strategy, threadId, location
-            invokeGetKClassFromType(valueType)              // STACK: strategy, threadId, location, kClass
-            loadLocal(valueLocal); box(valueType)           // STACK: strategy, threadId, location, kClass, value
-            loadLocal(codeLocationLocal)                    // STACK: strategy, threadId, location, kClass, value, codeloc
+            loadStrategy()                                      // STACK: strategy
+            loadCurrentThreadNumber()                           // STACK: strategy, threadId
+            invokeLabelMemoryLocation(locationState, valueType) // STACK: strategy, threadId, location
+            loadLocal(valueLocal); box(valueType)               // STACK: strategy, threadId, location, value
+            loadLocal(codeLocationLocal)                        // STACK: strategy, threadId, location, value, codeloc
             invokeVirtual(MANAGED_STRATEGY_TYPE, ON_SHARED_VARIABLE_WRITE_METHOD)
         }
 
@@ -639,11 +637,10 @@ internal class ManagedStrategyTransformer(
             require((methodDescriptor == AtomicUpdateMethodDescriptor.CMP_AND_SET) implies (cmpValueLocal != null))
             loadStrategy()                                          // STACK: strategy
             loadCurrentThreadNumber()                               // STACK: strategy, threadId
-            invokeLabelMemoryLocation(locationState)                // STACK: strategy, threadId, location
-            invokeGetKClassFromType(valueType)                      // STACK: strategy, threadId, location, kClass
-            cmpValueLocal?.also { loadLocal(it); box(valueType) }   // STACK: strategy, threadId, location, kClass, cmpValue?
-            updValueLocal .also { loadLocal(it); box(valueType) }   // STACK: strategy, threadId, location, kClass, cmpValue?, updValue
-            loadLocal(codeLocationLocal)                            // STACK: strategy, threadId, location, kClass, cmpValue?, updValue, codeloc
+            invokeLabelMemoryLocation(locationState, valueType)     // STACK: strategy, threadId, location
+            cmpValueLocal?.also { loadLocal(it); box(valueType) }   // STACK: strategy, threadId, location, cmpValue?
+            updValueLocal .also { loadLocal(it); box(valueType) }   // STACK: strategy, threadId, location, cmpValue?, updValue
+            loadLocal(codeLocationLocal)                            // STACK: strategy, threadId, location, cmpValue?, updValue, codeloc
             invokeVirtual(MANAGED_STRATEGY_TYPE, methodDescriptor.method())
         }
 
@@ -655,18 +652,12 @@ internal class ManagedStrategyTransformer(
         }
 
         // Stack: (empty) -> location
-        private fun invokeLabelMemoryLocation(locationState: MemoryLocationState) = adapter.run {
-            loadMemoryLocationLabeler()
-            loadStrategy()
-            locationState.load()
+        private fun invokeLabelMemoryLocation(locationState: MemoryLocationState, valueType: Type) = adapter.run {
+            loadMemoryLocationLabeler()         // STACK: labeler
+            loadStrategy()                      // STACK: labeler, strategy
+            locationState.load()                // STACK: labeler, strategy, [location args ...]
+            push(valueType.descriptor)          // STACK: labeler, strategy, [location args ...], descriptor
             invokeVirtual(MEMORY_LOCATION_LABELER_TYPE, locationState.labelMethod)
-        }
-
-        // STACK: (empty) -> kClass
-        private fun invokeGetKClassFromType(type: Type) = adapter.run {
-            // TODO: for some reason, pushing `type` directly on the stack does not work
-            push(type.descriptor)
-            invokeStatic(UTILS_KT_TYPE, GET_KCLASS_FROM_DESCRIPTOR)
         }
 
         // STACK: (empty) -> (empty)

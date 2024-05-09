@@ -540,7 +540,7 @@ class EventStructure(
             is Short    -> unwrapped.toLong()
             is Char     -> unwrapped.toLong()
             is Boolean  -> unwrapped.toInt().toLong()
-            else        -> getObjectID(value)
+            else        -> getOrRegisterObject(value)
         }
     }
 

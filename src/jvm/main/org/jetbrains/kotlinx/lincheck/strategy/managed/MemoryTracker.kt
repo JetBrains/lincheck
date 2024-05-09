@@ -108,7 +108,7 @@ internal class PlainMemoryTracker(
 
     override fun dumpMemory() {
         for ((location, valueID) in memory.entries) {
-            location.write(valueID) { objectTracker.getValue(location.kClass, it) }
+            location.write(valueID, objectTracker::getValue)
         }
     }
 

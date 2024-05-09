@@ -416,7 +416,7 @@ private class EventStructureMemoryTracker(
         // TODO: refactor this!
         eventStructure.allocationEvent(location.objID)?.label?.asWriteAccessLabel(location)
         eventStructure.addWriteEvent(iThread, codeLocation, location, value, isExclusive)
-        location.write(value?.unwrap()) { objectTracker.getValue(location.kClass, it) }
+        location.write(value?.unwrap(), objectTracker::getValue)
     }
 
     private fun performRead(iThread: Int, codeLocation: Int, location: MemoryLocation, isExclusive: Boolean = false): OpaqueValue? {
@@ -487,7 +487,7 @@ private class EventStructureMemoryTracker(
             val write = finalWrites.firstOrNull() ?: continue
             val label = write.label.asWriteAccessLabel(location).ensureNotNull()
             val value = objectTracker.getValue(location.kClass, label.value)
-            location.write(value?.unwrap()) { objectTracker.getValue(location.kClass, it) }
+            location.write(value?.unwrap(), objectTracker::getValue)
         }
     }
 

@@ -123,7 +123,7 @@ abstract class ManagedStrategy(
 
     protected val memoryInitializer: MemoryInitializer = { location ->
         runUntracking(currentThreadNumber()) {
-            location.read { objectTracker.getValue(location.kClass, it) }?.opaque()
+            location.read(objectTracker::getValue)?.opaque()
         }
     }
 
@@ -502,9 +502,7 @@ abstract class ManagedStrategy(
     internal fun onObjectInitialization(iThread: Int, obj: Any) {
         if (!shouldTrackMemory(iThread))
             return
-        val id = objectTracker.getValueID(obj.opaque()).ensure {
-            it != NULL_OBJECT_ID
-        }
+        val id = objectTracker.getValueID(obj.opaque())
         if (id == INVALID_OBJECT_ID) {
             objectTracker.registerObject(iThread, obj.opaque())
         }
