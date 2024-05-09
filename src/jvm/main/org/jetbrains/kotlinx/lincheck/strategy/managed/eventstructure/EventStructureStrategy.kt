@@ -411,59 +411,65 @@ private class EventStructureMemoryTracker(
     private val objectTracker: EventStructureObjectTracker,
 ) : MemoryTracker() {
 
-    private fun performWrite(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?, isExclusive: Boolean = false) {
+    private fun performWrite(iThread: Int, codeLocation: Int, location: MemoryLocation, value: OpaqueValue?, isExclusive: Boolean = false) {
         // force evaluation of initial value (before possibly overwriting it)
         // TODO: refactor this!
         eventStructure.allocationEvent(location.objID)?.label?.asWriteAccessLabel(location)
-        eventStructure.addWriteEvent(iThread, codeLocation, location, kClass, value, isExclusive)
+        eventStructure.addWriteEvent(iThread, codeLocation, location, value, isExclusive)
         location.write(value?.unwrap()) { objectTracker.getValue(location.kClass, it) }
     }
 
-    private fun performRead(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>, isExclusive: Boolean = false): OpaqueValue? {
-        val readEvent = eventStructure.addReadEvent(iThread, codeLocation, location, kClass, isExclusive)
+    private fun performRead(iThread: Int, codeLocation: Int, location: MemoryLocation, isExclusive: Boolean = false): OpaqueValue? {
+        val readEvent = eventStructure.addReadEvent(iThread, codeLocation, location, isExclusive)
         val valueID = (readEvent.label as ReadAccessLabel).value
         return objectTracker.getValue(location.kClass, valueID)
     }
 
-    override fun writeValue(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?) {
-        performWrite(iThread, codeLocation, location, kClass, value)
+    override fun writeValue(iThread: Int, codeLocation: Int, location: MemoryLocation, value: OpaqueValue?) {
+        performWrite(iThread, codeLocation, location, value)
     }
 
-    override fun readValue(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>): OpaqueValue? {
-        return performRead(iThread, codeLocation, location, kClass)
+    override fun readValue(iThread: Int, codeLocation: Int, location: MemoryLocation): OpaqueValue? {
+        return performRead(iThread, codeLocation, location)
     }
 
-    override fun compareAndSet(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>, expected: OpaqueValue?, desired: OpaqueValue?): Boolean {
-        val value = performRead(iThread, codeLocation, location, kClass, isExclusive = true)
+    override fun compareAndSet(
+        iThread: Int,
+        codeLocation: Int,
+        location: MemoryLocation,
+        expected: OpaqueValue?,
+        desired: OpaqueValue?
+    ): Boolean {
+        val value = performRead(iThread, codeLocation, location, isExclusive = true)
         if (value != expected)
             return false
-        performWrite(iThread, codeLocation, location, kClass, desired, isExclusive = true)
+        performWrite(iThread, codeLocation, location, desired, isExclusive = true)
         return true
     }
 
     private enum class IncrementKind { Pre, Post }
 
-    private fun fetchAndAdd(iThread: Int, codeLocation: Int, memoryLocationId: MemoryLocation, kClass: KClass<*>, delta: Number, incKind: IncrementKind): OpaqueValue? {
-        val oldValue = performRead(iThread, codeLocation, memoryLocationId, kClass, isExclusive = true)!!
+    private fun fetchAndAdd(iThread: Int, codeLocation: Int, memoryLocationId: MemoryLocation, delta: Number, incKind: IncrementKind): OpaqueValue? {
+        val oldValue = performRead(iThread, codeLocation, memoryLocationId, isExclusive = true)!!
         val newValue = oldValue + delta
-        performWrite(iThread, codeLocation, memoryLocationId, kClass, newValue, isExclusive = true)
+        performWrite(iThread, codeLocation, memoryLocationId, newValue, isExclusive = true)
         return when (incKind) {
             IncrementKind.Pre -> oldValue
             IncrementKind.Post -> newValue
         }
     }
 
-    override fun getAndAdd(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>, delta: Number): OpaqueValue? {
-        return fetchAndAdd(iThread, codeLocation, location, kClass, delta, IncrementKind.Pre)
+    override fun getAndAdd(iThread: Int, codeLocation: Int, location: MemoryLocation, delta: Number): OpaqueValue? {
+        return fetchAndAdd(iThread, codeLocation, location, delta, IncrementKind.Pre)
     }
 
-    override fun addAndGet(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>, delta: Number): OpaqueValue? {
-        return fetchAndAdd(iThread, codeLocation, location, kClass, delta, IncrementKind.Post)
+    override fun addAndGet(iThread: Int, codeLocation: Int, location: MemoryLocation, delta: Number): OpaqueValue? {
+        return fetchAndAdd(iThread, codeLocation, location, delta, IncrementKind.Post)
     }
 
-    override fun getAndSet(iThread: Int, codeLocation: Int, location: MemoryLocation, kClass: KClass<*>, value: OpaqueValue?): OpaqueValue? {
-        val readValue = performRead(iThread, codeLocation, location, kClass, isExclusive = true)
-        performWrite(iThread, codeLocation, location, kClass, value, isExclusive = true)
+    override fun getAndSet(iThread: Int, codeLocation: Int, location: MemoryLocation, value: OpaqueValue?): OpaqueValue? {
+        val readValue = performRead(iThread, codeLocation, location, isExclusive = true)
+        performWrite(iThread, codeLocation, location, value, isExclusive = true)
         return readValue
     }
 

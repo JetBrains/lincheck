@@ -457,7 +457,6 @@ sealed class MemoryAccessLabel(
     kind: LabelKind,
     open val location: MemoryLocation,
     open val isExclusive: Boolean = false,
-    open val kClass: KClass<*>? = null,
     open val codeLocation: Int = UNKNOWN_CODE_LOCATION,
 ): EventLabel(kind) {
 
@@ -538,9 +537,8 @@ data class ReadAccessLabel(
     override val location: MemoryLocation,
     override val readValue: ValueID,
     override val isExclusive: Boolean = false,
-    override val kClass: KClass<*>? = null,
     override val codeLocation: Int = UNKNOWN_CODE_LOCATION,
-): MemoryAccessLabel(kind, location, isExclusive, kClass, codeLocation) {
+): MemoryAccessLabel(kind, location, isExclusive, codeLocation) {
 
     init {
         require(isRequest || isResponse || isReceive)
@@ -569,9 +567,8 @@ data class WriteAccessLabel(
     override val location: MemoryLocation,
     override val writeValue: ValueID,
     override val isExclusive: Boolean = false,
-    override val kClass: KClass<*>? = null,
     override val codeLocation: Int = UNKNOWN_CODE_LOCATION,
-): MemoryAccessLabel(LabelKind.Send, location, isExclusive, kClass, codeLocation) {
+): MemoryAccessLabel(LabelKind.Send, location, isExclusive, codeLocation) {
 
     val value: ValueID
         get() = writeValue
@@ -597,9 +594,8 @@ data class ReadModifyWriteAccessLabel(
     override val location: MemoryLocation,
     override val readValue: ValueID,
     override val writeValue: ValueID,
-    override val kClass: KClass<*>? = null,
     override val codeLocation: Int = UNKNOWN_CODE_LOCATION,
-): MemoryAccessLabel(kind, location, isExclusive = true, kClass, codeLocation) {
+): MemoryAccessLabel(kind, location, isExclusive = true, codeLocation) {
 
     init {
         require(kind == LabelKind.Response || kind == LabelKind.Receive)
@@ -620,7 +616,6 @@ fun ReadModifyWriteAccessLabel(read: ReadAccessLabel, write: WriteAccessLabel): 
     require(read.kind == LabelKind.Response || read.kind == LabelKind.Receive)
     return if (read.location == write.location &&
                read.isExclusive == write.isExclusive &&
-               read.kClass == write.kClass &&
                read.codeLocation == write.codeLocation
     )
         ReadModifyWriteAccessLabel(
@@ -628,7 +623,6 @@ fun ReadModifyWriteAccessLabel(read: ReadAccessLabel, write: WriteAccessLabel): 
             location = read.location,
             readValue = read.value,
             writeValue = write.value,
-            kClass = read.kClass,
             codeLocation = read.codeLocation,
         )
     else null
@@ -651,7 +645,6 @@ fun ReadAccessLabel.getReadModifyWrite(write: WriteAccessLabel): ReadModifyWrite
  * @return true if the given label is a valid read part of the RMW, false otherwise.
  */
 fun ReadAccessLabel.isValidReadPart(label: ReadModifyWriteAccessLabel): Boolean =
-    kClass == label.kClass &&
     location == label.location &&
     isExclusive == label.isExclusive &&
     (isResponse implies (readValue == label.readValue))
@@ -663,7 +656,6 @@ fun ReadAccessLabel.isValidReadPart(label: ReadModifyWriteAccessLabel): Boolean 
  * @return true if the given label is a valid write part of the RMW, false otherwise.
  */
 fun WriteAccessLabel.isValidWritePart(label: ReadModifyWriteAccessLabel): Boolean =
-    kClass == label.kClass &&
     location == label.location &&
     isExclusive == label.isExclusive &&
     writeValue == label.writeValue

@@ -301,7 +301,6 @@ fun ReadAccessLabel.isValidResponse(label: EventLabel): Boolean {
     require(isResponse)
     require(label.isRequest)
     return label is ReadAccessLabel &&
-           kClass == label.kClass &&
            location == label.location &&
            isExclusive == label.isExclusive
 }

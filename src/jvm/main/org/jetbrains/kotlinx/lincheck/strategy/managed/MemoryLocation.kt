@@ -64,6 +64,7 @@ class StaticFieldMemoryLocation(
         return (other is StaticFieldMemoryLocation)
                 && (className == other.className)
                 && (fieldName == other.fieldName)
+                && (kClass == other.kClass)
     }
 
     override fun hashCode(): Int {
@@ -113,6 +114,7 @@ class ObjectFieldMemoryLocation(
                 && (objID == other.objID)
                 && (className == other.className)
                 && (fieldName == other.fieldName)
+                && (kClass == other.kClass)
     }
 
     override fun hashCode(): Int {
@@ -187,6 +189,7 @@ class ArrayElementMemoryLocation(
         return (other is ArrayElementMemoryLocation)
                 && (objID == other.objID)
                 && (index == other.index)
+                && (kClass == other.kClass)
     }
 
     override fun hashCode(): Int {
@@ -241,6 +244,7 @@ class AtomicPrimitiveMemoryLocation(
             return true
         return (other is AtomicPrimitiveMemoryLocation)
                 && (objID == other.objID)
+                && (kClass == other.kClass)
     }
 
     override fun hashCode(): Int {
