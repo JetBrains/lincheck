@@ -49,7 +49,15 @@ fun ObjectTracker.getValue(type: Type, id: ValueID): OpaqueValue? = when (type.s
     Type.SHORT      -> id.toShort().opaque()
     Type.CHAR       -> id.toChar().opaque()
     Type.BOOLEAN    -> id.toInt().toBoolean().opaque()
-    else            -> getObject(id)
+    else            -> when (type) {
+        LONG_TYPE_BOXED     -> id.opaque()
+        INT_TYPE_BOXED      -> id.toInt().opaque()
+        BYTE_TYPE_BOXED     -> id.toByte().opaque()
+        SHORT_TYPE_BOXED    -> id.toShort().opaque()
+        CHAR_TYPE_BOXED     -> id.toChar().opaque()
+        BOOLEAN_TYPE_BOXED  -> id.toInt().toBoolean().opaque()
+        else                -> getObject(id)
+    }
 }
 
 fun ObjectTracker.getValueID(type: Type, value: OpaqueValue?): ValueID {
@@ -61,7 +69,15 @@ fun ObjectTracker.getValueID(type: Type, value: OpaqueValue?): ValueID {
         Type.SHORT      -> (value.unwrap() as Short).toLong()
         Type.CHAR       -> (value.unwrap() as Char).toLong()
         Type.BOOLEAN    -> (value.unwrap() as Boolean).toInt().toLong()
-        else            -> getObjectID(value)
+        else            -> when (type) {
+            LONG_TYPE_BOXED     -> (value.unwrap() as Long)
+            INT_TYPE_BOXED      -> (value.unwrap() as Int).toLong()
+            BYTE_TYPE_BOXED     -> (value.unwrap() as Byte).toLong()
+            SHORT_TYPE_BOXED    -> (value.unwrap() as Short).toLong()
+            CHAR_TYPE_BOXED     -> (value.unwrap() as Char).toLong()
+            BOOLEAN_TYPE_BOXED  -> (value.unwrap() as Boolean).toInt().toLong()
+            else                -> getObjectID(value)
+        }
     }
 }
 
@@ -74,7 +90,15 @@ fun ObjectTracker.getOrRegisterValueID(type: Type, value: OpaqueValue?): ValueID
         Type.SHORT      -> (value.unwrap() as Short).toLong()
         Type.CHAR       -> (value.unwrap() as Char).toLong()
         Type.BOOLEAN    -> (value.unwrap() as Boolean).toInt().toLong()
-        else            -> getOrRegisterObjectID(value)
+        else            -> when (type) {
+            LONG_TYPE_BOXED     -> (value.unwrap() as Long)
+            INT_TYPE_BOXED      -> (value.unwrap() as Int).toLong()
+            BYTE_TYPE_BOXED     -> (value.unwrap() as Byte).toLong()
+            SHORT_TYPE_BOXED    -> (value.unwrap() as Short).toLong()
+            CHAR_TYPE_BOXED     -> (value.unwrap() as Char).toLong()
+            BOOLEAN_TYPE_BOXED  -> (value.unwrap() as Boolean).toInt().toLong()
+            else                -> getOrRegisterObjectID(value)
+        }
     }
 }
 
@@ -87,7 +111,7 @@ internal fun Type.getKClass(): KClass<*> = when (sort) {
     Type.DOUBLE  -> Double::class
     Type.CHAR    -> Char::class
     Type.BOOLEAN -> Boolean::class
-    Type.OBJECT  -> { when (this) {
+    Type.OBJECT  -> when (this) {
         INT_TYPE_BOXED      -> Int::class
         BYTE_TYPE_BOXED     -> Byte::class
         SHORT_TYPE_BOXED    -> Short::class
@@ -95,8 +119,8 @@ internal fun Type.getKClass(): KClass<*> = when (sort) {
         CHAR_TYPE_BOXED     -> Char::class
         BOOLEAN_TYPE_BOXED  -> Boolean::class
         else                -> Any::class
-    }}
-    Type.ARRAY   -> { when (elementType.sort) {
+    }
+    Type.ARRAY   -> when (elementType.sort) {
         Type.INT     -> IntArray::class
         Type.BYTE    -> ByteArray::class
         Type.SHORT   -> ShortArray::class
@@ -106,7 +130,7 @@ internal fun Type.getKClass(): KClass<*> = when (sort) {
         Type.CHAR    -> CharArray::class
         Type.BOOLEAN -> BooleanArray::class
         else         -> Array::class
-    }}
+    }
     else -> throw IllegalArgumentException()
 }
 

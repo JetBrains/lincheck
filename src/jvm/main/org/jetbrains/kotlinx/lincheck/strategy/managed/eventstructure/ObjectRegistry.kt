@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.utils.*
+import kotlin.collections.HashMap
 import java.util.*
 
 data class ObjectEntry(
@@ -32,6 +33,7 @@ data class ObjectEntry(
     init {
         require(id != NULL_OBJECT_ID)
         require(allocation.label is InitializationLabel || allocation.label is ObjectAllocationLabel)
+        require((id == STATIC_OBJECT_ID || obj.isPrimitive()) implies (allocation.label is InitializationLabel))
     }
 
     val isExternal: Boolean
@@ -44,7 +46,9 @@ class ObjectRegistry {
     private var objectCounter = 0L
 
     private val objectIdIndex = HashMap<ObjectID, ObjectEntry>()
+
     private val objectIndex = IdentityHashMap<Any, ObjectEntry>()
+    private val primitiveIndex = HashMap<Any, ObjectEntry>()
 
     val nextObjectID: ObjectID
         get() = 1 + objectCounter
@@ -53,7 +57,11 @@ class ObjectRegistry {
         check(entry.id != NULL_OBJECT_ID)
         check(entry.id <= objectCounter + 1)
         objectIdIndex.put(entry.id, entry).ensureNull()
-        objectIndex.put(entry.obj.unwrap(), entry).ensureNull()
+        if (entry.obj.isPrimitive) {
+            primitiveIndex.putIfAbsent(entry.obj.unwrap(), entry)
+        } else {
+            objectIndex.put(entry.obj.unwrap(), entry).ensureNull()
+        }
         if (entry.id != STATIC_OBJECT_ID) {
             objectCounter++
         }
@@ -63,11 +71,12 @@ class ObjectRegistry {
         objectIdIndex[id]
 
     operator fun get(obj: Any): ObjectEntry? =
-        objectIndex[obj]
+        if (obj.isPrimitive()) primitiveIndex[obj] else objectIndex[obj]
 
     fun retain(predicate: (ObjectEntry) -> Boolean) {
         objectIdIndex.values.retainAll(predicate)
         objectIndex.values.retainAll(predicate)
+        primitiveIndex.values.retainAll(predicate)
     }
 
 }

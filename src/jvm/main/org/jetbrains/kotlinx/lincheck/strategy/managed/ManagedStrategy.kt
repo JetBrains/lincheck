@@ -491,14 +491,14 @@ abstract class ManagedStrategy(
     // == LISTENING METHODS ==
 
     internal fun onObjectAllocation(iThread: Int, obj: Any) {
-        if (!shouldTrackMemory(iThread))
+        if (!shouldTrackMemory(iThread) || obj.isPrimitive())
             return
         objectTracker.registerObject(iThread, obj.opaque())
     }
 
     // TODO: should take initialized `Class` as well
     internal fun onObjectInitialization(iThread: Int, obj: Any) {
-        if (!shouldTrackMemory(iThread))
+        if (!shouldTrackMemory(iThread) || obj.isPrimitive())
             return
         val id = objectTracker.getValueID(OBJECT_TYPE, obj.opaque())
         if (id == INVALID_OBJECT_ID) {
