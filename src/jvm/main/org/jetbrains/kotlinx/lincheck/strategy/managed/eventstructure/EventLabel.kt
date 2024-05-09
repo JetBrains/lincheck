@@ -224,7 +224,7 @@ class InitializationLabel(
         HashMap<StaticFieldMemoryLocation, ValueID>()
 
     private val _objectsAllocations =
-        IdentityHashMap<ObjectID, ObjectAllocationLabel>()
+        HashMap<ObjectID, ObjectAllocationLabel>()
 
     val objectsAllocations: Map<ObjectID, ObjectAllocationLabel>
         get() = _objectsAllocations

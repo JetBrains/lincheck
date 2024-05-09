@@ -772,9 +772,7 @@ class EventStructure(
 
     private fun addEvent(iThread: Int, label: EventLabel, dependencies: List<AtomicThreadEvent>): AtomicThreadEvent {
         tryReplayEvent(iThread)?.let { event ->
-            check(event.label == label) {
-                "hehn't"
-            }
+            check(event.label == label)
             addEventToCurrentExecution(event)
             return event
         }
