@@ -76,7 +76,6 @@ internal object FieldSearchHelper {
                 }
                 continue
             }
-            if (fieldValue is AtomicReference<*> || fieldValue is AtomicReferenceArray<*> || fieldValue is AtomicRef<*> || fieldValue is AtomicArray<*>) continue
             when (val result = findObjectField(fieldValue, value, visitedObjects)) {
                 is FieldName -> {
                     if (fieldName != null) {
