@@ -56,15 +56,29 @@ class ObjectRegistry {
     fun register(entry: ObjectEntry) {
         check(entry.id != NULL_OBJECT_ID)
         check(entry.id <= objectCounter + 1)
+        check(!entry.obj.isPrimitive)
         objectIdIndex.put(entry.id, entry).ensureNull()
-        if (entry.obj.isPrimitive) {
-            primitiveIndex.putIfAbsent(entry.obj.unwrap(), entry)
-        } else {
-            objectIndex.put(entry.obj.unwrap(), entry).ensureNull()
-        }
+        objectIndex.put(entry.obj.unwrap(), entry).ensureNull()
         if (entry.id != STATIC_OBJECT_ID) {
             objectCounter++
         }
+    }
+
+    fun registerExternalObject(obj: OpaqueValue, allocation: AtomicThreadEvent): ObjectID {
+        check(allocation.label is InitializationLabel)
+        if (obj.isPrimitive) {
+            val entry = primitiveIndex.computeIfAbsent(obj.unwrap()) {
+                val id = ++objectCounter
+                val entry = ObjectEntry(id, obj, allocation)
+                objectIdIndex.put(entry.id, entry).ensureNull()
+                return@computeIfAbsent entry
+            }
+            return entry.id
+        }
+        val id = nextObjectID
+        val entry = ObjectEntry(id, obj, allocation)
+        register(entry)
+        return id
     }
 
     operator fun get(id: ObjectID): ObjectEntry? =

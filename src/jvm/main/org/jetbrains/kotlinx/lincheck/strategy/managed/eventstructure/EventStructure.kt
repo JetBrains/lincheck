@@ -525,13 +525,11 @@ class EventStructure(
             objectRegistry[obj]?.let {
                 return it.id
             }
-            val id = objectRegistry.nextObjectID
-            val entry = ObjectEntry(id, obj, root)
             val initLabel = (root.label as InitializationLabel)
             val className = obj.unwrap().javaClass.simpleName
-            objectRegistry.register(entry)
+            val id = objectRegistry.registerExternalObject(obj, root)
             initLabel.trackExternalObject(className, id)
-            return entry.id
+            return id
         }
 
         override fun getObjectID(obj: OpaqueValue): ObjectID {
@@ -774,7 +772,9 @@ class EventStructure(
 
     private fun addEvent(iThread: Int, label: EventLabel, dependencies: List<AtomicThreadEvent>): AtomicThreadEvent {
         tryReplayEvent(iThread)?.let { event ->
-            check(event.label == label)
+            check(event.label == label) {
+                "hehn't"
+            }
             addEventToCurrentExecution(event)
             return event
         }
