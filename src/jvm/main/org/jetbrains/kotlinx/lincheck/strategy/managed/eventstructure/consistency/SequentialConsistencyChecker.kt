@@ -156,7 +156,6 @@ class IncrementalSequentialConsistencyChecker(
         if (!executionOrder.isConsistentExtension(event)) {
             // if we end up in an unknown state, reset the execution order,
             // so it can be re-computed by the full consistency check
-            execution.executionOrderComputable.reset()
             return ConsistencyVerdict.Unknown
         }
         executionOrder.add(event)
@@ -170,15 +169,18 @@ class IncrementalSequentialConsistencyChecker(
             return ConsistencyVerdict.Inconsistent(inconsistency)
         }
         // check by trying to replay execution order
-        val replayer = SequentialConsistencyReplayer(1 + execution.maxThreadID)
-        val executionOrder = execution.executionOrderComputable.value
-        if (replayer.replay(executionOrder.ordering) == null) {
-            // if we end up in an unknown state, reset the execution order,
-            // so it can be re-computed by the full consistency check
-            execution.executionOrderComputable.reset()
-            return ConsistencyVerdict.Unknown
+        if (state == ConsistencyVerdict.Consistent) {
+            val replayer = SequentialConsistencyReplayer(1 + execution.maxThreadID)
+            val executionOrder = execution.executionOrderComputable.value
+            if (replayer.replay(executionOrder.ordering) != null) {
+                // if replay is successful, return "consistent" verdict
+                return ConsistencyVerdict.Consistent
+            }
         }
-        return ConsistencyVerdict.Consistent
+        // if we end up in an unknown state, reset the execution order,
+        // so it can be re-computed by the full consistency check
+        execution.executionOrderComputable.reset()
+        return ConsistencyVerdict.Unknown
     }
 
     override fun doReset(): ConsistencyVerdict {
@@ -189,13 +191,13 @@ class IncrementalSequentialConsistencyChecker(
             // so we can push the events into the execution order
             setComputed()
         }
-        var verdict: ConsistencyVerdict = ConsistencyVerdict.Consistent
         for (event in execution.enumerationOrderSorted()) {
-            verdict = verdict.join { doIncrementalCheck(event) }
-            if (verdict is ConsistencyVerdict.Unknown)
-                return verdict
+            val verdict = doIncrementalCheck(event)
+            if (verdict is ConsistencyVerdict.Unknown) {
+                return ConsistencyVerdict.Unknown
+            }
         }
-        return verdict
+        return ConsistencyVerdict.Consistent
     }
 
     private fun ExecutionOrder.isConsistentExtension(event: AtomicThreadEvent): Boolean {

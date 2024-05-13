@@ -194,23 +194,19 @@ abstract class AbstractPartialIncrementalConsistencyChecker<E : ThreadEvent, X :
 ) : AbstractIncrementalConsistencyChecker<E, X>(execution) {
 
     override fun doCheck(): Inconsistency? {
-        // if the checker is in the inconsistent state,
+        // the parent class should guarantee that at this point the state is
+        // either "consistent" or "unknown".
+        check(state !is ConsistencyVerdict.Inconsistent)
         // do a lightweight check before falling back to full consistency check
-        if (state is ConsistencyVerdict.Consistent) {
-            when (val verdict = doLightweightCheck()) {
-                // if lightweight check returns verdict "consistent",
-                // then the whole execution is consistent --- return null
-                is ConsistencyVerdict.Consistent ->
-                    return null
-                // if inconsistency is detected, return it
-                is ConsistencyVerdict.Inconsistent ->
-                    return verdict.inconsistency
-                // other cases are handled below
-                else -> {}
-            }
+        return when (val verdict = doLightweightCheck()) {
+            // if lightweight check returns verdict "consistent",
+            // then the whole execution is consistent --- return null
+            is ConsistencyVerdict.Consistent -> null
+            // if inconsistency is detected, return it
+            is ConsistencyVerdict.Inconsistent -> verdict.inconsistency
+            // otherwise, do the full consistency check
+            is ConsistencyVerdict.Unknown -> doFullCheck()
         }
-        // otherwise, do the full consistency check
-        return doFullCheck()
     }
 
     protected abstract fun doLightweightCheck(): ConsistencyVerdict
