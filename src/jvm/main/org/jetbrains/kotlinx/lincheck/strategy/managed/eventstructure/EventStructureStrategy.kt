@@ -152,7 +152,7 @@ class EventStructureStrategy(
                 lockConsistencyViolationCount +
                 atomicityInconsistenciesCount +
                 relAcqInconsistenciesCount +
-                seqCstReplayViolationCount
+                sequentialConsistencyViolationsCount
 
         val totalInvocations: Int
             get() = consistentInvocations + inconsistentInvocations + blockedInvocations
