@@ -150,12 +150,14 @@ class IncrementalSequentialConsistencyChecker(
     private val lockConsistencyChecker = LockConsistencyChecker()
 
     override fun doIncrementalCheck(event: AtomicThreadEvent): ConsistencyVerdict {
+        check(state is ConsistencyVerdict.Consistent)
         check(execution.executionOrderComputable.computed)
         resetRelations()
         val executionOrder = execution.executionOrderComputable.value
         if (!executionOrder.isConsistentExtension(event)) {
             // if we end up in an unknown state, reset the execution order,
             // so it can be re-computed by the full consistency check
+            execution.executionOrderComputable.reset()
             return ConsistencyVerdict.Unknown
         }
         executionOrder.add(event)
@@ -163,13 +165,13 @@ class IncrementalSequentialConsistencyChecker(
     }
 
     override fun doLightweightCheck(): ConsistencyVerdict {
-        check(execution.executionOrderComputable.computed)
         // TODO: extract into separate checker
         lockConsistencyChecker.check(execution)?.let { inconsistency ->
             return ConsistencyVerdict.Inconsistent(inconsistency)
         }
         // check by trying to replay execution order
         if (state == ConsistencyVerdict.Consistent) {
+            check(execution.executionOrderComputable.computed)
             val replayer = SequentialConsistencyReplayer(1 + execution.maxThreadID)
             val executionOrder = execution.executionOrderComputable.value
             if (replayer.replay(executionOrder.ordering) != null) {

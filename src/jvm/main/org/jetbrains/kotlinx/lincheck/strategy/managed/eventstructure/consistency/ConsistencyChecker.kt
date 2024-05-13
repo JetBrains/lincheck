@@ -176,9 +176,9 @@ abstract class AbstractIncrementalConsistencyChecker<E : ThreadEvent, X : Execut
     final override fun reset(execution: X): ConsistencyVerdict {
         this.execution = execution
         fullCheckCached = false
-        state = ConsistencyVerdict.Unknown
+        state = ConsistencyVerdict.Consistent
         state = doReset()
-        if (state is ConsistencyVerdict.Consistent) {
+        if (state !is ConsistencyVerdict.Unknown) {
             fullCheckCached = true
         }
         return state
@@ -256,11 +256,12 @@ class AggregatedIncrementalConsistencyChecker<E : ThreadEvent, X : Execution<E>>
     }
 
     override fun doReset(): ConsistencyVerdict {
-        val verdict = ConsistencyVerdict.Consistent
+        var result: ConsistencyVerdict = ConsistencyVerdict.Consistent
         for (incrementalChecker in incrementalConsistencyCheckers) {
-            verdict.join { incrementalChecker.reset(execution) }
+            val verdict = incrementalChecker.reset(execution)
+            result = result.join { verdict }
         }
-        return verdict
+        return result
     }
 
 }
