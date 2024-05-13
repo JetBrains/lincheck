@@ -901,6 +901,10 @@ abstract class ManagedStrategy(
     }
 
     private fun methodGuaranteeType(owner: Any?, className: String, methodName: String): ManagedGuaranteeType? = runInIgnoredSection {
+        // Treat `CancellableContinuation
+        if (owner is CancellableContinuation<*> && (methodName == "tryResume" || methodName == "completeResume")) {
+            return ManagedGuaranteeType.TREAT_AS_ATOMIC
+        }
         userDefinedGuarantees?.forEach { guarantee ->
             val ownerName = owner?.javaClass?.canonicalName ?: className
             if (guarantee.classPredicate(ownerName) && guarantee.methodPredicate(methodName)) {
