@@ -149,39 +149,39 @@ class IncrementalSequentialConsistencyChecker(
 
     private val lockConsistencyChecker = LockConsistencyChecker()
 
-    override fun doIncrementalCheck(event: AtomicThreadEvent) {
+    override fun doIncrementalCheck(event: AtomicThreadEvent): ConsistencyVerdict {
         check(execution.executionOrderComputable.computed)
         resetRelations()
         val executionOrder = execution.executionOrderComputable.value
-        if (executionOrder.isConsistentExtension(event)) {
-            executionOrder.add(event)
-        } else {
-            setUnknownState()
+        if (!executionOrder.isConsistentExtension(event)) {
+            // if we end up in an unknown state, reset the execution order,
+            // so it can be re-computed by the full consistency check
+            execution.executionOrderComputable.reset()
+            return ConsistencyVerdict.Unknown
         }
+        executionOrder.add(event)
+        return ConsistencyVerdict.Consistent
     }
 
-    override fun doLightweightCheck() {
+    override fun doLightweightCheck(): ConsistencyVerdict {
         check(execution.executionOrderComputable.computed)
         // TODO: extract into separate checker
-        inconsistency = lockConsistencyChecker.check(execution)
-        if (inconsistency != null)
-            return
+        lockConsistencyChecker.check(execution)?.let { inconsistency ->
+            return ConsistencyVerdict.Inconsistent(inconsistency)
+        }
         // check by trying to replay execution order
-        if (state == ConsistencyCheckerState.Consistent) {
-            val replayer = SequentialConsistencyReplayer(1 + execution.maxThreadID)
-            val executionOrder = execution.executionOrderComputable.value
-            if (replayer.replay(executionOrder.ordering) == null) {
-                setUnknownState()
-            }
-        }
-        // if we end up in an unknown state, reset the execution order,
-        // so it can be re-computed by the full consistency check
-        if (state == ConsistencyCheckerState.Unknown) {
+        val replayer = SequentialConsistencyReplayer(1 + execution.maxThreadID)
+        val executionOrder = execution.executionOrderComputable.value
+        if (replayer.replay(executionOrder.ordering) == null) {
+            // if we end up in an unknown state, reset the execution order,
+            // so it can be re-computed by the full consistency check
             execution.executionOrderComputable.reset()
+            return ConsistencyVerdict.Unknown
         }
+        return ConsistencyVerdict.Consistent
     }
 
-    override fun doReset() {
+    override fun doReset(): ConsistencyVerdict {
         resetRelations()
         execution.executionOrderComputable.apply {
             reset()
@@ -189,9 +189,13 @@ class IncrementalSequentialConsistencyChecker(
             // so we can push the events into the execution order
             setComputed()
         }
+        var verdict: ConsistencyVerdict = ConsistencyVerdict.Consistent
         for (event in execution.enumerationOrderSorted()) {
-            doIncrementalCheck(event)
+            verdict = verdict.join { doIncrementalCheck(event) }
+            if (verdict is ConsistencyVerdict.Unknown)
+                return verdict
         }
+        return verdict
     }
 
     private fun ExecutionOrder.isConsistentExtension(event: AtomicThreadEvent): Boolean {

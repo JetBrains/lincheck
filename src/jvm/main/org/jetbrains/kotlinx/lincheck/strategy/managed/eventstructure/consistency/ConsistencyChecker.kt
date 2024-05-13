@@ -38,19 +38,14 @@ fun interface ConsistencyChecker<E : ThreadEvent, X : Execution<E>> {
     fun check(execution: X): Inconsistency?
 }
 
-/**
- * Represents the state of an incremental consistency checker.
- * The consistency checker can be in one of the three states:
- * consistent, inconsistent, or unknown.
- */
-enum class ConsistencyCheckerState { Consistent, Inconsistent, Unknown }
-
 interface IncrementalConsistencyChecker<E : ThreadEvent, X : Execution<E>> {
 
     /**
      * Represents the current state of the consistency checker.
+     *
+     * @see ConsistencyVerdict
      */
-    val state: ConsistencyCheckerState
+    val state: ConsistencyVerdict
 
     /**
      * Performs incremental consistency check,
@@ -59,13 +54,12 @@ interface IncrementalConsistencyChecker<E : ThreadEvent, X : Execution<E>> {
      * - The check can be incomplete --- it can miss some inconsistencies.
      * - The check should be sound --- if an inconsistency is reported, the execution should indeed be inconsistent.
      * If an inconsistency was missed by an incremental check,
-     * a subsequent full consistency check via [check] function should detect this inconsistency.
+     * a later full consistency check via [check] function should detect this inconsistency.
      *
-     * @return `null` if execution remains consistent or if the consistency verdict is unknown,
-     *   otherwise returns non-null [Inconsistency] object
-     *   representing the reason of inconsistency.
+     * @return consistency verdict.
+     * @see ConsistencyVerdict
      */
-    fun check(event: E): Inconsistency?
+    fun check(event: E): ConsistencyVerdict
 
     /**
      * Performs full consistency check.
@@ -79,78 +73,118 @@ interface IncrementalConsistencyChecker<E : ThreadEvent, X : Execution<E>> {
     fun check(): Inconsistency?
 
     /**
-     * Resets the internal state of consistency checker to [execution].
+     * Resets the internal state of the consistency checker to [execution].
+     *
+     * @return consistency verdict on the execution after the reset.
      */
-    fun reset(execution: X)
+    fun reset(execution: X): ConsistencyVerdict
 }
 
-abstract class AbstractIncrementalConsistencyChecker<E : ThreadEvent, X : Execution<E>>(execution: X)
-    : IncrementalConsistencyChecker<E, X> {
+/**
+ * Represents the verdict of an incremental consistency check.
+ * The verdict can be either: consistent, inconsistent, or unknown.
+ */
+sealed class ConsistencyVerdict {
+    object Unknown : ConsistencyVerdict()
+    object Consistent : ConsistencyVerdict()
+    class  Inconsistent(val inconsistency: Inconsistency): ConsistencyVerdict()
+}
+
+val ConsistencyVerdict.inconsistency: Inconsistency?
+    get() = when (this) {
+        is ConsistencyVerdict.Inconsistent -> this.inconsistency
+        else -> null
+    }
+
+fun ConsistencyVerdict.join(doCheck: () -> ConsistencyVerdict): ConsistencyVerdict {
+    // if the inconsistency is already detected -- do not evaluate the second argument
+    // and return inconsistency immediately
+    if (this is ConsistencyVerdict.Inconsistent)
+        return this
+    // otherwise, evaluate the second argument to determine the result
+    val other = doCheck()
+    // if inconsistency is detected, return it
+    if (other is ConsistencyVerdict.Inconsistent)
+        return other
+    // otherwise, return "consistent" verdict only if both arguments are "consistent",
+    // if one of them is "unknown" -- then return "unknown"
+    return when {
+        this is ConsistencyVerdict.Consistent && other is ConsistencyVerdict.Consistent ->
+            ConsistencyVerdict.Consistent
+        else ->
+            ConsistencyVerdict.Unknown
+    }
+}
+
+abstract class AbstractIncrementalConsistencyChecker<E : ThreadEvent, X : Execution<E>>(
+    execution: X
+) : IncrementalConsistencyChecker<E, X> {
 
     protected var execution: X = execution
         private set
 
-    var inconsistency: Inconsistency? = null
-        protected set
+    final override var state: ConsistencyVerdict = ConsistencyVerdict.Unknown
+        private set
 
-    private var consistent = false
-    private var checked = false
+    // `true` means a full consistency check was already performed and its result was cached;
+    // `false` means the check was not performed or a new event was added since the last check
+    private var fullCheckCached: Boolean = false
 
-    final override val state: ConsistencyCheckerState get() = when {
-        consistent -> ConsistencyCheckerState.Consistent
-        inconsistency != null -> ConsistencyCheckerState.Inconsistent
-        else -> ConsistencyCheckerState.Unknown
-    }
-
-    init {
-        check(state == ConsistencyCheckerState.Unknown)
-    }
-
-    protected fun setUnknownState() {
-        check(inconsistency == null)
-        consistent = false
-        checked = false
-    }
-
-    final override fun check(event: E): Inconsistency? {
+    final override fun check(event: E): ConsistencyVerdict {
         // reset check cache
-        checked = false
-        // skip the check if the checker is in unknown state
-        if (state == ConsistencyCheckerState.Unknown)
-            return null
-        // return inconsistency if it was detected before
-        if (state == ConsistencyCheckerState.Inconsistent)
-            return inconsistency!!
-        doIncrementalCheck(event)
-        return inconsistency
+        fullCheckCached = false
+        // do case analysis
+        when (state) {
+            // skip the check if the checker is in unknown state
+            is ConsistencyVerdict.Unknown -> return state
+            // return inconsistency if it was detected earlier
+            is ConsistencyVerdict.Inconsistent -> return state
+            // otherwise, actually perform the incremental check
+            else -> {
+                state = doIncrementalCheck(event)
+                return state
+            }
+        }
     }
 
-    protected abstract fun doIncrementalCheck(event: E)
+    protected abstract fun doIncrementalCheck(event: E): ConsistencyVerdict
 
     final override fun check(): Inconsistency? {
-        // return inconsistency if it was detected before
-        if (state == ConsistencyCheckerState.Inconsistent)
-            return inconsistency!!
-        // return if consistency was already checked
-        if (checked)
-            return null
-        doCheck()
-        checked = true
-        consistent = (inconsistency == null)
-        return inconsistency
+        // if the full consistency check was already performed,
+        // and there were no new events added, return the cached result
+        if (fullCheckCached) {
+            check(state !is ConsistencyVerdict.Unknown)
+            return state.inconsistency
+        }
+        // return inconsistency if it was detected before by the incremental check
+        if (state is ConsistencyVerdict.Inconsistent) {
+            fullCheckCached = true
+            return state.inconsistency!!
+        }
+        // otherwise do the full check
+        state = when (val inconsistency = doCheck()) {
+            is Inconsistency    -> ConsistencyVerdict.Inconsistent(inconsistency)
+            else                -> ConsistencyVerdict.Consistent
+        }
+        // cache the result and return
+        fullCheckCached = true
+        return state.inconsistency
     }
 
-    protected abstract fun doCheck()
+    protected abstract fun doCheck(): Inconsistency?
 
-    final override fun reset(execution: X) {
+    final override fun reset(execution: X): ConsistencyVerdict {
         this.execution = execution
-        inconsistency = null
-        consistent = true
-        checked = false
-        doReset()
+        fullCheckCached = false
+        state = ConsistencyVerdict.Unknown
+        state = doReset()
+        if (state is ConsistencyVerdict.Consistent) {
+            fullCheckCached = true
+        }
+        return state
     }
 
-    protected abstract fun doReset()
+    protected abstract fun doReset(): ConsistencyVerdict
 
 }
 
@@ -159,31 +193,44 @@ abstract class AbstractPartialIncrementalConsistencyChecker<E : ThreadEvent, X :
     val checker: ConsistencyChecker<E, X>,
 ) : AbstractIncrementalConsistencyChecker<E, X>(execution) {
 
-    override fun doCheck() {
-        // if the checker is in a consistent state,
+    override fun doCheck(): Inconsistency? {
+        // if the checker is in the inconsistent state,
         // do a lightweight check before falling back to full consistency check
-        doLightweightCheck()
-        if (state == ConsistencyCheckerState.Unknown) {
-            doFullCheck()
+        if (state is ConsistencyVerdict.Consistent) {
+            when (val verdict = doLightweightCheck()) {
+                // if lightweight check returns verdict "consistent",
+                // then the whole execution is consistent --- return null
+                is ConsistencyVerdict.Consistent ->
+                    return null
+                // if inconsistency is detected, return it
+                is ConsistencyVerdict.Inconsistent ->
+                    return verdict.inconsistency
+                // other cases are handled below
+                else -> {}
+            }
         }
+        // otherwise, do the full consistency check
+        return doFullCheck()
     }
 
-    protected abstract fun doLightweightCheck()
+    protected abstract fun doLightweightCheck(): ConsistencyVerdict
 
-    private fun doFullCheck() {
-        inconsistency = checker.check(execution)
+    private fun doFullCheck(): Inconsistency? {
+        return checker.check(execution)
     }
 
 }
 
-abstract class AbstractFullyIncrementalConsistencyChecker<E : ThreadEvent, X : Execution<E>>(execution: X)
-    : AbstractIncrementalConsistencyChecker<E, X>(execution) {
+abstract class AbstractFullyIncrementalConsistencyChecker<E : ThreadEvent, X : Execution<E>>(
+    execution: X
+) : AbstractIncrementalConsistencyChecker<E, X>(execution) {
 
-    override fun doCheck() {
+    override fun doCheck(): Inconsistency? {
         // if a checker is fully incremental,
         // it can detect inconsistencies precisely upon each event addition;
         // thus we should not reach this point while being in the unknown state
-        check(state != ConsistencyCheckerState.Unknown)
+        check(state != ConsistencyVerdict.Unknown)
+        return state.inconsistency
     }
 
 }
@@ -194,33 +241,30 @@ class AggregatedIncrementalConsistencyChecker<E : ThreadEvent, X : Execution<E>>
     val consistencyCheckers: List<ConsistencyChecker<E, X>>,
 ) : AbstractIncrementalConsistencyChecker<E, X>(execution) {
 
-    override fun doIncrementalCheck(event: E) {
+    override fun doIncrementalCheck(event: E): ConsistencyVerdict {
+        var verdict: ConsistencyVerdict = ConsistencyVerdict.Consistent
         for (incrementalChecker in incrementalConsistencyCheckers) {
-            inconsistency = incrementalChecker.check(event)
-            if (inconsistency != null)
-                return
-            if (incrementalChecker.state == ConsistencyCheckerState.Unknown)
-                setUnknownState()
+            verdict = verdict.join { incrementalChecker.check(event) }
         }
+        return verdict
     }
 
-    override fun doCheck() {
+    override fun doCheck(): Inconsistency? {
         for (incrementalChecker in incrementalConsistencyCheckers) {
-            inconsistency = incrementalChecker.check()
-            if (inconsistency != null)
-                return
+            incrementalChecker.check()?.let { return it }
         }
         for (checker in consistencyCheckers) {
-            inconsistency = checker.check(execution)
-            if (inconsistency != null)
-                return
+            checker.check(execution)?.let { return it }
         }
+        return null
     }
 
-    override fun doReset() {
+    override fun doReset(): ConsistencyVerdict {
+        val verdict = ConsistencyVerdict.Consistent
         for (incrementalChecker in incrementalConsistencyCheckers) {
-            incrementalChecker.reset(execution)
+            verdict.join { incrementalChecker.reset(execution) }
         }
+        return verdict
     }
 
 }

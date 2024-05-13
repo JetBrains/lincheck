@@ -231,7 +231,7 @@ fun MutableExtendedExecution(nThreads: Int): MutableExtendedExecution =
     )
 
     override val inconsistency: Inconsistency?
-        get() = consistencyChecker.inconsistency
+        get() = consistencyChecker.state.inconsistency
 
     override fun checkConsistency(): Inconsistency? {
         return consistencyChecker.check()

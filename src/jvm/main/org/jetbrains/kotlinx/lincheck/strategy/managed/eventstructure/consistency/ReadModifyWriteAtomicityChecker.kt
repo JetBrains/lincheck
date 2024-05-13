@@ -31,20 +31,23 @@ class ReadModifyWriteAtomicityViolation(/*val write1: Event, val write2: Event*/
     }
 }
 
-class ReadModifyWriteAtomicityChecker(execution: MutableExtendedExecution) :
-    AbstractFullyIncrementalConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution>(execution) {
+class ReadModifyWriteAtomicityChecker(
+    execution: MutableExtendedExecution
+) : AbstractFullyIncrementalConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution>(execution) {
 
-    override fun doIncrementalCheck(event: AtomicThreadEvent) {
+    override fun doIncrementalCheck(event: AtomicThreadEvent): ConsistencyVerdict {
         check(execution.readModifyWriteOrderComputable.computed)
         val readModifyWriteOrder = execution.readModifyWriteOrderComputable.value
         val entry = readModifyWriteOrder.add(event)
-            ?: return
+            ?: return ConsistencyVerdict.Consistent
         if (!entry.isConsistent()) {
-            inconsistency = ReadModifyWriteAtomicityViolation()
+            val inconsistency = ReadModifyWriteAtomicityViolation()
+            return ConsistencyVerdict.Inconsistent(inconsistency)
         }
+        return ConsistencyVerdict.Consistent
     }
 
-    override fun doReset() {
+    override fun doReset(): ConsistencyVerdict {
         execution.readModifyWriteOrderComputable.apply {
             reset()
             initialize()
@@ -52,8 +55,10 @@ class ReadModifyWriteAtomicityChecker(execution: MutableExtendedExecution) :
         }
         val readModifyWriteOrder = execution.readModifyWriteOrderComputable.value
         if (!readModifyWriteOrder.isConsistent()) {
-            inconsistency = ReadModifyWriteAtomicityViolation()
+            val inconsistency = ReadModifyWriteAtomicityViolation()
+            return ConsistencyVerdict.Inconsistent(inconsistency)
         }
+        return ConsistencyVerdict.Consistent
     }
 
 }
