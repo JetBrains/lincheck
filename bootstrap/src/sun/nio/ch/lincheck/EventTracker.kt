@@ -42,7 +42,7 @@ interface EventTracker {
     fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int): Boolean
     fun afterWrite()
 
-    fun afterReflectiveSetter(receiver: Any, value: Any?)
+    fun afterReflectiveSetter(receiver: Any?, value: Any?)
 
     fun beforeMethodCall(owner: Any?, className: String, methodName: String, codeLocation: Int, params: Array<Any?>)
     fun beforeAtomicMethodCall(owner: Any?, className: String, methodName: String, codeLocation: Int, params: Array<Any?>)

@@ -88,6 +88,7 @@ internal class VarHandleMethodTransformer(
                 when (name) {
                     "set", "setVolatile", "setRelease", "setOpaque",
                     "getAndSet", "getAndSetAcquire", "getAndSetRelease" -> when (argumentCount) {
+                        1 -> processSetStaticFieldMethod(name, opcode, owner, desc, itf)
                         2 -> processSetFieldMethod(name, opcode, owner, desc, itf)
                         3 -> processSetArrayElementMethod(name, opcode, owner, desc, itf)
                         else -> throw IllegalStateException()
@@ -95,6 +96,7 @@ internal class VarHandleMethodTransformer(
                     "compareAndSet", "weakCompareAndSet",
                     "weakCompareAndSetRelease", "weakCompareAndSetAcquire", "weakCompareAndSetPlain",
                     "compareAndExchange", "compareAndExchangeAcquire", "compareAndExchangeRelease" -> when (argumentCount) {
+                        2 -> processCompareAndSetStaticFieldMethod(name, opcode, owner, desc, itf)
                         3 -> processCompareAndSetFieldMethod(name, opcode, owner, desc, itf)
                         4 -> processCompareAndSetArrayElementMethod(name, opcode, owner, desc, itf)
                         else -> throw IllegalStateException()
@@ -168,15 +170,36 @@ internal open class ReflectiveSharedMemoryAccessTransformer(
     protected fun processSetFieldMethod(name: String, opcode: Int, owner: String, desc: String, itf: Boolean) = adapter.run {
         // STACK: receiver, value
         val argumentTypes = Type.getArgumentTypes(desc)
+        val boxedTypes = arrayOf(OBJECT_TYPE, OBJECT_TYPE)
         val argumentLocals = copyLocals(
             valueTypes = argumentTypes,
-            localTypes = arrayOf(OBJECT_TYPE, OBJECT_TYPE),
+            localTypes = boxedTypes,
         )
         // STACK: receiver, value
         visitMethodInsn(opcode, owner, name, desc, itf)
         // STACK: <empty>
-        loadLocals(argumentLocals, argumentTypes)
+        loadLocals(argumentLocals, boxedTypes)
         // STACK: receiver, value
+        invokeStatic(Injections::afterReflectiveSetter)
+    }
+
+    /**
+     * Process methods like *.set(value)
+     */
+    protected fun processSetStaticFieldMethod(name: String, opcode: Int, owner: String, desc: String, itf: Boolean) = adapter.run {
+        // STACK: value
+        val argumentTypes = Type.getArgumentTypes(desc)
+        val boxedTypes = arrayOf(OBJECT_TYPE)
+        val argumentLocals = copyLocals(
+            valueTypes = argumentTypes,
+            localTypes = boxedTypes,
+        )
+        // STACK: value
+        visitMethodInsn(opcode, owner, name, desc, itf)
+        // STACK: <empty>
+        pushNull()
+        loadLocals(argumentLocals, boxedTypes)
+        // STACK: null, value
         invokeStatic(Injections::afterReflectiveSetter)
     }
 
@@ -215,6 +238,26 @@ internal open class ReflectiveSharedMemoryAccessTransformer(
         loadLocal(argumentLocals[0])
         loadLocal(argumentLocals[2])
         // STACK: cas-result, receiver, newValue
+        invokeStatic(Injections::afterReflectiveSetter)
+        // STACK: cas-result
+    }
+
+    /**
+     * Process methods like *.compareAndSet(expectedValue, desiredValue)
+     */
+    protected fun processCompareAndSetStaticFieldMethod(name: String, opcode: Int, owner: String, desc: String, itf: Boolean) = adapter.run {
+        // STACK: expectedValue, newValue
+        val argumentTypes = Type.getArgumentTypes(desc)
+        val argumentLocals = copyLocals(
+            valueTypes = argumentTypes,
+            localTypes = arrayOf(OBJECT_TYPE, OBJECT_TYPE),
+        )
+        // STACK: expectedValue, newValue
+        visitMethodInsn(opcode, owner, name, desc, itf)
+        // STACK: cas-result
+        pushNull()
+        loadLocal(argumentLocals[1])
+        // STACK: cas-result, null, newValue
         invokeStatic(Injections::afterReflectiveSetter)
         // STACK: cas-result
     }

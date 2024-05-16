@@ -125,6 +125,7 @@ internal fun GeneratorAdapter.copyLocals(
     valueTypes: Array<Type>,
     localTypes: Array<Type> = valueTypes
 ): IntArray {
+    check(valueTypes.size == localTypes.size)
     val locals = storeLocals(valueTypes, localTypes)
     locals.forEachIndexed { i, local ->
         val valueType = valueTypes[i]

@@ -114,10 +114,12 @@ internal class MethodCallTransformer(
         // to remove redundant parameters as receiver and offset.
         // To determine how we should process it, we provide the owner instance.
         val provideOwner = opcode != INVOKESTATIC && (
+            isAtomicClass(owner) ||
+            isAtomicArrayClass(owner) ||
             owner == "sun/misc/Unsafe" ||
             owner == "jdk/internal/misc/Unsafe" ||
             owner == "java/lang/invoke/VarHandle" ||
-            owner.endsWith("FieldUpdater")
+            (owner.startsWith("java/util/concurrent/atomic") && owner.endsWith("FieldUpdater"))
         )
         // STACK [INVOKEVIRTUAL]: owner, arguments
         // STACK [INVOKESTATIC] :        arguments
@@ -133,12 +135,13 @@ internal class MethodCallTransformer(
         // STACK [INVOKESTATIC  atomic updater]:        null
         // STACK [INVOKEVIRTUAL atomic]:                owner
         // STACK [INVOKESTATIC  atomic]:                <empty>
+        push(owner)
         push(name)
         loadNewCodeLocationId()
-        // STACK [INVOKEVIRTUAL atomic updater]: owner, owner, methodName, codeLocation
-        // STACK [INVOKESTATIC  atomic updater]:        null , methodName, codeLocation
-        // STACK [INVOKEVIRTUAL atomic]:                owner, methodName, codeLocation
-        // STACK [INVOKESTATIC  atomic]:                       methodName, codeLocation
+        // STACK [INVOKEVIRTUAL atomic updater]: owner, owner, className, methodName, codeLocation
+        // STACK [INVOKESTATIC  atomic updater]:        null , className, methodName, codeLocation
+        // STACK [INVOKEVIRTUAL atomic]:                owner, className, methodName, codeLocation
+        // STACK [INVOKESTATIC  atomic]:                       className, methodName, codeLocation
         pushArray(argumentLocals)
         // STACK: ..., argumentsArray
         invokeStatic(Injections::beforeAtomicMethodCall)
@@ -190,6 +193,17 @@ internal class MethodCallTransformer(
         owner == "java/util/Locale" ||
         owner == "org/slf4j/helpers/Util" ||
         owner == "java/util/Properties"
+
+    private fun isAtomicClass(className: String) =
+        className == "java/util/concurrent/atomic/AtomicInteger" ||
+        className == "java/util/concurrent/atomic/AtomicLong" ||
+        className == "java/util/concurrent/atomic/AtomicBoolean" ||
+        className == "java/util/concurrent/atomic/AtomicReference"
+
+    private fun isAtomicArrayClass(className: String) =
+        className == "java/util/concurrent/atomic/AtomicIntegerArray" ||
+        className == "java/util/concurrent/atomic/AtomicLongArray" ||
+        className == "java/util/concurrent/atomic/AtomicReferenceArray"
 
     private fun isAtomicPrimitiveMethod(owner: String, methodName: String) =
         owner == "sun/misc/Unsafe" ||

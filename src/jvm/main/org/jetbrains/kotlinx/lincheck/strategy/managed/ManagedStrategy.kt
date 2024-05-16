@@ -717,7 +717,7 @@ abstract class ManagedStrategy(
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             ReadTracePoint(
-                ownerRepresentation = simpleClassName(className),
+                ownerRepresentation = if (isStatic) simpleClassName(className) else findOwnerName(obj!!),
                 iThread = iThread,
                 actorId = currentActorId[iThread],
                 callStackTrace = callStackTrace[iThread],
@@ -784,7 +784,7 @@ abstract class ManagedStrategy(
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             WriteTracePoint(
-                ownerRepresentation = simpleClassName(className),
+                ownerRepresentation = if (isStatic) simpleClassName(className) else findOwnerName(obj!!),
                 iThread = iThread,
                 actorId = currentActorId[iThread],
                 callStackTrace = callStackTrace[iThread],
@@ -832,8 +832,12 @@ abstract class ManagedStrategy(
         }
     }
 
-    override fun afterReflectiveSetter(receiver: Any, value: Any?) = runInIgnoredSection {
-        localObjectManager.onWriteToObjectFieldOrArrayCell(receiver, value)
+    override fun afterReflectiveSetter(receiver: Any?, value: Any?) = runInIgnoredSection {
+        if (receiver == null) {
+            localObjectManager.markObjectNonLocal(value)
+        } else {
+            localObjectManager.onWriteToObjectFieldOrArrayCell(receiver, value)
+        }
     }
 
     override fun getThreadLocalRandom(): Random = runInIgnoredSection {
