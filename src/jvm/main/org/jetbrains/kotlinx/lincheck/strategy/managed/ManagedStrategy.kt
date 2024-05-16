@@ -875,7 +875,7 @@ abstract class ManagedStrategy(
      * after each write operation and atomic method invocation.
      */
     fun addStateRepresentation(iThread: Int) {
-        if (!inIgnoredSection(iThread)) {
+        if (isTestThread(iThread) && !inIgnoredSection(iThread)) {
             check(collectTrace) { "This method should be called only when logging is enabled" }
             traceCollector?.addStateRepresentation(iThread)
         }
