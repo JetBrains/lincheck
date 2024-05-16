@@ -85,12 +85,12 @@ internal class ManagedStrategyTransformer(
         mv = TryCatchBlockSorter(mv, access, mname, desc, signature, exceptions)
         // static initialization transformer
         mv = ClassInitializationTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        // atomics transformers has to be put here for some reason
-        // TODO: put AtomicPrimitiveAccessMethodTransformer near other memory access transformers
-        mv = AtomicPrimitiveAccessMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         // methods logging transformers
         mv = ManagedStrategyGuaranteeTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         mv = CallStackTraceLoggingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+        // atomics transformers has to be put here for some reason
+        // TODO: put AtomicPrimitiveAccessMethodTransformer near other memory access transformers
+        mv = AtomicPrimitiveAccessMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         // blocking synchronization primitives transformers
         mv = SynchronizedBlockTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         if (isSynchronized) {
@@ -1008,7 +1008,7 @@ internal class ManagedStrategyTransformer(
     private inner class IgnoreMethodTransformer(methodName: String, adapter: GeneratorAdapter) : ManagedStrategyMethodVisitor(methodName, adapter) {
         override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
             if (isIgnoredMethod(owner, name, desc)) {
-                runInIgnoredSection(untrack = true) {
+                runInIgnoredSection {
                     adapter.visitMethodInsn(opcode, owner, name, desc, itf)
                 }
             } else {
@@ -1033,7 +1033,6 @@ internal class ManagedStrategyTransformer(
         override fun visitCode() {
             if (isClinit) {
                 invokeBeforeIgnoredSectionEntering()
-                invokeBeforeUntrackingSectionEntering()
             }
             mv.visitCode()
         }
@@ -1043,7 +1042,6 @@ internal class ManagedStrategyTransformer(
                 when (opcode) {
                     // TODO: use visitEnd instead?
                     ARETURN, DRETURN, FRETURN, IRETURN, LRETURN, RETURN -> {
-                        invokeAfterUntrackingSectionLeaving()
                         invokeAfterIgnoredSectionLeaving()
                     }
                     else -> { }
@@ -2057,18 +2055,6 @@ internal class ManagedStrategyTransformer(
             adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, LEAVE_IGNORED_SECTION_METHOD)
         }
 
-        protected fun invokeBeforeUntrackingSectionEntering() {
-            loadStrategy()
-            loadCurrentThreadNumber()
-            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, ENTER_UNTRACKING_SECTION_METHOD)
-        }
-
-        protected fun invokeAfterUntrackingSectionLeaving() {
-            loadStrategy()
-            loadCurrentThreadNumber()
-            adapter.invokeVirtual(MANAGED_STRATEGY_TYPE, LEAVE_UNTRACKING_SECTION_METHOD)
-        }
-
         protected fun invokeMakeStateRepresentation() {
             if (collectStateRepresentation) {
                 loadStrategy()
@@ -2156,7 +2142,7 @@ internal class ManagedStrategyTransformer(
          * }
          * ```
          */
-        protected fun runInIgnoredSection(untrack: Boolean = false, block: () -> Unit) = adapter.run {
+        protected fun runInIgnoredSection(block: () -> Unit) = adapter.run {
             val callStart = newLabel()
             val callEnd = newLabel()
             val exceptionHandler = newLabel()
@@ -2167,22 +2153,13 @@ internal class ManagedStrategyTransformer(
                 visitTryCatchBlock(callStart, callEnd, exceptionHandler, null)
             }
             invokeBeforeIgnoredSectionEntering()
-            if (untrack) {
-                invokeBeforeUntrackingSectionEntering()
-            }
             visitLabel(callStart)
             block()
             visitLabel(callEnd)
-            if (untrack) {
-                invokeAfterUntrackingSectionLeaving()
-            }
             invokeAfterIgnoredSectionLeaving()
             goTo(skipHandler)
             // upon exception leave ignored section
             visitLabel(exceptionHandler)
-            if (untrack) {
-                invokeAfterUntrackingSectionLeaving()
-            }
             invokeAfterIgnoredSectionLeaving()
             throwException() // throw the exception further
             visitLabel(skipHandler)
@@ -2291,8 +2268,6 @@ private val BEFORE_ATOMIC_METHOD_CALL_METHOD = Method.getMethod(ManagedStrategy:
 private val ENTER_IGNORED_SECTION_METHOD = Method.getMethod(ManagedStrategy::enterIgnoredSection.javaMethod)
 private val LEAVE_IGNORED_SECTION_METHOD = Method.getMethod(ManagedStrategy::leaveIgnoredSection.javaMethod)
 private val SHOULD_TRACK_MEMORY_METHOD = Method.getMethod(ManagedStrategy::shouldTrackMemory.javaMethod)
-private val ENTER_UNTRACKING_SECTION_METHOD = Method.getMethod(ManagedStrategy::enterUntrackingSection.javaMethod)
-private val LEAVE_UNTRACKING_SECTION_METHOD = Method.getMethod(ManagedStrategy::leaveUntrackingSection.javaMethod)
 private val MAKE_STATE_REPRESENTATION_METHOD = Method.getMethod(ManagedStrategy::addStateRepresentation.javaMethod)
 private val CREATE_TRACE_POINT_METHOD = Method.getMethod(ManagedStrategy::createTracePoint.javaMethod)
 private val NEW_LOCAL_OBJECT_METHOD = Method.getMethod(ObjectManager::newLocalObject.javaMethod)

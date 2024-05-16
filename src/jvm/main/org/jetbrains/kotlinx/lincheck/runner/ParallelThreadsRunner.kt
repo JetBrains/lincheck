@@ -187,11 +187,7 @@ internal open class ParallelThreadsRunner(
     }
 
     private fun reset() {
-        sequentialPartExecutor.submit {
-            testInstance = testClass.newInstance()
-        }.get()
         testThreadExecutions.forEachIndexed { t, ex ->
-            ex.testInstance = testInstance
             val threads = scenario.threads
             val actors = scenario.parallelExecution[t].size
             ex.useClocks = if (useClocks == ALWAYS) true else Random.nextBoolean()
@@ -339,6 +335,8 @@ internal open class ParallelThreadsRunner(
         var failure: InvocationResult? = null
         try {
             sequentialPartExecutor.submit {
+                testInstance = testClass.newInstance()
+                testThreadExecutions.forEach { it.testInstance = testInstance }
                 results = scenario.initExecution.mapIndexed { i, initActor ->
                     val result = if (failure != null) {
                         NoResult

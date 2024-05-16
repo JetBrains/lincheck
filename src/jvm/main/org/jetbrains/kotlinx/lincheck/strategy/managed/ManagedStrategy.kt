@@ -82,9 +82,7 @@ abstract class ManagedStrategy(
     // Current actor id for each thread.
     protected val currentActorId = IntArray(nThreads)
     // Ihe number of entered but not left (yet) blocks that should be ignored by the strategy analysis for each thread.
-    private val ignoredSectionDepth = IntArray(nThreads) { 0 }
-    // Ihe number of entered but not left (yet) blocks where memory operations should not be tracked.
-    private val untrackingSectionDepth = IntArray(nThreads + 1) { if (memoryTrackingEnabled) 0 else 1 }
+    private val ignoredSectionDepth = IntArray(nThreads + 1) { 0 }
 
     // Detector of loops or hangs (i.e. active locks).
     protected abstract val loopDetector: LoopDetector
@@ -124,7 +122,7 @@ abstract class ManagedStrategy(
     private val suspendedFunctionsStack = Array(nThreads) { mutableListOf<Int>() }
 
     protected val memoryInitializer: MemoryInitializer = { location ->
-        runUntracking(currentThreadNumber()) {
+        runIgnored(currentThreadNumber()) {
             location.read(objectTracker::getValue)?.opaque()
         }
     }
@@ -205,7 +203,6 @@ abstract class ManagedStrategy(
         traceCollector = if (collectTrace) TraceCollector() else null
         suddenInvocationResult = null
         ignoredSectionDepth.fill(0)
-        untrackingSectionDepth.fill(if (memoryTrackingEnabled) 0 else 1)
         callStackTrace.forEach { it.clear() }
         suspendedFunctionsStack.forEach { it.clear() }
         ManagedStrategyStateHolder.resetState(runner.classLoader, testClass)
@@ -472,13 +469,6 @@ abstract class ManagedStrategy(
     protected fun switchableThreads(iThread: Int) = (0 until nThreads).filter { it != iThread && isActive(it) }
 
     private fun isTestThread(iThread: Int) = iThread < nThreads
-
-    /**
-     * The execution in an ignored section (added by transformer) or not in a test thread must not add switch points.
-     * Additionally, after [ForcibleExecutionFinishException] everything is ignored.
-     */
-    private fun inIgnoredSection(iThread: Int): Boolean =
-        !isTestThread(iThread) || ignoredSectionDepth[iThread] > 0 || suddenInvocationResult != null
 
     fun getValue(type: Type, id: ValueID): Any? {
         return objectTracker.getValue(type, id)?.unwrap()
@@ -758,7 +748,7 @@ abstract class ManagedStrategy(
      * @param iThread number of invoking thread
      */
     internal fun enterIgnoredSection(iThread: Int) {
-        if (isTestThread(iThread))
+        if (iThread < ignoredSectionDepth.size)
             ignoredSectionDepth[iThread]++
     }
 
@@ -768,7 +758,7 @@ abstract class ManagedStrategy(
      * @param iThread number of invoking thread
      */
     internal fun leaveIgnoredSection(iThread: Int) {
-        if (isTestThread(iThread))
+        if (iThread < ignoredSectionDepth.size)
             ignoredSectionDepth[iThread]--
     }
 
@@ -780,6 +770,21 @@ abstract class ManagedStrategy(
             leaveIgnoredSection(iThread)
         }
     }
+
+    /**
+     * The execution in an ignored section (added by transformer) or not in a test thread must not add switch points.
+     * Additionally, after [ForcibleExecutionFinishException] everything is ignored.
+     */
+    private fun inIgnoredSection(iThread: Int): Boolean =
+        iThread >= ignoredSectionDepth.size ||
+        ignoredSectionDepth[iThread] > 0 ||
+        suddenInvocationResult != null
+
+    internal fun shouldTrackMemory(iThread: Int): Boolean =
+        memoryTrackingEnabled &&
+        iThread < ignoredSectionDepth.size &&
+        ignoredSectionDepth[iThread] == 0 &&
+        suddenInvocationResult == null
 
     /**
      * This method is invoked by a test thread
@@ -831,29 +836,6 @@ abstract class ManagedStrategy(
 
     internal open fun trackRandom(generated: Int) {
         return
-    }
-
-    internal fun shouldTrackMemory(iThread: Int): Boolean {
-        return (iThread < untrackingSectionDepth.size) && (untrackingSectionDepth[iThread] == 0) && (suddenInvocationResult == null)
-    }
-
-    internal fun enterUntrackingSection(iThread: Int) {
-        if (iThread < untrackingSectionDepth.size)
-            untrackingSectionDepth[iThread]++
-    }
-
-    internal fun leaveUntrackingSection(iThread: Int) {
-        if (iThread < untrackingSectionDepth.size)
-            untrackingSectionDepth[iThread]--
-    }
-
-    internal fun<T> runUntracking(iThread: Int, block: () -> T): T {
-        return try {
-            enterUntrackingSection(iThread)
-            block()
-        } finally {
-            leaveUntrackingSection(iThread)
-        }
     }
 
     // == LOGGING METHODS ==

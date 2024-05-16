@@ -76,7 +76,7 @@ class EventStructureStrategy(
                 ?: break
             if (inconsistency == null) {
                 check(result != null)
-                runUntracking(nThreads) {
+                runIgnored(nThreads) {
                     memoryTracker.dumpMemory()
                 }
                 checkResult(result, shouldCollectTrace = false)?.let {

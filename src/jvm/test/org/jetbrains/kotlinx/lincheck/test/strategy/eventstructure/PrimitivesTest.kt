@@ -387,10 +387,10 @@ class PrimitivesTest {
         private var variable: String? = null
 
         companion object {
-            private var updater =
+            private val updater =
                 AtomicReferenceFieldUpdater.newUpdater(VolatileReferenceVariable::class.java, String::class.java, "variable")
 
-            private var handle = run {
+            private val handle = run {
                 val lookup = MethodHandles.lookup()
                 lookup.findVarHandle(VolatileReferenceVariable::class.java, "variable", String::class.java)
             }
