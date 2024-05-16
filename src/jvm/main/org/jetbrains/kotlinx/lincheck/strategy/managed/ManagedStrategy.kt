@@ -154,6 +154,7 @@ abstract class ManagedStrategy(
         collectStateRepresentation = collectStateRepresentation,
         constructTraceRepresentation = collectTrace,
         codeLocationIdProvider = codeLocationIdProvider,
+        memoryTrackingEnabled = memoryTrackingEnabled,
     )
 
     override fun needsTransformation(): Boolean = true

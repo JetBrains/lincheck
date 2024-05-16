@@ -47,7 +47,8 @@ internal class ManagedStrategyTransformer(
     private val eliminateLocalObjects: Boolean,
     private val collectStateRepresentation: Boolean,
     private val constructTraceRepresentation: Boolean,
-    private val codeLocationIdProvider: CodeLocationIdProvider
+    private val codeLocationIdProvider: CodeLocationIdProvider,
+    private val memoryTrackingEnabled: Boolean = false,
 ) : ClassVisitor(ASM_API, ClassRemapper(cv, JavaUtilRemapper())) {
     private lateinit var className: String
     private var classVersion = 0
@@ -368,6 +369,10 @@ internal class ManagedStrategyTransformer(
                 visitAtomicReflectionConstructor(opcode, owner, name, descriptor, isInterface)
                 return
             }
+            if (!memoryTrackingEnabled) {
+                super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+                return
+            }
             val atomicOwner = getAtomicPrimitiveClassName(owner)
             val innerDescriptor = atomicInnerDescriptor(atomicOwner ?: owner, name, descriptor) // e.g., Int for AtomicInteger
             val locationState = when {
@@ -578,15 +583,19 @@ internal class ManagedStrategyTransformer(
 
         // STACK: (empty) -> operation result
         private fun interceptIfMemoryTrackingEnabled(performOperation: () -> Unit, interceptOperation: () -> Unit) = adapter.run {
-            val skipTrackingLabel: Label = newLabel()
-            val endLabel: Label = newLabel()
-            invokeShouldTrackMemory()
-            ifZCmp(GeneratorAdapter.EQ, skipTrackingLabel)
-            interceptOperation()
-            goTo(endLabel)
-            visitLabel(skipTrackingLabel)
-            performOperation()
-            visitLabel(endLabel)
+            if (memoryTrackingEnabled) {
+                val skipTrackingLabel: Label = newLabel()
+                val endLabel: Label = newLabel()
+                invokeShouldTrackMemory()
+                ifZCmp(GeneratorAdapter.EQ, skipTrackingLabel)
+                interceptOperation()
+                goTo(endLabel)
+                visitLabel(skipTrackingLabel)
+                performOperation()
+                visitLabel(endLabel)
+            } else {
+                performOperation()
+            }
         }
 
         // STACK: (empty) -> (empty)
