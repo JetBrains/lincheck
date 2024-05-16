@@ -85,12 +85,12 @@ internal class ManagedStrategyTransformer(
         mv = TryCatchBlockSorter(mv, access, mname, desc, signature, exceptions)
         // static initialization transformer
         mv = ClassInitializationTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        // methods logging transformers
         mv = ManagedStrategyGuaranteeTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        mv = CallStackTraceLoggingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
-        // atomics transformers has to be put here for some reason
+        // atomics transformers has to be put here (after `CallStackTraceLoggingTransformer`) for some reason
         // TODO: put AtomicPrimitiveAccessMethodTransformer near other memory access transformers
         mv = AtomicPrimitiveAccessMethodTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
+        // methods logging transformer
+        mv = CallStackTraceLoggingTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         // blocking synchronization primitives transformers
         mv = SynchronizedBlockTransformer(mname, GeneratorAdapter(mv, access, mname, desc))
         if (isSynchronized) {

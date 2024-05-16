@@ -153,7 +153,7 @@ abstract class ManagedStrategy(
         eliminateLocalObjects = false, // TODO: fix local object elimination when tracking all the writes and reads
         collectStateRepresentation = collectStateRepresentation,
         constructTraceRepresentation = collectTrace,
-        codeLocationIdProvider = codeLocationIdProvider
+        codeLocationIdProvider = codeLocationIdProvider,
     )
 
     override fun needsTransformation(): Boolean = true
