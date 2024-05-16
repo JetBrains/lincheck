@@ -76,9 +76,13 @@ class EventStructureStrategy(
                 ?: break
             if (inconsistency == null) {
                 check(result != null)
-                runIgnored(nThreads) {
-                    memoryTracker.dumpMemory()
-                }
+                // TODO: re-verify that it is safe to omit the memory dump at the end;
+                //   it should be safe, because currently in the event-structure based algorithm,
+                //   the intercepted writes are still performed, so the actual state of the memory
+                //   reflects the state modelled by the current execution graph.
+                // runIgnored(nThreads) {
+                //     memoryTracker.dumpMemory()
+                // }
                 checkResult(result, shouldCollectTrace = false)?.let {
                     return it
                 }
