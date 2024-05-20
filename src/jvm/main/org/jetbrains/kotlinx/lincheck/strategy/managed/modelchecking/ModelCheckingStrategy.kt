@@ -54,6 +54,8 @@ internal class ModelCheckingStrategy(
     // The interleaving that will be studied on the next invocation.
     private lateinit var currentInterleaving: Interleaving
 
+    // Tracker of objects' allocations and object graph topology.
+    override val objectTracker: ObjectTracker = LocalObjectManager()
     // Tracker of the monitors' operations.
     override val monitorTracker: MonitorTracker = ModelCheckingMonitorTracker(nThreads)
     // Tracker of the thread parking.
@@ -530,6 +532,65 @@ internal class ModelCheckingStrategy(
         }
 
         fun build() = Interleaving(switchPositions, threadSwitchChoices, lastNoninitializedNode)
+    }
+}
+
+/**
+ * Manages objects created within the local scope.
+ * The purpose of this manager is to keep track of locally created objects that aren't yet shared,
+ * and automatically delete their dependencies when they become shared.
+ * This tracking helps to avoid unnecessary interleavings, which can occur if access to such local
+ * objects triggers switch points in the model checking strategy.
+ */
+internal class LocalObjectManager : ObjectTracker {
+    /**
+     * An identity hash map holding each local object and its dependent objects.
+     * Each local object is a key, and its value is a list of objects accessible from it.
+     * Note that non-local objects are excluded from this map.
+     */
+    private val localObjects = IdentityHashMap<Any, MutableList<Any>>()
+
+    /**
+     * Registers a new object as a locally accessible one.
+     */
+    override fun registerNewObject(obj: Any) {
+        check(obj !== StaticObject)
+        localObjects[obj] = mutableListOf()
+    }
+
+    override fun registerObjectLink(fromObject: Any, toObject: Any?) {
+        if (toObject == null) return
+        if (fromObject === StaticObject) {
+            markObjectNonLocal(toObject)
+        }
+        val reachableObjects = localObjects[fromObject]
+        if (reachableObjects != null) {
+            check(toObject !== StaticObject)
+            reachableObjects.add(toObject)
+        } else {
+            markObjectNonLocal(toObject)
+        }
+    }
+
+    /**
+     * Removes the specified local object and its dependencies from the set of local objects.
+     * If the removing object references other local objects, they are also removed recursively.
+     */
+    private fun markObjectNonLocal(obj: Any?) {
+        if (obj == null) return
+        val objects = localObjects.remove(obj) ?: return
+        objects.forEach { markObjectNonLocal(it) }
+    }
+
+    override fun isTrackedObject(obj: Any): Boolean = !isLocalObject(obj)
+
+    /**
+     * Checks if an object is only locally accessible.
+     */
+    private fun isLocalObject(obj: Any?) = localObjects.containsKey(obj)
+
+    override fun reset() {
+        localObjects.clear()
     }
 }
 

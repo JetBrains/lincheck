@@ -31,6 +31,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
 import java.lang.invoke.VarHandle
 import java.lang.reflect.*
 import java.util.*
+import java.util.concurrent.atomic.*
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 
 /**
@@ -76,6 +77,8 @@ abstract class ManagedStrategy(
     // Detector of loops or hangs (i.e. active locks).
     internal val loopDetector: LoopDetector = LoopDetector(testCfg.hangingDetectionThreshold)
 
+    // Tracker of objects' allocations and object graph topology.
+    protected abstract val objectTracker: ObjectTracker
     // Tracker of the monitors' operations.
     protected abstract val monitorTracker: MonitorTracker
     // Tracker of the thread parking.
@@ -106,10 +109,6 @@ abstract class ManagedStrategy(
     // NOTE: the call stack is stored in the reverse order,
     // i.e., the first element is the top stack trace element.
     private val suspendedFunctionsStack = Array(nThreads) { mutableListOf<CallStackTraceElement>() }
-
-    // Helps to ignore potential switch point in local objects (see LocalObjectManager) to avoid
-    // useless interleavings analysis.
-    private var localObjectManager = LocalObjectManager()
 
     // Last read trace point, occurred in the current thread.
     // We store it as we initialize read value after the point is created so we have to store
@@ -214,7 +213,7 @@ abstract class ManagedStrategy(
         callStackTrace.forEach { it.clear() }
         suspendedFunctionsStack.forEach { it.clear() }
         randoms.forEachIndexed { i, r -> r.setSeed(i + 239L) }
-        localObjectManager = LocalObjectManager()
+        objectTracker.reset()
         monitorTracker.reset()
         parkingTracker.reset()
     }
@@ -754,8 +753,8 @@ abstract class ManagedStrategy(
         if (isFinal) {
             return@runInIgnoredSection false
         }
-        // Optimization: do not track accesses to thread-local objects
-        if (!isStatic && localObjectManager.isLocalObject(obj)) {
+        // Do not track accesses to untracked objects
+        if (!objectTracker.isTrackedObject(obj ?: StaticObject)) {
             return@runInIgnoredSection false
         }
         val iThread = currentThread
@@ -781,7 +780,9 @@ abstract class ManagedStrategy(
 
     /** Returns <code>true</code> if a switch point is created. */
     override fun beforeReadArrayElement(array: Any, index: Int, codeLocation: Int): Boolean = runInIgnoredSection {
-        if (localObjectManager.isLocalObject(array)) return@runInIgnoredSection false
+        if (!objectTracker.isTrackedObject(array)) {
+            return@runInIgnoredSection false
+        }
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             ReadTracePoint(
@@ -814,13 +815,9 @@ abstract class ManagedStrategy(
 
     override fun beforeWriteField(obj: Any?, className: String, fieldName: String, value: Any?, codeLocation: Int,
                                   isStatic: Boolean, isFinal: Boolean): Boolean = runInIgnoredSection {
-        if (isStatic) {
-            localObjectManager.markObjectNonLocal(value)
-        } else if (obj != null) {
-            localObjectManager.onWriteToObjectFieldOrArrayCell(obj, value)
-            if (localObjectManager.isLocalObject(obj)) {
-                return@runInIgnoredSection false
-            }
+        objectTracker.registerObjectLink(fromObject = obj ?: StaticObject, toObject = value)
+        if (!objectTracker.isTrackedObject(obj ?: StaticObject)) {
+            return@runInIgnoredSection false
         }
         // Optimization: do not track final field writes
         if (isFinal) {
@@ -847,8 +844,8 @@ abstract class ManagedStrategy(
     }
 
     override fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int): Boolean = runInIgnoredSection {
-        localObjectManager.onWriteToObjectFieldOrArrayCell(array, value)
-        if (localObjectManager.isLocalObject(array)) {
+        objectTracker.registerObjectLink(fromObject = array, toObject = value)
+        if (!objectTracker.isTrackedObject(array)) {
             return@runInIgnoredSection false
         }
         val iThread = currentThread
@@ -880,11 +877,7 @@ abstract class ManagedStrategy(
     }
 
     override fun afterReflectiveSetter(receiver: Any?, value: Any?) = runInIgnoredSection {
-        if (receiver == null) {
-            localObjectManager.markObjectNonLocal(value)
-        } else {
-            localObjectManager.onWriteToObjectFieldOrArrayCell(receiver, value)
-        }
+        objectTracker.registerObjectLink(fromObject = receiver ?: StaticObject, toObject = value)
     }
 
     override fun getThreadLocalRandom(): Random = runInIgnoredSection {
@@ -914,7 +907,7 @@ abstract class ManagedStrategy(
     override fun afterNewObjectCreation(obj: Any) {
         if (obj is String || obj is Int || obj is Long || obj is Byte || obj is Char || obj is Float || obj is Double) return
         runInIgnoredSection {
-            localObjectManager.registerNewObject(obj)
+            objectTracker.registerNewObject(obj)
         }
     }
 
