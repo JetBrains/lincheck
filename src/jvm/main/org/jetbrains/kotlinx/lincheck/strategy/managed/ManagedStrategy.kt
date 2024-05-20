@@ -46,7 +46,8 @@ abstract class ManagedStrategy(
     scenario: ExecutionScenario,
     private val validationFunction: Actor?,
     private val stateRepresentationFunction: Method?,
-    private val testCfg: ManagedCTestConfiguration
+    private val testCfg: ManagedCTestConfiguration,
+    private val memoryTrackingEnabled: Boolean,
 ) : Strategy(scenario), EventTracker {
     // The number of parallel threads.
     protected val nThreads: Int = scenario.nThreads
@@ -62,7 +63,8 @@ abstract class ManagedStrategy(
 
     // Which thread is allowed to perform operations?
     @Volatile
-    protected var currentThread: Int = 0
+    var currentThread: Int = 0
+        protected set
 
     // Which threads finished all the operations?
     private val finished = BooleanArray(nThreads) { false }
@@ -78,6 +80,8 @@ abstract class ManagedStrategy(
 
     // Tracker of objects' allocations and object graph topology.
     protected abstract val objectTracker: ObjectTracker
+    // Tracker of shared memory accesses.
+    protected abstract val memoryTracker: MemoryTracker?
     // Tracker of the monitors' operations.
     protected abstract val monitorTracker: MonitorTracker
     // Tracker of the thread parking.
@@ -192,13 +196,15 @@ abstract class ManagedStrategy(
      * Returns whether thread should switch at the switch point.
      * @param iThread the current thread
      */
-    protected abstract fun shouldSwitch(iThread: Int): Boolean
+    protected abstract fun shouldSwitch(iThread: Int): ThreadSwitchDecision
 
     /**
      * Choose a thread to switch from thread [iThread].
      * @return id the chosen thread
      */
     protected abstract fun chooseThread(iThread: Int): Int
+
+    enum class ThreadSwitchDecision { NOT, MAY, MUST }
 
     /**
      * Resets all internal data to the initial state and initializes current invocation to be run.
@@ -213,6 +219,7 @@ abstract class ManagedStrategy(
         suspendedFunctionsStack.forEach { it.clear() }
         randoms.forEachIndexed { i, r -> r.setSeed(i + 239L) }
         objectTracker.reset()
+        memoryTracker?.reset()
         monitorTracker.reset()
         parkingTracker.reset()
     }
@@ -362,7 +369,7 @@ abstract class ManagedStrategy(
         // check we are in the right thread
         check(iThread == currentThread)
         // check if we need to switch
-        val shouldSwitch = when {
+        val threadSwitchDecision = when {
             /*
              * When replaying executions, it's important to repeat the same thread switches
              * recorded in the loop detector history during the last execution.
@@ -381,23 +388,29 @@ abstract class ManagedStrategy(
              * the spin cycle in thread 1, so no bug will appear.
              */
             loopDetector.replayModeEnabled ->
-                loopDetector.shouldSwitchInReplayMode()
+                if (loopDetector.shouldSwitchInReplayMode())
+                    ThreadSwitchDecision.MUST
+                else
+                    ThreadSwitchDecision.NOT
             /*
              * In the regular mode, we use loop detector only to determine should we
              * switch current thread or not due to new or early detection of spin locks.
              * Regular thread switches are dictated by the current interleaving.
              */
             else ->
-                (runner.currentExecutionPart == PARALLEL) && shouldSwitch(iThread)
+                if (runner.currentExecutionPart == PARALLEL)
+                    shouldSwitch(iThread)
+                else
+                    ThreadSwitchDecision.NOT
         }
         // check if live-lock is detected
-        val decision = loopDetector.visitCodeLocation(iThread, codeLocation)
+        val loopDetectorDecision = loopDetector.visitCodeLocation(iThread, codeLocation)
         // if we reached maximum number of events threshold, then fail immediately
-        if (decision == LoopDetector.Decision.EventsThresholdReached) {
+        if (loopDetectorDecision == LoopDetector.Decision.EventsThresholdReached) {
             failDueToDeadlock()
         }
         // if any kind of live-lock was detected, check for obstruction-freedom violation
-        if (decision.isLivelockDetected) {
+        if (loopDetectorDecision.isLivelockDetected) {
             failIfObstructionFreedomIsRequired {
                 if (decision is LoopDetector.Decision.LivelockFailureDetected) {
                     // if failure is detected, add a special obstruction-freedom violation
@@ -490,7 +503,7 @@ abstract class ManagedStrategy(
         (Thread.currentThread() as TestThread).inTestingCode = true
     }
 
-    override fun onActorFinish() {
+    override fun onActorFinish(iThread: Int) {
         // This is a hack to guarantee correct stepping in the plugin.
         // When stepping out to the TestThreadExecution class, stepping continues unproductively.
         // With this method, we force the debugger to stop at the beginning of the next actor.
@@ -502,7 +515,7 @@ abstract class ManagedStrategy(
      * Returns whether the specified thread is active and
      * can continue its execution (i.e. is not blocked/finished).
      */
-    private fun isActive(iThread: Int): Boolean =
+    protected open fun isActive(iThread: Int): Boolean =
         !finished[iThread] &&
         !(isSuspended[iThread] && !runner.isCoroutineResumed(iThread, currentActorId[iThread])) &&
         !monitorTracker.isWaiting(iThread) &&
@@ -512,7 +525,7 @@ abstract class ManagedStrategy(
      * Waits until the specified thread can continue
      * the execution according to the strategy decision.
      */
-    private fun awaitTurn(iThread: Int) = runInIgnoredSection {
+    protected fun awaitTurn(iThread: Int) = runInIgnoredSection {
         spinners[iThread].spinWaitUntil {
             // Finish forcibly if an error occurred and we already have an `InvocationResult`.
             if (suddenInvocationResult != null) throw ForcibleExecutionFinishError
@@ -525,7 +538,7 @@ abstract class ManagedStrategy(
      *
      * @return was this thread actually switched to another or not
      */
-    private fun switchCurrentThread(
+    protected fun switchCurrentThread(
         iThread: Int,
         reason: SwitchReason = SwitchReason.STRATEGY_SWITCH,
         mustSwitch: Boolean = false,
@@ -1052,7 +1065,7 @@ abstract class ManagedStrategy(
      * if a coroutine was suspended.
      * @param iThread number of invoking thread
      */
-    internal fun afterCoroutineSuspended(iThread: Int) {
+    internal open fun afterCoroutineSuspended(iThread: Int) {
         check(currentThread == iThread)
         isSuspended[iThread] = true
         if (runner.isCoroutineResumed(iThread, currentActorId[iThread])) {
@@ -1068,19 +1081,36 @@ abstract class ManagedStrategy(
      * This method is invoked by a test thread
      * if a coroutine was resumed.
      */
-    internal fun afterCoroutineResumed() {
-        isSuspended[currentThread] = false
+    internal open fun afterCoroutineResumed(iThread: Int) {
+        check(currentThread == iThread)
+        isSuspended[iThread] = false
     }
 
     /**
      * This method is invoked by a test thread
      * if a coroutine was cancelled.
      */
-    internal fun afterCoroutineCancelled() {
-        val iThread = currentThread
+    internal open fun afterCoroutineCancelled(iThread: Int, promptCancellation: Boolean, cancellationResult: CancellationResult) {
+        check(currentThread == iThread)
+        if (cancellationResult == CANCELLATION_FAILED)
+            return
         isSuspended[iThread] = false
         // method will not be resumed after suspension, so clear prepared for resume call stack
         suspendedFunctionsStack[iThread].clear()
+    }
+
+    /**
+     * This method is invoked by a test thread that attempts to resume coroutine.
+     */
+    internal open fun onResumeCoroutine(iThread: Int, iResumedThread: Int, iResumedActor: Int) {
+        check(currentThread == iThread)
+    }
+
+    /**
+     * This method is invoked by a test thread to check if the coroutine was resumed.
+     */
+    internal open fun isCoroutineResumed(iThread: Int, iActor: Int): Boolean {
+        return true
     }
 
     private fun addBeforeMethodCallTracePoint(
@@ -1651,11 +1681,20 @@ internal class ManagedStrategyRunner(
     }
 
     override fun afterCoroutineResumed(iThread: Int) = runInIgnoredSection {
-        managedStrategy.afterCoroutineResumed()
+        managedStrategy.afterCoroutineResumed(iThread)
     }
 
-    override fun afterCoroutineCancelled(iThread: Int) = runInIgnoredSection {
-        managedStrategy.afterCoroutineCancelled()
+    override fun afterCoroutineCancelled(iThread: Int, promptCancellation: Boolean, result: CancellationResult) = runInIgnoredSection {
+        managedStrategy.afterCoroutineCancelled(iThread, promptCancellation, result)
+    }
+
+    override fun onResumeCoroutine(iResumedThread: Int, iResumedActor: Int) {
+        super.onResumeCoroutine(iResumedThread, iResumedActor)
+        managedStrategy.onResumeCoroutine(managedStrategy.currentThread, iResumedThread, iResumedActor)
+    }
+
+    override fun isCoroutineResumed(iThread: Int, actorId: Int): Boolean {
+        return super.isCoroutineResumed(iThread, actorId) && managedStrategy.isCoroutineResumed(iThread, actorId)
     }
 
     override fun constructStateRepresentation(): String? {
@@ -1672,12 +1711,12 @@ internal class ManagedStrategyRunner(
         val cancellationTracePoint = managedStrategy.createAndLogCancellationTracePoint()
         try {
             // Call the `cancel` method.
+            val iThread = managedStrategy.currentThread
             val cancellationResult = super.cancelByLincheck(cont, promptCancellation)
             // Pass the result to `cancellationTracePoint`.
             cancellationTracePoint?.initializeCancellationResult(cancellationResult)
             // Invoke `strategy.afterCoroutineCancelled` if the coroutine was cancelled successfully.
-            if (cancellationResult != CANCELLATION_FAILED)
-                managedStrategy.afterCoroutineCancelled()
+            afterCoroutineCancelled(iThread, promptCancellation, cancellationResult)
             return cancellationResult
         } catch (e: Throwable) {
             cancellationTracePoint?.initializeException(e)

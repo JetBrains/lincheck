@@ -20,7 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.util.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import java.lang.reflect.*
@@ -285,7 +285,7 @@ private fun resolveClass(strategy: ManagedStrategy, clazz: Class<*>? = null, cla
         return clazz
     }
     if (clazz == null) {
-        return strategy.classLoader.loadClass(className)
+        return ClassLoader.getSystemClassLoader().loadClass(className)
     }
     if (matchClassName(clazz, className)) {
         return clazz

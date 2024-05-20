@@ -28,44 +28,51 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.*
 import org.jetbrains.kotlinx.lincheck.util.*
+import sun.nio.ch.lincheck.TestThread
 import java.lang.reflect.*
 
 class EventStructureStrategy(
         testCfg: EventStructureCTestConfiguration,
         testClass: Class<*>,
         scenario: ExecutionScenario,
-        validationFunctions: List<Method>,
+        validationFunction: Actor?,
         stateRepresentation: Method?,
         verifier: Verifier
-) : ManagedStrategy(testClass, scenario, verifier, validationFunctions, stateRepresentation, testCfg,
+) : ManagedStrategy(testClass, scenario, verifier, validationFunction, stateRepresentation, testCfg,
                     memoryTrackingEnabled = true) {
     // The number of invocations that the strategy is eligible to use to search for an incorrect execution.
     private val maxInvocations = testCfg.invocationsPerIteration
 
-    override val loopDetector: LoopDetector = LoopDetector(
-        hangingDetectionThreshold = testCfg.hangingDetectionThreshold,
-        resetOnActorStart = true,
-        resetOnThreadSwitch = false,
-    )
+    private val memoryInitializer: MemoryInitializer = { location ->
+        runInIgnoredSection {
+            location.read(eventStructure.objectRegistry::getValue)?.opaque()
+        }
+    }
 
     private val eventStructure: EventStructure =
-        EventStructure(nThreads, memoryInitializer, loopDetector, ::onInconsistency) { iThread, reason ->
+        EventStructure(nThreads, memoryInitializer, ::onInconsistency) { iThread, reason ->
             switchCurrentThread(iThread, reason, mustSwitch = true)
         }
 
     // Tracker of objects.
-    override val objectTracker: ObjectTracker get() = eventStructure.objectTracker
+    override val objectTracker: ObjectTracker =
+        EventStructureObjectTracker(eventStructure)
     // Tracker of shared memory accesses.
     override val memoryTracker: MemoryTracker =
-        EventStructureMemoryTracker(eventStructure, objectTracker)
+        EventStructureMemoryTracker(eventStructure, eventStructure.objectRegistry)
     // Tracker of monitors operations.
     override val monitorTracker: MonitorTracker =
-        EventStructureMonitorTracker(eventStructure, objectTracker)
+        EventStructureMonitorTracker(eventStructure, eventStructure.objectRegistry)
     // Tracker of thread parking
     override val parkingTracker: ParkingTracker =
         EventStructureParkingTracker(eventStructure)
 
     val stats = Stats()
+
+    override fun shouldInvokeBeforeEvent(): Boolean {
+        // TODO: fixme
+        return false
+    }
 
     override fun runImpl(): LincheckFailure? {
         // TODO: move invocation counting logic to ManagedStrategy class
@@ -222,14 +229,10 @@ class EventStructureStrategy(
                 val clockSize = result.clockOnStart.clock.size
                 val hbClock = actorEvent?.causalityClock?.toHBClock(clockSize, tid, i)
                     ?: prevHBClock.apply { clock[tid] = i }
-                result.clockOnStart.reset(hbClock)
+                result.clockOnStart.set(hbClock)
             }
         }
     }
-
-    // Number of steps given to each thread before context-switch
-    private val SCHEDULER_THREAD_STEPS_NUM: Int = 3
-    private var thread_steps = 0
 
     override fun shouldSwitch(iThread: Int): ThreadSwitchDecision {
         // If strategy is in replay phase we first need to execute replaying threads
@@ -255,19 +258,7 @@ class EventStructureStrategy(
          * of the model checking, and time-to-first-bug-discovered metric.
          * Thus we might want to customize scheduling strategy.
          * TODO: make scheduling strategy configurable
-
-         * Another important consideration for scheduling strategy is fairness.
-         * In case of live-locks (e.g. spin-loops) unfair scheduler
-         * is likely to prioritize wasteful exploration of spinning executions.
-         * For example, when checking typical spin-lock implementation,
-         * unfair scheduler might give bias to a thread waiting in spin-loop
-         *
-         * Thus we currently employ simple fair strategy that gives equal number of steps
-         * to every threads before switch.
          */
-        // if (++thread_steps <= SCHEDULER_THREAD_STEPS_NUM)
-        //     return false
-        // thread_steps = 0
         return ThreadSwitchDecision.NOT
     }
 
@@ -285,19 +276,14 @@ class EventStructureStrategy(
 
     override fun initializeInvocation() {
         super.initializeInvocation()
-        thread_steps = 0
         eventStructure.initializeExploration()
         eventStructure.addThreadStartEvent(eventStructure.mainThreadId)
     }
 
-    override fun beforeParallelPart() {
-        super.beforeParallelPart()
-        eventStructure.addThreadForkEvent(eventStructure.mainThreadId, (0 until nThreads).toSet())
-    }
-
-    override fun afterParallelPart() {
-        super.afterParallelPart()
-        eventStructure.addThreadJoinEvent(eventStructure.mainThreadId, (0 until nThreads).toSet())
+    override fun beforePart(part: ExecutionPart) {
+        super.beforePart(part)
+        // eventStructure.addThreadForkEvent(eventStructure.mainThreadId, (0 until nThreads).toSet())
+        // eventStructure.addThreadJoinEvent(eventStructure.mainThreadId, (0 until nThreads).toSet())
     }
 
     override fun onStart(iThread: Int) {
@@ -320,19 +306,19 @@ class EventStructureStrategy(
 
     override fun onActorStart(iThread: Int) {
         super.onActorStart(iThread)
-        val actor = scenario[1 + iThread][currentActorId[iThread]]
+        val actor = scenario.threads[1 + iThread][currentActorId[iThread]]
         eventStructure.addActorStartEvent(iThread, actor)
     }
 
-    override fun onActorEnd(iThread: Int) {
-        super.onActorEnd(iThread)
-        val actor = scenario[1 + iThread][currentActorId[iThread]]
+    override fun onActorFinish(iThread: Int) {
+        super.onActorFinish(iThread)
+        val actor = scenario.threads[1 + iThread][currentActorId[iThread]]
         eventStructure.addActorEndEvent(iThread, actor)
     }
 
     private fun onInconsistency(inconsistency: Inconsistency) {
         suddenInvocationResult = InconsistentInvocationResult(inconsistency)
-        throw ForcibleExecutionFinishException
+        throw ForcibleExecutionFinishError
     }
 
     override fun afterCoroutineSuspended(iThread: Int) {
@@ -366,28 +352,31 @@ class EventStructureStrategy(
         }
         return (resumeEvent != null)
     }
-
-    override fun interceptRandom(): Int? {
-        val iThread = (Thread.currentThread() as? FixedActiveThreadsExecutor.TestThread)?.iThread
-            ?: return null
-        val event = eventStructure.tryReplayRandomEvent(iThread)
-            ?: return null
-        return (event.label as RandomLabel).value
-    }
-
-    override fun trackRandom(generated: Int) {
-        val iThread = (Thread.currentThread() as? FixedActiveThreadsExecutor.TestThread)?.iThread
-            ?: return
-        eventStructure.addRandomEvent(iThread, generated)
-    }
 }
 
 typealias ReportInconsistencyCallback = (Inconsistency) -> Unit
 typealias InternalThreadSwitchCallback = (ThreadID, SwitchReason) -> Unit
 
+private class EventStructureObjectTracker(
+    private val eventStructure: EventStructure,
+) : ObjectTracker {
+
+    override fun registerNewObject(obj: Any) {
+        val iThread = (Thread.currentThread() as TestThread).threadId
+        eventStructure.addObjectAllocationEvent(iThread, obj.opaque())
+    }
+
+    override fun registerObjectLink(fromObject: Any, toObject: Any?) {}
+
+    override fun isTrackedObject(obj: Any): Boolean = true
+
+    override fun reset() {}
+
+}
+
 private class EventStructureMemoryTracker(
     private val eventStructure: EventStructure,
-    private val objectTracker: ObjectTracker,
+    private val objectRegistry: ObjectRegistry,
 ) : MemoryTracker() {
 
     private fun performWrite(iThread: Int, codeLocation: Int, location: MemoryLocation, value: OpaqueValue?, isExclusive: Boolean = false) {
@@ -395,13 +384,13 @@ private class EventStructureMemoryTracker(
         // TODO: refactor this!
         eventStructure.allocationEvent(location.objID)?.label?.asWriteAccessLabel(location)
         eventStructure.addWriteEvent(iThread, codeLocation, location, value, isExclusive)
-        location.write(value?.unwrap(), objectTracker::getValue)
+        location.write(value?.unwrap(), objectRegistry::getValue)
     }
 
     private fun performRead(iThread: Int, codeLocation: Int, location: MemoryLocation, isExclusive: Boolean = false): OpaqueValue? {
         val readEvent = eventStructure.addReadEvent(iThread, codeLocation, location, isExclusive)
         val valueID = (readEvent.label as ReadAccessLabel).value
-        return objectTracker.getValue(location.type, valueID)
+        return objectRegistry.getValue(location.type, valueID)
     }
 
     override fun writeValue(iThread: Int, codeLocation: Int, location: MemoryLocation, value: OpaqueValue?) {
@@ -465,8 +454,8 @@ private class EventStructureMemoryTracker(
             // we choose one of the racy final writes non-deterministically and dump it to the memory
             val write = finalWrites.firstOrNull() ?: continue
             val label = write.label.asWriteAccessLabel(location).ensureNotNull()
-            val value = objectTracker.getValue(location.type, label.value)
-            location.write(value?.unwrap(), objectTracker::getValue)
+            val value = objectRegistry.getValue(location.type, label.value)
+            location.write(value?.unwrap(), objectRegistry::getValue)
         }
     }
 
@@ -476,7 +465,7 @@ private class EventStructureMemoryTracker(
 
 private class EventStructureMonitorTracker(
     private val eventStructure: EventStructure,
-    private val objectTracker: ObjectTracker,
+    private val objectRegistry: ObjectRegistry,
 ) : MonitorTracker {
 
     // for each mutex object acquired by some thread,
@@ -493,16 +482,16 @@ private class EventStructureMonitorTracker(
         return (lockStack == null) || (lockStack.last().threadId == iThread)
     }
 
-    override fun canAcquireMonitor(iThread: Int, monitor: OpaqueValue): Boolean {
-        val mutexID = objectTracker.getObjectID(monitor)
+    private fun canAcquireMonitor(iThread: Int, monitor: OpaqueValue): Boolean {
+        val mutexID = objectRegistry[monitor]!!.id
         return canAcquireMonitor(iThread, mutexID)
     }
 
-    override fun acquire(iThread: Int, monitor: OpaqueValue): Boolean {
+    override fun acquireMonitor(iThread: Int, monitor: Any): Boolean {
         // issue lock-request event
-        val lockRequest = issueLockRequest(iThread, monitor)
+        val lockRequest = issueLockRequest(iThread, monitor.opaque())
         // if lock is acquired by another thread then postpone addition of lock-response event
-        if (!canAcquireMonitor(iThread, monitor))
+        if (!canAcquireMonitor(iThread, monitor.opaque()))
             return false
         // try to add lock-response event
         val lockResponse = tryCompleteLockResponse(lockRequest)
@@ -510,12 +499,12 @@ private class EventStructureMonitorTracker(
         return (lockResponse != null)
     }
 
-    override fun release(iThread: Int, monitor: OpaqueValue) {
-        issueUnlock(iThread, monitor)
+    override fun releaseMonitor(iThread: Int, monitor: Any) {
+        issueUnlock(iThread, monitor.opaque())
     }
 
     private fun issueLockRequest(iThread: Int, monitor: OpaqueValue): AtomicThreadEvent {
-        val mutexID = objectTracker.getObjectID(monitor)
+        val mutexID = objectRegistry[monitor]!!.id
         // check if the thread is already blocked on the lock-request
         val blockingRequest = eventStructure.getPendingBlockingRequest(iThread)
             ?.ensure { it.label.satisfies<LockLabel> { this.mutexID == mutexID } }
@@ -546,7 +535,7 @@ private class EventStructureMonitorTracker(
     }
 
     private fun issueUnlock(iThread: Int, monitor: OpaqueValue): AtomicThreadEvent {
-        val mutexID = objectTracker.getObjectID(monitor)
+        val mutexID = objectRegistry[monitor]!!.id
         // obtain current lock-responses stack, and ensure that
         // the lock is indeed acquired by the releasing thread
         val lockStack = lockStacks[mutexID]!!
@@ -575,8 +564,8 @@ private class EventStructureMonitorTracker(
                 canAcquireMonitor(iThread, mutexID))
     }
 
-    override fun waitOnMonitor(iThread: Int, monitor: OpaqueValue): Boolean {
-        val mutexID = objectTracker.getObjectID(monitor)
+    override fun waitOnMonitor(iThread: Int, monitor: Any): Boolean {
+        val mutexID = objectRegistry[monitor.opaque()]!!.id
         // check if the thread is already blocked on wait-request or (synthetic) lock-request
         val blockingRequest = eventStructure.getPendingBlockingRequest(iThread)
             ?.ensure { it.label.satisfies<MutexLabel> { this.mutexID == mutexID } }
@@ -587,31 +576,31 @@ private class EventStructureMonitorTracker(
         // this procedure will also add synthetic unlock event
         if (blockingRequest == null) {
             check(waitLockStack[iThread] == null)
-            waitRequest = issueWaitRequest(iThread, monitor)
+            waitRequest = issueWaitRequest(iThread, monitor.opaque())
         }
         // if the wait-request was already issued, try to complete it by wait-response;
         // this procedure will also add synthetic lock-request event
         if (waitRequest != null) {
-            val (_, _lockRequest) = tryCompleteWaitResponse(monitor, waitRequest)
+            val (_, _lockRequest) = tryCompleteWaitResponse(monitor.opaque(), waitRequest)
                 ?: return true
             lockRequest = _lockRequest
         }
         // finally, check that the thread can acquire the lock back,
         // and try to complete the lock-request by lock-response
         check(lockRequest != null)
-        if (!canAcquireMonitor(iThread, monitor))
+        if (!canAcquireMonitor(iThread, mutexID))
             return true
         val lockResponse = tryCompleteWaitLockResponse(lockRequest)
         // exit waiting if the lock response was added successfully
         return (lockResponse == null)
     }
 
-    override fun notify(iThread: Int, monitor: OpaqueValue, notifyAll: Boolean) {
-        issueNotify(iThread, monitor, notifyAll)
+    override fun notify(iThread: Int, monitor: Any, notifyAll: Boolean) {
+        issueNotify(iThread, monitor.opaque(), notifyAll)
     }
 
     private fun issueWaitRequest(iThread: Int, monitor: OpaqueValue): AtomicThreadEvent {
-        val mutexID = objectTracker.getObjectID(monitor)
+        val mutexID = objectRegistry[monitor]!!.id
         // obtain the current lock-responses stack, and ensure that
         // the lock is indeed acquired by the waiting thread
         val lockStack = lockStacks[mutexID]!!

@@ -45,8 +45,3 @@ interface ObjectTracker {
      */
     fun reset()
 }
-
-/**
- * Special auxiliary object used as an owner of static fields (instead of `null`).
- */
-internal object StaticObject: Any()

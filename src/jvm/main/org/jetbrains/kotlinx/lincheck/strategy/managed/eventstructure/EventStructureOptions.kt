@@ -28,8 +28,7 @@ class EventStructureOptions : ManagedOptions<EventStructureOptions, EventStructu
     override fun createTestConfigurations(testClass: Class<*>): EventStructureCTestConfiguration {
         return EventStructureCTestConfiguration(testClass, iterations, threads, actorsPerThread, actorsBefore, actorsAfter,
                 executionGenerator, verifier, checkObstructionFreedom, hangingDetectionThreshold, invocationsPerIteration,
-                guarantees, requireStateEquivalenceImplementationCheck, minimizeFailedScenario,
-                chooseSequentialSpecification(sequentialSpecification, testClass), timeoutMs, eliminateLocalObjects,
-                verboseTrace, customScenarios)
+                guarantees, minimizeFailedScenario, chooseSequentialSpecification(sequentialSpecification, testClass), timeoutMs,
+                customScenarios)
     }
 }

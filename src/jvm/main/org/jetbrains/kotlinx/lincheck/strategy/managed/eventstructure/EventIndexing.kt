@@ -114,7 +114,7 @@ class EventIndexImpl<E : Event, C : Enum<C>, K : Any> private constructor(
             witness: C,
             classifier: (E) -> Pair<C, K>?
         ): MutableEventIndex<E, C, K> {
-            return EventIndexImpl(witness.declaringClass.enumConstants.size, classifier)
+            return EventIndexImpl(witness.declaringJavaClass.enumConstants.size, classifier)
         }
 
         fun <E : Event, C : Enum<C>, K : Any> create(): MutableEventIndex<E, C, K> {

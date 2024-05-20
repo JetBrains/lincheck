@@ -20,8 +20,11 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
+import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
+import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.MODEL_CHECKING
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.lang.reflect.*
 
@@ -30,19 +33,21 @@ class EventStructureCTestConfiguration(
         threads: Int, actorsPerThread: Int, actorsBefore: Int, actorsAfter: Int,
         generatorClass: Class<out ExecutionGenerator>, verifierClass: Class<out Verifier>,
         checkObstructionFreedom: Boolean, hangingDetectionThreshold: Int, invocationsPerIteration: Int,
-        guarantees: List<ManagedStrategyGuarantee>, requireStateEquivalenceCheck: Boolean, minimizeFailedScenario: Boolean,
-        sequentialSpecification: Class<*>, timeoutMs: Long, eliminateLocalObjects: Boolean, verboseTrace: Boolean,
+        guarantees: List<ManagedStrategyGuarantee>, minimizeFailedScenario: Boolean,
+        sequentialSpecification: Class<*>, timeoutMs: Long,
         customScenarios: List<ExecutionScenario>
 ) : ManagedCTestConfiguration(
         testClass, iterations,
         threads, actorsPerThread, actorsBefore, actorsAfter,
         generatorClass, verifierClass,
         checkObstructionFreedom, hangingDetectionThreshold, invocationsPerIteration,
-        guarantees, requireStateEquivalenceCheck, minimizeFailedScenario,
-        sequentialSpecification, timeoutMs, eliminateLocalObjects, verboseTrace,
+        guarantees, minimizeFailedScenario, sequentialSpecification, timeoutMs,
         customScenarios
 ) {
-    override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunctions: List<Method>,
+
+    override val instrumentationMode: InstrumentationMode get() = MODEL_CHECKING
+
+    override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunction: Actor?,
                                 stateRepresentationMethod: Method?, verifier: Verifier): EventStructureStrategy
-            = EventStructureStrategy(this, testClass, scenario, validationFunctions, stateRepresentationMethod, verifier)
+            = EventStructureStrategy(this, testClass, scenario, validationFunction, stateRepresentationMethod, verifier)
 }

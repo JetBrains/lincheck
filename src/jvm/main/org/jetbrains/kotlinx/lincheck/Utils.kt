@@ -182,7 +182,7 @@ internal fun <T> CancellableContinuation<T>.cancelByLincheck(promptCancellation:
     }
 }
 
-internal enum class CancellationResult { CANCELLED_BEFORE_RESUMPTION, CANCELLED_AFTER_RESUMPTION, CANCELLATION_FAILED }
+enum class CancellationResult { CANCELLED_BEFORE_RESUMPTION, CANCELLED_AFTER_RESUMPTION, CANCELLATION_FAILED }
 
 /**
  * Returns `true` if the continuation was cancelled by [CancellableContinuation.cancel].

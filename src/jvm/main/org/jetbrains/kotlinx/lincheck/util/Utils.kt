@@ -20,6 +20,9 @@
 
 package org.jetbrains.kotlinx.lincheck.util
 
+import org.objectweb.asm.Type
+import kotlin.reflect.KClass
+
 fun Boolean.toInt(): Int = this.compareTo(false)
 
 fun Int.toBoolean() = (this == 1)
@@ -227,3 +230,42 @@ class UnreachableException(message: String?): Exception(message)
 fun unreachable(message: String? = null): Nothing {
     throw UnreachableException(message)
 }
+
+internal fun Type.getKClass(): KClass<*> = when (sort) {
+    Type.INT     -> Int::class
+    Type.BYTE    -> Byte::class
+    Type.SHORT   -> Short::class
+    Type.LONG    -> Long::class
+    Type.FLOAT   -> Float::class
+    Type.DOUBLE  -> Double::class
+    Type.CHAR    -> Char::class
+    Type.BOOLEAN -> Boolean::class
+    Type.OBJECT  -> when (this) {
+        INT_TYPE_BOXED      -> Int::class
+        BYTE_TYPE_BOXED     -> Byte::class
+        SHORT_TYPE_BOXED    -> Short::class
+        LONG_TYPE_BOXED     -> Long::class
+        CHAR_TYPE_BOXED     -> Char::class
+        BOOLEAN_TYPE_BOXED  -> Boolean::class
+        else                -> Any::class
+    }
+    Type.ARRAY   -> when (elementType.sort) {
+        Type.INT     -> IntArray::class
+        Type.BYTE    -> ByteArray::class
+        Type.SHORT   -> ShortArray::class
+        Type.LONG    -> LongArray::class
+        Type.FLOAT   -> FloatArray::class
+        Type.DOUBLE  -> DoubleArray::class
+        Type.CHAR    -> CharArray::class
+        Type.BOOLEAN -> BooleanArray::class
+        else         -> Array::class
+    }
+    else -> throw IllegalArgumentException()
+}
+
+internal val INT_TYPE_BOXED      = Type.getType("Ljava/lang/Integer")
+internal val LONG_TYPE_BOXED     = Type.getType("Ljava/lang/Long")
+internal val SHORT_TYPE_BOXED    = Type.getType("Ljava/lang/Short")
+internal val BYTE_TYPE_BOXED     = Type.getType("Ljava/lang/Byte")
+internal val CHAR_TYPE_BOXED     = Type.getType("Ljava/lang/Character")
+internal val BOOLEAN_TYPE_BOXED  = Type.getType("Ljava/lang/Boolean")
