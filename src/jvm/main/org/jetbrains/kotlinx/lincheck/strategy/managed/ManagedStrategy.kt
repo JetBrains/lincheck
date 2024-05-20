@@ -76,8 +76,10 @@ abstract class ManagedStrategy(
     // Detector of loops or hangs (i.e. active locks).
     internal val loopDetector: LoopDetector = LoopDetector(testCfg.hangingDetectionThreshold)
 
-    // Tracker of the monitors.
+    // Tracker of the monitors' operations.
     protected abstract val monitorTracker: MonitorTracker
+    // Tracker of the thread parking.
+    protected abstract val parkingTracker: ParkingTracker
 
     // InvocationResult that was observed by the strategy during the execution (e.g., a deadlock).
     @Volatile
@@ -214,6 +216,7 @@ abstract class ManagedStrategy(
         randoms.forEachIndexed { i, r -> r.setSeed(i + 239L) }
         localObjectManager = LocalObjectManager()
         monitorTracker.reset()
+        parkingTracker.reset()
     }
 
     /**
@@ -503,8 +506,9 @@ abstract class ManagedStrategy(
      */
     private fun isActive(iThread: Int): Boolean =
         !finished[iThread] &&
+        !(isSuspended[iThread] && !runner.isCoroutineResumed(iThread, currentActorId[iThread])) &&
         !monitorTracker.isWaiting(iThread) &&
-        !(isSuspended[iThread] && !runner.isCoroutineResumed(iThread, currentActorId[iThread]))
+        !parkingTracker.isParked(iThread)
 
     /**
      * Waits until the specified thread can continue
@@ -664,12 +668,16 @@ abstract class ManagedStrategy(
         // we simply add a new switch point here, thus, also
         // emulating spurious wake-ups.
         newSwitchPoint(iThread, codeLocation, tracePoint)
+        parkingTracker.park(iThread)
+        while (parkingTracker.waitUnpark(iThread)) {
+            // switch to another thread and wait till an unpark event happens
+            switchCurrentThread(iThread, SwitchReason.PARK_WAIT, true)
+        }
     }
 
     override fun unpark(thread: Thread, codeLocation: Int): Unit = runInIgnoredSection {
         val iThread = currentThread
-        // We don't suspend on `park()` calls to emulate spurious wake-ups,
-        // therefore, no actions are needed.
+        parkingTracker.unpark(iThread, (thread as TestThread).threadId)
         if (collectTrace) {
             val tracePoint = UnparkTracePoint(
                 iThread = iThread,

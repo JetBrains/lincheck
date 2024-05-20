@@ -52,8 +52,10 @@ internal class ModelCheckingStrategy(
     // The interleaving that will be studied on the next invocation.
     private lateinit var currentInterleaving: Interleaving
 
-    // Tracker of the monitors.
+    // Tracker of the monitors' operations.
     override val monitorTracker: MonitorTracker = ModelCheckingMonitorTracker(nThreads)
+    // Tracker of the thread parking.
+    override val parkingTracker: ParkingTracker = ModelCheckingParkingTracker(nThreads, allowSpuriousWakeUps = true)
 
     override fun nextInvocation(): Boolean {
         currentInterleaving = root.nextInterleaving()
