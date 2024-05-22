@@ -78,8 +78,8 @@ internal class LincheckClassVisitor(
                 mv
             }
         }
-        val createAdapter : (MethodVisitor) -> GeneratorAdapter = {
-            GeneratorAdapter(it, access, methodName, desc)
+        fun createAdapter(methodVisitor: MethodVisitor): GeneratorAdapter {
+            return GeneratorAdapter(methodVisitor, access, methodName, desc)
         }
         if (methodName == "<clinit>" ||
             // Debugger implicitly evaluates toString for variables rendering
