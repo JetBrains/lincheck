@@ -28,6 +28,7 @@ internal class MethodCallTransformer(
     className: String,
     methodName: String,
     adapter: GeneratorAdapter,
+    private val interceptAtomicMethodCallResult: Boolean = false,
 ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {

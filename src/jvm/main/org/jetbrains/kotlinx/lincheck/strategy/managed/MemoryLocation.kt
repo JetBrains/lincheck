@@ -20,10 +20,16 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicFieldUpdaterNames.getAtomicFieldUpdaterInfo
+import org.jetbrains.kotlinx.lincheck.canonicalClassName
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
+import java.lang.invoke.VarHandle
 import java.lang.reflect.*
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater
+import java.util.concurrent.atomic.AtomicLongFieldUpdater
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 import kotlin.reflect.KClass
 import java.lang.reflect.Array as ReflectArray
 
@@ -46,8 +52,102 @@ interface MemoryLocation {
 val MemoryLocation.kClass: KClass<*>
     get() = type.getKClass()
 
+fun ObjectTracker.getFieldAccessMemoryLocation(obj: Any?, className: String, fieldName: String, type: Type,
+                                               isStatic: Boolean, isFinal: Boolean): MemoryLocation {
+    if (isStatic) {
+        return StaticFieldMemoryLocation(className.canonicalClassName, fieldName, type)
+    }
+    val clazz = obj!!.javaClass
+    val id = getObjectId(obj)
+    return ObjectFieldMemoryLocation(clazz, id, className.canonicalClassName, fieldName, type)
+}
+
+fun ObjectTracker.getArrayAccessMemoryLocation(array: Any, index: Int, type: Type): MemoryLocation {
+    val clazz = array.javaClass
+    val id = getObjectId(array)
+    return ArrayElementMemoryLocation(clazz, id, index, type)
+}
+
+fun ObjectTracker.getAtomicAccessMemoryLocation(receiver: Any?, params: Array<Any?>): MemoryLocation? {
+    // TODO: just return inside when branches
+    var obj: Any? = null
+    var isArrayAccess = false
+    var className = ""
+    var fieldName = ""
+    var index = -1
+    var type = OBJECT_TYPE
+    when {
+         receiver is AtomicReferenceFieldUpdater<*, *> -> {
+             val info = getAtomicFieldUpdaterInfo(receiver)!!
+             obj = params[0]
+             className = info.className
+             fieldName = info.fieldName
+             type = OBJECT_TYPE
+        }
+
+        receiver is AtomicIntegerFieldUpdater<*> -> {
+            val info = getAtomicFieldUpdaterInfo(receiver)!!
+            obj = params[0]
+            className = info.className
+            fieldName = info.fieldName
+            type = Type.INT_TYPE
+        }
+
+        receiver is AtomicLongFieldUpdater<*> -> {
+            val info = getAtomicFieldUpdaterInfo(receiver)!!
+            obj = params[0]
+            className = info.className
+            fieldName = info.fieldName
+            type = Type.LONG_TYPE
+        }
+
+        receiver is VarHandle -> {
+            val info = VarHandleNames.varHandleMethodType(receiver, params)
+            check(info !is VarHandleMethodType.TreatAsDefaultMethod)
+            isArrayAccess = (info is VarHandleMethodType.ArrayVarHandleMethod)
+            obj = info.instance
+            className = info.className!!
+            fieldName = info.fieldName.orEmpty()
+            index = info.index
+        }
+
+        isUnsafe(receiver) -> {
+            val info = UnsafeNames.getMethodCallType(params)
+            check(info !is UnsafeName.TreatAsDefaultMethod)
+            isArrayAccess = (info is UnsafeName.UnsafeArrayMethod)
+            obj = info.instance
+            className = info.className!!
+            fieldName = info.fieldName.orEmpty()
+            index = info.index
+        }
+
+        isAtomicObject(receiver) -> {
+            return AtomicPrimitiveMemoryLocation(
+                clazz = receiver!!::class.java,
+                objID = getObjectId(receiver),
+                type = getAtomicType(receiver)!!,
+            )
+        }
+
+        isAtomicArray(receiver) -> {
+            isArrayAccess = true
+            obj = receiver
+            className = receiver!!::class.java.simpleName
+            index = (params[0] as Int)
+        }
+
+        else -> return null
+    }
+    return if (isArrayAccess)
+        getArrayAccessMemoryLocation(obj!!, index, type)
+    else
+        getFieldAccessMemoryLocation(obj, className, fieldName, type,
+            isStatic = (obj == null),
+            isFinal = false, // TODO: fixme?
+        )
+}
+
 class StaticFieldMemoryLocation(
-    strategy: ManagedStrategy,
     val className: String,
     val fieldName: String,
     override val type: Type,
@@ -56,7 +156,7 @@ class StaticFieldMemoryLocation(
     override val objID: ObjectID = STATIC_OBJECT_ID
 
     private val field: Field by lazy {
-        resolveClass(strategy, className = className)
+        resolveClass(className = className)
             .getDeclaredField(fieldName)
             .apply { isAccessible = true }
     }
@@ -90,7 +190,6 @@ class StaticFieldMemoryLocation(
 }
 
 class ObjectFieldMemoryLocation(
-    strategy: ManagedStrategy,
     clazz: Class<*>,
     override val objID: ObjectID,
     val className: String,
@@ -105,7 +204,7 @@ class ObjectFieldMemoryLocation(
     val simpleClassName: String = clazz.simpleName
 
     private val field: Field by lazy {
-        val resolvedClass = resolveClass(strategy, clazz, className = className)
+        val resolvedClass = resolveClass(clazz, className = className)
         resolveField(resolvedClass, className, fieldName)
             .apply { isAccessible = true }
     }
@@ -142,7 +241,6 @@ class ObjectFieldMemoryLocation(
 }
 
 class ArrayElementMemoryLocation(
-    strategy: ManagedStrategy,
     clazz: Class<*>,
     override val objID: ObjectID,
     val index: Int,
@@ -161,7 +259,7 @@ class ArrayElementMemoryLocation(
         if (isPlainArray) {
             return@lazy null
         }
-        val resolvedClass = resolveClass(strategy, clazz)
+        val resolvedClass = resolveClass(clazz)
         return@lazy resolvedClass.methods
             // TODO: can we use getOpaque() for atomic arrays here?
             .first { it.name == "get" }
@@ -172,7 +270,7 @@ class ArrayElementMemoryLocation(
         if (isPlainArray) {
             return@lazy null
         }
-        val resolvedClass = resolveClass(strategy, clazz)
+        val resolvedClass = resolveClass(clazz)
         return@lazy resolvedClass.methods
             // TODO: can we use setOpaque() for atomic arrays here?
             .first { it.name == "set" }
@@ -216,7 +314,6 @@ class ArrayElementMemoryLocation(
 }
 
 class AtomicPrimitiveMemoryLocation(
-    strategy: ManagedStrategy,
     clazz: Class<*>,
     override val objID: ObjectID,
     override val type: Type,
@@ -230,14 +327,14 @@ class AtomicPrimitiveMemoryLocation(
 
     private val getMethod by lazy {
         // TODO: can we use getOpaque() here?
-        resolveClass(strategy, clazz).methods
+        resolveClass(clazz).methods
             .first { it.name == "get" }
             .apply { isAccessible = true }
     }
 
     private val setMethod by lazy {
         // TODO: can we use setOpaque() here?
-        resolveClass(strategy, clazz).methods
+        resolveClass(clazz).methods
             .first { it.name == "set" }
             .apply { isAccessible = true }
     }
@@ -279,13 +376,13 @@ internal fun objRepr(className: String, objID: ObjectID): String {
 private fun matchClassName(clazz: Class<*>, className: String) =
     clazz.name.endsWith(className) || (clazz.canonicalName?.endsWith(className) ?: false)
 
-private fun resolveClass(strategy: ManagedStrategy, clazz: Class<*>? = null, className: String? = null): Class<*> {
+private fun resolveClass(clazz: Class<*>? = null, className: String? = null): Class<*> {
     if (className == null) {
         check(clazz != null)
         return clazz
     }
     if (clazz == null) {
-        return ClassLoader.getSystemClassLoader().loadClass(className)
+        return Class.forName(className)
     }
     if (matchClassName(clazz, className)) {
         return clazz

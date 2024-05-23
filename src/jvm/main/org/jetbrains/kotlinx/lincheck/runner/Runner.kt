@@ -29,7 +29,7 @@ abstract class Runner protected constructor(
     protected val completedOrSuspendedThreads = AtomicInteger(0)
 
     var currentExecutionPart: ExecutionPart? = null
-        private set
+        protected set
 
     /**
      * Returns the current state representation of the test instance constructed via
@@ -112,9 +112,9 @@ abstract class Runner protected constructor(
     }
 
     fun beforePart(part: ExecutionPart) {
+        strategy.beforePart(part)
         completedOrSuspendedThreads.set(0)
         currentExecutionPart = part
-        strategy.beforePart(part)
     }
 
     /**

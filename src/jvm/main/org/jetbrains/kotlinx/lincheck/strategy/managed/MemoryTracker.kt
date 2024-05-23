@@ -22,28 +22,51 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import java.util.*
 
+interface MemoryTracker {
+
+    fun beforeWrite(iThread: Int, codeLocation: Int, location: MemoryLocation, value: Any?)
+
+    fun beforeRead(iThread: Int, codeLocation: Int, location: MemoryLocation)
+
+    fun beforeGetAndSet(iThread: Int, codeLocation: Int, location: MemoryLocation, newValue: Any?)
+
+    fun beforeCompareAndSet(iThread: Int, codeLocation: Int, location: MemoryLocation, expectedValue: Any?, newValue: Any?)
+
+    fun beforeCompareAndExchange(iThread: Int, codeLocation: Int, location: MemoryLocation, expectedValue: Any?, newValue: Any?)
+
+    // TODO: move increment kind enum here?
+    fun beforeGetAndAdd(iThread: Int, codeLocation: Int, location: MemoryLocation, delta: Number)
+
+    fun beforeAddAndGet(iThread: Int, codeLocation: Int, location: MemoryLocation, delta: Number)
+
+    fun interceptReadResult(iThread: Int): Any?
+
+    fun reset()
+
+}
+
 /**
  * Tracks memory operations with shared variables.
  */
-abstract class MemoryTracker {
-
-    abstract fun writeValue(iThread: Int, codeLocation: Int, location: MemoryLocation, value: OpaqueValue?)
-
-    abstract fun readValue(iThread: Int, codeLocation: Int, location: MemoryLocation): OpaqueValue?
-
-    abstract fun compareAndSet(iThread: Int, codeLocation: Int, location: MemoryLocation, expected: OpaqueValue?, desired: OpaqueValue?): Boolean
-
-    abstract fun addAndGet(iThread: Int, codeLocation: Int, location: MemoryLocation, delta: Number): OpaqueValue?
-
-    abstract fun getAndAdd(iThread: Int, codeLocation: Int, location: MemoryLocation, delta: Number): OpaqueValue?
-
-    abstract fun getAndSet(iThread: Int, codeLocation: Int, location: MemoryLocation, value: OpaqueValue?): OpaqueValue?
-
-    abstract fun dumpMemory()
-
-    abstract fun reset()
-
-}
+// abstract class MemoryTracker {
+//
+//     abstract fun writeValue(iThread: Int, codeLocation: Int, location: MemoryLocation, value: OpaqueValue?)
+//
+//     abstract fun readValue(iThread: Int, codeLocation: Int, location: MemoryLocation): OpaqueValue?
+//
+//     abstract fun compareAndSet(iThread: Int, codeLocation: Int, location: MemoryLocation, expected: OpaqueValue?, desired: OpaqueValue?): Boolean
+//
+//     abstract fun addAndGet(iThread: Int, codeLocation: Int, location: MemoryLocation, delta: Number): OpaqueValue?
+//
+//     abstract fun getAndAdd(iThread: Int, codeLocation: Int, location: MemoryLocation, delta: Number): OpaqueValue?
+//
+//     abstract fun getAndSet(iThread: Int, codeLocation: Int, location: MemoryLocation, value: OpaqueValue?): OpaqueValue?
+//
+//     abstract fun dumpMemory()
+//
+//     abstract fun reset()
+//
+// }
 
 typealias MemoryInitializer = (MemoryLocation) -> OpaqueValue?
 typealias MemoryIDInitializer = (MemoryLocation) -> ValueID

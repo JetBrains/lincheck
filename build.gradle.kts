@@ -119,7 +119,12 @@ tasks {
         if (instrumentAllClasses.toBoolean()) {
             systemProperty("lincheck.instrumentAllClasses", "true")
         }
-        val extraArgs = mutableListOf<String>()
+        val extraArgs = mutableListOf<String>(
+            // flags to import Unsafe module;
+            // it is used in some tests to check handling of unsafe APIs by Lincheck
+            "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
+            "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED",
+        )
         val withEventIdSequentialCheck: String by project
         if (withEventIdSequentialCheck.toBoolean()) {
             extraArgs.add("-Dlincheck.debug.withEventIdSequentialCheck=true")

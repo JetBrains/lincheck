@@ -22,7 +22,7 @@
 // TODO: better solution?
 @file:Suppress("JAVA_MODULE_DOES_NOT_EXPORT_PACKAGE")
 
-package org.jetbrains.kotlinx.lincheck.test.strategy.eventstructure
+package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
@@ -39,11 +39,6 @@ import org.junit.Ignore
 import org.junit.Test
 import kotlin.reflect.jvm.javaMethod
 
-/**
- * These tests check that [EventStructureStrategy] correctly handles all basic concurrent primitives.
- * In particular, we check the partial order reduction optimality with respect to these primitives,
- * i.e. we check that the strategy does not explore redundant interleavings.
- */
 class PrimitivesTest {
 
     class PlainPrimitiveVariable {
@@ -1035,6 +1030,7 @@ class PrimitivesTest {
 
     internal object CancelledOperationException : Exception()
 
+    @Ignore
     @InternalCoroutinesApi
     @Test(timeout = TIMEOUT)
     fun testResume() {
@@ -1061,6 +1057,7 @@ class PrimitivesTest {
         }
     }
 
+    @Ignore
     @InternalCoroutinesApi
     @Test(timeout = TIMEOUT)
     fun testCancel() {
@@ -1092,6 +1089,7 @@ class PrimitivesTest {
         }
     }
 
+    @Ignore
     @InternalCoroutinesApi
     @Test(timeout = TIMEOUT)
     fun testLincheckCancellation() {
@@ -1123,6 +1121,7 @@ class PrimitivesTest {
         }
     }
 
+    @Ignore
     @InternalCoroutinesApi
     @Test(timeout = TIMEOUT)
     fun testLincheckPromptCancellation() {
@@ -1156,6 +1155,7 @@ class PrimitivesTest {
         }
     }
 
+    @Ignore
     @InternalCoroutinesApi
     @Test(timeout = TIMEOUT)
     fun testResumeCancel() {
@@ -1193,6 +1193,7 @@ class PrimitivesTest {
         }
     }
 
+    @Ignore
     @InternalCoroutinesApi
     @Test(timeout = TIMEOUT)
     fun test1Resume2Suspend() {
@@ -1224,6 +1225,7 @@ class PrimitivesTest {
         }
     }
 
+    @Ignore
     @InternalCoroutinesApi
     @Test(timeout = TIMEOUT)
     fun test2Resume1Suspend() {

@@ -25,6 +25,10 @@ internal object AtomicFieldUpdaterNames {
 
     @Suppress("DEPRECATION")
     internal fun getAtomicFieldUpdaterName(updater: Any): String? {
+        return getAtomicFieldUpdaterInfo(updater)?.fieldName
+    }
+
+    internal fun getAtomicFieldUpdaterInfo(updater: Any): AtomicFieldUpdaterInfo? {
         if (updater !is AtomicIntegerFieldUpdater<*> && updater !is AtomicLongFieldUpdater<*> && updater !is AtomicReferenceFieldUpdater<*, *>) {
             throw IllegalArgumentException("Provided object is not a recognized Atomic*FieldUpdater type.")
         }
@@ -32,16 +36,16 @@ internal object AtomicFieldUpdaterNames {
         try {
             // Cannot use neither reflection not MethodHandles.Lookup, as they lead to a warning.
             val tclassField = updater.javaClass.getDeclaredField("tclass")
-            val targetType = UNSAFE.getObject(updater, UNSAFE.objectFieldOffset(tclassField)) as Class<*>
-
+            val tclass = UNSAFE.getObject(updater, UNSAFE.objectFieldOffset(tclassField)) as Class<*>
             val offsetField = updater.javaClass.getDeclaredField("offset")
             val offset = UNSAFE.getLong(updater, UNSAFE.objectFieldOffset(offsetField))
-
-            return findFieldNameByOffset(targetType, offset)
+            val fieldName = findFieldNameByOffset(tclass, offset) ?: return null
+            return AtomicFieldUpdaterInfo(tclass.name, fieldName)
         } catch (t: Throwable) {
             t.printStackTrace()
         }
-
         return null // Field not found
     }
 }
+
+data class AtomicFieldUpdaterInfo(val className: String, val fieldName: String)

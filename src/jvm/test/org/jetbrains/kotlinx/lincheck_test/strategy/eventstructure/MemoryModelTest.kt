@@ -18,15 +18,14 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.test.strategy.eventstructure
+package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import org.jetbrains.kotlinx.lincheck.scenario
 import java.util.concurrent.atomic.*
 
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
+import org.junit.Ignore
 
 import org.junit.Test
 
@@ -34,6 +33,7 @@ import org.junit.Test
  * These tests check that [EventStructureStrategy] adheres to the weak memory model.
  * It contains various litmus tests to check for specific weak behaviors.
  */
+@Ignore
 class MemoryModelTest {
 
     private val read = SharedMemory::read

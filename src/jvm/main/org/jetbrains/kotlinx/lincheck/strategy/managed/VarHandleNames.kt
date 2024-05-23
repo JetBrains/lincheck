@@ -201,3 +201,27 @@ internal sealed interface VarHandleMethodType {
     data class StaticVarHandleMethod(val ownerClass: Class<*>, val fieldName: String, val parameters: List<Any?>) :
         VarHandleMethodType
 }
+
+internal val VarHandleMethodType.instance: Any? get() = when (this) {
+    is ArrayVarHandleMethod     -> array
+    is InstanceVarHandleMethod  -> owner
+    else                        -> null
+}
+
+internal val VarHandleMethodType.className: String? get() = when (this) {
+    is ArrayVarHandleMethod     -> array.javaClass.name
+    is InstanceVarHandleMethod  -> owner.javaClass.name
+    is StaticVarHandleMethod    -> ownerClass.name
+    else                        -> null
+}
+
+internal val VarHandleMethodType.fieldName: String? get() = when (this) {
+    is InstanceVarHandleMethod  -> fieldName
+    is StaticVarHandleMethod    -> fieldName
+    else                        -> null
+}
+
+internal val VarHandleMethodType.index: Int get() = when (this) {
+    is ArrayVarHandleMethod     -> index
+    else                        -> -1
+}

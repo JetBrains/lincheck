@@ -304,25 +304,10 @@ internal class ModelCheckingStrategy(
             ThreadSwitchDecision.NOT
     }
 
-    override fun beforePart(part: ExecutionPart) {
-        super.beforePart(part)
-        val nextThread = when (part) {
-            ExecutionPart.INIT -> 0
-            ExecutionPart.PARALLEL -> currentInterleaving.chooseThread(0)
-            ExecutionPart.POST -> 0
-            ExecutionPart.VALIDATION -> 0
-        }
-        loopDetector.beforePart(nextThread)
-        currentThread = nextThread
-    }
+
 
     override fun chooseThread(iThread: Int): Int =
-        currentInterleaving.chooseThread(iThread).also {
-           check(it in switchableThreads(iThread)) { """
-               Trying to switch the execution to thread $it,
-               but only the following threads are eligible to switch: ${switchableThreads(iThread)}
-           """.trimIndent() }
-        }
+        currentInterleaving.chooseThread(iThread)
 
     /**
      * An abstract node with an execution choice in the interleaving tree.
@@ -593,6 +578,12 @@ internal class LocalObjectManager : ObjectTracker {
      * Checks if an object is only locally accessible.
      */
     private fun isLocalObject(obj: Any?) = localObjects.containsKey(obj)
+
+    override fun getObjectId(obj: Any): ObjectID {
+        // model checking strategy does not currently use object IDs
+        throw UnsupportedOperationException("Model checking strategy does not track unique object IDs")
+        // return System.identityHashCode(obj).toLong()
+    }
 
     override fun reset() {
         localObjects.clear()

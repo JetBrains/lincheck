@@ -22,6 +22,7 @@ import kotlin.collections.HashSet
 
 internal class LincheckClassVisitor(
     private val instrumentationMode: InstrumentationMode,
+    private val useExperimentalModelCheckingStrategy: Boolean,
     classVisitor: ClassVisitor
 ) : ClassVisitor(ASM_API, classVisitor) {
     private val ideaPluginEnabled = ideaPluginEnabled()
@@ -111,7 +112,9 @@ internal class LincheckClassVisitor(
         // `skipVisitor` must not capture `MethodCallTransformer`
         // (to filter static method calls inserted by coverage library)
         val skipVisitor: MethodVisitor = mv
-        mv = MethodCallTransformer(fileName, className, methodName, mv.newAdapter())
+        mv = MethodCallTransformer(fileName, className, methodName, mv.newAdapter(),
+            interceptAtomicMethodCallResult = useExperimentalModelCheckingStrategy,
+        )
         mv = MonitorTransformer(fileName, className, methodName, mv.newAdapter())
         mv = WaitNotifyTransformer(fileName, className, methodName, mv.newAdapter())
         mv = ParkingTransformer(fileName, className, methodName, mv.newAdapter())
@@ -126,7 +129,9 @@ internal class LincheckClassVisitor(
         // which should be put in front of the byte-code transformer chain,
         // so that it can correctly analyze the byte-code and compute required type-information
         mv = run {
-            val sv = SharedMemoryAccessTransformer(fileName, className, methodName, mv.newAdapter())
+            val sv = SharedMemoryAccessTransformer(fileName, className, methodName, mv.newAdapter(),
+                interceptReadAccesses = useExperimentalModelCheckingStrategy,
+            )
             val aa = AnalyzerAdapter(className, access, methodName, desc, sv)
             sv.analyzer = aa
             aa

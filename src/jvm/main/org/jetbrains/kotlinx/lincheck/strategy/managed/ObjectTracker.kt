@@ -40,6 +40,8 @@ interface ObjectTracker {
      */
     fun shouldTrackObjectAccess(obj: Any): Boolean
 
+    fun getObjectId(obj: Any): ObjectID
+
     /**
      * Resets the state of the object tracker.
      */

@@ -18,7 +18,6 @@ import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner.Completion.*
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.util.*
 import sun.nio.ch.lincheck.*
@@ -160,6 +159,7 @@ internal open class ParallelThreadsRunner(
     }
 
     private fun resetState() {
+        currentExecutionPart = null
         suspensionPointResults.forEach { it.fill(NoResult) }
         completedOrSuspendedThreads.set(0)
         completions.forEach {
@@ -187,7 +187,7 @@ internal open class ParallelThreadsRunner(
     private fun createTestInstance() {
         @Suppress("DEPRECATION")
         testInstance = testClass.newInstance()
-        if (strategy is ModelCheckingStrategy) {
+        if (strategy is ManagedStrategy) {
             // We pass the test instance to the strategy to initialize the call stack.
             // It should be done here as we create the test instance in the `run` method in the runner, after
             // `initializeInvocation` method call of ManagedStrategy.
@@ -364,7 +364,6 @@ internal open class ParallelThreadsRunner(
         afterParallelStateRepresentation = afterParallelStateRepresentation,
         afterPostStateRepresentation = afterPostStateRepresentation
     )
-
 
     private fun createInitialPartExecution() =
         if (scenario.initExecution.isNotEmpty()) {

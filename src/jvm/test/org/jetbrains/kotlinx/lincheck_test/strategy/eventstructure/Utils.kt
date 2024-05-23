@@ -18,11 +18,14 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck.test.strategy.eventstructure
+package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
+import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
+import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.verifier.*
 
 import org.junit.Assert
@@ -44,17 +47,24 @@ internal fun<Outcome> litmusTest(
         outcomes.add(getOutcome(results))
         true
     }
-    val strategy = createStrategy(testClass, testScenario, verifier)
-    val failure = strategy.run()
-    assert(failure == null) { failure.toString() }
-    Assert.assertEquals(expectedOutcomes, outcomes)
+    try {
+        LincheckJavaAgent.useExperimentalModelCheckingStrategy = true
+        withLincheckJavaAgent(InstrumentationMode.MODEL_CHECKING) {
+            val strategy = createStrategy(testClass, testScenario, verifier)
+            val failure = strategy.run()
+            assert(failure == null) { failure.toString() }
+            Assert.assertEquals(expectedOutcomes, outcomes)
 
-    val expectedCount = when (executionCount) {
-        UNIQUE     -> expectedOutcomes.size
-        UNKNOWN    -> strategy.stats.consistentInvocations
-        else       -> executionCount
+            val expectedCount = when (executionCount) {
+                UNIQUE -> expectedOutcomes.size
+                UNKNOWN -> strategy.stats.consistentInvocations
+                else -> executionCount
+            }
+            Assert.assertEquals(expectedCount, strategy.stats.consistentInvocations)
+        }
+    } finally {
+        LincheckJavaAgent.useExperimentalModelCheckingStrategy = false
     }
-    Assert.assertEquals(expectedCount, strategy.stats.consistentInvocations)
 }
 
 private fun createConfiguration(testClass: Class<*>) =
