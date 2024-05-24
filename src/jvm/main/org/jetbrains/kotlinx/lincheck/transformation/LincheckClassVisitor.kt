@@ -78,25 +78,23 @@ internal class LincheckClassVisitor(
                 mv
             }
         }
-        fun createAdapter(methodVisitor: MethodVisitor): GeneratorAdapter {
-            return GeneratorAdapter(methodVisitor, access, methodName, desc)
-        }
+        fun MethodVisitor.newAdapter() = GeneratorAdapter(this, access, methodName, desc)
         if (methodName == "<clinit>" ||
             // Debugger implicitly evaluates toString for variables rendering
             // We need to disable breakpoints in such a case, as the numeration will break.
             // Breakpoints are disabled as we do not instrument toString and enter an ignored section,
             // so there are no beforeEvents inside.
             ideaPluginEnabled && methodName == "toString" && desc == "()Ljava/lang/String;") {
-            mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, createAdapter(mv))
+            mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
         }
         if (methodName == "<init>") {
-            mv = ObjectCreationTransformer(fileName, className, methodName, createAdapter(mv))
+            mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
         }
         if (className.contains("ClassLoader")) {
             if (methodName == "loadClass") {
-                mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, createAdapter(mv))
+                mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             }
             return mv
         }
@@ -107,25 +105,25 @@ internal class LincheckClassVisitor(
         mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
         mv = CoroutineCancellabilitySupportTransformer(mv, access, methodName, desc)
         if (access and ACC_SYNCHRONIZED != 0) {
-            mv = SynchronizedMethodTransformer(fileName, className, methodName, createAdapter(mv), classVersion)
+            mv = SynchronizedMethodTransformer(fileName, className, methodName, mv.newAdapter(), classVersion)
         }
-        mv = MethodCallTransformer(fileName, className, methodName, createAdapter(mv))
-        mv = MonitorTransformer(fileName, className, methodName, createAdapter(mv))
-        mv = WaitNotifyTransformer(fileName, className, methodName, createAdapter(mv))
-        mv = ParkingTransformer(fileName, className, methodName, createAdapter(mv))
-        mv = ObjectCreationTransformer(fileName, className, methodName, createAdapter(mv))
-        mv = UnsafeMethodTransformer(fileName, className, methodName, createAdapter(mv))
-        mv = AtomicFieldUpdaterMethodTransformer(fileName, className, methodName, createAdapter(mv))
-        mv = VarHandleMethodTransformer(fileName, className, methodName, createAdapter(mv))
+        mv = MethodCallTransformer(fileName, className, methodName, mv.newAdapter())
+        mv = MonitorTransformer(fileName, className, methodName, mv.newAdapter())
+        mv = WaitNotifyTransformer(fileName, className, methodName, mv.newAdapter())
+        mv = ParkingTransformer(fileName, className, methodName, mv.newAdapter())
+        mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
+        mv = UnsafeMethodTransformer(fileName, className, methodName, mv.newAdapter())
+        mv = AtomicFieldUpdaterMethodTransformer(fileName, className, methodName, mv.newAdapter())
+        mv = VarHandleMethodTransformer(fileName, className, methodName, mv.newAdapter())
         mv = run {
-            val sv = SharedMemoryAccessTransformer(fileName, className, methodName, createAdapter(mv))
+            val sv = SharedMemoryAccessTransformer(fileName, className, methodName, mv.newAdapter())
             val aa = AnalyzerAdapter(className, access, methodName, desc, sv)
             sv.analyzer = aa
             aa
         }
-        mv = DeterministicHashCodeTransformer(fileName, className, methodName, createAdapter(mv))
-        mv = DeterministicTimeTransformer(createAdapter(mv))
-        mv = DeterministicRandomTransformer(fileName, className, methodName, createAdapter(mv))
+        mv = DeterministicHashCodeTransformer(fileName, className, methodName, mv.newAdapter())
+        mv = DeterministicTimeTransformer(mv.newAdapter())
+        mv = DeterministicRandomTransformer(fileName, className, methodName, mv.newAdapter())
         return mv
     }
 
