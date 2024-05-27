@@ -12,58 +12,203 @@ package org.jetbrains.kotlinx.lincheck.transformation
 
 import sun.nio.ch.lincheck.Injections
 import org.objectweb.asm.*
+import org.objectweb.asm.Opcodes.ANEWARRAY
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
+import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import java.io.*
 import java.util.*
 import java.util.concurrent.*
 import kotlin.reflect.*
 import kotlin.reflect.jvm.*
 
+
 /**
- * This method is responsible for storing arguments of the method.
+ * Generates bytecode to push a null value onto the stack.
  *
  * Before execution:
- * STACK: param_1 param_2 ... param_n
+ * STACK: <empty>
  *
  * After execution:
- * STACK: (empty)
- *
- * @param methodDescriptor String representation of method's descriptor
- * @return Array of local variables containing arguments.
+ * STACK: null
  */
-internal fun GeneratorAdapter.storeArguments(methodDescriptor: String): IntArray {
-    val argumentTypes = getArgumentTypes(methodDescriptor)
-    val locals = IntArray(argumentTypes.size)
+internal fun GeneratorAdapter.pushNull() {
+    visitInsn(Opcodes.ACONST_NULL)
+}
 
-    // Store all arguments in reverse order
-    for (i in argumentTypes.indices.reversed()) {
-        locals[i] = newLocal(argumentTypes[i])
-        storeLocal(locals[i], argumentTypes[i])
-    }
-
-    return locals
+/**
+ * Copies the top value of the stack to a local variable and reloads it onto the stack.
+ *
+ * @param local Index of the local variable.
+ */
+internal fun GeneratorAdapter.copyLocal(local: Int) {
+    storeLocal(local)
+    loadLocal(local)
 }
 
 /**
  * Loads all local variables into the stack.
  *
  * @param locals Array of local variables.
+ * @param valueTypes If not-null, denotes an array of types of values that should be put onto stack.
+ *   The type of the local value can be the same as the type of the actual value on the stack,
+ *   or it can be its boxed variant.
  */
-internal fun GeneratorAdapter.loadLocals(locals: IntArray) {
-    for (local in locals)
+internal fun GeneratorAdapter.loadLocals(locals: IntArray, valueTypes: Array<Type>? = null) {
+    locals.forEachIndexed { i, local ->
         loadLocal(local)
+        if (valueTypes != null) {
+            val valueType = valueTypes[i]
+            val localType = getLocalType(local)
+            if (valueType != localType) {
+                check(localType == OBJECT_TYPE)
+                if (valueType.requiresBoxing) {
+                    unbox(valueType)
+                }
+            }
+        }
+    }
 }
 
 /**
- * Stores the top value of the stack to a local variable and reloads it onto the stack.
+ * Stores N top values from the stack in the local variables.
  *
- * @param local Index of the local variable.
+ * Before execution:
+ * STACK: value_1, value_2, ... value_n
+ *
+ * After execution:
+ * STACK: <empty>
+ *
+ * @param valueTypes List of types of values to be stored.
+ * @param localTypes If passed, denotes the desired types of local variables.
+ *   The type of the local value can be the same as the type of the actual value on the stack,
+ *   or it can be its boxed variant.
+ * @return Array of local variables containing arguments.
  */
-internal fun GeneratorAdapter.storeTopToLocal(local: Int) {
-    storeLocal(local)
-    loadLocal(local)
+internal fun GeneratorAdapter.storeLocals(
+    valueTypes: Array<Type>,
+    localTypes: Array<Type> = valueTypes
+): IntArray {
+    val locals = IntArray(valueTypes.size)
+    // Store values in reverse order
+    for (i in valueTypes.indices.reversed()) {
+        val valueType = valueTypes[i]
+        val localType = localTypes[i]
+        locals[i] = newLocal(localType)
+        if (valueType != localType) {
+            check(localType == OBJECT_TYPE)
+            if (valueType.requiresBoxing) {
+                box(valueType)
+            }
+        }
+        storeLocal(locals[i], localType)
+    }
+    return locals
 }
+
+/**
+ * Copies N top values from the stack in the local variables.
+ *
+ * Before execution:
+ * STACK: param_1, param_2, ... param_n
+ *
+ * After execution:
+ * STACK: param_1, param_2, ... param_n
+ *
+ * @param valueTypes List of types of values to be stored.
+ * @param localTypes If passed, denotes the desired types of local variables.
+ *   The type of the local value can be the same as the type of the actual value on the stack,
+ *   or it can be its boxed variant.
+ * @return Array of local variables containing arguments.
+ */
+internal fun GeneratorAdapter.copyLocals(
+    valueTypes: Array<Type>,
+    localTypes: Array<Type> = valueTypes
+): IntArray {
+    check(valueTypes.size == localTypes.size)
+    val locals = storeLocals(valueTypes, localTypes)
+    locals.forEachIndexed { i, local ->
+        val valueType = valueTypes[i]
+        val localType = localTypes[i]
+        loadLocal(local)
+        if (valueType != localType) {
+            check(localType == OBJECT_TYPE)
+            if (valueType.requiresBoxing) {
+                unbox(valueType)
+            }
+        }
+    }
+    return locals
+}
+
+/**
+ * Stores arguments of the method in the local variables.
+ *
+ * Before execution:
+ * STACK: param_1, param_2, ... param_n
+ *
+ * After execution:
+ * STACK: (empty)
+ *
+ * @param methodDescriptor String representation of the method's descriptor.
+ * @return Array of local variables containing arguments.
+ */
+internal fun GeneratorAdapter.storeArguments(methodDescriptor: String): IntArray {
+    val argumentTypes = getArgumentTypes(methodDescriptor)
+    return storeLocals(argumentTypes)
+}
+
+/**
+ * Copies arguments of the method in the local variables.
+ *
+ * Before execution:
+ * STACK: param_1, param_2, ... param_n
+ *
+ * After execution:
+ * STACK: param_1, param_2, ... param_n
+ *
+ * @param methodDescriptor String representation of the method's descriptor.
+ * @return Array of local variables containing arguments.
+ */
+internal fun GeneratorAdapter.copyArguments(methodDescriptor: String): IntArray {
+    val argumentTypes = getArgumentTypes(methodDescriptor)
+    return copyLocals(argumentTypes)
+}
+
+/**
+ * Pushes onto the stack an array consisting of values stored in the local variables.
+ *
+ * Before execution:
+ * STACK: (empty)
+ *
+ * After execution:
+ * STACK: array
+ *
+ * @param locals Local variables which values are stored in the stack.
+ */
+internal fun GeneratorAdapter.pushArray(locals: IntArray) {
+    // STACK: <empty>
+    push(locals.size)
+    // STACK: arraySize
+    visitTypeInsn(ANEWARRAY, OBJECT_TYPE.internalName)
+    // STACK: array
+    for (i in locals.indices) {
+        // STACK: array
+        dup()
+        // STACK: array, array
+        push(i)
+        // STACK: array, array, index
+        loadLocal(locals[i])
+        // STACK: array, array, index, value[index]
+        box(getLocalType(locals[i]))
+        arrayStore(OBJECT_TYPE)
+        // STACK: array
+    }
+    // STACK: array
+}
+
+private val Type.requiresBoxing: Boolean
+    get() = !(sort == OBJECT || sort == ARRAY)
 
 /**
  * Adds invocation of [beforeEvent] method.
@@ -162,6 +307,7 @@ internal inline fun GeneratorAdapter.invokeInIgnoredSection(
 }
 
 private val isCoroutineStateMachineClassMap = ConcurrentHashMap<String, Boolean>()
+
 internal fun isCoroutineStateMachineClass(internalClassName: String): Boolean {
     if (internalClassName.startsWith("java/")) return false
     if (internalClassName.startsWith("kotlin/") && !internalClassName.startsWith("kotlin/coroutines/")) return false
@@ -169,6 +315,10 @@ internal fun isCoroutineStateMachineClass(internalClassName: String): Boolean {
         getSuperclassName(internalClassName) == "kotlin/coroutines/jvm/internal/ContinuationImpl"
     }
 }
+
+internal fun isCoroutineInternalClass(internalClassName: String): Boolean =
+    internalClassName == "kotlin/coroutines/intrinsics/IntrinsicsKt" ||
+    internalClassName == "kotlinx/coroutines/internal/StackTraceRecoveryKt"
 
 private fun getSuperclassName(internalClassName: String): String? {
     class SuperclassClassVisitor : ClassVisitor(ASM_API) {

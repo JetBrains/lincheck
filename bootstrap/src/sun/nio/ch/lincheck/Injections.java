@@ -176,25 +176,10 @@ public class Injections {
      *
      * @return whether the trace point was created
      */
-    public static boolean beforeReadField(Object obj, String className, String fieldName, int codeLocation) {
-        if (obj == null) return false; // Ignore, NullPointerException will be thrown
-        return getEventTracker().beforeReadField(obj, className, fieldName, codeLocation);
-    }
-
-    /**
-     * Called from the instrumented code before any public static field read.
-     */
-    public static void beforeReadFieldStatic(String className, String fieldName, int codeLocation) {
-        getEventTracker().beforeReadFieldStatic(className, fieldName, codeLocation);
-    }
-
-    /**
-     * Called from the instrumented code before any public static field read.
-     * We need to track such reads to ensure that the corresponding objects
-     * are instrumented.
-     */
-    public static void beforeReadFinalFieldStatic(String className) {
-        getEventTracker().beforeReadFinalFieldStatic(className);
+    public static boolean beforeReadField(Object obj, String className, String fieldName, int codeLocation,
+                                          boolean isStatic, boolean isFinal) {
+        if (!isStatic && obj == null) return false; // Ignore, NullPointerException will be thrown
+        return getEventTracker().beforeReadField(obj, className, fieldName, codeLocation, isStatic, isFinal);
     }
 
     /**
@@ -219,16 +204,10 @@ public class Injections {
      *
      * @return whether the trace point was created
      */
-    public static boolean beforeWriteField(Object obj, String className, String fieldName, Object value, int codeLocation) {
-        if (obj == null) return false; // Ignore, NullPointerException will be thrown
-        return getEventTracker().beforeWriteField(obj, className, fieldName, value, codeLocation);
-    }
-
-    /**
-     * Called from the instrumented code before any public static field write.
-     */
-    public static void beforeWriteFieldStatic(String className, String fieldName, Object value, int codeLocation) {
-        getEventTracker().beforeWriteFieldStatic(className, fieldName, value, codeLocation);
+    public static boolean beforeWriteField(Object obj, String className, String fieldName, Object value, int codeLocation,
+                                           boolean isStatic, boolean isFinal) {
+        if (!isStatic && obj == null) return false; // Ignore, NullPointerException will be thrown
+        return getEventTracker().beforeWriteField(obj, className, fieldName, value, codeLocation, isStatic, isFinal);
     }
 
     /**
@@ -246,6 +225,19 @@ public class Injections {
      */
     public static void afterWrite() {
         getEventTracker().afterWrite();
+    }
+
+    /**
+     * Called from the instrumented code after atomic write is performed through either
+     * the AtomicXXXFieldUpdater, VarHandle, or Unsafe APIs.
+     * Incorporates all atomic methods that can set the field (or array element) of an object,
+     * such as `set`, `compareAndSet`, `compareAndExchange`, etc.
+     *
+     * @param receiver The object to which field (or array element) the value is set.
+     * @param value The value written into [receiver] field (or array element).
+     */
+    public static void afterReflectiveSetter(Object receiver, Object value) {
+        getEventTracker().afterReflectiveSetter(receiver, value);
     }
 
     /**
@@ -269,22 +261,22 @@ public class Injections {
     /**
      * Called from the instrumented code after any method successful call, i.e., without any exception.
      */
-    public static void onMethodCallFinishedSuccessfully(Object result) {
-        getEventTracker().onMethodCallFinishedSuccessfully(result);
+    public static void onMethodCallReturn(Object result) {
+        getEventTracker().onMethodCallReturn(result);
     }
 
     /**
      * Called from the instrumented code after any method that returns void successful call, i.e., without any exception.
      */
-    public static void onMethodCallVoidFinishedSuccessfully() {
-        getEventTracker().onMethodCallFinishedSuccessfully(VOID_RESULT);
+    public static void onMethodCallReturnVoid() {
+        getEventTracker().onMethodCallReturn(VOID_RESULT);
     }
 
     /**
      * Called from the instrumented code after any method call threw an exception
      */
-    public static void onMethodCallThrewException(Throwable t) {
-        getEventTracker().onMethodCallThrewException(t);
+    public static void onMethodCallException(Throwable t) {
+        getEventTracker().onMethodCallException(t);
     }
 
     /**
@@ -299,18 +291,6 @@ public class Injections {
      */
     public static void afterNewObjectCreation(Object obj) {
         getEventTracker().afterNewObjectCreation(obj);
-    }
-
-    /**
-     * Called from the instrumented code after value assigned to any receiver field.
-     * Required to track local objects.
-     *
-     * @param receiver              the object in whose field the entry is made
-     * @param fieldOrArrayCellValue the value written into [receiver] field
-     * @see [LocalObjectManager]
-     */
-    public static void onWriteToObjectFieldOrArrayCell(Object receiver, Object fieldOrArrayCellValue) {
-        getEventTracker().onWriteToObjectFieldOrArrayCell(receiver, fieldOrArrayCellValue);
     }
 
     /**

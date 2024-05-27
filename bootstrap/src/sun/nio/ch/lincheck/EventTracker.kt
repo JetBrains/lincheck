@@ -17,6 +17,7 @@ import java.util.*
  * See [Injections] for the documentation.
  */
 interface EventTracker {
+
     fun beforeLock(codeLocation: Int)
     fun lock(monitor: Any)
     fun unlock(monitor: Any, codeLocation: Int)
@@ -24,34 +25,32 @@ interface EventTracker {
     fun park(codeLocation: Int)
     fun unpark(thread: Thread, codeLocation: Int)
 
-    fun wait(monitor: Any, withTimeout: Boolean)
     fun beforeWait(codeLocation: Int)
+    fun wait(monitor: Any, withTimeout: Boolean)
     fun notify(monitor: Any, codeLocation: Int, notifyAll: Boolean)
-
-    fun beforeReadField(obj: Any, className: String, fieldName: String, codeLocation: Int): Boolean
-    fun beforeReadFieldStatic(className: String, fieldName: String, codeLocation: Int)
-    fun beforeReadFinalFieldStatic(className: String)
-    fun beforeReadArrayElement(array: Any, index: Int, codeLocation: Int): Boolean
-    fun afterRead(value: Any?)
-
-    fun beforeWriteField(obj: Any, className: String, fieldName: String, value: Any?, codeLocation: Int): Boolean
-    fun beforeWriteFieldStatic(className: String, fieldName: String, value: Any?, codeLocation: Int)
-    fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int): Boolean
-    fun afterWrite()
-
-    fun beforeMethodCall(owner: Any?, className: String, methodName: String, codeLocation: Int, params: Array<Any?>)
-    fun beforeAtomicMethodCall(owner: Any?, className: String, methodName: String, codeLocation: Int, params: Array<Any?>)
-    fun onMethodCallFinishedSuccessfully(result: Any?)
-    fun onMethodCallThrewException(t: Throwable)
-
-    fun getThreadLocalRandom(): Random
-    fun randomNextInt(): Int
 
     fun beforeNewObjectCreation(className: String)
     fun afterNewObjectCreation(obj: Any)
 
-    fun onWriteToObjectFieldOrArrayCell(receiver: Any, fieldOrArrayCellValue: Any?)
-    fun onWriteObjectToStaticField(fieldValue: Any?)
+    fun beforeReadField(obj: Any?, className: String, fieldName: String, codeLocation: Int,
+                        isStatic: Boolean, isFinal: Boolean): Boolean
+    fun beforeReadArrayElement(array: Any, index: Int, codeLocation: Int): Boolean
+    fun afterRead(value: Any?)
+
+    fun beforeWriteField(obj: Any?, className: String, fieldName: String, value: Any?, codeLocation: Int,
+                         isStatic: Boolean, isFinal: Boolean): Boolean
+    fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int): Boolean
+    fun afterWrite()
+
+    fun afterReflectiveSetter(receiver: Any?, value: Any?)
+
+    fun beforeMethodCall(owner: Any?, className: String, methodName: String, codeLocation: Int, params: Array<Any?>)
+    fun beforeAtomicMethodCall(owner: Any?, className: String, methodName: String, codeLocation: Int, params: Array<Any?>)
+    fun onMethodCallReturn(result: Any?)
+    fun onMethodCallException(t: Throwable)
+
+    fun getThreadLocalRandom(): Random
+    fun randomNextInt(): Int
 
     // Methods required for the plugin integration
 
