@@ -13,6 +13,7 @@ package org.jetbrains.kotlinx.lincheck.transformation.transformers
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.commons.AdviceAdapter
 import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.jetbrains.kotlinx.lincheck.canonicalClassName
 import sun.nio.ch.lincheck.*
 
 /**
@@ -22,22 +23,30 @@ import sun.nio.ch.lincheck.*
 internal class CoroutineCancellabilitySupportTransformer(
     mv: MethodVisitor,
     access: Int,
+    val className: String?,
     methodName: String?,
-    descriptor: String?
-) : AdviceAdapter(ASM_API, mv, access, methodName, descriptor) {
+    desc: String?
+) : AdviceAdapter(ASM_API, mv, access, methodName, desc) {
 
-    override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
-        if (isCancellableContinuationGetResultMethod(owner, name)) {
-            dup()
-            invokeStatic(Injections::storeCancellableContinuation)
-        }
-        super.visitMethodInsn(opcode, owner, name, desc, itf)
-    }
-
-    private fun isCancellableContinuationGetResultMethod(className: String, methodName: String): Boolean =
-        (methodName == "getResult") && (
+    override fun visitMethodInsn(
+        opcodeAndSource: Int,
+        className: String?,
+        methodName: String?,
+        descriptor: String?,
+        isInterface: Boolean
+    ) {
+        val isGetResult = (methodName == "getResult") && (
             className == "kotlinx/coroutines/CancellableContinuation" ||
             className == "kotlinx/coroutines/CancellableContinuationImpl"
         )
+        if (isGetResult) {
+            this.className?.canonicalClassName?.let {
+                coroutineCallingClasses += it.canonicalClassName
+            }
+            dup()
+            invokeStatic(Injections::storeCancellableContinuation)
+        }
+        super.visitMethodInsn(opcodeAndSource, className, methodName, descriptor, isInterface)
+    }
 
 }
