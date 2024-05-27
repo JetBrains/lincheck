@@ -18,8 +18,6 @@ import org.objectweb.asm.commons.*
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.*
 import sun.nio.ch.lincheck.*
-import sun.nio.ch.lincheck.Injections.*
-import java.util.*
 import kotlin.collections.HashSet
 
 internal class LincheckClassVisitor(
@@ -29,8 +27,8 @@ internal class LincheckClassVisitor(
     private val ideaPluginEnabled = ideaPluginEnabled()
     private var classVersion = 0
 
-    private lateinit var fileName: String
-    private lateinit var className: String
+    private var fileName: String = ""
+    private var className: String = ""
 
     override fun visitField(
         access: Int,
