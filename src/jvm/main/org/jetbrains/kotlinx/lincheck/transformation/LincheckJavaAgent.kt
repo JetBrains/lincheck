@@ -134,7 +134,9 @@ internal object LincheckJavaAgent {
             }
 
             // In the model checking mode, Lincheck processes classes lazily, only when they are used.
-            instrumentationMode == MODEL_CHECKING -> {}
+            instrumentationMode == MODEL_CHECKING -> {
+                check(instrumentedClasses.isEmpty())
+            }
         }
     }
 
@@ -170,18 +172,18 @@ internal object LincheckJavaAgent {
         instrumentation.removeTransformer(LincheckClassFileTransformer)
         // Collect the original bytecode of the instrumented classes.
         val classDefinitions = getLoadedClassesToInstrument()
-            .filter {
-                // Filter classes that were transformed by Lincheck and should be restored.
-                if (!INSTRUMENT_ALL_CLASSES) {
-                    it.name in instrumentedClasses
-                } else {
-                    true
-                }
-            }
             .mapNotNull { clazz ->
-                // For each class, get its original bytecode.
+                val canonicalClassName = clazz.name
+                // Skip classes not transformed by Lincheck.
+                if (!INSTRUMENT_ALL_CLASSES && canonicalClassName !in instrumentedClasses) {
+                    return@mapNotNull null
+                }
+                // For each class, retrieve its original bytecode.
                 val bytes = nonTransformedClasses[clazz.name]
-                bytes?.let { ClassDefinition(clazz, it) }
+                check(bytes != null) {
+                    "Original bytecode for the transformed class ${clazz.name} is missing!"
+                }
+                ClassDefinition(clazz, bytes)
             }
         // Redefine the instrumented classes back to their original state
         // using the original bytecodes collected previously.
