@@ -16,6 +16,7 @@ plugins {
     kotlin("multiplatform")
     id("maven-publish")
     id("kotlinx.team.infra") version "0.4.0-dev-80"
+    // id("org.jetbrains.kotlinx.kover") version "0.8.0"
 }
 
 repositories {
