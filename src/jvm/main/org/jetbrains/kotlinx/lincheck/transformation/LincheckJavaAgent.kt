@@ -22,6 +22,7 @@ import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.INSTRUMEN
 import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
 import sun.misc.Unsafe
 import org.objectweb.asm.*
+import org.objectweb.asm.util.TraceClassVisitor
 import java.io.*
 import java.lang.instrument.*
 import java.lang.reflect.*
@@ -93,6 +94,8 @@ internal object LincheckJavaAgent {
      * to inject code in the user codebase when the `java.base` module also needs to be instrumented.
      */
     fun install(instrumentationMode: InstrumentationMode) {
+        //println("Installing Lincheck JavaAgent")
+
         this.instrumentationMode = instrumentationMode
         // The bytecode injections must be loaded with the bootstrap class loader,
         // as the `java.base` module is loaded with it. To achieve that, we pack the
@@ -149,6 +152,8 @@ internal object LincheckJavaAgent {
      * the transformed classes to remove the Lincheck injections.
      */
     fun uninstall() {
+        //println("Uninstalling Lincheck JavaAgent")
+
         // Remove the Lincheck transformer.
         instrumentation.removeTransformer(LincheckClassFileTransformer)
         // Collect the original bytecode of the instrumented classes.
@@ -327,8 +332,21 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         val reader = ClassReader(classBytes)
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
         try {
-            reader.accept(LincheckClassVisitor(instrumentationMode, writer), ClassReader.SKIP_FRAMES)
-            writer.toByteArray()
+            //println("Initial class bytecode for '$className'")
+            val visitor = TraceClassVisitor(
+                LincheckClassVisitor(instrumentationMode, writer),
+                null //PrintWriter(System.out)
+            )
+            reader.accept(visitor, ClassReader.SKIP_FRAMES)
+            val bytes = writer.toByteArray()
+
+            //println("After Lincheck transformation for '$className'")
+            val afterReader = ClassReader(bytes)
+            afterReader.accept(TraceClassVisitor(
+                null //PrintWriter(System.out)
+            ), ClassReader.SKIP_FRAMES)
+
+            bytes
         } catch (e: Throwable) {
             System.err.println("Unable to transform $className")
             e.printStackTrace()
