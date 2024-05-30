@@ -28,25 +28,17 @@ internal class CoroutineCancellabilitySupportTransformer(
     desc: String?
 ) : AdviceAdapter(ASM_API, mv, access, methodName, desc) {
 
-    override fun visitMethodInsn(
-        opcodeAndSource: Int,
-        className: String?,
-        methodName: String?,
-        descriptor: String?,
-        isInterface: Boolean
-    ) {
-        val isGetResult = (methodName == "getResult") && (
-            className == "kotlinx/coroutines/CancellableContinuation" ||
-            className == "kotlinx/coroutines/CancellableContinuationImpl"
+    override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
+        val isGetResult = (name == "getResult") && (
+            owner == "kotlinx/coroutines/CancellableContinuation" ||
+            owner == "kotlinx/coroutines/CancellableContinuationImpl"
         )
         if (isGetResult) {
-            this.className?.canonicalClassName?.let {
-                coroutineCallingClasses += it.canonicalClassName
-            }
             dup()
             invokeStatic(Injections::storeCancellableContinuation)
+            className?.canonicalClassName?.let { coroutineCallingClasses += it }
         }
-        super.visitMethodInsn(opcodeAndSource, className, methodName, descriptor, isInterface)
+        super.visitMethodInsn(opcode, owner, name, desc, itf)
     }
 
 }
