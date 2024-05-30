@@ -306,6 +306,11 @@ internal object LincheckJavaAgent {
     /**
      * FOR TEST PURPOSE ONLY!
      * To test the byte-code transformation correctness, we can transform all classes.
+     *
+     * Both stress and model checking modes implement some optimizations
+     * to avoid re-transforming all loaded into VM classes on each run of a Lincheck test.
+     * When this flag is set, these optimizations are disabled, and so
+     * the Lincheck agent re-transforms all the loaded classes on each run.
      */
     internal val INSTRUMENT_ALL_CLASSES =
         System.getProperty("lincheck.instrumentAllClasses")?.toBoolean() ?: false
