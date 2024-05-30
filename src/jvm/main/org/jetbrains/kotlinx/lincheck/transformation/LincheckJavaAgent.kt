@@ -83,7 +83,7 @@ internal object LincheckJavaAgent {
     private var isBootstrapJarAddedToClasspath = false
 
     /**
-     * Names of the classes that were instrumented since the last agent installation.
+     * Names (canonical) of the classes that were instrumented since the last agent installation.
      */
     val instrumentedClasses = HashSet<String>()
 

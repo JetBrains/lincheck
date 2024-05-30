@@ -28,7 +28,7 @@ internal class LincheckClassVisitor(
     private var classVersion = 0
 
     private var fileName: String = ""
-    private var className: String = ""
+    private var className: String = "" // internal class name
 
     override fun visitField(
         access: Int,
@@ -195,4 +195,7 @@ private class WrapMethodInIgnoredSectionTransformer(
     }
 }
 
+// Set storing canonical names of the classes that call internal coroutine functions;
+// it is used to optimize class re-transformation in stress mode by remembering
+// exactly what classes need to be re-transformed (only the coroutines calling classes)
 internal val coroutineCallingClasses = HashSet<String>()
