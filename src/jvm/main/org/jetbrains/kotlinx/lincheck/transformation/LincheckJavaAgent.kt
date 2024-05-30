@@ -354,7 +354,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         internalClassName: String,
         classBytes: ByteArray
     ): ByteArray = transformedClassesCache.computeIfAbsent(internalClassName.canonicalClassName) {
-        nonTransformedClasses.putIfAbsent(internalClassName.canonicalClassName, classBytes.copyOf())
+        nonTransformedClasses.putIfAbsent(internalClassName.canonicalClassName, classBytes)
         val reader = ClassReader(classBytes)
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
         try {
