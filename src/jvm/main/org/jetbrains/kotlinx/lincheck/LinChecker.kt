@@ -95,17 +95,18 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
                 verifier = createVerifier()
             scenario.validate()
             reporter.logIteration(i + 1, scenariosSize, scenario)
-            var failure = scenario.run(i, this, verifier)
+            var failure = scenario.run(this, verifier)
             if (failure == null)
                 return@forEachIndexed
             if (minimizeFailedScenario && !isCustomScenario) {
                 var j = i + 1
                 reporter.logScenarioMinimization(scenario)
                 failure = failure.minimize { minimizedScenario ->
-                    minimizedScenario.run(j++, this, createVerifier())
+                    minimizedScenario.run(this, createVerifier())
                 }
             }
             reporter.logFailedIteration(failure)
+            runReplayForPlugin(failure, verifier)
             return failure
         }
         return null
@@ -127,7 +128,6 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
     }
 
     private fun ExecutionScenario.run(
-        iteration: Int,
         testCfg: CTestConfiguration,
         verifier: Verifier,
     ): LincheckFailure? {
@@ -138,19 +138,24 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
             stateRepresentationMethod = testStructure.stateRepresentation,
         )
         return strategy.use {
-            it.runIteration(iteration, testCfg.invocationsPerIteration, verifier)
+            it.runIteration(testCfg.invocationsPerIteration, verifier)
         }
     }
 
     private fun CTestConfiguration.createVerifier() =
         verifierClass.getConstructor(Class::class.java).newInstance(sequentialSpecification)
 
-    private fun CTestConfiguration.createExecutionGenerator(randomProvider: RandomProvider) =
-        generatorClass.getConstructor(
+    private fun CTestConfiguration.createExecutionGenerator(randomProvider: RandomProvider): ExecutionGenerator {
+        if (iterations > 0) {
+            checkAtLeastOneMethodIsMarkedAsOperation(testClass)
+        }
+        val constructor = generatorClass.getConstructor(
             CTestConfiguration::class.java,
             CTestStructure::class.java,
             RandomProvider::class.java
-        ).newInstance(this, testStructure, randomProvider)
+        )
+        return constructor.newInstance(this, testStructure, randomProvider)
+    }
 
     private val CTestConfiguration.invocationsPerIteration get() = when (this) {
         is ModelCheckingCTestConfiguration -> this.invocationsPerIteration

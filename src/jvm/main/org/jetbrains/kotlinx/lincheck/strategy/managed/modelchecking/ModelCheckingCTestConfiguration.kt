@@ -59,5 +59,5 @@ class ModelCheckingCTestConfiguration(testClass: Class<*>, iterations: Int, thre
         scenario: ExecutionScenario,
         validationFunction: Actor?,
         stateRepresentationMethod: Method?,
-    ): Strategy = ModelCheckingStrategy(this, testClass, scenario, validationFunction, stateRepresentationMethod)
+    ): Strategy = ModelCheckingStrategy(this, testClass, scenario, validationFunction, stateRepresentationMethod, isReplayModeForIdeaPluginEnabled)
 }

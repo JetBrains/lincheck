@@ -101,7 +101,7 @@ abstract class Strategy protected constructor(
  *
  * @return the failure, if detected, null otherwise.
  */
-fun Strategy.runIteration(iteration: Int, invocationsBound: Int, verifier: Verifier): LincheckFailure? {
+fun Strategy.runIteration(invocationsBound: Int, verifier: Verifier): LincheckFailure? {
     var spinning = false
     for (invocation in 0 until invocationsBound) {
         if (!(spinning || nextInvocation()))

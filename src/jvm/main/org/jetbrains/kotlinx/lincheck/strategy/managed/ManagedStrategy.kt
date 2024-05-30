@@ -135,6 +135,8 @@ abstract class ManagedStrategy(
 
     override fun close() {
         runner.close()
+        // clear object numeration at the end to avoid memory leaks
+        cleanObjectNumeration()
     }
 
     private fun createRunner(): ManagedStrategyRunner =
@@ -247,8 +249,11 @@ abstract class ManagedStrategy(
         // Therefore, if the runner detects deadlock, we don't even try to collect trace.
         if (loggedResults is RunnerTimeoutInvocationResult) return null
         val sameResultTypes = loggedResults.javaClass == result.javaClass
-        val sameResults =
-            loggedResults !is CompletedInvocationResult || result !is CompletedInvocationResult || loggedResults.results == failingResult.results
+        val sameResults = (
+            loggedResults !is CompletedInvocationResult ||
+            result !is CompletedInvocationResult ||
+            loggedResults.results == result.results
+        )
         check(sameResultTypes && sameResults) {
             StringBuilder().apply {
                 appendln("Non-determinism found. Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc).")
