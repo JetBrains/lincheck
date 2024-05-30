@@ -220,8 +220,3 @@ internal val VarHandleMethodType.fieldName: String? get() = when (this) {
     is StaticVarHandleMethod    -> fieldName
     else                        -> null
 }
-
-internal val VarHandleMethodType.index: Int get() = when (this) {
-    is ArrayVarHandleMethod     -> index
-    else                        -> -1
-}

@@ -68,83 +68,113 @@ fun ObjectTracker.getArrayAccessMemoryLocation(array: Any, index: Int, type: Typ
     return ArrayElementMemoryLocation(clazz, id, index, type)
 }
 
-fun ObjectTracker.getAtomicAccessMemoryLocation(receiver: Any?, params: Array<Any?>): MemoryLocation? {
-    // TODO: just return inside when branches
-    var obj: Any? = null
-    var isArrayAccess = false
-    var className = ""
-    var fieldName = ""
-    var index = -1
-    var type = OBJECT_TYPE
-    when {
-         receiver is AtomicReferenceFieldUpdater<*, *> -> {
-             val info = getAtomicFieldUpdaterInfo(receiver)!!
-             obj = params[0]
-             className = info.className
-             fieldName = info.fieldName
-             type = OBJECT_TYPE
-        }
+fun ObjectTracker.getAtomicAccessMemoryLocation(
+    className: String,
+    methodName: String,
+    receiver: Any?,
+    params: Array<Any?>
+): MemoryLocation? = when {
 
-        receiver is AtomicIntegerFieldUpdater<*> -> {
-            val info = getAtomicFieldUpdaterInfo(receiver)!!
-            obj = params[0]
-            className = info.className
-            fieldName = info.fieldName
-            type = Type.INT_TYPE
-        }
-
-        receiver is AtomicLongFieldUpdater<*> -> {
-            val info = getAtomicFieldUpdaterInfo(receiver)!!
-            obj = params[0]
-            className = info.className
-            fieldName = info.fieldName
-            type = Type.LONG_TYPE
-        }
-
-        receiver is VarHandle -> {
-            val info = VarHandleNames.varHandleMethodType(receiver, params)
-            check(info !is VarHandleMethodType.TreatAsDefaultMethod)
-            isArrayAccess = (info is VarHandleMethodType.ArrayVarHandleMethod)
-            obj = info.instance
-            className = info.className!!
-            fieldName = info.fieldName.orEmpty()
-            index = info.index
-        }
-
-        isUnsafe(receiver) -> {
-            val info = UnsafeNames.getMethodCallType(params)
-            check(info !is UnsafeName.TreatAsDefaultMethod)
-            isArrayAccess = (info is UnsafeName.UnsafeArrayMethod)
-            obj = info.instance
-            className = info.className!!
-            fieldName = info.fieldName.orEmpty()
-            index = info.index
-        }
-
-        isAtomicObject(receiver) -> {
-            return AtomicPrimitiveMemoryLocation(
-                clazz = receiver!!::class.java,
-                objID = getObjectId(receiver),
-                type = getAtomicType(receiver)!!,
-            )
-        }
-
-        isAtomicArray(receiver) -> {
-            isArrayAccess = true
-            obj = receiver
-            className = receiver!!::class.java.simpleName
-            index = (params[0] as Int)
-        }
-
-        else -> return null
+     receiver is AtomicReferenceFieldUpdater<*, *> -> {
+         val info = getAtomicFieldUpdaterInfo(receiver)!!
+         val obj = params[0]
+         getFieldAccessMemoryLocation(
+             obj = obj,
+             className = info.className,
+             fieldName = info.fieldName,
+             type = OBJECT_TYPE,
+             isStatic = (obj == null),
+             isFinal = false, // TODO: fixme?
+         )
     }
-    return if (isArrayAccess)
-        getArrayAccessMemoryLocation(obj!!, index, type)
-    else
-        getFieldAccessMemoryLocation(obj, className, fieldName, type,
+
+    receiver is AtomicIntegerFieldUpdater<*> -> {
+        val info = getAtomicFieldUpdaterInfo(receiver)!!
+        val obj = params[0]
+        getFieldAccessMemoryLocation(
+            obj = obj,
+            className = info.className,
+            fieldName = info.fieldName,
+            type = Type.INT_TYPE,
             isStatic = (obj == null),
             isFinal = false, // TODO: fixme?
         )
+    }
+
+    receiver is AtomicLongFieldUpdater<*> -> {
+        val info = getAtomicFieldUpdaterInfo(receiver)!!
+        val obj = params[0]
+        getFieldAccessMemoryLocation(
+            obj = obj,
+            className = info.className,
+            fieldName = info.fieldName,
+            type = Type.LONG_TYPE,
+            isStatic = (obj == null),
+            isFinal = false, // TODO: fixme?
+        )
+    }
+
+    receiver is VarHandle -> {
+        val info = VarHandleNames.varHandleMethodType(receiver, params).ensure {
+            it !is VarHandleMethodType.TreatAsDefaultMethod
+        }
+        val obj = info.instance
+        when (info) {
+            is VarHandleMethodType.ArrayVarHandleMethod -> getArrayAccessMemoryLocation(
+                array = obj!!,
+                index = info.index,
+                type = OBJECT_TYPE, // TODO: fixme?
+            )
+            else -> getFieldAccessMemoryLocation(
+                obj = obj,
+                className = info.className!!,
+                fieldName = info.fieldName.orEmpty(),
+                type = OBJECT_TYPE, // TODO: fixme?
+                isStatic = (obj == null),
+                isFinal = false, // TODO: fixme?
+            )
+        }
+    }
+
+    isUnsafe(receiver) -> {
+        val info = UnsafeNames.getMethodCallType(params).ensure {
+            it !is UnsafeName.TreatAsDefaultMethod
+        }
+        val obj = info.instance
+        when (info) {
+            is UnsafeName.UnsafeArrayMethod -> getArrayAccessMemoryLocation(
+                array = obj!!,
+                index = info.index,
+                type = parseUnsafeMethodAccessType(methodName)!!,
+            )
+            else -> getFieldAccessMemoryLocation(
+                obj = obj,
+                className = info.className!!,
+                fieldName = info.fieldName.orEmpty(),
+                type = parseUnsafeMethodAccessType(methodName)!!,
+                isStatic = (obj == null),
+                isFinal = false, // TODO: fixme?
+            )
+        }
+    }
+
+    isAtomicObject(receiver) -> {
+        AtomicPrimitiveMemoryLocation(
+            clazz = receiver!!::class.java,
+            objID = getObjectId(receiver),
+            type = getAtomicType(receiver)!!,
+        )
+    }
+
+    isAtomicArray(receiver) -> {
+        getArrayAccessMemoryLocation(
+            array = receiver!!,
+            index = (params[0] as Int),
+            type = getAtomicType(receiver)!!,
+        )
+    }
+
+    else -> null
 }
 
 class StaticFieldMemoryLocation(
@@ -158,15 +188,17 @@ class StaticFieldMemoryLocation(
     private val field: Field by lazy {
         resolveClass(className = className)
             .getDeclaredField(fieldName)
-            .apply { isAccessible = true }
+            // .apply { isAccessible = true }
     }
 
     override fun read(valueMapper: ValueMapper): Any? {
-        return field.get(null)
+        // return field.get(null)
+        return readField(null, field)
     }
 
     override fun write(value: Any?, valueMapper: ValueMapper) {
-        field.set(null, value)
+        // field.set(null, value)
+        writeField(null, field, value)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -206,15 +238,17 @@ class ObjectFieldMemoryLocation(
     private val field: Field by lazy {
         val resolvedClass = resolveClass(clazz, className = className)
         resolveField(resolvedClass, className, fieldName)
-            .apply { isAccessible = true }
+            // .apply { isAccessible = true }
     }
 
     override fun read(valueMapper: ValueMapper): Any? {
-        return field.get(valueMapper(OBJECT_TYPE, objID)?.unwrap())
+        // return field.get(valueMapper(OBJECT_TYPE, objID)?.unwrap())
+        return readField(valueMapper(OBJECT_TYPE, objID)?.unwrap(), field)
     }
 
     override fun write(value: Any?, valueMapper: ValueMapper) {
-        field.set(valueMapper(OBJECT_TYPE, objID)?.unwrap(), value)
+        // field.set(valueMapper(OBJECT_TYPE, objID)?.unwrap(), value)
+        writeField(valueMapper(OBJECT_TYPE, objID)?.unwrap(), field, value)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -278,6 +312,7 @@ class ArrayElementMemoryLocation(
     }
 
     override fun read(valueMapper: ValueMapper): Any? {
+        // TODO: also use unsafe?
         if (isPlainArray) {
             return ReflectArray.get(valueMapper(OBJECT_TYPE, objID)?.unwrap(), index)
         }
@@ -340,10 +375,12 @@ class AtomicPrimitiveMemoryLocation(
     }
 
     override fun read(valueMapper: ValueMapper): Any? {
+        // TODO: also use unsafe?
         return getMethod.invoke(valueMapper(OBJECT_TYPE, objID)?.unwrap())
     }
 
     override fun write(value: Any?, valueMapper: ValueMapper) {
+        // TODO: also use unsafe?
         setMethod.invoke(valueMapper(OBJECT_TYPE, objID)?.unwrap(), value)
     }
 

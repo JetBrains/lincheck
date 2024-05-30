@@ -155,9 +155,9 @@ internal data class SequentialConsistencyReplayer(
             monitorMapping.toMutableMap(),
         )
 
-    private fun getMonitor(objID: ObjectID): OpaqueValue {
+    private fun getMonitor(objID: ObjectID): Any {
         check(objID != NULL_OBJECT_ID)
-        return monitorMapping.computeIfAbsent(objID) { Any() }.opaque()
+        return monitorMapping.computeIfAbsent(objID) { Any() }
     }
 
 }

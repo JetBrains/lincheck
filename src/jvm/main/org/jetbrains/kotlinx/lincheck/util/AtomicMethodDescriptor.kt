@@ -125,6 +125,19 @@ internal fun getAtomicType(atomic: Any?): Type? = when (atomic) {
     else                        -> null
 }
 
+internal fun parseUnsafeMethodAccessType(methodName: String): Type? = when {
+    "Boolean"   in methodName -> Type.BOOLEAN_TYPE
+    "Byte"      in methodName -> Type.BYTE_TYPE
+    "Short"     in methodName -> Type.SHORT_TYPE
+    "Int"       in methodName -> Type.INT_TYPE
+    "Long"      in methodName -> Type.LONG_TYPE
+    "Float"     in methodName -> Type.FLOAT_TYPE
+    "Double"    in methodName -> Type.DOUBLE_TYPE
+    "Reference" in methodName -> OBJECT_TYPE
+    "Object"    in methodName -> OBJECT_TYPE
+    else                      -> null
+}
+
 private val atomicMethods = setOf(
     "get", "getAcquire", "getOpaque", "getPlain",
     "set", "lazySet", "setRelease", "setOpaque", "setPlain",
