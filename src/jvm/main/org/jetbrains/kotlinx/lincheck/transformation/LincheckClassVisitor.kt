@@ -123,8 +123,8 @@ internal class LincheckClassVisitor(
             aa
         }
         mv = CoverageBytecodeFilter(
-            skipVisitor.newAdapter(), // GeneratorAdapter(skipVisitor, access, methodName, desc),
-            mv.newAdapter() // GeneratorAdapter(mv, access, methodName, desc)
+            skipVisitor.newAdapter(),
+            mv.newAdapter()
         )
         mv = DeterministicHashCodeTransformer(fileName, className, methodName, mv.newAdapter())
         mv = DeterministicTimeTransformer(mv.newAdapter())
@@ -193,14 +193,34 @@ internal class LincheckClassVisitor(
 
         override fun visitInsn(opcode: Int) {
             when (opcode) {
-                BASTORE -> if (state == State.PREPARE_ASSIGN_TO_HITS) {
+                BASTORE, IASTORE -> if (state == State.PREPARE_ASSIGN_TO_HITS) {
                     state = State.LOADED_HITS_IN_LOCALS
+                    initialAdapter.visitInsn(opcode)
+                    return
+                }
+                IALOAD -> if (state == State.PREPARE_ASSIGN_TO_HITS) {
                     initialAdapter.visitInsn(opcode)
                     return
                 }
             }
 
             super.visitInsn(opcode)
+        }
+
+        override fun visitVarInsn(opcode: Int, index: Int) {
+            when (opcode) {
+                ASTORE -> {
+                    if (state == State.LOADED_HITS_ON_STACK || state == State.LOADED_HITS_ON_STACK_STATIC) {
+                        state = State.LOADED_HITS_IN_LOCALS
+                        localVariableIndex = index
+                    }
+                }
+                ALOAD -> if (state == State.LOADED_HITS_IN_LOCALS && localVariableIndex == index) {
+                    state = State.PREPARE_ASSIGN_TO_HITS
+                }
+            }
+
+            super.visitVarInsn(opcode, index)
         }
 
         override fun visitMethodInsn(
@@ -223,27 +243,6 @@ internal class LincheckClassVisitor(
             }
 
             super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
-        }
-
-        override fun visitVarInsn(opcode: Int, index: Int) {
-            when (opcode) {
-                ASTORE -> {
-                    if (state == State.LOADED_HITS_ON_STACK || state == State.LOADED_HITS_ON_STACK_STATIC) {
-                        state = State.LOADED_HITS_IN_LOCALS
-                        localVariableIndex = index
-                    }
-
-                    if (state == State.LOADED_HITS_ON_STACK_STATIC) {
-                        initialAdapter.visitVarInsn(opcode, index)
-                        return
-                    }
-                }
-                ALOAD -> if (state == State.LOADED_HITS_IN_LOCALS && localVariableIndex == index) {
-                    state = State.PREPARE_ASSIGN_TO_HITS
-                }
-            }
-
-            super.visitVarInsn(opcode, index)
         }
 
         override fun visitEnd() {
