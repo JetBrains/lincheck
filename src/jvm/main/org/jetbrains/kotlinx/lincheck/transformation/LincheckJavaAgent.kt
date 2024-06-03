@@ -94,8 +94,6 @@ internal object LincheckJavaAgent {
      * to inject code in the user codebase when the `java.base` module also needs to be instrumented.
      */
     fun install(instrumentationMode: InstrumentationMode) {
-        //println("Installing Lincheck JavaAgent")
-
         this.instrumentationMode = instrumentationMode
         // The bytecode injections must be loaded with the bootstrap class loader,
         // as the `java.base` module is loaded with it. To achieve that, we pack the
@@ -152,8 +150,6 @@ internal object LincheckJavaAgent {
      * the transformed classes to remove the Lincheck injections.
      */
     fun uninstall() {
-        //println("Uninstalling Lincheck JavaAgent")
-
         // Remove the Lincheck transformer.
         instrumentation.removeTransformer(LincheckClassFileTransformer)
         // Collect the original bytecode of the instrumented classes.
@@ -332,20 +328,24 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         val reader = ClassReader(classBytes)
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
         try {
-            //println("Initial class bytecode for '$className'")
-            val visitor = TraceClassVisitor(
-                LincheckClassVisitor(instrumentationMode, writer),
-                null //PrintWriter(System.out)
-            )
-            reader.accept(visitor, ClassReader.SKIP_FRAMES)
-            //reader.accept(LincheckClassVisitor(instrumentationMode, writer), ClassReader.SKIP_FRAMES)
+            /** Uncomment in order to print bytecode before Lincheck instrumentation. */
+            // println("Initial class bytecode for '$className'")
+            // val visitor = TraceClassVisitor(
+            //     LincheckClassVisitor(instrumentationMode, writer),
+            //     PrintWriter(System.out)
+            // )
+            // reader.accept(visitor, ClassReader.SKIP_FRAMES)
+
+            /** When debugging comment line below and uncomment block of code above. */
+            reader.accept(LincheckClassVisitor(instrumentationMode, writer), ClassReader.SKIP_FRAMES)
             val bytes = writer.toByteArray()
 
-            //println("After Lincheck transformation for '$className'")
-            val afterReader = ClassReader(bytes)
-            afterReader.accept(TraceClassVisitor(
-                null //PrintWriter(System.out)
-            ), ClassReader.SKIP_FRAMES)
+            /** Uncomment in order to print bytecode after Lincheck instrumentation. */
+            // println("After Lincheck transformation for '$className'")
+            // val afterReader = ClassReader(bytes)
+            // afterReader.accept(TraceClassVisitor(
+            //     PrintWriter(System.out)
+            // ), ClassReader.SKIP_FRAMES)
 
             bytes
         } catch (e: Throwable) {
