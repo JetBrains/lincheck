@@ -42,7 +42,6 @@ internal class CoverageBytecodeFilter(
         "com/intellij/rt/coverage/instrumentation/CoverageRuntime.getHitsMaskCached(Ljava/lang/String;)[Z",
         "com/intellij/rt/coverage/instrumentation/CoverageRuntime.getHits(Ljava/lang/String;)[I",
         "com/intellij/rt/coverage/instrumentation/CoverageRuntime.getHitsCached(Ljava/lang/String;)[I",
-        "com/intellij/rt/coverage/instrumentation/CoverageRuntime.getHitsMaskCached(Ljava/lang/String;)[Z",
     )
     private var state = State.INITIAL
     private var localVariableIndex = -1
