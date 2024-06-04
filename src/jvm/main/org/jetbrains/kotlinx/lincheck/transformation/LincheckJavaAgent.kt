@@ -328,26 +328,8 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         val reader = ClassReader(classBytes)
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
         try {
-            /** Uncomment in order to print bytecode before Lincheck instrumentation. */
-            // println("Initial class bytecode for '$className'")
-            // val visitor = TraceClassVisitor(
-            //     LincheckClassVisitor(instrumentationMode, writer),
-            //     PrintWriter(System.out)
-            // )
-            // reader.accept(visitor, ClassReader.SKIP_FRAMES)
-
-            /** When debugging comment line below and uncomment block of code above. */
             reader.accept(LincheckClassVisitor(instrumentationMode, writer), ClassReader.SKIP_FRAMES)
-            val bytes = writer.toByteArray()
-
-            /** Uncomment in order to print bytecode after Lincheck instrumentation. */
-            // println("After Lincheck transformation for '$className'")
-            // val afterReader = ClassReader(bytes)
-            // afterReader.accept(TraceClassVisitor(
-            //     PrintWriter(System.out)
-            // ), ClassReader.SKIP_FRAMES)
-
-            bytes
+            writer.toByteArray()
         } catch (e: Throwable) {
             System.err.println("Unable to transform $className")
             e.printStackTrace()
