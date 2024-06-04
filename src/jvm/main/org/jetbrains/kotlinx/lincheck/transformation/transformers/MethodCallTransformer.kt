@@ -11,14 +11,10 @@
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.*
-import org.jetbrains.kotlinx.lincheck.transformation.ManagedStrategyMethodVisitor
-import org.jetbrains.kotlinx.lincheck.transformation.invokeIfInTestingCode
-import org.jetbrains.kotlinx.lincheck.transformation.invokeInIgnoredSection
-import org.jetbrains.kotlinx.lincheck.transformation.storeArguments
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
-import org.objectweb.asm.Type.VOID_TYPE
-import org.objectweb.asm.commons.GeneratorAdapter
+import org.objectweb.asm.Type.*
+import org.objectweb.asm.commons.*
 import sun.nio.ch.lincheck.*
 
 /**
