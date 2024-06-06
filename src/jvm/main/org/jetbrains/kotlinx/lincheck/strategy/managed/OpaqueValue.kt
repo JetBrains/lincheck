@@ -20,6 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import org.objectweb.asm.Type
 import kotlin.reflect.KClass
 
 /**
@@ -127,3 +128,9 @@ internal object StaticObject : Any()
 internal const val INVALID_OBJECT_ID = -2L
 internal const val STATIC_OBJECT_ID = -1L
 internal const val NULL_OBJECT_ID = 0L
+
+internal fun Int.convert(type: Type): Number = when (type.sort) {
+    Type.LONG -> toLong()
+    Type.INT  -> this
+    else      -> throw IllegalArgumentException("Expected Long or Int")
+}

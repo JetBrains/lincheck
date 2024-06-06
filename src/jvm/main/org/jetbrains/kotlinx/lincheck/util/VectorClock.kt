@@ -142,7 +142,7 @@ fun VectorClock.toHBClock(capacity: Int, tid: ThreadID, aid: Int): HBClock {
     val result = emptyClock(capacity)
     for (i in 0 until capacity) {
         if (i == tid) {
-            result.clock[i] = get(i).ensure { it == aid }
+            result.clock[i] = get(i)
             continue
         }
         result.clock[i] = 1 + get(i)

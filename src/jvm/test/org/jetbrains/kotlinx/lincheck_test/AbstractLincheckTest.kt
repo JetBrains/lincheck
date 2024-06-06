@@ -11,8 +11,9 @@ package org.jetbrains.kotlinx.lincheck_test
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.junit.*
@@ -56,6 +57,13 @@ abstract class AbstractLincheckTest(
         runInternalTest()
     }
 
+    @Test(timeout = TIMEOUT)
+    fun testWithEventStructureStrategy(): Unit = EventStructureOptions().run {
+        invocationsPerIteration(1_000)
+        commonConfiguration()
+        runInternalTest()
+    }
+
     private fun <O : Options<O, *>> O.commonConfiguration(): Unit = run {
         iterations(30)
         actorsBefore(2)
@@ -63,6 +71,7 @@ abstract class AbstractLincheckTest(
         actorsPerThread(2)
         actorsAfter(2)
         minimizeFailedScenario(false)
+        logLevel(LoggingLevel.INFO)
         customize()
     }
 }

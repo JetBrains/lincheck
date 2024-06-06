@@ -94,6 +94,7 @@ class EventStructureStrategy(
                 //     memoryTracker.dumpMemory()
                 // }
                 checkResult(result, shouldCollectTrace = false)?.let {
+                    println(stats)
                     return it
                 }
             }
@@ -117,7 +118,8 @@ class EventStructureStrategy(
             }
             // patch clocks
             if (result is CompletedInvocationResult) {
-                patchResultsClock(eventStructure.execution, result.results)
+                val patchedResult = patchResultsClock(eventStructure.execution, result.results)
+                result = CompletedInvocationResult(patchedResult)
             }
             inconsistency = when (result) {
                 is InconsistentInvocationResult -> result.inconsistency
@@ -219,13 +221,24 @@ class EventStructureStrategy(
     // TODO: refactor this --- we need a more robust solution;
     //   for example, we can compute happens before relation induced by
     //   the event structure and pass it on
-    private fun patchResultsClock(execution: Execution<AtomicThreadEvent>, executionResult: ExecutionResult) {
+    private fun patchResultsClock(execution: Execution<AtomicThreadEvent>, executionResult: ExecutionResult): ExecutionResult {
+        val initPartSize = executionResult.initResults.size
+        val postPartSize = executionResult.postResults.size
         val hbClockSize = executionResult.parallelResultsWithClock.size
+        val patchedParallelResults = executionResult.parallelResultsWithClock
+            .map { it.map { resultWithClock -> ResultWithClock(resultWithClock.result, resultWithClock.clockOnStart) }}
         val (actorsExecution, _) = execution.aggregate(ActorAggregator(execution))
         check(actorsExecution.threadIDs.size == hbClockSize + 1)
-        for (tid in executionResult.parallelResultsWithClock.indices) {
-            val actorEvents = actorsExecution[tid]!!
-            val actorResults = executionResult.parallelResultsWithClock[tid]
+        for (tid in patchedParallelResults.indices) {
+            var actorEvents: List<HyperThreadEvent> = actorsExecution[tid]!!
+            // cut init/post part
+            if (tid == 0) {
+                actorEvents = actorEvents.subList(
+                    fromIndex = initPartSize,
+                    toIndex = actorEvents.size - postPartSize,
+                )
+            }
+            val actorResults = patchedParallelResults[tid]
             actorResults.forEachIndexed { i, result ->
                 val actorEvent = actorEvents.getOrNull(i)
                 val prevHBClock = actorResults.getOrNull(i - 1)?.clockOnStart?.copy()
@@ -233,9 +246,20 @@ class EventStructureStrategy(
                 val clockSize = result.clockOnStart.clock.size
                 val hbClock = actorEvent?.causalityClock?.toHBClock(clockSize, tid, i)
                     ?: prevHBClock.apply { clock[tid] = i }
+                // cut init part actors
+                hbClock.clock[0] -= initPartSize
+                check(hbClock[tid] == i)
                 result.clockOnStart.set(hbClock)
             }
         }
+        return ExecutionResult(
+            initResults = executionResult.initResults,
+            parallelResultsWithClock = patchedParallelResults,
+            postResults = executionResult.postResults,
+            afterInitStateRepresentation = executionResult.afterInitStateRepresentation,
+            afterParallelStateRepresentation = executionResult.afterParallelStateRepresentation,
+            afterPostStateRepresentation = executionResult.afterPostStateRepresentation,
+        )
     }
 
     override fun shouldSwitch(iThread: Int): ThreadSwitchDecision {
@@ -436,15 +460,7 @@ private class EventStructureMemoryTracker(
         // TODO: refactor this!
         eventStructure.allocationEvent(location.objID)?.label?.asWriteAccessLabel(location)
         eventStructure.addWriteEvent(iThread, codeLocation, location, getValueID(location, value), rmwWriteDescriptor)
-        // location.write(value?.unwrap(), objectRegistry::getValue)
     }
-
-    // private fun performRead(iThread: Int, codeLocation: Int, location: MemoryLocation,
-    //                         isExclusive: Boolean = false): OpaqueValue? {
-    //     val readEvent = eventStructure.addReadEvent(iThread, codeLocation, location, isExclusive)
-    //     val valueID = (readEvent.label as ReadAccessLabel).value
-    //     return objectRegistry.getValue(location.type, valueID)
-    // }
 
     private fun addReadRequest(iThread: Int, codeLocation: Int, location: MemoryLocation,
                                readModifyWriteDescriptor: ReadModifyWriteDescriptor? = null) {
@@ -463,15 +479,19 @@ private class EventStructureMemoryTracker(
         // TODO: perform actual write to memory for successful CAS
         when (rmwDescriptor) {
             is ReadModifyWriteDescriptor.GetAndSetDescriptor -> {
-                val newValue = rmwDescriptor.newValue
-                eventStructure.addWriteEvent(iThread, label.codeLocation, label.location, newValue, rmwDescriptor)
+                val newValueID = rmwDescriptor.newValue
+                val newValue = getValue(label.location, newValueID)
+                eventStructure.addWriteEvent(iThread, label.codeLocation, label.location, newValueID, rmwDescriptor)
+                label.location.write(newValue?.unwrap(), objectRegistry::getValue)
                 return getValue(label.location, label.value)
             }
 
             is ReadModifyWriteDescriptor.CompareAndSetDescriptor -> {
                 if (label.value == rmwDescriptor.expectedValue) {
-                    val newValue = rmwDescriptor.newValue
-                    eventStructure.addWriteEvent(iThread, label.codeLocation, label.location, newValue, rmwDescriptor)
+                    val newValueID = rmwDescriptor.newValue
+                    val newValue = getValue(label.location, newValueID)
+                    eventStructure.addWriteEvent(iThread, label.codeLocation, label.location, newValueID, rmwDescriptor)
+                    label.location.write(newValue?.unwrap(), objectRegistry::getValue)
                     return getValue(Type.BOOLEAN_TYPE, true.toInt().toLong())
                 }
                 return getValue(Type.BOOLEAN_TYPE, false.toInt().toLong())
@@ -479,18 +499,22 @@ private class EventStructureMemoryTracker(
 
             is ReadModifyWriteDescriptor.CompareAndExchangeDescriptor -> {
                 if (label.value == rmwDescriptor.expectedValue) {
-                    val newValue = rmwDescriptor.newValue
-                    eventStructure.addWriteEvent(iThread, label.codeLocation, label.location, newValue, rmwDescriptor)
+                    val newValueID = rmwDescriptor.newValue
+                    val newValue = getValue(label.location, newValueID)
+                    eventStructure.addWriteEvent(iThread, label.codeLocation, label.location, newValueID, rmwDescriptor)
+                    label.location.write(newValue?.unwrap(), objectRegistry::getValue)
                 }
                 return getValue(label.location, label.value)
             }
 
             is ReadModifyWriteDescriptor.FetchAndAddDescriptor -> {
-                val newValue = label.value + rmwDescriptor.delta
-                eventStructure.addWriteEvent(iThread, label.codeLocation, label.location, newValue, rmwDescriptor)
+                val newValueID = label.value + rmwDescriptor.delta
+                val newValue = getValue(label.location, newValueID)
+                eventStructure.addWriteEvent(iThread, label.codeLocation, label.location, newValueID, rmwDescriptor)
+                label.location.write(newValue?.unwrap(), objectRegistry::getValue)
                 return when (rmwDescriptor.kind) {
                     ReadModifyWriteDescriptor.IncrementKind.Pre  -> getValue(label.location, label.value)
-                    ReadModifyWriteDescriptor.IncrementKind.Post -> getValue(label.location, newValue)
+                    ReadModifyWriteDescriptor.IncrementKind.Post -> getValue(label.location, newValueID)
                 }
             }
         }
@@ -551,72 +575,6 @@ private class EventStructureMemoryTracker(
     override fun interceptReadResult(iThread: Int): Any? {
         return addReadResponse(iThread)?.unwrap()
     }
-
-    // override fun writeValue(iThread: Int, codeLocation: Int, location: MemoryLocation, value: OpaqueValue?) {
-    //     performWrite(iThread, codeLocation, location, value)
-    // }
-    //
-    // override fun readValue(iThread: Int, codeLocation: Int, location: MemoryLocation): OpaqueValue? {
-    //     return performRead(iThread, codeLocation, location)
-    // }
-    //
-    // override fun compareAndSet(
-    //     iThread: Int,
-    //     codeLocation: Int,
-    //     location: MemoryLocation,
-    //     expected: OpaqueValue?,
-    //     desired: OpaqueValue?
-    // ): Boolean {
-    //     val value = performRead(iThread, codeLocation, location, isExclusive = true)
-    //     if (value != expected)
-    //         return false
-    //     performWrite(iThread, codeLocation, location, desired, isExclusive = true)
-    //     return true
-    // }
-    //
-    // private enum class IncrementKind { Pre, Post }
-    //
-    // private fun fetchAndAdd(iThread: Int, codeLocation: Int, memoryLocationId: MemoryLocation, delta: Number, incKind: IncrementKind): OpaqueValue? {
-    //     val oldValue = performRead(iThread, codeLocation, memoryLocationId, isExclusive = true)!!
-    //     val newValue = oldValue + delta
-    //     performWrite(iThread, codeLocation, memoryLocationId, newValue, isExclusive = true)
-    //     return when (incKind) {
-    //         IncrementKind.Pre -> oldValue
-    //         IncrementKind.Post -> newValue
-    //     }
-    // }
-    //
-    // override fun getAndAdd(iThread: Int, codeLocation: Int, location: MemoryLocation, delta: Number): OpaqueValue? {
-    //     return fetchAndAdd(iThread, codeLocation, location, delta, IncrementKind.Pre)
-    // }
-    //
-    // override fun addAndGet(iThread: Int, codeLocation: Int, location: MemoryLocation, delta: Number): OpaqueValue? {
-    //     return fetchAndAdd(iThread, codeLocation, location, delta, IncrementKind.Post)
-    // }
-    //
-    // override fun getAndSet(iThread: Int, codeLocation: Int, location: MemoryLocation, value: OpaqueValue?): OpaqueValue? {
-    //     val readValue = performRead(iThread, codeLocation, location, isExclusive = true)
-    //     performWrite(iThread, codeLocation, location, value, isExclusive = true)
-    //     return readValue
-    // }
-    //
-    // override fun dumpMemory() {
-    //     val locations = mutableSetOf<MemoryLocation>()
-    //     for (event in eventStructure.execution) {
-    //         val location = (event.label as? MemoryAccessLabel)?.location
-    //         if (location != null) {
-    //             locations.add(location)
-    //         }
-    //     }
-    //     for (location in locations) {
-    //         val finalWrites = eventStructure.calculateRacyWrites(location, eventStructure.execution.toFrontier())
-    //         // we choose one of the racy final writes non-deterministically and dump it to the memory
-    //         val write = finalWrites.firstOrNull() ?: continue
-    //         val label = write.label.asWriteAccessLabel(location).ensureNotNull()
-    //         val value = objectRegistry.getValue(location.type, label.value)
-    //         location.write(value?.unwrap(), objectRegistry::getValue)
-    //     }
-    // }
 
     override fun reset() {}
 
