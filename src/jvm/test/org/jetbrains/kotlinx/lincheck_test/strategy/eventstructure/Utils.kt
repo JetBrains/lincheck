@@ -47,23 +47,18 @@ internal fun<Outcome> litmusTest(
         outcomes.add(getOutcome(results))
         true
     }
-    try {
-        LincheckJavaAgent.useExperimentalModelCheckingStrategy = true
-        withLincheckJavaAgent(InstrumentationMode.MODEL_CHECKING) {
-            val strategy = createStrategy(testClass, testScenario, verifier)
-            val failure = strategy.run()
-            assert(failure == null) { failure.toString() }
-            Assert.assertEquals(expectedOutcomes, outcomes)
+    withLincheckJavaAgent(InstrumentationMode.EXPERIMENTAL_MODEL_CHECKING) {
+        val strategy = createStrategy(testClass, testScenario, verifier)
+        val failure = strategy.run()
+        assert(failure == null) { failure.toString() }
+        Assert.assertEquals(expectedOutcomes, outcomes)
 
-            val expectedCount = when (executionCount) {
-                UNIQUE -> expectedOutcomes.size
-                UNKNOWN -> strategy.stats.consistentInvocations
-                else -> executionCount
-            }
-            Assert.assertEquals(expectedCount, strategy.stats.consistentInvocations)
+        val expectedCount = when (executionCount) {
+            UNIQUE -> expectedOutcomes.size
+            UNKNOWN -> strategy.stats.consistentInvocations
+            else -> executionCount
         }
-    } finally {
-        LincheckJavaAgent.useExperimentalModelCheckingStrategy = false
+        Assert.assertEquals(expectedCount, strategy.stats.consistentInvocations)
     }
 }
 

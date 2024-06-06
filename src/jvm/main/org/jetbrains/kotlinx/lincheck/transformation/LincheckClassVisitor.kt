@@ -22,7 +22,6 @@ import kotlin.collections.HashSet
 
 internal class LincheckClassVisitor(
     private val instrumentationMode: InstrumentationMode,
-    private val useExperimentalModelCheckingStrategy: Boolean,
     classVisitor: ClassVisitor
 ) : ClassVisitor(ASM_API, classVisitor) {
     private val ideaPluginEnabled = ideaPluginEnabled()
@@ -113,7 +112,7 @@ internal class LincheckClassVisitor(
         // (to filter static method calls inserted by coverage library)
         val skipVisitor: MethodVisitor = mv
         mv = MethodCallTransformer(fileName, className, methodName, mv.newAdapter(),
-            interceptAtomicMethodCallResult = useExperimentalModelCheckingStrategy,
+            interceptAtomicMethodCallResult = (instrumentationMode == EXPERIMENTAL_MODEL_CHECKING),
         )
         mv = MonitorTransformer(fileName, className, methodName, mv.newAdapter())
         mv = WaitNotifyTransformer(fileName, className, methodName, mv.newAdapter())
@@ -130,7 +129,7 @@ internal class LincheckClassVisitor(
         // so that it can correctly analyze the byte-code and compute required type-information
         mv = run {
             val sv = SharedMemoryAccessTransformer(fileName, className, methodName, mv.newAdapter(),
-                interceptReadAccesses = useExperimentalModelCheckingStrategy,
+                interceptReadAccesses = (instrumentationMode == EXPERIMENTAL_MODEL_CHECKING),
             )
             val aa = AnalyzerAdapter(className, access, methodName, desc, sv)
             sv.analyzer = aa

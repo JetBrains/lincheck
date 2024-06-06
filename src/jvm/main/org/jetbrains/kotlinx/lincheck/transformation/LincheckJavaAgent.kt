@@ -49,16 +49,30 @@ internal inline fun withLincheckJavaAgent(instrumentationMode: InstrumentationMo
 
 internal enum class InstrumentationMode {
     /**
-     * In this mode, Lincheck transforms bytecode
-     * only to track coroutine suspensions.
+     * In this mode, Lincheck transforms bytecode only to track coroutine suspensions.
      */
     STRESS,
 
     /**
-     * In this mode, Lincheck tracks
-     * all shared memory manipulations.
+     * In this mode, Lincheck tracks all shared memory manipulations.
      */
-    MODEL_CHECKING
+    MODEL_CHECKING,
+
+    /**
+     * In this mode, in addition to tracking all shared memory manipulations,
+     * Lincheck also can intercept read results.
+     */
+    EXPERIMENTAL_MODEL_CHECKING,
+}
+
+internal fun InstrumentationMode.isStressMode(): Boolean = when (this) {
+    STRESS -> true
+    else -> false
+}
+
+internal fun InstrumentationMode.isModelCheckingMode(): Boolean = when (this) {
+    MODEL_CHECKING, EXPERIMENTAL_MODEL_CHECKING -> true
+    else -> false
 }
 
 /**
@@ -74,12 +88,11 @@ internal object LincheckJavaAgent {
     private val instrumentation = ByteBuddyAgent.install()
 
     /**
-     * Determines how to transform classes;
-     * see [InstrumentationMode.STRESS] and [InstrumentationMode.MODEL_CHECKING].
+     * Determines how to transform classes.
+     *
+     * @see [InstrumentationMode]
      */
     lateinit var instrumentationMode: InstrumentationMode
-
-    var useExperimentalModelCheckingStrategy: Boolean = false
 
     /**
      * Indicates whether the "bootstrap.jar" (see the "bootstrap" project module)
@@ -126,7 +139,7 @@ internal object LincheckJavaAgent {
             // In the stress testing mode, Lincheck needs to track coroutine suspensions.
             // As an optimization, we remember the set of loaded classes that actually
             // have suspension points, so later we can re-transform only those classes.
-            instrumentationMode == STRESS -> {
+            instrumentationMode.isStressMode() -> {
                 check(instrumentedClasses.isEmpty())
                 val classes = getLoadedClassesToInstrument().filter {
                     val canonicalClassName = it.name
@@ -140,7 +153,7 @@ internal object LincheckJavaAgent {
             }
 
             // In the model checking mode, Lincheck processes classes lazily, only when they are used.
-            instrumentationMode == MODEL_CHECKING -> {
+            instrumentationMode.isModelCheckingMode() -> {
                 check(instrumentedClasses.isEmpty())
             }
         }
@@ -329,13 +342,16 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
      * Notice that the transformation depends on the [InstrumentationMode].
      * Additionally, this object caches bytes of non-transformed classes.
      */
-    val transformedClassesModelChecking = ConcurrentHashMap<String, ByteArray>()
     val transformedClassesStress = ConcurrentHashMap<String, ByteArray>()
+    val transformedClassesModelChecking = ConcurrentHashMap<String, ByteArray>()
+    val transformedClassesExperimentalModelChecking = ConcurrentHashMap<String, ByteArray>()
+    val nonTransformedClasses = ConcurrentHashMap<String, ByteArray>()
 
     private val transformedClassesCache
         get() = when (instrumentationMode) {
             STRESS -> transformedClassesStress
             MODEL_CHECKING -> transformedClassesModelChecking
+            EXPERIMENTAL_MODEL_CHECKING -> transformedClassesExperimentalModelChecking
         }
 
     override fun transform(
@@ -352,7 +368,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         // In the model checking mode, we transform classes lazily,
         // once they are used in the testing code.
         if (!INSTRUMENT_ALL_CLASSES &&
-            instrumentationMode == MODEL_CHECKING &&
+            instrumentationMode.isModelCheckingMode() &&
             internalClassName.canonicalClassName !in instrumentedClasses) {
             return null
         }

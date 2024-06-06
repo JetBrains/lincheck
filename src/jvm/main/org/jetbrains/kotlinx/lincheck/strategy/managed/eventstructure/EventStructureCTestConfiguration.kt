@@ -24,7 +24,7 @@ import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
-import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.MODEL_CHECKING
+import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.EXPERIMENTAL_MODEL_CHECKING
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.lang.reflect.*
 
@@ -45,7 +45,7 @@ class EventStructureCTestConfiguration(
         customScenarios
 ) {
 
-    override val instrumentationMode: InstrumentationMode get() = MODEL_CHECKING
+    override val instrumentationMode: InstrumentationMode get() = EXPERIMENTAL_MODEL_CHECKING
 
     override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunction: Actor?,
                                 stateRepresentationMethod: Method?, verifier: Verifier): EventStructureStrategy
