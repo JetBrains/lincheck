@@ -32,6 +32,9 @@ interface ObjectTracker {
      */
     fun registerObjectLink(fromObject: Any, toObject: Any?)
 
+    // TODO: add constructor name as parameter?
+    fun initializeObject(obj: Any)
+
     /**
      * Determines whether accesses to the fields of the given object should be tracked.
      *

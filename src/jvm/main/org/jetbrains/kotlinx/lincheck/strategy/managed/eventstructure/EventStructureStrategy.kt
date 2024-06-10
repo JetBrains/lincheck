@@ -430,6 +430,13 @@ private class EventStructureObjectTracker(
 
     override fun registerObjectLink(fromObject: Any, toObject: Any?) {}
 
+    override fun initializeObject(obj: Any) {
+        val isRegistered = (eventStructure.objectRegistry[obj.opaque()] != null)
+        if (!isRegistered && !obj.isPrimitive()) {
+            registerNewObject(obj)
+        }
+    }
+
     override fun isTrackedObject(obj: Any): Boolean = true
 
     override fun getObjectId(obj: Any): ObjectID {

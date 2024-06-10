@@ -73,15 +73,20 @@ class ObjectRegistry {
         }
     }
 
+    private fun registerPrimitiveObject(obj: OpaqueValue): ObjectID {
+        check(obj.isPrimitive)
+        val entry = primitiveIndex.computeIfAbsent(obj.unwrap()) {
+            val id = ++objectCounter
+            val entry = ObjectEntry(id, obj, initEvent!!)
+            objectIdIndex.put(entry.id, entry).ensureNull()
+            return@computeIfAbsent entry
+        }
+        return entry.id
+    }
+
     private fun registerExternalObject(obj: OpaqueValue): ObjectID {
         if (obj.isPrimitive) {
-            val entry = primitiveIndex.computeIfAbsent(obj.unwrap()) {
-                val id = ++objectCounter
-                val entry = ObjectEntry(id, obj, initEvent!!)
-                objectIdIndex.put(entry.id, entry).ensureNull()
-                return@computeIfAbsent entry
-            }
-            return entry.id
+            return registerPrimitiveObject(obj)
         }
         val id = nextObjectID
         val entry = ObjectEntry(id, obj, initEvent!!)

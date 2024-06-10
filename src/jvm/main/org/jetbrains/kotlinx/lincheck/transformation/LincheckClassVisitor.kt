@@ -90,7 +90,9 @@ internal class LincheckClassVisitor(
             return mv
         }
         if (methodName == "<init>") {
-            mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
+            mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter(),
+                interceptObjectInitialization = (instrumentationMode == EXPERIMENTAL_MODEL_CHECKING),
+            )
             return mv
         }
         if (className.contains("ClassLoader")) {
@@ -117,7 +119,9 @@ internal class LincheckClassVisitor(
         mv = MonitorTransformer(fileName, className, methodName, mv.newAdapter())
         mv = WaitNotifyTransformer(fileName, className, methodName, mv.newAdapter())
         mv = ParkingTransformer(fileName, className, methodName, mv.newAdapter())
-        mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
+        mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter(),
+            interceptObjectInitialization = (instrumentationMode == EXPERIMENTAL_MODEL_CHECKING),
+        )
         mv = DeterministicHashCodeTransformer(fileName, className, methodName, mv.newAdapter())
         mv = DeterministicTimeTransformer(mv.newAdapter())
         mv = DeterministicRandomTransformer(fileName, className, methodName, mv.newAdapter())

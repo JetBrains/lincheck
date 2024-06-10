@@ -302,6 +302,10 @@ public class Injections {
         getEventTracker().afterNewObjectCreation(obj);
     }
 
+    public static void afterObjectInitialization(Object obj) {
+        getEventTracker().afterObjectInitialization(obj);
+    }
+
     /**
      * Called from the instrumented code to replace [java.lang.Object.hashCode] method call with some
      * deterministic value.

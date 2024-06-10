@@ -967,6 +967,10 @@ abstract class ManagedStrategy(
         }
     }
 
+    override fun afterObjectInitialization(obj: Any) = runInIgnoredSection {
+        objectTracker.initializeObject(obj)
+    }
+
     private fun methodGuaranteeType(owner: Any?, className: String, methodName: String): ManagedGuaranteeType? = runInIgnoredSection {
         userDefinedGuarantees?.forEach { guarantee ->
             val ownerName = owner?.javaClass?.canonicalName ?: className
