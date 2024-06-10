@@ -41,6 +41,7 @@ class InternalLincheckBugTest {
     @Test
     fun test() = ModelCheckingOptions()
         .actorsPerThread(2)
-        .checkImpl(this::class.java)
-        .checkLincheckOutput("internal_bug_report.txt")
+        .checkImpl(this::class.java) { failure ->
+            failure.checkLincheckOutput("internal_bug_report.txt")
+        }
 }

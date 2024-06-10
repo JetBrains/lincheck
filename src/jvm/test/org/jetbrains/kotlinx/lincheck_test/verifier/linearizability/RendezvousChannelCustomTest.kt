@@ -41,7 +41,7 @@ class RendezvousChannelCustomTest : VerifierState() {
     private val pollFun = RendezvousChannelCustomTest::poll
 
     @Test
-    fun testCancellation_01() = withLincheckJavaAgent(InstrumentationMode.STRESS) {
+    fun testCancellation_01() {
         verify(RendezvousChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {
@@ -55,7 +55,7 @@ class RendezvousChannelCustomTest : VerifierState() {
     }
 
     @Test
-    fun testCancellation_02() = withLincheckJavaAgent(InstrumentationMode.STRESS) {
+    fun testCancellation_02() {
         verify(RendezvousChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {
@@ -69,7 +69,7 @@ class RendezvousChannelCustomTest : VerifierState() {
     }
 
     @Test
-    fun testCancellation_03() = withLincheckJavaAgent(InstrumentationMode.STRESS) {
+    fun testCancellation_03() {
         verify(RendezvousChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {
@@ -83,7 +83,7 @@ class RendezvousChannelCustomTest : VerifierState() {
     }
 
     @Test
-    fun testCancellation_04()  = withLincheckJavaAgent(InstrumentationMode.STRESS){
+    fun testCancellation_04() {
         verify(RendezvousChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {
@@ -97,7 +97,7 @@ class RendezvousChannelCustomTest : VerifierState() {
     }
 
     @Test
-    fun testCancellation_05() = withLincheckJavaAgent(InstrumentationMode.STRESS) {
+    fun testCancellation_05() {
         verify(RendezvousChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {

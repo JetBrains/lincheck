@@ -38,7 +38,8 @@ class ClocksWithExceptionsInOutputTest {
         actorsPerThread(2)
         minimizeFailedScenario(false)
     }
-        .checkImpl(this::class.java)
-        .checkLincheckOutput("clocks_and_exceptions.txt")
+    .checkImpl(this::class.java) { failure ->
+        failure.checkLincheckOutput("clocks_and_exceptions.txt")
+    }
 
 }

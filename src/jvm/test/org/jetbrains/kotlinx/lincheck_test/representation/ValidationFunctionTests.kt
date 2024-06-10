@@ -64,8 +64,9 @@ class ValidationFunctionCallTest {
             }
         }
     }
-        .checkImpl(this::class.java)
-        .checkLincheckOutput("validation_function_failure.txt")
+    .checkImpl(this::class.java) { failure ->
+        failure.checkLincheckOutput("validation_function_failure.txt")
+    }
 
 }
 

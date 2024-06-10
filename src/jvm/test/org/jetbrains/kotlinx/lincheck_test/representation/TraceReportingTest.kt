@@ -125,7 +125,7 @@ class TraceReportingTest {
 
     @Test
     fun testEmptyTrace() {
-        val failure = ModelCheckingOptions()
+        ModelCheckingOptions()
             .iterations(0)
             .addCustomScenario {
                 parallel {
@@ -135,8 +135,9 @@ class TraceReportingTest {
                 }
             }
             .sequentialSpecification(EmptySequentialImplementation::class.java)
-            .checkImpl(this::class.java)
-        failure.checkLincheckOutput("trace_reporting_empty.txt")
+            .checkImpl(this::class.java) { failure ->
+                failure.checkLincheckOutput("trace_reporting_empty.txt")
+            }
     }
 
     class EmptySequentialImplementation {

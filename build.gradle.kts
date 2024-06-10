@@ -110,9 +110,9 @@ tasks {
     fun Test.configureJvmTestCommon() {
         maxParallelForks = 1
         maxHeapSize = "6g"
-        val instrumentAllClassesInModelCheckingMode: String by project
-        if (instrumentAllClassesInModelCheckingMode.toBoolean()) {
-            systemProperty("lincheck.instrumentAllClassesInModelCheckingMode", "true")
+        val instrumentAllClasses: String by project
+        if (instrumentAllClasses.toBoolean()) {
+            systemProperty("lincheck.instrumentAllClasses", "true")
         }
         val extraArgs = mutableListOf<String>()
         val withEventIdSequentialCheck: String by project

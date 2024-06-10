@@ -702,12 +702,25 @@ abstract class ManagedStrategy(
     /**
      * Returns `true` if a switch point is created.
      */
-    override fun beforeReadField(obj: Any, className: String, fieldName: String, codeLocation: Int) = runInIgnoredSection {
-        if (localObjectManager.isLocalObject(obj)) return@runInIgnoredSection false
+    override fun beforeReadField(obj: Any?, className: String, fieldName: String, codeLocation: Int,
+                                 isStatic: Boolean, isFinal: Boolean) = runInIgnoredSection {
+        // We need to ensure all the classes related to the reading object are instrumented.
+        // The following call checks all the static fields.
+        if (isStatic) {
+            LincheckJavaAgent.ensureClassHierarchyIsTransformed(className.canonicalClassName)
+        }
+        // Optimization: do not track final field reads
+        if (isFinal) {
+            return@runInIgnoredSection false
+        }
+        // Optimization: do not track accesses to thread-local objects
+        if (!isStatic && localObjectManager.isLocalObject(obj)) {
+            return@runInIgnoredSection false
+        }
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             ReadTracePoint(
-                ownerRepresentation = findOwnerName(obj),
+                ownerRepresentation = if (isStatic) simpleClassName(className) else findOwnerName(obj!!),
                 iThread = iThread,
                 actorId = currentActorId[iThread],
                 callStackTrace = callStackTrace[iThread],
@@ -721,38 +734,7 @@ abstract class ManagedStrategy(
             lastReadTracePoint[iThread] = tracePoint
         }
         newSwitchPoint(iThread, codeLocation, tracePoint)
-        loopDetector.passValue(obj)
-        true
-    }
-
-    override fun beforeReadFinalFieldStatic(className: String) = runInIgnoredSection {
-        // We need to ensure all the classes related to the reading object are instrumented.
-        // The following call checks all the static fields.
-        LincheckJavaAgent.ensureClassHierarchyIsTransformed(className.canonicalClassName)
-    }
-
-    override fun beforeReadFieldStatic(className: String, fieldName: String, codeLocation: Int) = runInIgnoredSection {
-        // We need to ensure all the classes related to the reading object are instrumented.
-        // The following call checks all the static fields.
-        LincheckJavaAgent.ensureClassHierarchyIsTransformed(className.canonicalClassName)
-
-        val iThread = currentThread
-        val tracePoint = if (collectTrace) {
-            ReadTracePoint(
-                ownerRepresentation = simpleClassName(className),
-                iThread = iThread,
-                actorId = currentActorId[iThread],
-                callStackTrace = callStackTrace[iThread],
-                fieldName = fieldName,
-                stackTraceElement = CodeLocations.stackTrace(codeLocation)
-            )
-        } else {
-            null
-        }
-        if (tracePoint != null) {
-            lastReadTracePoint[iThread] = tracePoint
-        }
-        newSwitchPoint(iThread, codeLocation, tracePoint)
+        return@runInIgnoredSection true
     }
 
     /** Returns <code>true</code> if a switch point is created. */
@@ -793,15 +775,24 @@ abstract class ManagedStrategy(
         }
     }
 
-    override fun beforeWriteField(obj: Any, className: String, fieldName: String, value: Any?, codeLocation: Int): Boolean = runInIgnoredSection {
-        localObjectManager.onWriteToObjectFieldOrArrayCell(obj, value)
-        if (localObjectManager.isLocalObject(obj)) {
+    override fun beforeWriteField(obj: Any?, className: String, fieldName: String, value: Any?, codeLocation: Int,
+                                  isStatic: Boolean, isFinal: Boolean): Boolean = runInIgnoredSection {
+        if (isStatic) {
+            localObjectManager.markObjectNonLocal(value)
+        } else if (obj != null) {
+            localObjectManager.onWriteToObjectFieldOrArrayCell(obj, value)
+            if (localObjectManager.isLocalObject(obj)) {
+                return@runInIgnoredSection false
+            }
+        }
+        // Optimization: do not track final field writes
+        if (isFinal) {
             return@runInIgnoredSection false
         }
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             WriteTracePoint(
-                ownerRepresentation = findOwnerName(obj),
+                ownerRepresentation = if (isStatic) simpleClassName(className) else findOwnerName(obj!!),
                 iThread = iThread,
                 actorId = currentActorId[iThread],
                 callStackTrace = callStackTrace[iThread],
@@ -814,31 +805,7 @@ abstract class ManagedStrategy(
             null
         }
         newSwitchPoint(iThread, codeLocation, tracePoint)
-        loopDetector.passValue(obj)
-        loopDetector.passValue(value)
-        true
-    }
-
-
-    override fun beforeWriteFieldStatic(className: String, fieldName: String, value: Any?, codeLocation: Int): Unit = runInIgnoredSection {
-        localObjectManager.markObjectNonLocal(value)
-        val iThread = currentThread
-        val tracePoint = if (collectTrace) {
-            WriteTracePoint(
-                ownerRepresentation = simpleClassName(className),
-                iThread = iThread,
-                actorId = currentActorId[iThread],
-                callStackTrace = callStackTrace[iThread],
-                fieldName = fieldName,
-                stackTraceElement = CodeLocations.stackTrace(codeLocation)
-            ).also {
-                it.initializeWrittenValue(adornedStringRepresentation(value))
-            }
-        } else {
-            null
-        }
-        newSwitchPoint(iThread, codeLocation, tracePoint)
-        loopDetector.passValue(value)
+        return@runInIgnoredSection true
     }
 
     override fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int): Boolean = runInIgnoredSection {
@@ -876,6 +843,14 @@ abstract class ManagedStrategy(
         }
     }
 
+    override fun afterReflectiveSetter(receiver: Any?, value: Any?) = runInIgnoredSection {
+        if (receiver == null) {
+            localObjectManager.markObjectNonLocal(value)
+        } else {
+            localObjectManager.onWriteToObjectFieldOrArrayCell(receiver, value)
+        }
+    }
+
     override fun getThreadLocalRandom(): Random = runInIgnoredSection {
         return randoms[currentThread]
     }
@@ -907,14 +882,6 @@ abstract class ManagedStrategy(
         }
     }
 
-    override fun onWriteToObjectFieldOrArrayCell(receiver: Any, fieldOrArrayCellValue: Any?) = runInIgnoredSection {
-        localObjectManager.onWriteToObjectFieldOrArrayCell(receiver, fieldOrArrayCellValue)
-    }
-
-    override fun onWriteObjectToStaticField(fieldValue: Any?) = runInIgnoredSection {
-        localObjectManager.markObjectNonLocal(fieldValue)
-    }
-
     private fun methodGuaranteeType(owner: Any?, className: String, methodName: String): ManagedGuaranteeType? = runInIgnoredSection {
         userDefinedGuarantees?.forEach { guarantee ->
             val ownerName = owner?.javaClass?.canonicalName ?: className
@@ -926,9 +893,6 @@ abstract class ManagedStrategy(
         return null
     }
 
-    /**
-     * @param methodId identifier of the method, generated by [MethodIds].
-     */
     override fun beforeMethodCall(
         owner: Any?,
         className: String,
@@ -1006,7 +970,7 @@ abstract class ManagedStrategy(
         newSwitchPointOnAtomicMethodCall(codeLocation, params)
     }
 
-    override fun onMethodCallFinishedSuccessfully(result: Any?) {
+    override fun onMethodCallReturn(result: Any?) {
         runInIgnoredSection {
             loopDetector.afterRegularMethodCall()
         }
@@ -1029,7 +993,7 @@ abstract class ManagedStrategy(
         leaveIgnoredSectionIfEntered()
     }
 
-    override fun onMethodCallThrewException(t: Throwable) {
+    override fun onMethodCallException(t: Throwable) {
         runInIgnoredSection {
             loopDetector.afterRegularMethodCall()
         }
