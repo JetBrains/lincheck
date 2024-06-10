@@ -12,9 +12,6 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
-import java.math.*
-import kotlin.coroutines.*
-import kotlin.coroutines.intrinsics.*
 
 data class Trace(val trace: List<TracePoint>)
 
@@ -60,7 +57,7 @@ internal class SwitchEventTracePoint(
 internal abstract class CodeLocationTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
-    protected val stackTraceElement: StackTraceElement
+    val stackTraceElement: StackTraceElement
 ) : TracePoint(iThread, actorId, callStackTrace) {
 
     protected abstract fun toStringCompact(): String
@@ -315,6 +312,7 @@ internal enum class SwitchReason(private val reason: String) {
  * Method call info.
  *
  * All methods calls are enumerated to make it possible to distinguish different calls of the same method.
- * Suspended method calls have the same [identifier] before and after suspension, but different [call] points.
+ * Suspended method calls have the same [suspensionIdentifier] before and after suspension, but different [call] points.
+ * @param methodId Method identifier. See [org.jetbrains.kotlinx.lincheck.transformation.MethodIds].
  */
-internal class CallStackTraceElement(val call: MethodCallTracePoint, val identifier: Int)
+internal class CallStackTraceElement(val call: MethodCallTracePoint, val suspensionIdentifier: Int, val methodId: Int)

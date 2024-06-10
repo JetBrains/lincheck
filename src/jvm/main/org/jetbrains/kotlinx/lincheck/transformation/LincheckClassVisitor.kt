@@ -1264,6 +1264,9 @@ internal class LincheckClassVisitor(
                         loadNewCodeLocationId()
                         // STACK [INVOKEVIRTUAL]: owner, owner, className, methodName, codeLocation
                         // STACK [INVOKESTATIC]:         null, className, methodName, codeLocation
+                        adapter.push(MethodIds.getMethodId(owner, name, desc))
+                        // STACK [INVOKEVIRTUAL]: owner, owner, className, methodName, codeLocation, methodId
+                        // STACK [INVOKESTATIC]:         null, className, methodName, codeLocation, methodId
                         val argumentTypes = getArgumentTypes(desc)
                         push(argumentLocals.size) // size of the array
                         visitTypeInsn(ANEWARRAY, OBJECT_TYPE.internalName)
