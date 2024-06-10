@@ -734,6 +734,7 @@ abstract class ManagedStrategy(
             lastReadTracePoint[iThread] = tracePoint
         }
         newSwitchPoint(iThread, codeLocation, tracePoint)
+        loopDetector.passValue(obj)
         return@runInIgnoredSection true
     }
 
@@ -805,6 +806,8 @@ abstract class ManagedStrategy(
             null
         }
         newSwitchPoint(iThread, codeLocation, tracePoint)
+        loopDetector.passValue(obj)
+        loopDetector.passValue(value)
         return@runInIgnoredSection true
     }
 
