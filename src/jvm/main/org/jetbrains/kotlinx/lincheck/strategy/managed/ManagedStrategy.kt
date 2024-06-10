@@ -220,6 +220,7 @@ abstract class ManagedStrategy(
         callStackTrace.forEach { it.clear() }
         suspendedFunctionsStack.forEach { it.clear() }
         randoms.forEachIndexed { i, r -> r.setSeed(i + 239L) }
+        loopDetector.initialize()
         objectTracker.reset()
         memoryTracker?.reset()
         monitorTracker.reset()

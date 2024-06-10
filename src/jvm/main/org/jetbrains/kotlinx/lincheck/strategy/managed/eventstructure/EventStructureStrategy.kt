@@ -325,10 +325,14 @@ class EventStructureStrategy(
                 if (!isTestInstanceRegistered) {
                     registerTestInstance()
                 }
-                eventStructure.addThreadForkEvent(eventStructure.mainThreadId, forkedThreads)
+                if (forkedThreads.isNotEmpty()) {
+                    eventStructure.addThreadForkEvent(eventStructure.mainThreadId, forkedThreads)
+                }
             }
             ExecutionPart.POST -> {
-                eventStructure.addThreadJoinEvent(eventStructure.mainThreadId, forkedThreads)
+                if (forkedThreads.isNotEmpty()) {
+                    eventStructure.addThreadJoinEvent(eventStructure.mainThreadId, forkedThreads)
+                }
             }
             else -> {}
         }
