@@ -72,6 +72,9 @@ abstract class ManagedStrategy(
     // Which threads are suspended?
     private val isSuspended = BooleanArray(nThreads) { false }
 
+    // Which threads are spin-bound blocked?
+    private val isSpinBoundBlocked = BooleanArray(nThreads) { false }
+
     // Current actor id for each thread.
     protected val currentActorId = IntArray(nThreads)
 
@@ -214,6 +217,7 @@ abstract class ManagedStrategy(
     protected open fun initializeInvocation() {
         finished.fill(false)
         isSuspended.fill(false)
+        isSpinBoundBlocked.fill(false)
         currentActorId.fill(-1)
         traceCollector = if (collectTrace) TraceCollector() else null
         suddenInvocationResult = null
@@ -532,6 +536,7 @@ abstract class ManagedStrategy(
     protected open fun isActive(iThread: Int): Boolean =
         !finished[iThread] &&
         !(isSuspended[iThread] && !runner.isCoroutineResumed(iThread, currentActorId[iThread])) &&
+        !isSpinBoundBlocked[iThread] &&
         !monitorTracker.isWaiting(iThread) &&
         !parkingTracker.isParked(iThread)
 
@@ -558,6 +563,9 @@ abstract class ManagedStrategy(
         mustSwitch: Boolean = false,
         tracePoint: TracePoint? = null
     ): Boolean {
+        if (reason == SwitchReason.SPIN_BOUND) {
+            isSpinBoundBlocked[iThread] = true
+        }
         val nextThread = chooseThreadSwitch(iThread, mustSwitch)
         val switchHappened = (iThread != nextThread)
         if (switchHappened) {
@@ -595,6 +603,12 @@ abstract class ManagedStrategy(
         }
         if (suspendedThread != null) {
            return suspendedThread
+        }
+        // if some threads (but not all of them!) are blocked due to spin-loop bounding,
+        // then finish the execution but do not count it as a deadlock;
+        if (isSpinBoundBlocked.any { it } && !isSpinBoundBlocked.all { it }) {
+           suddenInvocationResult = SpinLoopBoundInvocationResult()
+           throw ForcibleExecutionFinishError
         }
         // any other situation is considered to be a deadlock
         suddenInvocationResult = ManagedDeadlockInvocationResult(runner.collectExecutionResults())
