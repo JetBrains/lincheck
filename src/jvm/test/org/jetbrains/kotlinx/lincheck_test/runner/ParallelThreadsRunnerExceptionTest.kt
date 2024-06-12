@@ -175,5 +175,6 @@ class ParallelThreadExecutionExceptionsTest {
 }
 
 fun mockStrategy(scenario: ExecutionScenario) = object : Strategy(scenario) {
-    override fun run(): LincheckFailure? = error("Not yet implemented")
+    override val runner: Runner get() = error("Not yet implemented")
+    override fun runInvocation(): InvocationResult = error("Not yet implemented")
 }
