@@ -280,8 +280,7 @@ abstract class ManagedStrategy(
     }
 
     private fun failDueToLivelock(lazyMessage: () -> String): Nothing {
-        suddenInvocationResult =
-            ObstructionFreedomViolationInvocationResult(lazyMessage(), runner.collectExecutionResults())
+        suddenInvocationResult = ObstructionFreedomViolationInvocationResult(lazyMessage(), runner.collectExecutionResults())
         // Forcibly finish the current execution by throwing an exception.
         throw ForcibleExecutionFinishError
     }
@@ -303,10 +302,10 @@ abstract class ManagedStrategy(
 
     private val concurrentActorCausesBlocking: Boolean
         get() = currentActorId.mapIndexed { iThread, actorId ->
-            if (iThread != currentThread && actorId >= 0 && !finished[iThread])
-                scenario.threads[iThread][actorId]
-            else null
-        }.filterNotNull().any { it.causesBlocking }
+                    if (iThread != currentThread && actorId >= 0 && !finished[iThread])
+                        scenario.threads[iThread][actorId]
+                    else null
+                }.filterNotNull().any { it.causesBlocking }
 
 
     // == EXECUTION CONTROL METHODS ==
