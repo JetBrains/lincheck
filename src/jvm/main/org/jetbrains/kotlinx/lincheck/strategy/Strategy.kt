@@ -102,15 +102,14 @@ abstract class Strategy protected constructor(
 /**
  * Runs one Lincheck's test iteration with the given strategy and verifier.
  *
- * @param iteration the id of the iteration.
- * @param invocationsBound number of invocations to run.
+ * @param invocations number of invocations to run.
  * @param verifier the verifier to be used.
  *
  * @return the failure, if detected, null otherwise.
  */
-fun Strategy.runIteration(invocationsBound: Int, verifier: Verifier): LincheckFailure? {
+fun Strategy.runIteration(invocations: Int, verifier: Verifier): LincheckFailure? {
     var spinning = false
-    for (invocation in 0 until invocationsBound) {
+    for (invocation in 0 until invocations) {
         if (!(spinning || nextInvocation()))
             return null
         spinning = false
