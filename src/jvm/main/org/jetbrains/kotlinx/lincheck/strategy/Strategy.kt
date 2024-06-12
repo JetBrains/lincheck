@@ -39,20 +39,13 @@ abstract class Strategy protected constructor(
     open fun nextInvocation(): Boolean = true
 
     /**
-     * Initializes the invocation.
-     * Should be called before each call to [runInvocation].
-     */
-    open fun initializeInvocation() {}
-
-    /**
      * Runs the current invocation and returns its result.
      *
-     * Should be called after [initializeInvocation] and only if previous call to [nextInvocation] returned `true`:
+     * Should be called only if previous call to [nextInvocation] returned `true`:
      *
      * ```kotlin
      *  with(strategy) {
      *      if (nextInvocation()) {
-     *          initializeInvocation()
      *          runInvocation()
      *      }
      *  }
@@ -113,7 +106,6 @@ fun Strategy.runIteration(invocations: Int, verifier: Verifier): LincheckFailure
         if (!(spinning || nextInvocation()))
             return null
         spinning = false
-        initializeInvocation()
         val failure = run {
             val result = runInvocation()
             spinning = (result is SpinCycleFoundAndReplayRequired)

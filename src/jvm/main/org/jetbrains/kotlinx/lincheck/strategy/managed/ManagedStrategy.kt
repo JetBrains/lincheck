@@ -173,8 +173,7 @@ abstract class ManagedStrategy(
     /**
      * Resets all internal data to the initial state and initializes current invocation to be run.
      */
-    override fun initializeInvocation() {
-        super.initializeInvocation()
+    protected open fun initializeInvocation() {
         finished.fill(false)
         isSuspended.fill(false)
         currentActorId.fill(-1)
@@ -191,7 +190,7 @@ abstract class ManagedStrategy(
      * Runs the current invocation.
      */
     override fun runInvocation(): InvocationResult {
-        // initializeInvocation()
+        initializeInvocation()
         val result = runner.run()
         // In case the runner detects a deadlock, some threads can still manipulate the current strategy,
         // so we're not interested in suddenInvocationResult in this case
@@ -241,7 +240,6 @@ abstract class ManagedStrategy(
 
         runner.close()
         runner = createRunner()
-        initializeInvocation()
 
         val loggedResults = runInvocation()
         // In case the runner detects a deadlock, some threads can still be in an active state,
