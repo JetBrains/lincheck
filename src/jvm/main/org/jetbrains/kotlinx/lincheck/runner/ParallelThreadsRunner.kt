@@ -37,7 +37,7 @@ private typealias SuspensionPointResultWithContinuation = AtomicReference<Pair<k
  *
  * It is pretty useful for stress testing or if you do not care about context switch expenses.
  */
-open class ParallelThreadsRunner(
+internal open class ParallelThreadsRunner(
     strategy: Strategy,
     testClass: Class<*>,
     validationFunction: Actor?,
@@ -445,6 +445,6 @@ open class ParallelThreadsRunner(
     override fun onFailure(iThread: Int, e: Throwable) {}
 }
 
-enum class UseClocks { ALWAYS, RANDOM }
+internal enum class UseClocks { ALWAYS, RANDOM }
 
 internal enum class CompletionStatus { CANCELLED, RESUMED }

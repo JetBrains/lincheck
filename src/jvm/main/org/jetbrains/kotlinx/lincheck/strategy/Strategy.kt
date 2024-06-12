@@ -29,7 +29,7 @@ abstract class Strategy protected constructor(
     /**
      * Runner used for executing the test scenario.
      */
-    protected abstract val runner: Runner
+    internal abstract val runner: Runner
 
     /**
      * Sets the internal state of strategy to run the next invocation.

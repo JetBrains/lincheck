@@ -134,7 +134,7 @@ abstract class ManagedStrategy(
     private lateinit var callStackContextPerThread: Array<ArrayList<CallContext>>
 
     override fun close() {
-        runner.close()
+        super.close()
         // clear object numeration at the end to avoid memory leaks
         cleanObjectNumeration()
     }
@@ -1518,7 +1518,7 @@ abstract class ManagedStrategy(
  * This class is a [ParallelThreadsRunner] with some overrides that add callbacks
  * to the strategy so that it can known about some required events.
  */
-class ManagedStrategyRunner(
+internal class ManagedStrategyRunner(
     private val managedStrategy: ManagedStrategy,
     testClass: Class<*>, validationFunction: Actor?, stateRepresentationMethod: Method?,
     timeoutMs: Long, useClocks: UseClocks
