@@ -101,18 +101,11 @@ abstract class Strategy protected constructor(
  * @return the failure, if detected, null otherwise.
  */
 fun Strategy.runIteration(invocations: Int, verifier: Verifier): LincheckFailure? {
-    var spinning = false
     for (invocation in 0 until invocations) {
-        if (!(spinning || nextInvocation()))
+        if (!nextInvocation())
             return null
-        spinning = false
-        val failure = run {
-            val result = runInvocation()
-            spinning = (result is SpinCycleFoundAndReplayRequired)
-            if (!spinning)
-                verify(result, verifier)
-            else null
-        }
+        val result = runInvocation()
+        val failure = verify(result, verifier)
         if (failure != null)
             return failure
     }

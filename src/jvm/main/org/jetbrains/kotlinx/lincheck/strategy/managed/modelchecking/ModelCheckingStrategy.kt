@@ -63,11 +63,9 @@ internal class ModelCheckingStrategy(
         currentInterleaving.initialize()
     }
 
-    override fun runInvocation(): InvocationResult {
-        return super.runInvocation().also {
-            if (it is SpinCycleFoundAndReplayRequired)
-                currentInterleaving.rollbackAfterSpinCycleFound()
-        }
+    override fun enableSpinCycleReplay() {
+        super.enableSpinCycleReplay()
+        currentInterleaving.rollbackAfterSpinCycleFound()
     }
 
     /**

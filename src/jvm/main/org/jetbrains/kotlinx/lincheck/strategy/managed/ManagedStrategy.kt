@@ -19,7 +19,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.util.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
 import sun.nio.ch.lincheck.*
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicFieldUpdaterNames.getAtomicFieldUpdaterName
@@ -190,22 +189,32 @@ abstract class ManagedStrategy(
      * Runs the current invocation.
      */
     override fun runInvocation(): InvocationResult {
-        initializeInvocation()
-        val result = runner.run()
-        // In case the runner detects a deadlock, some threads can still manipulate the current strategy,
-        // so we're not interested in suddenInvocationResult in this case
-        // and immediately return RunnerTimeoutInvocationResult.
-        if (result is RunnerTimeoutInvocationResult) {
-            return result
-        }
-        // Has strategy already determined the invocation result?
-        suddenInvocationResult?.let {
+        while (true) {
+            initializeInvocation()
+            val result = runner.run()
+            // In case the runner detects a deadlock, some threads can still manipulate the current strategy,
+            // so we're not interested in suddenInvocationResult in this case
+            // and immediately return RunnerTimeoutInvocationResult.
+            if (result is RunnerTimeoutInvocationResult) {
+                return result
+            }
+            // If strategy has not detected a sudden invocation result,
+            // then return, otherwise process the sudden result.
+            val suddenResult = suddenInvocationResult ?: return result
             // Unexpected `ForcibleExecutionFinishError` should be thrown.
             check(result is UnexpectedExceptionInvocationResult)
-            return it
+            // Check if an invocation replay is required
+            val isReplayRequired = (suddenResult is SpinCycleFoundAndReplayRequired)
+            if (isReplayRequired) {
+                enableSpinCycleReplay()
+                continue
+            }
+            // Otherwise return the sudden result
+            return suddenResult
         }
-        return result
     }
+
+    protected open fun enableSpinCycleReplay() {}
 
     // == BASIC STRATEGY METHODS ==
 
@@ -233,8 +242,8 @@ abstract class ManagedStrategy(
         collectTrace = true
         loopDetector.enableReplayMode(
             failDueToDeadlockInTheEnd =
-            result is ManagedDeadlockInvocationResult ||
-                    result is ObstructionFreedomViolationInvocationResult
+                result is ManagedDeadlockInvocationResult ||
+                result is ObstructionFreedomViolationInvocationResult
         )
         cleanObjectNumeration()
 
@@ -1703,7 +1712,11 @@ internal object ForcibleExecutionFinishError : Error() {
     override fun fillInStackTrace() = this
 }
 
-internal const val COROUTINE_SUSPENSION_CODE_LOCATION = -1 // currently the exact place of coroutine suspension is not known
+// currently the exact place of coroutine suspension is not known
+internal const val COROUTINE_SUSPENSION_CODE_LOCATION = -1
+
+// when spin-loop is detected, we might need to replay the execution up to N times
+private const val MAX_SPIN_CYCLE_REPLAY_COUNT = 3
 
 private const val OBSTRUCTION_FREEDOM_SPINLOCK_VIOLATION_MESSAGE =
     "The algorithm should be non-blocking, but an active lock is detected"
