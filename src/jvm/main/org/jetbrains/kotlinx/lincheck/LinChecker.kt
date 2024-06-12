@@ -121,7 +121,13 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
         if (ideaPluginEnabled() && this is ModelCheckingCTestConfiguration) {
             reporter.logFailedIteration(failure, loggingLevel = LoggingLevel.WARN)
             enableReplayModeForIdeaPlugin()
-            failure.scenario.run(this, verifier)
+            val strategy = createStrategy(failure.scenario)
+            check(strategy is ModelCheckingStrategy)
+            strategy.use {
+                val replayedFailure = it.runIteration(invocationsPerIteration, verifier)
+                check(replayedFailure != null)
+                strategy.runReplayIfPluginEnabled(replayedFailure)
+            }
         } else {
             reporter.logFailedIteration(failure)
         }
@@ -131,16 +137,19 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
         testCfg: CTestConfiguration,
         verifier: Verifier,
     ): LincheckFailure? {
-        val strategy = testCfg.createStrategy(
-            testClass = testClass,
-            scenario = this,
-            validationFunction = testStructure.validationFunction,
-            stateRepresentationMethod = testStructure.stateRepresentation,
-        )
+        val strategy = testCfg.createStrategy(this)
         return strategy.use {
             it.runIteration(testCfg.invocationsPerIteration, verifier)
         }
     }
+
+    private fun CTestConfiguration.createStrategy(scenario: ExecutionScenario) =
+        createStrategy(
+            testClass = testClass,
+            scenario = scenario,
+            validationFunction = testStructure.validationFunction,
+            stateRepresentationMethod = testStructure.stateRepresentation,
+        )
 
     private fun CTestConfiguration.createVerifier() =
         verifierClass.getConstructor(Class::class.java).newInstance(sequentialSpecification)

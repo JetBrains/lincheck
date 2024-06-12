@@ -72,7 +72,7 @@ internal class ModelCheckingStrategy(
      * If the plugin enabled and the failure has a trace, passes information about
      * the trace and the failure to the Plugin and run re-run execution to debug it.
      */
-    private fun runReplayIfPluginEnabled(failure: LincheckFailure) {
+    internal fun runReplayIfPluginEnabled(failure: LincheckFailure) {
         if (replay && failure.trace != null) {
             // Extract trace representation in the appropriate view.
             val trace = constructTraceForPlugin(failure, failure.trace)
