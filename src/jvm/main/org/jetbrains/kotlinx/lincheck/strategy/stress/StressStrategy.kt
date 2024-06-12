@@ -22,7 +22,8 @@ class StressStrategy(
     validationFunction: Actor?,
     stateRepresentationFunction: Method?,
 ) : Strategy(scenario) {
-    private val runner = ParallelThreadsRunner(
+
+    override val runner : Runner = ParallelThreadsRunner(
         strategy = this,
         testClass = testClass,
         validationFunction = validationFunction,
@@ -32,8 +33,4 @@ class StressStrategy(
     )
 
     override fun runInvocation(): InvocationResult = runner.run()
-
-    override fun close() {
-        runner.close()
-    }
 }

@@ -27,6 +27,11 @@ abstract class Strategy protected constructor(
 ) : Closeable {
 
     /**
+     * Runner used for executing the test scenario.
+     */
+    protected abstract val runner: Runner
+
+    /**
      * Sets the internal state of strategy to run the next invocation.
      *
      * @return true if there is next invocation to run, false if all invocations have been studied.
@@ -89,7 +94,9 @@ abstract class Strategy protected constructor(
     /**
      * Closes the strategy and releases any resources associated with it.
      */
-    override fun close() {}
+    override fun close() {
+        runner.close()
+    }
 }
 
 /**
