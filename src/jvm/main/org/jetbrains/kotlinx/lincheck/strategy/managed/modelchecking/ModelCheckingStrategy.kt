@@ -60,6 +60,7 @@ internal class ModelCheckingStrategy(
 
     override fun runImpl(): LincheckFailure? {
         currentInterleaving = root.nextInterleaving() ?: return null
+        var replayCount = 0
         while (usedInvocations < maxInvocations) {
             // run invocation and check its results
             val invocationResult = runInvocation()
@@ -67,8 +68,11 @@ internal class ModelCheckingStrategy(
                 // Restart the current interleaving with
                 // the collected knowledge about the detected spin loop.
                 currentInterleaving.rollbackAfterSpinCycleFound()
+                check(replayCount < 10)
+                ++replayCount
                 continue
             }
+            replayCount = 0
             usedInvocations++
             checkResult(invocationResult)?.let { failure ->
                 runReplayIfPluginEnabled(failure)
