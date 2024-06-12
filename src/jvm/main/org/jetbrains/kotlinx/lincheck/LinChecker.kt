@@ -76,12 +76,18 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
     private fun CTestConfiguration.checkImpl(): LincheckFailure? {
         var verifier = createVerifier()
         val generator = createExecutionGenerator(testStructure.randomProvider)
+        // create a sequence that generates scenarios lazily on demand
         val randomScenarios = generateSequence {
             generator.nextExecution().also {
                 // reset the parameter generator ranges to start with the same initial bounds for each scenario.
                 testStructure.parameterGenerators.forEach { it.reset() }
             }
         }
+        // we want to handle custom scenarios and random scenarios uniformly by a single loop;
+        // to achieve this, we join the custom scenarios list and
+        // random scenarios generator into a single sequence;
+        // this way the random scenarios are still generated lazily on demand
+        // only after all custom scenarios are checked
         val scenarios = customScenarios.asSequence() + randomScenarios.take(iterations)
         val scenariosSize = customScenarios.size + iterations
         scenarios.forEachIndexed { i, scenario ->
