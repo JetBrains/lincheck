@@ -179,10 +179,7 @@ internal object LincheckJavaAgent {
             .filter { clazz ->
                 val canonicalClassName = clazz.name
                 // Skip classes not transformed by Lincheck.
-                if (!INSTRUMENT_ALL_CLASSES && canonicalClassName !in instrumentedClasses) {
-                    return@filter false
-                }
-                true
+                return@filter !(!INSTRUMENT_ALL_CLASSES && canonicalClassName !in instrumentedClasses)
             }
         // `retransformClasses` uses initial (loaded in VM from disk) class bytecode and reapplies
         // transformations of all agents that did not remove their transformers to this moment
