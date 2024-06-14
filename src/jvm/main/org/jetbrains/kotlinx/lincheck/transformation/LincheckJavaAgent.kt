@@ -175,18 +175,18 @@ internal object LincheckJavaAgent {
         // Remove the Lincheck transformer.
         instrumentation.removeTransformer(LincheckClassFileTransformer)
         // Collect the original bytecode of the instrumented classes.
-        val classDefinitions = getLoadedClassesToInstrument()
-            .mapNotNull { clazz ->
+        val classes = getLoadedClassesToInstrument()
+            .filter { clazz ->
                 val canonicalClassName = clazz.name
                 // Skip classes not transformed by Lincheck.
                 if (!INSTRUMENT_ALL_CLASSES && canonicalClassName !in instrumentedClasses) {
-                    return@mapNotNull null
+                    return@filter false
                 }
-                clazz
+                true
             }
         // `retransformClasses` uses initial (loaded in VM from disk) class bytecode and reapplies
         // transformations of all agents that did not remove their transformers to this moment
-        instrumentation.retransformClasses(*classDefinitions.toTypedArray())
+        instrumentation.retransformClasses(*classes.toTypedArray())
         // Clear the set of classes instrumented in the model checking mode.
         instrumentedClasses.clear()
     }
