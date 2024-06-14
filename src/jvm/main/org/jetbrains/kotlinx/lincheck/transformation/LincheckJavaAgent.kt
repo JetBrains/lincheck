@@ -10,27 +10,30 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
-import net.bytebuddy.agent.*
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
+import net.bytebuddy.agent.ByteBuddyAgent
+import org.jetbrains.kotlinx.lincheck.canonicalClassName
+import org.jetbrains.kotlinx.lincheck.runInIgnoredSection
+import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.MODEL_CHECKING
+import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.STRESS
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.shouldTransform
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.transformedClassesStress
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.nonTransformedClasses
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.INSTRUMENT_ALL_CLASSES
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentation
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentationMode
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentedClasses
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.INSTRUMENT_ALL_CLASSES
 import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.ClassWriter
 import sun.misc.Unsafe
-import org.objectweb.asm.*
-import org.objectweb.asm.util.TraceClassVisitor
-import java.io.*
-import java.lang.instrument.*
-import java.lang.reflect.*
-import java.security.*
+import java.io.File
+import java.lang.instrument.ClassFileTransformer
+import java.lang.instrument.Instrumentation
+import java.lang.reflect.Modifier
+import java.security.ProtectionDomain
 import java.util.*
-import java.util.concurrent.*
-import java.util.jar.*
+import java.util.concurrent.ConcurrentHashMap
+import java.util.jar.JarFile
+
 
 /**
  * Executes [block] with the Lincheck java agent for byte-code instrumentation.
@@ -179,16 +182,11 @@ internal object LincheckJavaAgent {
                 if (!INSTRUMENT_ALL_CLASSES && canonicalClassName !in instrumentedClasses) {
                     return@mapNotNull null
                 }
-                // For each class, retrieve its original bytecode.
-                val bytes = nonTransformedClasses[clazz.name]
-                check(bytes != null) {
-                    "Original bytecode for the transformed class ${clazz.name} is missing!"
-                }
-                ClassDefinition(clazz, bytes)
+                clazz
             }
-        // Redefine the instrumented classes back to their original state
-        // using the original bytecodes collected previously.
-        instrumentation.redefineClasses(*classDefinitions.toTypedArray())
+        // `retransformClasses` uses initial (loaded in VM from disk) class bytecode and reapplies
+        // transformations of all agents that did not remove their transformers to this moment
+        instrumentation.retransformClasses(*classDefinitions.toTypedArray())
         // Clear the set of classes instrumented in the model checking mode.
         instrumentedClasses.clear()
     }
@@ -326,7 +324,6 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
      */
     val transformedClassesModelChecking = ConcurrentHashMap<String, ByteArray>()
     val transformedClassesStress = ConcurrentHashMap<String, ByteArray>()
-    val nonTransformedClasses = ConcurrentHashMap<String, ByteArray>()
 
     private val transformedClassesCache
         get() = when (instrumentationMode) {
@@ -360,7 +357,6 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         internalClassName: String,
         classBytes: ByteArray
     ): ByteArray = transformedClassesCache.computeIfAbsent(internalClassName.canonicalClassName) {
-        nonTransformedClasses.putIfAbsent(internalClassName.canonicalClassName, classBytes)
         val reader = ClassReader(classBytes)
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
         try {

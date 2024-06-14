@@ -36,7 +36,7 @@ internal class CoverageBytecodeFilter(
         HITS_BEFORE_ASSIGN,
     }
     private val COVERAGE_HITS_NAME = "__\$hits\$__"
-    /** @see <a href="https://github.com/JetBrains/intellij-coverage/blob/master/test-kotlin/resources/bytecode/simple/branches/branch_condy.txt">Hits masks static methods</a> */
+    /** @see <a href="https://github.com/JetBrains/intellij-coverage/blob/master/test-kotlin/resources/bytecode/simple/branches">Hits masks static methods</a> */
     private val COVERAGE_HITS_METHOD_SIGNATURES = listOf(
         "com/intellij/rt/coverage/instrumentation/CoverageRuntime.getHitsMask(Ljava/lang/String;)[Z",
         "com/intellij/rt/coverage/instrumentation/CoverageRuntime.getHitsMaskCached(Ljava/lang/String;)[Z",
