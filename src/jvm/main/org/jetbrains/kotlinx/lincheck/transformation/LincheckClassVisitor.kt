@@ -108,6 +108,7 @@ internal class LincheckClassVisitor(
         if (access and ACC_SYNCHRONIZED != 0) {
             mv = SynchronizedMethodTransformer(fileName, className, methodName, mv.newAdapter(), classVersion)
         }
+        val skipVisitor: MethodVisitor = mv // Must not capture `MethodCallTransformer` (in order to filter static method calls inserted by coverage library)
         mv = MethodCallTransformer(fileName, className, methodName, mv.newAdapter())
         mv = MonitorTransformer(fileName, className, methodName, mv.newAdapter())
         mv = WaitNotifyTransformer(fileName, className, methodName, mv.newAdapter())
@@ -122,6 +123,10 @@ internal class LincheckClassVisitor(
             sv.analyzer = aa
             aa
         }
+        mv = CoverageBytecodeFilter(
+            skipVisitor.newAdapter(),
+            mv.newAdapter()
+        ) // Must appear in code after `SharedMemoryAccessTransformer` (in order to be able to skip this transformer
         mv = DeterministicHashCodeTransformer(fileName, className, methodName, mv.newAdapter())
         mv = DeterministicTimeTransformer(mv.newAdapter())
         mv = DeterministicRandomTransformer(fileName, className, methodName, mv.newAdapter())

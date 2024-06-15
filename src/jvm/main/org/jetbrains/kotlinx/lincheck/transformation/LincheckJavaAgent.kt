@@ -10,26 +10,30 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
-import net.bytebuddy.agent.*
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
+import net.bytebuddy.agent.ByteBuddyAgent
+import org.jetbrains.kotlinx.lincheck.canonicalClassName
+import org.jetbrains.kotlinx.lincheck.runInIgnoredSection
+import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.MODEL_CHECKING
+import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.STRESS
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.shouldTransform
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.transformedClassesStress
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.nonTransformedClasses
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.INSTRUMENT_ALL_CLASSES
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentation
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentationMode
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentedClasses
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.INSTRUMENT_ALL_CLASSES
 import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.ClassWriter
 import sun.misc.Unsafe
-import org.objectweb.asm.*
-import java.io.*
-import java.lang.instrument.*
-import java.lang.reflect.*
-import java.security.*
+import java.io.File
+import java.lang.instrument.ClassFileTransformer
+import java.lang.instrument.Instrumentation
+import java.lang.reflect.Modifier
+import java.security.ProtectionDomain
 import java.util.*
-import java.util.concurrent.*
-import java.util.jar.*
+import java.util.concurrent.ConcurrentHashMap
+import java.util.jar.JarFile
+
 
 /**
  * Executes [block] with the Lincheck java agent for byte-code instrumentation.
@@ -170,25 +174,20 @@ internal object LincheckJavaAgent {
     fun uninstall() {
         // Remove the Lincheck transformer.
         instrumentation.removeTransformer(LincheckClassFileTransformer)
-        // Collect the original bytecode of the instrumented classes.
-        val classDefinitions = getLoadedClassesToInstrument()
-            .mapNotNull { clazz ->
+        // Collect the set of instrumented classes.
+        val classes = if (INSTRUMENT_ALL_CLASSES)
+            getLoadedClassesToInstrument()
+        else
+            getLoadedClassesToInstrument()
+            // Skip classes not transformed by Lincheck.
+            .filter { clazz ->
                 val canonicalClassName = clazz.name
-                // Skip classes not transformed by Lincheck.
-                if (!INSTRUMENT_ALL_CLASSES && canonicalClassName !in instrumentedClasses) {
-                    return@mapNotNull null
-                }
-                // For each class, retrieve its original bytecode.
-                val bytes = nonTransformedClasses[clazz.name]
-                check(bytes != null) {
-                    "Original bytecode for the transformed class ${clazz.name} is missing!"
-                }
-                ClassDefinition(clazz, bytes)
+                canonicalClassName in instrumentedClasses
             }
-        // Redefine the instrumented classes back to their original state
-        // using the original bytecodes collected previously.
-        instrumentation.redefineClasses(*classDefinitions.toTypedArray())
-        // Clear the set of classes instrumented in the model checking mode.
+        // `retransformClasses` uses initial (loaded in VM from disk) class bytecode and reapplies
+        // transformations of all agents that did not remove their transformers to this moment
+        instrumentation.retransformClasses(*classes.toTypedArray())
+        // Clear the set of instrumented classes.
         instrumentedClasses.clear()
     }
 
@@ -325,7 +324,6 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
      */
     val transformedClassesModelChecking = ConcurrentHashMap<String, ByteArray>()
     val transformedClassesStress = ConcurrentHashMap<String, ByteArray>()
-    val nonTransformedClasses = ConcurrentHashMap<String, ByteArray>()
 
     private val transformedClassesCache
         get() = when (instrumentationMode) {
@@ -359,7 +357,6 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         internalClassName: String,
         classBytes: ByteArray
     ): ByteArray = transformedClassesCache.computeIfAbsent(internalClassName.canonicalClassName) {
-        nonTransformedClasses.putIfAbsent(internalClassName.canonicalClassName, classBytes)
         val reader = ClassReader(classBytes)
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
         try {
