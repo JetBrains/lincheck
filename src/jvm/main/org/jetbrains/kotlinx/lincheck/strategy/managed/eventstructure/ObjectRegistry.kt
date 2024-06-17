@@ -163,10 +163,19 @@ fun ObjectRegistry.getOrRegisterValueID(type: Type, value: OpaqueValue?): ValueI
     return when (type.sort) {
         Type.LONG       -> (value.unwrap() as Long)
         Type.INT        -> (value.unwrap() as Int).toLong()
-        Type.BYTE       -> (value.unwrap() as Byte).toLong()
         Type.SHORT      -> (value.unwrap() as Short).toLong()
         Type.CHAR       -> (value.unwrap() as Char).toLong()
-        Type.BOOLEAN    -> (value.unwrap() as Boolean).toInt().toLong()
+
+        // sometimes, due to JVM internals, boolean values can be reinterpreted as byte values
+        // (e.g., because of BALOAD and BASTORE instructions are used for both boolean and byte arrays);
+        // thus if the type-cast failed, we try to reinterpret the value and cast it to manually
+        Type.BYTE       ->
+            (value.unwrap() as? Byte)?.toLong() ?:
+            (value.unwrap() as Boolean).toInt().toLong()
+        Type.BOOLEAN    ->
+            (value.unwrap() as? Boolean)?.toInt()?.toLong() ?:
+            (value.unwrap() as Byte).toBoolean().toInt().toLong()
+
         else            -> when (type) {
             LONG_TYPE_BOXED     -> (value.unwrap() as Long)
             INT_TYPE_BOXED      -> (value.unwrap() as Int).toLong()

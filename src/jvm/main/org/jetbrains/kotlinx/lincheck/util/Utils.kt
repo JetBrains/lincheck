@@ -27,6 +27,12 @@ import kotlin.reflect.KClass
 
 fun Boolean.toInt(): Int = this.compareTo(false)
 
+fun Byte.toBoolean(): Boolean = when (this) {
+    0.toByte() -> false
+    1.toByte() -> true
+    else -> throw IllegalArgumentException("Byte $this is not a Boolean")
+}
+
 fun Int.toBoolean() = (this == 1)
 
 infix fun Boolean.implies(other: Boolean): Boolean = 
