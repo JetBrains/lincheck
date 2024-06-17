@@ -59,7 +59,7 @@ fun ObjectTracker.getFieldAccessMemoryLocation(obj: Any?, className: String, fie
     }
     val clazz = obj!!.javaClass
     val id = getObjectId(obj)
-    return ObjectFieldMemoryLocation(clazz, id, className.canonicalClassName, fieldName, type)
+    return ObjectFieldMemoryLocation(clazz, id, clazz.name, fieldName, type)
 }
 
 fun ObjectTracker.getArrayAccessMemoryLocation(array: Any, index: Int, type: Type): MemoryLocation {

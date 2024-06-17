@@ -20,8 +20,9 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import java.util.*
-
+/**
+ * Tracks memory operations with shared variables.
+ */
 interface MemoryTracker {
 
     fun beforeWrite(iThread: Int, codeLocation: Int, location: MemoryLocation, value: Any?)
@@ -44,29 +45,6 @@ interface MemoryTracker {
     fun reset()
 
 }
-
-/**
- * Tracks memory operations with shared variables.
- */
-// abstract class MemoryTracker {
-//
-//     abstract fun writeValue(iThread: Int, codeLocation: Int, location: MemoryLocation, value: OpaqueValue?)
-//
-//     abstract fun readValue(iThread: Int, codeLocation: Int, location: MemoryLocation): OpaqueValue?
-//
-//     abstract fun compareAndSet(iThread: Int, codeLocation: Int, location: MemoryLocation, expected: OpaqueValue?, desired: OpaqueValue?): Boolean
-//
-//     abstract fun addAndGet(iThread: Int, codeLocation: Int, location: MemoryLocation, delta: Number): OpaqueValue?
-//
-//     abstract fun getAndAdd(iThread: Int, codeLocation: Int, location: MemoryLocation, delta: Number): OpaqueValue?
-//
-//     abstract fun getAndSet(iThread: Int, codeLocation: Int, location: MemoryLocation, value: OpaqueValue?): OpaqueValue?
-//
-//     abstract fun dumpMemory()
-//
-//     abstract fun reset()
-//
-// }
 
 typealias MemoryInitializer = (MemoryLocation) -> OpaqueValue?
 typealias MemoryIDInitializer = (MemoryLocation) -> ValueID

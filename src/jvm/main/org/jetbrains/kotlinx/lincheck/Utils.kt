@@ -233,17 +233,21 @@ internal val Class<*>.allDeclaredFieldWithSuperclasses get(): List<Field> {
 @Suppress("DEPRECATION")
 internal fun findFieldNameByOffset(targetType: Class<*>, offset: Long): String? {
     // Extract the private offset value and find the matching field.
-    for (field in targetType.declaredFields) {
+    for (field in targetType.allDeclaredFieldWithSuperclasses) {
         try {
             if (Modifier.isNative(field.modifiers)) continue
-            val fieldOffset = if (Modifier.isStatic(field.modifiers)) UnsafeHolder.UNSAFE.staticFieldOffset(field)
-            else UnsafeHolder.UNSAFE.objectFieldOffset(field)
-            if (fieldOffset == offset) return field.name
+            val fieldOffset =
+                if (Modifier.isStatic(field.modifiers))
+                    UnsafeHolder.UNSAFE.staticFieldOffset(field)
+                else
+                    UnsafeHolder.UNSAFE.objectFieldOffset(field)
+            if (fieldOffset == offset) {
+                return field.name
+            }
         } catch (t: Throwable) {
             t.printStackTrace()
         }
     }
-
     return null // Field not found
 }
 
