@@ -122,6 +122,9 @@ internal class LincheckClassVisitor(
         mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter(),
             interceptObjectInitialization = (instrumentationMode == EXPERIMENTAL_MODEL_CHECKING),
         )
+        mv = ReflectionTransformer(fileName, className, methodName, mv.newAdapter(),
+            interceptArrayCopyMethod = (instrumentationMode == EXPERIMENTAL_MODEL_CHECKING),
+        )
         mv = DeterministicHashCodeTransformer(fileName, className, methodName, mv.newAdapter())
         mv = DeterministicTimeTransformer(mv.newAdapter())
         mv = DeterministicRandomTransformer(fileName, className, methodName, mv.newAdapter())

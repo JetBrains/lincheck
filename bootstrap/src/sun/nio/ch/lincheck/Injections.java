@@ -254,6 +254,10 @@ public class Injections {
         getEventTracker().afterReflectiveSetter(receiver, value);
     }
 
+    public static void onArrayCopy(Object srcArray, int srcPos, Object dstArray, int dstPos, int length) {
+        getEventTracker().onArrayCopy(srcArray, srcPos, dstArray, dstPos, length);
+    }
+
     /**
      * Called from the instrumented code before any method call.
      *

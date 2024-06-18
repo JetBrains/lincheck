@@ -42,6 +42,8 @@ interface MemoryTracker {
 
     fun interceptReadResult(iThread: Int): Any?
 
+    fun interceptArrayCopy(iThread: Int, codeLocation: Int, srcArray: Any?, srcPos: Int, dstArray: Any?, dstPos: Int, length: Int)
+
     fun reset()
 
 }

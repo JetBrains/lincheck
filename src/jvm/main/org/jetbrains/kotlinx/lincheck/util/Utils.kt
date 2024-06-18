@@ -21,6 +21,8 @@
 package org.jetbrains.kotlinx.lincheck.util
 
 import org.objectweb.asm.Type
+import org.objectweb.asm.Type.*
+import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import kotlin.reflect.KClass
 
 fun Boolean.toInt(): Int = this.compareTo(false)
@@ -261,6 +263,33 @@ internal fun Type.getKClass(): KClass<*> = when (sort) {
         else         -> Array::class
     }
     else -> throw IllegalArgumentException()
+}
+
+internal fun KClass<*>.getType(): Type = when (this) {
+    Int::class      -> INT_TYPE
+    Byte::class     -> BYTE_TYPE
+    Short::class    -> SHORT_TYPE
+    Long::class     -> LONG_TYPE
+    Float::class    -> FLOAT_TYPE
+    Double::class   -> DOUBLE_TYPE
+    Char::class     -> CHAR_TYPE
+    Boolean::class  -> BOOLEAN_TYPE
+    else            -> OBJECT_TYPE
+}
+
+internal fun KClass<*>.getArrayElementType(): Type = when (this) {
+    IntArray::class     -> INT_TYPE
+    ByteArray::class    -> BYTE_TYPE
+    ShortArray::class   -> SHORT_TYPE
+    LongArray::class    -> LONG_TYPE
+    FloatArray::class   -> FLOAT_TYPE
+    DoubleArray::class  -> DOUBLE_TYPE
+    CharArray::class    -> CHAR_TYPE
+    BooleanArray::class -> BOOLEAN_TYPE
+    Array::class        -> OBJECT_TYPE
+    // TODO: should we handle atomic arrays?
+
+    else                -> throw IllegalArgumentException("Argument is not array")
 }
 
 internal val INT_TYPE_BOXED      = Type.getType("Ljava/lang/Integer")

@@ -61,7 +61,7 @@ class EventStructureStrategy(
         EventStructureObjectTracker(eventStructure)
     // Tracker of shared memory accesses.
     override val memoryTracker: MemoryTracker =
-        EventStructureMemoryTracker(eventStructure, eventStructure.objectRegistry)
+        EventStructureMemoryTracker(eventStructure, objectTracker)
     // Tracker of monitors operations.
     override val monitorTracker: MonitorTracker =
         EventStructureMonitorTracker(eventStructure, eventStructure.objectRegistry)
@@ -453,8 +453,11 @@ private class EventStructureObjectTracker(
 
 private class EventStructureMemoryTracker(
     private val eventStructure: EventStructure,
-    private val objectRegistry: ObjectRegistry,
+    private val objectTracker: ObjectTracker,
 ) : MemoryTracker {
+
+    private val objectRegistry: ObjectRegistry
+        get() = eventStructure.objectRegistry
 
     private fun getValueID(location: MemoryLocation, value: OpaqueValue?): ValueID =
         objectRegistry.getOrRegisterValueID(location.type, value)
@@ -585,6 +588,21 @@ private class EventStructureMemoryTracker(
 
     override fun interceptReadResult(iThread: Int): Any? {
         return addReadResponse(iThread)?.unwrap()
+    }
+
+    override fun interceptArrayCopy(iThread: Int, codeLocation: Int, srcArray: Any?, srcPos: Int, dstArray: Any?, dstPos: Int, length: Int) {
+        val srcType = srcArray!!::class.getType()
+        val dstType = dstArray!!::class.getType()
+        for (i in 0 until length) {
+            val readLocation  = objectTracker.getArrayAccessMemoryLocation(srcArray, srcPos + i, srcType)
+            val writeLocation = objectTracker.getArrayAccessMemoryLocation(dstArray, dstPos + i, dstType)
+            val value = run {
+                beforeRead(iThread, codeLocation, readLocation)
+                interceptReadResult(iThread)
+            }
+            beforeWrite(iThread, codeLocation, writeLocation, value)
+            writeLocation.write(value, objectRegistry::getValue)
+        }
     }
 
     override fun reset() {}
