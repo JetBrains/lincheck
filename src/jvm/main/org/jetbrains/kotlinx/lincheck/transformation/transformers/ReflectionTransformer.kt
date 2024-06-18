@@ -13,6 +13,7 @@ package org.jetbrains.kotlinx.lincheck.transformation.transformers
 import org.jetbrains.kotlinx.lincheck.transformation.ManagedStrategyMethodVisitor
 import org.jetbrains.kotlinx.lincheck.transformation.invokeIfInTestingCode
 import org.jetbrains.kotlinx.lincheck.transformation.invokeStatic
+import org.objectweb.asm.Opcodes.INVOKESTATIC
 import org.objectweb.asm.commons.GeneratorAdapter
 import sun.nio.ch.lincheck.EventTracker
 import sun.nio.ch.lincheck.Injections
@@ -30,14 +31,29 @@ internal class ReflectionTransformer(
 ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
-        val isSystemMethodInvocation = (owner == "java/lang/System")
         when {
-            isSystemMethodInvocation && name == "arraycopy" ->
+            opcode == INVOKESTATIC && owner == "java/lang/reflect/Array" && name == "newInstance" ->
+                visitInvokeArrayNewInstance(opcode, owner, name, desc, itf)
+
+            opcode == INVOKESTATIC && owner == "java/lang/System" && name == "arraycopy" ->
                 visitArrayCopyMethod(opcode, owner, name, desc, itf)
 
             else ->
                 visitMethodInsn(opcode, owner, name, desc, itf)
         }
+    }
+
+    private fun visitInvokeArrayNewInstance(opcode: Int, owner: String, name: String, descriptor: String, isInterface: Boolean) = adapter.run {
+        // TODO: should also call beforeNewObjectCreation?
+        visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+        // STACK: array
+        invokeIfInTestingCode(
+            original = {},
+            code = {
+                dup()
+                invokeStatic(Injections::afterNewObjectCreation)
+            }
+        )
     }
 
     private fun visitArrayCopyMethod(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
