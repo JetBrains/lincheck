@@ -185,7 +185,6 @@ class BoxedArrayAccessTest : AbstractLincheckTest() {
     override fun <O : Options<O, *>> O.customize() {
         iterations(1)
         threads(1)
-        // threads(2) // TODO: investigate why 2 threads are failing
         actorsPerThread(1)
         actorsBefore(0)
         actorsAfter(0)

@@ -29,6 +29,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanO
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
 import org.objectweb.asm.Type
+import org.objectweb.asm.Type.*
 import java.lang.invoke.VarHandle
 import java.lang.reflect.Method
 import java.util.*
@@ -848,7 +849,7 @@ abstract class ManagedStrategy(
             lastReadTracePoint[iThread] = tracePoint
         }
         newSwitchPoint(iThread, codeLocation, tracePoint)
-        if (memoryTracker != null) {
+        if (memoryTracker != null && typeDescriptor != VOID_TYPE.descriptor) {
             val type = Type.getType(typeDescriptor)
             val location = objectTracker.getArrayAccessMemoryLocation(array, index, type)
             memoryTracker!!.beforeRead(iThread, codeLocation, location)
