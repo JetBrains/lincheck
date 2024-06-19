@@ -10,7 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import org.jetbrains.kotlinx.lincheck.primitiveHashCodeOrSystemHashCode
+import org.jetbrains.kotlinx.lincheck.primitiveOrIdentityHashCode
+import org.jetbrains.kotlinx.lincheck.transformation.MethodIds
 import java.util.ArrayList
 
 /**
@@ -24,7 +25,7 @@ import java.util.ArrayList
  *
  * In the default mode, LoopDetector has two states.
  * When a spin cycle is not detected yet, LoopDetector ignores method parameters and read/write values and receivers,
- * operating only with switch points code locations.
+ * operating only with switch points and code locations.
  * When a spin cycle is detected, LoopDetector requests the replay of the execution and starts tracking
  * the parameters, etc., to detect a spin cycle period properly, taking into account all changes during the spin cycle.
  * When we run into a spin cycle again, LoopDetector tries to find the period using [currentThreadCodeLocationsHistory].
@@ -106,7 +107,7 @@ internal class LoopDetector(
     /**
      * Indicates if we analyze method parameters to calculate the spin-cycle period.
      */
-    private var cycleCalculationPhase: Boolean = false
+    private var mode: WorkMode = WorkMode.DEFAULT
 
     /**
      * Indicates that we are in a spin cycle iteration now.
@@ -210,14 +211,14 @@ internal class LoopDetector(
         // when we can't find a cycle period and can't switch to another thread.
         // Check whether the count exceeds the maximum number of repetitions for loop/hang detection.
         if (detectedFirstTime && !detectedEarly) {
-            if (!cycleCalculationPhase) {
+            if (mode == WorkMode.DEFAULT) {
                 // Turn on parameters and read/write values and receivers tracking and request one more replay.
-                cycleCalculationPhase = true
+                mode = WorkMode.CYCLE_PERIOD_CALCULATION
                 return Decision.LivelockReplayToDetectCycleRequired
             }
             registerCycle()
             // Turn off parameters tracking and request one more replay to avoid side effects.
-            cycleCalculationPhase = false
+            mode = WorkMode.DEFAULT
             // Enormous operations count considered as total spin lock
             if (totalExecutionsCount > ManagedCTestConfiguration.LIVELOCK_EVENTS_THRESHOLD) {
                 return Decision.EventsThresholdReached
@@ -252,7 +253,7 @@ internal class LoopDetector(
     /**
      * Called before regular method calls.
      */
-    fun beforeRegularMethodCall(codeLocation: Int, params: Array<Any?>) {
+    fun beforeMethodCall(codeLocation: Int, params: Array<Any?>) {
         replayModeLoopDetectorHelper?.let {
             it.onNextExecution()
             return
@@ -271,6 +272,9 @@ internal class LoopDetector(
      * Called after any method calls.
      */
     fun afterRegularMethodCall() {
+        // Because we want to track the fact of the method exit,
+        // but the sequence of the beforeMethodCall code locations values determines what exactly method we exit.
+        // That's why we can use just 0 as a label of a method exit.
         val afterMethodCallLocation = 0
         replayModeLoopDetectorHelper?.let {
             it.onNextExecution()
@@ -291,24 +295,45 @@ internal class LoopDetector(
      * Otherwise, does nothing.
      */
     fun passParameters(params: Array<Any?>) {
-        if (!cycleCalculationPhase) return
+        if (mode == WorkMode.DEFAULT) return
         params.forEach { param ->
             currentThreadCodeLocationsHistory += paramToIntRepresentation(param)
         }
     }
 
     /**
-     * Called when we:
-     * - Read/write some value.
-     * - Use some object as a receiver (receiver is passed as a parameter [obj]).
-     * - Use an index to access an array cell (index is passed as a parameter [obj]).
-     *
-     * Used only if LoopDetector is in the cycle calculation mode.
-     * Otherwise, does nothing.
+     * Should be called before each read non-local mutable field read.
      */
-    fun passValue(obj: Any?) {
-        if (!cycleCalculationPhase) return
-        currentThreadCodeLocationsHistory += paramToIntRepresentation(obj)
+    fun beforeReadField(receiver: Any?) = passValue(receiver)
+
+    /**
+     * Should be called after each read non-local mutable field read.
+     */
+    fun afterRead(value: Any?) = passValue(value)
+
+    /**
+     * Should be called before each non-local array element read.
+     */
+    fun beforeReadArrayElement(array: Any, index: Int) {
+        passValue(array)
+        passValue(index)
+    }
+
+    /**
+     * Should be called before each read non-local field write.
+     */
+    fun beforeWriteField(receiver: Any?, value: Any?) {
+        passValue(receiver)
+        passValue(value)
+    }
+
+    /**
+     * Should be called before each read non-local array element write.
+     */
+    fun beforeWriteArrayElement(array: Any, index: Int, value: Any?) {
+        passValue(array)
+        passValue(index)
+        passValue(value)
     }
 
     fun onActorStart(iThread: Int) {
@@ -382,6 +407,20 @@ internal class LoopDetector(
         }
         lastInterleavingHistoryNode.addExecution(executionIdentity)
         loopTrackingCursor.onNextExecutionPoint()
+    }
+
+    /**
+     * Called when we:
+     * - Read/write some value.
+     * - Use some object as a receiver (receiver is passed as a parameter [obj]).
+     * - Use an index to access an array cell (index is passed as a parameter [obj]).
+     *
+     * Used only if LoopDetector is in the cycle calculation mode.
+     * Otherwise, does nothing.
+     */
+    private fun passValue(obj: Any?) {
+        if (mode == WorkMode.DEFAULT) return
+        currentThreadCodeLocationsHistory += paramToIntRepresentation(obj)
     }
 
     private fun registerCycle() {
@@ -531,19 +570,48 @@ internal class LoopDetector(
      * and value representations produced by this method.
      */
     private fun paramToIntRepresentation(value: Any?): Int {
-        var hashCode = primitiveHashCodeOrSystemHashCode(value)
+        val hashCode = primitiveOrIdentityHashCode(value)
         if (hashCode < 0) return hashCode
-        hashCode++
+        // When we're trying to find a spin cycle and can't do it with parameters, receivers, etc.,
+        // we try to calculate the spin cycle without them. We need to filter executions story list
+        // of integers fast, so we keep the contract:
+        // 1. All potential switch points code locations, method call code locations are strictly greater than 0.
+        // 2. All method exits have zero (0) code locations.
+        // 3. All parameters, receivers, and value integer representations (the things we have to ignore in case
+        // After this line [hashCode] is positive value or Integer.MIN_VALUE in case of the overflow.
+        // So by `if` below we make sure that this value is strictly negative.
+        return if (hashCode == 0) -1 else -hashCode
+    }
 
-        return if (hashCode > 0) -hashCode else hashCode
+    private enum class WorkMode {
+
+        /**
+         * The default mode of [LoopDetector]: analyzing only potential switch points code locations
+         * and method enters/exits.
+         */
+        DEFAULT,
+
+        /**
+         * In this mode [LoopDetector] also takes into account parameters,
+         * receivers and written/wrote values to calculate the spin cycle period properly.
+         * After spin cycle is found, [DEFAULT] mode is enabled.
+         */
+        CYCLE_PERIOD_CALCULATION
     }
 
 }
 
-internal fun LoopDetector.Decision.isLivelockDetected() = when (this) {
+internal val LoopDetector.Decision.isLivelockDetected get() = when (this) {
     is LoopDetector.Decision.LivelockThreadSwitch,
     is LoopDetector.Decision.LivelockReplayRequired,
     is LoopDetector.Decision.LivelockFailureDetected -> true
+
+    else -> false
+}
+
+internal val LoopDetector.Decision.isReplayRequired get() = when (this) {
+    is LoopDetector.Decision.LivelockReplayRequired,
+    is LoopDetector.Decision.LivelockReplayToDetectCycleRequired -> true
 
     else -> false
 }
@@ -643,4 +711,259 @@ private class ReplayModeLoopDetectorHelper(
         else
             LoopDetector.Decision.Idle
     }
+}
+
+/**
+ * Calculates the [SpinCycleStartTracePoint] trace point callStackTrace correctly after all trace points
+ * related to the spin cycle are collected.
+ *
+ * # The problem overview
+ *
+ * [TraceCollector] collects two types of the [TracePoint]:
+ * 1. TracePoints that represents places where potential context switch points could happened.
+ * 2. TracePoints, representing regular, non-atomic method calls.
+ *
+ * This division is important for us, as [LoopDetector] stores execution points sequences of the
+ * first type, causing the challenges, described below.
+ *
+ * When [SpinCycleStartTracePoint] is added initially to the [trace], its callStackTrace, constructed via
+ * `callStackTrace[currentThread]` may be inaccurate. Consider the following example:
+ * We have the following code:
+ * ```kotlin
+ * @Operation
+ * fun actor() {
+ *     atomicInteger.set(false) // code location = 1
+ *     spinLock() // method call code location = 2
+ * }
+ *
+ * fun spinLock() {
+ *     while (true) {
+ *         val value = getValue() // method call code location = 3
+ *         atomicInteger.compareAndSet(value, !value) // code location = 5
+ *     }
+ * }
+ *
+ * fun getValue() = atomicInteger.get() // code location = 4
+ * ```
+ * When we ran into a cycle, we'll have the following code locations history:
+ * ```
+ * [1, 2, 3, 4, 5, 3, 4, 5, 3, 4 ,5 ..., 3, 4, 5]
+ * ```
+ * Cycle period here is 3: `[3, 4, 5]` and only two `[1, 2]` executions happened before the cycle.
+ * Then, suppose we have a scenario with two actors.
+ * The interleaving we have:
+ * ```
+ * [
+ *  1. Execute 2 instructions (switch positions) in thread 1,
+ *  2. Execute 1 instruction (switch positions) in the thread 1,
+ *  3. Execute 3 instructions (switch positions) in the thread 1 -> execution hung.
+ * ]
+ * ```
+ * It's worth noting that the LoopDetector operates with a switch positions when replaying the
+ * execution to collect trace.
+ *
+ * Due to the internals of the [LoopDetector], [LoopDetector.replayModeCurrentlyInSpinCycle] will only
+ * return `true` at the beginning of step 3 described above, as execution only contains a sequence of
+ * executed potential switch points, while method call isn't a potential switch point.
+ * But at the beginning of step 3 we'll be inside the `getValue` method, so when [LoopDetector.replayModeCurrentlyInSpinCycle]
+ * is triggered, it's not correct using `callStackTrace[currentThread]`, as it would contain `getValue`.
+ *
+ * Summarizing, we may receive the signal about spin cycle start some non-atomic method calls after the actual spin cycle start
+ * if we switch right before the first spin cycle potential switch point execution,
+ * and this happens as [LoopDetector] stores sequences of the only potential switch points executions and
+ * all enters to the non-atomic methods are considered as a part of a step 1, which doesn't correspond to a spin cycle.
+ *
+ * Hence, **we can only use trace points of the first type defined above (which are potential switch points)
+ * to calculate the correct spin cycle start label call depth**.
+ *
+ * The problem has two solutions, depending on the spin cycle type:
+ * * recursive
+ * * iterative.
+ *
+ * # Iterative spin lock
+ * Let's consider the solution for the iterative spin-cycle.
+ *
+ * When we report an iterative spin cycle, we **must** visit the first spin cycle execution point
+ * and the first execution point of the second iteration (with an exit before).
+ * Let's track the current stacktrace before each switch point, before and after each method calls.
+ * Consider the example of a spin cycle, representing call stack traces of the execution points:
+ * ```
+ * A -> B -> C
+ * A -> B -> C -> K
+ * A -> B -> E -> D
+ * A -> B -> E
+ * A -> B -> X
+ * ```
+ * As we can see, even if all the execution points are wrapped in the non-atomic method calls (which we track
+ * during the trace collection too), the longest common prefix of the method calls `A, B` in the stack traces
+ * is the right position to place spin cycle start label.
+ * Indeed, due to the iterative nature of the spin lock, the first spin cycle execution of the first iteration
+ * and of the second iteration are placed in the same depth of calls. So it's guaranteed that we'll visit
+ * the most nested call and the least nested call. The wanted recursive method (and its call depth) can be found
+ * using the longest prefix of all the points is the spin cycle, as it is going to be the same along all the
+ * trace points and method calls.
+ *
+ * So that's what we do in case of an iterative spin lock.
+ * Track all the trace points of the spin cycle,
+ * calculate the max common method call prefix of these trace points, and place the spin cycle start label
+ * onto the found call depth.
+ *
+ * # Recursive spin lock
+ *
+ * Unlike iterative spin lock, in case of a recursive spin lock, longest common prefix may include
+ * method calls, that are a part of a spin cycle. Consider the following example:
+ * ```kotlin
+ * fun actor() {
+ *     a()
+ * }
+ *
+ * fun a() = b()
+ *
+ * fun b() {
+ *     c()
+ *     c()
+ *     a() // recursive call
+ * }
+ *
+ * fun c() = value.get()
+ * ```
+ * According to the problem described above, if we switch to another thread and back right before point X,
+ * the trace points of the spin cycle will have the following stack traces:
+ * ```
+ * [
+ *     actor -> a -> b -> c
+ *     actor -> a -> b -> c
+ * ]
+ * ```
+ * And the first execution point of the second iteration will be
+ * ```
+ * actor -> a -> b -> a -> b -> c
+ * ```
+ *
+ * As mentioned, it's incorrect to say that spin cycle starts at the depth `actor -> a -> c`, as the first
+ * recursive call is method `b` call, so we can't use the approach for the iterative spin cycle type.
+ *
+ * Let's consider the last potential switch trace point before the first spin cycle trace point,
+ * the first iteration first potential switch trace point
+ * and the second iteration first potential switch trace point:
+ *
+ * 1. `actor -> a -> b -> c`
+ * 2. `actor -> a -> b -> c -> a -> b -> c`
+ *
+ * Due to the recursive nature of a spin cycle, the second and the third trace points must have common
+ * method call suffix.
+ * It's important how to compare method calls in the suffixes. We consider method calls identical if
+ * they have the same ids produced by [MethodIds] and the same parameters. That means we don't care
+ * here where this method is called - it's more convenient to see as short version of the spin cycle as possible.
+ *
+ * But this approach may produce a wrong result in case when we switch from the spin lock and then occur
+ * in the same spin lock again.
+ * Let's consider this situation using the example above.
+ * Trace points of the second spin lock would have the following call stacks:
+ *
+ * 1. `actor -> [a -> b -> c] -> [a -> b -> c]`
+ * 2. `actor -> [a -> b -> c] -> [a -> b -> c]`
+ *
+ * And the first execution point of the second iteration will be
+ * ```
+ *     actor -> [a -> b -> c] -> [a -> b -> c] -> [a -> b -> c]
+ * ```
+ *
+ * If we apply this algorithm to the first point from the first iteration and the first point from the second iteration
+ * we get `[a -> b -> c] -> [a -> b -> c]` longest common suffix, which is not correct, because the first recursive call
+ * of this cycle starts at the depth `actor -> a -> b`.
+ * In this case, the last trace point before the spin cycle becomes handy.
+ * In the example above it would have the following call stack `actor -> a -> b -> c`.
+ *
+ * Here are the points we're interested in:
+ * 1. `actor -> [a -> b -> c]` - The last trace point before the cycle.
+ * 2. `actor -> [a -> b -> c] -> [a -> b -> c]` - The first trace point of the cycle.
+ * 3. ` actor -> [a -> b -> c] -> [a -> b -> c] -> [a -> b -> c]` - The first trace point of the second iteration.
+ * Let's note the following rule: if point 1 has the same method call on the same depth as point 2,
+ * then this call can't be a part of the current spin cycle.
+ * The reason is quite easy: if it was, we would mark point 1 as a first spin cycle trace point.
+ *
+ * So, to detect the spin cycle, start trace point depth in case of a recursive spin lock we:
+ * 1. Take the first trace point of the spin cycle on the first iteration (point A) and on the second iteration (point B).
+ * 2. Take the last trace point before the spin cycle (point C).
+ * 3. We walk synchronously on their call stacks from the end to the beginning, while call from the A stack
+ * is the same as a call from the stack B. But it also equals the call from the call C, then we need to stop.
+ * The count of the call passed the condition above equals to the call we need to lift from the first spin cycle
+ * node to get the correct spin cycle start trace point depth.
+ *
+ * @param beforeMethodCallSwitch flag if this method invoked right after [MethodCallTracePoint] is added to a trace,
+ * before the corresponding method is called.
+ */
+internal fun afterSpinCycleTraceCollected(
+    trace: MutableList<TracePoint>,
+    callStackTrace: List<CallStackTraceElement>,
+    spinCycleMethodCallsStackTraces: List<List<CallStackTraceElement>>,
+    iThread: Int,
+    currentActorId: Int,
+    beforeMethodCallSwitch: Boolean
+) {
+    // Obtaining spin cycle trace points.
+    val spinLockTracePoints = trace.takeLastWhile { it.iThread == iThread && it !is SpinCycleStartTracePoint }
+    // Nothing to do in this case (seems unreal).
+    if (spinLockTracePoints.isEmpty()) return
+    // If this method is invoked after beforeMethodCall or beforeAtomicMethodCall
+    // than MethodCallTracePoint is already added, correct it by altering current stack trace
+    val currentCallStackTrace = if (beforeMethodCallSwitch) callStackTrace.dropLast(1) else callStackTrace
+
+    val cycleStartTracePointIndex = trace.size - spinLockTracePoints.size - 1
+    if (cycleStartTracePointIndex < 0 || trace[cycleStartTracePointIndex] !is SpinCycleStartTracePoint) return
+
+    val spinCycleFirstTracePointCallStackTrace = spinLockTracePoints.first().callStackTrace
+    val isRecursive = currentCallStackTrace.size != spinCycleFirstTracePointCallStackTrace.size
+    val spinCycleStartStackTrace = if (isRecursive) {
+        // See above the description of the algorithm for recursive spin lock.
+        val prevIndex = trace.lastIndex - spinLockTracePoints.size - 1
+        val tracePointBeforeCycle = if (prevIndex >= 0) (prevIndex downTo 0)
+            .firstOrNull { trace[it] !is SwitchEventTracePoint && trace[it].iThread == iThread }?.let { trace[it] }
+        else null
+
+        var currentI = currentCallStackTrace.lastIndex
+        var firstI = spinCycleFirstTracePointCallStackTrace.lastIndex
+        var count = 0
+        while (firstI >= 0) {
+            val identifier = spinCycleFirstTracePointCallStackTrace[firstI].methodId
+            // Comparing corresponding calls.
+            if (identifier != currentCallStackTrace[currentI].methodId) break
+            // Check for the last trace point before the cycle.
+            if ((tracePointBeforeCycle != null) &&
+                (tracePointBeforeCycle.callStackTrace.lastIndex >= firstI) &&
+                (tracePointBeforeCycle.callStackTrace[firstI].methodId == identifier)
+            ) break
+
+            currentI--
+            firstI--
+            count++
+        }
+        spinCycleFirstTracePointCallStackTrace.dropLast(count)
+    } else {
+        // See above the description of the algorithm for iterative spin lock.
+        getCommonMinStackTrace(spinLockTracePoints, spinCycleMethodCallsStackTraces)
+            .dropLast(currentCallStackTrace.size - spinCycleFirstTracePointCallStackTrace.size)
+    }
+    trace[cycleStartTracePointIndex] =
+        SpinCycleStartTracePoint(iThread, currentActorId, spinCycleStartStackTrace)
+}
+
+/**
+ * @return Max common prefix of the [StackTraceElement] of the provided [spinCycleTracePoints]
+ */
+private fun getCommonMinStackTrace(spinCycleTracePoints: List<TracePoint>, spinCycleMethodCallsStackTraces: List<List<CallStackTraceElement>>): List<CallStackTraceElement> {
+    val callStackTraces = spinCycleTracePoints.map { it.callStackTrace } + spinCycleMethodCallsStackTraces
+    var count = 0
+    outer@while (true) {
+        if (count == callStackTraces[0].size) break
+        val stackTraceElement = callStackTraces[0][count].call.stackTraceElement
+        for (i in 1 until callStackTraces.size) {
+            val traceElements = callStackTraces[i]
+            if (count == traceElements.size) break@outer
+            if (stackTraceElement != traceElements[count].call.stackTraceElement) break@outer
+        }
+        count++
+    }
+    return spinCycleTracePoints.first().callStackTrace.take(count)
 }

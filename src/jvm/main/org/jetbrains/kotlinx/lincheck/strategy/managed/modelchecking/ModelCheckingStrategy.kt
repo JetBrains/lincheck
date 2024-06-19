@@ -435,7 +435,6 @@ internal class ModelCheckingStrategy(
     }
 
     private inner class Choice(val node: InterleavingTreeNode, val value: Int) {
-        // For easier debug.
         override fun toString(): String {
             return "Choice(node=$node, value=$value)"
         }
