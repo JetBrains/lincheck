@@ -123,13 +123,13 @@ fun ObjectTracker.getAtomicAccessMemoryLocation(
             is VarHandleMethodType.ArrayVarHandleMethod -> getArrayAccessMemoryLocation(
                 array = obj!!,
                 index = info.index,
-                type = OBJECT_TYPE, // TODO: fixme?
+                type = info.type,
             )
             else -> getFieldAccessMemoryLocation(
                 obj = obj,
                 className = info.className!!,
                 fieldName = info.fieldName.orEmpty(),
-                type = OBJECT_TYPE, // TODO: fixme?
+                type = info.type,
                 isStatic = (obj == null),
                 isFinal = false, // TODO: fixme?
             )

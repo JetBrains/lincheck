@@ -164,7 +164,7 @@ private val atomicFieldUpdaterMethods = setOf(
 private val varHandleMethods = setOf(
     "get", "getVolatile", "getAcquire", "getOpaque",
     "set", "setVolatile", "setRelease", "setOpaque",
-    "getAndSet", "getAndSetAcquire, getAndSetRelease",
+    "getAndSet", "getAndSetAcquire", "getAndSetRelease",
     "compareAndSet",
     "weakCompareAndSet", "weakCompareAndSetPlain", "weakCompareAndSetAcquire", "weakCompareAndSetRelease",
     "compareAndExchange", "compareAndExchangeAcquire", "compareAndExchangeRelease",

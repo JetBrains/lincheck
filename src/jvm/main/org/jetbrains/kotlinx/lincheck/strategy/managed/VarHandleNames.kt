@@ -10,9 +10,11 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import org.jetbrains.kotlinx.lincheck.findFieldNameByOffset
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
-import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
+import org.jetbrains.kotlinx.lincheck.util.*
+import org.objectweb.asm.Type
+import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import sun.misc.Unsafe
 import java.lang.invoke.VarHandle
 import java.lang.reflect.Field
@@ -105,7 +107,7 @@ internal object VarHandleNames {
             val firstParameter = parameters.firstOrNull() ?: return TreatAsDefaultMethod
             if (!ownerType.isInstance(firstParameter)) return TreatAsDefaultMethod
 
-            return InstanceVarHandleMethod(firstParameter, fieldName, parameters.drop(1))
+            return InstanceVarHandleMethod(firstParameter, fieldName, varHandle.getType(), parameters.drop(1))
         }
     }
 
@@ -125,7 +127,7 @@ internal object VarHandleNames {
 
             val fieldName = findFieldNameByOffset(ownerType, fieldOffset) ?: return TreatAsDefaultMethod
 
-            return StaticVarHandleMethod(ownerType, fieldName, parameters.toList())
+            return StaticVarHandleMethod(ownerType, fieldName, varHandle.getType(), parameters.toList())
         }
     }
 
@@ -139,7 +141,7 @@ internal object VarHandleNames {
             val firstParameter = parameters[0] ?:  return TreatAsDefaultMethod
             val index = parameters[1] as? Int ?: return TreatAsDefaultMethod
 
-            return ArrayVarHandleMethod(firstParameter, index, parameters.drop(2))
+            return ArrayVarHandleMethod(firstParameter, index, varHandle.getType(), parameters.drop(2))
         }
     }
 
@@ -173,6 +175,25 @@ internal object VarHandleNames {
         }
         return null
     }
+
+    private fun VarHandle.getType(): Type {
+        val className = this::class.java.name
+        return when {
+            "Int"       in className -> Type.INT_TYPE
+            "Long"      in className -> Type.LONG_TYPE
+            "Short"     in className -> Type.SHORT_TYPE
+            "Byte"      in className -> Type.BYTE_TYPE
+            "Char"      in className -> Type.CHAR_TYPE
+            "Boolean"   in className -> Type.BOOLEAN_TYPE
+            "Double"    in className -> Type.DOUBLE_TYPE
+            "Float"     in className -> Type.FLOAT_TYPE
+            "Reference" in className -> OBJECT_TYPE
+            "Object"    in className -> OBJECT_TYPE
+
+            else -> unreachable()
+        }
+    }
+
 }
 
 /**
@@ -187,18 +208,18 @@ internal sealed interface VarHandleMethodType {
     /**
      * Array cell access method call.
      */
-    data class ArrayVarHandleMethod(val array: Any, val index: Int, val parameters: List<Any?>) : VarHandleMethodType
+    data class ArrayVarHandleMethod(val array: Any, val index: Int, val type: Type, val parameters: List<Any?>) : VarHandleMethodType
 
     /**
      * Method call affecting field [fieldName] of the [owner].
      */
-    data class InstanceVarHandleMethod(val owner: Any, val fieldName: String, val parameters: List<Any?>) :
+    data class InstanceVarHandleMethod(val owner: Any, val fieldName: String, val type: Type, val parameters: List<Any?>) :
         VarHandleMethodType
 
     /**
      * Method call affecting static field [fieldName] of the [ownerClass].
      */
-    data class StaticVarHandleMethod(val ownerClass: Class<*>, val fieldName: String, val parameters: List<Any?>) :
+    data class StaticVarHandleMethod(val ownerClass: Class<*>, val fieldName: String, val type: Type, val parameters: List<Any?>) :
         VarHandleMethodType
 }
 
@@ -219,4 +240,11 @@ internal val VarHandleMethodType.fieldName: String? get() = when (this) {
     is InstanceVarHandleMethod  -> fieldName
     is StaticVarHandleMethod    -> fieldName
     else                        -> null
+}
+
+internal val VarHandleMethodType.type: Type get() = when (this) {
+    is InstanceVarHandleMethod  -> type
+    is StaticVarHandleMethod    -> type
+    is ArrayVarHandleMethod     -> type
+    TreatAsDefaultMethod        -> throw IllegalArgumentException()
 }
