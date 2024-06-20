@@ -238,6 +238,7 @@ class EventStructure(
         objectRegistry.retain { it.isExternal }
         // reset state of other auxiliary structures
         delayedConsistencyCheckBuffer.clear()
+        readCodeLocationsCounter.clear()
     }
 
     fun checkConsistency(): Inconsistency? {
@@ -1093,7 +1094,9 @@ class EventStructure(
 
     fun addActorStartEvent(iThread: Int, actor: Actor): AtomicThreadEvent {
         val label = ActorLabel(SpanLabelKind.Start, iThread, actor)
-        return addEvent(iThread, label, dependencies = listOf())
+        return addEvent(iThread, label, dependencies = listOf()).also {
+            resetReadCodeLocationsCounter(iThread)
+        }
     }
 
     fun addActorEndEvent(iThread: Int, actor: Actor): AtomicThreadEvent {
@@ -1198,6 +1201,11 @@ class EventStructure(
                 return false
         }
         return true
+    }
+
+    private fun resetReadCodeLocationsCounter(iThread: Int) {
+        // reset all code-locations counters of the given thread
+        readCodeLocationsCounter.keys.retainAll { (tid, _) -> tid != iThread }
     }
 
 }
