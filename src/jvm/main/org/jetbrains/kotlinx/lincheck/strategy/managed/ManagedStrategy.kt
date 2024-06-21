@@ -952,10 +952,12 @@ abstract class ManagedStrategy(
         objectTracker.registerObjectLink(fromObject = receiver ?: StaticObject, toObject = value)
     }
 
-    override fun onArrayCopy(srcArray: Any?, srcPos: Int, dstArray: Any?, dstPos: Int, length: Int) {
+    override fun onArrayCopy(srcArray: Any?, srcPos: Int, dstArray: Any?, dstPos: Int, length: Int) = runInIgnoredSection {
         val iThread = currentThread
         val codeLocation = SYSTEM_ARRAYCOPY_CODE_LOCATION
-        memoryTracker?.interceptArrayCopy(iThread, codeLocation, srcArray, srcPos, dstArray, dstPos, length)
+        if (memoryTracker != null) {
+            memoryTracker!!.interceptArrayCopy(iThread, codeLocation, srcArray, srcPos, dstArray, dstPos, length)
+        }
     }
 
     override fun getThreadLocalRandom(): Random = runInIgnoredSection {
