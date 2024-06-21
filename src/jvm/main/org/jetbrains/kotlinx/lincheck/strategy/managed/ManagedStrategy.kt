@@ -1824,7 +1824,7 @@ internal class ManagedStrategyRunner(
         managedStrategy.afterCoroutineCancelled(iThread, promptCancellation, result)
     }
 
-    override fun onResumeCoroutine(iResumedThread: Int, iResumedActor: Int) {
+    override fun onResumeCoroutine(iResumedThread: Int, iResumedActor: Int) = runInIgnoredSection {
         super.onResumeCoroutine(iResumedThread, iResumedActor)
         managedStrategy.onResumeCoroutine(managedStrategy.currentThread, iResumedThread, iResumedActor)
     }

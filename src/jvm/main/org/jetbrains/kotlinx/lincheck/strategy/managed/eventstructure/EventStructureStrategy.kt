@@ -27,6 +27,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.*
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.util.*
 import sun.nio.ch.lincheck.TestThread
 import java.lang.reflect.*
@@ -374,12 +375,12 @@ class EventStructureStrategy(
     }
 
     override fun onActorFinish(iThread: Int) {
-        super.onActorFinish(iThread)
         // TODO: move ignored section to ManagedStrategyRunner
         runInIgnoredSection {
             val actor = scenario.threads[iThread][currentActorId[iThread]]
             eventStructure.addActorEndEvent(iThread, actor)
         }
+        super.onActorFinish(iThread)
     }
 
     private fun onInconsistency(inconsistency: Inconsistency) {
@@ -587,7 +588,9 @@ private class EventStructureMemoryTracker(
     }
 
     override fun interceptReadResult(iThread: Int): Any? {
-        return addReadResponse(iThread)?.unwrap()
+        return addReadResponse(iThread)?.unwrap()?.also {
+            LincheckJavaAgent.ensureObjectIsTransformed(it)
+        }
     }
 
     override fun interceptArrayCopy(iThread: Int, codeLocation: Int, srcArray: Any?, srcPos: Int, dstArray: Any?, dstPos: Int, length: Int) {

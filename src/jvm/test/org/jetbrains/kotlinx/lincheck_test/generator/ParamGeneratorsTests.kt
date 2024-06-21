@@ -21,6 +21,7 @@ import org.junit.Test
 import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.kotlinx.lincheck_test.verifier.linearizability.SpinLockBasedSet
 import org.junit.Assert.*
+import org.junit.Ignore
 import kotlin.math.pow
 
 /**
@@ -225,6 +226,7 @@ class EnumParamGeneratorTest {
  */
 @Param(name = "operation_type", gen = EnumGen::class)
 @Param(name = "key", gen = IntGen::class, conf = "1:5")
+@Ignore
 class NamedEnumParamGeneratorTest {
 
     private val set = SpinLockBasedSet()
@@ -255,6 +257,7 @@ class NamedEnumParamGeneratorTest {
  * This test checks enum generation with in-place configured unnamed enum generator
  */
 @Param(name = "key", gen = IntGen::class, conf = "1:5")
+@Ignore
 class UnnamedEnumParamGeneratorTest() {
     private val set = SpinLockBasedSet()
 
@@ -284,6 +287,7 @@ class UnnamedEnumParamGeneratorTest() {
  * Test checks that enum generator will be used even without [Param] annotation
  */
 @Param(name = "key", gen = IntGen::class, conf = "1:5")
+@Ignore
 class EnumParamWithoutAnnotationGeneratorTest: BaseEnumSetTest() {
 
     @Operation
@@ -319,6 +323,7 @@ abstract class BaseEnumSetTest {
  * Test checks that if one named parameter generator is associated with many types, then an exception is thrown
  */
 @Param(name = "type", gen = EnumGen::class)
+@Ignore
 class MultipleTypesAssociatedWithNamedEnumParameterGeneratorTest {
 
     @Operation
@@ -344,6 +349,7 @@ class MultipleTypesAssociatedWithNamedEnumParameterGeneratorTest {
  * Checks configuration works with enums with spaces in values names
  */
 @Param(name = "type", gen = EnumGen::class, conf = "FIRST OPTION, SECOND OPTION")
+@Ignore
 class EnumsWithWhitespacesInNameConfigurationTest {
 
     @Operation

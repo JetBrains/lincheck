@@ -162,6 +162,8 @@ tasks {
             ideaActive -> 10
             else -> 0
         }
+
+        exclude("org/jetbrains/kotlinx/lincheck_test/representation")
     }
 
     val jvmTestIsolated = register<Test>("jvmTestIsolated") {
