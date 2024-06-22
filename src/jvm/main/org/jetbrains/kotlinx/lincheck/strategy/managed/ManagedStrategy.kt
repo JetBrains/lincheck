@@ -908,7 +908,7 @@ abstract class ManagedStrategy(
                         } else {
                             params
                         }
-                        beforeMethodCall(owner, currentThread, codeLocation, 0, className, methodName, params)
+                        beforeMethodCall(owner, currentThread, codeLocation, ATOMIC_METHOD_ID, className, methodName, params)
                     }
                 }
                 // It's important that this method can't be called inside runInIgnoredSection, as the ignored section
@@ -920,7 +920,7 @@ abstract class ManagedStrategy(
             ManagedGuaranteeType.TREAT_AS_ATOMIC -> {
                 runInIgnoredSection {
                     if (collectTrace) {
-                        beforeMethodCall(owner, currentThread, codeLocation, 0, className, methodName, params)
+                        beforeMethodCall(owner, currentThread, codeLocation, ATOMIC_METHOD_ID, className, methodName, params)
                     }
                     newSwitchPointOnAtomicMethodCall(codeLocation, params)
                 }
@@ -962,14 +962,14 @@ abstract class ManagedStrategy(
         params: Array<Any?>
     ) = runInIgnoredSection {
         if (collectTrace) {
-            beforeMethodCall(owner, currentThread, codeLocation, 0, className, methodName, params)
+            beforeMethodCall(owner, currentThread, codeLocation, ATOMIC_METHOD_ID, className, methodName, params)
         }
         newSwitchPointOnAtomicMethodCall(codeLocation, params)
     }
 
     override fun onMethodCallReturn(result: Any?) {
         runInIgnoredSection {
-            loopDetector.afterRegularMethodCall()
+            loopDetector.afterMethodCall()
         }
         if (collectTrace) {
             runInIgnoredSection {
@@ -992,7 +992,7 @@ abstract class ManagedStrategy(
 
     override fun onMethodCallException(t: Throwable) {
         runInIgnoredSection {
-            loopDetector.afterRegularMethodCall()
+            loopDetector.afterMethodCall()
         }
         if (collectTrace) {
             runInIgnoredSection {
@@ -1798,3 +1798,8 @@ private const val INFINITE_TIMEOUT = 1000L * 60 * 60 * 24 * 365
 
 private fun getTimeOutMs(strategy: ManagedStrategy, defaultTimeOutMs: Long): Long =
     if (strategy is ModelCheckingStrategy && strategy.replay) INFINITE_TIMEOUT else defaultTimeOutMs
+
+// This is a "Stub" as we don't need methodId in case of atomic method call as there can't be
+// any other trace points -> no possible recursive spin cycles.
+// So it's just a workaround caused by beforeMethodCall is taking methodId parameter.
+private const val ATOMIC_METHOD_ID = 0

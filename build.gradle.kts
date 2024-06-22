@@ -20,9 +20,6 @@ plugins {
 
 repositories {
     mavenCentral()
-    flatDir {
-        dirs = mutableSetOf(File("/Users/Aleksandr.Potapov/Documents/Work/lincheck/libs"))
-    }
 }
 
 kotlin {

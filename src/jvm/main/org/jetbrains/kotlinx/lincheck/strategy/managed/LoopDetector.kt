@@ -107,7 +107,7 @@ internal class LoopDetector(
     /**
      * Indicates if we analyze method parameters to calculate the spin-cycle period.
      */
-    private var mode: WorkMode = WorkMode.DEFAULT
+    private var mode: Mode = Mode.DEFAULT
 
     /**
      * Indicates that we are in a spin cycle iteration now.
@@ -211,14 +211,14 @@ internal class LoopDetector(
         // when we can't find a cycle period and can't switch to another thread.
         // Check whether the count exceeds the maximum number of repetitions for loop/hang detection.
         if (detectedFirstTime && !detectedEarly) {
-            if (mode == WorkMode.DEFAULT) {
+            if (mode == Mode.DEFAULT) {
                 // Turn on parameters and read/write values and receivers tracking and request one more replay.
-                mode = WorkMode.CYCLE_PERIOD_CALCULATION
+                mode = Mode.CYCLE_PERIOD_CALCULATION
                 return Decision.LivelockReplayToDetectCycleRequired
             }
             registerCycle()
             // Turn off parameters tracking and request one more replay to avoid side effects.
-            mode = WorkMode.DEFAULT
+            mode = Mode.DEFAULT
             // Enormous operations count considered as total spin lock
             if (totalExecutionsCount > ManagedCTestConfiguration.LIVELOCK_EVENTS_THRESHOLD) {
                 return Decision.EventsThresholdReached
@@ -271,7 +271,7 @@ internal class LoopDetector(
     /**
      * Called after any method calls.
      */
-    fun afterRegularMethodCall() {
+    fun afterMethodCall() {
         // Because we want to track the fact of the method exit,
         // but the sequence of the beforeMethodCall code locations values determines what exactly method we exit.
         // That's why we can use just 0 as a label of a method exit.
@@ -295,7 +295,7 @@ internal class LoopDetector(
      * Otherwise, does nothing.
      */
     fun passParameters(params: Array<Any?>) {
-        if (mode == WorkMode.DEFAULT) return
+        if (mode == Mode.DEFAULT) return
         params.forEach { param ->
             currentThreadCodeLocationsHistory += paramToIntRepresentation(param)
         }
@@ -419,7 +419,7 @@ internal class LoopDetector(
      * Otherwise, does nothing.
      */
     private fun passValue(obj: Any?) {
-        if (mode == WorkMode.DEFAULT) return
+        if (mode == Mode.DEFAULT) return
         currentThreadCodeLocationsHistory += paramToIntRepresentation(obj)
     }
 
@@ -583,7 +583,7 @@ internal class LoopDetector(
         return if (hashCode == 0) -1 else -hashCode
     }
 
-    private enum class WorkMode {
+    private enum class Mode {
 
         /**
          * The default mode of [LoopDetector]: analyzing only potential switch points code locations

@@ -92,7 +92,7 @@ private fun Class<out Any>.getMethod(name: String, parameterTypes: Array<Class<o
  * of the [value].
  */
 internal fun primitiveOrIdentityHashCode(value: Any?): Int {
-    return if (value.isPrimitiveWrapper) return value.hashCode() else System.identityHashCode(value)
+    return if (value.isPrimitiveWrapper) value.hashCode() else System.identityHashCode(value)
 }
 
 private val Any?.isPrimitiveWrapper get() = when (this) {
