@@ -17,7 +17,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.ManagedDeadlockFailure
 import org.jetbrains.kotlinx.lincheck.strategy.ObstructionFreedomViolationFailure
 import org.jetbrains.kotlinx.lincheck.strategy.TimeoutFailure
 import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
-import java.util.*
 import kotlin.math.*
 
 @Synchronized // we should avoid concurrent executions to keep `objectNumeration` consistent
@@ -128,8 +127,10 @@ internal fun constructTraceGraph(
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
 ): List<TraceNode> {
     val resultProvider = ExecutionResultsProvider(results, failure)
-    val scenario = failure.scenario
     val tracePoints = trace.trace
+    val prefixFactory = TraceNodePrefixFactory(failure.scenario.nThreads)
+    val scenario = failure.scenario
+
     // last events that were executed for each thread. It is either thread finish events or events before crash
     val lastExecutedEvents = IntArray(scenario.nThreads) { iThread ->
         tracePoints.mapIndexed { i, e -> Pair(i, e) }.lastOrNull { it.second.iThread == iThread }?.first ?: -1
@@ -147,6 +148,7 @@ internal fun constructTraceGraph(
     // all trace nodes in order corresponding to `tracePoints`
     val traceGraphNodesSections = arrayListOf<MutableList<TraceNode>>()
     var traceGraphNodes = arrayListOf<TraceNode>()
+
 
     for (eventId in tracePoints.indices) {
         val event = tracePoints[eventId]
@@ -169,6 +171,7 @@ internal fun constructTraceGraph(
             // create new actor node actor
             val actorNode = traceGraphNodes.createAndAppend { lastNode ->
                 ActorNode(
+                    prefixProvider = prefixFactory.actorNodePrefix(iThread),
                     iThread = iThread,
                     last = lastNode,
                     callDepth = 0,
@@ -181,13 +184,14 @@ internal fun constructTraceGraph(
         // add the event
         var innerNode: TraceInnerNode = actorNodes[iThread][actorId]!!
         for (call in event.callStackTrace) {
-            val callId = call.identifier
+            val callId = call.suspensionIdentifier
             // Switch events that happen as a first event of the method are lifted out of the method in the trace
             if (!callNodes.containsKey(callId) && event is SwitchEventTracePoint) break
             val callNode = callNodes.computeIfAbsent(callId) {
                 // create a new call node if needed
                 val result = traceGraphNodes.createAndAppend { lastNode ->
-                    CallNode(iThread, lastNode, innerNode.callDepth + 1, call.call)
+                    val callDepth = innerNode.callDepth + 1
+                    CallNode(prefixFactory.prefixForCallNode(iThread, callDepth), iThread, lastNode, callDepth, call.call)
                 }
                 // make it a child of the previous node
                 innerNode.addInternalEvent(result)
@@ -197,7 +201,8 @@ internal fun constructTraceGraph(
         }
         val isLastExecutedEvent = eventId == lastExecutedEvents[iThread]
         val node = traceGraphNodes.createAndAppend { lastNode ->
-            TraceLeafEvent(iThread, lastNode, innerNode.callDepth + 1, event, isLastExecutedEvent)
+            val callDepth = innerNode.callDepth + 1
+            TraceLeafEvent(prefixFactory.prefix(event, callDepth), iThread, lastNode, callDepth, event, isLastExecutedEvent)
         }
         innerNode.addInternalEvent(node)
     }
@@ -211,6 +216,7 @@ internal fun constructTraceGraph(
             if (actorNode == null && actorResult != null) {
                 val lastNode = actorNodes[iThread].getOrNull(actorId - 1)?.lastInternalEvent
                 actorNode = ActorNode(
+                    prefixProvider = prefixFactory.actorNodePrefix(iThread),
                     iThread = iThread,
                     last = lastNode,
                     callDepth = 0,
@@ -227,10 +233,12 @@ internal fun constructTraceGraph(
             val lastEventNext = lastEvent.next
             val result = resultProvider[iThread, actorId]
             val resultRepresentation = result?.let { resultRepresentation(result, exceptionStackTraces) }
+            val callDepth = actorNode.callDepth + 1
             val resultNode = ActorResultNode(
+                prefixProvider = prefixFactory.actorResultPrefix(iThread, callDepth),
                 iThread = iThread,
                 last = lastEvent,
-                callDepth = actorNode.callDepth + 1,
+                callDepth = callDepth,
                 resultRepresentation = resultRepresentation,
                 exceptionNumberIfExceptionResult = if (result is ExceptionResult) exceptionStackTraces[result.throwable]?.number else null
             )
@@ -338,10 +346,12 @@ private fun traceGraphToRepresentationList(
     }
 
 internal sealed class TraceNode(
+    private val prefixProvider: PrefixProvider,
     val iThread: Int,
     last: TraceNode?,
     val callDepth: Int // for tree indentation
 ) {
+    protected val prefix get() = prefixProvider.get()
     // `next` edges form an ordered single-directed event list
     var next: TraceNode? = null
 
@@ -367,15 +377,19 @@ internal sealed class TraceNode(
         traceRepresentation: MutableList<TraceEventRepresentation>,
         verboseTrace: Boolean
     ): TraceNode?
+
+    protected fun stateEventRepresentation(iThread: Int, stateRepresentation: String) =
+        TraceEventRepresentation(iThread, prefix + "STATE: $stateRepresentation")
 }
 
 internal class TraceLeafEvent(
+    prefix: PrefixProvider,
     iThread: Int,
     last: TraceNode?,
     callDepth: Int,
     internal val event: TracePoint,
     private val lastExecutedEvent: Boolean = false
-) : TraceNode(iThread, last, callDepth) {
+) : TraceNode(prefix, iThread, last, callDepth) {
 
     override val lastState: String? =
         if (event is StateRepresentationTracePoint) event.stateRepresentation else null
@@ -398,14 +412,14 @@ internal class TraceLeafEvent(
         traceRepresentation: MutableList<TraceEventRepresentation>,
         verboseTrace: Boolean
     ): TraceNode? {
-        val representation = traceIndentation() + event.toString()
+        val representation = prefix + event.toString()
         traceRepresentation.add(TraceEventRepresentation(iThread, representation))
         return next
     }
 }
 
-internal abstract class TraceInnerNode(iThread: Int, last: TraceNode?, callDepth: Int) :
-    TraceNode(iThread, last, callDepth) {
+internal abstract class TraceInnerNode(prefixProvider: PrefixProvider, iThread: Int, last: TraceNode?, callDepth: Int) :
+    TraceNode(prefixProvider, iThread, last, callDepth) {
     override val lastState: String?
         get() = internalEvents.map { it.lastState }.lastOrNull { it != null }
     override val lastInternalEvent: TraceNode
@@ -424,11 +438,12 @@ internal abstract class TraceInnerNode(iThread: Int, last: TraceNode?, callDepth
 }
 
 internal class CallNode(
+    prefixProvider: PrefixProvider,
     iThread: Int,
     last: TraceNode?,
     callDepth: Int,
     internal val call: MethodCallTracePoint
-) : TraceInnerNode(iThread, last, callDepth) {
+) : TraceInnerNode(prefixProvider, iThread, last, callDepth) {
     // suspended method contents should be reported
     override fun shouldBeExpanded(verboseTrace: Boolean): Boolean {
         return call.wasSuspended || super.shouldBeExpanded(verboseTrace)
@@ -439,27 +454,28 @@ internal class CallNode(
         verboseTrace: Boolean
     ): TraceNode? =
         if (!shouldBeExpanded(verboseTrace)) {
-            traceRepresentation.add(TraceEventRepresentation(iThread, traceIndentation() + "$call"))
+            traceRepresentation.add(TraceEventRepresentation(iThread, prefix + "$call"))
             lastState?.let { traceRepresentation.add(stateEventRepresentation(iThread, it)) }
             lastInternalEvent.next
         } else {
-            traceRepresentation.add(TraceEventRepresentation(iThread, traceIndentation() + "$call"))
+            traceRepresentation.add(TraceEventRepresentation(iThread, prefix + "$call"))
             next
         }
 }
 
 internal class ActorNode(
+    prefixProvider: PrefixProvider,
     iThread: Int,
     last: TraceNode?,
     callDepth: Int,
     internal val actorRepresentation: String,
     private val resultRepresentation: String?
-) : TraceInnerNode(iThread, last, callDepth) {
+) : TraceInnerNode(prefixProvider, iThread, last, callDepth) {
     override fun addRepresentationTo(
         traceRepresentation: MutableList<TraceEventRepresentation>,
         verboseTrace: Boolean
     ): TraceNode? {
-        val actorRepresentation = actorRepresentation + if (resultRepresentation != null) ": $resultRepresentation" else ""
+        val actorRepresentation = prefix + actorRepresentation + if (resultRepresentation != null) ": $resultRepresentation" else ""
         traceRepresentation.add(TraceEventRepresentation(iThread, actorRepresentation))
         return if (!shouldBeExpanded(verboseTrace)) {
             lastState?.let { traceRepresentation.add(stateEventRepresentation(iThread, it)) }
@@ -471,6 +487,7 @@ internal class ActorNode(
 }
 
 internal class ActorResultNode(
+    prefixProvider: PrefixProvider,
     iThread: Int,
     last: TraceNode?,
     callDepth: Int,
@@ -479,7 +496,7 @@ internal class ActorResultNode(
      * This value presents only if an exception was the actor result.
      */
     internal val exceptionNumberIfExceptionResult: Int?
-) : TraceNode(iThread, last, callDepth) {
+) : TraceNode(prefixProvider, iThread, last, callDepth) {
     override val lastState: String? = null
     override val lastInternalEvent: TraceNode = this
     override fun shouldBeExpanded(verboseTrace: Boolean): Boolean = false
@@ -489,17 +506,137 @@ internal class ActorResultNode(
         verboseTrace: Boolean
     ): TraceNode? {
         if (resultRepresentation != null)
-            traceRepresentation.add(TraceEventRepresentation(iThread, traceIndentation() + "result: $resultRepresentation"))
+            traceRepresentation.add(TraceEventRepresentation(iThread, prefix + "result: $resultRepresentation"))
         return next
     }
 }
 
+/**
+ * Provides the prefix output for the [TraceNode].
+ * @see TraceNodePrefixFactory
+ */
+internal fun interface PrefixProvider {
+    fun get(): String
+}
+
+/**
+ * When we create the trace representation, it may need to add two additional spaces before each line is we have a
+ * spin cycle starting in call depth 1.
+ *
+ * This factory encapsulates the logic of creating [PrefixProvider] for different call depths with
+ * spin cycle arrows or without.
+ *
+ * At the beginning of the trace processing, we can't know definitely should we add
+ * extra spaces at the beginning of the each line or not.
+ * That's why we return [PrefixProvider] closure that have a reference on this factory field,
+ * so when trace nodes are composing output, we definitely know should we add extra spaces or not.
+ *
+ * Example when extra spaces needed:
+ * |   one(): <hung>                                                                                                                          |                                                                                                                                          |
+ * |     meaninglessActions2() at RecursiveTwoThreadsSpinLockTest.one(RecursiveSpinLockTest.kt:221)                                           |                                                                                                                                          |
+ * |     /* The following events repeat infinitely: */                                                                                        |                                                                                                                                          |
+ * | ┌╶> meaninglessActions1() at RecursiveTwoThreadsSpinLockTest.one(RecursiveSpinLockTest.kt:222)                                           |                                                                                                                                          |
+ * | |     sharedState2.compareAndSet(false,true): false at RecursiveTwoThreadsSpinLockTest.meaninglessActions1(RecursiveSpinLockTest.kt:242) |                                                                                                                                          |
+ * | └╶╶╶╶ switch (reason: active lock detected)                                                                                              |                                                                                                                                          |
+ * |
+ *
+ * Example when no extra spaces needed:
+ * | cas2_0(0, 0, 2, 1, 0, 3): <hung>                                                                                                                                             |                                                                                                                                                                            |
+ * |   array.cas2(0,0,2,1,0,3,0) at BrokenCas2RecursiveLiveLockTest.cas2_0(RecursiveSpinLockTest.kt:271)                                                                          |                                                                                                                                                                            |
+ * |     AtomicArrayWithCAS2$Descriptor.apply$default(Descriptor#3,false,0,false,5,null) at AtomicArrayWithCAS2.cas2(RecursiveSpinLockTest.kt:323)                                |                                                                                                                                                                            |
+ * |       Descriptor#3.apply(true,0,false) at AtomicArrayWithCAS2$Descriptor.apply$default(RecursiveSpinLockTest.kt:349)                                                         |                                                                                                                                                                            |
+ * |         AtomicArrayWithCAS2$Descriptor.installOrHelp$default(Descriptor#3,true,0,false,4,null) at AtomicArrayWithCAS2$Descriptor.apply(RecursiveSpinLockTest.kt:356)         |                                                                                                                                                                            |
+ * |           Descriptor#3.installOrHelp(true,0,false) at AtomicArrayWithCAS2$Descriptor.installOrHelp$default(RecursiveSpinLockTest.kt:368)                                     |                                                                                                                                                                            |
+ * |             BrokenCas2RecursiveLiveLockTest#1.array.gate0.READ: 1 at AtomicArrayWithCAS2$Descriptor.installOrHelp(RecursiveSpinLockTest.kt:390)                              |                                                                                                                                                                            |
+ * |             /* The following events repeat infinitely: */                                                                                                                    |                                                                                                                                                                            |
+ * |         ┌╶> Descriptor#2.apply(false,0,true) at AtomicArrayWithCAS2$Descriptor.installOrHelp(RecursiveSpinLockTest.kt:391)                                                   |                                                                                                                                                                            |
+ * |         |     status.READ: SUCCESS at AtomicArrayWithCAS2$Descriptor.apply(RecursiveSpinLockTest.kt:351)                                                                     |                                                                                                                                                                            |
+ * |         |     status.compareAndSet(SUCCESS,SUCCESS): true at AtomicArrayWithCAS2$Descriptor.apply(RecursiveSpinLockTest.kt:352)                                              |                                                                                                                                                                            |
+ * |         |     installOrHelp(true,0,true) at AtomicArrayWithCAS2$Descriptor.apply(RecursiveSpinLockTest.kt:353)                                                               |                                                                                                                                                                            |
+ * |         |       BrokenCas2RecursiveLiveLockTest#1.array.array.READ: AtomicReferenceArray#1 at AtomicArrayWithCAS2$Descriptor.installOrHelp(RecursiveSpinLockTest.kt:373)     |                                                                                                                                                                            |
+ * |         |       AtomicReferenceArray#1[0].get(): Descriptor#2 at AtomicArrayWithCAS2$Descriptor.installOrHelp(RecursiveSpinLockTest.kt:373)                                  |                                                                                                                                                                            |
+ * |         └╶╶╶╶╶╶ switch (reason: active lock detected)
+ *
+ */
+private class TraceNodePrefixFactory(nThreads: Int) {
+
+    /**
+     * Indicates should we add extra spaces to all the thread lines or not.
+     */
+    private val extraIndentPerThread = BooleanArray(nThreads) { false }
+
+    /**
+     * Tells if the next node is the first node of the spin cycle.
+     */
+    private var nextNodeIsSpinCycleStart = false
+
+    /**
+     * Tells if we're processing spin cycle nodes now.
+     */
+    private var inSpinCycle = false
+
+    /**
+     * Call depth of the first node in the current spin cycle.
+     */
+    private var arrowDepth: Int = -1
+
+    fun actorNodePrefix(iThread: Int) = PrefixProvider { extraPrefixIfNeeded(iThread) }
+
+    fun actorResultPrefix(iThread: Int, callDepth: Int) =
+        PrefixProvider { extraPrefixIfNeeded(iThread) + TRACE_INDENTATION.repeat(callDepth) }
+
+    fun prefix(event: TracePoint, callDepth: Int): PrefixProvider {
+        val isCycleEnd = inSpinCycle && (event is ObstructionFreedomViolationExecutionAbortTracePoint || event is SwitchEventTracePoint)
+        return prefixForNode(event.iThread, callDepth, isCycleEnd).also {
+            nextNodeIsSpinCycleStart = event is SpinCycleStartTracePoint
+            if (isCycleEnd) {
+                inSpinCycle = false
+            }
+        }
+    }
+
+    fun prefixForCallNode(iThread: Int, callDepth: Int): PrefixProvider {
+        return prefixForNode(iThread, callDepth, false)
+    }
+
+    private fun prefixForNode(iThread: Int, callDepth: Int, isCycleEnd: Boolean): PrefixProvider {
+        if (nextNodeIsSpinCycleStart) {
+            inSpinCycle = true
+            nextNodeIsSpinCycleStart = false
+            val extraPrefixRequired = callDepth == 1
+            if (extraPrefixRequired) {
+                extraIndentPerThread[iThread] = true
+            }
+            arrowDepth = callDepth
+            val arrowDepth = arrowDepth
+            return PrefixProvider {
+                val extraPrefix = if (arrowDepth == 1) 0 else extraPrefixLength(iThread)
+                TRACE_INDENTATION.repeat(max(0, arrowDepth - 2 + extraPrefix)) + "┌╶> "
+            }
+        }
+        if (isCycleEnd) {
+            val arrowDepth = arrowDepth
+            return PrefixProvider {
+                val extraPrefix = if (arrowDepth == 1) 0 else extraPrefixLength(iThread)
+                TRACE_INDENTATION.repeat(max(0, arrowDepth - 2 + extraPrefix)) + "└╶" + "╶╶".repeat(max(0, callDepth - arrowDepth)) + "╶ "
+            }
+        }
+        if (inSpinCycle) {
+            val arrowDepth = arrowDepth
+            return PrefixProvider {
+                val extraPrefix = if (arrowDepth == 1) 0 else extraPrefixLength(iThread)
+                TRACE_INDENTATION.repeat(max(0, arrowDepth - 2 + extraPrefix)) + "| " + TRACE_INDENTATION.repeat(callDepth - arrowDepth + 1)
+            }
+        }
+        return PrefixProvider { extraPrefixIfNeeded(iThread) + TRACE_INDENTATION.repeat(callDepth) }
+    }
+
+    private fun extraPrefixIfNeeded(iThread: Int): String = if (extraIndentPerThread[iThread]) "  " else ""
+    private fun extraPrefixLength(iThread: Int): Int = if (extraIndentPerThread[iThread]) 1 else 0
+}
+
 private const val TRACE_INDENTATION = "  "
 
-private fun TraceNode.traceIndentation() = TRACE_INDENTATION.repeat(callDepth)
-
-private fun TraceNode.stateEventRepresentation(iThread: Int, stateRepresentation: String) =
-    TraceEventRepresentation(iThread, traceIndentation() + "STATE: $stateRepresentation")
 
 internal class TraceEventRepresentation(val iThread: Int, val representation: String)
 

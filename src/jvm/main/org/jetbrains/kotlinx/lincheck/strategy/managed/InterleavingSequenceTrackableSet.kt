@@ -241,8 +241,17 @@ internal class InterleavingSequenceTrackableSet {
         fun mergeBranch(newChain: List<InterleavingHistoryNode>, startIndex: Int, executionsCountedEarlier: Int) {
             if (startIndex > newChain.lastIndex) return
             val firstNewNode = newChain[startIndex]
-            val firstNewNodeExecutions = (firstNewNode.executions + firstNewNode.spinCyclePeriod) - executionsCountedEarlier
+            var firstNewNodeExecutions = (firstNewNode.executions + firstNewNode.spinCyclePeriod) - executionsCountedEarlier
             check(firstNewNode.threadId == threadId)
+
+            // Some execution points may be added to the history after the spin-cycle is detected early
+            // even if we switched the execution using LoopDetector hint. In this case, the new branch may have
+            // more executions than the InterleavingSequenceSetNode which told switching the thread at this point.
+            // But these executions will be omitted in the next time, so we merge new branch taking execution count
+            // from the corresponding existing node.
+            if (cycleOccurred && firstNewNodeExecutions > executions) {
+                firstNewNodeExecutions = executions
+            }
 
             when {
                 executions == firstNewNodeExecutions -> mergeFurtherOrAddNewBranch(newChain, startIndex + 1, 0)
@@ -295,8 +304,26 @@ internal class InterleavingSequenceTrackableSet {
                 transition.mergeBranch(newChain, startIndex, executionsCountedEarlier)
             }
         }
+
+        // Utility function to debug spin-locks related internals.
+        fun getTree(prefix: String = "", isTail: Boolean = true): String = buildString {
+            val tailSymbol = if (isTail) "\\-- " else "|-- "
+            appendLine("$prefix$tailSymbol$threadId : $executions : $cyclePeriod : ${if (cycleOccurred) "!" else "."}")
+            val children = transitions?.values?.toList() ?: emptyList()
+            for (i in children.indices) {
+                children[i].getTree(prefix + if (isTail) "    " else "|   ", i == children.size - 1)
+            }
+        }
     }
 
+    // Utility function to debug spin-locks related internals.
+    internal fun treeToString(): String = buildString {
+        rootTransitions.forEach { (threadId, node) ->
+            appendLine("$threadId:")
+            appendLine(node.getTree())
+            appendLine()
+        }
+    }
 
     /**
      * Transforms a new chain
@@ -329,7 +356,7 @@ internal class InterleavingSequenceTrackableSet {
                 threadId = next.threadId,
                 executions = next.executions + next.spinCyclePeriod,
                 cyclePeriod = next.spinCyclePeriod,
-                cycleLocationsHash = first.executionHash,
+                cycleLocationsHash = next.executionHash,
                 cycleOccurred = i == chain.lastIndex
             )
             current.addTransition(next.threadId, nextNode)

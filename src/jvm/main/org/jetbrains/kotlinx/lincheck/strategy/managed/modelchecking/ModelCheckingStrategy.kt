@@ -417,16 +417,21 @@ internal class ModelCheckingStrategy(
         }
     }
 
-    private inner class Choice(val node: InterleavingTreeNode, val value: Int)
+    private inner class Choice(val node: InterleavingTreeNode, val value: Int) {
+        override fun toString(): String {
+            return "Choice(node=$node, value=$value)"
+        }
+    }
 
     /**
      * This class specifies an interleaving that is re-producible.
      */
     private inner class Interleaving(
-        private val switchPositions: List<Int>,
-        private val threadSwitchChoices: List<Int>,
-        private var lastNotInitializedNode: SwitchChoosingNode?
+         private val switchPositions: List<Int>,
+         private val threadSwitchChoices: List<Int>,
+         private val initialLastNotInitializedNode: SwitchChoosingNode?
     ) {
+        private var lastNotInitializedNode: SwitchChoosingNode? = initialLastNotInitializedNode
         private lateinit var interleavingFinishingRandom: Random
         private lateinit var nextThreadToSwitch: Iterator<Int>
         private var lastNotInitializedNodeChoices: MutableList<Choice>? = null
@@ -448,6 +453,7 @@ internal class ModelCheckingStrategy(
         }
 
         fun rollbackAfterSpinCycleFound() {
+            lastNotInitializedNode = initialLastNotInitializedNode
             lastNotInitializedNodeChoices?.clear()
         }
 

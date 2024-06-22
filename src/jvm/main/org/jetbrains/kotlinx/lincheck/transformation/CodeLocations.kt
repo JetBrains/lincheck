@@ -30,6 +30,7 @@ internal object CodeLocations {
 
     /**
      * Registers a new code location and returns its unique ID.
+     * Code locations are positive values.
      *
      * @param stackTraceElement Stack trace element representing the new code location.
      * @return Unique ID of the new code location.
@@ -39,7 +40,7 @@ internal object CodeLocations {
     fun newCodeLocation(stackTraceElement: StackTraceElement): Int {
         val id = codeLocations.size
         codeLocations.add(stackTraceElement)
-        return id
+        return id + 1
     }
 
     /**
@@ -51,7 +52,20 @@ internal object CodeLocations {
     @JvmStatic
     @Synchronized
     fun stackTrace(codeLocationId: Int): StackTraceElement {
-        return codeLocations[codeLocationId]
+        return codeLocations[codeLocationId - 1]
+    }
+}
+
+/**
+ * Provides unique IDs for all the methods that are called from the instrumented code.
+ * These IDs are used to detect the first recursive call in case of a recursive spin-cycle.
+ */
+internal object MethodIds {
+
+    private val map: MutableMap<String, Int> = hashMapOf()
+
+    fun getMethodId(owner: String, name: String, desc: String): Int {
+        return map.computeIfAbsent("$owner:$name:$desc") { map.size + 1 }
     }
 }
 
