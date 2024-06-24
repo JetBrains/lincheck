@@ -922,6 +922,7 @@ class EventStructure(
 
     fun addObjectAllocationEvent(iThread: Int, value: OpaqueValue): AtomicThreadEvent {
         tryReplayEvent(iThread)?.let { event ->
+            check(event.label is ObjectAllocationLabel)
             val id = event.label.objectID
             val entry = ObjectEntry(id, value, event)
             objectRegistry.register(entry)

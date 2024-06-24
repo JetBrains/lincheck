@@ -27,6 +27,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.*
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.util.*
 import sun.nio.ch.lincheck.TestThread
 import java.lang.reflect.*
@@ -587,7 +588,9 @@ private class EventStructureMemoryTracker(
     }
 
     override fun interceptReadResult(iThread: Int): Any? {
-        return addReadResponse(iThread)?.unwrap()
+        return addReadResponse(iThread)?.unwrap()?.also {
+            LincheckJavaAgent.ensureObjectIsTransformed(it)
+        }
     }
 
     override fun interceptArrayCopy(iThread: Int, codeLocation: Int, srcArray: Any?, srcPos: Int, dstArray: Any?, dstPos: Int, length: Int) {
