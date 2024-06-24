@@ -1139,7 +1139,6 @@ class PrimitivesTest {
         val outcomes = setOf(
             (Cancelled to false),
             (Cancelled to true),
-            (1 to true)
         )
         litmusTest(CoroutineWrapper::class.java, testScenario, outcomes, executionCount = UNKNOWN) { results ->
             val r = getValueSuspended(results.parallelResults[0][0]!!)
@@ -1184,7 +1183,6 @@ class PrimitivesTest {
         }
     }
 
-    @Ignore
     @InternalCoroutinesApi
     @Test(timeout = TIMEOUT)
     fun test1Resume2Suspend() {
@@ -1216,7 +1214,6 @@ class PrimitivesTest {
         }
     }
 
-    @Ignore
     @InternalCoroutinesApi
     @Test(timeout = TIMEOUT)
     fun test2Resume1Suspend() {
