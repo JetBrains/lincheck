@@ -10,12 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck.specifications
 
-import kotlinx.coroutines.CancellableContinuation
-import kotlinx.coroutines.InternalCoroutinesApi
-import kotlinx.coroutines.channels.ClosedReceiveChannelException
-import kotlinx.coroutines.channels.ClosedSendChannelException
-import kotlinx.coroutines.suspendCancellableCoroutine
-import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.*
+import org.jetbrains.kotlinx.lincheck.verifier.*
 
 @InternalCoroutinesApi
 open class SequentialIntChannel(private val capacity: Int) : VerifierState() {
