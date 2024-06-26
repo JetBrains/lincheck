@@ -14,7 +14,7 @@ import kotlinx.coroutines.channels.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
-import org.jetbrains.kotlinx.lincheck.specifications.SequentialIntChannelSpecification
+import org.jetbrains.kotlinx.lincheck.specifications.SequentialIntChannel
 import org.jetbrains.kotlinx.lincheck_test.*
 
 @ExperimentalCoroutinesApi
@@ -36,10 +36,10 @@ class RendezvousChannelTest : AbstractLincheckTest() {
     fun close() = ch.close()
 
     override fun <O : Options<O, *>> O.customize() {
-        sequentialSpecification(SequentialRendezvousIntChannelSpecification::class.java)
+        sequentialSpecification(SequentialRendezvousIntChannel::class.java)
         iterations(10)
     }
 }
 
 @InternalCoroutinesApi
-class SequentialRendezvousIntChannelSpecification : SequentialIntChannelSpecification(capacity = 0)
+class SequentialRendezvousIntChannel : SequentialIntChannel(capacity = 0)

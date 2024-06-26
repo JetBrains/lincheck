@@ -37,9 +37,9 @@ class BufferedChannelBenchmark : AbstractLincheckBenchmark() {
 
     override fun <O : Options<O, *>> O.customize() {
         iterations(10)
-        sequentialSpecification(SequentiaBuffered2IntChannelSpecification::class.java)
+        sequentialSpecification(SequentiaBuffered2IntChannel::class.java)
     }
 }
 
 @InternalCoroutinesApi
-class SequentiaBuffered2IntChannelSpecification : SequentialIntChannelSpecification(capacity = 2)
+class SequentiaBuffered2IntChannel : SequentialIntChannel(capacity = 2)
