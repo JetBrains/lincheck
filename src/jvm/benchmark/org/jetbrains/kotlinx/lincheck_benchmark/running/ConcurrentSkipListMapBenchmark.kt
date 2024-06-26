@@ -15,7 +15,6 @@ import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.kotlinx.lincheck_benchmark.AbstractLincheckBenchmark
 import java.util.concurrent.*
 
-@Param(name = "value", gen = IntGen::class, conf = "1:5")
 class ConcurrentSkipListMapBenchmark : AbstractLincheckBenchmark() {
     private val skiplistMap = ConcurrentSkipListMap<Int, Int>()
 

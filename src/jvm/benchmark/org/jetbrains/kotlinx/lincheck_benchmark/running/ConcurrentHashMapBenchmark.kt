@@ -15,16 +15,15 @@ import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.kotlinx.lincheck_benchmark.AbstractLincheckBenchmark
 import java.util.concurrent.ConcurrentHashMap
 
-@Param(name = "key", gen = IntGen::class, conf = "1:5")
 class ConcurrentHashMapBenchmark : AbstractLincheckBenchmark() {
     private val map = ConcurrentHashMap<Int, Int>()
 
     @Operation
-    fun put(@Param(name = "key") key: Int, value: Int) = map.put(key, value)
+    fun put(key: Int, value: Int) = map.put(key, value)
 
     @Operation
-    operator fun get(@Param(name = "key") key: Int) = map[key]
+    operator fun get(key: Int) = map[key]
 
     @Operation
-    fun remove(@Param(name = "key") key: Int) = map.remove(key)
+    fun remove(key: Int) = map.remove(key)
 }

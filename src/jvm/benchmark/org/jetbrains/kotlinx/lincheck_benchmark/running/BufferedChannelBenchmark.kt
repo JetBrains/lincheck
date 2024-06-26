@@ -19,12 +19,11 @@ import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck_benchmark.AbstractLincheckBenchmark
 
 @InternalCoroutinesApi
-@Param(name = "value", gen = IntGen::class, conf = "1:5")
 class BufferedChannelBenchmark : AbstractLincheckBenchmark() {
     private val c = Channel<Int>(2)
 
     @Operation(cancellableOnSuspension = false)
-    suspend fun send(@Param(name = "value") value: Int) = c.send(value)
+    suspend fun send(value: Int) = c.send(value)
 
     @Operation(cancellableOnSuspension = false)
     suspend fun receive() = c.receive()
@@ -33,7 +32,7 @@ class BufferedChannelBenchmark : AbstractLincheckBenchmark() {
     fun poll() = c.tryReceive().getOrNull()
 
     @Operation
-    fun offer(@Param(name = "value") value: Int) = c.trySend(value).isSuccess
+    fun offer(value: Int) = c.trySend(value).isSuccess
 
     override fun <O : Options<O, *>> O.customize() {
         iterations(10)
