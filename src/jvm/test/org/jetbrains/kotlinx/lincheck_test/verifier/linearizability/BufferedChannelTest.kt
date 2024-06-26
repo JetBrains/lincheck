@@ -37,4 +37,4 @@ class BufferedChannelTest : AbstractLincheckTest() {
 }
 
 @InternalCoroutinesApi
-class SequentialBuffered2IntChannel : SequentialIntChannelSpecification(capacity = 2)
+class SequentialBuffered2IntChannel : SequentialIntChannel(capacity = 2)

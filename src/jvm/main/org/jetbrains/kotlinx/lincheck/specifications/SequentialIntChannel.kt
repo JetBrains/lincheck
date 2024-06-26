@@ -18,7 +18,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 
 @InternalCoroutinesApi
-open class SequentialIntChannelSpecification(private val capacity: Int) : VerifierState() {
+open class SequentialIntChannel(private val capacity: Int) : VerifierState() {
     private val senders   = ArrayList<Pair<CancellableContinuation<Unit>, Int>>()
     private val receivers = ArrayList<CancellableContinuation<Any>>()
     private val buffer = ArrayList<Int>()

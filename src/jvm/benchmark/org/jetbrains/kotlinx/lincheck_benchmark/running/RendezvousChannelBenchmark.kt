@@ -42,4 +42,4 @@ class RendezvousChannelBenchmark : AbstractLincheckBenchmark() {
 }
 
 @InternalCoroutinesApi
-class SequentialRendezvousIntChannel : SequentialIntChannelSpecification(capacity = 0)
+class SequentialRendezvousIntChannel : SequentialIntChannel(capacity = 0)
