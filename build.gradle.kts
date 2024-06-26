@@ -149,9 +149,32 @@ kotlin {
                 implementation("org.jetbrains.lets-plot:lets-plot-common:$letsPlotVersion")
                 implementation("org.jetbrains.lets-plot:lets-plot-kotlin-jvm:$letsPlotKotlinVersion")
                 implementation("com.github.ajalt.clikt:clikt:$cliktVersion")
+
+                /* We need the following line because apparently there is some issue
+                 * with the Kotlin Multiplatform gradle plugin and our non-standard project structure
+                 * with an additional jvmBenchmark source set that should depend on the jvmMain source set.
+                 *
+                 * If we use `jvmBenchmark.dependsOn(jvmMain)`, as the documentation suggests (see link below),
+                 * then the imports in IDEA are working, but running the benchmarks
+                 * results in `java.lang.NoSuchMethodError` exception on call to any method form Lincheck (jvmMain).
+                 * It looks like there are some issues with classloading, as the `jvmBenchmark` classes do not see
+                 * classes from `jvmMain`.
+                 *
+                 * https://kotlinlang.org/docs/multiplatform-advanced-project-structure.html#dependson-and-source-set-hierarchies
+                 *
+                 * If we do not use `jvmBenchmark.dependsOn(jvmMain)`,
+                 * then gradle correctly compiles the benchmarks, and they run with no errors.
+                 * But the imports from `lincheck` package in the benchmarks
+                 * do not work in IDEA (so IDEA cannot resolve classes from `jvmMain`).
+                 *
+                 * To bypass this, we add implementation dependency on
+                 * the root project for the `jvmBenchmark` source set.
+                 * This way benchmarks are compiled, run with no errors,
+                 * and import and resolve work correctly in IDEA.
+                 */
+                implementation(rootProject)
             }
         }
-
         // jvmBenchmark.dependsOn(jvmMain)
     }
 }
