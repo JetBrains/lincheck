@@ -14,7 +14,6 @@ import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck_benchmark.AbstractLincheckBenchmark
 import java.util.concurrent.*
 
-@Param(name = "value", gen = IntGen::class, conf = "1:5")
 class ConcurrentDequeBenchmark : AbstractLincheckBenchmark() {
     private val deque = ConcurrentLinkedDeque<Int>()
 

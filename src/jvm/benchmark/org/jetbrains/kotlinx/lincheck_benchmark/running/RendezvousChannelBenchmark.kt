@@ -19,12 +19,11 @@ import org.jetbrains.kotlinx.lincheck_benchmark.AbstractLincheckBenchmark
 
 @ExperimentalCoroutinesApi
 @InternalCoroutinesApi
-@Param(name = "value", gen = IntGen::class, conf = "1:5")
 class RendezvousChannelBenchmark : AbstractLincheckBenchmark() {
     private val ch = Channel<Int>()
 
     @Operation
-    suspend fun send(@Param(name = "value") value: Int) = ch.send(value)
+    suspend fun send(value: Int) = ch.send(value)
 
     @Operation
     suspend fun receive() = ch.receive()
