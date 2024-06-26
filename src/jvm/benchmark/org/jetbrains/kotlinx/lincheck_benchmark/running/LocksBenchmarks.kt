@@ -49,7 +49,7 @@ class ReentrantLockBenchmark : AbstractLincheckBenchmark() {
     fun get(): Int = lock.withLock { counter }
 }
 
-class IntrinsicLockBenchmark : AbstractLincheckBenchmark() {
+class SynchronizedBenchmark : AbstractLincheckBenchmark() {
     private var counter = 0
 
     @Operation
