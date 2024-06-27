@@ -55,31 +55,56 @@ internal fun getAtomicMethodDescriptor(obj: Any?, className: String, methodName:
 }
 
 internal fun isAtomic(receiver: Any?) =
+    // java.util.concurrent
     receiver is AtomicReference<*> ||
     receiver is AtomicBoolean ||
     receiver is AtomicInteger ||
-    receiver is AtomicLong
-    // TODO: handle atomicFUs?
+    receiver is AtomicLong ||
+    // kotlinx.atomicfu
+    receiver is kotlinx.atomicfu.AtomicRef<*> ||
+    receiver is kotlinx.atomicfu.AtomicBoolean ||
+    receiver is kotlinx.atomicfu.AtomicInt ||
+    receiver is kotlinx.atomicfu.AtomicLong
+
 
 internal fun isAtomicClass(className: String) =
+    // java.util.concurrent
     className == "java.util.concurrent.atomic.AtomicInteger" ||
     className == "java.util.concurrent.atomic.AtomicLong" ||
     className == "java.util.concurrent.atomic.AtomicBoolean" ||
-    className == "java.util.concurrent.atomic.AtomicReference"
+    className == "java.util.concurrent.atomic.AtomicReference" ||
+    // kotlinx.atomicfu
+    className == "kotlinx.atomicfu.AtomicRef" ||
+    className == "kotlinx.atomicfu.AtomicBoolean" ||
+    className == "kotlinx.atomicfu.AtomicInt" ||
+    className == "kotlinx.atomicfu.AtomicLong"
+
 
 internal fun isAtomicMethod(className: String, methodName: String) =
     isAtomicClass(className) && methodName in atomicMethods
 
 internal fun isAtomicArray(receiver: Any?) =
+    // java.util.concurrent
     receiver is AtomicReferenceArray<*> ||
     receiver is AtomicIntegerArray ||
-    receiver is AtomicLongArray
-    // TODO: handle atomicFUs?
+    receiver is AtomicLongArray ||
+    // kotlinx.atomicfu
+    receiver is kotlinx.atomicfu.AtomicArray<*> ||
+    receiver is kotlinx.atomicfu.AtomicBooleanArray ||
+    receiver is kotlinx.atomicfu.AtomicIntArray ||
+    receiver is kotlinx.atomicfu.AtomicLongArray
+
 
 internal fun isAtomicArrayClass(className: String) =
+    // java.util.concurrent
+    className == "java.util.concurrent.atomic.AtomicReferenceArray" ||
     className == "java.util.concurrent.atomic.AtomicIntegerArray" ||
     className == "java.util.concurrent.atomic.AtomicLongArray" ||
-    className == "java.util.concurrent.atomic.AtomicReferenceArray"
+    // kotlinx.atomicfu
+    className == "kotlinx.atomicfu.AtomicArray" ||
+    className == "kotlinx.atomicfu.AtomicBooleanArray" ||
+    className == "kotlinx.atomicfu.AtomicIntArray" ||
+    className == "kotlinx.atomicfu.AtomicLongArray"
 
 internal fun isAtomicArrayMethod(className: String, methodName: String) =
     isAtomicArrayClass(className) && methodName in atomicMethods
