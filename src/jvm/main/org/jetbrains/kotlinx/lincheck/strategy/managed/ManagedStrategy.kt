@@ -871,6 +871,12 @@ abstract class ManagedStrategy(
         return null
     }
 
+    /**
+     * This method is invoked by a test thread before each method invocation.
+     *
+     * @param codeLocation the byte-code location identifier of this invocation
+     * @param iThread number of invoking thread
+     */
     override fun beforeMethodCall(
         owner: Any?,
         className: String,
@@ -878,55 +884,25 @@ abstract class ManagedStrategy(
         codeLocation: Int,
         params: Array<Any?>
     ) {
-        val guarantee = methodGuaranteeType(owner, className, methodName)
-        when (guarantee) {
-            ManagedGuaranteeType.IGNORE -> {
-                if (collectTrace) {
-                    runInIgnoredSection {
-                        val params = if (isSuspendFunction(className, methodName, params)) {
-                            params.dropLast(1).toTypedArray()
-                        } else {
-                            params
-                        }
-                        beforeMethodCall(owner, currentThread, codeLocation, className, methodName, params)
-                    }
-                }
-                // It's important that this method can't be called inside runInIgnoredSection, as the ignored section
-                // flag would be set to false when leaving runInIgnoredSection,
-                // so enterIgnoredSection would have no effect
-                enterIgnoredSection()
+        val guarantee = runInIgnoredSection {
+            val guarantee = methodGuaranteeType(owner, className, methodName)
+            if (owner == null && guarantee == null) { // static method
+                LincheckJavaAgent.ensureClassHierarchyIsTransformed(className.canonicalClassName)
             }
-
-            ManagedGuaranteeType.TREAT_AS_ATOMIC -> {
-                runInIgnoredSection {
-                    if (collectTrace) {
-                        beforeMethodCall(owner, currentThread, codeLocation, className, methodName, params)
-                    }
-                    newSwitchPointOnAtomicMethodCall(codeLocation)
-                }
-                // It's important that this method can't be called inside runInIgnoredSection, as the ignored section
-                // flag would be set to false when leaving runInIgnoredSection,
-                // so enterIgnoredSection would have no effect
-                enterIgnoredSection()
+            if (collectTrace) {
+                addBeforeMethodCallTracePoint(owner, codeLocation, className, methodName, params)
             }
-
-            null -> {
-                if (owner == null) { // static method
-                    runInIgnoredSection {
-                        LincheckJavaAgent.ensureClassHierarchyIsTransformed(className.canonicalClassName)
-                    }
-                }
-                if (collectTrace) {
-                    runInIgnoredSection {
-                        val params = if (isSuspendFunction(className, methodName, params)) {
-                            params.dropLast(1).toTypedArray()
-                        } else {
-                            params
-                        }
-                        beforeMethodCall(owner, currentThread, codeLocation, className, methodName, params)
-                    }
-                }
+            if (guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC) {
+                newSwitchPointOnAtomicMethodCall(codeLocation)
             }
+            guarantee
+        }
+        if (guarantee == ManagedGuaranteeType.IGNORE ||
+            guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC) {
+            // It's important that this method can't be called inside runInIgnoredSection, as the ignored section
+            // flag would be set to false when leaving runInIgnoredSection,
+            // so enterIgnoredSection would have no effect
+            enterIgnoredSection()
         }
     }
 
@@ -938,7 +914,7 @@ abstract class ManagedStrategy(
         params: Array<Any?>
     ) = runInIgnoredSection {
         if (collectTrace) {
-            beforeMethodCall(owner, currentThread, codeLocation, className, methodName, params)
+            addBeforeMethodCallTracePoint(owner, codeLocation, className, methodName, params)
         }
         newSwitchPointOnAtomicMethodCall(codeLocation)
     }
@@ -1056,20 +1032,14 @@ abstract class ManagedStrategy(
         suspendedFunctionsStack[iThread].clear()
     }
 
-    /**
-     * This method is invoked by a test thread
-     * before each method invocation.
-     * @param codeLocation the byte-code location identifier of this invocation
-     * @param iThread number of invoking thread
-     */
-    private fun beforeMethodCall(
+    private fun addBeforeMethodCallTracePoint(
         owner: Any?,
-        iThread: Int,
         codeLocation: Int,
         className: String,
         methodName: String,
-        params: Array<Any?>,
+        methodParams: Array<Any?>,
     ) {
+        val iThread = currentThread
         val callStackTrace = callStackTrace[iThread]
         val suspendedMethodStack = suspendedFunctionsStack[iThread]
         val methodId = if (suspendedMethodStack.isNotEmpty()) {
@@ -1080,6 +1050,11 @@ abstract class ManagedStrategy(
             lastId
         } else {
             methodCallNumber++
+        }
+        val params = if (isSuspendFunction(className, methodName, methodParams)) {
+            methodParams.dropLast(1).toTypedArray()
+        } else {
+            methodParams
         }
         // Code location of the new method call is currently the last one
         val tracePoint = createBeforeMethodCallTracePoint(owner, iThread, className, methodName, params, codeLocation)
