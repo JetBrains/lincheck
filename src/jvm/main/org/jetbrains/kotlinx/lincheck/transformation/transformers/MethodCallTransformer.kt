@@ -10,7 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.jetbrains.kotlinx.lincheck.util.*
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.Type.*
@@ -53,6 +55,7 @@ internal class MethodCallTransformer(
     private fun processMethodCall(desc: String, opcode: Int, owner: String, name: String, itf: Boolean) = adapter.run {
         val endLabel = newLabel()
         val methodCallStartLabel = newLabel()
+        val isThrowing = isExceptionThrowingMethod(owner, name)
         // STACK [INVOKEVIRTUAL]: owner, arguments
         // STACK [INVOKESTATIC] :        arguments
         val argumentLocals = storeArguments(desc)
@@ -75,7 +78,9 @@ internal class MethodCallTransformer(
         // STACK [INVOKESTATIC] :        arguments
         val methodCallEndLabel = newLabel()
         val handlerExceptionStartLabel = newLabel()
-        visitTryCatchBlock(methodCallStartLabel, methodCallEndLabel, handlerExceptionStartLabel, null)
+        if (isThrowing) {
+            visitTryCatchBlock(methodCallStartLabel, methodCallEndLabel, handlerExceptionStartLabel, null)
+        }
         visitLabel(methodCallStartLabel)
         loadLocals(argumentLocals)
         visitMethodInsn(opcode, owner, name, desc, itf)
@@ -85,10 +90,12 @@ internal class MethodCallTransformer(
         processMethodCallResult(desc)
         // STACK: result
         goTo(endLabel)
-        visitLabel(handlerExceptionStartLabel)
-        dup()
-        invokeStatic(Injections::onMethodCallException)
-        throwException()
+        if (isThrowing) {
+            visitLabel(handlerExceptionStartLabel)
+            dup()
+            invokeStatic(Injections::onMethodCallException)
+            throwException()
+        }
         visitLabel(endLabel)
         // STACK: result
     }
@@ -111,21 +118,32 @@ internal class MethodCallTransformer(
         }
     }
 
-    private fun isIgnoredMethod(owner: String, methodName: String) =
-        owner.startsWith("sun/nio/ch/lincheck/") ||
-        owner.startsWith("org/jetbrains/kotlinx/lincheck/") ||
-        owner == "kotlin/jvm/internal/Intrinsics" ||
-        owner == "java/util/Objects" ||
-        owner == "java/lang/String" ||
-        owner == "java/lang/Boolean" ||
-        owner == "java/lang/Long" ||
-        owner == "java/lang/Integer" ||
-        owner == "java/lang/Short" ||
-        owner == "java/lang/Byte" ||
-        owner == "java/lang/Double" ||
-        owner == "java/lang/Float" ||
-        owner == "java/util/Locale" ||
-        owner == "org/slf4j/helpers/Util" ||
-        owner == "java/util/Properties"
+    private fun isIgnoredMethod(className: String, methodName: String) =
+        className.startsWith("sun/nio/ch/lincheck/") ||
+        className.startsWith("org/jetbrains/kotlinx/lincheck/") ||
+        className == "kotlin/jvm/internal/Intrinsics" ||
+        className == "java/util/Objects" ||
+        className == "java/lang/String" ||
+        className == "java/lang/Boolean" ||
+        className == "java/lang/Long" ||
+        className == "java/lang/Integer" ||
+        className == "java/lang/Short" ||
+        className == "java/lang/Byte" ||
+        className == "java/lang/Double" ||
+        className == "java/lang/Float" ||
+        className == "java/util/Locale" ||
+        className == "org/slf4j/helpers/Util" ||
+        className == "java/util/Properties"
+
+    private fun isExceptionThrowingMethod(className: String, methodName: String) =
+        // atomic primitive methods do not throw exceptions
+        !isAtomicPrimitiveMethod(className, methodName)
+
+    private fun isAtomicPrimitiveMethod(className: String, methodName: String) =
+        isAtomicMethod(className.canonicalClassName, methodName) ||
+        isAtomicArrayMethod(className.canonicalClassName, methodName) ||
+        isAtomicFieldUpdaterMethod(className.canonicalClassName, methodName) ||
+        isVarHandleMethod(className.canonicalClassName, methodName) ||
+        isUnsafeMethod(className.canonicalClassName, methodName)
 
 }

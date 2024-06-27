@@ -61,19 +61,50 @@ internal fun isAtomic(receiver: Any?) =
     receiver is AtomicLong
     // TODO: handle atomicFUs?
 
+internal fun isAtomicClass(className: String) =
+    className == "java.util.concurrent.atomic.AtomicInteger" ||
+    className == "java.util.concurrent.atomic.AtomicLong" ||
+    className == "java.util.concurrent.atomic.AtomicBoolean" ||
+    className == "java.util.concurrent.atomic.AtomicReference"
+
+internal fun isAtomicMethod(className: String, methodName: String) =
+    isAtomicClass(className) && methodName in atomicMethods
+
 internal fun isAtomicArray(receiver: Any?) =
     receiver is AtomicReferenceArray<*> ||
     receiver is AtomicIntegerArray ||
     receiver is AtomicLongArray
     // TODO: handle atomicFUs?
 
+internal fun isAtomicArrayClass(className: String) =
+    className == "java.util.concurrent.atomic.AtomicIntegerArray" ||
+    className == "java.util.concurrent.atomic.AtomicLongArray" ||
+    className == "java.util.concurrent.atomic.AtomicReferenceArray"
+
+internal fun isAtomicArrayMethod(className: String, methodName: String) =
+    isAtomicArrayClass(className) && methodName in atomicMethods
+
 internal fun isAtomicFieldUpdater(obj: Any?) =
     obj is AtomicReferenceFieldUpdater<*, *> ||
     obj is AtomicIntegerFieldUpdater<*> ||
     obj is AtomicLongFieldUpdater<*>
 
+internal fun isAtomicFieldUpdaterClass(className: String) =
+    className == "java.util.concurrent.atomic.AtomicReferenceFieldUpdater" ||
+    className == "java.util.concurrent.atomic.AtomicIntegerFieldUpdater" ||
+    className == "java.util.concurrent.atomic.AtomicLongFieldUpdater"
+
+internal fun isAtomicFieldUpdaterMethod(className: String, methodName: String) =
+    isAtomicFieldUpdaterClass(className) && methodName in atomicFieldUpdaterMethods
+
 internal fun isVarHandle(obj: Any?) =
     obj is VarHandle
+
+internal fun isVarHandleClass(className: String) =
+    className == "java.lang.invoke.VarHandle"
+
+internal fun isVarHandleMethod(className: String, methodName: String) =
+    isVarHandleClass(className) && methodName in varHandleMethods
 
 internal fun isUnsafe(receiver: Any?): Boolean =
     if (receiver != null) isUnsafeClass(receiver::class.java.name) else false
@@ -81,6 +112,9 @@ internal fun isUnsafe(receiver: Any?): Boolean =
 internal fun isUnsafeClass(className: String) =
     className == "sun.misc.Unsafe" ||
     className == "jdk.internal.misc.Unsafe"
+
+internal fun isUnsafeMethod(className: String, methodName: String) =
+    isUnsafeClass(className) && methodName in unsafeMethods
 
 private val atomicMethods = mapOf(
     // get
