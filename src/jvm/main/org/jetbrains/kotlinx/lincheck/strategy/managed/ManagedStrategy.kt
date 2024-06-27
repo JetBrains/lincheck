@@ -1089,7 +1089,7 @@ abstract class ManagedStrategy(
         if (owner is AtomicIntegerFieldUpdater<*> || owner is AtomicLongFieldUpdater<*> || owner is AtomicReferenceFieldUpdater<*, *>) {
             return initializeAtomicUpdaterMethodCallTracePoint(tracePoint, owner, params)
         }
-        if (isAtomicReference(owner)) {
+        if (isAtomic(owner) || isAtomicArray(owner)) {
             return initializeAtomicReferenceMethodCallTracePoint(tracePoint, owner!!, params)
         }
         if (isUnsafe(owner)) {
@@ -1210,20 +1210,6 @@ abstract class ManagedStrategy(
         getAtomicFieldUpdaterName(atomicUpdater)?.let { tracePoint.initializeOwnerName(it) }
         tracePoint.initializeParameters(parameters.drop(1).map { adornedStringRepresentation(it) })
         return tracePoint
-    }
-
-    private fun isAtomicReference(receiver: Any?) = receiver is AtomicReference<*> ||
-            receiver is AtomicLong ||
-            receiver is AtomicInteger ||
-            receiver is AtomicBoolean ||
-            receiver is AtomicIntegerArray ||
-            receiver is AtomicReferenceArray<*> ||
-            receiver is AtomicLongArray
-
-    private fun isUnsafe(receiver: Any?): Boolean {
-        if (receiver == null) return false
-        val className = receiver::class.java.name
-        return className == "sun.misc.Unsafe" || className == "jdk.internal.misc.Unsafe"
     }
 
     /**

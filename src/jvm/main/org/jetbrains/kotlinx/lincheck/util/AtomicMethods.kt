@@ -13,7 +13,7 @@ package org.jetbrains.kotlinx.lincheck.util
 import java.util.concurrent.atomic.*
 import org.jetbrains.kotlinx.lincheck.util.AtomicMethodKind.*
 import org.jetbrains.kotlinx.lincheck.util.MemoryOrdering.*
-import javax.accessibility.AccessibleAction.INCREMENT
+import java.lang.invoke.VarHandle
 
 internal data class AtomicMethodDescriptor(
     val kind: AtomicMethodKind,
@@ -43,89 +43,44 @@ internal enum class MemoryOrdering {
     }
 }
 
-internal fun getAtomicMethodDescriptor(className: String, methodName: String): AtomicMethodDescriptor? {
-    TODO()
-    // if (!isAtomicMethod(className, methodName) &&
-    //     !isAtomicFieldUpdaterMethod(className, methodName) &&
-    //     !isVarHandleMethod(className, methodName) &&
-    //     !isUnsafeMethod(className, methodName)) {
-    //     return null
-    // }
-    // val kind = parseAtomicMethodKind(methodName)
-    // return AtomicMethodDescriptor(kind)
+internal fun getAtomicMethodDescriptor(obj: Any?, className: String, methodName: String): AtomicMethodDescriptor? {
+    return when {
+        isAtomic(obj)               -> atomicMethods[methodName]
+        isAtomicArray(obj)          -> atomicMethods[methodName]
+        isAtomicFieldUpdater(obj)   -> atomicFieldUpdaterMethods[methodName]
+        isVarHandle(obj)            -> varHandleMethods[methodName]
+        isUnsafe(obj)               -> unsafeMethods[methodName]
+        else                        -> null
+    }
 }
 
-internal fun isAtomicClass(className: String) =
-    className == "java/util/concurrent/atomic/AtomicInteger" ||
-    className == "java/util/concurrent/atomic/AtomicLong" ||
-    className == "java/util/concurrent/atomic/AtomicBoolean" ||
-    className == "java/util/concurrent/atomic/AtomicReference" ||
-    className.startsWith("kotlinx/atomicfu/") && (className.contains("Atomic"))
-
-internal fun isAtomicArrayClass(className: String) =
-    className == "java/util/concurrent/atomic/AtomicIntegerArray" ||
-    className == "java/util/concurrent/atomic/AtomicLongArray" ||
-    className == "java/util/concurrent/atomic/AtomicReferenceArray"
-
-internal fun isAtomicFieldUpdaterClass(className: String) =
-    (className.startsWith("java/util/concurrent/atomic") && className.endsWith("FieldUpdater"))
-
-internal fun isAtomicFieldUpdaterMethod(className: String, methodName: String) =
-    isAtomicFieldUpdaterClass(className) && (methodName in atomicFieldUpdaterMethods)
-
-internal fun isVarHandleClass(className: String) =
-    (className == "java/lang/invoke/VarHandle")
-
-internal fun isVarHandleMethod(className: String, methodName: String) =
-    isVarHandleClass(className) && (methodName in varHandleMethods)
-
-internal fun isUnsafeClass(className: String) =
-    className == "sun/misc/Unsafe" ||
-    className == "jdk/internal/misc/Unsafe"
-
-internal fun isUnsafeMethod(className: String, methodName: String) =
-    isUnsafeClass(className) && (methodName in unsafeMethods)
-
 internal fun isAtomic(receiver: Any?) =
-    isAtomicObject(receiver) || isAtomicArray(receiver)
-
-internal fun isAtomicMethod(className: String, methodName: String) =
-    (isAtomicClass(className) || isAtomicArrayClass(className)) && (methodName in atomicMethods)
-
-internal fun isAtomicObject(receiver: Any?) =
     receiver is AtomicReference<*> ||
     receiver is AtomicBoolean ||
     receiver is AtomicInteger ||
     receiver is AtomicLong
+    // TODO: handle atomicFUs?
 
 internal fun isAtomicArray(receiver: Any?) =
     receiver is AtomicReferenceArray<*> ||
     receiver is AtomicIntegerArray ||
     receiver is AtomicLongArray
+    // TODO: handle atomicFUs?
 
-internal fun isUnsafe(receiver: Any?): Boolean {
-    if (receiver == null) return false
-    val className = receiver::class.java.name
-    return className == "sun.misc.Unsafe" || className == "jdk.internal.misc.Unsafe"
-}
+internal fun isAtomicFieldUpdater(obj: Any?) =
+    obj is AtomicReferenceFieldUpdater<*, *> ||
+    obj is AtomicIntegerFieldUpdater<*> ||
+    obj is AtomicLongFieldUpdater<*>
 
-private fun parseAtomicMethodKind(methodName: String): AtomicMethodKind = when {
-    "getAndSet"          in methodName -> GET_AND_SET
-    "compareAndSet"      in methodName -> COMPARE_AND_SET
-    "weakCompareAndSet"  in methodName -> WEAK_COMPARE_AND_SET
-    "compareAndExchange" in methodName -> COMPARE_AND_EXCHANGE
-    "getAndAdd"          in methodName -> GET_AND_ADD
-    "addAndGet"          in methodName -> ADD_AND_GET
-    "getAndIncrement"    in methodName -> GET_AND_INCREMENT
-    "incrementAndGet"    in methodName -> INCREMENT_AND_GET
-    "getAndDecrement"    in methodName -> GET_AND_DECREMENT
-    "decrementAndGet"    in methodName -> DECREMENT_AND_GET
-    "get"                in methodName -> GET
-    "set"                in methodName -> SET
-    "lazySet"            in methodName -> SET
-    "put"                in methodName -> SET
-    else                               -> throw IllegalArgumentException("Unknown atomic method")
-}
+internal fun isVarHandle(obj: Any?) =
+    obj is VarHandle
+
+internal fun isUnsafe(receiver: Any?): Boolean =
+    if (receiver != null) isUnsafeClass(receiver::class.java.name) else false
+
+internal fun isUnsafeClass(className: String) =
+    className == "sun.misc.Unsafe" ||
+    className == "jdk.internal.misc.Unsafe"
 
 private val atomicMethods = mapOf(
     // get
@@ -182,31 +137,38 @@ private val atomicFieldUpdaterMethods = mapOf(
 )
 
 private val varHandleMethods = mapOf(
+    // get
     "get"           to AtomicMethodDescriptor(GET, PLAIN),
     "getOpaque"     to AtomicMethodDescriptor(GET, OPAQUE),
     "getAcquire"    to AtomicMethodDescriptor(GET, ACQUIRE),
     "getVolatile"   to AtomicMethodDescriptor(GET, VOLATILE),
 
+    // set
     "set"           to AtomicMethodDescriptor(GET, PLAIN),
     "setOpaque"     to AtomicMethodDescriptor(SET, OPAQUE),
     "setRelease"    to AtomicMethodDescriptor(GET, RELEASE),
     "setVolatile"   to AtomicMethodDescriptor(GET, VOLATILE),
 
+    // getAndSet
     "getAndSet"         to AtomicMethodDescriptor(GET_AND_SET, VOLATILE),
     "getAndSetRelease"  to AtomicMethodDescriptor(GET_AND_SET, RELEASE),
     "getAndSetAcquire"  to AtomicMethodDescriptor(GET_AND_SET, ACQUIRE),
 
+    // compareAndSet
     "compareAndSet"     to AtomicMethodDescriptor(COMPARE_AND_SET, VOLATILE),
 
+    // weakCompareAndSet
     "weakCompareAndSet"         to AtomicMethodDescriptor(WEAK_COMPARE_AND_SET, VOLATILE),
     "weakCompareAndSetAcquire"  to AtomicMethodDescriptor(WEAK_COMPARE_AND_SET, ACQUIRE),
     "weakCompareAndSetRelease"  to AtomicMethodDescriptor(WEAK_COMPARE_AND_SET, RELEASE),
     "weakCompareAndSetPlain"    to AtomicMethodDescriptor(WEAK_COMPARE_AND_SET, PLAIN),
 
+    // compareAndExchange
     "compareAndExchange"        to AtomicMethodDescriptor(COMPARE_AND_EXCHANGE, VOLATILE),
     "compareAndExchangeAcquire" to AtomicMethodDescriptor(COMPARE_AND_EXCHANGE, ACQUIRE),
     "compareAndExchangeRelease" to AtomicMethodDescriptor(COMPARE_AND_EXCHANGE, RELEASE),
 
+    // getAndAdd
     "getAndAdd"         to AtomicMethodDescriptor(GET_AND_ADD, VOLATILE),
     "getAndAddAcquire"  to AtomicMethodDescriptor(GET_AND_ADD, ACQUIRE),
     "getAndAddRelease"  to AtomicMethodDescriptor(GET_AND_ADD, RELEASE),
