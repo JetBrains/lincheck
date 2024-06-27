@@ -204,6 +204,10 @@ private val unsafeMethods: Map<String, AtomicMethodDescriptor> = run {
         typeNames.map { typeName ->
             "compareAndSet$typeName" to AtomicMethodDescriptor(COMPARE_AND_SET, VOLATILE)
         },
+        // compareAndSwap
+        typeNames.map { typeName ->
+            "compareAndSwap$typeName" to AtomicMethodDescriptor(COMPARE_AND_SET, VOLATILE)
+        },
         // weakCompareAndSet
         typeNames.flatMap { typeName -> weakCasAccessModes.map { accessMode ->
             val accessModeRepr = if (accessMode == VOLATILE) "" else accessMode.toString()

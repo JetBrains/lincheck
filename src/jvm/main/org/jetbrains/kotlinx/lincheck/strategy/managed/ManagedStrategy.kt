@@ -894,7 +894,7 @@ abstract class ManagedStrategy(
                 LincheckJavaAgent.ensureClassHierarchyIsTransformed(className.canonicalClassName)
             }
             if (collectTrace) {
-                addBeforeMethodCallTracePoint(owner, codeLocation, className, methodName, params)
+                addBeforeMethodCallTracePoint(owner, codeLocation, className, methodName, params, atomicMethodDescriptor)
             }
             if (guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC) {
                 newSwitchPointOnAtomicMethodCall(codeLocation)
@@ -1029,6 +1029,7 @@ abstract class ManagedStrategy(
         className: String,
         methodName: String,
         methodParams: Array<Any?>,
+        atomicMethodDescriptor: AtomicMethodDescriptor?,
     ) {
         val iThread = currentThread
         val callStackTrace = callStackTrace[iThread]
@@ -1048,7 +1049,7 @@ abstract class ManagedStrategy(
             methodParams
         }
         // Code location of the new method call is currently the last one
-        val tracePoint = createBeforeMethodCallTracePoint(owner, iThread, className, methodName, params, codeLocation)
+        val tracePoint = createBeforeMethodCallTracePoint(owner, iThread, className, methodName, params, codeLocation, atomicMethodDescriptor)
         methodCallTracePointStack[iThread] += tracePoint
         callStackTrace.add(CallStackTraceElement(tracePoint, methodId))
         if (owner == null) {
@@ -1064,7 +1065,8 @@ abstract class ManagedStrategy(
         className: String,
         methodName: String,
         params: Array<Any?>,
-        codeLocation: Int
+        codeLocation: Int,
+        atomicMethodDescriptor: AtomicMethodDescriptor?,
     ): MethodCallTracePoint {
         val callStackTrace = callStackTrace[iThread]
         val tracePoint = MethodCallTracePoint(
@@ -1074,11 +1076,21 @@ abstract class ManagedStrategy(
             methodName = methodName,
             stackTraceElement = CodeLocations.stackTrace(codeLocation)
         )
-        if (owner is VarHandle) {
-            return initializeVarHandleMethodCallTracePoint(tracePoint, owner, params)
+        // handle non-atomic methods
+        if (atomicMethodDescriptor == null) {
+            val ownerName = if (owner != null) findOwnerName(owner) else simpleClassName(className)
+            if (ownerName != null) {
+                tracePoint.initializeOwnerName(ownerName)
+            }
+            tracePoint.initializeParameters(params.map { adornedStringRepresentation(it) })
+            return tracePoint
         }
-        if (owner is AtomicIntegerFieldUpdater<*> || owner is AtomicLongFieldUpdater<*> || owner is AtomicReferenceFieldUpdater<*, *>) {
-            return initializeAtomicUpdaterMethodCallTracePoint(tracePoint, owner, params)
+        // handle atomic methods
+        if (isVarHandle(owner)) {
+            return initializeVarHandleMethodCallTracePoint(tracePoint, owner as VarHandle, params)
+        }
+        if (isAtomicFieldUpdater(owner)) {
+            return initializeAtomicUpdaterMethodCallTracePoint(tracePoint, owner!!, params)
         }
         if (isAtomic(owner) || isAtomicArray(owner)) {
             return initializeAtomicReferenceMethodCallTracePoint(tracePoint, owner!!, params)
@@ -1086,15 +1098,7 @@ abstract class ManagedStrategy(
         if (isUnsafe(owner)) {
             return initializeUnsafeMethodCallTracePoint(tracePoint, owner!!, params)
         }
-
-        tracePoint.initializeParameters(params.map { adornedStringRepresentation(it) })
-
-        val ownerName = if (owner != null) findOwnerName(owner) else simpleClassName(className)
-        if (ownerName != null) {
-            tracePoint.initializeOwnerName(ownerName)
-        }
-
-        return tracePoint
+        error("Unknown atomic method $className::$methodName")
     }
 
     private fun simpleClassName(className: String) = className.takeLastWhile { it != '/' }
@@ -1144,10 +1148,6 @@ abstract class ManagedStrategy(
                 tracePoint.initializeOwnerName((receiverName?.let { "$it." } ?: "") + "${atomicReferenceInfo.fieldName}[${atomicReferenceInfo.index}]")
                 tracePoint.initializeParameters(params.drop(1).map { adornedStringRepresentation(it) })
             }
-            AtomicReferenceMethodType.TreatAsDefaultMethod -> {
-                tracePoint.initializeOwnerName(adornedStringRepresentation(receiver))
-                tracePoint.initializeParameters(params.map { adornedStringRepresentation(it) })
-            }
             is AtomicReferenceInstanceMethod -> {
                 val receiverName = findOwnerName(atomicReferenceInfo.owner)
                 tracePoint.initializeOwnerName(receiverName?.let { "$it.${atomicReferenceInfo.fieldName}" } ?: atomicReferenceInfo.fieldName)
@@ -1160,6 +1160,10 @@ abstract class ManagedStrategy(
             is StaticFieldAtomicArrayMethod -> {
                 tracePoint.initializeOwnerName("${atomicReferenceInfo.ownerClass.simpleName}.${atomicReferenceInfo.fieldName}[${atomicReferenceInfo.index}]")
                 tracePoint.initializeParameters(params.drop(1).map { adornedStringRepresentation(it) })
+            }
+            AtomicReferenceMethodType.TreatAsDefaultMethod -> {
+                tracePoint.initializeOwnerName(adornedStringRepresentation(receiver))
+                tracePoint.initializeParameters(params.map { adornedStringRepresentation(it) })
             }
         }
         return tracePoint
