@@ -40,17 +40,6 @@ internal class MethodCallTransformer(
             }
             return
         }
-        if (isAtomicPrimitiveMethod(owner, name)) {
-            invokeIfInTestingCode(
-                original = {
-                    visitMethodInsn(opcode, owner, name, desc, itf)
-                },
-                code = {
-                    processAtomicMethodCall(desc, opcode, owner, name, itf)
-                }
-            )
-            return
-        }
         invokeIfInTestingCode(
             original = {
                 visitMethodInsn(opcode, owner, name, desc, itf)
@@ -104,57 +93,6 @@ internal class MethodCallTransformer(
         // STACK: result
     }
 
-    private fun processAtomicMethodCall(desc: String, opcode: Int, owner: String, name: String, itf: Boolean) = adapter.run {
-        // In the cases of Atomic*FieldUpdater, Unsafe and VarHandle we edit
-        // the params list before creating a trace point
-        // to remove redundant parameters as receiver and offset.
-        // To determine how we should process it, we provide the owner instance.
-        val provideOwner = opcode != INVOKESTATIC && (
-            isAtomicClass(owner) ||
-            isAtomicArrayClass(owner) ||
-            owner == "sun/misc/Unsafe" ||
-            owner == "jdk/internal/misc/Unsafe" ||
-            owner == "java/lang/invoke/VarHandle" ||
-            (owner.startsWith("java/util/concurrent/atomic") && owner.endsWith("FieldUpdater"))
-        )
-        // STACK [INVOKEVIRTUAL]: owner, arguments
-        // STACK [INVOKESTATIC] :        arguments
-        val argumentLocals = storeArguments(desc)
-        // STACK [INVOKEVIRTUAL]: owner
-        // STACK [INVOKESTATIC] : <empty>
-        if (provideOwner) {
-            dup()
-        } else {
-            visitInsn(ACONST_NULL)
-        }
-        // STACK [INVOKEVIRTUAL atomic updater]: owner, owner
-        // STACK [INVOKESTATIC  atomic updater]:        null
-        // STACK [INVOKEVIRTUAL atomic]:                owner
-        // STACK [INVOKESTATIC  atomic]:                <empty>
-        push(owner)
-        push(name)
-        loadNewCodeLocationId()
-        // STACK [INVOKEVIRTUAL atomic updater]: owner, owner, className, methodName, codeLocation
-        // STACK [INVOKESTATIC  atomic updater]:        null , className, methodName, codeLocation
-        // STACK [INVOKEVIRTUAL atomic]:                owner, className, methodName, codeLocation
-        // STACK [INVOKESTATIC  atomic]:                       className, methodName, codeLocation
-        pushArray(argumentLocals)
-        // STACK: ..., argumentsArray
-        invokeStatic(Injections::beforeAtomicMethodCall)
-        invokeBeforeEventIfPluginEnabled("atomic method call $methodName")
-        // STACK [INVOKEVIRTUAL]: owner
-        // STACK [INVOKESTATIC] : <empty>
-        loadLocals(argumentLocals)
-        // STACK [INVOKEVIRTUAL]: owner, arguments
-        // STACK [INVOKESTATIC] :        arguments
-        invokeInIgnoredSection {
-            visitMethodInsn(opcode, owner, name, desc, itf)
-        }
-        // STACK: result
-        processMethodCallResult(desc)
-        // STACK: result
-    }
-
     private fun processMethodCallResult(desc: String) = adapter.run {
         // STACK: result?
         val resultType = Type.getReturnType(desc)
@@ -189,23 +127,5 @@ internal class MethodCallTransformer(
         owner == "java/util/Locale" ||
         owner == "org/slf4j/helpers/Util" ||
         owner == "java/util/Properties"
-
-    private fun isAtomicClass(className: String) =
-        className == "java/util/concurrent/atomic/AtomicInteger" ||
-        className == "java/util/concurrent/atomic/AtomicLong" ||
-        className == "java/util/concurrent/atomic/AtomicBoolean" ||
-        className == "java/util/concurrent/atomic/AtomicReference"
-
-    private fun isAtomicArrayClass(className: String) =
-        className == "java/util/concurrent/atomic/AtomicIntegerArray" ||
-        className == "java/util/concurrent/atomic/AtomicLongArray" ||
-        className == "java/util/concurrent/atomic/AtomicReferenceArray"
-
-    private fun isAtomicPrimitiveMethod(owner: String, methodName: String) =
-        owner == "sun/misc/Unsafe" ||
-        owner == "jdk/internal/misc/Unsafe" ||
-        owner == "java/lang/invoke/VarHandle" ||
-        owner.startsWith("java/util/concurrent/") && (owner.contains("Atomic")) ||
-        owner.startsWith("kotlinx/atomicfu/") && (owner.contains("Atomic"))
 
 }

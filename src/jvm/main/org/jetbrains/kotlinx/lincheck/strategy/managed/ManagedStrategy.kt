@@ -885,8 +885,12 @@ abstract class ManagedStrategy(
         params: Array<Any?>
     ) {
         val guarantee = runInIgnoredSection {
-            val guarantee = methodGuaranteeType(owner, className, methodName)
-            if (owner == null && guarantee == null) { // static method
+            val atomicMethodDescriptor = getAtomicMethodDescriptor(owner, className, methodName)
+            val guarantee = when {
+                (atomicMethodDescriptor != null) -> ManagedGuaranteeType.TREAT_AS_ATOMIC
+                else -> methodGuaranteeType(owner, className, methodName)
+            }
+            if (owner == null && atomicMethodDescriptor == null && guarantee == null) { // static method
                 LincheckJavaAgent.ensureClassHierarchyIsTransformed(className.canonicalClassName)
             }
             if (collectTrace) {
@@ -904,19 +908,6 @@ abstract class ManagedStrategy(
             // so enterIgnoredSection would have no effect
             enterIgnoredSection()
         }
-    }
-
-    override fun beforeAtomicMethodCall(
-        owner: Any?,
-        className: String,
-        methodName: String,
-        codeLocation: Int,
-        params: Array<Any?>
-    ) = runInIgnoredSection {
-        if (collectTrace) {
-            addBeforeMethodCallTracePoint(owner, codeLocation, className, methodName, params)
-        }
-        newSwitchPointOnAtomicMethodCall(codeLocation)
     }
 
     override fun onMethodCallReturn(result: Any?) {
