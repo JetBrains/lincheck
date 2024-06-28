@@ -43,7 +43,7 @@ internal enum class MemoryOrdering {
     }
 }
 
-internal fun getAtomicMethodDescriptor(obj: Any?, className: String, methodName: String): AtomicMethodDescriptor? {
+internal fun getAtomicMethodDescriptor(obj: Any?, methodName: String): AtomicMethodDescriptor? {
     return when {
         isAtomic(obj)               -> atomicMethods[methodName]
         isAtomicArray(obj)          -> atomicMethods[methodName]

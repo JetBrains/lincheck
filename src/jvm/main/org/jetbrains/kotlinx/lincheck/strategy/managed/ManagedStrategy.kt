@@ -872,10 +872,14 @@ abstract class ManagedStrategy(
     }
 
     /**
-     * This method is invoked by a test thread before each method invocation.
+     * This method is invoked before each method invocation.
      *
-     * @param codeLocation the byte-code location identifier of this invocation
-     * @param iThread number of invoking thread
+     * @param owner the receiver object (null for static methods).
+     * @param className class name of the invoked method.
+     * @param methodName name of the invoked method.
+     * @param codeLocation the byte-code location identifier of this invocation.
+     * @param params array of arguments passed to the method.
+     *        Arguments of primitive types are boxed.
      */
     override fun beforeMethodCall(
         owner: Any?,
@@ -885,7 +889,7 @@ abstract class ManagedStrategy(
         params: Array<Any?>
     ) {
         val guarantee = runInIgnoredSection {
-            val atomicMethodDescriptor = getAtomicMethodDescriptor(owner, className, methodName)
+            val atomicMethodDescriptor = getAtomicMethodDescriptor(owner, methodName)
             val guarantee = when {
                 (atomicMethodDescriptor != null) -> ManagedGuaranteeType.TREAT_AS_ATOMIC
                 else -> methodGuaranteeType(owner, className, methodName)
