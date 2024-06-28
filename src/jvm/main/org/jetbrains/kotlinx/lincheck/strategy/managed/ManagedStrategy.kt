@@ -878,69 +878,30 @@ abstract class ManagedStrategy(
         codeLocation: Int,
         params: Array<Any?>
     ) {
-        val guarantee = methodGuaranteeType(owner, className, methodName)
-        when (guarantee) {
-            ManagedGuaranteeType.IGNORE -> {
-                if (collectTrace) {
-                    runInIgnoredSection {
-                        val params = if (isSuspendFunction(className, methodName, params)) {
-                            params.dropLast(1).toTypedArray()
-                        } else {
-                            params
-                        }
-                        beforeMethodCall(owner, currentThread, codeLocation, className, methodName, params)
-                    }
-                }
-                // It's important that this method can't be called inside runInIgnoredSection, as the ignored section
-                // flag would be set to false when leaving runInIgnoredSection,
-                // so enterIgnoredSection would have no effect
-                enterIgnoredSection()
+        val guarantee = runInIgnoredSection {
+            val atomicMethodDescriptor = getAtomicMethodDescriptor(owner, methodName)
+            val guarantee = when {
+                (atomicMethodDescriptor != null) -> ManagedGuaranteeType.TREAT_AS_ATOMIC
+                else -> methodGuaranteeType(owner, className, methodName)
             }
-
-            ManagedGuaranteeType.TREAT_AS_ATOMIC -> {
-                runInIgnoredSection {
-                    if (collectTrace) {
-                        beforeMethodCall(owner, currentThread, codeLocation, className, methodName, params)
-                    }
-                    newSwitchPointOnAtomicMethodCall(codeLocation)
-                }
-                // It's important that this method can't be called inside runInIgnoredSection, as the ignored section
-                // flag would be set to false when leaving runInIgnoredSection,
-                // so enterIgnoredSection would have no effect
-                enterIgnoredSection()
+            if (owner == null && atomicMethodDescriptor == null && guarantee == null) { // static method
+                LincheckJavaAgent.ensureClassHierarchyIsTransformed(className.canonicalClassName)
             }
-
-            null -> {
-                if (owner == null) { // static method
-                    runInIgnoredSection {
-                        LincheckJavaAgent.ensureClassHierarchyIsTransformed(className.canonicalClassName)
-                    }
-                }
-                if (collectTrace) {
-                    runInIgnoredSection {
-                        val params = if (isSuspendFunction(className, methodName, params)) {
-                            params.dropLast(1).toTypedArray()
-                        } else {
-                            params
-                        }
-                        beforeMethodCall(owner, currentThread, codeLocation, className, methodName, params)
-                    }
-                }
+            if (collectTrace) {
+                addBeforeMethodCallTracePoint(owner, codeLocation, className, methodName, params, atomicMethodDescriptor)
             }
+            if (guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC) {
+                newSwitchPointOnAtomicMethodCall(codeLocation)
+            }
+            guarantee
         }
-    }
-
-    override fun beforeAtomicMethodCall(
-        owner: Any?,
-        className: String,
-        methodName: String,
-        codeLocation: Int,
-        params: Array<Any?>
-    ) = runInIgnoredSection {
-        if (collectTrace) {
-            beforeMethodCall(owner, currentThread, codeLocation, className, methodName, params)
+        if (guarantee == ManagedGuaranteeType.IGNORE ||
+            guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC) {
+            // It's important that this method can't be called inside runInIgnoredSection, as the ignored section
+            // flag would be set to false when leaving runInIgnoredSection,
+            // so enterIgnoredSection would have no effect
+            enterIgnoredSection()
         }
-        newSwitchPointOnAtomicMethodCall(codeLocation)
     }
 
     override fun onMethodCallReturn(result: Any?) {
@@ -1056,20 +1017,15 @@ abstract class ManagedStrategy(
         suspendedFunctionsStack[iThread].clear()
     }
 
-    /**
-     * This method is invoked by a test thread
-     * before each method invocation.
-     * @param codeLocation the byte-code location identifier of this invocation
-     * @param iThread number of invoking thread
-     */
-    private fun beforeMethodCall(
+    private fun addBeforeMethodCallTracePoint(
         owner: Any?,
-        iThread: Int,
         codeLocation: Int,
         className: String,
         methodName: String,
-        params: Array<Any?>,
+        methodParams: Array<Any?>,
+        atomicMethodDescriptor: AtomicMethodDescriptor?,
     ) {
+        val iThread = currentThread
         val callStackTrace = callStackTrace[iThread]
         val suspendedMethodStack = suspendedFunctionsStack[iThread]
         val methodId = if (suspendedMethodStack.isNotEmpty()) {
@@ -1081,8 +1037,13 @@ abstract class ManagedStrategy(
         } else {
             methodCallNumber++
         }
+        val params = if (isSuspendFunction(className, methodName, methodParams)) {
+            methodParams.dropLast(1).toTypedArray()
+        } else {
+            methodParams
+        }
         // Code location of the new method call is currently the last one
-        val tracePoint = createBeforeMethodCallTracePoint(owner, iThread, className, methodName, params, codeLocation)
+        val tracePoint = createBeforeMethodCallTracePoint(owner, iThread, className, methodName, params, codeLocation, atomicMethodDescriptor)
         methodCallTracePointStack[iThread] += tracePoint
         callStackTrace.add(CallStackTraceElement(tracePoint, methodId))
         if (owner == null) {
@@ -1098,7 +1059,8 @@ abstract class ManagedStrategy(
         className: String,
         methodName: String,
         params: Array<Any?>,
-        codeLocation: Int
+        codeLocation: Int,
+        atomicMethodDescriptor: AtomicMethodDescriptor?,
     ): MethodCallTracePoint {
         val callStackTrace = callStackTrace[iThread]
         val tracePoint = MethodCallTracePoint(
@@ -1108,27 +1070,29 @@ abstract class ManagedStrategy(
             methodName = methodName,
             stackTraceElement = CodeLocations.stackTrace(codeLocation)
         )
-        if (owner is VarHandle) {
-            return initializeVarHandleMethodCallTracePoint(tracePoint, owner, params)
+        // handle non-atomic methods
+        if (atomicMethodDescriptor == null) {
+            val ownerName = if (owner != null) findOwnerName(owner) else simpleClassName(className)
+            if (ownerName != null) {
+                tracePoint.initializeOwnerName(ownerName)
+            }
+            tracePoint.initializeParameters(params.map { adornedStringRepresentation(it) })
+            return tracePoint
         }
-        if (owner is AtomicIntegerFieldUpdater<*> || owner is AtomicLongFieldUpdater<*> || owner is AtomicReferenceFieldUpdater<*, *>) {
-            return initializeAtomicUpdaterMethodCallTracePoint(tracePoint, owner, params)
+        // handle atomic methods
+        if (isVarHandle(owner)) {
+            return initializeVarHandleMethodCallTracePoint(tracePoint, owner as VarHandle, params)
         }
-        if (isAtomicReference(owner)) {
+        if (isAtomicFieldUpdater(owner)) {
+            return initializeAtomicUpdaterMethodCallTracePoint(tracePoint, owner!!, params)
+        }
+        if (isAtomic(owner) || isAtomicArray(owner)) {
             return initializeAtomicReferenceMethodCallTracePoint(tracePoint, owner!!, params)
         }
         if (isUnsafe(owner)) {
             return initializeUnsafeMethodCallTracePoint(tracePoint, owner!!, params)
         }
-
-        tracePoint.initializeParameters(params.map { adornedStringRepresentation(it) })
-
-        val ownerName = if (owner != null) findOwnerName(owner) else simpleClassName(className)
-        if (ownerName != null) {
-            tracePoint.initializeOwnerName(ownerName)
-        }
-
-        return tracePoint
+        error("Unknown atomic method $className::$methodName")
     }
 
     private fun simpleClassName(className: String) = className.takeLastWhile { it != '/' }
@@ -1178,10 +1142,6 @@ abstract class ManagedStrategy(
                 tracePoint.initializeOwnerName((receiverName?.let { "$it." } ?: "") + "${atomicReferenceInfo.fieldName}[${atomicReferenceInfo.index}]")
                 tracePoint.initializeParameters(params.drop(1).map { adornedStringRepresentation(it) })
             }
-            AtomicReferenceMethodType.TreatAsDefaultMethod -> {
-                tracePoint.initializeOwnerName(adornedStringRepresentation(receiver))
-                tracePoint.initializeParameters(params.map { adornedStringRepresentation(it) })
-            }
             is AtomicReferenceInstanceMethod -> {
                 val receiverName = findOwnerName(atomicReferenceInfo.owner)
                 tracePoint.initializeOwnerName(receiverName?.let { "$it.${atomicReferenceInfo.fieldName}" } ?: atomicReferenceInfo.fieldName)
@@ -1194,6 +1154,10 @@ abstract class ManagedStrategy(
             is StaticFieldAtomicArrayMethod -> {
                 tracePoint.initializeOwnerName("${atomicReferenceInfo.ownerClass.simpleName}.${atomicReferenceInfo.fieldName}[${atomicReferenceInfo.index}]")
                 tracePoint.initializeParameters(params.drop(1).map { adornedStringRepresentation(it) })
+            }
+            AtomicReferenceMethodType.TreatAsDefaultMethod -> {
+                tracePoint.initializeOwnerName(adornedStringRepresentation(receiver))
+                tracePoint.initializeParameters(params.map { adornedStringRepresentation(it) })
             }
         }
         return tracePoint
@@ -1235,20 +1199,6 @@ abstract class ManagedStrategy(
         getAtomicFieldUpdaterName(atomicUpdater)?.let { tracePoint.initializeOwnerName(it) }
         tracePoint.initializeParameters(parameters.drop(1).map { adornedStringRepresentation(it) })
         return tracePoint
-    }
-
-    private fun isAtomicReference(receiver: Any?) = receiver is AtomicReference<*> ||
-            receiver is AtomicLong ||
-            receiver is AtomicInteger ||
-            receiver is AtomicBoolean ||
-            receiver is AtomicIntegerArray ||
-            receiver is AtomicReferenceArray<*> ||
-            receiver is AtomicLongArray
-
-    private fun isUnsafe(receiver: Any?): Boolean {
-        if (receiver == null) return false
-        val className = receiver::class.java.name
-        return className == "sun.misc.Unsafe" || className == "jdk.internal.misc.Unsafe"
     }
 
     /**
