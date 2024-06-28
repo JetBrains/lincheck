@@ -390,6 +390,10 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
     if (failure.trace != null) {
         appendLine()
         appendTrace(failure, results, failure.trace, exceptionStackTraces)
+        if (!ideaPluginEnabled()) {
+            appendLine()
+            appendPluginReference()
+        }
     } else {
         appendExceptionsStackTracesBlock(exceptionStackTraces)
     }
@@ -712,5 +716,12 @@ private fun StringBuilder.appendException(t: Throwable) {
     t.printStackTrace(PrintWriter(sw))
     appendLine(sw.toString())
 }
+
+private fun StringBuilder.appendPluginReference() = append(pluginReferenceInTrace)
+
+internal val pluginReferenceInTrace = """
+    Enhance your debugging experience with the Lincheck IDEA Plugin https://plugins.jetbrains.com/plugin/24171-lincheck. 
+    Easily navigate trace points and quickly identify bugs with fully-fledged debugger integration.
+    """.trimIndent()
 
 private const val EXCEPTIONS_TRACES_TITLE = "Exception stack traces:"
