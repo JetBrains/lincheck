@@ -11,10 +11,10 @@
 package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.LoggingLevel.*
-import sun.nio.ch.lincheck.TestThread
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import sun.nio.ch.lincheck.TestThread
 import java.io.*
 import kotlin.math.max
 
@@ -23,8 +23,13 @@ class Reporter(private val logLevel: LoggingLevel) {
     private val outErr: PrintStream = System.err
 
     fun logIteration(iteration: Int, maxIterations: Int, scenario: ExecutionScenario) = log(INFO) {
-        appendLine("\n= Iteration $iteration / $maxIterations =")
+        appendLine("\n= Iteration ${iteration + 1} / $maxIterations =")
         appendExecutionScenario(scenario)
+    }
+
+    fun logIterationStatistics(invocations: Int, runningTimeNano: Long) = log(INFO) {
+        val runningTime = nanoTimeToString(runningTimeNano)
+        appendLine("= Statistics: #invocations=$invocations, running time ${runningTime}s =")
     }
 
     fun logFailedIteration(failure: LincheckFailure, loggingLevel: LoggingLevel = INFO) = log(loggingLevel) {
@@ -714,3 +719,6 @@ private fun StringBuilder.appendException(t: Throwable) {
 }
 
 private const val EXCEPTIONS_TRACES_TITLE = "Exception stack traces:"
+
+internal fun nanoTimeToString(timeNano: Long, decimalPlaces: Int = 3) =
+    String.format("%.${decimalPlaces}f", timeNano.toDouble() / 1_000_000_000)

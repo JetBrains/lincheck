@@ -14,7 +14,6 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
@@ -52,28 +51,31 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
     /**
      * Runs Lincheck to check the tested class under given configurations.
      *
-     * @param cont Optional continuation taking [LincheckFailure] as an argument.
+     * @param continuation Optional continuation taking [LincheckFailure] as an argument.
      *   The continuation is run in the context when Lincheck java-agent is still attached.
      * @return [LincheckFailure] if a failure is discovered, null otherwise.
      */
     @Synchronized // never run Lincheck tests in parallel
-    internal fun checkImpl(cont: LincheckFailureContinuation? = null): LincheckFailure? {
+    internal fun checkImpl(
+        customTracker: LincheckRunTracker? = null,
+        continuation: LincheckFailureContinuation? = null,
+    ): LincheckFailure? {
         check(testConfigurations.isNotEmpty()) { "No Lincheck test configuration to run" }
         lincheckVerificationStarted()
         for (testCfg in testConfigurations) {
             withLincheckJavaAgent(testCfg.instrumentationMode) {
-                val failure = testCfg.checkImpl()
+                val failure = testCfg.checkImpl(customTracker)
                 if (failure != null) {
-                    if (cont != null) cont(failure)
+                    if (continuation != null) continuation(failure)
                     return failure
                 }
             }
         }
-        if (cont != null) cont(null)
+        if (continuation != null) continuation(null)
         return null
     }
 
-    private fun CTestConfiguration.checkImpl(): LincheckFailure? {
+    private fun CTestConfiguration.checkImpl(customTracker: LincheckRunTracker? = null): LincheckFailure? {
         var verifier = createVerifier()
         val generator = createExecutionGenerator(testStructure.randomProvider)
         // create a sequence that generates scenarios lazily on demand
@@ -90,6 +92,11 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
         // only after all custom scenarios are checked
         val scenarios = customScenarios.asSequence() + randomScenarios.take(iterations)
         val scenariosSize = customScenarios.size + iterations
+        val tracker = ChainedRunTracker().apply {
+            if (customTracker != null)
+                addTracker(customTracker)
+        }
+        val statisticsTracker = tracker.addTrackerIfAbsent { LincheckStatisticsTracker() }
         scenarios.forEachIndexed { i, scenario ->
             val isCustomScenario = (i < customScenarios.size)
             // For performance reasons, verifier re-uses LTS from previous iterations.
@@ -100,19 +107,20 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
             if ((i + 1) % VERIFIER_REFRESH_CYCLE == 0)
                 verifier = createVerifier()
             scenario.validate()
-            reporter.logIteration(i + 1, scenariosSize, scenario)
-            var failure = scenario.run(this, verifier)
+            reporter.logIteration(i, scenariosSize, scenario)
+            var failure = scenario.run(i, this, verifier, tracker)
+            reporter.logIterationStatistics(i, statisticsTracker)
             if (failure == null)
                 return@forEachIndexed
+            var j = i + 1
             if (minimizeFailedScenario && !isCustomScenario) {
-                var j = i + 1
                 reporter.logScenarioMinimization(scenario)
                 failure = failure.minimize { minimizedScenario ->
-                    minimizedScenario.run(this, createVerifier())
+                    minimizedScenario.run(j++, this, createVerifier(), tracker)
                 }
             }
             reporter.logFailedIteration(failure)
-            runReplayForPlugin(failure, verifier)
+            runReplayForPlugin(j++, failure, verifier)
             return failure
         }
         return null
@@ -123,14 +131,20 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
      * We cannot initiate the failed interleaving replaying in the strategy code,
      * as the failing scenario might need to be minimized first.
      */
-    private fun CTestConfiguration.runReplayForPlugin(failure: LincheckFailure, verifier: Verifier) {
+    private fun CTestConfiguration.runReplayForPlugin(
+        iteration: Int,
+        failure: LincheckFailure,
+        verifier: Verifier,
+        tracker: LincheckRunTracker? = null,
+    ) {
         if (ideaPluginEnabled() && this is ModelCheckingCTestConfiguration) {
             reporter.logFailedIteration(failure, loggingLevel = LoggingLevel.WARN)
             enableReplayModeForIdeaPlugin()
             val strategy = createStrategy(failure.scenario)
             check(strategy is ModelCheckingStrategy)
+            val parameters = createIterationParameters(strategy)
             strategy.use {
-                val replayedFailure = it.runIteration(invocationsPerIteration, verifier)
+                val replayedFailure = it.runIteration(iteration, parameters, verifier, tracker)
                 check(replayedFailure != null)
                 strategy.runReplayIfPluginEnabled(replayedFailure)
             }
@@ -140,13 +154,21 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
     }
 
     private fun ExecutionScenario.run(
+        iteration: Int,
         testCfg: CTestConfiguration,
         verifier: Verifier,
+        tracker: LincheckRunTracker? = null,
     ): LincheckFailure? {
         val strategy = testCfg.createStrategy(this)
+        val parameters = testCfg.createIterationParameters(strategy)
         return strategy.use {
-            it.runIteration(testCfg.invocationsPerIteration, verifier)
+            it.runIteration(iteration, parameters, verifier, tracker)
         }
+    }
+
+    private fun Reporter.logIterationStatistics(iteration: Int, statisticsTracker: LincheckStatisticsTracker) {
+        val statistics = statisticsTracker.iterationsStatistics[iteration]!!
+        logIterationStatistics(statistics.totalInvocationsCount, statistics.totalRunningTimeNano)
     }
 
     private fun CTestConfiguration.createStrategy(scenario: ExecutionScenario) =
@@ -171,6 +193,17 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
         )
         return constructor.newInstance(this, testStructure, randomProvider)
     }
+
+    private fun CTestConfiguration.createIterationParameters(strategy: Strategy) =
+        IterationParameters(
+            strategy = when (strategy) {
+                is StressStrategy -> LincheckStrategy.Stress
+                is ModelCheckingStrategy -> LincheckStrategy.ModelChecking
+                else -> throw IllegalStateException("Unsupported Lincheck strategy")
+            },
+            invocationsBound = this.invocationsPerIteration,
+            warmUpInvocationsCount = 0,
+        )
 
     private val CTestConfiguration.invocationsPerIteration get() = when (this) {
         is ModelCheckingCTestConfiguration -> this.invocationsPerIteration
@@ -268,12 +301,12 @@ internal fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>): LincheckFailu
  * To overcome this problem, we run the continuation in the context when Lincheck java-agent is still attached.
  *
  * @param testClass Tested class.
- * @param cont Continuation taking [LincheckFailure] as an argument.
+ * @param continuation Continuation taking [LincheckFailure] as an argument.
  *   The continuation is run in the context when Lincheck java-agent is still attached.
  * @return [LincheckFailure] if a failure is discovered, null otherwise.
  */
-internal fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>, cont: LincheckFailureContinuation) {
-    LinChecker(testClass, this).checkImpl(cont)
+internal fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>, continuation: LincheckFailureContinuation) {
+    LinChecker(testClass, this).checkImpl(continuation = continuation)
 }
 
 internal typealias LincheckFailureContinuation = (LincheckFailure?) -> Unit
