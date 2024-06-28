@@ -55,7 +55,6 @@ internal class MethodCallTransformer(
     private fun processMethodCall(desc: String, opcode: Int, owner: String, name: String, itf: Boolean) = adapter.run {
         val endLabel = newLabel()
         val methodCallStartLabel = newLabel()
-        val isThrowing = isExceptionThrowingMethod(owner, name)
         // STACK [INVOKEVIRTUAL]: owner, arguments
         // STACK [INVOKESTATIC] :        arguments
         val argumentLocals = storeArguments(desc)
@@ -78,9 +77,7 @@ internal class MethodCallTransformer(
         // STACK [INVOKESTATIC] :        arguments
         val methodCallEndLabel = newLabel()
         val handlerExceptionStartLabel = newLabel()
-        if (isThrowing) {
-            visitTryCatchBlock(methodCallStartLabel, methodCallEndLabel, handlerExceptionStartLabel, null)
-        }
+        visitTryCatchBlock(methodCallStartLabel, methodCallEndLabel, handlerExceptionStartLabel, null)
         visitLabel(methodCallStartLabel)
         loadLocals(argumentLocals)
         visitMethodInsn(opcode, owner, name, desc, itf)
@@ -90,12 +87,10 @@ internal class MethodCallTransformer(
         processMethodCallResult(desc)
         // STACK: result
         goTo(endLabel)
-        if (isThrowing) {
-            visitLabel(handlerExceptionStartLabel)
-            dup()
-            invokeStatic(Injections::onMethodCallException)
-            throwException()
-        }
+        visitLabel(handlerExceptionStartLabel)
+        dup()
+        invokeStatic(Injections::onMethodCallException)
+        throwException()
         visitLabel(endLabel)
         // STACK: result
     }
@@ -134,16 +129,5 @@ internal class MethodCallTransformer(
         className == "java/util/Locale" ||
         className == "org/slf4j/helpers/Util" ||
         className == "java/util/Properties"
-
-    private fun isExceptionThrowingMethod(className: String, methodName: String) =
-        // atomic primitive methods do not throw exceptions
-        !isAtomicPrimitiveMethod(className, methodName)
-
-    private fun isAtomicPrimitiveMethod(className: String, methodName: String) =
-        isAtomicMethod(className.canonicalClassName, methodName) ||
-        isAtomicArrayMethod(className.canonicalClassName, methodName) ||
-        isAtomicFieldUpdaterMethod(className.canonicalClassName, methodName) ||
-        isVarHandleMethod(className.canonicalClassName, methodName) ||
-        isUnsafeMethod(className.canonicalClassName, methodName)
 
 }
