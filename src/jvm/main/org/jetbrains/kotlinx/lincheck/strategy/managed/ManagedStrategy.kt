@@ -871,16 +871,6 @@ abstract class ManagedStrategy(
         return null
     }
 
-    /**
-     * This method is invoked before each method invocation.
-     *
-     * @param owner the receiver object (null for static methods).
-     * @param className class name of the invoked method.
-     * @param methodName name of the invoked method.
-     * @param codeLocation the byte-code location identifier of this invocation.
-     * @param params array of arguments passed to the method.
-     *        Arguments of primitive types are boxed.
-     */
     override fun beforeMethodCall(
         owner: Any?,
         className: String,
