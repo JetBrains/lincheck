@@ -48,7 +48,6 @@ class AtomicReferencesNamesTest : BaseFailingTest("atomic_references_names_trace
         atomicLongArray.set(0, 2)
 
         wrapper.reference.set(Node(5))
-        wrapper.array.length()
         wrapper.array.compareAndSet(0, 1 ,2)
 
         staticValue.compareAndSet(0, 2)

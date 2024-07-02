@@ -250,15 +250,6 @@ public class Injections {
     }
 
     /**
-     * Called from the instrumented code before any atomic method call.
-     * This is just an optimization of [beforeMethodCall] for trusted
-     * atomic constructs to avoid wrapping the invocations into try-finally blocks.
-     */
-    public static void beforeAtomicMethodCall(Object owner, String className, String methodName, int codeLocation, Object[] params) {
-        getEventTracker().beforeAtomicMethodCall(owner, className, methodName, codeLocation, params);
-    }
-
-    /**
      * Called from the instrumented code after any method successful call, i.e., without any exception.
      */
     public static void onMethodCallReturn(Object result) {

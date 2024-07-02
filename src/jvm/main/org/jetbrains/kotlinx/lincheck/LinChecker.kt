@@ -16,12 +16,14 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import kotlin.reflect.*
 
 /**
  * This class runs concurrent tests.
  */
-class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
+class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
     private val testStructure = CTestStructure.getFromTestClass(testClass)
     private val testConfigurations: List<CTestConfiguration>
     private val reporter: Reporter
@@ -72,40 +74,46 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
     }
 
     private fun CTestConfiguration.checkImpl(): LincheckFailure? {
-        val exGen = createExecutionGenerator(testStructure.randomProvider)
-        for (i in customScenarios.indices) {
-            val verifier = createVerifier()
-            val scenario = customScenarios[i]
-            scenario.validate()
-            reporter.logIteration(i + 1, customScenarios.size, scenario)
-            val failure = scenario.run(this, verifier)
-            if (failure != null) {
-                runReplayForPlugin(failure, verifier)
-                return failure
+        var verifier = createVerifier()
+        val generator = createExecutionGenerator(testStructure.randomProvider)
+        // create a sequence that generates scenarios lazily on demand
+        val randomScenarios = generateSequence {
+            generator.nextExecution().also {
+                // reset the parameter generator ranges to start with the same initial bounds for each scenario.
+                testStructure.parameterGenerators.forEach { it.reset() }
             }
         }
-        checkAtLeastOneMethodIsMarkedAsOperation(testClass)
-        var verifier = createVerifier()
-        repeat(iterations) { i ->
+        // we want to handle custom scenarios and random scenarios uniformly by a single loop;
+        // to achieve this, we join the custom scenarios list and
+        // random scenarios generator into a single sequence;
+        // this way the random scenarios are still generated lazily on demand
+        // only after all custom scenarios are checked
+        val scenarios = customScenarios.asSequence() + randomScenarios.take(iterations)
+        val scenariosSize = customScenarios.size + iterations
+        scenarios.forEachIndexed { i, scenario ->
+            val isCustomScenario = (i < customScenarios.size)
             // For performance reasons, verifier re-uses LTS from previous iterations.
-            // This behaviour is similar to a memory leak and can potentially cause OutOfMemoryError.
+            // This behavior is similar to a memory leak and can potentially cause OutOfMemoryError.
             // This is why we periodically create a new verifier to still have increased performance
             // from re-using LTS and limit the size of potential memory leak.
             // https://github.com/Kotlin/kotlinx-lincheck/issues/124
             if ((i + 1) % VERIFIER_REFRESH_CYCLE == 0)
                 verifier = createVerifier()
-            val scenario = exGen.nextExecution()
             scenario.validate()
-            reporter.logIteration(i + 1 + customScenarios.size, iterations, scenario)
-            val failure = scenario.run(this, verifier)
-            if (failure != null) {
-                val minimizedFailedIteration = if (!minimizeFailedScenario) failure else failure.minimize(this)
-                reporter.logFailedIteration(minimizedFailedIteration)
-                runReplayForPlugin(minimizedFailedIteration, verifier)
-                return minimizedFailedIteration
+            reporter.logIteration(i + 1, scenariosSize, scenario)
+            var failure = scenario.run(this, verifier)
+            if (failure == null)
+                return@forEachIndexed
+            if (minimizeFailedScenario && !isCustomScenario) {
+                var j = i + 1
+                reporter.logScenarioMinimization(scenario)
+                failure = failure.minimize { minimizedScenario ->
+                    minimizedScenario.run(this, createVerifier())
+                }
             }
-            // Reset the parameter generator ranges to start with the same initial bounds on each scenario generation.
-            testStructure.parameterGenerators.forEach { it.reset() }
+            reporter.logFailedIteration(failure)
+            runReplayForPlugin(failure, verifier)
+            return failure
         }
         return null
     }
@@ -119,57 +127,56 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
         if (ideaPluginEnabled() && this is ModelCheckingCTestConfiguration) {
             reporter.logFailedIteration(failure, loggingLevel = LoggingLevel.WARN)
             enableReplayModeForIdeaPlugin()
-            failure.scenario.run(this, verifier)
+            val strategy = createStrategy(failure.scenario)
+            check(strategy is ModelCheckingStrategy)
+            strategy.use {
+                val replayedFailure = it.runIteration(invocationsPerIteration, verifier)
+                check(replayedFailure != null)
+                strategy.runReplayIfPluginEnabled(replayedFailure)
+            }
         } else {
             reporter.logFailedIteration(failure)
         }
     }
 
-    // Tries to minimize the specified failing scenario to make the error easier to understand.
-    // The algorithm is greedy: it tries to remove one actor from the scenario and checks
-    // whether a test with the modified one fails with error as well. If it fails,
-    // then the scenario has been successfully minimized, and the algorithm tries to minimize it again, recursively.
-    // Otherwise, if no actor can be removed so that the generated test fails, the minimization is completed.
-    // Thus, the algorithm works in the linear time of the total number of actors.
-    private fun LincheckFailure.minimize(testCfg: CTestConfiguration): LincheckFailure {
-        reporter.logScenarioMinimization(scenario)
-        var minimizedFailure = this
-        while (true) {
-            minimizedFailure = minimizedFailure.scenario.tryMinimize(testCfg) ?: break
+    private fun ExecutionScenario.run(
+        testCfg: CTestConfiguration,
+        verifier: Verifier,
+    ): LincheckFailure? {
+        val strategy = testCfg.createStrategy(this)
+        return strategy.use {
+            it.runIteration(testCfg.invocationsPerIteration, verifier)
         }
-        return minimizedFailure
     }
 
-    private fun ExecutionScenario.tryMinimize(testCfg: CTestConfiguration): LincheckFailure? {
-        // Reversed indices to avoid conflicts with in-loop removals
-        for (i in threads.indices.reversed()) {
-            for (j in threads[i].indices.reversed()) {
-                tryMinimize(i, j)
-                    ?.run(testCfg, testCfg.createVerifier())
-                    ?.let { return it }
-            }
-        }
-        return null
-    }
-
-    private fun ExecutionScenario.run(testCfg: CTestConfiguration, verifier: Verifier): LincheckFailure? =
-        testCfg.createStrategy(
+    private fun CTestConfiguration.createStrategy(scenario: ExecutionScenario) =
+        createStrategy(
             testClass = testClass,
-            scenario = this,
+            scenario = scenario,
             validationFunction = testStructure.validationFunction,
             stateRepresentationMethod = testStructure.stateRepresentation,
-            verifier = verifier
-        ).run()
+        )
 
     private fun CTestConfiguration.createVerifier() =
         verifierClass.getConstructor(Class::class.java).newInstance(sequentialSpecification)
 
-    private fun CTestConfiguration.createExecutionGenerator(randomProvider: RandomProvider) =
-        generatorClass.getConstructor(
+    private fun CTestConfiguration.createExecutionGenerator(randomProvider: RandomProvider): ExecutionGenerator {
+        if (iterations > 0) {
+            checkAtLeastOneMethodIsMarkedAsOperation(testClass)
+        }
+        val constructor = generatorClass.getConstructor(
             CTestConfiguration::class.java,
             CTestStructure::class.java,
             RandomProvider::class.java
-        ).newInstance(this, testStructure, randomProvider)
+        )
+        return constructor.newInstance(this, testStructure, randomProvider)
+    }
+
+    private val CTestConfiguration.invocationsPerIteration get() = when (this) {
+        is ModelCheckingCTestConfiguration -> this.invocationsPerIteration
+        is StressCTestConfiguration -> this.invocationsPerIteration
+        else -> error("unexpected")
+    }
 
     private fun checkAtLeastOneMethodIsMarkedAsOperation(testClass: Class<*>) {
         check (testClass.methods.any { it.isAnnotationPresent(Operation::class.java) }) { NO_OPERATION_ERROR_MESSAGE }
@@ -191,6 +198,33 @@ class LinChecker (private val testClass: Class<*>, options: Options<*, *>?) {
 
         private const val VERIFIER_REFRESH_CYCLE = 100
     }
+}
+
+// Tries to minimize the specified failing scenario to make the error easier to understand.
+// The algorithm is greedy: it tries to remove one actor from the scenario and checks
+// whether a test with the modified one fails with error as well. If it fails,
+// then the scenario has been successfully minimized, and the algorithm tries to minimize it again, recursively.
+// Otherwise, if no actor can be removed so that the generated test fails, the minimization is completed.
+// Thus, the algorithm works in the linear time of the total number of actors.
+private fun LincheckFailure.minimize(checkScenario: (ExecutionScenario) -> LincheckFailure?): LincheckFailure {
+    var minimizedFailure = this
+    while (true) {
+        minimizedFailure = minimizedFailure.scenario.tryMinimize(checkScenario)
+            ?: break
+    }
+    return minimizedFailure
+}
+
+private fun ExecutionScenario.tryMinimize(checkScenario: (ExecutionScenario) -> LincheckFailure?): LincheckFailure? {
+    // Reversed indices to avoid conflicts with in-loop removals
+    for (i in threads.indices.reversed()) {
+        for (j in threads[i].indices.reversed()) {
+            tryMinimize(i, j)
+                ?.run(checkScenario)
+                ?.let { return it }
+        }
+    }
+    return null
 }
 
 

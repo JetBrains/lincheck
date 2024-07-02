@@ -10,7 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.jetbrains.kotlinx.lincheck.util.*
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.Type.*
@@ -38,17 +40,6 @@ internal class MethodCallTransformer(
             invokeInIgnoredSection {
                 visitMethodInsn(opcode, owner, name, desc, itf)
             }
-            return
-        }
-        if (isAtomicPrimitiveMethod(owner, name)) {
-            invokeIfInTestingCode(
-                original = {
-                    visitMethodInsn(opcode, owner, name, desc, itf)
-                },
-                code = {
-                    processAtomicMethodCall(desc, opcode, owner, name, itf)
-                }
-            )
             return
         }
         invokeIfInTestingCode(
@@ -107,57 +98,6 @@ internal class MethodCallTransformer(
         // STACK: result
     }
 
-    private fun processAtomicMethodCall(desc: String, opcode: Int, owner: String, name: String, itf: Boolean) = adapter.run {
-        // In the cases of Atomic*FieldUpdater, Unsafe and VarHandle we edit
-        // the params list before creating a trace point
-        // to remove redundant parameters as receiver and offset.
-        // To determine how we should process it, we provide the owner instance.
-        val provideOwner = opcode != INVOKESTATIC && (
-            isAtomicClass(owner) ||
-            isAtomicArrayClass(owner) ||
-            owner == "sun/misc/Unsafe" ||
-            owner == "jdk/internal/misc/Unsafe" ||
-            owner == "java/lang/invoke/VarHandle" ||
-            (owner.startsWith("java/util/concurrent/atomic") && owner.endsWith("FieldUpdater"))
-        )
-        // STACK [INVOKEVIRTUAL]: owner, arguments
-        // STACK [INVOKESTATIC] :        arguments
-        val argumentLocals = storeArguments(desc)
-        // STACK [INVOKEVIRTUAL]: owner
-        // STACK [INVOKESTATIC] : <empty>
-        if (provideOwner) {
-            dup()
-        } else {
-            visitInsn(ACONST_NULL)
-        }
-        // STACK [INVOKEVIRTUAL atomic updater]: owner, owner
-        // STACK [INVOKESTATIC  atomic updater]:        null
-        // STACK [INVOKEVIRTUAL atomic]:                owner
-        // STACK [INVOKESTATIC  atomic]:                <empty>
-        push(owner)
-        push(name)
-        loadNewCodeLocationId()
-        // STACK [INVOKEVIRTUAL atomic updater]: owner, owner, className, methodName, codeLocation
-        // STACK [INVOKESTATIC  atomic updater]:        null , className, methodName, codeLocation
-        // STACK [INVOKEVIRTUAL atomic]:                owner, className, methodName, codeLocation
-        // STACK [INVOKESTATIC  atomic]:                       className, methodName, codeLocation
-        pushArray(argumentLocals)
-        // STACK: ..., argumentsArray
-        invokeStatic(Injections::beforeAtomicMethodCall)
-        invokeBeforeEventIfPluginEnabled("atomic method call $methodName")
-        // STACK [INVOKEVIRTUAL]: owner
-        // STACK [INVOKESTATIC] : <empty>
-        loadLocals(argumentLocals)
-        // STACK [INVOKEVIRTUAL]: owner, arguments
-        // STACK [INVOKESTATIC] :        arguments
-        invokeInIgnoredSection {
-            visitMethodInsn(opcode, owner, name, desc, itf)
-        }
-        // STACK: result
-        processMethodCallResult(desc)
-        // STACK: result
-    }
-
     private fun processMethodCallResult(desc: String) = adapter.run {
         // STACK: result?
         val resultType = Type.getReturnType(desc)
@@ -176,39 +116,21 @@ internal class MethodCallTransformer(
         }
     }
 
-    private fun isIgnoredMethod(owner: String, methodName: String) =
-        owner.startsWith("sun/nio/ch/lincheck/") ||
-        owner.startsWith("org/jetbrains/kotlinx/lincheck/") ||
-        owner == "kotlin/jvm/internal/Intrinsics" ||
-        owner == "java/util/Objects" ||
-        owner == "java/lang/String" ||
-        owner == "java/lang/Boolean" ||
-        owner == "java/lang/Long" ||
-        owner == "java/lang/Integer" ||
-        owner == "java/lang/Short" ||
-        owner == "java/lang/Byte" ||
-        owner == "java/lang/Double" ||
-        owner == "java/lang/Float" ||
-        owner == "java/util/Locale" ||
-        owner == "org/slf4j/helpers/Util" ||
-        owner == "java/util/Properties"
-
-    private fun isAtomicClass(className: String) =
-        className == "java/util/concurrent/atomic/AtomicInteger" ||
-        className == "java/util/concurrent/atomic/AtomicLong" ||
-        className == "java/util/concurrent/atomic/AtomicBoolean" ||
-        className == "java/util/concurrent/atomic/AtomicReference"
-
-    private fun isAtomicArrayClass(className: String) =
-        className == "java/util/concurrent/atomic/AtomicIntegerArray" ||
-        className == "java/util/concurrent/atomic/AtomicLongArray" ||
-        className == "java/util/concurrent/atomic/AtomicReferenceArray"
-
-    private fun isAtomicPrimitiveMethod(owner: String, methodName: String) =
-        owner == "sun/misc/Unsafe" ||
-        owner == "jdk/internal/misc/Unsafe" ||
-        owner == "java/lang/invoke/VarHandle" ||
-        owner.startsWith("java/util/concurrent/") && (owner.contains("Atomic")) ||
-        owner.startsWith("kotlinx/atomicfu/") && (owner.contains("Atomic"))
+    private fun isIgnoredMethod(className: String, methodName: String) =
+        className.startsWith("sun/nio/ch/lincheck/") ||
+        className.startsWith("org/jetbrains/kotlinx/lincheck/") ||
+        className == "kotlin/jvm/internal/Intrinsics" ||
+        className == "java/util/Objects" ||
+        className == "java/lang/String" ||
+        className == "java/lang/Boolean" ||
+        className == "java/lang/Long" ||
+        className == "java/lang/Integer" ||
+        className == "java/lang/Short" ||
+        className == "java/lang/Byte" ||
+        className == "java/lang/Double" ||
+        className == "java/lang/Float" ||
+        className == "java/util/Locale" ||
+        className == "org/slf4j/helpers/Util" ||
+        className == "java/util/Properties"
 
 }

@@ -13,7 +13,6 @@ import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.lang.reflect.*
 
 class StressStrategy(
@@ -22,10 +21,9 @@ class StressStrategy(
     scenario: ExecutionScenario,
     validationFunction: Actor?,
     stateRepresentationFunction: Method?,
-    private val verifier: Verifier
 ) : Strategy(scenario) {
-    private val invocations = testCfg.invocationsPerIteration
-    private val runner = ParallelThreadsRunner(
+
+    override val runner : Runner = ParallelThreadsRunner(
         strategy = this,
         testClass = testClass,
         validationFunction = validationFunction,
@@ -34,19 +32,5 @@ class StressStrategy(
         useClocks = UseClocks.RANDOM
     )
 
-    override fun run(): LincheckFailure? {
-        runner.use {
-            // Run invocations
-            for (invocation in 0 until invocations) {
-                when (val ir = runner.run()) {
-                    is CompletedInvocationResult -> {
-                        if (!verifier.verifyResults(scenario, ir.results))
-                            return IncorrectResultsFailure(scenario, ir.results)
-                    }
-                    else -> return ir.toLincheckFailure(scenario)
-                }
-            }
-            return null
-        }
-    }
+    override fun runInvocation(): InvocationResult = runner.run()
 }
