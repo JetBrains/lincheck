@@ -31,7 +31,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
 import java.lang.invoke.VarHandle
 import java.lang.reflect.*
 import java.util.*
-import java.util.concurrent.atomic.*
 import kotlin.collections.set
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 
@@ -897,10 +896,14 @@ abstract class ManagedStrategy(
                 LincheckJavaAgent.ensureClassHierarchyIsTransformed(className.canonicalClassName)
             }
             if (collectTrace) {
-                addBeforeMethodCallTracePoint(owner, codeLocation, className, methodName, params, atomicMethodDescriptor)
+                traceCollector!!.checkActiveLockDetected()
+                addBeforeMethodCallTracePoint(owner, codeLocation, methodId, className, methodName, params, atomicMethodDescriptor)
             }
             if (guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC) {
-                newSwitchPointOnAtomicMethodCall(codeLocation)
+                newSwitchPointOnAtomicMethodCall(codeLocation, params)
+            }
+            if (guarantee == null) {
+                loopDetector.beforeMethodCall(codeLocation, params)
             }
             guarantee
         }
@@ -1265,8 +1268,8 @@ abstract class ManagedStrategy(
         callStackContextPerThread[currentThread].add(CallContext.InstanceCallContext(receiver))
     }
 
-    private fun afterExitMethod() {
-        val currentContext = callStackContextPerThread[currentThread]
+    private fun afterExitMethod(iThread: Int) {
+        val currentContext = callStackContextPerThread[iThread]
         currentContext.removeLast()
         check(currentContext.isNotEmpty()) { "Context cannot be empty" }
     }
@@ -1278,7 +1281,7 @@ abstract class ManagedStrategy(
      * @param tracePoint the corresponding trace point for the invocation
      */
     private fun afterMethodCall(iThread: Int, tracePoint: MethodCallTracePoint) {
-        afterExitMethod()
+        afterExitMethod(iThread)
         val callStackTrace = callStackTrace[iThread]
         if (tracePoint.wasSuspended) {
             // if a method call is suspended, save its identifier to reuse for continuation resuming
@@ -1735,8 +1738,3 @@ private const val INFINITE_TIMEOUT = 1000L * 60 * 60 * 24 * 365
 
 private fun getTimeOutMs(strategy: ManagedStrategy, defaultTimeOutMs: Long): Long =
     if (strategy is ModelCheckingStrategy && strategy.replay) INFINITE_TIMEOUT else defaultTimeOutMs
-
-// This is a "Stub" as we don't need methodId in case of atomic method call as there can't be
-// any other trace points -> no possible recursive spin cycles.
-// So it's just a workaround caused by beforeMethodCall is taking methodId parameter.
-private const val ATOMIC_METHOD_ID = 0

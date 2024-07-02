@@ -40,6 +40,7 @@ internal object CodeLocations {
     fun newCodeLocation(stackTraceElement: StackTraceElement): Int {
         val id = codeLocations.size
         codeLocations.add(stackTraceElement)
+        // Code location 0 stands for the method exit, so we start this sequence from 1.
         return id + 1
     }
 
