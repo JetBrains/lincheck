@@ -44,6 +44,7 @@ fun scenario(block: DSLScenarioBuilder.() -> Unit): ExecutionScenario =
 internal fun actor(f: KFunction<*>, vararg args: Any?, cancelOnSuspension: Boolean = false): Actor {
     val method = f.javaMethod ?: throw IllegalStateException("The function is a constructor or cannot be represented by a Java Method")
     require(method.exceptionTypes.all { Throwable::class.java.isAssignableFrom(it) }) { "Not all declared exceptions are Throwable" }
+    require(f.parameters.size == args.size) { "The count of the supplied parameters for the ${f.name} method is incorrect: ${f.parameters.size} arguments expected, ${args.size} supplied." }
     return Actor(
         method = method,
         arguments = args.toList(),
