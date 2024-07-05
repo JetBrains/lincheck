@@ -5,8 +5,8 @@ import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.junit.jupiter.api.Test
 
-class SPSCMSQueueTest {
-    val q = SPSCMSQueue<Int>()
+class SPSCQueueTest {
+    val q = SPSCQueue<Int>()
 
     @Operation(nonParallelGroup = "producer")
     fun enqueue(element: Int) = q.enqueue(element)
