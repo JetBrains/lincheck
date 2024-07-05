@@ -1,5 +1,4 @@
-# Demo Lincheck project for ECOOP 2024
-Testing Concurrent Algorithms with Lincheck and IntelliJ IDEA
+# Demo Lincheck project for "Testing Concurrent Algorithms with Lincheck and IntelliJ IDEA" paper by Aleksandr Potapov, Maksim Zuev, Evgenii Moiseenko, and Nikita Koval.
 
 ### Setup
 1. Install IntelliJ IDEA (Ultimate Edition)
