@@ -62,7 +62,8 @@ internal class SharedMemoryAccessTransformer(
                             ifClause = {
                                 invokeBeforeEventIfPluginEnabled("read static field")
                             },
-                            elseClause = {})
+                            elseClause = {}
+                        )
                         // STACK: <empty>
                         if (interceptReadAccesses) {
                             invokeStatic(Injections::interceptReadResult)

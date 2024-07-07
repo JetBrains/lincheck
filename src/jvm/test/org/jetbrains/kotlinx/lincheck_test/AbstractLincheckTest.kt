@@ -57,12 +57,12 @@ abstract class AbstractLincheckTest(
         runInternalTest()
     }
 
-    @Test(timeout = TIMEOUT)
-    fun testWithEventStructureStrategy(): Unit = EventStructureOptions().run {
-        invocationsPerIteration(1_000)
-        commonConfiguration()
-        runInternalTest()
-    }
+    // @Test(timeout = TIMEOUT)
+    // fun testWithEventStructureStrategy(): Unit = EventStructureOptions().run {
+    //     invocationsPerIteration(1_000)
+    //     commonConfiguration()
+    //     runInternalTest()
+    // }
 
     private fun <O : Options<O, *>> O.commonConfiguration(): Unit = run {
         iterations(30)

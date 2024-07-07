@@ -13,6 +13,7 @@ import org.jetbrains.kotlinx.lincheck.CTestConfiguration.Companion.DEFAULT_TIMEO
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.EventStructureCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
@@ -83,7 +84,8 @@ internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConf
     val modelCheckingConfigurations: List<CTestConfiguration> =
         testClass.getAnnotationsByType(ModelCheckingCTest::class.java)
             .map { ann: ModelCheckingCTest ->
-                ModelCheckingCTestConfiguration(
+                EventStructureCTestConfiguration(
+                // ModelCheckingCTestConfiguration(
                     testClass = testClass,
                     iterations = ann.iterations,
                     threads = ann.threads,
