@@ -30,7 +30,7 @@ class IncorrectArgumentsCountInCustomScenarioActorTest {
                     parallel { thread { actor(::operation) } }
                 }
         }
-        assertEquals("The count of the supplied parameters for the operation method is incorrect: 1 arguments expected, 0 supplied.", exception.message)
+        assertEquals("Invalid number of the operation operation parameters: 1 expected, 0 provided.", exception.message)
     }
 
     @Test
@@ -41,7 +41,7 @@ class IncorrectArgumentsCountInCustomScenarioActorTest {
                     parallel { thread { actor(::operation, 1, 2) } }
                 }
         }
-        assertEquals("The count of the supplied parameters for the operation method is incorrect: 1 arguments expected, 2 supplied.", exception.message)
+        assertEquals("Invalid number of the operation operation parameters: 1 expected, 2 provided.", exception.message)
     }
 
 }
