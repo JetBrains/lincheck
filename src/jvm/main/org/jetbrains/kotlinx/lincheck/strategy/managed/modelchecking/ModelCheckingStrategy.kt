@@ -427,9 +427,20 @@ internal class ModelCheckingStrategy(
      * This class specifies an interleaving that is re-producible.
      */
     private inner class Interleaving(
-         private val switchPositions: List<Int>,
-         private val threadSwitchChoices: List<Int>,
-         private val initialLastNotInitializedNode: SwitchChoosingNode?
+        /**
+         * Numbers of execution positions [executionPosition] where thread switch must be performed.
+         */
+        private val switchPositions: List<Int>,
+        /**
+         * Numbers of the threads where to switch if the [switchPositions].
+         */
+        private val threadSwitchChoices: List<Int>,
+        /**
+         * The next not initialized switch node. It's stored as a field because sometimes execution may be replayed
+         * due to spin cycles, and we have to drop information about odd executions, that was performed during
+         * unnecessary spin cycle iterations.
+         */
+        private val initialLastNotInitializedNode: SwitchChoosingNode?
     ) {
         private var lastNotInitializedNode: SwitchChoosingNode? = initialLastNotInitializedNode
         private lateinit var interleavingFinishingRandom: Random
