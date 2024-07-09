@@ -36,6 +36,23 @@ class AllowExtraSuspensionCorrectTest : AbstractLincheckTest() {
     }
 }
 
+class AllowExtraSuspensionIncorrectTest : AbstractLincheckTest() {
+    private val mutex = Mutex()
+    private var counter = AtomicInteger()
+
+    @Operation
+    suspend fun inc(): Int = mutex.withLock {
+        counter.getAndIncrement()
+    }
+
+    @Operation
+    suspend fun dec() = counter.getAndDecrement()
+
+    override fun <O : Options<O, *>> O.customize() {
+        sequentialSpecification(CounterSequential::class.java)
+    }
+}
+
 // One of the operations should always succeed without suspension
 class OnlyExtraSuspensionsHaveToBeAtomicTest : AbstractLincheckTest() {
     private val c = atomic(0)
