@@ -24,7 +24,6 @@ class ActorGenerator(
     private val parameterGenerators: List<ParameterGenerator<*>>,
     val useOnce: Boolean,
     cancellableOnSuspension: Boolean,
-    private val allowExtraSuspension: Boolean,
     private val blocking: Boolean,
     private val causesBlocking: Boolean,
     promptCancellation: Boolean
@@ -42,7 +41,6 @@ class ActorGenerator(
             method = method,
             arguments = parameters,
             cancelOnSuspension = cancelOnSuspension,
-            allowExtraSuspension = allowExtraSuspension,
             blocking = blocking,
             causesBlocking = causesBlocking,
             promptCancellation = promptCancellation

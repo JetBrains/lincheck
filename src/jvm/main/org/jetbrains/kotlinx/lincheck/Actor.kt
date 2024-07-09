@@ -24,7 +24,6 @@ data class Actor @JvmOverloads constructor(
     val method: Method,
     val arguments: List<Any?>,
     val cancelOnSuspension: Boolean = false,
-    val allowExtraSuspension: Boolean = false,
     val blocking: Boolean = false,
     val causesBlocking: Boolean = false,
     val promptCancellation: Boolean = false,

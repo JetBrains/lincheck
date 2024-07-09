@@ -26,14 +26,13 @@ import kotlin.coroutines.*
  */
 sealed class Result {
     abstract val wasSuspended: Boolean
-    protected val wasSuspendedPrefix: String get() = (if (wasSuspended) "SUSPENDED + " else "")
 }
 
 /**
  * Type of result used if the actor invocation returns any value.
  */
 data class ValueResult @JvmOverloads constructor(val value: Any?, override val wasSuspended: Boolean = false) : Result() {
-    override fun toString() = wasSuspendedPrefix + "$value"
+    override fun toString() = "$value"
 }
 
 /**
@@ -41,19 +40,19 @@ data class ValueResult @JvmOverloads constructor(val value: Any?, override val w
  */
 object VoidResult : Result() {
     override val wasSuspended get() = false
-    override fun toString() = wasSuspendedPrefix + VOID
+    override fun toString() = VOID
 }
 
 object SuspendedVoidResult : Result() {
     override val wasSuspended get() = true
-    override fun toString() = wasSuspendedPrefix + VOID
+    override fun toString() = VOID
 }
 
 private const val VOID = "void"
 
 object Cancelled : Result() {
     override val wasSuspended get() = true
-    override fun toString() = wasSuspendedPrefix + "CANCELLED"
+    override fun toString() ="CANCELLED"
 }
 
 /**
@@ -72,7 +71,7 @@ class ExceptionResult private constructor(
 ) : Result() {
 
     val tClassCanonicalName: String = tClazz.canonicalName
-    override fun toString() = wasSuspendedPrefix + throwable::class.java.simpleName
+    override fun toString() = throwable::class.java.simpleName
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is ExceptionResult) return false

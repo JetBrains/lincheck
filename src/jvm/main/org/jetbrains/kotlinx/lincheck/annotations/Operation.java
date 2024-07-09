@@ -67,8 +67,11 @@ public @interface Operation {
      * is set to `true`) even if it should not according to the sequential
      * specification. The one may consider this as a relaxation of the
      * dual data structures formalism.
+     *
+     * @deprecated extra suspensions are now allowed for all operations
      */
-    boolean allowExtraSuspension() default false;
+    @Deprecated(forRemoval = true)
+    boolean allowExtraSuspension() default true;
 
     /**
      * Specifies whether this operation is blocking.
