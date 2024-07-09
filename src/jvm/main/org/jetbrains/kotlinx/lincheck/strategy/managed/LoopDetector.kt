@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.primitiveOrIdentityHashCode
+import org.jetbrains.kotlinx.lincheck.strategy.managed.LoopDetector.CodeIdentity.RegularCodeLocationIdentity
 import org.jetbrains.kotlinx.lincheck.transformation.MethodIds
 import org.jetbrains.kotlinx.lincheck.transformation.CodeLocations
 import java.util.ArrayList
@@ -277,7 +278,7 @@ internal class LoopDetector(
             it.onNextExecution()
             return
         }
-        val methodExitLocationIdentity = CodeIdentity.METHOD_EXIT_LOCATION_IDENTITY
+        val methodExitLocationIdentity = RegularCodeLocationIdentity(0)
         currentThreadCodeLocationsHistory += methodExitLocationIdentity
         val lastInterleavingHistoryNode = currentInterleavingHistory.last()
         if (lastInterleavingHistoryNode.cycleOccurred) {
@@ -584,7 +585,7 @@ internal class LoopDetector(
         data class RegularCodeLocationIdentity(val location: Int): CodeIdentity
         data class ValueRepresentationIdentity(val identity: Int) : CodeIdentity
         companion object {
-            val METHOD_EXIT_LOCATION_IDENTITY = RegularCodeLocationIdentity(-1)
+            val METHOD_EXIT_LOCATION_IDENTITY = RegularCodeLocationIdentity(0)
         }
     }
 }
