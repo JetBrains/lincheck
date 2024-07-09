@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.primitiveOrIdentityHashCode
 import org.jetbrains.kotlinx.lincheck.transformation.MethodIds
+import org.jetbrains.kotlinx.lincheck.transformation.CodeLocations
 import java.util.ArrayList
 
 /**
@@ -71,7 +72,7 @@ internal class LoopDetector(
     /**
      * Is used to find a cycle period inside exact thread execution if it has hung
      */
-    private val currentThreadCodeLocationsHistory = mutableListOf<Int>()
+    private val currentThreadCodeLocationsHistory = mutableListOf<CodeIdentity>()
 
     /**
      *  Threads switches and executions history to store sequences lead to loops
@@ -204,7 +205,7 @@ internal class LoopDetector(
         // Increment the number of times the specified code location is visited.
         val count = currentThreadCodeLocationVisitCountMap.getOrDefault(codeLocation, 0) + 1
         currentThreadCodeLocationVisitCountMap[codeLocation] = count
-        currentThreadCodeLocationsHistory += codeLocation
+        currentThreadCodeLocationsHistory += CodeIdentity.RegularCodeLocationIdentity(codeLocation)
         val detectedFirstTime = count > hangingDetectionThreshold
         val detectedEarly = loopTrackingCursor.isInCycle
         // DetectedFirstTime and detectedEarly can both sometimes be true
@@ -258,7 +259,7 @@ internal class LoopDetector(
             it.onNextExecution()
             return
         }
-        currentThreadCodeLocationsHistory += codeLocation
+        currentThreadCodeLocationsHistory += CodeIdentity.RegularCodeLocationIdentity(codeLocation)
         passParameters(params)
         val lastInterleavingHistoryNode = currentInterleavingHistory.last()
         if (lastInterleavingHistoryNode.cycleOccurred) {
@@ -272,20 +273,17 @@ internal class LoopDetector(
      * Called after any method calls.
      */
     fun afterMethodCall() {
-        // Because we want to track the fact of the method exit,
-        // but the sequence of the beforeMethodCall code locations values determines what exactly method we exit.
-        // That's why we can use just 0 as a label of a method exit.
-        val afterMethodCallLocation = 0
         replayModeLoopDetectorHelper?.let {
             it.onNextExecution()
             return
         }
-        currentThreadCodeLocationsHistory += afterMethodCallLocation
+        val methodExitLocationIdentity = CodeIdentity.METHOD_EXIT_LOCATION_IDENTITY
+        currentThreadCodeLocationsHistory += methodExitLocationIdentity
         val lastInterleavingHistoryNode = currentInterleavingHistory.last()
         if (lastInterleavingHistoryNode.cycleOccurred) {
             return /* If we already ran into cycle and haven't switched than no need to track executions */
         }
-        lastInterleavingHistoryNode.addExecution(afterMethodCallLocation)
+        lastInterleavingHistoryNode.addExecution(methodExitLocationIdentity.location)
         loopTrackingCursor.onNextExecutionPoint()
     }
 
@@ -297,7 +295,7 @@ internal class LoopDetector(
     fun passParameters(params: Array<Any?>) {
         if (mode == Mode.DEFAULT) return
         params.forEach { param ->
-            currentThreadCodeLocationsHistory += paramToIntRepresentation(param)
+            currentThreadCodeLocationsHistory += CodeIdentity.ValueRepresentationIdentity(primitiveOrIdentityHashCode(param))
         }
     }
 
@@ -394,7 +392,7 @@ internal class LoopDetector(
         // Increment the number of times the specified code location is visited.
         val count = currentThreadCodeLocationVisitCountMap.getOrDefault(codeLocation, 0) + 1
         currentThreadCodeLocationVisitCountMap[codeLocation] = count
-        currentThreadCodeLocationsHistory += codeLocation
+        currentThreadCodeLocationsHistory += CodeIdentity.RegularCodeLocationIdentity(codeLocation)
     }
 
     /**
@@ -420,7 +418,7 @@ internal class LoopDetector(
      */
     private fun passValue(obj: Any?) {
         if (mode == Mode.DEFAULT) return
-        currentThreadCodeLocationsHistory += paramToIntRepresentation(obj)
+        currentThreadCodeLocationsHistory += CodeIdentity.ValueRepresentationIdentity(primitiveOrIdentityHashCode(obj))
     }
 
     private fun registerCycle() {
@@ -486,8 +484,7 @@ internal class LoopDetector(
      */
     private fun tryFindCycleWithParamsOrWithout(): Pair<CycleInfo?, List<Int>> {
         // Get the code locations history of potential switch points, without parameters and values.
-        // Potential switch point code locations are >= 0.
-        val historyWithoutParams = currentThreadCodeLocationsHistory.filter { it >= 0 }
+        val historyWithoutParams = currentThreadCodeLocationsHistory.mapNotNull { (it as? CodeIdentity.RegularCodeLocationIdentity)?.location }
         // Trying to find a cycle with them.
         val cycleInfo = findMaxPrefixLengthWithNoCycleOnSuffix(currentThreadCodeLocationsHistory)
             // If it's not possible - searching for the cycle in the filtered history list - without params and values.
@@ -507,16 +504,16 @@ internal class LoopDetector(
         var i = 0
         // Count how many potential switch point executions happened before the spin cycle.
         while (operationsBeforeWithParams < cycleInfo.executionsBeforeCycle) {
-            // Potential switch point code locations are >= 0.
-            if (currentThreadCodeLocationsHistory[i] >= 0) {
+            // Potential switch point code locations are only RegularCodeLocationIdentity
+            if (currentThreadCodeLocationsHistory[i] is CodeIdentity.RegularCodeLocationIdentity) {
                 operationsBefore++
             }
             operationsBeforeWithParams++
             i++
         }
         while (cyclePeriodWithParams < cycleInfo.cyclePeriod) {
-            // Potential switch point code locations are >= 0.
-            if (currentThreadCodeLocationsHistory[i] >= 0) {
+            // Potential switch point code locations are only RegularCodeLocationIdentity
+            if (currentThreadCodeLocationsHistory[i] is CodeIdentity.RegularCodeLocationIdentity) {
                 cyclePeriod++
             }
             cyclePeriodWithParams++
@@ -563,26 +560,6 @@ internal class LoopDetector(
     @Suppress("unused")
     internal fun treeToString() = interleavingsLeadToSpinLockSet.treeToString()
 
-    /**
-     * Maps any parameter, receiver or read value to a **negative** integer value.
-     * We map in the **negative** number as we want to be able to filter a code locations history list
-     * and drop all elements that don't represent potential switch points - all parameter, receiver
-     * and value representations produced by this method.
-     */
-    private fun paramToIntRepresentation(value: Any?): Int {
-        val hashCode = primitiveOrIdentityHashCode(value)
-        if (hashCode < 0) return hashCode
-        // When we're trying to find a spin cycle and can't do it with parameters, receivers, etc.,
-        // we try to calculate the spin cycle without them. We need to filter executions story list
-        // of integers fast, so we keep the contract:
-        // 1. All potential switch points code locations, method call code locations are strictly greater than 0.
-        // 2. All method exits have zero (0) code locations.
-        // 3. All parameters, receivers, and value integer representations (the things we have to ignore in case
-        // After this line [hashCode] is positive value or Integer.MIN_VALUE in case of the overflow.
-        // So by `if` below we make sure that this value is strictly negative.
-        return if (hashCode == 0) -1 else -hashCode
-    }
-
     private enum class Mode {
 
         /**
@@ -599,6 +576,17 @@ internal class LoopDetector(
         CYCLE_PERIOD_CALCULATION
     }
 
+    /**
+     * Represents either a regular code location [RegularCodeLocationIdentity], determined by [CodeLocations], or
+     * a value [ValueRepresentationIdentity] (i.e. parameter, receiver written/read value) hashcode.
+     */
+    private sealed interface CodeIdentity {
+        data class RegularCodeLocationIdentity(val location: Int): CodeIdentity
+        data class ValueRepresentationIdentity(val identity: Int) : CodeIdentity
+        companion object {
+            val METHOD_EXIT_LOCATION_IDENTITY = RegularCodeLocationIdentity(-1)
+        }
+    }
 }
 
 internal val LoopDetector.Decision.isLivelockDetected get() = when (this) {
