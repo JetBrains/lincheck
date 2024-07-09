@@ -278,7 +278,7 @@ internal class LoopDetector(
             it.onNextExecution()
             return
         }
-        val methodExitLocationIdentity = RegularCodeLocationIdentity(0)
+        val methodExitLocationIdentity = RegularCodeLocationIdentity(-1)
         currentThreadCodeLocationsHistory += methodExitLocationIdentity
         val lastInterleavingHistoryNode = currentInterleavingHistory.last()
         if (lastInterleavingHistoryNode.cycleOccurred) {
