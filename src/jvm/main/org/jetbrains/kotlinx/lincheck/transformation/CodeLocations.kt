@@ -30,7 +30,6 @@ internal object CodeLocations {
 
     /**
      * Registers a new code location and returns its unique ID.
-     * Code locations are positive values.
      *
      * @param stackTraceElement Stack trace element representing the new code location.
      * @return Unique ID of the new code location.

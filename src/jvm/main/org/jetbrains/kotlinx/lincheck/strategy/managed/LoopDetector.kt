@@ -31,7 +31,9 @@ import java.util.ArrayList
  * When a spin cycle is detected, LoopDetector requests the replay of the execution and starts tracking
  * the parameters, etc., to detect a spin cycle period properly, taking into account all changes during the spin cycle.
  * When we run into a spin cycle again, LoopDetector tries to find the period using [currentThreadCodeLocationsHistory].
- * Parameters etc. are converted to the negative integer representation using hashcode (see [paramToIntRepresentation]).
+ * Visited regular code locations are stored in [currentThreadCodeLocationsHistory] as [RegularCodeLocationIdentity].
+ * Parameters etc. are converted to the integer representation using hashcode and stored in [currentThreadCodeLocationsHistory]
+ * as [ValueRepresentationIdentity].
  * But sometimes it's not possible, for example, in case of using random. In that case, LoopDetector omits parameters,
  * read/written values, etc., and tries to find the period using only switch points code locations.
  * Once it's found (or not) LoopDetector requests one more replay to avoid side effects, made by this spin cycle.
@@ -584,9 +586,6 @@ internal class LoopDetector(
     private sealed interface CodeIdentity {
         data class RegularCodeLocationIdentity(val location: Int): CodeIdentity
         data class ValueRepresentationIdentity(val identity: Int) : CodeIdentity
-        companion object {
-            val METHOD_EXIT_LOCATION_IDENTITY = RegularCodeLocationIdentity(0)
-        }
     }
 }
 
