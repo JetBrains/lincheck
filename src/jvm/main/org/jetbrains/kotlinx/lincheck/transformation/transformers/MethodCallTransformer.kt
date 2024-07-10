@@ -68,7 +68,10 @@ internal class MethodCallTransformer(
         push(name)
         loadNewCodeLocationId()
         // STACK [INVOKEVIRTUAL]: owner, owner, className, methodName, codeLocation
-        // STACK [INVOKESTATIC]:         null , className, methodName, codeLocation
+        // STACK [INVOKESTATIC]:         null, className, methodName, codeLocation
+        adapter.push(MethodIds.getMethodId(owner, name, desc))
+        // STACK [INVOKEVIRTUAL]: owner, owner, className, methodName, codeLocation, methodId
+        // STACK [INVOKESTATIC]:         null, className, methodName, codeLocation, methodId
         pushArray(argumentLocals)
         // STACK: ..., argumentsArray
         invokeStatic(Injections::beforeMethodCall)

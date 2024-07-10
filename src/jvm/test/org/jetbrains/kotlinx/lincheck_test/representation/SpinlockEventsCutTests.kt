@@ -50,7 +50,7 @@ class SpinlockEventsCutShortLengthTest : AbstractSpinLivelockTest() {
 
     private val sharedStateAny = AtomicBoolean(false)
 
-    override val outputFileName: String get() = "spin_lock_events_cut_single_action_cycle.txt"
+    override val outputFileName: String get() = "spin_lock/spin_lock_events_cut_single_action_cycle.txt"
 
     override fun meaninglessActions() {
         sharedStateAny.get()
@@ -65,7 +65,7 @@ class SpinlockEventsCutMiddleLengthTest : AbstractSpinLivelockTest() {
 
     private val sharedStateAny = AtomicBoolean(false)
 
-    override val outputFileName: String get() = "spin_lock_events_cut_two_actions_cycle.txt"
+    override val outputFileName: String get() = "spin_lock/spin_lock_events_cut_two_actions_cycle.txt"
 
     override fun meaninglessActions() {
         val x = sharedStateAny.get()
@@ -81,7 +81,7 @@ class SpinlockEventsCutInfiniteLoopTest : AbstractSpinLivelockTest() {
 
     private val sharedStateAny = AtomicBoolean(false)
 
-    override val outputFileName: String get() = "infinite_spin_loop_events_cut.txt"
+    override val outputFileName: String get() = "spin_lock/infinite_spin_loop_events_cut.txt"
 
     override fun meaninglessActions() {
         while (true) {
@@ -92,12 +92,127 @@ class SpinlockEventsCutInfiniteLoopTest : AbstractSpinLivelockTest() {
 }
 
 /**
+ * Checks that spin-cycle repeated events are cut in case
+ * when one thread runs in the infinite loop while others terminate
+ */
+class SpinlockEventsCutInfiniteLoopWithParametersTest : AbstractSpinLivelockTest() {
+
+    @Volatile
+    private var sharedState: Boolean = false
+
+    override val outputFileName: String get() = "spin_lock/infinite_spin_loop_events_read_write.txt"
+
+    override fun meaninglessActions() {
+        while (true) {
+            val x = sharedState
+            sharedState = !x
+        }
+    }
+}
+
+/**
+ * Checks that spin cycle properly detected, and the spin cycle label is placed correctly
+ * when the spin cycle is twice bigger due to a flipping method receivers.
+ */
+class SpinlockEventsCutInfiniteLoopWithReceiversTest : AbstractSpinLivelockTest() {
+
+    private val first = Receiver(false)
+    private val second = Receiver(false)
+
+    override val outputFileName: String get() = "spin_lock/infinite_spin_loop_events_receivers.txt"
+
+    override fun meaninglessActions() {
+        var pickFirst = false
+        val firstReceiver = first
+        val secondReceiver = second
+        while (true) {
+            val receiver = if (pickFirst) firstReceiver else secondReceiver
+            receiver.value = false
+            pickFirst = !pickFirst
+        }
+    }
+
+    data class Receiver(@Volatile var value: Boolean)
+}
+
+/**
+ * Checks that spin cycle properly detected, and the spin cycle label is placed correctly
+ * when the spin cycle is bigger due to a different arrays usage and cells access.
+ */
+class SpinlockEventsCutInfiniteLoopWithArrayOperationsTest : AbstractSpinLivelockTest() {
+
+    @Volatile
+    private var array: Array<Int> = Array(3) { 0 }
+
+    override val outputFileName: String get() = "spin_lock/infinite_spin_loop_events_arrays.txt"
+
+    override fun meaninglessActions() {
+        var index = 0
+        var valueToWrite = 0
+        while (true) {
+            array[index] = valueToWrite
+
+            index = (index + 1) % array.size
+            if (index == 0) {
+                valueToWrite = (valueToWrite + 1) % 3
+            }
+        }
+    }
+}
+
+/**
+ * Checks that spin cycle properly detected, and the spin cycle label is placed correctly
+ * when the spin cycle is twice bigger due to a flipping arrays receivers usage.
+ */
+class SpinlockEventsCutInfiniteLoopWithArrayReceiversTest : AbstractSpinLivelockTest() {
+
+    private val first = Array(3) { 0 }
+    private val second = Array(3) { 0 }
+
+    override val outputFileName: String get() = "spin_lock/infinite_spin_loop_events_arrays_receivers.txt"
+
+    override fun meaninglessActions() {
+        var pickFirst = false
+        val firstReceiver = first
+        val secondReceiver = second
+        while (true) {
+            val receiver = if (pickFirst) firstReceiver else secondReceiver
+            receiver[0] = 1
+            pickFirst = !pickFirst
+        }
+    }
+}
+
+/**
+ * Checks that spin cycle properly detected, and the spin cycle label is placed correctly
+ * when spin cycle period can't be found using parameters and receivers, so
+ * LinCheck should calculate spin cycle period without params.
+ */
+class SpinlockEventsCutInfiniteNoCycleWithParamsTest : AbstractSpinLivelockTest() {
+
+    private val array = Array(3) { 0 }
+    private val random = java.util.Random(0)
+
+    override val outputFileName: String get() = "spin_lock/infinite_spin_loop_events_no_cycle_params.txt"
+
+    override fun meaninglessActions() {
+        while (true) {
+            val value = random.nextInt()
+            array[0] = value
+            array[0] = value + 1
+            array[0] = value + 2
+        }
+    }
+}
+
+
+/**
  * Checks that spin-cycle repeated events are cut in case when spin cycle contains many actions
  */
 class SpinlockEventsCutLongCycleActionsTest : AbstractSpinLivelockTest() {
 
     private val data = AtomicReferenceArray<Int>(7)
-    override val outputFileName: String get() = "spin_lock_events_cut_long_cycle.txt"
+    override val outputFileName: String get() = "spin_lock/spin_lock_events_cut_long_cycle.txt"
     override fun meaninglessActions() {
         data[0] = 0
         data[1] = 0
@@ -116,7 +231,7 @@ class SpinlockEventsCutLongCycleActionsTest : AbstractSpinLivelockTest() {
 class SpinlockEventsCutWithInnerLoopActionsTest : AbstractSpinLivelockTest() {
 
     private val data = AtomicReferenceArray<Int>(10)
-    override val outputFileName: String get() = "spin_lock_events_cut_inner_loop.txt"
+    override val outputFileName: String get() = "spin_lock/spin_lock_events_cut_inner_loop.txt"
     override fun meaninglessActions() {
         for (i in 0 until data.length()) {
             data[i] = 0
@@ -202,7 +317,7 @@ class SpinlockInIncorrectResultsWithClocksTest {
         .sequentialSpecification(ClocksTestSequential::class.java)
         .minimizeFailedScenario(false)
         .checkImpl(this::class.java)
-        .checkLincheckOutput("spin_lock_in_incorrect_results_failure.txt")
+        .checkLincheckOutput("spin_lock/spin_lock_in_incorrect_results_failure.txt")
 
 
     /**
@@ -284,5 +399,76 @@ class SpinCycleWithSideEffectsTest {
         .invocationsPerIteration(100)
         .iterations(100)
         .check(this::class)
+
+}
+
+/**
+ * Checks proper output in case of spin-lock in one thread.
+ * Should correctly detect spin cycle and place spin cycle label in case
+ * when all potential switch points are nested in non-atomic methods.
+ */
+class SpinLockWithAllEventsWrappedInMethodsTest {
+
+    private val counter = AtomicInteger(0)
+    private val someUselessSharedState = AtomicBoolean(false)
+
+    @Operation
+    fun trigger() {
+        counter.incrementAndGet()
+        counter.decrementAndGet()
+    }
+
+    @Operation
+    fun causesSpinLock() {
+        if (counter.get() != 0) {
+            deadSpinCycle()
+        }
+    }
+
+    private fun deadSpinCycle() {
+        while (true) {
+            val value = getSharedVariable()
+            action(value)
+        }
+    }
+
+    private fun getSharedVariable(): Boolean = someUselessSharedState.get()
+    private fun action(value: Boolean) = someUselessSharedState.compareAndSet(value, !value)
+
+    @Test
+    fun test() = ModelCheckingOptions()
+        .addCustomScenario {
+            parallel {
+                thread { actor(RecursiveSpinLockTest::trigger) }
+                thread { actor(RecursiveSpinLockTest::causesSpinLock) }
+            }
+        }
+        .minimizeFailedScenario(false)
+        .checkImpl(this::class.java)
+        .checkLincheckOutput("spin_lock/spin_lock_nested_events.txt")
+
+}
+
+/**
+ * Checks that spin cycle properly detected, and the spin cycle label is placed correctly
+ * when all the trace points are in the top-level, i.e., right in the actor.
+ */
+class SingleThreadTopLevelSpinLockTest {
+
+    @Volatile
+    private var state: Boolean = false
+
+    @Operation
+    fun spinLock() {
+        while (true) {
+            state = false
+            state = true
+        }
+    }
+
+    @Test
+    fun test() = ModelCheckingOptions()
+        .checkImpl(this::class.java)
+        .checkLincheckOutput("spin_lock/spin_lock_top_level.txt")
 
 }

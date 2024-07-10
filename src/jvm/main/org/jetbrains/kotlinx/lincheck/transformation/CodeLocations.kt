@@ -56,6 +56,19 @@ internal object CodeLocations {
 }
 
 /**
+ * Provides unique IDs for all the methods that are called from the instrumented code.
+ * These IDs are used to detect the first recursive call in case of a recursive spin-cycle.
+ */
+internal object MethodIds {
+
+    private val map: MutableMap<String, Int> = hashMapOf()
+
+    fun getMethodId(owner: String, name: String, desc: String): Int {
+        return map.computeIfAbsent("$owner:$name:$desc") { map.size + 1 }
+    }
+}
+
+/**
  * [FinalFields] object is used to track final fields across different classes.
  * It is used only during byte-code transformation to get information about fields
  * and decide should we track reads of a field or not.

@@ -88,6 +88,19 @@ private fun Class<out Any>.getMethod(name: String, parameterTypes: Array<Class<o
     } ?: throw NoSuchMethodException("${getName()}.$name(${parameterTypes.joinToString(",")})")
 
 /**
+ * @return hashcode of the unboxed value if [value] represents a boxed primitive, otherwise returns [System.identityHashCode]
+ * of the [value].
+ */
+internal fun primitiveOrIdentityHashCode(value: Any?): Int {
+    return if (value.isPrimitiveWrapper) value.hashCode() else System.identityHashCode(value)
+}
+
+private val Any?.isPrimitiveWrapper get() = when (this) {
+    is Boolean, is Int, is Short, is Long, is Double, is Float, is Char, is Byte -> true
+    else -> false
+}
+
+/**
  * Creates [Result] of corresponding type from any given value.
  *
  * Java [Void] and Kotlin [Unit] classes are represented as [VoidResult].

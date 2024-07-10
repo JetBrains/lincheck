@@ -44,7 +44,7 @@ interface EventTracker {
 
     fun afterReflectiveSetter(receiver: Any?, value: Any?)
 
-    fun beforeMethodCall(owner: Any?, className: String, methodName: String, codeLocation: Int, params: Array<Any?>)
+    fun beforeMethodCall(owner: Any?, className: String, methodName: String, codeLocation: Int, methodId: Int, params: Array<Any?>)
     fun onMethodCallReturn(result: Any?)
     fun onMethodCallException(t: Throwable)
 
