@@ -102,10 +102,10 @@ private fun Class<out Any>.getMethod(name: String, parameterTypes: Array<Class<o
  */
 internal fun createLincheckResult(res: Any?, wasSuspended: Boolean = false) = when {
     (res != null && res.javaClass.isAssignableFrom(Void.TYPE)) || res is Unit -> if (wasSuspended) SuspendedVoidResult else VoidResult
-    res != null && res is Throwable -> ExceptionResult.create(res, wasSuspended)
+    res != null && res is Throwable -> ExceptionResult.create(res)
     res === COROUTINE_SUSPENDED -> Suspended
     res is kotlin.Result<Any?> -> res.toLinCheckResult(wasSuspended)
-    else -> ValueResult(res, wasSuspended)
+    else -> ValueResult(res)
 }
 
 private fun kotlin.Result<Any?>.toLinCheckResult(wasSuspended: Boolean) =
@@ -113,10 +113,10 @@ private fun kotlin.Result<Any?>.toLinCheckResult(wasSuspended: Boolean) =
         when (val value = getOrNull()) {
             is Unit -> if (wasSuspended) SuspendedVoidResult else VoidResult
             // Throwable was returned as a successful result
-            is Throwable -> ValueResult(value::class.java, wasSuspended)
-            else -> ValueResult(value, wasSuspended)
+            is Throwable -> ValueResult(value::class.java)
+            else -> ValueResult(value)
         }
-    } else ExceptionResult.create(exceptionOrNull()!!, wasSuspended)
+    } else ExceptionResult.create(exceptionOrNull()!!)
 
 inline fun <R> Throwable.catch(vararg exceptions: Class<*>, block: () -> R): R {
     if (exceptions.any { this::class.java.isAssignableFrom(it) }) {

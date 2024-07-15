@@ -57,7 +57,7 @@ class ResumingFollowUpTest {
         verify(ResumingFollowUpTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {
-                    operation(actor(f), ValueResult("OK", wasSuspended = true))
+                    operation(actor(f), ValueResult("OK"))
                 }
                 thread {
                     operation(actor(b, 1), ValueResult(true))

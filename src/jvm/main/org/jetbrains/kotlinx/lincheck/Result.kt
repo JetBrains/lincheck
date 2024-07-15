@@ -24,34 +24,29 @@ import kotlin.coroutines.*
  * the execution thread was suspended without any chance to be resumed,
  * meaning that all other execution threads completed their execution or were suspended too.
  */
-sealed class Result {
-    abstract val wasSuspended: Boolean
-}
+sealed interface Result
 
 /**
  * Type of result used if the actor invocation returns any value.
  */
-data class ValueResult @JvmOverloads constructor(val value: Any?, override val wasSuspended: Boolean = false) : Result() {
+data class ValueResult @JvmOverloads constructor(val value: Any?) : Result {
     override fun toString() = "$value"
 }
 
 /**
  * Type of result used if the actor invocation does not return value.
  */
-object VoidResult : Result() {
-    override val wasSuspended get() = false
+object VoidResult : Result {
     override fun toString() = VOID
 }
 
-object SuspendedVoidResult : Result() {
-    override val wasSuspended get() = true
+object SuspendedVoidResult : Result {
     override fun toString() = VOID
 }
 
 private const val VOID = "void"
 
-object Cancelled : Result() {
-    override val wasSuspended get() = true
+object Cancelled : Result {
     override fun toString() ="CANCELLED"
 }
 
@@ -63,12 +58,11 @@ class ExceptionResult private constructor(
      * Exception is stored to print it's stackTrace in case of incorrect results
      */
     val throwable: Throwable,
-    override val wasSuspended: Boolean,
     /**
      * Normalized version of the exception class
      */
     tClazz: Class<out Throwable>,
-) : Result() {
+) : Result {
 
     val tClassCanonicalName: String = tClazz.canonicalName
     override fun toString() = throwable::class.java.simpleName
@@ -77,39 +71,35 @@ class ExceptionResult private constructor(
         if (other !is ExceptionResult) return false
 
         if (tClassCanonicalName != other.tClassCanonicalName) return false
-        return wasSuspended == other.wasSuspended
+        return true
     }
 
     override fun hashCode(): Int {
-        var result = tClassCanonicalName.hashCode()
-        result = 31 * result + wasSuspended.hashCode()
-        return result
+        return tClassCanonicalName.hashCode()
     }
 
 
     companion object {
         @Suppress("UNCHECKED_CAST")
         @JvmOverloads
-        fun create(throwable: Throwable, wasSuspended: Boolean = false) =
-            ExceptionResult(throwable, wasSuspended, throwable::class.java)
+        fun create(throwable: Throwable) =
+            ExceptionResult(throwable, throwable::class.java)
     }
 }
 
 // for byte-code generation
 @JvmSynthetic
-fun createExceptionResult(throwable: Throwable) = ExceptionResult.create(throwable, false)
+fun createExceptionResult(throwable: Throwable) = ExceptionResult.create(throwable)
 
 /**
  * Type of result used if the actor invocation suspended the thread and did not get the final result yet
  * though it can be resumed later
  */
-object NoResult : Result() {
-    override val wasSuspended get() = false
+object NoResult : Result {
     override fun toString() = "-"
 }
 
-object Suspended : Result() {
-    override val wasSuspended get() = true
+object Suspended : Result {
     override fun toString() = "S"
 }
 
@@ -117,9 +107,7 @@ object Suspended : Result() {
  * Type of result used for verification.
  * Resuming thread writes result of the suspension point and continuation to be executed in the resumed thread into [contWithSuspensionPointRes].
  */
-internal data class ResumedResult(val contWithSuspensionPointRes: Pair<Continuation<Any?>?, kotlin.Result<Any?>>) : Result() {
-    override val wasSuspended: Boolean get() = true
-
+internal data class ResumedResult(val contWithSuspensionPointRes: Pair<Continuation<Any?>?, kotlin.Result<Any?>>) : Result {
     lateinit var resumedActor: Actor
     lateinit var by: Actor
 }

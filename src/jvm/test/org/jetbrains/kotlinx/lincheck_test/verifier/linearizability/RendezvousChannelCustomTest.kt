@@ -140,7 +140,7 @@ class RendezvousChannelCustomTest : VerifierState() {
                     operation(actor(sendFun, 2), Suspended)
                 }
                 thread {
-                    operation(actor(receiveFun), ValueResult(103, wasSuspended = true))
+                    operation(actor(receiveFun), ValueResult(103))
                     operation(actor(sendFun, 3), SuspendedVoidResult)
                 }
             }
@@ -155,7 +155,7 @@ class RendezvousChannelCustomTest : VerifierState() {
                     operation(actor(receiveFun), Suspended)
                 }
                 thread {
-                    operation(actor(receiveFun), ValueResult(101, wasSuspended = true))
+                    operation(actor(receiveFun), ValueResult(101))
                     operation(actor(receiveFun), ValueResult(102))
                 }
                 thread {
@@ -172,10 +172,10 @@ class RendezvousChannelCustomTest : VerifierState() {
             parallel {
                 thread {
                     operation(actor(sendFun, 2), VoidResult)
-                    operation(actor(receiveFun), ValueResult(105, wasSuspended = true))
+                    operation(actor(receiveFun), ValueResult(105))
                 }
                 thread {
-                    operation(actor(rOrNull), ValueResult(102, wasSuspended = true))
+                    operation(actor(rOrNull), ValueResult(102))
                     operation(actor(sendFun, 5), VoidResult)
                 }
             }
@@ -190,7 +190,7 @@ class RendezvousChannelCustomTest : VerifierState() {
                     operation(actor(receiveFun), Suspended)
                 }
                 thread {
-                    operation(actor(receiveFun), ValueResult(101, wasSuspended = false))
+                    operation(actor(receiveFun), ValueResult(101))
                 }
                 thread {
                     operation(actor(sendFun, 1), SuspendedVoidResult)
@@ -204,13 +204,13 @@ class RendezvousChannelCustomTest : VerifierState() {
         verify(RendezvousChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {
-                    operation(actor(receiveFun), ValueResult(103, wasSuspended = true))
+                    operation(actor(receiveFun), ValueResult(103))
                 }
                 thread {
-                    operation(actor(receiveFun), ValueResult(101, wasSuspended = true))
+                    operation(actor(receiveFun), ValueResult(101))
                 }
                 thread {
-                    operation(actor(receiveFun), ValueResult(104, wasSuspended = true))
+                    operation(actor(receiveFun), ValueResult(104))
                 }
                 thread {
                     operation(actor(receiveFun), ValueResult(102))
@@ -230,7 +230,7 @@ class RendezvousChannelCustomTest : VerifierState() {
         verify(RendezvousChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {
-                    operation(actor(receiveFun), ValueResult(102, wasSuspended = true))
+                    operation(actor(receiveFun), ValueResult(102))
                 }
                 thread {
                     operation(actor(receiveFun), ValueResult(101))
@@ -248,7 +248,7 @@ class RendezvousChannelCustomTest : VerifierState() {
         verify(RendezvousChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {
-                    operation(actor(receiveFun), ValueResult(102, wasSuspended = true))
+                    operation(actor(receiveFun), ValueResult(102))
                     operation(actor(receiveFun), Suspended)
                 }
                 thread {
@@ -256,7 +256,7 @@ class RendezvousChannelCustomTest : VerifierState() {
                     operation(actor(receiveFun), NoResult)
                 }
                 thread {
-                    operation(actor(receiveFun), ValueResult(101, wasSuspended = true))
+                    operation(actor(receiveFun), ValueResult(101))
                     operation(actor(receiveFun), Suspended)
                 }
                 thread {
@@ -272,7 +272,7 @@ class RendezvousChannelCustomTest : VerifierState() {
         verify(RendezvousChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {
-                    operation(actor(receiveFun), ValueResult(102, wasSuspended = true))
+                    operation(actor(receiveFun), ValueResult(102))
                     operation(actor(receiveFun), Suspended)
                 }
                 thread {
@@ -296,7 +296,7 @@ class RendezvousChannelCustomTest : VerifierState() {
         verify(RendezvousChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {
-                    operation(actor(receiveFun), ValueResult(104, wasSuspended = true))
+                    operation(actor(receiveFun), ValueResult(104))
                     operation(actor(receiveFun), Suspended)
                     operation(actor(receiveFun), NoResult)
                 }
@@ -342,7 +342,7 @@ class RendezvousChannelCustomTest : VerifierState() {
                     operation(actor(receiveFun), NoResult)
                 }
                 thread {
-                    operation(actor(receiveFun), ValueResult(104, wasSuspended = true))
+                    operation(actor(receiveFun), ValueResult(104))
                     operation(actor(receiveFun), Suspended)
                     operation(actor(sendFun, 2), NoResult)
                 }
@@ -367,7 +367,7 @@ class RendezvousChannelCustomTest : VerifierState() {
                     operation(actor(sendFun, 4), Suspended)
                 }
                 thread {
-                    operation(actor(receiveFun), ValueResult(102, wasSuspended = true))
+                    operation(actor(receiveFun), ValueResult(102))
                 }
             }
         }, true)
@@ -401,7 +401,7 @@ class RendezvousChannelCustomTest : VerifierState() {
         verify(RendezvousChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {
-                    operation(actor(receiveFun), ValueResult(105, wasSuspended = true))
+                    operation(actor(receiveFun), ValueResult(105))
                     operation(actor(receiveFun), ValueResult(103))
                     operation(actor(receiveFun), Suspended)
                 }
@@ -424,14 +424,14 @@ class RendezvousChannelCustomTest : VerifierState() {
                     operation(actor(receiveFun), NoResult)
                 }
                 thread {
-                    operation(actor(receiveFun), ValueResult(101, wasSuspended = true))
+                    operation(actor(receiveFun), ValueResult(101))
                     operation(actor(receiveFun), ValueResult(104))
                     operation(actor(sendFun, 5), VoidResult)
                 }
                 thread {
                     operation(actor(sendFun, 1), VoidResult)
                     operation(actor(sendFun, 4), SuspendedVoidResult)
-                    operation(actor(receiveFun), ValueResult(105, wasSuspended = true))
+                    operation(actor(receiveFun), ValueResult(105))
                 }
             }
         }, true)
@@ -467,12 +467,12 @@ class RendezvousChannelCustomTest : VerifierState() {
         verify(RendezvousChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {
-                    operation(actor(receiveFun), ValueResult(101, wasSuspended = true))
-                    operation(actor(receiveFun), ValueResult(103, wasSuspended = true))
+                    operation(actor(receiveFun), ValueResult(101))
+                    operation(actor(receiveFun), ValueResult(103))
                 }
                 thread {
-                    operation(actor(receiveFun), ValueResult(102, wasSuspended = true))
-                    operation(actor(receiveFun), ValueResult(104, wasSuspended = true))
+                    operation(actor(receiveFun), ValueResult(102))
+                    operation(actor(receiveFun), ValueResult(104))
                 }
                 thread {
                     operation(actor(sendFun, 1), VoidResult)
@@ -489,7 +489,7 @@ class RendezvousChannelCustomTest : VerifierState() {
         verify(RendezvousChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {
-                    operation(actor(receiveFun), ValueResult(102, wasSuspended = true))
+                    operation(actor(receiveFun), ValueResult(102))
                     operation(actor(sendFun, 5), Suspended)
                     operation(actor(sendFun, 4), NoResult)
                     operation(actor(receiveFun), NoResult)
@@ -497,11 +497,11 @@ class RendezvousChannelCustomTest : VerifierState() {
                 thread {
                     operation(actor(sendFun, 2), VoidResult)
                     operation(actor(sendFun, 5), VoidResult)
-                    operation(actor(receiveFun), ValueResult(103, wasSuspended = true))
+                    operation(actor(receiveFun), ValueResult(103))
                     operation(actor(sendFun, 5), Suspended)
                 }
                 thread {
-                    operation(actor(receiveFun), ValueResult(105, wasSuspended = true))
+                    operation(actor(receiveFun), ValueResult(105))
                     operation(actor(sendFun, 3), VoidResult)
                     operation(actor(sendFun, 3), Suspended)
                     operation(actor(receiveFun), NoResult)
@@ -522,25 +522,25 @@ class RendezvousChannelCustomTest : VerifierState() {
             parallel {
                 thread {
                     operation(actor(sendFun, 4), VoidResult)
-                    operation(actor(receiveFun), ValueResult(102, wasSuspended = true))
+                    operation(actor(receiveFun), ValueResult(102))
                     operation(actor(sendFun, 4), VoidResult)
                     operation(actor(sendFun, 4), SuspendedVoidResult)
                 }
                 thread {
                     operation(actor(sendFun, 2), VoidResult)
                     operation(actor(receiveFun), ValueResult(103))
-                    operation(actor(receiveFun), ValueResult(104, wasSuspended = true))
+                    operation(actor(receiveFun), ValueResult(104))
                     operation(actor(sendFun, 1), VoidResult)
                 }
                 thread {
-                    operation(actor(receiveFun), ValueResult(104, wasSuspended = true))
+                    operation(actor(receiveFun), ValueResult(104))
                     operation(actor(sendFun, 2), VoidResult)
-                    operation(actor(receiveFun), ValueResult(101, wasSuspended = true))
+                    operation(actor(receiveFun), ValueResult(101))
                     operation(actor(sendFun, 2), Suspended)
                 }
                 thread {
                     operation(actor(sendFun, 3), SuspendedVoidResult)
-                    operation(actor(receiveFun), ValueResult(102, wasSuspended = true))
+                    operation(actor(receiveFun), ValueResult(102))
                     operation(actor(receiveFun), ValueResult(104))
                     operation(actor(sendFun, 4), Suspended)
                 }

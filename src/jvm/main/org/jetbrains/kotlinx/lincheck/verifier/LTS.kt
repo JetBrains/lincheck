@@ -122,16 +122,12 @@ class LTS(private val sequentialSpecification: Class<*>) {
         }
 
         private fun Result.isLegalByRequest(transitionInfo: TransitionInfo) =
-            isLegalByFollowUp(transitionInfo) ||
-            this.wasSuspended ||
-            !this.wasSuspended && transitionInfo.result == Suspended
+            isLegalByFollowUp(transitionInfo) || transitionInfo.result == Suspended
 
         private fun Result.isLegalByFollowUp(transitionInfo: TransitionInfo) =
             this == transitionInfo.result ||
-            this is ValueResult && transitionInfo.result is ValueResult && this.value == transitionInfo.result.value &&
-                (!wasSuspended && transitionInfo.result.wasSuspended || wasSuspended) ||
-            this is ExceptionResult && transitionInfo.result is ExceptionResult && this.tClassCanonicalName == transitionInfo.result.tClassCanonicalName &&
-                (!wasSuspended && transitionInfo.result.wasSuspended || wasSuspended) ||
+            this is ValueResult && transitionInfo.result is ValueResult && this.value == transitionInfo.result.value  ||
+            this is ExceptionResult && transitionInfo.result is ExceptionResult && this.tClassCanonicalName == transitionInfo.result.tClassCanonicalName ||
             this == VoidResult && transitionInfo.result == SuspendedVoidResult ||
             this == SuspendedVoidResult && transitionInfo.result == VoidResult
 
