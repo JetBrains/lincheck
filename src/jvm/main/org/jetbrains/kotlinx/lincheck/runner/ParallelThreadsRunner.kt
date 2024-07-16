@@ -117,7 +117,7 @@ internal open class ParallelThreadsRunner(
                     }
                 }
                 // write function's final result
-                suspensionPointResults[iThread][actorId] = createLincheckResult(result, wasSuspended = true)
+                suspensionPointResults[iThread][actorId] = createLincheckResult(result)
             }
         }
 

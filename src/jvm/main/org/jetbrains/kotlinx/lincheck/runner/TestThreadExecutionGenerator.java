@@ -53,9 +53,6 @@ public class TestThreadExecutionGenerator {
     private static final Type VOID_RESULT_TYPE = getType(VoidResult.class);
     private static final String VOID_RESULT_CLASS_NAME = VoidResult.class.getCanonicalName().replace('.', '/');
 
-    private static final Type SUSPENDED_VOID_RESULT_TYPE = getType(SuspendedVoidResult.class);
-    private static final String SUSPENDED_RESULT_CLASS_NAME = SuspendedVoidResult.class.getCanonicalName().replace('.', '/');
-
     private static final String INSTANCE = "INSTANCE";
 
     private static final Type VALUE_RESULT_TYPE = getType(ValueResult.class);
@@ -304,7 +301,7 @@ public class TestThreadExecutionGenerator {
             mv.ifCmp(BOOLEAN_TYPE, GeneratorAdapter.EQ, suspendedVoidResult);
             mv.visitFieldInsn(GETSTATIC, VOID_RESULT_CLASS_NAME, INSTANCE, VOID_RESULT_TYPE.getDescriptor());
             mv.visitLabel(suspendedVoidResult);
-            mv.visitFieldInsn(GETSTATIC, SUSPENDED_RESULT_CLASS_NAME, INSTANCE, SUSPENDED_VOID_RESULT_TYPE.getDescriptor());
+            mv.visitFieldInsn(GETSTATIC, VOID_RESULT_CLASS_NAME, INSTANCE, VOID_RESULT_TYPE.getDescriptor());
         } else {
             mv.pop();
             mv.visitFieldInsn(GETSTATIC, VOID_RESULT_CLASS_NAME, INSTANCE, VOID_RESULT_TYPE.getDescriptor());

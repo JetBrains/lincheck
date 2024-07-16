@@ -40,14 +40,10 @@ object VoidResult : Result {
     override fun toString() = VOID
 }
 
-object SuspendedVoidResult : Result {
-    override fun toString() = VOID
-}
-
 private const val VOID = "void"
 
 object Cancelled : Result {
-    override fun toString() ="CANCELLED"
+    override fun toString() = "CANCELLED"
 }
 
 /**
@@ -59,13 +55,12 @@ class ExceptionResult private constructor(
      */
     val throwable: Throwable,
     /**
-     * Normalized version of the exception class
+     * Exception class canonical name
      */
-    tClazz: Class<out Throwable>,
+    internal val tClassCanonicalName: String
 ) : Result {
 
-    val tClassCanonicalName: String = tClazz.canonicalName
-    override fun toString() = throwable::class.java.simpleName
+    override fun toString(): String = throwable::class.java.simpleName
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is ExceptionResult) return false
@@ -83,7 +78,7 @@ class ExceptionResult private constructor(
         @Suppress("UNCHECKED_CAST")
         @JvmOverloads
         fun create(throwable: Throwable) =
-            ExceptionResult(throwable, throwable::class.java)
+            ExceptionResult(throwable, throwable::class.java.canonicalName)
     }
 }
 
@@ -100,7 +95,7 @@ object NoResult : Result {
 }
 
 object Suspended : Result {
-    override fun toString() = "S"
+    override fun toString() = "Suspended"
 }
 
 /**

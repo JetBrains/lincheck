@@ -127,10 +127,7 @@ class LTS(private val sequentialSpecification: Class<*>) {
         private fun Result.isLegalByFollowUp(transitionInfo: TransitionInfo) =
             this == transitionInfo.result ||
             this is ValueResult && transitionInfo.result is ValueResult && this.value == transitionInfo.result.value  ||
-            this is ExceptionResult && transitionInfo.result is ExceptionResult && this.tClassCanonicalName == transitionInfo.result.tClassCanonicalName ||
-            this == VoidResult && transitionInfo.result == SuspendedVoidResult ||
-            this == SuspendedVoidResult && transitionInfo.result == VoidResult
-
+            this is ExceptionResult && transitionInfo.result is ExceptionResult && this.tClassCanonicalName == transitionInfo.result.tClassCanonicalName
 
         private inline fun <T> copyAndApply(
             action: (
@@ -201,7 +198,7 @@ class LTS(private val sequentialSpecification: Class<*>) {
                         resumedOperations[ticket]!!.contWithSuspensionPointRes.second
                     })
                 resumedOperations.remove(ticket)
-                createLincheckResult(finalRes, wasSuspended = true)
+                createLincheckResult(finalRes)
             }
             CANCELLATION -> {
                 continuationsMap[Operation(this.actor, this.ticket, REQUEST)]!!.cancelByLincheck(promptCancellation = actor.promptCancellation)

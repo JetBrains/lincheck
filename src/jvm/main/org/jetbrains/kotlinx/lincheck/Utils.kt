@@ -100,18 +100,18 @@ private fun Class<out Any>.getMethod(name: String, parameterTypes: Array<Class<o
  * Success values of [kotlin.Result] instances are represented as either [VoidResult] or [ValueResult].
  * Failure values of [kotlin.Result] instances are represented as [ExceptionResult].
  */
-internal fun createLincheckResult(res: Any?, wasSuspended: Boolean = false) = when {
-    (res != null && res.javaClass.isAssignableFrom(Void.TYPE)) || res is Unit -> if (wasSuspended) SuspendedVoidResult else VoidResult
+internal fun createLincheckResult(res: Any?) = when {
+    (res != null && res.javaClass.isAssignableFrom(Void.TYPE)) || res is Unit -> VoidResult
     res != null && res is Throwable -> ExceptionResult.create(res)
     res === COROUTINE_SUSPENDED -> Suspended
-    res is kotlin.Result<Any?> -> res.toLinCheckResult(wasSuspended)
+    res is kotlin.Result<Any?> -> res.toLinCheckResult()
     else -> ValueResult(res)
 }
 
-private fun kotlin.Result<Any?>.toLinCheckResult(wasSuspended: Boolean) =
+private fun kotlin.Result<Any?>.toLinCheckResult() =
     if (isSuccess) {
         when (val value = getOrNull()) {
-            is Unit -> if (wasSuspended) SuspendedVoidResult else VoidResult
+            is Unit -> VoidResult
             // Throwable was returned as a successful result
             is Throwable -> ValueResult(value::class.java)
             else -> ValueResult(value)
