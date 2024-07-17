@@ -288,7 +288,7 @@ private class ExecutionResultsProvider(result: ExecutionResult?, failure: Linche
                 .toMap()
         }
         if (failure is ValidationFailure) {
-            results[0 to firstThreadActorCount(failure)] = ExceptionResult.create(failure.exception, false)
+            results[0 to firstThreadActorCount(failure)] = ExceptionResult.create(failure.exception)
         }
         threadNumberToActorResultMap = results
     }

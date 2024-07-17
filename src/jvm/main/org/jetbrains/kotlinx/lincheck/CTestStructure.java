@@ -126,7 +126,7 @@ public class CTestStructure {
                     gens.add(parameterGenerator);
                 }
                 ActorGenerator actorGenerator = new ActorGenerator(m, gens, opAnn.runOnce(),
-                    opAnn.cancellableOnSuspension(), opAnn.allowExtraSuspension(), opAnn.blocking(), opAnn.causesBlocking(),
+                    opAnn.cancellableOnSuspension(), opAnn.blocking(), opAnn.causesBlocking(),
                     opAnn.promptCancellation());
                 actorGenerators.add(actorGenerator);
                 // Get list of groups and add this operation to specified ones

@@ -21,10 +21,10 @@ import org.jetbrains.kotlinx.lincheck_test.*
 class BufferedChannelTest : AbstractLincheckTest() {
     private val c = Channel<Int>(2)
 
-    @Operation(cancellableOnSuspension = false, allowExtraSuspension = true)
+    @Operation(cancellableOnSuspension = false)
     suspend fun send(@Param(name = "value") value: Int) = c.send(value)
 
-    @Operation(cancellableOnSuspension = false, allowExtraSuspension = true)
+    @Operation(cancellableOnSuspension = false)
     suspend fun receive() = c.receive()
 
     @Operation

@@ -36,7 +36,7 @@ class AllowExtraSuspensionCorrectTest : AbstractLincheckTest() {
     }
 }
 
-class AllowExtraSuspensionIncorrectTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
+class AllowExtraSuspensionIncorrectTest : AbstractLincheckTest() {
     private val mutex = Mutex()
     private var counter = AtomicInteger()
 

@@ -91,9 +91,9 @@ class LTS(private val sequentialSpecification: Class<*>) {
             // Check whether the current actor allows an extra suspension and the the expected result is `Cancelled` while the
             // constructed transition does not suspend -- we can simply consider that this cancelled invocation does not take
             // any effect and remove it from the history.
-            if (actor.allowExtraSuspension && expectedResult == Cancelled && transitionInfo.result != Suspended)
+            if (expectedResult == Cancelled && transitionInfo.result != Suspended)
                 return atomicallySuspendedAndCancelledTransition
-            return if (expectedResult.isLegalByRequest(transitionInfo, actor.allowExtraSuspension)) transitionInfo else null
+            return if (expectedResult.isLegalByRequest(transitionInfo)) transitionInfo else null
         }
 
         private fun nextByFollowUp(actor: Actor, ticket: Int, expectedResult: Result): TransitionInfo? {
@@ -108,7 +108,7 @@ class LTS(private val sequentialSpecification: Class<*>) {
             check(transitionInfo.result != Suspended) {
                 "Execution of the follow-up part of this operation ${actor.method} suspended - this behaviour is not supported"
             }
-            return if (expectedResult.isLegalByFollowUp(transitionInfo, actor.allowExtraSuspension)) transitionInfo else null
+            return if (expectedResult.isLegalByFollowUp(transitionInfo)) transitionInfo else null
         }
 
         fun nextByCancellation(actor: Actor, ticket: Int): TransitionInfo = transitionsByCancellations.computeIfAbsent(ticket) {
@@ -121,20 +121,13 @@ class LTS(private val sequentialSpecification: Class<*>) {
             }
         }
 
-        private fun Result.isLegalByRequest(transitionInfo: TransitionInfo, allowExtraSuspension: Boolean) =
-            isLegalByFollowUp(transitionInfo, allowExtraSuspension) ||
-            this.wasSuspended && (transitionInfo.result == Suspended || allowExtraSuspension) ||
-            !this.wasSuspended && transitionInfo.result == Suspended
+        private fun Result.isLegalByRequest(transitionInfo: TransitionInfo) =
+            isLegalByFollowUp(transitionInfo) || transitionInfo.result == Suspended
 
-        private fun Result.isLegalByFollowUp(transitionInfo: TransitionInfo, allowExtraSuspension: Boolean) =
+        private fun Result.isLegalByFollowUp(transitionInfo: TransitionInfo) =
             this == transitionInfo.result ||
-            this is ValueResult && transitionInfo.result is ValueResult && this.value == transitionInfo.result.value &&
-                (!wasSuspended && transitionInfo.result.wasSuspended || wasSuspended && allowExtraSuspension) ||
-            this is ExceptionResult && transitionInfo.result is ExceptionResult && this.tClassCanonicalName == transitionInfo.result.tClassCanonicalName &&
-                (!wasSuspended && transitionInfo.result.wasSuspended || wasSuspended && allowExtraSuspension) ||
-            this == VoidResult && transitionInfo.result == SuspendedVoidResult ||
-            this == SuspendedVoidResult && transitionInfo.result == VoidResult && allowExtraSuspension
-
+            this is ValueResult && transitionInfo.result is ValueResult && this.value == transitionInfo.result.value  ||
+            this is ExceptionResult && transitionInfo.result is ExceptionResult && this.tClassCanonicalName == transitionInfo.result.tClassCanonicalName
 
         private inline fun <T> copyAndApply(
             action: (
@@ -205,7 +198,7 @@ class LTS(private val sequentialSpecification: Class<*>) {
                         resumedOperations[ticket]!!.contWithSuspensionPointRes.second
                     })
                 resumedOperations.remove(ticket)
-                createLincheckResult(finalRes, wasSuspended = true)
+                createLincheckResult(finalRes)
             }
             CANCELLATION -> {
                 continuationsMap[Operation(this.actor, this.ticket, REQUEST)]!!.cancelByLincheck(promptCancellation = actor.promptCancellation)
