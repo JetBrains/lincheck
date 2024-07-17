@@ -644,6 +644,7 @@ private fun StringBuilder.appendTimeoutDeadlockWithDumpFailure(
     appendExecutionScenarioWithResults(failure, exceptionStackTraces)
     appendLine()
     // Sort threads to produce same output for the same results
+    @Suppress("DEPRECATION") // Thread.id
     for ((t, stackTrace) in failure.threadDump.entries.sortedBy { it.key.id }) {
         val threadNumber = (t as? TestThread)?.name ?: "?"
         appendLine("Thread-$threadNumber:")

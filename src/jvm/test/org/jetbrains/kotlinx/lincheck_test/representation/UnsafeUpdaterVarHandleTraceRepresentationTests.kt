@@ -60,8 +60,8 @@ class SunUnsafeTraceRepresentationTest {
         } catch (ex: Exception) {
             throw RuntimeException(ex)
         }
-        val offset =
-            unsafe.objectFieldOffset(SunUnsafeTraceRepresentationTest::class.java.getDeclaredField("node"))
+        @Suppress("DEPRECATION")
+        val offset = unsafe.objectFieldOffset(SunUnsafeTraceRepresentationTest::class.java.getDeclaredField("node"))
     }
 }
 

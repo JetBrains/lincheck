@@ -186,6 +186,7 @@ class UnsafeLocalObjectsTest {
         } catch (ex: Exception) {
             throw RuntimeException(ex)
         }
+        @Suppress("DEPRECATION")
         val offset = unsafe.objectFieldOffset(UnsafeLocalObjectsTest::class.java.getDeclaredField("node"))
     }
 

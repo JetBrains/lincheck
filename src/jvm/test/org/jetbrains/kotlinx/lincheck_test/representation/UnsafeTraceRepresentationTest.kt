@@ -30,6 +30,7 @@ class UnsafeTraceRepresentationTest : BaseFailingTest("unsafe_representation_tra
 
     private data class IntWrapper(val value: Int)
 
+    @Suppress("DEPRECATION") // Unsafe
     companion object {
         val unsafe = UnsafeHolder.UNSAFE
 

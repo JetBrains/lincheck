@@ -24,6 +24,7 @@ internal object UnsafeHolder {
     }
 }
 
+@Suppress("DEPRECATION")
 internal inline fun <T> readFieldViaUnsafe(obj: Any?, field: Field, getter: Unsafe.(Any?, Long) -> T): T {
     if (Modifier.isStatic(field.modifiers)) {
         val base = UnsafeHolder.UNSAFE.staticFieldBase(field)
