@@ -55,6 +55,4 @@ class KotlinStdlibTransformationTest : AbstractLincheckTest() {
     override fun <O : Options<O, *>> O.customize() {
         iterations(1)
     }
-
-    override fun extractState(): Any = 0 // constant state
 }

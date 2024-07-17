@@ -39,6 +39,4 @@ class LockFreeTaskQueueTest : AbstractLincheckTest() {
         actorsPerThread(3)
         verifier(QuiescentConsistencyVerifier::class.java)
     }
-
-    override fun extractState() = q.map { it } to q.isClosed()
 }

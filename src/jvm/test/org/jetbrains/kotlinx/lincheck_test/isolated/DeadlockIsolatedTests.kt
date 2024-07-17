@@ -42,8 +42,6 @@ class DeadlockOnSynchronizedIsolatedTest : AbstractLincheckTest(TimeoutFailure::
         minimizeFailedScenario(false)
         invocationTimeout(200)
     }
-
-    override fun extractState(): Any = counter
 }
 
 class DeadlockOnSynchronizedWaitIsolatedTest : AbstractLincheckTest(TimeoutFailure::class, ManagedDeadlockFailure::class) {
@@ -61,8 +59,6 @@ class DeadlockOnSynchronizedWaitIsolatedTest : AbstractLincheckTest(TimeoutFailu
         minimizeFailedScenario(false)
         invocationTimeout(200)
     }
-
-    override fun extractState(): Any = 0 // constant
 }
 
 class LiveLockIsolatedTest : AbstractLincheckTest(TimeoutFailure::class, ManagedDeadlockFailure::class) {
@@ -83,8 +79,6 @@ class LiveLockIsolatedTest : AbstractLincheckTest(TimeoutFailure::class, Managed
                 counter++
             }
         }
-
-    override fun extractState(): Any = counter
 
     override fun <O : Options<O, *>> O.customize() {
         minimizeFailedScenario(false)

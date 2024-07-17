@@ -7,8 +7,11 @@
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+@file:OptIn(DelicateCoroutinesApi::class)
+
 package org.jetbrains.kotlinx.lincheck_test.verifier.linearizability
 
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck_test.verifier.*
@@ -16,19 +19,10 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
 import org.junit.*
 import java.util.concurrent.*
+import java.util.concurrent.CancellationException
 
-class BufferedChannelCustomTest : VerifierState() {
+class BufferedChannelCustomTest {
     private val ch = Channel<Int>(3)
-
-    override fun extractState(): Pair<Any, Boolean> {
-        val state = mutableListOf<Any>()
-        while (true) {
-            val x = poll() ?: break // no elements
-            state.add(x)
-            if (x is String) break // closed/cancelled
-        }
-        return state to isClosedForReceive()
-    }
 
     suspend fun send(value: Int) = try {
         ch.send(value)

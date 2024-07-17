@@ -30,6 +30,7 @@ class CancellationHandlingTest : AbstractLincheckTest() {
     fun cancelSuspended() {
         val cont = suspendedContOrCancelled.getAndSet(CANCELLED)
         if (cont === null) return
+        @Suppress("UNCHECKED_CAST")
         (cont as CancellableContinuation<Unit>).cancel()
     }
 

@@ -14,7 +14,6 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTest
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 import sun.misc.Unsafe
 import java.lang.invoke.MethodHandles
@@ -37,7 +36,7 @@ import kotlin.reflect.KFunction
     invocationsPerIteration = Int.MAX_VALUE,
     iterations = 50
 )
-class LocalObjectEliminationTest : VerifierState() {
+class LocalObjectEliminationTest {
     @Operation
     fun operation(): Int {
         val a = A(0, this, IntArray(2))
@@ -59,8 +58,6 @@ class LocalObjectEliminationTest : VerifierState() {
     fun test() {
         LinChecker.check(this::class.java)
     }
-
-    override fun extractState(): Any = 0 // constant state
 
     private data class A(var value: Int, var any: Any, val array: IntArray)
 }

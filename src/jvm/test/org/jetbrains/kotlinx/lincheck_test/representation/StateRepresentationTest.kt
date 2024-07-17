@@ -17,7 +17,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelChecki
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck_test.util.*
-import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 import java.lang.IllegalStateException
 import java.lang.StringBuilder
@@ -44,6 +43,7 @@ open class ModelCheckingStateReportingTest {
         actorsPerThread(1)
         actorsBefore(0)
         actorsAfter(0)
+        @Suppress("DEPRECATION")
         requireStateEquivalenceImplCheck(false)
     }
         .checkImpl(this::class.java)
@@ -54,7 +54,7 @@ open class ModelCheckingStateReportingTest {
  * This test checks for incorrect scenarios states are reported.
  * States should be present after every part of the scenario (init, parallel, post).
  */
-class StressStateReportingTest : VerifierState() {
+class StressStateReportingTest {
     @Volatile
     private var counter = 0
 
@@ -63,8 +63,6 @@ class StressStateReportingTest : VerifierState() {
         ++counter
         return ++counter
     }
-
-    override fun extractState(): Any = counter
 
     @StateRepresentation
     fun stateRepresentation() = counter.toString()
@@ -86,7 +84,7 @@ class StressStateReportingTest : VerifierState() {
 
 class StateRepresentationInParentClassTest : ModelCheckingStateReportingTest()
 
-class TwoStateRepresentationFunctionsTest : VerifierState() {
+class TwoStateRepresentationFunctionsTest {
     @Volatile
     private var counter = 0
 
@@ -97,8 +95,6 @@ class TwoStateRepresentationFunctionsTest : VerifierState() {
     }
 
     private fun inc(): Int = ++counter
-
-    override fun extractState(): Any = counter
 
     @StateRepresentation
     fun stateRepresentation1() = counter.toString()

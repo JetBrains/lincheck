@@ -15,6 +15,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.junit.*
 
+@Suppress("UNUSED_PARAMETER")
 class SingletonCollectionInTraceTest {
     private var x = 0
 

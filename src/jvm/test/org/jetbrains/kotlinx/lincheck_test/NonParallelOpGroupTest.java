@@ -27,16 +27,4 @@ public class NonParallelOpGroupTest extends AbstractLincheckTest {
     public Integer poll() {
         return queue.poll();
     }
-
-    @NotNull
-    @Override
-    protected Object extractState() {
-        List<Integer> elements = new ArrayList<>();
-        while (true) {
-            Integer el = poll();
-            if (el == null) break;
-            elements.add(el);
-        }
-        return elements;
-    }
 }

@@ -14,7 +14,7 @@ import kotlinx.coroutines.channels.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 
 @InternalCoroutinesApi
-open class SequentialIntChannel(private val capacity: Int) : VerifierState() {
+open class SequentialIntChannel(private val capacity: Int) {
     private val senders   = ArrayList<Pair<CancellableContinuation<Unit>, Int>>()
     private val receivers = ArrayList<CancellableContinuation<Any>>()
     private val buffer = ArrayList<Int>()
@@ -92,8 +92,6 @@ open class SequentialIntChannel(private val capacity: Int) : VerifierState() {
         receivers.clear()
         return true
     }
-
-    override fun extractState() = buffer to closed
 }
 
 @InternalCoroutinesApi

@@ -20,9 +20,8 @@ import kotlin.reflect.*
 
 abstract class AbstractLincheckTest(
     private vararg val expectedFailures: KClass<out LincheckFailure>
-) : VerifierState() {
+) {
     open fun <O: Options<O, *>> O.customize() {}
-    override fun extractState(): Any = System.identityHashCode(this)
 
     private fun <O : Options<O, *>> O.runInternalTest() {
         val failure: LincheckFailure? = checkImpl(this@AbstractLincheckTest::class.java)

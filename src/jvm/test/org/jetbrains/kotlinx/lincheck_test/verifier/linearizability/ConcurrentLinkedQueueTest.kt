@@ -29,6 +29,4 @@ class ConcurrentLinkedQueueTest : AbstractLincheckTest() {
 
     @Operation
     fun poll() = queue.poll()
-
-    override fun extractState() = queue.toList()
 }

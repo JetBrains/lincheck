@@ -82,11 +82,9 @@ class OnlyExtraSuspensionsHaveToBeAtomicTest : AbstractLincheckTest() {
     }
 }
 
-class CounterSequential : VerifierState() {
+class CounterSequential {
     private var counter = 0
 
     suspend fun inc(): Int = counter++
     suspend fun dec() = counter--
-
-    override fun extractState() = counter
 }
