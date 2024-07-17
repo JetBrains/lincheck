@@ -32,7 +32,7 @@ internal class MethodCallTransformer(
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         // TODO: do not ignore <init>
-        if (name == "<init>" || isIgnoredMethod(owner, name)) {
+        if (name == "<init>" || isIgnoredMethod(className = owner)) {
             visitMethodInsn(opcode, owner, name, desc, itf)
             return
         }
@@ -116,7 +116,7 @@ internal class MethodCallTransformer(
         }
     }
 
-    private fun isIgnoredMethod(className: String, methodName: String) =
+    private fun isIgnoredMethod(className: String) =
         className.startsWith("sun/nio/ch/lincheck/") ||
         className.startsWith("org/jetbrains/kotlinx/lincheck/") ||
         className == "kotlin/jvm/internal/Intrinsics" ||

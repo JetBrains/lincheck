@@ -29,7 +29,7 @@ sealed interface Result
 /**
  * Type of result used if the actor invocation returns any value.
  */
-data class ValueResult @JvmOverloads constructor(val value: Any?) : Result {
+data class ValueResult(val value: Any?) : Result {
     override fun toString() = "$value"
 }
 
@@ -73,8 +73,6 @@ class ExceptionResult private constructor(
 
 
     companion object {
-        @Suppress("UNCHECKED_CAST")
-        @JvmOverloads
         fun create(throwable: Throwable) = ExceptionResult(throwable)
     }
 }

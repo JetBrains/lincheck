@@ -68,14 +68,15 @@ class LTS(private val sequentialSpecification: Class<*>) {
         /**
          * Computes or gets the existing transition from the current state by the given [actor].
          */
-        fun next(actor: Actor, expectedResult: Result, ticket: Int) = when(ticket) {
+        fun next(actor: Actor, expectedResult: Result, ticket: Int) = when (ticket) {
             NO_TICKET -> nextByRequest(actor, expectedResult)
             else -> nextByFollowUp(actor, ticket, expectedResult)
         }
 
-        private fun createAtomicallySuspendedAndCancelledTransition() =  copyAndApply { instance, suspendedOperations, resumedTicketsWithResults, continuationsMap ->
-            TransitionInfo(this, getResumedOperations(resumedTicketsWithResults).map { it.resumedActorTicket }.toSet(), NO_TICKET, null, Cancelled)
-        }
+        private fun createAtomicallySuspendedAndCancelledTransition() =
+            copyAndApply { _, _, resumedTicketsWithResults, _ ->
+                TransitionInfo(this, getResumedOperations(resumedTicketsWithResults).map { it.resumedActorTicket }.toSet(), NO_TICKET, null, Cancelled)
+            }
 
         private fun nextByRequest(actor: Actor, expectedResult: Result): TransitionInfo? {
             // Compute the transition following the sequential specification.
@@ -126,8 +127,8 @@ class LTS(private val sequentialSpecification: Class<*>) {
 
         private fun Result.isLegalByFollowUp(transitionInfo: TransitionInfo) =
             this == transitionInfo.result ||
-            this is ValueResult && transitionInfo.result is ValueResult && this.value == transitionInfo.result.value  ||
-            this is ExceptionResult && transitionInfo.result is ExceptionResult && this.tClassCanonicalName == transitionInfo.result.tClassCanonicalName
+                    this is ValueResult && transitionInfo.result is ValueResult && this.value == transitionInfo.result.value ||
+                    this is ExceptionResult && transitionInfo.result is ExceptionResult && this.tClassCanonicalName == transitionInfo.result.tClassCanonicalName
 
         private inline fun <T> copyAndApply(
             action: (
@@ -145,7 +146,7 @@ class LTS(private val sequentialSpecification: Class<*>) {
             try {
                 seqToCreate.forEach { it.invoke(instance, suspendedOperations, resumedTicketsWithResults, continuationsMap) }
             } catch (e: Exception) {
-                throw  IllegalStateException(e)
+                throw IllegalStateException(e)
             }
             return action(instance, suspendedOperations, resumedTicketsWithResults, continuationsMap)
         }
@@ -192,14 +193,15 @@ class LTS(private val sequentialSpecification: Class<*>) {
             FOLLOW_UP -> {
                 val (cont, suspensionPointRes) = resumedOperations[ticket]!!.contWithSuspensionPointRes
                 val finalRes = (
-                    if (cont == null) suspensionPointRes // Resumed operation has no follow-up.
-                    else {
-                        cont.resumeWith(suspensionPointRes)
-                        resumedOperations[ticket]!!.contWithSuspensionPointRes.second
-                    })
+                        if (cont == null) suspensionPointRes // Resumed operation has no follow-up.
+                        else {
+                            cont.resumeWith(suspensionPointRes)
+                            resumedOperations[ticket]!!.contWithSuspensionPointRes.second
+                        })
                 resumedOperations.remove(ticket)
                 createLincheckResult(finalRes)
             }
+
             CANCELLATION -> {
                 continuationsMap[Operation(this.actor, this.ticket, REQUEST)]!!.cancelByLincheck(promptCancellation = actor.promptCancellation)
                 val wasSuspended = suspendedOperations.removeIf { it.actor == actor && it.ticket == ticket }
@@ -259,6 +261,7 @@ class LTS(private val sequentialSpecification: Class<*>) {
     }
 
     private fun createInitialStateInstance(): Any {
+        @Suppress("DEPRECATION")
         return sequentialSpecification.newInstance().also {
             // the sequential version of the data structure used for verification
             // may differ from the original parallel version,
@@ -297,24 +300,24 @@ class LTS(private val sequentialSpecification: Class<*>) {
 
     fun generateDotGraph(): String {
         val builder = StringBuilder()
-        builder.appendln("digraph {")
-        builder.appendln("\"${initialState.hashCode()}\" [style=filled, fillcolor=green]")
+        builder.appendLine("digraph {")
+        builder.appendLine("\"${initialState.hashCode()}\" [style=filled, fillcolor=green]")
         builder.appendTransitions(initialState, IdentityHashMap())
-        builder.appendln("}")
+        builder.appendLine("}")
         return builder.toString()
     }
 
     private fun StringBuilder.appendTransitions(state: State, visitedStates: IdentityHashMap<State, Unit>) {
         state.transitionsByRequests.forEach { actor, transition ->
-            appendln("${state.hashCode()} -> ${transition.nextState.hashCode()} [ label=\"<R,$actor:${transition.result},${transition.ticket}>, rf=${transition.rf?.contentToString()}\" ]")
+            appendLine("${state.hashCode()} -> ${transition.nextState.hashCode()} [ label=\"<R,$actor:${transition.result},${transition.ticket}>, rf=${transition.rf?.contentToString()}\" ]")
             if (visitedStates.put(transition.nextState, Unit) === null) appendTransitions(transition.nextState, visitedStates)
         }
         state.transitionsByFollowUps.forEach { ticket, transition ->
-            appendln("${state.hashCode()} -> ${transition.nextState.hashCode()} [ label=\"<F,$ticket:${transition.result},${transition.ticket}>, rf=${transition.rf?.contentToString()}\" ]")
+            appendLine("${state.hashCode()} -> ${transition.nextState.hashCode()} [ label=\"<F,$ticket:${transition.result},${transition.ticket}>, rf=${transition.rf?.contentToString()}\" ]")
             if (visitedStates.put(transition.nextState, Unit) === null) appendTransitions(transition.nextState, visitedStates)
         }
         state.transitionsByCancellations.forEach { ticket, transition ->
-            appendln("${state.hashCode()} -> ${transition.nextState.hashCode()} [ label=\"<C,$ticket:${transition.result},${transition.ticket}>, rf=${transition.rf?.contentToString()}\" ]")
+            appendLine("${state.hashCode()} -> ${transition.nextState.hashCode()} [ label=\"<C,$ticket:${transition.result},${transition.ticket}>, rf=${transition.rf?.contentToString()}\" ]")
             if (visitedStates.put(transition.nextState, Unit) === null) appendTransitions(transition.nextState, visitedStates)
         }
     }
@@ -371,6 +374,7 @@ internal class VerifierInterceptor(
         return Continuation(StoreExceptionHandler() + Job()) { res ->
             // write the result only if the operation has not been cancelled
             if (!res.cancelledByLincheck()) {
+                @Suppress("UNCHECKED_CAST")
                 resumedTicketsWithResults[ticket] = ResumedResult(continuation as Continuation<Any?> to res)
                     .also { it.resumedActor = actor }
             }

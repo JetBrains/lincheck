@@ -33,6 +33,7 @@ abstract class VerifierState {
      */
     protected abstract fun extractState(): Any
 
+    @Suppress("DEPRECATION")
     override fun equals(other: Any?) =
         (other is VerifierState) && (this.state == other.state)
 

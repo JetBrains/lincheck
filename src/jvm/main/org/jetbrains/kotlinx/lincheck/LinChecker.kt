@@ -105,7 +105,6 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
             if (failure == null)
                 return@forEachIndexed
             if (minimizeFailedScenario && !isCustomScenario) {
-                var j = i + 1
                 reporter.logScenarioMinimization(scenario)
                 failure = failure.minimize { minimizedScenario ->
                     minimizedScenario.run(this, createVerifier())

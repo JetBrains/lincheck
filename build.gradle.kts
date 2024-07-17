@@ -1,6 +1,7 @@
 import groovy.util.*
 import kotlinx.team.infra.*
 import org.gradle.jvm.tasks.Jar
+import org.jetbrains.kotlin.gradle.*
 
 // atomicfu
 buildscript {
@@ -23,6 +24,11 @@ repositories {
 }
 
 kotlin {
+    @OptIn(ExperimentalKotlinGradlePluginApi::class)
+    compilerOptions {
+        allWarningsAsErrors = true
+    }
+
     jvm {
         withJava()
 

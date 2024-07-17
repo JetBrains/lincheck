@@ -262,11 +262,11 @@ abstract class ManagedStrategy(
         )
         check(sameResultTypes && sameResults) {
             StringBuilder().apply {
-                appendln("Non-determinism found. Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc).")
-                appendln("== Reporting the first execution without execution trace ==")
-                appendln(result.toLincheckFailure(scenario, null))
-                appendln("== Reporting the second execution ==")
-                appendln(loggedResults.toLincheckFailure(scenario, Trace(traceCollector!!.trace)).toString())
+                appendLine("Non-determinism found. Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc).")
+                appendLine("== Reporting the first execution without execution trace ==")
+                appendLine(result.toLincheckFailure(scenario, null))
+                appendLine("== Reporting the second execution ==")
+                appendLine(loggedResults.toLincheckFailure(scenario, Trace(traceCollector!!.trace)).toString())
             }.toString()
         }
 
