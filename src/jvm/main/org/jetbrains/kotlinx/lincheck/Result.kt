@@ -53,12 +53,10 @@ class ExceptionResult private constructor(
     /**
      * Exception is stored to print it's stackTrace in case of incorrect results
      */
-    val throwable: Throwable,
-    /**
-     * Exception class canonical name
-     */
-    internal val tClassCanonicalName: String
+    val throwable: Throwable
 ) : Result {
+
+    internal val tClassCanonicalName: String get() = throwable::class.java.canonicalName
 
     override fun toString(): String = throwable::class.java.simpleName
     override fun equals(other: Any?): Boolean {
@@ -77,8 +75,7 @@ class ExceptionResult private constructor(
     companion object {
         @Suppress("UNCHECKED_CAST")
         @JvmOverloads
-        fun create(throwable: Throwable) =
-            ExceptionResult(throwable, throwable::class.java.canonicalName)
+        fun create(throwable: Throwable) = ExceptionResult(throwable)
     }
 }
 

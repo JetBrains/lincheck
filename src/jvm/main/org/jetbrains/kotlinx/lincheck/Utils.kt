@@ -112,8 +112,6 @@ private fun kotlin.Result<Any?>.toLinCheckResult() =
     if (isSuccess) {
         when (val value = getOrNull()) {
             is Unit -> VoidResult
-            // Throwable was returned as a successful result
-            is Throwable -> ValueResult(value::class.java)
             else -> ValueResult(value)
         }
     } else ExceptionResult.create(exceptionOrNull()!!)
