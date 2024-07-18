@@ -10,7 +10,6 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import junit.framework.Assert.assertTrue
 import kotlinx.atomicfu.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
@@ -18,6 +17,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.junit.*
+import org.junit.Assert.*
 
 class ForcibleFinishExceptionInTryBlockTest {
     private val threadsIn = atomic(0)

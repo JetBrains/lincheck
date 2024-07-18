@@ -27,6 +27,7 @@ import static org.jetbrains.kotlinx.lincheck.ActorKt.*;
  * Several {@link StressCTest tests} can refer to one structure
  * (i.e. one test class could have several {@link StressCTest} annotations)
  */
+@SuppressWarnings("removal")
 public class CTestStructure {
     public final List<ActorGenerator> actorGenerators;
     public final List<ParameterGenerator<?>> parameterGenerators;

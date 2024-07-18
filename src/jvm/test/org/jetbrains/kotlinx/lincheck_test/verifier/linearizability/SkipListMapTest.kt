@@ -30,6 +30,4 @@ class SkipListMapTest : AbstractLincheckTest() {
 
     @Operation
     fun remove(key: Int) = skiplistMap.remove(key)
-
-    override fun extractState() = skiplistMap.toMap()
 }

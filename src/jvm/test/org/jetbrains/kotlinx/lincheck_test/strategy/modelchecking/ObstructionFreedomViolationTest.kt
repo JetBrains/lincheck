@@ -16,7 +16,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 
-class ObstructionFreedomViolationTest : VerifierState() {
+class ObstructionFreedomViolationTest {
     private var c: Int = 0
 
     @Operation
@@ -33,6 +33,4 @@ class ObstructionFreedomViolationTest : VerifierState() {
         val failure = options.checkImpl(ObstructionFreedomViolationTest::class.java)
         check(failure is ObstructionFreedomViolationFailure)
     }
-
-    override fun extractState(): Any = c
 }

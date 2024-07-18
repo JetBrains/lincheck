@@ -13,7 +13,6 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
 
 import org.junit.*
@@ -23,7 +22,8 @@ import java.lang.StringBuilder
  * This test checks interleaving reporting features related to methods, such as reporting of atomic functions with
  * and their parameters and results compression of calls that are executed without a context switch in the middle.
  */
-class MethodReportingTest : VerifierState() {
+@Suppress("UNUSED_PARAMETER")
+class MethodReportingTest {
     @Volatile
     var a = 0
     var b = 0
@@ -59,8 +59,6 @@ class MethodReportingTest : VerifierState() {
         return IllegalStateException()
     }
 
-    override fun extractState(): Any = a
-
     @Test
     fun test() {
         val options = ModelCheckingOptions()
@@ -84,7 +82,7 @@ class MethodReportingTest : VerifierState() {
 /**
  * This test checks that exceptions that are caught in other methods do not corrupt internal call stack.
  */
-class CaughtExceptionMethodReportingTest : VerifierState() {
+class CaughtExceptionMethodReportingTest {
     @Volatile
     private var counter = 0
     private var useless = 0
@@ -103,8 +101,6 @@ class CaughtExceptionMethodReportingTest : VerifierState() {
         useless++
         TODO()
     }
-
-    override fun extractState(): Any = counter
 
     @Test
     fun test() = ModelCheckingOptions().apply {

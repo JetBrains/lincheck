@@ -18,10 +18,8 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
 import org.junit.*
 
-class RendezvousChannelCustomTest : VerifierState() {
+class RendezvousChannelCustomTest {
     private val ch = Channel<Int>()
-
-    override fun extractState() = ch.isClosedForSend
 
     suspend fun send(value: Int) {
         ch.send(value)

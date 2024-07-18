@@ -31,6 +31,4 @@ class IncorrectOnCancellationTest : AbstractLincheckTest(IncorrectResultsFailure
         }
         return 0
     }
-
-    override fun extractState(): Any = 0 // constant state
 }

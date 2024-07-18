@@ -29,8 +29,6 @@ class ConcurrentHashMapTest : AbstractLincheckTest() {
     @Operation
     fun remove(@Param(name = "key") key: Int) = map.remove(key)
 
-    override fun extractState(): Any = map
-
     override fun <O : Options<O, *>> O.customize() {
         // To obtain rare interleaving with `fullAddCount` method
         if (this is ModelCheckingOptions)

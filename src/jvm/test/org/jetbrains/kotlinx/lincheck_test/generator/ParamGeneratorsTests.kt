@@ -11,7 +11,6 @@
 
 package org.jetbrains.kotlinx.lincheck_test.generator
 
-import junit.framework.Assert.assertTrue
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
@@ -317,12 +316,13 @@ abstract class BaseEnumSetTest {
 }
 
 /**
- * Test checks that if one named parameter generator is associated with many types, then exception will be thrown
+ * Test checks that if one named parameter generator is associated with many types, then an exception is thrown
  */
 @Param(name = "type", gen = EnumGen::class)
 class MultipleTypesAssociatedWithNamedEnumParameterGeneratorTest {
 
     @Operation
+    @Suppress("UNUSED_PARAMETER")
     fun operation(@Param(name = "type") first: FirstEnum, @Param(name = "type") secondEnum: SecondEnum) = Unit
 
     @Test
@@ -347,7 +347,9 @@ class MultipleTypesAssociatedWithNamedEnumParameterGeneratorTest {
 class EnumsWithWhitespacesInNameConfigurationTest {
 
     @Operation
+    @Suppress("UNUSED_PARAMETER")
     fun operation(@Param(name = "type") param: WeirdEnum) = 0
+
     @Test
     fun test() = ModelCheckingOptions().check(this::class)
 

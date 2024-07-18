@@ -16,7 +16,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 
 @StressCTest(iterations = 5, threads = 2, actorsPerThread = 2, verifier = EpsilonVerifier::class)
-class EpsilonVerifierTest : VerifierState() {
+class EpsilonVerifierTest {
     private var i = 0
 
     @Operation
@@ -24,6 +24,4 @@ class EpsilonVerifierTest : VerifierState() {
 
     @Test
     fun test() = LinChecker.check(EpsilonVerifierTest::class.java)
-
-    override fun extractState() = i
 }

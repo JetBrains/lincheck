@@ -107,6 +107,7 @@ abstract class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
      * If the check failed [[IllegalStateException]] was thrown.
      */
     @Deprecated("Does nothing, because equals/hashcode don't always improve performance of verification")
+    @Suppress("UNUSED_PARAMETER")
     fun requireStateEquivalenceImplCheck(require: Boolean): OPT = applyAndCast { }
 
     /**

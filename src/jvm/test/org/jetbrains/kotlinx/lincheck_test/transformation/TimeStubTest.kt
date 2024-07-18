@@ -20,7 +20,7 @@ import org.junit.*
  * replaced with deterministic implementations in the model checking mode.
  */
 @ModelCheckingCTest(iterations = 30, invocationsPerIteration = 1000)
-class TimeStubTest : VerifierState() {
+class TimeStubTest {
     @Volatile
     private var a: Any = Any()
 
@@ -46,7 +46,4 @@ class TimeStubTest : VerifierState() {
     fun test() {
         LinChecker.check(this::class.java)
     }
-
-    override fun extractState(): Any = 0 // constant state
-
 }

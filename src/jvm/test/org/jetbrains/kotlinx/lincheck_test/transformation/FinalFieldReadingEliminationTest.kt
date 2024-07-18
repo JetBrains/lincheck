@@ -12,7 +12,6 @@ package org.jetbrains.kotlinx.lincheck_test.transformation
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTest
-import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.junit.Test
 import java.io.Serializable
 
@@ -24,7 +23,7 @@ import java.io.Serializable
  * the number of invocations is set to [Int.MAX_VALUE].
  */
 @ModelCheckingCTest(actorsBefore = 0, actorsAfter = 0, actorsPerThread = 50, invocationsPerIteration = Int.MAX_VALUE, iterations = 50, minimizeFailedScenario = false)
-class FinalFieldReadingEliminationTest : VerifierState() {
+class FinalFieldReadingEliminationTest {
     val primitiveValue: Int = 32
     val nonPrimitiveValue = ValueHolder(2)
 
@@ -38,8 +37,6 @@ class FinalFieldReadingEliminationTest : VerifierState() {
     fun test() {
         LinChecker.check(this::class.java)
     }
-
-    override fun extractState(): Any = 0 // constant state
 
     data class ValueHolder(val value: Int) : Serializable
 }

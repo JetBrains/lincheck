@@ -367,7 +367,7 @@ internal class ModelCheckingStrategy(
         protected fun chooseUnexploredNode(): Choice {
             if (choices.size == 1) return choices.first()
             // Choose a weighted random child.
-            val total = choices.sumByDouble { it.node.fractionUnexplored }
+            val total = choices.sumOf { it.node.fractionUnexplored }
             val random = generationRandom.nextDouble() * total
             var sumWeight = 0.0
             choices.forEach { choice ->

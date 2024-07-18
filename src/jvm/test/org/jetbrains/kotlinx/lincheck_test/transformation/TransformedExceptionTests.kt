@@ -22,8 +22,6 @@ class ExpectedTransformedExceptionTest : AbstractLincheckTest() {
     override fun <O : Options<O, *>> O.customize() {
         iterations(1)
     }
-
-    override fun extractState(): Any = 0 // constant state
 }
 
 class UnexpectedTransformedExceptionTest : AbstractLincheckTest(UnexpectedExceptionFailure::class) {
@@ -38,8 +36,6 @@ class UnexpectedTransformedExceptionTest : AbstractLincheckTest(UnexpectedExcept
             throw InternalLincheckTestUnexpectedException
         return 0
     }
-
-    override fun extractState(): Any = 0 // constant state
 }
 
 internal class CustomException : Throwable()

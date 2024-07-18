@@ -20,7 +20,7 @@ import org.junit.*
  * This test checks methods with `ignored` guarantee are handled correctly when exception occurs,
  * i.e. ignored section ends.
  */
-class IgnoredGuaranteeOnExceptionTest : VerifierState() {
+class IgnoredGuaranteeOnExceptionTest {
     private var counter = 0
 
     @Operation
@@ -39,6 +39,4 @@ class IgnoredGuaranteeOnExceptionTest : VerifierState() {
         val failure = options.checkImpl(this.javaClass)
         check(failure != null) { "This test should fail" }
     }
-
-    override fun extractState(): Any = counter
 }

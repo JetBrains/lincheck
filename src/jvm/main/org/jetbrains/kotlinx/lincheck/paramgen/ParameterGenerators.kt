@@ -93,7 +93,11 @@ class IntGen(randomProvider: RandomProvider, configuration: String) : ParameterG
     override fun reset() = generator.resetRange()
 }
 
-class BooleanGen(randomProvider: RandomProvider, configuration: String) : ParameterGenerator<Boolean> {
+class BooleanGen(
+    randomProvider: RandomProvider,
+    @Suppress("UNUSED_PARAMETER")
+    configuration: String
+) : ParameterGenerator<Boolean> {
     private val random = randomProvider.createRandom()
 
     override fun generate() = random.nextBoolean()

@@ -22,14 +22,14 @@ import java.util.concurrent.atomic.*
  * Instead of `compareAndSet(object, 1, 2)` representation should be `fieldName.compareAndSet(1, 2)`,
  * where `fieldName` is the parameter in constructor for the AFU.
  */
-class AFUCallRepresentationTest : VerifierState() {
+class AFUCallRepresentationTest {
     @Volatile
     private var counter = 0
     private val afu = AtomicIntegerFieldUpdater.newUpdater(AFUCallRepresentationTest::class.java, "counter")
 
     @Operation
     fun operation(): Int {
-        var value = 0
+        var value: Int
         // first inc
         do {
             value = afu.get(this)
@@ -40,8 +40,6 @@ class AFUCallRepresentationTest : VerifierState() {
         } while (!afu.compareAndSet(this, value, value + 1))
         return value + 1
     }
-
-    override fun extractState(): Any = counter
 
     @Test
     fun test() {

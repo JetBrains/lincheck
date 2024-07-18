@@ -51,11 +51,9 @@ class SuspendResumeScenarios {
 
     @Throws(TestException::class)
     suspend fun suspendAndThrowException(): Int {
-        val res = suspendCoroutineUninterceptedOrReturn<Int> { cont ->
+        suspendCoroutineUninterceptedOrReturn<Int> { _ ->
             throw TestException()
         }
-        if (res < 100) throw TestException()
-        return res + 100
     }
 
     fun resumeWithException() {
@@ -76,7 +74,7 @@ class SuspendResumeScenarios {
  * Test [ParallelThreadsRunner] different suspend-resume scenarios with exceptions.
  */
 class ParallelThreadsRunnerExceptionTest {
-    val testClass = SuspendResumeScenarios::class.java
+    private val testClass = SuspendResumeScenarios::class.java
 
     private val susWithoutException = SuspendResumeScenarios::suspendWithoutException
     private val susThrow = SuspendResumeScenarios::suspendAndThrowException

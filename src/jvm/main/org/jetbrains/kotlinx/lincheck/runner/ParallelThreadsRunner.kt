@@ -148,6 +148,7 @@ internal open class ParallelThreadsRunner(
                                 // already cancelled via prompt cancellation, increment the counter back
                                 completedOrSuspendedThreads.incrementAndGet()
                             }
+                            @Suppress("UNCHECKED_CAST")
                             resWithCont.set(result to continuation as Continuation<Any?>)
                         }
                     }
@@ -182,6 +183,7 @@ internal open class ParallelThreadsRunner(
     private var ensuredTestInstanceIsTransformed = false
 
     private fun createTestInstance() {
+        @Suppress("DEPRECATION")
         testInstance = testClass.newInstance()
         if (strategy is ModelCheckingStrategy) {
             // We pass the test instance to the strategy to initialize the call stack.

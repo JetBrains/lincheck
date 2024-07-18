@@ -30,6 +30,7 @@ class SequentialSpecificationTest : AbstractLincheckTest(IncorrectResultsFailure
     }
 }
 
+@Suppress("DEPRECATION")
 class CorrectCounter: VerifierState() {
     private var c = 0
     fun set(value: Int) { c = value }

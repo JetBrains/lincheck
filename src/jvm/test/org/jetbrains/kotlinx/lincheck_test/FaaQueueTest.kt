@@ -71,8 +71,9 @@ class FAAQueue<T> {
     fun enqueue(x: T) {
         while (true) {
             var tail = tail.get()
-            val tNext = tail.next.get()
-//            if (tNext != null) { // помогаем переместить TODO: bug
+//            Commenting the code below leads to a bug.
+//            val tNext = tail.next.get()
+//            if (tNext != null) {
 //                this.tail.compareAndSet(tail, tNext)
 //                continue
 //            }
@@ -116,6 +117,7 @@ class FAAQueue<T> {
                 if (dequeIndex >= SEGMENT_SIZE) {
                     continue
                 }
+                @Suppress("UNCHECKED_CAST")
                 return head.elements.getAndSet(dequeIndex, DONE) as T? ?: continue;
             }
         }

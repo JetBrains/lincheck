@@ -12,7 +12,6 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.ideaPluginEnabled
-import org.jetbrains.kotlinx.lincheck.verifier.VerifierState
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
 import org.junit.Test
@@ -23,7 +22,7 @@ import org.junit.Test
  * For other classes we use simplified representation to avoid problems with concurrent modification or
  * not completely initialized objects (e.g, with `ConcurrentModificationException`)
  */
-class CapturedValueRepresentationTest : VerifierState() {
+class CapturedValueRepresentationTest {
     private var counter = 0
     private var outerClass1 = OuterDataClass(0)
     private var outerClass2 = OuterDataClass(0)
@@ -55,8 +54,6 @@ class CapturedValueRepresentationTest : VerifierState() {
         // the test object on each beforeEvent call, so it sees additional objects of some type
         // and numeration changes.
         .checkLincheckOutput(if (ideaPluginEnabled()) "captured_value_plugin.txt" else  "captured_value.txt")
-
-    override fun extractState(): Any = counter
 
     private class InnerClass
 }

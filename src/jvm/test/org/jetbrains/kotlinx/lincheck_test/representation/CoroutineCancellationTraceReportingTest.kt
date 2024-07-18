@@ -18,7 +18,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.junit.*
 
-class CoroutineCancellationTraceReportingTest : VerifierState() {
+class CoroutineCancellationTraceReportingTest {
     @Volatile
     var correct = true
 
@@ -34,8 +34,6 @@ class CoroutineCancellationTraceReportingTest : VerifierState() {
 
     @Operation
     fun isAbsurd(): Boolean = correct && !correct
-
-    override fun extractState(): Any = correct
 
     @Test
     fun test() = ModelCheckingOptions().apply {

@@ -20,6 +20,7 @@ import org.junit.Test
 class IncorrectArgumentsCountInCustomScenarioActorTest {
 
     @Operation
+    @Suppress("UNUSED_PARAMETER")
     fun operation(value: Int) = Unit
 
     @Test

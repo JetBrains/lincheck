@@ -28,8 +28,6 @@ class UnexpectedExceptionTest : AbstractLincheckTest(UnexpectedExceptionFailure:
     fun operation2() {
         if (canEnterForbiddenSection) throw InternalLincheckTestUnexpectedException
     }
-
-    override fun extractState(): Any = canEnterForbiddenSection
 }
 
 class CoroutineResumedWithUnexpectedExceptionTest : AbstractLincheckTest(UnexpectedExceptionFailure::class) {
@@ -40,6 +38,4 @@ class CoroutineResumedWithUnexpectedExceptionTest : AbstractLincheckTest(Unexpec
             cont.resumeWithException(InternalLincheckTestUnexpectedException)
         }
     }
-
-    override fun extractState(): Any = 0 // constant state
 }

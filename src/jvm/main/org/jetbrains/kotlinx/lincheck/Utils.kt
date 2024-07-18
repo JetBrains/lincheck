@@ -194,6 +194,7 @@ internal fun collectThreadDump(runner: Runner) = Thread.getAllStackTraces().filt
 
 internal val String.canonicalClassName get() = this.replace('/', '.')
 
+@Suppress("DEPRECATION") // ThreadDeath
 internal fun exceptionCanBeValidExecutionResult(exception: Throwable): Boolean {
     return exception !is ThreadDeath && // used to stop thread in FixedActiveThreadsExecutor by calling thread.stop method
             exception !is InternalLincheckTestUnexpectedException &&
@@ -222,6 +223,7 @@ internal val Class<*>.allDeclaredFieldWithSuperclasses get(): List<Field> {
     return fields
 }
 
+@Suppress("DEPRECATION")
 internal fun findFieldNameByOffset(targetType: Class<*>, offset: Long): String? {
     // Extract the private offset value and find the matching field.
     for (field in targetType.declaredFields) {

@@ -18,13 +18,13 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 
 
-class SuspendTraceReportingTest : VerifierState() {
+class SuspendTraceReportingTest {
     private val lock = Mutex()
     private var canEnterForbiddenBlock: Boolean = false
     private var barStarted: Boolean = false
     private var counter: Int = 0
 
-    @Operation(allowExtraSuspension = true, cancellableOnSuspension = false)
+    @Operation(cancellableOnSuspension = false)
     suspend fun foo() {
         if (barStarted) canEnterForbiddenBlock = true
         lock.withLock {
@@ -33,7 +33,7 @@ class SuspendTraceReportingTest : VerifierState() {
         canEnterForbiddenBlock = false
     }
 
-    @Operation(allowExtraSuspension = true, cancellableOnSuspension = false)
+    @Operation(cancellableOnSuspension = false)
     suspend fun bar(): Int {
         barStarted = true
         lock.withLock {
@@ -42,8 +42,6 @@ class SuspendTraceReportingTest : VerifierState() {
         if (canEnterForbiddenBlock) return -1
         return 0
     }
-
-    override fun extractState(): Any = counter
 
     @Test
     fun test() = ModelCheckingOptions().apply {

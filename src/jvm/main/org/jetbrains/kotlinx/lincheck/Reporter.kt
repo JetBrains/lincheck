@@ -467,7 +467,7 @@ private data class ResultActorData(
             : this(actor, result, (result as? ExceptionResult)?.let { exceptionStackTraces[it.throwable] }, hbClock)
 
     override fun toString(): String {
-        return "${actor}${result.toString().let { ": $it" } ?: ""}" +
+        return "${actor}${result.toString().let { ": $it" }}" +
                 (exceptionInfo?.let { " #${it.number}" } ?: "") +
                 (hbClock?.takeIf { !it.empty }?.let { " $it" } ?: "")
     }
@@ -644,6 +644,7 @@ private fun StringBuilder.appendTimeoutDeadlockWithDumpFailure(
     appendExecutionScenarioWithResults(failure, exceptionStackTraces)
     appendLine()
     // Sort threads to produce same output for the same results
+    @Suppress("DEPRECATION") // Thread.id
     for ((t, stackTrace) in failure.threadDump.entries.sortedBy { it.key.id }) {
         val threadNumber = (t as? TestThread)?.name ?: "?"
         appendLine("Thread-$threadNumber:")
@@ -692,8 +693,8 @@ private fun StringBuilder.appendValidationFailure(
 ): StringBuilder {
     appendLine("= Validation function ${failure.validationFunctionName} has failed =")
     appendExecutionScenarioWithResults(failure, exceptionStackTraces)
-    appendln()
-    appendln()
+    appendLine()
+    appendLine()
     appendException(failure.exception)
     return this
 }

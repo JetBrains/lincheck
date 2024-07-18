@@ -10,9 +10,6 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import kotlinx.atomicfu.AtomicArray
-import kotlinx.atomicfu.atomic
-import kotlinx.atomicfu.atomicArrayOfNulls
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
@@ -92,8 +89,8 @@ class RecursiveSpinWithParamsLockTest {
     private fun deadSpinCycleRecursive(value: Boolean) {
         flag.set(value)
         repeat(4) {
-            val value = getSharedVariable()
-            someUselessSharedState.compareAndSet(value, !value)
+            val sharedStateValue = getSharedVariable()
+            someUselessSharedState.compareAndSet(sharedStateValue, !sharedStateValue)
         }
         deadSpinCycleRecursive(!value)
     }

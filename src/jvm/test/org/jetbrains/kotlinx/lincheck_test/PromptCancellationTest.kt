@@ -89,6 +89,7 @@ class IncorrectPromptCancellationSequential {
         }
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun resumeOp(mode: Int): Int {
         val cont = cont ?: return -1
         cont.resume(Unit)

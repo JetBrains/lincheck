@@ -27,7 +27,7 @@ import org.junit.*
  * by timeout since the number of invocations is set to Int.MAX_VALUE.
  */
 @ModelCheckingCTest(actorsBefore = 0, actorsAfter = 0, actorsPerThread = 100, invocationsPerIteration = Int.MAX_VALUE, iterations = 50)
-class IgnoredGuaranteeTest : VerifierState() {
+class IgnoredGuaranteeTest {
     var value: Int = 0
 
     @Operation
@@ -48,6 +48,4 @@ class IgnoredGuaranteeTest : VerifierState() {
                 .addGuarantee(forClasses(this::class.java.name).methods("inc").ignore())
         options.check(this::class.java)
     }
-
-    override fun extractState(): Any = value
 }

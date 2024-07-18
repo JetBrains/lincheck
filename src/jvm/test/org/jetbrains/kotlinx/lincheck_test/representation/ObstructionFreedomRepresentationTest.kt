@@ -25,7 +25,7 @@ import org.junit.*
  * This test checks that the last event in the case of an active lock
  * that causes obstruction freedom violation is reported.
  */
-class ObstructionFreedomActiveLockRepresentationTest : VerifierState() {
+class ObstructionFreedomActiveLockRepresentationTest {
     private val counter = AtomicInteger(0)
 
     @Operation
@@ -45,8 +45,6 @@ class ObstructionFreedomActiveLockRepresentationTest : VerifierState() {
         }
     }
 
-    override fun extractState(): Any = counter.get()
-
     @Test
     fun test() = ModelCheckingOptions()
         .actorsPerThread(1)
@@ -63,13 +61,11 @@ class ObstructionFreedomActiveLockRepresentationTest : VerifierState() {
  * This test checks that the last MONITORENTER event
  * that causes obstruction freedom violation is reported.
  */
-class ObstructionFreedomSynchronizedRepresentationTest : VerifierState() {
+class ObstructionFreedomSynchronizedRepresentationTest {
     private var counter = 0
 
     @Operation
     fun operation(): Int = synchronized(this) { counter++ }
-
-    override fun extractState(): Any = counter
 
     @Test
     fun test() = ModelCheckingOptions().apply {

@@ -10,27 +10,19 @@
 
 package org.jetbrains.kotlinx.lincheck_test;
 
-import org.jetbrains.annotations.*;
 import org.jetbrains.kotlinx.lincheck.*;
-import org.jetbrains.kotlinx.lincheck.annotations.OpGroupConfig;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.annotations.Param;
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
-import org.jetbrains.kotlinx.lincheck.verifier.VerifierState;
 import org.junit.Test;
 
-import java.util.ArrayList;
-import java.util.List;
-
-@SuppressWarnings("removal")
-@OpGroupConfig(name = "push_remove", nonParallel = true)
 @StressCTest(iterations = 5, actorsBefore = 0, actorsPerThread = 2, actorsAfter = 0)
-public class ResultAsParameterTest extends VerifierState {
+public class ResultAsParameterTest {
     private final Stack stack = new Stack();
     private Node lastPushNode = null;
 
-    @Operation(runOnce = true, group = "push_remove")
+    @Operation(runOnce = true, nonParallelGroup = "push_remove")
     public synchronized void push(@Param(gen = IntGen.class, conf = "1:1") int x) {
         lastPushNode = stack.push(x);
     }
@@ -40,7 +32,7 @@ public class ResultAsParameterTest extends VerifierState {
         return stack.pop();
     }
 
-    @Operation(runOnce = true, group = "push_remove")
+    @Operation(runOnce = true, nonParallelGroup = "push_remove")
     public synchronized boolean remove() {
         Node node = lastPushNode; // read under potential race, unsafe
         if (node == null)
@@ -51,15 +43,6 @@ public class ResultAsParameterTest extends VerifierState {
     @Test
     public void test() {
         LinChecker.check(ResultAsParameterTest.class);
-    }
-
-    @NotNull
-    @Override
-    protected Object extractState() {
-        List<Integer> elements = new ArrayList<>();
-        int e;
-        while ((e = stack.pop()) != -1) elements.add(e);
-        return elements;
     }
 
     private static class Stack {
