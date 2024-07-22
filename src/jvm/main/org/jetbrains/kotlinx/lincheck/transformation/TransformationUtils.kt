@@ -231,7 +231,9 @@ internal fun GeneratorAdapter.invokeBeforeEvent(debugMessage: String, setMethodE
             push(debugMessage)
             invokeStatic(Injections::beforeEvent)
         },
-        elseClause = {}
+        elseClause = {
+            invokeStatic(Injections::enumerateObjectsIfNeeded)
+        }
     )
 }
 

@@ -1329,6 +1329,15 @@ abstract class ManagedStrategy(
     }
 
     /**
+     * Enumerates recursevely all test object of trace collection is enabled.
+     * @see Injections.enumerateObjectsIfNeeded
+     */
+    override fun enumerateObjectsIfNeeded() {
+        if (!collectTrace) return
+        enumerateObjects(runner.testInstance)
+    }
+
+    /**
      * Set eventId of the [tracePoint] right after it is added to the trace.
      */
     private fun setBeforeEventId(tracePoint: TracePoint) {

@@ -57,4 +57,5 @@ interface EventTracker {
     fun beforeEvent(eventId: Int, type: String)
     fun getEventId(): Int
     fun setLastMethodCallEventId()
+    fun enumerateObjectsIfNeeded()
 }

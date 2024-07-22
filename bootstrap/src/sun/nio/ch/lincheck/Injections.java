@@ -341,4 +341,15 @@ public class Injections {
     public static void setLastMethodCallEventId() {
         getEventTracker().setLastMethodCallEventId();
     }
+
+    /**
+     * The Plugin traverses the test object when enabled before the trace is fully reported via `beforeEvent`
+     * method calls before each trace point. Thus, the Lincheck might see some object fields before it's appeared in the trace.
+     * This may lead to object numeration mismatch between the output with the plugin enabled and without.
+     * To avoid that, we traverse test object and enumerate all nested object recursively each time we collect a
+     * trace, so the numeration stays the same.
+     */
+    public static void enumerateObjectsIfNeeded() {
+        getEventTracker().enumerateObjectsIfNeeded();
+    }
 }
