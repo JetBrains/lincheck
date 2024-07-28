@@ -14,6 +14,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
+import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner.Completion.*
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
@@ -251,15 +252,24 @@ internal open class ParallelThreadsRunner(
         // Coroutine will be resumed. Call method so that strategy can learn it.
         afterCoroutineResumed(threadId)
         // Check whether the result of the suspension point with the continuation has been stored
-        // by the resuming thread and invoke the follow-up part in this case.
-        if (completion.resWithCont.get() !== null) {
-            // Suspended thread got the result of the suspension point and continuation to resume.
-            val resumedValue = completion.resWithCont.get().first
-            // It is important to run the coroutine resumption part outside the ignored section
-            // to track the events inside resumption.
+        // by the resuming thread, and invoke the follow-up part in this case
+        val suspendResultToContinuation = completion.resWithCont.get()
+        if (suspendResultToContinuation !== null) {
+            // Suspended thread got result of the suspension point and continuation to resume
+            val (resumedValue, continuation) = suspendResultToContinuation
+            // Erase the current result
+            completion.resWithCont.set(null)
+            // We must exit the ignored section to keep tracking execution after the resumption.
             runOutsideIgnoredSection {
-                completion.resWithCont.get().second.resumeWith(resumedValue)
+                // Resume the execution of the coroutine.
+                continuation.resumeWith(resumedValue)
             }
+        }
+        // If we've suspended again - then clean the completion status and rerun all the logic of this method to
+        // wait for resumption.
+        if (suspensionPointResults[threadId][actorId] == NoResult) {
+            completionStatuses[threadId].set(actorId, null)
+            return waitAndInvokeFollowUp(thread, actorId)
         }
         return suspensionPointResults[threadId][actorId]
     }
