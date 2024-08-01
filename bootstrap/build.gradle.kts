@@ -1,8 +1,5 @@
-import org.jetbrains.kotlin.gradle.tasks.*
-
 plugins {
     java
-    kotlin("jvm")
 }
 
 repositories {
@@ -11,10 +8,6 @@ repositories {
 
 sourceSets.main {
     java.srcDirs("src")
-}
-
-tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "11"
 }
 
 tasks.jar {

@@ -66,11 +66,9 @@ internal class FixedActiveThreadsExecutor(private val testName: String, private 
      * Threads used in this runner.
      */
     val threads = Array(nThreads) { iThread ->
-        TestThread(
-            testName = testName,
-            threadId = iThread,
-            block = testThreadRunnable(iThread)
-        ).also { it.start() }
+        TestThread(testName, iThread, testThreadRunnable(iThread)).also {
+            it.start()
+        }
     }
 
     /**
