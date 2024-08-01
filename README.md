@@ -34,7 +34,7 @@ repositories {
 
 dependencies {
    // Lincheck dependency
-   testImplementation("org.jetbrains.kotlinx:lincheck:2.32")
+   testImplementation("org.jetbrains.kotlinx:lincheck:2.33")
 }
 ```
 
