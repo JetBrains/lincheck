@@ -1,10 +1,10 @@
 = Invalid execution results =
-| ------------------------------ |
-|    Thread 1     |   Thread 2   |
-| ------------------------------ |
-| a(): void       | c(): void    |
-| b(): void [1,0] | d(): 0 [2,1] |
-| ------------------------------ |
+| ------------------------ |
+| Thread 1  |   Thread 2   |
+| ------------------------ |
+| a(): void | c(): void    |
+| b(): void | d(): 0 [2,1] |
+| ------------------------ |
 
 ---
 Values in "[..]" brackets indicate the number of completed operations

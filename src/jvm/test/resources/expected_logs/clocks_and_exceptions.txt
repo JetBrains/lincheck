@@ -1,22 +1,22 @@
 = Invalid execution results =
-| ----------------------------------------------------------------------- |
-|         Thread 1         |                   Thread 2                   |
-| ----------------------------------------------------------------------- |
-| operation2(): void       |                                              |
-| operation1(): void       |                                              |
-| operation1(): void       |                                              |
-| operation2(): void       |                                              |
-| operation2(): void       |                                              |
-| ----------------------------------------------------------------------- |
-| operation1(): void       | operation2(): IllegalStateException #1 [1,0] |
-| operation1(): void [1,0] | operation1(): void [1,1]                     |
-| ----------------------------------------------------------------------- |
-| operation1(): void       |                                              |
-| operation1(): void       |                                              |
-| operation1(): void       |                                              |
-| operation2(): void       |                                              |
-| operation1(): void       |                                              |
-| ----------------------------------------------------------------------- |
+| ----------------------------------------------------------------- |
+|      Thread 1      |                   Thread 2                   |
+| ----------------------------------------------------------------- |
+| operation2(): void |                                              |
+| operation1(): void |                                              |
+| operation1(): void |                                              |
+| operation2(): void |                                              |
+| operation2(): void |                                              |
+| ----------------------------------------------------------------- |
+| operation1(): void | operation2(): IllegalStateException #1 [1,0] |
+| operation1(): void | operation1(): void [1,1]                     |
+| ----------------------------------------------------------------- |
+| operation1(): void |                                              |
+| operation1(): void |                                              |
+| operation1(): void |                                              |
+| operation2(): void |                                              |
+| operation1(): void |                                              |
+| ----------------------------------------------------------------- |
 
 ---
 All operations above the horizontal line | ----- | happen before those below the line
