@@ -215,12 +215,70 @@ private fun LincheckFailure.minimize(checkScenario: (ExecutionScenario) -> Linch
 }
 
 private fun ExecutionScenario.tryMinimize(checkScenario: (ExecutionScenario) -> LincheckFailure?): LincheckFailure? {
-    // Reversed indices to avoid conflicts with in-loop removals
-    for (i in threads.indices.reversed()) {
-        for (j in threads[i].indices.reversed()) {
-            tryMinimize(i, j)
-                ?.run(checkScenario)
-                ?.let { return it }
+    // Try to remove only one operation.
+    for (threadId in threads.indices.reversed()) {
+        for (actorId in threads[threadId].indices.reversed()) {
+            tryMinimize(threadId, actorId)?.run(checkScenario)?.let { return it }
+        }
+    }
+    // Try to remove two operations. For some data structure, such as a queue,
+    // you need to remove pairwise operations, such as enqueue(e) and dequeue(),
+    // to minimize the scenario and keep the error.
+    for (threadId1 in threads.indices.reversed()) {
+        for (actorId1 in threads[threadId1].indices.reversed()) {
+            // Try to remove two operations at once.
+            val minimizedScenario = tryMinimize(threadId1, actorId1) ?: continue
+            for (threadId2 in minimizedScenario.threads.indices.reversed()) {
+                for (actorId2 in minimizedScenario.threads[threadId2].indices.reversed()) {
+                    minimizedScenario.tryMinimize(threadId2, actorId2)?.run(checkScenario)?.let { return it }
+                }
+            }
+        }
+    }
+    // Try to move one of the first operations to the initial (pre-parallel) part.
+    parallelExecution.forEachIndexed {  threadId: Int, actors: List<Actor> ->
+        if (actors.isNotEmpty()) {
+            val newInitExecution = initExecution + actors.first()
+            val newParallelExecution = parallelExecution.mapIndexed { t: Int, it: List<Actor> ->
+                if (t == threadId) {
+                    it.drop(1)
+                } else {
+                    ArrayList(it)
+                }
+            }
+            val newPostExecution = ArrayList(postExecution)
+            val optimizedScenario = ExecutionScenario(
+                initExecution = newInitExecution,
+                parallelExecution = newParallelExecution,
+                postExecution = newPostExecution,
+                validationFunction = validationFunction
+            )
+            if (optimizedScenario.isValid) {
+                optimizedScenario.run(checkScenario)?.let { return it }
+            }
+        }
+    }
+    // Try to move one of the last operations to the post (post-parallel) part.
+    parallelExecution.forEachIndexed {  threadId: Int, actors: List<Actor> ->
+        if (actors.isNotEmpty()) {
+            val newInitExecution = ArrayList(initExecution)
+            val newParallelExecution = parallelExecution.mapIndexed { t: Int, it: List<Actor> ->
+                if (t == threadId) {
+                    it.dropLast(1)
+                } else {
+                    ArrayList(it)
+                }
+            }
+            val newPostExecution = listOf(actors.last()) + postExecution
+            val optimizedScenario = ExecutionScenario(
+                initExecution = newInitExecution,
+                parallelExecution = newParallelExecution,
+                postExecution = newPostExecution,
+                validationFunction = validationFunction
+            )
+            if (optimizedScenario.isValid) {
+                optimizedScenario.run(checkScenario)?.let { return it }
+            }
         }
     }
     return null

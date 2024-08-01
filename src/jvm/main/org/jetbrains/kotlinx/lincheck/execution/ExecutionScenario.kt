@@ -104,8 +104,7 @@ val ExecutionScenario.hasPostPartAndSuspendableActors
  *   - if it contains suspendable actors, then post part should be empty.
  */
 val ExecutionScenario.isValid: Boolean
-    get() = !isParallelPartEmpty &&
-            (!hasSuspendableActors || (!hasSuspendableActorsInInitPart && !hasPostPartAndSuspendableActors))
+    get() = !isParallelPartEmpty && !hasSuspendableActorsInInitPart && !hasPostPartAndSuspendableActors
 
 /**
  * Validates the execution scenario.
