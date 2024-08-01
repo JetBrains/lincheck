@@ -224,10 +224,10 @@ private fun ExecutionScenario.tryMinimize(checkScenario: (ExecutionScenario) -> 
     // Try to remove two operations. For some data structure, such as a queue,
     // you need to remove pairwise operations, such as enqueue(e) and dequeue(),
     // to minimize the scenario and keep the error.
-    for (threadId in threads.indices.reversed()) {
-        for (actorId in threads[threadId].indices.reversed()) {
+    for (threadId1 in threads.indices.reversed()) {
+        for (actorId1 in threads[threadId1].indices.reversed()) {
             // Try to remove two operations at once.
-            val minimizedScenario = tryMinimize(threadId, actorId) ?: continue
+            val minimizedScenario = tryMinimize(threadId1, actorId1) ?: continue
             for (threadId2 in minimizedScenario.threads.indices.reversed()) {
                 for (actorId2 in minimizedScenario.threads[threadId2].indices.reversed()) {
                     minimizedScenario.tryMinimize(threadId2, actorId2)?.run(checkScenario)?.let { return it }
@@ -269,7 +269,7 @@ private fun ExecutionScenario.tryMinimize(checkScenario: (ExecutionScenario) -> 
                     ArrayList(it)
                 }
             }
-            val newPostExecution = postExecution + actors.last()
+            val newPostExecution = listOf(actors.last()) + postExecution
             val optimizedScenario = ExecutionScenario(
                 initExecution = newInitExecution,
                 parallelExecution = newParallelExecution,
