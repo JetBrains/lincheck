@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.strategy
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.managed.Trace
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.EventStructureStrategy
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.io.Closeable
 
@@ -105,10 +106,15 @@ fun Strategy.runIteration(invocations: Int, verifier: Verifier): LincheckFailure
         if (!nextInvocation())
             return null
         val result = runInvocation()
+        // TODO: should we count failed inconsistent executions as used invocations?
+        if (result is InconsistentInvocationResult) continue
         val failure = verify(result, verifier)
-        if (failure != null)
+        if (failure != null) {
+            printStatistics()
             return failure
+        }
     }
+    printStatistics()
     return null
 }
 
@@ -128,4 +134,10 @@ fun Strategy.verify(result: InvocationResult, verifier: Verifier): LincheckFailu
         } else null
     else ->
         result.toLincheckFailure(scenario, tryCollectTrace(result))
+}
+
+private fun Strategy.printStatistics() {
+    if (this is EventStructureStrategy) {
+        println(stats)
+    }
 }

@@ -42,7 +42,7 @@ internal class ModelCheckingStrategy(
     validationFunction: Actor?,
     stateRepresentation: Method?,
     val replay: Boolean,
-) : ManagedStrategy(testClass, scenario, validationFunction, stateRepresentation, testCfg, memoryTrackingEnabled = false) {
+) : ManagedStrategy(testClass, scenario, validationFunction, stateRepresentation, testCfg) {
     // The maximum number of thread switch choices that strategy should perform
     // (increases when all the interleavings with the current depth are studied).
     private var maxNumberOfSwitches = 0

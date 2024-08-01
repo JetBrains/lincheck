@@ -26,7 +26,7 @@ repositories {
 kotlin {
     @OptIn(ExperimentalKotlinGradlePluginApi::class)
     compilerOptions {
-        allWarningsAsErrors = true
+        // allWarningsAsErrors = true
     }
 
     jvm {

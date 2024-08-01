@@ -48,6 +48,6 @@ class EventStructureCTestConfiguration(
     override val instrumentationMode: InstrumentationMode get() = EXPERIMENTAL_MODEL_CHECKING
 
     override fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, validationFunction: Actor?,
-                                stateRepresentationMethod: Method?, verifier: Verifier): EventStructureStrategy
-            = EventStructureStrategy(this, testClass, scenario, validationFunction, stateRepresentationMethod, verifier)
+                                stateRepresentationMethod: Method?): EventStructureStrategy
+            = EventStructureStrategy(this, testClass, scenario, validationFunction, stateRepresentationMethod)
 }

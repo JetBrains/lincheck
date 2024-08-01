@@ -38,9 +38,8 @@ class EventStructureStrategy(
         testClass: Class<*>,
         scenario: ExecutionScenario,
         validationFunction: Actor?,
-        stateRepresentation: Method?,
-        verifier: Verifier
-) : ManagedStrategy(testClass, scenario, verifier, validationFunction, stateRepresentation, testCfg) {
+        stateRepresentation: Method?
+) : ManagedStrategy(testClass, scenario, validationFunction, stateRepresentation, testCfg) {
     // The number of invocations that the strategy is eligible to use to search for an incorrect execution.
     private val maxInvocations = testCfg.invocationsPerIteration
 
@@ -79,36 +78,54 @@ class EventStructureStrategy(
         return false
     }
 
-    override fun runImpl(): LincheckFailure? {
-        // TODO: move invocation counting logic to ManagedStrategy class
-        // TODO: should we count failed inconsistent executions as used invocations?
-        outer@while (stats.totalInvocations < maxInvocations) {
-            val (result, inconsistency) = runNextExploration()
-                ?: break
-            if (inconsistency == null) {
-                check(result != null)
-                // TODO: re-verify that it is safe to omit the memory dump at the end;
-                //   it should be safe, because currently in the event-structure based algorithm,
-                //   the intercepted writes are still performed, so the actual state of the memory
-                //   reflects the state modelled by the current execution graph.
-                // runIgnored(nThreads) {
-                //     memoryTracker.dumpMemory()
-                // }
-                checkResult(result, shouldCollectTrace = false)?.let {
-                    println(stats)
-                    return it
-                }
-            }
-        }
-        println(stats)
-        return null
+    override fun nextInvocation(): Boolean {
+        // check that we have the next invocation to explore
+        return eventStructure.startNextExploration()
     }
 
+    override fun runInvocationImpl(): InvocationResult {
+        val (result, inconsistency) = runNextExploration()
+        if (inconsistency != null) {
+            return InconsistentInvocationResult(inconsistency)
+        }
+        check(result != null)
+        // TODO: re-verify that it is safe to omit the memory dump at the end;
+        //   it should be safe, because currently in the event-structure based algorithm,
+        //   the intercepted writes are still performed, so the actual state of the memory
+        //   reflects the state modelled by the current execution graph.
+        // runIgnored(nThreads) {
+        //     memoryTracker.dumpMemory()
+        // }
+        return result
+    }
+
+    // override fun runImpl(): LincheckFailure? {
+    //     // TODO: move invocation counting logic to ManagedStrategy class
+    //     // TODO: should we count failed inconsistent executions as used invocations?
+    //     outer@while (stats.totalInvocations < maxInvocations) {
+    //         val (result, inconsistency) = runNextExploration()
+    //             ?: break
+    //         if (inconsistency == null) {
+    //             check(result != null)
+    //             // TODO: re-verify that it is safe to omit the memory dump at the end;
+    //             //   it should be safe, because currently in the event-structure based algorithm,
+    //             //   the intercepted writes are still performed, so the actual state of the memory
+    //             //   reflects the state modelled by the current execution graph.
+    //             // runIgnored(nThreads) {
+    //             //     memoryTracker.dumpMemory()
+    //             // }
+    //             checkResult(result, shouldCollectTrace = false)?.let {
+    //                 println(stats)
+    //                 return it
+    //             }
+    //         }
+    //     }
+    //     println(stats)
+    //     return null
+    // }
+
     // TODO: rename & refactor!
-    fun runNextExploration(): Pair<InvocationResult?, Inconsistency?>? {
-        // check that we have the next invocation to explore
-        if (!eventStructure.startNextExploration())
-            return null
+    fun runNextExploration(): Pair<InvocationResult?, Inconsistency?> {
         var result: InvocationResult? = null
         var inconsistency: Inconsistency? = eventStructure.checkConsistency()
         if (inconsistency == null) {

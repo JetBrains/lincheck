@@ -158,7 +158,7 @@ fun ObjectTracker.getAtomicAccessMemoryLocation(
         }
     }
 
-    isAtomicObject(receiver) -> {
+    isAtomic(receiver) -> {
         AtomicPrimitiveMemoryLocation(
             clazz = receiver!!::class.java,
             objID = getObjectId(receiver),

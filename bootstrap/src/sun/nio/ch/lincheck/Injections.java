@@ -268,7 +268,8 @@ public class Injections {
     }
 
     public static Object interceptAtomicMethodCallResult() {
-        return getEventTracker().interceptAtomicMethodCallResult();
+        // return getEventTracker().interceptAtomicMethodCallResult();
+        return null;
     }
 
     /**

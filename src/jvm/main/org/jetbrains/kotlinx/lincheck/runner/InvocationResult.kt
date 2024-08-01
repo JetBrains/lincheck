@@ -81,7 +81,6 @@ class SpinLoopBoundInvocationResult : InvocationResult()
  */
 data object SpinCycleFoundAndReplayRequired: InvocationResult()
 
-
 fun InvocationResult.isAbortedInvocation(): Boolean =
     when (this) {
         is ManagedDeadlockInvocationResult,
