@@ -412,22 +412,22 @@ private fun executionResultsRepresentation(
     val scenario = failure.scenario
 
     val initActorData = results.initResults.zip(scenario.initExecution).map { (result, actor) ->
-        ResultActorData(actor, result, exceptionStackTraces, null)
+        ResultActorData(0, actor, result, exceptionStackTraces, null)
     }
     val isIncorrectResultsFailure = failure is IncorrectResultsFailure
     var hasClock = false
-    val parallelActorData = scenario.parallelExecution.mapIndexed { i, actors ->
-        actors.zip(results.parallelResultsWithClock[i]) { actor, resultWithClock ->
+    val parallelActorData = scenario.parallelExecution.mapIndexed { threadId, actors ->
+        actors.zip(results.parallelResultsWithClock[threadId]) { actor, resultWithClock ->
             val hbClock = if (isIncorrectResultsFailure) resultWithClock.clockOnStart else null
-            if (hbClock != null && !hbClock.empty) {
+            if (hbClock != null && !hbClock.isEmpty(threadId)) {
                 hasClock = true
             }
-            ResultActorData(actor, resultWithClock.result, exceptionStackTraces, hbClock)
+            ResultActorData(threadId, actor, resultWithClock.result, exceptionStackTraces, hbClock)
         }
     }
     hasClock = isIncorrectResultsFailure && hasClock
     val postActorData = results.postResults.zip(scenario.postExecution).map { (result, actor) ->
-        ResultActorData(actor, result, exceptionStackTraces, null)
+        ResultActorData(0, actor, result, exceptionStackTraces, null)
     }
     var executionHung: Boolean
     val (initialExecutionHung, initialActorRepresentation) = executionResultsRepresentation(initActorData, failure)
@@ -458,18 +458,19 @@ private fun executionResultsRepresentation(
 
 
 private data class ResultActorData(
+    val threadId: Int,
     val actor: Actor,
     val result: Result?,
     val exceptionInfo: ExceptionNumberAndStacktrace? = null,
     val hbClock: HBClock? = null
 ) {
-    constructor(actor: Actor, result: Result?, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>, hbClock: HBClock?)
-            : this(actor, result, (result as? ExceptionResult)?.let { exceptionStackTraces[it.throwable] }, hbClock)
+    constructor(threadId: Int, actor: Actor, result: Result?, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>, hbClock: HBClock?)
+            : this(threadId, actor, result, (result as? ExceptionResult)?.let { exceptionStackTraces[it.throwable] }, hbClock)
 
     override fun toString(): String {
         return "${actor}${result.toString().let { ": $it" }}" +
                 (exceptionInfo?.let { " #${it.number}" } ?: "") +
-                (hbClock?.takeIf { !it.empty }?.let { " $it" } ?: "")
+                (hbClock?.takeIf { !it.isEmpty(threadId) }?.let { " $it" } ?: "")
     }
 }
 
