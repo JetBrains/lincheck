@@ -186,8 +186,8 @@ class StaticFieldMemoryLocation(
     override val objID: ObjectID = STATIC_OBJECT_ID
 
     private val field: Field by lazy {
-        resolveClass(className = className)
-            .getDeclaredField(fieldName)
+        val resolvedClass = resolveClass(className = className)
+        resolveField(resolvedClass, className, fieldName)
             // .apply { isAccessible = true }
     }
 

@@ -309,13 +309,23 @@ internal object LincheckJavaAgent {
             return
         }
         // Traverse static fields.
-        clazz.declaredFields
-            .filter { !it.type.isPrimitive }
-            .filter { Modifier.isStatic(it.modifiers) }
-            .mapNotNull { readFieldViaUnsafe(null, it, Unsafe::getObject) }
-            .forEach {
-                ensureObjectIsTransformed(it, processedObjects)
+        val staticFields = clazz.declaredFields.filter { Modifier.isStatic(it.modifiers) }
+        if (staticFields.isNotEmpty()) {
+            // ensure the class is loaded and initialized before reading its static field
+            Class.forName(clazz.name)
+            for (field in staticFields) {
+                val value = readFieldViaUnsafe(null, field, Unsafe::getObject)
+                if (!field.type.isPrimitive && value != null) {
+                    ensureObjectIsTransformed(value, processedObjects)
+                }
             }
+        }
+        // Traverse interfaces.
+        clazz.interfaces.forEach {
+            if (it.name in instrumentedClasses) return // already instrumented
+            ensureClassHierarchyIsTransformed(it, processedObjects)
+        }
+        // Traverse superclass.
         clazz.superclass?.let {
             if (it.name in instrumentedClasses) return // already instrumented
             ensureClassHierarchyIsTransformed(it, processedObjects)
