@@ -278,3 +278,11 @@ internal fun <O : Options<O, *>> O.checkImpl(testClass: Class<*>, cont: Lincheck
 internal typealias LincheckFailureContinuation = (LincheckFailure?) -> Unit
 
 internal const val NO_OPERATION_ERROR_MESSAGE = "You must specify at least one operation to test. Please refer to the user guide: https://kotlinlang.org/docs/introduction.html"
+
+/**
+ * We provide lincheck version to [testFailed] method to the plugin be able to
+ * determine if this version is compatible with the plugin version.
+ */
+internal val lincheckVersion by lazy {
+    LinChecker::class.java.`package`.implementationVersion ?: System.getProperty("lincheck.version")
+}
