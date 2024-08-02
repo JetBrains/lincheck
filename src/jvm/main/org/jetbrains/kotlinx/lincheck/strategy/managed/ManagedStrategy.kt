@@ -1022,7 +1022,8 @@ abstract class ManagedStrategy(
         codeLocation: Int,
         methodId: Int,
         params: Array<Any?>
-    ) {
+    ): Boolean {
+        var shouldInterceptMethodResult = false
         val guarantee = runInIgnoredSection {
             val atomicMethodDescriptor = getAtomicMethodDescriptor(owner, methodName)
             val guarantee = when {
@@ -1039,73 +1040,14 @@ abstract class ManagedStrategy(
             if (guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC) {
                 newSwitchPointOnAtomicMethodCall(codeLocation, params)
             }
+            if (atomicMethodDescriptor != null) {
+                shouldInterceptMethodResult = trackAtomicMethodMemoryAccess(
+                    owner, className, methodName, codeLocation, params, atomicMethodDescriptor
+                )
+            }
             if (guarantee == null) {
                 loopDetector.beforeMethodCall(codeLocation, params)
             }
-            // if (memoryTracker != null) {
-            //     // TODO: extract into method?
-            //     val iThread = currentThread
-            //     val methodDescriptor = getAtomicMethodDescriptor(className, methodName)
-            //         ?: return@runInIgnoredSection
-            //     val location = objectTracker.getAtomicAccessMemoryLocation(className, methodName, owner, params)
-            //         ?: return@runInIgnoredSection
-            //     var argOffset = 0
-            //     // atomic reflection case (AFU, VarHandle or Unsafe) - the first argument is reflection object
-            //     argOffset += if (!isAtomic(owner)) 1 else 0
-            //     // Unsafe has an additional offset argument
-            //     argOffset += if (isUnsafe(owner)) 1 else 0
-            //     // array accesses (besides Unsafe) take index as an additional argument
-            //     argOffset += if (location is ArrayElementMemoryLocation && !isUnsafe(owner)) 1 else 0
-            //     when (methodDescriptor.kind) {
-            //         AtomicMethodKind.SET -> {
-            //             memoryTracker!!.beforeWrite(iThread, codeLocation, location,
-            //                 value = params[argOffset]
-            //             )
-            //         }
-            //         AtomicMethodKind.GET -> {
-            //             memoryTracker!!.beforeRead(iThread, codeLocation, location)
-            //         }
-            //         AtomicMethodKind.GET_AND_SET -> {
-            //             memoryTracker!!.beforeGetAndSet(iThread, codeLocation, location,
-            //                 newValue = params[argOffset]
-            //             )
-            //         }
-            //         AtomicMethodKind.COMPARE_AND_SET, AtomicMethodKind.WEAK_COMPARE_AND_SET -> {
-            //             memoryTracker!!.beforeCompareAndSet(iThread, codeLocation, location,
-            //                 expectedValue = params[argOffset],
-            //                 newValue = params[argOffset + 1]
-            //             )
-            //         }
-            //         AtomicMethodKind.COMPARE_AND_EXCHANGE -> {
-            //             memoryTracker!!.beforeCompareAndExchange(iThread, codeLocation, location,
-            //                 expectedValue = params[argOffset],
-            //                 newValue = params[argOffset + 1]
-            //             )
-            //         }
-            //         AtomicMethodKind.GET_AND_ADD -> {
-            //             memoryTracker!!.beforeGetAndAdd(iThread, codeLocation, location,
-            //                 delta = (params[argOffset] as Number)
-            //             )
-            //         }
-            //         AtomicMethodKind.ADD_AND_GET -> {
-            //             memoryTracker!!.beforeAddAndGet(iThread, codeLocation, location,
-            //                 delta = (params[argOffset] as Number)
-            //             )
-            //         }
-            //         AtomicMethodKind.GET_AND_INCREMENT -> {
-            //             memoryTracker!!.beforeGetAndAdd(iThread, codeLocation, location, delta = 1)
-            //         }
-            //         AtomicMethodKind.INCREMENT_AND_GET -> {
-            //             memoryTracker!!.beforeAddAndGet(iThread, codeLocation, location, delta = 1)
-            //         }
-            //         AtomicMethodKind.GET_AND_DECREMENT -> {
-            //             memoryTracker!!.beforeGetAndAdd(iThread, codeLocation, location, delta = -1)
-            //         }
-            //         AtomicMethodKind.DECREMENT_AND_GET -> {
-            //             memoryTracker!!.beforeAddAndGet(iThread, codeLocation, location, delta = -1)
-            //         }
-            //     }
-            // }
             guarantee
         }
         if (guarantee == ManagedGuaranteeType.IGNORE ||
@@ -1115,6 +1057,85 @@ abstract class ManagedStrategy(
             // so enterIgnoredSection would have no effect
             enterIgnoredSection()
         }
+        return shouldInterceptMethodResult
+    }
+
+    private fun trackAtomicMethodMemoryAccess(
+        owner: Any?,
+        className: String,
+        methodName: String,
+        codeLocation: Int,
+        params: Array<Any?>,
+        methodDescriptor: AtomicMethodDescriptor,
+    ): Boolean {
+        if (memoryTracker == null)
+            return false
+        val iThread = currentThread
+        val location = objectTracker.getAtomicAccessMemoryLocation(className, methodName, owner, params)
+            ?: return false
+        var argOffset = 0
+        // atomic reflection case (AFU, VarHandle or Unsafe) - the first argument is a reflection object
+        argOffset += if (!isAtomic(owner)) 1 else 0
+        // Unsafe has an additional offset argument
+        argOffset += if (isUnsafe(owner)) 1 else 0
+        // array accesses (besides Unsafe) take index as an additional argument
+        argOffset += if (location is ArrayElementMemoryLocation && !isUnsafe(owner)) 1 else 0
+        when (methodDescriptor.kind) {
+            AtomicMethodKind.SET -> {
+                memoryTracker!!.beforeWrite(iThread, codeLocation, location,
+                    value = params[argOffset]
+                )
+            }
+            AtomicMethodKind.GET -> {
+                memoryTracker!!.beforeRead(iThread, codeLocation, location)
+            }
+            AtomicMethodKind.GET_AND_SET -> {
+                memoryTracker!!.beforeGetAndSet(iThread, codeLocation, location,
+                    newValue = params[argOffset]
+                )
+            }
+            AtomicMethodKind.COMPARE_AND_SET, AtomicMethodKind.WEAK_COMPARE_AND_SET -> {
+                memoryTracker!!.beforeCompareAndSet(iThread, codeLocation, location,
+                    expectedValue = params[argOffset],
+                    newValue = params[argOffset + 1]
+                )
+            }
+            AtomicMethodKind.COMPARE_AND_EXCHANGE -> {
+                memoryTracker!!.beforeCompareAndExchange(iThread, codeLocation, location,
+                    expectedValue = params[argOffset],
+                    newValue = params[argOffset + 1]
+                )
+            }
+            AtomicMethodKind.GET_AND_ADD -> {
+                memoryTracker!!.beforeGetAndAdd(iThread, codeLocation, location,
+                    delta = (params[argOffset] as Number)
+                )
+            }
+            AtomicMethodKind.ADD_AND_GET -> {
+                memoryTracker!!.beforeAddAndGet(iThread, codeLocation, location,
+                    delta = (params[argOffset] as Number)
+                )
+            }
+            AtomicMethodKind.GET_AND_INCREMENT -> {
+                memoryTracker!!.beforeGetAndAdd(iThread, codeLocation, location, delta = 1)
+            }
+            AtomicMethodKind.INCREMENT_AND_GET -> {
+                memoryTracker!!.beforeAddAndGet(iThread, codeLocation, location, delta = 1)
+            }
+            AtomicMethodKind.GET_AND_DECREMENT -> {
+                memoryTracker!!.beforeGetAndAdd(iThread, codeLocation, location, delta = -1)
+            }
+            AtomicMethodKind.DECREMENT_AND_GET -> {
+                memoryTracker!!.beforeAddAndGet(iThread, codeLocation, location, delta = -1)
+            }
+        }
+        return true
+    }
+
+    override fun interceptMethodCallResult(): Any? = runInIgnoredSection {
+        check(memoryTracker != null)
+        val iThread = currentThread
+        return memoryTracker?.interceptReadResult(iThread)
     }
 
     override fun onMethodCallReturn(result: Any?) {

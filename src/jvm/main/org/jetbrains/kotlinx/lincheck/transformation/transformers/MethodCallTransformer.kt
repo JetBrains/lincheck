@@ -10,9 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
-import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
-import org.jetbrains.kotlinx.lincheck.util.*
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.Type.*
@@ -87,8 +85,34 @@ internal class MethodCallTransformer(
         val handlerExceptionStartLabel = newLabel()
         visitTryCatchBlock(methodCallStartLabel, methodCallEndLabel, handlerExceptionStartLabel, null)
         visitLabel(methodCallStartLabel)
-        loadLocals(argumentLocals)
-        visitMethodInsn(opcode, owner, name, desc, itf)
+        if (interceptAtomicMethodCallResult) {
+            // STACK: shouldInterceptMethodResult
+            ifStatement(
+                condition = { /* already on stack */ },
+                ifClause = {
+                    val resultType = Type.getReturnType(desc)
+                    if (opcode != INVOKESTATIC) {
+                        pop()
+                    }
+                    // STACK : <empty>
+                    invokeStatic(Injections::interceptMethodCallResult)
+                    if (resultType == Type.VOID_TYPE) {
+                        pop()
+                    } else {
+                        unbox(resultType)
+                    }
+                },
+                elseClause = {
+                    loadLocals(argumentLocals)
+                    visitMethodInsn(opcode, owner, name, desc, itf)
+                }
+            )
+        } else {
+            loadLocals(argumentLocals)
+            visitMethodInsn(opcode, owner, name, desc, itf)
+            // STACK: shouldInterceptMethodCallResult
+            pop()
+        }
         visitLabel(methodCallEndLabel)
         // STACK [INVOKEVIRTUAL]: owner, arguments
         // STACK [INVOKESTATIC] :        arguments
