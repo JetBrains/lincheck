@@ -148,6 +148,7 @@ internal open class ManagedStrategyMethodVisitor(
 
     /**
      * Injects `beforeEvent` method invocation if IDEA plugin is enabled.
+     * If the plugin is disabled, insert invocation of `enumerateObjectsIfNeeded` method. See its doc for more details.
      *
      * @param type type of the event, needed just for debugging.
      * @param setMethodEventId a flag that identifies that method call event id set is required
@@ -155,6 +156,10 @@ internal open class ManagedStrategyMethodVisitor(
     protected fun invokeBeforeEventIfPluginEnabled(type: String, setMethodEventId: Boolean = false) {
         if (ideaPluginEnabled) {
             adapter.invokeBeforeEvent(type, setMethodEventId)
+        } else {
+            adapter.invokeInIgnoredSection {
+                adapter.invokeStatic(Injections::enumerateObjectsIfNeeded)
+            }
         }
     }
 
