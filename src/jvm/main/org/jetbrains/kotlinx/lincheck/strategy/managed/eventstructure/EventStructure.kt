@@ -163,10 +163,12 @@ class EventStructure(
     fun initializeExploration() {
         playedFrontier = MutableExecutionFrontier(nThreads)
         playedFrontier[initThreadId] = execution[initThreadId]!!.last()
-        replayer.currentEvent.ensure {
-            it != null && it.label is InitializationLabel
+        if (replayer.inProgress()) {
+            replayer.currentEvent.ensure {
+                it != null && it.label is InitializationLabel
+            }
+            replayer.setNextEvent()
         }
-        replayer.setNextEvent()
     }
 
     fun abortExploration() {

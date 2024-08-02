@@ -83,6 +83,12 @@ class EventStructureStrategy(
         return eventStructure.startNextExploration()
     }
 
+    override fun initializeInvocation() {
+        super.initializeInvocation()
+        isTestInstanceRegistered = false
+        eventStructure.initializeExploration()
+    }
+
     override fun runInvocationImpl(): InvocationResult {
         val (result, inconsistency) = runNextExploration()
         if (inconsistency != null) {
@@ -99,36 +105,12 @@ class EventStructureStrategy(
         return result
     }
 
-    // override fun runImpl(): LincheckFailure? {
-    //     // TODO: move invocation counting logic to ManagedStrategy class
-    //     // TODO: should we count failed inconsistent executions as used invocations?
-    //     outer@while (stats.totalInvocations < maxInvocations) {
-    //         val (result, inconsistency) = runNextExploration()
-    //             ?: break
-    //         if (inconsistency == null) {
-    //             check(result != null)
-    //             // TODO: re-verify that it is safe to omit the memory dump at the end;
-    //             //   it should be safe, because currently in the event-structure based algorithm,
-    //             //   the intercepted writes are still performed, so the actual state of the memory
-    //             //   reflects the state modelled by the current execution graph.
-    //             // runIgnored(nThreads) {
-    //             //     memoryTracker.dumpMemory()
-    //             // }
-    //             checkResult(result, shouldCollectTrace = false)?.let {
-    //                 println(stats)
-    //                 return it
-    //             }
-    //         }
-    //     }
-    //     println(stats)
-    //     return null
-    // }
-
     // TODO: rename & refactor!
     fun runNextExploration(): Pair<InvocationResult?, Inconsistency?> {
         var result: InvocationResult? = null
         var inconsistency: Inconsistency? = eventStructure.checkConsistency()
         if (inconsistency == null) {
+            eventStructure.addThreadStartEvent(eventStructure.mainThreadId)
             result = super.runInvocationImpl()
             // if invocation was aborted, we also abort the current execution inside event structure
             if (result.isAbortedInvocation()) {
@@ -321,13 +303,6 @@ class EventStructureStrategy(
         return super.isActive(iThread) && (eventStructure.inReplayPhase() implies {
             eventStructure.inReplayPhase(iThread) && eventStructure.canReplayNextEvent(iThread)
         })
-    }
-
-    override fun initializeInvocation() {
-        super.initializeInvocation()
-        isTestInstanceRegistered = false
-        eventStructure.initializeExploration()
-        eventStructure.addThreadStartEvent(eventStructure.mainThreadId)
     }
 
     override fun beforePart(part: ExecutionPart) {
