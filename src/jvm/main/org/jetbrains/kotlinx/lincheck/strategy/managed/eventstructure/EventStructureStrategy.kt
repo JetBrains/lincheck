@@ -137,6 +137,11 @@ class EventStructureStrategy(
         return (result to inconsistency)
     }
 
+    // TODO: temporarily disable trace collection for event structure strategy
+    override fun tryCollectTrace(result: InvocationResult): Trace? {
+        return null
+    }
+
     class Stats {
 
         var consistentInvocations: Int = 0

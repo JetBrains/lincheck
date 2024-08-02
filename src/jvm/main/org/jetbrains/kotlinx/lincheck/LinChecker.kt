@@ -15,6 +15,7 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.EventStructureCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
@@ -172,6 +173,7 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
     }
 
     private val CTestConfiguration.invocationsPerIteration get() = when (this) {
+        is EventStructureCTestConfiguration -> this.invocationsPerIteration
         is ModelCheckingCTestConfiguration -> this.invocationsPerIteration
         is StressCTestConfiguration -> this.invocationsPerIteration
         else -> error("unexpected")
