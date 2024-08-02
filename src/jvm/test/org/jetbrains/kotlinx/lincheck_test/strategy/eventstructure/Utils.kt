@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
+import org.jetbrains.kotlinx.lincheck.strategy.runIteration
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
@@ -48,8 +49,8 @@ internal fun<Outcome> litmusTest(
         true
     }
     withLincheckJavaAgent(InstrumentationMode.EXPERIMENTAL_MODEL_CHECKING) {
-        val strategy = createStrategy(testClass, testScenario, verifier)
-        val failure = strategy.run()
+        val strategy = createStrategy(testClass, testScenario)
+        val failure = strategy.runIteration(INVOCATIONS, verifier)
         assert(failure == null) { failure.toString() }
         Assert.assertEquals(expectedOutcomes, outcomes)
 
@@ -68,12 +69,11 @@ private fun createConfiguration(testClass: Class<*>) =
         .invocationTimeout(60 * 60 * 1000)
         .createTestConfigurations(testClass)
 
-internal fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, verifier: Verifier): EventStructureStrategy {
+internal fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario): EventStructureStrategy {
     return createConfiguration(testClass)
         .createStrategy(
             testClass = testClass,
             scenario = scenario,
-            verifier = verifier,
             validationFunction = null,
             stateRepresentationMethod = null,
         )
@@ -102,3 +102,6 @@ internal fun getValueSuspended(result: Result): Any? = when (result) {
 }
 
 internal const val TIMEOUT = 30 * 1000L // 30 sec
+
+// we expect for all litmus tests to have less than 1000 outcomes
+private const val INVOCATIONS = 1000

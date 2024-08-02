@@ -129,7 +129,7 @@ class EventStructureStrategy(
         var result: InvocationResult? = null
         var inconsistency: Inconsistency? = eventStructure.checkConsistency()
         if (inconsistency == null) {
-            result = runInvocation()
+            result = super.runInvocationImpl()
             // if invocation was aborted, we also abort the current execution inside event structure
             if (result.isAbortedInvocation()) {
                 eventStructure.abortExploration()

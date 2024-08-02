@@ -78,8 +78,6 @@ class AtomicIntegerTest : AbstractLincheckTest() {
 
     @Operation
     fun getAndDecrement() = value.getAndDecrement()
-
-    override fun extractState(): Any = value.get()
 }
 
 class AtomicLongTest : AbstractLincheckTest() {
