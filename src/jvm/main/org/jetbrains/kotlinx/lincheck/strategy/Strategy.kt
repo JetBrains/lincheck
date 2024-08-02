@@ -131,8 +131,10 @@ fun Strategy.verify(result: InvocationResult, verifier: Verifier): LincheckFailu
         if (!verifier.verifyResults(scenario, result.results)) {
             IncorrectResultsFailure(scenario, result.results, tryCollectTrace(result))
         } else null
-    else ->
-        result.toLincheckFailure(scenario, tryCollectTrace(result))
+
+    is SpinLoopBoundInvocationResult -> null
+
+    else -> result.toLincheckFailure(scenario, tryCollectTrace(result))
 }
 
 private fun Strategy.printStatistics() {
