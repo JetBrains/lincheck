@@ -1075,7 +1075,7 @@ abstract class ManagedStrategy(
             ?: return false
         var argOffset = 0
         // atomic reflection case (AFU, VarHandle or Unsafe) - the first argument is a reflection object
-        argOffset += if (!isAtomic(owner)) 1 else 0
+        argOffset += if (!isAtomic(owner) && !isAtomicArray(owner)) 1 else 0
         // Unsafe has an additional offset argument
         argOffset += if (isUnsafe(owner)) 1 else 0
         // array accesses (besides Unsafe) take index as an additional argument
@@ -1117,16 +1117,16 @@ abstract class ManagedStrategy(
                 )
             }
             AtomicMethodKind.GET_AND_INCREMENT -> {
-                memoryTracker!!.beforeGetAndAdd(iThread, codeLocation, location, delta = 1)
+                memoryTracker!!.beforeGetAndAdd(iThread, codeLocation, location, delta = 1.convert(location.type))
             }
             AtomicMethodKind.INCREMENT_AND_GET -> {
-                memoryTracker!!.beforeAddAndGet(iThread, codeLocation, location, delta = 1)
+                memoryTracker!!.beforeAddAndGet(iThread, codeLocation, location, delta = 1.convert(location.type))
             }
             AtomicMethodKind.GET_AND_DECREMENT -> {
-                memoryTracker!!.beforeGetAndAdd(iThread, codeLocation, location, delta = -1)
+                memoryTracker!!.beforeGetAndAdd(iThread, codeLocation, location, delta = (-1).convert(location.type))
             }
             AtomicMethodKind.DECREMENT_AND_GET -> {
-                memoryTracker!!.beforeAddAndGet(iThread, codeLocation, location, delta = -1)
+                memoryTracker!!.beforeAddAndGet(iThread, codeLocation, location, delta = (-1).convert(location.type))
             }
         }
         return (methodDescriptor.kind != AtomicMethodKind.SET)
