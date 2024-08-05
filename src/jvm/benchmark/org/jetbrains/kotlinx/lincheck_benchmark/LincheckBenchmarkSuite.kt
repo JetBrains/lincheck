@@ -23,7 +23,7 @@ import org.junit.runners.Suite
 @Suite.SuiteClasses(
     SpinLockBenchmark::class,
     ReentrantLockBenchmark::class,
-    IntrinsicLockBenchmark::class,
+    SynchronizedBenchmark::class,
     ConcurrentLinkedQueueBenchmark::class,
     ConcurrentDequeBenchmark::class,
     ConcurrentHashMapBenchmark::class,

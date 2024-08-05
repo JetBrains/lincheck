@@ -217,6 +217,8 @@ class PlotCommand : CliktCommand() {
         .optional()
 
     override fun run() {
+
+        @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
         val report = report.inputStream().use { inputStream ->
             Json.decodeFromStream<BenchmarksReport>(inputStream)
         }

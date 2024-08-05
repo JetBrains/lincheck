@@ -97,6 +97,7 @@ fun LincheckStatistics.toBenchmarkStatistics(name: String, strategy: LincheckStr
         }
 )
 
+@OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
 fun BenchmarksReport.saveJson(filename: String) {
     val file = File("$filename.json")
     file.outputStream().use { outputStream ->

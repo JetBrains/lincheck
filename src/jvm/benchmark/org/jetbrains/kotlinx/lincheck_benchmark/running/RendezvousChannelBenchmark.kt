@@ -14,10 +14,8 @@ import kotlinx.coroutines.channels.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.specifications.*
-import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck_benchmark.AbstractLincheckBenchmark
 
-@ExperimentalCoroutinesApi
 @InternalCoroutinesApi
 class RendezvousChannelBenchmark : AbstractLincheckBenchmark() {
     private val ch = Channel<Int>()
