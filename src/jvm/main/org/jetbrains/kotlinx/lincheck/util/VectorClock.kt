@@ -131,6 +131,9 @@ private class IntArrayClock(capacity: Int = 0) : MutableVectorClock {
     override fun hashCode(): Int =
         clock.contentHashCode()
 
+    override fun toString() =
+        clock.joinToString(prefix = "[", separator = ",", postfix = "]")
+
     companion object {
         private fun emptyIntArrayClock(capacity: Int) =
             IntArray(capacity) { -1 }

@@ -13,7 +13,7 @@ import org.jetbrains.kotlinx.lincheck.Result
 
 data class HBClock(val clock: IntArray) {
     val threads: Int get() = clock.size
-
+    val empty: Boolean get() = clock.all { it == 0 }
     operator fun get(i: Int) = clock[i]
 
     fun set(other: HBClock) {
@@ -34,6 +34,10 @@ data class HBClock(val clock: IntArray) {
      * excluding the one this clock is associated with.
      */
     fun isEmpty(clockThreadId: Int) = clock.filterIndexed { t, _ -> t != clockThreadId }.all { it == 0 }
+
+    fun copy(): HBClock {
+        return HBClock(clock.copyOf())
+    }
 
     override fun toString() = clock.joinToString(prefix = "[", separator = ",", postfix = "]")
 
