@@ -17,6 +17,8 @@ import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.addMutableField
 import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.collectFieldInformation
 import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.isFinalField
 import org.objectweb.asm.*
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentMap
 
 /**
  * [CodeLocations] object is used to maintain the mapping between unique IDs and code locations.
@@ -63,6 +65,7 @@ internal object MethodIds {
 
     private val map: MutableMap<String, Int> = hashMapOf()
 
+    @Synchronized
     fun getMethodId(owner: String, name: String, desc: String): Int {
         return map.computeIfAbsent("$owner:$name:$desc") { map.size + 1 }
     }
@@ -88,7 +91,7 @@ internal object FinalFields {
     /**
      * Stores a map INTERNAL_CLASS_NAME -> { FIELD_NAME -> IS FINAL } for each processed class.
      */
-    private val classToFieldsMap = HashMap<String, HashMap<String, FieldInfo>>()
+    private val classToFieldsMap = ConcurrentHashMap<String, HashMap<String, FieldInfo>>()
 
     /**
      * Registers the field [fieldName] as a final field of the class [internalClassName].
