@@ -11,14 +11,12 @@
 package org.jetbrains.kotlinx.lincheck.transformation
 
 import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.FieldInfo.*
-import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.FinalFieldsVisitor
 import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.addFinalField
 import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.addMutableField
 import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.collectFieldInformation
 import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.isFinalField
 import org.objectweb.asm.*
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentMap
 
 /**
  * [CodeLocations] object is used to maintain the mapping between unique IDs and code locations.
