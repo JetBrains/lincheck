@@ -31,9 +31,6 @@ class BufferedChannelBenchmark : AbstractLincheckBenchmark() {
     @Operation
     fun poll() = c.tryReceive().getOrNull()
 
-    @Operation
-    fun offer(value: Int) = c.trySend(value).isSuccess
-
     override fun <O : Options<O, *>> O.customize() {
         iterations(10)
         sequentialSpecification(SequentiaBuffered2IntChannel::class.java)
