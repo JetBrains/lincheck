@@ -142,7 +142,7 @@ kotlin {
             val letsPlotKotlinVersion: String by project
             val cliktVersion: String by project
             dependencies {
-                implementation(project(":bootstrap"))
+                compileOnly(project(":bootstrap"))
                 implementation("junit:junit:$junitVersion")
                 implementation("org.jctools:jctools-core:$jctoolsVersion")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
@@ -167,7 +167,7 @@ kotlin {
                  * But the imports from `lincheck` package in the benchmarks
                  * do not work in IDEA (so IDEA cannot resolve classes from `jvmMain`).
                  *
-                 * To bypass this, we add implementation dependency on
+                 * To bypass this, we add an implementation dependency on
                  * the root project for the `jvmBenchmark` source set.
                  * This way benchmarks are compiled, run with no errors,
                  * and import and resolve work correctly in IDEA.
