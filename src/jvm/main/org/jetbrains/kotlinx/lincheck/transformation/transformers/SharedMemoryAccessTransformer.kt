@@ -276,7 +276,7 @@ internal class SharedMemoryAccessTransformer(
         AALOAD -> getArrayAccessTypeFromStack(2) // OBJECT_TYPE
         IALOAD -> INT_TYPE
         FALOAD -> FLOAT_TYPE
-        BALOAD -> BOOLEAN_TYPE
+        BALOAD -> BYTE_TYPE
         CALOAD -> CHAR_TYPE
         SALOAD -> SHORT_TYPE
         LALOAD -> LONG_TYPE
@@ -285,7 +285,7 @@ internal class SharedMemoryAccessTransformer(
         AASTORE -> getArrayAccessTypeFromStack(3) // OBJECT_TYPE
         IASTORE -> INT_TYPE
         FASTORE -> FLOAT_TYPE
-        BASTORE -> BOOLEAN_TYPE
+        BASTORE -> BYTE_TYPE
         CASTORE -> CHAR_TYPE
         SASTORE -> SHORT_TYPE
         LASTORE -> LONG_TYPE
