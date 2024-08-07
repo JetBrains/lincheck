@@ -203,10 +203,10 @@ private val varHandleMethods = mapOf(
     "getVolatile"   to AtomicMethodDescriptor(GET, VOLATILE),
 
     // set
-    "set"           to AtomicMethodDescriptor(GET, PLAIN),
+    "set"           to AtomicMethodDescriptor(SET, PLAIN),
     "setOpaque"     to AtomicMethodDescriptor(SET, OPAQUE),
-    "setRelease"    to AtomicMethodDescriptor(GET, RELEASE),
-    "setVolatile"   to AtomicMethodDescriptor(GET, VOLATILE),
+    "setRelease"    to AtomicMethodDescriptor(SET, RELEASE),
+    "setVolatile"   to AtomicMethodDescriptor(SET, VOLATILE),
 
     // getAndSet
     "getAndSet"         to AtomicMethodDescriptor(GET_AND_SET, VOLATILE),
