@@ -161,14 +161,22 @@ class EventStructure(
     }
 
     fun initializeExploration() {
+        // reset re-played frontier
         playedFrontier = MutableExecutionFrontier(nThreads)
         playedFrontier[initThreadId] = execution[initThreadId]!!.last()
+        // reset replayer state
+        replayer.reset()
         if (replayer.inProgress()) {
             replayer.currentEvent.ensure {
                 it != null && it.label is InitializationLabel
             }
             replayer.setNextEvent()
         }
+        // reset object indices --- retain only external events
+        objectRegistry.retain { it.isExternal }
+        // reset state of other auxiliary structures
+        delayedConsistencyCheckBuffer.clear()
+        readCodeLocationsCounter.clear()
     }
 
     fun abortExploration() {
@@ -236,11 +244,6 @@ class EventStructure(
         // set the replayer state
         val replayOrdering = _execution.executionOrderComputable.value.ordering
         replayer = Replayer(replayOrdering)
-        // reset object indices --- retain only external events
-        objectRegistry.retain { it.isExternal }
-        // reset state of other auxiliary structures
-        delayedConsistencyCheckBuffer.clear()
-        readCodeLocationsCounter.clear()
     }
 
     fun checkConsistency(): Inconsistency? {
@@ -466,7 +469,7 @@ class EventStructure(
 
     private class Replayer(private val executionOrder: List<ThreadEvent>) {
         private var index: Int = 0
-        private val size: Int = executionOrder.size
+        private var size: Int = 0
 
         constructor(): this(listOf())
 
@@ -478,6 +481,11 @@ class EventStructure(
 
         fun setNextEvent() {
             index++
+        }
+
+        fun reset() {
+            index = 0
+            size = executionOrder.size
         }
     }
 
