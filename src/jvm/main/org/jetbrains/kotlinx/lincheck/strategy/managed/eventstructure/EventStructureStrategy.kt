@@ -366,6 +366,8 @@ class EventStructureStrategy(
         super.onActorStart(iThread)
         // TODO: move ignored section to ManagedStrategyRunner
         runInIgnoredSection {
+            if (runner.currentExecutionPart == ExecutionPart.VALIDATION)
+                return@runInIgnoredSection
             val actor = scenario.threads[iThread][currentActorId[iThread]]
             eventStructure.addActorStartEvent(iThread, actor)
         }
@@ -374,6 +376,8 @@ class EventStructureStrategy(
     override fun onActorFinish(iThread: Int) {
         // TODO: move ignored section to ManagedStrategyRunner
         runInIgnoredSection {
+            if (runner.currentExecutionPart == ExecutionPart.VALIDATION)
+                return@runInIgnoredSection
             val actor = scenario.threads[iThread][currentActorId[iThread]]
             eventStructure.addActorEndEvent(iThread, actor)
         }
