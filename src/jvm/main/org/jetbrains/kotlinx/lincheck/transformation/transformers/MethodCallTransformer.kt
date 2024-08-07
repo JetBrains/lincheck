@@ -76,11 +76,9 @@ internal class MethodCallTransformer(
         // STACK [INVOKEVIRTUAL]: owner, owner, className, methodName, codeLocation, methodId
         // STACK [INVOKESTATIC]:         null, className, methodName, codeLocation, methodId
         pushArray(argumentLocals)
-        // STACK: ..., argumentsArray
+        // STACK: ..., arguments
         invokeStatic(Injections::beforeMethodCall)
         invokeBeforeEventIfPluginEnabled("method call $methodName", setMethodEventId = true)
-        // STACK [INVOKEVIRTUAL]: owner, arguments
-        // STACK [INVOKESTATIC] :        arguments
         val methodCallEndLabel = newLabel()
         val handlerExceptionStartLabel = newLabel()
         visitTryCatchBlock(methodCallStartLabel, methodCallEndLabel, handlerExceptionStartLabel, null)
@@ -108,10 +106,10 @@ internal class MethodCallTransformer(
                 }
             )
         } else {
+            // STACK: shouldInterceptMethodResult
+            pop()
             loadLocals(argumentLocals)
             visitMethodInsn(opcode, owner, name, desc, itf)
-            // STACK: shouldInterceptMethodCallResult
-            pop()
         }
         visitLabel(methodCallEndLabel)
         // STACK [INVOKEVIRTUAL]: owner, arguments
