@@ -167,7 +167,7 @@ private class ExecutionImpl<E : ThreadEvent>(
         private set
 
     override fun isEmpty(): Boolean =
-        (size > 0)
+        (size == 0)
 
     override fun get(tid: ThreadID): SortedMutableList<E>? =
         threadMap[tid]
