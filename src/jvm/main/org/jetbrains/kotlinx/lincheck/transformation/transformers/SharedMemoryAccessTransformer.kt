@@ -273,7 +273,7 @@ internal class SharedMemoryAccessTransformer(
 
     /*
      * For an array access instruction (either load or store),
-     * tried to obtain the type of the read/written array element.
+     * tries to obtain the type of the read/written array element.
      *
      * If the type can be determined from the opcode of the instruction itself
      * (e.g., IALOAD/IASTORE) returns it immediately.
