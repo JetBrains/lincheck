@@ -277,4 +277,25 @@ private inline fun <R> runInIgnoredSection(currentThread: Thread, block: () -> R
         block()
     }
 
+/**
+ * Exits the ignored section and invokes the provided [block] in the ignored section, setting
+ * the [TestThread.inIgnoredSection] flag to `false` in the beginning and setting it back
+ * in the end to `true`.
+ * This method **must** be called in an ignored section.
+ */
+@Suppress("UnusedReceiverParameter")
+internal inline fun <R> ParallelThreadsRunner.runWithoutIgnoredSection(currentThread: TestThread, block: () -> R): R {
+    if (!currentThread.inTestingCode) {
+        return block()
+    }
+    require(currentThread.inIgnoredSection) { "Current thread must be in an ignored section" }
+
+    currentThread.inIgnoredSection = false
+    return try {
+        block()
+    } finally {
+        currentThread.inIgnoredSection = true
+    }
+}
+
 internal const val LINCHECK_PACKAGE_NAME = "org.jetbrains.kotlinx.lincheck."

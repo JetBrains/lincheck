@@ -221,7 +221,7 @@ internal open class ParallelThreadsRunner(
                     completedOrSuspendedThreads.incrementAndGet()
                 }
                 Cancelled
-            } else waitAndInvokeFollowUp(iThread, actorId)
+            } else waitAndInvokeFollowUp(t, actorId)
         } else createLincheckResult(res)
         val isLastActor = actorId == scenario.parallelExecution[iThread].size - 1
         if (isLastActor && finalResult !== Suspended)
@@ -234,7 +234,8 @@ internal open class ParallelThreadsRunner(
 
     // We need to run this code in an ignored section,
     // as it is called in the testing code but should not be analyzed.
-    private fun waitAndInvokeFollowUp(iThread: Int, actorId: Int): Result = runInIgnoredSection {
+    private fun waitAndInvokeFollowUp(thread: TestThread, actorId: Int): Result = runInIgnoredSection {
+        val iThread = thread.threadId
         // Coroutine is suspended. Call method so that strategy can learn it.
         afterCoroutineSuspended(iThread)
         // If the suspended method call has a follow-up part after this suspension point,
@@ -261,7 +262,9 @@ internal open class ParallelThreadsRunner(
         if (completion.resWithCont.get() !== null) {
             // Suspended thread got result of the suspension point and continuation to resume
             val resumedValue = completion.resWithCont.get().first
-            completion.resWithCont.get().second.resumeWith(resumedValue)
+            runWithoutIgnoredSection(thread) {
+                completion.resWithCont.get().second.resumeWith(resumedValue)
+            }
         }
         return suspensionPointResults[iThread][actorId]
     }
