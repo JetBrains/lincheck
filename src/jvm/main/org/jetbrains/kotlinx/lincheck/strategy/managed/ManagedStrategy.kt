@@ -311,8 +311,12 @@ abstract class ManagedStrategy(
         )
         cleanObjectNumeration()
 
-        runner.close()
-        runner = createRunner()
+        // TODO: for the event structure strategy, we cannot re-create the runner object,
+        //   since it may lead to non-determinism, due to different values that can be
+        //   read from tracked memory locations;
+        //   INVESTIGATE IT FURTHER!
+        // runner.close()
+        // runner = createRunner()
 
         val loggedResults = runInvocation()
         // In case the runner detects a deadlock, some threads can still be in an active state,
