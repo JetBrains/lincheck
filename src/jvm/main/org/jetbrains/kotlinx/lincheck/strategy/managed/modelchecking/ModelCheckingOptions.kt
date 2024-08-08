@@ -16,9 +16,9 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.EventStruc
 /**
  * Options for [model checking][ModelCheckingStrategy] strategy.
  */
-class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, EventStructureCTestConfiguration>() {
-    override fun createTestConfigurations(testClass: Class<*>): EventStructureCTestConfiguration {
-        return EventStructureCTestConfiguration( // ModelCheckingCTestConfiguration(
+class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingCTestConfiguration /* EventStructureCTestConfiguration */>() {
+    override fun createTestConfigurations(testClass: Class<*>): ModelCheckingCTestConfiguration /* EventStructureCTestConfiguration */ {
+        return ModelCheckingCTestConfiguration( /* EventStructureCTestConfiguration( */
             testClass = testClass,
             iterations = iterations,
             threads = threads,

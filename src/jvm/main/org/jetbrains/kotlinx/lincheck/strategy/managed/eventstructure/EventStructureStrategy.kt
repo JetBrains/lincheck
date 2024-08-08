@@ -99,7 +99,7 @@ class EventStructureStrategy(
         //   it should be safe, because currently in the event-structure based algorithm,
         //   the intercepted writes are still performed, so the actual state of the memory
         //   reflects the state modelled by the current execution graph.
-        // runIgnored(nThreads) {
+        // runInIgnoredSection {
         //     memoryTracker.dumpMemory()
         // }
         return result
@@ -139,6 +139,7 @@ class EventStructureStrategy(
 
     // TODO: temporarily disable trace collection for event structure strategy
     override fun tryCollectTrace(result: InvocationResult): Trace? {
+        // return super.tryCollectTrace(result)
         return null
     }
 

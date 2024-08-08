@@ -84,8 +84,8 @@ internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConf
     val modelCheckingConfigurations: List<CTestConfiguration> =
         testClass.getAnnotationsByType(ModelCheckingCTest::class.java)
             .map { ann: ModelCheckingCTest ->
-                EventStructureCTestConfiguration(
-                // ModelCheckingCTestConfiguration(
+                // EventStructureCTestConfiguration(
+                ModelCheckingCTestConfiguration(
                     testClass = testClass,
                     iterations = ann.iterations,
                     threads = ann.threads,

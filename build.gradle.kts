@@ -163,7 +163,7 @@ tasks {
             else -> 0
         }
         // temporarily ignore representation tests, because they are unsupported in the new strategy
-        exclude("org/jetbrains/kotlinx/lincheck_test/representation")
+        // exclude("org/jetbrains/kotlinx/lincheck_test/representation")
     }
 
     val jvmTestIsolated = register<Test>("jvmTestIsolated") {
