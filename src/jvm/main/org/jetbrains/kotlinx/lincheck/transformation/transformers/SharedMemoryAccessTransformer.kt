@@ -291,8 +291,8 @@ internal class SharedMemoryAccessTransformer(
         SALOAD -> SHORT_TYPE
         LALOAD -> LONG_TYPE
         DALOAD -> DOUBLE_TYPE
-        BALOAD -> getArrayAccessTypeFromStack(2) // BYTE_TYPE or BOOLEAN_TYPE
-        AALOAD -> getArrayAccessTypeFromStack(2) // OBJECT_TYPE
+        BALOAD -> getArrayAccessTypeFromStack(2) ?: BYTE_TYPE
+        AALOAD -> getArrayAccessTypeFromStack(2) ?: OBJECT_TYPE
         // Store
         IASTORE -> INT_TYPE
         FASTORE -> FLOAT_TYPE
@@ -300,8 +300,8 @@ internal class SharedMemoryAccessTransformer(
         SASTORE -> SHORT_TYPE
         LASTORE -> LONG_TYPE
         DASTORE -> DOUBLE_TYPE
-        BASTORE -> getArrayAccessTypeFromStack(3) // BYTE_TYPE or BOOLEAN_TYPE
-        AASTORE -> getArrayAccessTypeFromStack(3) // OBJECT_TYPE
+        BASTORE -> getArrayAccessTypeFromStack(3) ?: BYTE_TYPE
+        AASTORE -> getArrayAccessTypeFromStack(3) ?: OBJECT_TYPE
         else -> throw IllegalStateException("Unexpected opcode: $opcode")
     }
 
@@ -312,8 +312,8 @@ internal class SharedMemoryAccessTransformer(
     * If the analyzer does not know the type, then return null
     * (according to the ASM docs, this can happen, for example, when the visited instruction is unreachable).
     */
-    private fun getArrayAccessTypeFromStack(position: Int): Type {
-        if (analyzer.stack == null) return OBJECT_TYPE // better than throwing an exception
+    private fun getArrayAccessTypeFromStack(position: Int): Type? {
+        if (analyzer.stack == null) return null
         val arrayDesc = analyzer.stack[analyzer.stack.size - position]
         check(arrayDesc is String)
         val arrayType = getType(arrayDesc)
