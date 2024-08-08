@@ -60,7 +60,11 @@ internal object FieldSearchHelper {
         // so there is no problem that we can receive some fields of the same name and the same type.
         for (field in testObject::class.java.allDeclaredFieldWithSuperclasses) {
             if (field.type.isPrimitive) continue
-            val fieldValue = readFieldViaUnsafe(testObject, field, Unsafe::getObject)
+            val fieldValue = try {
+                readFieldViaUnsafe(testObject, field, Unsafe::getObject)
+            } catch (exception: UnsupportedOperationException) {
+                continue
+            }
 
             if (fieldValue in visitedObjects) continue
             visitedObjects += testObject
