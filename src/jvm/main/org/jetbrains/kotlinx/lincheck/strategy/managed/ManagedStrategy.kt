@@ -554,6 +554,10 @@ abstract class ManagedStrategy(
         !monitorTracker.isWaiting(iThread) &&
         !parkingTracker.isParked(iThread)
 
+    // TODO: refactor --- get rid of this!!!
+    internal fun isBlocked(): Boolean =
+        (0 until nThreads).all { !isActive(it) }
+
     /**
      * Waits until the specified thread can continue
      * the execution according to the strategy decision.
@@ -571,7 +575,7 @@ abstract class ManagedStrategy(
      *
      * @return was this thread actually switched to another or not
      */
-    protected fun switchCurrentThread(
+    internal fun switchCurrentThread(
         iThread: Int,
         reason: SwitchReason = SwitchReason.STRATEGY_SWITCH,
         mustSwitch: Boolean = false,

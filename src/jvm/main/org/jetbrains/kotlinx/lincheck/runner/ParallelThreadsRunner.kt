@@ -244,12 +244,18 @@ internal open class ParallelThreadsRunner(
         // wait for the final result of the method call otherwise.
         val completion = completions[threadId][actorId]
         // Check if the coroutine is already resumed and if not, enter the spin loop.
+        var blocked = false
         if (!isCoroutineResumed(threadId, actorId)) {
             spinners[threadId].spinWaitUntil {
                 // Check whether the scenario is completed and the current suspended operation cannot be resumed.
-                if (currentExecutionPart == POST || isParallelExecutionCompleted) {
+                if (currentExecutionPart == POST || isParallelExecutionCompleted || blocked) {
                     suspensionPointResults[threadId][actorId] = NoResult
                     return Suspended
+                }
+                if (strategy is ManagedStrategy) {
+                    strategy.switchCurrentThread(iThread, SwitchReason.STRATEGY_SWITCH, mustSwitch = true)
+                    blocked = strategy.isBlocked()
+                    return@spinWaitUntil false
                 }
                 // Wait until coroutine is resumed.
                 isCoroutineResumed(threadId, actorId)
