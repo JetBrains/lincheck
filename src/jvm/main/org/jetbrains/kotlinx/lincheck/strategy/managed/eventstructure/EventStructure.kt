@@ -1098,9 +1098,20 @@ class EventStructure(
         }
     }
 
-    fun addCoroutineResumeEvent(iThread: Int, iResumedThread: Int, iResumedActor: Int): AtomicThreadEvent {
+    fun addCoroutineResumeEvent(iThread: Int, iResumedThread: Int, iResumedActor: Int): AtomicThreadEvent? {
         val label = CoroutineResumeLabel(iResumedThread, iResumedActor)
-        return addSendEvent(iThread, label)
+        for (event in execution) {
+            if (event in playedFrontier && event.label == label) return null
+        }
+        tryReplayEvent(iThread)?.let { event ->
+            check(event.label == label)
+            addEventToCurrentExecution(event)
+            return event
+        }
+        val parent = playedFrontier[iThread]
+        return createEvent(iThread, label, parent, dependencies = listOf())!!.also { event ->
+            addEventToCurrentExecution(event)
+        }
     }
 
     fun addActorStartEvent(iThread: Int, actor: Actor): AtomicThreadEvent {
