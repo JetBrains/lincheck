@@ -126,6 +126,34 @@ abstract class ManagedStrategy(
     private var eventIdProvider = EventIdProvider()
 
     /**
+     * In current implementation we don't track the invocation of actor itself.
+     * But when the actor represents `suspend` function, and it is suspended - it will be resumed
+     * manually by [ParallelThreadsRunner] using `Continuation::resumeWith`. Then, the execution will enter
+     * the similar method representing this actor, but which receives a continuation also
+     * (like "access$methodName" or something like that), which corresponds to the actor method call.
+     * As we track all suspended methods using [suspendedFunctionsStack] to match suspended calls with subsequent
+     * resumed calls, we have to ignore the method call after coroutine resumption, as we previously
+     * didn't add the actor call to [suspendedFunctionsStack] from before suspension. All in all, it's just an internal contract
+     * of the [ManagedStrategy] that actor call is not added to the [callStackTrace] and this field just
+     * tracks if the coroutine by a certain thread is suspended, so we mustn't add next method call to the [callStackTrace].
+     */
+    private val nextMethodCallInThreadIsResumedActorCall = BooleanArray(nThreads) { false }
+
+    /**
+     * In case when the plugin is enabled, we enable [eventIdStrictOrderingCheck] property and
+     * check that ids provided to the [beforeEvent] method and corresponding trace points are sequentially ordered.
+     * But as described above in doc to [nextMethodCallInThreadIsResumedActorCall] field, we don't add a
+     * [MethodCallTracePoint] for the resumed actor invocation.
+     * In current implementation `nextMethodCallInThreadIsResumedActorCall[iThread]` will be set to false right before
+     * the next [EventIdProvider.nextId] will be invoked, because [beforeMethodCall] method call goes before the [beforeEvent]
+     * method call. So this field just tracks if the [nextMethodCallInThreadIsResumedActorCall] by the current thread
+     * was just set from `true` to `false` to help us to skip next [beforeEvent] method call.
+     *
+     * @see nextMethodCallInThreadIsResumedActorCall
+     */
+    private var skipNextBeforeEvent = false
+
+    /**
      * Current method call context (static or instance).
      * Initialized and used only in the trace collecting stage.
      */
@@ -174,6 +202,8 @@ abstract class ManagedStrategy(
     protected open fun initializeInvocation() {
         finished.fill(false)
         isSuspended.fill(false)
+        nextMethodCallInThreadIsResumedActorCall.fill(false)
+        skipNextBeforeEvent = false
         currentActorId.fill(-1)
         monitorTracker = MonitorTracker(nThreads)
         traceCollector = if (collectTrace) TraceCollector() else null
@@ -897,7 +927,14 @@ abstract class ManagedStrategy(
             }
             if (collectTrace) {
                 traceCollector!!.checkActiveLockDetected()
-                addBeforeMethodCallTracePoint(owner, codeLocation, methodId, className, methodName, params, atomicMethodDescriptor)
+                // See description if the `nextMethodCallInThreadIsResumedActorCall` field for details
+                if (!nextMethodCallInThreadIsResumedActorCall[currentThread]) {
+                    addBeforeMethodCallTracePoint(owner, codeLocation, methodId, className, methodName, params, atomicMethodDescriptor)
+                    skipNextBeforeEvent = false
+                } else {
+                    nextMethodCallInThreadIsResumedActorCall[currentThread] = false
+                    skipNextBeforeEvent = true
+                }
             }
             if (guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC) {
                 newSwitchPointOnAtomicMethodCall(codeLocation, params)
@@ -923,7 +960,10 @@ abstract class ManagedStrategy(
         if (collectTrace) {
             runInIgnoredSection {
                 val iThread = currentThread
-                val tracePoint = methodCallTracePointStack[iThread].removeLast()
+                // removeLastOrNull - corresponding `methodCallTracePointStack[iThread]` may be empty
+                // only in case we're exiting resumed actor - see `nextMethodCallInThreadIsResumedActorCall`
+                // for more details
+                val tracePoint = methodCallTracePointStack[iThread].removeLastOrNull() ?: return@runInIgnoredSection
                 when (result) {
                     Injections.VOID_RESULT -> tracePoint.initializeVoidReturnedValue()
                     COROUTINE_SUSPENDED -> tracePoint.initializeCoroutineSuspendedResult()
@@ -1021,8 +1061,9 @@ abstract class ManagedStrategy(
      * This method is invoked by a test thread
      * if a coroutine was resumed.
      */
-    internal fun afterCoroutineResumed() {
+    internal fun afterCoroutineResumed(iThread: Int) {
         isSuspended[currentThread] = false
+        nextMethodCallInThreadIsResumedActorCall[iThread] = true
     }
 
     /**
@@ -1379,7 +1420,15 @@ abstract class ManagedStrategy(
                 iThread = iThread,
                 actorId = currentActorId[iThread],
                 reason = reason,
-                callStackTrace = callStackTrace[iThread]
+                callStackTrace = if (reason == SwitchReason.SUSPENDED) {
+                    // If the reason of this method is `SwitchReason.SUSPENDED` - then
+                    // this method is called from the `afterCoroutineSuspended` method.
+                    // `afterCoroutineSuspended` is called on the same stack depth as an actor itself,
+                    // due to a logic in [ParallelThreadsRunner]. That means we won't have any calls in callStackTrace[iThread].
+                    // As a workaround we take the call stack trace from the last trace point in this thread, just
+                    // before the suspension.
+                    trace.lastOrNull()?.takeIf { it.iThread == iThread }?.callStackTrace ?: callStackTrace[iThread]
+                } else callStackTrace[iThread]
             )
             spinCycleStartAdded = false
         }
@@ -1443,7 +1492,20 @@ abstract class ManagedStrategy(
         }
     }
 
+    /**
+     * Make sense only of the plugin is enabled.
+     * Indicates if the next [beforeEvent] method call should be ignored.
+     *
+     * @see skipNextBeforeEvent
+     */
+    protected fun shouldSkipBeforeEvent(): Boolean {
+        val skipBeforeEvent = skipNextBeforeEvent
+        if (skipNextBeforeEvent) {
+            skipNextBeforeEvent = false
+        }
 
+        return skipBeforeEvent
+    }
 
     /**
      * Utility class to set trace point ids for the Lincheck Plugin.
@@ -1553,7 +1615,7 @@ internal class ManagedStrategyRunner(
     }
 
     override fun afterCoroutineResumed(iThread: Int) = runInIgnoredSection {
-        managedStrategy.afterCoroutineResumed()
+        managedStrategy.afterCoroutineResumed(iThread)
     }
 
     override fun afterCoroutineCancelled(iThread: Int) = runInIgnoredSection {

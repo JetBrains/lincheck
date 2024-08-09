@@ -103,7 +103,7 @@ internal class ModelCheckingStrategy(
         // as the instrumented code might call `enterIgnoredSection` just before this call.
         return replay && collectTrace &&
                 Thread.currentThread() is TestThread &&
-                suddenInvocationResult == null
+                suddenInvocationResult == null && !shouldSkipBeforeEvent()
     }
 
 
