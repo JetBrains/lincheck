@@ -522,14 +522,4 @@ internal class ModelCheckingStrategy(
 
         fun build() = Interleaving(switchPositions, threadSwitchChoices, lastNoninitializedNode)
     }
-
-    companion object {
-        /**
-         * We provide lincheck version to [testFailed] method to the plugin be able to
-         * determine if this version is compatible with the plugin version.
-         */
-        internal val lincheckVersion by lazy {
-            this::class.java.`package`.implementationVersion ?: System.getProperty("lincheck.version")
-        }
-    }
 }

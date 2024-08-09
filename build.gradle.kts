@@ -69,7 +69,6 @@ kotlin {
             val jctoolsVersion: String by project
             val mockkVersion: String by project
             dependencies {
-                implementation(project(":bootstrap"))
                 implementation("junit:junit:$junitVersion")
                 implementation("org.jctools:jctools-core:$jctoolsVersion")
                 implementation("io.mockk:mockk:${mockkVersion}")

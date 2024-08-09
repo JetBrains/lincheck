@@ -10,64 +10,72 @@
 package org.jetbrains.kotlinx.lincheck_test.isolated
 
 import org.jetbrains.kotlinx.lincheck.runner.*
+import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
 import org.junit.*
 import sun.nio.ch.lincheck.TestThread
 import java.util.concurrent.*
 
 class FixedActiveThreadsExecutorIsolatedTest {
     @Test
-    fun testSubmit() = FixedActiveThreadsExecutor("FixedActiveThreadsExecutorTest.testSubmit", 2).use { executor ->
-        val executed = arrayOf(false, false)
-        val tasks = Array<TestThreadExecution>(2) { iThread ->
-            object : TestThreadExecution(iThread) {
-                override fun run() {
-                    executed[iThread] = true
+    fun testSubmit() = withLincheckJavaAgent(InstrumentationMode.STRESS) {
+        FixedActiveThreadsExecutor("FixedActiveThreadsExecutorTest.testSubmit", 2).use { executor ->
+            val executed = arrayOf(false, false)
+            val tasks = Array<TestThreadExecution>(2) { iThread ->
+                object : TestThreadExecution(iThread) {
+                    override fun run() {
+                        executed[iThread] = true
+                    }
                 }
             }
+            executor.submitAndAwait(tasks, Long.MAX_VALUE / 2)
+            check(executed.all { it })
         }
-        executor.submitAndAwait(tasks, Long.MAX_VALUE / 2)
-        check(executed.all { it })
     }
 
     @Test
-    fun testResubmit() = FixedActiveThreadsExecutor("FixedActiveThreadsExecutorTest.testResubmit", 2).use { executor ->
-        val executed = arrayOf(false, false)
-        val tasks = Array<TestThreadExecution>(2) { iThread ->
-            object : TestThreadExecution(iThread) {
-                override fun run() {
-                    executed[iThread] = true
+    fun testResubmit() = withLincheckJavaAgent(InstrumentationMode.STRESS) {
+        FixedActiveThreadsExecutor("FixedActiveThreadsExecutorTest.testResubmit", 2).use { executor ->
+            val executed = arrayOf(false, false)
+            val tasks = Array<TestThreadExecution>(2) { iThread ->
+                object : TestThreadExecution(iThread) {
+                    override fun run() {
+                        executed[iThread] = true
+                    }
                 }
             }
+            executor.submitAndAwait(tasks, Long.MAX_VALUE / 2)
+            executed.fill(false)
+            executor.submitAndAwait(tasks, Long.MAX_VALUE / 2)
+            check(executed.all { it })
         }
-        executor.submitAndAwait(tasks, Long.MAX_VALUE / 2)
-        executed.fill(false)
-        executor.submitAndAwait(tasks, Long.MAX_VALUE / 2)
-        check(executed.all { it })
     }
 
     @Test(timeout = 100_000)
-    fun testSubmitTimeout() = FixedActiveThreadsExecutor(
-        "FixedActiveThreadsExecutorTest.testSubmitTimeout",
-        2
-    ).use { executor ->
-        val tasks = Array<TestThreadExecution>(2) { iThread ->
-            object : TestThreadExecution(iThread) {
-                init {
-                    this.iThread = iThread
-                }
+    fun testSubmitTimeout() = withLincheckJavaAgent(InstrumentationMode.STRESS) {
+        FixedActiveThreadsExecutor(
+            "FixedActiveThreadsExecutorTest.testSubmitTimeout",
+            2
+        ).use { executor ->
+            val tasks = Array<TestThreadExecution>(2) { iThread ->
+                object : TestThreadExecution(iThread) {
+                    init {
+                        this.iThread = iThread
+                    }
 
-                override fun run() {
-                    if (iThread == 1)
-                        while (true);
+                    override fun run() {
+                        if (iThread == 1)
+                            while (true);
+                    }
                 }
             }
+            try {
+                executor.submitAndAwait(tasks, 200)
+            } catch (e: TimeoutException) {
+                return // TimeoutException is expected
+            }
+            check(false) { "TimeoutException was expected" }
         }
-        try {
-            executor.submitAndAwait(tasks, 200)
-        } catch (e: TimeoutException) {
-            return // TimeoutException is expected
-        }
-        check(false) { "TimeoutException was expected" }
     }
 
     @Test(timeout = 100_000)
