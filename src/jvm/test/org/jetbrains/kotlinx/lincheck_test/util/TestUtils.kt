@@ -43,11 +43,18 @@ internal inline fun <reified E: Exception> Options<*, *>.checkFailsWithException
  *
  * @param expectedOutputFile name of file stored in resources/expected_logs, storing the expected lincheck output.
  */
-internal fun LincheckFailure?.checkLincheckOutput(expectedOutputFile: String) {
+internal fun LincheckFailure?.checkLincheckOutput(expectedOutputFile: String, expectPluginReferenceIfPluginDisabled: Boolean = true) {
     check(this != null) { "The test should fail" }
 
     val actualOutput = StringBuilder().appendFailure(this).toString()
-    val expectedOutput = getExpectedLogFromResources(expectedOutputFile)
+    var expectedOutput = getExpectedLogFromResources(expectedOutputFile)
+
+    if (expectPluginReferenceIfPluginDisabled && !ideaPluginEnabled()) {
+        expectedOutput = StringBuilder(expectedOutput)
+            .appendLine()
+            .append(pluginReferenceInTrace)
+            .toString()
+    }
 
     if (actualOutput.filtered != expectedOutput.filtered) {
         assertEquals(expectedOutput, actualOutput)
