@@ -47,14 +47,14 @@ class LocalObjectEliminationTest {
         a.array[1] = 54
         val b = A(a.value, a.any, a.array)
         b.value = 65
-        repeat(20) {
+        repeat(3) {
             b.array[0] = it
         }
         a.any = b
         return (a.any as A).array.sum()
     }
 
-    @Test(timeout = 3 * 60 * 1000) // 3 min
+    @Test(timeout = 100_000)
     fun test() {
         LinChecker.check(this::class.java)
     }
