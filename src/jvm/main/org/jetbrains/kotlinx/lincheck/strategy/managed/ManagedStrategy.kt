@@ -928,10 +928,14 @@ abstract class ManagedStrategy(
     override fun onMethodCallReturn(result: Any?) {
         runInIgnoredSection {
             loopDetector.afterMethodCall()
-        }
-        if (collectTrace) {
-            runInIgnoredSection {
+            if (collectTrace) {
                 val iThread = currentThread
+                // this case is possible and can occur when we resume the coroutine,
+                // and it results in a call to a top-level actor `suspend` function;
+                // currently top-level actor functions are not represented in the `callStackTrace`,
+                // we should probably refactor and fix that, because it is very inconvenient
+                if (callStackTrace[iThread].isEmpty())
+                    return@runInIgnoredSection
                 val tracePoint = callStackTrace[iThread].last().tracePoint
                 when (result) {
                     Injections.VOID_RESULT -> tracePoint.initializeVoidReturnedValue()
@@ -974,7 +978,7 @@ abstract class ManagedStrategy(
         loopDetector.passParameters(params)
     }
 
-    private fun isSuspendFunction(className: String, methodName: String, params: Array<Any?>) =
+    private fun isSuspendFunction(className: String, methodName: String, params: Array<Any?>): Boolean =
         try {
             // While this code is inefficient, it is called only when an error is detected.
             getMethod(className.canonicalClassName, methodName, params)?.isSuspendable() ?: false
@@ -983,6 +987,9 @@ abstract class ManagedStrategy(
             // to an extra "<cont>" in the method call line in the trace.
             false
         }
+
+    private fun CallStackTraceElement.isCoroutineResumptionAccessor(className: String, methodName: String): Boolean =
+        tracePoint.className == className && tracePoint.methodName == "access\$$methodName"
 
     private fun getMethod(className: String, methodName: String, params: Array<Any?>): Method? {
         val clazz = Class.forName(className)
@@ -1057,7 +1064,34 @@ abstract class ManagedStrategy(
         val iThread = currentThread
         val callStackTrace = callStackTrace[iThread]
         val suspendedMethodStack = suspendedFunctionsStack[iThread]
-        val suspensionId = if (suspendedMethodStack.isNotEmpty()) {
+        val isSuspending = isSuspendFunction(className, methodName, methodParams)
+        val isResumption = isSuspending && suspendedMethodStack.isNotEmpty()
+        if (isResumption) {
+            // In case of resumption, we need to find a call stack frame corresponding to the resumed function
+            var elementIndex = suspendedMethodStack.indexOfFirst {
+                it.tracePoint.className == className && it.tracePoint.methodName == methodName
+            }
+            if (elementIndex == -1) {
+                val actor = scenario.threads[iThread][currentActorId[iThread]]
+                check(methodName == actor.method.name)
+                check(className.canonicalClassName == actor.method.declaringClass.name)
+                elementIndex = suspendedMethodStack.size
+            }
+            val resumedStackTrace = suspendedMethodStack.subList(elementIndex, suspendedMethodStack.size).reversed()
+            // remove technical coroutines machinery functions from the stack trace
+            if (callStackTrace.isNotEmpty() && callStackTrace.last().isCoroutineResumptionAccessor(className, methodName)) {
+                callStackTrace.removeLast()
+                callStackContextPerThread[iThread].removeLast()
+            }
+            // we assume that all methods lying below the resumed one in stack trace
+            // have empty resumption part or were already resumed before,
+            // so we remove them from the suspended methods stack.
+            suspendedMethodStack.subList(0, elementIndex).clear()
+            callStackTrace.addAll(resumedStackTrace)
+            resumedStackTrace.forEach { beforeMethodEnter(it.instance) }
+            return
+        }
+        val suspensionId = if (isResumption) {
             // If there was a suspension before, then instead of creating a new identifier,
             // use the one that the suspended call had
             // TODO: do not remove it here, remove in `afterMethodCall` instead???
@@ -1065,7 +1099,7 @@ abstract class ManagedStrategy(
         } else {
             methodCallNumber++
         }
-        val params = if (isSuspendFunction(className, methodName, methodParams)) {
+        val params = if (isSuspending) {
             methodParams.dropLast(1).toTypedArray()
         } else {
             methodParams
@@ -1085,13 +1119,14 @@ abstract class ManagedStrategy(
         val methodInvocationId = Objects.hash(methodId,
             params.map { primitiveOrIdentityHashCode(it) }.toTypedArray().contentHashCode()
         )
-        val stackTraceElement = CallStackTraceElement(tracePoint, suspensionId, methodInvocationId)
+        val stackTraceElement = CallStackTraceElement(
+            tracePoint = tracePoint,
+            instance = owner,
+            suspensionId = suspensionId,
+            methodInvocationId = methodInvocationId
+        )
         callStackTrace.add(stackTraceElement)
-        if (owner == null) {
-            beforeStaticMethodCall()
-        } else {
-            beforeInstanceMethodCall(owner)
-        }
+        beforeMethodEnter(owner)
     }
 
     private fun createBeforeMethodCallTracePoint(
@@ -1277,12 +1312,12 @@ abstract class ManagedStrategy(
 
     /* Methods to control the current call context. */
 
-    private fun beforeStaticMethodCall() {
-        callStackContextPerThread[currentThread].add(CallContext.StaticCallContext)
-    }
-
-    private fun beforeInstanceMethodCall(receiver: Any) {
-        callStackContextPerThread[currentThread].add(CallContext.InstanceCallContext(receiver))
+    private fun beforeMethodEnter(receiver: Any?) {
+        if (receiver == null) {
+            callStackContextPerThread[currentThread].add(CallContext.StaticCallContext)
+        } else {
+            callStackContextPerThread[currentThread].add(CallContext.InstanceCallContext(receiver))
+        }
     }
 
     private fun afterExitMethod(iThread: Int) {

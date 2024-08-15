@@ -139,8 +139,8 @@ internal class WriteTracePoint(
 
 internal class MethodCallTracePoint(
     iThread: Int, actorId: Int,
-    private val className: String,
-    private val methodName: String,
+    val className: String,
+    val methodName: String,
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
@@ -316,6 +316,7 @@ internal enum class SwitchReason(private val reason: String) {
  * Suspended method calls have the same [suspensionId] before and after suspension, but different [tracePoint].
  *
  * @property tracePoint the method call trace point corresponding to this call stack element.
+ * @property instance the object on which the method was invoked (null in case of static method).
  * @property suspensionId for `suspend` methods, stores the method identifier
  *   to match the method call before suspension and after resumption.
  * @property methodInvocationId identifier of the method invocation;
@@ -325,6 +326,7 @@ internal enum class SwitchReason(private val reason: String) {
  */
 internal class CallStackTraceElement(
     val tracePoint: MethodCallTracePoint,
+    val instance: Any?,
     val suspensionId: Int,
     val methodInvocationId: Int
 )
