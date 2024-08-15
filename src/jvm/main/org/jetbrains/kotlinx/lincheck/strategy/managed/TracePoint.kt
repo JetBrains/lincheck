@@ -310,10 +310,21 @@ internal enum class SwitchReason(private val reason: String) {
 }
 
 /**
- * Method call info.
+ * Method call stack trace element info.
  *
- * All methods calls are enumerated to make it possible to distinguish different calls of the same method.
- * Suspended method calls have the same [suspensionId] before and after suspension, but different [call] points.
+ * All method calls are enumerated to make it possible to distinguish different calls of the same method.
+ * Suspended method calls have the same [suspensionId] before and after suspension, but different [tracePoint].
+ *
+ * @property tracePoint the method call trace point corresponding to this call stack element.
+ * @property suspensionId for `suspend` methods, stores the method identifier
+ *   to match the method call before suspension and after resumption.
+ * @property methodInvocationId identifier of the method invocation;
+ *   encompasses the id of the method itself and ids of its parameters (i.e., their hash codes).
+ *
  * @see [org.jetbrains.kotlinx.lincheck.transformation.MethodIds].
  */
-internal class CallStackTraceElement(val call: MethodCallTracePoint, val suspensionId: Int, val methodId: Int)
+internal class CallStackTraceElement(
+    val tracePoint: MethodCallTracePoint,
+    val suspensionId: Int,
+    val methodInvocationId: Int
+)

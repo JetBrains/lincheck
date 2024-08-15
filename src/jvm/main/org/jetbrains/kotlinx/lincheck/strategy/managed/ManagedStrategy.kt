@@ -932,7 +932,7 @@ abstract class ManagedStrategy(
         if (collectTrace) {
             runInIgnoredSection {
                 val iThread = currentThread
-                val tracePoint = callStackTrace[iThread].last().call
+                val tracePoint = callStackTrace[iThread].last().tracePoint
                 when (result) {
                     Injections.VOID_RESULT -> tracePoint.initializeVoidReturnedValue()
                     COROUTINE_SUSPENDED -> tracePoint.initializeCoroutineSuspendedResult()
@@ -956,7 +956,7 @@ abstract class ManagedStrategy(
             runInIgnoredSection {
                 // We cannot simply read `thread` as Forcible???Exception can be thrown.
                 val iThread = (Thread.currentThread() as TestThread).threadId
-                val tracePoint = callStackTrace[iThread].last().call
+                val tracePoint = callStackTrace[iThread].last().tracePoint
                 tracePoint.initializeThrownException(t)
                 afterMethodCall(iThread, tracePoint)
                 traceCollector!!.addStateRepresentation()
@@ -970,7 +970,7 @@ abstract class ManagedStrategy(
 
     private fun newSwitchPointOnAtomicMethodCall(codeLocation: Int, params: Array<Any?>) {
         // re-use last call trace point
-        newSwitchPoint(currentThread, codeLocation, callStackTrace[currentThread].lastOrNull()?.call)
+        newSwitchPoint(currentThread, codeLocation, callStackTrace[currentThread].lastOrNull()?.tracePoint)
         loopDetector.passParameters(params)
     }
 
@@ -1085,7 +1085,8 @@ abstract class ManagedStrategy(
         val methodInvocationId = Objects.hash(methodId,
             params.map { primitiveOrIdentityHashCode(it) }.toTypedArray().contentHashCode()
         )
-        callStackTrace.add(CallStackTraceElement(tracePoint, suspensionId, methodInvocationId))
+        val stackTraceElement = CallStackTraceElement(tracePoint, suspensionId, methodInvocationId)
+        callStackTrace.add(stackTraceElement)
         if (owner == null) {
             beforeStaticMethodCall()
         } else {
@@ -1344,7 +1345,7 @@ abstract class ManagedStrategy(
      * Method call trace points are not added to the event list by default, so their event ids are not set otherwise.
      */
     override fun setLastMethodCallEventId() {
-        val lastMethodCall: MethodCallTracePoint = callStackTrace[currentThread].lastOrNull()?.call ?: return
+        val lastMethodCall: MethodCallTracePoint = callStackTrace[currentThread].lastOrNull()?.tracePoint ?: return
         setBeforeEventId(lastMethodCall)
     }
 

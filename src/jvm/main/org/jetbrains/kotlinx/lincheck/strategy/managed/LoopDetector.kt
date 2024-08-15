@@ -914,13 +914,13 @@ internal fun afterSpinCycleTraceCollected(
         var firstI = spinCycleFirstTracePointCallStackTrace.lastIndex
         var count = 0
         while (firstI >= 0) {
-            val identifier = spinCycleFirstTracePointCallStackTrace[firstI].methodId
+            val identifier = spinCycleFirstTracePointCallStackTrace[firstI].methodInvocationId
             // Comparing corresponding calls.
-            if (identifier != currentCallStackTrace[currentI].methodId) break
+            if (identifier != currentCallStackTrace[currentI].methodInvocationId) break
             // Check for the last trace point before the cycle.
             if ((tracePointBeforeCycle != null) &&
                 (tracePointBeforeCycle.callStackTrace.lastIndex >= firstI) &&
-                (tracePointBeforeCycle.callStackTrace[firstI].methodId == identifier)
+                (tracePointBeforeCycle.callStackTrace[firstI].methodInvocationId == identifier)
             ) break
 
             currentI--
@@ -945,11 +945,11 @@ private fun getCommonMinStackTrace(spinCycleTracePoints: List<TracePoint>, spinC
     var count = 0
     outer@while (true) {
         if (count == callStackTraces[0].size) break
-        val stackTraceElement = callStackTraces[0][count].call.stackTraceElement
+        val stackTraceElement = callStackTraces[0][count].tracePoint.stackTraceElement
         for (i in 1 until callStackTraces.size) {
             val traceElements = callStackTraces[i]
             if (count == traceElements.size) break@outer
-            if (stackTraceElement != traceElements[count].call.stackTraceElement) break@outer
+            if (stackTraceElement != traceElements[count].tracePoint.stackTraceElement) break@outer
         }
         count++
     }

@@ -191,7 +191,7 @@ internal fun constructTraceGraph(
                 // create a new call node if needed
                 val result = traceGraphNodes.createAndAppend { lastNode ->
                     val callDepth = innerNode.callDepth + 1
-                    CallNode(prefixFactory.prefixForCallNode(iThread, callDepth), iThread, lastNode, callDepth, call.call)
+                    CallNode(prefixFactory.prefixForCallNode(iThread, callDepth), iThread, lastNode, callDepth, call.tracePoint)
                 }
                 // make it a child of the previous node
                 innerNode.addInternalEvent(result)
