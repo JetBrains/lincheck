@@ -1073,11 +1073,16 @@ abstract class ManagedStrategy(
                 it.tracePoint.className == className && it.tracePoint.methodName == methodName
             }
             if (elementIndex == -1) {
+                // this case is possible and can occur when we resume the coroutine,
+                // and it results in a call to a top-level actor `suspend` function;
+                // currently top-level actor functions are not represented in the `callStackTrace`,
+                // we should probably refactor and fix that, because it is very inconvenient
                 val actor = scenario.threads[iThread][currentActorId[iThread]]
                 check(methodName == actor.method.name)
                 check(className.canonicalClassName == actor.method.declaringClass.name)
                 elementIndex = suspendedMethodStack.size
             }
+            // get suspended stack trace elements to restore
             val resumedStackTrace = suspendedMethodStack
                 .subList(elementIndex, suspendedMethodStack.size)
                 .reversed()
@@ -1085,6 +1090,8 @@ abstract class ManagedStrategy(
             // have empty resumption part or were already resumed before,
             // so we remove them from the suspended methods stack.
             suspendedMethodStack.subList(0, elementIndex).clear()
+            // we need to restore suspended stack trace elements
+            // if they are not on the top of the current stack trace
             if (!resumedStackTrace.isSuffixOf(callStackTrace)) {
                 // restore resumed stack trace elements
                 callStackTrace.addAll(resumedStackTrace)
@@ -1098,7 +1105,7 @@ abstract class ManagedStrategy(
         } else {
             methodParams
         }
-        // Code location of the new method call is currently the last one
+        // The code location of the new method call is currently the last one
         val tracePoint = createBeforeMethodCallTracePoint(
             iThread,
             owner,
@@ -1108,7 +1115,7 @@ abstract class ManagedStrategy(
             codeLocation,
             atomicMethodDescriptor
         )
-        // Method id used to calculate spin cycle start label call depth.
+        // Method invocation id used to calculate spin cycle start label call depth.
         // Two calls are considered equals if two same methods were called with the same parameters.
         val methodInvocationId = Objects.hash(methodId,
             params.map { primitiveOrIdentityHashCode(it) }.toTypedArray().contentHashCode()
@@ -1333,10 +1340,6 @@ abstract class ManagedStrategy(
             // if a method call is suspended, save its call stack element to reuse for continuation resuming
             suspendedFunctionsStack[iThread].add(callStackTrace.last())
         }
-        // TODO: reset suspensionId for finished resumed method
-        //  - put whole `callStackTrace` into `suspendedFunctionsStack`?
-        //  - on resumption match (a prefix of) the current call stack and saved stack in `suspendedFunctionsStack`?
-        //  - or current call stack should be a prefix of saved stack?
         callStackTrace.removeLast()
     }
 
