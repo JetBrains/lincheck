@@ -427,7 +427,8 @@ abstract class ManagedStrategy(
         finished[iThread] = true
         loopDetector.onThreadFinish(iThread)
         traceCollector?.onThreadFinish()
-        doSwitchCurrentThread(iThread, true)
+        val nextThread = chooseThreadSwitch(iThread, true)
+        setCurrentThread(nextThread)
     }
 
     /**
@@ -494,14 +495,19 @@ abstract class ManagedStrategy(
         mustSwitch: Boolean = false,
         tracePoint: TracePoint? = null
     ): Boolean {
-        traceCollector?.newSwitch(iThread, reason, beforeMethodCallSwitch = tracePoint != null && tracePoint is MethodCallTracePoint)
-        doSwitchCurrentThread(iThread, mustSwitch)
-        val switchHappened = iThread != currentThread
+        val nextThread = chooseThreadSwitch(iThread, mustSwitch)
+        val switchHappened = (iThread != nextThread)
+        if (switchHappened) {
+            traceCollector?.newSwitch(iThread, reason,
+                beforeMethodCallSwitch = (tracePoint != null && tracePoint is MethodCallTracePoint)
+            )
+        }
+        setCurrentThread(nextThread)
         awaitTurn(iThread)
         return switchHappened
     }
 
-    private fun doSwitchCurrentThread(iThread: Int, mustSwitch: Boolean = false) {
+    private fun chooseThreadSwitch(iThread: Int, mustSwitch: Boolean = false): Int {
         onNewSwitch(iThread, mustSwitch)
         val threads = switchableThreads(iThread)
         // do the switch if there is an available thread
@@ -514,20 +520,18 @@ abstract class ManagedStrategy(
                     """.trimIndent()
                 }
             }
-            setCurrentThread(nextThread)
-            return
+            return nextThread
         }
         // otherwise exit if the thread switch is optional, or all threads are finished
         if (!mustSwitch || finished.all { it }) {
-           return
+           return iThread
         }
         // try to resume some suspended thread
         val suspendedThread = (0 until nThreads).firstOrNull {
            !finished[it] && isSuspended[it]
         }
         if (suspendedThread != null) {
-           setCurrentThread(suspendedThread)
-           return
+           return suspendedThread
         }
         // any other situation is considered to be a deadlock
         suddenInvocationResult = ManagedDeadlockInvocationResult(runner.collectExecutionResults())
