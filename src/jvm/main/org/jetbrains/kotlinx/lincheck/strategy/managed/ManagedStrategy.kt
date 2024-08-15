@@ -244,9 +244,6 @@ abstract class ManagedStrategy(
         )
         cleanObjectNumeration()
 
-        runner.close()
-        runner = createRunner()
-
         val loggedResults = runInvocation()
         // In case the runner detects a deadlock, some threads can still be in an active state,
         // simultaneously adding events to the TraceCollector, which leads to an inconsistent trace.
