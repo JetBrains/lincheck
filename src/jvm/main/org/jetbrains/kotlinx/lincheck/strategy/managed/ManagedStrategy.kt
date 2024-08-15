@@ -1081,15 +1081,15 @@ abstract class ManagedStrategy(
             val resumedStackTrace = suspendedMethodStack
                 .subList(elementIndex, suspendedMethodStack.size)
                 .reversed()
-                // remove resumed stack trace elements, which were already restored
-                .filter { it !in callStackTrace }
             // we assume that all methods lying below the resumed one in stack trace
             // have empty resumption part or were already resumed before,
             // so we remove them from the suspended methods stack.
             suspendedMethodStack.subList(0, elementIndex).clear()
-            // restore resumed stack trace elements
-            callStackTrace.addAll(resumedStackTrace)
-            resumedStackTrace.forEach { beforeMethodEnter(it.instance) }
+            if (!resumedStackTrace.isSuffixOf(callStackTrace)) {
+                // restore resumed stack trace elements
+                callStackTrace.addAll(resumedStackTrace)
+                resumedStackTrace.forEach { beforeMethodEnter(it.instance) }
+            }
             return
         }
         val suspensionId = if (isResumption) {

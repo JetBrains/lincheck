@@ -26,6 +26,13 @@ import java.util.*
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
 
+fun <T> List<T>.isSuffixOf(list: List<T>): Boolean {
+    if (size > list.size) return false
+    for (i in indices) {
+       if (this[size - i - 1] != list[list.size - i - 1]) return false
+    }
+    return true
+}
 
 fun chooseSequentialSpecification(sequentialSpecificationByUser: Class<*>?, testClass: Class<*>): Class<*> =
     if (sequentialSpecificationByUser === DummySequentialSpecification::class.java || sequentialSpecificationByUser == null) testClass
