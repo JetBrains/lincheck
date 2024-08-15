@@ -1077,16 +1077,16 @@ abstract class ManagedStrategy(
                 check(className.canonicalClassName == actor.method.declaringClass.name)
                 elementIndex = suspendedMethodStack.size
             }
-            val resumedStackTrace = suspendedMethodStack.subList(elementIndex, suspendedMethodStack.size).reversed()
-            // remove technical coroutines machinery functions from the stack trace
-            if (callStackTrace.isNotEmpty() && callStackTrace.last().isCoroutineResumptionAccessor(className, methodName)) {
-                callStackTrace.removeLast()
-                callStackContextPerThread[iThread].removeLast()
-            }
+            val resumedStackTrace = suspendedMethodStack
+                .subList(elementIndex, suspendedMethodStack.size)
+                .reversed()
+                // remove resumed stack trace elements, which were already restored
+                .filter { it !in callStackTrace }
             // we assume that all methods lying below the resumed one in stack trace
             // have empty resumption part or were already resumed before,
             // so we remove them from the suspended methods stack.
             suspendedMethodStack.subList(0, elementIndex).clear()
+            // restore resumed stack trace elements
             callStackTrace.addAll(resumedStackTrace)
             resumedStackTrace.forEach { beforeMethodEnter(it.instance) }
             return
