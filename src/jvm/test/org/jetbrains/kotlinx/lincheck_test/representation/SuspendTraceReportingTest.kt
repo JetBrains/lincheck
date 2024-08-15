@@ -9,14 +9,13 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import kotlinx.coroutines.sync.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.junit.*
 import kotlin.coroutines.*
-
+import kotlinx.coroutines.sync.*
 
 class SuspendTraceReportingTest {
     private val lock = Mutex()
@@ -45,17 +44,18 @@ class SuspendTraceReportingTest {
 
     @Test
     fun test() = ModelCheckingOptions().apply {
-        actorsPerThread(1)
-        actorsBefore(0)
-        actorsAfter(0)
+        addCustomScenario {
+            parallel {
+                thread { actor(::foo) }
+                thread { actor(::bar) }
+            }
+        }
     }
         .checkImpl(this::class.java)
         .checkLincheckOutput("suspend_trace_reporting.txt")
-
 }
 
-/* This test checks the trace reporting in case when
- * a nested sequence of `suspend` functions is resumed ---
+/* This test checks the trace reporting in case when a nested sequence of `suspend` functions is resumed ---
  * upon the resumption the stack trace should be correctly restored.
  */
 class SuspendTraceResumptionReportingTest {
@@ -103,11 +103,13 @@ class SuspendTraceResumptionReportingTest {
 
     @Test
     fun test() = ModelCheckingOptions().apply {
-        actorsPerThread(1)
-        actorsBefore(0)
-        actorsAfter(0)
+        addCustomScenario {
+            parallel {
+                thread { actor(::foo) }
+                thread { actor(::bar) }
+            }
+        }
     }
         .checkImpl(this::class.java)
         .checkLincheckOutput("suspend_trace_resumption_reporting_test.txt")
-
 }

@@ -137,6 +137,7 @@ internal class MethodCallTransformer(
         className == "org/slf4j/helpers/Util" ||
         className == "java/util/Properties"
 
+    @Suppress("UNUSED_PARAMETER")
     private fun isCoroutineResumptionSyntheticAccessor(className: String, methodName: String): Boolean =
         (this.methodName == "invokeSuspend") && methodName.startsWith("access\$")
 
