@@ -139,8 +139,9 @@ internal class WriteTracePoint(
 
 internal class MethodCallTracePoint(
     iThread: Int, actorId: Int,
-    callStackTrace: CallStackTrace,
+    private val className: String,
     private val methodName: String,
+    callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
     private var returnedValue: ReturnedValueResult = ReturnedValueResult.NoValue
@@ -148,7 +149,7 @@ internal class MethodCallTracePoint(
     private var parameters: List<String>? = null
     private var ownerName: String? = null
 
-    val wasSuspended get() = returnedValue == ReturnedValueResult.CoroutineSuspended
+    val wasSuspended get() = (returnedValue == ReturnedValueResult.CoroutineSuspended)
 
     override fun toStringCompact(): String = StringBuilder().apply {
         if (ownerName != null)

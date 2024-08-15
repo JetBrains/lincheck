@@ -1074,7 +1074,15 @@ abstract class ManagedStrategy(
             methodParams
         }
         // Code location of the new method call is currently the last one
-        val tracePoint = createBeforeMethodCallTracePoint(owner, iThread, className, methodName, params, codeLocation, atomicMethodDescriptor)
+        val tracePoint = createBeforeMethodCallTracePoint(
+            iThread,
+            owner,
+            className,
+            methodName,
+            params,
+            codeLocation,
+            atomicMethodDescriptor
+        )
         methodCallTracePointStack[iThread] += tracePoint
         // Method id used to calculate spin cycle start label call depth.
         // Two calls are considered equals if two same methods were called with the same parameters.
@@ -1090,8 +1098,8 @@ abstract class ManagedStrategy(
     }
 
     private fun createBeforeMethodCallTracePoint(
-        owner: Any?,
         iThread: Int,
+        owner: Any?,
         className: String,
         methodName: String,
         params: Array<Any?>,
@@ -1102,8 +1110,9 @@ abstract class ManagedStrategy(
         val tracePoint = MethodCallTracePoint(
             iThread = iThread,
             actorId = currentActorId[iThread],
-            callStackTrace = callStackTrace,
+            className = className,
             methodName = methodName,
+            callStackTrace = callStackTrace,
             stackTraceElement = CodeLocations.stackTrace(codeLocation)
         )
         // handle non-atomic methods
