@@ -105,9 +105,6 @@ abstract class ManagedStrategy(
     // i.e. the first element is the top stack trace element.
     private val suspendedFunctionsStack = Array(nThreads) { mutableListOf<CallStackTraceElement>() }
 
-    // Current call stack for a thread, updated during beforeMethodCall and afterMethodCall methods.
-    private val methodCallTracePointStack = (0 until nThreads + 2).map { mutableListOf<MethodCallTracePoint>() }
-
     // Helps to ignore potential switch point in local objects (see LocalObjectManager) to avoid
     // useless interleavings analysis.
     private var localObjectManager = LocalObjectManager()
@@ -935,7 +932,7 @@ abstract class ManagedStrategy(
         if (collectTrace) {
             runInIgnoredSection {
                 val iThread = currentThread
-                val tracePoint = methodCallTracePointStack[iThread].removeLast()
+                val tracePoint = callStackTrace[iThread].last().call
                 when (result) {
                     Injections.VOID_RESULT -> tracePoint.initializeVoidReturnedValue()
                     COROUTINE_SUSPENDED -> tracePoint.initializeCoroutineSuspendedResult()
@@ -959,7 +956,7 @@ abstract class ManagedStrategy(
             runInIgnoredSection {
                 // We cannot simply read `thread` as Forcible???Exception can be thrown.
                 val iThread = (Thread.currentThread() as TestThread).threadId
-                val tracePoint = methodCallTracePointStack[iThread].removeLast()
+                val tracePoint = callStackTrace[iThread].last().call
                 tracePoint.initializeThrownException(t)
                 afterMethodCall(iThread, tracePoint)
                 traceCollector!!.addStateRepresentation()
@@ -1083,13 +1080,12 @@ abstract class ManagedStrategy(
             codeLocation,
             atomicMethodDescriptor
         )
-        methodCallTracePointStack[iThread] += tracePoint
         // Method id used to calculate spin cycle start label call depth.
         // Two calls are considered equals if two same methods were called with the same parameters.
-        val methodIdentifierWithSignatureAndParams = Objects.hash(methodId,
+        val methodInvocationId = Objects.hash(methodId,
             params.map { primitiveOrIdentityHashCode(it) }.toTypedArray().contentHashCode()
         )
-        callStackTrace.add(CallStackTraceElement(tracePoint, suspensionId, methodIdentifierWithSignatureAndParams))
+        callStackTrace.add(CallStackTraceElement(tracePoint, suspensionId, methodInvocationId))
         if (owner == null) {
             beforeStaticMethodCall()
         } else {
