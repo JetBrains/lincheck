@@ -91,8 +91,8 @@ abstract class ManagedStrategy(
     // Collector of all events in the execution such as thread switches.
     private var traceCollector: TraceCollector? = null // null when `collectTrace` is false
 
-    // Stores the global number of method calls.
-    private var methodCallNumber = 0
+    // Stores the global number of stack trace elements.
+    private var callStackTraceElementNextId = 0
 
     // Stores the currently executing methods call stack for each thread.
     private val callStackTrace = Array(nThreads) { mutableListOf<CallStackTraceElement>() }
@@ -1092,14 +1092,7 @@ abstract class ManagedStrategy(
             }
             return
         }
-        val suspensionId = if (isResumption) {
-            // If there was a suspension before, then instead of creating a new identifier,
-            // use the one that the suspended call had
-            // TODO: do not remove it here, remove in `afterMethodCall` instead???
-            suspendedMethodStack.removeLast().suspensionId
-        } else {
-            methodCallNumber++
-        }
+        val callId = callStackTraceElementNextId++
         val params = if (isSuspending) {
             methodParams.dropLast(1).toTypedArray()
         } else {
@@ -1121,9 +1114,9 @@ abstract class ManagedStrategy(
             params.map { primitiveOrIdentityHashCode(it) }.toTypedArray().contentHashCode()
         )
         val stackTraceElement = CallStackTraceElement(
+            id = callId,
             tracePoint = tracePoint,
             instance = owner,
-            suspensionId = suspensionId,
             methodInvocationId = methodInvocationId
         )
         callStackTrace.add(stackTraceElement)
