@@ -184,7 +184,7 @@ internal fun constructTraceGraph(
         // add the event
         var innerNode: TraceInnerNode = actorNodes[iThread][actorId]!!
         for (call in event.callStackTrace) {
-            val callId = call.suspensionIdentifier
+            val callId = call.suspensionId
             // Switch events that happen as a first event of the method are lifted out of the method in the trace
             if (!callNodes.containsKey(callId) && event is SwitchEventTracePoint) break
             val callNode = callNodes.computeIfAbsent(callId) {

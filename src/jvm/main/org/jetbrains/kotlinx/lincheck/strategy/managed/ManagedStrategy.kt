@@ -31,7 +31,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
 import java.lang.invoke.VarHandle
 import java.lang.reflect.*
 import java.util.*
-import kotlin.collections.set
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 
 /**
@@ -47,7 +46,7 @@ abstract class ManagedStrategy(
     scenario: ExecutionScenario,
     private val validationFunction: Actor?,
     private val stateRepresentationFunction: Method?,
-    private val testCfg: ManagedCTestConfiguration
+    private val testCfg: ManagedCTestConfiguration,
 ) : Strategy(scenario), EventTracker {
     // The number of parallel threads.
     protected val nThreads: Int = scenario.nThreads
@@ -92,17 +91,23 @@ abstract class ManagedStrategy(
     // Collector of all events in the execution such as thread switches.
     private var traceCollector: TraceCollector? = null // null when `collectTrace` is false
 
-    // Stores the currently executing methods call stack for each thread.
-    private val callStackTrace = Array(nThreads) { mutableListOf<CallStackTraceElement>() }
-
     // Stores the global number of method calls.
     private var methodCallNumber = 0
+
+    // Stores the currently executing methods call stack for each thread.
+    private val callStackTrace = Array(nThreads) { mutableListOf<CallStackTraceElement>() }
 
     // In case of suspension, the call stack of the corresponding `suspend`
     // methods is stored here, so that the same method call identifiers are
     // used on resumption, and the trace point before and after the suspension
     // correspond to the same method call in the trace.
+    // NOTE: the call stack is stored in the reverse order,
+    // i.e. the first element is the top stack trace element.
+    // TODO: store CallStackTraceElement instead
     private val suspendedFunctionsStack = Array(nThreads) { mutableListOf<Int>() }
+
+    // Current call stack for a thread, updated during beforeMethodCall and afterMethodCall methods.
+    private val methodCallTracePointStack = (0 until nThreads + 2).map { mutableListOf<MethodCallTracePoint>() }
 
     // Helps to ignore potential switch point in local objects (see LocalObjectManager) to avoid
     // useless interleavings analysis.
@@ -115,9 +120,6 @@ abstract class ManagedStrategy(
 
     // Random instances with fixed seeds to replace random calls in instrumented code.
     private var randoms = (0 until nThreads + 2).map { Random(it + 239L) }
-
-    // Current call stack for a thread, updated during beforeMethodCall and afterMethodCall methods.
-    private val methodCallTracePointStack = (0 until nThreads + 2).map { mutableListOf<MethodCallTracePoint>() }
 
     // User-specified guarantees on specific function, which can be considered as atomic or ignored.
     private val userDefinedGuarantees: List<ManagedStrategyGuarantee>? = testCfg.guarantees.ifEmpty { null }
@@ -505,24 +507,35 @@ abstract class ManagedStrategy(
 
     private fun doSwitchCurrentThread(iThread: Int, mustSwitch: Boolean = false) {
         onNewSwitch(iThread, mustSwitch)
-        val switchableThreads = switchableThreads(iThread)
-        if (switchableThreads.isEmpty()) {
-            if (mustSwitch && !finished.all { it }) {
-                // All threads are suspended
-                // then switch on any suspended thread to finish it and get SuspendedResult
-                val nextThread = (0 until nThreads).firstOrNull { !finished[it] && isSuspended[it] }
-                if (nextThread == null) {
-                    // must switch not to get into a deadlock, but there are no threads to switch.
-                    suddenInvocationResult = ManagedDeadlockInvocationResult(runner.collectExecutionResults())
-                    // forcibly finish execution by throwing an exception.
-                    throw ForcibleExecutionFinishError
+        val threads = switchableThreads(iThread)
+        // do the switch if there is an available thread
+        if (threads.isNotEmpty()) {
+            val nextThread = chooseThread(iThread).also {
+                check(it in threads) {
+                    """
+                        Trying to switch the execution to thread $it,
+                        but only the following threads are eligible to switch: $threads
+                    """.trimIndent()
                 }
-                setCurrentThread(nextThread)
             }
-            return // ignore switch, because there is no one to switch to
+            setCurrentThread(nextThread)
+            return
         }
-        val nextThread = chooseThread(iThread)
-        setCurrentThread(nextThread)
+        // otherwise exit if the thread switch is optional, or all threads are finished
+        if (!mustSwitch || finished.all { it }) {
+           return
+        }
+        // try to resume some suspended thread
+        val suspendedThread = (0 until nThreads).firstOrNull {
+           !finished[it] && isSuspended[it]
+        }
+        if (suspendedThread != null) {
+           setCurrentThread(suspendedThread)
+           return
+        }
+        // any other situation is considered to be a deadlock
+        suddenInvocationResult = ManagedDeadlockInvocationResult(runner.collectExecutionResults())
+        throw ForcibleExecutionFinishError
     }
 
     @JvmName("setNextThread")
@@ -1048,12 +1061,11 @@ abstract class ManagedStrategy(
         val iThread = currentThread
         val callStackTrace = callStackTrace[iThread]
         val suspendedMethodStack = suspendedFunctionsStack[iThread]
-        val suspensionIdentifier = if (suspendedMethodStack.isNotEmpty()) {
+        val suspensionId = if (suspendedMethodStack.isNotEmpty()) {
             // If there was a suspension before, then instead of creating a new identifier,
             // use the one that the suspended call had
-            val lastId = suspendedMethodStack.last()
-            suspendedMethodStack.removeAt(suspendedMethodStack.lastIndex)
-            lastId
+            // TODO: do not remove it here, remove in `afterMethodCall` instead???
+            suspendedMethodStack.removeLast()
         } else {
             methodCallNumber++
         }
@@ -1070,7 +1082,7 @@ abstract class ManagedStrategy(
         val methodIdentifierWithSignatureAndParams = Objects.hash(methodId,
             params.map { primitiveOrIdentityHashCode(it) }.toTypedArray().contentHashCode()
         )
-        callStackTrace.add(CallStackTraceElement(tracePoint, suspensionIdentifier, methodIdentifierWithSignatureAndParams))
+        callStackTrace.add(CallStackTraceElement(tracePoint, suspensionId, methodIdentifierWithSignatureAndParams))
         if (owner == null) {
             beforeStaticMethodCall()
         } else {
@@ -1285,9 +1297,14 @@ abstract class ManagedStrategy(
         val callStackTrace = callStackTrace[iThread]
         if (tracePoint.wasSuspended) {
             // if a method call is suspended, save its identifier to reuse for continuation resuming
-            suspendedFunctionsStack[iThread].add(callStackTrace.last().suspensionIdentifier)
+            val id = callStackTrace.last().suspensionId
+            suspendedFunctionsStack[iThread].add(id)
         }
-        callStackTrace.removeAt(callStackTrace.lastIndex)
+        // TODO: reset suspensionId for finished resumed method
+        //  - put whole `callStackTrace` into `suspendedFunctionsStack`?
+        //  - on resumption match (a prefix of) the current call stack and saved stack in `suspendedFunctionsStack`?
+        //  - or current call stack should be a prefix of saved stack?
+        callStackTrace.removeLast()
     }
 
     // == LOGGING METHODS ==
