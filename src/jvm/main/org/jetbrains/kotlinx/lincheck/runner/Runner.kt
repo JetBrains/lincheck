@@ -29,7 +29,7 @@ abstract class Runner protected constructor(
     protected val completedOrSuspendedThreads = AtomicInteger(0)
 
     var currentExecutionPart: ExecutionPart? = null
-        protected set
+        private set
 
     /**
      * Returns the current state representation of the test instance constructed via
