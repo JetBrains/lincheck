@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <!DOCTYPE instance-profile SYSTEM "https://resources.jetbrains.com/writerside/1.0/product-profile.dtd">
-<instance-profile id="kl" name="kotlinx-lincheck" start-page="lincheck-guide.md">
+<instance-profile id="lincheck" name="kotlinx-lincheck" start-page="lincheck-guide.md">
 	<snippet id="lincheck">
 		<toc-element topic="lincheck-guide.md"/>
 		<toc-element topic="introduction.md"/>
