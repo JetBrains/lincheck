@@ -52,6 +52,7 @@ internal fun enumerateObjects(obj: Any): Map<Any, Int> {
  * @param objectNumberMap result enumeration map
  */
 private fun enumerateObjects(obj: Any, processedObjects: MutableSet<Any>, objectNumberMap: MutableMap<Any, Int>) {
+    if (obj is Class<*> || obj is ClassLoader) return
     if (!processedObjects.add(obj)) return
     val objectNumber = getObjectNumber(obj.javaClass, obj)
     objectNumberMap[obj] = objectNumber
