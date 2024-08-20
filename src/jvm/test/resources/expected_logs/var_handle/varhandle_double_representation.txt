@@ -1,56 +1,32 @@
 = Invalid execution results =
-| ------------------------------- |
-|    Thread 1    |    Thread 2    |
-| ------------------------------- |
-| increment(): 0 | increment(): 0 |
-| ------------------------------- |
+| -------------- |
+|    Thread 1    |
+| -------------- |
+| operation(): 1 |
+| -------------- |
 
 The following interleaving leads to the error:
-| ---------------------------------------------------------------------------------------- |
-|    Thread 1    |                                Thread 2                                 |
-| ---------------------------------------------------------------------------------------- |
-|                | increment(): 0                                                          |
-|                |   counter.READ: 0 at BaseFailingTest.increment(BaseFailingTest.kt:30)   |
-|                |   switch                                                                |
-| increment(): 0 |                                                                         |
-|                |   counter.WRITE(1) at BaseFailingTest.increment(BaseFailingTest.kt:30)  |
-|                |   actionsForTrace() at BaseFailingTest.increment(BaseFailingTest.kt:31) |
-|                |   result: 0                                                             |
-| ---------------------------------------------------------------------------------------- |
+| -------------- |
+|    Thread 1    |
+| -------------- |
+| operation(): 1 |
+| -------------- |
 
 Detailed trace:
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                 Thread 1                                                                                  |                                                                                 Thread 2                                                                                  |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                                                                                                           | increment(): 0                                                                                                                                                            |
-|                                                                                                                                                                           |   counter.READ: 0 at BaseFailingTest.increment(BaseFailingTest.kt:30)                                                                                                     |
-|                                                                                                                                                                           |   switch                                                                                                                                                                  |
-| increment(): 0                                                                                                                                                            |                                                                                                                                                                           |
-|   counter.READ: 0 at BaseFailingTest.increment(BaseFailingTest.kt:30)                                                                                                     |                                                                                                                                                                           |
-|   counter.WRITE(1) at BaseFailingTest.increment(BaseFailingTest.kt:30)                                                                                                    |                                                                                                                                                                           |
-|   actionsForTrace() at BaseFailingTest.increment(BaseFailingTest.kt:31)                                                                                                   |                                                                                                                                                                           |
-|     number.READ: 1.0 at VarHandleDoubleRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:327)                                                            |                                                                                                                                                                           |
-|     number.compareAndSet(1.0,1.0): true at VarHandleDoubleRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:327)                                         |                                                                                                                                                                           |
-|     number.set(2.0) at VarHandleDoubleRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:328)                                                             |                                                                                                                                                                           |
-|     VarHandleDoubleRepresentationTest.staticNumber.READ: 3.0 at VarHandleDoubleRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:330)                    |                                                                                                                                                                           |
-|     VarHandleDoubleRepresentationTest.staticNumber.compareAndSet(3.0,1.0): true at VarHandleDoubleRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:330) |                                                                                                                                                                           |
-|     VarHandleDoubleRepresentationTest.staticNumber.set(3.0) at VarHandleDoubleRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:331)                     |                                                                                                                                                                           |
-|     array.READ: DoubleArray#1 at VarHandleDoubleRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:333)                                                   |                                                                                                                                                                           |
-|     DoubleArray#1[1].compareAndSet(3.0,1.0): false at VarHandleDoubleRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:333)                              |                                                                                                                                                                           |
-|     array.READ: DoubleArray#1 at VarHandleDoubleRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:334)                                                   |                                                                                                                                                                           |
-|     DoubleArray#1[1].set(2.0) at VarHandleDoubleRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:334)                                                   |                                                                                                                                                                           |
-|   result: 0                                                                                                                                                               |                                                                                                                                                                           |
-|                                                                                                                                                                           |   counter.WRITE(1) at BaseFailingTest.increment(BaseFailingTest.kt:30)                                                                                                    |
-|                                                                                                                                                                           |   actionsForTrace() at BaseFailingTest.increment(BaseFailingTest.kt:31)                                                                                                   |
-|                                                                                                                                                                           |     number.READ: 2.0 at VarHandleDoubleRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:327)                                                            |
-|                                                                                                                                                                           |     number.compareAndSet(2.0,1.0): true at VarHandleDoubleRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:327)                                         |
-|                                                                                                                                                                           |     number.set(2.0) at VarHandleDoubleRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:328)                                                             |
-|                                                                                                                                                                           |     VarHandleDoubleRepresentationTest.staticNumber.READ: 3.0 at VarHandleDoubleRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:330)                    |
-|                                                                                                                                                                           |     VarHandleDoubleRepresentationTest.staticNumber.compareAndSet(3.0,1.0): true at VarHandleDoubleRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:330) |
-|                                                                                                                                                                           |     VarHandleDoubleRepresentationTest.staticNumber.set(3.0) at VarHandleDoubleRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:331)                     |
-|                                                                                                                                                                           |     array.READ: DoubleArray#1 at VarHandleDoubleRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:333)                                                   |
-|                                                                                                                                                                           |     DoubleArray#1[1].compareAndSet(3.0,1.0): false at VarHandleDoubleRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:333)                              |
-|                                                                                                                                                                           |     array.READ: DoubleArray#1 at VarHandleDoubleRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:334)                                                   |
-|                                                                                                                                                                           |     DoubleArray#1[1].set(2.0) at VarHandleDoubleRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:334)                                                   |
-|                                                                                                                                                                           |   result: 0                                                                                                                                                               |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                 Thread 1                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation(): 1                                                                                                                                                            |
+|   actionsForTrace() at BaseFailingTest.operation(BaseFailingTest.kt:27)                                                                                                   |
+|     number.READ: 1.0 at VarHandleDoubleRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:327)                                                            |
+|     number.compareAndSet(1.0,1.0): true at VarHandleDoubleRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:327)                                         |
+|     number.set(2.0) at VarHandleDoubleRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:328)                                                             |
+|     VarHandleDoubleRepresentationTest.staticNumber.READ: 3.0 at VarHandleDoubleRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:330)                    |
+|     VarHandleDoubleRepresentationTest.staticNumber.compareAndSet(3.0,1.0): true at VarHandleDoubleRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:330) |
+|     VarHandleDoubleRepresentationTest.staticNumber.set(3.0) at VarHandleDoubleRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:331)                     |
+|     array.READ: DoubleArray#1 at VarHandleDoubleRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:333)                                                   |
+|     DoubleArray#1[1].compareAndSet(3.0,1.0): false at VarHandleDoubleRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:333)                              |
+|     array.READ: DoubleArray#1 at VarHandleDoubleRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:334)                                                   |
+|     DoubleArray#1[1].set(2.0) at VarHandleDoubleRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:334)                                                   |
+|   result: 1                                                                                                                                                               |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

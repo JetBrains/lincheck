@@ -1,92 +1,50 @@
 = Invalid execution results =
-| ------------------------------- |
-|    Thread 1    |    Thread 2    |
-| ------------------------------- |
-| increment(): 0 | increment(): 0 |
-| ------------------------------- |
+| -------------- |
+|    Thread 1    |
+| -------------- |
+| operation(): 1 |
+| -------------- |
 
 The following interleaving leads to the error:
-| ---------------------------------------------------------------------------------------- |
-|    Thread 1    |                                Thread 2                                 |
-| ---------------------------------------------------------------------------------------- |
-|                | increment(): 0                                                          |
-|                |   counter.READ: 0 at BaseFailingTest.increment(BaseFailingTest.kt:30)   |
-|                |   switch                                                                |
-| increment(): 0 |                                                                         |
-|                |   counter.WRITE(1) at BaseFailingTest.increment(BaseFailingTest.kt:30)  |
-|                |   actionsForTrace() at BaseFailingTest.increment(BaseFailingTest.kt:31) |
-|                |   result: 0                                                             |
-| ---------------------------------------------------------------------------------------- |
+| -------------- |
+|    Thread 1    |
+| -------------- |
+| operation(): 1 |
+| -------------- |
 
 Detailed trace:
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                               Thread 1                                                                |                                                               Thread 2                                                                |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                                                                       | increment(): 0                                                                                                                        |
-|                                                                                                                                       |   counter.READ: 0 at BaseFailingTest.increment(BaseFailingTest.kt:30)                                                                 |
-|                                                                                                                                       |   switch                                                                                                                              |
-| increment(): 0                                                                                                                        |                                                                                                                                       |
-|   counter.READ: 0 at BaseFailingTest.increment(BaseFailingTest.kt:30)                                                                 |                                                                                                                                       |
-|   counter.WRITE(1) at BaseFailingTest.increment(BaseFailingTest.kt:30)                                                                |                                                                                                                                       |
-|   actionsForTrace() at BaseFailingTest.increment(BaseFailingTest.kt:31)                                                               |                                                                                                                                       |
-|     readActions() at ArrayNameInTraceRepresentationTest.actionsForTrace(OwnerNameInTraceRepresentationTests.kt:69)                    |                                                                                                                                       |
-|       intArray.READ: IntArray#1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:74)          |                                                                                                                                       |
-|       IntArray#1[0].READ: 1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:74)              |                                                                                                                                       |
-|       shortArray.READ: ShortArray#1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:75)      |                                                                                                                                       |
-|       ShortArray#1[0].READ: 1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:75)            |                                                                                                                                       |
-|       charArray.READ: CharArray#1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:76)        |                                                                                                                                       |
-|       CharArray#1[0].READ: 1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:76)             |                                                                                                                                       |
-|       byteArray.READ: ByteArray#1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:77)        |                                                                                                                                       |
-|       ByteArray#1[0].READ: 1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:77)             |                                                                                                                                       |
-|       booleanArray.READ: BooleanArray#1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:78)  |                                                                                                                                       |
-|       BooleanArray#1[0].READ: true at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:78)       |                                                                                                                                       |
-|       FloatArray#1[0].READ: 1.0 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:80)          |                                                                                                                                       |
-|       DoubleArray#1[0].READ: 1.0 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:81)         |                                                                                                                                       |
-|       LongArray#1[0].READ: 1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:82)             |                                                                                                                                       |
-|     writeActions() at ArrayNameInTraceRepresentationTest.actionsForTrace(OwnerNameInTraceRepresentationTests.kt:70)                   |                                                                                                                                       |
-|       intArray.READ: IntArray#1 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:86)         |                                                                                                                                       |
-|       IntArray#1[0].WRITE(0) at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:86)            |                                                                                                                                       |
-|       shortArray.READ: ShortArray#1 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:87)     |                                                                                                                                       |
-|       ShortArray#1[0].WRITE(0) at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:87)          |                                                                                                                                       |
-|       charArray.READ: CharArray#1 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:88)       |                                                                                                                                       |
-|       CharArray#1[0].WRITE(0) at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:88)           |                                                                                                                                       |
-|       byteArray.READ: ByteArray#1 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:89)       |                                                                                                                                       |
-|       ByteArray#1[0].WRITE(0) at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:89)           |                                                                                                                                       |
-|       booleanArray.READ: BooleanArray#1 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:90) |                                                                                                                                       |
-|       BooleanArray#1[0].WRITE(false) at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:90)    |                                                                                                                                       |
-|       FloatArray#1[0].WRITE(0.0) at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:92)        |                                                                                                                                       |
-|       DoubleArray#1[0].WRITE(0.0) at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:93)       |                                                                                                                                       |
-|       LongArray#1[0].WRITE(0) at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:94)           |                                                                                                                                       |
-|   result: 0                                                                                                                           |                                                                                                                                       |
-|                                                                                                                                       |   counter.WRITE(1) at BaseFailingTest.increment(BaseFailingTest.kt:30)                                                                |
-|                                                                                                                                       |   actionsForTrace() at BaseFailingTest.increment(BaseFailingTest.kt:31)                                                               |
-|                                                                                                                                       |     readActions() at ArrayNameInTraceRepresentationTest.actionsForTrace(OwnerNameInTraceRepresentationTests.kt:69)                    |
-|                                                                                                                                       |       intArray.READ: IntArray#1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:74)          |
-|                                                                                                                                       |       IntArray#1[0].READ: 0 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:74)              |
-|                                                                                                                                       |       shortArray.READ: ShortArray#1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:75)      |
-|                                                                                                                                       |       ShortArray#1[0].READ: 0 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:75)            |
-|                                                                                                                                       |       charArray.READ: CharArray#1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:76)        |
-|                                                                                                                                       |       CharArray#1[0].READ: 0 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:76)             |
-|                                                                                                                                       |       byteArray.READ: ByteArray#1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:77)        |
-|                                                                                                                                       |       ByteArray#1[0].READ: 0 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:77)             |
-|                                                                                                                                       |       booleanArray.READ: BooleanArray#1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:78)  |
-|                                                                                                                                       |       BooleanArray#1[0].READ: false at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:78)      |
-|                                                                                                                                       |       FloatArray#1[0].READ: 0.0 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:80)          |
-|                                                                                                                                       |       DoubleArray#1[0].READ: 0.0 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:81)         |
-|                                                                                                                                       |       LongArray#1[0].READ: 0 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:82)             |
-|                                                                                                                                       |     writeActions() at ArrayNameInTraceRepresentationTest.actionsForTrace(OwnerNameInTraceRepresentationTests.kt:70)                   |
-|                                                                                                                                       |       intArray.READ: IntArray#1 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:86)         |
-|                                                                                                                                       |       IntArray#1[0].WRITE(0) at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:86)            |
-|                                                                                                                                       |       shortArray.READ: ShortArray#1 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:87)     |
-|                                                                                                                                       |       ShortArray#1[0].WRITE(0) at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:87)          |
-|                                                                                                                                       |       charArray.READ: CharArray#1 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:88)       |
-|                                                                                                                                       |       CharArray#1[0].WRITE(0) at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:88)           |
-|                                                                                                                                       |       byteArray.READ: ByteArray#1 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:89)       |
-|                                                                                                                                       |       ByteArray#1[0].WRITE(0) at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:89)           |
-|                                                                                                                                       |       booleanArray.READ: BooleanArray#1 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:90) |
-|                                                                                                                                       |       BooleanArray#1[0].WRITE(false) at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:90)    |
-|                                                                                                                                       |       FloatArray#1[0].WRITE(0.0) at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:92)        |
-|                                                                                                                                       |       DoubleArray#1[0].WRITE(0.0) at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:93)       |
-|                                                                                                                                       |       LongArray#1[0].WRITE(0) at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:94)           |
-|                                                                                                                                       |   result: 0                                                                                                                           |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                               Thread 1                                                                |
+| ------------------------------------------------------------------------------------------------------------------------------------- |
+| operation(): 1                                                                                                                        |
+|   actionsForTrace() at BaseFailingTest.operation(BaseFailingTest.kt:27)                                                               |
+|     readActions() at ArrayNameInTraceRepresentationTest.actionsForTrace(OwnerNameInTraceRepresentationTests.kt:69)                    |
+|       intArray.READ: IntArray#1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:74)          |
+|       IntArray#1[0].READ: 1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:74)              |
+|       shortArray.READ: ShortArray#1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:75)      |
+|       ShortArray#1[0].READ: 1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:75)            |
+|       charArray.READ: CharArray#1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:76)        |
+|       CharArray#1[0].READ: 1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:76)             |
+|       byteArray.READ: ByteArray#1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:77)        |
+|       ByteArray#1[0].READ: 1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:77)             |
+|       booleanArray.READ: BooleanArray#1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:78)  |
+|       BooleanArray#1[0].READ: true at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:78)       |
+|       FloatArray#1[0].READ: 1.0 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:80)          |
+|       DoubleArray#1[0].READ: 1.0 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:81)         |
+|       LongArray#1[0].READ: 1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:82)             |
+|     writeActions() at ArrayNameInTraceRepresentationTest.actionsForTrace(OwnerNameInTraceRepresentationTests.kt:70)                   |
+|       intArray.READ: IntArray#1 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:86)         |
+|       IntArray#1[0].WRITE(0) at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:86)            |
+|       shortArray.READ: ShortArray#1 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:87)     |
+|       ShortArray#1[0].WRITE(0) at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:87)          |
+|       charArray.READ: CharArray#1 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:88)       |
+|       CharArray#1[0].WRITE(0) at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:88)           |
+|       byteArray.READ: ByteArray#1 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:89)       |
+|       ByteArray#1[0].WRITE(0) at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:89)           |
+|       booleanArray.READ: BooleanArray#1 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:90) |
+|       BooleanArray#1[0].WRITE(false) at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:90)    |
+|       FloatArray#1[0].WRITE(0.0) at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:92)        |
+|       DoubleArray#1[0].WRITE(0.0) at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:93)       |
+|       LongArray#1[0].WRITE(0) at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:94)           |
+|   result: 1                                                                                                                           |
+| ------------------------------------------------------------------------------------------------------------------------------------- |

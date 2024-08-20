@@ -22,14 +22,10 @@ import org.junit.Test
  */
 abstract class BaseFailingTest(private val outputFileName: String) {
 
-    @Volatile
-    private var counter: Int = 0
-
     @Operation
-    fun increment(): Int {
-        val result = counter++
+    fun operation(): Int {
         actionsForTrace()
-        return result
+        return 1
     }
 
     /**
@@ -41,10 +37,18 @@ abstract class BaseFailingTest(private val outputFileName: String) {
     fun test() = ModelCheckingOptions()
         .addCustomScenario {
             parallel {
-                thread { actor(::increment) }
+                thread { actor(::operation) }
             }
         }
+        // to trigger the lincheck failure, we set the specification class
+        // where the `operation` method always returns a different result
+        .sequentialSpecification(BaseFailingTestSpecification::class.java)
+        .iterations(0)
         .checkImpl(this::class.java)
         .checkLincheckOutput(outputFileName)
 
+}
+
+class BaseFailingTestSpecification {
+    fun operation(): Int = 0
 }
