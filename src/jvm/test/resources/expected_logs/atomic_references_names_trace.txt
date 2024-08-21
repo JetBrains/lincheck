@@ -17,7 +17,7 @@ Detailed trace:
 |                                                                       Thread 1                                                                        |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | operation(): 1                                                                                                                                        |
-|   actionsForTrace() at BaseFailingTest.operation(BaseFailingTest.kt:27)                                                                               |
+|   actionsForTrace() at BaseTraceRepresentationTest.operation(BaseTraceRepresentationTest.kt:27)                                                       |
 |     atomicReference.get(): Node#1 at AtomicReferencesNamesTest.actionsForTrace(AtomicReferencesNamesTests.kt:29)                                      |
 |     atomicReference.compareAndSet(Node#1,Node#2): true at AtomicReferencesNamesTest.actionsForTrace(AtomicReferencesNamesTests.kt:29)                 |
 |     atomicReference.set(Node#3) at AtomicReferencesNamesTest.actionsForTrace(AtomicReferencesNamesTests.kt:30)                                        |

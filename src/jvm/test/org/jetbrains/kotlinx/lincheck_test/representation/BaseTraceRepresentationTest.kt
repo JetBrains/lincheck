@@ -42,7 +42,7 @@ abstract class BaseTraceRepresentationTest(private val outputFileName: String) {
         }
         // to trigger the lincheck failure, we set the specification class
         // where the `operation` method always returns a different result
-        .sequentialSpecification(BaseFailingTestSpecification::class.java)
+        .sequentialSpecification(BaseTraceRepresentationTestSpecification::class.java)
         .iterations(0)
         .apply { customize() }
         .checkImpl(this::class.java)
@@ -52,6 +52,6 @@ abstract class BaseTraceRepresentationTest(private val outputFileName: String) {
 
 }
 
-class BaseFailingTestSpecification {
+class BaseTraceRepresentationTestSpecification {
     fun operation(): Int = 0
 }

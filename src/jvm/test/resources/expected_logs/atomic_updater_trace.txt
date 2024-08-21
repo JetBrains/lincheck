@@ -17,7 +17,7 @@ Detailed trace:
 |                                                                               Thread 1                                                                                |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | operation(): 1                                                                                                                                                        |
-|   actionsForTrace() at BaseFailingTest.operation(BaseFailingTest.kt:29)                                                                                               |
+|   actionsForTrace() at BaseTraceRepresentationTest.operation(BaseTraceRepresentationTest.kt:29)                                                                       |
 |     node.READ: IntWrapper#1 at AtomicUpdaterTraceRepresentationTest.actionsForTrace(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:73)                             |
 |     node.compareAndSet(IntWrapper#1,IntWrapper#2): true at AtomicUpdaterTraceRepresentationTest.actionsForTrace(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:73) |
 |     node.set(IntWrapper#3) at AtomicUpdaterTraceRepresentationTest.actionsForTrace(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:74)                              |

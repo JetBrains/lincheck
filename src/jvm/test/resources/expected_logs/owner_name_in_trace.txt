@@ -17,7 +17,7 @@ Detailed trace:
 |                                                                     Thread 1                                                                      |
 | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | operation(): 1                                                                                                                                    |
-|   actionsForTrace() at BaseFailingTest.operation(BaseFailingTest.kt:27)                                                                           |
+|   actionsForTrace() at BaseTraceRepresentationTest.operation(BaseTraceRepresentationTest.kt:27)                                                   |
 |     readWriteTestMethod(): 6 at OwnerNameInTraceRepresentationTest.actionsForTrace(OwnerNameInTraceRepresentationTests.kt:24)                     |
 |       value.WRITE(2) at OwnerNameInTraceRepresentationTest.readWriteTestMethod(OwnerNameInTraceRepresentationTests.kt:31)                         |
 |       Array<Integer>#1[0].WRITE(4) at OwnerNameInTraceRepresentationTest.readWriteTestMethod(OwnerNameInTraceRepresentationTests.kt:32)           |

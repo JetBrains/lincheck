@@ -17,7 +17,7 @@ Detailed trace:
 |                                                        Thread 1                                                        |
 | ---------------------------------------------------------------------------------------------------------------------- |
 | operation(): 1                                                                                                         |
-|   actionsForTrace() at BaseFailingTest.operation(BaseFailingTest.kt:27)                                                |
+|   actionsForTrace() at BaseTraceRepresentationTest.operation(BaseTraceRepresentationTest.kt:27)                        |
 |     IntArray#1[0].READ: 0 at ArrayReadWriteRepresentationTest.actionsForTrace(ArrayReadWriteRepresentationTest.kt:27)  |
 |     IntArray#1[0].WRITE(1) at ArrayReadWriteRepresentationTest.actionsForTrace(ArrayReadWriteRepresentationTest.kt:28) |
 |     IntArray#1[1].WRITE(0) at ArrayReadWriteRepresentationTest.actionsForTrace(ArrayReadWriteRepresentationTest.kt:29) |

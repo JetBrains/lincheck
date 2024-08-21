@@ -17,7 +17,7 @@ Detailed trace:
 |                                                                                Thread 1                                                                                 |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | operation(): 1                                                                                                                                                          |
-|   actionsForTrace() at BaseFailingTest.operation(BaseFailingTest.kt:27)                                                                                                 |
+|   actionsForTrace() at BaseTraceRepresentationTest.operation(BaseTraceRepresentationTest.kt:27)                                                                         |
 |     number.READ: 1.0 at VarHandleFloatRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:290)                                                           |
 |     number.compareAndSet(1.0,1.0): true at VarHandleFloatRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:290)                                        |
 |     number.set(2.0) at VarHandleFloatRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:291)                                                            |

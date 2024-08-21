@@ -17,7 +17,7 @@ Detailed trace:
 |                                                      Thread 1                                                      |
 | ------------------------------------------------------------------------------------------------------------------ |
 | operation(): 1                                                                                                     |
-|   actionsForTrace() at BaseFailingTest.operation(BaseFailingTest.kt:27)                                            |
+|   actionsForTrace() at BaseTraceRepresentationTest.operation(BaseTraceRepresentationTest.kt:27)                    |
 |     counter.get(): 0 at AFUCallRepresentationTest.actionsForTrace(AFUCallRepresentationTest.kt:31)                 |
 |     counter.set(1) at AFUCallRepresentationTest.actionsForTrace(AFUCallRepresentationTest.kt:32)                   |
 |     counter.compareAndSet(1,2): true at AFUCallRepresentationTest.actionsForTrace(AFUCallRepresentationTest.kt:33) |
