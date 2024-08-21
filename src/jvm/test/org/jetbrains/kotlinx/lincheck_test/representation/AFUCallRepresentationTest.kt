@@ -17,8 +17,6 @@ import java.util.concurrent.atomic.*
  * where `fieldName` is the parameter in constructor for the AFU.
  */
 class AFUCallRepresentationTest : BaseTraceRepresentationTest("afu_call_representation.txt") {
-    @Volatile
-    private var counter = 0
     private val afu = AtomicIntegerFieldUpdater.newUpdater(AFUCallRepresentationTest::class.java, "counter")
 
     override fun actionsForTrace() {
