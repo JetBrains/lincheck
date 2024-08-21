@@ -10,26 +10,17 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.jetbrains.kotlinx.lincheck_test.util.*
-import org.junit.*
+class EnumRepresentationTest : BaseFailingTest("enum_representation.txt") {
+    private var x: MyEnum? = null
+    private var y: MyEnum? = null
 
-class EnumRepresentationTest {
-    private var x: MyEnum = MyEnum.VALUE_1
-    private var counter = 0
-
-    @Operation
-    fun operation(): Int {
+    override fun actionsForTrace() {
+        x = MyEnum.VALUE_1
+        y = x
         x = MyEnum.VALUE_2
-        return counter++
+        y = x
     }
 
-    @Test
-    fun test() = ModelCheckingOptions()
-        .checkImpl(this::class.java)
-        .checkLincheckOutput("enum_representation.txt")
 }
 
 private enum class MyEnum {

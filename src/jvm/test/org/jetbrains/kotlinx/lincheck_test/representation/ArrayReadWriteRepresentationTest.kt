@@ -19,30 +19,14 @@ import org.junit.Test
 /**
  * Check an array read and write operation representation.
  */
-class ArrayReadWriteRepresentationTest {
+class ArrayReadWriteRepresentationTest : BaseFailingTest("array_read_write.txt") {
 
-    private val flags = IntArray(2)
-    @Volatile
-    private var counter = 0
+    private val array = IntArray(2)
 
-    @Operation
-    fun increment(): Int {
-        val value = flags[0]
-        flags[0] = value + 1
-        val result = counter++
-        flags[1] = 0
-        return result
+    override fun actionsForTrace() {
+        val value = array[0]
+        array[0] = value + 1
+        array[1] = 0
     }
-
-    @Test
-    fun test() = ModelCheckingOptions()
-        .addCustomScenario {
-            parallel {
-                thread { actor(::increment) }
-                thread { actor(::increment) }
-            }
-        }
-        .checkImpl(this::class.java)
-        .checkLincheckOutput("array_read_write.txt")
 
 }

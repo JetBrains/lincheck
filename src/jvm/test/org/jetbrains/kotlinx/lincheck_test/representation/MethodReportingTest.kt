@@ -62,9 +62,11 @@ class MethodReportingTest {
     @Test
     fun test() {
         val options = ModelCheckingOptions()
-            .actorsPerThread(1)
-            .actorsBefore(0)
-            .actorsAfter(0)
+            .addCustomScenario {
+                parallel {
+                    thread { actor(::operation) }
+                }
+            }
             .addGuarantee(forClasses(this::class.java.name).methods("inc").treatAsAtomic())
             .addGuarantee(forClasses(this::class.java.name).methods("ignored").ignore())
         val failure = options.checkImpl(this::class.java)

@@ -1,36 +1,28 @@
 = Invalid execution results =
-| ------------------------------- |
-|    Thread 1    |    Thread 2    |
-| ------------------------------- |
-| operation(): 0 | operation(): 0 |
-| ------------------------------- |
+| -------------- |
+|    Thread 1    |
+| -------------- |
+| operation(): 1 |
+| -------------- |
 
 The following interleaving leads to the error:
-| ----------------------------------------------------------------------------------------------------- |
-|    Thread 1    |                                       Thread 2                                       |
-| ----------------------------------------------------------------------------------------------------- |
-|                | operation(): 0                                                                       |
-|                |   x.WRITE(VALUE_2) at EnumRepresentationTest.operation(EnumRepresentationTest.kt:25) |
-|                |   counter.READ: 0 at EnumRepresentationTest.operation(EnumRepresentationTest.kt:26)  |
-|                |   switch                                                                             |
-| operation(): 0 |                                                                                      |
-|                |   counter.WRITE(1) at EnumRepresentationTest.operation(EnumRepresentationTest.kt:26) |
-|                |   result: 0                                                                          |
-| ----------------------------------------------------------------------------------------------------- |
+| -------------- |
+|    Thread 1    |
+| -------------- |
+| operation(): 1 |
+| -------------- |
 
 Detailed trace:
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                       Thread 1                                       |                                       Thread 2                                       |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                      | operation(): 0                                                                       |
-|                                                                                      |   x.WRITE(VALUE_2) at EnumRepresentationTest.operation(EnumRepresentationTest.kt:25) |
-|                                                                                      |   counter.READ: 0 at EnumRepresentationTest.operation(EnumRepresentationTest.kt:26)  |
-|                                                                                      |   switch                                                                             |
-| operation(): 0                                                                       |                                                                                      |
-|   x.WRITE(VALUE_2) at EnumRepresentationTest.operation(EnumRepresentationTest.kt:25) |                                                                                      |
-|   counter.READ: 0 at EnumRepresentationTest.operation(EnumRepresentationTest.kt:26)  |                                                                                      |
-|   counter.WRITE(1) at EnumRepresentationTest.operation(EnumRepresentationTest.kt:26) |                                                                                      |
-|   result: 0                                                                          |                                                                                      |
-|                                                                                      |   counter.WRITE(1) at EnumRepresentationTest.operation(EnumRepresentationTest.kt:26) |
-|                                                                                      |   result: 0                                                                          |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| -------------------------------------------------------------------------------------------- |
+|                                           Thread 1                                           |
+| -------------------------------------------------------------------------------------------- |
+| operation(): 1                                                                               |
+|   actionsForTrace() at BaseFailingTest.operation(BaseFailingTest.kt:27)                      |
+|     x.WRITE(VALUE_1) at EnumRepresentationTest.actionsForTrace(EnumRepresentationTest.kt:18) |
+|     x.READ: VALUE_1 at EnumRepresentationTest.actionsForTrace(EnumRepresentationTest.kt:19)  |
+|     y.WRITE(VALUE_1) at EnumRepresentationTest.actionsForTrace(EnumRepresentationTest.kt:19) |
+|     x.WRITE(VALUE_2) at EnumRepresentationTest.actionsForTrace(EnumRepresentationTest.kt:20) |
+|     x.READ: VALUE_2 at EnumRepresentationTest.actionsForTrace(EnumRepresentationTest.kt:21)  |
+|     y.WRITE(VALUE_2) at EnumRepresentationTest.actionsForTrace(EnumRepresentationTest.kt:21) |
+|   result: 1                                                                                  |
+| -------------------------------------------------------------------------------------------- |

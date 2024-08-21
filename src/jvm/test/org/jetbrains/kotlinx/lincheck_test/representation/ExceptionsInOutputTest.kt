@@ -32,9 +32,13 @@ class ExceptionsInOutputTest {
     fun operation2() = check(!canEnterForbiddenSection) { "Violating exception" }
 
     @Test
-    fun `should add stackTrace to output`() = ModelCheckingOptions().apply {
-        actorsBefore(2)
-    }
+    fun `should add stackTrace to output`() = ModelCheckingOptions()
+        .addCustomScenario {
+            parallel {
+                thread { actor(::operation1) }
+                thread { actor(::operation2) }
+            }
+        }
         .checkImpl(this::class.java) { failure ->
             failure.checkLincheckOutput("exceptions_in_output.txt")
         }

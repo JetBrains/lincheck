@@ -12,6 +12,8 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.scenario
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
 import org.junit.Test
@@ -44,8 +46,11 @@ abstract class BaseFailingTest(private val outputFileName: String) {
         // where the `operation` method always returns a different result
         .sequentialSpecification(BaseFailingTestSpecification::class.java)
         .iterations(0)
+        .apply { customize() }
         .checkImpl(this::class.java)
         .checkLincheckOutput(outputFileName)
+
+    open fun ModelCheckingOptions.customize() {}
 
 }
 

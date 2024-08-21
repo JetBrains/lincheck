@@ -22,32 +22,12 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 /**
  * Test checks that in case of a field update using Unsafe we remove receiver and offset arguments from the trace.
  */
-class SunUnsafeTraceRepresentationTest {
+class SunUnsafeTraceRepresentationTest : BaseFailingTest("sun_unsafe_trace.txt") {
 
     @Volatile
     private var node: IntWrapper = IntWrapper(1)
 
-    @Volatile
-    private var counter: Int = 0
-
-    @Operation
-    fun increment(): Int {
-        val result = counter++
-        actionsJustForTrace()
-        return result
-    }
-
-    @Test
-    fun test() = ModelCheckingOptions()
-        .addCustomScenario {
-            parallel {
-                thread { actor(::increment) }
-            }
-        }
-        .checkImpl(this::class.java)
-        .checkLincheckOutput("sun_unsafe_trace.txt")
-
-    private fun actionsJustForTrace() {
+    override fun actionsForTrace() {
         unsafe.compareAndSwapObject(this, offset, node, IntWrapper(2))
         unsafe.getAndSetObject(this, offset, IntWrapper(3))
     }
@@ -68,66 +48,28 @@ class SunUnsafeTraceRepresentationTest {
 /**
  * Test checks that in case of a field update using Unsafe we remove receiver and offset arguments from the trace.
  */
-class JdkUnsafeTraceRepresentationTest {
+class JdkUnsafeTraceRepresentationTest : BaseFailingTest("jdk_unsafe_trace.txt") {
 
-    @Volatile
-    private var counter: Int = 0
     // We use it just to interact with jdk.internal.misc.Unsafe, which we cannot access directly.
     private val hashMap = ConcurrentHashMap<Int, Int>()
 
-    @Operation
-    fun increment(): Int {
-        val result = counter++
-        actionsJustForTrace()
-        return result
-    }
-
-    @Test
-    fun test() = ModelCheckingOptions()
-        .addCustomScenario {
-            parallel {
-                thread { actor(::increment) }
-            }
-        }
-        .checkImpl(this::class.java)
-        .checkLincheckOutput("jdk_unsafe_trace.txt")
-
-    private fun actionsJustForTrace() {
+    override fun actionsForTrace() {
         // Here under the hood we interact with the Unsafe instance.
         hashMap[1] = 2
     }
+
 }
 
 /**
  * Test checks that in case of a field update using AtomicReferenceFieldUpdater
  * we remove receiver argument from the trace.
  */
-class AtomicUpdaterTraceRepresentationTest {
+class AtomicUpdaterTraceRepresentationTest : BaseFailingTest("atomic_updater_trace.txt") {
 
     @Volatile
     private var node: IntWrapper = IntWrapper(1)
 
-    @Volatile
-    private var counter: Int = 0
-
-    @Operation
-    fun increment(): Int {
-        val result = counter++
-        actionsJustForTrace()
-        return result
-    }
-
-    @Test
-    fun test() = ModelCheckingOptions()
-        .addCustomScenario {
-            parallel {
-                thread { actor(::increment) }
-            }
-        }
-        .checkImpl(this::class.java)
-        .checkLincheckOutput("atomic_updater_trace.txt")
-
-    private fun actionsJustForTrace() {
+    override fun actionsForTrace() {
         nodeUpdater.compareAndSet(this, node, IntWrapper(4))
         nodeUpdater.set(this, IntWrapper(5))
     }

@@ -22,8 +22,12 @@ import org.junit.Test
  * For other classes we use simplified representation to avoid problems with concurrent modification or
  * not completely initialized objects (e.g, with `ConcurrentModificationException`)
  */
-class CapturedValueRepresentationTest {
-    private var counter = 0
+class CapturedValueRepresentationTest : BaseFailingTest(
+    // We choose the expected output in that way because when the plugin is enabled, we traverse
+    // the test object on each beforeEvent call, so it sees additional objects of some type
+    // and numeration changes.
+    if (ideaPluginEnabled()) "captured_value_plugin.txt" else  "captured_value.txt"
+) {
     private var outerClass1 = OuterDataClass(0)
     private var outerClass2 = OuterDataClass(0)
     private var innerClass = InnerClass()
@@ -31,8 +35,7 @@ class CapturedValueRepresentationTest {
     private var primitiveArray = IntArray(1)
     private var objectArray = Array(1) { "" }
 
-    @Operation
-    fun operation(): Int {
+    override fun actionsForTrace() {
         outerClass1
         outerClass2
         innerClass
@@ -40,20 +43,7 @@ class CapturedValueRepresentationTest {
         otherInnerClass
         primitiveArray
         objectArray
-        return counter++
     }
-
-    @Test
-    fun test() = ModelCheckingOptions().apply {
-        actorsAfter(0)
-        actorsBefore(0)
-        actorsPerThread(1)
-    }
-        .checkImpl(this::class.java)
-        // We choose the expected output in that way because when plugin is enabled, we traverse
-        // the test object on each beforeEvent call, so it sees additional objects of some type
-        // and numeration changes.
-        .checkLincheckOutput(if (ideaPluginEnabled()) "captured_value_plugin.txt" else  "captured_value.txt")
 
     private class InnerClass
 }

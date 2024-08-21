@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 class InterleavingAnalysisPresentInSpinCycleFirstIterationTest {
 
-    // Counter thar causes spin-lock in spinLock operation
+    // Counter that causes spin-lock in spinLock operation
     private val counter = AtomicInteger(0)
     // Trigger to increment and decrement in spin-cycle to check in causeSpinLock operation
     private val shouldAlwaysBeZero = AtomicInteger(0)

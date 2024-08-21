@@ -1,42 +1,25 @@
 = Invalid execution results =
-| ------------------------------- |
-|    Thread 1    |    Thread 2    |
-| ------------------------------- |
-| increment(): 0 | increment(): 0 |
-| ------------------------------- |
+| -------------- |
+|    Thread 1    |
+| -------------- |
+| operation(): 1 |
+| -------------- |
 
 The following interleaving leads to the error:
-| ------------------------------------------------------------------------------------------------------------------------------------------------- |
-|    Thread 1    |                                                             Thread 2                                                             |
-| ------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                | increment(): 0                                                                                                                   |
-|                |   counter.READ: 0 at AtomicUpdaterTraceRepresentationTest.increment(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:115)       |
-|                |   switch                                                                                                                         |
-| increment(): 0 |                                                                                                                                  |
-|                |   counter.WRITE(1) at AtomicUpdaterTraceRepresentationTest.increment(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:115)      |
-|                |   actionsJustForTrace() at AtomicUpdaterTraceRepresentationTest.increment(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:116) |
-|                |   result: 0                                                                                                                      |
-| ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| -------------- |
+|    Thread 1    |
+| -------------- |
+| operation(): 1 |
+| -------------- |
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                  Thread 1                                                                                  |                                                                                  Thread 2                                                                                  |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                                                                                                            | increment(): 0                                                                                                                                                             |
-|                                                                                                                                                                            |   counter.READ: 0 at AtomicUpdaterTraceRepresentationTest.increment(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:115)                                                 |
-|                                                                                                                                                                            |   switch                                                                                                                                                                   |
-| increment(): 0                                                                                                                                                             |                                                                                                                                                                            |
-|   counter.READ: 0 at AtomicUpdaterTraceRepresentationTest.increment(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:115)                                                 |                                                                                                                                                                            |
-|   counter.WRITE(1) at AtomicUpdaterTraceRepresentationTest.increment(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:115)                                                |                                                                                                                                                                            |
-|   actionsJustForTrace() at AtomicUpdaterTraceRepresentationTest.increment(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:116)                                           |                                                                                                                                                                            |
-|     node.READ: IntWrapper#1 at AtomicUpdaterTraceRepresentationTest.actionsJustForTrace(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:131)                             |                                                                                                                                                                            |
-|     node.compareAndSet(IntWrapper#1,IntWrapper#2): true at AtomicUpdaterTraceRepresentationTest.actionsJustForTrace(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:131) |                                                                                                                                                                            |
-|     node.set(IntWrapper#3) at AtomicUpdaterTraceRepresentationTest.actionsJustForTrace(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:132)                              |                                                                                                                                                                            |
-|   result: 0                                                                                                                                                                |                                                                                                                                                                            |
-|                                                                                                                                                                            |   counter.WRITE(1) at AtomicUpdaterTraceRepresentationTest.increment(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:115)                                                |
-|                                                                                                                                                                            |   actionsJustForTrace() at AtomicUpdaterTraceRepresentationTest.increment(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:116)                                           |
-|                                                                                                                                                                            |     node.READ: IntWrapper#3 at AtomicUpdaterTraceRepresentationTest.actionsJustForTrace(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:131)                             |
-|                                                                                                                                                                            |     node.compareAndSet(IntWrapper#3,IntWrapper#4): true at AtomicUpdaterTraceRepresentationTest.actionsJustForTrace(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:131) |
-|                                                                                                                                                                            |     node.set(IntWrapper#5) at AtomicUpdaterTraceRepresentationTest.actionsJustForTrace(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:132)                              |
-|                                                                                                                                                                            |   result: 0                                                                                                                                                                |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                               Thread 1                                                                                |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation(): 1                                                                                                                                                        |
+|   actionsForTrace() at BaseFailingTest.operation(BaseFailingTest.kt:29)                                                                                               |
+|     node.READ: IntWrapper#1 at AtomicUpdaterTraceRepresentationTest.actionsForTrace(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:73)                             |
+|     node.compareAndSet(IntWrapper#1,IntWrapper#2): true at AtomicUpdaterTraceRepresentationTest.actionsForTrace(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:73) |
+|     node.set(IntWrapper#3) at AtomicUpdaterTraceRepresentationTest.actionsForTrace(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:74)                              |
+|   result: 1                                                                                                                                                           |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
