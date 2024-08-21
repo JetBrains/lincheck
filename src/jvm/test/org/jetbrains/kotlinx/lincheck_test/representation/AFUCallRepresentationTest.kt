@@ -9,12 +9,6 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.jetbrains.kotlinx.lincheck_test.util.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
-import org.junit.*
 import java.util.concurrent.atomic.*
 
 /**
@@ -22,7 +16,7 @@ import java.util.concurrent.atomic.*
  * Instead of `compareAndSet(object, 1, 2)` representation should be `fieldName.compareAndSet(1, 2)`,
  * where `fieldName` is the parameter in constructor for the AFU.
  */
-class AFUCallRepresentationTest : BaseFailingTest("afu_call_representation.txt") {
+class AFUCallRepresentationTest : BaseTraceRepresentationTest("afu_call_representation.txt") {
     @Volatile
     private var counter = 0
     private val afu = AtomicIntegerFieldUpdater.newUpdater(AFUCallRepresentationTest::class.java, "counter")

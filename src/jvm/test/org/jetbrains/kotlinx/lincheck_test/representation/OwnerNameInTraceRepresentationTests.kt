@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-class OwnerNameInTraceRepresentationTest : BaseFailingTest("owner_name_in_trace.txt") {
+class OwnerNameInTraceRepresentationTest : BaseTraceRepresentationTest("owner_name_in_trace.txt") {
 
     @Volatile
     private var value: Int = 1
@@ -53,7 +53,7 @@ class OwnerNameInTraceRepresentationTest : BaseFailingTest("owner_name_in_trace.
     }
 }
 
-class ArrayNameInTraceRepresentationTest : BaseFailingTest("array_name_in_trace.txt") {
+class ArrayNameInTraceRepresentationTest : BaseTraceRepresentationTest("array_name_in_trace.txt") {
 
     private var intArray: IntArray = intArrayOf(1)
     private var shortArray: ShortArray = shortArrayOf(1)

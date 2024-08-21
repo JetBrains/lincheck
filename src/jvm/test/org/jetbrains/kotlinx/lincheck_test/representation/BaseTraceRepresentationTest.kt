@@ -12,8 +12,6 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.checkImpl
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.scenario
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
 import org.junit.Test
@@ -22,7 +20,7 @@ import org.junit.Test
  * Failing test that checks that output using [outputFileName].
  * The goal is to place the logic to check trace in the [actionsForTrace] method.
  */
-abstract class BaseFailingTest(private val outputFileName: String) {
+abstract class BaseTraceRepresentationTest(private val outputFileName: String) {
 
     @Operation
     fun operation(): Int {

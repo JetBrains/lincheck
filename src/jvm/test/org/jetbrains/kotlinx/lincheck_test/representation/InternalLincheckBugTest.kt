@@ -18,7 +18,7 @@ import org.jetbrains.kotlinx.lincheck.util.InternalLincheckExceptionEmulator
  * which is located in org.jetbrains.kotlinx.lincheck package, so exception will be treated like internal bug.
  */
 @Suppress("UNUSED")
-class InternalLincheckBugTest : BaseFailingTest("internal_bug_report.txt") {
+class InternalLincheckBugTest : BaseTraceRepresentationTest("internal_bug_report.txt") {
 
     override fun actionsForTrace() {
         InternalLincheckExceptionEmulator.throwException()

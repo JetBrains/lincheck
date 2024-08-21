@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-class EnumRepresentationTest : BaseFailingTest("enum_representation.txt") {
+class EnumRepresentationTest : BaseTraceRepresentationTest("enum_representation.txt") {
     private var x: MyEnum? = null
     private var y: MyEnum? = null
 

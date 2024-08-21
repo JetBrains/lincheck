@@ -16,7 +16,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
 
-import java.lang.StringBuilder
 import java.util.concurrent.atomic.*
 import org.junit.*
 
@@ -24,7 +23,7 @@ import org.junit.*
  * This test checks that the last event in the case of an active lock
  * that causes obstruction freedom violation is reported.
  */
-class ObstructionFreedomActiveLockRepresentationTest : BaseFailingTest(
+class ObstructionFreedomActiveLockRepresentationTest : BaseTraceRepresentationTest(
     "obstruction_freedom_violation_with_no_detected_cycle.txt"
 ) {
     private val counter = AtomicInteger(0)

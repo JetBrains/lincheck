@@ -10,11 +10,6 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.checkImpl
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
-import org.junit.Test
 import sun.misc.Unsafe
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
@@ -22,7 +17,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 /**
  * Test checks that in case of a field update using Unsafe we remove receiver and offset arguments from the trace.
  */
-class SunUnsafeTraceRepresentationTest : BaseFailingTest("sun_unsafe_trace.txt") {
+class SunUnsafeTraceRepresentationTest : BaseTraceRepresentationTest("sun_unsafe_trace.txt") {
 
     @Volatile
     private var node: IntWrapper = IntWrapper(1)
@@ -48,7 +43,7 @@ class SunUnsafeTraceRepresentationTest : BaseFailingTest("sun_unsafe_trace.txt")
 /**
  * Test checks that in case of a field update using Unsafe we remove receiver and offset arguments from the trace.
  */
-class JdkUnsafeTraceRepresentationTest : BaseFailingTest("jdk_unsafe_trace.txt") {
+class JdkUnsafeTraceRepresentationTest : BaseTraceRepresentationTest("jdk_unsafe_trace.txt") {
 
     // We use it just to interact with jdk.internal.misc.Unsafe, which we cannot access directly.
     private val hashMap = ConcurrentHashMap<Int, Int>()
@@ -64,7 +59,7 @@ class JdkUnsafeTraceRepresentationTest : BaseFailingTest("jdk_unsafe_trace.txt")
  * Test checks that in case of a field update using AtomicReferenceFieldUpdater
  * we remove receiver argument from the trace.
  */
-class AtomicUpdaterTraceRepresentationTest : BaseFailingTest("atomic_updater_trace.txt") {
+class AtomicUpdaterTraceRepresentationTest : BaseTraceRepresentationTest("atomic_updater_trace.txt") {
 
     @Volatile
     private var node: IntWrapper = IntWrapper(1)

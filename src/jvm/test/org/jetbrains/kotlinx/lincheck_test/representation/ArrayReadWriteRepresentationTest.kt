@@ -10,16 +10,10 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.checkImpl
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
-import org.junit.Test
-
 /**
  * Check an array read and write operation representation.
  */
-class ArrayReadWriteRepresentationTest : BaseFailingTest("array_read_write.txt") {
+class ArrayReadWriteRepresentationTest : BaseTraceRepresentationTest("array_read_write.txt") {
 
     private val array = IntArray(2)
 

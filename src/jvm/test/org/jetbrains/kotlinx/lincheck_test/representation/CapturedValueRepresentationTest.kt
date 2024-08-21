@@ -9,12 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.ideaPluginEnabled
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
-import org.junit.Test
 
 /**
  * This test checks that values captured in an incorrect interleaving have proper representation.
@@ -22,7 +17,7 @@ import org.junit.Test
  * For other classes we use simplified representation to avoid problems with concurrent modification or
  * not completely initialized objects (e.g, with `ConcurrentModificationException`)
  */
-class CapturedValueRepresentationTest : BaseFailingTest(
+class CapturedValueRepresentationTest : BaseTraceRepresentationTest(
     // We choose the expected output in that way because when the plugin is enabled, we traverse
     // the test object on each beforeEvent call, so it sees additional objects of some type
     // and numeration changes.
