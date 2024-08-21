@@ -45,8 +45,9 @@ abstract class BaseTraceRepresentationTest(private val outputFileName: String) {
         .sequentialSpecification(BaseTraceRepresentationTestSpecification::class.java)
         .iterations(0)
         .apply { customize() }
-        .checkImpl(this::class.java)
-        .checkLincheckOutput(outputFileName)
+        .checkImpl(this::class.java) { failure ->
+            failure.checkLincheckOutput(outputFileName)
+        }
 
     open fun ModelCheckingOptions.customize() {}
 
