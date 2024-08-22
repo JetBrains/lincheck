@@ -129,6 +129,18 @@ abstract class ManagedStrategy(
      */
     private lateinit var callStackContextPerThread: Array<ArrayList<CallContext>>
 
+    /**
+     * In case when the plugin is enabled, we also enable [eventIdStrictOrderingCheck] property and check
+     * that ids provided to the [beforeEvent] method and corresponding trace points are sequentially ordered.
+     * But we do not add a [MethodCallTracePoint] for the coroutine resumption.
+     * So this field just tracks if the last [beforeMethodCall] invocation was actually a coroutine resumption.
+     * In this case, we just skip the next [beforeEvent] call.
+     *
+     * TODO: refactor this --- we should have a more reliable way
+     *   to communicate coroutine resumption event to the plugin.
+     */
+    private var skipNextBeforeEvent = false
+
     override fun close() {
         super.close()
         // clear object numeration at the end to avoid memory leaks
@@ -1097,6 +1109,8 @@ abstract class ManagedStrategy(
                 callStackTrace.addAll(resumedStackTrace)
                 resumedStackTrace.forEach { beforeMethodEnter(it.instance) }
             }
+            // since we are in resumption, skip the next ` beforeEvent ` call
+            skipNextBeforeEvent = true
             return
         }
         val callId = callStackTraceElementNextId++
@@ -1398,6 +1412,19 @@ abstract class ManagedStrategy(
         }
     }
 
+    /**
+     * Indicates if the next [beforeEvent] method call should be skipped.
+     *
+     * @see skipNextBeforeEvent
+     */
+    protected fun shouldSkipNextBeforeEvent(): Boolean {
+        val skipBeforeEvent = skipNextBeforeEvent
+        if (skipNextBeforeEvent) {
+            skipNextBeforeEvent = false
+        }
+        return skipBeforeEvent
+    }
+
     protected fun resetEventIdProvider() {
         eventIdProvider = EventIdProvider()
     }
@@ -1541,7 +1568,7 @@ abstract class ManagedStrategy(
 
         /**
          * Returns the last generated id.
-         * Also, if [eventIdStrictOrderingCheck] is enabled, checks that
+         * Also, if [eventIdStrictOrderingCheck] is enabled, checks that.
          */
         fun currentId(): Int {
             val id = lastId
