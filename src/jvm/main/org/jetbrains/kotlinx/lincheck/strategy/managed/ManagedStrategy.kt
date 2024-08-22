@@ -501,8 +501,8 @@ abstract class ManagedStrategy(
             traceCollector?.newSwitch(iThread, reason,
                 beforeMethodCallSwitch = (tracePoint != null && tracePoint is MethodCallTracePoint)
             )
+            setCurrentThread(nextThread)
         }
-        setCurrentThread(nextThread)
         awaitTurn(iThread)
         return switchHappened
     }
@@ -991,9 +991,6 @@ abstract class ManagedStrategy(
             // to an extra "<cont>" in the method call line in the trace.
             false
         }
-
-    private fun CallStackTraceElement.isCoroutineResumptionAccessor(className: String, methodName: String): Boolean =
-        tracePoint.className == className && tracePoint.methodName == "access\$$methodName"
 
     private fun getMethod(className: String, methodName: String, params: Array<Any?>): Method? {
         val clazz = Class.forName(className)
