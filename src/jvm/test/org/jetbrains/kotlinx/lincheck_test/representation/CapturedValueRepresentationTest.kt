@@ -17,12 +17,7 @@ import org.jetbrains.kotlinx.lincheck.ideaPluginEnabled
  * For other classes we use simplified representation to avoid problems with concurrent modification or
  * not completely initialized objects (e.g, with `ConcurrentModificationException`)
  */
-class CapturedValueRepresentationTest : BaseTraceRepresentationTest(
-    // We choose the expected output in that way because when the plugin is enabled, we traverse
-    // the test object on each beforeEvent call, so it sees additional objects of some type
-    // and numeration changes.
-    if (ideaPluginEnabled()) "captured_value_plugin.txt" else  "captured_value.txt"
-) {
+class CapturedValueRepresentationTest : BaseTraceRepresentationTest("captured_value.txt") {
     private var outerClass1 = OuterDataClass(0)
     private var outerClass2 = OuterDataClass(0)
     private var innerClass = InnerClass()
