@@ -41,8 +41,6 @@ class EventStructureStrategy(
         validationFunction: Actor?,
         stateRepresentation: Method?
 ) : ManagedStrategy(testClass, scenario, validationFunction, stateRepresentation, testCfg) {
-    // The number of invocations that the strategy is eligible to use to search for an incorrect execution.
-    private val maxInvocations = testCfg.invocationsPerIteration
 
     private val memoryInitializer: MemoryInitializer = { location ->
         runInIgnoredSection {
