@@ -868,6 +868,8 @@ abstract class ManagedStrategy(
     }
 
     private fun methodGuaranteeType(owner: Any?, className: String, methodName: String): ManagedGuaranteeType? = runInIgnoredSection {
+        if (className == "java/util/logging/Logger") return ManagedGuaranteeType.IGNORE
+
         userDefinedGuarantees?.forEach { guarantee ->
             val ownerName = owner?.javaClass?.canonicalName ?: className
             if (guarantee.classPredicate(ownerName) && guarantee.methodPredicate(methodName)) {
