@@ -359,8 +359,9 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
     ): ByteArray = transformedClassesCache.computeIfAbsent(internalClassName.canonicalClassName) {
         val reader = ClassReader(classBytes)
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
+        val visitor = LincheckClassVisitor(instrumentationMode, writer)
         try {
-            reader.accept(LincheckClassVisitor(instrumentationMode, writer), ClassReader.SKIP_FRAMES)
+            reader.accept(visitor, ClassReader.EXPAND_FRAMES)
             writer.toByteArray()
         } catch (e: Throwable) {
             System.err.println("Unable to transform $internalClassName")
