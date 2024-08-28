@@ -11,14 +11,20 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.EventStructureCTestConfiguration
 
 /**
  * Options for [model checking][ModelCheckingStrategy] strategy.
  */
-class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingCTestConfiguration /* EventStructureCTestConfiguration */>() {
-    override fun createTestConfigurations(testClass: Class<*>): ModelCheckingCTestConfiguration /* EventStructureCTestConfiguration */ {
-        return ModelCheckingCTestConfiguration( /* EventStructureCTestConfiguration( */
+class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingCTestConfiguration>() {
+    private var experimentalModelChecking = false
+
+    internal fun useExperimentalModelChecking(): ModelCheckingOptions {
+        experimentalModelChecking = true
+        return this
+    }
+
+    override fun createTestConfigurations(testClass: Class<*>): ModelCheckingCTestConfiguration {
+        return ModelCheckingCTestConfiguration(
             testClass = testClass,
             iterations = iterations,
             threads = threads,
@@ -35,6 +41,8 @@ class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingC
             sequentialSpecification = chooseSequentialSpecification(sequentialSpecification, testClass),
             timeoutMs = timeoutMs,
             customScenarios = customScenarios,
+            experimentalModelChecking = experimentalModelChecking,
         )
     }
+
 }

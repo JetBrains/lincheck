@@ -23,9 +23,9 @@ package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.runIteration
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.verifier.*
 
@@ -64,7 +64,8 @@ internal fun<Outcome> litmusTest(
 }
 
 private fun createConfiguration(testClass: Class<*>) =
-    EventStructureOptions()
+    ModelCheckingOptions()
+        .useExperimentalModelChecking()
         // for tests debugging set large timeout
         .invocationTimeout(60 * 60 * 1000)
         .createTestConfigurations(testClass)
@@ -76,7 +77,7 @@ internal fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario): E
             scenario = scenario,
             validationFunction = null,
             stateRepresentationMethod = null,
-        )
+        ) as EventStructureStrategy
 }
 
 internal fun createVerifier(testScenario: ExecutionScenario?, verify: (ExecutionResult) -> Boolean): Verifier =

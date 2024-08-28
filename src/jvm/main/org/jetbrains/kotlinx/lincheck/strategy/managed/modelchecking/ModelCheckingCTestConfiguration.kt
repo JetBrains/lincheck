@@ -13,6 +13,7 @@ import org.jetbrains.kotlinx.lincheck.Actor
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
@@ -26,7 +27,8 @@ class ModelCheckingCTestConfiguration(testClass: Class<*>, iterations: Int, thre
                                       checkObstructionFreedom: Boolean, hangingDetectionThreshold: Int, invocationsPerIteration: Int,
                                       guarantees: List<ManagedStrategyGuarantee>, minimizeFailedScenario: Boolean,
                                       sequentialSpecification: Class<*>, timeoutMs: Long,
-                                      customScenarios: List<ExecutionScenario>
+                                      customScenarios: List<ExecutionScenario>,
+                                      experimentalModelChecking: Boolean,
 ) : ManagedCTestConfiguration(
     testClass = testClass,
     iterations = iterations,
@@ -46,7 +48,11 @@ class ModelCheckingCTestConfiguration(testClass: Class<*>, iterations: Int, thre
     customScenarios = customScenarios
 ) {
 
-    override val instrumentationMode: InstrumentationMode get() = MODEL_CHECKING
+    private val useExperimentalModelChecking =
+        experimentalModelChecking || System.getProperty("lincheck.useExperimentalModelChecking")?.toBoolean() ?: false
+
+    override val instrumentationMode: InstrumentationMode get() =
+        if (useExperimentalModelChecking) EXPERIMENTAL_MODEL_CHECKING else MODEL_CHECKING
 
     private var isReplayModeForIdeaPluginEnabled = false
 
@@ -59,5 +65,13 @@ class ModelCheckingCTestConfiguration(testClass: Class<*>, iterations: Int, thre
         scenario: ExecutionScenario,
         validationFunction: Actor?,
         stateRepresentationMethod: Method?,
-    ): Strategy = ModelCheckingStrategy(this, testClass, scenario, validationFunction, stateRepresentationMethod, isReplayModeForIdeaPluginEnabled)
+    ): Strategy =
+        if (useExperimentalModelChecking)
+            EventStructureStrategy(this, testClass, scenario, validationFunction, stateRepresentationMethod)
+        else
+            ModelCheckingStrategy(this, testClass, scenario, validationFunction, stateRepresentationMethod,
+                replay = isReplayModeForIdeaPluginEnabled
+            )
 }
+
+

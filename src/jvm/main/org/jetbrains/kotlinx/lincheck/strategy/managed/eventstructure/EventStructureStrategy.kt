@@ -26,15 +26,16 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.*
-import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import sun.nio.ch.lincheck.TestThread
 import java.lang.reflect.*
 import org.objectweb.asm.Type
 
 class EventStructureStrategy(
-        testCfg: EventStructureCTestConfiguration,
+        testCfg: ModelCheckingCTestConfiguration,
         testClass: Class<*>,
         scenario: ExecutionScenario,
         validationFunction: Actor?,

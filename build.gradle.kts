@@ -125,6 +125,10 @@ tasks {
             "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
             "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED",
         )
+        val useExperimentalModelChecking: String by project
+        if (useExperimentalModelChecking.toBoolean()) {
+            extraArgs.add("-Dlincheck.useExperimentalModelChecking=true")
+        }
         val withEventIdSequentialCheck: String by project
         if (withEventIdSequentialCheck.toBoolean()) {
             extraArgs.add("-Dlincheck.debug.withEventIdSequentialCheck=true")
