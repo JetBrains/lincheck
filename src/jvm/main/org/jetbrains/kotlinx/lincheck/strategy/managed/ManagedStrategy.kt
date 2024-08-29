@@ -31,7 +31,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
 import java.lang.invoke.VarHandle
 import java.lang.reflect.*
 import java.util.*
-import java.util.concurrent.atomic.*
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 
 /**
@@ -754,7 +753,7 @@ abstract class ManagedStrategy(
             return@runInIgnoredSection false
         }
         // Do not track accesses to untracked objects
-        if (!objectTracker.isTrackedObject(obj ?: StaticObject)) {
+        if (!objectTracker.shouldTrackObjectAccess(obj ?: StaticObject)) {
             return@runInIgnoredSection false
         }
         val iThread = currentThread
@@ -780,7 +779,7 @@ abstract class ManagedStrategy(
 
     /** Returns <code>true</code> if a switch point is created. */
     override fun beforeReadArrayElement(array: Any, index: Int, codeLocation: Int): Boolean = runInIgnoredSection {
-        if (!objectTracker.isTrackedObject(array)) {
+        if (!objectTracker.shouldTrackObjectAccess(array)) {
             return@runInIgnoredSection false
         }
         val iThread = currentThread
@@ -816,7 +815,7 @@ abstract class ManagedStrategy(
     override fun beforeWriteField(obj: Any?, className: String, fieldName: String, value: Any?, codeLocation: Int,
                                   isStatic: Boolean, isFinal: Boolean): Boolean = runInIgnoredSection {
         objectTracker.registerObjectLink(fromObject = obj ?: StaticObject, toObject = value)
-        if (!objectTracker.isTrackedObject(obj ?: StaticObject)) {
+        if (!objectTracker.shouldTrackObjectAccess(obj ?: StaticObject)) {
             return@runInIgnoredSection false
         }
         // Optimization: do not track final field writes
@@ -845,7 +844,7 @@ abstract class ManagedStrategy(
 
     override fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int): Boolean = runInIgnoredSection {
         objectTracker.registerObjectLink(fromObject = array, toObject = value)
-        if (!objectTracker.isTrackedObject(array)) {
+        if (!objectTracker.shouldTrackObjectAccess(array)) {
             return@runInIgnoredSection false
         }
         val iThread = currentThread

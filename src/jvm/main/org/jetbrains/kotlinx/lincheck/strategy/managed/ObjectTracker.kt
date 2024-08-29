@@ -19,7 +19,7 @@ interface ObjectTracker {
 
     fun registerObjectLink(fromObject: Any, toObject: Any?)
 
-    fun isTrackedObject(obj: Any): Boolean
+    fun shouldTrackObjectAccess(obj: Any): Boolean
 
     fun reset()
 }

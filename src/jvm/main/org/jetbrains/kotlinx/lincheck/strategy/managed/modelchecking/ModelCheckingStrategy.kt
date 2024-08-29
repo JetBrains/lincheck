@@ -582,7 +582,8 @@ internal class LocalObjectManager : ObjectTracker {
         objects.forEach { markObjectNonLocal(it) }
     }
 
-    override fun isTrackedObject(obj: Any): Boolean = !isLocalObject(obj)
+    override fun shouldTrackObjectAccess(obj: Any): Boolean =
+        !isLocalObject(obj)
 
     /**
      * Checks if an object is only locally accessible.
