@@ -13,20 +13,20 @@ The following interleaving leads to the error:
 | -------------- |
 
 Detailed trace:
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                             Thread 1                                                                              |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| operation(): 1                                                                                                                                                    |
-|   actionsForTrace() at BaseTraceRepresentationTest.operation(BaseTraceRepresentationTest.kt:27)                                                                   |
-|     number.READ: 1 at VarHandleCharRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:179)                                                        |
-|     number.compareAndSet(1,1): true at VarHandleCharRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:179)                                       |
-|     number.set(2) at VarHandleCharRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:180)                                                         |
-|     VarHandleCharRepresentationTest.staticNumber.READ: 3 at VarHandleCharRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:182)                  |
-|     VarHandleCharRepresentationTest.staticNumber.compareAndSet(3,1): true at VarHandleCharRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:182) |
-|     VarHandleCharRepresentationTest.staticNumber.set(3) at VarHandleCharRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:183)                   |
-|     array.READ: CharArray#1 at VarHandleCharRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:185)                                               |
-|     CharArray#1[1].compareAndSet(3,1): false at VarHandleCharRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:185)                              |
-|     array.READ: CharArray#1 at VarHandleCharRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:186)                                               |
-|     CharArray#1[1].set(2) at VarHandleCharRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:186)                                                 |
-|   result: 1                                                                                                                                                       |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                               Thread 1                                                                                |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation(): 1                                                                                                                                                        |
+|   actionsForTrace() at BaseTraceRepresentationTest.operation(BaseTraceRepresentationTest.kt:27)                                                                       |
+|     number.READ: '1' at VarHandleCharRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:179)                                                          |
+|     number.compareAndSet('1','1'): true at VarHandleCharRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:179)                                       |
+|     number.set('2') at VarHandleCharRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:180)                                                           |
+|     VarHandleCharRepresentationTest.staticNumber.READ: '3' at VarHandleCharRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:182)                    |
+|     VarHandleCharRepresentationTest.staticNumber.compareAndSet('3','1'): true at VarHandleCharRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:182) |
+|     VarHandleCharRepresentationTest.staticNumber.set('3') at VarHandleCharRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:183)                     |
+|     array.READ: CharArray#1 at VarHandleCharRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:185)                                                   |
+|     CharArray#1[1].compareAndSet('3','1'): false at VarHandleCharRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:185)                              |
+|     array.READ: CharArray#1 at VarHandleCharRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:186)                                                   |
+|     CharArray#1[1].set('2') at VarHandleCharRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:186)                                                   |
+|   result: 1                                                                                                                                                           |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -23,9 +23,13 @@ object ObjectLabelFactory {
     private val objectNumeration = Collections.synchronizedMap(WeakHashMap<Class<Any>, MutableMap<Any, Int>>())
 
     internal fun adornedStringRepresentation(any: Any?): String {
+        if (any == null) return "null"
+        // Chars and strings are wrapped in quotes.
+        if (any is Char) return "\'$any\'"
+        if (any is String) return "\"$any\""
         // Primitive types (and several others) are immutable and
         // have trivial `toString` implementation, which is used here.
-        if (any == null || any.javaClass.isImmutableWithNiceToString)
+        if (any.javaClass.isImmutableWithNiceToString)
             return any.toString()
         // For enum types, we can always display their name.
         if (any.javaClass.isEnum) {
