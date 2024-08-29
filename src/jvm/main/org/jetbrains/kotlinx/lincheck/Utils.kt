@@ -291,12 +291,13 @@ private inline fun <R> runInIgnoredSection(currentThread: Thread, block: () -> R
  * This method **must** be called in an ignored section.
  */
 @Suppress("UnusedReceiverParameter")
-internal inline fun <R> ParallelThreadsRunner.runWithoutIgnoredSection(currentThread: TestThread, block: () -> R): R {
+internal inline fun <R> ParallelThreadsRunner.runOutsideIgnoredSection(currentThread: TestThread, block: () -> R): R {
     if (!currentThread.inTestingCode) {
         return block()
     }
-    require(currentThread.inIgnoredSection) { "Current thread must be in an ignored section" }
-
+    require(currentThread.inIgnoredSection) {
+        "Current thread must be in ignored section"
+    }
     currentThread.inIgnoredSection = false
     return try {
         block()

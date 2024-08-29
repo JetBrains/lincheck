@@ -46,7 +46,7 @@ abstract class ManagedStrategy(
     scenario: ExecutionScenario,
     private val validationFunction: Actor?,
     private val stateRepresentationFunction: Method?,
-    private val testCfg: ManagedCTestConfiguration,
+    private val testCfg: ManagedCTestConfiguration
 ) : Strategy(scenario), EventTracker {
     // The number of parallel threads.
     protected val nThreads: Int = scenario.nThreads
@@ -92,7 +92,7 @@ abstract class ManagedStrategy(
     private var traceCollector: TraceCollector? = null // null when `collectTrace` is false
 
     // Stores the global number of stack trace elements.
-    private var callStackTraceElementNextId = 0
+    private var callStackTraceElementId = 0
 
     // Stores the currently executing methods call stack for each thread.
     private val callStackTrace = Array(nThreads) { mutableListOf<CallStackTraceElement>() }
@@ -102,7 +102,7 @@ abstract class ManagedStrategy(
     // used on resumption, and the trace point before and after the suspension
     // correspond to the same method call in the trace.
     // NOTE: the call stack is stored in the reverse order,
-    // i.e. the first element is the top stack trace element.
+    // i.e., the first element is the top stack trace element.
     private val suspendedFunctionsStack = Array(nThreads) { mutableListOf<CallStackTraceElement>() }
 
     // Helps to ignore potential switch point in local objects (see LocalObjectManager) to avoid
@@ -1113,7 +1113,7 @@ abstract class ManagedStrategy(
             skipNextBeforeEvent = true
             return
         }
-        val callId = callStackTraceElementNextId++
+        val callId = callStackTraceElementId++
         val params = if (isSuspending) {
             methodParams.dropLast(1).toTypedArray()
         } else {
@@ -1121,13 +1121,13 @@ abstract class ManagedStrategy(
         }
         // The code location of the new method call is currently the last one
         val tracePoint = createBeforeMethodCallTracePoint(
-            iThread,
-            owner,
-            className,
-            methodName,
-            params,
-            codeLocation,
-            atomicMethodDescriptor
+            iThread = iThread,
+            owner = owner,
+            className = className,
+            methodName = methodName,
+            params = params,
+            codeLocation = codeLocation,
+            atomicMethodDescriptor = atomicMethodDescriptor,
         )
         // Method invocation id used to calculate spin cycle start label call depth.
         // Two calls are considered equals if two same methods were called with the same parameters.
