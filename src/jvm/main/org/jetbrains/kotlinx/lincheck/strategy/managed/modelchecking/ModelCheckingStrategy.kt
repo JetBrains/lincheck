@@ -643,7 +643,7 @@ internal class ModelCheckingMonitorTracker(nThreads: Int) : MonitorTracker {
     }
 
     /**
-     * Returns `true` if the corresponding threads is waiting on some monitor.
+     * Returns `true` if the corresponding thread is waiting on some monitor.
      */
     override fun isWaiting(iThread: Int): Boolean {
         val monitor = waitingMonitor[iThread]?.monitor ?: return false
@@ -659,7 +659,7 @@ internal class ModelCheckingMonitorTracker(nThreads: Int) : MonitorTracker {
 
     /**
      * Performs a logical wait, [isWaiting] for the specified thread
-     * returns `true` until the corresponding [notify] or [notifyAll] is invoked.
+     * returns `true` until the corresponding [notify] is invoked.
      */
     override fun waitOnMonitor(iThread: Int, monitor: Any): Boolean {
         // TODO: we can add spurious wakeups here
@@ -716,9 +716,7 @@ internal class ModelCheckingMonitorTracker(nThreads: Int) : MonitorTracker {
 
 class ModelCheckingParkingTracker(val nThreads: Int, val allowSpuriousWakeUps: Boolean = false) : ParkingTracker {
 
-    /*
-     * Stores `true` for the parked threads.
-     */
+    // stores `true` for the parked threads
     private val parked = BooleanArray(nThreads) { false }
 
     override fun park(iThread: Int) {
