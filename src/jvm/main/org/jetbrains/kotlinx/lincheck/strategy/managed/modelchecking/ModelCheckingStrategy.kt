@@ -537,9 +537,9 @@ internal class ModelCheckingStrategy(
 
 /**
  * Manages objects created within the local scope.
- * The purpose of this manager is to keep track of locally created objects that aren't yet shared,
+ * The purpose of this manager is to keep track of locally created objects that aren't yet shared
  * and automatically delete their dependencies when they become shared.
- * This tracking helps to avoid unnecessary interleavings, which can occur if access to such local
+ * This tracking helps to avoid exploring unnecessary interleavings, which can occur if access to such local
  * objects triggers switch points in the model checking strategy.
  */
 internal class LocalObjectManager : ObjectTracker {
@@ -728,8 +728,8 @@ class ModelCheckingParkingTracker(val nThreads: Int, val allowSpuriousWakeUps: B
         return isParked(iThread)
     }
 
-    override fun unpark(iThread: Int, unparkingThreadId: Int) {
-        parked[unparkingThreadId] = false
+    override fun unpark(iThread: Int, unparkedThreadId: Int) {
+        parked[unparkedThreadId] = false
     }
 
     override fun isParked(iThread: Int): Boolean =
