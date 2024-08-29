@@ -15,12 +15,34 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
  */
 interface ObjectTracker {
 
+    /**
+     * Registers a newly created object in the object tracker.
+     *
+     * @param obj the object to be registered
+     */
     fun registerNewObject(obj: Any)
 
+    /**
+     * This method is used to register a link between two objects in the object tracker.
+     * The link is established from the object specified by the [fromObject] parameter
+     * to the object specified by the [toObject] parameter.
+     *
+     * @param fromObject the object from which the link originates.
+     * @param toObject the object to which the link points.
+     */
     fun registerObjectLink(fromObject: Any, toObject: Any?)
 
+    /**
+     * Determines whether accesses to the fields of the given object should be tracked.
+     *
+     * @param obj the object to check for tracking.
+     * @return true if the object's accesses should be tracked, false otherwise.
+     */
     fun shouldTrackObjectAccess(obj: Any): Boolean
 
+    /**
+     * Resets the state of the object tracker.
+     */
     fun reset()
 }
 
