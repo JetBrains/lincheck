@@ -61,6 +61,9 @@ internal object FieldSearchHelper {
         for (field in testObject::class.java.allDeclaredFieldWithSuperclasses) {
             if (field.type.isPrimitive) continue
 
+            // We wrap an unsafe read into `runCatching` to hande `UnsupportedOperationException`,
+            // which can be thrown, for instance, when attempting to read a field of
+            // a hidden class (starting from Java 15).
             val fieldValue = runCatching {
                 readFieldViaUnsafe(testObject, field, Unsafe::getObject)
             }.getOrNull() ?: continue
