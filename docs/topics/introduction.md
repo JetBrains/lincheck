@@ -172,7 +172,7 @@ The updated `BasicCounterTest` class will look like this:
 
 > [Get the full code](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/BasicCounterTest.kt).
 >
-{type="note"}
+{style="note"}
 
 ## Test the Java standard library
 
@@ -254,7 +254,7 @@ The following interleaving leads to the error:
 
 > [Get the full code](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/ConcurrentLinkedDequeTest.kt).
 >
-{type="note"}
+{style="note"}
 
 ## Next step
 

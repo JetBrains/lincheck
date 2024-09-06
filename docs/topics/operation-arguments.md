@@ -132,7 +132,7 @@ one of the values may be overwritten and lost.
 
 > [Get the full code](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/MultiMapTest.kt).
 >
-{type="note"}
+{style="note"}
 
 
 ## Next step
