@@ -27,6 +27,7 @@ class CounterCorrectTest : AbstractCounterTest(CounterCorrect())
 class CounterWrong0Test : AbstractCounterTest(CounterWrong0(), IncorrectResultsFailure::class)
 class CounterWrong1Test : AbstractCounterTest(CounterWrong1(), IncorrectResultsFailure::class)
 class CounterWrong2Test : AbstractCounterTest(CounterWrong2(), IncorrectResultsFailure::class)
+class CounterWithArrayWrongTest : AbstractCounterTest(CounterWithArrayWrong(), IncorrectResultsFailure::class)
 
 interface Counter {
     fun incAndGet(): Int
@@ -56,6 +57,20 @@ private class CounterWrong2 : Counter {
 
     override fun incAndGet(): Int = ++c
     override fun get(): Int = c
+}
+
+private class CounterWithArrayWrong : Counter {
+    private var counter = arrayOf(CounterImpl())
+
+    override fun incAndGet(): Int = counter[0].incAndGet()
+    override fun get(): Int = counter[0].get()
+
+    private class CounterImpl {
+        private var c: Int = 0
+
+        fun incAndGet(): Int = ++c
+        fun get(): Int = c
+    }
 }
 
 private class CounterCorrect : Counter {
