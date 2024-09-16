@@ -20,6 +20,18 @@ public class Injections {
     // Used in the verification phase to store a suspended continuation.
     public static Object lastSuspendedCancellableContinuationDuringVerification = null;
 
+    public static Class<?> KOTLIN_RANDOM_CLASS;
+
+    static {
+        Class<?> kotlinRandomClass = null;
+        try {
+            kotlinRandomClass = ClassLoader.getSystemClassLoader().loadClass("kotlin.random.Random");
+        } catch (ClassNotFoundException e) {
+            // Kotlin is not used in the user project.
+        }
+        Injections.KOTLIN_RANDOM_CLASS = kotlinRandomClass;
+    }
+
     public static void storeCancellableContinuation(Object cont) {
         Thread t = Thread.currentThread();
         if (t instanceof TestThread) {
@@ -168,7 +180,17 @@ public class Injections {
      * Called from the instrumented code to check whether the object is a [Random] instance.
      */
     public static boolean isRandom(Object any) {
-        return any instanceof Random;
+        // Is this a Java random?
+        if (any instanceof Random) return  true;
+        // Is this a Kotlin random?
+        try {
+            Class<?> kotlinRandomClass = any.getClass().getClassLoader().loadClass("kotlin.random.Random");
+            return kotlinRandomClass.isInstance(any);
+        } catch (ClassNotFoundException e) {
+            // Kotlin is not used in the user project.
+        }
+        // No, this is not a random instance.
+        return false;
     }
 
     /**
