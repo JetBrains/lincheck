@@ -20,18 +20,6 @@ public class Injections {
     // Used in the verification phase to store a suspended continuation.
     public static Object lastSuspendedCancellableContinuationDuringVerification = null;
 
-    public static Class<?> KOTLIN_RANDOM_CLASS;
-
-    static {
-        Class<?> kotlinRandomClass = null;
-        try {
-            kotlinRandomClass = ClassLoader.getSystemClassLoader().loadClass("kotlin.random.Random");
-        } catch (ClassNotFoundException e) {
-            // Kotlin is not used in the user project.
-        }
-        Injections.KOTLIN_RANDOM_CLASS = kotlinRandomClass;
-    }
-
     public static void storeCancellableContinuation(Object cont) {
         Thread t = Thread.currentThread();
         if (t instanceof TestThread) {
