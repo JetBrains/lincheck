@@ -29,6 +29,9 @@ object TimeTravelAgent {
 }
 
 internal object TimeTravelTransformer : ClassFileTransformer {
+    private val classUnderTimeTravel = System.getProperty("rr.className") ?: error("Class name under time travel not found")
+    private val methodUnderTimeTravel = System.getProperty("rr.methodName") ?: error("Method name under time travel not found")
+
     override fun transform(
         loader: ClassLoader?,
         internalClassName: String,
@@ -48,10 +51,6 @@ internal object TimeTravelTransformer : ClassFileTransformer {
         internalClassName: String,
         classBytes: ByteArray
     ): ByteArray {
-        println("Transforming '$internalClassName'")
-        val classUnderTimeTravel = System.getProperty("rr.className") ?: error("Class name under time travel not found")
-        val methodUnderTimeTravel = System.getProperty("rr.methodName") ?: error("Method name under time travel not found")
-
         val reader = ClassReader(classBytes)
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
         try {

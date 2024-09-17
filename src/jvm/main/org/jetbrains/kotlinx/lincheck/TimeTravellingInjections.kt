@@ -19,7 +19,9 @@ object TimeTravellingInjections {
     @JvmStatic
     var firstRun = true
 
+    @JvmStatic
     fun runWithLincheck(testInstance: Any, testMethodName: String) {
+        println("Running with Lincheck")
         firstRun = false
 
         val testClass = testInstance.javaClass

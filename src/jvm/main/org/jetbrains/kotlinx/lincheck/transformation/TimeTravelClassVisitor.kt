@@ -31,6 +31,7 @@ class TimeTravelClassVisitor(
         interfaces: Array<String>
     ) {
         className = name
+        println("Class name under observation: $className")
         super.visit(version, access, name, signature, superName, interfaces)
     }
 
