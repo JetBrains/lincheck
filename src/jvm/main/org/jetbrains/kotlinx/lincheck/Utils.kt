@@ -17,6 +17,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
 import org.jetbrains.kotlinx.lincheck.verifier.*
+import sun.nio.ch.lincheck.LincheckTracker
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.lang.ref.*
@@ -265,16 +266,86 @@ internal inline fun<R> LincheckClassFileTransformer.runInIgnoredSection(block: (
 @Suppress("UnusedReceiverParameter")
 internal inline fun<R> ExecutionClassLoader.runInIgnoredSection(block: () -> R): R =  runInIgnoredSection(Thread.currentThread(), block)
 
-private inline fun <R> runInIgnoredSection(currentThread: Thread, block: () -> R): R =
-    if (currentThread is TestThread && currentThread.inTestingCode && !currentThread.inIgnoredSection) {
-        currentThread.inIgnoredSection = true
-        try {
-            block()
-        } finally {
-            currentThread.inIgnoredSection = false
-        }
-    } else {
-        block()
+private inline fun <R> runInIgnoredSection(currentThread: Thread, block: () -> R): R {
+    // return if (currentThread is TestThread && currentThread.inTestingCode && !currentThread.inIgnoredSection) {
+    //     currentThread.inIgnoredSection = true
+    //     try {
+    //         block()
+    //     } finally {
+    //         currentThread.inIgnoredSection = false
+    //     }
+    // } else {
+    //     block()
+    // }
+
+
+    val strategy: ManagedStrategy = LincheckTracker.getEventTracker() as? ManagedStrategy
+        ?: return block()
+
+    if (strategy.inIgnoredSection()) {
+        return block()
     }
+    strategy.enterIgnoredSection()
+    return try {
+        block()
+    } finally {
+        strategy.leaveIgnoredSection()
+    }
+
+    // if (inIgnoredSection()) {
+    //     return block()
+    // }
+    // enterIgnoredSection()
+    // return try {
+    //     block()
+    // } finally {
+    //     leaveIgnoredSection()
+    // }
+}
+
+/*
+internal fun inIgnoredSection(): Boolean {
+    return isInIgnoredCode.get()
+}
+
+internal fun enterIgnoredSection() {
+    // val thread = (Thread.currentThread() as? TestThread) ?: return
+    // thread.inIgnoredSection = true
+
+    // isInIgnoredCode.set(true)
+
+    val iThread = getThreadId(Thread.currentThread())
+    inIgnoredSection[iThread] = false
+}
+
+internal fun leaveIgnoredSection() {
+    // val thread = (Thread.currentThread() as? TestThread) ?: return
+    // thread.inIgnoredSection = false
+
+    // val iThread = getThreadId(Thread.currentThread())
+    // inIgnoredSection[iThread] = false
+
+    isInIgnoredCode.set(false)
+}
+
+internal fun leaveIgnoredSectionIfEntered() {
+    // val thread = (Thread.currentThread() as? TestThread) ?: return
+    // if (thread.inIgnoredSection) {
+    //     thread.inIgnoredSection = false
+    // }
+
+    if (isInIgnoredCode.get()) {
+        isInIgnoredCode.set(false)
+    }
+}
+*/
+
+// class IgnoredSectionSupport {
+//     companion object {
+//         var isInIgnoredCode = ThreadLocal.withInitial { false }
+//     }
+// }
+
+// private var isInIgnoredCode : ThreadLocal<Boolean> = ThreadLocal.withInitial { false }
 
 internal const val LINCHECK_PACKAGE_NAME = "org.jetbrains.kotlinx.lincheck."

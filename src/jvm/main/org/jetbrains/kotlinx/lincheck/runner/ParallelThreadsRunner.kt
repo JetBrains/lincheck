@@ -83,10 +83,6 @@ internal open class ParallelThreadsRunner(
     )
 
     init {
-        if (strategy is ManagedStrategy) {
-            // executor.threads.forEach { it.eventTracker = strategy }
-            LincheckTracker.setEventTracker(strategy)
-        }
         resetState()
     }
 
@@ -289,6 +285,11 @@ internal open class ParallelThreadsRunner(
         suspensionPointResults[iThread][actorId] != NoResult || completions[iThread][actorId].resWithCont.get() != null
 
     override fun run(): InvocationResult {
+        if (strategy is ManagedStrategy) {
+            // executor.threads.forEach { it.eventTracker = strategy }
+            LincheckTracker.setEventTracker(strategy)
+        }
+
         try {
             var timeout = timeoutMs * 1_000_000
             // Create a new testing class instance.
