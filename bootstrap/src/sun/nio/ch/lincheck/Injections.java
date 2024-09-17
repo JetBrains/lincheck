@@ -361,11 +361,17 @@ public class Injections {
     }
 
     private static EventTracker getEventTracker() {
-        Thread currentThread = Thread.currentThread();
-        if (currentThread instanceof TestThread) {
-            return ((TestThread) currentThread).eventTracker;
+//        Thread currentThread = Thread.currentThread();
+//        if (currentThread instanceof TestThread) {
+//            return ((TestThread) currentThread).eventTracker;
+//        }
+//        throw new RuntimeException("Current thread is not an instance of TestThread");
+        var tracker = LincheckTracker.getEventTracker();
+        if (tracker == null) {
+            throw new RuntimeException("No event tracker set in `RaceDetector`");
         }
-        throw new RuntimeException("Current thread is not an instance of TestThread");
+        return tracker;
+
     }
 
 

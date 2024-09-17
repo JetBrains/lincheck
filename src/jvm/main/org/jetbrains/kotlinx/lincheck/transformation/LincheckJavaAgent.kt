@@ -376,7 +376,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
 
             val labelToNumberMap: Map<MethodNode, MutableMap<LabelNode, Int>> = mapLabelIndexes(classNode)
             val methods: Map<String, Map<Int, List<LocalVariableInfo>>> = mapMethodsToLabels(classNode, labelToNumberMap)
-            val visitor = LincheckClassVisitor(instrumentationMode, writer, methods)
+            val visitor = LincheckClassVisitor(loader, writer, instrumentationMode, methods)
 
             reader.accept(visitor, ClassReader.EXPAND_FRAMES)
             writer.toByteArray()
@@ -441,6 +441,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         // `java.util.*` ones, ignored the known atomic constructs.
         if (className.startsWith("java.")) {
             if (className.startsWith("java.util.concurrent.") && className.contains("Atomic")) return false
+            if (className.startsWith("java.lang.Thread")) return true
             if (className.startsWith("java.util.")) return true
             if (className.startsWith("com.sun.")) return false
             return false

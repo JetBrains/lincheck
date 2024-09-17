@@ -28,8 +28,8 @@ internal class ThreadTransformer(
     className: String,
     methodName: String,
     private val desc: String,
+    private val isThreadSubclass: Boolean,
     adapter: GeneratorAdapter,
-    private val isThreadSubclass: Boolean
 ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter)  {
 
     override fun visitCode() = adapter.run {
@@ -82,7 +82,7 @@ internal class ThreadTransformer(
         methodName == "run" && desc == VOID_METHOD_DESCRIPTOR
 }
 
-private const val JAVA_THREAD_CLASSNAME = "java/lang/Thread"
+internal const val JAVA_THREAD_CLASSNAME = "java/lang/Thread"
 
 private val EMPTY_TYPE_ARRAY = emptyArray<Type>()
 
