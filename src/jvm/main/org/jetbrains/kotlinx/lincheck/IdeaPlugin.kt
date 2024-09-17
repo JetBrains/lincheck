@@ -163,9 +163,9 @@ private fun createThreadToLincheckThreadIdMap(threads: Array<TestThread>): Array
     val array = arrayListOf<Any>()
     for (thread in threads) {
         array.add(thread)
+        // TODO: use threadId provided by ManagedStrategy
         array.add(thread.threadId)
     }
-
     return array.toTypedArray()
 }
 
@@ -180,8 +180,8 @@ private fun createContinuationToThreadIdMap(threads: Array<TestThread>): Array<A
     val array = arrayListOf<Any>()
     for (thread in threads) {
         array.add(thread.suspendedContinuation ?: continue)
+        // TODO: use threadId provided by ManagedStrategy
         array.add(thread.threadId)
     }
-
     return array.toTypedArray()
 }

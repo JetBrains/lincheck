@@ -53,9 +53,21 @@ abstract class ManagedStrategy(
     // The number of parallel threads.
     protected val nThreads: Int = scenario.nThreads
 
+    // Threads registered in managed strategy
+    protected val registeredThreads = mutableListOf<Thread>()
+
+    // Total number of threads (parallel threads of the scenario + dynamically created threads)
+    protected val nTotalThreads: Int get() = registeredThreads.size
+
     // Runner for scenario invocations,
     // can be replaced with a new one for trace construction.
-    override var runner = createRunner()
+    final override var runner = createRunner()
+
+    init {
+        registeredThreads.addAll(
+            runner.executor.threads
+        )
+    }
 
     // Spin-waiters for each thread
     private val spinners = SpinnerGroup(nThreads)
@@ -112,11 +124,11 @@ abstract class ManagedStrategy(
 
     // Random instances with fixed seeds to replace random calls in instrumented code.
     // TODO: check why `nThreads + 2`
-    private var randoms = MutableThreadMap(nThreads + 2) { Random(it + 239L) }
+    private var randoms = MutableThreadMap(nThreads) { Random(it + 239L) }
 
     // Current call stack for a thread, updated during beforeMethodCall and afterMethodCall methods.
     // TODO: check why `nThreads + 2`
-    private val methodCallTracePointStack = MutableThreadMap(nThreads + 2) { mutableListOf<MethodCallTracePoint>() }
+    private val methodCallTracePointStack = MutableThreadMap(nThreads) { mutableListOf<MethodCallTracePoint>() }
 
     // User-specified guarantees on specific function, which can be considered as atomic or ignored.
     private val userDefinedGuarantees: List<ManagedStrategyGuarantee>? = testCfg.guarantees.ifEmpty { null }
@@ -412,7 +424,7 @@ abstract class ManagedStrategy(
     }
 
     override fun beforeThreadFork(thread: Thread?) {
-        TODO("Not yet implemented")
+        registerThread(thread!!)
     }
 
     override fun beforeThreadStart() {
@@ -425,6 +437,23 @@ abstract class ManagedStrategy(
 
     override fun afterThreadJoin(thread: Thread?) {
         TODO("Not yet implemented")
+    }
+
+    private fun registerThread(thread: Thread) {
+        val iThread = nTotalThreads
+        registeredThreads.add(thread)
+        finished[iThread] = false
+        isSuspended[iThread] = false
+        currentActorId[iThread] = -1
+        monitorTracker.registerThread(iThread, thread)
+        // traceCollector = if (collectTrace) TraceCollector() else null
+        callStackTrace[iThread] = mutableListOf()
+        suspendedFunctionsStack[iThread] = mutableListOf()
+        randoms[iThread] = Random(iThread + 239L)
+    }
+
+    fun getThreadId(thread: Thread): Int {
+        return registeredThreads.indexOfFirst { it === thread }
     }
 
     /**
@@ -943,7 +972,8 @@ abstract class ManagedStrategy(
         if (collectTrace) {
             runInIgnoredSection {
                 // We cannot simply read `thread` as Forcible???Exception can be thrown.
-                val iThread = (Thread.currentThread() as TestThread).threadId
+                val iThread = getThreadId(Thread.currentThread())
+                // val iThread = (Thread.currentThread() as TestThread).threadId
                 val tracePoint = methodCallTracePointStack[iThread]!!.removeLast()
                 tracePoint.initializeThrownException(t)
                 afterMethodCall(iThread, tracePoint)
@@ -1646,6 +1676,11 @@ private class MonitorTracker(nThreads: Int) {
     // Stores `true` for the threads which are waiting for a
     // `notify` call on the monitor stored in `acquiringMonitor`.
     private val waitForNotify = MutableThreadMap(nThreads) { false }
+
+    fun registerThread(iThread: Int, thread: Thread) {
+        waitingMonitor[iThread] = null
+        waitForNotify[iThread] = false
+    }
 
     /**
      * Performs a logical acquisition.
