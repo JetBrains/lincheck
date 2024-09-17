@@ -114,12 +114,6 @@ internal class LincheckClassVisitor(
         mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
         mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
         mv = CoroutineCancellabilitySupportTransformer(mv, access, className, methodName, desc)
-        if (access and ACC_SYNCHRONIZED != 0) {
-            mv = SynchronizedMethodTransformer(fileName, className, methodName, mv.newAdapter(), classVersion)
-        }
-        // `skipVisitor` must not capture `MethodCallTransformer`
-        // (to filter static method calls inserted by coverage library)
-        val skipVisitor: MethodVisitor = mv
 
         mv = ThreadTransformer(fileName, className, methodName, desc, isThreadSubclass, mv.newAdapter())
         // We can do further instrumentation in methods of the custom thread subclasses,
@@ -128,6 +122,12 @@ internal class LincheckClassVisitor(
             return mv
         }
 
+        if (access and ACC_SYNCHRONIZED != 0) {
+            mv = SynchronizedMethodTransformer(fileName, className, methodName, mv.newAdapter(), classVersion)
+        }
+        // `skipVisitor` must not capture `MethodCallTransformer`
+        // (to filter static method calls inserted by coverage library)
+        val skipVisitor: MethodVisitor = mv
         mv = MethodCallTransformer(fileName, className, methodName, mv.newAdapter())
         mv = MonitorTransformer(fileName, className, methodName, mv.newAdapter())
         mv = WaitNotifyTransformer(fileName, className, methodName, mv.newAdapter())

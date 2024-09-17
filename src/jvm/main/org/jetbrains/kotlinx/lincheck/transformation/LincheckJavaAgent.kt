@@ -440,8 +440,8 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         // It is fine to inject the Lincheck analysis only into the
         // `java.util.*` ones, ignored the known atomic constructs.
         if (className.startsWith("java.")) {
+            if (className == "java.lang.Thread") return true
             if (className.startsWith("java.util.concurrent.") && className.contains("Atomic")) return false
-            if (className.startsWith("java.lang.Thread")) return true
             if (className.startsWith("java.util.")) return true
             if (className.startsWith("com.sun.")) return false
             return false
