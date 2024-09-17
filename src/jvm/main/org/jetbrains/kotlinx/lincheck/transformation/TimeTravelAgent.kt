@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
+import org.jetbrains.kotlinx.lincheck.TimeTravellingInjections
 import org.jetbrains.kotlinx.lincheck.canonicalClassName
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
@@ -25,14 +26,14 @@ object TimeTravelAgent {
     fun premain(agentArgs: String?, inst: Instrumentation) {
         // install agent
         println("Installing Time Travelling Agent")
+        if (TimeTravellingInjections.classUnderTimeTravel == null) error("Class name under time travel not found")
+        if (TimeTravellingInjections.methodUnderTimeTravel == null) error("Method name under time travel not found")
 
         inst.addTransformer(TimeTravelTransformer, true)
     }
 }
 
 internal object TimeTravelTransformer : ClassFileTransformer {
-    private val classUnderTimeTravel = System.getProperty("rr.className") ?: error("Class name under time travel not found")
-    private val methodUnderTimeTravel = System.getProperty("rr.methodName") ?: error("Method name under time travel not found")
 
     override fun transform(
         loader: ClassLoader?,
@@ -41,7 +42,7 @@ internal object TimeTravelTransformer : ClassFileTransformer {
         protectionDomain: ProtectionDomain?,
         classBytes: ByteArray
     ): ByteArray? {
-        println("Enter transform for $internalClassName")
+        //println("Enter transform for $internalClassName")
         // If the class should not be transformed, return immediately.
         if (!shouldTransform(internalClassName.canonicalClassName)) {
             return null
@@ -54,7 +55,9 @@ internal object TimeTravelTransformer : ClassFileTransformer {
         internalClassName: String,
         classBytes: ByteArray
     ): ByteArray {
-        println("Transforming class $internalClassName")
+        //println("Transforming class $internalClassName")
+        val classUnderTimeTravel = TimeTravellingInjections.classUnderTimeTravel!!
+        val methodUnderTimeTravel = TimeTravellingInjections.methodUnderTimeTravel!!
 
         try {
             val bytes: ByteArray

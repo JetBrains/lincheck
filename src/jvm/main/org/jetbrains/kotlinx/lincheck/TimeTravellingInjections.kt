@@ -16,12 +16,15 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 
 object TimeTravellingInjections {
+    val classUnderTimeTravel: String? = System.getProperty("rr.className")
+    val methodUnderTimeTravel: String? = System.getProperty("rr.methodName")
+
     @JvmStatic
     var firstRun = true
 
     @JvmStatic
     fun runWithLincheck(testClassName: String, testMethodName: String) {
-        println("Running with Lincheck")
+        println("Running with Lincheck (runWithLincheck method)")
         firstRun = false
 
         val testClass = Class.forName(testClassName)

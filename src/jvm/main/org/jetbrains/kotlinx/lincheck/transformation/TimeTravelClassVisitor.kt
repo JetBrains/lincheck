@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.transformation
 
 import org.jetbrains.kotlinx.lincheck.TimeTravellingInjections
+import org.jetbrains.kotlinx.lincheck.canonicalClassName
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.commons.GeneratorAdapter
@@ -31,8 +32,8 @@ class TimeTravelClassVisitor(
         interfaces: Array<String>
     ) {
         super.visit(version, access, name, signature, superName, interfaces)
-        println("Class name under observation: $name")
-        className = name
+        //println("Class name under observation: $name")
+        className = name.canonicalClassName
     }
 
     override fun visitMethod(
@@ -43,11 +44,11 @@ class TimeTravelClassVisitor(
         exceptions: Array<String>?
     ): MethodVisitor {
         fun MethodVisitor.newAdapter() = GeneratorAdapter(this, access, methodName, desc)
-        println("Visiting method: $className::$methodName(...)")
+        //println("Visiting method: $className::$methodName(...)")
 
         var mv = super.visitMethod(access, methodName, desc, signature, exceptions)
         if (className == classUnderTimeTravel && methodName == methodUnderTimeTravel) {
-            println("Inside a visit junit-method")
+            //println("Inside a visit junit-method")
             mv = JUnitTestMethodTransformer(classUnderTimeTravel, methodUnderTimeTravel, mv.newAdapter())
         }
 
