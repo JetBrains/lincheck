@@ -144,7 +144,13 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
     ): LincheckFailure? {
         val strategy = testCfg.createStrategy(this)
         return strategy.use {
-            it.runIteration(testCfg.invocationsPerIteration, verifier)
+            try {
+                it.runIteration(testCfg.invocationsPerIteration, verifier)
+            } catch (e: Throwable) {
+                println("Unexpected failure")
+                println(e)
+                return null
+            }
         }
     }
 

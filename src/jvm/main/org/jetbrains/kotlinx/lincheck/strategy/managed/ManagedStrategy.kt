@@ -78,16 +78,16 @@ abstract class ManagedStrategy(
     protected var currentThread: Int = 0
 
     // Which threads finished all the operations?
-    private val finished = MutableThreadMap(nThreads) { false }
+    private var finished = MutableThreadMap(nThreads) { false }
 
     // Which threads are suspended?
-    private val isSuspended = MutableThreadMap(nThreads) { false }
+    private var isSuspended = MutableThreadMap(nThreads) { false }
 
     // Which threads are in ignored section?
-    private val inIgnoredSection = MutableThreadMap(nThreads) { true }
+    private var inIgnoredSection = MutableThreadMap(nThreads) { true }
 
     // Current actor id for each thread.
-    protected val currentActorId = MutableThreadMap(nThreads) { 0 }
+    protected var currentActorId = MutableThreadMap(nThreads) { -1 }
 
     // Detector of loops or hangs (i.e., active locks).
     internal val loopDetector: LoopDetector = LoopDetector(testCfg.hangingDetectionThreshold)
@@ -108,7 +108,7 @@ abstract class ManagedStrategy(
     private var traceCollector: TraceCollector? = null // null when `collectTrace` is false
 
     // Stores the currently executing methods call stack for each thread.
-    private val callStackTrace = MutableThreadMap(nThreads) { mutableListOf<CallStackTraceElement>() }
+    private var callStackTrace = MutableThreadMap(nThreads) { mutableListOf<CallStackTraceElement>() }
 
     // Stores the global number of method calls.
     private var methodCallNumber = 0
@@ -117,7 +117,7 @@ abstract class ManagedStrategy(
     // methods is stored here, so that the same method call identifiers are
     // used on resumption, and the trace point before and after the suspension
     // correspond to the same method call in the trace.
-    private val suspendedFunctionsStack = MutableThreadMap(nThreads) { mutableListOf<Int>() }
+    private var suspendedFunctionsStack = MutableThreadMap(nThreads) { mutableListOf<Int>() }
 
     // Last read trace point, occurred in the current thread.
     // We store it as we initialize read value after the point is created so we have to store
@@ -183,16 +183,21 @@ abstract class ManagedStrategy(
      * Resets all internal data to the initial state and initializes current invocation to be run.
      */
     protected open fun initializeInvocation() {
-        finished.replaceAll { _, _ -> false }
-        isSuspended.replaceAll { _, _ -> false }
-        inIgnoredSection.replaceAll { _, _ -> true }
-        currentActorId.replaceAll { _, _ -> -1 }
+        registeredThreads.clear()
+        registeredThreads.addAll(
+            runner.executor.threads
+        )
+
+        finished = MutableThreadMap(nThreads) { false }
+        isSuspended = MutableThreadMap(nThreads) { false }
+        inIgnoredSection = MutableThreadMap(nThreads) { true }
+        currentActorId = MutableThreadMap(nThreads) { -1 }
         monitorTracker = MonitorTracker(nThreads)
         traceCollector = if (collectTrace) TraceCollector() else null
         suddenInvocationResult = null
-        callStackTrace.forEach { (_, it) -> it.clear() }
-        suspendedFunctionsStack.forEach { (_, it) -> it.clear() }
-        randoms.forEach { (i, r) -> r.setSeed(i + 239L) }
+        callStackTrace = MutableThreadMap(nThreads) { mutableListOf() }
+        suspendedFunctionsStack = MutableThreadMap(nThreads) { mutableListOf() }
+        randoms = MutableThreadMap(nThreads) { Random(it + 239L) }
     }
 
     /**
@@ -433,6 +438,7 @@ abstract class ManagedStrategy(
     }
 
     override fun beforeThreadFork(thread: Thread?) = runInIgnoredSection {
+        if (thread is TestThread) return
         val iThread = getThreadId(Thread.currentThread())
         registerThread(thread!!)
         newSwitchPoint(iThread, COROUTINE_SUSPENSION_CODE_LOCATION, tracePoint = null)
@@ -440,11 +446,13 @@ abstract class ManagedStrategy(
 
     override fun beforeThreadStart() {
         val iThread = getThreadId(Thread.currentThread())
+        if (iThread == -1) return
         onStart(iThread)
     }
 
     override fun afterThreadFinish() {
         val iThread = getThreadId(Thread.currentThread())
+        if (iThread == -1) return
         onFinish(iThread)
     }
 
