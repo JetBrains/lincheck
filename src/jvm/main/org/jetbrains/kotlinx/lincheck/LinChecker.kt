@@ -124,7 +124,7 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
      */
     private fun CTestConfiguration.runReplayForPlugin(failure: LincheckFailure, verifier: Verifier) {
         if (ideaPluginEnabled() && this is ModelCheckingCTestConfiguration) {
-            reporter.logFailedIteration(failure, loggingLevel = LoggingLevel.WARN)
+            // reporter.logFailedIteration(failure, loggingLevel = LoggingLevel.WARN)
             enableReplayModeForIdeaPlugin()
             val strategy = createStrategy(failure.scenario)
             check(strategy is ModelCheckingStrategy)
@@ -134,7 +134,7 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
                 strategy.runReplayIfPluginEnabled(replayedFailure)
             }
         } else {
-            reporter.logFailedIteration(failure)
+            // reporter.logFailedIteration(failure)
         }
     }
 
