@@ -1196,8 +1196,8 @@ abstract class ManagedStrategy(
             ReadTracePoint(
                 ownerRepresentation = null,
                 iThread = iThread,
-                actorId = currentActorId[iThread],
-                callStackTrace = callStackTrace[iThread],
+                actorId = currentActorId[iThread]!!,
+                callStackTrace = callStackTrace[iThread]!!,
                 fieldName = name ?: "<unknown variable>",
                 stackTraceElement = CodeLocations.stackTrace(codeLocation)
             ).also { it.initializeReadValue(adornedStringRepresentation(value)) }
@@ -1214,8 +1214,8 @@ abstract class ManagedStrategy(
             WriteTracePoint(
                 ownerRepresentation = null,
                 iThread = iThread,
-                actorId = currentActorId[iThread],
-                callStackTrace = callStackTrace[iThread],
+                actorId = currentActorId[iThread]!!,
+                callStackTrace = callStackTrace[iThread]!!,
                 fieldName = name ?: "<unknown variable>",
                 stackTraceElement = CodeLocations.stackTrace(codeLocation)
             ).also { it.initializeWrittenValue(adornedStringRepresentation(value)) }
