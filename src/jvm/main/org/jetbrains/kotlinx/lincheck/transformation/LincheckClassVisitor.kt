@@ -22,7 +22,8 @@ import kotlin.collections.HashSet
 
 internal class LincheckClassVisitor(
     private val instrumentationMode: InstrumentationMode,
-    classVisitor: ClassVisitor
+    classVisitor: ClassVisitor,
+    private val methods: Map<String, Map<Int, List<LocalVariableInfo>>>
 ) : ClassVisitor(ASM_API, classVisitor) {
     private val ideaPluginEnabled = ideaPluginEnabled()
     private var classVersion = 0
@@ -131,6 +132,8 @@ internal class LincheckClassVisitor(
             sv.analyzer = aa
             aa
         }
+        val locals: Map<Int, List<LocalVariableInfo>> = methods[methodName + desc] ?: emptyMap()
+        mv = LocalVariablesAnalyzerAdapter(fileName, className, methodName, mv.newAdapter(), locals)
         // Must appear in code after `SharedMemoryAccessTransformer` (to be able to skip this transformer)
         mv = CoverageBytecodeFilter(
             skipVisitor.newAdapter(),

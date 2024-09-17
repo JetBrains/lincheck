@@ -62,4 +62,6 @@ public interface EventTracker {
     void beforeEvent(int eventId, String type);
     int getEventId();
     void setLastMethodCallEventId();
+    void beforeLocalRead(int codeLocation, String name, Object value);
+    void beforeLocalWrite(int codeLocation, String name, Object value);
 }

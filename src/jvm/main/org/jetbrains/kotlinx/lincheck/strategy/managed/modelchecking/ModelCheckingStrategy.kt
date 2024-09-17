@@ -100,8 +100,8 @@ internal class ModelCheckingStrategy(
         // We do not check `inIgnoredSection` here because this method is called from instrumented code
         // that should be invoked only outside the ignored section.
         // However, we cannot add `!inIgnoredSection` check here
-        // as the instrumented code might call `enterIgnoredSection` just before this call.
-        return replay && collectTrace &&
+        // as the instrumented code might call `enterIgnoredSection` just befor this call.
+        return collectTrace &&
                 Thread.currentThread() is TestThread &&
                 suddenInvocationResult == null
     }

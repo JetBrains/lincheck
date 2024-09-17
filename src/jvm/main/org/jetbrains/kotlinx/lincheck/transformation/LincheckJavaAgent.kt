@@ -24,6 +24,10 @@ import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumen
 import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
+import org.objectweb.asm.Type
+import org.objectweb.asm.tree.ClassNode
+import org.objectweb.asm.tree.LabelNode
+import org.objectweb.asm.tree.MethodNode
 import sun.misc.Unsafe
 import java.io.File
 import java.lang.instrument.ClassFileTransformer
@@ -364,8 +368,16 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
     ): ByteArray = transformedClassesCache.computeIfAbsent(internalClassName.canonicalClassName) {
         val reader = ClassReader(classBytes)
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
-        val visitor = LincheckClassVisitor(instrumentationMode, writer)
         try {
+            val classReader = ClassReader(classBytes)
+
+            val classNode = ClassNode()
+            classReader.accept(classNode, 0)
+
+            val labelToNumberMap: Map<MethodNode, MutableMap<LabelNode, Int>> = mapLabelIndexes(classNode)
+            val methods: Map<String, Map<Int, List<LocalVariableInfo>>> = mapMethodsToLabels(classNode, labelToNumberMap)
+            val visitor = LincheckClassVisitor(instrumentationMode, writer, methods)
+
             reader.accept(visitor, ClassReader.EXPAND_FRAMES)
             writer.toByteArray()
         } catch (e: Throwable) {
@@ -373,6 +385,48 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
             e.printStackTrace()
             classBytes
         }
+    }
+
+    private fun mapMethodsToLabels(
+        classNode: ClassNode,
+        labelToNumberMap: Map<MethodNode, MutableMap<LabelNode, Int>>
+    ): Map<String, Map<Int, List<LocalVariableInfo>>> {
+        return classNode.methods.associateBy(
+            keySelector = { m -> m.name + m.desc },
+            valueTransform = { m ->
+                val labMap = labelToNumberMap[m] ?: emptyMap()
+                val result = mutableMapOf<Int, MutableList<LocalVariableInfo>>()
+
+                m.localVariables.forEach { local ->
+                    val index = local.index
+                    val list = result.getOrPut(index) { mutableListOf() }
+                    val from = labMap[local.start]
+                    val to = labMap[local.end]
+                    if (from == null || to == null) return@forEach
+
+                    val type = Type.getType(local.desc)
+                    list += LocalVariableInfo(local.name, IntRange(from, to), type)
+                }
+
+                result
+            }
+        )
+    }
+
+    private fun mapLabelIndexes(classNode: ClassNode): Map<MethodNode, MutableMap<LabelNode, Int>> = classNode.methods.associateWith { methodNode ->
+        val result = mutableMapOf<LabelNode, Int>()
+        val instructions = methodNode.instructions
+        var index = 0
+
+        var node = instructions.first
+        while (node != null) {
+            if (node is LabelNode) {
+                result[node] = index++
+            }
+            node = node.next
+        }
+
+        result
     }
 
     @Suppress("SpellCheckingInspection")

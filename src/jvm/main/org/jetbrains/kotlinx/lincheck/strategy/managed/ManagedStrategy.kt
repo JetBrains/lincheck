@@ -710,7 +710,6 @@ abstract class ManagedStrategy(
         if (isStatic) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(className.canonicalClassName)
         }
-        // Optimization: do not track final field reads
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             ReadTracePoint(
@@ -1075,6 +1074,42 @@ abstract class ManagedStrategy(
         if (!isBeforeAtomicMethodCall) {
             traceCollector!!.passCodeLocation(tracePoint)
         }
+    }
+
+    override fun beforeLocalRead(codeLocation: Int, name: String?, value: Any?) = runInIgnoredSection {
+        if (!collectTrace) return@runInIgnoredSection
+        val iThread = currentThread
+        val tracePoint = if (collectTrace) {
+            ReadTracePoint(
+                ownerRepresentation = null,
+                iThread = iThread,
+                actorId = currentActorId[iThread],
+                callStackTrace = callStackTrace[iThread],
+                fieldName = name ?: "<unknown variable>",
+                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+            ).also { it.initializeReadValue(adornedStringRepresentation(value)) }
+        } else {
+            null
+        }
+        traceCollector!!.passCodeLocation(tracePoint)
+    }
+
+    override fun beforeLocalWrite(codeLocation: Int, name: String?, value: Any?) = runInIgnoredSection{
+        if (!collectTrace) return@runInIgnoredSection
+        val iThread = currentThread
+        val tracePoint = if (collectTrace) {
+            WriteTracePoint(
+                ownerRepresentation = null,
+                iThread = iThread,
+                actorId = currentActorId[iThread],
+                callStackTrace = callStackTrace[iThread],
+                fieldName = name ?: "<unknown variable>",
+                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+            ).also { it.initializeWrittenValue(adornedStringRepresentation(value)) }
+        } else {
+            null
+        }
+        traceCollector!!.passCodeLocation(tracePoint)
     }
 
     private fun createBeforeMethodCallTracePoint(
