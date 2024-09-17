@@ -30,7 +30,7 @@ data class Trace(val trace: List<TracePoint>)
 sealed class TracePoint(val iThread: Int, val actorId: Int, callStackTrace: CallStackTrace, var eventId: Int = -1) {
     // This field assignment creates a copy of current callStackTrace using .toList()
     // as CallStackTrace is a mutable list and can be changed after this trace point is created.
-    internal val callStackTrace = callStackTrace.toList()
+    internal val callStackTrace: List<CallStackTraceElement> = callStackTrace.toList()
     internal abstract fun toStringImpl(withLocation: Boolean): String
     override fun toString(): String = toStringImpl(withLocation = true)
 }
@@ -141,8 +141,9 @@ internal class MethodCallTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
     private val methodName: String,
-    stackTraceElement: StackTraceElement
+    stackTraceElement: StackTraceElement,
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
+    var callStackTraceElement: CallStackTraceElement? = null
     private var returnedValue: ReturnedValueResult = ReturnedValueResult.NoValue
     private var thrownException: Throwable? = null
     private var parameters: List<String>? = null

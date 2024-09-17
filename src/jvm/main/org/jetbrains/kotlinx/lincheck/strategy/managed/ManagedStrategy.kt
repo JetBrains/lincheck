@@ -1030,19 +1030,22 @@ abstract class ManagedStrategy(
             methodParams
         }
         // Code location of the new method call is currently the last one
-        val tracePoint = createBeforeMethodCallTracePoint(owner, iThread, className, methodName, params, codeLocation, atomicMethodDescriptor)
+        val tracePoint: MethodCallTracePoint = createBeforeMethodCallTracePoint(owner, iThread, className, methodName, params, codeLocation, atomicMethodDescriptor)
         methodCallTracePointStack[iThread] += tracePoint
         // Method id used to calculate spin cycle start label call depth.
         // Two calls are considered equals if two same methods were called with the same parameters.
         val methodIdentifierWithSignatureAndParams = Objects.hash(methodId,
             params.map { primitiveOrIdentityHashCode(it) }.toTypedArray().contentHashCode()
         )
-        callStackTrace.add(CallStackTraceElement(tracePoint, suspensionIdentifier, methodIdentifierWithSignatureAndParams))
+        val callStackTraceElement = CallStackTraceElement(tracePoint, suspensionIdentifier, methodIdentifierWithSignatureAndParams)
+        callStackTrace.add(callStackTraceElement)
+        tracePoint.callStackTraceElement = callStackTraceElement
         if (owner == null) {
             beforeStaticMethodCall()
         } else {
             beforeInstanceMethodCall(owner)
         }
+        traceCollector!!.passCodeLocation(tracePoint)
     }
 
     private fun createBeforeMethodCallTracePoint(
@@ -1060,7 +1063,7 @@ abstract class ManagedStrategy(
             actorId = currentActorId[iThread],
             callStackTrace = callStackTrace,
             methodName = methodName,
-            stackTraceElement = CodeLocations.stackTrace(codeLocation)
+            stackTraceElement = CodeLocations.stackTrace(codeLocation),
         )
         // handle non-atomic methods
         if (atomicMethodDescriptor == null) {

@@ -202,6 +202,22 @@ internal fun constructTraceGraph(
         val isLastExecutedEvent = eventId == lastExecutedEvents[iThread]
         val node = traceGraphNodes.createAndAppend { lastNode ->
             val callDepth = innerNode.callDepth + 1
+
+            if (event is MethodCallTracePoint) {
+                val callStackTraceElement = event.callStackTraceElement
+                if (callStackTraceElement != null) {
+                    val callNode = CallNode(
+                        prefixProvider = prefixFactory.prefixForCallNode(iThread, callDepth),
+                        iThread = iThread,
+                        last = lastNode,
+                        callDepth = callDepth,
+                        call = event
+                    )
+                    callNodes[callStackTraceElement.suspensionIdentifier] = callNode
+                    return@createAndAppend callNode
+                }
+            }
+
             TraceLeafEvent(prefixFactory.prefix(event, callDepth), iThread, lastNode, callDepth, event, isLastExecutedEvent)
         }
         innerNode.addInternalEvent(node)
