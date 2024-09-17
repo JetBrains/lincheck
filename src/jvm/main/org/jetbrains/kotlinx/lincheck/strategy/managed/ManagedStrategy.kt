@@ -407,6 +407,22 @@ abstract class ManagedStrategy(
         traceCollector?.passCodeLocation(tracePoint)
     }
 
+    override fun beforeThreadFork(thread: Thread?) {
+        TODO("Not yet implemented")
+    }
+
+    override fun beforeThreadStart() {
+        TODO("Not yet implemented")
+    }
+
+    override fun afterThreadFinish() {
+        TODO("Not yet implemented")
+    }
+
+    override fun afterThreadJoin(thread: Thread?) {
+        TODO("Not yet implemented")
+    }
+
     /**
      * This method is executed as the first thread action.
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
