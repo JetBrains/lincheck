@@ -18,6 +18,11 @@ import java.util.*;
  */
 public interface EventTracker {
 
+    void beforeThreadFork(Thread thread);
+    void beforeThreadStart();
+    void afterThreadFinish();
+    void afterThreadJoin(Thread thread);
+
     void beforeLock(int codeLocation);
     void lock(Object monitor);
     void unlock(Object monitor, int codeLocation);
