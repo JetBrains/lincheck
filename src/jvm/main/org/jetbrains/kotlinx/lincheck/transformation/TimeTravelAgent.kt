@@ -13,6 +13,8 @@ package org.jetbrains.kotlinx.lincheck.transformation
 import org.jetbrains.kotlinx.lincheck.canonicalClassName
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
+import org.objectweb.asm.util.TraceClassVisitor
+import java.io.PrintWriter
 import java.lang.instrument.ClassFileTransformer
 import java.lang.instrument.Instrumentation
 import java.security.ProtectionDomain
@@ -53,16 +55,42 @@ internal object TimeTravelTransformer : ClassFileTransformer {
         classBytes: ByteArray
     ): ByteArray {
         println("Transforming class $internalClassName")
+
         try {
+            val bytes: ByteArray
             val reader = ClassReader(classBytes)
             val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
-            reader.accept(
-                TimeTravelClassVisitor(writer, classUnderTimeTravel, methodUnderTimeTravel),
-                ClassReader.SKIP_FRAMES
-            )
-            return writer.toByteArray()
+
+            if (internalClassName.canonicalClassName == classUnderTimeTravel) {
+                println("Before time-travel transforming: $internalClassName")
+                reader.accept(
+                    TraceClassVisitor(
+                        TimeTravelClassVisitor(writer, classUnderTimeTravel, methodUnderTimeTravel),
+                        PrintWriter(System.out)
+                    ),
+                    ClassReader.SKIP_FRAMES
+                )
+                bytes = writer.toByteArray()
+
+                println("After time-travel transforming: $internalClassName")
+                val afterReader = ClassReader(bytes)
+                afterReader.accept(
+                    TraceClassVisitor(PrintWriter(System.out)),
+                    ClassReader.SKIP_FRAMES
+                )
+
+                return bytes
+            } else {
+                reader.accept(
+                    TimeTravelClassVisitor(writer, classUnderTimeTravel, methodUnderTimeTravel),
+                    ClassReader.SKIP_FRAMES
+                )
+                bytes = writer.toByteArray()
+            }
+
+            return bytes
         } catch (e: Throwable) {
-            println("Unable to transform '$internalClassName': $e")
+            System.err.println("Unable to transform '$internalClassName': $e")
             return classBytes
         }
     }
