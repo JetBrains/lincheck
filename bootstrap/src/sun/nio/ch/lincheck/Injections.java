@@ -320,6 +320,14 @@ public class Injections {
         return getEventTracker().beforeReadArrayElement(array, index, codeLocation);
     }
 
+    public static void beforeLocalRead(int codeLocation, String name, Object value) {
+        getEventTracker().beforeLocalRead(codeLocation, name, value);
+    }
+
+    public static void beforeLocalWrite(int codeLocation, String name, Object value) {
+        getEventTracker().beforeLocalWrite(codeLocation, name, value);
+    }
+
     /**
      * Called from the instrumented code after each field read (final field reads can be ignored here).
      */

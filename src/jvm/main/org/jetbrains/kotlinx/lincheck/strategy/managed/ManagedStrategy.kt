@@ -97,12 +97,12 @@ abstract class ManagedStrategy(
     private val identityHashCodeTracker = ObjectIdentityHashCodeTracker()
     // Tracker of native method call states.
     private val nativeMethodCallStatesTracker = NativeMethodCallStatesTracker()
-    
+
     internal val traceDebuggerEventTrackers: Map<TraceDebuggerTracker, AbstractTraceDebuggerEventTracker> = mapOf(
         TraceDebuggerTracker.IdentityHashCode to identityHashCodeTracker,
         TraceDebuggerTracker.NativeMethodCall to nativeMethodCallStatesTracker,
     )
-    
+
     // Cache for evaluated invoke dynamic call sites
     private val invokeDynamicCallSites = ConcurrentHashMap<ConstantDynamic, CallSite>()
     // Tracker of the monitors' operations.
@@ -152,7 +152,7 @@ abstract class ManagedStrategy(
 
     // Utility class for the plugin integration to provide ids for each trace point
     private var eventIdProvider = EventIdProvider()
-    
+
     protected var replayNumber = 0L
 
 
@@ -1001,7 +1001,7 @@ abstract class ManagedStrategy(
      */
     override fun beforeReadField(obj: Any?, className: String, fieldName: String, codeLocation: Int,
                                  isStatic: Boolean, isFinal: Boolean) = runInIgnoredSection {
-         updateSnapshotOnFieldAccess(obj, className.canonicalClassName, fieldName)
+        updateSnapshotOnFieldAccess(obj, className.canonicalClassName, fieldName)
         // We need to ensure all the classes related to the reading object are instrumented.
         // The following call checks all the static fields.
         if (isStatic) {
@@ -1462,7 +1462,7 @@ abstract class ManagedStrategy(
         // this "ignore" section.
         leaveIgnoredSection()
     }
-    
+
     private fun <T> KResult<T>.toBootstrapResult() =
         if (isSuccess) BootstrapResult.fromSuccess(getOrThrow())
         else BootstrapResult.fromFailure(exceptionOrNull()!!)
@@ -1610,6 +1610,42 @@ abstract class ManagedStrategy(
         beforeMethodEnter(owner)
     }
 
+    override fun beforeLocalRead(codeLocation: Int, name: String?, value: Any?) = runInIgnoredSection {
+        if (!collectTrace) return@runInIgnoredSection
+        val iThread = currentThread
+        val tracePoint = if (collectTrace) {
+            ReadTracePoint(
+                ownerRepresentation = null,
+                iThread = iThread,
+                actorId = currentActorId[iThread],
+                callStackTrace = callStackTrace[iThread],
+                fieldName = name ?: "<unknown variable>",
+                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+            ).also { it.initializeReadValue(adornedStringRepresentation(value)) }
+        } else {
+            null
+        }
+        traceCollector!!.passCodeLocation(tracePoint)
+    }
+
+    override fun beforeLocalWrite(codeLocation: Int, name: String?, value: Any?) = runInIgnoredSection{
+        if (!collectTrace) return@runInIgnoredSection
+        val iThread = currentThread
+        val tracePoint = if (collectTrace) {
+            WriteTracePoint(
+                ownerRepresentation = null,
+                iThread = iThread,
+                actorId = currentActorId[iThread],
+                callStackTrace = callStackTrace[iThread],
+                fieldName = name ?: "<unknown variable>",
+                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+            ).also { it.initializeWrittenValue(adornedStringRepresentation(value)) }
+        } else {
+            null
+        }
+        traceCollector!!.passCodeLocation(tracePoint)
+    }
+
     private fun createBeforeMethodCallTracePoint(
         iThread: Int,
         owner: Any?,
@@ -1653,7 +1689,7 @@ abstract class ManagedStrategy(
         }
         error("Unknown atomic method $className::$methodName")
     }
-    
+
     private fun objectFqTypeName(obj: Any?): String {
         val enumPrefix = if (obj?.javaClass?.isEnum == true) "Enum:" else ""
         return "$enumPrefix${obj?.javaClass?.name ?: "null"}"
@@ -1764,7 +1800,7 @@ abstract class ManagedStrategy(
         tracePoint.initializeParameters(parameters.drop(1))
         return tracePoint
     }
-    
+
     private fun MethodCallTracePoint.initializeParameters(parameters: List<Any?>) =
         initializeParameters(parameters.map { adornedStringRepresentation(it) }, parameters.map { objectFqTypeName(it) })
 

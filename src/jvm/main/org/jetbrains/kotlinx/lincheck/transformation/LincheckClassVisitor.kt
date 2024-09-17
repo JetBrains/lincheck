@@ -22,6 +22,7 @@ import sun.nio.ch.lincheck.*
 internal class LincheckClassVisitor(
     private val classVisitor: SafeClassWriter,
     private val instrumentationMode: InstrumentationMode,
+    private val methods: Map<String, Map<Int, List<LocalVariableInfo>>>
 ) : ClassVisitor(ASM_API, classVisitor) {
     private var classVersion = 0
 
@@ -176,8 +177,8 @@ internal class LincheckClassVisitor(
             // so there is no need for the `DeterministicInvokeDynamicTransformer` there.
             mv = DeterministicInvokeDynamicTransformer(fileName, className, methodName, mv.newAdapter())
         } else {
-            // In trace debugger mode we record hash codes of tracked objects and substitute them on re-run, 
-            // otherwise, we track all hash code calls in the instrumented code 
+            // In trace debugger mode we record hash codes of tracked objects and substitute them on re-run,
+            // otherwise, we track all hash code calls in the instrumented code
             // and substitute them with constant.
             mv = ConstantHashCodeTransformer(fileName, className, methodName, mv.newAdapter())
         }
@@ -191,6 +192,8 @@ internal class LincheckClassVisitor(
             sv.analyzer = aa
             aa
         }
+        val locals: Map<Int, List<LocalVariableInfo>> = methods[methodName + desc] ?: emptyMap()
+        mv = LocalVariablesAnalyzerAdapter(fileName, className, methodName, mv.newAdapter(), locals)
         // Must appear in code after `SharedMemoryAccessTransformer` (to be able to skip this transformer)
         mv = CoverageBytecodeFilter(
             skipVisitor.newAdapter(),
