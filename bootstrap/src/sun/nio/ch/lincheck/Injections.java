@@ -31,28 +31,43 @@ public class Injections {
     }
 
     public static boolean enterIgnoredSection() {
-        Thread t = Thread.currentThread();
-        if (!(t instanceof TestThread)) return false;
-        TestThread testThread = (TestThread) t;
-        if (testThread.inIgnoredSection) return false;
-        testThread.inIgnoredSection = true;
-        return true;
+//        Thread t = Thread.currentThread();
+//        if (!(t instanceof TestThread)) return false;
+//        TestThread testThread = (TestThread) t;
+//        if (testThread.inIgnoredSection) return false;
+//        testThread.inIgnoredSection = true;
+//        return true;
+        var tracker = LincheckTracker.getEventTracker();
+        if (tracker == null) {
+            return false;
+        }
+        return tracker.enterIgnoredSection();
     }
 
     public static void leaveIgnoredSection() {
-        Thread t = Thread.currentThread();
-        if (t instanceof TestThread) {
-            ((TestThread) t).inIgnoredSection = false;
+//        Thread t = Thread.currentThread();
+//        if (t instanceof TestThread) {
+//            ((TestThread) t).inIgnoredSection = false;
+//        }
+        var tracker = LincheckTracker.getEventTracker();
+        if (tracker == null) {
+            return;
         }
+        tracker.leaveIgnoredSection();
     }
 
     public static boolean inTestingCode() {
-        Thread t = Thread.currentThread();
-        if (t instanceof TestThread) {
-            TestThread testThread = (TestThread) t;
-            return testThread.inTestingCode && !testThread.inIgnoredSection;
+//        Thread t = Thread.currentThread();
+//        if (t instanceof TestThread) {
+//            TestThread testThread = (TestThread) t;
+//            return testThread.inTestingCode && !testThread.inIgnoredSection;
+//        }
+//        return false;
+        var tracker = LincheckTracker.getEventTracker();
+        if (tracker == null) {
+            return false;
         }
-        return false;
+        return !tracker.inIgnoredSection();
     }
 
     /**
