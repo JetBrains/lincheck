@@ -156,7 +156,7 @@ internal class MethodCallTracePoint(
         append("$methodName(")
         val parameters = parameters
         if (parameters != null) {
-            append(parameters.joinToString(","))
+            append(parameters.joinToString(", "))
         }
         append(")")
         val returnedValue = returnedValue
