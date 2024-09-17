@@ -909,26 +909,29 @@ abstract class ManagedStrategy(
         getThreadLocalRandom().nextInt()
     }
 
-    fun inIgnoredSection(): Boolean {
+    override fun inIgnoredSection(): Boolean {
         val iThread = getThreadId(Thread.currentThread())
         return inIgnoredSection[iThread] ?: false
     }
 
-    fun enterIgnoredSection() {
+    override fun enterIgnoredSection(): Boolean {
         // val thread = (Thread.currentThread() as? TestThread) ?: return
         // thread.inIgnoredSection = true
 
         val iThread = getThreadId(Thread.currentThread())
+        if (iThread == -1) return false
         inIgnoredSection[iThread] = true
+        return true
 
         // org.jetbrains.kotlinx.lincheck.enterIgnoredSection()
     }
 
-    fun leaveIgnoredSection() {
+    override fun leaveIgnoredSection() {
         // val thread = (Thread.currentThread() as? TestThread) ?: return
         // thread.inIgnoredSection = false
 
         val iThread = getThreadId(Thread.currentThread())
+        if (iThread == -1) return
         inIgnoredSection[iThread] = false
 
         // org.jetbrains.kotlinx.lincheck.leaveIgnoredSection()
