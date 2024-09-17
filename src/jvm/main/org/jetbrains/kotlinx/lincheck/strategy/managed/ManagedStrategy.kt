@@ -104,10 +104,6 @@ abstract class ManagedStrategy(
     // correspond to the same method call in the trace.
     private val suspendedFunctionsStack = Array(nThreads) { mutableListOf<Int>() }
 
-    // Helps to ignore potential switch point in local objects (see LocalObjectManager) to avoid
-    // useless interleavings analysis.
-    private var localObjectManager = LocalObjectManager()
-
     // Last read trace point, occurred in the current thread.
     // We store it as we initialize read value after the point is created so we have to store
     // the trace point somewhere to obtain it later.
@@ -181,7 +177,6 @@ abstract class ManagedStrategy(
         callStackTrace.forEach { it.clear() }
         suspendedFunctionsStack.forEach { it.clear() }
         randoms.forEachIndexed { i, r -> r.setSeed(i + 239L) }
-        localObjectManager = LocalObjectManager()
     }
 
     /**
@@ -700,13 +695,6 @@ abstract class ManagedStrategy(
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(className.canonicalClassName)
         }
         // Optimization: do not track final field reads
-        if (isFinal) {
-            return@runInIgnoredSection false
-        }
-        // Optimization: do not track accesses to thread-local objects
-        if (!isStatic && localObjectManager.isLocalObject(obj)) {
-            return@runInIgnoredSection false
-        }
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             ReadTracePoint(
@@ -730,7 +718,6 @@ abstract class ManagedStrategy(
 
     /** Returns <code>true</code> if a switch point is created. */
     override fun beforeReadArrayElement(array: Any, index: Int, codeLocation: Int): Boolean = runInIgnoredSection {
-        if (localObjectManager.isLocalObject(array)) return@runInIgnoredSection false
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             ReadTracePoint(
@@ -763,14 +750,6 @@ abstract class ManagedStrategy(
 
     override fun beforeWriteField(obj: Any?, className: String, fieldName: String, value: Any?, codeLocation: Int,
                                   isStatic: Boolean, isFinal: Boolean): Boolean = runInIgnoredSection {
-        if (isStatic) {
-            localObjectManager.markObjectNonLocal(value)
-        } else if (obj != null) {
-            localObjectManager.onWriteToObjectFieldOrArrayCell(obj, value)
-            if (localObjectManager.isLocalObject(obj)) {
-                return@runInIgnoredSection false
-            }
-        }
         // Optimization: do not track final field writes
         if (isFinal) {
             return@runInIgnoredSection false
@@ -796,10 +775,6 @@ abstract class ManagedStrategy(
     }
 
     override fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int): Boolean = runInIgnoredSection {
-        localObjectManager.onWriteToObjectFieldOrArrayCell(array, value)
-        if (localObjectManager.isLocalObject(array)) {
-            return@runInIgnoredSection false
-        }
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             WriteTracePoint(
@@ -828,12 +803,8 @@ abstract class ManagedStrategy(
         }
     }
 
-    override fun afterReflectiveSetter(receiver: Any?, value: Any?) = runInIgnoredSection {
-        if (receiver == null) {
-            localObjectManager.markObjectNonLocal(value)
-        } else {
-            localObjectManager.onWriteToObjectFieldOrArrayCell(receiver, value)
-        }
+    override fun afterReflectiveSetter(receiver: Any?, value: Any?) {
+
     }
 
     override fun getThreadLocalRandom(): Random = runInIgnoredSection {
@@ -861,10 +832,6 @@ abstract class ManagedStrategy(
     }
 
     override fun afterNewObjectCreation(obj: Any) {
-        if (obj is String || obj is Int || obj is Long || obj is Byte || obj is Char || obj is Float || obj is Double) return
-        runInIgnoredSection {
-            localObjectManager.registerNewObject(obj)
-        }
     }
 
     private fun methodGuaranteeType(owner: Any?, className: String, methodName: String): ManagedGuaranteeType? = runInIgnoredSection {

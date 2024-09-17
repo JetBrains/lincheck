@@ -55,7 +55,7 @@ object TimeTravellingInjections {
         return firstRun
     }
 
-    class FailingVerifier(sequentialSpecification: Class<*>) : Verifier {
+    class FailingVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : Verifier {
         override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?) = false
     }
 }
