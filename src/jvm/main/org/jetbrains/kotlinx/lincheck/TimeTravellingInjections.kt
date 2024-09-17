@@ -50,6 +50,8 @@ object TimeTravellingInjections {
         val failure = lincheckOptions.checkImpl(testClass)
         val result = failure!!.results.threadsResults[0][0]
         if (result is ExceptionResult) throw result.throwable
+        val trace = constructTraceForPlugin(failure, failure.trace!!)
+        println(trace.joinToString("\n"))
         // Otherwise, we just finish. For simplicity, the function always returns nothing.
     }
 
