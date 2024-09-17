@@ -432,8 +432,10 @@ abstract class ManagedStrategy(
         traceCollector?.passCodeLocation(tracePoint)
     }
 
-    override fun beforeThreadFork(thread: Thread?) {
+    override fun beforeThreadFork(thread: Thread?) = runInIgnoredSection {
+        val iThread = getThreadId(Thread.currentThread())
         registerThread(thread!!)
+        newSwitchPoint(iThread, COROUTINE_SUSPENSION_CODE_LOCATION, tracePoint = null)
     }
 
     override fun beforeThreadStart() {
@@ -547,7 +549,8 @@ abstract class ManagedStrategy(
     private fun awaitTurn(iThread: Int) = runInIgnoredSection {
         spinners[iThread]!!.spinWaitUntil {
             // Finish forcibly if an error occurred and we already have an `InvocationResult`.
-            if (suddenInvocationResult != null) throw ForcibleExecutionFinishError
+            if (suddenInvocationResult != null)
+                throw ForcibleExecutionFinishError
             currentThread == iThread
         }
     }
