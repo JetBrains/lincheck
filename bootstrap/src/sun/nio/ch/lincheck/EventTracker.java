@@ -21,7 +21,7 @@ public interface EventTracker {
     void beforeThreadFork(Thread thread);
     void beforeThreadStart();
     void afterThreadFinish();
-    void afterThreadJoin(Thread thread);
+    void beforeThreadJoin(Thread thread);
 
     void beforeLock(int codeLocation);
     void lock(Object monitor);

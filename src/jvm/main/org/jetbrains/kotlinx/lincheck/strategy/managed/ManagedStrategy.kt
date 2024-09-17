@@ -449,8 +449,19 @@ abstract class ManagedStrategy(
         onFinish(iThread)
     }
 
-    override fun afterThreadJoin(thread: Thread?) {
+    override fun beforeThreadJoin(thread: Thread?) = runInIgnoredSection {
+        val iThread = getThreadId(Thread.currentThread())
+        val iJoinThread = getThreadId(thread!!)
         // TODO: add trace point ?
+        while (!finished[iJoinThread]!!) {
+            failIfObstructionFreedomIsRequired {
+                // TODO: This might be a false positive when this MONITORENTER call never suspends.
+                // TODO: We can keep it as is until refactoring, as this weird case is an anti-pattern anyway.
+                OBSTRUCTION_FREEDOM_LOCK_VIOLATION_MESSAGE
+            }
+            // Switch to another thread and wait for a moment when the thread is finished
+            switchCurrentThread(iThread, SwitchReason.THREAD_JOIN_WAIT, mustSwitch = true)
+        }
     }
 
     private fun registerThread(thread: Thread) {

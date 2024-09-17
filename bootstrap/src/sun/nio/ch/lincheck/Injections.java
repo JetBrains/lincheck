@@ -81,8 +81,8 @@ public class Injections {
      * <p>
      * <b>Does not support joins with time limits yet</b>.
      */
-    public static void afterThreadJoin(Thread t) {
-        getEventTracker().afterThreadJoin(t);
+    public static void beforeThreadJoin(Thread t) {
+        getEventTracker().beforeThreadJoin(t);
     }
 
     /**
