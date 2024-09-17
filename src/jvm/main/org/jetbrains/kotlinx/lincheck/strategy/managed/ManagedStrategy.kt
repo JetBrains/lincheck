@@ -292,7 +292,7 @@ abstract class ManagedStrategy(
 
     fun initializeCallStack(testInstance: Any) {
         if (collectTrace) {
-            callStackContextPerThread.replaceAll { _, _ -> arrayListOf() }
+            callStackContextPerThread.clear()
             (0 .. nThreads).forEach { iThread ->
                 callStackContextPerThread[iThread] = arrayListOf(
                     CallContext.InstanceCallContext(testInstance)
@@ -483,6 +483,7 @@ abstract class ManagedStrategy(
         // traceCollector = if (collectTrace) TraceCollector() else null
         callStackTrace[iThread] = mutableListOf()
         suspendedFunctionsStack[iThread] = mutableListOf()
+        callStackContextPerThread[iThread] = arrayListOf()
         randoms[iThread] = Random(iThread + 239L)
         spinners[iThread] = Spinner()
     }
@@ -1398,9 +1399,10 @@ abstract class ManagedStrategy(
      * Checks if [owner] is the current `this` in the current method context.
      */
     private fun isOwnerCurrentContext(owner: Any): Boolean {
-        return when (val callContext = callStackContextPerThread[currentThread]!!.last()) {
+        return when (val callContext = callStackContextPerThread[currentThread]!!.lastOrNull()) {
             is CallContext.InstanceCallContext -> callContext.instance === owner
             is CallContext.StaticCallContext -> false
+            null -> false
         }
     }
 
