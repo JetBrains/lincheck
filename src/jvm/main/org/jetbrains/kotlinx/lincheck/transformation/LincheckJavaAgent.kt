@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.transformation
 
 import net.bytebuddy.agent.ByteBuddyAgent
+import org.jetbrains.kotlinx.lincheck.TimeTravellingInjections
 import org.jetbrains.kotlinx.lincheck.canonicalClassName
 import org.jetbrains.kotlinx.lincheck.runInIgnoredSection
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.MODEL_CHECKING
@@ -24,8 +25,10 @@ import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumen
 import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
+import org.objectweb.asm.util.TraceClassVisitor
 import sun.misc.Unsafe
 import java.io.File
+import java.io.PrintWriter
 import java.lang.instrument.ClassFileTransformer
 import java.lang.instrument.Instrumentation
 import java.lang.reflect.Modifier
@@ -362,12 +365,40 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         internalClassName: String,
         classBytes: ByteArray
     ): ByteArray = transformedClassesCache.computeIfAbsent(internalClassName.canonicalClassName) {
-        val reader = ClassReader(classBytes)
-        val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
-        val visitor = LincheckClassVisitor(instrumentationMode, writer)
+        //val reader = ClassReader(classBytes)
+        //val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
+        //val visitor = LincheckClassVisitor(instrumentationMode, writer)
         try {
-            reader.accept(visitor, ClassReader.EXPAND_FRAMES)
-            writer.toByteArray()
+            //reader.accept(visitor, ClassReader.EXPAND_FRAMES)
+            //writer.toByteArray()
+
+            val reader = ClassReader(classBytes)
+            val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
+            val visitor = LincheckClassVisitor(instrumentationMode, writer)
+
+            if (internalClassName.canonicalClassName == TimeTravellingInjections.classUnderTimeTravel) {
+                println("Before Lincheck transforming: $internalClassName")
+                reader.accept(
+                    TraceClassVisitor(
+                        visitor,
+                        PrintWriter(System.out)
+                    ),
+                    ClassReader.SKIP_FRAMES
+                )
+                val bytes = writer.toByteArray()
+
+                println("After Lincheck transforming: $internalClassName")
+                val afterReader = ClassReader(bytes)
+                afterReader.accept(
+                    TraceClassVisitor(PrintWriter(System.out)),
+                    ClassReader.SKIP_FRAMES
+                )
+
+                bytes
+            } else {
+                reader.accept(visitor, ClassReader.EXPAND_FRAMES)
+                writer.toByteArray()
+            }
         } catch (e: Throwable) {
             System.err.println("Unable to transform $internalClassName")
             e.printStackTrace()

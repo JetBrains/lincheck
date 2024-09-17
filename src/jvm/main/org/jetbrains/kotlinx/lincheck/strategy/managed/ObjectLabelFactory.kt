@@ -48,6 +48,7 @@ object ObjectLabelFactory {
 
     internal fun cleanObjectNumeration() {
         objectNumeration.clear()
+        ObjectInitialHashCodes.resetObjectIds()
     }
 
     private val Class<*>.simpleNameForAnonymous: String

@@ -18,6 +18,7 @@ import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner.Completion.*
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectInitialHashCodes
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.util.*
@@ -185,6 +186,9 @@ internal open class ParallelThreadsRunner(
     private fun createTestInstance() {
         @Suppress("DEPRECATION")
         testInstance = testClass.newInstance()
+        // We want to substitute test class instance identity hashcode as well
+        ObjectInitialHashCodes.onNewTrackedObjectCreation(testInstance)
+
         if (strategy is ModelCheckingStrategy) {
             // We pass the test instance to the strategy to initialize the call stack.
             // It should be done here as we create the test instance in the `run` method in the runner, after
