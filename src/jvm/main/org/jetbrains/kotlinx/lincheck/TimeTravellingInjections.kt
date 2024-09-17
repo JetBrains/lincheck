@@ -19,10 +19,12 @@ object TimeTravellingInjections {
     @JvmStatic
     var firstRun = true
 
-    fun runWithLincheck(testInstance: Any, testMethodName: String) {
+    @JvmStatic
+    fun runWithLincheck(testClassName: String, testMethodName: String) {
+        println("Running with Lincheck")
         firstRun = false
 
-        val testClass = testInstance.javaClass
+        val testClass = Class.forName(testClassName)
         // TODO: get the name from the system property
         val testMethod = testClass.getMethod(testMethodName)
 
@@ -45,7 +47,7 @@ object TimeTravellingInjections {
             .verifier(FailingVerifier::class.java)
 
         @Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE")
-        val failure = lincheckOptions.checkImpl(testInstance::class.java)
+        val failure = lincheckOptions.checkImpl(testClass)
         val result = failure!!.results.threadsResults[0][0]
         if (result is ExceptionResult) throw result.throwable
         // Otherwise, we just finish. For simplicity, the function always returns nothing.

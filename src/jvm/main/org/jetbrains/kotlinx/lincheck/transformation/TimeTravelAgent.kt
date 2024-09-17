@@ -13,6 +13,8 @@ package org.jetbrains.kotlinx.lincheck.transformation
 import org.jetbrains.kotlinx.lincheck.canonicalClassName
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
+import org.objectweb.asm.util.TraceClassVisitor
+import java.io.PrintWriter
 import java.lang.instrument.ClassFileTransformer
 import java.lang.instrument.Instrumentation
 import java.security.ProtectionDomain
@@ -29,6 +31,9 @@ object TimeTravelAgent {
 }
 
 internal object TimeTravelTransformer : ClassFileTransformer {
+    private val classUnderTimeTravel = System.getProperty("rr.className") ?: error("Class name under time travel not found")
+    private val methodUnderTimeTravel = System.getProperty("rr.methodName") ?: error("Method name under time travel not found")
+
     override fun transform(
         loader: ClassLoader?,
         internalClassName: String,
@@ -36,6 +41,7 @@ internal object TimeTravelTransformer : ClassFileTransformer {
         protectionDomain: ProtectionDomain?,
         classBytes: ByteArray
     ): ByteArray? {
+        println("Enter transform for $internalClassName")
         // If the class should not be transformed, return immediately.
         if (!shouldTransform(internalClassName.canonicalClassName)) {
             return null
@@ -48,18 +54,41 @@ internal object TimeTravelTransformer : ClassFileTransformer {
         internalClassName: String,
         classBytes: ByteArray
     ): ByteArray {
-        println("Transforming '$internalClassName'")
-        val classUnderTimeTravel = System.getProperty("rr.className") ?: error("Class name under time travel not found")
-        val methodUnderTimeTravel = System.getProperty("rr.methodName") ?: error("Method name under time travel not found")
+        println("Transforming class $internalClassName")
 
-        val reader = ClassReader(classBytes)
-        val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
         try {
-            reader.accept(
-                TimeTravelClassVisitor(writer, classUnderTimeTravel, methodUnderTimeTravel),
-                ClassReader.SKIP_FRAMES
-            )
-            return writer.toByteArray()
+            val bytes: ByteArray
+            val reader = ClassReader(classBytes)
+            val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
+
+            if (internalClassName.canonicalClassName == classUnderTimeTravel) {
+                println("Before time-travel transforming: $internalClassName")
+                reader.accept(
+                    TraceClassVisitor(
+                        TimeTravelClassVisitor(writer, classUnderTimeTravel, methodUnderTimeTravel),
+                        PrintWriter(System.out)
+                    ),
+                    ClassReader.SKIP_FRAMES
+                )
+                bytes = writer.toByteArray()
+
+                println("After time-travel transforming: $internalClassName")
+                val afterReader = ClassReader(bytes)
+                afterReader.accept(
+                    TraceClassVisitor(PrintWriter(System.out)),
+                    ClassReader.SKIP_FRAMES
+                )
+
+                return bytes
+            } else {
+                reader.accept(
+                    TimeTravelClassVisitor(writer, classUnderTimeTravel, methodUnderTimeTravel),
+                    ClassReader.SKIP_FRAMES
+                )
+                bytes = writer.toByteArray()
+            }
+
+            return bytes
         } catch (e: Throwable) {
             System.err.println("Unable to transform '$internalClassName': $e")
             return classBytes

@@ -54,7 +54,8 @@ public class TestThread extends Thread {
      * @param block    The Runnable object associated with the thread.
      */
     public TestThread(String testName, int threadId, Runnable block) {
-        super(block, "Lincheck-" + testName + "-" + threadId);
+        // TODO: add test className/methodName to the Thread name?
+        super(block, "TestThread" /* + testName + "-" + threadId */);
         this.threadId = threadId;
     }
 }
