@@ -105,12 +105,20 @@ val bootstrapJar = tasks.register<Copy>("bootstrapJar") {
 }
 
 val timeTravelJar = tasks.register<Jar>("timeTravelJar") {
-    archiveBaseName = "time-travelling"
+    archiveBaseName = "fat-time-travel"
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
     // TODO: re-check if we need it
     // dependsOn(bootstrapJar)
+
+    // lincheck sources
     from(sourceSets["main"].output)
+    // run-time dependencies (asm, bytebuddy, etc.)
+    from({
+        configurations.runtimeClasspath.get().filter { it.name.endsWith(".jar") }.map {
+            return@map if (it.isDirectory) it else project.zipTree(it)
+        }
+    })
 
     manifest {
         attributes(
