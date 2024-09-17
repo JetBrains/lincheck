@@ -84,6 +84,9 @@ abstract class ManagedStrategy(
     // Which threads are suspended?
     private val isSuspended = MutableThreadMap(nThreads) { false }
 
+    // Which threads are in ignored section?
+    private val inIgnoredSection = MutableThreadMap(nThreads) { true }
+
     // Current actor id for each thread.
     protected val currentActorId = MutableThreadMap(nThreads) { 0 }
 
@@ -183,6 +186,7 @@ abstract class ManagedStrategy(
     protected open fun initializeInvocation() {
         finished.replaceAll { _, _ -> false }
         isSuspended.replaceAll { _, _ -> false }
+        inIgnoredSection.replaceAll { _, _ -> true }
         currentActorId.replaceAll { _, _ -> -1 }
         monitorTracker = MonitorTracker(nThreads)
         traceCollector = if (collectTrace) TraceCollector() else null
@@ -452,6 +456,7 @@ abstract class ManagedStrategy(
         registeredThreads.add(thread)
         finished[iThread] = false
         isSuspended[iThread] = false
+        inIgnoredSection[iThread] = true
         currentActorId[iThread] = -1
         monitorTracker.registerThread(iThread, thread)
         // traceCollector = if (collectTrace) TraceCollector() else null
@@ -474,6 +479,8 @@ abstract class ManagedStrategy(
         while (!isActive(iThread)) {
             switchCurrentThread(iThread, mustSwitch = true)
         }
+
+        leaveIgnoredSection()
     }
 
     /**
@@ -481,6 +488,8 @@ abstract class ManagedStrategy(
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
      */
     open fun onFinish(iThread: Int) {
+        enterIgnoredSection()
+
         awaitTurn(iThread)
         finished[iThread] = true
         loopDetector.onThreadFinish(iThread)
@@ -494,6 +503,8 @@ abstract class ManagedStrategy(
      * @param exception the exception that was thrown
      */
     open fun onFailure(iThread: Int, exception: Throwable) {
+        enterIgnoredSection()
+
         // This method is called only if exception can't be treated as a normal operation result,
         // so we exit testing code to avoid trace collection resume or some bizarre bugs
         (Thread.currentThread() as TestThread).inTestingCode = false
@@ -876,16 +887,43 @@ abstract class ManagedStrategy(
         getThreadLocalRandom().nextInt()
     }
 
-    private fun enterIgnoredSection() {
-        val thread = (Thread.currentThread() as? TestThread) ?: return
-        thread.inIgnoredSection = true
+    fun inIgnoredSection(): Boolean {
+        val iThread = getThreadId(Thread.currentThread())
+        return inIgnoredSection[iThread] ?: false
     }
 
-    private fun leaveIgnoredSectionIfEntered() {
-        val thread = (Thread.currentThread() as? TestThread) ?: return
-        if (thread.inIgnoredSection) {
-            thread.inIgnoredSection = false
+    fun enterIgnoredSection() {
+        // val thread = (Thread.currentThread() as? TestThread) ?: return
+        // thread.inIgnoredSection = true
+
+        val iThread = getThreadId(Thread.currentThread())
+        inIgnoredSection[iThread] = true
+
+        // org.jetbrains.kotlinx.lincheck.enterIgnoredSection()
+    }
+
+    fun leaveIgnoredSection() {
+        // val thread = (Thread.currentThread() as? TestThread) ?: return
+        // thread.inIgnoredSection = false
+
+        val iThread = getThreadId(Thread.currentThread())
+        inIgnoredSection[iThread] = false
+
+        // org.jetbrains.kotlinx.lincheck.leaveIgnoredSection()
+    }
+
+    fun leaveIgnoredSectionIfEntered() {
+        // val thread = (Thread.currentThread() as? TestThread) ?: return
+        // if (thread.inIgnoredSection) {
+        //     thread.inIgnoredSection = false
+        // }
+
+        val iThread = getThreadId(Thread.currentThread())
+        if (inIgnoredSection[iThread]!!) {
+            inIgnoredSection[iThread] = false
         }
+
+        // org.jetbrains.kotlinx.lincheck.leaveIgnoredSectionIfEntered()
     }
 
     override fun beforeNewObjectCreation(className: String) = runInIgnoredSection {
@@ -1616,12 +1654,13 @@ internal class ManagedStrategyRunner(
     testClass: Class<*>, validationFunction: Actor?, stateRepresentationMethod: Method?,
     timeoutMs: Long, useClocks: UseClocks
 ) : ParallelThreadsRunner(managedStrategy, testClass, validationFunction, stateRepresentationMethod, timeoutMs, useClocks) {
-    override fun onStart(iThread: Int) = runInIgnoredSection {
+
+    override fun onStart(iThread: Int) {
         if (currentExecutionPart !== PARALLEL) return
         managedStrategy.onStart(iThread)
     }
 
-    override fun onFinish(iThread: Int) = runInIgnoredSection {
+    override fun onFinish(iThread: Int) {
         if (currentExecutionPart !== PARALLEL) return
         managedStrategy.onFinish(iThread)
     }
