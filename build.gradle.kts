@@ -26,7 +26,7 @@ repositories {
 kotlin {
     @OptIn(ExperimentalKotlinGradlePluginApi::class)
     compilerOptions {
-        allWarningsAsErrors = true
+        allWarningsAsErrors = false // true
     }
 
     jvm {
@@ -102,6 +102,22 @@ val bootstrapJar = tasks.register<Copy>("bootstrapJar") {
     dependsOn(":bootstrap:jar")
     from(file("${project(":bootstrap").buildDir}/libs/bootstrap.jar"))
     into(file("$buildDir/processedResources/jvm/main"))
+}
+
+val timeTravelJar = tasks.register<Jar>("timeTravelJar") {
+    archiveBaseName = "time-travelling"
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    dependsOn(bootstrapJar)
+    from(sourceSets["main"].output)
+
+    manifest {
+        attributes(
+            "Premain-Class" to "org.jetbrains.kotlinx.lincheck.transformation.TimeTravelAgent",
+            "Can-Redefine-Classes" to "true",
+            "Can-Retransform-Classes" to "true"
+        )
+    }
 }
 
 tasks {

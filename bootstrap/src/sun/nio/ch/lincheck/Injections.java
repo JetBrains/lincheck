@@ -168,7 +168,17 @@ public class Injections {
      * Called from the instrumented code to check whether the object is a [Random] instance.
      */
     public static boolean isRandom(Object any) {
-        return any instanceof Random;
+        // Is this a Java random?
+        if (any instanceof Random) return  true;
+        // Is this a Kotlin random?
+        try {
+            Class<?> kotlinRandomClass = any.getClass().getClassLoader().loadClass("kotlin.random.Random");
+            return kotlinRandomClass.isInstance(any);
+        } catch (ClassNotFoundException e) {
+            // Kotlin is not used in the user project.
+        }
+        // No, this is not a random instance.
+        return false;
     }
 
     /**
