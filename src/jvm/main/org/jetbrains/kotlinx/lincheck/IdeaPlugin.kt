@@ -79,7 +79,8 @@ fun shouldReplayInterleaving(): Boolean {
  */
 @Suppress("UNUSED_PARAMETER")
 fun beforeEvent(eventId: Int, type: String) {
-    val strategy = (Thread.currentThread() as? TestThread)?.eventTracker ?: return
+    // val strategy = (Thread.currentThread() as? TestThread)?.eventTracker ?: return
+    val strategy = LincheckTracker.getEventTracker() ?: return
     visualize(strategy)
 }
 

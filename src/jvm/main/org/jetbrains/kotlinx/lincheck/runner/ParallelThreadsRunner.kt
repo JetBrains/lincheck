@@ -84,7 +84,8 @@ internal open class ParallelThreadsRunner(
 
     init {
         if (strategy is ManagedStrategy) {
-            executor.threads.forEach { it.eventTracker = strategy }
+            // executor.threads.forEach { it.eventTracker = strategy }
+            LincheckTracker.setEventTracker(strategy)
         }
         resetState()
     }

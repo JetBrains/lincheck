@@ -364,7 +364,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
     ): ByteArray = transformedClassesCache.computeIfAbsent(internalClassName.canonicalClassName) {
         val reader = ClassReader(classBytes)
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
-        val visitor = LincheckClassVisitor(instrumentationMode, writer)
+        val visitor = LincheckClassVisitor(loader, writer, instrumentationMode)
         try {
             reader.accept(visitor, ClassReader.EXPAND_FRAMES)
             writer.toByteArray()
@@ -387,6 +387,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         // `java.util.*` ones, ignored the known atomic constructs.
         if (className.startsWith("java.")) {
             if (className.startsWith("java.util.concurrent.") && className.contains("Atomic")) return false
+            if (className.startsWith("java.lang.Thread")) return true
             if (className.startsWith("java.util.")) return true
             if (className.startsWith("com.sun.")) return false
             return false

@@ -17,18 +17,25 @@ import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.*
+import org.objectweb.asm.tree.ClassNode
 import sun.nio.ch.lincheck.*
 import kotlin.collections.HashSet
 
 internal class LincheckClassVisitor(
+    loader: ClassLoader?,
+    classVisitor: ClassVisitor,
     private val instrumentationMode: InstrumentationMode,
-    classVisitor: ClassVisitor
 ) : ClassVisitor(ASM_API, classVisitor) {
+
+    private val loader = loader ?: ClassLoader.getSystemClassLoader()
+
     private val ideaPluginEnabled = ideaPluginEnabled()
     private var classVersion = 0
 
     private var fileName: String = ""
     private var className: String = "" // internal class name
+
+    private var isThreadSubclass: Boolean = false
 
     override fun visitField(
         access: Int,
@@ -55,6 +62,7 @@ internal class LincheckClassVisitor(
     ) {
         className = name
         classVersion = version
+        isThreadSubclass = isInstanceOf(JAVA_THREAD_CLASSNAME, className) // check if class is instance of `java/lang/Thread`
         super.visit(version, access, name, signature, superName, interfaces)
     }
 
@@ -111,6 +119,14 @@ internal class LincheckClassVisitor(
         // `skipVisitor` must not capture `MethodCallTransformer`
         // (to filter static method calls inserted by coverage library)
         val skipVisitor: MethodVisitor = mv
+
+        mv = ThreadTransformer(fileName, className, methodName, desc, isThreadSubclass, mv.newAdapter())
+        // We can do further instrumentation in methods of the custom thread subclasses,
+        // but not in the `java.lang.Thread` itself.
+        if (className == JAVA_THREAD_CLASSNAME) {
+            return mv
+        }
+
         mv = MethodCallTransformer(fileName, className, methodName, mv.newAdapter())
         mv = MonitorTransformer(fileName, className, methodName, mv.newAdapter())
         mv = WaitNotifyTransformer(fileName, className, methodName, mv.newAdapter())
@@ -138,6 +154,30 @@ internal class LincheckClassVisitor(
         )
         return mv
     }
+
+    @Suppress("SameParameterValue")
+    private fun isInstanceOf(expectedClassName: String, className: String): Boolean {
+        var currentSuperClassName: String? = className
+        while (currentSuperClassName != null) {
+            if (currentSuperClassName == expectedClassName) {
+                return true
+            }
+
+            val superClassReader = getClassReader(loader, currentSuperClassName)
+            val superClassNode = ClassNode()
+            superClassReader.accept(superClassNode, 0)
+            currentSuperClassName = superClassNode.superName
+        }
+        return false
+    }
+
+    private fun getClassReader(loader: ClassLoader, internalClassName: String): ClassReader {
+        val resource = "$internalClassName.class"
+        val inputStream = loader.getResourceAsStream(resource)
+            ?: error("Cannot create ClassReader for type '$internalClassName' (resource: $resource)")
+        return inputStream.use { ClassReader(inputStream) }
+    }
+
 
 }
 

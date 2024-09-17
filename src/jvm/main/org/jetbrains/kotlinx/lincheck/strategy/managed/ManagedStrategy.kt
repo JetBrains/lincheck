@@ -427,15 +427,17 @@ abstract class ManagedStrategy(
     }
 
     override fun beforeThreadStart() {
-        TODO("Not yet implemented")
+        val iThread = getThreadId(Thread.currentThread())
+        onStart(iThread)
     }
 
     override fun afterThreadFinish() {
-        TODO("Not yet implemented")
+        val iThread = getThreadId(Thread.currentThread())
+        onFinish(iThread)
     }
 
     override fun afterThreadJoin(thread: Thread?) {
-        TODO("Not yet implemented")
+        // TODO: add trace point ?
     }
 
     private fun registerThread(thread: Thread) {
@@ -461,6 +463,9 @@ abstract class ManagedStrategy(
      */
     open fun onStart(iThread: Int) {
         awaitTurn(iThread)
+        while (!isActive(iThread)) {
+            switchCurrentThread(iThread, mustSwitch = true)
+        }
     }
 
     /**
