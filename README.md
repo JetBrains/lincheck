@@ -117,6 +117,12 @@ The following interleaving leads to the error:
 |   result: 4                                                                                               |                      |
 ```
 
+## Lincheck IDEA Plugin
+
+Try [Lincheck IDEA Plugin](https://plugins.jetbrains.com/plugin/24171-lincheck) to investigate
+bugs easily, navigate trace points, and quickly identify bugs with fully-fledged debugger integration.
+Walk through the failure trace to any direction you want (even in the past!) and examine your data structure in live mode via the debugger, without sophisticated conditional breakpoints creation. Download in from the JetBrains Plugin marketplace or right from the IntelliJ IDEA Ultimate.
+
 ## Contributing 
 
 See [Contributing Guidelines](CONTRIBUTING.md).
