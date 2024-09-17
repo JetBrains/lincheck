@@ -108,7 +108,8 @@ val timeTravelJar = tasks.register<Jar>("timeTravelJar") {
     archiveBaseName = "time-travelling"
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
-    dependsOn(bootstrapJar)
+    // TODO: re-check if we need it
+    // dependsOn(bootstrapJar)
     from(sourceSets["main"].output)
 
     manifest {

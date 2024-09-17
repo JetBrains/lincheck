@@ -39,6 +39,7 @@ internal object TimeTravelTransformer : ClassFileTransformer {
         protectionDomain: ProtectionDomain?,
         classBytes: ByteArray
     ): ByteArray? {
+        println("Enter transform for $internalClassName")
         // If the class should not be transformed, return immediately.
         if (!shouldTransform(internalClassName.canonicalClassName)) {
             return null
@@ -51,16 +52,17 @@ internal object TimeTravelTransformer : ClassFileTransformer {
         internalClassName: String,
         classBytes: ByteArray
     ): ByteArray {
-        val reader = ClassReader(classBytes)
-        val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
+        println("Transforming class $internalClassName")
         try {
+            val reader = ClassReader(classBytes)
+            val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
             reader.accept(
                 TimeTravelClassVisitor(writer, classUnderTimeTravel, methodUnderTimeTravel),
                 ClassReader.SKIP_FRAMES
             )
             return writer.toByteArray()
         } catch (e: Throwable) {
-            System.err.println("Unable to transform '$internalClassName': $e")
+            println("Unable to transform '$internalClassName': $e")
             return classBytes
         }
     }

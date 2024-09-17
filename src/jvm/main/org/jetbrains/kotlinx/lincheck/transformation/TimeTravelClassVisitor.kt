@@ -30,9 +30,9 @@ class TimeTravelClassVisitor(
         superName: String,
         interfaces: Array<String>
     ) {
-        className = name
-        println("Class name under observation: $className")
         super.visit(version, access, name, signature, superName, interfaces)
+        println("Class name under observation: $name")
+        className = name
     }
 
     override fun visitMethod(
