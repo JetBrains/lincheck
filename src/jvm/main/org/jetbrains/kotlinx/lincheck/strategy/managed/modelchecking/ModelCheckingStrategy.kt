@@ -218,17 +218,17 @@ internal class ModelCheckingStrategy(
                         is ObstructionFreedomViolationExecutionAbortTracePoint -> 6
                         else -> 0
                     }
-
                     if (representation.isNotEmpty()) {
-                        representations.add("$type;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${eventId};${representation}")
+                        representations.add("$type;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${eventId};${representation};${stackTraceElementView(event)}")
                     }
                 }
 
                 is CallNode -> {
+                    val event = node.call.callStackTraceElement?.call
                     val beforeEventId = node.call.eventId
                     val representation = node.call.toStringImpl(withLocation = false)
                     if (representation.isNotEmpty()) {
-                        representations.add("0;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation}")
+                        representations.add("0;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};${stackTraceElementView(event)}")
                     }
                 }
 
@@ -236,14 +236,14 @@ internal class ModelCheckingStrategy(
                     val beforeEventId = -1
                     val representation = node.actorRepresentation
                     if (representation.isNotEmpty()) {
-                        representations.add("1;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation}")
+                        representations.add("1;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};null")
                     }
                 }
 
                 is ActorResultNode -> {
                     val beforeEventId = -1
                     val representation = node.resultRepresentation.toString()
-                    representations.add("2;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};${node.exceptionNumberIfExceptionResult ?: -1}")
+                    representations.add("2;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};${node.exceptionNumberIfExceptionResult ?: -1};null")
                 }
 
                 else -> {}
@@ -255,6 +255,13 @@ internal class ModelCheckingStrategy(
             }
         }
         return representations.toTypedArray()
+    }
+
+    private fun stackTraceElementView(event: TracePoint?) =
+        (event as? CodeLocationTracePoint)?.stackTraceElement?.toStringImpl() ?: "null"
+
+    private fun StackTraceElement.toStringImpl(): String {
+        return "${this.className}:${this.methodName}:${this.fileName}:${this.lineNumber}"
     }
 
     private fun collectExceptionsOrEmpty(failure: LincheckFailure): Map<Throwable, ExceptionNumberAndStacktrace> {
