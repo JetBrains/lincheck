@@ -61,9 +61,10 @@ internal class ThreadTransformer(
         if (isThreadJoinCall(owner, name, desc)) {
             // STACK: joiningThread
             dup()
-            adapter.visitMethodInsn(opcode, owner, name, desc, itf)
+            // STACK: joiningThread, joiningThread
+            invokeStatic(Injections::beforeThreadJoin)
             // STACK: joiningThread
-            invokeStatic(Injections::afterThreadJoin)
+            adapter.visitMethodInsn(opcode, owner, name, desc, itf)
             // STACK: <empty>
         } else {
             adapter.visitMethodInsn(opcode, owner, name, desc, itf)
