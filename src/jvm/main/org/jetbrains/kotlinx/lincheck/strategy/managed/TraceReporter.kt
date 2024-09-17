@@ -143,25 +143,14 @@ internal fun constructTraceGraph(
     val lastHandledActor = IntArray(nThreads) { -1 }
     val isValidationFunctionFailure = failure is ValidationFailure
     val actorNodes = Array(nThreads) { i ->
-        if (i < scenario.nThreads) {
-            val actorsCount = scenario.threads[i].size + if (i == 0 && failure is ValidationFailure) 1 else 0
-            Array<ActorNode?>(actorsCount) { null }
-        } else {
-            Array<ActorNode?>(1) {
-                traceGraphNodes.createAndAppend { lastNode ->
-                    ActorNode(
-                        prefixProvider = prefixFactory.actorNodePrefix(i),
-                        iThread = i,
-                        last = lastNode,
-                        callDepth = 0,
-                        actorRepresentation = "",
-                        resultRepresentation = null,
-                    )
-                }
-            }
+        val actorsCount = when {
+           i < scenario.nThreads ->
+               scenario.threads[i].size + if (i == 0 && failure is ValidationFailure) 1 else 0
+           else -> 1
         }
+        Array<ActorNode?>(actorsCount) { null }
     }
-    val actorRepresentations = createActorRepresentation(scenario, failure)
+    val actorRepresentations = createActorRepresentation(nThreads, scenario, failure)
     // call nodes for each method call
     val callNodes = mutableMapOf<Int, CallNode>()
     // all trace nodes in order corresponding to `tracePoints`
@@ -183,26 +172,24 @@ internal fun constructTraceGraph(
         val iThread = event.iThread
         val actorId = if (iThread < scenario.nThreads) event.actorId else 0
         // add all actors that started since the last event
-        if (iThread < scenario.nThreads) {
-            while (lastHandledActor[iThread] < min(actorId, actorNodes[iThread].lastIndex)) {
-                val nextActor = ++lastHandledActor[iThread]
-                // create new actor node actor
-                val actorNode = traceGraphNodes.createAndAppend { lastNode ->
-                    ActorNode(
-                        prefixProvider = prefixFactory.actorNodePrefix(iThread),
-                        iThread = iThread,
-                        last = lastNode,
-                        callDepth = 0,
-                        actorRepresentation = actorRepresentations[iThread][nextActor],
-                        resultRepresentation = actorNodeResultRepresentation(
-                            resultProvider[iThread, nextActor],
-                            failure,
-                            exceptionStackTraces
-                        )
+        while (lastHandledActor[iThread] < min(actorId, actorNodes[iThread].lastIndex)) {
+            val nextActor = ++lastHandledActor[iThread]
+            // create new actor node actor
+            val actorNode = traceGraphNodes.createAndAppend { lastNode ->
+                ActorNode(
+                    prefixProvider = prefixFactory.actorNodePrefix(iThread),
+                    iThread = iThread,
+                    last = lastNode,
+                    callDepth = 0,
+                    actorRepresentation = actorRepresentations[iThread][nextActor],
+                    resultRepresentation = actorNodeResultRepresentation(
+                        resultProvider[iThread, nextActor],
+                        failure,
+                        exceptionStackTraces
                     )
-                }
-                actorNodes[iThread][nextActor] = actorNode
+                )
             }
+            actorNodes[iThread][nextActor] = actorNode
         }
         // add the event
         var innerNode: TraceInnerNode = actorNodes[iThread][actorId]!!
@@ -312,6 +299,8 @@ private fun actorNodeResultRepresentation(result: Result?, failure: LincheckFail
  */
 private class ExecutionResultsProvider(result: ExecutionResult?, failure: LincheckFailure) {
 
+    val scenario = failure.scenario
+
     /**
      * A map of type Map<(threadId, actorId) -> Result>
      */
@@ -333,7 +322,10 @@ private class ExecutionResultsProvider(result: ExecutionResult?, failure: Linche
     }
 
     operator fun get(iThread: Int, actorId: Int): Result? {
-        return threadNumberToActorResultMap[iThread to actorId]
+        return if (iThread < scenario.nThreads)
+            threadNumberToActorResultMap[iThread to actorId]
+        else
+            VoidResult
     }
 
     private fun firstThreadActorCount(failure: ValidationFailure): Int =
@@ -346,20 +338,25 @@ private class ExecutionResultsProvider(result: ExecutionResult?, failure: Linche
  * In output construction, we treat validation function call like a regular actor for unification.
  */
 private fun createActorRepresentation(
+    nThreads: Int,
     scenario: ExecutionScenario,
     failure: LincheckFailure
 ): Array<List<String>> {
-    return Array(scenario.nThreads) { i ->
-        if (i == 0) {
+    return Array(nThreads) { i -> when {
+        (i == 0) -> {
             val actors = scenario.threads[i].map { it.toString() }.toMutableList()
-
             if (failure is ValidationFailure) {
                 actors += "${failure.validationFunctionName}()"
             }
-
             actors
-        } else scenario.threads[i].map { it.toString() }
-    }
+        }
+
+        (i < scenario.nThreads) -> {
+            scenario.threads[i].map { it.toString() }
+        }
+
+        else -> listOf("run")
+    }}
 }
 
 /**
