@@ -67,7 +67,7 @@ private class JUnitTestMethodTransformer(
     /**
      * This method is called for the target class and method that require time-travelling functionality.
      */
-    override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
+    override fun visitCode() = adapter.run {
         ifStatement(
             condition = {
                 invokeStatic(TimeTravellingInjections::isFirstRun)
@@ -75,11 +75,11 @@ private class JUnitTestMethodTransformer(
             ifClause = {
                 push(classUnderTimeTravel)
                 push(methodUnderTimeTravel)
-                // STACK: testInstance, currentTestMethod
+                // STACK: testClassName, testMethodName
                 invokeStatic(TimeTravellingInjections::runWithLincheck)
             },
             elseClause = {
-                visitMethodInsn(opcode, owner, name, desc, itf)
+                visitCode()
             }
         )
     }

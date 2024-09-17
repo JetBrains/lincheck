@@ -53,6 +53,7 @@ object TimeTravellingInjections {
         // Otherwise, we just finish. For simplicity, the function always returns nothing.
     }
 
+    @JvmStatic
     fun isFirstRun(): Boolean {
         return firstRun
     }
