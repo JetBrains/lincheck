@@ -48,7 +48,7 @@ class TimeTravelClassVisitor(
         var mv = super.visitMethod(access, methodName, desc, signature, exceptions)
         if (className == classUnderTimeTravel && methodName == methodUnderTimeTravel) {
             println("Inside a visit junit-method")
-            mv = JUnitTestMethodTransformer(methodUnderTimeTravel, mv.newAdapter())
+            mv = JUnitTestMethodTransformer(classUnderTimeTravel, methodUnderTimeTravel, mv.newAdapter())
         }
 
         return mv
@@ -59,6 +59,7 @@ class TimeTravelClassVisitor(
  * Wraps junit methods marked with `@Test` in order to set up Lincheck in time-travelling mode.
  */
 private class JUnitTestMethodTransformer(
+    private val classUnderTimeTravel: String,
     private val methodUnderTimeTravel: String,
     private val adapter: GeneratorAdapter
 ) : MethodVisitor(ASM_API, adapter) {
@@ -72,7 +73,7 @@ private class JUnitTestMethodTransformer(
                 invokeStatic(TimeTravellingInjections::isFirstRun)
             },
             ifClause = {
-                loadThis()
+                push(classUnderTimeTravel)
                 push(methodUnderTimeTravel)
                 // STACK: testInstance, currentTestMethod
                 invokeStatic(TimeTravellingInjections::runWithLincheck)
