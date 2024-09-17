@@ -69,7 +69,7 @@ abstract class ManagedStrategy(
     }
 
     // Spin-waiters for each thread
-    private val spinners = SpinnerGroup(nThreads)
+    private val spinners = MutableThreadMap(nThreads) { Spinner() }
 
     // == EXECUTION CONTROL FIELDS ==
 
@@ -122,11 +122,9 @@ abstract class ManagedStrategy(
     private var lastReadTracePoint = MutableThreadMap<ReadTracePoint?>(nThreads) { null }
 
     // Random instances with fixed seeds to replace random calls in instrumented code.
-    // TODO: check why `nThreads + 2`
     private var randoms = MutableThreadMap(nThreads) { Random(it + 239L) }
 
     // Current call stack for a thread, updated during beforeMethodCall and afterMethodCall methods.
-    // TODO: check why `nThreads + 2`
     private val methodCallTracePointStack = MutableThreadMap(nThreads) { mutableListOf<MethodCallTracePoint>() }
 
     // User-specified guarantees on specific function, which can be considered as atomic or ignored.
@@ -139,7 +137,7 @@ abstract class ManagedStrategy(
      * Current method call context (static or instance).
      * Initialized and used only in the trace collecting stage.
      */
-    private lateinit var callStackContextPerThread: Array<ArrayList<CallContext>>
+    private var callStackContextPerThread = MutableThreadMap<ArrayList<CallContext>>(nThreads) { arrayListOf() }
 
     override fun close() {
         super.close()
@@ -284,7 +282,15 @@ abstract class ManagedStrategy(
 
     fun initializeCallStack(testInstance: Any) {
         if (collectTrace) {
-            callStackContextPerThread = Array(nThreads) { arrayListOf(CallContext.InstanceCallContext(testInstance)) }
+            callStackContextPerThread.replaceAll { _, _ -> arrayListOf() }
+            (0 .. nThreads).forEach { iThread ->
+                callStackContextPerThread[iThread] = arrayListOf(
+                    CallContext.InstanceCallContext(testInstance)
+                )
+            }
+            // callStackContextPerThread = Array(nThreads) {
+            //     arrayListOf(CallContext.InstanceCallContext(testInstance))
+            // }
         }
     }
 
@@ -451,6 +457,7 @@ abstract class ManagedStrategy(
         callStackTrace[iThread] = mutableListOf()
         suspendedFunctionsStack[iThread] = mutableListOf()
         randoms[iThread] = Random(iThread + 239L)
+        spinners[iThread] = Spinner()
     }
 
     fun getThreadId(thread: Thread): Int {
@@ -527,7 +534,7 @@ abstract class ManagedStrategy(
      * the execution according to the strategy decision.
      */
     private fun awaitTurn(iThread: Int) = runInIgnoredSection {
-        spinners[iThread].spinWaitUntil {
+        spinners[iThread]!!.spinWaitUntil {
             // Finish forcibly if an error occurred and we already have an `InvocationResult`.
             if (suddenInvocationResult != null) throw ForcibleExecutionFinishError
             currentThread == iThread
@@ -559,7 +566,7 @@ abstract class ManagedStrategy(
             if (mustSwitch && !finished.all { (_, it) -> it }) {
                 // All threads are suspended
                 // then switch on any suspended thread to finish it and get SuspendedResult
-                val nextThread = (0 until nThreads).firstOrNull { !finished[it]!! && isSuspended[it]!! }
+                val nextThread = (0 until nTotalThreads).firstOrNull { !finished[it]!! && isSuspended[it]!! }
                 if (nextThread == null) {
                     // must switch not to get into a deadlock, but there are no threads to switch.
                     suddenInvocationResult = ManagedDeadlockInvocationResult(runner.collectExecutionResults())
@@ -585,7 +592,7 @@ abstract class ManagedStrategy(
      */
     protected fun switchableThreads(iThread: Int) =
         if (runner.currentExecutionPart == PARALLEL) {
-            (0 until nThreads).filter { it != iThread && isActive(it) }
+            (0 until nTotalThreads).filter { it != iThread && isActive(it) }
         } else {
             emptyList()
         }
@@ -1291,7 +1298,7 @@ abstract class ManagedStrategy(
      * Checks if [owner] is the current `this` in the current method context.
      */
     private fun isOwnerCurrentContext(owner: Any): Boolean {
-        return when (val callContext = callStackContextPerThread[currentThread].last()) {
+        return when (val callContext = callStackContextPerThread[currentThread]!!.last()) {
             is CallContext.InstanceCallContext -> callContext.instance === owner
             is CallContext.StaticCallContext -> false
         }
@@ -1300,15 +1307,15 @@ abstract class ManagedStrategy(
     /* Methods to control the current call context. */
 
     private fun beforeStaticMethodCall() {
-        callStackContextPerThread[currentThread].add(CallContext.StaticCallContext)
+        callStackContextPerThread[currentThread]!!.add(CallContext.StaticCallContext)
     }
 
     private fun beforeInstanceMethodCall(receiver: Any) {
-        callStackContextPerThread[currentThread].add(CallContext.InstanceCallContext(receiver))
+        callStackContextPerThread[currentThread]!!.add(CallContext.InstanceCallContext(receiver))
     }
 
     private fun afterExitMethod(iThread: Int) {
-        val currentContext = callStackContextPerThread[iThread]
+        val currentContext = callStackContextPerThread[iThread]!!
         currentContext.removeLast()
         check(currentContext.isNotEmpty()) { "Context cannot be empty" }
     }
