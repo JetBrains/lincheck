@@ -16,12 +16,29 @@ import java.util.*
 
 class TestClass {
 
+    class IntHolder(@JvmField var value: Int)
+
     fun singleThreadedTest() {
-        val random = Random()
-        val list = List(8) { random.nextInt(20) }.sorted()
-        val result = list.binarySearch(5)
-        println("list = $list")
-        println("result = $result")
+        val x = IntHolder(0)
+        x.value++
+        println("x = ${x.value}")
+    }
+
+    fun multiThreadedTest() {
+        val x = IntHolder(0)
+        val y = IntHolder(0)
+        val t1 = Thread {
+            x.value++
+        }
+        val t2 = Thread {
+            y.value++
+        }
+        t1.start()
+        t2.start()
+        t1.join()
+        t2.join()
+        println("x=${x.value}")
+        println("y=${y.value}")
     }
 
 }
@@ -33,6 +50,11 @@ class TimeTravellingTest {
     @Test
     fun singleThreadedTest() {
         runWithLincheck(testClass.name, "singleThreadedTest")
+    }
+
+    @Test
+    fun multiThreadedTest() {
+        runWithLincheck(testClass.name, "multiThreadedTest")
     }
 
 }
