@@ -126,29 +126,46 @@ internal fun constructTraceGraph(
     trace: Trace,
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
 ): List<TraceNode> {
-    val resultProvider = ExecutionResultsProvider(results, failure)
     val tracePoints = trace.trace
-    val prefixFactory = TraceNodePrefixFactory(failure.scenario.nThreads)
     val scenario = failure.scenario
+    val nThreads = trace.trace.maxOf { it.iThread } + 1
+
+    val resultProvider = ExecutionResultsProvider(results, failure)
+    val prefixFactory = TraceNodePrefixFactory(nThreads)
+
+    var traceGraphNodes = arrayListOf<TraceNode>()
 
     // last events that were executed for each thread. It is either thread finish events or events before crash
-    val lastExecutedEvents = IntArray(scenario.nThreads) { iThread ->
+    val lastExecutedEvents = IntArray(nThreads) { iThread ->
         tracePoints.mapIndexed { i, e -> Pair(i, e) }.lastOrNull { it.second.iThread == iThread }?.first ?: -1
     }
     // last actor that was handled for each thread
-    val lastHandledActor = IntArray(scenario.nThreads) { -1 }
+    val lastHandledActor = IntArray(nThreads) { -1 }
     val isValidationFunctionFailure = failure is ValidationFailure
-    val actorNodes = Array(scenario.nThreads) { i ->
-        val actorsCount = scenario.threads[i].size + if (i == 0 && failure is ValidationFailure) 1 else 0
-        Array<ActorNode?>(actorsCount) { null }
+    val actorNodes = Array(nThreads) { i ->
+        if (i < scenario.nThreads) {
+            val actorsCount = scenario.threads[i].size + if (i == 0 && failure is ValidationFailure) 1 else 0
+            Array<ActorNode?>(actorsCount) { null }
+        } else {
+            Array<ActorNode?>(1) {
+                traceGraphNodes.createAndAppend { lastNode ->
+                    ActorNode(
+                        prefixProvider = prefixFactory.actorNodePrefix(i),
+                        iThread = i,
+                        last = lastNode,
+                        callDepth = 0,
+                        actorRepresentation = "",
+                        resultRepresentation = null,
+                    )
+                }
+            }
+        }
     }
     val actorRepresentations = createActorRepresentation(scenario, failure)
     // call nodes for each method call
     val callNodes = mutableMapOf<Int, CallNode>()
     // all trace nodes in order corresponding to `tracePoints`
     val traceGraphNodesSections = arrayListOf<MutableList<TraceNode>>()
-    var traceGraphNodes = arrayListOf<TraceNode>()
-
 
     for (eventId in tracePoints.indices) {
         val event = tracePoints[eventId]
@@ -164,22 +181,28 @@ internal fun constructTraceGraph(
             continue
         }
         val iThread = event.iThread
-        val actorId = event.actorId
+        val actorId = if (iThread < scenario.nThreads) event.actorId else 0
         // add all actors that started since the last event
-        while (lastHandledActor[iThread] < min(actorId, actorNodes[iThread].lastIndex)) {
-            val nextActor = ++lastHandledActor[iThread]
-            // create new actor node actor
-            val actorNode = traceGraphNodes.createAndAppend { lastNode ->
-                ActorNode(
-                    prefixProvider = prefixFactory.actorNodePrefix(iThread),
-                    iThread = iThread,
-                    last = lastNode,
-                    callDepth = 0,
-                    actorRepresentation = actorRepresentations[iThread][nextActor],
-                    resultRepresentation = actorNodeResultRepresentation(resultProvider[iThread, nextActor], failure, exceptionStackTraces)
-                )
+        if (iThread < scenario.nThreads) {
+            while (lastHandledActor[iThread] < min(actorId, actorNodes[iThread].lastIndex)) {
+                val nextActor = ++lastHandledActor[iThread]
+                // create new actor node actor
+                val actorNode = traceGraphNodes.createAndAppend { lastNode ->
+                    ActorNode(
+                        prefixProvider = prefixFactory.actorNodePrefix(iThread),
+                        iThread = iThread,
+                        last = lastNode,
+                        callDepth = 0,
+                        actorRepresentation = actorRepresentations[iThread][nextActor],
+                        resultRepresentation = actorNodeResultRepresentation(
+                            resultProvider[iThread, nextActor],
+                            failure,
+                            exceptionStackTraces
+                        )
+                    )
+                }
+                actorNodes[iThread][nextActor] = actorNode
             }
-            actorNodes[iThread][nextActor] = actorNode
         }
         // add the event
         var innerNode: TraceInnerNode = actorNodes[iThread][actorId]!!
