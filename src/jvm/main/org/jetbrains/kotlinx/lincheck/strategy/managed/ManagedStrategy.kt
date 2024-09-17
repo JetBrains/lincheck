@@ -28,6 +28,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.adorne
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanObjectNumeration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
+import sun.misc.Unsafe
 import java.lang.invoke.VarHandle
 import java.lang.reflect.*
 import java.util.*
@@ -847,6 +848,7 @@ abstract class ManagedStrategy(
     }
 
     override fun afterNewObjectCreation(obj: Any) {
+        ObjectInitialHashCodes.onNewTrackedObjectCreation(obj)
     }
 
     private fun methodGuaranteeType(owner: Any?, className: String, methodName: String): ManagedGuaranteeType? = runInIgnoredSection {
