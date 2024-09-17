@@ -880,7 +880,16 @@ abstract class ManagedStrategy(
             }
             if (collectTrace) {
                 traceCollector!!.checkActiveLockDetected()
-                addBeforeMethodCallTracePoint(owner, codeLocation, methodId, className, methodName, params, atomicMethodDescriptor)
+                addBeforeMethodCallTracePoint(
+                    owner = owner,
+                    codeLocation = codeLocation,
+                    methodId = methodId,
+                    className = className,
+                    methodName = methodName,
+                    methodParams = params,
+                    atomicMethodDescriptor = atomicMethodDescriptor,
+                    isBeforeAtomicMethodCall = guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC
+                )
             }
             if (guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC) {
                 newSwitchPointOnAtomicMethodCall(codeLocation, params)
@@ -1027,6 +1036,7 @@ abstract class ManagedStrategy(
         methodName: String,
         methodParams: Array<Any?>,
         atomicMethodDescriptor: AtomicMethodDescriptor?,
+        isBeforeAtomicMethodCall: Boolean
     ) {
         val iThread = currentThread
         val callStackTrace = callStackTrace[iThread]
@@ -1061,7 +1071,10 @@ abstract class ManagedStrategy(
         } else {
             beforeInstanceMethodCall(owner)
         }
-        traceCollector!!.passCodeLocation(tracePoint)
+        // Because it will be added in the `newSwitchPoint` method.
+        if (!isBeforeAtomicMethodCall) {
+            traceCollector!!.passCodeLocation(tracePoint)
+        }
     }
 
     private fun createBeforeMethodCallTracePoint(
