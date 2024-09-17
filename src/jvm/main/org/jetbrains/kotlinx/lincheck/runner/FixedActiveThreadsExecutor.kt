@@ -63,9 +63,9 @@ internal class FixedActiveThreadsExecutor(private val testName: String, private 
     private var hangDetected = false
 
     init {
-        check(nThreads == 1) {
-            "Only single thread is expected in the time-travelling debugging mode."
-        }
+//        check(nThreads == 1) {
+//            "Only single thread is expected in the time-travelling debugging mode."
+//        }
     }
 
     /**
