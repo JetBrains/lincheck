@@ -13,7 +13,8 @@ package org.jetbrains.kotlinx.lincheck
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.ensureClassHierarchyIsTransformed
+import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 import kotlin.reflect.jvm.javaMethod
@@ -42,7 +43,10 @@ object TimeTravellingInjections {
                 listOf(
                     // takes no arguments, ok for prototype
                     if (isStaticMethod) {
-                        Actor(StaticMethodWrapper::callStaticMethod.javaMethod!!, listOf(testMethod))
+                        Actor(
+                            StaticMethodWrapper::callStaticMethod.javaMethod!!,
+                            listOf(testClass, testMethod)
+                        )
                     } else {
                         Actor(testMethod, emptyList())
                     }
@@ -81,7 +85,8 @@ object TimeTravellingInjections {
 }
 
 class StaticMethodWrapper {
-    fun callStaticMethod(method: Method) {
+    fun callStaticMethod(clazz: Class<*>, method: Method) {
+        ensureClassHierarchyIsTransformed(clazz.name)
         method.invoke(null)
     }
 }
