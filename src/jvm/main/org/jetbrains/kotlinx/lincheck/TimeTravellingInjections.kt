@@ -24,7 +24,6 @@ object TimeTravellingInjections {
 
     @JvmStatic
     fun runWithLincheck(testClassName: String, testMethodName: String) {
-        println("Running with Lincheck (runWithLincheck method)")
         firstRun = false
 
         val testClass = Class.forName(testClassName)
@@ -48,6 +47,7 @@ object TimeTravellingInjections {
             .addCustomScenario(scenario)
             .addGuarantee(forClasses(TimeTravellingInjections::class).allMethods().ignore())
             .verifier(FailingVerifier::class.java)
+            .logLevel(LoggingLevel.OFF)
 
         @Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE")
         val failure = lincheckOptions.checkImpl(testClass)

@@ -64,6 +64,7 @@ internal object TimeTravelTransformer : ClassFileTransformer {
             val reader = ClassReader(classBytes)
             val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
 
+            /*
             if (internalClassName.canonicalClassName == classUnderTimeTravel) {
                 println("Before time-travel transforming: $internalClassName")
                 reader.accept(
@@ -83,13 +84,14 @@ internal object TimeTravelTransformer : ClassFileTransformer {
                 )
 
                 return bytes
-            } else {
-                reader.accept(
-                    TimeTravelClassVisitor(writer, classUnderTimeTravel, methodUnderTimeTravel),
-                    ClassReader.SKIP_FRAMES
-                )
-                bytes = writer.toByteArray()
             }
+            */
+
+            reader.accept(
+                TimeTravelClassVisitor(writer, classUnderTimeTravel, methodUnderTimeTravel),
+                ClassReader.SKIP_FRAMES
+            )
+            bytes = writer.toByteArray()
 
             return bytes
         } catch (e: Throwable) {
