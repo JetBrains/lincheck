@@ -42,8 +42,7 @@ fun testFailed(
     minimalPluginVersion: String,
     exceptions: Array<String>,
     threadNames: Array<String>,
-) {
-}
+) {}
 
 /**
  * Debugger replaces the result of this method to `true` if idea plugin is enabled.

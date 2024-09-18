@@ -184,29 +184,6 @@ internal class ModelCheckingStrategy(
         val isInternalBugOccurred: Boolean
     )
 
-    /**
-     * Transforms failure trace to the array of string to pass it to the debugger.
-     * (due to difficulties with passing objects like List and TracePoint, as class versions may vary)
-     *
-     * Each trace point is transformed into the line of type:
-     * "type,iThread,callDepth,shouldBeExpanded,eventId,representation".
-     *
-     * Later, when [testFailed] breakpoint is triggered debugger parses these lines back to trace points.
-     *
-     * To help the plugin to create execution view, we provide a type for each trace point.
-     * Below are the codes of trace point types.
-     *
-     * | Value                          | Code |
-     * |--------------------------------|------|
-     * | REGULAR                        | 0    |
-     * | ACTOR                          | 1    |
-     * | RESULT                         | 2    |
-     * | SWITCH                         | 3    |
-     * | SPIN_CYCLE_START               | 4    |
-     * | SPIN_CYCLE_SWITCH              | 5    |
-     * | OBSTRUCTION_FREEDOM_VIOLATION  | 6    |
-     */
-
     private fun collectExceptionsOrEmpty(failure: LincheckFailure): Map<Throwable, ExceptionNumberAndStacktrace> {
         if (failure is ValidationFailure) {
             return mapOf(failure.exception to ExceptionNumberAndStacktrace(1, failure.exception.stackTrace.toList()))
@@ -482,6 +459,28 @@ internal class ModelCheckingStrategy(
     }
 }
 
+/**
+ * Transforms failure trace to the array of string to pass it to the debugger.
+ * (due to difficulties with passing objects like List and TracePoint, as class versions may vary)
+ *
+ * Each trace point is transformed into the line of type:
+ * "type,iThread,callDepth,shouldBeExpanded,eventId,representation".
+ *
+ * Later, when [testFailed] breakpoint is triggered debugger parses these lines back to trace points.
+ *
+ * To help the plugin to create execution view, we provide a type for each trace point.
+ * Below are the codes of trace point types.
+ *
+ * | Value                          | Code |
+ * |--------------------------------|------|
+ * | REGULAR                        | 0    |
+ * | ACTOR                          | 1    |
+ * | RESULT                         | 2    |
+ * | SWITCH                         | 3    |
+ * | SPIN_CYCLE_START               | 4    |
+ * | SPIN_CYCLE_SWITCH              | 5    |
+ * | OBSTRUCTION_FREEDOM_VIOLATION  | 6    |
+ */
 fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Array<String> {
     val results = failure.results
     val nodesList = constructTraceGraph(failure, results, trace, emptyMap())
