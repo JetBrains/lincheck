@@ -304,7 +304,12 @@ private fun createActorRepresentation(
 ): Array<List<String>> {
     return Array(nThreads) { i -> when {
         (i == 0) -> {
-            val actors = scenario.threads[i].map { it.toString() }.toMutableList()
+            val actors = scenario.threads[i]
+                .map {
+                    val name = it.toString()
+                    if (name.startsWith("callStaticMethod")) "main" else name
+                }
+                .toMutableList()
             if (failure is ValidationFailure) {
                 actors += "${failure.validationFunctionName}()"
             }
