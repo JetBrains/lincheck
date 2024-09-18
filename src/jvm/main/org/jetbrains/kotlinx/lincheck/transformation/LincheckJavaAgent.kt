@@ -425,7 +425,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
                 val labMap = labelToNumberMap[m] ?: emptyMap()
                 val result = mutableMapOf<Int, MutableList<LocalVariableInfo>>()
 
-                m.localVariables.forEach { local ->
+                m.localVariables?.forEach { local ->
                     val index = local.index
                     val list = result.getOrPut(index) { mutableListOf() }
                     val from = labMap[local.start]
