@@ -232,46 +232,6 @@ internal fun constructTraceGraph(
         }
         innerNode.addInternalEvent(node)
     }
-    // add an ActorResultNode to each actor, because did not know where actor ends before
-    for (iThread in actorNodes.indices) {
-        for (actorId in actorNodes[iThread].indices) {
-            var actorNode = actorNodes[iThread][actorId]
-            val actorResult = resultProvider[iThread, actorId]
-            // in case of empty trace, we want to show at least the actor nodes themselves;
-            // however, no actor nodes will be created by the code above, so we need to create them explicitly here.
-            if (actorNode == null && actorResult != null) {
-                val lastNode = actorNodes[iThread].getOrNull(actorId - 1)?.lastInternalEvent
-                actorNode = ActorNode(
-                    prefixProvider = prefixFactory.actorNodePrefix(iThread),
-                    iThread = iThread,
-                    last = lastNode,
-                    callDepth = 0,
-                    actorRepresentation = actorRepresentations[iThread][actorId],
-                    resultRepresentation = actorNodeResultRepresentation(actorResult, failure, exceptionStackTraces)
-                )
-                actorNodes[iThread][actorId] = actorNode
-                traceGraphNodes += actorNode
-            }
-            if (actorNode == null)
-                continue
-            // insert an ActorResultNode between the last actor event and the next event after it
-            val lastEvent = actorNode.lastInternalEvent
-            val lastEventNext = lastEvent.next
-            val result = resultProvider[iThread, actorId]
-            val resultRepresentation = result?.let { resultRepresentation(result, exceptionStackTraces) }
-            val callDepth = actorNode.callDepth + 1
-            val resultNode = ActorResultNode(
-                prefixProvider = prefixFactory.actorResultPrefix(iThread, callDepth),
-                iThread = iThread,
-                last = lastEvent,
-                callDepth = callDepth,
-                resultRepresentation = resultRepresentation,
-                exceptionNumberIfExceptionResult = if (result is ExceptionResult) exceptionStackTraces[result.throwable]?.number else null
-            )
-            actorNode.addInternalEvent(resultNode)
-            resultNode.next = lastEventNext
-        }
-    }
     // add last section
     if (traceGraphNodes.isNotEmpty()) {
         traceGraphNodesSections += traceGraphNodes
@@ -519,31 +479,6 @@ internal class ActorNode(
         } else {
             next
         }
-    }
-}
-
-internal class ActorResultNode(
-    prefixProvider: PrefixProvider,
-    iThread: Int,
-    last: TraceNode?,
-    callDepth: Int,
-    internal val resultRepresentation: String?,
-    /**
-     * This value presents only if an exception was the actor result.
-     */
-    internal val exceptionNumberIfExceptionResult: Int?
-) : TraceNode(prefixProvider, iThread, last, callDepth) {
-    override val lastState: String? = null
-    override val lastInternalEvent: TraceNode = this
-    override fun shouldBeExpanded(verboseTrace: Boolean): Boolean = false
-
-    override fun addRepresentationTo(
-        traceRepresentation: MutableList<TraceEventRepresentation>,
-        verboseTrace: Boolean
-    ): TraceNode? {
-        if (resultRepresentation != null)
-            traceRepresentation.add(TraceEventRepresentation(iThread, prefix + "result: $resultRepresentation"))
-        return next
     }
 }
 

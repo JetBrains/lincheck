@@ -506,12 +506,6 @@ fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Array<Strin
                 }
             }
 
-            is ActorResultNode -> {
-                val beforeEventId = -1
-                val representation = node.resultRepresentation.toString()
-                representations.add("2;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};${node.exceptionNumberIfExceptionResult ?: -1};null")
-            }
-
             else -> {}
         }
 
