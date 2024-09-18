@@ -63,6 +63,7 @@ object TimeTravellingInjections {
             .addGuarantee(forClasses(TimeTravellingInjections::class).allMethods().ignore())
             .verifier(FailingVerifier::class.java)
             .logLevel(LoggingLevel.OFF)
+            .invocationTimeout(5 * 60 * 1000) // 5 mins
 
         @Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE")
         val failure = lincheckOptions.checkImpl(instanceClass)
