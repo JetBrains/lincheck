@@ -274,11 +274,11 @@ abstract class ManagedStrategy(
                 appendLine("== Reporting the first execution without execution trace ==")
                 appendLine(result.toLincheckFailure(scenario, null))
                 appendLine("== Reporting the second execution ==")
-                appendLine(loggedResults.toLincheckFailure(scenario, Trace(traceCollector!!.trace)).toString())
+                appendLine(loggedResults.toLincheckFailure(scenario, Trace(traceCollector?.trace ?: listOf())).toString())
             }.toString()
         }
 
-        return Trace(traceCollector!!.trace)
+        return Trace(traceCollector?.trace ?: listOf())
     }
 
     fun initializeCallStack(testInstance: Any) {
@@ -596,7 +596,7 @@ abstract class ManagedStrategy(
                 callStackTrace = callStackTrace[iThread]!!,
                 stackTraceElement = CodeLocations.stackTrace(codeLocation)
             )
-            traceCollector!!.passCodeLocation(tracePoint)
+            traceCollector?.passCodeLocation(tracePoint)
         }
     }
 
@@ -848,6 +848,7 @@ abstract class ManagedStrategy(
         // }
 
         val iThread = getThreadId(Thread.currentThread())
+        if (iThread == -1) return
         if (inIgnoredSection[iThread]!!) {
             inIgnoredSection[iThread] = false
         }
@@ -928,7 +929,7 @@ abstract class ManagedStrategy(
                     else -> tracePoint.initializeReturnedValue(adornedStringRepresentation(result))
                 }
                 afterMethodCall(iThread, tracePoint)
-                traceCollector!!.addStateRepresentation()
+                traceCollector?.addStateRepresentation()
             }
         }
         // In case the code is now in an "ignore" section due to
@@ -946,7 +947,7 @@ abstract class ManagedStrategy(
                 val tracePoint = methodCallTracePointStack[iThread]!!.removeLast()
                 tracePoint.initializeThrownException(t)
                 afterMethodCall(iThread, tracePoint)
-                traceCollector!!.addStateRepresentation()
+                traceCollector?.addStateRepresentation()
             }
         }
         // In case the code is now in an "ignore" section due to
@@ -1077,7 +1078,7 @@ abstract class ManagedStrategy(
         }
         // Because it will be added in the `newSwitchPoint` method.
         if (!isBeforeAtomicMethodCall) {
-            traceCollector!!.passCodeLocation(tracePoint)
+            traceCollector?.passCodeLocation(tracePoint)
         }
     }
 
@@ -1096,7 +1097,7 @@ abstract class ManagedStrategy(
         } else {
             null
         }
-        traceCollector!!.passCodeLocation(tracePoint)
+        traceCollector?.passCodeLocation(tracePoint)
     }
 
     override fun beforeLocalWrite(codeLocation: Int, name: String?, value: Any?) = runInIgnoredSection{
@@ -1114,7 +1115,7 @@ abstract class ManagedStrategy(
         } else {
             null
         }
-        traceCollector!!.passCodeLocation(tracePoint)
+        traceCollector?.passCodeLocation(tracePoint)
     }
 
     private fun createBeforeMethodCallTracePoint(
