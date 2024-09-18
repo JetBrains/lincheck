@@ -124,6 +124,9 @@ internal class ModelCheckingStrategy(
 
 
     private fun doReplay(): InvocationResult {
+        // reset object enumeration for identity hash code substitution
+        ObjectInitialHashCodes.resetObjectIds()
+
         currentInterleaving = currentInterleaving.copy()
         resetEventIdProvider()
         return runInvocation()
