@@ -10,6 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck_test
 
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.jetbrains.kotlinx.lincheck.TimeTravellingInjections.runWithLincheck
 import org.junit.Test
 import java.util.*
@@ -45,6 +48,15 @@ class TestClass {
         m[1] = "123"
     }
 
+    fun coroutinesTest() = runBlocking {
+        val c = Channel<String>()
+        launch {
+            val message = c.receive()
+            println("Message: $message")
+        }
+        c.send("hello, world!")
+    }
+
 }
 
 class TimeTravellingTest {
@@ -64,6 +76,11 @@ class TimeTravellingTest {
     @Test
     fun hashMapTest() {
         runWithLincheck(testClass.name, "hashMapTest")
+    }
+
+    @Test
+    fun coroutinesTest() {
+        runWithLincheck(testClass.name, "coroutinesTest")
     }
 
 }
