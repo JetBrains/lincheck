@@ -706,7 +706,8 @@ abstract class ManagedStrategy(
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
                 fieldName = fieldName,
-                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+                stackTraceElement = CodeLocations.stackTrace(codeLocation),
+                isLocal = false
             )
         } else {
             null
@@ -728,7 +729,8 @@ abstract class ManagedStrategy(
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
                 fieldName = "${adornedStringRepresentation(array)}[$index]",
-                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+                stackTraceElement = CodeLocations.stackTrace(codeLocation),
+                isLocal = false
             )
         } else {
             null
@@ -762,7 +764,8 @@ abstract class ManagedStrategy(
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
                 fieldName = fieldName,
-                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+                stackTraceElement = CodeLocations.stackTrace(codeLocation),
+                isLocal = false
             ).also {
                 it.initializeWrittenValue(adornedStringRepresentation(value))
             }
@@ -782,7 +785,8 @@ abstract class ManagedStrategy(
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
                 fieldName = "${adornedStringRepresentation(array)}[$index]",
-                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+                stackTraceElement = CodeLocations.stackTrace(codeLocation),
+                isLocal = false
             ).also {
                 it.initializeWrittenValue(adornedStringRepresentation(value))
             }
@@ -1098,7 +1102,8 @@ abstract class ManagedStrategy(
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
                 fieldName = name ?: "<unknown variable>",
-                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+                stackTraceElement = CodeLocations.stackTrace(codeLocation),
+                isLocal = true
             ).also { it.initializeReadValue(adornedStringRepresentation(value)) }
         } else {
             null
@@ -1116,7 +1121,8 @@ abstract class ManagedStrategy(
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
                 fieldName = name ?: "<unknown variable>",
-                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+                stackTraceElement = CodeLocations.stackTrace(codeLocation),
+                isLocal = true
             ).also { it.initializeWrittenValue(adornedStringRepresentation(value)) }
         } else {
             null

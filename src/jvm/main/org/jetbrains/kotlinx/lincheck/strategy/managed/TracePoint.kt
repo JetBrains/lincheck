@@ -90,7 +90,8 @@ internal class ReadTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
     private val fieldName: String,
-    stackTraceElement: StackTraceElement
+    stackTraceElement: StackTraceElement,
+    val isLocal: Boolean,
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
     private lateinit var valueRepresentation: String
 
@@ -117,7 +118,8 @@ internal class WriteTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
     private val fieldName: String,
-    stackTraceElement: StackTraceElement
+    stackTraceElement: StackTraceElement,
+    val isLocal: Boolean
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
     private lateinit var valueRepresentation: String
 
