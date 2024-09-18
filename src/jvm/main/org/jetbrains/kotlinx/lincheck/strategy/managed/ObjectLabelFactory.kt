@@ -20,8 +20,6 @@ import kotlin.coroutines.Continuation
  */
 object ObjectLabelFactory {
 
-    private val objectNumeration = Collections.synchronizedMap(WeakHashMap<Class<Any>, MutableMap<Any, Int>>())
-
     internal fun adornedStringRepresentation(any: Any?): String {
         // Primitive types (and several others) are immutable and
         // have trivial `toString` implementation, which is used here.
@@ -42,14 +40,6 @@ object ObjectLabelFactory {
         return getObjectName(any)
     }
 
-    internal fun getObjectNumber(clazz: Class<Any>, obj: Any): Int = objectNumeration
-        .computeIfAbsent(clazz) { IdentityHashMap() }
-        .computeIfAbsent(obj) { 1 + objectNumeration[clazz]!!.size }
-
-    internal fun cleanObjectNumeration() {
-        objectNumeration.clear()
-        ObjectInitialHashCodes.resetObjectIds()
-    }
 
     private val Class<*>.simpleNameForAnonymous: String
         get() {
@@ -67,7 +57,7 @@ object ObjectLabelFactory {
             if (obj.javaClass.isAnonymousClass) {
                 obj.javaClass.simpleNameForAnonymous
             } else {
-                objectName(obj) + "#" + getObjectNumber(obj.javaClass, obj)
+                objectName(obj) // + "#<нужна помощь Максима>"
             }
         } else {
             "null"

@@ -93,16 +93,14 @@ fun beforeEvent(eventId: Int, type: String) {
  * (class version, etc.).
  *
  * @param testInstance tested data structure.
- * @param numbersArrayMap an array structured like [Object, objectNumber, Object, objectNumber, ...]. Represents a `Map<Any, Int>`.
  * @param threadsArrayMap an array structured like [Thread, threadId, Thread, threadId, ...]. Represents a `Map<Any, Int>`.
  * @param threadToLincheckThreadIdMap an array structured like [CancellableContinuation, threadId, CancellableContinuation, threadId, ...]. Represents a `Map<Any, Int>`.
  */
 @Suppress("UNUSED_PARAMETER")
 fun visualizeInstance(
     testInstance: Any,
-    numbersArrayMap: Array<Any>,
     threadsArrayMap: Array<Any>,
-    threadToLincheckThreadIdMap: Array<Any>
+    threadToLincheckThreadIdMap: Array<Any>,
 ) {
 }
 
@@ -127,31 +125,12 @@ private fun visualize(strategyObject: Any) = runCatching {
     val testObject = runner.testInstance
     val threads = runner.executor.threads
 
-    val objectToNumberMap = createObjectToNumberMapAsArray(testObject)
     val continuationToLincheckThreadIdMap = createContinuationToThreadIdMap(threads)
     val threadToLincheckThreadIdMap = createThreadToLincheckThreadIdMap(threads)
 
-    visualizeInstance(testObject, objectToNumberMap, continuationToLincheckThreadIdMap, threadToLincheckThreadIdMap)
+    visualizeInstance(testObject, continuationToLincheckThreadIdMap, threadToLincheckThreadIdMap)
 }
 
-
-/**
- * Creates an array [Object, objectNumber, Object, objectNumber, ...].
- * It represents a `Map<Any, Int>`, but due to difficulties with passing objects (Map)
- * to debugger, we represent it as an Array.
- *
- * The Debugger uses this information to enumerate objects.
- */
-private fun createObjectToNumberMapAsArray(testObject: Any): Array<Any> {
-    val resultArray = arrayListOf<Any>()
-
-    val numbersMap = enumerateObjects(testObject)
-    numbersMap.forEach { (any, objectNumber) ->
-        resultArray.add(any)
-        resultArray.add(objectNumber)
-    }
-    return resultArray.toTypedArray()
-}
 
 /**
  * Creates an array [Thread, threadId, Thread, threadId, ...].
