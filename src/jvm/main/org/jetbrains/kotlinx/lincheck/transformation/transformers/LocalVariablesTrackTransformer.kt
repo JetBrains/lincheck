@@ -46,7 +46,7 @@ internal class LocalVariablesAnalyzerAdapter(
         }
 
         if (isRead) {
-            visitReadVarInsn(localVariableInfo, opcode, varIndex)
+//            visitReadVarInsn(localVariableInfo, opcode, varIndex)
         } else {
             visitWriteVarInsn(localVariableInfo, opcode, varIndex)
         }
