@@ -498,6 +498,8 @@ fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Array<Strin
                     is SwitchEventTracePoint ->  3
                     is SpinCycleStartTracePoint -> 4
                     is ObstructionFreedomViolationExecutionAbortTracePoint -> 6
+                    is ReadTracePoint -> 7
+                    is WriteTracePoint -> 8
                     else -> 0
                 }
                 if (representation.isNotEmpty()) {
