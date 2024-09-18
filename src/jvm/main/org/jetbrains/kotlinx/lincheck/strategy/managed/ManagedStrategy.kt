@@ -25,8 +25,10 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicFieldUpdaterNames.g
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.FieldSearchHelper.findFinalFieldWithOwner
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.adornedStringRepresentation
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanObjectNumeration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
+import sun.misc.Unsafe
 import java.lang.invoke.VarHandle
 import java.lang.reflect.*
 import java.util.*
@@ -143,6 +145,8 @@ abstract class ManagedStrategy(
 
     override fun close() {
         super.close()
+        // clear object numeration at the end to avoid memory leaks
+        cleanObjectNumeration()
     }
 
     private fun createRunner(): ManagedStrategyRunner =
@@ -257,6 +261,7 @@ abstract class ManagedStrategy(
                 result is ManagedDeadlockInvocationResult ||
                 result is ObstructionFreedomViolationInvocationResult
         )
+        cleanObjectNumeration()
 
         runner.close()
         runner = createRunner()

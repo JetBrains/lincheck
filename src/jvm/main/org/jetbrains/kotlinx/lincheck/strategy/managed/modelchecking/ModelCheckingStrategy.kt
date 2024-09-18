@@ -15,6 +15,7 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanObjectNumeration
 import java.lang.reflect.*
 import kotlin.random.*
 
@@ -127,6 +128,7 @@ internal class ModelCheckingStrategy(
         // reset object enumeration for identity hash code substitution
         ObjectInitialHashCodes.resetObjectIds()
 
+        cleanObjectNumeration()
         currentInterleaving = currentInterleaving.copy()
         resetEventIdProvider()
         return runInvocation()
@@ -195,6 +197,17 @@ internal class ModelCheckingStrategy(
      * | SPIN_CYCLE_SWITCH              | 5    |
      * | OBSTRUCTION_FREEDOM_VIOLATION  | 6    |
      */
+
+    private fun collectExceptionsOrEmpty(failure: LincheckFailure): Map<Throwable, ExceptionNumberAndStacktrace> {
+        if (failure is ValidationFailure) {
+            return mapOf(failure.exception to ExceptionNumberAndStacktrace(1, failure.exception.stackTrace.toList()))
+        }
+        val results = (failure as? IncorrectResultsFailure)?.results ?: return emptyMap()
+        return when (val result = collectExceptionStackTraces(results)) {
+            is ExceptionStackTracesResult -> result.exceptionStackTraces
+            is InternalLincheckBugResult -> emptyMap()
+        }
+    }
 
     override fun onNewSwitch(iThread: Int, mustSwitch: Boolean) {
         if (replay && collectTrace) {
@@ -419,7 +432,7 @@ internal class ModelCheckingStrategy(
          */
         fun newExecutionPosition(iThread: Int) {
             executionPosition++
-            if (executionPosition > (switchPositions.lastOrNull() ?: -1)) {
+            if (executionPosition > switchPositions.lastOrNull() ?: -1) {
                 // Add a new thread choosing node corresponding to the switch at the current execution position.
                 lastNotInitializedNodeChoices?.add(Choice(ThreadChoosingNode(switchableThreads(iThread)), executionPosition))
             }
