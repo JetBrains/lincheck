@@ -13,6 +13,7 @@ package org.jetbrains.kotlinx.lincheck_test
 import org.jetbrains.kotlinx.lincheck.TimeTravellingInjections.runWithLincheck
 import org.junit.Test
 import java.util.*
+import kotlin.concurrent.thread
 
 class TestClass {
 
@@ -27,14 +28,12 @@ class TestClass {
     fun multiThreadedTest() {
         val x = IntHolder(0)
         val y = IntHolder(0)
-        val t1 = Thread {
+        val t1 = thread {
             x.value++
         }
-        val t2 = Thread {
+        val t2 = thread {
             y.value++
         }
-        t1.start()
-        t2.start()
         t1.join()
         t2.join()
         println("x=${x.value}")

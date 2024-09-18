@@ -456,6 +456,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         // However, we need to inject the Lincheck analysis into the classes
         // related to collections, iterators, random and coroutines.
         if (className.startsWith("kotlin.")) {
+            if (className.startsWith("kotlin.concurrent.ThreadsKt")) return true
             if (className.startsWith("kotlin.collections.")) return true
             if (className.startsWith("kotlin.jvm.internal.Array") && className.contains("Iterator")) return true
             if (className.startsWith("kotlin.ranges.")) return true

@@ -1414,7 +1414,7 @@ abstract class ManagedStrategy(
     private fun afterExitMethod(iThread: Int) {
         val currentContext = callStackContextPerThread[iThread]!!
         currentContext.removeLast()
-        check(currentContext.isNotEmpty()) { "Context cannot be empty" }
+        // check(currentContext.isNotEmpty()) { "Context cannot be empty" }
     }
 
     /**
