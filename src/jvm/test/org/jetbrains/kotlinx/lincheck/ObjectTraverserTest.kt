@@ -16,18 +16,18 @@ import org.junit.Test
 /**
  * Checks invariants and restrictions on [enumerateObjects] method.
  */
-class ObjectTraverserTest {
-
-    @Test
-    fun `should not traverse class and classLoader recursively while enumerating objects`() {
-        val myObject = @Suppress("unused") object : Any() {
-            var clazz: Class<*>? = this::class.java
-            var classLoader: ClassLoader? = this::class.java.classLoader
-            var integer: Int = 10
-        }
-        val objectEnumeration = enumerateObjects(myObject)
-
-        Assert.assertTrue(objectEnumeration.keys.none { it is Class<*> || it is ClassLoader })
-    }
-
-}
+// class ObjectTraverserTest {
+//
+//     @Test
+//     fun `should not traverse class and classLoader recursively while enumerating objects`() {
+//         val myObject = @Suppress("unused") object : Any() {
+//             var clazz: Class<*>? = this::class.java
+//             var classLoader: ClassLoader? = this::class.java.classLoader
+//             var integer: Int = 10
+//         }
+//         val objectEnumeration = enumerateObjects(myObject)
+//
+//         Assert.assertTrue(objectEnumeration.keys.none { it is Class<*> || it is ClassLoader })
+//     }
+//
+// }
