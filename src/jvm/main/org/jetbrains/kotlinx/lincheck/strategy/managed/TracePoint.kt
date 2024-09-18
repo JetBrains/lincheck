@@ -100,7 +100,7 @@ internal class ReadTracePoint(
         } else {
             append(fieldName)
         }
-        append(" -⟶")
+        append(" ⟶")
         append(" $valueRepresentation")
     }.toString()
 
@@ -127,7 +127,7 @@ internal class WriteTracePoint(
         } else {
             append(fieldName)
         }
-        append(" ⟵- ")
+        append(" ⟵ ")
         append(valueRepresentation)
         append("")
     }.toString()
