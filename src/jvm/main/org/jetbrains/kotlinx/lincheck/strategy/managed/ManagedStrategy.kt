@@ -28,7 +28,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.adorne
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanObjectNumeration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
-import sun.misc.Unsafe
 import java.lang.invoke.VarHandle
 import java.lang.reflect.*
 import java.util.*
@@ -89,9 +88,6 @@ abstract class ManagedStrategy(
 
     // Current actor id for each thread.
     protected var currentActorId = MutableThreadMap(nThreads) { -1 }
-
-    // Detector of loops or hangs (i.e., active locks).
-    internal val loopDetector: LoopDetector = LoopDetector(testCfg.hangingDetectionThreshold)
 
     // Tracker of acquisitions and releases of monitors.
     private lateinit var monitorTracker: MonitorTracker
@@ -256,11 +252,6 @@ abstract class ManagedStrategy(
         }
 
         collectTrace = true
-        loopDetector.enableReplayMode(
-            failDueToDeadlockInTheEnd =
-                result is ManagedDeadlockInvocationResult ||
-                result is ObstructionFreedomViolationInvocationResult
-        )
         cleanObjectNumeration()
 
         runner.close()
@@ -302,12 +293,6 @@ abstract class ManagedStrategy(
             //     arrayListOf(CallContext.InstanceCallContext(testInstance))
             // }
         }
-    }
-
-    private fun failDueToDeadlock(): Nothing {
-        suddenInvocationResult = ManagedDeadlockInvocationResult(runner.collectExecutionResults())
-        // Forcibly finish the current execution by throwing an exception.
-        throw ForcibleExecutionFinishError
     }
 
     private fun failDueToLivelock(lazyMessage: () -> String): Nothing {
@@ -355,85 +340,12 @@ abstract class ManagedStrategy(
         // check we are in the right thread
         check(iThread == currentThread)
         // check if we need to switch
-        val shouldSwitch = when {
-            /*
-             * When replaying executions, it's important to repeat the same thread switches
-             * recorded in the loop detector history during the last execution.
-             * For example, suppose that interleaving say us to switch
-             * from thread 1 to thread 2 at execution position 200.
-             * But after execution 10, a spin cycle with period 2 occurred,
-             * so we will switch from the spin cycle.
-             * When we leave this cycle due to the switch for the first time,
-             * interleaving execution counter may be near 200 and the strategy switch will happen soon.
-             * But on the replay run, we will switch from thread 1 early, after 12 operations,
-             * but no strategy switch will be performed for the next 200-12 operations.
-             * This leads to the results of another execution, compared to the original failure results.
-             * To avoid this bug when we're replaying some executions,
-             * we have to follow only loop detector's history during the last execution.
-             * In the considered example, we will retain that we will switch soon after
-             * the spin cycle in thread 1, so no bug will appear.
-             */
-            loopDetector.replayModeEnabled ->
-                loopDetector.shouldSwitchInReplayMode()
-            /*
-             * In the regular mode, we use loop detector only to determine should we
-             * switch current thread or not due to new or early detection of spin locks.
-             * Regular thread switches are dictated by the current interleaving.
-             */
-            else ->
-                (runner.currentExecutionPart == PARALLEL) && shouldSwitch(iThread)
-        }
-        // check if live-lock is detected
-        val decision = loopDetector.visitCodeLocation(iThread, codeLocation)
-        // if we reached maximum number of events threshold, then fail immediately
-        if (decision == LoopDetector.Decision.EventsThresholdReached) {
-            failDueToDeadlock()
-        }
-        // if any kind of live-lock was detected, check for obstruction-freedom violation
-        if (decision.isLivelockDetected) {
-            failIfObstructionFreedomIsRequired {
-                if (decision is LoopDetector.Decision.LivelockFailureDetected) {
-                    // if failure is detected, add a special obstruction-freedom violation
-                    // trace point to account for that
-                    traceCollector?.passObstructionFreedomViolationTracePoint(currentThread, beforeMethodCall = tracePoint is MethodCallTracePoint)
-                } else {
-                    // otherwise log the last event that caused obstruction-freedom violation
-                    traceCollector?.passCodeLocation(tracePoint)
-                }
-                OBSTRUCTION_FREEDOM_SPINLOCK_VIOLATION_MESSAGE
-            }
-        }
-        // if live-lock failure was detected, then fail immediately
-        if (decision is LoopDetector.Decision.LivelockFailureDetected) {
-            traceCollector?.newSwitch(currentThread, SwitchReason.ACTIVE_LOCK, beforeMethodCallSwitch = tracePoint is MethodCallTracePoint)
-            failDueToDeadlock()
-        }
-        // if live-lock was detected, and replay was requested,
-        // then abort current execution and start the replay
-        if (decision.isReplayRequired) {
-            suddenInvocationResult = SpinCycleFoundAndReplayRequired
-            throw ForcibleExecutionFinishError
-        }
-        // if the current thread in a live-lock, then try to switch to another thread
-        if (decision is LoopDetector.Decision.LivelockThreadSwitch) {
-            val switchHappened = switchCurrentThread(iThread, SwitchReason.ACTIVE_LOCK, tracePoint = tracePoint)
-            if (switchHappened) {
-                loopDetector.initializeFirstCodeLocationAfterSwitch(codeLocation)
-            }
-            traceCollector?.passCodeLocation(tracePoint)
-            return
-        }
+        val shouldSwitch = (runner.currentExecutionPart == PARALLEL) && shouldSwitch(iThread)
         // if strategy requested thread switch, then do it
         if (shouldSwitch) {
-            val switchHappened = switchCurrentThread(iThread, SwitchReason.STRATEGY_SWITCH, tracePoint = tracePoint)
-            if (switchHappened) {
-                loopDetector.initializeFirstCodeLocationAfterSwitch(codeLocation)
-            }
+            switchCurrentThread(iThread, SwitchReason.STRATEGY_SWITCH, tracePoint = tracePoint)
             traceCollector?.passCodeLocation(tracePoint)
             return
-        }
-        if (!loopDetector.replayModeEnabled) {
-            loopDetector.onNextExecutionPoint(codeLocation)
         }
         traceCollector?.passCodeLocation(tracePoint)
     }
@@ -514,7 +426,6 @@ abstract class ManagedStrategy(
 
         awaitTurn(iThread)
         finished[iThread] = true
-        loopDetector.onThreadFinish(iThread)
         traceCollector?.onThreadFinish()
         doSwitchCurrentThread(iThread, true)
     }
@@ -541,7 +452,6 @@ abstract class ManagedStrategy(
         currentActorId.update(iThread, default = 0) { it + 1 } // currentActorId[iThread]++
         callStackTrace[iThread]!!.clear()
         suspendedFunctionsStack[iThread]!!.clear()
-        loopDetector.onActorStart(iThread)
         (Thread.currentThread() as TestThread).inTestingCode = true
     }
 
@@ -618,7 +528,6 @@ abstract class ManagedStrategy(
 
     @JvmName("setNextThread")
     private fun setCurrentThread(nextThread: Int) {
-        loopDetector.onThreadSwitch(nextThread)
         currentThread = nextThread
     }
 
@@ -807,7 +716,6 @@ abstract class ManagedStrategy(
             lastReadTracePoint[iThread] = tracePoint
         }
         newSwitchPoint(iThread, codeLocation, tracePoint)
-        loopDetector.beforeReadField(obj)
         return@runInIgnoredSection true
     }
 
@@ -830,7 +738,6 @@ abstract class ManagedStrategy(
             lastReadTracePoint[iThread] = tracePoint
         }
         newSwitchPoint(iThread, codeLocation, tracePoint)
-        loopDetector.beforeReadArrayElement(array, index)
         true
     }
 
@@ -840,7 +747,6 @@ abstract class ManagedStrategy(
                 lastReadTracePoint[iThread]?.initializeReadValue(adornedStringRepresentation(value))
                 lastReadTracePoint[iThread] = null
         }
-        loopDetector.afterRead(value)
     }
 
     override fun beforeWriteField(obj: Any?, className: String, fieldName: String, value: Any?, codeLocation: Int,
@@ -865,7 +771,6 @@ abstract class ManagedStrategy(
             null
         }
         newSwitchPoint(iThread, codeLocation, tracePoint)
-        loopDetector.beforeWriteField(obj, value)
         return@runInIgnoredSection true
     }
 
@@ -886,7 +791,6 @@ abstract class ManagedStrategy(
             null
         }
         newSwitchPoint(iThread, codeLocation, tracePoint)
-        loopDetector.beforeWriteArrayElement(array, index, value)
         true
     }
 
@@ -989,7 +893,6 @@ abstract class ManagedStrategy(
                 LincheckJavaAgent.ensureClassHierarchyIsTransformed(className.canonicalClassName)
             }
             if (collectTrace) {
-                traceCollector!!.checkActiveLockDetected()
                 addBeforeMethodCallTracePoint(
                     owner = owner,
                     codeLocation = codeLocation,
@@ -1004,9 +907,6 @@ abstract class ManagedStrategy(
             if (guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC) {
                 newSwitchPointOnAtomicMethodCall(codeLocation, params)
             }
-            if (guarantee == null) {
-                loopDetector.beforeMethodCall(codeLocation, params)
-            }
             guarantee
         }
         if (guarantee == ManagedGuaranteeType.IGNORE ||
@@ -1019,9 +919,6 @@ abstract class ManagedStrategy(
     }
 
     override fun onMethodCallReturn(result: Any?) {
-        runInIgnoredSection {
-            loopDetector.afterMethodCall()
-        }
         if (collectTrace) {
             runInIgnoredSection {
                 val iThread = currentThread
@@ -1042,9 +939,6 @@ abstract class ManagedStrategy(
     }
 
     override fun onMethodCallException(t: Throwable) {
-        runInIgnoredSection {
-            loopDetector.afterMethodCall()
-        }
         if (collectTrace) {
             runInIgnoredSection {
                 // We cannot simply read `thread` as Forcible???Exception can be thrown.
@@ -1065,7 +959,6 @@ abstract class ManagedStrategy(
     private fun newSwitchPointOnAtomicMethodCall(codeLocation: Int, params: Array<Any?>) {
         // re-use last call trace point
         newSwitchPoint(currentThread, codeLocation, callStackTrace[currentThread]!!.lastOrNull()?.call)
-        loopDetector.passParameters(params)
     }
 
     private fun isSuspendFunction(className: String, methodName: String, params: Array<Any?>) =
@@ -1537,7 +1430,6 @@ abstract class ManagedStrategy(
         }
 
         fun checkActiveLockDetected() {
-            if (!loopDetector.replayModeCurrentlyInSpinCycle) return
             if (spinCycleStartAdded) {
                 spinCycleMethodCallsStackTraces += callStackTrace[currentThread]!!.toList()
                 return
@@ -1574,21 +1466,6 @@ abstract class ManagedStrategy(
 
         }
 
-        fun passObstructionFreedomViolationTracePoint(iThread: Int, beforeMethodCall: Boolean) {
-            afterSpinCycleTraceCollected(
-                trace = _trace,
-                callStackTrace = callStackTrace[currentThread]!!,
-                spinCycleMethodCallsStackTraces = spinCycleMethodCallsStackTraces,
-                iThread = iThread,
-                currentActorId = currentActorId[iThread]!!,
-                beforeMethodCallSwitch = beforeMethodCall
-            )
-            _trace += ObstructionFreedomViolationExecutionAbortTracePoint(
-                iThread = iThread,
-                actorId = currentActorId[iThread]!!,
-                callStackTrace = _trace.last().callStackTrace
-            )
-        }
     }
 
 
@@ -1871,12 +1748,6 @@ internal object ForcibleExecutionFinishError : Error() {
 
 // currently the exact place of coroutine suspension is not known
 internal const val COROUTINE_SUSPENSION_CODE_LOCATION = -1
-
-// when spin-loop is detected, we might need to replay the execution up to N times
-private const val MAX_SPIN_CYCLE_REPLAY_COUNT = 3
-
-private const val OBSTRUCTION_FREEDOM_SPINLOCK_VIOLATION_MESSAGE =
-    "The algorithm should be non-blocking, but an active lock is detected"
 
 private const val OBSTRUCTION_FREEDOM_LOCK_VIOLATION_MESSAGE =
     "The algorithm should be non-blocking, but a lock is detected"
