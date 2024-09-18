@@ -100,9 +100,10 @@ internal class ModelCheckingStrategy(
         // that should be invoked only outside the ignored section.
         // However, we cannot add `!inIgnoredSection` check here
         // as the instrumented code might call `enterIgnoredSection` just befor this call.
-        return collectTrace &&
-                Thread.currentThread() is TestThread &&
-                suddenInvocationResult == null
+        return collectTrace
+                // && !inIgnoredSection()
+                // && (Thread.currentThread() is TestThread)
+                && (suddenInvocationResult == null)
     }
 
 
