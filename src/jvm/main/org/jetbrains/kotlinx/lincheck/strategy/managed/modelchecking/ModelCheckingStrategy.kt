@@ -86,7 +86,17 @@ internal class ModelCheckingStrategy(
                 trace = trace,
                 version = lincheckVersion,
                 minimalPluginVersion = MINIMAL_PLUGIN_VERSION,
-                exceptions = exceptionsRepresentation
+                exceptions = exceptionsRepresentation,
+                threadNames = registeredThreads
+                    .map { it.name }
+                    .toMutableList()
+                    .apply {
+                        // in time-traveling debug mode, set a custom name for the main thread
+                        if (failure.scenario.nThreads == 1) {
+                            set(0, "Main Thread")
+                        }
+                    }
+                    .toTypedArray()
             )
             // Replay execution while it's needed.
             doReplay()
