@@ -14,6 +14,9 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
+import java.lang.reflect.Method
+import java.lang.reflect.Modifier
+import kotlin.reflect.jvm.javaMethod
 
 object TimeTravellingInjections {
     val classUnderTimeTravel: String? = System.getProperty("rr.className")
@@ -28,19 +31,27 @@ object TimeTravellingInjections {
 
         val testClass = Class.forName(testClassName)
         // TODO: get the name from the system property
-        val testMethod = testClass.getMethod(testMethodName)
+        val testMethod = testClass.getMethod(testMethodName)!!
+
+        val isStaticMethod = Modifier.isStatic(testMethod.modifiers)
+        val instanceClass = if (isStaticMethod) StaticMethodWrapper::class.java else testClass
 
         val scenario = ExecutionScenario(
             emptyList(),
             listOf(
                 listOf(
                     // takes no arguments, ok for prototype
-                    Actor(testMethod, emptyList())
+                    if (isStaticMethod) {
+                        Actor(StaticMethodWrapper::callStaticMethod.javaMethod!!, listOf(testMethod))
+                    } else {
+                        Actor(testMethod, emptyList())
+                    }
                 )
             ),
             emptyList(),
             null
         )
+
         val lincheckOptions = ModelCheckingOptions()
             .iterations(0)
             .invocationsPerIteration(1)
@@ -50,7 +61,8 @@ object TimeTravellingInjections {
             .logLevel(LoggingLevel.OFF)
 
         @Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE")
-        val failure = lincheckOptions.checkImpl(testClass)
+        val failure = lincheckOptions.checkImpl(instanceClass)
+
         val result = failure!!.results.threadsResults[0][0]
         if (result is ExceptionResult) throw result.throwable
         val trace = constructTraceForPlugin(failure, failure.trace!!)
@@ -67,3 +79,10 @@ object TimeTravellingInjections {
         override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?) = false
     }
 }
+
+class StaticMethodWrapper {
+    fun callStaticMethod(method: Method) {
+        method.invoke(null)
+    }
+}
+

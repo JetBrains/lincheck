@@ -83,5 +83,22 @@ class TimeTravellingTest {
         runWithLincheck(testClass.name, "coroutinesTest")
     }
 
+    @Test
+    fun mainTest() {
+        runWithLincheck(MainKtEmulated::class.java.name, "main")
+    }
+
 }
 
+class MainKtEmulated(val useless: Int) {
+
+    companion object {
+        @JvmStatic
+        fun main() {
+            val x = TestClass.IntHolder(1)
+            x.value++
+            println("Hello, world!")
+        }
+    }
+
+}
