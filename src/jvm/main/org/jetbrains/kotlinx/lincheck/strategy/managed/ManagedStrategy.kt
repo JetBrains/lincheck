@@ -1410,18 +1410,7 @@ abstract class ManagedStrategy(
             )
         }
 
-
-        fun checkActiveLockDetected() {
-            val spinCycleStartTracePoint = SpinCycleStartTracePoint(
-                iThread = currentThread,
-                actorId = currentActorId[currentThread]!!,
-                callStackTrace = callStackTrace[currentThread]!!
-            )
-            _trace.add(spinCycleStartTracePoint)
-        }
-
         fun passCodeLocation(tracePoint: TracePoint?) {
-            if (tracePoint !is SectionDelimiterTracePoint) checkActiveLockDetected()
             // tracePoint can be null here if trace is not available, e.g. in case of suspension
             if (tracePoint != null) {
                 _trace += tracePoint
