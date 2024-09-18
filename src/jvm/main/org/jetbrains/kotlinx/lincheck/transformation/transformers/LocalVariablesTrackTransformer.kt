@@ -13,6 +13,7 @@ package org.jetbrains.kotlinx.lincheck.transformation.transformers
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.GeneratorAdapter
+import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import sun.nio.ch.lincheck.Injections
 
 internal class LocalVariablesAnalyzerAdapter(
@@ -59,15 +60,22 @@ internal class LocalVariablesAnalyzerAdapter(
             original = {
             },
             code = {
-                val local = newLocal(localVariableInfo.type)
-                dup()
-                storeLocal(local)
+                val local = newLocal(OBJECT_TYPE)
+
+                if (localVariableInfo.type.sort == Type.DOUBLE || localVariableInfo.type.sort == Type.LONG) {
+                    dup2()
+                    box(localVariableInfo.type)
+                    storeLocal(local)
+                } else {
+                    dup()
+                    box(localVariableInfo.type)
+                    storeLocal(local)
+                }
 
                 loadNewCodeLocationId()
                 push(localVariableInfo.name)
 
                 loadLocal(local)
-                box(localVariableInfo.type)
                 invokeStatic(Injections::beforeLocalWrite)
 
                 invokeBeforeEventIfPluginEnabled("write local")
