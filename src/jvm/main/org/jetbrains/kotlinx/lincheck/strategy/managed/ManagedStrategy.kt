@@ -813,6 +813,12 @@ abstract class ManagedStrategy(
         getThreadLocalRandom().nextInt()
     }
 
+    override fun inTestingCode(): Boolean {
+        val iThread = getThreadId(Thread.currentThread())
+        if (iThread == -1) return false
+        return !inIgnoredSection[iThread]!!
+    }
+
     override fun inIgnoredSection(): Boolean {
         val iThread = getThreadId(Thread.currentThread())
         return inIgnoredSection[iThread] ?: false

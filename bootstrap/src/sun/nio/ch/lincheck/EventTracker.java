@@ -18,6 +18,8 @@ import java.util.*;
  */
 public interface EventTracker {
 
+    boolean inTestingCode();
+
     boolean inIgnoredSection();
     boolean enterIgnoredSection();
     void leaveIgnoredSection();
