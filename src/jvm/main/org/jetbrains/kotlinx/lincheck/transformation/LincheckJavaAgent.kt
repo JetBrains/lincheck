@@ -442,8 +442,11 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         if (className.startsWith("java.")) {
             if (className == "java.lang.Thread") return true
             if (className.startsWith("java.util.concurrent.") && className.contains("Atomic")) return false
-            if (className.startsWith("java.util.")) return true
             if (className.startsWith("com.sun.")) return false
+
+            // if (className == "java.util.HashMap") return false
+            if (className.startsWith("java.util.")) return false
+
             return false
         }
         if (className.startsWith("sun.")) return false

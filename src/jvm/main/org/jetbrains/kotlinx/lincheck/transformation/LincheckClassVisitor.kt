@@ -150,11 +150,13 @@ internal class LincheckClassVisitor(
         }
         val locals: Map<Int, List<LocalVariableInfo>> = methods[methodName + desc] ?: emptyMap()
         mv = LocalVariablesAnalyzerAdapter(fileName, className, methodName, mv.newAdapter(), locals)
+
         // Must appear in code after `SharedMemoryAccessTransformer` (to be able to skip this transformer)
         mv = CoverageBytecodeFilter(
             skipVisitor.newAdapter(),
             mv.newAdapter()
         )
+
         return mv
     }
 

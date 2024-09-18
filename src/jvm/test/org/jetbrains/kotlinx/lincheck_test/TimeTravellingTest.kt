@@ -41,6 +41,11 @@ class TestClass {
         println("y=${y.value}")
     }
 
+    fun hashMapTest() {
+        val m = HashMap<Int, String>()
+        m[1] = "123"
+    }
+
 }
 
 class TimeTravellingTest {
@@ -55,6 +60,11 @@ class TimeTravellingTest {
     @Test
     fun multiThreadedTest() {
         runWithLincheck(testClass.name, "multiThreadedTest")
+    }
+
+    @Test
+    fun hashMapTest() {
+        runWithLincheck(testClass.name, "hashMapTest")
     }
 
 }
