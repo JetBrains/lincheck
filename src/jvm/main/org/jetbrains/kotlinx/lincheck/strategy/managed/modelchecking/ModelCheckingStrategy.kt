@@ -9,7 +9,6 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
-import sun.nio.ch.lincheck.TestThread
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
@@ -496,14 +495,7 @@ fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Array<Strin
                 val eventId = event.eventId
                 val representation = event.toStringImpl(withLocation = false)
                 val type = when (event) {
-                    is SwitchEventTracePoint -> {
-                        when (event.reason) {
-                            SwitchReason.ACTIVE_LOCK -> {
-                                5
-                            }
-                            else -> 3
-                        }
-                    }
+                    is SwitchEventTracePoint ->  3
                     is SpinCycleStartTracePoint -> 4
                     is ObstructionFreedomViolationExecutionAbortTracePoint -> 6
                     else -> 0

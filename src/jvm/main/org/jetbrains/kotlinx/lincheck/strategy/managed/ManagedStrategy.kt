@@ -426,7 +426,6 @@ abstract class ManagedStrategy(
 
         awaitTurn(iThread)
         finished[iThread] = true
-        traceCollector?.onThreadFinish()
         doSwitchCurrentThread(iThread, true)
     }
 
@@ -1401,47 +1400,24 @@ abstract class ManagedStrategy(
     private inner class TraceCollector {
         private val _trace = mutableListOf<TracePoint>()
         val trace: List<TracePoint> = _trace
-        private var spinCycleStartAdded = false
-
-        private val spinCycleMethodCallsStackTraces: MutableList<List<CallStackTraceElement>> = mutableListOf()
 
         fun newSwitch(iThread: Int, reason: SwitchReason, beforeMethodCallSwitch: Boolean = false) {
-            if (reason == SwitchReason.ACTIVE_LOCK) {
-                afterSpinCycleTraceCollected(
-                    trace = _trace,
-                    callStackTrace = callStackTrace[currentThread]!!,
-                    spinCycleMethodCallsStackTraces = spinCycleMethodCallsStackTraces,
-                    iThread = iThread,
-                    currentActorId = currentActorId[iThread]!!,
-                    beforeMethodCallSwitch = beforeMethodCallSwitch
-                )
-            }
             _trace += SwitchEventTracePoint(
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
                 reason = reason,
                 callStackTrace = callStackTrace[iThread]!!,
             )
-            spinCycleStartAdded = false
         }
 
-        fun onThreadFinish() {
-            spinCycleStartAdded = false
-        }
 
         fun checkActiveLockDetected() {
-            if (spinCycleStartAdded) {
-                spinCycleMethodCallsStackTraces += callStackTrace[currentThread]!!.toList()
-                return
-            }
             val spinCycleStartTracePoint = SpinCycleStartTracePoint(
                 iThread = currentThread,
                 actorId = currentActorId[currentThread]!!,
                 callStackTrace = callStackTrace[currentThread]!!
             )
             _trace.add(spinCycleStartTracePoint)
-            spinCycleStartAdded = true
-            spinCycleMethodCallsStackTraces.clear()
         }
 
         fun passCodeLocation(tracePoint: TracePoint?) {
