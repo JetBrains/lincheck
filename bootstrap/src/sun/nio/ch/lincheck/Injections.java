@@ -67,7 +67,7 @@ public class Injections {
         if (tracker == null) {
             return false;
         }
-        return !tracker.inIgnoredSection();
+        return tracker.inTestingCode();
     }
 
     /**
