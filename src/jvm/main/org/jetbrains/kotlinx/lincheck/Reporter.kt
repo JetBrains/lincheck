@@ -605,7 +605,8 @@ internal fun collectExceptionStackTraces(executionResult: ExecutionResult): Exce
         .forEachIndexed { index, exceptionResult ->
             val exception = exceptionResult.throwable
 
-            val filteredStacktrace = exception.stackTrace.takeWhile { LINCHECK_PACKAGE_NAME !in it.className }
+            val filteredStacktrace = exception.stackTrace.toList()
+                // .takeWhile { LINCHECK_PACKAGE_NAME !in it.className }
             if (filteredStacktrace.isEmpty()) { // Exception in Lincheck itself
                 return InternalLincheckBugResult(exception)
             }
