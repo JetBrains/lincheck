@@ -50,8 +50,8 @@ abstract class ManagedCTestConfiguration(
     companion object {
         const val DEFAULT_INVOCATIONS = 10000
         const val DEFAULT_CHECK_OBSTRUCTION_FREEDOM = false
-        const val DEFAULT_HANGING_DETECTION_THRESHOLD = 101
-        const val LIVELOCK_EVENTS_THRESHOLD = 10001
+        const val DEFAULT_HANGING_DETECTION_THRESHOLD = 100001
+        const val LIVELOCK_EVENTS_THRESHOLD = 10000001
         val DEFAULT_GUARANTEES = listOf<ManagedStrategyGuarantee>()
     }
 }
