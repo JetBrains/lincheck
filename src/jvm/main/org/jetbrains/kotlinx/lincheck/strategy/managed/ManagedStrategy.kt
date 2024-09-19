@@ -384,6 +384,7 @@ abstract class ManagedStrategy(
         }
     }
 
+    @Synchronized
     private fun registerThread(thread: Thread) {
         val iThread = nTotalThreads
         registeredThreads.add(thread)
@@ -400,6 +401,7 @@ abstract class ManagedStrategy(
         spinners[iThread] = Spinner()
     }
 
+    @Synchronized
     fun getThreadId(thread: Thread): Int {
         return registeredThreads.indexOfFirst { it === thread }
     }
