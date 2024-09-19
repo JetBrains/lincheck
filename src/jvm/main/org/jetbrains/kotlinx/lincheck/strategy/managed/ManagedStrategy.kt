@@ -99,7 +99,7 @@ abstract class ManagedStrategy(
     // == TRACE CONSTRUCTION FIELDS ==
 
     // Whether an additional information requires for the trace construction should be collected.
-    protected var collectTrace = false
+    protected var collectTrace = true
 
     // Collector of all events in the execution such as thread switches.
     private var traceCollector: TraceCollector? = null // null when `collectTrace` is false
@@ -238,6 +238,10 @@ abstract class ManagedStrategy(
      * Re-runs the last invocation to collect its trace.
      */
     override fun tryCollectTrace(result: InvocationResult): Trace? {
+        if (collectTrace) {
+            Trace(traceCollector?.trace ?: listOf())
+        }
+
         val detectedByStrategy = suddenInvocationResult != null
         val canCollectTrace = when {
             detectedByStrategy -> true // ObstructionFreedomViolationInvocationResult or UnexpectedExceptionInvocationResult
