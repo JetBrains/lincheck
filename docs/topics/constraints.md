@@ -98,7 +98,7 @@ Note that all consuming `poll()` and `peek()` invocations are performed from a s
 
 > [Get the full code](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/MPSCQueueTest.kt).
 >
-{type="note"}
+{style="note"}
 
 ## Next step
 
