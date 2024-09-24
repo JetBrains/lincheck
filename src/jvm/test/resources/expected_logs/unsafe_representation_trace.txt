@@ -1,28 +1,27 @@
 = Invalid execution results =
-| -------------- |
-|    Thread 1    |
-| -------------- |
-| operation(): 1 |
-| -------------- |
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
 
 The following interleaving leads to the error:
-| -------------- |
-|    Thread 1    |
-| -------------- |
-| operation(): 1 |
-| -------------- |
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
 
 Detailed trace:
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                         Thread 1                                                                                         |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| operation(): 1                                                                                                                                                                           |
-|   actionsForTrace() at BaseTraceRepresentationTest.operation(BaseTraceRepresentationTest.kt:27)                                                                                          |
-|     Array<IntWrapper>#1[2].getObject(): IntWrapper#1 at UnsafeTraceRepresentationTest.actionsForTrace(UnsafeTraceRepresentationTest.kt:23)                                               |
-|     node.compareAndSwapObject(IntWrapper#2,IntWrapper#3): true at UnsafeTraceRepresentationTest.actionsForTrace(UnsafeTraceRepresentationTest.kt:24)                                     |
-|     value.READ: 2 at UnsafeTraceRepresentationTest.actionsForTrace(UnsafeTraceRepresentationTest.kt:25)                                                                                  |
-|     value.compareAndSwapInt(2,3): true at UnsafeTraceRepresentationTest.actionsForTrace(UnsafeTraceRepresentationTest.kt:25)                                                             |
-|     UnsafeTraceRepresentationTest.staticNode.compareAndSwapObject(IntWrapper#4,IntWrapper#5): true at UnsafeTraceRepresentationTest.actionsForTrace(UnsafeTraceRepresentationTest.kt:27) |
-|     node.value.compareAndSwapInt(4,6): true at UnsafeTraceRepresentationTest.actionsForTrace(UnsafeTraceRepresentationTest.kt:28)                                                        |
-|   result: 1                                                                                                                                                                              |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                     Thread 1                                                                                     |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                                                      |
+|   Array<IntWrapper>#1[2].getObject(): IntWrapper#1 at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:23)                                               |
+|   node.compareAndSwapObject(IntWrapper#2,IntWrapper#3): true at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:24)                                     |
+|   value.READ: 2 at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:25)                                                                                  |
+|   value.compareAndSwapInt(2,3): true at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:25)                                                             |
+|   UnsafeTraceRepresentationTest.staticNode.compareAndSwapObject(IntWrapper#4,IntWrapper#5): true at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:27) |
+|   node.value.compareAndSwapInt(4,6): true at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:28)                                                        |
+|   result: void                                                                                                                                                                   |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

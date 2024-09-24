@@ -1,28 +1,27 @@
 = Invalid execution results =
-| -------------- |
-|    Thread 1    |
-| -------------- |
-| operation(): 1 |
-| -------------- |
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
 
 The following interleaving leads to the error:
-| -------------- |
-|    Thread 1    |
-| -------------- |
-| operation(): 1 |
-| -------------- |
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
 
 Detailed trace:
-| ----------------------------------------------------------------------------------------------- |
-|                                            Thread 1                                             |
-| ----------------------------------------------------------------------------------------------- |
-| operation(): 1                                                                                  |
-|   actionsForTrace() at BaseTraceRepresentationTest.operation(BaseTraceRepresentationTest.kt:27) |
-|     x.WRITE(VALUE_1) at EnumRepresentationTest.actionsForTrace(EnumRepresentationTest.kt:18)    |
-|     x.READ: VALUE_1 at EnumRepresentationTest.actionsForTrace(EnumRepresentationTest.kt:19)     |
-|     y.WRITE(VALUE_1) at EnumRepresentationTest.actionsForTrace(EnumRepresentationTest.kt:19)    |
-|     x.WRITE(VALUE_2) at EnumRepresentationTest.actionsForTrace(EnumRepresentationTest.kt:20)    |
-|     x.READ: VALUE_2 at EnumRepresentationTest.actionsForTrace(EnumRepresentationTest.kt:21)     |
-|     y.WRITE(VALUE_2) at EnumRepresentationTest.actionsForTrace(EnumRepresentationTest.kt:21)    |
-|   result: 1                                                                                     |
-| ----------------------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------ |
+|                                       Thread 1                                       |
+| ------------------------------------------------------------------------------------ |
+| operation()                                                                          |
+|   x.WRITE(VALUE_1) at EnumRepresentationTest.operation(EnumRepresentationTest.kt:18) |
+|   x.READ: VALUE_1 at EnumRepresentationTest.operation(EnumRepresentationTest.kt:19)  |
+|   y.WRITE(VALUE_1) at EnumRepresentationTest.operation(EnumRepresentationTest.kt:19) |
+|   x.WRITE(VALUE_2) at EnumRepresentationTest.operation(EnumRepresentationTest.kt:20) |
+|   x.READ: VALUE_2 at EnumRepresentationTest.operation(EnumRepresentationTest.kt:21)  |
+|   y.WRITE(VALUE_2) at EnumRepresentationTest.operation(EnumRepresentationTest.kt:21) |
+|   result: void                                                                       |
+| ------------------------------------------------------------------------------------ |

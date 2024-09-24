@@ -25,7 +25,7 @@ class AtomicReferencesNamesTest : BaseTraceRepresentationTest("atomic_references
 
     private val wrapper = AtomicReferenceWrapper()
 
-    override fun actionsForTrace() {
+    override fun operation() {
         atomicReference.compareAndSet(atomicReference.get(), Node(2))
         atomicReference.set(Node(3))
 
@@ -93,7 +93,7 @@ class AtomicReferencesFromMultipleFieldsTest : BaseTraceRepresentationTest("atom
         atomicReference2 = ref
     }
 
-    override fun actionsForTrace() {
+    override fun operation() {
         atomicReference1.compareAndSet(atomicReference2.get(), Node(2))
     }
 

@@ -25,7 +25,7 @@ class CapturedValueRepresentationTest : BaseTraceRepresentationTest("captured_va
     private var primitiveArray = IntArray(1)
     private var objectArray = Array(1) { "" }
 
-    override fun actionsForTrace() {
+    override fun operation() {
         outerClass1
         outerClass2
         innerClass

@@ -13,7 +13,9 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
+import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
+import org.jetbrains.kotlinx.lincheck.execution.*
 import org.junit.Test
 
 /**
@@ -22,16 +24,11 @@ import org.junit.Test
  */
 abstract class BaseTraceRepresentationTest(private val outputFileName: String) {
 
-    @Operation
-    fun operation(): Int {
-        actionsForTrace()
-        return 1
-    }
-
     /**
      * Implement me and place the logic to check its trace.
      */
-    abstract fun actionsForTrace()
+    @Operation
+    abstract fun operation()
 
     @Test
     fun test() = ModelCheckingOptions()
@@ -40,9 +37,8 @@ abstract class BaseTraceRepresentationTest(private val outputFileName: String) {
                 thread { actor(::operation) }
             }
         }
-        // to trigger the lincheck failure, we set the specification class
-        // where the `operation` method always returns a different result
-        .sequentialSpecification(BaseTraceRepresentationTestSpecification::class.java)
+        // to trigger the lincheck failure, we use the always failing verifier
+        .verifier(FailingVerifier::class.java)
         .iterations(0)
         .apply { customize() }
         .checkImpl(this::class.java) { failure ->
@@ -53,6 +49,6 @@ abstract class BaseTraceRepresentationTest(private val outputFileName: String) {
 
 }
 
-class BaseTraceRepresentationTestSpecification {
-    fun operation(): Int = 0
+class FailingVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : Verifier {
+    override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?) = false
 }

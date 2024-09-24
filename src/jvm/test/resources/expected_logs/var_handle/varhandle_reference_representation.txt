@@ -1,34 +1,33 @@
 = Invalid execution results =
-| -------------- |
-|    Thread 1    |
-| -------------- |
-| operation(): 1 |
-| -------------- |
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
 
 The following interleaving leads to the error:
-| -------------- |
-|    Thread 1    |
-| -------------- |
-| operation(): 1 |
-| -------------- |
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
 
 Detailed trace:
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                              Thread 1                                                                                              |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| operation(): 1                                                                                                                                                                                     |
-|   actionsForTrace() at BaseTraceRepresentationTest.operation(BaseTraceRepresentationTest.kt:27)                                                                                                    |
-|     wrapper.READ: IntWrapper#1 at VarHandleReferenceRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:25)                                                                         |
-|     wrapper.compareAndSet(IntWrapper#1,IntWrapper#2): true at VarHandleReferenceRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:25)                                             |
-|     wrapper.set(IntWrapper#3) at VarHandleReferenceRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:26)                                                                          |
-|     wrapper.READ: IntWrapper#3 at VarHandleReferenceRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:28)                                                                         |
-|     VarHandleReferenceRepresentationTest.staticWrapper.compareAndSet(IntWrapper#3,IntWrapper#4): false at VarHandleReferenceRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:28) |
-|     VarHandleReferenceRepresentationTest.staticWrapper.set(IntWrapper#5) at VarHandleReferenceRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:29)                               |
-|     array.READ: Array<IntWrapper>#1 at VarHandleReferenceRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:31)                                                                    |
-|     Array<IntWrapper>#1[1].compareAndSet(IntWrapper#6,IntWrapper#7): false at VarHandleReferenceRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:31)                             |
-|     array.READ: Array<IntWrapper>#1 at VarHandleReferenceRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:32)                                                                    |
-|     Array<IntWrapper>#1[1].set(IntWrapper#8) at VarHandleReferenceRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:32)                                                           |
-|     valueWrapper.value.compareAndSet(1,2): true at VarHandleReferenceRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:34)                                                        |
-|     valueWrapper.value.set(3) at VarHandleReferenceRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:35)                                                                          |
-|   result: 1                                                                                                                                                                                        |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|                                                                                          Thread 1                                                                                          |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| operation()                                                                                                                                                                                |
+|   wrapper.READ: IntWrapper#1 at VarHandleReferenceRepresentationTest.operation(VarHandleRepresentationTests.kt:25)                                                                         |
+|   wrapper.compareAndSet(IntWrapper#1,IntWrapper#2): true at VarHandleReferenceRepresentationTest.operation(VarHandleRepresentationTests.kt:25)                                             |
+|   wrapper.set(IntWrapper#3) at VarHandleReferenceRepresentationTest.operation(VarHandleRepresentationTests.kt:26)                                                                          |
+|   wrapper.READ: IntWrapper#3 at VarHandleReferenceRepresentationTest.operation(VarHandleRepresentationTests.kt:28)                                                                         |
+|   VarHandleReferenceRepresentationTest.staticWrapper.compareAndSet(IntWrapper#3,IntWrapper#4): false at VarHandleReferenceRepresentationTest.operation(VarHandleRepresentationTests.kt:28) |
+|   VarHandleReferenceRepresentationTest.staticWrapper.set(IntWrapper#5) at VarHandleReferenceRepresentationTest.operation(VarHandleRepresentationTests.kt:29)                               |
+|   array.READ: Array<IntWrapper>#1 at VarHandleReferenceRepresentationTest.operation(VarHandleRepresentationTests.kt:31)                                                                    |
+|   Array<IntWrapper>#1[1].compareAndSet(IntWrapper#6,IntWrapper#7): false at VarHandleReferenceRepresentationTest.operation(VarHandleRepresentationTests.kt:31)                             |
+|   array.READ: Array<IntWrapper>#1 at VarHandleReferenceRepresentationTest.operation(VarHandleRepresentationTests.kt:32)                                                                    |
+|   Array<IntWrapper>#1[1].set(IntWrapper#8) at VarHandleReferenceRepresentationTest.operation(VarHandleRepresentationTests.kt:32)                                                           |
+|   valueWrapper.value.compareAndSet(1,2): true at VarHandleReferenceRepresentationTest.operation(VarHandleRepresentationTests.kt:34)                                                        |
+|   valueWrapper.value.set(3) at VarHandleReferenceRepresentationTest.operation(VarHandleRepresentationTests.kt:35)                                                                          |
+|   result: void                                                                                                                                                                             |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

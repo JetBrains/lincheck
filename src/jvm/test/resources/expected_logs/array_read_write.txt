@@ -1,25 +1,24 @@
 = Invalid execution results =
-| -------------- |
-|    Thread 1    |
-| -------------- |
-| operation(): 1 |
-| -------------- |
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
 
 The following interleaving leads to the error:
-| -------------- |
-|    Thread 1    |
-| -------------- |
-| operation(): 1 |
-| -------------- |
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
 
 Detailed trace:
-| ---------------------------------------------------------------------------------------------------------------------- |
-|                                                        Thread 1                                                        |
-| ---------------------------------------------------------------------------------------------------------------------- |
-| operation(): 1                                                                                                         |
-|   actionsForTrace() at BaseTraceRepresentationTest.operation(BaseTraceRepresentationTest.kt:27)                        |
-|     IntArray#1[0].READ: 0 at ArrayReadWriteRepresentationTest.actionsForTrace(ArrayReadWriteRepresentationTest.kt:27)  |
-|     IntArray#1[0].WRITE(1) at ArrayReadWriteRepresentationTest.actionsForTrace(ArrayReadWriteRepresentationTest.kt:28) |
-|     IntArray#1[1].WRITE(0) at ArrayReadWriteRepresentationTest.actionsForTrace(ArrayReadWriteRepresentationTest.kt:29) |
-|   result: 1                                                                                                            |
-| ---------------------------------------------------------------------------------------------------------------------- |
+| -------------------------------------------------------------------------------------------------------------- |
+|                                                    Thread 1                                                    |
+| -------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                    |
+|   IntArray#1[0].READ: 0 at ArrayReadWriteRepresentationTest.operation(ArrayReadWriteRepresentationTest.kt:21)  |
+|   IntArray#1[0].WRITE(1) at ArrayReadWriteRepresentationTest.operation(ArrayReadWriteRepresentationTest.kt:22) |
+|   IntArray#1[1].WRITE(0) at ArrayReadWriteRepresentationTest.operation(ArrayReadWriteRepresentationTest.kt:23) |
+|   result: void                                                                                                 |
+| -------------------------------------------------------------------------------------------------------------- |

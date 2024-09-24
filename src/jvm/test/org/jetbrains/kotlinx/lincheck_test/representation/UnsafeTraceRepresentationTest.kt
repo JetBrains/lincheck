@@ -19,7 +19,7 @@ class UnsafeTraceRepresentationTest : BaseTraceRepresentationTest("unsafe_repres
     private var value: Int = 2
     private val node = IntWrapper(3)
 
-    override fun actionsForTrace() {
+    override fun operation() {
         unsafe.getObject(array, baseOffset + indexScale * 2L)
         unsafe.compareAndSwapObject(this, nodeFieldOffset, node, IntWrapper(4))
         unsafe.compareAndSwapInt(this, valueFieldOffset, value, 3)

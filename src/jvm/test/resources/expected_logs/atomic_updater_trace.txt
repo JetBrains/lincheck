@@ -1,25 +1,24 @@
 = Invalid execution results =
-| -------------- |
-|    Thread 1    |
-| -------------- |
-| operation(): 1 |
-| -------------- |
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
 
 The following interleaving leads to the error:
-| -------------- |
-|    Thread 1    |
-| -------------- |
-| operation(): 1 |
-| -------------- |
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
 
 Detailed trace:
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                               Thread 1                                                                                |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| operation(): 1                                                                                                                                                        |
-|   actionsForTrace() at BaseTraceRepresentationTest.operation(BaseTraceRepresentationTest.kt:29)                                                                       |
-|     node.READ: IntWrapper#1 at AtomicUpdaterTraceRepresentationTest.actionsForTrace(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:73)                             |
-|     node.compareAndSet(IntWrapper#1,IntWrapper#2): true at AtomicUpdaterTraceRepresentationTest.actionsForTrace(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:73) |
-|     node.set(IntWrapper#3) at AtomicUpdaterTraceRepresentationTest.actionsForTrace(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:74)                              |
-|   result: 1                                                                                                                                                           |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                           Thread 1                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                                   |
+|   node.READ: IntWrapper#1 at AtomicUpdaterTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:68)                             |
+|   node.compareAndSet(IntWrapper#1,IntWrapper#2): true at AtomicUpdaterTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:68) |
+|   node.set(IntWrapper#3) at AtomicUpdaterTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:69)                              |
+|   result: void                                                                                                                                                |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------- |

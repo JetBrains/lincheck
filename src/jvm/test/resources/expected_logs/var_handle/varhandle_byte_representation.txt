@@ -1,32 +1,31 @@
 = Invalid execution results =
-| -------------- |
-|    Thread 1    |
-| -------------- |
-| operation(): 1 |
-| -------------- |
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
 
 The following interleaving leads to the error:
-| -------------- |
-|    Thread 1    |
-| -------------- |
-| operation(): 1 |
-| -------------- |
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
 
 Detailed trace:
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                             Thread 1                                                                              |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| operation(): 1                                                                                                                                                    |
-|   actionsForTrace() at BaseTraceRepresentationTest.operation(BaseTraceRepresentationTest.kt:27)                                                                   |
-|     number.READ: 1 at VarHandleByteRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:142)                                                        |
-|     number.compareAndSet(1,1): true at VarHandleByteRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:142)                                       |
-|     number.set(2) at VarHandleByteRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:143)                                                         |
-|     VarHandleByteRepresentationTest.staticNumber.READ: 3 at VarHandleByteRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:145)                  |
-|     VarHandleByteRepresentationTest.staticNumber.compareAndSet(3,1): true at VarHandleByteRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:145) |
-|     VarHandleByteRepresentationTest.staticNumber.set(3) at VarHandleByteRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:146)                   |
-|     array.READ: ByteArray#1 at VarHandleByteRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:148)                                               |
-|     ByteArray#1[1].compareAndSet(3,1): false at VarHandleByteRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:148)                              |
-|     array.READ: ByteArray#1 at VarHandleByteRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:149)                                               |
-|     ByteArray#1[1].set(2) at VarHandleByteRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:149)                                                 |
-|   result: 1                                                                                                                                                       |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                         Thread 1                                                                          |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                               |
+|   number.READ: 1 at VarHandleByteRepresentationTest.operation(VarHandleRepresentationTests.kt:142)                                                        |
+|   number.compareAndSet(1,1): true at VarHandleByteRepresentationTest.operation(VarHandleRepresentationTests.kt:142)                                       |
+|   number.set(2) at VarHandleByteRepresentationTest.operation(VarHandleRepresentationTests.kt:143)                                                         |
+|   VarHandleByteRepresentationTest.staticNumber.READ: 3 at VarHandleByteRepresentationTest.operation(VarHandleRepresentationTests.kt:145)                  |
+|   VarHandleByteRepresentationTest.staticNumber.compareAndSet(3,1): true at VarHandleByteRepresentationTest.operation(VarHandleRepresentationTests.kt:145) |
+|   VarHandleByteRepresentationTest.staticNumber.set(3) at VarHandleByteRepresentationTest.operation(VarHandleRepresentationTests.kt:146)                   |
+|   array.READ: ByteArray#1 at VarHandleByteRepresentationTest.operation(VarHandleRepresentationTests.kt:148)                                               |
+|   ByteArray#1[1].compareAndSet(3,1): false at VarHandleByteRepresentationTest.operation(VarHandleRepresentationTests.kt:148)                              |
+|   array.READ: ByteArray#1 at VarHandleByteRepresentationTest.operation(VarHandleRepresentationTests.kt:149)                                               |
+|   ByteArray#1[1].set(2) at VarHandleByteRepresentationTest.operation(VarHandleRepresentationTests.kt:149)                                                 |
+|   result: void                                                                                                                                            |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------- |

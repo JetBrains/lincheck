@@ -14,7 +14,7 @@ class EnumRepresentationTest : BaseTraceRepresentationTest("enum_representation.
     private var x: MyEnum? = null
     private var y: MyEnum? = null
 
-    override fun actionsForTrace() {
+    override fun operation() {
         x = MyEnum.VALUE_1
         y = x
         x = MyEnum.VALUE_2

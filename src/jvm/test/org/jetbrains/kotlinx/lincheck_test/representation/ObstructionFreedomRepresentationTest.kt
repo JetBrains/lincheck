@@ -28,7 +28,7 @@ class ObstructionFreedomActiveLockRepresentationTest : BaseTraceRepresentationTe
 ) {
     private val counter = AtomicInteger(0)
 
-    override fun actionsForTrace() {
+    override fun operation() {
         // The first invocation will not fail
         incrementManyTimes()
         // This invocation will fail immediately after `counter.get`,

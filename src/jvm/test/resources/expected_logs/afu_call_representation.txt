@@ -1,25 +1,24 @@
 = Invalid execution results =
-| -------------- |
-|    Thread 1    |
-| -------------- |
-| operation(): 1 |
-| -------------- |
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
 
 The following interleaving leads to the error:
-| -------------- |
-|    Thread 1    |
-| -------------- |
-| operation(): 1 |
-| -------------- |
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------------------------ |
-|                                                      Thread 1                                                      |
-| ------------------------------------------------------------------------------------------------------------------ |
-| operation(): 1                                                                                                     |
-|   actionsForTrace() at BaseTraceRepresentationTest.operation(BaseTraceRepresentationTest.kt:27)                    |
-|     counter.get(): 0 at AFUCallRepresentationTest.actionsForTrace(AFUCallRepresentationTest.kt:31)                 |
-|     counter.set(1) at AFUCallRepresentationTest.actionsForTrace(AFUCallRepresentationTest.kt:32)                   |
-|     counter.compareAndSet(1,2): true at AFUCallRepresentationTest.actionsForTrace(AFUCallRepresentationTest.kt:33) |
-|   result: 1                                                                                                        |
-| ------------------------------------------------------------------------------------------------------------------ |
+| ---------------------------------------------------------------------------------------------------------- |
+|                                                  Thread 1                                                  |
+| ---------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                |
+|   counter.get(): 0 at AFUCallRepresentationTest.operation(AFUCallRepresentationTest.kt:25)                 |
+|   counter.set(1) at AFUCallRepresentationTest.operation(AFUCallRepresentationTest.kt:26)                   |
+|   counter.compareAndSet(1,2): true at AFUCallRepresentationTest.operation(AFUCallRepresentationTest.kt:27) |
+|   result: void                                                                                             |
+| ---------------------------------------------------------------------------------------------------------- |

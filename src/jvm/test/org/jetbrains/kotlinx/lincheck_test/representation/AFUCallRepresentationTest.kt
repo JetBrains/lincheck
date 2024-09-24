@@ -21,7 +21,7 @@ class AFUCallRepresentationTest : BaseTraceRepresentationTest("afu_call_represen
     private var counter = 0
     private val afu = AtomicIntegerFieldUpdater.newUpdater(AFUCallRepresentationTest::class.java, "counter")
 
-    override fun actionsForTrace() {
+    override fun operation() {
         afu.get(this)
         afu.set(this, 1)
         afu.compareAndSet(this, 1, 2)

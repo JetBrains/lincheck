@@ -17,7 +17,7 @@ class ArrayReadWriteRepresentationTest : BaseTraceRepresentationTest("array_read
 
     private val array = IntArray(2)
 
-    override fun actionsForTrace() {
+    override fun operation() {
         val value = array[0]
         array[0] = value + 1
         array[1] = 0

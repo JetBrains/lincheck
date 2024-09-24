@@ -20,7 +20,7 @@ class OwnerNameInTraceRepresentationTest : BaseTraceRepresentationTest("owner_na
     private val array: Array<Int> = arrayOf(0)
 
 
-    override fun actionsForTrace() {
+    override fun operation() {
         readWriteTestMethod()
         val result = stub
         result.readWriteTestMethod()
@@ -65,7 +65,7 @@ class ArrayNameInTraceRepresentationTest : BaseTraceRepresentationTest("array_na
     private val doubleArray: DoubleArray = doubleArrayOf(1.0)
     private val longArray: LongArray = longArrayOf(1L)
 
-    override fun actionsForTrace() {
+    override fun operation() {
         readActions()
         writeActions()
     }

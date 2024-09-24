@@ -22,7 +22,7 @@ class SunUnsafeTraceRepresentationTest : BaseTraceRepresentationTest("sun_unsafe
     @Volatile
     private var node: IntWrapper = IntWrapper(1)
 
-    override fun actionsForTrace() {
+    override fun operation() {
         unsafe.compareAndSwapObject(this, offset, node, IntWrapper(2))
         unsafe.getAndSetObject(this, offset, IntWrapper(3))
     }
@@ -48,7 +48,7 @@ class JdkUnsafeTraceRepresentationTest : BaseTraceRepresentationTest("jdk_unsafe
     // We use it just to interact with jdk.internal.misc.Unsafe, which we cannot access directly.
     private val hashMap = ConcurrentHashMap<Int, Int>()
 
-    override fun actionsForTrace() {
+    override fun operation() {
         // Here under the hood we interact with the Unsafe instance.
         hashMap[1] = 2
     }
@@ -64,7 +64,7 @@ class AtomicUpdaterTraceRepresentationTest : BaseTraceRepresentationTest("atomic
     @Volatile
     private var node: IntWrapper = IntWrapper(1)
 
-    override fun actionsForTrace() {
+    override fun operation() {
         nodeUpdater.compareAndSet(this, node, IntWrapper(4))
         nodeUpdater.set(this, IntWrapper(5))
     }

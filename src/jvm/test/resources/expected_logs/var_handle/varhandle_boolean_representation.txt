@@ -1,32 +1,31 @@
 = Invalid execution results =
-| -------------- |
-|    Thread 1    |
-| -------------- |
-| operation(): 1 |
-| -------------- |
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
 
 The following interleaving leads to the error:
-| -------------- |
-|    Thread 1    |
-| -------------- |
-| operation(): 1 |
-| -------------- |
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                    Thread 1                                                                                     |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| operation(): 1                                                                                                                                                                  |
-|   actionsForTrace() at BaseTraceRepresentationTest.operation(BaseTraceRepresentationTest.kt:27)                                                                                 |
-|     number.READ: false at VarHandleBooleanRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:216)                                                               |
-|     number.compareAndSet(false,false): true at VarHandleBooleanRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:216)                                          |
-|     number.set(true) at VarHandleBooleanRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:217)                                                                 |
-|     VarHandleBooleanRepresentationTest.staticNumber.READ: false at VarHandleBooleanRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:219)                      |
-|     VarHandleBooleanRepresentationTest.staticNumber.compareAndSet(false,false): true at VarHandleBooleanRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:219) |
-|     VarHandleBooleanRepresentationTest.staticNumber.set(false) at VarHandleBooleanRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:220)                       |
-|     array.READ: BooleanArray#1 at VarHandleBooleanRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:222)                                                       |
-|     BooleanArray#1[1].compareAndSet(false,false): true at VarHandleBooleanRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:222)                               |
-|     array.READ: BooleanArray#1 at VarHandleBooleanRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:223)                                                       |
-|     BooleanArray#1[1].set(true) at VarHandleBooleanRepresentationTest.actionsForTrace(VarHandleRepresentationTests.kt:223)                                                      |
-|   result: 1                                                                                                                                                                     |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                Thread 1                                                                                 |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                                             |
+|   number.READ: false at VarHandleBooleanRepresentationTest.operation(VarHandleRepresentationTests.kt:216)                                                               |
+|   number.compareAndSet(false,false): true at VarHandleBooleanRepresentationTest.operation(VarHandleRepresentationTests.kt:216)                                          |
+|   number.set(true) at VarHandleBooleanRepresentationTest.operation(VarHandleRepresentationTests.kt:217)                                                                 |
+|   VarHandleBooleanRepresentationTest.staticNumber.READ: false at VarHandleBooleanRepresentationTest.operation(VarHandleRepresentationTests.kt:219)                      |
+|   VarHandleBooleanRepresentationTest.staticNumber.compareAndSet(false,false): true at VarHandleBooleanRepresentationTest.operation(VarHandleRepresentationTests.kt:219) |
+|   VarHandleBooleanRepresentationTest.staticNumber.set(false) at VarHandleBooleanRepresentationTest.operation(VarHandleRepresentationTests.kt:220)                       |
+|   array.READ: BooleanArray#1 at VarHandleBooleanRepresentationTest.operation(VarHandleRepresentationTests.kt:222)                                                       |
+|   BooleanArray#1[1].compareAndSet(false,false): true at VarHandleBooleanRepresentationTest.operation(VarHandleRepresentationTests.kt:222)                               |
+|   array.READ: BooleanArray#1 at VarHandleBooleanRepresentationTest.operation(VarHandleRepresentationTests.kt:223)                                                       |
+|   BooleanArray#1[1].set(true) at VarHandleBooleanRepresentationTest.operation(VarHandleRepresentationTests.kt:223)                                                      |
+|   result: void                                                                                                                                                          |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

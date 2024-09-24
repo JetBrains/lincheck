@@ -1,26 +1,25 @@
 = Invalid execution results =
-| -------------- |
-|    Thread 1    |
-| -------------- |
-| operation(): 1 |
-| -------------- |
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
 
 The following interleaving leads to the error:
-| -------------- |
-|    Thread 1    |
-| -------------- |
-| operation(): 1 |
-| -------------- |
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
 
 Detailed trace:
-| ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                       Thread 1                                                                       |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| operation(): 1                                                                                                                                       |
-|   actionsForTrace() at BaseTraceRepresentationTest.operation(BaseTraceRepresentationTest.kt:27)                                                      |
-|     atomicReference1.READ: AtomicReference#1 at AtomicReferencesFromMultipleFieldsTest.actionsForTrace(AtomicReferencesNamesTests.kt:97)             |
-|     atomicReference2.READ: AtomicReference#1 at AtomicReferencesFromMultipleFieldsTest.actionsForTrace(AtomicReferencesNamesTests.kt:97)             |
-|     AtomicReference#1.get(): Node#1 at AtomicReferencesFromMultipleFieldsTest.actionsForTrace(AtomicReferencesNamesTests.kt:97)                      |
-|     AtomicReference#1.compareAndSet(Node#1,Node#2): true at AtomicReferencesFromMultipleFieldsTest.actionsForTrace(AtomicReferencesNamesTests.kt:97) |
-|   result: 1                                                                                                                                          |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| -------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                   Thread 1                                                                   |
+| -------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                  |
+|   atomicReference1.READ: AtomicReference#1 at AtomicReferencesFromMultipleFieldsTest.operation(AtomicReferencesNamesTests.kt:97)             |
+|   atomicReference2.READ: AtomicReference#1 at AtomicReferencesFromMultipleFieldsTest.operation(AtomicReferencesNamesTests.kt:97)             |
+|   AtomicReference#1.get(): Node#1 at AtomicReferencesFromMultipleFieldsTest.operation(AtomicReferencesNamesTests.kt:97)                      |
+|   AtomicReference#1.compareAndSet(Node#1,Node#2): true at AtomicReferencesFromMultipleFieldsTest.operation(AtomicReferencesNamesTests.kt:97) |
+|   result: void                                                                                                                               |
+| -------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -20,7 +20,7 @@ import org.jetbrains.kotlinx.lincheck.util.InternalLincheckExceptionEmulator
 @Suppress("UNUSED")
 class InternalLincheckBugTest : BaseTraceRepresentationTest("internal_bug_report.txt") {
 
-    override fun actionsForTrace() {
+    override fun operation() {
         InternalLincheckExceptionEmulator.throwException()
     }
 
