@@ -1,0 +1,50 @@
+= Invalid execution results =
+| -------------------------------- |
+|    Thread 1     |    Thread 2    |
+| -------------------------------- |
+| trigger(): void | operation(): 1 |
+| -------------------------------- |
+
+The following interleaving leads to the error:
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                             Thread 1                                              |                                                       Thread 2                                                        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                   | operation(): 1                                                                                                        |
+|                                                                                                   |   part1(): COROUTINE_SUSPENDED at MultipleSuspensionTest.operation(MultipleSuspensionsTests.kt:56)                    |
+|                                                                                                   |   switch (reason: coroutine is suspended)                                                                             |
+| trigger()                                                                                         |                                                                                                                       |
+|   firstStep() at MultipleSuspensionTest.trigger(MultipleSuspensionsTests.kt:39)                   |                                                                                                                       |
+|   switch                                                                                          |                                                                                                                       |
+|                                                                                                   |   operation(): COROUTINE_SUSPENDED at MultipleSuspensionTest$operation$1.invokeSuspend(MultipleSuspensionsTests.kt:0) |
+|                                                                                                   |     part2(): COROUTINE_SUSPENDED at MultipleSuspensionTest.operation(MultipleSuspensionsTests.kt:57)                  |
+|                                                                                                   |     switch (reason: coroutine is suspended)                                                                           |
+|   secondStep() at MultipleSuspensionTest.trigger(MultipleSuspensionsTests.kt:40)                  |                                                                                                                       |
+|   counter.READ: AtomicInteger#1 at MultipleSuspensionTest.trigger(MultipleSuspensionsTests.kt:41) |                                                                                                                       |
+|   AtomicInteger#1.set(3) at MultipleSuspensionTest.trigger(MultipleSuspensionsTests.kt:41)        |                                                                                                                       |
+|   result: void                                                                                    |                                                                                                                       |
+|                                                                                                   |     counter.READ: AtomicInteger#1 at MultipleSuspensionTest.operation(MultipleSuspensionsTests.kt:58)                 |
+|                                                                                                   |     AtomicInteger#1.get(): 3 at MultipleSuspensionTest.operation(MultipleSuspensionsTests.kt:58)                      |
+|                                                                                                   |   result: 1                                                                                                           |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+
+Detailed trace:
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                             Thread 1                                              |                                                       Thread 2                                                        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                   | operation(): 1                                                                                                        |
+|                                                                                                   |   part1(): COROUTINE_SUSPENDED at MultipleSuspensionTest.operation(MultipleSuspensionsTests.kt:56)                    |
+|                                                                                                   |   switch (reason: coroutine is suspended)                                                                             |
+| trigger()                                                                                         |                                                                                                                       |
+|   firstStep() at MultipleSuspensionTest.trigger(MultipleSuspensionsTests.kt:39)                   |                                                                                                                       |
+|   switch                                                                                          |                                                                                                                       |
+|                                                                                                   |   operation(): COROUTINE_SUSPENDED at MultipleSuspensionTest$operation$1.invokeSuspend(MultipleSuspensionsTests.kt:0) |
+|                                                                                                   |     part2(): COROUTINE_SUSPENDED at MultipleSuspensionTest.operation(MultipleSuspensionsTests.kt:57)                  |
+|                                                                                                   |     switch (reason: coroutine is suspended)                                                                           |
+|   secondStep() at MultipleSuspensionTest.trigger(MultipleSuspensionsTests.kt:40)                  |                                                                                                                       |
+|   counter.READ: AtomicInteger#1 at MultipleSuspensionTest.trigger(MultipleSuspensionsTests.kt:41) |                                                                                                                       |
+|   AtomicInteger#1.set(3) at MultipleSuspensionTest.trigger(MultipleSuspensionsTests.kt:41)        |                                                                                                                       |
+|   result: void                                                                                    |                                                                                                                       |
+|                                                                                                   |     counter.READ: AtomicInteger#1 at MultipleSuspensionTest.operation(MultipleSuspensionsTests.kt:58)                 |
+|                                                                                                   |     AtomicInteger#1.get(): 3 at MultipleSuspensionTest.operation(MultipleSuspensionsTests.kt:58)                      |
+|                                                                                                   |   result: 1                                                                                                           |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
