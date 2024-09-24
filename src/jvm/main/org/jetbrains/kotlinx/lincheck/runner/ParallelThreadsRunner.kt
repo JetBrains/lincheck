@@ -213,15 +213,15 @@ internal open class ParallelThreadsRunner(
     fun processInvocationResult(res: Any?, iThread: Int, actorId: Int): Result = runInIgnoredSection {
         val actor = scenario.parallelExecution[iThread][actorId]
         val finalResult = if (res === COROUTINE_SUSPENDED) {
-            val t = Thread.currentThread() as TestThread
-            val cont = t.suspendedContinuation.also { t.suspendedContinuation = null }
+            val thread = Thread.currentThread() as TestThread
+            val cont = thread.suspendedContinuation.also { thread.suspendedContinuation = null }
             if (actor.cancelOnSuspension && cont !== null && cancelByLincheck(cont as CancellableContinuation<*>, actor.promptCancellation) != CANCELLATION_FAILED) {
                 if (!trySetCancelledStatus(iThread, actorId)) {
                     // already resumed, increment `completedOrSuspendedThreads` back
                     completedOrSuspendedThreads.incrementAndGet()
                 }
                 Cancelled
-            } else waitAndInvokeFollowUp(iThread, actorId)
+            } else waitAndInvokeFollowUp(thread, actorId)
         } else createLincheckResult(res)
         val isLastActor = actorId == scenario.parallelExecution[iThread].size - 1
         if (isLastActor && finalResult !== Suspended)
@@ -234,36 +234,41 @@ internal open class ParallelThreadsRunner(
 
     // We need to run this code in an ignored section,
     // as it is called in the testing code but should not be analyzed.
-    private fun waitAndInvokeFollowUp(iThread: Int, actorId: Int): Result = runInIgnoredSection {
+    private fun waitAndInvokeFollowUp(thread: TestThread, actorId: Int): Result = runInIgnoredSection {
+        val threadId = thread.threadId
         // Coroutine is suspended. Call method so that strategy can learn it.
-        afterCoroutineSuspended(iThread)
+        afterCoroutineSuspended(threadId)
         // If the suspended method call has a follow-up part after this suspension point,
         // then wait for the resuming thread to write a result of this suspension point
         // as well as the continuation to be executed by this thread;
         // wait for the final result of the method call otherwise.
-        val completion = completions[iThread][actorId]
+        val completion = completions[threadId][actorId]
         // Check if the coroutine is already resumed and if not, enter the spin loop.
-        if (!isCoroutineResumed(iThread, actorId)) {
-            spinners[iThread].spinWaitUntil {
+        if (!isCoroutineResumed(threadId, actorId)) {
+            spinners[threadId].spinWaitUntil {
                 // Check whether the scenario is completed and the current suspended operation cannot be resumed.
                 if (currentExecutionPart == POST || isParallelExecutionCompleted) {
-                    suspensionPointResults[iThread][actorId] = NoResult
+                    suspensionPointResults[threadId][actorId] = NoResult
                     return Suspended
                 }
                 // Wait until coroutine is resumed.
-                isCoroutineResumed(iThread, actorId)
+                isCoroutineResumed(threadId, actorId)
             }
         }
         // Coroutine will be resumed. Call method so that strategy can learn it.
-        afterCoroutineResumed(iThread)
+        afterCoroutineResumed(threadId)
         // Check whether the result of the suspension point with the continuation has been stored
-        // by the resuming thread, and invoke the follow-up part in this case
+        // by the resuming thread and invoke the follow-up part in this case.
         if (completion.resWithCont.get() !== null) {
-            // Suspended thread got result of the suspension point and continuation to resume
+            // Suspended thread got the result of the suspension point and continuation to resume.
             val resumedValue = completion.resWithCont.get().first
-            completion.resWithCont.get().second.resumeWith(resumedValue)
+            // It is important to run the coroutine resumption part outside the ignored section
+            // to track the events inside resumption.
+            runOutsideIgnoredSection(thread) {
+                completion.resWithCont.get().second.resumeWith(resumedValue)
+            }
         }
-        return suspensionPointResults[iThread][actorId]
+        return suspensionPointResults[threadId][actorId]
     }
 
     /**

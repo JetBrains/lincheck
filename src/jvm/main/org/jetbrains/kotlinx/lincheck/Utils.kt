@@ -26,6 +26,13 @@ import java.util.*
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
 
+fun <T> List<T>.isSuffixOf(list: List<T>): Boolean {
+    if (size > list.size) return false
+    for (i in indices) {
+       if (this[size - i - 1] != list[list.size - i - 1]) return false
+    }
+    return true
+}
 
 fun chooseSequentialSpecification(sequentialSpecificationByUser: Class<*>?, testClass: Class<*>): Class<*> =
     if (sequentialSpecificationByUser === DummySequentialSpecification::class.java || sequentialSpecificationByUser == null) testClass
@@ -276,5 +283,27 @@ private inline fun <R> runInIgnoredSection(currentThread: Thread, block: () -> R
     } else {
         block()
     }
+
+/**
+ * Exits the ignored section and invokes the provided [block] in the ignored section, setting
+ * the [TestThread.inIgnoredSection] flag to `false` in the beginning and setting it back
+ * in the end to `true`.
+ * This method **must** be called in an ignored section.
+ */
+@Suppress("UnusedReceiverParameter")
+internal inline fun <R> ParallelThreadsRunner.runOutsideIgnoredSection(currentThread: TestThread, block: () -> R): R {
+    if (!currentThread.inTestingCode) {
+        return block()
+    }
+    require(currentThread.inIgnoredSection) {
+        "Current thread must be in ignored section"
+    }
+    currentThread.inIgnoredSection = false
+    return try {
+        block()
+    } finally {
+        currentThread.inIgnoredSection = true
+    }
+}
 
 internal const val LINCHECK_PACKAGE_NAME = "org.jetbrains.kotlinx.lincheck."

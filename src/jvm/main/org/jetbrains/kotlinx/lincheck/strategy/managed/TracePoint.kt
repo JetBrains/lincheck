@@ -139,8 +139,9 @@ internal class WriteTracePoint(
 
 internal class MethodCallTracePoint(
     iThread: Int, actorId: Int,
+    val className: String,
+    val methodName: String,
     callStackTrace: CallStackTrace,
-    private val methodName: String,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
     private var returnedValue: ReturnedValueResult = ReturnedValueResult.NoValue
@@ -148,7 +149,7 @@ internal class MethodCallTracePoint(
     private var parameters: List<String>? = null
     private var ownerName: String? = null
 
-    val wasSuspended get() = returnedValue == ReturnedValueResult.CoroutineSuspended
+    val wasSuspended get() = (returnedValue == ReturnedValueResult.CoroutineSuspended)
 
     override fun toStringCompact(): String = StringBuilder().apply {
         if (ownerName != null)
@@ -309,10 +310,20 @@ internal enum class SwitchReason(private val reason: String) {
 }
 
 /**
- * Method call info.
+ * Method call stack trace element info.
+ * All method calls are enumerated with unique ids to distinguish different calls of the same method.
  *
- * All methods calls are enumerated to make it possible to distinguish different calls of the same method.
- * Suspended method calls have the same [suspensionIdentifier] before and after suspension, but different [call] points.
+ * @property id unique identifier of the call stack trace element.
+ * @property tracePoint the method call trace point corresponding to this call stack element.
+ * @property instance the object on which the method was invoked (null in case of static method).
+ * @property methodInvocationId identifier of the method invocation;
+ *   encompasses the id of the method itself and ids of its parameters (i.e., their hash codes).
+ *
  * @see [org.jetbrains.kotlinx.lincheck.transformation.MethodIds].
  */
-internal class CallStackTraceElement(val call: MethodCallTracePoint, val suspensionIdentifier: Int, val methodId: Int)
+internal class CallStackTraceElement(
+    val id: Int,
+    val tracePoint: MethodCallTracePoint,
+    val instance: Any?,
+    val methodInvocationId: Int
+)

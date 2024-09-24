@@ -184,14 +184,13 @@ internal fun constructTraceGraph(
         // add the event
         var innerNode: TraceInnerNode = actorNodes[iThread][actorId]!!
         for (call in event.callStackTrace) {
-            val callId = call.suspensionIdentifier
             // Switch events that happen as a first event of the method are lifted out of the method in the trace
-            if (!callNodes.containsKey(callId) && event is SwitchEventTracePoint) break
-            val callNode = callNodes.computeIfAbsent(callId) {
+            if (!callNodes.containsKey(call.id) && event is SwitchEventTracePoint) break
+            val callNode = callNodes.computeIfAbsent(call.id) {
                 // create a new call node if needed
                 val result = traceGraphNodes.createAndAppend { lastNode ->
                     val callDepth = innerNode.callDepth + 1
-                    CallNode(prefixFactory.prefixForCallNode(iThread, callDepth), iThread, lastNode, callDepth, call.call)
+                    CallNode(prefixFactory.prefixForCallNode(iThread, callDepth), iThread, lastNode, callDepth, call.tracePoint)
                 }
                 // make it a child of the previous node
                 innerNode.addInternalEvent(result)
