@@ -12,7 +12,7 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 
 import java.util.concurrent.atomic.*
 
-class AtomicReferencesNamesTest : BaseFailingTest("atomic_references_names_trace.txt") {
+class AtomicReferencesNamesTest : BaseTraceRepresentationTest("atomic_references_names_trace.txt") {
 
     private val atomicReference = AtomicReference(Node(1))
     private val atomicInteger = AtomicInteger(0)
@@ -25,7 +25,7 @@ class AtomicReferencesNamesTest : BaseFailingTest("atomic_references_names_trace
 
     private val wrapper = AtomicReferenceWrapper()
 
-    override fun actionsForTrace() {
+    override fun operation() {
         atomicReference.compareAndSet(atomicReference.get(), Node(2))
         atomicReference.set(Node(3))
 
@@ -82,7 +82,7 @@ class AtomicReferencesNamesTest : BaseFailingTest("atomic_references_names_trace
     }
 }
 
-class AtomicReferencesFromMultipleFieldsTest : BaseFailingTest("atomic_references_name_two_fields_trace.txt") {
+class AtomicReferencesFromMultipleFieldsTest : BaseTraceRepresentationTest("atomic_references_name_two_fields_trace.txt") {
 
     private var atomicReference1: AtomicReference<Node>
     private var atomicReference2: AtomicReference<Node>
@@ -93,7 +93,7 @@ class AtomicReferencesFromMultipleFieldsTest : BaseFailingTest("atomic_reference
         atomicReference2 = ref
     }
 
-    override fun actionsForTrace() {
+    override fun operation() {
         atomicReference1.compareAndSet(atomicReference2.get(), Node(2))
     }
 

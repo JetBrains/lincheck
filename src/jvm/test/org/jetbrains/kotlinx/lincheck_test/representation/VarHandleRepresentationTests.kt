@@ -13,14 +13,14 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.VarHandle
 
-class VarHandleReferenceRepresentationTest : BaseFailingTest("var_handle/varhandle_reference_representation.txt") {
+class VarHandleReferenceRepresentationTest : BaseTraceRepresentationTest("var_handle/varhandle_reference_representation.txt") {
 
     @Volatile
     private var wrapper = IntWrapper(1)
     private var array = Array(10) { IntWrapper(it) }
     private val valueWrapper = Wrapper()
 
-    override fun actionsForTrace() {
+    override fun operation() {
         // Instance object field operation.
         nodeHandle.compareAndSet(this, wrapper, IntWrapper(2))
         nodeHandle.set(this, IntWrapper(3))
@@ -60,13 +60,13 @@ class VarHandleReferenceRepresentationTest : BaseFailingTest("var_handle/varhand
     }
 }
 
-class VarHandleIntRepresentationTest : BaseFailingTest("var_handle/varhandle_int_representation.txt") {
+class VarHandleIntRepresentationTest : BaseTraceRepresentationTest("var_handle/varhandle_int_representation.txt") {
 
     @Volatile
     private var number: Int = 1
     private var array = IntArray(10) { it }
 
-    override fun actionsForTrace() {
+    override fun operation() {
         numberHandle.compareAndSet(this, number, 2)
         numberHandle.set(this, 3)
 
@@ -95,13 +95,13 @@ class VarHandleIntRepresentationTest : BaseFailingTest("var_handle/varhandle_int
     }
 }
 
-class VarHandleShortRepresentationTest : BaseFailingTest("var_handle/varhandle_short_representation.txt") {
+class VarHandleShortRepresentationTest : BaseTraceRepresentationTest("var_handle/varhandle_short_representation.txt") {
 
     @Volatile
     private var number: Short = (1).toShort()
     private var array = ShortArray(10) { it.toShort() }
 
-    override fun actionsForTrace() {
+    override fun operation() {
         numberHandle.compareAndSet(this, number, (1).toShort())
         numberHandle.set(this, (2).toShort())
 
@@ -132,13 +132,13 @@ class VarHandleShortRepresentationTest : BaseFailingTest("var_handle/varhandle_s
 
 
 
-class VarHandleByteRepresentationTest : BaseFailingTest("var_handle/varhandle_byte_representation.txt") {
+class VarHandleByteRepresentationTest : BaseTraceRepresentationTest("var_handle/varhandle_byte_representation.txt") {
 
     @Volatile
     private var number: Byte = (1).toByte()
     private var array = ByteArray(10) { it.toByte() }
 
-    override fun actionsForTrace() {
+    override fun operation() {
         numberHandle.compareAndSet(this, number, (1).toByte())
         numberHandle.set(this, (2).toByte())
 
@@ -169,13 +169,13 @@ class VarHandleByteRepresentationTest : BaseFailingTest("var_handle/varhandle_by
 
 
 
-class VarHandleCharRepresentationTest : BaseFailingTest("var_handle/varhandle_char_representation.txt") {
+class VarHandleCharRepresentationTest : BaseTraceRepresentationTest("var_handle/varhandle_char_representation.txt") {
 
     @Volatile
     private var number: Char = '1'
     private var array = CharArray(10) { it.toChar() }
 
-    override fun actionsForTrace() {
+    override fun operation() {
         numberHandle.compareAndSet(this, number, '1')
         numberHandle.set(this, '2')
 
@@ -206,13 +206,13 @@ class VarHandleCharRepresentationTest : BaseFailingTest("var_handle/varhandle_ch
 
 
 
-class VarHandleBooleanRepresentationTest : BaseFailingTest("var_handle/varhandle_boolean_representation.txt") {
+class VarHandleBooleanRepresentationTest : BaseTraceRepresentationTest("var_handle/varhandle_boolean_representation.txt") {
 
     @Volatile
     private var number: Boolean = false
     private var array = BooleanArray(10) { false }
 
-    override fun actionsForTrace() {
+    override fun operation() {
         numberHandle.compareAndSet(this, number, false)
         numberHandle.set(this, true)
 
@@ -243,13 +243,13 @@ class VarHandleBooleanRepresentationTest : BaseFailingTest("var_handle/varhandle
 
 
 
-class VarHandleLongRepresentationTest : BaseFailingTest("var_handle/varhandle_long_representation.txt") {
+class VarHandleLongRepresentationTest : BaseTraceRepresentationTest("var_handle/varhandle_long_representation.txt") {
 
     @Volatile
     private var number: Long = 1L
     private var array = LongArray(10) { it.toLong() }
 
-    override fun actionsForTrace() {
+    override fun operation() {
         numberHandle.compareAndSet(this, number, 1L)
         numberHandle.set(this, 2L)
 
@@ -280,13 +280,13 @@ class VarHandleLongRepresentationTest : BaseFailingTest("var_handle/varhandle_lo
 
 
 
-class VarHandleFloatRepresentationTest : BaseFailingTest("var_handle/varhandle_float_representation.txt") {
+class VarHandleFloatRepresentationTest : BaseTraceRepresentationTest("var_handle/varhandle_float_representation.txt") {
 
     @Volatile
     private var number: Float = 1f
     private var array = FloatArray(10) { it.toFloat() }
 
-    override fun actionsForTrace() {
+    override fun operation() {
         numberHandle.compareAndSet(this, number, 1f)
         numberHandle.set(this, 2f)
 
@@ -317,13 +317,13 @@ class VarHandleFloatRepresentationTest : BaseFailingTest("var_handle/varhandle_f
 
 
 
-class VarHandleDoubleRepresentationTest : BaseFailingTest("var_handle/varhandle_double_representation.txt") {
+class VarHandleDoubleRepresentationTest : BaseTraceRepresentationTest("var_handle/varhandle_double_representation.txt") {
 
     @Volatile
     private var number: Double = 1.0
     private var array = DoubleArray(10) { it.toDouble() }
 
-    override fun actionsForTrace() {
+    override fun operation() {
         numberHandle.compareAndSet(this, number, 1.0)
         numberHandle.set(this, 2.0)
 

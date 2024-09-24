@@ -10,12 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.annotations.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.jetbrains.kotlinx.lincheck.util.InternalLincheckExceptionEmulator.throwException
-import org.jetbrains.kotlinx.lincheck_test.util.*
-import org.junit.*
+import org.jetbrains.kotlinx.lincheck.util.InternalLincheckExceptionEmulator
 
 /**
  * This test checks that if exception is thrown from the Lincheck itself, it will be reported properly.
@@ -23,25 +18,10 @@ import org.junit.*
  * which is located in org.jetbrains.kotlinx.lincheck package, so exception will be treated like internal bug.
  */
 @Suppress("UNUSED")
-class InternalLincheckBugTest {
+class InternalLincheckBugTest : BaseTraceRepresentationTest("internal_bug_report.txt") {
 
-    private var canEnterForbiddenSection = false
-
-    @Operation
-    fun operation1() {
-        canEnterForbiddenSection = true
-        canEnterForbiddenSection = false
+    override fun operation() {
+        InternalLincheckExceptionEmulator.throwException()
     }
 
-    @Operation
-    fun operation2() {
-        if (canEnterForbiddenSection) throwException()
-    }
-
-    @Test
-    fun test() = ModelCheckingOptions()
-        .actorsPerThread(2)
-        .checkImpl(this::class.java) { failure ->
-            failure.checkLincheckOutput("internal_bug_report.txt")
-        }
 }

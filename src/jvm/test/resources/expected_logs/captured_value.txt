@@ -1,54 +1,28 @@
 = Invalid execution results =
-| ------------------------------- |
-|    Thread 1    |    Thread 2    |
-| ------------------------------- |
-| operation(): 0 | operation(): 0 |
-| ------------------------------- |
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
 
 The following interleaving leads to the error:
-| ----------------------------------------------------------------------------------------------------------------------------------------- |
-|    Thread 1    |                                                         Thread 2                                                         |
-| ----------------------------------------------------------------------------------------------------------------------------------------- |
-|                | operation(): 0                                                                                                           |
-|                |   outerClass1.READ: OuterDataClass#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:37) |
-|                |   outerClass2.READ: OuterDataClass#2 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:38) |
-|                |   innerClass.READ: InnerClass#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:39)      |
-|                |   innerClass.READ: InnerClass#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:40)      |
-|                |   otherInnerClass.READ: InnerClass#2 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:41) |
-|                |   primitiveArray.READ: IntArray#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:42)    |
-|                |   objectArray.READ: Array<String>#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:43)  |
-|                |   counter.READ: 0 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:44)                    |
-|                |   switch                                                                                                                 |
-| operation(): 0 |                                                                                                                          |
-|                |   counter.WRITE(1) at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:44)                   |
-|                |   result: 0                                                                                                              |
-| ----------------------------------------------------------------------------------------------------------------------------------------- |
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
 
 Detailed trace:
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                         Thread 1                                                         |                                                         Thread 2                                                         |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                                                          | operation(): 0                                                                                                           |
-|                                                                                                                          |   outerClass1.READ: OuterDataClass#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:37) |
-|                                                                                                                          |   outerClass2.READ: OuterDataClass#2 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:38) |
-|                                                                                                                          |   innerClass.READ: InnerClass#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:39)      |
-|                                                                                                                          |   innerClass.READ: InnerClass#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:40)      |
-|                                                                                                                          |   otherInnerClass.READ: InnerClass#2 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:41) |
-|                                                                                                                          |   primitiveArray.READ: IntArray#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:42)    |
-|                                                                                                                          |   objectArray.READ: Array<String>#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:43)  |
-|                                                                                                                          |   counter.READ: 0 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:44)                    |
-|                                                                                                                          |   switch                                                                                                                 |
-| operation(): 0                                                                                                           |                                                                                                                          |
-|   outerClass1.READ: OuterDataClass#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:37) |                                                                                                                          |
-|   outerClass2.READ: OuterDataClass#2 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:38) |                                                                                                                          |
-|   innerClass.READ: InnerClass#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:39)      |                                                                                                                          |
-|   innerClass.READ: InnerClass#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:40)      |                                                                                                                          |
-|   otherInnerClass.READ: InnerClass#2 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:41) |                                                                                                                          |
-|   primitiveArray.READ: IntArray#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:42)    |                                                                                                                          |
-|   objectArray.READ: Array<String>#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:43)  |                                                                                                                          |
-|   counter.READ: 0 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:44)                    |                                                                                                                          |
-|   counter.WRITE(1) at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:44)                   |                                                                                                                          |
-|   result: 0                                                                                                              |                                                                                                                          |
-|                                                                                                                          |   counter.WRITE(1) at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:44)                   |
-|                                                                                                                          |   result: 0                                                                                                              |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------------------------------------------ |
+|                                                         Thread 1                                                         |
+| ------------------------------------------------------------------------------------------------------------------------ |
+| operation()                                                                                                              |
+|   outerClass1.READ: OuterDataClass#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:29) |
+|   outerClass2.READ: OuterDataClass#2 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:30) |
+|   innerClass.READ: InnerClass#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:31)      |
+|   innerClass.READ: InnerClass#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:32)      |
+|   otherInnerClass.READ: InnerClass#2 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:33) |
+|   primitiveArray.READ: IntArray#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:34)    |
+|   objectArray.READ: Array<String>#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:35)  |
+|   result: void                                                                                                           |
+| ------------------------------------------------------------------------------------------------------------------------ |

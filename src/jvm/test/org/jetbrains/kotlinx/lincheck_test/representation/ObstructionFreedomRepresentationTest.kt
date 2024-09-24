@@ -14,10 +14,8 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
 
-import java.lang.StringBuilder
 import java.util.concurrent.atomic.*
 import org.junit.*
 
@@ -25,11 +23,12 @@ import org.junit.*
  * This test checks that the last event in the case of an active lock
  * that causes obstruction freedom violation is reported.
  */
-class ObstructionFreedomActiveLockRepresentationTest {
+class ObstructionFreedomActiveLockRepresentationTest : BaseTraceRepresentationTest(
+    "obstruction_freedom_violation_with_no_detected_cycle.txt"
+) {
     private val counter = AtomicInteger(0)
 
-    @Operation
-    fun operation() {
+    override fun operation() {
         // The first invocation will not fail
         incrementManyTimes()
         // This invocation will fail immediately after `counter.get`,
@@ -37,7 +36,7 @@ class ObstructionFreedomActiveLockRepresentationTest {
         incrementManyTimes()
     }
 
-    fun incrementManyTimes() {
+    private fun incrementManyTimes() {
         counter.get()
         // repeat exactly the maximum number of times that does not cause obstruction freedom violation
         repeat(ManagedCTestConfiguration.DEFAULT_HANGING_DETECTION_THRESHOLD) {
@@ -45,15 +44,9 @@ class ObstructionFreedomActiveLockRepresentationTest {
         }
     }
 
-    @Test
-    fun test() = ModelCheckingOptions()
-        .actorsPerThread(1)
-        .actorsBefore(0)
-        .actorsAfter(0)
-        .threads(1)
-        .checkObstructionFreedom(true)
-        .checkImpl(this::class.java)
-        .checkLincheckOutput("obstruction_freedom_violation_with_no_detected_cycle.txt")
+    override fun ModelCheckingOptions.customize() {
+        checkObstructionFreedom(true)
+    }
 
 }
 
@@ -68,13 +61,14 @@ class ObstructionFreedomSynchronizedRepresentationTest {
     fun operation(): Int = synchronized(this) { counter++ }
 
     @Test
-    fun test() = ModelCheckingOptions().apply {
-        actorsPerThread(1)
-        actorsBefore(0)
-        actorsAfter(0)
-        threads(2)
-        checkObstructionFreedom(true)
-    }
+    fun test() = ModelCheckingOptions()
+        .addCustomScenario {
+            parallel {
+                thread { actor(::operation) }
+                thread { actor(::operation) }
+            }
+        }
+        .checkObstructionFreedom(true)
         .checkImpl(this::class.java)
         .checkLincheckOutput("obstruction_freedom_synchronized.txt")
 

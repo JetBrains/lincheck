@@ -24,7 +24,9 @@ class NoOperationsDefinedTest {
 
     @Test
     fun test() {
-        val exception = assertThrows(IllegalStateException::class.java) { ModelCheckingOptions().check(this::class) }
+        val exception = assertThrows(IllegalStateException::class.java) {
+            ModelCheckingOptions().check(this::class)
+        }
         assertEquals(NO_OPERATION_ERROR_MESSAGE, exception.message)
     }
 

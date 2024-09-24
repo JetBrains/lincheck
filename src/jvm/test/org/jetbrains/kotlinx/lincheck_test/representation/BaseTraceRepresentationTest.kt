@@ -13,38 +13,42 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
+import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
+import org.jetbrains.kotlinx.lincheck.execution.*
 import org.junit.Test
 
 /**
  * Failing test that checks that output using [outputFileName].
  * The goal is to place the logic to check trace in the [actionsForTrace] method.
  */
-abstract class BaseFailingTest(private val outputFileName: String) {
-
-    @Volatile
-    private var counter: Int = 0
-
-    @Operation
-    fun increment(): Int {
-        val result = counter++
-        actionsForTrace()
-        return result
-    }
+abstract class BaseTraceRepresentationTest(private val outputFileName: String) {
 
     /**
      * Implement me and place the logic to check its trace.
      */
-    abstract fun actionsForTrace()
+    @Operation
+    abstract fun operation()
 
     @Test
     fun test() = ModelCheckingOptions()
         .addCustomScenario {
             parallel {
-                thread { actor(::increment) }
+                thread { actor(::operation) }
             }
         }
-        .checkImpl(this::class.java)
-        .checkLincheckOutput(outputFileName)
+        // to trigger the lincheck failure, we use the always failing verifier
+        .verifier(FailingVerifier::class.java)
+        .iterations(0)
+        .apply { customize() }
+        .checkImpl(this::class.java) { failure ->
+            failure.checkLincheckOutput(outputFileName)
+        }
 
+    open fun ModelCheckingOptions.customize() {}
+
+}
+
+class FailingVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : Verifier {
+    override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?) = false
 }

@@ -136,6 +136,8 @@ class NonDeterministicStateRepresentationTest() {
             .actorsAfter(0)
         val failure = options.checkImpl(this::class.java)
         check(failure != null) { "the test should fail" }
-        check(failure is IncorrectResultsFailure) { "Incorrect results are expected, but ${failure::class.simpleName} failure found." }
+        check(failure is IncorrectResultsFailure) {
+            "Incorrect results are expected, but ${failure::class.simpleName} failure found."
+        }
     }
 }

@@ -1,48 +1,27 @@
 = Invalid execution results =
-| ------------------------------- |
-|    Thread 1    |    Thread 2    |
-| ------------------------------- |
-| increment(): 0 | increment(): 0 |
-| ------------------------------- |
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
 
 The following interleaving leads to the error:
-| ---------------------------------------------------------------------------------------- |
-|    Thread 1    |                                Thread 2                                 |
-| ---------------------------------------------------------------------------------------- |
-|                | increment(): 0                                                          |
-|                |   counter.READ: 0 at BaseFailingTest.increment(BaseFailingTest.kt:30)   |
-|                |   switch                                                                |
-| increment(): 0 |                                                                         |
-|                |   counter.WRITE(1) at BaseFailingTest.increment(BaseFailingTest.kt:30)  |
-|                |   actionsForTrace() at BaseFailingTest.increment(BaseFailingTest.kt:31) |
-|                |   result: 0                                                             |
-| ---------------------------------------------------------------------------------------- |
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                         Thread 1                                                                                          |                                                                                         Thread 2                                                                                          |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                                                                                                                           | increment(): 0                                                                                                                                                                            |
-|                                                                                                                                                                                           |   counter.READ: 0 at BaseFailingTest.increment(BaseFailingTest.kt:30)                                                                                                                     |
-|                                                                                                                                                                                           |   switch                                                                                                                                                                                  |
-| increment(): 0                                                                                                                                                                            |                                                                                                                                                                                           |
-|   counter.READ: 0 at BaseFailingTest.increment(BaseFailingTest.kt:30)                                                                                                                     |                                                                                                                                                                                           |
-|   counter.WRITE(1) at BaseFailingTest.increment(BaseFailingTest.kt:30)                                                                                                                    |                                                                                                                                                                                           |
-|   actionsForTrace() at BaseFailingTest.increment(BaseFailingTest.kt:31)                                                                                                                   |                                                                                                                                                                                           |
-|     Array<IntWrapper>#1[2].getObject(): IntWrapper#1 at UnsafeTraceRepresentationTest.actionsForTrace(UnsafeTraceRepresentationTest.kt:23)                                                |                                                                                                                                                                                           |
-|     node.compareAndSwapObject(IntWrapper#2,IntWrapper#3): true at UnsafeTraceRepresentationTest.actionsForTrace(UnsafeTraceRepresentationTest.kt:24)                                      |                                                                                                                                                                                           |
-|     value.READ: 2 at UnsafeTraceRepresentationTest.actionsForTrace(UnsafeTraceRepresentationTest.kt:25)                                                                                   |                                                                                                                                                                                           |
-|     value.compareAndSwapInt(2,3): true at UnsafeTraceRepresentationTest.actionsForTrace(UnsafeTraceRepresentationTest.kt:25)                                                              |                                                                                                                                                                                           |
-|     UnsafeTraceRepresentationTest.staticNode.compareAndSwapObject(IntWrapper#4,IntWrapper#5): false at UnsafeTraceRepresentationTest.actionsForTrace(UnsafeTraceRepresentationTest.kt:27) |                                                                                                                                                                                           |
-|     node.value.compareAndSwapInt(4,6): true at UnsafeTraceRepresentationTest.actionsForTrace(UnsafeTraceRepresentationTest.kt:28)                                                         |                                                                                                                                                                                           |
-|   result: 0                                                                                                                                                                               |                                                                                                                                                                                           |
-|                                                                                                                                                                                           |   counter.WRITE(1) at BaseFailingTest.increment(BaseFailingTest.kt:30)                                                                                                                    |
-|                                                                                                                                                                                           |   actionsForTrace() at BaseFailingTest.increment(BaseFailingTest.kt:31)                                                                                                                   |
-|                                                                                                                                                                                           |     Array<IntWrapper>#1[2].getObject(): IntWrapper#1 at UnsafeTraceRepresentationTest.actionsForTrace(UnsafeTraceRepresentationTest.kt:23)                                                |
-|                                                                                                                                                                                           |     node.compareAndSwapObject(IntWrapper#3,IntWrapper#6): true at UnsafeTraceRepresentationTest.actionsForTrace(UnsafeTraceRepresentationTest.kt:24)                                      |
-|                                                                                                                                                                                           |     value.READ: 3 at UnsafeTraceRepresentationTest.actionsForTrace(UnsafeTraceRepresentationTest.kt:25)                                                                                   |
-|                                                                                                                                                                                           |     value.compareAndSwapInt(3,3): true at UnsafeTraceRepresentationTest.actionsForTrace(UnsafeTraceRepresentationTest.kt:25)                                                              |
-|                                                                                                                                                                                           |     UnsafeTraceRepresentationTest.staticNode.compareAndSwapObject(IntWrapper#4,IntWrapper#7): false at UnsafeTraceRepresentationTest.actionsForTrace(UnsafeTraceRepresentationTest.kt:27) |
-|                                                                                                                                                                                           |     node.value.compareAndSwapInt(4,6): true at UnsafeTraceRepresentationTest.actionsForTrace(UnsafeTraceRepresentationTest.kt:28)                                                         |
-|                                                                                                                                                                                           |   result: 0                                                                                                                                                                               |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                     Thread 1                                                                                     |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                                                      |
+|   Array<IntWrapper>#1[2].getObject(): IntWrapper#1 at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:23)                                               |
+|   node.compareAndSwapObject(IntWrapper#2,IntWrapper#3): true at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:24)                                     |
+|   value.READ: 2 at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:25)                                                                                  |
+|   value.compareAndSwapInt(2,3): true at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:25)                                                             |
+|   UnsafeTraceRepresentationTest.staticNode.compareAndSwapObject(IntWrapper#4,IntWrapper#5): true at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:27) |
+|   node.value.compareAndSwapInt(4,6): true at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:28)                                                        |
+|   result: void                                                                                                                                                                   |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

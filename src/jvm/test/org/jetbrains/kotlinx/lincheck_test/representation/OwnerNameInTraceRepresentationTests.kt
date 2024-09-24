@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-class OwnerNameInTraceRepresentationTest : BaseFailingTest("owner_name_in_trace.txt") {
+class OwnerNameInTraceRepresentationTest : BaseTraceRepresentationTest("owner_name_in_trace.txt") {
 
     @Volatile
     private var value: Int = 1
@@ -20,7 +20,7 @@ class OwnerNameInTraceRepresentationTest : BaseFailingTest("owner_name_in_trace.
     private val array: Array<Int> = arrayOf(0)
 
 
-    override fun actionsForTrace() {
+    override fun operation() {
         readWriteTestMethod()
         val result = stub
         result.readWriteTestMethod()
@@ -53,7 +53,7 @@ class OwnerNameInTraceRepresentationTest : BaseFailingTest("owner_name_in_trace.
     }
 }
 
-class ArrayNameInTraceRepresentationTest : BaseFailingTest("array_name_in_trace.txt") {
+class ArrayNameInTraceRepresentationTest : BaseTraceRepresentationTest("array_name_in_trace.txt") {
 
     private var intArray: IntArray = intArrayOf(1)
     private var shortArray: ShortArray = shortArrayOf(1)
@@ -65,7 +65,7 @@ class ArrayNameInTraceRepresentationTest : BaseFailingTest("array_name_in_trace.
     private val doubleArray: DoubleArray = doubleArrayOf(1.0)
     private val longArray: LongArray = longArrayOf(1L)
 
-    override fun actionsForTrace() {
+    override fun operation() {
         readActions()
         writeActions()
     }

@@ -62,9 +62,13 @@ class MethodReportingTest {
     @Test
     fun test() {
         val options = ModelCheckingOptions()
-            .actorsPerThread(1)
-            .actorsBefore(0)
-            .actorsAfter(0)
+            .addCustomScenario {
+                parallel {
+                    thread { actor(::operation) }
+                    thread { actor(::operation) }
+                }
+            }
+            .iterations(0)
             .addGuarantee(forClasses(this::class.java.name).methods("inc").treatAsAtomic())
             .addGuarantee(forClasses(this::class.java.name).methods("ignored").ignore())
         val failure = options.checkImpl(this::class.java)
@@ -103,11 +107,14 @@ class CaughtExceptionMethodReportingTest {
     }
 
     @Test
-    fun test() = ModelCheckingOptions().apply {
-        actorsPerThread(1)
-        actorsBefore(0)
-        actorsAfter(0)
-    }
+    fun test() = ModelCheckingOptions()
+        .addCustomScenario {
+            parallel {
+                thread { actor(::operation) }
+                thread { actor(::operation) }
+            }
+        }
+        .iterations(0)
         .checkImpl(this::class.java)
         .checkLincheckOutput("method_reporting.txt")
 

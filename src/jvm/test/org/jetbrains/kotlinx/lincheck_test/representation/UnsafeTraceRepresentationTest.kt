@@ -13,13 +13,13 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
 
 
-class UnsafeTraceRepresentationTest : BaseFailingTest("unsafe_representation_trace.txt") {
+class UnsafeTraceRepresentationTest : BaseTraceRepresentationTest("unsafe_representation_trace.txt") {
 
     private val array = Array(3) { IntWrapper(it) }
     private var value: Int = 2
     private val node = IntWrapper(3)
 
-    override fun actionsForTrace() {
+    override fun operation() {
         unsafe.getObject(array, baseOffset + indexScale * 2L)
         unsafe.compareAndSwapObject(this, nodeFieldOffset, node, IntWrapper(4))
         unsafe.compareAndSwapInt(this, valueFieldOffset, value, 3)

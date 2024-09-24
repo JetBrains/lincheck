@@ -1,42 +1,24 @@
 = Invalid execution results =
-| ------------------------------- |
-|    Thread 1    |    Thread 2    |
-| ------------------------------- |
-| increment(): 0 | increment(): 0 |
-| ------------------------------- |
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
 
 The following interleaving leads to the error:
-| -------------------------------------------------------------------------------------------------------------------------------------------- |
-|    Thread 1    |                                                          Thread 2                                                           |
-| -------------------------------------------------------------------------------------------------------------------------------------------- |
-|                | increment(): 0                                                                                                              |
-|                |   counter.READ: 0 at SunUnsafeTraceRepresentationTest.increment(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:35)       |
-|                |   switch                                                                                                                    |
-| increment(): 0 |                                                                                                                             |
-|                |   counter.WRITE(1) at SunUnsafeTraceRepresentationTest.increment(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:35)      |
-|                |   actionsJustForTrace() at SunUnsafeTraceRepresentationTest.increment(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:36) |
-|                |   result: 0                                                                                                                 |
-| -------------------------------------------------------------------------------------------------------------------------------------------- |
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
 
 Detailed trace:
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                   Thread 1                                                                                   |                                                                                   Thread 2                                                                                   |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                                                                                                              | increment(): 0                                                                                                                                                               |
-|                                                                                                                                                                              |   counter.READ: 0 at SunUnsafeTraceRepresentationTest.increment(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:35)                                                        |
-|                                                                                                                                                                              |   switch                                                                                                                                                                     |
-| increment(): 0                                                                                                                                                               |                                                                                                                                                                              |
-|   counter.READ: 0 at SunUnsafeTraceRepresentationTest.increment(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:35)                                                        |                                                                                                                                                                              |
-|   counter.WRITE(1) at SunUnsafeTraceRepresentationTest.increment(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:35)                                                       |                                                                                                                                                                              |
-|   actionsJustForTrace() at SunUnsafeTraceRepresentationTest.increment(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:36)                                                  |                                                                                                                                                                              |
-|     node.READ: IntWrapper#1 at SunUnsafeTraceRepresentationTest.actionsJustForTrace(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:51)                                    |                                                                                                                                                                              |
-|     node.compareAndSwapObject(IntWrapper#1,IntWrapper#2): true at SunUnsafeTraceRepresentationTest.actionsJustForTrace(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:51) |                                                                                                                                                                              |
-|     node.getAndSetObject(IntWrapper#3): IntWrapper#2 at SunUnsafeTraceRepresentationTest.actionsJustForTrace(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:52)           |                                                                                                                                                                              |
-|   result: 0                                                                                                                                                                  |                                                                                                                                                                              |
-|                                                                                                                                                                              |   counter.WRITE(1) at SunUnsafeTraceRepresentationTest.increment(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:35)                                                       |
-|                                                                                                                                                                              |   actionsJustForTrace() at SunUnsafeTraceRepresentationTest.increment(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:36)                                                  |
-|                                                                                                                                                                              |     node.READ: IntWrapper#3 at SunUnsafeTraceRepresentationTest.actionsJustForTrace(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:51)                                    |
-|                                                                                                                                                                              |     node.compareAndSwapObject(IntWrapper#3,IntWrapper#4): true at SunUnsafeTraceRepresentationTest.actionsJustForTrace(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:51) |
-|                                                                                                                                                                              |     node.getAndSetObject(IntWrapper#5): IntWrapper#4 at SunUnsafeTraceRepresentationTest.actionsJustForTrace(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:52)           |
-|                                                                                                                                                                              |   result: 0                                                                                                                                                                  |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                             Thread 1                                                                             |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                                      |
+|   node.READ: IntWrapper#1 at SunUnsafeTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:26)                                    |
+|   node.compareAndSwapObject(IntWrapper#1,IntWrapper#2): true at SunUnsafeTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:26) |
+|   node.getAndSetObject(IntWrapper#3): IntWrapper#2 at SunUnsafeTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:27)           |
+|   result: void                                                                                                                                                   |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
