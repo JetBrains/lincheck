@@ -131,10 +131,32 @@ abstract class ManagedStrategy(
 
     /**
      * In case when the plugin is enabled, we also enable [eventIdStrictOrderingCheck] property and check
-     * that ids provided to the [beforeEvent] method and corresponding trace points are sequentially ordered.
+     * that event ids provided to the [beforeEvent] method
+     * and corresponding trace points are sequentially ordered.
      * But we do not add a [MethodCallTracePoint] for the coroutine resumption.
      * So this field just tracks if the last [beforeMethodCall] invocation was actually a coroutine resumption.
      * In this case, we just skip the next [beforeEvent] call.
+     *
+     * So this is a hack to make the plugin integration working without refactoring too much code.
+     *
+     * In more detail: when the resumption is called, a lot of stuff is happening under the hood.
+     * In particular, a suspend fun is called with the given completion object.
+     * [MethodCallTransformer] instruments this call as it instruments other method calls,
+     * however, in case of resumption this suspend fun call should not create new trace point.
+     * [MethodCallTransformer] does not know about it, it always injects beforeEvent call regardless:
+     *
+     * ```
+     * invokeStatic(Injections::beforeMethodCall)
+     * invokeBeforeEventIfPluginEnabled("method call $methodName", setMethodEventId = true)
+     * ```
+     *
+     * Therefore, to "skip" this beforeEvent call following resumption call to suspend fun,
+     * we use this `skipNextBeforeEvent` flag.
+     *
+     * A better approach would be to refactor a code, and instead just assign eventId-s directly to trace points.
+     * Methods like `beforeMethodCall` then can return `eventId` of the created trace point,
+     * or something like `-1` in case when no trace point is created.
+     * Then subsequent beforeEvent call can just take this `eventId` from the stack.
      *
      * TODO: refactor this --- we should have a more reliable way
      *   to communicate coroutine resumption event to the plugin.
@@ -1327,11 +1349,11 @@ abstract class ManagedStrategy(
 
     /* Methods to control the current call context. */
 
-    private fun beforeMethodEnter(receiver: Any?) {
-        if (receiver == null) {
+    private fun beforeMethodEnter(owner: Any?) {
+        if (owner == null) {
             callStackContextPerThread[currentThread].add(CallContext.StaticCallContext)
         } else {
-            callStackContextPerThread[currentThread].add(CallContext.InstanceCallContext(receiver))
+            callStackContextPerThread[currentThread].add(CallContext.InstanceCallContext(owner))
         }
     }
 
