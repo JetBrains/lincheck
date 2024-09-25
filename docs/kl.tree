@@ -1,18 +1,13 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE product-profile
-        SYSTEM "https://resources.jetbrains.com/stardust/product-profile.dtd">
-
-<product-profile id="kl"
-                 name="kotlinx-lincheck"
-                 start-page="lincheck-guide.md">
-
-    <chunk include-id="lincheck">
-        <toc-element id="lincheck-guide.md"/>
-        <toc-element id="introduction.md"/>
-        <toc-element id="testing-strategies.md" toc-title="Testing strategies"/>
-        <toc-element id="operation-arguments.md"/>
-        <toc-element id="constraints.md"/>
-        <toc-element id="progress-guarantees.md"/>
-        <toc-element id="sequential-specification.md"/>
-    </chunk>
-</product-profile>
+<?xml version='1.0' encoding='utf-8'?>
+<!DOCTYPE instance-profile SYSTEM "https://resources.jetbrains.com/writerside/1.0/product-profile.dtd">
+<instance-profile id="kl" name="kotlinx-lincheck" start-page="lincheck-guide.md">
+	<snippet id="lincheck">
+		<toc-element topic="lincheck-guide.md"/>
+		<toc-element topic="introduction.md"/>
+		<toc-element toc-title="Testing strategies" topic="testing-strategies.md"/>
+		<toc-element topic="operation-arguments.md"/>
+		<toc-element topic="constraints.md"/>
+		<toc-element topic="progress-guarantees.md"/>
+		<toc-element topic="sequential-specification.md"/>
+	</snippet>
+</instance-profile>

@@ -98,7 +98,7 @@ class ConcurrentSkipListMapTest {
 >   steps while a particular operation may be stuck.
 > * **obstruction-freedom**, when any operation is completed in a bounded number of steps if all the other threads pause.
 >
-{type="tip"}
+{style="tip"}
 
 At the moment, Lincheck supports only the obstruction-freedom progress guarantees. However, most real-life liveness bugs
 add unexpected blocking code, so the obstruction-freedom check will also help with lock-free and wait-free algorithms.
@@ -107,7 +107,7 @@ add unexpected blocking code, so the obstruction-freedom check will also help wi
 > * See [another example](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/ObstructionFreedomViolationTest.kt)
 >   where the Michael-Scott queue implementation is tested for progress guarantees.
 >
-{type="note"}
+{style="note"}
 
 ## Next step
 

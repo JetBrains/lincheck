@@ -5,7 +5,7 @@ by writing a straightforward sequential implementation of the testing data struc
 
 > This feature also allows you to write a single test instead of two separate sequential and concurrent tests.
 >
-{type="tip"}
+{style="tip"}
 
 To provide a sequential specification of the algorithm for verification:
 
@@ -51,4 +51,4 @@ class SequentialQueue {
 
 > Get the [full code of the examples](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/ConcurrentLinkedQueueTest.kt).
 >
-{type="note"}
+{style="note"}

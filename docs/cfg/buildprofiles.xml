@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
 <!--
   ~ Lincheck
   ~
@@ -9,12 +8,11 @@
   ~ Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
   ~ with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
   -->
-
-<buildprofiles>
-    <variables>
-        <enable-browser-edits>true</enable-browser-edits>
-        <browser-edits-url>https://github.com/Kotlin/kotlinx-lincheck/edit/master/docs/</browser-edits-url>
-        <allow-indexable-eaps>true</allow-indexable-eaps>
-    </variables>
-    <build-profile product="kl"/>
+<buildprofiles xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/build-profiles.xsd">
+	<variables>
+		<enable-browser-edits>true</enable-browser-edits>
+		<browser-edits-url>https://github.com/Kotlin/kotlinx-lincheck/edit/master/docs/</browser-edits-url>
+		<allow-indexable-eaps>true</allow-indexable-eaps>
+	</variables>
+	<build-profile instance="kl"/>
 </buildprofiles>
