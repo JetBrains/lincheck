@@ -18,47 +18,47 @@ interface MonitorTracker {
     /**
      * Attempts to acquire a monitor for a thread.
      *
-     * @param iThread the id of the thread performing acquisition.
+     * @param threadId the id of the thread performing acquisition.
      * @param monitor the monitor object to acquire.
      * @return true if the monitor was successfully acquired, false otherwise.
      */
-    fun acquireMonitor(iThread: Int, monitor: Any): Boolean
+    fun acquireMonitor(threadId: Int, monitor: Any): Boolean
 
     /**
      * Releases a monitor previously acquired by a thread.
      *
-     * @param iThread the id of the thread releasing the monitor.
+     * @param threadId the id of the thread releasing the monitor.
      * @param monitor the monitor object to release.
      */
-    fun releaseMonitor(iThread: Int, monitor: Any)
+    fun releaseMonitor(threadId: Int, monitor: Any)
 
     /**
      * Waits for a monitor to be notified by another thread.
      *
-     * @param iThread the id of the thread waiting on the monitor.
+     * @param threadId the id of the thread waiting on the monitor.
      * @param monitor the monitor object to wait on.
      * @return true if the thread should continue waiting on the monitor,
      *   false if the monitor was notified.
      */
-    fun waitOnMonitor(iThread: Int, monitor: Any): Boolean
+    fun waitOnMonitor(threadId: Int, monitor: Any): Boolean
 
     /**
      * Notifies a monitor object.
      *
-     * @param iThread the id of the thread performing notification.
+     * @param threadId the id of the thread performing notification.
      * @param monitor the notified monitor object.
      * @param notifyAll true if all threads waiting on the monitor should be notified,
      *   false if only one thread should be notified.
      */
-    fun notify(iThread: Int, monitor: Any, notifyAll: Boolean)
+    fun notify(threadId: Int, monitor: Any, notifyAll: Boolean)
 
     /**
      * Checks if a thread with the given ID is waiting on some monitor.
      *
-     * @param iThread the id of the thread to check.
+     * @param threadId the id of the thread to check.
      * @return true if the thread with the given id is waiting on a monitor, false otherwise.
      */
-    fun isWaiting(iThread: Int): Boolean
+    fun isWaiting(threadId: Int): Boolean
 
     /**
      * Resets the state of the monitor tracker.

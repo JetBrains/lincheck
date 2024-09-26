@@ -18,7 +18,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanObjectNumeration
 import java.lang.reflect.*
 import java.util.*
-import kotlin.random.*
 import kotlin.random.Random
 
 /**
@@ -615,25 +614,25 @@ internal class ModelCheckingMonitorTracker(nThreads: Int) : MonitorTracker {
     /**
      * Performs a logical acquisition.
      */
-    override fun acquireMonitor(iThread: Int, monitor: Any): Boolean {
+    override fun acquireMonitor(threadId: Int, monitor: Any): Boolean {
         // Increment the reentrant depth and store the
         // acquisition info if needed.
         val info = acquiredMonitors.computeIfAbsent(monitor) {
-            MonitorAcquiringInfo(monitor, iThread, 0)
+            MonitorAcquiringInfo(monitor, threadId, 0)
         }
-        if (info.iThread != iThread) {
-            waitingMonitor[iThread] = MonitorAcquiringInfo(monitor, iThread, 0)
+        if (info.threadId != threadId) {
+            waitingMonitor[threadId] = MonitorAcquiringInfo(monitor, threadId, 0)
             return false
         }
         info.timesAcquired++
-        waitingMonitor[iThread] = null
+        waitingMonitor[threadId] = null
         return true
     }
 
     /**
      * Performs a logical release.
      */
-    override fun releaseMonitor(iThread: Int, monitor: Any) {
+    override fun releaseMonitor(threadId: Int, monitor: Any) {
         // Decrement the reentrancy depth and remove the acquisition info
         // if the monitor becomes free to acquire by another thread.
         val info = acquiredMonitors[monitor]!!
@@ -645,48 +644,48 @@ internal class ModelCheckingMonitorTracker(nThreads: Int) : MonitorTracker {
     /**
      * Returns `true` if the corresponding thread is waiting on some monitor.
      */
-    override fun isWaiting(iThread: Int): Boolean {
-        val monitor = waitingMonitor[iThread]?.monitor ?: return false
-        return waitForNotify[iThread] || !canAcquireMonitor(iThread, monitor)
+    override fun isWaiting(threadId: Int): Boolean {
+        val monitor = waitingMonitor[threadId]?.monitor ?: return false
+        return waitForNotify[threadId] || !canAcquireMonitor(threadId, monitor)
     }
 
     /**
      * Returns `true` if the monitor is already acquired by
-     * the thread [iThread], or if this monitor is free to acquire.
+     * the thread [threadId], or if this monitor is free to acquire.
      */
-    private fun canAcquireMonitor(iThread: Int, monitor: Any) =
-        acquiredMonitors[monitor]?.iThread?.equals(iThread) ?: true
+    private fun canAcquireMonitor(threadId: Int, monitor: Any) =
+        acquiredMonitors[monitor]?.threadId?.equals(threadId) ?: true
 
     /**
      * Performs a logical wait, [isWaiting] for the specified thread
      * returns `true` until the corresponding [notify] is invoked.
      */
-    override fun waitOnMonitor(iThread: Int, monitor: Any): Boolean {
+    override fun waitOnMonitor(threadId: Int, monitor: Any): Boolean {
         // TODO: we can add spurious wakeups here
         var info = acquiredMonitors[monitor]
         if (info != null) {
             // in case when lock is currently acquired by another thread continue waiting
-            if (info.iThread != iThread)
+            if (info.threadId != threadId)
                 return true
             // in case when current thread owns the lock we release it
             // in order to give other thread a chance to acquire it
             // and put the current thread into waiting state
-            waitForNotify[iThread] = true
-            waitingMonitor[iThread] = info
+            waitForNotify[threadId] = true
+            waitingMonitor[threadId] = info
             acquiredMonitors.remove(monitor)
             return true
         }
         // otherwise the lock is held by no-one and can be acquired
-        info = waitingMonitor[iThread]
-        check(info != null && info.monitor === monitor && info.iThread == iThread) {
+        info = waitingMonitor[threadId]
+        check(info != null && info.monitor === monitor && info.threadId == threadId) {
             "Monitor should have been acquired by this thread"
         }
         // if there has been no `notify` yet continue waiting
-        if (waitForNotify[iThread])
+        if (waitForNotify[threadId])
             return true
         // otherwise acquire monitor restoring its re-entrance depth
         acquiredMonitors[monitor] = info
-        waitingMonitor[iThread] = null
+        waitingMonitor[threadId] = null
         return false
     }
 
@@ -694,7 +693,7 @@ internal class ModelCheckingMonitorTracker(nThreads: Int) : MonitorTracker {
      * Performs the logical `notify`.
      * Always notifies all threads, odd threads will simply have a spurious wakeup.
      */
-    override fun notify(iThread: Int, monitor: Any, notifyAll: Boolean) {
+    override fun notify(threadId: Int, monitor: Any, notifyAll: Boolean) {
         waitingMonitor.forEachIndexed { tid, info ->
             if (monitor === info?.monitor)
                 waitForNotify[tid] = false
@@ -708,10 +707,10 @@ internal class ModelCheckingMonitorTracker(nThreads: Int) : MonitorTracker {
     }
 
     /**
-     * Stores the [monitor], id of the thread acquired the monitor [iThread],
+     * Stores the [monitor], id of the thread acquired the monitor [threadId],
      * and the number of reentrant acquisitions [timesAcquired].
      */
-    private class MonitorAcquiringInfo(val monitor: Any, val iThread: Int, var timesAcquired: Int)
+    private class MonitorAcquiringInfo(val monitor: Any, val threadId: Int, var timesAcquired: Int)
 }
 
 class ModelCheckingParkingTracker(val nThreads: Int, val allowSpuriousWakeUps: Boolean = false) : ParkingTracker {
@@ -719,20 +718,20 @@ class ModelCheckingParkingTracker(val nThreads: Int, val allowSpuriousWakeUps: B
     // stores `true` for the parked threads
     private val parked = BooleanArray(nThreads) { false }
 
-    override fun park(iThread: Int) {
-        parked[iThread] = true
+    override fun park(threadId: Int) {
+        parked[threadId] = true
     }
 
-    override fun waitUnpark(iThread: Int): Boolean {
-        return isParked(iThread)
+    override fun waitUnpark(threadId: Int): Boolean {
+        return isParked(threadId)
     }
 
-    override fun unpark(iThread: Int, unparkedThreadId: Int) {
+    override fun unpark(threadId: Int, unparkedThreadId: Int) {
         parked[unparkedThreadId] = false
     }
 
-    override fun isParked(iThread: Int): Boolean =
-        parked[iThread] && !allowSpuriousWakeUps
+    override fun isParked(threadId: Int): Boolean =
+        parked[threadId] && !allowSpuriousWakeUps
 
     override fun reset() {
         parked.fill(false)
