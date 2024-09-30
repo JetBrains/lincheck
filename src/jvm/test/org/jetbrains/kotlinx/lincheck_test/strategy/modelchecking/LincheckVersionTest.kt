@@ -10,14 +10,14 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy.modelchecking
 
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
+import org.jetbrains.kotlinx.lincheck.*
 import org.junit.Assert
 import org.junit.Test
 
 class LincheckVersionTest {
     @Test
     fun `test version should be accessible at runtime`() {
-        val version = ModelCheckingStrategy.lincheckVersion
+        val version = lincheckVersion
         Assert.assertNotNull(version)
         Assert.assertTrue(version.matches("\\d+(\\.\\d+)+(-SNAPSHOT)?".toRegex()))
     }
