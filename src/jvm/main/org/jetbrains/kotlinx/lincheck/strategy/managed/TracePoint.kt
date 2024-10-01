@@ -302,6 +302,7 @@ private fun StackTraceElement.shorten(): String {
 internal enum class SwitchReason(private val reason: String) {
     MONITOR_WAIT("wait on monitor"),
     LOCK_WAIT("lock is already acquired"),
+    PARK_WAIT("thread is parked"),
     ACTIVE_LOCK("active lock detected"),
     SUSPENDED("coroutine is suspended"),
     STRATEGY_SWITCH("");

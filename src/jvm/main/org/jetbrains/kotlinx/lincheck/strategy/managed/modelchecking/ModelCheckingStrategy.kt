@@ -17,7 +17,8 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanObjectNumeration
 import java.lang.reflect.*
-import kotlin.random.*
+import java.util.*
+import kotlin.random.Random
 
 /**
  * The model checking strategy studies all possible interleavings by increasing the
@@ -51,6 +52,13 @@ internal class ModelCheckingStrategy(
     private val generationRandom = Random(0)
     // The interleaving that will be studied on the next invocation.
     private lateinit var currentInterleaving: Interleaving
+
+    // Tracker of objects' allocations and object graph topology.
+    override val objectTracker: ObjectTracker = LocalObjectManager()
+    // Tracker of the monitors' operations.
+    override val monitorTracker: MonitorTracker = ModelCheckingMonitorTracker(nThreads)
+    // Tracker of the thread parking.
+    override val parkingTracker: ParkingTracker = ModelCheckingParkingTracker(nThreads, allowSpuriousWakeUps = true)
 
     override fun nextInvocation(): Boolean {
         currentInterleaving = root.nextInterleaving()
@@ -524,4 +532,209 @@ internal class ModelCheckingStrategy(
 
         fun build() = Interleaving(switchPositions, threadSwitchChoices, lastNoninitializedNode)
     }
+}
+
+/**
+ * Manages objects created within the local scope.
+ * The purpose of this manager is to keep track of locally created objects that aren't yet shared
+ * and automatically delete their dependencies when they become shared.
+ * This tracking helps to avoid exploring unnecessary interleavings, which can occur if access to such local
+ * objects triggers switch points in the model checking strategy.
+ */
+internal class LocalObjectManager : ObjectTracker {
+    /**
+     * An identity hash map holding each local object and its dependent objects.
+     * Each local object is a key, and its value is a list of objects accessible from it.
+     * Note that non-local objects are excluded from this map.
+     */
+    private val localObjects = IdentityHashMap<Any, MutableList<Any>>()
+
+    /**
+     * Registers a new object as a locally accessible one.
+     */
+    override fun registerNewObject(obj: Any) {
+        check(obj !== StaticObject)
+        localObjects[obj] = mutableListOf()
+    }
+
+    override fun registerObjectLink(fromObject: Any, toObject: Any?) {
+        if (toObject == null) return
+        if (fromObject === StaticObject) {
+            markObjectNonLocal(toObject)
+        }
+        val reachableObjects = localObjects[fromObject]
+        if (reachableObjects != null) {
+            check(toObject !== StaticObject)
+            reachableObjects.add(toObject)
+        } else {
+            markObjectNonLocal(toObject)
+        }
+    }
+
+    /**
+     * Removes the specified local object and its dependencies from the set of local objects.
+     * If the removing object references other local objects, they are also removed recursively.
+     */
+    private fun markObjectNonLocal(obj: Any?) {
+        if (obj == null) return
+        val objects = localObjects.remove(obj) ?: return
+        objects.forEach { markObjectNonLocal(it) }
+    }
+
+    override fun shouldTrackObjectAccess(obj: Any): Boolean =
+        !isLocalObject(obj)
+
+    /**
+     * Checks if an object is only locally accessible.
+     */
+    private fun isLocalObject(obj: Any?) = localObjects.containsKey(obj)
+
+    override fun reset() {
+        localObjects.clear()
+    }
+}
+
+/**
+ * Tracks synchronization operations on the monitors (intrinsic locks)
+ */
+internal class ModelCheckingMonitorTracker(nThreads: Int) : MonitorTracker {
+    // Maintains a set of acquired monitors with an information on which thread
+    // performed the acquisition and the reentrancy depth.
+    private val acquiredMonitors = IdentityHashMap<Any, MonitorAcquiringInfo>()
+
+    // Maintains a set of monitors on which each thread is waiting.
+    // Note, that a thread can wait on a free monitor if it is waiting for a `notify` call.
+    // Stores `null` if thread is not waiting on any monitor.
+    private val waitingMonitor = Array<MonitorAcquiringInfo?>(nThreads) { null }
+
+    // Stores `true` for the threads which are waiting for a
+    // `notify` call on the monitor stored in `acquiringMonitor`.
+    private val waitForNotify = BooleanArray(nThreads) { false }
+
+    /**
+     * Performs a logical acquisition.
+     */
+    override fun acquireMonitor(threadId: Int, monitor: Any): Boolean {
+        // Increment the reentrant depth and store the
+        // acquisition info if needed.
+        val info = acquiredMonitors.computeIfAbsent(monitor) {
+            MonitorAcquiringInfo(monitor, threadId, 0)
+        }
+        if (info.threadId != threadId) {
+            waitingMonitor[threadId] = MonitorAcquiringInfo(monitor, threadId, 0)
+            return false
+        }
+        info.timesAcquired++
+        waitingMonitor[threadId] = null
+        return true
+    }
+
+    /**
+     * Performs a logical release.
+     */
+    override fun releaseMonitor(threadId: Int, monitor: Any) {
+        // Decrement the reentrancy depth and remove the acquisition info
+        // if the monitor becomes free to acquire by another thread.
+        val info = acquiredMonitors[monitor]!!
+        info.timesAcquired--
+        if (info.timesAcquired == 0)
+            acquiredMonitors.remove(monitor)
+    }
+
+    /**
+     * Returns `true` if the corresponding thread is waiting on some monitor.
+     */
+    override fun isWaiting(threadId: Int): Boolean {
+        val monitor = waitingMonitor[threadId]?.monitor ?: return false
+        return waitForNotify[threadId] || !canAcquireMonitor(threadId, monitor)
+    }
+
+    /**
+     * Returns `true` if the monitor is already acquired by
+     * the thread [threadId], or if this monitor is free to acquire.
+     */
+    private fun canAcquireMonitor(threadId: Int, monitor: Any) =
+        acquiredMonitors[monitor]?.threadId?.equals(threadId) ?: true
+
+    /**
+     * Performs a logical wait, [isWaiting] for the specified thread
+     * returns `true` until the corresponding [notify] is invoked.
+     */
+    override fun waitOnMonitor(threadId: Int, monitor: Any): Boolean {
+        // TODO: we can add spurious wakeups here
+        var info = acquiredMonitors[monitor]
+        if (info != null) {
+            // in case when lock is currently acquired by another thread continue waiting
+            if (info.threadId != threadId)
+                return true
+            // in case when current thread owns the lock we release it
+            // in order to give other thread a chance to acquire it
+            // and put the current thread into waiting state
+            waitForNotify[threadId] = true
+            waitingMonitor[threadId] = info
+            acquiredMonitors.remove(monitor)
+            return true
+        }
+        // otherwise the lock is held by no-one and can be acquired
+        info = waitingMonitor[threadId]
+        check(info != null && info.monitor === monitor && info.threadId == threadId) {
+            "Monitor should have been acquired by this thread"
+        }
+        // if there has been no `notify` yet continue waiting
+        if (waitForNotify[threadId])
+            return true
+        // otherwise acquire monitor restoring its re-entrance depth
+        acquiredMonitors[monitor] = info
+        waitingMonitor[threadId] = null
+        return false
+    }
+
+    /**
+     * Performs the logical `notify`.
+     * Always notifies all threads, odd threads will simply have a spurious wakeup.
+     */
+    override fun notify(threadId: Int, monitor: Any, notifyAll: Boolean) {
+        waitingMonitor.forEachIndexed { tid, info ->
+            if (monitor === info?.monitor)
+                waitForNotify[tid] = false
+        }
+    }
+
+    override fun reset() {
+        acquiredMonitors.clear()
+        waitingMonitor.fill(null)
+        waitForNotify.fill(false)
+    }
+
+    /**
+     * Stores the [monitor], id of the thread acquired the monitor [threadId],
+     * and the number of reentrant acquisitions [timesAcquired].
+     */
+    private class MonitorAcquiringInfo(val monitor: Any, val threadId: Int, var timesAcquired: Int)
+}
+
+class ModelCheckingParkingTracker(val nThreads: Int, val allowSpuriousWakeUps: Boolean = false) : ParkingTracker {
+
+    // stores `true` for the parked threads
+    private val parked = BooleanArray(nThreads) { false }
+
+    override fun park(threadId: Int) {
+        parked[threadId] = true
+    }
+
+    override fun waitUnpark(threadId: Int): Boolean {
+        return isParked(threadId)
+    }
+
+    override fun unpark(threadId: Int, unparkedThreadId: Int) {
+        parked[unparkedThreadId] = false
+    }
+
+    override fun isParked(threadId: Int): Boolean =
+        parked[threadId] && !allowSpuriousWakeUps
+
+    override fun reset() {
+        parked.fill(false)
+    }
+
 }
