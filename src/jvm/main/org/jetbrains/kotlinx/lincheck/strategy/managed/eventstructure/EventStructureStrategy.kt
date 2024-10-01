@@ -443,7 +443,7 @@ private class EventStructureObjectTracker(
         }
     }
 
-    override fun isTrackedObject(obj: Any): Boolean = true
+    override fun shouldTrackObjectAccess(obj: Any): Boolean = true
 
     override fun getObjectId(obj: Any): ObjectID {
         return eventStructure.objectRegistry.getOrRegisterObjectID(obj.opaque())

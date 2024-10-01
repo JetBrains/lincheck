@@ -17,7 +17,7 @@ import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner.Completion.*
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
+import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.util.*
 import sun.nio.ch.lincheck.*
@@ -263,7 +263,7 @@ internal open class ParallelThreadsRunner(
                     return Suspended
                 }
                 if (strategy is ManagedStrategy) {
-                    strategy.switchCurrentThread(iThread, SwitchReason.STRATEGY_SWITCH, mustSwitch = true)
+                    strategy.switchCurrentThread(threadId, SwitchReason.STRATEGY_SWITCH, mustSwitch = true)
                     blocked = strategy.isBlocked()
                     return@spinWaitUntil false
                 }

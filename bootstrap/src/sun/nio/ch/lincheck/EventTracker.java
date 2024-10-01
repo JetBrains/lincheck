@@ -31,22 +31,29 @@ public interface EventTracker {
 
     void beforeNewObjectCreation(String className);
     void afterNewObjectCreation(Object obj);
+    void afterObjectInitialization(Object obj);
 
-    boolean beforeReadField(Object obj, String className, String fieldName, int codeLocation,
+    boolean beforeReadField(Object obj, String className, String fieldName, String typeDescriptor, int codeLocation,
                             boolean isStatic, boolean isFinal);
-    boolean beforeReadArrayElement(Object array, int index, int codeLocation);
+    boolean beforeReadArrayElement(Object array, int index, String typeDescriptor, int codeLocation);
     void afterRead(Object value);
 
-    boolean beforeWriteField(Object obj, String className, String fieldName, Object value, int codeLocation,
+    Object interceptReadResult();
+
+    boolean beforeWriteField(Object obj, String className, String fieldName, String typeDescriptor, Object value, int codeLocation,
                              boolean isStatic, boolean isFinal);
-    boolean beforeWriteArrayElement(Object array, int index, Object value, int codeLocation);
+    boolean beforeWriteArrayElement(Object array, int index, String typeDescriptor, Object value, int codeLocation);
     void afterWrite();
 
     void afterReflectiveSetter(Object receiver, Object value);
 
-    void beforeMethodCall(Object owner, String className, String methodName, int codeLocation, int methodId, Object[] params);
+    void onArrayCopy(Object srcArray, int srcPos, Object dstArray, int dstPos, int length);
+
+    boolean beforeMethodCall(Object owner, String className, String methodName, int codeLocation, int methodId, Object[] params);
     void onMethodCallReturn(Object result);
     void onMethodCallException(Throwable t);
+
+    Object interceptMethodCallResult();
 
     Random getThreadLocalRandom();
     int randomNextInt();
