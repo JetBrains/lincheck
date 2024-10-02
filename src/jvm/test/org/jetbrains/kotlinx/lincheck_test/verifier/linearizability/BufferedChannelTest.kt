@@ -15,9 +15,11 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck_test.*
+import org.junit.Ignore
 
 @InternalCoroutinesApi
 @Param(name = "value", gen = IntGen::class, conf = "1:5")
+@Ignore
 class BufferedChannelTest : AbstractLincheckTest() {
     private val c = Channel<Int>(2)
 

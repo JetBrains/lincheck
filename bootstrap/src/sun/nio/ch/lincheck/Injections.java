@@ -186,10 +186,10 @@ public class Injections {
      *
      * @return whether the trace point was created
      */
-    public static boolean beforeReadField(Object obj, String className, String fieldName, int codeLocation,
+    public static boolean beforeReadField(Object obj, String className, String fieldName, String typeDescriptor, int codeLocation,
                                           boolean isStatic, boolean isFinal) {
         if (!isStatic && obj == null) return false; // Ignore, NullPointerException will be thrown
-        return getEventTracker().beforeReadField(obj, className, fieldName, codeLocation, isStatic, isFinal);
+        return getEventTracker().beforeReadField(obj, className, fieldName, typeDescriptor, codeLocation, isStatic, isFinal);
     }
 
     /**
@@ -197,9 +197,13 @@ public class Injections {
      *
      * @return whether the trace point was created
      */
-    public static boolean beforeReadArray(Object array, int index, int codeLocation) {
+    public static boolean beforeReadArray(Object array, int index, String typeDescriptor, int codeLocation) {
         if (array == null) return false; // Ignore, NullPointerException will be thrown
-        return getEventTracker().beforeReadArrayElement(array, index, codeLocation);
+        return getEventTracker().beforeReadArrayElement(array, index, typeDescriptor, codeLocation);
+    }
+
+    public static Object interceptReadResult() {
+        return getEventTracker().interceptReadResult();
     }
 
     /**
@@ -214,10 +218,10 @@ public class Injections {
      *
      * @return whether the trace point was created
      */
-    public static boolean beforeWriteField(Object obj, String className, String fieldName, Object value, int codeLocation,
+    public static boolean beforeWriteField(Object obj, String className, String fieldName, String typeDescriptor, Object value, int codeLocation,
                                            boolean isStatic, boolean isFinal) {
         if (!isStatic && obj == null) return false; // Ignore, NullPointerException will be thrown
-        return getEventTracker().beforeWriteField(obj, className, fieldName, value, codeLocation, isStatic, isFinal);
+        return getEventTracker().beforeWriteField(obj, className, fieldName, typeDescriptor, value, codeLocation, isStatic, isFinal);
     }
 
     /**
@@ -225,9 +229,9 @@ public class Injections {
      *
      * @return whether the trace point was created
      */
-    public static boolean beforeWriteArray(Object array, int index, Object value, int codeLocation) {
+    public static boolean beforeWriteArray(Object array, int index, String typeDescriptor, Object value, int codeLocation) {
         if (array == null) return false; // Ignore, NullPointerException will be thrown
-        return getEventTracker().beforeWriteArrayElement(array, index, value, codeLocation);
+        return getEventTracker().beforeWriteArrayElement(array, index, typeDescriptor, value, codeLocation);
     }
 
     /**
@@ -250,13 +254,27 @@ public class Injections {
         getEventTracker().afterReflectiveSetter(receiver, value);
     }
 
+    public static void onArrayCopy(Object srcArray, int srcPos, Object dstArray, int dstPos, int length) {
+        getEventTracker().onArrayCopy(srcArray, srcPos, dstArray, dstPos, length);
+    }
+
     /**
      * Called from the instrumented code before any method call.
      *
      * @param owner is `null` for public static methods.
+     * @return true if the method result should be intercepted. TODO: revisit this API decision
      */
-    public static void beforeMethodCall(Object owner, String className, String methodName, int codeLocation, int methodId, Object[] params) {
-        getEventTracker().beforeMethodCall(owner, className, methodName, codeLocation, methodId, params);
+    public static boolean beforeMethodCall(Object owner, String className, String methodName, int codeLocation, int methodId, Object[] params) {
+        return getEventTracker().beforeMethodCall(owner, className, methodName, codeLocation, methodId, params);
+    }
+
+    /**
+     * Intercepts the result of a method call.
+     *
+     * @return The intercepted result of the method call.
+     */
+    public static Object interceptMethodCallResult() {
+        return getEventTracker().interceptMethodCallResult();
     }
 
     /**
@@ -292,6 +310,10 @@ public class Injections {
      */
     public static void afterNewObjectCreation(Object obj) {
         getEventTracker().afterNewObjectCreation(obj);
+    }
+
+    public static void afterObjectInitialization(Object obj) {
+        getEventTracker().afterObjectInitialization(obj);
     }
 
     /**

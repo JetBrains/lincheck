@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.findFieldNameByOffset
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.TreatAsDefaultMethod
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
 
 /**
@@ -95,4 +96,28 @@ internal sealed interface UnsafeName {
      * Unrecognized Unsafe method call so we should present it 'as is'.
      */
     data object TreatAsDefaultMethod : UnsafeName
+}
+
+internal val UnsafeName.instance: Any? get() = when (this) {
+    is UnsafeArrayMethod    -> array
+    is UnsafeInstanceMethod -> owner
+    else                    -> null
+}
+
+internal val UnsafeName.className: String? get() = when (this) {
+    is UnsafeArrayMethod    -> array.javaClass.name
+    is UnsafeInstanceMethod -> owner.javaClass.name
+    is UnsafeStaticMethod   -> clazz.name
+    else                    -> null
+}
+
+internal val UnsafeName.fieldName: String? get() = when (this) {
+    is UnsafeInstanceMethod -> fieldName
+    is UnsafeStaticMethod   -> fieldName
+    else                    -> null
+}
+
+internal val UnsafeName.index: Int get() = when (this) {
+    is UnsafeArrayMethod -> index
+    else                 -> -1
 }

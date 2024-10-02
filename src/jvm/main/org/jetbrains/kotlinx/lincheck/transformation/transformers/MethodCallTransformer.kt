@@ -10,9 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
-import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
-import org.jetbrains.kotlinx.lincheck.util.*
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.Type.*
@@ -28,6 +26,7 @@ internal class MethodCallTransformer(
     className: String,
     methodName: String,
     adapter: GeneratorAdapter,
+    private val interceptAtomicMethodCallResult: Boolean = false,
 ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
@@ -77,17 +76,41 @@ internal class MethodCallTransformer(
         // STACK [INVOKEVIRTUAL]: owner, owner, className, methodName, codeLocation, methodId
         // STACK [INVOKESTATIC]:         null, className, methodName, codeLocation, methodId
         pushArray(argumentLocals)
-        // STACK: ..., argumentsArray
+        // STACK: ..., arguments
         invokeStatic(Injections::beforeMethodCall)
         invokeBeforeEventIfPluginEnabled("method call $methodName", setMethodEventId = true)
-        // STACK [INVOKEVIRTUAL]: owner, arguments
-        // STACK [INVOKESTATIC] :        arguments
         val methodCallEndLabel = newLabel()
         val handlerExceptionStartLabel = newLabel()
         visitTryCatchBlock(methodCallStartLabel, methodCallEndLabel, handlerExceptionStartLabel, null)
         visitLabel(methodCallStartLabel)
-        loadLocals(argumentLocals)
-        visitMethodInsn(opcode, owner, name, desc, itf)
+        if (interceptAtomicMethodCallResult) {
+            // STACK: shouldInterceptMethodResult
+            ifStatement(
+                condition = { /* already on stack */ },
+                ifClause = {
+                    val resultType = Type.getReturnType(desc)
+                    if (opcode != INVOKESTATIC) {
+                        pop()
+                    }
+                    // STACK : <empty>
+                    invokeStatic(Injections::interceptMethodCallResult)
+                    if (resultType == Type.VOID_TYPE) {
+                        pop()
+                    } else {
+                        unbox(resultType)
+                    }
+                },
+                elseClause = {
+                    loadLocals(argumentLocals)
+                    visitMethodInsn(opcode, owner, name, desc, itf)
+                }
+            )
+        } else {
+            // STACK: shouldInterceptMethodResult
+            pop()
+            loadLocals(argumentLocals)
+            visitMethodInsn(opcode, owner, name, desc, itf)
+        }
         visitLabel(methodCallEndLabel)
         // STACK [INVOKEVIRTUAL]: owner, arguments
         // STACK [INVOKESTATIC] :        arguments

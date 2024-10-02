@@ -13,14 +13,31 @@ import org.jetbrains.kotlinx.lincheck.Result
 
 data class HBClock(val clock: IntArray) {
     val threads: Int get() = clock.size
-
+    val empty: Boolean get() = clock.all { it == 0 }
     operator fun get(i: Int) = clock[i]
+
+    fun set(other: HBClock) {
+        check(clock.size == other.clock.size)
+        for (i in clock.indices) {
+            clock[i] = other.clock[i]
+        }
+    }
+
+    fun reset() {
+        for (i in clock.indices) {
+            clock[i] = 0
+        }
+    }
 
     /**
      * Checks whether the clock contains information for any thread
      * excluding the one this clock is associated with.
      */
     fun isEmpty(clockThreadId: Int) = clock.filterIndexed { t, _ -> t != clockThreadId }.all { it == 0 }
+
+    fun copy(): HBClock {
+        return HBClock(clock.copyOf())
+    }
 
     override fun toString() = clock.joinToString(prefix = "[", separator = ",", postfix = "]")
 

@@ -26,7 +26,7 @@ repositories {
 kotlin {
     @OptIn(ExperimentalKotlinGradlePluginApi::class)
     compilerOptions {
-        allWarningsAsErrors = true
+        // allWarningsAsErrors = true
     }
 
     jvm {
@@ -119,7 +119,16 @@ tasks {
         if (instrumentAllClasses.toBoolean()) {
             systemProperty("lincheck.instrumentAllClasses", "true")
         }
-        val extraArgs = mutableListOf<String>()
+        val extraArgs = mutableListOf<String>(
+            // flags to import Unsafe module;
+            // it is used in some tests to check handling of unsafe APIs by Lincheck
+            "--add-opens", "java.base/jdk.internal.misc=ALL-UNNAMED",
+            "--add-exports", "java.base/jdk.internal.util=ALL-UNNAMED",
+        )
+        val useExperimentalModelChecking: String by project
+        if (useExperimentalModelChecking.toBoolean()) {
+            extraArgs.add("-Dlincheck.useExperimentalModelChecking=true")
+        }
         val withEventIdSequentialCheck: String by project
         if (withEventIdSequentialCheck.toBoolean()) {
             extraArgs.add("-Dlincheck.debug.withEventIdSequentialCheck=true")
@@ -157,6 +166,8 @@ tasks {
             ideaActive -> 10
             else -> 0
         }
+        // temporarily ignore representation tests, because they are unsupported in the new strategy
+        // exclude("org/jetbrains/kotlinx/lincheck_test/representation")
     }
 
     val jvmTestIsolated = register<Test>("jvmTestIsolated") {

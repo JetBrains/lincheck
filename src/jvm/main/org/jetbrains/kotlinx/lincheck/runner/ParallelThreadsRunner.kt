@@ -17,8 +17,7 @@ import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner.Completion.*
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
+import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.util.*
 import sun.nio.ch.lincheck.*
@@ -101,7 +100,9 @@ internal open class ParallelThreadsRunner(
     protected inner class Completion(private val iThread: Int, private val actorId: Int) : Continuation<Any?> {
         val resWithCont = SuspensionPointResultWithContinuation(null)
 
-        override var context = ParallelThreadRunnerInterceptor(resWithCont) + StoreExceptionHandler() + Job()
+        private val interceptor = ParallelThreadRunnerInterceptor(resWithCont)
+
+        override val context = interceptor + StoreExceptionHandler() + Job()
 
         // We need to run this code in an ignored section,
         // as it is called in the testing code but should not be analyzed.
@@ -118,12 +119,13 @@ internal open class ParallelThreadsRunner(
                 }
                 // write function's final result
                 suspensionPointResults[iThread][actorId] = createLincheckResult(result)
+                onResumeCoroutine(iThread, actorId)
             }
         }
 
         fun reset() {
             resWithCont.set(null)
-            context = ParallelThreadRunnerInterceptor(resWithCont) + StoreExceptionHandler() + Job()
+            interceptor.reset(resWithCont)
         }
 
         /**
@@ -136,9 +138,12 @@ internal open class ParallelThreadsRunner(
             private var resWithCont: SuspensionPointResultWithContinuation
         ) : AbstractCoroutineContextElement(ContinuationInterceptor), ContinuationInterceptor {
 
+            var continuation: Continuation<Any?>? = null
+
             // We need to run this code in an ignored section,
             // as it is called in the testing code but should not be analyzed.
             override fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T> = runInIgnoredSection {
+                this.continuation = (continuation as Continuation<Any?>)
                 return Continuation(StoreExceptionHandler() + Job()) { result ->
                     runInIgnoredSection {
                         // decrement completed or suspended threads only if the operation was not cancelled
@@ -149,15 +154,22 @@ internal open class ParallelThreadsRunner(
                                 completedOrSuspendedThreads.incrementAndGet()
                             }
                             @Suppress("UNCHECKED_CAST")
-                            resWithCont.set(result to continuation as Continuation<Any?>)
+                            resWithCont.set(result to this.continuation as Continuation<Any?>)
+                            onResumeCoroutine(iThread, actorId)
                         }
                     }
                 }
+            }
+
+            fun reset(resWithCont: SuspensionPointResultWithContinuation) {
+                this.resWithCont = resWithCont
+                this.continuation = null
             }
         }
     }
 
     private fun resetState() {
+        currentExecutionPart = null
         suspensionPointResults.forEach { it.fill(NoResult) }
         completedOrSuspendedThreads.set(0)
         completions.forEach {
@@ -185,7 +197,7 @@ internal open class ParallelThreadsRunner(
     private fun createTestInstance() {
         @Suppress("DEPRECATION")
         testInstance = testClass.newInstance()
-        if (strategy is ModelCheckingStrategy) {
+        if (strategy is ManagedStrategy) {
             // We pass the test instance to the strategy to initialize the call stack.
             // It should be done here as we create the test instance in the `run` method in the runner, after
             // `initializeInvocation` method call of ManagedStrategy.
@@ -230,8 +242,6 @@ internal open class ParallelThreadsRunner(
         return finalResult
     }
 
-    override fun afterCoroutineCancelled(iThread: Int) {}
-
     // We need to run this code in an ignored section,
     // as it is called in the testing code but should not be analyzed.
     private fun waitAndInvokeFollowUp(thread: TestThread, actorId: Int): Result = runInIgnoredSection {
@@ -244,12 +254,18 @@ internal open class ParallelThreadsRunner(
         // wait for the final result of the method call otherwise.
         val completion = completions[threadId][actorId]
         // Check if the coroutine is already resumed and if not, enter the spin loop.
+        var blocked = false
         if (!isCoroutineResumed(threadId, actorId)) {
             spinners[threadId].spinWaitUntil {
                 // Check whether the scenario is completed and the current suspended operation cannot be resumed.
-                if (currentExecutionPart == POST || isParallelExecutionCompleted) {
+                if (currentExecutionPart == POST || isParallelExecutionCompleted || blocked) {
                     suspensionPointResults[threadId][actorId] = NoResult
                     return Suspended
+                }
+                if (strategy is ManagedStrategy) {
+                    strategy.switchCurrentThread(threadId, SwitchReason.STRATEGY_SWITCH, mustSwitch = true)
+                    blocked = strategy.isBlocked()
+                    return@spinWaitUntil false
                 }
                 // Wait until coroutine is resumed.
                 isCoroutineResumed(threadId, actorId)
@@ -286,6 +302,10 @@ internal open class ParallelThreadsRunner(
     }
 
     override fun afterCoroutineResumed(iThread: Int) {}
+
+    override fun afterCoroutineCancelled(iThread: Int, promptCancellation: Boolean, result: CancellationResult) {}
+
+    override fun onResumeCoroutine(iResumedThread: Int, iResumedActor: Int) {}
 
     // We cannot use `completionStatuses` here since
     // they are set _before_ the result is published.
@@ -360,7 +380,6 @@ internal open class ParallelThreadsRunner(
         afterParallelStateRepresentation = afterParallelStateRepresentation,
         afterPostStateRepresentation = afterPostStateRepresentation
     )
-
 
     private fun createInitialPartExecution() =
         if (scenario.initExecution.isNotEmpty()) {

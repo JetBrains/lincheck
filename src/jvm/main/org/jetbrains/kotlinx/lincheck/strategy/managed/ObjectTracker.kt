@@ -32,6 +32,9 @@ interface ObjectTracker {
      */
     fun registerObjectLink(fromObject: Any, toObject: Any?)
 
+    // TODO: add constructor name as parameter?
+    fun initializeObject(obj: Any)
+
     /**
      * Determines whether accesses to the fields of the given object should be tracked.
      *
@@ -40,13 +43,10 @@ interface ObjectTracker {
      */
     fun shouldTrackObjectAccess(obj: Any): Boolean
 
+    fun getObjectId(obj: Any): ObjectID
+
     /**
      * Resets the state of the object tracker.
      */
     fun reset()
 }
-
-/**
- * Special auxiliary object used as an owner of static fields (instead of `null`).
- */
-internal object StaticObject: Any()

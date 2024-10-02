@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.strategy
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.managed.Trace
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.EventStructureStrategy
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.io.Closeable
 
@@ -82,7 +83,7 @@ abstract class Strategy protected constructor(
     /**
      * Is invoked after each actor execution, even if a legal exception was thrown
      */
-    open fun onActorFinish() {}
+    open fun onActorFinish(iThread: Int) {}
 
     /**
      * Closes the strategy and releases any resources associated with it.
@@ -101,15 +102,19 @@ abstract class Strategy protected constructor(
  * @return the failure, if detected, null otherwise.
  */
 fun Strategy.runIteration(invocations: Int, verifier: Verifier): LincheckFailure? {
+    var failure: LincheckFailure? = null
     for (invocation in 0 until invocations) {
         if (!nextInvocation())
-            return null
+            break
         val result = runInvocation()
-        val failure = verify(result, verifier)
+        // TODO: should we count failed inconsistent executions as used invocations?
+        if (result is InconsistentInvocationResult) continue
+        failure = verify(result, verifier)
         if (failure != null)
-            return failure
+            break
     }
-    return null
+    printStatistics()
+    return failure
 }
 
 /**
@@ -126,6 +131,14 @@ fun Strategy.verify(result: InvocationResult, verifier: Verifier): LincheckFailu
         if (!verifier.verifyResults(scenario, result.results)) {
             IncorrectResultsFailure(scenario, result.results, tryCollectTrace(result))
         } else null
-    else ->
-        result.toLincheckFailure(scenario, tryCollectTrace(result))
+
+    is SpinLoopBoundInvocationResult -> null
+
+    else -> result.toLincheckFailure(scenario, tryCollectTrace(result))
+}
+
+private fun Strategy.printStatistics() {
+    if (this is EventStructureStrategy) {
+        println(stats)
+    }
 }

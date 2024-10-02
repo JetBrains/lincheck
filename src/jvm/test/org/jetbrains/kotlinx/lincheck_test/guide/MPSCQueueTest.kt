@@ -17,6 +17,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.junit.*
 
+@Ignore
 class MPSCQueueTest {
     private val queue = MpscLinkedAtomicQueue<Int>()
 

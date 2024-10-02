@@ -90,7 +90,9 @@ internal class LincheckClassVisitor(
             return mv
         }
         if (methodName == "<init>") {
-            mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
+            mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter(),
+                interceptObjectInitialization = (instrumentationMode == EXPERIMENTAL_MODEL_CHECKING),
+            )
             return mv
         }
         if (className.contains("ClassLoader")) {
@@ -111,11 +113,18 @@ internal class LincheckClassVisitor(
         // `skipVisitor` must not capture `MethodCallTransformer`
         // (to filter static method calls inserted by coverage library)
         val skipVisitor: MethodVisitor = mv
-        mv = MethodCallTransformer(fileName, className, methodName, mv.newAdapter())
+        mv = MethodCallTransformer(fileName, className, methodName, mv.newAdapter(),
+            interceptAtomicMethodCallResult = (instrumentationMode == EXPERIMENTAL_MODEL_CHECKING),
+        )
         mv = MonitorTransformer(fileName, className, methodName, mv.newAdapter())
         mv = WaitNotifyTransformer(fileName, className, methodName, mv.newAdapter())
         mv = ParkingTransformer(fileName, className, methodName, mv.newAdapter())
-        mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
+        mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter(),
+            interceptObjectInitialization = (instrumentationMode == EXPERIMENTAL_MODEL_CHECKING),
+        )
+        mv = ReflectionTransformer(fileName, className, methodName, mv.newAdapter(),
+            interceptArrayCopyMethod = (instrumentationMode == EXPERIMENTAL_MODEL_CHECKING),
+        )
         mv = DeterministicHashCodeTransformer(fileName, className, methodName, mv.newAdapter())
         mv = DeterministicTimeTransformer(mv.newAdapter())
         mv = DeterministicRandomTransformer(fileName, className, methodName, mv.newAdapter())
@@ -126,7 +135,9 @@ internal class LincheckClassVisitor(
         // which should be put in front of the byte-code transformer chain,
         // so that it can correctly analyze the byte-code and compute required type-information
         mv = run {
-            val sv = SharedMemoryAccessTransformer(fileName, className, methodName, mv.newAdapter())
+            val sv = SharedMemoryAccessTransformer(fileName, className, methodName, mv.newAdapter(),
+                interceptReadAccesses = (instrumentationMode == EXPERIMENTAL_MODEL_CHECKING),
+            )
             val aa = AnalyzerAdapter(className, access, methodName, desc, sv)
             sv.analyzer = aa
             aa

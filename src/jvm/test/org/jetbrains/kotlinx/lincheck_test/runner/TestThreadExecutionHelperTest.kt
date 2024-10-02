@@ -47,11 +47,13 @@ class TestThreadExecutionHelperTest {
                 return false
             }
 
-            override fun afterCoroutineCancelled(iThread: Int) {}
+            override fun afterCoroutineCancelled(iThread: Int, promptCancellation: Boolean, result: CancellationResult) {}
 
             override fun afterCoroutineResumed(iThread: Int) {}
 
             override fun afterCoroutineSuspended(iThread: Int) {}
+
+            override fun onResumeCoroutine(iResumedThread: Int, iResumedActor: Int) {}
 
             override fun onFailure(iThread: Int, e: Throwable) {}
 

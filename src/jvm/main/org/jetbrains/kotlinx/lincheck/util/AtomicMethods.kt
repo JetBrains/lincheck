@@ -14,6 +14,8 @@ import java.util.concurrent.atomic.*
 import org.jetbrains.kotlinx.lincheck.util.AtomicMethodKind.*
 import org.jetbrains.kotlinx.lincheck.util.MemoryOrdering.*
 import java.lang.invoke.VarHandle
+import org.objectweb.asm.Type
+import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 
 internal data class AtomicMethodDescriptor(
     val kind: AtomicMethodKind,
@@ -66,7 +68,6 @@ internal fun isAtomic(receiver: Any?) =
     receiver is kotlinx.atomicfu.AtomicInt ||
     receiver is kotlinx.atomicfu.AtomicLong
 
-
 internal fun isAtomicClass(className: String) =
     // java.util.concurrent
     className == "java.util.concurrent.atomic.AtomicInteger" ||
@@ -94,7 +95,6 @@ internal fun isAtomicArray(receiver: Any?) =
     receiver is kotlinx.atomicfu.AtomicIntArray ||
     receiver is kotlinx.atomicfu.AtomicLongArray
 
-
 internal fun isAtomicArrayClass(className: String) =
     // java.util.concurrent
     className == "java.util.concurrent.atomic.AtomicReferenceArray" ||
@@ -108,6 +108,17 @@ internal fun isAtomicArrayClass(className: String) =
 
 internal fun isAtomicArrayMethod(className: String, methodName: String) =
     isAtomicArrayClass(className) && methodName in atomicMethods
+
+internal fun getAtomicType(atomic: Any?): Type? = when (atomic) {
+    is AtomicReference<*>       -> OBJECT_TYPE
+    is AtomicBoolean            -> Type.BOOLEAN_TYPE
+    is AtomicInteger            -> Type.INT_TYPE
+    is AtomicLong               -> Type.LONG_TYPE
+    is AtomicReferenceArray<*>  -> OBJECT_TYPE
+    is AtomicIntegerArray       -> Type.INT_TYPE
+    is AtomicLongArray          -> Type.LONG_TYPE
+    else                        -> null
+}
 
 internal fun isAtomicFieldUpdater(obj: Any?) =
     obj is AtomicReferenceFieldUpdater<*, *> ||
@@ -140,6 +151,19 @@ internal fun isUnsafeClass(className: String) =
 
 internal fun isUnsafeMethod(className: String, methodName: String) =
     isUnsafeClass(className) && methodName in unsafeMethods
+
+internal fun parseUnsafeMethodAccessType(methodName: String): Type? = when {
+    "Boolean"   in methodName -> Type.BOOLEAN_TYPE
+    "Byte"      in methodName -> Type.BYTE_TYPE
+    "Short"     in methodName -> Type.SHORT_TYPE
+    "Int"       in methodName -> Type.INT_TYPE
+    "Long"      in methodName -> Type.LONG_TYPE
+    "Float"     in methodName -> Type.FLOAT_TYPE
+    "Double"    in methodName -> Type.DOUBLE_TYPE
+    "Reference" in methodName -> OBJECT_TYPE
+    "Object"    in methodName -> OBJECT_TYPE
+    else                      -> null
+}
 
 private val atomicMethods = mapOf(
     // get

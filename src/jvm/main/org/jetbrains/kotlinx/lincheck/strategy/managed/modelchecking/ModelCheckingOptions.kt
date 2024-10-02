@@ -16,6 +16,13 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.*
  * Options for [model checking][ModelCheckingStrategy] strategy.
  */
 class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingCTestConfiguration>() {
+    private var experimentalModelChecking = false
+
+    internal fun useExperimentalModelChecking(): ModelCheckingOptions {
+        experimentalModelChecking = true
+        return this
+    }
+
     override fun createTestConfigurations(testClass: Class<*>): ModelCheckingCTestConfiguration {
         return ModelCheckingCTestConfiguration(
             testClass = testClass,
@@ -33,7 +40,9 @@ class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingC
             minimizeFailedScenario = minimizeFailedScenario,
             sequentialSpecification = chooseSequentialSpecification(sequentialSpecification, testClass),
             timeoutMs = timeoutMs,
-            customScenarios = customScenarios
+            customScenarios = customScenarios,
+            experimentalModelChecking = experimentalModelChecking,
         )
     }
+
 }
