@@ -458,7 +458,7 @@ abstract class ManagedStrategy(
      * This method is executed as the first thread action.
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
      */
-    open fun onStart(iThread: Int) {
+    open fun onThreadStart(iThread: Int) {
         awaitTurn(iThread)
     }
 
@@ -466,7 +466,7 @@ abstract class ManagedStrategy(
      * This method is executed as the last thread action if no exception has been thrown.
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
      */
-    open fun onFinish(iThread: Int) {
+    open fun onThreadFinish(iThread: Int) {
         awaitTurn(iThread)
         finished[iThread] = true
         loopDetector.onThreadFinish(iThread)
@@ -1640,14 +1640,15 @@ internal class ManagedStrategyRunner(
     testClass: Class<*>, validationFunction: Actor?, stateRepresentationMethod: Method?,
     timeoutMs: Long, useClocks: UseClocks
 ) : ParallelThreadsRunner(managedStrategy, testClass, validationFunction, stateRepresentationMethod, timeoutMs, useClocks) {
-    override fun onStart(iThread: Int) = runInIgnoredSection {
+
+    override fun onThreadStart(iThread: Int) = runInIgnoredSection {
         if (currentExecutionPart !== PARALLEL) return
-        managedStrategy.onStart(iThread)
+        managedStrategy.onThreadStart(iThread)
     }
 
-    override fun onFinish(iThread: Int) = runInIgnoredSection {
+    override fun onThreadFinish(iThread: Int) = runInIgnoredSection {
         if (currentExecutionPart !== PARALLEL) return
-        managedStrategy.onFinish(iThread)
+        managedStrategy.onThreadFinish(iThread)
     }
 
     override fun onFailure(iThread: Int, e: Throwable) = runInIgnoredSection {
