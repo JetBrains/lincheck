@@ -299,25 +299,8 @@ internal class ModelCheckingStrategy(
         return currentInterleaving.isSwitchPosition()
     }
 
-    override fun beforePart(part: ExecutionPart) {
-        super.beforePart(part)
-        val nextThread = when (part) {
-            ExecutionPart.INIT -> 0
-            ExecutionPart.PARALLEL -> currentInterleaving.chooseThread(0)
-            ExecutionPart.POST -> 0
-            ExecutionPart.VALIDATION -> 0
-        }
-        loopDetector.beforePart(nextThread)
-        currentThread = nextThread
-    }
-
     override fun chooseThread(iThread: Int): Int =
-        currentInterleaving.chooseThread(iThread).also {
-           check(it in switchableThreads(iThread)) { """
-               Trying to switch the execution to thread $it,
-               but only the following threads are eligible to switch: ${switchableThreads(iThread)}
-           """.trimIndent() }
-        }
+        currentInterleaving.chooseThread(iThread)
 
     /**
      * An abstract node with an execution choice in the interleaving tree.
@@ -462,7 +445,6 @@ internal class ModelCheckingStrategy(
             executionPosition = -1 // the first execution position will be zero
             interleavingFinishingRandom = Random(2) // random with a constant seed
             nextThreadToSwitch = threadSwitchChoices.iterator()
-            loopDetector.initialize()
             lastNotInitializedNodeChoices = null
             lastNotInitializedNode?.let {
                 // Create a mutable list for the initialization of the not initialized node choices.

@@ -212,6 +212,7 @@ abstract class ManagedStrategy(
         callStackTrace.forEach { it.clear() }
         suspendedFunctionsStack.forEach { it.clear() }
         randoms.forEachIndexed { i, r -> r.setSeed(i + 239L) }
+        loopDetector.initialize()
         objectTracker.reset()
         monitorTracker.reset()
         parkingTracker.reset()
@@ -250,8 +251,16 @@ abstract class ManagedStrategy(
 
     // == BASIC STRATEGY METHODS ==
 
-    override fun beforePart(part: ExecutionPart) {
+    override fun beforePart(part: ExecutionPart) = runInIgnoredSection {
         traceCollector?.passCodeLocation(SectionDelimiterTracePoint(part))
+        val nextThread = when (part) {
+            INIT        -> 0
+            PARALLEL    -> chooseThread(0)
+            POST        -> 0
+            VALIDATION  -> 0
+        }
+        loopDetector.beforePart(nextThread)
+        currentThread = nextThread
     }
 
     /**
