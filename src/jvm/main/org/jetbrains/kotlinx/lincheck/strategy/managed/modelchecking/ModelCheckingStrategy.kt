@@ -294,7 +294,7 @@ internal class ModelCheckingStrategy(
     override fun shouldSwitch(iThread: Int): Boolean {
         // Crete a new current position in the same place as where the check is,
         // because the position check and the position increment are dual operations.
-        check(iThread == currentThread)
+        check(iThread == threadScheduler.currentThreadId)
         currentInterleaving.newExecutionPosition(iThread)
         return currentInterleaving.isSwitchPosition()
     }

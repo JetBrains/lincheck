@@ -20,7 +20,7 @@ package org.jetbrains.kotlinx.lincheck.util
  *
  * @constructor Creates an instance of the [Spinner] class.
  */
-internal class Spinner(val nThreads: Int = -1) {
+class Spinner(val nThreads: Int = -1) {
 
     /**
      * Determines whether the spinner should actually spin in a loop,
