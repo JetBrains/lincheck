@@ -430,7 +430,7 @@ internal open class ParallelThreadsRunner(
         curClock = 0
     }
 
-    override fun onStart(iThread: Int) {
+    override fun onThreadStart(iThread: Int) {
         if (currentExecutionPart !== PARALLEL) return
         uninitializedThreads.decrementAndGet() // this thread has finished initialization
         // wait for other threads to start
@@ -447,7 +447,7 @@ internal open class ParallelThreadsRunner(
 
     override fun isCurrentRunnerThread(thread: Thread): Boolean = executor.threads.any { it === thread }
 
-    override fun onFinish(iThread: Int) {}
+    override fun onThreadFinish(iThread: Int) {}
 
     override fun onFailure(iThread: Int, e: Throwable) {}
 }

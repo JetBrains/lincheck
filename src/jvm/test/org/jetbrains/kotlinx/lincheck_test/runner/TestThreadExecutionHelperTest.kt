@@ -55,9 +55,9 @@ class TestThreadExecutionHelperTest {
 
             override fun onFailure(iThread: Int, e: Throwable) {}
 
-            override fun onFinish(iThread: Int) {}
+            override fun onThreadFinish(iThread: Int) {}
 
-            override fun onStart(iThread: Int) {}
+            override fun onThreadStart(iThread: Int) {}
 
             override fun run(): InvocationResult {
                 throw UnsupportedOperationException()
