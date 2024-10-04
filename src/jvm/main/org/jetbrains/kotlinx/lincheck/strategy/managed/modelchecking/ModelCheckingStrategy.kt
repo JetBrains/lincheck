@@ -610,13 +610,22 @@ internal class ModelCheckingMonitorTracker(nThreads: Int) : MonitorTracker {
     /**
      * Performs a logical release.
      */
-    override fun releaseMonitor(threadId: Int, monitor: Any) {
+    override fun releaseMonitor(threadId: Int, monitor: Any): Boolean {
         // Decrement the reentrancy depth and remove the acquisition info
         // if the monitor becomes free to acquire by another thread.
         val info = acquiredMonitors[monitor]!!
         info.timesAcquired--
-        if (info.timesAcquired == 0)
+        if (info.timesAcquired == 0) {
             acquiredMonitors.remove(monitor)
+            return true
+        }
+        return false
+    }
+
+    override fun acquiringThreads(monitor: Any): List<ThreadId> {
+        return waitingMonitor.mapNotNull { info ->
+            if (info?.monitor === monitor) info.threadId else null
+        }
     }
 
     /**
@@ -673,8 +682,9 @@ internal class ModelCheckingMonitorTracker(nThreads: Int) : MonitorTracker {
      */
     override fun notify(threadId: Int, monitor: Any, notifyAll: Boolean) {
         waitingMonitor.forEachIndexed { tid, info ->
-            if (monitor === info?.monitor)
+            if (monitor === info?.monitor && waitForNotify[tid]) {
                 waitForNotify[tid] = false
+            }
         }
     }
 
