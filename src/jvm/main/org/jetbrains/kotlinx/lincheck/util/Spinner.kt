@@ -12,29 +12,65 @@ package org.jetbrains.kotlinx.lincheck.util
 
 /**
  * A spinner implements utility functions for spinning in a loop.
- *
- * @property nThreads If passed, denotes the number of threads in a group that
- *   may wait for a common condition in the spin-loop.
- *   This information is used to check if the number of available CPUs is greater than
- *   the number of threads, and avoid spinning if that is not the case.
- *
- * @constructor Creates an instance of the [Spinner] class.
  */
-class Spinner(val nThreads: Int = -1) {
+class Spinner private constructor(
+    private val threadCount: Int,
+    private val threadCounter: (() -> Int)?,
+) {
 
     /**
-     * Determines whether the spinner should actually spin in a loop,
-     * or if it should exit immediately.
+     * Creates an instance of the [Spinner] class.
+     */
+    constructor() : this(threadCount = -1, threadCounter = null)
+
+    /**
+     * Creates an instance of the [Spinner] class.
+     *
+     * @param threadCount Denotes the number of threads in a group that
+     *   may wait for a common condition in the spin-loop.
+     *   This information is used to check if the number of available CPUs is greater than
+     *   the number of threads and avoid spinning if that is not the case.
+     */
+    constructor(threadCount: Int) : this(threadCount, threadCounter = null)
+
+    /**
+     * Creates an instance of the [Spinner] class.
+     *
+     * @param threadCounter Denotes the number of threads in a group that
+     *   may wait for a common condition in the spin-loop.
+     *   The number of threads in a group is allowed to change dynamically ---
+     *   the spinner queries this number on each spin iteration, avoiding the spinning if necessary.
+     *   This information is used to check if the number of available CPUs is greater than
+     *   the number of threads in the group and avoid spinning if that is not the case.
+     */
+    constructor(threadCounter: () -> Int) : this(threadCount = -1, threadCounter = threadCounter)
+
+    /**
+     * Determines whether the spinner should actually spin in a loop or if it should exit immediately.
      *
      * The value is calculated based on the number of available processors
      * and the number of threads (if provided in the constructor).
-     * If the number of processors is less than the number of threads,
+     * If the number of processors is lower than the number of threads in the group,
      * then the spinner should exit the loop immediately.
      */
-    val shouldSpin: Boolean = run {
+    val isSpinning: Boolean = run {
+        val nThreads = threadCounter?.invoke() ?: threadCount
         val nProcessors = Runtime.getRuntime().availableProcessors()
         (nProcessors >= nThreads)
     }
+
+    /**
+     * Determines the limit for the number of iterations
+     * the spin-loop should perform before yielding to other threads.
+     */
+    val yieldLimit: Int
+        get() = 1 + if (isSpinning) SPIN_CYCLES_BOUND else 0
+
+    /**
+     * Defines the limit for iterations in a spin-loop before it exits.
+     */
+    val exitLimit: Int
+        get() = if (isSpinning) SPIN_CYCLES_BOUND else 0
 
     /**
      * Waits in the spin-loop until the given condition is true
@@ -45,7 +81,6 @@ class Spinner(val nThreads: Int = -1) {
      */
     inline fun spinWaitUntil(condition: () -> Boolean) {
         var counter = 0
-        val yieldLimit = 1 + if (shouldSpin) SPIN_CYCLES_BOUND else 0
         while (!condition()) {
             counter++
             if (counter % yieldLimit == 0) {
@@ -67,10 +102,9 @@ class Spinner(val nThreads: Int = -1) {
      */
     inline fun Spinner.spinWaitBoundedUntil(condition: () -> Boolean): Boolean {
         var counter = 0
-        val exitLimit = if (shouldSpin) SPIN_CYCLES_BOUND else 0
         var result = true
         while (!condition()) {
-            if (counter == exitLimit) {
+            if (counter >= exitLimit) {
                 result = condition()
                 break
             }
