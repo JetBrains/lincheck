@@ -511,6 +511,7 @@ abstract class ManagedStrategy(
      */
     private fun isActive(iThread: Int): Boolean =
         threadScheduler.isSchedulable(iThread) &&
+        // TODO: coroutine suspensions are currently handled separately from `ThreadScheduler`
         !(isSuspended[iThread] && !runner.isCoroutineResumed(iThread, currentActorId[iThread]))
 
     /**
@@ -527,7 +528,8 @@ abstract class ManagedStrategy(
             SwitchReason.LOCK_WAIT      -> BlockingReason.LOCKED
             SwitchReason.MONITOR_WAIT   -> BlockingReason.WAITING
             SwitchReason.PARK_WAIT      -> BlockingReason.PARKED
-            // SwitchReason.SUSPENDED      -> BlockingReason.SUSPENDED // TODO
+            // TODO: coroutine suspensions are currently handled separately from `ThreadScheduler`
+            // SwitchReason.SUSPENDED   -> BlockingReason.SUSPENDED
             else                        -> null
         }
         val mustSwitch = (blockingReason != null) || (switchReason == SwitchReason.SUSPENDED)
