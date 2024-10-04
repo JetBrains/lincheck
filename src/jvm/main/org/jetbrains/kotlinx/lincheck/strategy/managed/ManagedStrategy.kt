@@ -229,7 +229,7 @@ abstract class ManagedStrategy(
             // If strategy has not detected a sudden invocation result,
             // then return, otherwise process the sudden result.
             val suddenResult = suddenInvocationResult ?: return result
-            // Unexpected `ForcibleExecutionFinishError` should be thrown.
+            // Unexpected `ThreadAbortedError` should be thrown.
             check(result is UnexpectedExceptionInvocationResult)
             // Check if an invocation replay is required
             val isReplayRequired = (suddenResult is SpinCycleFoundAndReplayRequired)
@@ -361,9 +361,8 @@ abstract class ManagedStrategy(
      * @param codeLocation the byte-code location identifier of the point in code.
      */
     private fun newSwitchPoint(iThread: Int, codeLocation: Int, tracePoint: TracePoint?) {
-        // Throw ForcibleExecutionFinishException if the invocation
-        // result is already calculated.
-        if (suddenInvocationResult != null) throw ForcibleExecutionFinishError
+        // Throw `ThreadAbortedError` if the invocation result is already calculated.
+        if (suddenInvocationResult != null) throw ThreadAbortedError
         // check we are in the right thread
         val currentThreadId = threadScheduler.currentThreadId
         check(iThread == currentThreadId)
@@ -484,7 +483,7 @@ abstract class ManagedStrategy(
         // Despite the fact that the corresponding failure will be detected by the runner,
         // the managed strategy can construct a trace to reproduce this failure.
         // Let's then store the corresponding failing result and construct the trace.
-        if (exception === ForcibleExecutionFinishError) return // not a forcible execution finish
+        if (exception === ThreadAbortedError) return // not a forcible execution finish
         suddenInvocationResult = UnexpectedExceptionInvocationResult(exception, runner.collectExecutionResults())
         threadScheduler.abortAllThreads()
     }

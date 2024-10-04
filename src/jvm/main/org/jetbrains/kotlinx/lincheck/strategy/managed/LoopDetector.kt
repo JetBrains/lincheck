@@ -57,7 +57,7 @@ import java.util.ArrayList
  * - For instance, if the [currentInterleavingHistory] is [0: 2], [1: 3], [0: 3], [1: 3], [0: 3], ..., [1: 3], [0: 3] and a deadlock is detected,
  * the cycle is identified as [1: 3], [0: 3].
  * This means 2 executions in thread 0 and 3 executions in both threads 1 and 0 will be allowed.
- * - Execution is halted after the last execution in thread 0 using [ForcibleExecutionFinishError].
+ * - Execution is halted after the last execution in thread 0 using [ThreadAbortedError].
  * - The logic for tracking executions and switches in replay mode is implemented in [ReplayModeLoopDetectorHelper].
  *
  * Note: An example of this behavior is detailed in the comments of the code itself.
