@@ -36,13 +36,12 @@ enum class BlockingReason {
 
 open class ThreadScheduler {
 
-    protected class ThreadDescriptor(val id: ThreadId, val thread: Thread) {
+    protected inner class ThreadDescriptor(val id: ThreadId, val thread: Thread) {
         @Volatile var state: ThreadState = ThreadState.INITIALIZED
 
         @Volatile var blockingReason: BlockingReason? = null
 
-        val spinner: Spinner = Spinner() // TODO: pass nThreads
-
+        val spinner: Spinner = Spinner { threads.size }
     }
 
     private val threads_ = mutableMapOf<ThreadId, ThreadDescriptor>()
