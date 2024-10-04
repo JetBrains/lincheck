@@ -40,21 +40,21 @@ class ManagedThreadScheduler : ThreadScheduler() {
         check(isCurrentThreadScheduled())
         val threadId = currentThreadId
         threads[threadId]!!.state = ThreadState.ABORTED
-        throw ForcibleExecutionFinishError
+        throw ThreadAbortedError
     }
 
     /**
      * Waits until the specified thread is chosen to continue the execution.
      *
      * @param threadId The identifier of the thread whose turn to wait for.
-     * @throws ForcibleExecutionFinishError if the thread was aborted.
+     * @throws ThreadAbortedError if the thread was aborted.
      */
     fun awaitTurn(threadId: ThreadId) {
         check(threadId == getThreadId(Thread.currentThread()))
         val descriptor = threads[threadId]!!
         descriptor.spinner.spinWaitUntil {
             if (descriptor.state == ThreadState.ABORTED)
-                throw ForcibleExecutionFinishError
+                throw ThreadAbortedError
             currentThreadId == threadId
         }
     }
@@ -62,14 +62,12 @@ class ManagedThreadScheduler : ThreadScheduler() {
 }
 
 /**
- * This exception is used to finish the execution correctly for managed strategies.
- * Otherwise, there is no way to do it in case of (e.g.) deadlocks.
- * If we just leave it, then the execution will not be halted.
- * If we forcibly pass through all barriers, then we can get another exception due to being in an incorrect state.
- *
- * TODO: rename to ThreadAbortedError
+ * This exception is used to abort the execution correctly for managed strategies,
+ * for instance, in case of a deadlock.
  */
-internal object ForcibleExecutionFinishError : Error() {
+internal object ThreadAbortedError : Error() {
     // do not create a stack trace -- it simply can be unsafe
     override fun fillInStackTrace() = this
+
+    private fun readResolve(): Any = ThreadAbortedError
 }

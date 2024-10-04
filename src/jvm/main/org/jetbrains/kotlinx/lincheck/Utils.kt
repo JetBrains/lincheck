@@ -204,7 +204,7 @@ internal val String.canonicalClassName get() = this.replace('/', '.')
 @Suppress("DEPRECATION") // ThreadDeath
 internal fun exceptionCanBeValidExecutionResult(exception: Throwable): Boolean {
     return exception !is ThreadDeath && // is used to stop thread in `FixedActiveThreadsExecutor` via `thread.stop()`
-           exception !is ForcibleExecutionFinishError // is used to abort thread in `ManagedStrategy`
+           exception !is ThreadAbortedError // is used to abort thread in `ManagedStrategy`
 }
 
 internal val Throwable.text: String get() {
