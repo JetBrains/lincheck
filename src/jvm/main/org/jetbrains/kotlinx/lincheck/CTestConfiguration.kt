@@ -48,6 +48,8 @@ abstract class CTestConfiguration(
         stateRepresentationMethod: Method?
     ): Strategy
 
+    fun createVerifier() = verifierClass.getConstructor(Class::class.java).newInstance(sequentialSpecification)
+
     companion object {
         const val DEFAULT_ITERATIONS = 100
         const val DEFAULT_THREADS = 2
