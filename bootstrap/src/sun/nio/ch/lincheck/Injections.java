@@ -32,27 +32,32 @@ public class Injections {
 
     public static boolean enterIgnoredSection() {
         Thread t = Thread.currentThread();
-        if (!(t instanceof TestThread)) return false;
-        TestThread testThread = (TestThread) t;
-        if (testThread.inIgnoredSection) return false;
-        testThread.inIgnoredSection = true;
-        return true;
+        if (t instanceof TestThread) {
+            TestThread testThread = (TestThread) t;
+            if (testThread.inIgnoredSection) return false;
+            testThread.inIgnoredSection = true;
+            return true;
+        } else {
+            return false;
+        }
     }
 
     public static void leaveIgnoredSection() {
         Thread t = Thread.currentThread();
         if (t instanceof TestThread) {
-            ((TestThread) t).inIgnoredSection = false;
+            TestThread testThread = (TestThread) t;
+            testThread.inIgnoredSection = false;
         }
     }
 
-    public static boolean inTestingCode() {
+    public static boolean isInsideIgnoredSection() {
         Thread t = Thread.currentThread();
         if (t instanceof TestThread) {
             TestThread testThread = (TestThread) t;
-            return testThread.inTestingCode && !testThread.inIgnoredSection;
+            return !testThread.inTestingCode || testThread.inIgnoredSection;
+        } else {
+            return true;
         }
-        return false;
     }
 
     /**
