@@ -140,6 +140,11 @@ internal object LincheckJavaAgent {
             // In the model checking mode, Lincheck processes classes lazily, only when they are used.
             instrumentationMode == MODEL_CHECKING -> {
                 check(instrumentedClasses.isEmpty())
+                // Transform class loaders on the start, because it's the only place where we can do it.
+                val classLoaderClasses = getLoadedClassesToInstrument()
+                    .filter { isClassLoader(it.name) }
+                    .toTypedArray()
+                instrumentation.retransformClasses(*classLoaderClasses)
             }
         }
     }
@@ -351,7 +356,8 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         // once they are used in the testing code.
         if (!INSTRUMENT_ALL_CLASSES &&
             instrumentationMode == MODEL_CHECKING &&
-            internalClassName.canonicalClassName !in instrumentedClasses) {
+            internalClassName.canonicalClassName !in instrumentedClasses &&
+            !isClassLoader(internalClassName)) {
             return null
         }
         return transformImpl(loader, internalClassName, classBytes)
@@ -381,6 +387,10 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         // Java and Kotlin classes -- they do not have coroutine suspension points.
         if (instrumentationMode == STRESS) {
             if (className.startsWith("java.") || className.startsWith("kotlin.")) return false
+        }
+        // We should transform all the ClassLoader-s to wrap `loadClass` methods in the ignored section.
+        if (isClassLoader(className)) {
+            return true
         }
         // We do not need to instrument most standard Java classes.
         // It is fine to inject the Lincheck analysis only into the
