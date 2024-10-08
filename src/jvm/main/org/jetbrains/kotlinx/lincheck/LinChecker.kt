@@ -156,9 +156,6 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
             stateRepresentationMethod = testStructure.stateRepresentation,
         )
 
-    private fun CTestConfiguration.createVerifier() =
-        verifierClass.getConstructor(Class::class.java).newInstance(sequentialSpecification)
-
     private fun CTestConfiguration.createExecutionGenerator(randomProvider: RandomProvider): ExecutionGenerator {
         if (iterations > 0) {
             checkAtLeastOneMethodIsMarkedAsOperation(testClass)
