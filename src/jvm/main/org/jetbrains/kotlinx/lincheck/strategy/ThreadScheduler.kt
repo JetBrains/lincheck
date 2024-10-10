@@ -33,6 +33,9 @@ open class ThreadScheduler {
     private val threads_ = mutableThreadMapOf<ThreadDescriptor>()
     protected val threads: ThreadMap<ThreadDescriptor> get() = threads_
 
+    val nThreads: Int get() =
+        threads.size
+
     protected open class ThreadDescriptor(
         val id: ThreadId,
         val thread: Thread,
