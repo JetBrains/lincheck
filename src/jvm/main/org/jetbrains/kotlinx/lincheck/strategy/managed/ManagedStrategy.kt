@@ -495,6 +495,7 @@ abstract class ManagedStrategy(
         ))
         lastReadTracePoint.add(Optional.empty())
         randoms.add(Random(threadId + 239L))
+        // TODO: register in monitor tracker and parkingTracker
         // monitorTracker.registerThread(threadId, thread)
         return threadId
     }

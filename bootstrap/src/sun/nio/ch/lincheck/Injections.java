@@ -98,6 +98,52 @@ public class Injections {
     }
 
     /**
+     * Current thread reports that it started a new child thread {@code t}.
+     */
+    public static void beforeThreadFork(Thread t) {
+        var tracker = LincheckTracker.getEventTracker();
+        if (tracker == null) {
+            return;
+        }
+        tracker.beforeThreadFork(t);
+    }
+
+    /**
+     * Current thread entered its {@code run} method.
+     */
+    public static void beforeThreadStart() {
+        var tracker = LincheckTracker.getEventTracker();
+        if (tracker == null) {
+            return;
+        }
+        tracker.beforeThreadStart();
+    }
+
+    /**
+     * Current thread returned from its {@code run} method.
+     */
+    public static void afterThreadFinish() {
+        var tracker = LincheckTracker.getEventTracker();
+        if (tracker == null) {
+            return;
+        }
+        tracker.afterThreadFinish();
+    }
+
+    /**
+     * Current thread successfully joined thread {@code t}.
+     * <p>
+     * <b>Does not support joins with time limits yet</b>.
+     */
+    public static void beforeThreadJoin(Thread t) {
+        var tracker = LincheckTracker.getEventTracker();
+        if (tracker == null) {
+            return;
+        }
+        tracker.beforeThreadJoin(t);
+    }
+
+    /**
      * See [org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy.lock] for the explanation
      * why we have beforeLock method.
      *
