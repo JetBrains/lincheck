@@ -157,18 +157,9 @@ internal class StoreExceptionHandler :
 internal fun <T> CancellableContinuation<T>.cancelByLincheck(promptCancellation: Boolean): CancellationResult {
     val exceptionHandler = context[CoroutineExceptionHandler] as StoreExceptionHandler
     exceptionHandler.exception = null
-
-    val currentThread = Thread.currentThread() as? TestThread
-    val inIgnoredSection = currentThread?.inIgnoredSection ?: false
-    // We must exit the ignored section here to analyze the cancellation handler logic.
-    // After that, we need to enter the ignored section back.
-    currentThread?.inIgnoredSection = false
-    val cancelled = try {
+    val cancelled = runOutsideIgnoredSection(Thread.currentThread()) {
         cancel(cancellationByLincheckException)
-    } finally {
-        currentThread?.inIgnoredSection = inIgnoredSection
     }
-
     exceptionHandler.exception?.let {
         throw it.cause!! // let's throw the original exception, ignoring the internal coroutines details
     }
@@ -287,13 +278,17 @@ private inline fun <R> runInIgnoredSection(currentThread: Thread, block: () -> R
     }
 }
 
+@Suppress("UnusedReceiverParameter")
+internal inline fun <R> ParallelThreadsRunner.runOutsideIgnoredSection(block: () -> R) =
+    runOutsideIgnoredSection(Thread.currentThread(), block)
+
 /**
  * Exits the ignored section and invokes the provided [block] outside the ignored section,
  * entering the ignored section back after the [block] is executed.
  * This method **must** be called in an ignored section.
  */
 @Suppress("UNUSED_PARAMETER")
-internal inline fun <R> ParallelThreadsRunner.runOutsideIgnoredSection(currentThread: Thread, block: () -> R): R {
+private inline fun <R> runOutsideIgnoredSection(currentThread: Thread, block: () -> R): R {
     val strategy: ManagedStrategy = LincheckTracker.getEventTracker() as? ManagedStrategy
         ?: return block()
     check(strategy.inIgnoredSection()) {
