@@ -261,7 +261,7 @@ internal open class ParallelThreadsRunner(
             val resumedValue = completion.resWithCont.get().first
             // It is important to run the coroutine resumption part outside the ignored section
             // to track the events inside resumption.
-            runOutsideIgnoredSection(thread) {
+            runOutsideIgnoredSection {
                 completion.resWithCont.get().second.resumeWith(resumedValue)
             }
         }
