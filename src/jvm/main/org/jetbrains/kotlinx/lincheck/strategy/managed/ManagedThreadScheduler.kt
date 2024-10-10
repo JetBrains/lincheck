@@ -53,7 +53,7 @@ class ManagedThreadScheduler : ThreadScheduler() {
     fun abortCurrentThread(): Nothing {
         check(isCurrentThreadScheduled())
         val threadId = currentThreadId
-        threads[threadId]!!.state = ThreadState.ABORTED
+        threads[threadId].state = ThreadState.ABORTED
         throw ThreadAbortedError
     }
 
@@ -65,7 +65,7 @@ class ManagedThreadScheduler : ThreadScheduler() {
      */
     fun awaitTurn(threadId: ThreadId) {
         check(threadId == getThreadId(Thread.currentThread()))
-        val descriptor = threads[threadId]!!
+        val descriptor = threads[threadId]
         descriptor.spinner.spinWaitUntil {
             if (descriptor.state == ThreadState.ABORTED)
                 throw ThreadAbortedError
@@ -75,7 +75,7 @@ class ManagedThreadScheduler : ThreadScheduler() {
 
     fun enterTestingCode() {
         val threadId = getThreadId(Thread.currentThread())
-        val descriptor = threads[threadId] ?: return
+        val descriptor = threads.getOrNull(threadId) ?: return
         check(descriptor is ManagedThreadDescriptor)
         // check(!descriptor.inTestingCode)
         descriptor.inTestingCode = true
@@ -83,7 +83,7 @@ class ManagedThreadScheduler : ThreadScheduler() {
 
     fun leaveTestingCode() {
         val threadId = getThreadId(Thread.currentThread())
-        val descriptor = threads[threadId] ?: return
+        val descriptor = threads.getOrNull(threadId) ?: return
         check(descriptor is ManagedThreadDescriptor)
         // check(descriptor.inTestingCode)
         descriptor.inTestingCode = false
@@ -91,14 +91,14 @@ class ManagedThreadScheduler : ThreadScheduler() {
 
     fun inIgnoredSection(): Boolean {
         val threadId = getThreadId(Thread.currentThread())
-        val descriptor = threads[threadId] ?: return true
+        val descriptor = threads.getOrNull(threadId) ?: return true
         check(descriptor is ManagedThreadDescriptor)
         return !descriptor.inTestingCode || descriptor.inIgnoredSection
     }
 
     fun enterIgnoredSection(): Boolean {
         val threadId = getThreadId(Thread.currentThread())
-        val descriptor = threads[threadId] ?: return false
+        val descriptor = threads.getOrNull(threadId) ?: return false
         check(descriptor is ManagedThreadDescriptor)
         // check(!descriptor.inIgnoredSection)
         descriptor.inIgnoredSection = true
@@ -107,7 +107,7 @@ class ManagedThreadScheduler : ThreadScheduler() {
 
     fun leaveIgnoredSection() {
         val threadId = getThreadId(Thread.currentThread())
-        val descriptor = threads[threadId] ?: return
+        val descriptor = threads.getOrNull(threadId) ?: return
         check(descriptor is ManagedThreadDescriptor)
         // check(descriptor.inIgnoredSection)
         descriptor.inIgnoredSection = false
