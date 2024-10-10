@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.util.*
 
 class ManagedThreadScheduler : ThreadScheduler() {
 
@@ -72,27 +73,31 @@ class ManagedThreadScheduler : ThreadScheduler() {
         }
     }
 
-    fun enterTestingCode(threadId: ThreadId) {
+    fun enterTestingCode() {
+        val threadId = getThreadId(Thread.currentThread())
         val descriptor = threads[threadId] ?: return
         check(descriptor is ManagedThreadDescriptor)
         // check(!descriptor.inTestingCode)
         descriptor.inTestingCode = true
     }
 
-    fun leaveTestingCode(threadId: ThreadId) {
+    fun leaveTestingCode() {
+        val threadId = getThreadId(Thread.currentThread())
         val descriptor = threads[threadId] ?: return
         check(descriptor is ManagedThreadDescriptor)
         // check(descriptor.inTestingCode)
         descriptor.inTestingCode = false
     }
 
-    fun inIgnoredSection(threadId: ThreadId): Boolean {
+    fun inIgnoredSection(): Boolean {
+        val threadId = getThreadId(Thread.currentThread())
         val descriptor = threads[threadId] ?: return true
         check(descriptor is ManagedThreadDescriptor)
         return !descriptor.inTestingCode || descriptor.inIgnoredSection
     }
 
-    fun enterIgnoredSection(threadId: ThreadId): Boolean {
+    fun enterIgnoredSection(): Boolean {
+        val threadId = getThreadId(Thread.currentThread())
         val descriptor = threads[threadId] ?: return false
         check(descriptor is ManagedThreadDescriptor)
         // check(!descriptor.inIgnoredSection)
@@ -100,7 +105,8 @@ class ManagedThreadScheduler : ThreadScheduler() {
         return true
     }
 
-    fun leaveIgnoredSection(threadId: ThreadId) {
+    fun leaveIgnoredSection() {
+        val threadId = getThreadId(Thread.currentThread())
         val descriptor = threads[threadId] ?: return
         check(descriptor is ManagedThreadDescriptor)
         // check(descriptor.inIgnoredSection)

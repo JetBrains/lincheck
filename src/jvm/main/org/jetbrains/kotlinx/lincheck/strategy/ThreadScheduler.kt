@@ -12,13 +12,6 @@ package org.jetbrains.kotlinx.lincheck.strategy
 
 import org.jetbrains.kotlinx.lincheck.util.*
 
-
-typealias ThreadId = Int
-
-typealias ThreadMap<T> = Map<ThreadId, T>
-
-typealias MutableThreadMap<T> = MutableMap<ThreadId, T>
-
 enum class ThreadState {
     INITIALIZED,
     ENABLED,
@@ -36,7 +29,7 @@ enum class BlockingReason {
 
 open class ThreadScheduler {
 
-    private val threads_ = mutableMapOf<ThreadId, ThreadDescriptor>()
+    private val threads_ = mutableThreadMapOf<ThreadDescriptor>()
     protected val threads: ThreadMap<ThreadDescriptor> get() = threads_
 
     protected open class ThreadDescriptor(
@@ -56,7 +49,7 @@ open class ThreadScheduler {
     }
 
     fun getThreadId(thread: Thread): ThreadId =
-        threads.values.find { it.thread == thread }?.id ?: -1
+        threads.find { it.thread == thread }?.id ?: -1
 
     fun getThread(threadId: ThreadId): Thread? =
         threads[threadId]?.thread
@@ -82,11 +75,12 @@ open class ThreadScheduler {
         getThreadState(threadId) == ThreadState.FINISHED
 
     fun areAllThreadsFinished() =
-        threads.values.all { it.state == ThreadState.FINISHED }
+        threads.all { it.state == ThreadState.FINISHED }
 
-    fun registerThread(threadId: ThreadId, thread: Thread) {
+    open fun registerThread(thread: Thread) {
+        val threadId = threads.size
         val descriptor = createThreadDescriptor(threadId, thread)
-        threads_.put(threadId, descriptor).ensureNull()
+        threads_.add(descriptor)
     }
 
     fun startThread(threadId: ThreadId) {
@@ -115,7 +109,7 @@ open class ThreadScheduler {
     }
 
     fun abortAllThreads() {
-        threads.values.forEach { it.state = ThreadState.ABORTED }
+        threads.forEach { it.state = ThreadState.ABORTED }
     }
 
     fun finishThread(threadId: ThreadId) {

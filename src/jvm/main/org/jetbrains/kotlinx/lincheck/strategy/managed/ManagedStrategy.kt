@@ -209,7 +209,8 @@ abstract class ManagedStrategy(
         parkingTracker.reset()
         threadScheduler.reset()
         runner.executor.threads.forEachIndexed { threadId, thread ->
-            threadScheduler.registerThread(threadId, thread)
+            threadScheduler.registerThread(thread)
+            check(threadId == threadScheduler.getThreadId(thread))
         }
     }
 
@@ -922,28 +923,23 @@ abstract class ManagedStrategy(
     }
 
     private fun enterTestingCode() {
-        val threadId = threadScheduler.currentThreadId
-        threadScheduler.enterTestingCode(threadId)
+        threadScheduler.enterTestingCode()
     }
 
     private fun leaveTestingCode() {
-        val threadId = threadScheduler.currentThreadId
-        threadScheduler.leaveTestingCode(threadId)
+        threadScheduler.leaveTestingCode()
     }
 
     override fun inIgnoredSection(): Boolean {
-        val threadId = threadScheduler.currentThreadId
-        return threadScheduler.inIgnoredSection(threadId)
+        return threadScheduler.inIgnoredSection()
     }
 
     override fun enterIgnoredSection(): Boolean {
-        val threadId = threadScheduler.currentThreadId
-        return threadScheduler.enterIgnoredSection(threadId)
+        return threadScheduler.enterIgnoredSection()
     }
 
     override fun leaveIgnoredSection() {
-        val threadId = threadScheduler.currentThreadId
-        threadScheduler.leaveIgnoredSection(threadId)
+        threadScheduler.leaveIgnoredSection()
     }
 
     override fun beforeNewObjectCreation(className: String) = runInIgnoredSection {
