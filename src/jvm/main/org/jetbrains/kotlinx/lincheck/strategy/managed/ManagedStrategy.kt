@@ -456,7 +456,8 @@ abstract class ManagedStrategy(
 
     override fun beforeThreadFork(thread: Thread?) = runInIgnoredSection {
         if (thread is TestThread) return
-        val iThread = registerThread(thread!!)
+        registerThread(thread!!)
+        val iThread = threadScheduler.getThreadId(Thread.currentThread())
         newSwitchPoint(iThread, UNKNOWN_CODE_LOCATION, tracePoint = null)
     }
 
@@ -658,7 +659,7 @@ abstract class ManagedStrategy(
      */
     protected fun switchableThreads(iThread: Int) =
         if (runner.currentExecutionPart == PARALLEL) {
-            (0 until nThreads).filter { it != iThread && isActive(it) }
+            (0 until threadScheduler.nThreads).filter { it != iThread && isActive(it) }
         } else {
             emptyList()
         }
