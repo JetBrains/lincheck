@@ -16,7 +16,7 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanObjectNumeration
-import org.jetbrains.kotlinx.lincheck.util.traverseObjectGraph
+import org.jetbrains.kotlinx.lincheck.util.*
 import java.lang.reflect.*
 import java.util.*
 import kotlin.random.Random
