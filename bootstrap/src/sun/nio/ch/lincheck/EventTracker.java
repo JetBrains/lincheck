@@ -18,7 +18,7 @@ import java.util.*;
  */
 public interface EventTracker {
 
-    boolean isInsideIgnoredSection();
+    boolean inIgnoredSection();
     boolean enterIgnoredSection();
     void leaveIgnoredSection();
 

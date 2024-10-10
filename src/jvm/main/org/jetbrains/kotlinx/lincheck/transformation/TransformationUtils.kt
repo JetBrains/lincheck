@@ -288,7 +288,7 @@ internal inline fun GeneratorAdapter.invokeIfInTestingCode(
     code: GeneratorAdapter.() -> Unit
 ) {
     ifStatement(
-        condition = { invokeStatic(Injections::isInsideIgnoredSection) },
+        condition = { invokeStatic(Injections::inIgnoredSection) },
         ifClause = original,
         elseClause = code
     )

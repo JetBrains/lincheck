@@ -931,7 +931,7 @@ abstract class ManagedStrategy(
         thread.inIgnoredSection = false
     }
 
-    override fun isInsideIgnoredSection(): Boolean {
+    override fun inIgnoredSection(): Boolean {
         val thread = (Thread.currentThread() as? TestThread) ?: return true
         return !thread.inTestingCode || thread.inIgnoredSection
     }
