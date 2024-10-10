@@ -89,12 +89,12 @@ public class Injections {
      *
      * @return true if the current thread is inside an ignored section, false otherwise.
      */
-    public static boolean isInsideIgnoredSection() {
+    public static boolean inIgnoredSection() {
         var tracker = LincheckTracker.getEventTracker();
         if (tracker == null) {
             return true;
         }
-        return tracker.isInsideIgnoredSection();
+        return tracker.inIgnoredSection();
     }
 
     /**
