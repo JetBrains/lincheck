@@ -276,7 +276,7 @@ internal inline fun<R> ExecutionClassLoader.runInIgnoredSection(block: () -> R):
 private inline fun <R> runInIgnoredSection(currentThread: Thread, block: () -> R): R {
     val strategy: ManagedStrategy = LincheckTracker.getEventTracker() as? ManagedStrategy
         ?: return block()
-    if (strategy.isInsideIgnoredSection()) {
+    if (strategy.inIgnoredSection()) {
         return block()
     }
     strategy.enterIgnoredSection().ensureTrue()
@@ -296,7 +296,7 @@ private inline fun <R> runInIgnoredSection(currentThread: Thread, block: () -> R
 internal inline fun <R> ParallelThreadsRunner.runOutsideIgnoredSection(currentThread: Thread, block: () -> R): R {
     val strategy: ManagedStrategy = LincheckTracker.getEventTracker() as? ManagedStrategy
         ?: return block()
-    check(strategy.isInsideIgnoredSection()) {
+    check(strategy.inIgnoredSection()) {
         "Current thread must be in ignored section"
     }
     strategy.leaveIgnoredSection()
