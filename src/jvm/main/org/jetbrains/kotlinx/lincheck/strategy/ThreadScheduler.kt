@@ -25,6 +25,7 @@ enum class BlockingReason {
     WAITING,
     SUSPENDED,
     PARKED,
+    THREAD_JOIN,
 }
 
 open class ThreadScheduler {
@@ -47,6 +48,9 @@ open class ThreadScheduler {
     protected open fun createThreadDescriptor(id: ThreadId, thread: Thread): ThreadDescriptor {
         return ThreadDescriptor(id, thread, this)
     }
+
+    fun getRegisteredThreads(): List<Thread> =
+        threads.map { it.thread }
 
     fun getThreadId(thread: Thread): ThreadId =
         threads.find { it.thread == thread }?.id ?: -1
@@ -77,10 +81,11 @@ open class ThreadScheduler {
     fun areAllThreadsFinished() =
         threads.all { it.state == ThreadState.FINISHED }
 
-    open fun registerThread(thread: Thread) {
+    open fun registerThread(thread: Thread): ThreadId {
         val threadId = threads.size
         val descriptor = createThreadDescriptor(threadId, thread)
         threads_.add(descriptor)
+        return threadId
     }
 
     fun startThread(threadId: ThreadId) {

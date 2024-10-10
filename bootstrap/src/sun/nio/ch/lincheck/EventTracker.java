@@ -22,6 +22,11 @@ public interface EventTracker {
     boolean enterIgnoredSection();
     void leaveIgnoredSection();
 
+    void beforeThreadFork(Thread thread);
+    void beforeThreadStart();
+    void afterThreadFinish();
+    void beforeThreadJoin(Thread thread);
+
     void beforeLock(int codeLocation);
     void lock(Object monitor);
     void unlock(Object monitor, int codeLocation);

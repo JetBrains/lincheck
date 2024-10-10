@@ -304,6 +304,7 @@ internal enum class SwitchReason(private val reason: String) {
     LOCK_WAIT("lock is already acquired"),
     PARK_WAIT("thread is parked"),
     ACTIVE_LOCK("active lock detected"),
+    THREAD_JOIN_WAIT("waiting for thread to join"),
     SUSPENDED("coroutine is suspended"),
     STRATEGY_SWITCH("");
 

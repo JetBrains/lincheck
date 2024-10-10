@@ -183,10 +183,6 @@ internal open class ParallelThreadsRunner(
         @Suppress("DEPRECATION")
         testInstance = testClass.newInstance()
         if (strategy is ModelCheckingStrategy) {
-            // We pass the test instance to the strategy to initialize the call stack.
-            // It should be done here as we create the test instance in the `run` method in the runner, after
-            // `initializeInvocation` method call of ManagedStrategy.
-            strategy.initializeCallStack(testInstance)
             // In the model checking mode, we need to ensure
             // that all the necessary classes and instrumented
             // after creating a test instance.
@@ -292,12 +288,12 @@ internal open class ParallelThreadsRunner(
     override fun run(): InvocationResult {
         try {
             var timeout = timeoutMs * 1_000_000
+            // Create a new testing class instance.
+            createTestInstance()
             // set the event tracker
             if (strategy is ManagedStrategy) {
                 LincheckTracker.setEventTracker(strategy)
             }
-            // Create a new testing class instance.
-            createTestInstance()
             // Execute the initial part.
             initialPartExecution?.let {
                 beforePart(INIT)
