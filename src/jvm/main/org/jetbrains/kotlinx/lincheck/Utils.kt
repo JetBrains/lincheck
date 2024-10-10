@@ -10,13 +10,13 @@
 package org.jetbrains.kotlinx.lincheck
 
 import kotlinx.coroutines.*
-import sun.nio.ch.lincheck.EventTracker
-import sun.nio.ch.lincheck.TestThread
+import sun.nio.ch.lincheck.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
 import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.jetbrains.kotlinx.lincheck.util.*
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.lang.ref.*
@@ -272,37 +272,38 @@ internal inline fun<R> LincheckClassFileTransformer.runInIgnoredSection(block: (
 @Suppress("UnusedReceiverParameter")
 internal inline fun<R> ExecutionClassLoader.runInIgnoredSection(block: () -> R): R =  runInIgnoredSection(Thread.currentThread(), block)
 
-private inline fun <R> runInIgnoredSection(currentThread: Thread, block: () -> R): R =
-    if (currentThread is TestThread && currentThread.inTestingCode && !currentThread.inIgnoredSection) {
-        currentThread.inIgnoredSection = true
-        try {
-            block()
-        } finally {
-            currentThread.inIgnoredSection = false
-        }
-    } else {
-        block()
-    }
-
-/**
- * Exits the ignored section and invokes the provided [block] in the ignored section, setting
- * the [TestThread.inIgnoredSection] flag to `false` in the beginning and setting it back
- * in the end to `true`.
- * This method **must** be called in an ignored section.
- */
-@Suppress("UnusedReceiverParameter")
-internal inline fun <R> ParallelThreadsRunner.runOutsideIgnoredSection(currentThread: TestThread, block: () -> R): R {
-    if (!currentThread.inTestingCode) {
+@Suppress("UNUSED_PARAMETER")
+private inline fun <R> runInIgnoredSection(currentThread: Thread, block: () -> R): R {
+    val strategy: ManagedStrategy = LincheckTracker.getEventTracker() as? ManagedStrategy
+        ?: return block()
+    if (strategy.isInsideIgnoredSection()) {
         return block()
     }
-    require(currentThread.inIgnoredSection) {
-        "Current thread must be in ignored section"
-    }
-    currentThread.inIgnoredSection = false
+    strategy.enterIgnoredSection().ensureTrue()
     return try {
         block()
     } finally {
-        currentThread.inIgnoredSection = true
+        strategy.leaveIgnoredSection()
+    }
+}
+
+/**
+ * Exits the ignored section and invokes the provided [block] outside the ignored section,
+ * entering the ignored section back after the [block] is executed.
+ * This method **must** be called in an ignored section.
+ */
+@Suppress("UNUSED_PARAMETER")
+internal inline fun <R> ParallelThreadsRunner.runOutsideIgnoredSection(currentThread: Thread, block: () -> R): R {
+    val strategy: ManagedStrategy = LincheckTracker.getEventTracker() as? ManagedStrategy
+        ?: return block()
+    check(strategy.isInsideIgnoredSection()) {
+        "Current thread must be in ignored section"
+    }
+    strategy.leaveIgnoredSection()
+    return try {
+        block()
+    } finally {
+        strategy.enterIgnoredSection().ensureTrue()
     }
 }
 

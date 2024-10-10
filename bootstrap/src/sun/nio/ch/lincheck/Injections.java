@@ -41,26 +41,22 @@ public class Injections {
      * @return true if the thread successfully entered the ignored section, false otherwise.
      */
     public static boolean enterIgnoredSection() {
-        Thread t = Thread.currentThread();
-        if (t instanceof TestThread) {
-            TestThread testThread = (TestThread) t;
-            if (testThread.inIgnoredSection) return false;
-            testThread.inIgnoredSection = true;
-            return true;
-        } else {
+        var tracker = LincheckTracker.getEventTracker();
+        if (tracker == null) {
             return false;
         }
+        return tracker.enterIgnoredSection();
     }
 
     /**
      * Leaves an ignored section for the current thread.
      */
     public static void leaveIgnoredSection() {
-        Thread t = Thread.currentThread();
-        if (t instanceof TestThread) {
-            TestThread testThread = (TestThread) t;
-            testThread.inIgnoredSection = false;
+        var tracker = LincheckTracker.getEventTracker();
+        if (tracker == null) {
+            return;
         }
+        tracker.leaveIgnoredSection();
     }
 
     /**
@@ -69,13 +65,11 @@ public class Injections {
      * @return true if the current thread is inside an ignored section, false otherwise.
      */
     public static boolean isInsideIgnoredSection() {
-        Thread t = Thread.currentThread();
-        if (t instanceof TestThread) {
-            TestThread testThread = (TestThread) t;
-            return !testThread.inTestingCode || testThread.inIgnoredSection;
-        } else {
+        var tracker = LincheckTracker.getEventTracker();
+        if (tracker == null) {
             return true;
         }
+        return tracker.isInsideIgnoredSection();
     }
 
     /**
@@ -346,11 +340,11 @@ public class Injections {
     }
 
     private static EventTracker getEventTracker() {
-        Thread currentThread = Thread.currentThread();
-        if (currentThread instanceof TestThread) {
-            return ((TestThread) currentThread).eventTracker;
+        var tracker = LincheckTracker.getEventTracker();
+        if (tracker == null) {
+            throw new RuntimeException("No event tracker set by Lincheck");
         }
-        throw new RuntimeException("Current thread is not an instance of TestThread");
+        return tracker;
     }
 
 
