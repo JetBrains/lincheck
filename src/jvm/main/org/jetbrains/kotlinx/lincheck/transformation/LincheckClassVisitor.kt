@@ -117,7 +117,8 @@ internal class LincheckClassVisitor(
         mv = ParkingTransformer(fileName, className, methodName, mv.newAdapter())
         mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
         mv = DeterministicHashCodeTransformer(fileName, className, methodName, mv.newAdapter())
-        mv = DeterministicTimeTransformer(mv.newAdapter())
+        // TODO: add TRACE_DEBUGGER_MODE property
+        // mv = DeterministicTimeTransformer(mv.newAdapter())
         mv = DeterministicRandomTransformer(fileName, className, methodName, mv.newAdapter())
         mv = UnsafeMethodTransformer(fileName, className, methodName, mv.newAdapter())
         mv = AtomicFieldUpdaterMethodTransformer(fileName, className, methodName, mv.newAdapter())

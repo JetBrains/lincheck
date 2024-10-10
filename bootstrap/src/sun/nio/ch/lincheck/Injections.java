@@ -55,6 +55,10 @@ public class Injections {
         return false;
     }
 
+    public static boolean isFirstRun() {
+        return getEventTracker().isFirstRun()
+    }
+
     /**
      * See [org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy.lock] for the explanation
      * why we have beforeLock method.
