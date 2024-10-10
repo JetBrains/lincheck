@@ -21,7 +21,9 @@ interface ThreadMap<out T> {
 
     fun isEmpty(): Boolean
 
-    operator fun get(threadId: ThreadId): T?
+    operator fun get(threadId: ThreadId): T
+
+    fun getOrNull(threadId: ThreadId): T?
 
 }
 
@@ -42,7 +44,7 @@ fun <T : Any> mutableThreadMapOf(): MutableThreadMap<T> =
 fun <T> ThreadMap<T>.find(predicate: (T) -> Boolean): T? {
     var i = 0
     while (i < size) {
-        val value = get(i)!!
+        val value = get(i)
         if (predicate(value))
             return value
         i++
@@ -53,7 +55,7 @@ fun <T> ThreadMap<T>.find(predicate: (T) -> Boolean): T? {
 fun <T> ThreadMap<T>.forEach(action: (T) -> Unit) {
     var i = 0
     while (i < size) {
-        val value = get(i)!!
+        val value = get(i)
         action(value)
         i++
     }
@@ -62,7 +64,7 @@ fun <T> ThreadMap<T>.forEach(action: (T) -> Unit) {
 fun <T> ThreadMap<T>.all(predicate: (T) -> Boolean): Boolean {
     var i = 0
     while (i < size) {
-        val value = get(i)!!
+        val value = get(i)
         if (!predicate(value))
             return false
         i++
@@ -84,7 +86,14 @@ private class ArrayThreadMap<T : Any> : MutableThreadMap<T> {
         (size == 0)
 
     @Suppress("UNCHECKED_CAST")
-    override fun get(threadId: ThreadId): T? {
+    override fun get(threadId: ThreadId): T {
+        if (threadId < 0 || threadId >= size)
+            throw IndexOutOfBoundsException("Thread id $threadId is out of bounds")
+        return (array[threadId] as T)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    override fun getOrNull(threadId: ThreadId): T? {
         return if (threadId >= 0 && threadId < capacity) (array[threadId] as? T?) else null
     }
 
