@@ -52,19 +52,19 @@ open class ThreadScheduler {
         threads.find { it.thread == thread }?.id ?: -1
 
     fun getThread(threadId: ThreadId): Thread? =
-        threads[threadId]?.thread
+        threads.getOrNull(threadId)?.thread
 
     fun getThreadState(threadId: ThreadId): ThreadState? =
-        threads[threadId]?.state
+        threads.getOrNull(threadId)?.state
 
     fun getBlockingReason(threadId: ThreadId): BlockingReason? =
-        threads[threadId]?.blockingReason
+        threads.getOrNull(threadId)?.blockingReason
 
     fun isEnabled(threadId: ThreadId) =
         getThreadState(threadId) == ThreadState.ENABLED
 
     fun isSchedulable(threadId: ThreadId): Boolean {
-        val state = threads[threadId]?.state ?: return false
+        val state = threads.getOrNull(threadId)?.state ?: return false
         return (state == ThreadState.INITIALIZED) || (state == ThreadState.ENABLED)
     }
 
@@ -84,28 +84,28 @@ open class ThreadScheduler {
     }
 
     fun startThread(threadId: ThreadId) {
-        threads[threadId]!!.apply {
+        threads[threadId].apply {
             check(state == ThreadState.INITIALIZED)
             state = ThreadState.ENABLED
         }
     }
 
     fun blockThread(threadId: ThreadId, reason: BlockingReason) {
-        threads[threadId]!!.apply {
+        threads[threadId].apply {
             blockingReason = reason
             state = ThreadState.BLOCKED
         }
     }
 
     fun unblockThread(threadId: ThreadId) {
-        threads[threadId]!!.apply {
+        threads[threadId].apply {
             state = ThreadState.ENABLED
             blockingReason = null
         }
     }
 
     fun abortThread(threadId: ThreadId) {
-        threads[threadId]!!.apply { state = ThreadState.ABORTED }
+        threads[threadId].apply { state = ThreadState.ABORTED }
     }
 
     fun abortAllThreads() {
@@ -113,7 +113,7 @@ open class ThreadScheduler {
     }
 
     fun finishThread(threadId: ThreadId) {
-        threads[threadId]!!.apply { state = ThreadState.FINISHED }
+        threads[threadId].apply { state = ThreadState.FINISHED }
     }
 
     fun reset() {
