@@ -28,16 +28,20 @@ class DynamicThreadsTest {
 
     @Operation
     fun operation(): Int {
-        thread {
+        val t1 = thread {
             counter.incrementAndGet()
         }
-        thread {
+        val t2 = thread {
             counter.incrementAndGet()
         }
-        thread {
+        val t3 = thread {
             counter.incrementAndGet()
         }
-        return counter.get()
+        return counter.get().also {
+            t1.join()
+            t2.join()
+            t3.join()
+        }
     }
 
     val scenario = scenario {
