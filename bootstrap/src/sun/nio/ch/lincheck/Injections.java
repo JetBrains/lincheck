@@ -73,7 +73,7 @@ public class Injections {
     }
 
     /**
-     * Current thread reports that it started a new child thread {@code t}.
+     * Current thread reports that it is going to start a new child thread {@code t}.
      */
     public static void beforeThreadFork(Thread t) {
         var tracker = LincheckTracker.getEventTracker();
@@ -81,6 +81,17 @@ public class Injections {
             return;
         }
         tracker.beforeThreadFork(t);
+    }
+
+    /**
+     * Current thread reports that it started a new child thread {@code t}.
+     */
+    public static void afterThreadFork(Thread t) {
+        var tracker = LincheckTracker.getEventTracker();
+        if (tracker == null) {
+            return;
+        }
+        tracker.afterThreadFork(t);
     }
 
     /**

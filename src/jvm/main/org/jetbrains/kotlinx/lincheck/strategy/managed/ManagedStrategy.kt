@@ -442,31 +442,39 @@ abstract class ManagedStrategy(
 
     override fun beforeThreadFork(thread: Thread?) = runInIgnoredSection {
         if (thread is TestThread) return
-        registerThread(thread!!)
-        val iThread = threadScheduler.getThreadId(Thread.currentThread())
-        newSwitchPoint(iThread, UNKNOWN_CODE_LOCATION, tracePoint = null)
+        @Suppress("UNUSED_VARIABLE")
+        val forkedThreadId = registerThread(thread!!)
     }
 
-    override fun beforeThreadStart() {
-        val iThread = threadScheduler.getThreadId(Thread.currentThread())
-        if (iThread == -1) return
-        onThreadStart(iThread)
+    override fun afterThreadFork(thread: Thread?) {
+        val currentThreadId = threadScheduler.getThreadId(Thread.currentThread())
+        newSwitchPoint(currentThreadId, UNKNOWN_CODE_LOCATION, tracePoint = null)
     }
 
-    override fun afterThreadFinish() {
-        val iThread = threadScheduler.getThreadId(Thread.currentThread())
-        if (iThread == -1) return
-        onThreadFinish(iThread)
+    override fun beforeThreadStart() = runInIgnoredSection {
+        val currentThreadId = threadScheduler.getThreadId(Thread.currentThread())
+        // scenario threads are handled separately by the runner itself
+        if (currentThreadId < scenario.nThreads) return
+        onThreadStart(currentThreadId)
+        enterTestingCode()
+    }
+
+    override fun afterThreadFinish() = runInIgnoredSection {
+        val currentThreadId = threadScheduler.getThreadId(Thread.currentThread())
+        // scenario threads are handled separately by the runner itself
+        if (currentThreadId < scenario.nThreads) return
+        leaveTestingCode()
+        onThreadFinish(currentThreadId)
     }
 
     override fun beforeThreadJoin(thread: Thread?) = runInIgnoredSection {
-        val iThread = threadScheduler.getThreadId(Thread.currentThread())
+        val currentThreadId = threadScheduler.getThreadId(Thread.currentThread())
         val iJoinThread = threadScheduler.getThreadId(thread!!)
         // TODO: add trace point ?
         while (threadScheduler.getThreadState(iJoinThread) != ThreadState.FINISHED) {
             // TODO: should wait on thread-join be considered an obstruction-freedom violation?
             // Switch to another thread and wait for a moment when the thread is finished
-            switchCurrentThread(iThread, SwitchReason.THREAD_JOIN_WAIT)
+            switchCurrentThread(currentThreadId, SwitchReason.THREAD_JOIN_WAIT)
         }
     }
 
@@ -515,6 +523,7 @@ abstract class ManagedStrategy(
         threadScheduler.finishThread(iThread)
         loopDetector.onThreadFinish(iThread)
         traceCollector?.onThreadFinish()
+        unblockJoiningThreads(iThread)
         val nextThread = chooseThreadSwitch(iThread, true)
         setCurrentThread(nextThread)
     }
@@ -799,6 +808,16 @@ abstract class ManagedStrategy(
                 stackTraceElement = CodeLocations.stackTrace(codeLocation)
             )
             traceCollector?.passCodeLocation(tracePoint)
+        }
+    }
+
+    @Suppress("UNUSED_PARAMETER")
+    private fun unblockJoiningThreads(finishedThreadId: Int) {
+        for (threadId in 0 until threadScheduler.nThreads) {
+            // TODO: unlock only those threads waiting for finishedThreadId
+            if (threadScheduler.getBlockingReason(threadId) == BlockingReason.THREAD_JOIN) {
+                threadScheduler.unblockThread(threadId)
+            }
         }
     }
 

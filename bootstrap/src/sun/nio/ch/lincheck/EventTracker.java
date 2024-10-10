@@ -23,6 +23,7 @@ public interface EventTracker {
     void leaveIgnoredSection();
 
     void beforeThreadFork(Thread thread);
+    void afterThreadFork(Thread thread);
     void beforeThreadStart();
     void afterThreadFinish();
     void beforeThreadJoin(Thread thread);
