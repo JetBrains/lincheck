@@ -18,6 +18,10 @@ import java.util.*;
  */
 public interface EventTracker {
 
+    boolean isInsideIgnoredSection();
+    boolean enterIgnoredSection();
+    void leaveIgnoredSection();
+
     void beforeLock(int codeLocation);
     void lock(Object monitor);
     void unlock(Object monitor, int codeLocation);

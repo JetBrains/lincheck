@@ -920,16 +920,20 @@ abstract class ManagedStrategy(
         getThreadLocalRandom().nextInt()
     }
 
-    private fun enterIgnoredSection() {
-        val thread = (Thread.currentThread() as? TestThread) ?: return
+    override fun enterIgnoredSection(): Boolean {
+        val thread = (Thread.currentThread() as? TestThread) ?: return false
         thread.inIgnoredSection = true
+        return true
     }
 
-    private fun leaveIgnoredSectionIfEntered() {
+    override fun leaveIgnoredSection() {
         val thread = (Thread.currentThread() as? TestThread) ?: return
-        if (thread.inIgnoredSection) {
-            thread.inIgnoredSection = false
-        }
+        thread.inIgnoredSection = false
+    }
+
+    override fun isInsideIgnoredSection(): Boolean {
+        val thread = (Thread.currentThread() as? TestThread) ?: return false
+        return !thread.inTestingCode || thread.inIgnoredSection
     }
 
     override fun beforeNewObjectCreation(className: String) = runInIgnoredSection {
@@ -1016,7 +1020,7 @@ abstract class ManagedStrategy(
         // In case the code is now in an "ignore" section due to
         // an "atomic" or "ignore" guarantee, we need to leave
         // this "ignore" section.
-        leaveIgnoredSectionIfEntered()
+        leaveIgnoredSection()
     }
 
     override fun onMethodCallException(t: Throwable) {
@@ -1036,7 +1040,7 @@ abstract class ManagedStrategy(
         // In case the code is now in an "ignore" section due to
         // an "atomic" or "ignore" guarantee, we need to leave
         // this "ignore" section.
-        leaveIgnoredSectionIfEntered()
+        leaveIgnoredSection()
     }
 
     private fun newSwitchPointOnAtomicMethodCall(codeLocation: Int, params: Array<Any?>) {
