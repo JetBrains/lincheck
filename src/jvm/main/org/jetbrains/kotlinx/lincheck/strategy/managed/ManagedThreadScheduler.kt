@@ -28,6 +28,19 @@ class ManagedThreadScheduler : ThreadScheduler() {
     var currentThreadId: Int = 0
         private set
 
+    private class ManagedThreadDescriptor(
+        id: ThreadId,
+        thread: Thread,
+        scheduler: ThreadScheduler,
+    ) : ThreadDescriptor(id, thread, scheduler) {
+        var inTestingCode = false
+        var inIgnoredSection = false
+    }
+
+    override fun createThreadDescriptor(id: ThreadId, thread: Thread): ThreadDescriptor {
+        return ManagedThreadDescriptor(id, thread, this)
+    }
+
     fun isCurrentThreadScheduled(): Boolean {
         return currentThreadId == getThreadId(Thread.currentThread())
     }
@@ -57,6 +70,41 @@ class ManagedThreadScheduler : ThreadScheduler() {
                 throw ThreadAbortedError
             currentThreadId == threadId
         }
+    }
+
+    fun enterTestingCode(threadId: ThreadId) {
+        val descriptor = threads[threadId] ?: return
+        check(descriptor is ManagedThreadDescriptor)
+        // check(!descriptor.inTestingCode)
+        descriptor.inTestingCode = true
+    }
+
+    fun leaveTestingCode(threadId: ThreadId) {
+        val descriptor = threads[threadId] ?: return
+        check(descriptor is ManagedThreadDescriptor)
+        // check(descriptor.inTestingCode)
+        descriptor.inTestingCode = false
+    }
+
+    fun inIgnoredSection(threadId: ThreadId): Boolean {
+        val descriptor = threads[threadId] ?: return true
+        check(descriptor is ManagedThreadDescriptor)
+        return !descriptor.inTestingCode || descriptor.inIgnoredSection
+    }
+
+    fun enterIgnoredSection(threadId: ThreadId): Boolean {
+        val descriptor = threads[threadId] ?: return false
+        check(descriptor is ManagedThreadDescriptor)
+        // check(!descriptor.inIgnoredSection)
+        descriptor.inIgnoredSection = true
+        return true
+    }
+
+    fun leaveIgnoredSection(threadId: ThreadId) {
+        val descriptor = threads[threadId] ?: return
+        check(descriptor is ManagedThreadDescriptor)
+        // check(descriptor.inIgnoredSection)
+        descriptor.inIgnoredSection = false
     }
 
 }
