@@ -10,6 +10,18 @@
 
 package org.jetbrains.kotlinx.lincheck.util
 
+fun Boolean.ensureTrue(): Boolean {
+    // TODO: add contracts?
+    check(this == true)
+    return this
+}
+
+fun Boolean.ensureFalse(): Boolean {
+    // TODO: add contracts?
+    check(this == false)
+    return this
+}
+
 inline fun<T> T.ensure(predicate: (T) -> Boolean): T {
     // TODO: add contracts?
     check(predicate(this))
