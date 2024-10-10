@@ -29,6 +29,8 @@ interface ThreadMap<out T> {
 
 interface MutableThreadMap<T>: ThreadMap<T> {
 
+    operator fun set(threadId: ThreadId, value: T)
+
     fun add(value: T)
 
     fun clear()
@@ -41,7 +43,7 @@ fun <T> threadMapOf(): ThreadMap<T> =
 fun <T : Any> mutableThreadMapOf(): MutableThreadMap<T> =
     ArrayThreadMap()
 
-fun <T> ThreadMap<T>.find(predicate: (T) -> Boolean): T? {
+inline fun <T> ThreadMap<T>.find(predicate: (T) -> Boolean): T? {
     var i = 0
     while (i < size) {
         val value = get(i)
@@ -52,7 +54,31 @@ fun <T> ThreadMap<T>.find(predicate: (T) -> Boolean): T? {
     return null
 }
 
-fun <T> ThreadMap<T>.forEach(action: (T) -> Unit) {
+@Suppress("UNCHECKED_CAST")
+inline fun <T, reified R> ThreadMap<T>.map(transform: (T) -> R): List<R> {
+    var i = 0
+    val array = Array<R?>(size) { null }
+    while (i < size) {
+        val value = get(i)
+        array[i] = transform(value)
+        i++
+    }
+    return (array as Array<R>).asList()
+}
+
+@Suppress("UNCHECKED_CAST")
+inline fun <T, reified R> ThreadMap<T>.mapIndexed(transform: (Int, T) -> R): List<R> {
+    var i = 0
+    val array = Array<R?>(size) { null }
+    while (i < size) {
+        val value = get(i)
+        array[i] = transform(i, value)
+        i++
+    }
+    return (array as Array<R>).asList()
+}
+
+inline fun <T> ThreadMap<T>.forEach(action: (T) -> Unit) {
     var i = 0
     while (i < size) {
         val value = get(i)
@@ -61,7 +87,7 @@ fun <T> ThreadMap<T>.forEach(action: (T) -> Unit) {
     }
 }
 
-fun <T> ThreadMap<T>.all(predicate: (T) -> Boolean): Boolean {
+inline fun <T> ThreadMap<T>.all(predicate: (T) -> Boolean): Boolean {
     var i = 0
     while (i < size) {
         val value = get(i)
@@ -95,6 +121,12 @@ private class ArrayThreadMap<T : Any> : MutableThreadMap<T> {
     @Suppress("UNCHECKED_CAST")
     override fun getOrNull(threadId: ThreadId): T? {
         return if (threadId >= 0 && threadId < capacity) (array[threadId] as? T?) else null
+    }
+
+    override fun set(threadId: ThreadId, value: T) {
+        if (threadId < 0 || threadId >= size)
+            throw IndexOutOfBoundsException("Thread ID $threadId is out of bounds")
+        array[threadId] = value
     }
 
     override fun add(value: T) {
