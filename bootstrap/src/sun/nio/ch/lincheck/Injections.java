@@ -55,6 +55,16 @@ public class Injections {
         }
     }
 
+    /**
+     * Enters an ignored section for the current thread.
+     * A code inside the ignored section is not analyzed by the Lincheck.
+     *
+     * Note that the thread may not actually enter the ignored section in the following cases.
+     *   1. The thread is not registered in the Lincheck strategy.
+     *   2. The thread is already inside the ignored section.
+     *
+     * @return true if the thread successfully entered the ignored section, false otherwise.
+     */
     public static boolean enterIgnoredSection() {
         Thread t = Thread.currentThread();
         if (t instanceof TestThread) {
@@ -67,6 +77,9 @@ public class Injections {
         }
     }
 
+    /**
+     * Leaves an ignored section for the current thread.
+     */
     public static void leaveIgnoredSection() {
         Thread t = Thread.currentThread();
         if (t instanceof TestThread) {
@@ -75,6 +88,11 @@ public class Injections {
         }
     }
 
+    /**
+     * Determines if the current thread is inside an ignored section.
+     *
+     * @return true if the current thread is inside an ignored section, false otherwise.
+     */
     public static boolean isInsideIgnoredSection() {
         Thread t = Thread.currentThread();
         if (t instanceof TestThread) {
