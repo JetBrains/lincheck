@@ -479,7 +479,7 @@ abstract class ManagedStrategy(
     open fun onFailure(iThread: Int, exception: Throwable) {
         // This method is called only if exception can't be treated as a normal operation result,
         // so we exit testing code to avoid trace collection resume or some bizarre bugs
-        (Thread.currentThread() as TestThread).inTestingCode = false
+        leaveTestingCode()
         // Despite the fact that the corresponding failure will be detected by the runner,
         // the managed strategy can construct a trace to reproduce this failure.
         // Let's then store the corresponding failing result and construct the trace.
@@ -488,12 +488,12 @@ abstract class ManagedStrategy(
         threadScheduler.abortAllThreads()
     }
 
-    override fun onActorStart(iThread: Int) = runInIgnoredSection {
+    override fun onActorStart(iThread: Int) {
         currentActorId[iThread]++
         callStackTrace[iThread].clear()
         suspendedFunctionsStack[iThread].clear()
         loopDetector.onActorStart(iThread)
-        (Thread.currentThread() as TestThread).inTestingCode = true
+        enterTestingCode()
     }
 
     override fun onActorFinish() {
@@ -501,7 +501,7 @@ abstract class ManagedStrategy(
         // When stepping out to the TestThreadExecution class, stepping continues unproductively.
         // With this method, we force the debugger to stop at the beginning of the next actor.
         onThreadSwitchesOrActorFinishes()
-        (Thread.currentThread() as TestThread).inTestingCode = false
+        leaveTestingCode()
     }
 
     /**
@@ -921,6 +921,19 @@ abstract class ManagedStrategy(
         getThreadLocalRandom().nextInt()
     }
 
+    private fun enterTestingCode() {
+        (Thread.currentThread() as TestThread).inTestingCode = true
+    }
+
+    private fun leaveTestingCode() {
+        (Thread.currentThread() as TestThread).inTestingCode = false
+    }
+
+    override fun inIgnoredSection(): Boolean {
+        val thread = (Thread.currentThread() as? TestThread) ?: return true
+        return !thread.inTestingCode || thread.inIgnoredSection
+    }
+
     override fun enterIgnoredSection(): Boolean {
         val thread = (Thread.currentThread() as? TestThread) ?: return false
         thread.inIgnoredSection = true
@@ -930,11 +943,6 @@ abstract class ManagedStrategy(
     override fun leaveIgnoredSection() {
         val thread = (Thread.currentThread() as? TestThread) ?: return
         thread.inIgnoredSection = false
-    }
-
-    override fun inIgnoredSection(): Boolean {
-        val thread = (Thread.currentThread() as? TestThread) ?: return true
-        return !thread.inTestingCode || thread.inIgnoredSection
     }
 
     override fun beforeNewObjectCreation(className: String) = runInIgnoredSection {
