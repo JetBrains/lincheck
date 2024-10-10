@@ -364,7 +364,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
     ): ByteArray = transformedClassesCache.computeIfAbsent(internalClassName.canonicalClassName) {
         val reader = ClassReader(classBytes)
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
-        val visitor = LincheckClassVisitor(instrumentationMode, writer)
+        val visitor = LincheckClassVisitor(loader, writer, instrumentationMode)
         try {
             reader.accept(visitor, ClassReader.EXPAND_FRAMES)
             writer.toByteArray()
@@ -386,6 +386,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         // It is fine to inject the Lincheck analysis only into the
         // `java.util.*` ones, ignored the known atomic constructs.
         if (className.startsWith("java.")) {
+            if (className == "java.lang.Thread") return true
             if (className.startsWith("java.util.concurrent.") && className.contains("Atomic")) return false
             if (className.startsWith("java.util.")) return true
             if (className.startsWith("com.sun.")) return false
@@ -398,6 +399,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         // However, we need to inject the Lincheck analysis into the classes
         // related to collections, iterators, random and coroutines.
         if (className.startsWith("kotlin.")) {
+            if (className.startsWith("kotlin.concurrent.ThreadsKt")) return true
             if (className.startsWith("kotlin.collections.")) return true
             if (className.startsWith("kotlin.jvm.internal.Array") && className.contains("Iterator")) return true
             if (className.startsWith("kotlin.ranges.")) return true
