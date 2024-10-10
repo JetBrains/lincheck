@@ -922,27 +922,28 @@ abstract class ManagedStrategy(
     }
 
     private fun enterTestingCode() {
-        (Thread.currentThread() as TestThread).inTestingCode = true
+        val threadId = threadScheduler.currentThreadId
+        threadScheduler.enterTestingCode(threadId)
     }
 
     private fun leaveTestingCode() {
-        (Thread.currentThread() as TestThread).inTestingCode = false
+        val threadId = threadScheduler.currentThreadId
+        threadScheduler.leaveTestingCode(threadId)
     }
 
     override fun inIgnoredSection(): Boolean {
-        val thread = (Thread.currentThread() as? TestThread) ?: return true
-        return !thread.inTestingCode || thread.inIgnoredSection
+        val threadId = threadScheduler.currentThreadId
+        return threadScheduler.inIgnoredSection(threadId)
     }
 
     override fun enterIgnoredSection(): Boolean {
-        val thread = (Thread.currentThread() as? TestThread) ?: return false
-        thread.inIgnoredSection = true
-        return true
+        val threadId = threadScheduler.currentThreadId
+        return threadScheduler.enterIgnoredSection(threadId)
     }
 
     override fun leaveIgnoredSection() {
-        val thread = (Thread.currentThread() as? TestThread) ?: return
-        thread.inIgnoredSection = false
+        val threadId = threadScheduler.currentThreadId
+        threadScheduler.leaveIgnoredSection(threadId)
     }
 
     override fun beforeNewObjectCreation(className: String) = runInIgnoredSection {

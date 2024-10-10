@@ -36,16 +36,24 @@ enum class BlockingReason {
 
 open class ThreadScheduler {
 
-    protected inner class ThreadDescriptor(val id: ThreadId, val thread: Thread) {
+    private val threads_ = mutableMapOf<ThreadId, ThreadDescriptor>()
+    protected val threads: ThreadMap<ThreadDescriptor> get() = threads_
+
+    protected open class ThreadDescriptor(
+        val id: ThreadId,
+        val thread: Thread,
+        val scheduler: ThreadScheduler,
+    ) {
         @Volatile var state: ThreadState = ThreadState.INITIALIZED
 
         @Volatile var blockingReason: BlockingReason? = null
 
-        val spinner: Spinner = Spinner { threads.size }
+        val spinner: Spinner = Spinner { scheduler.threads.size }
     }
 
-    private val threads_ = mutableMapOf<ThreadId, ThreadDescriptor>()
-    protected val threads: ThreadMap<ThreadDescriptor> get() = threads_
+    protected open fun createThreadDescriptor(id: ThreadId, thread: Thread): ThreadDescriptor {
+        return ThreadDescriptor(id, thread, this)
+    }
 
     fun getThreadId(thread: Thread): ThreadId =
         threads.values.find { it.thread == thread }?.id ?: -1
@@ -77,7 +85,7 @@ open class ThreadScheduler {
         threads.values.all { it.state == ThreadState.FINISHED }
 
     fun registerThread(threadId: ThreadId, thread: Thread) {
-        val descriptor = ThreadDescriptor(threadId, thread)
+        val descriptor = createThreadDescriptor(threadId, thread)
         threads_.put(threadId, descriptor).ensureNull()
     }
 
