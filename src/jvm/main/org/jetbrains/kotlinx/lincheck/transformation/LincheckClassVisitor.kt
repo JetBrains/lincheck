@@ -32,8 +32,6 @@ internal class LincheckClassVisitor(
     private var fileName: String = ""
     private var className: String = "" // internal class name
 
-    private var isThreadSubclass: Boolean = false
-
     override fun visitField(
         access: Int,
         fieldName: String,
@@ -59,8 +57,6 @@ internal class LincheckClassVisitor(
     ) {
         className = name
         classVersion = version
-        // check if class is instance of `java/lang/Thread`
-        isThreadSubclass = false // isInstanceOf(className, JAVA_THREAD_CLASSNAME)
         super.visit(version, access, name, signature, superName, interfaces)
     }
 
@@ -130,7 +126,7 @@ internal class LincheckClassVisitor(
         mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
         mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
         mv = CoroutineCancellabilitySupportTransformer(mv, access, className, methodName, desc)
-        mv = ThreadTransformer(fileName, className, methodName, desc, isThreadSubclass, mv.newAdapter())
+        mv = ThreadTransformer(fileName, className, methodName, desc, isThreadSubclass(), mv.newAdapter())
         // We can do further instrumentation in methods of the custom thread subclasses,
         // but not in the `java.lang.Thread` itself.
         if (className == JAVA_THREAD_CLASSNAME) {
@@ -168,6 +164,16 @@ internal class LincheckClassVisitor(
             mv.newAdapter()
         )
         return mv
+    }
+
+    private fun isThreadSubclass(): Boolean {
+        if (className == JAVA_THREAD_CLASSNAME) return true
+        if (className.canonicalClassName in threadSubclasses) return true
+        if (isInstanceOf(className, JAVA_THREAD_CLASSNAME)) {
+            threadSubclasses.add(className.canonicalClassName)
+            return true
+        }
+        return false
     }
 
     @Suppress("SameParameterValue")
@@ -246,3 +252,6 @@ private class WrapMethodInIgnoredSectionTransformer(
 // it is used to optimize class re-transformation in stress mode by remembering
 // exactly what classes need to be re-transformed (only the coroutines calling classes)
 internal val coroutineCallingClasses = HashSet<String>()
+
+// Set storing canonical names of the subclasses of the java.lang.Thread class
+internal val threadSubclasses = HashSet<String>()
