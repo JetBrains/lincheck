@@ -1002,23 +1002,33 @@ abstract class ManagedStrategy(
     }
 
     private fun enterTestingCode() {
-        threadScheduler.enterTestingCode()
+        val flags = Injections.threadFlags.get()
+        flags.inTestingCode = true
+        // threadScheduler.enterTestingCode()
     }
 
     private fun leaveTestingCode() {
-        threadScheduler.leaveTestingCode()
+        val flags = Injections.threadFlags.get()
+        flags.inTestingCode = false
+        // threadScheduler.leaveTestingCode()
     }
 
     override fun inIgnoredSection(): Boolean {
-        return threadScheduler.inIgnoredSection()
+        val flags = Injections.threadFlags.get()
+        return flags.inIgnoredSection()
+        // return threadScheduler.inIgnoredSection()
     }
 
     override fun enterIgnoredSection(): Boolean {
-        return threadScheduler.enterIgnoredSection()
+        val flags = Injections.threadFlags.get()
+        return flags.enterIgnoredSection()
+        // return threadScheduler.enterIgnoredSection()
     }
 
     override fun leaveIgnoredSection() {
-        threadScheduler.leaveIgnoredSection()
+        val flags = Injections.threadFlags.get()
+        flags.leaveIgnoredSection()
+        // threadScheduler.leaveIgnoredSection()
     }
 
     override fun beforeNewObjectCreation(className: String) = runInIgnoredSection {
