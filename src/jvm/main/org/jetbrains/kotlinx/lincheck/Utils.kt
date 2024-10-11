@@ -282,16 +282,17 @@ internal inline fun<R> ExecutionClassLoader.runInIgnoredSection(block: () -> R):
 
 @Suppress("UNUSED_PARAMETER")
 private inline fun <R> runInIgnoredSection(currentThread: Thread, block: () -> R): R {
+    @Suppress("UNUSED_VARIABLE")
     val strategy: ManagedStrategy = LincheckTracker.getEventTracker() as? ManagedStrategy
         ?: return block()
-    if (strategy.inIgnoredSection()) {
+    if (Injections.inIgnoredSection()) {
         return block()
     }
-    strategy.enterIgnoredSection().ensureTrue()
+    Injections.enterIgnoredSection().ensureTrue()
     return try {
         block()
     } finally {
-        strategy.leaveIgnoredSection()
+        Injections.leaveIgnoredSection()
     }
 }
 
@@ -306,16 +307,17 @@ internal inline fun <R> ParallelThreadsRunner.runOutsideIgnoredSection(block: ()
  */
 @Suppress("UNUSED_PARAMETER")
 private inline fun <R> runOutsideIgnoredSection(currentThread: Thread, block: () -> R): R {
+    @Suppress("UNUSED_VARIABLE")
     val strategy: ManagedStrategy = LincheckTracker.getEventTracker() as? ManagedStrategy
         ?: return block()
-    check(strategy.inIgnoredSection()) {
+    check(Injections.inIgnoredSection()) {
         "Current thread must be in ignored section"
     }
-    strategy.leaveIgnoredSection()
+    Injections.leaveIgnoredSection()
     return try {
         block()
     } finally {
-        strategy.enterIgnoredSection().ensureTrue()
+        Injections.enterIgnoredSection().ensureTrue()
     }
 }
 
