@@ -8,6 +8,8 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+@file:Suppress("Since15")
+
 package org.jetbrains.kotlinx.lincheck_test.representation
 
 import java.lang.invoke.MethodHandles

@@ -123,7 +123,7 @@ internal fun isAtomicFieldUpdaterMethod(className: String, methodName: String) =
     isAtomicFieldUpdaterClass(className) && methodName in atomicFieldUpdaterMethods
 
 internal fun isVarHandle(obj: Any?) =
-    obj is VarHandle
+    obj != null && generateSequence(obj::class.java) { it.superclass }.any { isVarHandleClass(it.canonicalName ?: "") }
 
 internal fun isVarHandleClass(className: String) =
     className == "java.lang.invoke.VarHandle"

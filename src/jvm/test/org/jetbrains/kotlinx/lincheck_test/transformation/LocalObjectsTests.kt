@@ -243,6 +243,7 @@ class UnsafeLocalObjectsTest {
  * If we hadn't such check, this test would hang due to infinite spin-loop on a local object operations with
  * no chances to detect a cycle and switch.
  */
+@Suppress("Since15")
 class VarHandleLocalObjectsTest {
 
     companion object {

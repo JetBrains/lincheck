@@ -1106,7 +1106,7 @@ abstract class ManagedStrategy(
         }
         // handle atomic methods
         if (isVarHandle(owner)) {
-            return initializeVarHandleMethodCallTracePoint(tracePoint, owner as VarHandle, params)
+            return initializeVarHandleMethodCallTracePoint(tracePoint, owner, params)
         }
         if (isAtomicFieldUpdater(owner)) {
             return initializeAtomicUpdaterMethodCallTracePoint(tracePoint, owner!!, params)
@@ -1190,7 +1190,7 @@ abstract class ManagedStrategy(
 
     private fun initializeVarHandleMethodCallTracePoint(
         tracePoint: MethodCallTracePoint,
-        varHandle: VarHandle,
+        varHandle: Any?, // for Java 8 VarHandle class does not exist
         parameters: Array<Any?>,
     ): MethodCallTracePoint {
         when (val varHandleMethodType = VarHandleNames.varHandleMethodType(varHandle, parameters)) {
