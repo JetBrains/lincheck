@@ -823,10 +823,9 @@ abstract class ManagedStrategy(
     }
 
     private fun unblockParkedThread(unparkedThreadId: Int) {
-        threadScheduler.getBlockingReason(unparkedThreadId)?.ensure {
-            it == BlockingReason.PARKED
+        if (threadScheduler.getBlockingReason(unparkedThreadId) == BlockingReason.PARKED) {
+            threadScheduler.unblockThread(unparkedThreadId)
         }
-        threadScheduler.unblockThread(unparkedThreadId)
     }
 
     private fun unblockAcquiringThreads(iThread: Int, monitor: Any) {
