@@ -57,9 +57,9 @@ internal class ModelCheckingStrategy(
     // Tracker of objects' allocations and object graph topology.
     override val objectTracker: ObjectTracker = LocalObjectManager()
     // Tracker of the monitors' operations.
-    override val monitorTracker: MonitorTracker = ModelCheckingMonitorTracker(nThreads)
+    override val monitorTracker: MonitorTracker = ModelCheckingMonitorTracker()
     // Tracker of the thread parking.
-    override val parkingTracker: ParkingTracker = ModelCheckingParkingTracker(nThreads, allowSpuriousWakeUps = true)
+    override val parkingTracker: ParkingTracker = ModelCheckingParkingTracker(allowSpuriousWakeUps = true)
 
     override fun nextInvocation(): Boolean {
         currentInterleaving = root.nextInterleaving()
@@ -580,7 +580,7 @@ internal class LocalObjectManager : ObjectTracker {
 /**
  * Tracks synchronization operations on the monitors (intrinsic locks)
  */
-internal class ModelCheckingMonitorTracker(nThreads: Int) : MonitorTracker {
+internal class ModelCheckingMonitorTracker : MonitorTracker {
     // Maintains a set of acquired monitors with an information on which thread
     // performed the acquisition and the reentrancy depth.
     private val acquiredMonitors = IdentityHashMap<Any, MonitorAcquiringInfo>()
@@ -588,7 +588,11 @@ internal class ModelCheckingMonitorTracker(nThreads: Int) : MonitorTracker {
     // Maintains a set of monitors on which each thread is waiting.
     // Note, that a thread can wait on a free monitor if it is waiting for a `notify` call.
     // Stores `null` if thread is not waiting on any monitor.
-    private val waitingMonitor = Array<MonitorAcquiringInfo?>(nThreads) { null }
+    private val waitingMonitor = mutableMapOf<ThreadId, MonitorAcquiringInfo?>()
+
+    override fun registerThread(threadId: Int) {
+        waitingMonitor[threadId] = null
+    }
 
     /**
      * Performs a logical acquisition.
@@ -624,7 +628,7 @@ internal class ModelCheckingMonitorTracker(nThreads: Int) : MonitorTracker {
     }
 
     override fun acquiringThreads(monitor: Any): List<ThreadId> {
-        return waitingMonitor.mapNotNull { info ->
+        return waitingMonitor.values.mapNotNull { info ->
             if (info?.monitor === monitor) info.threadId else null
         }
     }
@@ -682,7 +686,7 @@ internal class ModelCheckingMonitorTracker(nThreads: Int) : MonitorTracker {
      * Always notifies all threads, odd threads will simply have a spurious wakeup.
      */
     override fun notify(threadId: Int, monitor: Any, notifyAll: Boolean) {
-        waitingMonitor.forEach { info ->
+        waitingMonitor.values.forEach { info ->
             if (monitor === info?.monitor && info.waitForNotify) {
                 info.waitForNotify = false
             }
@@ -691,7 +695,7 @@ internal class ModelCheckingMonitorTracker(nThreads: Int) : MonitorTracker {
 
     override fun reset() {
         acquiredMonitors.clear()
-        waitingMonitor.fill(null)
+        waitingMonitor.clear()
     }
 
     /**
@@ -706,10 +710,14 @@ internal class ModelCheckingMonitorTracker(nThreads: Int) : MonitorTracker {
     )
 }
 
-class ModelCheckingParkingTracker(val nThreads: Int, val allowSpuriousWakeUps: Boolean = false) : ParkingTracker {
+class ModelCheckingParkingTracker(val allowSpuriousWakeUps: Boolean = false) : ParkingTracker {
 
-    // stores `true` for the parked threads
-    private val parked = BooleanArray(nThreads) { false }
+    private val parked = mutableThreadMapOf<Boolean>()
+
+    override fun registerThread(threadId: Int) {
+        check(threadId == parked.size)
+        parked.add(false)
+    }
 
     override fun park(threadId: Int) {
         parked[threadId] = true
@@ -727,7 +735,7 @@ class ModelCheckingParkingTracker(val nThreads: Int, val allowSpuriousWakeUps: B
         parked[threadId] && !allowSpuriousWakeUps
 
     override fun reset() {
-        parked.fill(false)
+        parked.clear()
     }
 
 }
