@@ -16,7 +16,10 @@ import java.util.Random;
  * Methods of this object are called from the instrumented code.
  */
 public class Injections {
+
+    // Special object to represent void method call result.
     public static final Object VOID_RESULT = new Object();
+
     // Used in the verification phase to store a suspended continuation.
     public static Object lastSuspendedCancellableContinuationDuringVerification = null;
 
@@ -45,6 +48,29 @@ public class Injections {
     @SuppressWarnings({"FieldCanBeLocal", "unused"})
     private static int currentEventId = -1;
 
+    // Thread local variable storing testing code and ignored section flags.
+    public static final ThreadLocal<ThreadFlags> threadFlags =
+            ThreadLocal.withInitial(ThreadFlags::new);
+
+    public static class ThreadFlags {
+        public boolean inTestingCode = false;
+        public boolean inIgnoredSection = false;
+
+        public boolean inIgnoredSection() {
+            return !inTestingCode || inIgnoredSection;
+        }
+
+        public boolean enterIgnoredSection() {
+            if (inIgnoredSection) return false;
+            inIgnoredSection = true;
+            return true;
+        }
+
+        public void leaveIgnoredSection() {
+            inIgnoredSection = false;
+        }
+    }
+
     public static void storeCancellableContinuation(Object cont) {
         Thread t = Thread.currentThread();
         if (t instanceof TestThread) {
@@ -66,22 +92,18 @@ public class Injections {
      * @return true if the thread successfully entered the ignored section, false otherwise.
      */
     public static boolean enterIgnoredSection() {
-        var tracker = LincheckTracker.getEventTracker();
-        if (tracker == null) {
-            return false;
-        }
-        return tracker.enterIgnoredSection();
+        if (LincheckTracker.getEventTracker() == null) return false;
+        var flags = threadFlags.get();
+        return flags.enterIgnoredSection();
     }
 
     /**
      * Leaves an ignored section for the current thread.
      */
     public static void leaveIgnoredSection() {
-        var tracker = LincheckTracker.getEventTracker();
-        if (tracker == null) {
-            return;
-        }
-        tracker.leaveIgnoredSection();
+        if (LincheckTracker.getEventTracker() == null) return;
+        var flags = threadFlags.get();
+        flags.leaveIgnoredSection();
     }
 
     /**
@@ -90,11 +112,9 @@ public class Injections {
      * @return true if the current thread is inside an ignored section, false otherwise.
      */
     public static boolean inIgnoredSection() {
-        var tracker = LincheckTracker.getEventTracker();
-        if (tracker == null) {
-            return true;
-        }
-        return tracker.inIgnoredSection();
+        if (LincheckTracker.getEventTracker() == null) return true;
+        var flags = threadFlags.get();
+        return flags.inIgnoredSection();
     }
 
     /**
