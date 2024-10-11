@@ -18,51 +18,128 @@ import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.junit.Assert.assertEquals
+import org.junit.Ignore
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.locks.LockSupport
 import kotlin.concurrent.thread
 import org.junit.Test
 
 class DynamicThreadsTest {
 
-    private val counter = AtomicInteger(0)
+    @Test
+    fun testThreadForkJoin() {
+        class TestClass {
+            private val counter = AtomicInteger(0)
 
-    @Operation
-    fun operation(): Int {
-        val t1 = thread {
-            counter.incrementAndGet()
-        }
-        val t2 = thread {
-            counter.incrementAndGet()
-        }
-        val t3 = thread {
-            counter.incrementAndGet()
-        }
-        return counter.get().also {
-            t1.join()
-            t2.join()
-            t3.join()
-        }
-    }
-
-    val scenario = scenario {
-        parallel {
-            thread {
-                actor(::operation)
+            @Operation
+            fun operation(): Int {
+                val t1 = thread {
+                    counter.incrementAndGet()
+                }
+                val t2 = thread {
+                    counter.incrementAndGet()
+                }
+                val t3 = thread {
+                    counter.incrementAndGet()
+                }
+                return counter.get().also {
+                    t1.join()
+                    t2.join()
+                    t3.join()
+                }
             }
         }
+        val scenario = scenario {
+            parallel {
+                thread {
+                    actor(TestClass::operation)
+                }
+            }
+        }
+        val outcomes = setOf(0, 1, 2, 3)
+        test(TestClass::class.java, scenario, outcomes)
     }
 
     @Test
-    fun test() {
+    fun testMonitor() {
+        class TestClass {
+            private var counter = 0
+
+            @Operation
+            fun operation(): Int {
+                val t1 = thread {
+                    synchronized(this) {
+                        counter++
+                    }
+                }
+                val t2 = thread {
+                    synchronized(this) {
+                        counter++
+                    }
+                }
+                val t3 = thread {
+                    synchronized(this) {
+                        counter++
+                    }
+                }
+                return counter.also {
+                    t1.join()
+                    t2.join()
+                    t3.join()
+                }
+            }
+        }
+        val scenario = scenario {
+            parallel {
+                thread {
+                    actor(TestClass::operation)
+                }
+            }
+        }
+        val outcomes = setOf(0, 1, 2, 3)
+        test(TestClass::class.java, scenario, outcomes)
+    }
+
+    @Test
+    @Ignore
+    fun testParking() {
+        class TestClass {
+            private var counter = 0
+
+            @Operation
+            fun operation(): Int {
+                val mainThread = Thread.currentThread()
+                val t1 = thread {
+                    counter++
+                    LockSupport.unpark(mainThread)
+                }
+                LockSupport.park()
+                return counter.also {
+                    t1.join()
+                }
+            }
+        }
+        val scenario = scenario {
+            parallel {
+                thread {
+                    actor(TestClass::operation)
+                }
+            }
+        }
+        val outcomes = setOf(1)
+        test(TestClass::class.java, scenario, outcomes)
+    }
+
+    private fun test(testClass: Class<*>, scenario: ExecutionScenario, outcomes: Set<Any?>) {
         val verifier = CollectResultsVerifier()
         withLincheckJavaAgent(InstrumentationMode.MODEL_CHECKING) {
-            val strategy = createStrategy(this::class.java, scenario)
+            val strategy = createStrategy(testClass, scenario)
             val failure = strategy.runIteration(
                 invocations = 100,
                 verifier = verifier,
             )
             assert(failure == null) { failure.toString() }
-            assertEquals(setOf(0, 1, 2, 3), verifier.values)
+            assertEquals(outcomes, verifier.values)
         }
     }
 
