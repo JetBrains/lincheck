@@ -61,7 +61,7 @@ internal class LincheckClassVisitor(
         className = name
         classVersion = version
         // check if class is instance of `java/lang/Thread`
-        isThreadSubclass = isInstanceOf(className, JAVA_THREAD_CLASSNAME)
+        isThreadSubclass = false // isInstanceOf(className, JAVA_THREAD_CLASSNAME)
         super.visit(version, access, name, signature, superName, interfaces)
     }
 

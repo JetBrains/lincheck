@@ -380,7 +380,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
     ): ByteArray = transformedClassesCache.computeIfAbsent(internalClassName.canonicalClassName) {
         val reader = ClassReader(classBytes)
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
-        val visitor = LincheckClassVisitor(loader, writer, instrumentationMode)
+        val visitor = LincheckClassVisitor(writer, instrumentationMode)
         try {
             reader.accept(visitor, ClassReader.EXPAND_FRAMES)
             writer.toByteArray()
