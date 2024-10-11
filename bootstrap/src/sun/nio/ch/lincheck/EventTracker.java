@@ -18,10 +18,6 @@ import java.util.*;
  */
 public interface EventTracker {
 
-    boolean inIgnoredSection();
-    boolean enterIgnoredSection();
-    void leaveIgnoredSection();
-
     void beforeThreadFork(Thread thread);
     void afterThreadFork(Thread thread);
     void beforeThreadStart();
