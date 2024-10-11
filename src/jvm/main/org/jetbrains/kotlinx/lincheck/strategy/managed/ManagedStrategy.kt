@@ -455,6 +455,10 @@ abstract class ManagedStrategy(
     }
 
     override fun beforeThreadFork(thread: Thread?) = runInIgnoredSection {
+        val currentThreadId = threadScheduler.getThreadId(Thread.currentThread())
+        // do not track threads forked from unregistered threads (id < 0)
+        if (currentThreadId < 0) return
+        // scenario threads are handled separately by the runner itself
         if (thread is TestThread) return
         @Suppress("UNUSED_VARIABLE")
         val forkedThreadId = registerThread(thread!!)
@@ -462,11 +466,16 @@ abstract class ManagedStrategy(
 
     override fun afterThreadFork(thread: Thread?) {
         val currentThreadId = threadScheduler.getThreadId(Thread.currentThread())
+        // do not track threads forked from unregistered threads (id < 0)
+        if (currentThreadId < 0) return
+        // scenario threads are handled separately by the runner itself
+        if (thread is TestThread) return
         newSwitchPoint(currentThreadId, UNKNOWN_CODE_LOCATION, tracePoint = null)
     }
 
     override fun beforeThreadStart() = runInIgnoredSection {
         val currentThreadId = threadScheduler.getThreadId(Thread.currentThread())
+        // do not track unregistered threads (id < 0),
         // scenario threads are handled separately by the runner itself
         if (currentThreadId < scenario.nThreads) return
         onThreadStart(currentThreadId)
@@ -475,6 +484,7 @@ abstract class ManagedStrategy(
 
     override fun afterThreadFinish() = runInIgnoredSection {
         val currentThreadId = threadScheduler.getThreadId(Thread.currentThread())
+        // do not track unregistered threads (id < 0),
         // scenario threads are handled separately by the runner itself
         if (currentThreadId < scenario.nThreads) return
         leaveTestingCode()
@@ -492,7 +502,6 @@ abstract class ManagedStrategy(
         }
     }
 
-    // @Synchronized
     private fun registerThread(thread: Thread): ThreadId {
         val threadId = threadScheduler.registerThread(thread)
         isSuspended.add(false)
