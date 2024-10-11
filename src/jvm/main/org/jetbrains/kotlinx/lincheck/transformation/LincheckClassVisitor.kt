@@ -23,9 +23,9 @@ import kotlin.collections.HashSet
 
 internal class LincheckClassVisitor(
     loader: ClassLoader?,
-    classVisitor: ClassVisitor,
+    private val safeClassWriter: SafeClassWriter,
     private val instrumentationMode: InstrumentationMode,
-) : ClassVisitor(ASM_API, classVisitor) {
+) : ClassVisitor(ASM_API, safeClassWriter) {
     private val loader = loader ?: ClassLoader.getSystemClassLoader()
 
     private val ideaPluginEnabled = ideaPluginEnabled()
@@ -61,7 +61,8 @@ internal class LincheckClassVisitor(
     ) {
         className = name
         classVersion = version
-        isThreadSubclass = isInstanceOf(JAVA_THREAD_CLASSNAME, className) // check if class is instance of `java/lang/Thread`
+        // check if class is instance of `java/lang/Thread`
+        isThreadSubclass = isInstanceOf(className, JAVA_THREAD_CLASSNAME)
         super.visit(version, access, name, signature, superName, interfaces)
     }
 
@@ -172,26 +173,8 @@ internal class LincheckClassVisitor(
     }
 
     @Suppress("SameParameterValue")
-    private fun isInstanceOf(expectedClassName: String, className: String): Boolean {
-        var currentSuperClassName: String? = className
-        while (currentSuperClassName != null) {
-            if (currentSuperClassName == expectedClassName) {
-                return true
-            }
-
-            val superClassReader = getClassReader(loader, currentSuperClassName)
-            val superClassNode = ClassNode()
-            superClassReader.accept(superClassNode, 0)
-            currentSuperClassName = superClassNode.superName
-        }
-        return false
-    }
-
-    private fun getClassReader(loader: ClassLoader, internalClassName: String): ClassReader {
-        val resource = "$internalClassName.class"
-        val inputStream = loader.getResourceAsStream(resource)
-            ?: error("Cannot create ClassReader for type '$internalClassName' (resource: $resource)")
-        return inputStream.use { ClassReader(inputStream) }
+    private fun isInstanceOf(subClassName: String, superClassName: String): Boolean {
+        return (safeClassWriter.getCommonSuperClass(subClassName, superClassName) == superClassName)
     }
 
 }
