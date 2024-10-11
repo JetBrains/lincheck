@@ -39,7 +39,24 @@ class ConcurrentLinkedDequeTest {
     fun peekLast() = deque.peekLast()
 
     @Test
-    fun modelCheckingTest() = ModelCheckingOptions().checkImpl(this::class.java) { failure ->
-        failure.checkLincheckOutput("concurrent_linked_deque.txt")
-    }
+    fun modelCheckingTest() = ModelCheckingOptions()
+        .addCustomScenario {
+            initial {
+                actor(::addLast, 1)
+            }
+            parallel {
+                thread {
+                    actor(::pollFirst)
+                }
+                thread {
+                    actor(::addFirst, 0)
+                    actor(::peekLast)
+                }
+            }
+        }
+        .iterations(0)
+        .checkImpl(this::class.java) { failure ->
+            val expectedOutputFile = if (isJdk8) "concurrent_linked_deque_jdk8.txt" else "concurrent_linked_deque.txt"
+            failure.checkLincheckOutput(expectedOutputFile)
+        }
 }

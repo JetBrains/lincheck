@@ -52,7 +52,7 @@ class SuspendTraceReportingTest {
         }
     }
         .checkImpl(this::class.java)
-        .checkLincheckOutput("suspend_trace_reporting.txt")
+        .checkLincheckOutput("suspend_trace_reporting${if (isJdk8) "_jdk8" else ""}.txt")
 }
 
 /* This test checks the trace reporting in case when a nested sequence of `suspend` functions is resumed ---
