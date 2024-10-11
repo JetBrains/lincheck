@@ -22,11 +22,9 @@ import sun.nio.ch.lincheck.*
 import kotlin.collections.HashSet
 
 internal class LincheckClassVisitor(
-    loader: ClassLoader?,
     private val safeClassWriter: SafeClassWriter,
     private val instrumentationMode: InstrumentationMode,
 ) : ClassVisitor(ASM_API, safeClassWriter) {
-    private val loader = loader ?: ClassLoader.getSystemClassLoader()
 
     private val ideaPluginEnabled = ideaPluginEnabled()
     private var classVersion = 0
@@ -62,7 +60,7 @@ internal class LincheckClassVisitor(
         className = name
         classVersion = version
         // check if class is instance of `java/lang/Thread`
-        isThreadSubclass = isInstanceOf(className, JAVA_THREAD_CLASSNAME)
+        isThreadSubclass = false // isInstanceOf(className, JAVA_THREAD_CLASSNAME)
         super.visit(version, access, name, signature, superName, interfaces)
     }
 
