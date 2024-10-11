@@ -99,7 +99,7 @@ internal class LincheckClassVisitor(
             mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
         }
-        if (className.contains("ClassLoader")) {
+        if (isClassLoader(className)) {
             if (methodName == "loadClass") {
                 mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             }
