@@ -33,14 +33,14 @@ internal class ThreadTransformer(
 ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter)  {
 
     override fun visitCode() = adapter.run {
-        if (isThreadSubclass && isStartMethod(methodName, desc)) {
+        if (isThreadStartMethod(methodName, desc)) {
             // STACK: <empty>
             loadThis()
             // STACK: forkedThread
             invokeStatic(Injections::beforeThreadFork)
             // STACK: <empty>
         }
-        if (isThreadSubclass && isRunMethod(methodName, desc)) {
+        if (isThreadRunMethod(methodName, desc)) {
             // STACK: <empty>
             invokeStatic(Injections::beforeThreadStart)
             // STACK: <empty>
@@ -50,14 +50,14 @@ internal class ThreadTransformer(
 
     override fun visitInsn(opcode: Int) = adapter.run {
         // TODO: this approach does not support thread interruptions and any other thrown exceptions
-        if (isThreadSubclass && isStartMethod(methodName, desc) && opcode == Opcodes.RETURN) {
+        if (isThreadStartMethod(methodName, desc) && opcode == Opcodes.RETURN) {
             // STACK: <empty>
             loadThis()
             // STACK: forkedThread
             invokeStatic(Injections::afterThreadFork)
             // STACK: <empty>
         }
-        if (isThreadSubclass && isRunMethod(methodName, desc) && opcode == Opcodes.RETURN) {
+        if (isThreadRunMethod(methodName, desc) && opcode == Opcodes.RETURN) {
             // STACK: <empty>
             invokeStatic(Injections::afterThreadFinish)
         }
@@ -78,16 +78,16 @@ internal class ThreadTransformer(
         }
     }
 
+    private fun isThreadStartMethod(methodName: String, desc: String): Boolean =
+        isThreadSubclass && methodName == "start" && desc == VOID_METHOD_DESCRIPTOR
+
+    private fun isThreadRunMethod(methodName: String, desc: String): Boolean =
+        isThreadSubclass && methodName == "run" && desc == VOID_METHOD_DESCRIPTOR
+
     // TODO: add support for thread joins with time limit
-    private fun isThreadJoinCall(owner: String, methodName: String, desc: String) =
+    private fun isThreadJoinCall(className: String, methodName: String, desc: String) =
         // no need to check for thread subclasses here, since join methods are marked as final
-        owner == JAVA_THREAD_CLASSNAME && methodName == "join" && desc == VOID_METHOD_DESCRIPTOR
-
-    private fun isStartMethod(methodName: String, desc: String): Boolean =
-        methodName == "start" && desc == VOID_METHOD_DESCRIPTOR
-
-    private fun isRunMethod(methodName: String, desc: String): Boolean =
-        methodName == "run" && desc == VOID_METHOD_DESCRIPTOR
+        className == JAVA_THREAD_CLASSNAME && methodName == "join" && desc == VOID_METHOD_DESCRIPTOR
 }
 
 internal const val JAVA_THREAD_CLASSNAME = "java/lang/Thread"
