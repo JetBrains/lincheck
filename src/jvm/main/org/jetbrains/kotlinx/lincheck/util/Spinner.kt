@@ -56,7 +56,7 @@ class Spinner private constructor(
     val isSpinning: Boolean = run {
         val nThreads = threadCounter?.invoke() ?: threadCount
         val nProcessors = Runtime.getRuntime().availableProcessors()
-        (nProcessors >= nThreads)
+        (nProcessors > 1) && (nProcessors >= nThreads)
     }
 
     /**
