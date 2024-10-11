@@ -18,13 +18,11 @@ import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.junit.Assert.assertEquals
-import org.junit.Ignore
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.LockSupport
 import kotlin.concurrent.thread
 import org.junit.Test
 
-@Ignore
 class DynamicThreadsTest {
 
     @Test
