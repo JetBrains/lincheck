@@ -607,7 +607,7 @@ abstract class ManagedStrategy(
                 beforeMethodCallSwitch = (tracePoint != null && tracePoint is MethodCallTracePoint)
             )
             if (blockingReason != null) {
-                threadScheduler.blockThread(iThread, blockingReason)
+                blockThread(iThread, blockingReason)
             }
             setCurrentThread(nextThread)
         }
@@ -697,11 +697,6 @@ abstract class ManagedStrategy(
         val iThread = threadScheduler.currentThreadId
         // Try to acquire the monitor
         while (!monitorTracker.acquireMonitor(iThread, monitor)) {
-            failIfObstructionFreedomIsRequired {
-                // TODO: This might be a false positive when this MONITORENTER call never suspends.
-                // TODO: We can keep it as is until refactoring, as this weird case is an anti-pattern anyway.
-                OBSTRUCTION_FREEDOM_LOCK_VIOLATION_MESSAGE
-            }
             // Switch to another thread and wait for a moment when the monitor can be acquired
             switchCurrentThread(iThread, SwitchReason.LOCK_WAIT)
         }
@@ -796,11 +791,6 @@ abstract class ManagedStrategy(
         if (withTimeout) return // timeouts occur instantly
         val iThread = threadScheduler.currentThreadId
         while (monitorTracker.waitOnMonitor(iThread, monitor)) {
-            failIfObstructionFreedomIsRequired {
-                // TODO: This might be a false positive when this `wait()` call never suspends.
-                // TODO: We can keep it as is until refactoring, as this weird case is an anti-pattern anyway.
-                OBSTRUCTION_FREEDOM_WAIT_VIOLATION_MESSAGE
-            }
             unblockAcquiringThreads(iThread, monitor)
             switchCurrentThread(iThread, SwitchReason.MONITOR_WAIT)
         }
@@ -818,6 +808,13 @@ abstract class ManagedStrategy(
             )
             traceCollector?.passCodeLocation(tracePoint)
         }
+    }
+
+    private fun blockThread(threadId: ThreadId, blockingReason: BlockingReason) {
+        failIfObstructionFreedomIsRequired {
+            blockingReason.obstructionFreedomViolationMessage
+        }
+        threadScheduler.blockThread(threadId, blockingReason)
     }
 
     @Suppress("UNUSED_PARAMETER")
@@ -1825,8 +1822,13 @@ internal class ManagedStrategyRunner(
 // currently the exact place of coroutine suspension is not known
 internal const val UNKNOWN_CODE_LOCATION = -1
 
-// when spin-loop is detected, we might need to replay the execution up to N times
-private const val MAX_SPIN_CYCLE_REPLAY_COUNT = 3
+private val BlockingReason.obstructionFreedomViolationMessage: String get() = when (this) {
+    BlockingReason.LOCKED       -> OBSTRUCTION_FREEDOM_LOCK_VIOLATION_MESSAGE
+    BlockingReason.WAITING      -> OBSTRUCTION_FREEDOM_WAIT_VIOLATION_MESSAGE
+    BlockingReason.PARKED       -> OBSTRUCTION_FREEDOM_PARK_VIOLATION_MESSAGE
+    BlockingReason.THREAD_JOIN  -> OBSTRUCTION_FREEDOM_THREAD_JOIN_VIOLATION_MESSAGE
+    BlockingReason.SUSPENDED    -> OBSTRUCTION_FREEDOM_SUSPEND_VIOLATION_MESSAGE
+}
 
 private const val OBSTRUCTION_FREEDOM_SPINLOCK_VIOLATION_MESSAGE =
     "The algorithm should be non-blocking, but an active lock is detected"
@@ -1836,6 +1838,15 @@ private const val OBSTRUCTION_FREEDOM_LOCK_VIOLATION_MESSAGE =
 
 private const val OBSTRUCTION_FREEDOM_WAIT_VIOLATION_MESSAGE =
     "The algorithm should be non-blocking, but a wait call is detected"
+
+private const val OBSTRUCTION_FREEDOM_PARK_VIOLATION_MESSAGE =
+    "The algorithm should be non-blocking, but a thread park is detected"
+
+private const val OBSTRUCTION_FREEDOM_THREAD_JOIN_VIOLATION_MESSAGE =
+    "The algorithm should be non-blocking, but a thread join is detected"
+
+private const val OBSTRUCTION_FREEDOM_SUSPEND_VIOLATION_MESSAGE =
+    "The algorithm should be non-blocking, but a coroutine suspension is detected"
 
 /**
  * With idea plugin enabled, we should not use default Lincheck timeout
