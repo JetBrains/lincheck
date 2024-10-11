@@ -157,7 +157,7 @@ internal class StoreExceptionHandler :
 internal fun <T> CancellableContinuation<T>.cancelByLincheck(promptCancellation: Boolean): CancellationResult {
     val exceptionHandler = context[CoroutineExceptionHandler] as StoreExceptionHandler
     exceptionHandler.exception = null
-    val cancelled = runOutsideIgnoredSection(Thread.currentThread()) {
+    val cancelled = LincheckTracker.getEventTracker().runOutsideIgnoredSection {
         cancel(cancellationByLincheckException)
     }
     exceptionHandler.exception?.let {
@@ -250,57 +250,63 @@ internal object InternalLincheckTestUnexpectedException : Exception()
  */
 internal class LincheckInternalBugException(cause: Throwable): Exception(cause)
 
-// We use receivers here in order not to use this function instead of `invokeInIgnoredSection` in the transformation logic.
-@Suppress("UnusedReceiverParameter")
-internal inline fun<R> EventTracker.runInIgnoredSection(block: () -> R): R =  runInIgnoredSection(Thread.currentThread(), block)
-@Suppress("UnusedReceiverParameter")
-internal inline fun<R> FixedActiveThreadsExecutor.runInIgnoredSection(block: () -> R): R =  runInIgnoredSection(Thread.currentThread(), block)
-@Suppress("UnusedReceiverParameter")
-internal inline fun<R> ParallelThreadsRunner.runInIgnoredSection(block: () -> R): R =  runInIgnoredSection(Thread.currentThread(), block)
-@Suppress("UnusedReceiverParameter")
-internal inline fun<R> LincheckClassFileTransformer.runInIgnoredSection(block: () -> R): R =  runInIgnoredSection(Thread.currentThread(), block)
+// We use receivers for `runInIgnoredSection` to not use these functions
+// accidentally instead of `invokeInIgnoredSection` in the transformation logic.
 
 @Suppress("UnusedReceiverParameter")
-internal inline fun<R> ExecutionClassLoader.runInIgnoredSection(block: () -> R): R =  runInIgnoredSection(Thread.currentThread(), block)
+internal inline fun<R> FixedActiveThreadsExecutor.runInIgnoredSection(block: () -> R): R =
+    LincheckTracker.getEventTracker().runInIgnoredSection(block)
 
-@Suppress("UNUSED_PARAMETER")
-private inline fun <R> runInIgnoredSection(currentThread: Thread, block: () -> R): R {
+@Suppress("UnusedReceiverParameter")
+internal inline fun<R> ParallelThreadsRunner.runInIgnoredSection(block: () -> R): R =
+    LincheckTracker.getEventTracker().runInIgnoredSection(block)
+
+@Suppress("UnusedReceiverParameter")
+internal inline fun<R> LincheckClassFileTransformer.runInIgnoredSection(block: () -> R): R =
+    LincheckTracker.getEventTracker().runInIgnoredSection(block)
+
+@Suppress("UnusedReceiverParameter")
+internal inline fun<R> ExecutionClassLoader.runInIgnoredSection(block: () -> R): R =
+    LincheckTracker.getEventTracker().runInIgnoredSection(block)
+
+internal inline fun <R> EventTracker?.runInIgnoredSection(block: () -> R): R {
     @Suppress("UNUSED_VARIABLE")
-    val strategy: ManagedStrategy = LincheckTracker.getEventTracker() as? ManagedStrategy
+    val strategy: ManagedStrategy = this as? ManagedStrategy
         ?: return block()
-    if (Injections.inIgnoredSection()) {
+    val flags = Injections.threadFlags.get()
+    if (flags.inIgnoredSection()) {
         return block()
     }
-    Injections.enterIgnoredSection().ensureTrue()
+    flags.enterIgnoredSection().ensureTrue()
     return try {
         block()
     } finally {
-        Injections.leaveIgnoredSection()
+        flags.leaveIgnoredSection()
     }
 }
 
 @Suppress("UnusedReceiverParameter")
 internal inline fun <R> ParallelThreadsRunner.runOutsideIgnoredSection(block: () -> R) =
-    runOutsideIgnoredSection(Thread.currentThread(), block)
+    LincheckTracker.getEventTracker().runOutsideIgnoredSection(block)
 
 /**
  * Exits the ignored section and invokes the provided [block] outside the ignored section,
  * entering the ignored section back after the [block] is executed.
  * This method **must** be called in an ignored section.
  */
-@Suppress("UNUSED_PARAMETER")
-private inline fun <R> runOutsideIgnoredSection(currentThread: Thread, block: () -> R): R {
+internal inline fun <R> EventTracker?.runOutsideIgnoredSection(block: () -> R): R {
     @Suppress("UNUSED_VARIABLE")
-    val strategy: ManagedStrategy = LincheckTracker.getEventTracker() as? ManagedStrategy
+    val strategy: ManagedStrategy = this as? ManagedStrategy
         ?: return block()
-    check(Injections.inIgnoredSection()) {
+    val flags = Injections.threadFlags.get()
+    check(flags.inIgnoredSection()) {
         "Current thread must be in ignored section"
     }
-    Injections.leaveIgnoredSection()
+    flags.leaveIgnoredSection()
     return try {
         block()
     } finally {
-        Injections.enterIgnoredSection().ensureTrue()
+        flags.enterIgnoredSection().ensureTrue()
     }
 }
 
