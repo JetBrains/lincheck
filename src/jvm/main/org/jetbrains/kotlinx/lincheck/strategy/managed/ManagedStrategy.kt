@@ -1001,34 +1001,29 @@ abstract class ManagedStrategy(
         getThreadLocalRandom().nextInt()
     }
 
-    private fun enterTestingCode() {
+    protected fun enterTestingCode() {
         val flags = Injections.threadFlags.get()
         flags.inTestingCode = true
-        // threadScheduler.enterTestingCode()
     }
 
-    private fun leaveTestingCode() {
+    protected fun leaveTestingCode() {
         val flags = Injections.threadFlags.get()
         flags.inTestingCode = false
-        // threadScheduler.leaveTestingCode()
     }
 
-    override fun inIgnoredSection(): Boolean {
+    protected fun inIgnoredSection(): Boolean {
         val flags = Injections.threadFlags.get()
         return flags.inIgnoredSection()
-        // return threadScheduler.inIgnoredSection()
     }
 
-    override fun enterIgnoredSection(): Boolean {
+    protected fun enterIgnoredSection(): Boolean {
         val flags = Injections.threadFlags.get()
         return flags.enterIgnoredSection()
-        // return threadScheduler.enterIgnoredSection()
     }
 
-    override fun leaveIgnoredSection() {
+    protected fun leaveIgnoredSection() {
         val flags = Injections.threadFlags.get()
         flags.leaveIgnoredSection()
-        // threadScheduler.leaveIgnoredSection()
     }
 
     override fun beforeNewObjectCreation(className: String) = runInIgnoredSection {
