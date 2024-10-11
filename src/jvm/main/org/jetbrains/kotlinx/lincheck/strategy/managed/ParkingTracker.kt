@@ -16,6 +16,13 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 interface ParkingTracker {
 
     /**
+     * Registers a thread with the given id in the parking tracker.
+     *
+     * @param threadId the id of the thread to register.
+     */
+    fun registerThread(threadId: Int)
+
+    /**
      * Parks the specified thread.
      *
      * @param threadId the id of the thread to be parked
