@@ -18,7 +18,6 @@ import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.junit.Assert.assertEquals
-import org.junit.Ignore
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.LockSupport
 import kotlin.concurrent.thread
@@ -101,20 +100,19 @@ class DynamicThreadsTest {
     }
 
     @Test
-    @Ignore
     fun testParking() {
         class TestClass {
-            private var counter = 0
+            private val counter = AtomicInteger(0)
 
             @Operation
             fun operation(): Int {
                 val mainThread = Thread.currentThread()
                 val t1 = thread {
-                    counter++
+                    counter.incrementAndGet()
                     LockSupport.unpark(mainThread)
                 }
                 LockSupport.park()
-                return counter.also {
+                return counter.get().also {
                     t1.join()
                 }
             }
@@ -126,7 +124,8 @@ class DynamicThreadsTest {
                 }
             }
         }
-        val outcomes = setOf(1)
+        // can be both because of the spurious wake-ups
+        val outcomes = setOf(0, 1)
         test(TestClass::class.java, scenario, outcomes)
     }
 
