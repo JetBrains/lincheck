@@ -53,25 +53,25 @@ open class ThreadScheduler {
     }
 
     fun getRegisteredThreads(): List<Thread> =
-        threads.map { it.thread }
+        threads.values.map { it.thread }
 
     fun getThreadId(thread: Thread): ThreadId =
-        threads.find { it.thread == thread }?.id ?: -1
+        threads.values.find { it.thread == thread }?.id ?: -1
 
     fun getThread(threadId: ThreadId): Thread? =
-        threads.getOrNull(threadId)?.thread
+        threads[threadId]?.thread
 
     fun getThreadState(threadId: ThreadId): ThreadState? =
-        threads.getOrNull(threadId)?.state
+        threads[threadId]?.state
 
     fun getBlockingReason(threadId: ThreadId): BlockingReason? =
-        threads.getOrNull(threadId)?.blockingReason
+        threads[threadId]?.blockingReason
 
     fun isEnabled(threadId: ThreadId) =
         getThreadState(threadId) == ThreadState.ENABLED
 
     fun isSchedulable(threadId: ThreadId): Boolean {
-        val state = threads.getOrNull(threadId)?.state ?: return false
+        val state = threads[threadId]?.state ?: return false
         return (state == ThreadState.INITIALIZED) || (state == ThreadState.ENABLED)
     }
 
@@ -82,46 +82,52 @@ open class ThreadScheduler {
         getThreadState(threadId) == ThreadState.FINISHED
 
     fun areAllThreadsFinished() =
-        threads.all { it.state == ThreadState.FINISHED }
+        threads.values.all { it.state == ThreadState.FINISHED }
 
-    open fun registerThread(thread: Thread): ThreadId {
+    fun registerThread(thread: Thread): ThreadId {
         val threadId = threads.size
         val descriptor = createThreadDescriptor(threadId, thread)
-        threads_.add(descriptor)
+        threads_.put(threadId, descriptor).ensureNull()
         return threadId
     }
 
     fun startThread(threadId: ThreadId) {
-        threads[threadId].apply {
+        threads[threadId]!!.apply {
             check(state == ThreadState.INITIALIZED)
             state = ThreadState.ENABLED
         }
     }
 
     fun blockThread(threadId: ThreadId, reason: BlockingReason) {
-        threads[threadId].apply {
+        threads[threadId]!!.apply {
             blockingReason = reason
             state = ThreadState.BLOCKED
         }
     }
 
     fun unblockThread(threadId: ThreadId) {
-        threads[threadId].apply {
+        threads[threadId]!!.apply {
             state = ThreadState.ENABLED
             blockingReason = null
         }
     }
 
     fun abortThread(threadId: ThreadId) {
-        threads[threadId].apply { state = ThreadState.ABORTED }
+        threads[threadId]!!.apply {
+            state = ThreadState.ABORTED
+        }
     }
 
     fun abortAllThreads() {
-        threads.forEach { it.state = ThreadState.ABORTED }
+        threads.values.forEach {
+            it.state = ThreadState.ABORTED
+        }
     }
 
     fun finishThread(threadId: ThreadId) {
-        threads[threadId].apply { state = ThreadState.FINISHED }
+        threads[threadId]!!.apply {
+            state = ThreadState.FINISHED
+        }
     }
 
     fun reset() {

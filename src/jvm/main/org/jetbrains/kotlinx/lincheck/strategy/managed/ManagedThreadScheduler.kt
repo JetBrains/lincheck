@@ -40,7 +40,7 @@ class ManagedThreadScheduler : ThreadScheduler() {
     fun abortCurrentThread(): Nothing {
         check(isCurrentThreadScheduled())
         val threadId = currentThreadId
-        threads[threadId].state = ThreadState.ABORTED
+        threads[threadId]!!.state = ThreadState.ABORTED
         throw ThreadAbortedError
     }
 
@@ -52,7 +52,7 @@ class ManagedThreadScheduler : ThreadScheduler() {
      */
     fun awaitTurn(threadId: ThreadId) {
         check(threadId == getThreadId(Thread.currentThread()))
-        val descriptor = threads[threadId]
+        val descriptor = threads[threadId]!!
         descriptor.spinner.spinWaitUntil {
             if (descriptor.state == ThreadState.ABORTED)
                 throw ThreadAbortedError
