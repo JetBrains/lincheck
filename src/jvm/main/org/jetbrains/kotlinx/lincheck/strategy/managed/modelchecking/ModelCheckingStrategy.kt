@@ -710,8 +710,7 @@ class ModelCheckingParkingTracker(val allowSpuriousWakeUps: Boolean = false) : P
     private val parked = mutableThreadMapOf<Boolean>()
 
     override fun registerThread(threadId: Int) {
-        check(threadId == parked.size)
-        parked.add(false)
+        parked[threadId] = false
     }
 
     override fun park(threadId: Int) {
@@ -727,7 +726,7 @@ class ModelCheckingParkingTracker(val allowSpuriousWakeUps: Boolean = false) : P
     }
 
     override fun isParked(threadId: Int): Boolean =
-        parked[threadId] && !allowSpuriousWakeUps
+        !allowSpuriousWakeUps && parked[threadId]!!
 
     override fun reset() {
         parked.clear()
