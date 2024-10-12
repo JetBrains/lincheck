@@ -253,7 +253,7 @@ abstract class ManagedStrategy(
             VALIDATION  -> 0
         }
         loopDetector.beforePart(nextThread)
-        threadScheduler.setCurrentThread(nextThread)
+        threadScheduler.scheduleThread(nextThread)
     }
 
     /**
@@ -650,7 +650,7 @@ abstract class ManagedStrategy(
     @JvmName("setNextThread")
     private fun setCurrentThread(nextThread: Int) {
         loopDetector.onThreadSwitch(nextThread)
-        threadScheduler.setCurrentThread(nextThread)
+        threadScheduler.scheduleThread(nextThread)
     }
 
     private fun abortWithSuddenInvocationResult(invocationResult: InvocationResult): Nothing {
