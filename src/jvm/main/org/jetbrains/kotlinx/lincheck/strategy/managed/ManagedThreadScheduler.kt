@@ -14,10 +14,20 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.util.*
 
 
+/**
+ * [ManagedThreadScheduler] is responsible for managing the execution of threads
+ * ensuring that at any given moment, only a single registered thread is allowed to run.
+ *
+ * To achieve this goal, the scheduler relies on cooperation from the [ManagedStrategy],
+ * in particular, that the strategy correctly places [awaitTurn] calls
+ * to artificially block a thread from running until it is scheduled.
+ *
+ * @see [ThreadScheduler]
+ */
 class ManagedThreadScheduler : ThreadScheduler() {
 
     /**
-     * Represents the ID of the currently scheduled thread.
+     * Represents the id of the currently scheduled thread.
      *
      * In managed strategy the invariant is that at each point of time
      * only a single registered thread is allowed to run.
@@ -30,14 +40,30 @@ class ManagedThreadScheduler : ThreadScheduler() {
     var currentThreadId: Int = 0
         private set
 
+    /**
+     * Checks if the current thread is the one scheduled to run.
+     *
+     * @return `true` if the current thread is the one scheduled to run; `false` otherwise.
+     */
     fun isCurrentThreadScheduled(): Boolean {
         return currentThreadId == getThreadId(Thread.currentThread())
     }
 
-    fun setCurrentThread(threadId: Int) {
+    /**
+     * Schedules the specified thread to be run.
+     *
+     * @param threadId The identifier of the thread to be scheduled.
+     */
+    fun scheduleThread(threadId: Int) {
         currentThreadId = threadId
     }
 
+    /**
+     * Aborts the currently running thread.
+     * Throws [ThreadAbortedError] to indicate that the thread has been aborted.
+     *
+     * @return Nothing as this method always throws [ThreadAbortedError].
+     */
     fun abortCurrentThread(): Nothing {
         check(isCurrentThreadScheduled())
         val threadId = currentThreadId
