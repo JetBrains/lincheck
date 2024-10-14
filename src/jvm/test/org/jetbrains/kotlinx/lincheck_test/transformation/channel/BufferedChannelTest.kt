@@ -52,6 +52,25 @@ class BufferedChannelTest {
         .iterations(1)
         .logLevel(LoggingLevel.INFO)
         .sequentialSpecification(SequentialBufferedChannel::class.java)
+        .addCustomScenario {
+            parallel {
+                thread {
+                    actor(::send, 3)
+                    actor(::send, 2)
+                    actor(::send, 1)
+                }
+                thread {
+                    actor(::receive)
+                    actor(::send, 3)
+                    actor(::receive)
+                }
+                thread {
+                    actor(::receive)
+                    actor(::send, 3)
+                    actor(::send, 3)
+                }
+            }
+        }
         .check(this::class)
 }
 
