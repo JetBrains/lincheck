@@ -129,7 +129,6 @@ inline fun LincheckRunTracker?.trackIteration(
     }
 }
 
-
 /**
  * Tracks the invocation of the specific Lincheck test iteration.
  *
@@ -159,17 +158,12 @@ inline fun LincheckRunTracker?.trackInvocation(
     }
 }
 
-
 /**
- * Chains multiple Lincheck run trackers into a single tracker.
- * The chained tracker delegates method calls to each tracker in the chain.
- *
- * @return The chained LincheckRunTracker, or null if the original list is empty.
+ * A chain of multiple Lincheck run trackers combined into a single tracker.
+ * This tracker delegates method calls to each tracker in the chain
+ * in the order they appear in the constructor.
  */
-fun List<LincheckRunTracker>.chainTrackers(): LincheckRunTracker? =
-    if (this.isEmpty()) null else ChainedRunTracker(this)
-
-internal class ChainedRunTracker(trackers: List<LincheckRunTracker> = listOf()) : LincheckRunTracker {
+internal class ChainRunTracker(trackers: List<LincheckRunTracker> = listOf()) : LincheckRunTracker {
 
     private val trackers = mutableListOf<LincheckRunTracker>()
 
@@ -211,12 +205,12 @@ internal class ChainedRunTracker(trackers: List<LincheckRunTracker> = listOf()) 
 }
 
 /**
- * Searches for a first LincheckRunTracker of the specified type
+ * Searches for the first [LincheckRunTracker] of the specified type
  * among the internal sub-trackers of a given tracker.
  *
- * @param T The type of LincheckRunTracker to search for.
+ * @param T The type of [LincheckRunTracker] to search for.
  *
- * @return The LincheckRunTracker of the specified type if found, otherwise null.
+ * @return The tracker of the specified type if found, otherwise null.
  */
 inline fun<reified T : LincheckRunTracker> LincheckRunTracker.findTracker(): T? {
     if (this is T)
@@ -232,7 +226,15 @@ inline fun<reified T : LincheckRunTracker> LincheckRunTracker.findTracker(): T? 
     return null
 }
 
-internal inline fun<reified T : LincheckRunTracker> ChainedRunTracker.addTrackerIfAbsent(createTracker: () -> T): T {
+/**
+ * Adds a tracker of type [T] to the chain of trackers if it is not already present there.
+ *
+ * @param createTracker A function that creates a new tracker of type [T].
+ *   It is invoked only if the requested tracker does not already exist in the chain.
+ * @return The existing tracker of type [T] if found,
+ *   otherwise a newly created and added tracker of type [T].
+ */
+internal inline fun<reified T : LincheckRunTracker> ChainRunTracker.addTrackerIfAbsent(createTracker: () -> T): T {
     val tracker = findTracker<T>()
     if (tracker != null)
         return tracker
