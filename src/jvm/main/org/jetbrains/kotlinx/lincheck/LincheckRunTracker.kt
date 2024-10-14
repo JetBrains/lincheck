@@ -83,6 +83,7 @@ interface LincheckRunTracker {
 /**
  * Represents the parameters for controlling the iteration of a Lincheck test run.
  *
+ * @property strategy The Lincheck testing strategy used on this iteration.
  * @property invocationsBound The maximum number of invocations to be performed on the iteration.
  * @property warmUpInvocationsCount The number of warm-up invocations to be performed.
  */
