@@ -92,10 +92,12 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
         // only after all custom scenarios are checked
         val scenarios = customScenarios.asSequence() + randomScenarios.take(iterations)
         val scenariosSize = customScenarios.size + iterations
+        // add a custom run tracker if it is provided by the caller
         val tracker = ChainRunTracker().apply {
             if (customTracker != null)
                 addTracker(customTracker)
         }
+        // add a statistics tracker if it is not already present
         val statisticsTracker = tracker.addTrackerIfAbsent { LincheckStatisticsTracker() }
         scenarios.forEachIndexed { i, scenario ->
             val isCustomScenario = (i < customScenarios.size)
