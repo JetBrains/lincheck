@@ -29,6 +29,18 @@ import kotlin.time.DurationUnit
 import kotlin.io.path.inputStream
 
 
+/**
+ * Generates a bar plot depicting the total running time of various benchmarks
+ * under different strategies and saves it as a file.
+ *
+ * The plot includes benchmark names on the x-axis and
+ * corresponding running times (in milliseconds) on the y-axis.
+ * Different strategies employed for the benchmarks are represented by different colors in the bar plot.
+ *
+ * @param filename The name of the file where the plot will be saved.
+ * @param path The optional directory path where the file will be saved.
+ *   If null, the plot is saved in the `lets-plot-images` folder inside the current working directory.
+ */
 fun BenchmarksReport.runningTimeBarPlot(filename: String, path: String? = null) {
     val data = runningTimeData()
     var plot = letsPlot(data)
@@ -49,7 +61,7 @@ fun BenchmarksReport.runningTimeBarPlot(filename: String, path: String? = null) 
     ggsave(plot, filename, path = path)
 }
 
-fun BenchmarksReport.runningTimeData(
+private fun BenchmarksReport.runningTimeData(
     durationUnit: DurationUnit = DurationUnit.MILLISECONDS
 ): Map<String, Any> {
     val map = mutableMapOf<String, Any>()
@@ -66,6 +78,20 @@ fun BenchmarksReport.runningTimeData(
     return map
 }
 
+/**
+ * Generates a bar plot showing the average invocation times by scenario size
+ * for a specified benchmark and saves it as a file.
+ *
+ * The plot displays the x-axis as a tuple of (number of threads, number of operations)
+ * and the y-axis as the average time taken for invocations in microseconds.
+ * Different strategies employed in the benchmarks are differentiated using different fill colors.
+ * Optionally, error bars are included if the time error low and high values are present in the data.
+ *
+ * @param benchmarkName The name of the benchmark for which the plot is to be generated.
+ * @param filename The name of the file where the generated plot will be saved.
+ * @param path An optional directory path where the file will be saved.
+ *   If null, the plot is saved in the `lets-plot-images` folder inside the current working directory.
+ */
 fun BenchmarksReport.invocationTimeByScenarioSizeBarPlot(
     benchmarkName: String,
     filename: String,
@@ -101,7 +127,7 @@ fun BenchmarksReport.invocationTimeByScenarioSizeBarPlot(
     ggsave(plot, filename, path = path)
 }
 
-fun BenchmarksReport.invocationTimeByScenarioSizeData(
+private fun BenchmarksReport.invocationTimeByScenarioSizeData(
     benchmarkName: String,
     durationUnit: DurationUnit = DurationUnit.MICROSECONDS,
 ): Map<String, Any> {
@@ -138,6 +164,16 @@ fun BenchmarksReport.invocationTimeByScenarioSizeData(
     return map
 }
 
+/**
+ * Generates a scatter plot depicting the invocation times for a given benchmark and saves it as a file.
+ *
+ * The plot includes invocation IDs on the x-axis and corresponding running times (in microseconds) on the y-axis.
+ *
+ * @param benchmarkID The identifier of the benchmark to generate the scatter plot for.
+ * @param filename The name of the file where the plot will be saved.
+ * @param path The optional directory path where the file will be saved.
+ *   If null, the plot is saved in the `lets-plot-images` folder inside the current working directory.
+ */
 fun BenchmarksReport.invocationTimeScatterPlot(
     benchmarkID: BenchmarkID,
     filename: String,
@@ -166,7 +202,7 @@ fun BenchmarksReport.invocationTimeScatterPlot(
     ggsave(plot, filename, path = path)
 }
 
-fun BenchmarksReport.invocationsTimeData(benchmarkID: BenchmarkID,
+private fun BenchmarksReport.invocationsTimeData(benchmarkID: BenchmarkID,
      durationUnit: DurationUnit = DurationUnit.MICROSECONDS,
 ): Map<String, Any> {
     val map = mutableMapOf<String, Any>()
@@ -177,6 +213,21 @@ fun BenchmarksReport.invocationsTimeData(benchmarkID: BenchmarkID,
     return map
 }
 
+/**
+ * Represents the type of plots that can be generated from benchmark reports.
+ *
+ * Available plot types.
+ * - [AllPlots]: generates all available plot types.
+ *
+ * - [RunningTimeBarPlot]: generates a bar plot of the total running time
+ *   for all benchmarks (see [runningTimeBarPlot]).
+ *
+ * - [InvocationTimeByScenarioSizeBarPlot]: generates a bar plot of invocation time by scenario size
+ *   for a specific benchmark (see [invocationTimeByScenarioSizeBarPlot]).
+ *
+ * - [InvocationTimeScatterPlot]: generates a scatter plot of invocation times
+ *   for a specific benchmark (see [invocationTimeScatterPlot]).
+ */
 enum class PlotType {
     AllPlots,
     RunningTimeBarPlot,
@@ -193,6 +244,7 @@ fun PlotType.defaultOutputFilename(): String = when (this) {
     else -> throw IllegalArgumentException()
 }
 
+// Defines the CLI for drawing the plots
 class PlotCommand : CliktCommand() {
 
     val plotType by option()
