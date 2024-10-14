@@ -7,18 +7,18 @@ and contains instructions on how to run them to produce reports and plots.
 
 Benchmarks are split into several categories with 
 each category aiming to evaluate particular aspects of the framework.
-All benchmarks within each category have similar structure
+All benchmarks within each category have a similar structure 
 and collect the same set of metrics.
 
 #### Category `running`
 
 Benchmarks in this category aim to evaluate the overall performance of 
 running Lincheck tests using different strategies.
-In each benchmark, specific correctly implemented 
+In each benchmark, a specific correctly implemented 
 data structure or synchronization primitive is tested by Lincheck
 (since the implementations are assumed to be correct, the tool should not report any bugs).
-For each benchmark, the Lincheck is requested to generate fixed number of scenarios, 
-and run each scenario fixed number of times with fixed strategy. 
+For each benchmark, the Lincheck is requested to generate a fixed number of scenarios  
+and run each scenario fixed number of times with a fixed strategy. 
 The overall running time of the benchmark is measured.
 
 **Parameters:**
@@ -63,8 +63,8 @@ To run all benchmarks and produce the reports, use the `jvmBenchmarkSuite` gradl
 ```
 
 By default, this task collects only per-iteration statistics, 
-without the information about the running time of each invocation.
-It is because this information significantly increases the size of the produced reports.
+without the information about the running time of each invocation,
+because this information significantly increases the size of the produced reports.
 If you need per-invocation statistics, run the `jvmBenchmarkSuite` task 
 with the `statisticsGranularity` option set to `perInvocation`:
 
@@ -104,8 +104,3 @@ To see a description of all available task options, run the following command:
 ```
 ./gradlew :runBenchmarkPlots --args="--help"
 ```
-
-
-
-
-
