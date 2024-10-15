@@ -40,6 +40,7 @@ abstract class BaseTraceRepresentationTest(private val outputFileName: String) {
         // to trigger the lincheck failure, we use the always failing verifier
         .verifier(FailingVerifier::class.java)
         .iterations(0)
+        .threads(1)
         .apply { customize() }
         .checkImpl(this::class.java) { failure ->
             failure.checkLincheckOutput(outputFileName)

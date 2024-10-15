@@ -351,4 +351,32 @@ public class Injections {
     public static void setLastMethodCallEventId() {
         getEventTracker().setLastMethodCallEventId();
     }
+
+    public static boolean isFirstRun() {
+        return getEventTracker().isFirstRun();
+    }
+    
+    public static long nextEventAccumulatorId() {
+        return getEventTracker().nextEventAccumulatorId();
+    }
+    
+    public static void storeEventResult(Object result, long oldEventAccumulatorCounter) {
+        getEventTracker().storeEventResult(result, oldEventAccumulatorCounter);
+    }
+    
+    public static Object getNextEventResultOrThrow() {
+        return getEventTracker().getNextEventResultOrThrow();
+    }
+    
+    public static void storeEventException(Throwable t, long oldEventAccumulatorCounter) {
+        getEventTracker().storeEventException(t, oldEventAccumulatorCounter);
+    }
+    
+    public static void storeParameterValue(Object value) {
+        getEventTracker().storeParameterValue(value);
+    }
+    
+    public static void restoreParameterValue(Object value) {
+        getEventTracker().restoreParameterValue(value);
+    }
 }

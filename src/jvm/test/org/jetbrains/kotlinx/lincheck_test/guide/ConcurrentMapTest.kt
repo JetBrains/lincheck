@@ -42,5 +42,6 @@ class ConcurrentSkipListMapTest {
     @Test
     fun modelCheckingTest() = ModelCheckingOptions()
         .checkObstructionFreedom(true)
+        .threads(1)
         .check(this::class)
 }

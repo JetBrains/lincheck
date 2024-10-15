@@ -31,6 +31,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
 import java.lang.invoke.VarHandle
 import java.lang.reflect.*
 import java.util.*
+import kotlin.Result
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 
 /**
@@ -216,12 +217,17 @@ abstract class ManagedStrategy(
         monitorTracker.reset()
         parkingTracker.reset()
     }
+    
+    override fun isFirstRun(): Boolean = runNumber == 1L
+    private var runNumber = 0L
 
     /**
      * Runs the current invocation.
      */
     override fun runInvocation(): InvocationResult {
         while (true) {
+            runNumber++
+            methodCallResultsTracker.resetCounter()
             initializeInvocation()
             val result = runner.run()
             // In case the runner detects a deadlock, some threads can still manipulate the current strategy,
@@ -1541,6 +1547,39 @@ abstract class ManagedStrategy(
         }
     }
 
+    private val methodCallResultsTracker = MethodCallResultsTracker()
+    override fun storeEventResult(result: Any?, oldEventAccumulatorCounter: Long) {
+        methodCallResultsTracker.storeNewResult(Result.success(result), oldEventAccumulatorCounter)
+    }
+
+    override fun getNextEventResultOrThrow(): Any? {
+        return methodCallResultsTracker.getNextResult().getOrThrow()
+    }
+
+    override fun storeEventException(t: Throwable, oldEventAccumulatorCounter: Long) {
+        methodCallResultsTracker.storeNewResult(Result.failure(t), oldEventAccumulatorCounter)
+    }
+
+    override fun nextEventAccumulatorId(): Long {
+        return methodCallResultsTracker.nextId()
+    }
+
+    override fun storeParameterValue(value: Any?) = when (value) {
+        is ByteArray -> storeEventResult(value.copyOf(), nextEventAccumulatorId())
+        else -> error("Value of unknown type: $value")
+    }
+
+    override fun restoreParameterValue(value: Any?) {
+        when (value) {
+            is ByteArray -> {
+                val rightData = nextEventResultOrThrow as ByteArray
+                assert(rightData.size == value.size)
+                rightData.copyInto(value)
+            }
+
+            else -> error("Value of unknown type: $value")
+        }
+    }
 
 
     /**

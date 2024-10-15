@@ -57,4 +57,14 @@ public interface EventTracker {
     void beforeEvent(int eventId, String type);
     int getEventId();
     void setLastMethodCallEventId();
+    
+    boolean isFirstRun();
+    void storeEventResult(Object result, long oldEventAccumulatorCounter);
+    Object getNextEventResultOrThrow();
+    void storeEventException(Throwable t, long oldEventAccumulatorCounter);
+    long nextEventAccumulatorId();
+
+    void storeParameterValue(Object value);
+
+    void restoreParameterValue(Object value);
 }

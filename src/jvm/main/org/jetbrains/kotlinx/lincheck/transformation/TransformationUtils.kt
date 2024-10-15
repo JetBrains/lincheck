@@ -159,6 +159,89 @@ internal fun GeneratorAdapter.storeArguments(methodDescriptor: String): IntArray
 }
 
 /**
+ * Pops arguments of the method except the receiver.
+ *
+ * Before execution:
+ * STACK: param_1, param_2, ... param_n
+ *
+ * After execution:
+ * STACK: (empty)
+ *
+ * @param methodDescriptor String representation of the method's descriptor.
+ */
+internal fun GeneratorAdapter.popArguments(methodDescriptor: String) {
+    val argumentTypes = getArgumentTypes(methodDescriptor)
+    // Pop values in reverse order
+    for (i in argumentTypes.indices.reversed()) {
+        val valueType = argumentTypes[i]
+        if (valueType == DOUBLE_TYPE || valueType == LONG_TYPE) {
+            pop2()
+        } else {
+            pop()
+        }
+    }
+}
+
+/**
+ * Duplicates the value of some type.
+ *
+ * Before execution:
+ * STACK: VALUE
+ *
+ * After execution:
+ * STACK: VALUE, VALUE
+ */
+internal fun GeneratorAdapter.dup(type: Type) {
+    when (type) {
+        LONG_TYPE, DOUBLE_TYPE -> dup2()
+        VOID_TYPE -> {}
+        else -> dup()
+    }
+}
+
+/**
+ * Executes a try-catch-finally block within the context of the GeneratorAdapter.
+ *
+ * @param tryBlock The code block to be executed in the try section.
+ * @param exceptionType The type of exception to be caught in the catch section, or null to catch all exceptions.
+ * @param catchBlock The code block to be executed in the catch section if an exception is thrown. By default, it re-throws the exception.
+ * @param finallyBlock The code block to be executed in the finally section. This is optional.
+ */
+internal fun GeneratorAdapter.tryCatchFinally(
+    tryBlock: GeneratorAdapter.() -> Unit,
+    exceptionType: Type? = null,
+    catchBlock: GeneratorAdapter.() -> Unit = { throwException() },
+    finallyBlock: (GeneratorAdapter.() -> Unit)? = null,
+) {
+    val startTryBlockLabel = newLabel()
+    val endTryBlockLabel = newLabel()
+    val exceptionHandlerLabel = newLabel()
+    val endLabel = newLabel()
+    visitTryCatchBlock(
+        startTryBlockLabel,
+        endTryBlockLabel,
+        exceptionHandlerLabel,
+        exceptionType?.internalName
+    )
+    visitLabel(startTryBlockLabel)
+    tryBlock()
+    visitLabel(endTryBlockLabel)
+    if (finallyBlock != null) finallyBlock()
+    goTo(endLabel)
+    visitLabel(exceptionHandlerLabel)
+    if (finallyBlock != null) {
+        val exception = newLocal(exceptionType ?: getType(Throwable::class.java))
+        storeLocal(exception)
+        finallyBlock()
+        loadLocal(exception)
+        catchBlock()
+    } else {
+        catchBlock()
+    }
+    visitLabel(endLabel)
+}
+
+/**
  * Copies arguments of the method in the local variables.
  *
  * Before execution:
