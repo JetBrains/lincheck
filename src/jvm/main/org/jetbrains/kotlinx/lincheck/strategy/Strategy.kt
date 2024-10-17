@@ -90,6 +90,8 @@ abstract class Strategy protected constructor(
     override fun close() {
         runner.close()
     }
+
+    open fun restoreStaticMemorySnapshot() {}
 }
 
 /**
@@ -101,15 +103,20 @@ abstract class Strategy protected constructor(
  * @return the failure, if detected, null otherwise.
  */
 fun Strategy.runIteration(invocations: Int, verifier: Verifier): LincheckFailure? {
+    var failure: LincheckFailure? = null
+
     for (invocation in 0 until invocations) {
         if (!nextInvocation())
-            return null
+            break
         val result = runInvocation()
-        val failure = verify(result, verifier)
+        restoreStaticMemorySnapshot()
+        failure = verify(result, verifier)
         if (failure != null)
-            return failure
+            break
     }
-    return null
+
+    restoreStaticMemorySnapshot()
+    return failure
 }
 
 /**

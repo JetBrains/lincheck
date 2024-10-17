@@ -230,6 +230,47 @@ internal val Class<*>.allDeclaredFieldWithSuperclasses get(): List<Field> {
     return fields
 }
 
+/**
+ * Finds a public/protected/private/internal field in the class and its superclasses/interfaces by name.
+ *
+ * @param fieldName the name of the field to find.
+ * @return the [java.lang.reflect.Field] object if found, or `null` if not found.
+ */
+fun Class<*>.findField(fieldName: String): Field {
+    // Search in the class hierarchy
+    var clazz: Class<*>? = this
+    while (clazz != null) {
+        // Check class itself
+        try {
+            return clazz.getDeclaredField(fieldName)
+        }
+        catch (_: NoSuchFieldException) {}
+
+        // Check interfaces
+        for (interfaceClass in clazz.interfaces) {
+            try {
+                return interfaceClass.getDeclaredField(fieldName)
+            }
+            catch (_: NoSuchFieldException) {}
+        }
+
+        // Move up the hierarchy
+        clazz = clazz.superclass
+    }
+
+    throw NoSuchFieldException("Class '${this.name}' does not have field '$fieldName'")
+}
+
+@Suppress("DEPRECATION")
+fun getFieldOffset(field: Field): Long {
+    return if (Modifier.isStatic(field.modifiers)) {
+        UnsafeHolder.UNSAFE.staticFieldOffset(field)
+    }
+    else {
+        UnsafeHolder.UNSAFE.objectFieldOffset(field)
+    }
+}
+
 @Suppress("DEPRECATION")
 internal fun findFieldNameByOffset(targetType: Class<*>, offset: Long): String? {
     // Extract the private offset value and find the matching field.
