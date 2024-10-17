@@ -358,6 +358,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         if (!INSTRUMENT_ALL_CLASSES &&
             instrumentationMode == MODEL_CHECKING &&
             internalClassName.canonicalClassName !in instrumentedClasses &&
+            // Always transform classloaders
             !containsClassloaderInName(internalClassName)) {
             return null
         }
