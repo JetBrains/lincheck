@@ -145,6 +145,9 @@ val ExecutionResult.parallelResults: List<List<Result?>> get() =
 val ExecutionResult.threadsResults: List<List<Result?>> get() =
     threadsResultsWithClock.map { it.map { r -> r.result } }
 
+val ExecutionResult.allResults: Sequence<Result?> get() =
+    initResults.asSequence() + parallelResults.asSequence().flatten() + postResults.asSequence()
+
 // for tests
 fun ExecutionResult.equalsIgnoringClocks(other: ExecutionResult) =
     this.withEmptyClocks == other.withEmptyClocks

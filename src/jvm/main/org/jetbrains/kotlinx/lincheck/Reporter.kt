@@ -597,22 +597,20 @@ internal data class ExceptionStackTracesResult(val exceptionStackTraces: Map<Thr
  */
 internal fun collectExceptionStackTraces(executionResult: ExecutionResult): ExceptionsProcessingResult {
     val exceptionStackTraces = mutableMapOf<Throwable, ExceptionNumberAndStacktrace>()
-
-    (executionResult.initResults.asSequence()
-            + executionResult.parallelResults.asSequence().flatten()
-            + executionResult.postResults.asSequence())
+    executionResult.allResults
         .filterIsInstance<ExceptionResult>()
         .forEachIndexed { index, exceptionResult ->
             val exception = exceptionResult.throwable
-
-            val filteredStacktrace = exception.stackTrace.takeWhile { LINCHECK_PACKAGE_NAME !in it.className }
-            if (filteredStacktrace.isEmpty()) { // Exception in Lincheck itself
+            val isInternalLincheckBug = exception.stackTrace?.lastOrNull()
+                ?.let { LINCHECK_PACKAGE_NAME in it.className }
+                ?: false
+            if (isInternalLincheckBug) {
                 return InternalLincheckBugResult(exception)
             }
-
-            exceptionStackTraces[exception] = ExceptionNumberAndStacktrace(index + 1, filteredStacktrace)
+            val stackTrace = exception.stackTrace
+                .filter { LINCHECK_PACKAGE_NAME !in it.className }
+            exceptionStackTraces[exception] = ExceptionNumberAndStacktrace(index + 1, stackTrace)
         }
-
     return ExceptionStackTracesResult(exceptionStackTraces)
 }
 
