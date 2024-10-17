@@ -16,6 +16,13 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 interface MonitorTracker {
 
     /**
+     * Registers a thread with the given id in the monitor tracker.
+     *
+     * @param threadId the id of the thread to register.
+     */
+    fun registerThread(threadId: Int)
+
+    /**
      * Attempts to acquire a monitor for a thread.
      *
      * @param threadId the id of the thread performing acquisition.
@@ -29,8 +36,18 @@ interface MonitorTracker {
      *
      * @param threadId the id of the thread releasing the monitor.
      * @param monitor the monitor object to release.
+     * @return true if the thread completely released the monitor,
+     *   false otherwise (e.g., in case of lock re-entrance).
      */
-    fun releaseMonitor(threadId: Int, monitor: Any)
+    fun releaseMonitor(threadId: Int, monitor: Any): Boolean
+
+    /**
+     * Retrieves a list of threads that wait to acquire the specified monitor.
+     *
+     * @param monitor the monitor object.
+     * @return a list of thread IDs waiting to acquire the given monitor.
+     */
+    fun acquiringThreads(monitor: Any): List<Int>
 
     /**
      * Waits for a monitor to be notified by another thread.

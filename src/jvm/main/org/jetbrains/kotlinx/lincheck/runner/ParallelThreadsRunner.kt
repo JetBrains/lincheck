@@ -83,9 +83,6 @@ internal open class ParallelThreadsRunner(
     )
 
     init {
-        if (strategy is ManagedStrategy) {
-            executor.threads.forEach { it.eventTracker = strategy }
-        }
         resetState()
     }
 
@@ -186,10 +183,6 @@ internal open class ParallelThreadsRunner(
         @Suppress("DEPRECATION")
         testInstance = testClass.newInstance()
         if (strategy is ModelCheckingStrategy) {
-            // We pass the test instance to the strategy to initialize the call stack.
-            // It should be done here as we create the test instance in the `run` method in the runner, after
-            // `initializeInvocation` method call of ManagedStrategy.
-            strategy.initializeCallStack(testInstance)
             // In the model checking mode, we need to ensure
             // that all the necessary classes and instrumented
             // after creating a test instance.
@@ -264,7 +257,7 @@ internal open class ParallelThreadsRunner(
             val resumedValue = completion.resWithCont.get().first
             // It is important to run the coroutine resumption part outside the ignored section
             // to track the events inside resumption.
-            runOutsideIgnoredSection(thread) {
+            runOutsideIgnoredSection {
                 completion.resWithCont.get().second.resumeWith(resumedValue)
             }
         }
@@ -297,6 +290,10 @@ internal open class ParallelThreadsRunner(
             var timeout = timeoutMs * 1_000_000
             // Create a new testing class instance.
             createTestInstance()
+            // set the event tracker
+            if (strategy is ManagedStrategy) {
+                LincheckTracker.setEventTracker(strategy)
+            }
             // Execute the initial part.
             initialPartExecution?.let {
                 beforePart(INIT)
@@ -334,6 +331,9 @@ internal open class ParallelThreadsRunner(
             return UnexpectedExceptionInvocationResult(e.cause!!, collectExecutionResults())
         } finally {
             resetState()
+            if (strategy is ManagedStrategy) {
+                LincheckTracker.resetEventTracker()
+            }
         }
     }
 
@@ -430,7 +430,7 @@ internal open class ParallelThreadsRunner(
         curClock = 0
     }
 
-    override fun onStart(iThread: Int) {
+    override fun onThreadStart(iThread: Int) {
         if (currentExecutionPart !== PARALLEL) return
         uninitializedThreads.decrementAndGet() // this thread has finished initialization
         // wait for other threads to start
@@ -447,7 +447,7 @@ internal open class ParallelThreadsRunner(
 
     override fun isCurrentRunnerThread(thread: Thread): Boolean = executor.threads.any { it === thread }
 
-    override fun onFinish(iThread: Int) {}
+    override fun onThreadFinish(iThread: Int) {}
 
     override fun onFailure(iThread: Int, e: Throwable) {}
 }

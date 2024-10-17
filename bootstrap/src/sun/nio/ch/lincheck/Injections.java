@@ -16,9 +16,35 @@ import java.util.Random;
  * Methods of this object are called from the instrumented code.
  */
 public class Injections {
+
+    // Special object to represent void method call result.
     public static final Object VOID_RESULT = new Object();
+
     // Used in the verification phase to store a suspended continuation.
     public static Object lastSuspendedCancellableContinuationDuringVerification = null;
+
+    // Thread local variable storing testing code and ignored section flags.
+    public static final ThreadLocal<ThreadFlags> threadFlags =
+            ThreadLocal.withInitial(ThreadFlags::new);
+
+    public static class ThreadFlags {
+        public boolean inTestingCode = false;
+        public boolean inIgnoredSection = false;
+
+        public boolean inIgnoredSection() {
+            return !inTestingCode || inIgnoredSection;
+        }
+
+        public boolean enterIgnoredSection() {
+            if (inIgnoredSection) return false;
+            inIgnoredSection = true;
+            return true;
+        }
+
+        public void leaveIgnoredSection() {
+            inIgnoredSection = false;
+        }
+    }
 
     public static void storeCancellableContinuation(Object cont) {
         Thread t = Thread.currentThread();
@@ -30,29 +56,97 @@ public class Injections {
         }
     }
 
+    /**
+     * Enters an ignored section for the current thread.
+     * A code inside the ignored section is not analyzed by the Lincheck.
+     *
+     * Note that the thread may not actually enter the ignored section in the following cases.
+     *   1. The thread is not registered in the Lincheck strategy.
+     *   2. The thread is already inside the ignored section.
+     *
+     * @return true if the thread successfully entered the ignored section, false otherwise.
+     */
     public static boolean enterIgnoredSection() {
-        Thread t = Thread.currentThread();
-        if (!(t instanceof TestThread)) return false;
-        TestThread testThread = (TestThread) t;
-        if (testThread.inIgnoredSection) return false;
-        testThread.inIgnoredSection = true;
-        return true;
+        if (LincheckTracker.getEventTracker() == null) return false;
+        var flags = threadFlags.get();
+        return flags.enterIgnoredSection();
     }
 
+    /**
+     * Leaves an ignored section for the current thread.
+     */
     public static void leaveIgnoredSection() {
-        Thread t = Thread.currentThread();
-        if (t instanceof TestThread) {
-            ((TestThread) t).inIgnoredSection = false;
-        }
+        if (LincheckTracker.getEventTracker() == null) return;
+        var flags = threadFlags.get();
+        flags.leaveIgnoredSection();
     }
 
-    public static boolean inTestingCode() {
-        Thread t = Thread.currentThread();
-        if (t instanceof TestThread) {
-            TestThread testThread = (TestThread) t;
-            return testThread.inTestingCode && !testThread.inIgnoredSection;
+    /**
+     * Determines if the current thread is inside an ignored section.
+     *
+     * @return true if the current thread is inside an ignored section, false otherwise.
+     */
+    public static boolean inIgnoredSection() {
+        if (LincheckTracker.getEventTracker() == null) return true;
+        var flags = threadFlags.get();
+        return flags.inIgnoredSection();
+    }
+
+    /**
+     * Current thread reports that it is going to start a new child thread {@code t}.
+     */
+    public static void beforeThreadFork(Thread t) {
+        var tracker = LincheckTracker.getEventTracker();
+        if (tracker == null) {
+            return;
         }
-        return false;
+        tracker.beforeThreadFork(t);
+    }
+
+    /**
+     * Current thread reports that it started a new child thread {@code t}.
+     */
+    public static void afterThreadFork(Thread t) {
+        var tracker = LincheckTracker.getEventTracker();
+        if (tracker == null) {
+            return;
+        }
+        tracker.afterThreadFork(t);
+    }
+
+    /**
+     * Current thread entered its {@code run} method.
+     */
+    public static void beforeThreadStart() {
+        var tracker = LincheckTracker.getEventTracker();
+        if (tracker == null) {
+            return;
+        }
+        tracker.beforeThreadStart();
+    }
+
+    /**
+     * Current thread returned from its {@code run} method.
+     */
+    public static void afterThreadFinish() {
+        var tracker = LincheckTracker.getEventTracker();
+        if (tracker == null) {
+            return;
+        }
+        tracker.afterThreadFinish();
+    }
+
+    /**
+     * Current thread successfully joined thread {@code t}.
+     * <p>
+     * <b>Does not support joins with time limits yet</b>.
+     */
+    public static void beforeThreadJoin(Thread t) {
+        var tracker = LincheckTracker.getEventTracker();
+        if (tracker == null) {
+            return;
+        }
+        tracker.beforeThreadJoin(t);
     }
 
     /**
@@ -323,11 +417,11 @@ public class Injections {
     }
 
     private static EventTracker getEventTracker() {
-        Thread currentThread = Thread.currentThread();
-        if (currentThread instanceof TestThread) {
-            return ((TestThread) currentThread).eventTracker;
+        var tracker = LincheckTracker.getEventTracker();
+        if (tracker == null) {
+            throw new RuntimeException("No event tracker set by Lincheck");
         }
-        throw new RuntimeException("Current thread is not an instance of TestThread");
+        return tracker;
     }
 
 
