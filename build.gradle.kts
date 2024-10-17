@@ -33,11 +33,11 @@ kotlin {
         withJava()
 
         val main by compilations.getting {
-            kotlinOptions.jvmTarget = "11"
+            kotlinOptions.jvmTarget = "1.8"
         }
 
         val test by compilations.getting {
-            kotlinOptions.jvmTarget = "11"
+            kotlinOptions.jvmTarget = "1.8"
         }
     }
 
@@ -78,8 +78,8 @@ kotlin {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
     toolchain {
         val jdkToolchainVersion: String by project
         languageVersion = JavaLanguageVersion.of(jdkToolchainVersion)
