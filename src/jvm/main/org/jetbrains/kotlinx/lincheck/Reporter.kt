@@ -601,7 +601,7 @@ internal fun collectExceptionStackTraces(executionResult: ExecutionResult): Exce
         .filterIsInstance<ExceptionResult>()
         .forEachIndexed { index, exceptionResult ->
             val exception = exceptionResult.throwable
-            val isInternalLincheckBug = exception.stackTrace?.lastOrNull()
+            val isInternalLincheckBug = exception.stackTrace?.firstOrNull()
                 ?.let { LINCHECK_PACKAGE_NAME in it.className }
                 ?: false
             if (isInternalLincheckBug) {
