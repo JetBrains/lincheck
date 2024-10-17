@@ -105,6 +105,8 @@ abstract class Strategy protected constructor(
     override fun close() {
         runner.close()
     }
+
+    open fun restoreStaticMemorySnapshot() {}
 }
 
 /**
