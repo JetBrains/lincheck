@@ -89,6 +89,9 @@ internal class LincheckClassVisitor(
             mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
         }
+        if (isStackTraceElement(className)) {
+            return mv
+        }
         if (methodName == "<init>") {
             mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
             return mv

@@ -352,3 +352,4 @@ internal val CLASS_FOR_NAME_METHOD = Method("forName", CLASS_TYPE, arrayOf(STRIN
  * Tests if the provided [className] contains `"ClassLoader"` as a substring
  */
 internal fun containsClassloaderInName(className: String): Boolean = className.contains("ClassLoader")
+internal fun isStackTraceElement(className: String): Boolean = className.contains("StackTraceElement")
