@@ -15,8 +15,10 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck_test.verifier.*
+import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
 import org.junit.*
+import java.util.concurrent.*
 import java.util.concurrent.CancellationException
 
 class BufferedChannelCustomTest {
