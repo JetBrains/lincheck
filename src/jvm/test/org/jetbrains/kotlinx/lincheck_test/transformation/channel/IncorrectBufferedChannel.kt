@@ -18,7 +18,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 /**
  * Incorrect implementation of the BufferedChannel, intentionally provided by Daria Shutina.
  */
-class BufferedChannel<E>(capacity: Long) : Channel<E> {
+class IncorrectBufferedChannel<E>(capacity: Long) : Channel<E> {
     /**
       The counters show the total amount of senders and receivers ever performed. They are
       incremented in the beginning of the corresponding operation, thus acquiring a unique
@@ -528,7 +528,7 @@ interface Channel<E> {
  * and [tryRemoveSegment] and cannot be changed from the outside.
  */
 private class ChannelSegment<E>(
-    private val channel: BufferedChannel<E>,
+    private val channel: IncorrectBufferedChannel<E>,
     val id: Long,
     prevSegment: ChannelSegment<E>?,
 ) {
@@ -598,8 +598,8 @@ private class ChannelSegment<E>(
     coroutine is cancelled, the cell's state is marked interrupted, its element is set to `null`
     in order to avoid memory leaks and the segment's counter of interrupted cells is increased.
 
-    If the cancelled request is a receiver, the method invokes [BufferedChannel.waitExpandBufferCompletion]
-    to guarantee that [BufferedChannel.expandBuffer] has processed all cells before the segment
+    If the cancelled request is a receiver, the method invokes [IncorrectBufferedChannel.waitExpandBufferCompletion]
+    to guarantee that [IncorrectBufferedChannel.expandBuffer] has processed all cells before the segment
     is physically removed.
      */
     internal fun onCancellation(index: Int, isSender: Boolean) {

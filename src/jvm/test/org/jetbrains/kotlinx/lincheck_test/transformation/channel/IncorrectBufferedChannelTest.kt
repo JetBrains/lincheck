@@ -15,9 +15,7 @@ import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.jetbrains.kotlinx.lincheck.LoggingLevel
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.annotations.Param
 import org.jetbrains.kotlinx.lincheck.check
-import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.junit.Test
 import kotlin.coroutines.cancellation.CancellationException
@@ -25,16 +23,12 @@ import kotlin.coroutines.cancellation.CancellationException
 /**
  * Checks that [bug with not transformed ClassLoader-s](https://github.com/JetBrains/lincheck/issues/412) is resolved.
  */
-@Param.Params(
-    Param(name = "elem", gen = IntGen::class, conf = "1:3"),
-    Param(name = "closeToken", gen = IntGen::class, conf = "1:3")
-)
-class BufferedChannelTest {
+class IncorrectBufferedChannelTest {
 
-    val c = BufferedChannel<Int>(1)
+    val c = IncorrectBufferedChannel<Int>(1)
 
     @Operation(blocking = true)
-    suspend fun send(@Param(name = "elem") elem: Int): Any = try {
+    suspend fun send(elem: Int): Any = try {
         c.send(elem)
     } catch (e: NumberedCancellationException) {
         e.testResult

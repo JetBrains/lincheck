@@ -15,13 +15,11 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck_test.verifier.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
 import org.junit.*
-import java.util.concurrent.*
 import java.util.concurrent.CancellationException
 
-class BufferedChannelCustomTest {
+class IncorrectBufferedChannelCustomTest {
     private val ch = Channel<Int>(3)
 
     suspend fun send(value: Int) = try {
@@ -62,15 +60,15 @@ class BufferedChannelCustomTest {
         val testResult = "Cancelled($number)"
     }
 
-    private val r = BufferedChannelCustomTest::receive
-    private val s = BufferedChannelCustomTest::send
-    private val o = BufferedChannelCustomTest::offer
-    private val p = BufferedChannelCustomTest::poll
-    private val c = BufferedChannelCustomTest::cancel
+    private val r = IncorrectBufferedChannelCustomTest::receive
+    private val s = IncorrectBufferedChannelCustomTest::send
+    private val o = IncorrectBufferedChannelCustomTest::offer
+    private val p = IncorrectBufferedChannelCustomTest::poll
+    private val c = IncorrectBufferedChannelCustomTest::cancel
 
     @Test
     fun test1() {
-        verify(BufferedChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
+        verify(IncorrectBufferedChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {
                     operation(actor(s,1), VoidResult)
@@ -91,7 +89,7 @@ class BufferedChannelCustomTest {
 
     @Test
     fun mixedTest() {
-        verify(BufferedChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
+        verify(IncorrectBufferedChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {
                     operation(actor(s,1), VoidResult)
@@ -109,7 +107,7 @@ class BufferedChannelCustomTest {
 
     @Test
     fun testSuspendablePostPart() {
-        verify(BufferedChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
+        verify(IncorrectBufferedChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {
                     operation(actor(p), ValueResult(null))
@@ -129,7 +127,7 @@ class BufferedChannelCustomTest {
 
     @Test
     fun testVoidResult() {
-        verify(BufferedChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
+        verify(IncorrectBufferedChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {
                     operation(actor(c, 5), VoidResult)

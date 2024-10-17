@@ -348,4 +348,7 @@ internal val STRING_TYPE = getType(String::class.java)
 internal val CLASS_TYPE = getType(Class::class.java)
 internal val CLASS_FOR_NAME_METHOD = Method("forName", CLASS_TYPE, arrayOf(STRING_TYPE))
 
-internal fun isClassLoader(className: String): Boolean = className.contains("ClassLoader")
+/**
+ * Tests if the provided [className] contains `"ClassLoader"` as a substring
+ */
+internal fun containsClassloaderInName(className: String): Boolean = className.contains("ClassLoader")

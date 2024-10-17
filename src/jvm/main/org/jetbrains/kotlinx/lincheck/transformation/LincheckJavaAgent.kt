@@ -142,9 +142,10 @@ internal object LincheckJavaAgent {
                 check(instrumentedClasses.isEmpty())
                 // Transform class loaders on the start, because it's the only place where we can do it.
                 val classLoaderClasses = getLoadedClassesToInstrument()
-                    .filter { isClassLoader(it.name) }
+                    .filter { containsClassloaderInName(it.name) }
                     .toTypedArray()
                 instrumentation.retransformClasses(*classLoaderClasses)
+                instrumentedClasses.addAll(classLoaderClasses.map { it.name })
             }
         }
     }
@@ -357,7 +358,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         if (!INSTRUMENT_ALL_CLASSES &&
             instrumentationMode == MODEL_CHECKING &&
             internalClassName.canonicalClassName !in instrumentedClasses &&
-            !isClassLoader(internalClassName)) {
+            !containsClassloaderInName(internalClassName)) {
             return null
         }
         return transformImpl(loader, internalClassName, classBytes)
@@ -389,7 +390,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
             if (className.startsWith("java.") || className.startsWith("kotlin.")) return false
         }
         // We should transform all the ClassLoader-s to wrap `loadClass` methods in the ignored section.
-        if (isClassLoader(className)) {
+        if (containsClassloaderInName(className)) {
             return true
         }
         // We do not need to instrument most standard Java classes.
