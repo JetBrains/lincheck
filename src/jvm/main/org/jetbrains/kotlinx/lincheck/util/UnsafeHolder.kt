@@ -80,3 +80,33 @@ internal fun getArrayElementOffsetViaUnsafe(arr: Any, index: Int): Long {
     val indexScale = UnsafeHolder.UNSAFE.arrayIndexScale(clazz).toLong()
     return baseOffset + index * indexScale
 }
+
+@Suppress("DEPRECATION")
+internal inline fun writeFieldViaUnsafe(obj: Any?, field: Field, value: Any?, setter: Unsafe.(Any?, Long, Any?) -> Unit) {
+    if (Modifier.isStatic(field.modifiers)) {
+        val base = UnsafeHolder.UNSAFE.staticFieldBase(field)
+        val offset = UnsafeHolder.UNSAFE.staticFieldOffset(field)
+        return UnsafeHolder.UNSAFE.setter(base, offset, value)
+    } else {
+        val offset = UnsafeHolder.UNSAFE.objectFieldOffset(field)
+        return UnsafeHolder.UNSAFE.setter(obj, offset, value)
+    }
+}
+
+@Suppress("NAME_SHADOWING")
+internal fun writeField(obj: Any?, field: Field, value: Any?) {
+    if (!field.type.isPrimitive) {
+        return writeFieldViaUnsafe(obj, field, value, Unsafe::putObject)
+    }
+    return when (field.type) {
+        Boolean::class.javaPrimitiveType    -> writeFieldViaUnsafe(obj, field, value) { obj, field, value -> putBoolean(obj, field, value as Boolean) }
+        Byte::class.javaPrimitiveType       -> writeFieldViaUnsafe(obj, field, value) { obj, field, value -> putByte(obj, field, value as Byte) }
+        Char::class.javaPrimitiveType       -> writeFieldViaUnsafe(obj, field, value) { obj, field, value -> putChar(obj, field, value as Char) }
+        Short::class.javaPrimitiveType      -> writeFieldViaUnsafe(obj, field, value) { obj, field, value -> putShort(obj, field, value as Short) }
+        Int::class.javaPrimitiveType        -> writeFieldViaUnsafe(obj, field, value) { obj, field, value -> putInt(obj, field, value as Int) }
+        Long::class.javaPrimitiveType       -> writeFieldViaUnsafe(obj, field, value) { obj, field, value -> putLong(obj, field, value as Long) }
+        Double::class.javaPrimitiveType     -> writeFieldViaUnsafe(obj, field, value) { obj, field, value -> putDouble(obj, field, value as Double) }
+        Float::class.javaPrimitiveType      -> writeFieldViaUnsafe(obj, field, value) { obj, field, value -> putFloat(obj, field, value as Float) }
+        else                                -> error("No more types expected")
+    }
+}

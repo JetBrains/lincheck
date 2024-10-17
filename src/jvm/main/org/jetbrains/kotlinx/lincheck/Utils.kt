@@ -10,13 +10,12 @@
 package org.jetbrains.kotlinx.lincheck
 
 import kotlinx.coroutines.*
-import sun.nio.ch.lincheck.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
 import org.jetbrains.kotlinx.lincheck.verifier.*
-import org.jetbrains.kotlinx.lincheck.util.*
+import sun.nio.ch.lincheck.*
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.lang.ref.*
@@ -213,6 +212,46 @@ internal val Throwable.text: String get() {
     return writer.buffer.toString()
 }
 
+/**
+ * Finds a public/protected/private/internal field in the class and its superclasses/interfaces by name.
+ *
+ * @param fieldName the name of the field to find.
+ * @return the [java.lang.reflect.Field] object if found, or `null` if not found.
+ */
+fun Class<*>.findField(fieldName: String): Field {
+    // Search in the class hierarchy
+    var clazz: Class<*>? = this
+    while (clazz != null) {
+        // Check class itself
+        try {
+            return clazz.getDeclaredField(fieldName)
+        }
+        catch (_: NoSuchFieldException) {}
+
+        // Check interfaces
+        for (interfaceClass in clazz.interfaces) {
+            try {
+                return interfaceClass.getDeclaredField(fieldName)
+            }
+            catch (_: NoSuchFieldException) {}
+        }
+
+        // Move up the hierarchy
+        clazz = clazz.superclass
+    }
+
+    throw NoSuchFieldException("Class '${this.name}' does not have field '$fieldName'")
+}
+
+@Suppress("DEPRECATION")
+fun getFieldOffset(field: Field): Long {
+    return if (Modifier.isStatic(field.modifiers)) {
+        UnsafeHolder.UNSAFE.staticFieldOffset(field)
+    }
+    else {
+        UnsafeHolder.UNSAFE.objectFieldOffset(field)
+    }
+}
 
 @Suppress("DEPRECATION")
 internal fun findFieldNameByOffset(targetType: Class<*>, offset: Long): String? {
