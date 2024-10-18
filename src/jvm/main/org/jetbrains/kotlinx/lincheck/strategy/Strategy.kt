@@ -9,6 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy
 
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.managed.Trace
@@ -100,12 +101,19 @@ abstract class Strategy protected constructor(
  *
  * @return the failure, if detected, null otherwise.
  */
-fun Strategy.runIteration(invocations: Int, verifier: Verifier): LincheckFailure? {
-    for (invocation in 0 until invocations) {
+fun Strategy.runIteration(
+    iteration: Int,
+    params: IterationParameters,
+    verifier: Verifier,
+    tracker: LincheckRunTracker? = null
+): LincheckFailure? = tracker.trackIteration(iteration, scenario, params) {
+    for (invocation in 0 until params.invocationsBound) {
         if (!nextInvocation())
             return null
-        val result = runInvocation()
-        val failure = verify(result, verifier)
+        val failure = tracker.trackInvocation(iteration, invocation) {
+            val result = this.runInvocation()
+            verify(result, verifier)
+        }
         if (failure != null)
             return failure
     }
