@@ -173,11 +173,13 @@ public class SafeClassWriter extends ClassWriter {
     private ClassReader typeInfo(final String type) throws IOException {
         String resource = type + ".class";
         InputStream is = loader.getResourceAsStream(resource);
-        try (is) {
-            if (is == null) {
-                throw new IOException("Cannot create ClassReader for type " + type);
-            }
+        if (is == null) {
+            throw new IOException("Cannot create ClassReader for type " + type);
+        }
+        try {
             return new ClassReader(is);
+        } finally {
+            is.close();
         }
     }
 }

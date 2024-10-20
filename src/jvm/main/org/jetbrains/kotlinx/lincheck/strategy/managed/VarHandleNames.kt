@@ -20,7 +20,7 @@ import java.lang.reflect.Field
 /**
  * Helper object to provide the field name and the owner of the VarHandle method call.
  */
-@Suppress("SameParameterValue")
+@Suppress("SameParameterValue", "Since15")
 internal object VarHandleNames {
 
     private val nameExtractors: List<VarHandleNameExtractor> = listOf(
@@ -76,7 +76,10 @@ internal object VarHandleNames {
         )
     ).flatten()
 
-    internal fun varHandleMethodType(varHandle: VarHandle, parameters: Array<Any?>): VarHandleMethodType = runCatching {
+    
+    // varHandle is Any because of Java 8, where VarHandle class does not exist
+    internal fun varHandleMethodType(varHandle: Any, parameters: Array<Any?>): VarHandleMethodType = runCatching {
+        varHandle as VarHandle
         return nameExtractors.firstOrNull { it.canExtract(varHandle) }?.getMethodType(varHandle, parameters)
             ?: TreatAsDefaultMethod
     }.getOrElse { exception ->

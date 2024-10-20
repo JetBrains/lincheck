@@ -39,7 +39,7 @@ public @interface Operation {
      * @deprecated use {@link Operation#nonParallelGroup()} instead.
      */
     @SuppressWarnings("removal")
-    @Deprecated(forRemoval = true)
+    @Deprecated
     String group() default "";
 
     /**
@@ -52,7 +52,7 @@ public @interface Operation {
      *
      * @deprecated all exceptions now handled as possible results
      */
-    @Deprecated(forRemoval = true)
+    @Deprecated
     Class<? extends Throwable>[] handleExceptionsAsResult() default {};
 
     /**
@@ -70,7 +70,7 @@ public @interface Operation {
      *
      * @deprecated extra suspensions are now allowed for all operations
      */
-    @Deprecated(forRemoval = true)
+    @Deprecated
     boolean allowExtraSuspension() default true;
 
     /**

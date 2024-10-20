@@ -147,7 +147,7 @@ public class Injections {
      * Called from the instrumented code to replace `ThreadLocalRandom.nextInt(origin, bound)` with a deterministic random value.
      */
     public static int nextInt2(int origin, int bound) {
-        var enteredIgnoredSection = enterIgnoredSection();
+        boolean enteredIgnoredSection = enterIgnoredSection();
         try {
             return deterministicRandom().nextInt(bound);
         } finally {
@@ -299,7 +299,7 @@ public class Injections {
      * deterministic value.
      */
     public static int hashCodeDeterministic(Object obj) {
-        var hashCode = obj.hashCode();
+        int hashCode = obj.hashCode();
         // This is a dirty hack to determine whether there is a
         // custom hashCode() implementation or it is always delegated
         // to System.identityHashCode(..).
