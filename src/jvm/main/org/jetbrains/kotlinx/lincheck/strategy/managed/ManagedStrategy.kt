@@ -28,7 +28,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.adorne
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanObjectNumeration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
-import java.lang.invoke.VarHandle
 import java.lang.reflect.*
 import java.util.*
 import kotlin.collections.set
@@ -1190,7 +1189,7 @@ abstract class ManagedStrategy(
 
     private fun initializeVarHandleMethodCallTracePoint(
         tracePoint: MethodCallTracePoint,
-        varHandle: Any?, // for Java 8 VarHandle class does not exist
+        varHandle: Any, // for Java 8 VarHandle class does not exist
         parameters: Array<Any?>,
     ): MethodCallTracePoint {
         when (val varHandleMethodType = VarHandleNames.varHandleMethodType(varHandle, parameters)) {

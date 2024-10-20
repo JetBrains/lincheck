@@ -77,8 +77,8 @@ internal object VarHandleNames {
     ).flatten()
 
     
-    // varHandle is Any? because of Java 8, where VarHandle class does not exist
-    internal fun varHandleMethodType(varHandle: Any?, parameters: Array<Any?>): VarHandleMethodType = runCatching {
+    // varHandle is Any because of Java 8, where VarHandle class does not exist
+    internal fun varHandleMethodType(varHandle: Any, parameters: Array<Any?>): VarHandleMethodType = runCatching {
         varHandle as VarHandle
         return nameExtractors.firstOrNull { it.canExtract(varHandle) }?.getMethodType(varHandle, parameters)
             ?: TreatAsDefaultMethod

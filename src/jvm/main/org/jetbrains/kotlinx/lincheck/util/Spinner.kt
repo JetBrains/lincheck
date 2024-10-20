@@ -47,7 +47,6 @@ internal class Spinner(val nThreads: Int = -1) {
         var counter = 0
         val yieldLimit = 1 + if (shouldSpin) SPIN_CYCLES_BOUND else 0
         while (!condition()) {
-            threadOnSpinWait?.invoke(null)
             counter++
             if (counter % yieldLimit == 0) {
                 Thread.yield()
@@ -75,15 +74,9 @@ internal class Spinner(val nThreads: Int = -1) {
                 result = condition()
                 break
             }
-            threadOnSpinWait?.invoke(null)
             counter++
         }
         return result
-    }
-    companion object {
-        private val threadOnSpinWait = runCatching { 
-            Thread::class.java.getDeclaredMethod("onSpinWait")
-        }.getOrNull()
     }
 }
 
