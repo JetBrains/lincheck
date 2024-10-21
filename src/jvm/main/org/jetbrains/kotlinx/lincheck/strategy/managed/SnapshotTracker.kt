@@ -86,8 +86,6 @@ class SnapshotTracker {
      * reachable fields to initial values recorded by previous calls to [addHierarchy].
      */
     fun restoreValues() {
-//        println("Restoring all memory reachable from static state to snapshot values")
-
         val visitedNodes = mutableSetOf<MemoryNode>()
         snapshotRoots.forEach { rootNode ->
             restoreValues(rootNode, null, visitedNodes)
@@ -103,14 +101,6 @@ class SnapshotTracker {
             if (node is ArrayCellNode) it.type.componentType
             else it.type
         }
-
-//        val initValue = if (node.initialValue == null || nodeClass.isPrimitive) node.initialValue
-//        else "${node.initialValue.javaClass.simpleName}@${node.initialValue.hashCode().toHexString()}"
-//
-//        println(
-//            "Added to hierarchy: ${nodeClass.name}::${node.descriptor.field.name} =" +
-//            initValue + if (node.initialValue is Array<*> && node !is ArrayCellNode) (node.initialValue as Array<*>).contentToString() else ""
-//        )
 
         if (nodeClass.isPrimitive || nodeClass.isEnum || node.initialValue == null) return
 
@@ -174,14 +164,6 @@ class SnapshotTracker {
                     check(parent != null) { "Regular field in snapshot hierarchy must have a parent node" }
                     parent.initialValue
                 }
-
-//            val initValue = if (node.initialValue == null || node.descriptor.field.type.isPrimitive) node.initialValue
-//            else "${node.initialValue.javaClass.simpleName}@${node.initialValue.hashCode().toHexString()}"
-//
-//            println(
-//                "Write to ${node.descriptor.className}::${node.descriptor.field.name} =" +
-//                initValue + if (node.initialValue is Array<*> && node !is ArrayCellNode) (node.initialValue as Array<*>).contentToString() else ""
-//            )
 
             if (node.descriptor.field.type.isArray && node is ArrayCellNode) {
                 val array = obj!!
