@@ -83,6 +83,9 @@ abstract class ManagedStrategy(
     // Tracker of the thread parking.
     protected abstract val parkingTracker: ParkingTracker
 
+    // Snapshot of the memory, reachable from static fields
+    protected val staticMemorySnapshot = SnapshotTracker()
+
     // InvocationResult that was observed by the strategy during the execution (e.g., a deadlock).
     @Volatile
     protected var suddenInvocationResult: InvocationResult? = null
@@ -217,12 +220,28 @@ abstract class ManagedStrategy(
         parkingTracker.reset()
     }
 
+    override fun restoreStaticMemorySnapshot() {
+        // TODO: what is the appropriate location to call this function?
+        if (testCfg.restoreStaticMemory) {
+            staticMemorySnapshot.restoreValues()
+            super.restoreStaticMemorySnapshot()
+        }
+    }
+
+    override fun updateStaticMemorySnapshot(className: String, fieldName: String) {
+        if (testCfg.restoreStaticMemory) {
+            staticMemorySnapshot.addHierarchy(className, fieldName)
+            super.updateStaticMemorySnapshot(className, fieldName)
+        }
+    }
+
     /**
      * Runs the current invocation.
      */
     override fun runInvocation(): InvocationResult {
         while (true) {
             initializeInvocation()
+            restoreStaticMemorySnapshot()
             val result = runner.run()
             // In case the runner detects a deadlock, some threads can still manipulate the current strategy,
             // so we're not interested in suddenInvocationResult in this case
@@ -747,6 +766,7 @@ abstract class ManagedStrategy(
         // The following call checks all the static fields.
         if (isStatic) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(className.canonicalClassName)
+            updateStaticMemorySnapshot(className.canonicalClassName, fieldName)
         }
         // Optimization: do not track final field reads
         if (isFinal) {
@@ -817,6 +837,9 @@ abstract class ManagedStrategy(
         objectTracker.registerObjectLink(fromObject = obj ?: StaticObject, toObject = value)
         if (!objectTracker.shouldTrackObjectAccess(obj ?: StaticObject)) {
             return@runInIgnoredSection false
+        }
+        if (isStatic) {
+            updateStaticMemorySnapshot(className.canonicalClassName, fieldName)
         }
         // Optimization: do not track final field writes
         if (isFinal) {

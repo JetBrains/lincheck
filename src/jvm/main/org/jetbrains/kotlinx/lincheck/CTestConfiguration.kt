@@ -95,6 +95,7 @@ internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConf
                     checkObstructionFreedom = ann.checkObstructionFreedom,
                     hangingDetectionThreshold = ann.hangingDetectionThreshold,
                     invocationsPerIteration = ann.invocationsPerIteration,
+                    restoreStaticMemory = ann.restoreStaticMemory,
                     guarantees = ManagedCTestConfiguration.DEFAULT_GUARANTEES,
                     minimizeFailedScenario = ann.minimizeFailedScenario,
                     sequentialSpecification = chooseSequentialSpecification(
