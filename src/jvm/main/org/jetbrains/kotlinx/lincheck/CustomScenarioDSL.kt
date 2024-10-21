@@ -41,7 +41,7 @@ fun scenario(block: DSLScenarioBuilder.() -> Unit): ExecutionScenario =
 /**
  * Create an actor with the specified [function][f] and [arguments][args].
  */
-internal fun actor(f: KFunction<*>, vararg args: Any?, cancelOnSuspension: Boolean = false): Actor {
+internal fun actor(f: KFunction<*>, vararg args: Any?, cancelOnSuspension: Boolean = false, blocking: Boolean = false): Actor {
     val method = f.javaMethod ?: throw IllegalStateException("The function is a constructor or cannot be represented by a Java Method")
     require(method.exceptionTypes.all { Throwable::class.java.isAssignableFrom(it) }) { "Not all declared exceptions are Throwable" }
     val requiredArgsCount = method.parameters.size - if (f.isSuspend) 1 else 0
@@ -49,7 +49,8 @@ internal fun actor(f: KFunction<*>, vararg args: Any?, cancelOnSuspension: Boole
     return Actor(
         method = method,
         arguments = args.toList(),
-        cancelOnSuspension = cancelOnSuspension
+        cancelOnSuspension = cancelOnSuspension,
+        blocking = blocking
     )
 }
 
@@ -60,6 +61,13 @@ class DSLThreadScenario : ArrayList<Actor>() {
      */
     fun actor(f: KFunction<*>, vararg args: Any?) {
         add(org.jetbrains.kotlinx.lincheck.actor(f, *args))
+    }
+
+    /**
+     * A blocking actor to be executed
+     */
+    fun blockingActor(f: KFunction<*>, vararg args: Any?) {
+        add(org.jetbrains.kotlinx.lincheck.actor(f, *args, blocking = true))
     }
 }
 
