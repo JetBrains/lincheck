@@ -16,7 +16,22 @@ import org.junit.Test
 
 class ThreadForkJoinTest {
 
-    fun operation(): Int {
+    fun fork(): Int {
+        val counter = AtomicInteger(0)
+        thread {
+            counter.incrementAndGet()
+        }
+        return counter.get()
+    }
+
+    @Test(timeout = TIMEOUT)
+    fun testFork() = modelCheckerTest(
+        testClass = this::class,
+        testOperation = this::fork,
+        outcomes = setOf(0, 1),
+    )
+
+    fun forkJoin(): Int {
         val counter = AtomicInteger(0)
         val t1 = thread {
             counter.incrementAndGet()
@@ -35,9 +50,9 @@ class ThreadForkJoinTest {
     }
 
     @Test(timeout = TIMEOUT)
-    fun test() = modelCheckerTest(
+    fun testForkJoin() = modelCheckerTest(
         testClass = this::class,
-        testOperation = this::operation,
+        testOperation = this::forkJoin,
         outcomes = setOf(0, 1, 2, 3),
     )
 
