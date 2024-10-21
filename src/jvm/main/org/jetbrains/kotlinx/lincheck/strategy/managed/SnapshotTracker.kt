@@ -10,13 +10,16 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import org.jetbrains.kotlinx.lincheck.allDeclaredFieldWithSuperclasses
 import org.jetbrains.kotlinx.lincheck.canonicalClassName
 import org.jetbrains.kotlinx.lincheck.findField
+import org.jetbrains.kotlinx.lincheck.getArrayLength
 import org.jetbrains.kotlinx.lincheck.getFieldOffset
 import org.jetbrains.kotlinx.lincheck.strategy.managed.SnapshotTracker.ArrayCellNode
-import org.jetbrains.kotlinx.lincheck.util.readField
-import org.jetbrains.kotlinx.lincheck.util.writeField
+import org.jetbrains.kotlinx.lincheck.util.allDeclaredFieldWithSuperclasses
+import org.jetbrains.kotlinx.lincheck.util.readArrayElementViaUnsafe
+import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
+import org.jetbrains.kotlinx.lincheck.util.writeArrayElementViaUnsafe
+import org.jetbrains.kotlinx.lincheck.util.writeFieldViaUnsafe
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
 
@@ -30,7 +33,7 @@ import java.lang.reflect.Modifier
  */
 class SnapshotTracker {
     private val snapshotRoots = mutableListOf<StaticFieldNode>()
-    private val trackedStaticFields = mutableSetOf<NodeDescriptor>()
+    private val trackedStaticFields = mutableMapOf<String, MutableSet<Long>>() // CLASS_NAME -> { OFFSETS_OF_STATIC_FIELDS }
 
     // TODO: is `className` always required to be declaringClassName (both for static and non-static fields)?
     //  right now `declaringClassName` is not calculated, which is incorrect, but I will fix it later
@@ -61,19 +64,20 @@ class SnapshotTracker {
      * If the provided static variable is already present in the graph, then nothing will happen.
      */
     fun addHierarchy(className: String, fieldName: String) {
-        if (className.startsWith("java.")) return
         check(className == className.canonicalClassName) { "Class name must be canonical" }
 
         val clazz = Class.forName(className)
         val field = clazz.findField(fieldName)
-        val descriptor = NodeDescriptor(className, field, getFieldOffset(field))
-        val initialValue = readField(null, descriptor.field)
-
+        val offset = getFieldOffset(field)
+        val descriptor = NodeDescriptor(className, field, offset)
+        val initialValue = readFieldViaUnsafe(null, descriptor.field)
         check(Modifier.isStatic(field.modifiers)) { "Root field in the snapshot hierarchy must be static" }
-        if (descriptor in trackedStaticFields) return
+
+        if (!trackStaticField(className, offset)) return
 
         val root = StaticFieldNode(descriptor, initialValue)
         snapshotRoots.add(root)
+
         addToGraph(root)
     }
 
@@ -91,60 +95,74 @@ class SnapshotTracker {
     }
 
 
+    @OptIn(ExperimentalStdlibApi::class)
     private fun addToGraph(node: MemoryNode, visitedObjects: MutableSet<Any> = mutableSetOf()) {
         if (node.initialValue in visitedObjects) return
 
-        if (node is StaticFieldNode) {
-            if (trackedStaticFields.contains(node.descriptor)) return
-            trackedStaticFields.add(node.descriptor)
-        }
-
-        val nodeClass = node.descriptor.field.let {
+        val nodeClass: Class<*> = node.descriptor.field.let {
             if (node is ArrayCellNode) it.type.componentType
             else it.type
         }
 
-        if (nodeClass.isPrimitive || nodeClass.isEnum || node.initialValue == null) return
-
+//        val initValue = if (node.initialValue == null || nodeClass.isPrimitive) node.initialValue
+//        else "${node.initialValue.javaClass.simpleName}@${node.initialValue.hashCode().toHexString()}"
+//
 //        println(
-//            "Adding to hierarchy: ${nodeClass.canonicalName}::${node.descriptor.field.name} =" +
-//            node.initialValue + if (nodeClass.isArray && node !is ArrayCellNode) (node.initialValue as Array<*>).contentToString() else ""
+//            "Added to hierarchy: ${nodeClass.name}::${node.descriptor.field.name} =" +
+//            initValue + if (node.initialValue is Array<*> && node !is ArrayCellNode) (node.initialValue as Array<*>).contentToString() else ""
 //        )
+
+        if (nodeClass.isPrimitive || nodeClass.isEnum || node.initialValue == null) return
 
         visitedObjects.add(node.initialValue)
 
         if (nodeClass.isArray && node !is ArrayCellNode) {
-            val array = node.initialValue as Array<*>
+            val array = node.initialValue
 
-            for (index in array.indices) {
+            for (index in 0..getArrayLength(array) - 1) {
                 val childDescriptor = NodeDescriptor(
-                    nodeClass.canonicalName,
+                    nodeClass.name,
                     node.descriptor.field,
                     index.toLong()
                 )
+                val childNode = ArrayCellNode(childDescriptor, readArrayElementViaUnsafe(array, index))
 
-                val childNode = ArrayCellNode(childDescriptor, array[index])
-
-                node.fields.add(childNode)
-                addToGraph(childNode, visitedObjects)
+                processChildNode(node, childNode, visitedObjects)
             }
         }
         else {
             nodeClass.allDeclaredFieldWithSuperclasses.forEach { field ->
-                val childDescriptor = NodeDescriptor(nodeClass.canonicalName, field, getFieldOffset(field))
-
+                val childDescriptor = NodeDescriptor(nodeClass.name, field, getFieldOffset(field))
                 val childNode = if (Modifier.isStatic(field.modifiers)) {
-                    StaticFieldNode(childDescriptor, readField(null, childDescriptor.field))
+                    StaticFieldNode(childDescriptor, readFieldViaUnsafe(null, childDescriptor.field))
                 } else {
-                    RegularFieldNode(childDescriptor, readField(node.initialValue, childDescriptor.field))
+                    RegularFieldNode(childDescriptor, readFieldViaUnsafe(node.initialValue, childDescriptor.field))
                 }
 
-                node.fields.add(childNode)
-                addToGraph(childNode, visitedObjects)
+                processChildNode(node, childNode, visitedObjects)
             }
         }
     }
 
+    private fun processChildNode(parentNode: MemoryNode, childNode: MemoryNode, visitedObjects: MutableSet<Any>) {
+        if (
+            childNode is StaticFieldNode &&
+            !trackStaticField(childNode.descriptor.className, childNode.descriptor.offset)
+        ) return
+
+        parentNode.fields.add(childNode)
+        addToGraph(childNode, visitedObjects)
+    }
+
+    /**
+     * @return `true` if static field located in class [className] by [offset] was not tracked before, `false` otherwise.
+     */
+    private fun trackStaticField(className: String, offset: Long): Boolean {
+        trackedStaticFields.putIfAbsent(className, HashSet())
+        return trackedStaticFields[className]!!.add(offset)
+    }
+
+    @OptIn(ExperimentalStdlibApi::class)
     private fun restoreValues(node: MemoryNode, parent: MemoryNode? = null, visitedNodes: MutableSet<MemoryNode>) {
         if (node in visitedNodes) return
         visitedNodes.add(node)
@@ -157,19 +175,21 @@ class SnapshotTracker {
                     parent.initialValue
                 }
 
+//            val initValue = if (node.initialValue == null || node.descriptor.field.type.isPrimitive) node.initialValue
+//            else "${node.initialValue.javaClass.simpleName}@${node.initialValue.hashCode().toHexString()}"
+//
 //            println(
 //                "Write to ${node.descriptor.className}::${node.descriptor.field.name} =" +
-//                node.initialValue + if (node.descriptor.field.type.isArray && node !is ArrayCellNode) (node.initialValue as Array<*>).contentToString() else ""
+//                initValue + if (node.initialValue is Array<*> && node !is ArrayCellNode) (node.initialValue as Array<*>).contentToString() else ""
 //            )
 
-            if (node is ArrayCellNode) {
-                @Suppress("UNCHECKED_CAST")
-                val array = obj as Array<Any?>
+            if (node.descriptor.field.type.isArray && node is ArrayCellNode) {
+                val array = obj!!
                 val index = node.descriptor.offset.toInt()
-                array[index] = node.initialValue
+                writeArrayElementViaUnsafe(array, index, node.initialValue)
             }
             else {
-                writeField(obj, node.descriptor.field, node.initialValue)
+                writeFieldViaUnsafe(obj, node.descriptor.field, node.initialValue)
             }
         }
 

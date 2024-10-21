@@ -221,8 +221,17 @@ abstract class ManagedStrategy(
 
     override fun restoreStaticMemorySnapshot() {
         // TODO: what is the appropriate location to call this function?
-        staticMemorySnapshot.restoreValues()
-        super.restoreStaticMemorySnapshot()
+        if (testCfg.restoreStaticMemory) {
+            staticMemorySnapshot.restoreValues()
+            super.restoreStaticMemorySnapshot()
+        }
+    }
+
+    override fun updateStaticMemorySnapshot(className: String, fieldName: String) {
+        if (testCfg.restoreStaticMemory) {
+            staticMemorySnapshot.addHierarchy(className, fieldName)
+            super.updateStaticMemorySnapshot(className, fieldName)
+        }
     }
 
     /**
@@ -231,7 +240,7 @@ abstract class ManagedStrategy(
     override fun runInvocation(): InvocationResult {
         while (true) {
             initializeInvocation()
-            staticMemorySnapshot.restoreValues()
+            restoreStaticMemorySnapshot()
             val result = runner.run()
             // In case the runner detects a deadlock, some threads can still manipulate the current strategy,
             // so we're not interested in suddenInvocationResult in this case
@@ -756,7 +765,7 @@ abstract class ManagedStrategy(
         // The following call checks all the static fields.
         if (isStatic) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(className.canonicalClassName)
-            staticMemorySnapshot.addHierarchy(className.canonicalClassName, fieldName)
+            updateStaticMemorySnapshot(className.canonicalClassName, fieldName)
         }
         // Optimization: do not track final field reads
         if (isFinal) {
@@ -829,7 +838,7 @@ abstract class ManagedStrategy(
             return@runInIgnoredSection false
         }
         if (isStatic) {
-            staticMemorySnapshot.addHierarchy(className.canonicalClassName, fieldName)
+            updateStaticMemorySnapshot(className.canonicalClassName, fieldName)
         }
         // Optimization: do not track final field writes
         if (isFinal) {

@@ -91,7 +91,15 @@ abstract class Strategy protected constructor(
         runner.close()
     }
 
+    /**
+     * Restores recorded values of all memory reachable from static state.
+     */
     open fun restoreStaticMemorySnapshot() {}
+
+    /**
+     * Records values of all memory locations, reachable from `className::fieldName` static variable.
+     */
+    open fun updateStaticMemorySnapshot(className: String, fieldName: String) {}
 }
 
 /**

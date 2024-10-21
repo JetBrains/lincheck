@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.util
 
+import org.jetbrains.kotlinx.lincheck.getArrayElementOffset
 import sun.misc.Unsafe
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
@@ -94,7 +95,7 @@ internal inline fun writeFieldViaUnsafe(obj: Any?, field: Field, value: Any?, se
 }
 
 @Suppress("NAME_SHADOWING")
-internal fun writeField(obj: Any?, field: Field, value: Any?) {
+internal fun writeFieldViaUnsafe(obj: Any?, field: Field, value: Any?) {
     if (!field.type.isPrimitive) {
         return writeFieldViaUnsafe(obj, field, value, Unsafe::putObject)
     }
@@ -108,5 +109,26 @@ internal fun writeField(obj: Any?, field: Field, value: Any?) {
         Double::class.javaPrimitiveType     -> writeFieldViaUnsafe(obj, field, value) { obj, field, value -> putDouble(obj, field, value as Double) }
         Float::class.javaPrimitiveType      -> writeFieldViaUnsafe(obj, field, value) { obj, field, value -> putFloat(obj, field, value as Float) }
         else                                -> error("No more types expected")
+    }
+}
+
+internal fun writeArrayElementViaUnsafe(arr: Any, index: Int, value: Any?): Any? {
+    val offset = getArrayElementOffset(arr, index)
+    val componentType = arr::class.java.componentType
+
+    if (!componentType.isPrimitive) {
+        return UnsafeHolder.UNSAFE.putObject(arr, offset, value)
+    }
+
+    return when (componentType) {
+        Boolean::class.javaPrimitiveType    -> UnsafeHolder.UNSAFE.putBoolean(arr, offset, value as Boolean)
+        Byte::class.javaPrimitiveType       -> UnsafeHolder.UNSAFE.putByte(arr, offset, value as Byte)
+        Char::class.javaPrimitiveType       -> UnsafeHolder.UNSAFE.putChar(arr, offset, value as Char)
+        Short::class.javaPrimitiveType      -> UnsafeHolder.UNSAFE.putShort(arr, offset, value as Short)
+        Int::class.javaPrimitiveType        -> UnsafeHolder.UNSAFE.putInt(arr, offset, value as Int)
+        Long::class.javaPrimitiveType       -> UnsafeHolder.UNSAFE.putLong(arr, offset, value as Long)
+        Double::class.javaPrimitiveType     -> UnsafeHolder.UNSAFE.putDouble(arr, offset, value as Double)
+        Float::class.javaPrimitiveType      -> UnsafeHolder.UNSAFE.putFloat(arr, offset, value as Float)
+        else                                -> error("No more primitive types expected")
     }
 }

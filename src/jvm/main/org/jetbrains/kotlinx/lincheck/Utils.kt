@@ -253,6 +253,16 @@ fun getFieldOffset(field: Field): Long {
     }
 }
 
+internal fun getArrayElementOffset(arr: Any, index: Int): Long {
+    val clazz = arr::class.java
+    val baseOffset = UnsafeHolder.UNSAFE.arrayBaseOffset(clazz).toLong()
+    val indexScale = UnsafeHolder.UNSAFE.arrayIndexScale(clazz).toLong()
+
+    return baseOffset + index * indexScale
+}
+
+internal fun getArrayLength(arr: Any): Int = java.lang.reflect.Array.getLength(arr)
+
 @Suppress("DEPRECATION")
 internal fun findFieldNameByOffset(targetType: Class<*>, offset: Long): String? {
     // Extract the private offset value and find the matching field.

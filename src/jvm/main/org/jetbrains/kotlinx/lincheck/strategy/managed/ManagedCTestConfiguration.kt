@@ -28,6 +28,7 @@ abstract class ManagedCTestConfiguration(
     val checkObstructionFreedom: Boolean,
     val hangingDetectionThreshold: Int,
     val invocationsPerIteration: Int,
+    val restoreStaticMemory: Boolean,
     val guarantees: List<ManagedStrategyGuarantee>,
     minimizeFailedScenario: Boolean,
     sequentialSpecification: Class<*>,
@@ -52,6 +53,7 @@ abstract class ManagedCTestConfiguration(
         const val DEFAULT_CHECK_OBSTRUCTION_FREEDOM = false
         const val DEFAULT_HANGING_DETECTION_THRESHOLD = 101
         const val LIVELOCK_EVENTS_THRESHOLD = 10001
+        const val DEFAULT_RESTORE_STATIC_MEMORY = false
         val DEFAULT_GUARANTEES = listOf<ManagedStrategyGuarantee>()
     }
 }
