@@ -15,7 +15,7 @@ import org.junit.Test
 
 class MonitorTest {
 
-    fun operation(): Int {
+    fun mutex(): Int {
         var counter = 0
         val monitor = Any()
         val t1 = thread {
@@ -34,11 +34,42 @@ class MonitorTest {
         }
     }
 
-    @Test
-    fun test() = modelCheckerTest(
+    @Test(timeout = TIMEOUT)
+    fun testMutex() = modelCheckerTest(
         testClass = this::class,
-        testOperation = this::operation,
-        outcomes = setOf(0, 1, 2, 3)
+        testOperation = this::mutex,
+        outcomes = setOf(0, 1, 2)
+    )
+
+    fun deadlock(): Int {
+        var counter = 0
+        val monitor1 = Any()
+        val monitor2 = Any()
+        val t1 = thread {
+            synchronized(monitor1) {
+                synchronized(monitor2) {
+                    counter++
+                }
+            }
+        }
+        val t2 = thread {
+            synchronized(monitor2) {
+                synchronized(monitor1) {
+                    counter++
+                }
+            }
+        }
+        return counter.also {
+            t1.join()
+            t2.join()
+        }
+    }
+
+    @Test(timeout = TIMEOUT)
+    fun testDeadlock() = modelCheckerTest(
+        testClass = this::class,
+        testOperation = this::deadlock,
+        outcomes = setOf(0, 1, 2)
     )
 
 }

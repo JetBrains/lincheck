@@ -34,7 +34,7 @@ class ThreadForkJoinTest {
         }
     }
 
-    @Test
+    @Test(timeout = TIMEOUT)
     fun test() = modelCheckerTest(
         testClass = this::class,
         testOperation = this::operation,
