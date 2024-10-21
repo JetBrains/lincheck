@@ -64,6 +64,12 @@ kotlin {
 
         val jvmTest by getting {
             kotlin.srcDir("src/jvm/test")
+            val jdkToolchainVersion: String by project
+            if (jdkToolchainVersion.toInt() >= 11) {
+                kotlin.srcDir("src/jvm/test-jdk11")
+            } else {
+                kotlin.srcDir("src/jvm/test-jdk8")
+            }
 
             val junitVersion: String by project
             val jctoolsVersion: String by project
