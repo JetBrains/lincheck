@@ -38,6 +38,7 @@ kotlin {
 
         val test by compilations.getting {
             kotlinOptions.jvmTarget = "11"
+            kotlinOptions.options.javaParameters = true
         }
     }
 

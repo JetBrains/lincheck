@@ -243,12 +243,17 @@ public class CTestStructure {
         Param paramAnn = p.getAnnotation(Param.class);
         // If this annotation not presented use named generator based on name presented in @Operation or parameter name.
         if (paramAnn == null) {
-            // If name in @Operation is presented, return the generator with this name,
-            // otherwise return generator with parameter's name
-            String name = nameInOperation != null ? nameInOperation :
-                (p.isNamePresent() ? p.getName() : null);
-            if (name != null)
-                return checkAndGetNamedGenerator(namedGens, name);
+            // If name in @Operation is presented, return the generator with this name
+            if (nameInOperation != null)
+                return checkAndGetNamedGenerator(namedGens, nameInOperation);
+
+            // Otherwise, if the parameter name matches a named generator, use that one
+            if (p.isNamePresent()) {
+                ParameterGenerator<?> generator = namedGens.get(p.getName());
+                if (generator != null)
+                    return generator;
+            }
+
             // Parameter generator is not specified, try to create a default one
             ParameterGenerator<?> defaultGenerator = defaultGens.get(p.getType());
             if (defaultGenerator != null)
