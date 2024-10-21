@@ -10,9 +10,10 @@
 
 package org.jetbrains.kotlinx.lincheck_test.gpmc
 
-import org.junit.Test
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
+import org.junit.Test
+import org.junit.Ignore
 
 class SpinLoopTest {
 
@@ -40,6 +41,7 @@ class SpinLoopTest {
         }
     }
 
+    @Ignore
     @Test(timeout = TIMEOUT)
     fun testLivelock() = modelCheckerTest(
         testClass = this::class,

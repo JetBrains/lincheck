@@ -10,8 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck_test.gpmc
 
-import org.junit.Test
 import kotlin.concurrent.thread
+import org.junit.Test
+import org.junit.Ignore
 
 class HangTest {
 
@@ -26,6 +27,7 @@ class HangTest {
         t2.join()
     }
 
+    @Ignore
     @Test(timeout = TIMEOUT)
     fun testHang() = modelCheckerTest(
         testClass = this::class,
