@@ -165,6 +165,9 @@ internal fun constructTraceGraph(
         }
         val iThread = event.iThread
         val actorId = event.actorId
+        // custom threads are not supported currently
+        if (iThread >= scenario.nThreads)
+            continue
         // add all actors that started since the last event
         while (lastHandledActor[iThread] < min(actorId, actorNodes[iThread].lastIndex)) {
             val nextActor = ++lastHandledActor[iThread]
