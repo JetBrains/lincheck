@@ -1114,10 +1114,10 @@ abstract class ManagedStrategy(
         if (collectTrace) {
             runInIgnoredSection {
                 // We cannot simply read `thread` as Forcible???Exception can be thrown.
-                val iThread = (Thread.currentThread() as TestThread).threadId
-                val tracePoint = callStackTrace[iThread]!!.last().tracePoint
+                val threadId = threadScheduler.getThreadId(Thread.currentThread())
+                val tracePoint = callStackTrace[threadId]!!.last().tracePoint
                 tracePoint.initializeThrownException(t)
-                afterMethodCall(iThread, tracePoint)
+                afterMethodCall(threadId, tracePoint)
                 traceCollector!!.addStateRepresentation()
             }
         }
