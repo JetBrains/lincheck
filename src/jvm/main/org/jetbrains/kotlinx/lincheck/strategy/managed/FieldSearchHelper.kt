@@ -10,17 +10,11 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import kotlinx.atomicfu.AtomicArray
-import kotlinx.atomicfu.AtomicRef
-import org.jetbrains.kotlinx.lincheck.allDeclaredFieldWithSuperclasses
 import org.jetbrains.kotlinx.lincheck.strategy.managed.FieldSearchHelper.TraverseResult.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.OwnerWithName.*
-import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
-import sun.misc.Unsafe
+import org.jetbrains.kotlinx.lincheck.traverseObjectHierarchy
+import org.jetbrains.kotlinx.lincheck.util.readField
 import java.lang.reflect.Modifier
-import java.util.*
-import java.util.concurrent.atomic.AtomicReference
-import java.util.concurrent.atomic.AtomicReferenceArray
 
 
 /**
@@ -35,8 +29,7 @@ internal object FieldSearchHelper {
      * In case the [value] is not found or accessible by multiple fields, the function returns `null`.
      */
     internal fun findFinalFieldWithOwner(testObject: Any, value: Any): OwnerWithName? = runCatching {
-        val visitedObjects: MutableSet<Any> = Collections.newSetFromMap(IdentityHashMap())
-        return when (val result = findObjectField(testObject, value, visitedObjects)) {
+        return when (val result = findObjectField(testObject, value)) {
             is FieldName -> result.field
             MultipleFieldsMatching, NotFound, FoundInNonFinalField -> null
         }
@@ -52,50 +45,38 @@ internal object FieldSearchHelper {
         data object FoundInNonFinalField: TraverseResult
     }
 
-    private fun findObjectField(testObject: Any?, value: Any, visitedObjects: MutableSet<Any>): TraverseResult {
+    private fun findObjectField(testObject: Any?, value: Any): TraverseResult {
         if (testObject == null) return NotFound
+
+        var traverseResult: TraverseResult = NotFound
         var fieldName: OwnerWithName? = null
-        // We take all the fields from the hierarchy.
-        // If two or more fields match (===) the AtomicReference object, we fall back to the default behavior,
-        // so there is no problem that we can receive some fields of the same name and the same type.
-        for (field in testObject::class.java.allDeclaredFieldWithSuperclasses) {
-            if (field.type.isPrimitive) continue
-
-            // We wrap an unsafe read into `runCatching` to hande `UnsupportedOperationException`,
-            // which can be thrown, for instance, when attempting to read a field of
-            // a hidden class (starting from Java 15).
-            val fieldValue = runCatching {
-                readFieldViaUnsafe(testObject, field, Unsafe::getObject)
-            }.getOrNull() ?: continue
-
-            if (fieldValue in visitedObjects) continue
-            visitedObjects += testObject
-
-            if (fieldValue === value) {
-                if (fieldName != null) return MultipleFieldsMatching
-                if (!Modifier.isFinal(field.modifiers)) return FoundInNonFinalField
-
-                fieldName = if (Modifier.isStatic(field.modifiers)) {
-                    StaticOwnerWithName(field.name, testObject::class.java)
-                } else {
-                    InstanceOwnerWithName(field.name, testObject)
-                }
-                continue
-            }
-            when (val result = findObjectField(fieldValue, value, visitedObjects)) {
-                is FieldName -> {
-                    if (fieldName != null) {
-                        return MultipleFieldsMatching
-                    } else {
-                        fieldName = result.field
-                    }
-                }
-
-                MultipleFieldsMatching, FoundInNonFinalField -> return result
-                NotFound -> {}
-            }
+        val isTraverseCompleted = {
+            traverseResult is MultipleFieldsMatching ||
+            traverseResult is FoundInNonFinalField
         }
-        return if (fieldName != null) FieldName(fieldName) else NotFound
+
+        traverseObjectHierarchy(testObject) { ownerObject, field ->
+            if (field.type.isPrimitive) return@traverseObjectHierarchy false
+
+            val fieldValue = readField(ownerObject, field) ?: return@traverseObjectHierarchy false
+
+            if (value === fieldValue && !isTraverseCompleted()) {
+                if (fieldName != null) traverseResult = MultipleFieldsMatching
+                else if (!Modifier.isFinal(field.modifiers)) traverseResult = FoundInNonFinalField
+                else {
+                    fieldName = if (Modifier.isStatic(field.modifiers)) {
+                        StaticOwnerWithName(field.name, ownerObject::class.java)
+                    } else {
+                        InstanceOwnerWithName(field.name, ownerObject)
+                    }
+                    traverseResult = FieldName(fieldName!!)
+                }
+            }
+
+            return@traverseObjectHierarchy !isTraverseCompleted()
+        }
+
+        return traverseResult
     }
 
 }

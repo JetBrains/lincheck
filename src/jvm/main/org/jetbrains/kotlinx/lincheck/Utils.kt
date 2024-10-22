@@ -16,6 +16,7 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
+import org.jetbrains.kotlinx.lincheck.util.readField
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.io.PrintWriter
 import java.io.StringWriter
@@ -228,6 +229,60 @@ internal val Class<*>.allDeclaredFieldWithSuperclasses get(): List<Field> {
         currentClass = currentClass.superclass
     }
     return fields
+}
+
+/**
+ * Traverses all fields of a given object in bfs order.
+ * The [callback] is called for each tuple of `(fieldOwner, field, fieldValue)` of the [obj],
+ * the return value of the callback determines, whether the considered field should be traversed further.
+ *
+ * Parameters of [callback]:
+ * - `fieldOwner`: either `Any` - some class instance that owns the field, or `Class<*>` is case if `field` is static.
+ * - `field`: the field that currently is traversed.
+ */
+internal fun traverseObjectHierarchy(obj: Any, callback: (Any, Field) -> Boolean) {
+    val queue = ArrayDeque<Any>()
+    val visitedObjects = Collections.newSetFromMap<Any>(IdentityHashMap())
+
+    queue.add(obj)
+    visitedObjects.add(obj)
+
+    while (queue.isNotEmpty()) {
+        val currentObj = queue.removeFirst()
+        val fields =
+            if (currentObj is Class<*>) emptyList<Field>()
+            else if (currentObj.javaClass.isArray) {
+                // We do not traverse the actual fields of an array,
+                // instead the elements of the array are treated as its field.
+                // But note that primitive arrays are skipped completely.
+                if (currentObj is Array<*>) {
+                    currentObj.forEach { element ->
+                        element?.let { queue.add(it) }
+                    }
+                }
+                emptyList<Field>()
+            }
+            else currentObj.javaClass.allDeclaredFieldWithSuperclasses
+
+        for (f in fields) {
+            // We wrap an unsafe read into `runCatching` to hande `UnsupportedOperationException`,
+            // which can be thrown, for instance, when attempting to read a field of
+            // a hidden class (starting from Java 15).
+            val result = runCatching { readField(currentObj, f) }
+            val fieldValue = result.getOrNull()
+
+            if (
+                result.isSuccess && // do not pass non-readable by Unsafe fields to the user
+                callback(currentObj, f) && // user determines, whether to traverse deeper in this field
+                !f.type.isPrimitive && // no primitives traversing
+                fieldValue != null && // no null traversing
+                fieldValue !in visitedObjects // no reference-cycles allowed during traversing
+            ) {
+                queue.add(fieldValue)
+                visitedObjects.add(fieldValue)
+            }
+        }
+    }
 }
 
 @Suppress("DEPRECATION")

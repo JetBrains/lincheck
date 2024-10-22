@@ -35,3 +35,20 @@ internal inline fun <T> readFieldViaUnsafe(obj: Any?, field: Field, getter: Unsa
         return UnsafeHolder.UNSAFE.getter(obj, offset)
     }
 }
+
+internal fun readField(obj: Any?, field: Field): Any? {
+    if (!field.type.isPrimitive) {
+        return readFieldViaUnsafe(obj, field, Unsafe::getObject)
+    }
+    return when (field.type) {
+        Boolean::class.javaPrimitiveType    -> readFieldViaUnsafe(obj, field, Unsafe::getBoolean)
+        Byte::class.javaPrimitiveType       -> readFieldViaUnsafe(obj, field, Unsafe::getByte)
+        Char::class.javaPrimitiveType       -> readFieldViaUnsafe(obj, field, Unsafe::getChar)
+        Short::class.javaPrimitiveType      -> readFieldViaUnsafe(obj, field, Unsafe::getShort)
+        Int::class.javaPrimitiveType        -> readFieldViaUnsafe(obj, field, Unsafe::getInt)
+        Long::class.javaPrimitiveType       -> readFieldViaUnsafe(obj, field, Unsafe::getLong)
+        Double::class.javaPrimitiveType     -> readFieldViaUnsafe(obj, field, Unsafe::getDouble)
+        Float::class.javaPrimitiveType      -> readFieldViaUnsafe(obj, field, Unsafe::getFloat)
+        else                                -> error("No more types expected")
+    }
+}
