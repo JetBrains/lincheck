@@ -19,10 +19,11 @@ import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import kotlin.reflect.*
 import org.junit.Assert
 
-internal fun <R> modelCheckerTest(
+internal fun modelCheckerTest(
     testClass: KClass<*>,
     testOperation: KFunction<*>,
-    outcomes: Set<R>,
+    outcomes: Set<Any?> = setOf(),
+    expectedFailure: KClass<out LincheckFailure>? = null,
     invocations: Int = DEFAULT_INVOCATIONS_COUNT,
 ) {
     val scenario = scenario {
@@ -32,6 +33,10 @@ internal fun <R> modelCheckerTest(
     withLincheckJavaAgent(InstrumentationMode.MODEL_CHECKING) {
         val strategy = createStrategy(testClass.java, scenario)
         val failure = strategy.runIteration(invocations, verifier)
+        if (expectedFailure != null) {
+            assert(expectedFailure.isInstance(failure))
+            return
+        }
         assert(failure == null) { failure.toString() }
         Assert.assertEquals(outcomes, verifier.values)
     }
