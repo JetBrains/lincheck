@@ -10,9 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck_test.gpmc
 
+import org.jetbrains.kotlinx.lincheck.strategy.*
 import kotlin.concurrent.thread
 import org.junit.Test
-import org.junit.Ignore
 
 class MonitorTest {
 
@@ -66,12 +66,11 @@ class MonitorTest {
         }
     }
 
-    @Ignore
     @Test(timeout = TIMEOUT)
     fun testDeadlock() = modelCheckerTest(
         testClass = this::class,
         testOperation = this::deadlock,
-        outcomes = setOf(0, 1, 2)
+        expectedFailure = ManagedDeadlockFailure::class,
     )
 
 }
