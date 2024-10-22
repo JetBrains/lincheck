@@ -10,9 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck_test.gpmc
 
+import org.jetbrains.kotlinx.lincheck.strategy.*
 import kotlin.concurrent.thread
 import org.junit.Test
-import org.junit.Ignore
 
 class HangTest {
 
@@ -27,12 +27,11 @@ class HangTest {
         t2.join()
     }
 
-    @Ignore
     @Test(timeout = TIMEOUT)
     fun testHang() = modelCheckerTest(
         testClass = this::class,
         testOperation = this::hang,
-        outcomes = setOf<Unit>(),
+        expectedFailure = TimeoutFailure::class,
     )
 
 }
