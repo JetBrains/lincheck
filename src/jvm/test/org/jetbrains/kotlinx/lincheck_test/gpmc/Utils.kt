@@ -53,10 +53,7 @@ private fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario): Mo
 }
 
 private fun createConfiguration(testClass: Class<*>) =
-    ModelCheckingOptions()
-        // for tests debugging set large timeout
-        .invocationTimeout(60 * 60 * 1000)
-        .createTestConfigurations(testClass)
+    ModelCheckingOptions().createTestConfigurations(testClass)
 
 private class CollectResultsVerifier : Verifier {
     val values: MutableSet<Any?> = HashSet()
