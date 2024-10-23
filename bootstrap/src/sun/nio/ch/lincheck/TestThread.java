@@ -19,11 +19,6 @@ public class TestThread extends Thread {
     public final int threadId;
 
     /**
-     * The `EventTracker` for tracking shared memory events in the model checking mode.
-     */
-    public EventTracker eventTracker;
-
-    /**
      * The currently suspended continuation, if present.
      * It's stored here to provide a handle for resumption during testing.
      *
@@ -31,22 +26,6 @@ public class TestThread extends Thread {
      * But actually `suspendedContinuation` is always of `CancellableContinuation` type.
      */
     public Object suspendedContinuation;
-
-    /**
-     * This flag indicates whether the Lincheck is currently running user's code.
-     *
-     * - When it is `true`, Lincheck is running user's code and analyzes it.
-     * - When it is `false`, the analysis is disabled.
-     */
-    public boolean inTestingCode = false;
-
-    /**
-     * This flag is used to disable tracking of all code events.
-     * If Lincheck enters a code block for which analysis should be disabled,
-     * this flag is set to `true`. Notably, such code blocks can be nested,
-     * but only the most outer one changes the flag.
-     */
-    public boolean inIgnoredSection = false;
 
     /**
      * @param testName The name of the test currently being run.

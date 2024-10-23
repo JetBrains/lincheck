@@ -11,10 +11,29 @@
 package sun.nio.ch.lincheck;
 
 public class ThreadDescriptor {
+
+    /**
+     * The {@code EventTracker} for tracking events in the model checking mode.
+     */
     private EventTracker eventTracker = null;
+
+    /**
+     * Holds additional event-tracker-specific data associated with the thread.
+     */
     private Object eventTrackerData = null;
 
+    /**
+     * This flag indicates whether the Lincheck is currently running analyzed test code.
+     */
     private boolean inTestingCode = false;
+
+    /**
+     * This flag is used to disable tracking of all events.
+     *
+     * <p>
+     * If Lincheck enters a code block for which analysis should be disabled, this flag is set to `true`.
+     * Notably, such code blocks can be nested, but only the outermost one changes the flag.
+     */
     private boolean inIgnoredSection = false;
 
     public EventTracker getEventTracker() {
