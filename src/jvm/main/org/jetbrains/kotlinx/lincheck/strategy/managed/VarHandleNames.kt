@@ -19,7 +19,7 @@ import java.lang.reflect.Field
 /**
  * Helper object to provide the field name and the owner of the VarHandle method call.
  */
-@Suppress("SameParameterValue", "Since15")
+@Suppress("SameParameterValue")
 internal object VarHandleNames {
 
     private val nameExtractors: List<VarHandleNameExtractor> = listOf(
