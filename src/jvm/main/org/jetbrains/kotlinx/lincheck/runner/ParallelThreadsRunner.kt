@@ -291,9 +291,7 @@ internal open class ParallelThreadsRunner(
             // Create a new testing class instance.
             createTestInstance()
             // set the event tracker
-            if (strategy is ManagedStrategy) {
-                LincheckTracker.setEventTracker(strategy)
-            }
+            setEventTracker()
             // Execute the initial part.
             initialPartExecution?.let {
                 beforePart(INIT)
@@ -331,9 +329,7 @@ internal open class ParallelThreadsRunner(
             return UnexpectedExceptionInvocationResult(e.cause!!, collectExecutionResults())
         } finally {
             resetState()
-            if (strategy is ManagedStrategy) {
-                LincheckTracker.resetEventTracker()
-            }
+            resetEventTracker()
         }
     }
 
@@ -361,6 +357,30 @@ internal open class ParallelThreadsRunner(
         afterPostStateRepresentation = afterPostStateRepresentation
     )
 
+    private fun setEventTracker() {
+        if (strategy !is ManagedStrategy)
+            return
+        executor.threads.forEachIndexed { i, thread ->
+            var descriptor = Injections.getThreadDescriptor(thread)
+            if (descriptor == null) {
+                descriptor = ThreadDescriptor()
+                Injections.setThreadDescriptor(thread, descriptor)
+            }
+            descriptor.eventTracker = strategy
+            strategy.registerThread(thread, descriptor)
+                .ensure { threadId -> threadId == i }
+        }
+    }
+
+    private fun resetEventTracker() {
+        if (strategy !is ManagedStrategy)
+            return
+        for (thread in executor.threads) {
+            val descriptor = Injections.getThreadDescriptor(thread)
+                ?: continue
+            descriptor.eventTracker = null
+        }
+    }
 
     private fun createInitialPartExecution() =
         if (scenario.initExecution.isNotEmpty()) {

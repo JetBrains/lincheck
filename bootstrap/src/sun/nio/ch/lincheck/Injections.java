@@ -11,6 +11,7 @@
 package sun.nio.ch.lincheck;
 
 import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Methods of this object are called from the instrumented code.
@@ -49,26 +50,44 @@ public class Injections {
     private static int currentEventId = -1;
 
     // Thread local variable storing testing code and ignored section flags.
-    public static final ThreadLocal<ThreadFlags> threadFlags =
-            ThreadLocal.withInitial(ThreadFlags::new);
+    private static final ThreadLocal<ThreadDescriptor> threadDescriptor =
+        ThreadLocal.withInitial(ThreadDescriptor::new);
 
-    public static class ThreadFlags {
-        public boolean inTestingCode = false;
-        public boolean inIgnoredSection = false;
+    private static final ConcurrentHashMap<Integer, ThreadDescriptor> threadDescriptorsMap =
+        new ConcurrentHashMap<Integer, ThreadDescriptor>();
 
-        public boolean inIgnoredSection() {
-            return !inTestingCode || inIgnoredSection;
+    public static ThreadDescriptor getCurrentThreadDescriptor() {
+        return threadDescriptor.get();
+    }
+
+    public static ThreadDescriptor getThreadDescriptor(Thread thread) {
+        // TODO: handle hashcode collisions (?)
+        var hashCode = System.identityHashCode(thread);
+        return threadDescriptorsMap.get(hashCode);
+    }
+
+    public static void setThreadDescriptor(Thread thread, ThreadDescriptor descriptor) {
+        // TODO: handle hashcode collisions (?)
+        var hashCode = System.identityHashCode(thread);
+        var previousDescriptor = threadDescriptorsMap.put(hashCode, descriptor);
+        if (previousDescriptor != null) {
+            throw new IllegalStateException("Thread descriptor was already set!");
         }
+    }
 
-        public boolean enterIgnoredSection() {
-            if (inIgnoredSection) return false;
-            inIgnoredSection = true;
-            return true;
+    public static EventTracker getEventTracker() {
+        var descriptor = threadDescriptor.get();
+        var tracker = descriptor.getEventTracker();
+        if (tracker == null) {
+            throw new RuntimeException("No event tracker set by Lincheck");
         }
+        return tracker;
+    }
 
-        public void leaveIgnoredSection() {
-            inIgnoredSection = false;
-        }
+    public static EventTracker getEventTrackerOrNull() {
+        var descriptor = threadDescriptor.get();
+        if (descriptor == null) return null;
+        return descriptor.getEventTracker();
     }
 
     public static void storeCancellableContinuation(Object cont) {
@@ -92,18 +111,16 @@ public class Injections {
      * @return true if the thread successfully entered the ignored section, false otherwise.
      */
     public static boolean enterIgnoredSection() {
-        if (LincheckTracker.getEventTracker() == null) return false;
-        var flags = threadFlags.get();
-        return flags.enterIgnoredSection();
+        var descriptor = threadDescriptor.get();
+        return descriptor.enterIgnoredSection();
     }
 
     /**
      * Leaves an ignored section for the current thread.
      */
     public static void leaveIgnoredSection() {
-        if (LincheckTracker.getEventTracker() == null) return;
-        var flags = threadFlags.get();
-        flags.leaveIgnoredSection();
+        var descriptor = threadDescriptor.get();
+        descriptor.leaveIgnoredSection();
     }
 
     /**
@@ -112,27 +129,31 @@ public class Injections {
      * @return true if the current thread is inside an ignored section, false otherwise.
      */
     public static boolean inIgnoredSection() {
-        if (LincheckTracker.getEventTracker() == null) return true;
-        var flags = threadFlags.get();
-        return flags.inIgnoredSection();
+        var descriptor = threadDescriptor.get();
+        return descriptor.inIgnoredSection();
     }
 
     /**
      * Current thread reports that it is going to start a new child thread {@code t}.
      */
-    public static void beforeThreadFork(Thread t) {
-        var tracker = LincheckTracker.getEventTracker();
+    public static void beforeThreadFork(Thread forkedThread) {
+        var descriptor = threadDescriptor.get();
+        var tracker = descriptor.getEventTracker();
         if (tracker == null) {
             return;
         }
-        tracker.beforeThreadFork(t);
+        var forkedThreadDescriptor = new ThreadDescriptor();
+        forkedThreadDescriptor.setEventTracker(tracker);
+        setThreadDescriptor(forkedThread, forkedThreadDescriptor);
+        tracker.beforeThreadFork(forkedThread, forkedThreadDescriptor);
     }
 
     /**
      * Current thread reports that it started a new child thread {@code t}.
      */
     public static void afterThreadFork(Thread t) {
-        var tracker = LincheckTracker.getEventTracker();
+        var descriptor = threadDescriptor.get();
+        var tracker = descriptor.getEventTracker();
         if (tracker == null) {
             return;
         }
@@ -143,10 +164,14 @@ public class Injections {
      * Current thread entered its {@code run} method.
      */
     public static void beforeThreadStart() {
-        var tracker = LincheckTracker.getEventTracker();
-        if (tracker == null) {
+        var thread = Thread.currentThread();
+        var hashCode = System.identityHashCode(thread);
+        var descriptor = threadDescriptorsMap.get(hashCode);
+        if (descriptor == null) {
             return;
         }
+        var tracker = descriptor.getEventTracker();
+        threadDescriptor.set(descriptor);
         tracker.beforeThreadStart();
     }
 
@@ -154,7 +179,8 @@ public class Injections {
      * Current thread returned from its {@code run} method.
      */
     public static void afterThreadFinish() {
-        var tracker = LincheckTracker.getEventTracker();
+        var descriptor = threadDescriptor.get();
+        var tracker = descriptor.getEventTracker();
         if (tracker == null) {
             return;
         }
@@ -167,7 +193,8 @@ public class Injections {
      * <b>Does not support joins with time limits yet</b>.
      */
     public static void beforeThreadJoin(Thread t) {
-        var tracker = LincheckTracker.getEventTracker();
+        var descriptor = threadDescriptor.get();
+        var tracker = descriptor.getEventTracker();
         if (tracker == null) {
             return;
         }
@@ -436,15 +463,6 @@ public class Injections {
         // TODO: easier to support when `javaagent` is merged
         return 0;
     }
-
-    private static EventTracker getEventTracker() {
-        var tracker = LincheckTracker.getEventTracker();
-        if (tracker == null) {
-            throw new RuntimeException("No event tracker set by Lincheck");
-        }
-        return tracker;
-    }
-
 
     // == Methods required for the IDEA Plugin integration ==
 

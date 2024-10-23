@@ -37,7 +37,7 @@ class ManagedThreadScheduler : ThreadScheduler() {
      * its latest value across different threads.
      */
     @Volatile
-    var currentThreadId: Int = 0
+    var scheduledThreadId: Int = 0
         private set
 
     /**
@@ -46,7 +46,7 @@ class ManagedThreadScheduler : ThreadScheduler() {
      * @return `true` if the current thread is the one scheduled to run; `false` otherwise.
      */
     fun isCurrentThreadScheduled(): Boolean {
-        return currentThreadId == getThreadId(Thread.currentThread())
+        return scheduledThreadId == getThreadId(Thread.currentThread())
     }
 
     /**
@@ -55,7 +55,7 @@ class ManagedThreadScheduler : ThreadScheduler() {
      * @param threadId The identifier of the thread to be scheduled.
      */
     fun scheduleThread(threadId: Int) {
-        currentThreadId = threadId
+        scheduledThreadId = threadId
     }
 
     /**
@@ -66,7 +66,7 @@ class ManagedThreadScheduler : ThreadScheduler() {
      */
     fun abortCurrentThread(): Nothing {
         check(isCurrentThreadScheduled())
-        val threadId = currentThreadId
+        val threadId = scheduledThreadId
         threads[threadId]!!.state = ThreadState.ABORTED
         throw ThreadAbortedError
     }
@@ -83,7 +83,7 @@ class ManagedThreadScheduler : ThreadScheduler() {
         descriptor.spinner.spinWaitUntil {
             if (descriptor.state == ThreadState.ABORTED)
                 throw ThreadAbortedError
-            currentThreadId == threadId
+            scheduledThreadId == threadId
         }
     }
 

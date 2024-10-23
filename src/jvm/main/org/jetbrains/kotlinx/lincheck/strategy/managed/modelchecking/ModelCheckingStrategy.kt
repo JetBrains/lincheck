@@ -9,7 +9,6 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
-import sun.nio.ch.lincheck.TestThread
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
@@ -295,7 +294,7 @@ internal class ModelCheckingStrategy(
     override fun shouldSwitch(iThread: Int): Boolean {
         // Crete a new current position in the same place as where the check is,
         // because the position check and the position increment are dual operations.
-        check(iThread == threadScheduler.currentThreadId)
+        check(iThread == threadScheduler.scheduledThreadId)
         currentInterleaving.newExecutionPosition(iThread)
         return currentInterleaving.isSwitchPosition()
     }
