@@ -515,11 +515,6 @@ abstract class ManagedStrategy(
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
      */
     open fun onThreadStart(iThread: Int) {
-        // scenario threads are handled separately
-        if (iThread < scenario.nThreads) {
-            // TODO: move this to TestThread class
-            Injections.beforeThreadStart()
-        }
         threadScheduler.startThread(iThread)
         threadScheduler.awaitTurn(iThread)
     }
