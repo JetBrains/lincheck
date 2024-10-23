@@ -992,28 +992,23 @@ abstract class ManagedStrategy(
     }
 
     protected fun enterTestingCode() {
-        val descriptor = Injections.getCurrentThreadDescriptor()
-        descriptor.enterTestingCode()
+        return Injections.enterTestingCode();
     }
 
     protected fun leaveTestingCode() {
-        val descriptor = Injections.getCurrentThreadDescriptor()
-        descriptor.leaveTestingCode()
+        return Injections.leaveTestingCode();
     }
 
     protected fun inIgnoredSection(): Boolean {
-        val descriptor = Injections.getCurrentThreadDescriptor()
-        return descriptor.inIgnoredSection()
+        return Injections.inIgnoredSection();
     }
 
     protected fun enterIgnoredSection(): Boolean {
-        val descriptor = Injections.getCurrentThreadDescriptor()
-        return descriptor.enterIgnoredSection()
+        return Injections.enterIgnoredSection()
     }
 
     protected fun leaveIgnoredSection() {
-        val descriptor = Injections.getCurrentThreadDescriptor()
-        descriptor.leaveIgnoredSection()
+        return Injections.leaveIgnoredSection()
     }
 
     override fun beforeNewObjectCreation(className: String) = runInIgnoredSection {

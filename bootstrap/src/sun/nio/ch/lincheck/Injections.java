@@ -26,7 +26,7 @@ public class Injections {
 
     // Thread local variable storing testing code and ignored section flags.
     private static final ThreadLocal<ThreadDescriptor> threadDescriptor =
-        ThreadLocal.withInitial(ThreadDescriptor::new);
+        ThreadLocal.withInitial(() -> null);
 
     private static final ConcurrentHashMap<Integer, ThreadDescriptor> threadDescriptorsMap =
         new ConcurrentHashMap<Integer, ThreadDescriptor>();
@@ -55,12 +55,11 @@ public class Injections {
     }
 
     public static EventTracker getEventTracker() {
-        var descriptor = threadDescriptor.get();
-        var tracker = descriptor.getEventTracker();
-        if (tracker == null) {
+        var descriptor = getCurrentThreadDescriptor();
+        if (descriptor == null) {
             throw new RuntimeException("No event tracker set by Lincheck");
         }
-        return tracker;
+        return descriptor.getEventTracker();
     }
 
     public static void storeCancellableContinuation(Object cont) {
@@ -71,6 +70,18 @@ public class Injections {
             // We are in the verification phase.
             lastSuspendedCancellableContinuationDuringVerification = cont;
         }
+    }
+
+    public static void enterTestingCode() {
+        var descriptor = getCurrentThreadDescriptor();
+        if (descriptor == null) return;
+        descriptor.enterTestingCode();
+    }
+
+    public static void leaveTestingCode() {
+        var descriptor = getCurrentThreadDescriptor();
+        if (descriptor == null) return;
+        descriptor.leaveTestingCode();
     }
 
     /**
@@ -85,6 +96,7 @@ public class Injections {
      */
     public static boolean enterIgnoredSection() {
         var descriptor = getCurrentThreadDescriptor();
+        if (descriptor == null) return false;
         return descriptor.enterIgnoredSection();
     }
 
@@ -93,6 +105,7 @@ public class Injections {
      */
     public static void leaveIgnoredSection() {
         var descriptor = getCurrentThreadDescriptor();
+        if (descriptor == null) return;
         descriptor.leaveIgnoredSection();
     }
 
@@ -103,6 +116,7 @@ public class Injections {
      */
     public static boolean inIgnoredSection() {
         var descriptor = getCurrentThreadDescriptor();
+        if (descriptor == null) return true;
         return descriptor.inIgnoredSection();
     }
 
@@ -130,10 +144,8 @@ public class Injections {
         // TestThread is handled separately
         if (forkedThread instanceof TestThread) return;
         var descriptor = getCurrentThreadDescriptor();
+        if (descriptor == null) return;
         var tracker = descriptor.getEventTracker();
-        if (tracker == null) {
-            return;
-        }
         tracker.afterThreadFork(forkedThread);
     }
 
@@ -161,10 +173,8 @@ public class Injections {
         // TestThread is handled separately
         if (thread instanceof TestThread) return;
         var descriptor = getCurrentThreadDescriptor();
+        if (descriptor == null) return;
         var tracker = descriptor.getEventTracker();
-        if (tracker == null) {
-            return;
-        }
         tracker.afterThreadFinish();
     }
 
@@ -175,10 +185,8 @@ public class Injections {
      */
     public static void beforeThreadJoin(Thread t) {
         var descriptor = getCurrentThreadDescriptor();
+        if (descriptor == null) return;
         var tracker = descriptor.getEventTracker();
-        if (tracker == null) {
-            return;
-        }
         tracker.beforeThreadJoin(t);
     }
 
