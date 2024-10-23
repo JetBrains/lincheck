@@ -65,7 +65,8 @@ class ValidationFunctionCallTest {
         }
     }
     .checkImpl(this::class.java) { failure ->
-        failure.checkLincheckOutput("validation_function_failure.txt")
+        val expectedOutputFile = if (isJdk8) "validation_function_failure_jdk8.txt" else "validation_function_failure.txt"
+        failure.checkLincheckOutput(expectedOutputFile)
     }
 
 }

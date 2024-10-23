@@ -33,11 +33,11 @@ kotlin {
         withJava()
 
         val main by compilations.getting {
-            kotlinOptions.jvmTarget = "11"
+            kotlinOptions.jvmTarget = "1.8"
         }
 
         val test by compilations.getting {
-            kotlinOptions.jvmTarget = "11"
+            kotlinOptions.jvmTarget = "1.8"
         }
     }
 
@@ -64,6 +64,12 @@ kotlin {
 
         val jvmTest by getting {
             kotlin.srcDir("src/jvm/test")
+            val jdkToolchainVersion: String by project
+            if (jdkToolchainVersion.toInt() >= 11) {
+                kotlin.srcDir("src/jvm/test-jdk11")
+            } else {
+                kotlin.srcDir("src/jvm/test-jdk8")
+            }
 
             val junitVersion: String by project
             val jctoolsVersion: String by project
@@ -78,8 +84,8 @@ kotlin {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
     toolchain {
         val jdkToolchainVersion: String by project
         languageVersion = JavaLanguageVersion.of(jdkToolchainVersion)

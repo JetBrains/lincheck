@@ -13,7 +13,8 @@ package org.jetbrains.kotlinx.lincheck.util
 import java.util.concurrent.atomic.*
 import org.jetbrains.kotlinx.lincheck.util.AtomicMethodKind.*
 import org.jetbrains.kotlinx.lincheck.util.MemoryOrdering.*
-import java.lang.invoke.VarHandle
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
 
 internal data class AtomicMethodDescriptor(
     val kind: AtomicMethodKind,
@@ -122,8 +123,92 @@ internal fun isAtomicFieldUpdaterClass(className: String) =
 internal fun isAtomicFieldUpdaterMethod(className: String, methodName: String) =
     isAtomicFieldUpdaterClass(className) && methodName in atomicFieldUpdaterMethods
 
-internal fun isVarHandle(obj: Any?) =
-    obj is VarHandle
+private val varHandleClassNames = setOf(
+    "java.lang.invoke.VarHandle",
+    "java.lang.invoke.IndirectVarHandle",
+    "java.lang.invoke.VarHandleSegmentViewBase",
+    "java.lang.invoke.VarHandleSegmentAsBytes",
+    "java.lang.invoke.VarHandleSegmentAsChars",
+    "java.lang.invoke.VarHandleSegmentAsDoubles",
+    "java.lang.invoke.VarHandleSegmentAsFloats",
+    "java.lang.invoke.VarHandleSegmentAsInts",
+    "java.lang.invoke.VarHandleSegmentAsLongs",
+    "java.lang.invoke.VarHandleSegmentAsShorts",
+    "java.lang.invoke.VarHandleByteArrayAsChars${'$'}ByteArrayViewVarHandle",
+    "java.lang.invoke.VarHandleByteArrayAsChars${'$'}ArrayHandle",
+    "java.lang.invoke.VarHandleByteArrayAsChars${'$'}ByteBufferHandle",
+    "java.lang.invoke.VarHandleByteArrayAsDoubles${'$'}ByteArrayViewVarHandle",
+    "java.lang.invoke.VarHandleByteArrayAsDoubles${'$'}ArrayHandle",
+    "java.lang.invoke.VarHandleByteArrayAsDoubles${'$'}ByteBufferHandle",
+    "java.lang.invoke.VarHandleByteArrayAsFloats${'$'}ByteArrayViewVarHandle",
+    "java.lang.invoke.VarHandleByteArrayAsFloats${'$'}ArrayHandle",
+    "java.lang.invoke.VarHandleByteArrayAsFloats${'$'}ByteBufferHandle",
+    "java.lang.invoke.VarHandleByteArrayAsInts${'$'}ByteArrayViewVarHandle",
+    "java.lang.invoke.VarHandleByteArrayAsInts${'$'}ArrayHandle",
+    "java.lang.invoke.VarHandleByteArrayAsInts${'$'}ByteBufferHandle",
+    "java.lang.invoke.VarHandleByteArrayAsLongs${'$'}ByteArrayViewVarHandle",
+    "java.lang.invoke.VarHandleByteArrayAsLongs${'$'}ArrayHandle",
+    "java.lang.invoke.VarHandleByteArrayAsLongs${'$'}ByteBufferHandle",
+    "java.lang.invoke.VarHandleByteArrayAsShorts${'$'}ByteArrayViewVarHandle",
+    "java.lang.invoke.VarHandleByteArrayAsShorts${'$'}ArrayHandle",
+    "java.lang.invoke.VarHandleByteArrayAsShorts${'$'}ByteBufferHandle",
+    "java.lang.invoke.VarHandleBooleans${'$'}Array",
+    "java.lang.invoke.VarHandleBooleans${'$'}FieldInstanceReadOnly",
+    "java.lang.invoke.VarHandleBooleans${'$'}FieldInstanceReadWrite",
+    "java.lang.invoke.VarHandleBooleans${'$'}FieldStaticReadOnly",
+    "java.lang.invoke.VarHandleBooleans${'$'}FieldStaticReadWrite",
+    "java.lang.invoke.VarHandleBytes${'$'}Array",
+    "java.lang.invoke.VarHandleBytes${'$'}FieldInstanceReadOnly",
+    "java.lang.invoke.VarHandleBytes${'$'}FieldInstanceReadWrite",
+    "java.lang.invoke.VarHandleBytes${'$'}FieldStaticReadOnly",
+    "java.lang.invoke.VarHandleBytes${'$'}FieldStaticReadWrite",
+    "java.lang.invoke.VarHandleChars${'$'}Array",
+    "java.lang.invoke.VarHandleChars${'$'}FieldInstanceReadOnly",
+    "java.lang.invoke.VarHandleChars${'$'}FieldInstanceReadWrite",
+    "java.lang.invoke.VarHandleChars${'$'}FieldStaticReadOnly",
+    "java.lang.invoke.VarHandleChars${'$'}FieldStaticReadWrite",
+    "java.lang.invoke.VarHandleDoubles${'$'}Array",
+    "java.lang.invoke.VarHandleDoubles${'$'}FieldInstanceReadOnly",
+    "java.lang.invoke.VarHandleDoubles${'$'}FieldInstanceReadWrite",
+    "java.lang.invoke.VarHandleDoubles${'$'}FieldStaticReadOnly",
+    "java.lang.invoke.VarHandleDoubles${'$'}FieldStaticReadWrite",
+    "java.lang.invoke.VarHandleFloats${'$'}Array",
+    "java.lang.invoke.VarHandleFloats${'$'}FieldInstanceReadOnly",
+    "java.lang.invoke.VarHandleFloats${'$'}FieldInstanceReadWrite",
+    "java.lang.invoke.VarHandleFloats${'$'}FieldStaticReadOnly",
+    "java.lang.invoke.VarHandleFloats${'$'}FieldStaticReadWrite",
+    "java.lang.invoke.VarHandleInts${'$'}Array",
+    "java.lang.invoke.VarHandleInts${'$'}FieldInstanceReadOnly",
+    "java.lang.invoke.VarHandleInts${'$'}FieldInstanceReadWrite",
+    "java.lang.invoke.VarHandleInts${'$'}FieldStaticReadOnly",
+    "java.lang.invoke.VarHandleInts${'$'}FieldStaticReadWrite",
+    "java.lang.invoke.VarHandleLongs${'$'}Array",
+    "java.lang.invoke.VarHandleLongs${'$'}FieldInstanceReadOnly",
+    "java.lang.invoke.VarHandleLongs${'$'}FieldInstanceReadWrite",
+    "java.lang.invoke.VarHandleLongs${'$'}FieldStaticReadOnly",
+    "java.lang.invoke.VarHandleLongs${'$'}FieldStaticReadWrite",
+    "java.lang.invoke.VarHandleReferences${'$'}Array",
+    "java.lang.invoke.VarHandleReferences${'$'}FieldInstanceReadOnly",
+    "java.lang.invoke.VarHandleReferences${'$'}FieldInstanceReadWrite",
+    "java.lang.invoke.VarHandleReferences${'$'}FieldStaticReadOnly",
+    "java.lang.invoke.VarHandleReferences${'$'}FieldStaticReadWrite",
+    "java.lang.invoke.VarHandleObjects${'$'}Array",
+    "java.lang.invoke.VarHandleObjects${'$'}FieldInstanceReadOnly",
+    "java.lang.invoke.VarHandleObjects${'$'}FieldInstanceReadWrite",
+    "java.lang.invoke.VarHandleObjects${'$'}FieldStaticReadOnly",
+    "java.lang.invoke.VarHandleObjects${'$'}FieldStaticReadWrite",
+    "java.lang.invoke.VarHandleShorts${'$'}Array",
+    "java.lang.invoke.VarHandleShorts${'$'}FieldInstanceReadOnly",
+    "java.lang.invoke.VarHandleShorts${'$'}FieldInstanceReadWrite",
+    "java.lang.invoke.VarHandleShorts${'$'}FieldStaticReadOnly",
+    "java.lang.invoke.VarHandleShorts${'$'}FieldStaticReadWrite",
+)
+
+@OptIn(ExperimentalContracts::class)
+internal fun isVarHandle(obj: Any?): Boolean {
+    contract { returns(true) implies (obj != null) }
+    return obj != null && obj::class.java.name in varHandleClassNames
+}
 
 internal fun isVarHandleClass(className: String) =
     className == "java.lang.invoke.VarHandle"

@@ -14,7 +14,6 @@ import org.jetbrains.kotlinx.lincheck.findFieldNameByOffset
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
 import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
 import sun.misc.Unsafe
-import java.lang.invoke.VarHandle
 import java.lang.reflect.Field
 
 /**
@@ -76,7 +75,9 @@ internal object VarHandleNames {
         )
     ).flatten()
 
-    internal fun varHandleMethodType(varHandle: VarHandle, parameters: Array<Any?>): VarHandleMethodType = runCatching {
+    
+    // varHandle is Any because of Java 8, where VarHandle class does not exist
+    internal fun varHandleMethodType(varHandle: Any, parameters: Array<Any?>): VarHandleMethodType = runCatching {
         return nameExtractors.firstOrNull { it.canExtract(varHandle) }?.getMethodType(varHandle, parameters)
             ?: TreatAsDefaultMethod
     }.getOrElse { exception ->
@@ -85,8 +86,8 @@ internal object VarHandleNames {
     }
 
     private sealed class VarHandleNameExtractor(protected val varHandleClass: Class<*>) {
-        fun canExtract(varHandle: VarHandle): Boolean = varHandleClass.isInstance(varHandle)
-        abstract fun getMethodType(varHandle: VarHandle, parameters: Array<Any?>): VarHandleMethodType
+        fun canExtract(varHandle: Any): Boolean = varHandleClass.isInstance(varHandle)
+        abstract fun getMethodType(varHandle: Any, parameters: Array<Any?>): VarHandleMethodType
     }
 
     /**
@@ -98,7 +99,7 @@ internal object VarHandleNames {
         private val fieldOffsetField: Field = varHandleClass.getDeclaredField("fieldOffset")
         private val receiverTypeField: Field = varHandleClass.getDeclaredField("receiverType")
 
-        override fun getMethodType(varHandle: VarHandle, parameters: Array<Any?>): VarHandleMethodType {
+        override fun getMethodType(varHandle: Any, parameters: Array<Any?>): VarHandleMethodType {
             val ownerType = readFieldViaUnsafe(varHandle, receiverTypeField, Unsafe::getObject) as Class<*>
             val fieldOffset = readFieldViaUnsafe(varHandle, fieldOffsetField, Unsafe::getLong)
             val fieldName = findFieldNameByOffset(ownerType, fieldOffset) ?: return TreatAsDefaultMethod
@@ -119,7 +120,7 @@ internal object VarHandleNames {
 
         private val receiverTypeField: Field = varHandleClass.getDeclaredField("base")
 
-        override fun getMethodType(varHandle: VarHandle, parameters: Array<Any?>): VarHandleMethodType {
+        override fun getMethodType(varHandle: Any, parameters: Array<Any?>): VarHandleMethodType {
             val ownerType = readFieldViaUnsafe(varHandle, receiverTypeField, Unsafe::getObject) as Class<*>
             val fieldOffset = readFieldViaUnsafe(varHandle, fieldOffsetField, Unsafe::getLong)
 
@@ -134,7 +135,7 @@ internal object VarHandleNames {
      * so we just analyze the arguments and return the provided array and the index.
      */
     private class VarHandeArrayNameExtractor(varHandleClass: Class<*>) : VarHandleNameExtractor(varHandleClass) {
-        override fun getMethodType(varHandle: VarHandle, parameters: Array<Any?>): VarHandleMethodType {
+        override fun getMethodType(varHandle: Any, parameters: Array<Any?>): VarHandleMethodType {
             if (parameters.size < 2) return TreatAsDefaultMethod
             val firstParameter = parameters[0] ?:  return TreatAsDefaultMethod
             val index = parameters[1] as? Int ?: return TreatAsDefaultMethod

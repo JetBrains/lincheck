@@ -213,7 +213,7 @@ internal class FixedActiveThreadsExecutor(private val testName: String, private 
 
 }
 
-private val majorJavaVersion = Runtime.version().version()[0]
+private val majorJavaVersion = System.getProperty("java.specification.version").removePrefix("1.").toInt()
 
 // These constants are objects for easier debugging.
 private object Shutdown

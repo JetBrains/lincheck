@@ -88,3 +88,5 @@ fun checkTraceHasNoLincheckEvents(trace: String) {
     val lincheckPackageOccurrences = trace.split("org.jetbrains.kotlinx.lincheck.").size - 1
     check(testPackageOccurrences == lincheckPackageOccurrences) { "Internal Lincheck events were found in the trace" }
 }
+
+internal val isJdk8 = System.getProperty("java.specification.version").removePrefix("1.") == "8"

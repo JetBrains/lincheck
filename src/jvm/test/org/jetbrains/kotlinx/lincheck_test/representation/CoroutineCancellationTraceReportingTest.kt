@@ -42,6 +42,6 @@ class CoroutineCancellationTraceReportingTest {
         actorsAfter(0)
     }
         .checkImpl(this::class.java)
-        .checkLincheckOutput("coroutine_cancellation.txt")
+        .checkLincheckOutput("coroutine_cancellation${if (isJdk8) "_jdk8" else ""}.txt")
 
 }

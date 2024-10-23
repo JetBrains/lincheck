@@ -28,7 +28,7 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 @Repeatable(OpGroupConfig.OpGroupConfigs.class)
 @Inherited
-@Deprecated(forRemoval = true)
+@Deprecated
 public @interface OpGroupConfig {
     /**
      * Name of this group used by {@link Operation#group()}.
