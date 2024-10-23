@@ -42,14 +42,14 @@ class ConcurrentLinkedDequeTest {
     fun modelCheckingTest() = ModelCheckingOptions()
         .addCustomScenario {
             initial {
-                actor(::addLast, 1)
+                actor(ConcurrentLinkedDequeTest::addLast, 1)
             }
             parallel {
                 thread {
                     actor(::pollFirst)
                 }
                 thread {
-                    actor(::addFirst, 0)
+                    actor(ConcurrentLinkedDequeTest::addFirst, 0)
                     actor(::peekLast)
                 }
             }
