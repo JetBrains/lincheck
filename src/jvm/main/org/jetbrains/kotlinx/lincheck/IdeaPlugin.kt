@@ -79,7 +79,8 @@ fun shouldReplayInterleaving(): Boolean {
  */
 @Suppress("UNUSED_PARAMETER")
 fun beforeEvent(eventId: Int, type: String) {
-    val strategy = LincheckTracker.getEventTracker() ?: return
+    val strategy = Injections.getCurrentThreadDescriptor()?.eventTracker
+        ?: return
     visualize(strategy)
 }
 

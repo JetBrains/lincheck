@@ -157,7 +157,7 @@ internal class StoreExceptionHandler :
 internal fun <T> CancellableContinuation<T>.cancelByLincheck(promptCancellation: Boolean): CancellationResult {
     val exceptionHandler = context[CoroutineExceptionHandler] as StoreExceptionHandler
     exceptionHandler.exception = null
-    val cancelled = LincheckTracker.getEventTracker().runOutsideIgnoredSection {
+    val cancelled = runOutsideIgnoredSection(Injections.getCurrentThreadDescriptor()) {
         cancel(cancellationByLincheckException)
     }
     exceptionHandler.exception?.let {
@@ -231,58 +231,58 @@ internal class LincheckInternalBugException(cause: Throwable): Exception(cause)
 
 @Suppress("UnusedReceiverParameter")
 internal inline fun<R> FixedActiveThreadsExecutor.runInIgnoredSection(block: () -> R): R =
-    LincheckTracker.getEventTracker().runInIgnoredSection(block)
+    runInIgnoredSection(Injections.getCurrentThreadDescriptor(), block)
 
 @Suppress("UnusedReceiverParameter")
 internal inline fun<R> ParallelThreadsRunner.runInIgnoredSection(block: () -> R): R =
-    LincheckTracker.getEventTracker().runInIgnoredSection(block)
+    runInIgnoredSection(Injections.getCurrentThreadDescriptor(), block)
 
 @Suppress("UnusedReceiverParameter")
 internal inline fun<R> LincheckClassFileTransformer.runInIgnoredSection(block: () -> R): R =
-    LincheckTracker.getEventTracker().runInIgnoredSection(block)
+    runInIgnoredSection(Injections.getCurrentThreadDescriptor(), block)
+
+@Suppress("UnusedReceiverParameter")
+internal inline fun<R> EventTracker.runInIgnoredSection(block: () -> R): R =
+    runInIgnoredSection(Injections.getCurrentThreadDescriptor(), block)
 
 @Suppress("UnusedReceiverParameter")
 internal inline fun<R> ExecutionClassLoader.runInIgnoredSection(block: () -> R): R =
-    LincheckTracker.getEventTracker().runInIgnoredSection(block)
+    runInIgnoredSection(Injections.getCurrentThreadDescriptor(), block)
 
-internal inline fun <R> EventTracker?.runInIgnoredSection(block: () -> R): R {
-    @Suppress("UNUSED_VARIABLE")
-    val strategy: ManagedStrategy = this as? ManagedStrategy
-        ?: return block()
-    val flags = Injections.threadFlags.get()
-    if (flags.inIgnoredSection()) {
+internal inline fun <R> runInIgnoredSection(descriptor: ThreadDescriptor?, block: () -> R): R {
+    if (descriptor == null || descriptor.eventTracker !is ManagedStrategy)
+        return block()
+    if (descriptor.inIgnoredSection()) {
         return block()
     }
-    flags.enterIgnoredSection().ensureTrue()
+    descriptor.enterIgnoredSection().ensureTrue()
     return try {
         block()
     } finally {
-        flags.leaveIgnoredSection()
+        descriptor.leaveIgnoredSection()
     }
 }
 
 @Suppress("UnusedReceiverParameter")
 internal inline fun <R> ParallelThreadsRunner.runOutsideIgnoredSection(block: () -> R) =
-    LincheckTracker.getEventTracker().runOutsideIgnoredSection(block)
+    runOutsideIgnoredSection(Injections.getCurrentThreadDescriptor(), block)
 
 /**
  * Exits the ignored section and invokes the provided [block] outside the ignored section,
  * entering the ignored section back after the [block] is executed.
  * This method **must** be called in an ignored section.
  */
-internal inline fun <R> EventTracker?.runOutsideIgnoredSection(block: () -> R): R {
-    @Suppress("UNUSED_VARIABLE")
-    val strategy: ManagedStrategy = this as? ManagedStrategy
-        ?: return block()
-    val flags = Injections.threadFlags.get()
-    check(flags.inIgnoredSection()) {
+internal inline fun <R> runOutsideIgnoredSection(descriptor: ThreadDescriptor?, block: () -> R): R {
+    if (descriptor == null || descriptor.eventTracker !is ManagedStrategy)
+        return block()
+    check(descriptor.inIgnoredSection()) {
         "Current thread must be in ignored section"
     }
-    flags.leaveIgnoredSection()
+    descriptor.leaveIgnoredSection()
     return try {
         block()
     } finally {
-        flags.enterIgnoredSection().ensureTrue()
+        descriptor.enterIgnoredSection().ensureTrue()
     }
 }
 

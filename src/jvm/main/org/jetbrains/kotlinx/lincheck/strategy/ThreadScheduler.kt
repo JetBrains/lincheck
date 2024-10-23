@@ -11,6 +11,8 @@
 package org.jetbrains.kotlinx.lincheck.strategy
 
 import org.jetbrains.kotlinx.lincheck.util.*
+import sun.nio.ch.lincheck.Injections
+import sun.nio.ch.lincheck.ThreadDescriptor
 
 /**
  * Enumeration representing the various states of a thread.
@@ -77,8 +79,8 @@ enum class BlockingReason {
  */
 open class ThreadScheduler {
 
-    private val threads_ = mutableThreadMapOf<ThreadDescriptor>()
-    protected val threads: ThreadMap<ThreadDescriptor> get() = threads_
+    private val threads_ = mutableThreadMapOf<ThreadData>()
+    protected val threads: ThreadMap<ThreadData> get() = threads_
 
     /**
      * Number of threads currently managed by the scheduler.
@@ -86,7 +88,7 @@ open class ThreadScheduler {
     val nThreads: Int get() =
         threads.size
 
-    protected open class ThreadDescriptor(
+    protected open class ThreadData(
         val id: ThreadId,
         val thread: Thread,
         val scheduler: ThreadScheduler,
@@ -98,8 +100,8 @@ open class ThreadScheduler {
         val spinner: Spinner = Spinner { scheduler.threads.size }
     }
 
-    protected open fun createThreadDescriptor(id: ThreadId, thread: Thread): ThreadDescriptor {
-        return ThreadDescriptor(id, thread, this)
+    protected open fun createThreadData(id: ThreadId, thread: Thread): ThreadData {
+        return ThreadData(id, thread, this)
     }
 
     /**
@@ -117,8 +119,15 @@ open class ThreadScheduler {
      * @param thread The thread for which the id is to be retrieved.
      * @return The id of the thread, or -1 if the thread is not found.
      */
-    fun getThreadId(thread: Thread): ThreadId =
-        threads.values.find { it.thread == thread }?.id ?: -1
+    fun getThreadId(thread: Thread): ThreadId {
+        val descriptor = Injections.getThreadDescriptor(thread)
+        return (descriptor?.eventTrackerData as? ThreadData)?.id ?: -1
+    }
+
+    fun getCurrentThreadId(): ThreadId {
+        val descriptor = Injections.getCurrentThreadDescriptor()
+        return (descriptor?.eventTrackerData as? ThreadData)?.id ?: -1
+    }
 
     /**
      * Retrieves the thread associated with the given thread id.
@@ -203,10 +212,11 @@ open class ThreadScheduler {
      * @param thread The thread to be registered.
      * @return The unique identifier assigned to the registered thread.
      */
-    fun registerThread(thread: Thread): ThreadId {
+    fun registerThread(thread: Thread, descriptor: ThreadDescriptor): ThreadId {
         val threadId = threads.size
-        val descriptor = createThreadDescriptor(threadId, thread)
-        threads_.put(threadId, descriptor).ensureNull()
+        val threadData = createThreadData(threadId, thread)
+        threads_.put(threadId, threadData).ensureNull()
+        descriptor.eventTrackerData = threadData
         return threadId
     }
 
