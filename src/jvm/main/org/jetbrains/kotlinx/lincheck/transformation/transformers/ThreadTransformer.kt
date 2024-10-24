@@ -28,7 +28,6 @@ internal class ThreadTransformer(
     className: String,
     methodName: String,
     private val desc: String,
-    private val isThreadSubclass: Boolean,
     adapter: GeneratorAdapter,
 ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter)  {
 
@@ -79,18 +78,16 @@ internal class ThreadTransformer(
     }
 
     private fun isThreadStartMethod(methodName: String, desc: String): Boolean =
-        isThreadSubclass && methodName == "start" && desc == VOID_METHOD_DESCRIPTOR
+        methodName == "start" && desc == VOID_METHOD_DESCRIPTOR && isThreadSubClass(className)
 
     private fun isThreadRunMethod(methodName: String, desc: String): Boolean =
-        isThreadSubclass && methodName == "run" && desc == VOID_METHOD_DESCRIPTOR
+        methodName == "run" && desc == VOID_METHOD_DESCRIPTOR && isThreadSubClass(className)
 
     // TODO: add support for thread joins with time limit
     private fun isThreadJoinCall(className: String, methodName: String, desc: String) =
         // no need to check for thread subclasses here, since join methods are marked as final
         className == JAVA_THREAD_CLASSNAME && methodName == "join" && desc == VOID_METHOD_DESCRIPTOR
 }
-
-internal const val JAVA_THREAD_CLASSNAME = "java/lang/Thread"
 
 private val EMPTY_TYPE_ARRAY = emptyArray<Type>()
 

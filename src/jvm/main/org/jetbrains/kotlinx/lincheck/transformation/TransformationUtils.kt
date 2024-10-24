@@ -12,9 +12,9 @@ package org.jetbrains.kotlinx.lincheck.transformation
 
 import sun.nio.ch.lincheck.Injections
 import org.objectweb.asm.*
-import org.objectweb.asm.Opcodes.ANEWARRAY
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
+import org.objectweb.asm.Opcodes.ANEWARRAY
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import java.io.*
 import java.util.*
@@ -318,6 +318,15 @@ internal inline fun GeneratorAdapter.invokeInIgnoredSection(
     )
 }
 
+private val isThreadSubclassMap = ConcurrentHashMap<String, Boolean>()
+
+internal fun isThreadSubClass(internalClassName: String): Boolean {
+    if (internalClassName == JAVA_THREAD_CLASSNAME) return true
+    return isThreadSubclassMap.computeIfAbsent(internalClassName) {
+        isSubClassOf(internalClassName, JAVA_THREAD_CLASSNAME)
+    }
+}
+
 private val isCoroutineStateMachineClassMap = ConcurrentHashMap<String, Boolean>()
 
 internal fun isCoroutineStateMachineClass(internalClassName: String): Boolean {
@@ -342,7 +351,8 @@ private fun getSuperclassName(internalClassName: String): String? {
         }
     }
     try {
-        val classStream: InputStream = ClassLoader.getSystemClassLoader().getResourceAsStream("$internalClassName.class")
+        val classStream: InputStream = ClassLoader.getSystemClassLoader()
+            .getResourceAsStream("$internalClassName.class")
             ?: return null
         val classReader = ClassReader(classStream)
         val superclassVisitor = SuperclassClassVisitor()
@@ -354,11 +364,12 @@ private fun getSuperclassName(internalClassName: String): String? {
     }
 }
 
-internal const val ASM_API = Opcodes.ASM9
-
-internal val STRING_TYPE = getType(String::class.java)
-internal val CLASS_TYPE = getType(Class::class.java)
-internal val CLASS_FOR_NAME_METHOD = Method("forName", CLASS_TYPE, arrayOf(STRING_TYPE))
+private fun isSubClassOf(internalClassName: String, internalSuperClassName: String): Boolean {
+    if (internalClassName == internalSuperClassName) return true
+    val superclassName = getSuperclassName(internalClassName)
+        ?: return false
+    return isSubClassOf(superclassName, internalSuperClassName)
+}
 
 /**
  * Tests if the provided [className] contains `"ClassLoader"` as a substring.
@@ -371,3 +382,13 @@ internal fun containsClassloaderInName(className: String): Boolean =
  */
 internal fun isStackTraceElementClass(className: String): Boolean =
     className == "java.lang.StackTraceElement"
+
+
+internal const val ASM_API = Opcodes.ASM9
+
+internal val STRING_TYPE = getType(String::class.java)
+internal val CLASS_TYPE = getType(Class::class.java)
+
+internal val CLASS_FOR_NAME_METHOD = Method("forName", CLASS_TYPE, arrayOf(STRING_TYPE))
+
+internal const val JAVA_THREAD_CLASSNAME = "java/lang/Thread"
