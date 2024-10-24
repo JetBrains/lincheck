@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.util.*
+import sun.nio.ch.lincheck.Injections
 
 
 /**
@@ -68,7 +69,7 @@ class ManagedThreadScheduler : ThreadScheduler() {
         check(isCurrentThreadScheduled())
         val threadId = scheduledThreadId
         threads[threadId]!!.state = ThreadState.ABORTED
-        throw ThreadAbortedError
+        raiseThreadAbortError()
     }
 
     /**
@@ -78,13 +79,21 @@ class ManagedThreadScheduler : ThreadScheduler() {
      * @throws ThreadAbortedError if the thread was aborted.
      */
     fun awaitTurn(threadId: ThreadId) {
-        check(threadId == getThreadId(Thread.currentThread()))
-        val descriptor = threads[threadId]!!
-        descriptor.spinner.spinWaitUntil {
-            if (descriptor.state == ThreadState.ABORTED)
-                throw ThreadAbortedError
+        check(threadId == getCurrentThreadId())
+        val threadData = threads[threadId]!!
+        threadData.spinner.spinWaitUntil {
+            if (threadData.state == ThreadState.ABORTED) {
+                raiseThreadAbortError()
+            }
             scheduledThreadId == threadId
         }
+    }
+
+    private fun raiseThreadAbortError(): Nothing {
+        val descriptor = Injections.getCurrentThreadDescriptor()!!
+        // exit the testing code in case of aborting
+        descriptor.leaveTestingCode()
+        throw ThreadAbortedError
     }
 
 }
