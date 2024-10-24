@@ -54,5 +54,6 @@ class KotlinStdlibTransformationTest : AbstractLincheckTest() {
 
     override fun <O : Options<O, *>> O.customize() {
         iterations(1)
+        invocationTimeout(20_000)
     }
 }

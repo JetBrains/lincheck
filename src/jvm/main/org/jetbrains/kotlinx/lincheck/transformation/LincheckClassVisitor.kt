@@ -15,15 +15,17 @@ import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
+import org.objectweb.asm.tree.ClassNode
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.*
 import sun.nio.ch.lincheck.*
 import kotlin.collections.HashSet
 
 internal class LincheckClassVisitor(
+    private val safeClassWriter: SafeClassWriter,
     private val instrumentationMode: InstrumentationMode,
-    classVisitor: ClassVisitor
-) : ClassVisitor(ASM_API, classVisitor) {
+) : ClassVisitor(ASM_API, safeClassWriter) {
+
     private val ideaPluginEnabled = ideaPluginEnabled()
     private var classVersion = 0
 
@@ -105,6 +107,12 @@ internal class LincheckClassVisitor(
         mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
         mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
         mv = CoroutineCancellabilitySupportTransformer(mv, access, className, methodName, desc)
+        mv = ThreadTransformer(fileName, className, methodName, desc, isThreadSubclass(), mv.newAdapter())
+        // We can do further instrumentation in methods of the custom thread subclasses,
+        // but not in the `java.lang.Thread` itself.
+        if (className == JAVA_THREAD_CLASSNAME) {
+            return mv
+        }
         if (access and ACC_SYNCHRONIZED != 0) {
             mv = SynchronizedMethodTransformer(fileName, className, methodName, mv.newAdapter(), classVersion)
         }
@@ -137,6 +145,21 @@ internal class LincheckClassVisitor(
             mv.newAdapter()
         )
         return mv
+    }
+
+    private fun isThreadSubclass(): Boolean {
+        if (className == JAVA_THREAD_CLASSNAME) return true
+        if (className.canonicalClassName in threadSubclasses) return true
+        if (isInstanceOf(className, JAVA_THREAD_CLASSNAME)) {
+            threadSubclasses.add(className.canonicalClassName)
+            return true
+        }
+        return false
+    }
+
+    @Suppress("SameParameterValue")
+    private fun isInstanceOf(subClassName: String, superClassName: String): Boolean {
+        return (safeClassWriter.getCommonSuperClass(subClassName, superClassName) == superClassName)
     }
 
 }
@@ -210,3 +233,6 @@ private class WrapMethodInIgnoredSectionTransformer(
 // it is used to optimize class re-transformation in stress mode by remembering
 // exactly what classes need to be re-transformed (only the coroutines calling classes)
 internal val coroutineCallingClasses = HashSet<String>()
+
+// Set storing canonical names of the subclasses of the java.lang.Thread class
+internal val threadSubclasses = HashSet<String>()

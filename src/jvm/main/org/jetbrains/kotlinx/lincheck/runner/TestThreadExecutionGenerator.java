@@ -35,8 +35,8 @@ public class TestThreadExecutionGenerator {
     private static final Method EMPTY_CONSTRUCTOR = new Method("<init>", VOID_TYPE, NO_ARGS);
 
     private static final Type RUNNER_TYPE = getType(Runner.class);
-    private static final Method RUNNER_ON_START_METHOD = new Method("onStart", VOID_TYPE, new Type[]{INT_TYPE});
-    private static final Method RUNNER_ON_FINISH_METHOD = new Method("onFinish", VOID_TYPE, new Type[]{INT_TYPE});
+    private static final Method RUNNER_ON_THREAD_START_METHOD = new Method("onThreadStart", VOID_TYPE, new Type[]{INT_TYPE});
+    private static final Method RUNNER_ON_THREAD_FINISH_METHOD = new Method("onThreadFinish", VOID_TYPE, new Type[]{INT_TYPE});
     private static final Method RUNNER_ON_ACTOR_START = new Method("onActorStart", Type.VOID_TYPE, new Type[]{ Type.INT_TYPE });
     private static final Method RUNNER_ON_ACTOR_FINISH = new Method("onActorFinish", Type.VOID_TYPE, NO_ARGS);
 
@@ -144,11 +144,11 @@ public class TestThreadExecutionGenerator {
         mv.loadThis();
         mv.getField(TEST_THREAD_EXECUTION_TYPE, "results", RESULT_ARRAY_TYPE);
         mv.storeLocal(resLocal);
-        // Call runner's onStart(iThread) method
+        // Call runner's onThreadStart(iThread) method
         mv.loadThis();
         mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
         mv.push(iThread);
-        mv.invokeVirtual(RUNNER_TYPE, RUNNER_ON_START_METHOD);
+        mv.invokeVirtual(RUNNER_TYPE, RUNNER_ON_THREAD_START_METHOD);
         // Number of current operation (starts with 0)
         int iLocal = mv.newLocal(INT_TYPE);
         mv.push(0);
@@ -270,11 +270,11 @@ public class TestThreadExecutionGenerator {
             mv.iinc(iLocal, 1);
             mv.visitLabel(launchNextActor);
         }
-        // Call runner's onFinish(iThread) method
+        // Call runner's onThreadFinish(iThread) method
         mv.loadThis();
         mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
         mv.push(iThread);
-        mv.invokeVirtual(RUNNER_TYPE, RUNNER_ON_FINISH_METHOD);
+        mv.invokeVirtual(RUNNER_TYPE, RUNNER_ON_THREAD_FINISH_METHOD);
         // Complete the method
         mv.visitInsn(RETURN);
         mv.visitMaxs(3, 4);

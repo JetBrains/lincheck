@@ -11,14 +11,56 @@
 package sun.nio.ch.lincheck;
 
 import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Methods of this object are called from the instrumented code.
  */
 public class Injections {
+
+    // Special object to represent void method call result.
     public static final Object VOID_RESULT = new Object();
+
     // Used in the verification phase to store a suspended continuation.
     public static Object lastSuspendedCancellableContinuationDuringVerification = null;
+
+    // Thread local variable storing testing code and ignored section flags.
+    private static final ThreadLocal<ThreadDescriptor> threadDescriptor =
+        ThreadLocal.withInitial(() -> null);
+
+    private static final ConcurrentHashMap<Integer, ThreadDescriptor> threadDescriptorsMap =
+        new ConcurrentHashMap<Integer, ThreadDescriptor>();
+
+    public static ThreadDescriptor getCurrentThreadDescriptor() {
+        return threadDescriptor.get();
+    }
+
+    public static void setCurrentThreadDescriptor(ThreadDescriptor descriptor) {
+        threadDescriptor.set(descriptor);
+    }
+
+    public static ThreadDescriptor getThreadDescriptor(Thread thread) {
+        // TODO: handle hashcode collisions (?)
+        var hashCode = System.identityHashCode(thread);
+        return threadDescriptorsMap.get(hashCode);
+    }
+
+    public static void setThreadDescriptor(Thread thread, ThreadDescriptor descriptor) {
+        // TODO: handle hashcode collisions (?)
+        var hashCode = System.identityHashCode(thread);
+        var previousDescriptor = threadDescriptorsMap.put(hashCode, descriptor);
+        if (previousDescriptor != null) {
+            throw new IllegalStateException("Thread descriptor was already set!");
+        }
+    }
+
+    public static EventTracker getEventTracker() {
+        var descriptor = getCurrentThreadDescriptor();
+        if (descriptor == null) {
+            throw new RuntimeException("No event tracker set by Lincheck");
+        }
+        return descriptor.getEventTracker();
+    }
 
     public static void storeCancellableContinuation(Object cont) {
         Thread t = Thread.currentThread();
@@ -30,29 +72,138 @@ public class Injections {
         }
     }
 
+    public static void enterTestingCode() {
+        var descriptor = getCurrentThreadDescriptor();
+        if (descriptor == null) return;
+        descriptor.enterTestingCode();
+    }
+
+    public static void leaveTestingCode() {
+        var descriptor = getCurrentThreadDescriptor();
+        if (descriptor == null) return;
+        descriptor.leaveTestingCode();
+    }
+
+    /**
+     * Enters an ignored section for the current thread.
+     * A code inside the ignored section is not analyzed by the Lincheck.
+     *
+     * Note that the thread may not actually enter the ignored section in the following cases.
+     *   1. The thread is not registered in the Lincheck strategy.
+     *   2. The thread is already inside the ignored section.
+     *
+     * @return true if the thread successfully entered the ignored section, false otherwise.
+     */
     public static boolean enterIgnoredSection() {
-        Thread t = Thread.currentThread();
-        if (!(t instanceof TestThread)) return false;
-        TestThread testThread = (TestThread) t;
-        if (testThread.inIgnoredSection) return false;
-        testThread.inIgnoredSection = true;
-        return true;
+        var descriptor = getCurrentThreadDescriptor();
+        if (descriptor == null) return false;
+        return descriptor.enterIgnoredSection();
     }
 
+    /**
+     * Leaves an ignored section for the current thread.
+     */
     public static void leaveIgnoredSection() {
-        Thread t = Thread.currentThread();
-        if (t instanceof TestThread) {
-            ((TestThread) t).inIgnoredSection = false;
-        }
+        var descriptor = getCurrentThreadDescriptor();
+        if (descriptor == null) return;
+        descriptor.leaveIgnoredSection();
     }
 
-    public static boolean inTestingCode() {
-        Thread t = Thread.currentThread();
-        if (t instanceof TestThread) {
-            TestThread testThread = (TestThread) t;
-            return testThread.inTestingCode && !testThread.inIgnoredSection;
+    /**
+     * Determines if the current thread is inside an ignored section.
+     *
+     * @return true if the current thread is inside an ignored section, false otherwise.
+     */
+    public static boolean inIgnoredSection() {
+        var descriptor = getCurrentThreadDescriptor();
+        if (descriptor == null) return true;
+        return descriptor.inIgnoredSection();
+    }
+
+    /**
+     * Current thread reports that it is going to start a new child thread {@code forkedThread}.
+     */
+    public static void beforeThreadFork(Thread forkedThread) {
+        // TestThread is handled separately
+        if (forkedThread instanceof TestThread) return;
+        var descriptor = getCurrentThreadDescriptor();
+        if (descriptor == null) {
+            return;
         }
-        return false;
+        var tracker = descriptor.getEventTracker();
+        var forkedThreadDescriptor = new ThreadDescriptor();
+        forkedThreadDescriptor.setEventTracker(tracker);
+        /*
+         * Method `setThreadDescriptor` calls methods of `ConcurrentHashMap` (instrumented class),
+         * and at this point the calling thread can have the event tracker set,
+         * so we need to wrap the call into an ignored section.
+         *
+         * Note that other thread events tracking methods don't need to wrap anything
+         * into an ignored section, because when they are called, either
+         *   (1) thread descriptor (and thus event tracker) of the thread is not installed yet, or
+         *   (2) they do not call any instrumented methods themselves.
+         */
+        descriptor.enterIgnoredSection();
+        setThreadDescriptor(forkedThread, forkedThreadDescriptor);
+        descriptor.leaveIgnoredSection();
+        /*
+         * End of the ignored section, the rest should be
+         * wrapped into an ignored section by the event tracker itself, if necessary.
+         */
+        tracker.beforeThreadFork(forkedThread, forkedThreadDescriptor);
+    }
+
+    /**
+     * Current thread reports that it started a new child thread {@code forkedThread}.
+     */
+    public static void afterThreadFork(Thread forkedThread) {
+        // TestThread is handled separately
+        if (forkedThread instanceof TestThread) return;
+        var descriptor = getCurrentThreadDescriptor();
+        if (descriptor == null) return;
+        var tracker = descriptor.getEventTracker();
+        tracker.afterThreadFork(forkedThread);
+    }
+
+    /**
+     * Current thread entered its {@code run} method.
+     */
+    public static void beforeThreadStart() {
+        var thread = Thread.currentThread();
+        // TestThread is handled separately
+        if (thread instanceof TestThread) return;
+        var descriptor = getThreadDescriptor(thread);
+        if (descriptor == null) {
+            return;
+        }
+        setCurrentThreadDescriptor(descriptor);
+        var tracker = descriptor.getEventTracker();
+        tracker.beforeThreadStart();
+    }
+
+    /**
+     * Current thread returned from its {@code run} method.
+     */
+    public static void afterThreadFinish() {
+        var thread = Thread.currentThread();
+        // TestThread is handled separately
+        if (thread instanceof TestThread) return;
+        var descriptor = getCurrentThreadDescriptor();
+        if (descriptor == null) return;
+        var tracker = descriptor.getEventTracker();
+        tracker.afterThreadFinish();
+    }
+
+    /**
+     * Current thread successfully joined thread {@code t}.
+     * <p>
+     * <b>Does not support joins with time limits yet</b>.
+     */
+    public static void beforeThreadJoin(Thread t) {
+        var descriptor = getCurrentThreadDescriptor();
+        if (descriptor == null) return;
+        var tracker = descriptor.getEventTracker();
+        tracker.beforeThreadJoin(t);
     }
 
     /**
@@ -321,15 +472,6 @@ public class Injections {
         // TODO: easier to support when `javaagent` is merged
         return 0;
     }
-
-    private static EventTracker getEventTracker() {
-        Thread currentThread = Thread.currentThread();
-        if (currentThread instanceof TestThread) {
-            return ((TestThread) currentThread).eventTracker;
-        }
-        throw new RuntimeException("Current thread is not an instance of TestThread");
-    }
-
 
     // == Methods required for the IDEA Plugin integration ==
 

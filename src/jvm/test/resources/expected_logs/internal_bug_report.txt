@@ -9,3 +9,4 @@ java.lang.IllegalStateException: Internal bug
 	at org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution16.run(Unknown Source)
 	at org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.testThreadRunnable$lambda$10(FixedActiveThreadsExecutor.kt:172)
 	at java.base/java.lang.Thread.run(Thread.java:840)
+	at sun.nio.ch.lincheck.TestThread.run(TestThread.java:66)

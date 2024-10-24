@@ -10,13 +10,13 @@
 package org.jetbrains.kotlinx.lincheck
 
 import kotlinx.coroutines.*
-import sun.nio.ch.lincheck.EventTracker
-import sun.nio.ch.lincheck.TestThread
+import sun.nio.ch.lincheck.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
 import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.jetbrains.kotlinx.lincheck.util.*
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.lang.ref.*
@@ -157,18 +157,9 @@ internal class StoreExceptionHandler :
 internal fun <T> CancellableContinuation<T>.cancelByLincheck(promptCancellation: Boolean): CancellationResult {
     val exceptionHandler = context[CoroutineExceptionHandler] as StoreExceptionHandler
     exceptionHandler.exception = null
-
-    val currentThread = Thread.currentThread() as? TestThread
-    val inIgnoredSection = currentThread?.inIgnoredSection ?: false
-    // We must exit the ignored section here to analyze the cancellation handler logic.
-    // After that, we need to enter the ignored section back.
-    currentThread?.inIgnoredSection = false
-    val cancelled = try {
+    val cancelled = runOutsideIgnoredSection(Injections.getCurrentThreadDescriptor()) {
         cancel(cancellationByLincheckException)
-    } finally {
-        currentThread?.inIgnoredSection = inIgnoredSection
     }
-
     exceptionHandler.exception?.let {
         throw it.cause!! // let's throw the original exception, ignoring the internal coroutines details
     }
@@ -205,7 +196,7 @@ internal val String.canonicalClassName get() = this.replace('/', '.')
 internal fun exceptionCanBeValidExecutionResult(exception: Throwable): Boolean {
     return exception !is ThreadDeath && // used to stop thread in FixedActiveThreadsExecutor by calling thread.stop method
             exception !is InternalLincheckTestUnexpectedException &&
-            exception !is ForcibleExecutionFinishError
+            exception !is ThreadAbortedError
 }
 
 internal val Throwable.text: String get() {
@@ -259,50 +250,63 @@ internal object InternalLincheckTestUnexpectedException : Exception()
  */
 internal class LincheckInternalBugException(cause: Throwable): Exception(cause)
 
-// We use receivers here in order not to use this function instead of `invokeInIgnoredSection` in the transformation logic.
-@Suppress("UnusedReceiverParameter")
-internal inline fun<R> EventTracker.runInIgnoredSection(block: () -> R): R =  runInIgnoredSection(Thread.currentThread(), block)
-@Suppress("UnusedReceiverParameter")
-internal inline fun<R> FixedActiveThreadsExecutor.runInIgnoredSection(block: () -> R): R =  runInIgnoredSection(Thread.currentThread(), block)
-@Suppress("UnusedReceiverParameter")
-internal inline fun<R> ParallelThreadsRunner.runInIgnoredSection(block: () -> R): R =  runInIgnoredSection(Thread.currentThread(), block)
-@Suppress("UnusedReceiverParameter")
-internal inline fun<R> LincheckClassFileTransformer.runInIgnoredSection(block: () -> R): R =  runInIgnoredSection(Thread.currentThread(), block)
+// We use receivers for `runInIgnoredSection` to not use these functions
+// accidentally instead of `invokeInIgnoredSection` in the transformation logic.
 
 @Suppress("UnusedReceiverParameter")
-internal inline fun<R> ExecutionClassLoader.runInIgnoredSection(block: () -> R): R =  runInIgnoredSection(Thread.currentThread(), block)
+internal inline fun<R> FixedActiveThreadsExecutor.runInIgnoredSection(block: () -> R): R =
+    runInIgnoredSection(Injections.getCurrentThreadDescriptor(), block)
 
-private inline fun <R> runInIgnoredSection(currentThread: Thread, block: () -> R): R =
-    if (currentThread is TestThread && currentThread.inTestingCode && !currentThread.inIgnoredSection) {
-        currentThread.inIgnoredSection = true
-        try {
-            block()
-        } finally {
-            currentThread.inIgnoredSection = false
-        }
-    } else {
-        block()
-    }
-
-/**
- * Exits the ignored section and invokes the provided [block] in the ignored section, setting
- * the [TestThread.inIgnoredSection] flag to `false` in the beginning and setting it back
- * in the end to `true`.
- * This method **must** be called in an ignored section.
- */
 @Suppress("UnusedReceiverParameter")
-internal inline fun <R> ParallelThreadsRunner.runOutsideIgnoredSection(currentThread: TestThread, block: () -> R): R {
-    if (!currentThread.inTestingCode) {
+internal inline fun<R> ParallelThreadsRunner.runInIgnoredSection(block: () -> R): R =
+    runInIgnoredSection(Injections.getCurrentThreadDescriptor(), block)
+
+@Suppress("UnusedReceiverParameter")
+internal inline fun<R> LincheckClassFileTransformer.runInIgnoredSection(block: () -> R): R =
+    runInIgnoredSection(Injections.getCurrentThreadDescriptor(), block)
+
+@Suppress("UnusedReceiverParameter")
+internal inline fun<R> EventTracker.runInIgnoredSection(block: () -> R): R =
+    runInIgnoredSection(Injections.getCurrentThreadDescriptor(), block)
+
+@Suppress("UnusedReceiverParameter")
+internal inline fun<R> ExecutionClassLoader.runInIgnoredSection(block: () -> R): R =
+    runInIgnoredSection(Injections.getCurrentThreadDescriptor(), block)
+
+internal inline fun <R> runInIgnoredSection(descriptor: ThreadDescriptor?, block: () -> R): R {
+    if (descriptor == null || descriptor.eventTracker !is ManagedStrategy)
+        return block()
+    if (descriptor.inIgnoredSection()) {
         return block()
     }
-    require(currentThread.inIgnoredSection) {
-        "Current thread must be in ignored section"
-    }
-    currentThread.inIgnoredSection = false
+    descriptor.enterIgnoredSection().ensureTrue()
     return try {
         block()
     } finally {
-        currentThread.inIgnoredSection = true
+        descriptor.leaveIgnoredSection()
+    }
+}
+
+@Suppress("UnusedReceiverParameter")
+internal inline fun <R> ParallelThreadsRunner.runOutsideIgnoredSection(block: () -> R) =
+    runOutsideIgnoredSection(Injections.getCurrentThreadDescriptor(), block)
+
+/**
+ * Exits the ignored section and invokes the provided [block] outside the ignored section,
+ * entering the ignored section back after the [block] is executed.
+ * This method **must** be called in an ignored section.
+ */
+internal inline fun <R> runOutsideIgnoredSection(descriptor: ThreadDescriptor?, block: () -> R): R {
+    if (descriptor == null || descriptor.eventTracker !is ManagedStrategy)
+        return block()
+    check(descriptor.inIgnoredSection()) {
+        "Current thread must be in ignored section"
+    }
+    descriptor.leaveIgnoredSection()
+    return try {
+        block()
+    } finally {
+        descriptor.enterIgnoredSection().ensureTrue()
     }
 }
 
