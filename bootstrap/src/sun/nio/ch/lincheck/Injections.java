@@ -133,7 +133,23 @@ public class Injections {
         var tracker = descriptor.getEventTracker();
         var forkedThreadDescriptor = new ThreadDescriptor();
         forkedThreadDescriptor.setEventTracker(tracker);
+        /*
+         * Method `setThreadDescriptor` calls methods of `ConcurrentHashMap` (instrumented class),
+         * and at this point the calling thread can have the event tracker set,
+         * so we need to wrap the call into an ignored section.
+         *
+         * Note that other thread events tracking methods don't need to wrap anything
+         * into an ignored section, because when they are called, either
+         *   (1) thread descriptor (and thus event tracker) of the thread is not installed yet, or
+         *   (2) they do not call any instrumented methods themselves.
+         */
+        descriptor.enterIgnoredSection();
         setThreadDescriptor(forkedThread, forkedThreadDescriptor);
+        descriptor.leaveIgnoredSection();
+        /*
+         * End of the ignored section, the rest should be
+         * wrapped into an ignored section by the event tracker itself, if necessary.
+         */
         tracker.beforeThreadFork(forkedThread, forkedThreadDescriptor);
     }
 
