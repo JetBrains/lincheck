@@ -23,6 +23,7 @@ internal fun modelCheckerTest(
     testClass: KClass<*>,
     testOperation: KFunction<*>,
     outcomes: Set<Any?> = setOf(),
+    expectedExceptions: Set<KClass<out Throwable>> = setOf(),
     expectedFailure: KClass<out LincheckFailure>? = null,
     invocations: Int = DEFAULT_INVOCATIONS_COUNT,
 ) {
@@ -38,6 +39,13 @@ internal fun modelCheckerTest(
             return
         }
         assert(failure == null) { failure.toString() }
+        if (expectedExceptions.isNotEmpty()) {
+            verifier.exceptions.forEach { exception ->
+                Assert.assertTrue(expectedExceptions.any { it.isInstance(exception) })
+            }
+        } else {
+            Assert.assertTrue(verifier.exceptions.isEmpty())
+        }
         Assert.assertEquals(outcomes, verifier.values)
     }
 }
@@ -57,11 +65,19 @@ private fun createConfiguration(testClass: Class<*>) =
 
 private class CollectResultsVerifier : Verifier {
     val values: MutableSet<Any?> = HashSet()
+    val exceptions: MutableSet<Throwable> = HashSet()
 
     override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
-        val result = results!!.parallelResults[0][0]!!
-        val value = (result as ValueResult).value
-        values.add(value)
+        when (val result = results!!.parallelResults[0][0]!!) {
+            is VoidResult -> {}
+            is ValueResult -> {
+                values.add(result.value)
+            }
+            is ExceptionResult -> {
+                exceptions.add(result.throwable)
+            }
+            else -> { throw IllegalStateException("Unexpected result: $result") }
+        }
         return true
     }
 }
