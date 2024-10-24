@@ -134,7 +134,7 @@ internal class LincheckClassVisitor(
         mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
         mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
         mv = CoroutineCancellabilitySupportTransformer(mv, access, className, methodName, desc)
-        mv = ThreadTransformer(fileName, className, methodName, desc, isThreadSubclass(), mv.newAdapter())
+        mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
         // We can do further instrumentation in methods of the custom thread subclasses,
         // but not in the `java.lang.Thread` itself.
         if (className == JAVA_THREAD_CLASSNAME) {
@@ -258,6 +258,3 @@ private class WrapMethodInIgnoredSectionTransformer(
 // it is used to optimize class re-transformation in stress mode by remembering
 // exactly what classes need to be re-transformed (only the coroutines calling classes)
 internal val coroutineCallingClasses = HashSet<String>()
-
-// Set storing canonical names of the subclasses of the java.lang.Thread class
-internal val threadSubclasses = HashSet<String>()
