@@ -10,9 +10,12 @@
 
 package org.jetbrains.kotlinx.lincheck_test.gpmc
 
-import java.util.concurrent.ConcurrentLinkedDeque
 import kotlin.concurrent.thread
+import java.util.concurrent.ConcurrentLinkedDeque
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentSkipListMap
 import org.junit.Test
+
 
 class DataStructuresTests {
 
@@ -61,6 +64,52 @@ class DataStructuresTests {
         testClass = this::class,
         testOperation = this::incorrectHashMap,
         expectedExceptions = setOf(IllegalStateException::class),
+        invocations = 1_000,
+    )
+
+    fun correctConcurrentHashMap() {
+        val hashMap = ConcurrentHashMap<Int, Int>()
+        var r1: Int? = -1
+        var r2: Int? = -1
+        val t1 = thread {
+            r1 = hashMap.put(0, 1)
+        }
+        val t2 = thread {
+            r2 = hashMap.put(0, 1)
+        }
+        t1.join()
+        t2.join()
+        check(!(r1 == null && r2 == null))
+    }
+
+    @Test(timeout = TIMEOUT)
+    fun correctConcurrentHashMapTest() = modelCheckerTest(
+        testClass = this::class,
+        testOperation = this::correctConcurrentHashMap,
+        outcomes = setOf(),
+        invocations = 1_000,
+    )
+
+    fun correctConcurrentSkipListMap() {
+        val hashMap = ConcurrentSkipListMap<Int, Int>()
+        var r1: Int? = -1
+        var r2: Int? = -1
+        val t1 = thread {
+            r1 = hashMap.put(0, 1)
+        }
+        val t2 = thread {
+            r2 = hashMap.put(0, 1)
+        }
+        t1.join()
+        t2.join()
+        check(!(r1 == null && r2 == null))
+    }
+
+    @Test(timeout = TIMEOUT)
+    fun correctConcurrentSkipListMapTest() = modelCheckerTest(
+        testClass = this::class,
+        testOperation = this::correctConcurrentSkipListMap,
+        outcomes = setOf(),
         invocations = 1_000,
     )
 
