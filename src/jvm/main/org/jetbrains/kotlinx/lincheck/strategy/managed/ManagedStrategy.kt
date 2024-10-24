@@ -346,8 +346,10 @@ abstract class ManagedStrategy(
      * @param codeLocation the byte-code location identifier of the point in code.
      */
     private fun newSwitchPoint(iThread: Int, codeLocation: Int, tracePoint: TracePoint?) {
-        // Throw `ThreadAbortedError` if the invocation result is already calculated.
-        if (suddenInvocationResult != null) throw ThreadAbortedError
+        // abort the current thread if the invocation result is already calculated.
+        if (suddenInvocationResult != null) {
+            threadScheduler.abortCurrentThread()
+        }
         // check we are in the right thread
         val currentThreadId = threadScheduler.scheduledThreadId
         check(iThread == currentThreadId)
@@ -542,10 +544,11 @@ abstract class ManagedStrategy(
         // This method is called only if exception can't be treated as a normal operation result,
         // so we exit testing code to avoid trace collection resume or some bizarre bugs
         leaveTestingCode()
+        // skip abort exception
+        if (exception === ThreadAbortedError) return
         // Despite the fact that the corresponding failure will be detected by the runner,
         // the managed strategy can construct a trace to reproduce this failure.
         // Let's then store the corresponding failing result and construct the trace.
-        if (exception === ThreadAbortedError) return // not a forcible execution finish
         suddenInvocationResult = UnexpectedExceptionInvocationResult(exception, runner.collectExecutionResults())
         threadScheduler.abortAllThreads()
     }
