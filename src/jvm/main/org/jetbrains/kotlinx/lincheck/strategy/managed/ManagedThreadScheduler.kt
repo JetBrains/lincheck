@@ -47,7 +47,7 @@ class ManagedThreadScheduler : ThreadScheduler() {
      * @return `true` if the current thread is the one scheduled to run; `false` otherwise.
      */
     fun isCurrentThreadScheduled(): Boolean {
-        return scheduledThreadId == getThreadId(Thread.currentThread())
+        return scheduledThreadId == getCurrentThreadId()
     }
 
     /**
