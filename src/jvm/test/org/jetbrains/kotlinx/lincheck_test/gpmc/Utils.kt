@@ -61,7 +61,9 @@ private fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario): Mo
 }
 
 private fun createConfiguration(testClass: Class<*>) =
-    ModelCheckingOptions().createTestConfigurations(testClass)
+    ModelCheckingOptions()
+        .invocationTimeout(5_000) // 5 sec
+        .createTestConfigurations(testClass)
 
 private class CollectResultsVerifier : Verifier {
     val values: MutableSet<Any?> = HashSet()
@@ -84,4 +86,4 @@ private class CollectResultsVerifier : Verifier {
 
 private const val DEFAULT_INVOCATIONS_COUNT = 100
 
-internal const val TIMEOUT = 20 * 1000L // 20 sec
+internal const val TIMEOUT = 10_000L // 10 sec
