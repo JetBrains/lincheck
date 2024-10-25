@@ -63,14 +63,14 @@ class Spinner private constructor(
      * Determines the limit for the number of iterations
      * the spin-loop should perform before yielding to other threads.
      */
-    val yieldLimit: Int
-        get() = 1 + if (isSpinning) SPIN_CYCLES_BOUND else 0
+    fun pollYieldLimit(): Int =
+        1 + if (isSpinning) SPIN_CYCLES_LIMIT else 0
 
     /**
      * Defines the limit for iterations in a spin-loop before it exits.
      */
-    val exitLimit: Int
-        get() = if (isSpinning) SPIN_CYCLES_BOUND else 0
+    fun pollExitLimit(): Int =
+        if (isSpinning) SPIN_CYCLES_LIMIT else 0
 
     /**
      * Waits in the spin-loop until the given condition is true
@@ -81,10 +81,15 @@ class Spinner private constructor(
      */
     inline fun spinWaitUntil(condition: () -> Boolean) {
         var counter = 0
+        var limit = pollYieldLimit()
+        val pollCount = SPIN_CYCLES_LIMITS_POLL_COUNT
         while (!condition()) {
             counter++
-            if (counter % yieldLimit == 0) {
+            if (counter % limit == 0) {
                 Thread.yield()
+            }
+            if (counter % pollCount == 0) {
+                limit = pollYieldLimit()
             }
         }
     }
@@ -103,12 +108,17 @@ class Spinner private constructor(
     inline fun Spinner.spinWaitBoundedUntil(condition: () -> Boolean): Boolean {
         var counter = 0
         var result = true
+        var limit = pollExitLimit()
+        val pollCount = SPIN_CYCLES_LIMITS_POLL_COUNT
         while (!condition()) {
-            if (counter >= exitLimit) {
+            if (counter >= limit) {
                 result = condition()
                 break
             }
             counter++
+            if (counter % pollCount == 0) {
+                limit = pollExitLimit()
+            }
         }
         return result
     }
@@ -147,4 +157,6 @@ internal fun SpinnerGroup(nThreads: Int): List<Spinner> {
 }
 
 
-const val SPIN_CYCLES_BOUND: Int = 1_000_000
+const val SPIN_CYCLES_LIMIT: Int = 1_000_000
+
+const val SPIN_CYCLES_LIMITS_POLL_COUNT = 1_000
