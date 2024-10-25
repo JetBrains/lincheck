@@ -531,8 +531,8 @@ abstract class ManagedStrategy(
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
      */
     open fun onThreadStart(iThread: Int) {
-        threadScheduler.startThread(iThread)
         threadScheduler.awaitTurn(iThread)
+        threadScheduler.startThread(iThread)
     }
 
     /**
