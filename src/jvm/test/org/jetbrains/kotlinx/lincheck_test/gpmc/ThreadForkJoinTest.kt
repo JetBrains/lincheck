@@ -10,12 +10,10 @@
 
 package org.jetbrains.kotlinx.lincheck_test.gpmc
 
-import org.junit.Ignore
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import org.junit.Test
 
-@Ignore
 class ThreadForkJoinTest {
 
     fun fork(): Int {
