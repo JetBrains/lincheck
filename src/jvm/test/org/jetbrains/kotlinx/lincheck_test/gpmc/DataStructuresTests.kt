@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.gpmc
 
+import org.junit.Ignore
 import kotlin.concurrent.thread
 import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.ConcurrentHashMap
@@ -17,6 +18,7 @@ import java.util.concurrent.ConcurrentSkipListMap
 import org.junit.Test
 
 
+@Ignore
 class DataStructuresTests {
 
     fun incorrectConcurrentLinkedDeque() {

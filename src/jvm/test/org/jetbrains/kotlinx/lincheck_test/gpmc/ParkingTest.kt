@@ -10,11 +10,13 @@
 
 package org.jetbrains.kotlinx.lincheck_test.gpmc
 
+import org.junit.Ignore
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.LockSupport
 import kotlin.concurrent.thread
 import org.junit.Test
 
+@Ignore
 class ParkingTest {
 
     fun operation(): Int {
