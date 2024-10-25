@@ -16,7 +16,16 @@ package sun.nio.ch.lincheck;
  * It also names the thread based on the test being run for easier debugging and tracking.
  */
 public class TestThread extends Thread {
+
+    /**
+     * The unique identifier for the thread in the context of the Lincheck test.
+     */
     public final int threadId;
+
+    /**
+     * The thread descriptor.
+     */
+    public ThreadDescriptor descriptor;
 
     /**
      * The currently suspended continuation, if present.

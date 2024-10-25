@@ -50,6 +50,13 @@ public class Injections {
     private static int currentEventId = -1;
 
     // Thread local variable storing testing code and ignored section flags.
+    /*
+     * Thread local variable storing the thread descriptor for each thread.
+     *
+     * NOTE: as an optimization, for the `TestThread` instances,
+     *   we avoid lookup via `ThreadLocal` by instead storing
+     *   the thread descriptor in a field of the thread object itself.
+     */
     private static final ThreadLocal<ThreadDescriptor> threadDescriptor =
         ThreadLocal.withInitial(() -> null);
 
@@ -57,20 +64,35 @@ public class Injections {
         new ConcurrentHashMap<Integer, ThreadDescriptor>();
 
     public static ThreadDescriptor getCurrentThreadDescriptor() {
+        var thread = Thread.currentThread();
+        if (thread instanceof TestThread) {
+            return ((TestThread) thread).descriptor;
+        }
         return threadDescriptor.get();
     }
 
     public static void setCurrentThreadDescriptor(ThreadDescriptor descriptor) {
+        var thread = Thread.currentThread();
+        if (thread instanceof TestThread) {
+            return;
+        }
         threadDescriptor.set(descriptor);
     }
 
     public static ThreadDescriptor getThreadDescriptor(Thread thread) {
+        if (thread instanceof TestThread) {
+            return ((TestThread) thread).descriptor;
+        }
         // TODO: handle hashcode collisions (?)
         var hashCode = System.identityHashCode(thread);
         return threadDescriptorsMap.get(hashCode);
     }
 
     public static void setThreadDescriptor(Thread thread, ThreadDescriptor descriptor) {
+        if (thread instanceof TestThread) {
+            ((TestThread) thread).descriptor = descriptor;
+            return;
+        }
         // TODO: handle hashcode collisions (?)
         var hashCode = System.identityHashCode(thread);
         var previousDescriptor = threadDescriptorsMap.put(hashCode, descriptor);
