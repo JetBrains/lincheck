@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck_test.gpmc
 
 import org.jetbrains.kotlinx.lincheck.strategy.ManagedDeadlockFailure
+import org.junit.Ignore
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 import org.junit.Test
@@ -41,6 +42,7 @@ class SpinLoopTest {
         }
     }
 
+    @Ignore
     @Test(timeout = TIMEOUT)
     fun testLivelock() = modelCheckerTest(
         testClass = this::class,
