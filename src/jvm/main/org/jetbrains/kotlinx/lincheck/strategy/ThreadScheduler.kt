@@ -303,6 +303,20 @@ open class ThreadScheduler {
     }
 
     /**
+     * Aborts all threads controlled by the scheduler, except the current thread.
+     *
+     * @see abortThread
+     */
+    fun abortOtherThreads() {
+        val currentThreadId = getCurrentThreadId()
+        for (thread in threads.values) {
+            if (thread.state == ThreadState.FINISHED || thread.id == currentThreadId)
+                continue
+            thread.state = ThreadState.ABORTED
+        }
+    }
+
+    /**
      * Marks the specified thread as finished.
      * The thread states transitions to [ThreadState.FINISHED].
      *

@@ -355,9 +355,14 @@ abstract class ManagedStrategy(
      * @param codeLocation the byte-code location identifier of the point in code.
      */
     private fun newSwitchPoint(iThread: Int, codeLocation: Int, tracePoint: TracePoint?) {
-        // re-throw abort error if the thread was aborted.
-        if (threadScheduler.isAborted(iThread))
-            throw ThreadAbortedError
+        // re-throw abort error if the thread was aborted
+        // TODO: in case if current thread is aborted, we may have the following situation:
+        //     `scheduledThreadId == iThread != currentThreadId`
+        //   we probably need to fix this issue and restore the invariant:
+        //     `iThread == currentThreadId`
+        if (threadScheduler.isAborted(threadScheduler.getCurrentThreadId())) {
+            threadScheduler.abortCurrentThread()
+        }
         // check we are in the right thread
         val currentThreadId = threadScheduler.scheduledThreadId
         check(iThread == currentThreadId)
@@ -677,7 +682,7 @@ abstract class ManagedStrategy(
 
     private fun abortWithSuddenInvocationResult(invocationResult: InvocationResult): Nothing {
         suddenInvocationResult = invocationResult
-        threadScheduler.abortAllThreads()
+        threadScheduler.abortOtherThreads()
         threadScheduler.abortCurrentThread()
     }
 
