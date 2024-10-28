@@ -296,24 +296,28 @@ internal open class ParallelThreadsRunner(
             initialPartExecution?.let {
                 beforePart(INIT)
                 timeout -= executor.submitAndAwait(arrayOf(it), timeout)
+                afterPart(INIT)
             }
             onThreadSwitchesOrActorFinishes()
             val afterInitStateRepresentation = constructStateRepresentation()
             // Execute the parallel part.
             beforePart(PARALLEL)
             timeout -= executor.submitAndAwait(parallelPartExecutions, timeout)
+            afterPart(PARALLEL)
             val afterParallelStateRepresentation: String? = constructStateRepresentation()
             onThreadSwitchesOrActorFinishes()
             // Execute the post part.
             postPartExecution?.let {
                 beforePart(POST)
                 timeout -= executor.submitAndAwait(arrayOf(it), timeout)
+                afterPart(POST)
             }
             val afterPostStateRepresentation = constructStateRepresentation()
             // Execute validation functions
             validationPartExecution?.let { validationPart ->
                 beforePart(VALIDATION)
                 executor.submitAndAwait(arrayOf(validationPart), timeout)
+                afterPart(VALIDATION)
                 val validationResult = validationPart.results.single()
                 if (validationResult is ExceptionResult) {
                     return ValidationFailureInvocationResult(scenario, validationResult.throwable, collectExecutionResults())

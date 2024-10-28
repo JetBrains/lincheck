@@ -112,6 +112,10 @@ abstract class Runner protected constructor(
         strategy.beforePart(part)
     }
 
+    fun afterPart(part: ExecutionPart) {
+        strategy.afterPart(part)
+    }
+
     /**
      * Closes the resources used in this runner.
      */
