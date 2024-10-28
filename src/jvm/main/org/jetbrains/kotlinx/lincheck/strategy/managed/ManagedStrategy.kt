@@ -355,10 +355,9 @@ abstract class ManagedStrategy(
      * @param codeLocation the byte-code location identifier of the point in code.
      */
     private fun newSwitchPoint(iThread: Int, codeLocation: Int, tracePoint: TracePoint?) {
-        // abort the current thread if the invocation result is already calculated.
-        if (suddenInvocationResult != null) {
-            threadScheduler.abortCurrentThread()
-        }
+        // re-throw abort error if the thread was aborted.
+        if (threadScheduler.isAborted(iThread))
+            throw ThreadAbortedError
         // check we are in the right thread
         val currentThreadId = threadScheduler.scheduledThreadId
         check(iThread == currentThreadId)
@@ -727,13 +726,14 @@ abstract class ManagedStrategy(
     }
 
     override fun unlock(monitor: Any, codeLocation: Int): Unit = runInIgnoredSection {
+        val iThread = threadScheduler.getCurrentThreadId()
         // We need to be extremely careful with the MONITOREXIT instruction,
         // as it can be put into a recursive "finally" block, releasing
         // the lock over and over until the instruction succeeds.
         // Therefore, we always release the lock in this case,
         // without tracking the event.
-        if (suddenInvocationResult != null) return
-        val iThread = threadScheduler.scheduledThreadId
+        if (threadScheduler.isAborted(iThread)) return
+        check(iThread == threadScheduler.scheduledThreadId)
         val isReleased = monitorTracker.releaseMonitor(iThread, monitor)
         if (isReleased) {
             unblockAcquiringThreads(iThread, monitor)
