@@ -188,6 +188,15 @@ open class ThreadScheduler {
         getThreadState(threadId) == ThreadState.BLOCKED
 
     /**
+     * Checks if the thread was aborted.
+     *
+     * @param threadId The identifier of the thread to check.
+     * @return `true` if the thread is aborted, `false` otherwise.
+     */
+    fun isAborted(threadId: ThreadId) =
+        getThreadState(threadId) == ThreadState.ABORTED
+
+    /**
      * Checks if the thread has finished its execution.
      *
      * @param threadId The identifier of the thread to check.
@@ -286,8 +295,10 @@ open class ThreadScheduler {
      * @see abortThread
      */
     fun abortAllThreads() {
-        threads.values.forEach {
-            it.state = ThreadState.ABORTED
+        for (thread in threads.values) {
+            if (thread.state == ThreadState.FINISHED)
+                continue
+            thread.state = ThreadState.ABORTED
         }
     }
 
