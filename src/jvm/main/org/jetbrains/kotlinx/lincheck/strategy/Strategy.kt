@@ -76,6 +76,13 @@ abstract class Strategy protected constructor(
     open fun beforePart(part: ExecutionPart) {}
 
     /**
+     * This method is called after the execution of a specific part of the scenario.
+     *
+     * @param part The execution part that has been executed.
+     */
+    open fun afterPart(part: ExecutionPart) {}
+
+    /**
      * Is invoked before each actor execution.
      */
     open fun onActorStart(iThread: Int) {}

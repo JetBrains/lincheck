@@ -105,12 +105,12 @@ open class ThreadScheduler {
     }
 
     /**
-     * Retrieves a list of threads registered in the scheduler.
+     * Retrieves all threads registered in the scheduler.
      *
-     * @return a list of threads that are currently registered.
+     * @return a map from thread ids to thread instances that are currently registered.
      */
-    fun getRegisteredThreads(): List<Thread> =
-        threads.values.map { it.thread }
+    fun getRegisteredThreads(): ThreadMap<Thread> =
+        threads.mapValues { (_, it) -> it.thread }
 
     /**
      * Retrieves the identifier of the specified thread.

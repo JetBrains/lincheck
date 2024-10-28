@@ -263,6 +263,21 @@ abstract class ManagedStrategy(
         threadScheduler.scheduleThread(nextThread)
     }
 
+    override fun afterPart(part: ExecutionPart) = runInIgnoredSection {
+        if (part === PARALLEL) {
+            // join all custom threads at the end of the parallel part
+            for ((threadId, thread) in threadScheduler.getRegisteredThreads()) {
+                // Lincheck test threads should already be finished
+                if (thread is TestThread) {
+                    check(threadScheduler.isFinished(threadId))
+                    continue
+                }
+                // wait for the custom thread to finish
+                thread.join()
+            }
+        }
+    }
+
     /**
      * Re-runs the last invocation to collect its trace.
      */
