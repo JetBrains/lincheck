@@ -66,8 +66,11 @@ class ManagedThreadScheduler : ThreadScheduler() {
      * @return Nothing as this method always throws [ThreadAbortedError].
      */
     fun abortCurrentThread(): Nothing {
-        check(isCurrentThreadScheduled())
-        val threadId = scheduledThreadId
+        val threadId = getCurrentThreadId()
+        val threadData = threads[threadId]!!
+        if (threadData.state != ThreadState.ABORTED) {
+           check(threadId == scheduledThreadId)
+        }
         threads[threadId]!!.state = ThreadState.ABORTED
         raiseThreadAbortError()
     }
