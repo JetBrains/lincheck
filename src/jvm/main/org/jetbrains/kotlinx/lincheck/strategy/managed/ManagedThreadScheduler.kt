@@ -90,9 +90,6 @@ class ManagedThreadScheduler : ThreadScheduler() {
     }
 
     private fun raiseThreadAbortError(): Nothing {
-        val descriptor = Injections.getCurrentThreadDescriptor()!!
-        // exit the testing code in case of aborting
-        descriptor.leaveTestingCode()
         throw ThreadAbortedError
     }
 
