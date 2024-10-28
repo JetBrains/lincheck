@@ -147,8 +147,7 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
             try {
                 it.runIteration(testCfg.invocationsPerIteration, verifier)
             } catch (e: Throwable) {
-                println("Unexpected failure")
-                println(e)
+                e.printStackTrace()
                 return null
             }
         }
