@@ -25,8 +25,6 @@ class ThreadForkJoinTest {
         return counter.get()
     }
 
-
-    @Ignore
     @Test(timeout = TIMEOUT)
     fun testFork() = modelCheckerTest(
         testClass = this::class,
