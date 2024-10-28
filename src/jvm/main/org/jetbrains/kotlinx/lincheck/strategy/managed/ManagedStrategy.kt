@@ -222,6 +222,8 @@ abstract class ManagedStrategy(
             val suddenResult = suddenInvocationResult ?: return result
             // Unexpected `ThreadAbortedError` should be thrown.
             check(result is UnexpectedExceptionInvocationResult)
+            // in case if invocation was aborted, make sure all threads terminate before continuing
+            joinAllThreads()
             // Check if an invocation replay is required
             val isReplayRequired = (suddenResult is SpinCycleFoundAndReplayRequired)
             if (isReplayRequired) {
@@ -252,15 +254,7 @@ abstract class ManagedStrategy(
     override fun afterPart(part: ExecutionPart) = runInIgnoredSection {
         if (part === PARALLEL) {
             // join all custom threads at the end of the parallel part
-            for ((threadId, thread) in threadScheduler.getRegisteredThreads()) {
-                // Lincheck test threads should already be finished
-                if (thread is TestThread) {
-                    check(threadScheduler.isFinished(threadId))
-                    continue
-                }
-                // wait for the custom thread to finish
-                thread.join()
-            }
+            joinAllThreads()
         }
     }
 
@@ -527,6 +521,18 @@ abstract class ManagedStrategy(
         randoms.clear()
     }
 
+    private fun joinAllThreads() {
+        for ((threadId, thread) in threadScheduler.getRegisteredThreads()) {
+            // Lincheck test threads should already be finished
+            if (thread is TestThread) {
+                check(threadScheduler.isFinished(threadId))
+                continue
+            }
+            // wait for the custom thread to finish
+            thread.join()
+        }
+    }
+
     /**
      * This method is executed as the first thread action.
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
@@ -560,12 +566,15 @@ abstract class ManagedStrategy(
         // so we exit testing code to avoid trace collection resume or some bizarre bugs
         leaveTestingCode()
         // skip abort exception
-        if (exception === ThreadAbortedError) return
-        // Despite the fact that the corresponding failure will be detected by the runner,
-        // the managed strategy can construct a trace to reproduce this failure.
-        // Let's then store the corresponding failing result and construct the trace.
-        suddenInvocationResult = UnexpectedExceptionInvocationResult(exception, runner.collectExecutionResults())
-        threadScheduler.abortAllThreads()
+        if (exception !== ThreadAbortedError) {
+            // Despite the fact that the corresponding failure will be detected by the runner,
+            // the managed strategy can construct a trace to reproduce this failure.
+            // Let's then store the corresponding failing result and construct the trace.
+            suddenInvocationResult = UnexpectedExceptionInvocationResult(exception, runner.collectExecutionResults())
+            threadScheduler.abortAllThreads()
+        }
+        // notify the scheduler that the thread is going to be finished
+        threadScheduler.finishThread(iThread)
     }
 
     override fun onActorStart(iThread: Int) {

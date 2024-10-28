@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.strategy
 
 import org.jetbrains.kotlinx.lincheck.util.*
 import sun.nio.ch.lincheck.Injections
+import sun.nio.ch.lincheck.TestThread
 import sun.nio.ch.lincheck.ThreadDescriptor
 
 /**
@@ -215,6 +216,9 @@ open class ThreadScheduler {
     fun registerThread(thread: Thread, descriptor: ThreadDescriptor): ThreadId {
         val threadId = threads.size
         val threadData = createThreadData(threadId, thread)
+        if (thread is TestThread) {
+            check(threadId == thread.threadId)
+        }
         threads_.put(threadId, threadData).ensureNull()
         descriptor.eventTrackerData = threadData
         return threadId
