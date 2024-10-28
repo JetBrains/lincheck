@@ -539,7 +539,8 @@ abstract class ManagedStrategy(
         for ((threadId, thread) in threadScheduler.getRegisteredThreads()) {
             // Lincheck test threads should already be finished
             if (thread is TestThread) {
-                check(threadScheduler.isFinished(threadId))
+                check(threadScheduler.isAborted(threadId) ||
+                      threadScheduler.isFinished(threadId))
                 continue
             }
             // wait for the custom thread to finish
