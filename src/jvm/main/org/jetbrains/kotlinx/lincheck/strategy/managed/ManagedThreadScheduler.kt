@@ -90,9 +90,18 @@ class ManagedThreadScheduler : ThreadScheduler() {
     }
 
     private fun raiseThreadAbortError(): Nothing {
+        /* TODO: currently we cannot implement it this way,
+         *   one of the reasons being because of the how monitors support is implemented,
+         *   in testing code, monitorenter/monitorexit are replaced with the strategy lock/unlock callbacks,
+         *   after we throw the abort exception, some finally blocks still might be executed,
+         *   these finally blocks may contain monitorexit instruction,
+         *   which this time (outside testing code) will actually be executed,
+         *   resulting in `IllegalMonitorStateException`
+         */
         // exit the testing code in case of aborting
         // val descriptor = Injections.getCurrentThreadDescriptor()!!
         // descriptor.leaveTestingCode()
+
         // raise the exception
         throw ThreadAbortedError
     }
