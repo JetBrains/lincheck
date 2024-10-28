@@ -55,13 +55,17 @@ internal object FieldSearchHelper {
             traverseResult is FoundInNonFinalField
         }
 
-        traverseObjectHierarchy(testObject) { ownerObject, field ->
-            if (field.type.isPrimitive) return@traverseObjectHierarchy false
+        traverseObjectHierarchy(testObject) { ownerObject, field, fieldValue ->
+            if (field.type.isPrimitive) return@traverseObjectHierarchy null
 
-            val fieldValue = readField(ownerObject, field) ?: return@traverseObjectHierarchy false
-
-            if (value === fieldValue && !isTraverseCompleted()) {
-                if (fieldName != null) traverseResult = MultipleFieldsMatching
+            if (
+                value === fieldValue &&
+                field.name != "this$0" && // we do not want to reach the required value via an inner class link to the outer class
+                !isTraverseCompleted()
+            ) {
+                if (fieldName != null) {
+                    traverseResult = MultipleFieldsMatching
+                }
                 else if (!Modifier.isFinal(field.modifiers)) traverseResult = FoundInNonFinalField
                 else {
                     fieldName = if (Modifier.isStatic(field.modifiers)) {
@@ -73,7 +77,7 @@ internal object FieldSearchHelper {
                 }
             }
 
-            return@traverseObjectHierarchy !isTraverseCompleted()
+            return@traverseObjectHierarchy if (isTraverseCompleted()) null else fieldValue
         }
 
         return traverseResult

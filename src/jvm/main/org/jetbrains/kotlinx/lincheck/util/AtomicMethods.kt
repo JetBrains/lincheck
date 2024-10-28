@@ -96,10 +96,16 @@ internal fun isAtomicMethod(className: String, methodName: String) =
     isAtomicClass(className) && methodName in atomicMethods
 
 internal fun isAtomicArray(receiver: Any?) =
+    isAtomicArrayJava(receiver) ||
+    isAtomicFUArray(receiver)
+
+internal fun isAtomicArrayJava(receiver: Any?) =
     // java.util.concurrent
     receiver is AtomicReferenceArray<*> ||
     receiver is AtomicIntegerArray ||
-    receiver is AtomicLongArray ||
+    receiver is AtomicLongArray
+
+internal fun isAtomicFUArray(receiver: Any?) =
     // kotlinx.atomicfu
     receiver is kotlinx.atomicfu.AtomicArray<*> ||
     receiver is kotlinx.atomicfu.AtomicBooleanArray ||

@@ -16,6 +16,9 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
+import org.jetbrains.kotlinx.lincheck.util.isAtomicArray
+import org.jetbrains.kotlinx.lincheck.util.isAtomicArrayJava
+import org.jetbrains.kotlinx.lincheck.util.isAtomicFUArray
 import org.jetbrains.kotlinx.lincheck.util.readField
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.io.PrintWriter
@@ -24,6 +27,8 @@ import java.lang.ref.*
 import java.lang.reflect.*
 import java.lang.reflect.Method
 import java.util.*
+import java.util.concurrent.atomic.AtomicIntegerArray
+import java.util.concurrent.atomic.AtomicReferenceArray
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
 
@@ -234,13 +239,15 @@ internal val Class<*>.allDeclaredFieldWithSuperclasses get(): List<Field> {
 /**
  * Traverses all fields of a given object in bfs order.
  * The [callback] is called for each tuple of `(fieldOwner, field, fieldValue)` of the [obj],
- * the return value of the callback determines, whether the considered field should be traversed further.
+ * the return value of the callback determines, what object should be traversed further
+ * (it can be something different from `fieldValue`).
  *
  * Parameters of [callback]:
  * - `fieldOwner`: either `Any` - some class instance that owns the field, or `Class<*>` is case if `field` is static.
  * - `field`: the field that currently is traversed.
+ * - `fieldValue`: the value that was read from the field.
  */
-internal fun traverseObjectHierarchy(obj: Any, callback: (Any, Field) -> Boolean) {
+internal fun traverseObjectHierarchy(obj: Any, callback: (Any, Field, Any?) -> Any?) {
     val queue = ArrayDeque<Any>()
     val visitedObjects = Collections.newSetFromMap<Any>(IdentityHashMap())
 
@@ -262,6 +269,23 @@ internal fun traverseObjectHierarchy(obj: Any, callback: (Any, Field) -> Boolean
                 }
                 emptyList<Field>()
             }
+            else if (
+                currentObj is AtomicReferenceArray<*> ||
+                currentObj is kotlinx.atomicfu.AtomicArray<*>
+            ) {
+                // Do the same as before, but for atomic arrays (with non-primitive types)
+                val getElementAt = currentObj.javaClass.getMethod("get", Int::class.javaPrimitiveType)
+                val length = (
+                    if (currentObj is AtomicReferenceArray<*>) currentObj.javaClass.getMethod("length").invoke(currentObj)
+                    else currentObj.javaClass.getMethod("getSize").invoke(currentObj)
+                        //currentObj.javaClass.getDeclaredField("size").get(currentObj)
+                ) as Int
+
+                for (index in 0..length - 1) {
+                    getElementAt.invoke(currentObj, index)?.let { queue.add(it) }
+                }
+                emptyList<Field>()
+            }
             else currentObj.javaClass.allDeclaredFieldWithSuperclasses
 
         for (f in fields) {
@@ -269,17 +293,18 @@ internal fun traverseObjectHierarchy(obj: Any, callback: (Any, Field) -> Boolean
             // which can be thrown, for instance, when attempting to read a field of
             // a hidden class (starting from Java 15).
             val result = runCatching { readField(currentObj, f) }
+            if (result.isFailure) continue // do not pass fields to the user, that are non-readable by Unsafe
+
             val fieldValue = result.getOrNull()
+            val nextObject = callback(currentObj, f, fieldValue)
 
             if (
-                result.isSuccess && // do not pass non-readable by Unsafe fields to the user
-                callback(currentObj, f) && // user determines, whether to traverse deeper in this field
-                !f.type.isPrimitive && // no primitives traversing
-                fieldValue != null && // no null traversing
-                fieldValue !in visitedObjects // no reference-cycles allowed during traversing
+                nextObject != null && // user determines, if null, then no object will be appended to queue
+                !nextObject.javaClass.isPrimitive && // no primitives traversing
+                nextObject !in visitedObjects // no reference-cycles allowed during traversing
             ) {
-                queue.add(fieldValue)
-                visitedObjects.add(fieldValue)
+                queue.add(nextObject)
+                visitedObjects.add(nextObject)
             }
         }
     }
