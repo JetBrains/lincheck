@@ -42,7 +42,6 @@ class SpinLoopTest {
         }
     }
 
-    @Ignore
     @Test(timeout = TIMEOUT)
     fun testLivelock() = modelCheckerTest(
         testClass = this::class,
