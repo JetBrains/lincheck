@@ -35,4 +35,19 @@ class HangTest {
         expectedFailure = TimeoutFailure::class,
     )
 
+    fun hangWithoutThreadJoin() {
+        thread {
+            while (true) { }
+        }
+        thread {
+            while (true) { }
+        }
+    }
+
+    @Test(timeout = TIMEOUT)
+    fun testHangWithoutThreadJoin() = modelCheckerTest(
+        testClass = this::class,
+        testOperation = this::hangWithoutThreadJoin,
+        expectedFailure = TimeoutFailure::class,
+    )
 }
