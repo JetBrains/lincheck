@@ -86,22 +86,6 @@ private fun enumerateObjects(obj: Any, objectNumberMap: MutableMap<Any, Int>) {
                 }
             }
 
-//            if (jumpValue?.javaClass?.canonicalName == "kotlinx.atomicfu.AtomicRef") {
-//                jumpValue = readField(jumpValue, jumpValue.javaClass.getDeclaredField("value"))
-//            }
-//            if (jumpValue?.javaClass?.canonicalName == "kotlinx.atomicfu.AtomicInt") {
-//                jumpValue = readField(jumpValue, jumpValue.javaClass.getDeclaredField("value"))
-//            }
-//            if (jumpValue?.javaClass?.canonicalName == "kotlinx.atomicfu.AtomicLong") {
-//                jumpValue = readField(jumpValue, jumpValue.javaClass.getDeclaredField("value"))
-//            }
-//            if (jumpValue?.javaClass?.canonicalName == "kotlinx.atomicfu.AtomicBoolean") {
-//                jumpValue = readField(jumpValue, jumpValue.javaClass.getDeclaredField("_value"))
-//            }
-
-//            if (jumpValue is AtomicIntegerArray) {
-//                jumpValue = (0 until jumpValue.length()).map { (jumpValue as AtomicIntegerArray).get(it) }.toIntArray()
-//            }
             if (jumpValue is AtomicReferenceArray<*>) {
                 jumpValue = (0 until jumpValue.length()).map { (jumpValue as AtomicReferenceArray<*>).get(it) }.toTypedArray()
             }
