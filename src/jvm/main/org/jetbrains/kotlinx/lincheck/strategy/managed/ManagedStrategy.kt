@@ -29,6 +29,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanO
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
 import java.lang.reflect.*
+import java.util.concurrent.TimeoutException
 import java.util.*
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 
@@ -222,8 +223,6 @@ abstract class ManagedStrategy(
             val suddenResult = suddenInvocationResult ?: return result
             // Unexpected `ThreadAbortedError` should be thrown.
             check(result is UnexpectedExceptionInvocationResult)
-            // in case if invocation was aborted, make sure all threads terminate before continuing
-            joinAllThreads()
             // Check if an invocation replay is required
             val isReplayRequired = (suddenResult is SpinCycleFoundAndReplayRequired)
             if (isReplayRequired) {
@@ -249,13 +248,6 @@ abstract class ManagedStrategy(
         }
         loopDetector.beforePart(nextThread)
         threadScheduler.scheduleThread(nextThread)
-    }
-
-    override fun afterPart(part: ExecutionPart) = runInIgnoredSection {
-        if (part === PARALLEL) {
-            // join all custom threads at the end of the parallel part
-            joinAllThreads()
-        }
     }
 
     /**
@@ -525,17 +517,10 @@ abstract class ManagedStrategy(
         randoms.clear()
     }
 
-    private fun joinAllThreads() {
-        for ((threadId, thread) in threadScheduler.getRegisteredThreads()) {
-            // Lincheck test threads should already be finished
-            if (thread is TestThread) {
-                check(threadScheduler.isAborted(threadId) ||
-                      threadScheduler.isFinished(threadId))
-                continue
-            }
-            // wait for the custom thread to finish
-            thread.join()
-        }
+    override fun awaitAllThreads(timeoutNano: Long): Long {
+        val elapsedTime = threadScheduler.awaitAllThreadsFinish(timeoutNano)
+        if (elapsedTime < 0L) throw TimeoutException()
+        return elapsedTime
     }
 
     /**

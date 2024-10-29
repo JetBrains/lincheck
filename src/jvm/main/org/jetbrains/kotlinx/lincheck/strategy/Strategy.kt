@@ -13,6 +13,7 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.managed.Trace
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
+import java.util.concurrent.TimeoutException
 import java.io.Closeable
 
 /**
@@ -68,18 +69,22 @@ abstract class Strategy protected constructor(
     open fun tryCollectTrace(result: InvocationResult): Trace? = null
 
     /**
+     * Waits for all threads in the current invocation to complete or suspend within the given timeout.
+     *
+     * @param timeoutNano The maximum time to wait in nanoseconds.
+     * @return The elapsed time in nanoseconds if all threads finish within the timeout.
+     * @throws TimeoutException if more than [timeoutNano] is passed.
+     */
+    open fun awaitAllThreads(timeoutNano: Long): Long {
+        return 0L
+    }
+
+    /**
      * This method is called before the execution of a specific scenario part.
      *
      * @param part The execution part that is about to be executed.
      */
     open fun beforePart(part: ExecutionPart) {}
-
-    /**
-     * This method is called after the execution of a specific part of the scenario.
-     *
-     * @param part The execution part that has been executed.
-     */
-    open fun afterPart(part: ExecutionPart) {}
 
     /**
      * Is invoked before each actor execution.

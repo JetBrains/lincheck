@@ -286,8 +286,8 @@ internal open class ParallelThreadsRunner(
         suspensionPointResults[iThread][actorId] != NoResult || completions[iThread][actorId].resWithCont.get() != null
 
     override fun run(): InvocationResult {
+        var timeout = timeoutMs * 1_000_000
         try {
-            var timeout = timeoutMs * 1_000_000
             // Create a new testing class instance.
             createTestInstance()
             // set the event tracker
@@ -296,28 +296,26 @@ internal open class ParallelThreadsRunner(
             initialPartExecution?.let {
                 beforePart(INIT)
                 timeout -= executor.submitAndAwait(arrayOf(it), timeout)
-                afterPart(INIT)
             }
             onThreadSwitchesOrActorFinishes()
             val afterInitStateRepresentation = constructStateRepresentation()
             // Execute the parallel part.
             beforePart(PARALLEL)
             timeout -= executor.submitAndAwait(parallelPartExecutions, timeout)
-            afterPart(PARALLEL)
+            // Wait for all threads to finish at the end of the parallel part
+            timeout -= strategy.awaitAllThreads(timeout)
             val afterParallelStateRepresentation: String? = constructStateRepresentation()
             onThreadSwitchesOrActorFinishes()
             // Execute the post part.
             postPartExecution?.let {
                 beforePart(POST)
                 timeout -= executor.submitAndAwait(arrayOf(it), timeout)
-                afterPart(POST)
             }
             val afterPostStateRepresentation = constructStateRepresentation()
             // Execute validation functions
             validationPartExecution?.let { validationPart ->
                 beforePart(VALIDATION)
                 executor.submitAndAwait(arrayOf(validationPart), timeout)
-                afterPart(VALIDATION)
                 val validationResult = validationPart.results.single()
                 if (validationResult is ExceptionResult) {
                     return ValidationFailureInvocationResult(scenario, validationResult.throwable, collectExecutionResults())
@@ -327,9 +325,17 @@ internal open class ParallelThreadsRunner(
             // We do not want the transformed code to be reachable outside of the runner and strategy classes.
             return CompletedInvocationResult(collectExecutionResults(afterInitStateRepresentation, afterParallelStateRepresentation, afterPostStateRepresentation))
         } catch (e: TimeoutException) {
-            val threadDump = collectThreadDump(this)
-            return RunnerTimeoutInvocationResult(threadDump, collectExecutionResults())
+            return RunnerTimeoutInvocationResult()
         } catch (e: ExecutionException) {
+            // in case if invocation thrown an exception,
+            // make sure all threads terminate before continuing
+            // and handle possible hangings gracefully
+            runCatching { strategy.awaitAllThreads(timeout) }
+                .onFailure { exception ->
+                    if (exception is TimeoutException) {
+                        return RunnerTimeoutInvocationResult()
+                    }
+                }
             return UnexpectedExceptionInvocationResult(e.cause!!, collectExecutionResults())
         } finally {
             resetState()
@@ -384,6 +390,11 @@ internal open class ParallelThreadsRunner(
                 ?: continue
             descriptor.eventTracker = null
         }
+    }
+
+    private fun RunnerTimeoutInvocationResult(): RunnerTimeoutInvocationResult {
+        val threadDump = collectThreadDump(this)
+        return RunnerTimeoutInvocationResult(threadDump, collectExecutionResults())
     }
 
     private fun createInitialPartExecution() =
