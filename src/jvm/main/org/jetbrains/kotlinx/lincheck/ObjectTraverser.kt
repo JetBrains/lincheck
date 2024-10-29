@@ -49,7 +49,6 @@ internal fun enumerateObjects(obj: Any): Map<Any, Int> {
  * @param objectNumberMap result enumeration map
  */
 private fun enumerateObjects(obj: Any, objectNumberMap: MutableMap<Any, Int>) {
-    println("Traversing object: $obj")
     if (obj is Class<*> || obj is ClassLoader) return
     objectNumberMap[obj] = getObjectNumber(obj.javaClass, obj)
 
