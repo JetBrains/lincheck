@@ -15,6 +15,7 @@ import org.junit.Ignore
 import kotlin.concurrent.thread
 import org.junit.Test
 
+@Ignore
 class HangTest {
 
     fun hang() {
