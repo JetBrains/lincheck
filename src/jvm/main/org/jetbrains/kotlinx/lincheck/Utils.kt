@@ -258,11 +258,11 @@ internal fun traverseObjectHierarchy(obj: Any, treatArrayElementsAsFields: Boole
         val currentObj = queue.removeFirst()
         val fields =
             if (currentObj is Class<*>) emptyList<Field>()
-            else if (currentObj.javaClass.isArray) {
+            else if (currentObj.javaClass.isArray && treatArrayElementsAsFields) {
                 // We do not traverse the actual fields of an array,
                 // instead the elements of the array are treated as its field.
                 // But note that primitive arrays are skipped completely.
-                if (treatArrayElementsAsFields && currentObj is Array<*>) {
+                if (currentObj is Array<*>) {
                     currentObj.forEach { element ->
                         element?.let { queue.add(it) }
                     }
@@ -270,21 +270,18 @@ internal fun traverseObjectHierarchy(obj: Any, treatArrayElementsAsFields: Boole
                 emptyList<Field>()
             }
             else if (
-                currentObj is AtomicReferenceArray<*> ||
-                currentObj is kotlinx.atomicfu.AtomicArray<*>
+                (currentObj is AtomicReferenceArray<*> || currentObj is kotlinx.atomicfu.AtomicArray<*>) &&
+                treatArrayElementsAsFields
             ) {
                 // Do the same as before, but for atomic arrays (with non-primitive types)
                 val getElementAt = currentObj.javaClass.getMethod("get", Int::class.javaPrimitiveType)
                 val length = (
                     if (currentObj is AtomicReferenceArray<*>) currentObj.javaClass.getMethod("length").invoke(currentObj)
                     else currentObj.javaClass.getMethod("getSize").invoke(currentObj)
-                        //currentObj.javaClass.getDeclaredField("size").get(currentObj)
                 ) as Int
 
-                if (treatArrayElementsAsFields) {
-                    for (index in 0..length - 1) {
-                        getElementAt.invoke(currentObj, index)?.let { queue.add(it) }
-                    }
+                for (index in 0..length - 1) {
+                    getElementAt.invoke(currentObj, index)?.let { queue.add(it) }
                 }
                 emptyList<Field>()
             }
