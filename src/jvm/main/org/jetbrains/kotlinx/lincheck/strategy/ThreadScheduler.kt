@@ -331,6 +331,51 @@ open class ThreadScheduler {
     }
 
     /**
+     * Awaits the completion of a thread up to a specified timeout.
+     *
+     * @param threadId The identifier of the thread to await.
+     * @param timeoutNano The maximum time to wait in nanoseconds.
+     * @return The elapsed time in nanoseconds if the thread finishes or aborts;
+     *   -1 if the timeout is reached.
+     */
+    fun awaitThreadFinish(threadId: ThreadId, timeoutNano: Long): Long {
+        val threadData = threads[threadId]!!
+        // special handling of Lincheck test threads
+        if (threadData.thread is TestThread) {
+            val elapsedTime = threadData.spinner.spinWaitTimedUntil(timeoutNano) {
+                threadData.state == ThreadState.FINISHED ||
+                // TODO: due to limitations of current implementation,
+                //   Lincheck test threads sometime end up in ABORTED state,
+                //   even though they are actually finished
+                threadData.state == ThreadState.ABORTED
+            }
+            return elapsedTime
+        }
+        val startTime = System.nanoTime()
+        val timeoutMs = timeoutNano / 1_000_000
+        threadData.thread.join(timeoutMs, (timeoutNano % 1_000_000).toInt())
+        val elapsedTime = System.nanoTime() - startTime
+        return if (elapsedTime < timeoutNano) elapsedTime else -1
+    }
+
+    /**
+     * Awaits the completion of all threads up to a specified timeout.
+     *
+     * @param timeoutNano The maximum time to wait in nanoseconds for all threads to finish.
+     * @return The elapsed time in nanoseconds if all threads finish within the timeout;
+     *   -1 if the timeout is reached before all threads finish.
+     */
+    fun awaitAllThreadsFinish(timeoutNano: Long): Long {
+        var remainingTime = timeoutNano
+        for (threadData in threads.values) {
+            val elapsedTime = awaitThreadFinish(threadData.id, remainingTime)
+            if (elapsedTime < 0) return -1
+            remainingTime -= elapsedTime
+        }
+        return (timeoutNano - remainingTime)
+    }
+
+    /**
      * Resets the thread scheduler by removing all registered threads.
      */
     fun reset() {

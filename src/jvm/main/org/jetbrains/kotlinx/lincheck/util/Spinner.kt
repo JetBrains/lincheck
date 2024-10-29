@@ -73,6 +73,15 @@ class Spinner private constructor(
         if (isSpinning) SPIN_CYCLES_LIMIT else 0
 
     /**
+     * Calculates the elapsed time in nanoseconds since the provided start time.
+     *
+     * @param startTimeNano The starting time in nanoseconds.
+     * @return The elapsed time in nanoseconds.
+     */
+    fun pollElapsedTime(startTimeNano: Long): Long =
+        (System.nanoTime() - startTimeNano)
+
+    /**
      * Waits in the spin-loop until the given condition is true
      * with periodical yielding to other threads.
      *
@@ -121,6 +130,32 @@ class Spinner private constructor(
             }
         }
         return result
+    }
+
+    /**
+     * Waits in a spin-loop until the specified condition is met or the timeout is reached.
+     *
+     * @param timeoutNano The maximum time to wait in nanoseconds.
+     * @param condition A lambda function that determines the condition to wait for.
+     *                  The function should return true when the condition is satisfied, and false otherwise.
+     * @return The elapsed time in nanoseconds if the condition is met before the timeout;
+     *   -1 if the timeout is reached.
+     */
+    inline fun spinWaitTimedUntil(timeoutNano: Long, condition: () -> Boolean): Long {
+        var counter = 0
+        val startTime = System.nanoTime()
+        var elapsedTime = 0L
+        val pollCount = SPIN_CYCLES_LIMITS_POLL_COUNT
+        while (!condition()) {
+            if (elapsedTime >= timeoutNano) {
+                return -1
+            }
+            counter++
+            if (counter % pollCount == 0) {
+                elapsedTime = pollElapsedTime(startTime)
+            }
+        }
+        return pollElapsedTime(startTime)
     }
 }
 
