@@ -10,24 +10,20 @@
 package org.jetbrains.kotlinx.lincheck
 
 import kotlinx.coroutines.*
-import sun.nio.ch.lincheck.EventTracker
-import sun.nio.ch.lincheck.TestThread
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
-import org.jetbrains.kotlinx.lincheck.util.isAtomicArray
-import org.jetbrains.kotlinx.lincheck.util.isAtomicArrayJava
-import org.jetbrains.kotlinx.lincheck.util.isAtomicFUArray
 import org.jetbrains.kotlinx.lincheck.util.readField
 import org.jetbrains.kotlinx.lincheck.verifier.*
+import sun.nio.ch.lincheck.EventTracker
+import sun.nio.ch.lincheck.TestThread
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.lang.ref.*
 import java.lang.reflect.*
 import java.lang.reflect.Method
 import java.util.*
-import java.util.concurrent.atomic.AtomicIntegerArray
 import java.util.concurrent.atomic.AtomicReferenceArray
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
@@ -238,6 +234,10 @@ internal val Class<*>.allDeclaredFieldWithSuperclasses get(): List<Field> {
 
 /**
  * Traverses all fields of a given object in bfs order.
+ *
+ * In case [treatArrayElementsAsFields] is
+ * set to `false`, then array fields will be traversed instead of elements.
+ *
  * The [callback] is called for each tuple of `(fieldOwner, field, fieldValue)` of the [obj],
  * the return value of the callback determines, what object should be traversed further
  * (it can be something different from `fieldValue`).
@@ -247,7 +247,7 @@ internal val Class<*>.allDeclaredFieldWithSuperclasses get(): List<Field> {
  * - `field`: the field that currently is traversed.
  * - `fieldValue`: the value that was read from the field.
  */
-internal fun traverseObjectHierarchy(obj: Any, callback: (Any, Field, Any?) -> Any?) {
+internal fun traverseObjectHierarchy(obj: Any, treatArrayElementsAsFields: Boolean = true, callback: (Any, Field, Any?) -> Any?) {
     val queue = ArrayDeque<Any>()
     val visitedObjects = Collections.newSetFromMap<Any>(IdentityHashMap())
 
@@ -262,7 +262,7 @@ internal fun traverseObjectHierarchy(obj: Any, callback: (Any, Field, Any?) -> A
                 // We do not traverse the actual fields of an array,
                 // instead the elements of the array are treated as its field.
                 // But note that primitive arrays are skipped completely.
-                if (currentObj is Array<*>) {
+                if (treatArrayElementsAsFields && currentObj is Array<*>) {
                     currentObj.forEach { element ->
                         element?.let { queue.add(it) }
                     }
@@ -281,8 +281,10 @@ internal fun traverseObjectHierarchy(obj: Any, callback: (Any, Field, Any?) -> A
                         //currentObj.javaClass.getDeclaredField("size").get(currentObj)
                 ) as Int
 
-                for (index in 0..length - 1) {
-                    getElementAt.invoke(currentObj, index)?.let { queue.add(it) }
+                if (treatArrayElementsAsFields) {
+                    for (index in 0..length - 1) {
+                        getElementAt.invoke(currentObj, index)?.let { queue.add(it) }
+                    }
                 }
                 emptyList<Field>()
             }

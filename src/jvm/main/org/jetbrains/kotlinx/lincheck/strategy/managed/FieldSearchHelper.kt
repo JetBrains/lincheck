@@ -13,7 +13,6 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import org.jetbrains.kotlinx.lincheck.strategy.managed.FieldSearchHelper.TraverseResult.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.OwnerWithName.*
 import org.jetbrains.kotlinx.lincheck.traverseObjectHierarchy
-import org.jetbrains.kotlinx.lincheck.util.readField
 import java.lang.reflect.Modifier
 
 
@@ -55,17 +54,11 @@ internal object FieldSearchHelper {
             traverseResult is FoundInNonFinalField
         }
 
-        traverseObjectHierarchy(testObject) { ownerObject, field, fieldValue ->
-            if (field.type.isPrimitive) return@traverseObjectHierarchy null
+        traverseObjectHierarchy(testObject, treatArrayElementsAsFields = false) { ownerObject, field, fieldValue ->
+            if (field.type.isPrimitive || fieldValue == null) return@traverseObjectHierarchy null
 
-            if (
-                value === fieldValue &&
-                field.name != "this$0" && // we do not want to reach the required value via an inner class link to the outer class
-                !isTraverseCompleted()
-            ) {
-                if (fieldName != null) {
-                    traverseResult = MultipleFieldsMatching
-                }
+            if (value === fieldValue && !isTraverseCompleted()) {
+                if (fieldName != null) traverseResult = MultipleFieldsMatching
                 else if (!Modifier.isFinal(field.modifiers)) traverseResult = FoundInNonFinalField
                 else {
                     fieldName = if (Modifier.isStatic(field.modifiers)) {
@@ -75,6 +68,7 @@ internal object FieldSearchHelper {
                     }
                     traverseResult = FieldName(fieldName!!)
                 }
+                return@traverseObjectHierarchy null
             }
 
             return@traverseObjectHierarchy if (isTraverseCompleted()) null else fieldValue
