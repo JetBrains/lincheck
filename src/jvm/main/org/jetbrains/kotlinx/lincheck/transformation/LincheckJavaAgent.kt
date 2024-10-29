@@ -218,6 +218,7 @@ internal object LincheckJavaAgent {
             Class.forName(canonicalClassName)
             return
         }
+        if (!shouldTransform(canonicalClassName, instrumentationMode)) return
         if (canonicalClassName in instrumentedClasses) return // already instrumented
         ensureClassHierarchyIsTransformed(Class.forName(canonicalClassName), Collections.newSetFromMap(IdentityHashMap()))
     }
