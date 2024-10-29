@@ -28,7 +28,6 @@ class HangTest {
         t2.join()
     }
 
-    @Ignore
     @Test(timeout = TIMEOUT)
     fun testHang() = modelCheckerTest(
         testClass = this::class,
