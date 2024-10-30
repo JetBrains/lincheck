@@ -130,7 +130,10 @@ internal class FixedActiveThreadsExecutor(private val testName: String, private 
                 }
             }
         }
-        exception?.let { throw ExecutionException(it) }
+        exception?.let { 
+            println("Execution failed with exception: $it")
+            throw ExecutionException(it) 
+        }
         return System.nanoTime() - startTime
     }
 
@@ -193,6 +196,9 @@ internal class FixedActiveThreadsExecutor(private val testName: String, private 
     }
 
     private fun setResult(iThread: Int, any: Any) {
+        if (any is Throwable) {
+            any.printStackTrace()
+        }
         if (results[iThread].compareAndSet(null, any)) return
         // CAS failed => a test thread is parked.
         // Set the result and unpark the waiting thread.

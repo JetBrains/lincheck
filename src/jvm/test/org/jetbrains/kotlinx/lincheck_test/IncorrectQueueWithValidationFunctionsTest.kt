@@ -48,7 +48,7 @@ class IncorrectQueueWithValidationFunctionsTest {
         val failure = ModelCheckingOptions()
             .addCustomScenario {
                 parallel {
-                    thread { }
+//                    thread { }
                     thread {
                         actor(IncorrectQueueWithValidationFunctionsTest::enqueue, 0)
                     }
@@ -62,6 +62,7 @@ class IncorrectQueueWithValidationFunctionsTest {
             .invocationsPerIteration(1_000)
             .checkObstructionFreedom(true)
             .sequentialSpecification(IntQueueSequential::class.java)
+            .threads(1)
             .checkImpl(this::class.java)
 
         assertTrue(failure is IncorrectResultsFailure)

@@ -40,7 +40,8 @@ abstract class NativeCallTest {
             ModelCheckingOptions()
                 .actorsBefore(0)
                 .actorsAfter(0)
-                .threads(1)
+                .iterations(30)
+                .threads(2)
                 .actorsPerThread(1)
                 .verifier(FailingVerifier::class.java)
                 .checkImpl(this::class.java)
@@ -60,6 +61,8 @@ abstract class NativeCallTest {
     fun test() = testTraceDebugger()
 }
 
+// TODO: changing output
+// TODO: ===
 abstract class CurrentTimeTest : NativeCallTest()
 
 class CurrentTimeNanoTest : CurrentTimeTest() {
@@ -105,6 +108,15 @@ class RandomInt3Test : RandomTest() {
 class RandomInt4Test : RandomTest() {
     @Operation
     fun operation() = Random.nextInt(1000..10000)
+}
+
+class FakeRandomTest : RandomTest() {
+    class NotRandom : Random() {
+        private var x = 0
+        override fun nextBits(bitCount: Int): Int = x++
+    }
+    @Operation
+    fun operation() = NotRandom().nextBits(10)
 }
 
 class RandomLong1Test : RandomTest() {
@@ -263,6 +275,8 @@ class ExceptionTest : NativeCallTest() {
     @Operation
     fun operation() = Random.nextInt(10, 0)
 }
+
+// todo ===
 
 @Suppress("UNUSED_PARAMETER")
 class FailingVerifier(sequentialSpecification: Class<*>) : Verifier {

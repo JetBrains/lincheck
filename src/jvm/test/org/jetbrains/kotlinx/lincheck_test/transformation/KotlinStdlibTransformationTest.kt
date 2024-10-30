@@ -11,6 +11,7 @@ package org.jetbrains.kotlinx.lincheck_test.transformation
 
 import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
 
 /**
@@ -54,5 +55,9 @@ class KotlinStdlibTransformationTest : AbstractLincheckTest() {
 
     override fun <O : Options<O, *>> O.customize() {
         iterations(1)
+        threads(6)
+        if (this is ModelCheckingOptions) {
+            invocationsPerIteration(1000)
+        }
     }
 }

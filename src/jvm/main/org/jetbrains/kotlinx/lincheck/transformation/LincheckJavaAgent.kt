@@ -139,7 +139,7 @@ internal object LincheckJavaAgent {
 
             // In the model checking mode, Lincheck processes classes lazily, only when they are used.
             instrumentationMode == MODEL_CHECKING -> {
-                check(instrumentedClasses.isEmpty())
+                check(instrumentedClasses.isEmpty()) { instrumentedClasses.joinToString() }
             }
         }
     }

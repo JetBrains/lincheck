@@ -15,12 +15,17 @@ import org.objectweb.asm.commons.Method
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.DeterministicHashCodeTransformer.Companion.hashCodeFilter
-import org.jetbrains.kotlinx.lincheck.transformation.transformers.DeterministicRandomTransformer.Companion.randomMethodFilter
+import org.jetbrains.kotlinx.lincheck.transformation.transformers.DeterministicRandomTransformer.Companion.randomInstanceMethodsFilter
+import org.jetbrains.kotlinx.lincheck.transformation.transformers.DeterministicRandomTransformer.Companion.restRandomMethodsFilter
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.DeterministicTimeTransformer.Companion.timeFilter
+import org.objectweb.asm.Label
 import org.objectweb.asm.Opcodes
+import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.Type.*
 import sun.nio.ch.lincheck.*
+import java.io.PrintStream
+import java.lang.reflect.Modifier
 import java.util.*
 import kotlin.reflect.KClass
 
@@ -203,11 +208,18 @@ internal class DeterministicRandomTransformer(
         private val randomGeneratorMethods by lazy {
             Random::class.java.interfaces.singleOrNull { it.simpleName == "RandomGenerator" }?.getDeclaredAsmMethods()
         }
-        private val randomMethods by lazy {
-            Random::class.getDeclaredAsmMethods() + randomGeneratorMethods.orEmpty() + kotlin.random.Random::class.getDeclaredAsmMethods()
+        private val declaredRandomMethods by lazy {
+            Random::class.getDeclaredAsmMethods()// + randomGeneratorMethods.orEmpty() + kotlin.random.Random::class.getDeclaredAsmMethods()
+        }
+        private val randomInstanceMethods by lazy {
+            Random::class.java.declaredMethods.filter { !Modifier.isStatic(it.modifiers) }.map(Method::getMethod) +
+                    randomGeneratorMethods.orEmpty()
         }
         private val regularRandomMethodFilter = MethodFilter { _, _, name, desc, _ ->
-            randomMethods.any { it.name == name && it.descriptor == desc }
+            declaredRandomMethods.any { it.name == name && it.descriptor == desc }
+        }
+        internal val randomInstanceMethodsFilter = MethodFilter { _, _, name, desc, _ ->
+            randomInstanceMethods.any { it.name == name && it.descriptor == desc }
         }
         private val restRandomClasses = setOf(
             "java/util/concurrent/ThreadLocalRandom",
@@ -224,8 +236,7 @@ internal class DeterministicRandomTransformer(
             MethodFilter { _, owner, name, _, _ -> owner in restRandomClasses && name == "advanceProbe" }
         private val nextIntTwoInts =
             MethodFilter { _, owner, name, desc, _ -> owner in restRandomClasses && name == "nextInt" && desc == "(II)I" }
-        internal val randomMethodFilter =
-            regularRandomMethodFilter + nextSecondarySeedOrGetProbe + advanceProbe + nextIntTwoInts
+        internal val restRandomMethodsFilter = nextSecondarySeedOrGetProbe + advanceProbe + nextIntTwoInts
     }
 }
 
@@ -261,16 +272,81 @@ internal class SubstitutionDeterminismTransformer(
     adapter: GeneratorAdapter,
 ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
 
-    private val nonDeterministicFilter = timeFilter + hashCodeFilter + randomMethodFilter
+    private val nonDeterministicUnconditionalFilter = timeFilter + hashCodeFilter + restRandomMethodsFilter
+
+    override fun visitJumpInsn(opcode: Int, label: Label?) = adapter.run {
+        if (opcode == Opcodes.IF_ACMPEQ || opcode == Opcodes.IF_ACMPNE) {
+            invokeIfInTestingCode(
+                original = { visitJumpInsn(opcode, label) },
+                code = {
+                    ifStatement(
+                        condition = { invokeStatic(Injections::isFirstRun) },
+                        ifClause = {
+                            invokeInIgnoredSection {
+                                invokeStatic(Injections::nextEventAccumulatorId)
+                            }
+                            val id = newLocal(LONG_TYPE)
+                            storeLocal(id)
+                            
+                            val trueLabel = newLabel()
+                            val endLabel = newLabel()
+                            visitJumpInsn(opcode, trueLabel)
+                            push(true)
+                            box(BOOLEAN_TYPE)
+                            loadLocal(id)
+                            invokeInIgnoredSection {
+                                invokeStatic(Injections::storeEventResult)
+                            }
+                            visitJumpInsn(GOTO, endLabel)
+                            visitLabel(trueLabel)
+                            push(false)
+                            box(BOOLEAN_TYPE)
+                            loadLocal(id)
+                            invokeInIgnoredSection {
+                                invokeStatic(Injections::storeEventResult)
+                            }
+                            visitJumpInsn(GOTO, label)
+                            visitLabel(endLabel)
+                        },
+                        elseClause = {
+                            pop2()
+                            ifStatement(
+                                condition = { getNextEventResultOrThrow(BOOLEAN_TYPE) },
+                                ifClause = { visitJumpInsn(GOTO, label) },
+                                elseClause = {}
+                            )
+                        }
+                    )
+                }
+            )
+        } else {
+            visitJumpInsn(opcode, label)
+        }
+    }
+
+    @Suppress("unused")
+    private fun GeneratorAdapter.log(message: String) = invokeInIgnoredSection {
+        val printStreamType = getType(PrintStream::class.java)
+        getStatic(getType(System::class.java), "out", printStreamType)
+        visitLdcInsn(message)
+        invokeVirtual(printStreamType, Method.getMethod(PrintStream::class.java.getMethod("println", Any::class.java)))
+    }
+
+    private fun isMethodInsnStatic(opcode: Int) = when (opcode) {
+        Opcodes.INVOKESTATIC, Opcodes.INVOKEDYNAMIC -> true
+        Opcodes.INVOKEVIRTUAL, Opcodes.INVOKEINTERFACE, Opcodes.INVOKESPECIAL -> false
+        else -> error("Unexpected method insn: $opcode")
+    }
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
-        if (nonDeterministicFilter.matchesMethodCall(opcode, owner, name, desc, itf)) {
+        fun instrumentCode() {
+//            log("$opcode: $owner.$name$desc")
             val specialArgumentHandlers: Map<Int?, SpecialArgumentHandler> =
                 getSpecialArgumentHandlers(getType("L$owner;"), getArgumentTypes(desc))
             val returnType = getReturnType(desc)
-            executeWithDeterminationIfInTestingCode(
+            executeWithDetermination(
                 valueType = returnType,
-                executeRegularly = { visitMethodInsn(opcode, owner, name, desc, itf) },
+                executeOnFirstRun = { visitMethodInsn(opcode, owner, name, desc, itf) },
                 executeOnNextRuns = { getNextEventResultOrThrow(returnType) },
                 wrapCall = { isFirstRun, execute ->
                     if (isFirstRun) {
@@ -296,6 +372,36 @@ internal class SubstitutionDeterminismTransformer(
                     }
                 }
             )
+        }
+
+        if (nonDeterministicUnconditionalFilter.matchesMethodCall(opcode, owner, name, desc, itf)) {
+            invokeIfInTestingCode(
+                original = { visitMethodInsn(opcode, owner, name, desc, itf) },
+                code = { instrumentCode() }
+            )
+        } else if (
+            !isMethodInsnStatic(opcode) && randomInstanceMethodsFilter.matchesMethodCall(opcode, owner, name, desc, itf)
+        ) {
+            invokeIfInTestingCode(
+                original = { visitMethodInsn(opcode, owner, name, desc, itf) },
+                code = {
+                    val args = storeArguments(desc)
+                    dup()
+                    ifStatement(
+                        condition = {
+                            invokeStatic(Injections::isRandom)
+                        },
+                        ifClause = {
+                            loadLocals(args)
+                            instrumentCode()
+                        },
+                        elseClause = {
+                            loadLocals(args)
+                            visitMethodInsn(opcode, owner, name, desc, itf)
+                        },
+                    )
+                }
+            )
         } else {
             visitMethodInsn(opcode, owner, name, desc, itf)
         }
@@ -309,11 +415,7 @@ internal class SubstitutionDeterminismTransformer(
         restoreArgumentsOnStackBeforeCall: Boolean,
         code: GeneratorAdapter.() -> Unit,
     ) {
-        val isInstanceCall = when (opcode) {
-            Opcodes.INVOKESTATIC, Opcodes.INVOKEDYNAMIC -> false
-            Opcodes.INVOKEVIRTUAL, Opcodes.INVOKEINTERFACE, Opcodes.INVOKESPECIAL -> true
-            else -> error("Unexpected method: $opcode")
-        }
+        val isInstanceCall = !isMethodInsnStatic(opcode)
         val receiverSpecialHandler = specialArgumentHandlers[null]
 
         val argumentVariables = storeArguments(desc)

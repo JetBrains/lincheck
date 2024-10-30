@@ -220,6 +220,10 @@ abstract class ManagedStrategy(
     
     override fun isFirstRun(): Boolean = runNumber == 1L
     private var runNumber = 0L
+    protected fun resetRunNumber() {
+        runNumber = 0L
+        methodCallResultsTracker.resetStateToId()
+    }
 
     /**
      * Runs the current invocation.
@@ -227,7 +231,7 @@ abstract class ManagedStrategy(
     override fun runInvocation(): InvocationResult {
         while (true) {
             runNumber++
-            methodCallResultsTracker.resetCounter()
+            methodCallResultsTracker.startReplaying()
             initializeInvocation()
             val result = runner.run()
             // In case the runner detects a deadlock, some threads can still manipulate the current strategy,
@@ -1546,22 +1550,24 @@ abstract class ManagedStrategy(
             )
         }
     }
+    
+    
 
-    private val methodCallResultsTracker = MethodCallResultsTracker()
+    private val methodCallResultsTracker: MethodCallResultsTracker = ConcurrentMethodCallResultsTracker()
     override fun storeEventResult(result: Any?, oldEventAccumulatorCounter: Long) {
-        methodCallResultsTracker.storeNewResult(Result.success(result), oldEventAccumulatorCounter)
+        methodCallResultsTracker.storeNewResult(Result.success(result), oldEventAccumulatorCounter, currentThread.toLong())
     }
 
     override fun getNextEventResultOrThrow(): Any? {
-        return methodCallResultsTracker.getNextResult().getOrThrow()
+        return methodCallResultsTracker.getNextResult(currentThread.toLong()).getOrThrow()
     }
 
     override fun storeEventException(t: Throwable, oldEventAccumulatorCounter: Long) {
-        methodCallResultsTracker.storeNewResult(Result.failure(t), oldEventAccumulatorCounter)
+        methodCallResultsTracker.storeNewResult(Result.failure(t), oldEventAccumulatorCounter, currentThread.toLong())
     }
 
     override fun nextEventAccumulatorId(): Long {
-        return methodCallResultsTracker.nextId()
+        return methodCallResultsTracker.nextId(currentThread.toLong())
     }
 
     override fun storeParameterValue(value: Any?) = when (value) {
@@ -1580,6 +1586,11 @@ abstract class ManagedStrategy(
             else -> error("Value of unknown type: $value")
         }
     }
+    
+    protected fun getCurrentMethodCallId(): Long =
+        methodCallResultsTracker.currentId(currentThread.toLong())
+    
+    protected fun resetStateToId(id: Long): Unit = methodCallResultsTracker.resetStateToId(id)
 
 
     /**

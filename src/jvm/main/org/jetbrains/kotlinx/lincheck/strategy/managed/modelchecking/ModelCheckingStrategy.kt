@@ -63,6 +63,7 @@ internal class ModelCheckingStrategy(
     override fun nextInvocation(): Boolean {
         currentInterleaving = root.nextInterleaving()
             ?: return false
+        resetRunNumber()
         return true
     }
 
