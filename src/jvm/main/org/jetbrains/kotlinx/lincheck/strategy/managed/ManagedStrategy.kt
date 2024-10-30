@@ -227,10 +227,17 @@ abstract class ManagedStrategy(
         }
     }
 
-    override fun updateStaticMemorySnapshot(className: String, fieldName: String) {
+    override fun updateStaticMemorySnapshot(obj: Any?, className: String, fieldName: String) {
         if (testCfg.restoreStaticMemory) {
-            staticMemorySnapshot.addHierarchy(className, fieldName)
-            super.updateStaticMemorySnapshot(className, fieldName)
+            staticMemorySnapshot.trackField(obj, className, fieldName)
+            super.updateStaticMemorySnapshot(obj, className, fieldName)
+        }
+    }
+
+    override fun updateStaticMemorySnapshot(array: Any, index: Int) {
+        if (testCfg.restoreStaticMemory) {
+            staticMemorySnapshot.trackArrayCell(array, index)
+            super.updateStaticMemorySnapshot(array, index)
         }
     }
 
@@ -765,7 +772,7 @@ abstract class ManagedStrategy(
         // The following call checks all the static fields.
         if (isStatic) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(className.canonicalClassName)
-            updateStaticMemorySnapshot(className.canonicalClassName, fieldName)
+            updateStaticMemorySnapshot(obj, className.canonicalClassName, fieldName)
         }
         // Optimization: do not track final field reads
         if (isFinal) {
@@ -801,6 +808,7 @@ abstract class ManagedStrategy(
         if (!objectTracker.shouldTrackObjectAccess(array)) {
             return@runInIgnoredSection false
         }
+        updateStaticMemorySnapshot(array, index)
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             ReadTracePoint(
@@ -838,7 +846,7 @@ abstract class ManagedStrategy(
             return@runInIgnoredSection false
         }
         if (isStatic) {
-            updateStaticMemorySnapshot(className.canonicalClassName, fieldName)
+            updateStaticMemorySnapshot(obj, className.canonicalClassName, fieldName)
         }
         // Optimization: do not track final field writes
         if (isFinal) {
@@ -869,6 +877,7 @@ abstract class ManagedStrategy(
         if (!objectTracker.shouldTrackObjectAccess(array)) {
             return@runInIgnoredSection false
         }
+        updateStaticMemorySnapshot(array, index)
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             WriteTracePoint(
