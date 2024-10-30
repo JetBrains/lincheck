@@ -111,10 +111,8 @@ abstract class Strategy protected constructor(
      */
     open fun restoreStaticMemorySnapshot() {}
 
-    /**
-     * Records values of all memory locations, reachable from `className::fieldName` static variable.
-     */
-    open fun updateStaticMemorySnapshot(className: String, fieldName: String) {}
+    open fun updateStaticMemorySnapshot(obj: Any?, className: String, fieldName: String) {}
+    open fun updateStaticMemorySnapshot(array: Any, index: Int) {}
 }
 
 /**
