@@ -227,6 +227,7 @@ abstract class ManagedStrategy(
         }
     }
 
+    // TODO: fix bug with the fact, that non-transformed classes are impossible to track lazily
     override fun updateStaticMemorySnapshot(obj: Any?, className: String, fieldName: String) {
         if (testCfg.restoreStaticMemory) {
             staticMemorySnapshot.trackField(obj, className, fieldName)
@@ -770,9 +771,9 @@ abstract class ManagedStrategy(
                                  isStatic: Boolean, isFinal: Boolean) = runInIgnoredSection {
         // We need to ensure all the classes related to the reading object are instrumented.
         // The following call checks all the static fields.
+        updateStaticMemorySnapshot(obj, className.canonicalClassName, fieldName)
         if (isStatic) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(className.canonicalClassName)
-            updateStaticMemorySnapshot(obj, className.canonicalClassName, fieldName)
         }
         // Optimization: do not track final field reads
         if (isFinal) {
@@ -845,9 +846,7 @@ abstract class ManagedStrategy(
         if (!objectTracker.shouldTrackObjectAccess(obj ?: StaticObject)) {
             return@runInIgnoredSection false
         }
-        if (isStatic) {
-            updateStaticMemorySnapshot(obj, className.canonicalClassName, fieldName)
-        }
+        updateStaticMemorySnapshot(obj, className.canonicalClassName, fieldName)
         // Optimization: do not track final field writes
         if (isFinal) {
             return@runInIgnoredSection false

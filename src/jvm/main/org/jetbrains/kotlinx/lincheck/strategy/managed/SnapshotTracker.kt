@@ -59,7 +59,7 @@ class SnapshotTracker {
 
         val nodesList =
             if (obj != null) trackedObjects[obj]
-            else trackedObjects.putIfAbsent(clazz, mutableListOf<MemoryNode>())
+            else trackedObjects.getOrPut(clazz) { mutableListOf<MemoryNode>() }
 
         if (
             nodesList == null || // parent object is not tracked
@@ -69,6 +69,7 @@ class SnapshotTracker {
                 .any { it.field.name == fieldName } // field is already tracked
         ) return
 
+        println("SNAPSHOT: obj=$obj, className=$className, fieldName=$fieldName")
         val field = clazz.findField(fieldName)
         val childNode = createMemoryNode(
             obj,
@@ -89,6 +90,7 @@ class SnapshotTracker {
             nodesList.any { it is ArrayCellNode && (it.descriptor as ArrayCellDescriptor).index == index } // this array cell is already tracked
         ) return
 
+        println("SNAPSHOT: array=$array, index=$index")
         val childNode = createMemoryNode(array, ArrayCellDescriptor(index))
 
         nodesList.add(childNode)
