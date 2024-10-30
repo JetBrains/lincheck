@@ -11,12 +11,10 @@
 package org.jetbrains.kotlinx.lincheck_test.gpmc
 
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.junit.Ignore
 import kotlin.concurrent.thread
 import org.junit.Test
 
-@Ignore
-class HangTest {
+class HangIsolatedTest {
 
     fun hang() {
         val t1 = thread {
