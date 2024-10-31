@@ -46,8 +46,8 @@ class DataStructuresTests {
 
     fun incorrectHashMap() {
         val hashMap = HashMap<Int, Int>()
-        var r1: Int? = -1
-        var r2: Int? = -1
+        var r1: Int? = null
+        var r2: Int? = null
         val t1 = thread {
             r1 = hashMap.put(0, 1)
         }

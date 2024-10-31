@@ -40,11 +40,26 @@ internal fun modelCheckerTest(
         }
         assert(failure == null) { failure.toString() }
         if (expectedExceptions.isNotEmpty()) {
+            // check that all expected exceptions are discovered
+            expectedExceptions.forEach { exceptionClass ->
+                Assert.assertTrue(verifier.exceptions.any { exceptionClass.isInstance(it) })
+            }
+            // check that each discovered exception is an instance of some expected exception class
             verifier.exceptions.forEach { exception ->
                 Assert.assertTrue(expectedExceptions.any { it.isInstance(exception) })
             }
         } else {
-            Assert.assertTrue(verifier.exceptions.isEmpty())
+            // check that there was no exception thrown
+            if (verifier.exceptions.isNotEmpty()) {
+                val message = StringBuilder().apply {
+                    appendLine("Unexpected exceptions!")
+                    for (exception in verifier.exceptions) {
+                        appendLine("$exception ${exception.message?.let { ": $it" } ?: "" }")
+                        appendLine(exception.stackTraceToString())
+                    }
+                }.toString()
+                Assert.fail(message)
+            }
         }
         Assert.assertEquals(outcomes, verifier.values)
     }
@@ -78,7 +93,9 @@ private class CollectResultsVerifier : Verifier {
             is ExceptionResult -> {
                 exceptions.add(result.throwable)
             }
-            else -> { throw IllegalStateException("Unexpected result: $result") }
+            else -> {
+                throw IllegalStateException("Unexpected result: $result")
+            }
         }
         return true
     }
