@@ -17,6 +17,30 @@ import org.junit.Test
 
 class SpinLockLivelockIsolatedTest {
 
+    fun spinLock(): Int {
+        // var counter = 0
+        val lock = SpinLock()
+        val t1 = thread {
+            lock.withLock { counter++ }
+        }
+        val t2 = thread {
+            lock.withLock { counter++ }
+        }
+        val t3 = thread {
+            lock.withLock { counter++ }
+        }
+        return lock.withLock { counter }
+            .also { t1.join(); t2.join(); t3.join() }
+    }
+
+    // @Ignore
+    @Test(timeout = TIMEOUT)
+    fun testSpinLock() = modelCheckerTest(
+        testClass = this::class,
+        testOperation = this::spinLock,
+        outcomes = setOf(0, 1, 2, 3),
+    )
+
     fun livelock(): Int {
         var counter = 0
         val lock1 = SpinLock()
