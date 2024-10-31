@@ -16,7 +16,6 @@ import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransforme
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
 import org.jetbrains.kotlinx.lincheck.util.isAtomic
 import org.jetbrains.kotlinx.lincheck.util.isAtomicArray
-import org.jetbrains.kotlinx.lincheck.util.isAtomicArrayJava
 import org.jetbrains.kotlinx.lincheck.util.isAtomicFU
 import org.jetbrains.kotlinx.lincheck.util.isAtomicFUArray
 import org.jetbrains.kotlinx.lincheck.util.readArrayElementViaUnsafe
@@ -34,6 +33,7 @@ import java.util.concurrent.atomic.AtomicIntegerArray
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater
 import java.util.concurrent.atomic.AtomicLongArray
 import java.util.concurrent.atomic.AtomicLongFieldUpdater
+import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.atomic.AtomicReferenceArray
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 import kotlin.coroutines.*
@@ -258,7 +258,7 @@ internal val Class<*>.allDeclaredFieldWithSuperclasses get(): List<Field> {
 internal fun traverseObjectGraph(
     root: Any,
     onArrayElement: (Any, Int, Any?) -> Boolean,
-    onField: (Any?, Field, Any?) -> Boolean
+    onField: (Any, Field, Any?) -> Boolean
 ) {
     val queue = ArrayDeque<Any>()
     val visitedObjects = Collections.newSetFromMap<Any>(IdentityHashMap())
@@ -306,7 +306,7 @@ internal fun traverseObjectGraph(
             currentObj is Class<*> -> {}
             currentObj.javaClass.isArray || isAtomicArray(currentObj) -> {
                 val length = getArrayLength(currentObj)
-                val cachedAtomicFUGetMethod: Method? = if (isAtomicFUArray(currentObj)) currentObj.javaClass.getMethod("get") else null
+                val cachedAtomicFUGetMethod: Method? = if (isAtomicFUArray(currentObj)) currentObj.javaClass.getMethod("get", Int::class.java) else null
 
                 for (index in 0..length - 1) {
                     process(
@@ -328,9 +328,24 @@ internal fun traverseObjectGraph(
             else -> {
                 // we jump through most of the atomic classes
                 var jumpObj: Any? = currentObj
-                if (isAtomic(jumpObj)) {
+
+                if (isAtomic(jumpObj) && !(jumpObj is AtomicReference<*> || jumpObj is kotlinx.atomicfu.AtomicRef<*>)) {
                     jumpObj = jumpObj?.javaClass?.getDeclaredMethod("get")?.invoke(jumpObj)
                 }
+
+                /*
+                receiver is AtomicReference<*> ||
+                receiver is AtomicBoolean ||
+                receiver is AtomicInteger ||
+                receiver is AtomicLong
+
+                // kotlinx.atomicfu
+                receiver is kotlinx.atomicfu.AtomicRef<*> ||
+                receiver is kotlinx.atomicfu.AtomicBoolean ||
+                receiver is kotlinx.atomicfu.AtomicInt ||
+                receiver is kotlinx.atomicfu.AtomicLong
+
+                */
 
                 if (isAtomicFU(jumpObj)) {
                     val readNextJumpObjectByFieldName = { fieldName: String ->

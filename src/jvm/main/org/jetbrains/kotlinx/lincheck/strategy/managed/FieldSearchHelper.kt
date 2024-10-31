@@ -70,9 +70,9 @@ internal object FieldSearchHelper {
                         }
                         else -> {
                             fieldName = if (Modifier.isStatic(field.modifiers)) {
-                                StaticOwnerWithName(field.name, /*ownerObject::class.java*/ field.declaringClass)
+                                StaticOwnerWithName(field.name, ownerObject::class.java)
                             } else {
-                                InstanceOwnerWithName(field.name, ownerObject!!)
+                                InstanceOwnerWithName(field.name, ownerObject)
                             }
                             traverseResult = FieldName(fieldName!!)
                         }
