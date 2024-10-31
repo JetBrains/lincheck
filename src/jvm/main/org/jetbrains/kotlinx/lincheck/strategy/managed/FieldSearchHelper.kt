@@ -12,7 +12,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.FieldSearchHelper.TraverseResult.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.OwnerWithName.*
-import org.jetbrains.kotlinx.lincheck.traverseObjectHierarchy
+import org.jetbrains.kotlinx.lincheck.traverseObjectGraph
 import java.lang.reflect.Modifier
 
 
@@ -54,25 +54,35 @@ internal object FieldSearchHelper {
             traverseResult is FoundInNonFinalField
         }
 
-        traverseObjectHierarchy(testObject, treatArrayElementsAsFields = false) { ownerObject, field, fieldValue ->
-            if (field.type.isPrimitive || fieldValue == null) return@traverseObjectHierarchy null
+        traverseObjectGraph(
+            testObject,
+            onArrayElement = { _, _, _ -> null }, // do not traverse array elements further
+            onField = { ownerObject, field, fieldValue ->
+                if (field.type.isPrimitive || fieldValue == null) return@traverseObjectGraph null
 
-            if (value === fieldValue && !isTraverseCompleted()) {
-                if (fieldName != null) traverseResult = MultipleFieldsMatching
-                else if (!Modifier.isFinal(field.modifiers)) traverseResult = FoundInNonFinalField
-                else {
-                    fieldName = if (Modifier.isStatic(field.modifiers)) {
-                        StaticOwnerWithName(field.name, ownerObject::class.java)
-                    } else {
-                        InstanceOwnerWithName(field.name, ownerObject)
+                if (value === fieldValue && !isTraverseCompleted()) {
+                    when {
+                        fieldName != null -> {
+                            traverseResult = MultipleFieldsMatching
+                        }
+                        !Modifier.isFinal(field.modifiers) -> {
+                            traverseResult = FoundInNonFinalField
+                        }
+                        else -> {
+                            fieldName = if (Modifier.isStatic(field.modifiers)) {
+                                StaticOwnerWithName(field.name, /*ownerObject::class.java*/ field.declaringClass)
+                            } else {
+                                InstanceOwnerWithName(field.name, ownerObject!!)
+                            }
+                            traverseResult = FieldName(fieldName!!)
+                        }
                     }
-                    traverseResult = FieldName(fieldName!!)
+                    return@traverseObjectGraph null
                 }
-                return@traverseObjectHierarchy null
-            }
 
-            return@traverseObjectHierarchy if (isTraverseCompleted()) null else fieldValue
-        }
+                return@traverseObjectGraph if (isTraverseCompleted()) null else fieldValue
+            }
+        )
 
         return traverseResult
     }

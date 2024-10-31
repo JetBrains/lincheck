@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.util
 
+import org.jetbrains.kotlinx.lincheck.getArrayElementOffset
 import sun.misc.Unsafe
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
@@ -36,7 +37,7 @@ internal inline fun <T> readFieldViaUnsafe(obj: Any?, field: Field, getter: Unsa
     }
 }
 
-internal fun readField(obj: Any?, field: Field): Any? {
+internal fun readFieldViaUnsafe(obj: Any?, field: Field): Any? {
     if (!field.type.isPrimitive) {
         return readFieldViaUnsafe(obj, field, Unsafe::getObject)
     }
@@ -50,5 +51,26 @@ internal fun readField(obj: Any?, field: Field): Any? {
         Double::class.javaPrimitiveType     -> readFieldViaUnsafe(obj, field, Unsafe::getDouble)
         Float::class.javaPrimitiveType      -> readFieldViaUnsafe(obj, field, Unsafe::getFloat)
         else                                -> error("No more types expected")
+    }
+}
+
+internal fun readArrayElementViaUnsafe(arr: Any, index: Int): Any? {
+    val offset = getArrayElementOffset(arr, index)
+    val componentType = arr::class.java.componentType
+
+    if (!componentType.isPrimitive) {
+        return UnsafeHolder.UNSAFE.getObject(arr, offset)
+    }
+
+    return when (componentType) {
+        Boolean::class.javaPrimitiveType    -> UnsafeHolder.UNSAFE.getBoolean(arr, offset)
+        Byte::class.javaPrimitiveType       -> UnsafeHolder.UNSAFE.getByte(arr, offset)
+        Char::class.javaPrimitiveType       -> UnsafeHolder.UNSAFE.getChar(arr, offset)
+        Short::class.javaPrimitiveType      -> UnsafeHolder.UNSAFE.getShort(arr, offset)
+        Int::class.javaPrimitiveType        -> UnsafeHolder.UNSAFE.getInt(arr, offset)
+        Long::class.javaPrimitiveType       -> UnsafeHolder.UNSAFE.getLong(arr, offset)
+        Double::class.javaPrimitiveType     -> UnsafeHolder.UNSAFE.getDouble(arr, offset)
+        Float::class.javaPrimitiveType      -> UnsafeHolder.UNSAFE.getFloat(arr, offset)
+        else                                -> error("No more primitive types expected")
     }
 }

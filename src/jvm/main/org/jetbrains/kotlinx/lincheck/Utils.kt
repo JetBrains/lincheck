@@ -14,7 +14,11 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
-import org.jetbrains.kotlinx.lincheck.util.readField
+import org.jetbrains.kotlinx.lincheck.util.isAtomicArray
+import org.jetbrains.kotlinx.lincheck.util.isAtomicArrayJava
+import org.jetbrains.kotlinx.lincheck.util.isAtomicFUArray
+import org.jetbrains.kotlinx.lincheck.util.readArrayElementViaUnsafe
+import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import sun.nio.ch.lincheck.EventTracker
 import sun.nio.ch.lincheck.TestThread
@@ -24,6 +28,8 @@ import java.lang.ref.*
 import java.lang.reflect.*
 import java.lang.reflect.Method
 import java.util.*
+import java.util.concurrent.atomic.AtomicIntegerArray
+import java.util.concurrent.atomic.AtomicLongArray
 import java.util.concurrent.atomic.AtomicReferenceArray
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
@@ -235,75 +241,83 @@ internal val Class<*>.allDeclaredFieldWithSuperclasses get(): List<Field> {
 /**
  * Traverses all fields of a given object in bfs order.
  *
- * In case [treatArrayElementsAsFields] is
- * set to `false`, then array fields will be traversed instead of elements.
+ * In case if a reached object is java array, atomic array, or atomicfu array,
+ * the elements of such arrays will be traversed and [onArrayElement] will be called on them.
  *
- * The [callback] is called for each tuple of `(fieldOwner, field, fieldValue)` of the [obj],
- * the return value of the callback determines, what object should be traversed further
- * (it can be something different from `fieldValue`).
+ * Otherwise, fields are traversed and [onField] is called.
  *
- * Parameters of [callback]:
- * - `fieldOwner`: either `Any` - some class instance that owns the field, or `Class<*>` is case if `field` is static.
- * - `field`: the field that currently is traversed.
- * - `fieldValue`: the value that was read from the field.
+ * @param root object from which the traverse starts.
+ * @param onArrayElement callback for array elements, accepts `(array, index, elementValue)`. Returns the object to traverse next.
+ * @param onField callback for fields, accepts `(fieldOwner, field, fieldValue)`. Returns the object to traverse next.
  */
-internal fun traverseObjectHierarchy(obj: Any, treatArrayElementsAsFields: Boolean = true, callback: (Any, Field, Any?) -> Any?) {
+internal fun traverseObjectGraph(
+    root: Any,
+    onArrayElement: (Any, Int, Any?) -> Any?,
+    onField: (Any?, Field, Any?) -> Any?
+) {
     val queue = ArrayDeque<Any>()
     val visitedObjects = Collections.newSetFromMap<Any>(IdentityHashMap())
 
-    queue.add(obj)
-    visitedObjects.add(obj)
+    queue.add(root)
+    visitedObjects.add(root)
 
-    while (queue.isNotEmpty()) {
-        val currentObj = queue.removeFirst()
-        val fields =
-            if (currentObj is Class<*>) emptyList<Field>()
-            else if (currentObj.javaClass.isArray && treatArrayElementsAsFields) {
-                // We do not traverse the actual fields of an array,
-                // instead the elements of the array are treated as its field.
-                // But note that primitive arrays are skipped completely.
-                if (currentObj is Array<*>) {
-                    currentObj.forEach { element ->
-                        element?.let { queue.add(it) }
-                    }
-                }
-                emptyList<Field>()
-            }
-            else if (
-                (currentObj is AtomicReferenceArray<*> || currentObj is kotlinx.atomicfu.AtomicArray<*>) &&
-                treatArrayElementsAsFields
-            ) {
-                // Do the same as before, but for atomic arrays (with non-primitive types)
-                val getElementAt = currentObj.javaClass.getMethod("get", Int::class.javaPrimitiveType)
-                val length = (
-                    if (currentObj is AtomicReferenceArray<*>) currentObj.javaClass.getMethod("length").invoke(currentObj)
-                    else currentObj.javaClass.getMethod("getSize").invoke(currentObj)
-                ) as Int
+    val process: (
+        onRead: () -> Any?,
+        onCallback: (Any?) -> Any?
+    ) -> Unit = { onRead, onCallback ->
+        // We wrap an unsafe read into `runCatching` to hande `UnsupportedOperationException`,
+        // which can be thrown, for instance, when attempting to read a field of
+        // a hidden class (starting from Java 15).
+        val result = runCatching { onRead() }
 
-                for (index in 0..length - 1) {
-                    getElementAt.invoke(currentObj, index)?.let { queue.add(it) }
-                }
-                emptyList<Field>()
-            }
-            else currentObj.javaClass.allDeclaredFieldWithSuperclasses
-
-        for (f in fields) {
-            // We wrap an unsafe read into `runCatching` to hande `UnsupportedOperationException`,
-            // which can be thrown, for instance, when attempting to read a field of
-            // a hidden class (starting from Java 15).
-            val result = runCatching { readField(currentObj, f) }
-            if (result.isFailure) continue // do not pass fields to the user, that are non-readable by Unsafe
-
+        // do not pass fields to the user, that are non-readable by Unsafe
+        if (result.isSuccess) {
             val fieldValue = result.getOrNull()
-            val nextObject = callback(currentObj, f, fieldValue)
+            val nextObject = onCallback(fieldValue)
 
             if (
                 nextObject != null && // user determines, if null, then no object will be appended to queue
                 !nextObject.javaClass.isPrimitive && // no primitives traversing
+                !nextObject.isPrimitiveWrapper && // no primitive wrappers traversing
                 nextObject !in visitedObjects // no reference-cycles allowed during traversing
             ) {
                 queue.add(nextObject)
                 visitedObjects.add(nextObject)
+            }
+        }
+    }
+
+    while (queue.isNotEmpty()) {
+        val currentObj = queue.removeFirst()
+
+        when {
+            currentObj is Class<*> -> {}
+            currentObj.javaClass.isArray || isAtomicArray(currentObj) -> {
+                val length = getArrayLength(currentObj)
+                val cachedAtomicFUGetMethod: Method? = if (isAtomicFUArray(currentObj)) currentObj.javaClass.getMethod("get") else null
+
+                for (index in 0..length - 1) {
+                    process(
+                        {
+                            if (isAtomicFUArray(currentObj)) {
+                                cachedAtomicFUGetMethod!!.invoke(currentObj, index) as Int
+                            }
+                            else when (currentObj) {
+                                is AtomicReferenceArray<*> -> currentObj.get(index)
+                                is AtomicIntegerArray -> currentObj.get(index)
+                                is AtomicLongArray -> currentObj.get(index)
+                                else -> readArrayElementViaUnsafe(currentObj, index)
+                            }
+                        },
+                        { onArrayElement(currentObj, index, it) }
+                    )
+                }
+            }
+            else -> currentObj.javaClass.allDeclaredFieldWithSuperclasses.forEach { field ->
+                process(
+                    { readFieldViaUnsafe(currentObj, field) },
+                    { onField(currentObj, field, it) }
+                )
             }
         }
     }
@@ -324,6 +338,40 @@ internal fun findFieldNameByOffset(targetType: Class<*>, offset: Long): String? 
     }
 
     return null // Field not found
+}
+
+internal fun getArrayElementOffset(arr: Any, index: Int): Long {
+    val clazz = arr::class.java
+    val baseOffset = UnsafeHolder.UNSAFE.arrayBaseOffset(clazz).toLong()
+    val indexScale = UnsafeHolder.UNSAFE.arrayIndexScale(clazz).toLong()
+
+    return baseOffset + index * indexScale
+}
+
+internal fun getArrayLength(arr: Any): Int {
+    return when {
+        arr is Array<*>     -> arr.size
+        arr is IntArray     -> arr.size
+        arr is DoubleArray  -> arr.size
+        arr is FloatArray   -> arr.size
+        arr is LongArray    -> arr.size
+        arr is ShortArray   -> arr.size
+        arr is ByteArray    -> arr.size
+        arr is BooleanArray -> arr.size
+        arr is CharArray    -> arr.size
+        isAtomicArray(arr)  -> getAtomicArrayLength(arr)
+        else -> error("Argument is not an array")
+    }
+}
+
+internal fun getAtomicArrayLength(arr: Any): Int {
+    return when {
+        arr is AtomicReferenceArray<*> -> arr.length()
+        arr is AtomicIntegerArray -> arr.length()
+        arr is AtomicLongArray -> arr.length()
+        isAtomicFUArray(arr) -> arr.javaClass.getMethod("getSize").invoke(arr) as Int
+        else -> error("Argument is not atomic array")
+    }
 }
 
 /**

@@ -23,7 +23,7 @@ package org.jetbrains.kotlinx.lincheck
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.getObjectNumber
 import org.jetbrains.kotlinx.lincheck.util.isAtomic
 import org.jetbrains.kotlinx.lincheck.util.isAtomicFU
-import org.jetbrains.kotlinx.lincheck.util.readField
+import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
 import java.lang.reflect.Modifier
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -52,59 +52,63 @@ private fun enumerateObjects(obj: Any, objectNumberMap: MutableMap<Any, Int>) {
     if (obj is Class<*> || obj is ClassLoader) return
     objectNumberMap[obj] = getObjectNumber(obj.javaClass, obj)
 
-    traverseObjectHierarchy(obj) { _, f, value ->
-        if (
-            Modifier.isStatic(f.modifiers) ||
-            f.isEnumConstant ||
-            f.name == "serialVersionUID"
-        ) return@traverseObjectHierarchy null
+    traverseObjectGraph(
+        obj,
+        onArrayElement = { _, _, value -> value }, // just allow traversing array elements further
+        onField = { _, f, value ->
+            if (
+                Modifier.isStatic(f.modifiers) ||
+                f.isEnumConstant ||
+                f.name == "serialVersionUID"
+            ) return@traverseObjectGraph null
 
-        try {
-            if (value == null || value is Class<*> || value is ClassLoader) return@traverseObjectHierarchy null
-            objectNumberMap[value] = getObjectNumber(value.javaClass, value)
+            try {
+                if (value == null || value is Class<*> || value is ClassLoader) return@traverseObjectGraph null
+                objectNumberMap[value] = getObjectNumber(value.javaClass, value)
 
-            var jumpValue: Any? = value
+                var jumpValue: Any? = value
 
-            // we jump through most of the atomic classes
-            if (isAtomic(jumpValue)) {
-                jumpValue = jumpValue!!.javaClass.getDeclaredMethod("get").invoke(jumpValue)
-            }
-
-            if (isAtomicFU(jumpValue)) {
-                val readNextJumpValueByFieldName = { fieldName: String ->
-                    readField(jumpValue, jumpValue!!.javaClass.getDeclaredField(fieldName))
-                }
-
-                if (jumpValue is kotlinx.atomicfu.AtomicRef<*>) {
-                    jumpValue = readNextJumpValueByFieldName("value")
+                // we jump through most of the atomic classes
+                if (isAtomic(jumpValue)) {
+                    jumpValue = jumpValue!!.javaClass.getDeclaredMethod("get").invoke(jumpValue)
                 }
 
                 if (isAtomicFU(jumpValue)) {
-                    jumpValue =
-                        if (jumpValue is kotlinx.atomicfu.AtomicBoolean) readNextJumpValueByFieldName("_value")
-                        else readNextJumpValueByFieldName("value")
+                    val readNextJumpValueByFieldName = { fieldName: String ->
+                        readFieldViaUnsafe(jumpValue, jumpValue!!.javaClass.getDeclaredField(fieldName))
+                    }
+
+                    if (jumpValue is kotlinx.atomicfu.AtomicRef<*>) {
+                        jumpValue = readNextJumpValueByFieldName("value")
+                    }
+
+                    if (isAtomicFU(jumpValue)) {
+                        jumpValue =
+                            if (jumpValue is kotlinx.atomicfu.AtomicBoolean) readNextJumpValueByFieldName("_value")
+                            else readNextJumpValueByFieldName("value")
+                    }
                 }
+
+                if (jumpValue is AtomicReferenceArray<*>) {
+                    jumpValue = (0 until jumpValue.length()).map { (jumpValue as AtomicReferenceArray<*>).get(it) }.toTypedArray()
+                }
+
+                if (
+                    jumpValue is AtomicReferenceFieldUpdater<*, *> ||
+                    jumpValue is AtomicIntegerFieldUpdater<*> ||
+                    jumpValue is AtomicLongFieldUpdater<*>
+                ) {
+                    return@traverseObjectGraph null
+                }
+
+                return@traverseObjectGraph if (shouldAnalyseObjectRecursively(jumpValue, objectNumberMap)) jumpValue else null
+            } catch (e: Throwable) {
+                e.printStackTrace()
             }
 
-            if (jumpValue is AtomicReferenceArray<*>) {
-                jumpValue = (0 until jumpValue.length()).map { (jumpValue as AtomicReferenceArray<*>).get(it) }.toTypedArray()
-            }
-
-            if (
-                jumpValue is AtomicReferenceFieldUpdater<*, *> ||
-                jumpValue is AtomicIntegerFieldUpdater<*> ||
-                jumpValue is AtomicLongFieldUpdater<*>
-            ) {
-                return@traverseObjectHierarchy null
-            }
-
-            return@traverseObjectHierarchy if (shouldAnalyseObjectRecursively(jumpValue, objectNumberMap)) jumpValue else null
-        } catch (e: Throwable) {
-            e.printStackTrace()
+            return@traverseObjectGraph null
         }
-
-        return@traverseObjectHierarchy null
-    }
+    )
 }
 
 /**
