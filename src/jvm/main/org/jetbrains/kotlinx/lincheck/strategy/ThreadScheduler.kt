@@ -91,7 +91,7 @@ open class ThreadScheduler {
 
     protected open class ThreadData(
         val id: ThreadId,
-        val thread: Thread,
+        val descriptor: ThreadDescriptor,
         val scheduler: ThreadScheduler,
     ) {
         @Volatile var state: ThreadState = ThreadState.INITIALIZED
@@ -101,8 +101,8 @@ open class ThreadScheduler {
         val spinner: Spinner = Spinner { scheduler.threads.size }
     }
 
-    protected open fun createThreadData(id: ThreadId, thread: Thread): ThreadData {
-        return ThreadData(id, thread, this)
+    protected open fun createThreadData(id: ThreadId, descriptor: ThreadDescriptor): ThreadData {
+        return ThreadData(id, descriptor, this)
     }
 
     /**
@@ -111,7 +111,7 @@ open class ThreadScheduler {
      * @return a map from thread ids to thread instances that are currently registered.
      */
     fun getRegisteredThreads(): ThreadMap<Thread> =
-        threads.mapValues { (_, it) -> it.thread }
+        threads.mapValues { (_, it) -> it.descriptor.thread }
 
     /**
      * Retrieves the identifier of the specified thread.
@@ -137,7 +137,7 @@ open class ThreadScheduler {
      * @return The thread associated with the provided identifier or null if the thread is not found.
      */
     fun getThread(threadId: ThreadId): Thread? =
-        threads[threadId]?.thread
+        threads[threadId]?.descriptor?.thread
 
     /**
      * Retrieves the current state of the thread for the specified thread id.
@@ -224,7 +224,7 @@ open class ThreadScheduler {
      */
     fun registerThread(thread: Thread, descriptor: ThreadDescriptor): ThreadId {
         val threadId = threads.size
-        val threadData = createThreadData(threadId, thread)
+        val threadData = createThreadData(threadId, descriptor)
         if (thread is TestThread) {
             check(threadId == thread.threadId)
         }
@@ -341,7 +341,7 @@ open class ThreadScheduler {
     fun awaitThreadFinish(threadId: ThreadId, timeoutNano: Long): Long {
         val threadData = threads[threadId]!!
         // special handling of Lincheck test threads
-        if (threadData.thread is TestThread) {
+        if (threadData.descriptor.thread is TestThread) {
             val elapsedTime = threadData.spinner.spinWaitTimedUntil(timeoutNano) {
                 threadData.state == ThreadState.FINISHED ||
                 // TODO: due to limitations of current implementation,
@@ -353,7 +353,7 @@ open class ThreadScheduler {
         }
         val startTime = System.nanoTime()
         val timeoutMs = timeoutNano / 1_000_000
-        threadData.thread.join(timeoutMs, (timeoutNano % 1_000_000).toInt())
+        threadData.descriptor.thread.join(timeoutMs, (timeoutNano % 1_000_000).toInt())
         val elapsedTime = System.nanoTime() - startTime
         return if (elapsedTime < timeoutNano) elapsedTime else -1
     }

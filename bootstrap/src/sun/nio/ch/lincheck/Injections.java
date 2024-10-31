@@ -97,7 +97,12 @@ public class Injections {
         var hashCode = System.identityHashCode(thread);
         var previousDescriptor = threadDescriptorsMap.put(hashCode, descriptor);
         if (previousDescriptor != null) {
-            throw new IllegalStateException("Thread descriptor was already set!");
+            var message = String.format(
+                "Thread descriptor of thread %s was already set (previous thread is %s)!",
+                thread.getName(),
+                previousDescriptor.getThread().getName()
+            );
+            throw new IllegalStateException(message);
         }
     }
 
@@ -178,7 +183,7 @@ public class Injections {
             return;
         }
         var tracker = descriptor.getEventTracker();
-        var forkedThreadDescriptor = new ThreadDescriptor();
+        var forkedThreadDescriptor = new ThreadDescriptor(forkedThread);
         forkedThreadDescriptor.setEventTracker(tracker);
         /*
          * Method `setThreadDescriptor` calls methods of `ConcurrentHashMap` (instrumented class),
