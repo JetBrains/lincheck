@@ -56,9 +56,9 @@ internal object FieldSearchHelper {
 
         traverseObjectGraph(
             testObject,
-            onArrayElement = { _, _, _ -> null }, // do not traverse array elements further
+            onArrayElement = { _, _, _ -> false }, // do not traverse array elements further
             onField = { ownerObject, field, fieldValue ->
-                if (field.type.isPrimitive || fieldValue == null) return@traverseObjectGraph null
+                if (field.type.isPrimitive || fieldValue == null) return@traverseObjectGraph false
 
                 if (value === fieldValue && !isTraverseCompleted()) {
                     when {
@@ -77,10 +77,10 @@ internal object FieldSearchHelper {
                             traverseResult = FieldName(fieldName!!)
                         }
                     }
-                    return@traverseObjectGraph null
+                    return@traverseObjectGraph false
                 }
 
-                return@traverseObjectGraph if (isTraverseCompleted()) null else fieldValue
+                return@traverseObjectGraph !isTraverseCompleted()
             }
         )
 
