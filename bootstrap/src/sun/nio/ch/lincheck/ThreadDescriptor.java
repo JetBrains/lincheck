@@ -10,12 +10,19 @@
 
 package sun.nio.ch.lincheck;
 
+import java.lang.ref.WeakReference;
+
 public class ThreadDescriptor {
+
+    /**
+     * The thread instance associated with this descriptor.
+     */
+    private final Thread thread;
 
     /**
      * The {@code EventTracker} for tracking events in the model checking mode.
      */
-    private EventTracker eventTracker = null;
+    private WeakReference<EventTracker> eventTracker = new WeakReference<>(null);
 
     /**
      * Holds additional event-tracker-specific data associated with the thread.
@@ -36,12 +43,23 @@ public class ThreadDescriptor {
      */
     private boolean inIgnoredSection = false;
 
+    public ThreadDescriptor(Thread thread) {
+        if (thread == null) {
+            throw new IllegalArgumentException("Thread must not be null");
+        }
+        this.thread = thread;
+    }
+
+    public Thread getThread() {
+        return thread;
+    }
+
     public EventTracker getEventTracker() {
-        return eventTracker;
+        return eventTracker.get();
     }
 
     public void setEventTracker(EventTracker eventTracker) {
-        this.eventTracker = eventTracker;
+        this.eventTracker = new WeakReference<>(eventTracker);
     }
 
     public Object getEventTrackerData() {

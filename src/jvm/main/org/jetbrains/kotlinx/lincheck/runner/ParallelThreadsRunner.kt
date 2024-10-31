@@ -373,7 +373,7 @@ internal open class ParallelThreadsRunner(
         executor.threads.forEachIndexed { i, thread ->
             var descriptor = Injections.getThreadDescriptor(thread)
             if (descriptor == null) {
-                descriptor = ThreadDescriptor()
+                descriptor = ThreadDescriptor(thread)
                 Injections.setThreadDescriptor(thread, descriptor)
             }
             descriptor.eventTracker = strategy
