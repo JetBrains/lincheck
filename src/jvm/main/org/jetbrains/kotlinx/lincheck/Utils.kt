@@ -286,7 +286,7 @@ internal fun traverseObjectGraph(
             val fieldValue = result.getOrNull()
 
             if (
-                onCallback(fieldValue) && // user determines, if null, then no object will be appended to queue
+                onCallback(fieldValue) && // user determines whether to append to queue
                 fieldValue != null &&
                 !fieldValue.javaClass.isPrimitive && // no primitives traversing
                 !fieldValue.isPrimitiveWrapper && // no primitive wrappers traversing
@@ -350,8 +350,8 @@ internal fun traverseObjectGraph(
 
                 jumpObj?.javaClass?.allDeclaredFieldWithSuperclasses?.forEach { field ->
                     process(
-                        { readFieldViaUnsafe(currentObj, field) },
-                        { onField(currentObj, field, it) }
+                        { readFieldViaUnsafe(jumpObj, field) },
+                        { onField(jumpObj, field, it) }
                     )
                 }
             }
