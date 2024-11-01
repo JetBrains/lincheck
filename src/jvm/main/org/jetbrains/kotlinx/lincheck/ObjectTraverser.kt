@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.getObjectNumber
 import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
 import java.math.BigDecimal
 import java.math.BigInteger
 import kotlin.coroutines.Continuation

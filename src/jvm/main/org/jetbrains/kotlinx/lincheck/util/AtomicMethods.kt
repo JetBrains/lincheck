@@ -92,7 +92,6 @@ internal fun isAtomicFUClass(className: String) =
     className == "kotlinx.atomicfu.AtomicInt" ||
     className == "kotlinx.atomicfu.AtomicLong"
 
-
 internal fun isAtomicMethod(className: String, methodName: String) =
     isAtomicClass(className) && methodName in atomicMethods
 
@@ -112,7 +111,6 @@ internal fun isAtomicFUArray(receiver: Any?) =
     receiver is kotlinx.atomicfu.AtomicBooleanArray ||
     receiver is kotlinx.atomicfu.AtomicIntArray ||
     receiver is kotlinx.atomicfu.AtomicLongArray
-
 
 internal fun isAtomicArrayClass(className: String) =
     // java.util.concurrent
