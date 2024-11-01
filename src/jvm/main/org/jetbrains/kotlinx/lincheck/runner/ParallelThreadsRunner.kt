@@ -180,8 +180,7 @@ internal open class ParallelThreadsRunner(
     private var ensuredTestInstanceIsTransformed = false
 
     private fun createTestInstance() {
-        @Suppress("DEPRECATION")
-        testInstance = testClass.newInstance()
+        testInstance = testClass.newInstanceRecursive()
         if (strategy is ModelCheckingStrategy) {
             // In the model checking mode, we need to ensure
             // that all the necessary classes and instrumented

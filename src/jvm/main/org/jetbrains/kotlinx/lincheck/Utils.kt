@@ -329,3 +329,20 @@ internal inline fun <R> runOutsideIgnoredSection(descriptor: ThreadDescriptor?, 
 
 internal const val LINCHECK_PACKAGE_NAME = "org.jetbrains.kotlinx.lincheck."
 internal const val LINCHECK_RUNNER_PACKAGE_NAME = "org.jetbrains.kotlinx.lincheck.runner."
+
+internal fun <T> Class<T>.newInstanceRecursive(): T {
+    @Suppress("UNCHECKED_CAST")
+    val constructor = this.declaredConstructors.singleOrNull { it.parameterCount == 0 } as? Constructor<T>
+    if (constructor != null) {
+        return constructor.newInstance()
+    }
+
+    if (this.enclosingClass != null) {
+        val enclosingObject = this.enclosingClass.newInstanceRecursive()
+        return this.getDeclaredConstructor(this.enclosingClass)
+            .also { it.isAccessible = true }
+            .newInstance(enclosingObject)
+    }
+
+    throw IllegalStateException("No suitable constructor found for ${this.canonicalName}")
+}
