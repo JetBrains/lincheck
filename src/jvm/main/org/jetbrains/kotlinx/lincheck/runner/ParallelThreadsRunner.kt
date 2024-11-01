@@ -183,8 +183,7 @@ internal open class ParallelThreadsRunner(
     private var ensuredTestInstanceIsTransformed = false
 
     private fun createTestInstance() {
-        @Suppress("DEPRECATION")
-        testInstance = testClass.newInstance()
+        testInstance = testClass.getDeclaredConstructor().newInstance()
         if (strategy is ModelCheckingStrategy) {
             // We pass the test instance to the strategy to initialize the call stack.
             // It should be done here as we create the test instance in the `run` method in the runner, after
