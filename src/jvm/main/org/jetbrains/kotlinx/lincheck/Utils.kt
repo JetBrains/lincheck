@@ -329,7 +329,7 @@ internal fun traverseObjectGraph(
                 // we jump through most of the atomic classes
                 var jumpObj: Any? = currentObj
 
-                if (isAtomic(jumpObj) && jumpObj !is AtomicReference<*>) {
+                if (isAtomic(jumpObj) && jumpObj !is AtomicReference<*> && jumpObj !is kotlinx.atomicfu.AtomicRef<*>) {
                     jumpObj = jumpObj?.javaClass?.getMethod("get")?.invoke(jumpObj)
                 }
 
