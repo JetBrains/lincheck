@@ -21,13 +21,9 @@
 package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.getObjectNumber
-import org.jetbrains.kotlinx.lincheck.util.isAtomic
-import org.jetbrains.kotlinx.lincheck.util.isAtomicFU
-import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
 import java.lang.reflect.Modifier
 import java.math.BigDecimal
 import java.math.BigInteger
-import java.util.concurrent.atomic.*
 import kotlin.coroutines.Continuation
 
 /**
@@ -52,9 +48,27 @@ private fun enumerateObjects(obj: Any, objectNumberMap: MutableMap<Any, Int>) {
     if (obj is Class<*> || obj is ClassLoader) return
     objectNumberMap[obj] = getObjectNumber(obj.javaClass, obj)
 
+    val processObject: (Any?) -> Boolean = processObject@{ value: Any? ->
+        if (value == null || value is Class<*> || value is ClassLoader) return@processObject false
+
+        objectNumberMap[value] = getObjectNumber(value.javaClass, value)
+        return@processObject shouldAnalyseObjectRecursively(value, objectNumberMap)
+    }
+
     traverseObjectGraph(
         obj,
-        onArrayElement = { _, _, _ -> true }, // just allow traversing array elements further
+        onArrayElement = { _, _, value ->
+            if (value?.javaClass?.isEnum == true) return@traverseObjectGraph false
+
+            try {
+                return@traverseObjectGraph processObject(value)
+            }
+            catch (e: Throwable) {
+                e.printStackTrace()
+            }
+
+            return@traverseObjectGraph false
+        },
         onField = { _, f, value ->
             if (
                 Modifier.isStatic(f.modifiers) ||
@@ -63,9 +77,7 @@ private fun enumerateObjects(obj: Any, objectNumberMap: MutableMap<Any, Int>) {
             ) return@traverseObjectGraph false
 
             try {
-                if (value == null || value is Class<*> || value is ClassLoader) return@traverseObjectGraph false
-                objectNumberMap[value] = getObjectNumber(value.javaClass, value)
-                return@traverseObjectGraph shouldAnalyseObjectRecursively(value, objectNumberMap)
+                return@traverseObjectGraph processObject(value)
             } catch (e: Throwable) {
                 e.printStackTrace()
             }
