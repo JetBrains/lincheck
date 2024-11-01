@@ -53,41 +53,9 @@ class SnapshotTracker {
         class ArrayCellNode(descriptor: ArrayCellDescriptor, initialValue: Any?) : MemoryNode(descriptor, initialValue)
     }
 
-    @OptIn(ExperimentalStdlibApi::class)
-    private fun trackSingleField(
-        obj: Any?,
-        clazz: Class<*>,
-        field: Field,
-        fieldValue: Any?,
-        callback: (() -> Unit)? = null
-    ) {
-        val nodesList =
-            if (obj != null) trackedObjects[obj]
-            else trackedObjects.getOrPut(clazz) { mutableListOf<MemoryNode>() }
-
-        if (
-            nodesList == null || // parent object is not tracked
-            nodesList
-                .map { it.descriptor }
-                .filterIsInstance<FieldDescriptor>()
-                .any { it.field.name == /*fieldName*/ field.name } // field is already tracked
-        ) return
-
-        println("SNAPSHOT: obj=${if (obj == null) "null" else obj.javaClass.simpleName + "@" + System.identityHashCode(obj).toHexString()}, className=${clazz.simpleName}, fieldName=${field.name}")
-        val childNode = createMemoryNode(
-            obj,
-            FieldDescriptor(field, getFieldOffset(field)),
-            fieldValue
-        )
-
-        nodesList.add(childNode)
-        if (isTrackableObject(childNode.initialValue)) {
-            trackedObjects.putIfAbsent(childNode.initialValue, mutableListOf<MemoryNode>())
-            callback?.invoke()
-        }
-    }
-
     fun trackField(obj: Any?, className: String, fieldName: String) {
+        if (obj != null && obj !in trackedObjects) return
+
         val clazz: Class<*> = Class.forName(className).let {
             if (obj != null) it
             else it.findField(fieldName).declaringClass
@@ -106,26 +74,9 @@ class SnapshotTracker {
         }
     }
 
-    @OptIn(ExperimentalStdlibApi::class)
-    private fun trackSingleArrayCell(array: Any, index: Int, elementValue: Any?, callback: (() -> Unit)? = null) {
-        val nodesList = trackedObjects[array]
-
-        if (
-            nodesList == null || // array is not tracked
-            nodesList.any { it is ArrayCellNode && (it.descriptor as ArrayCellDescriptor).index == index } // this array cell is already tracked
-        ) return
-
-        println("SNAPSHOT: array=${array.javaClass.simpleName}@${System.identityHashCode(array).toHexString()}, index=$index")
-        val childNode = createMemoryNode(array, ArrayCellDescriptor(index), elementValue)
-
-        nodesList.add(childNode)
-        if (isTrackableObject(childNode.initialValue)) {
-            trackedObjects.putIfAbsent(childNode.initialValue, mutableListOf<MemoryNode>())
-            callback?.invoke()
-        }
-    }
-
     fun trackArrayCell(array: Any, index: Int) {
+        if (array !in trackedObjects) return
+
         val readResult = runCatching { readArrayElementViaUnsafe(array, index) }
 
         if (readResult.isSuccess) {
@@ -146,10 +97,63 @@ class SnapshotTracker {
             .forEach { restoreValues(it, visitedObjects) }
     }
 
+
+    @OptIn(ExperimentalStdlibApi::class)
+    private fun trackSingleField(
+        obj: Any?,
+        clazz: Class<*>,
+        field: Field,
+        fieldValue: Any?,
+        callback: (() -> Unit)? = null
+    ) {
+        val nodesList =
+            if (obj != null) trackedObjects[obj]
+            else trackedObjects.getOrPut(clazz) { mutableListOf<MemoryNode>() }
+
+        if (
+            nodesList == null || // parent object is not tracked
+            nodesList
+                .map { it.descriptor }
+                .filterIsInstance<FieldDescriptor>()
+                .any { it.field.name == /*fieldName*/ field.name } // field is already tracked
+        ) return
+
+//        println("SNAPSHOT: obj=${if (obj == null) "null" else obj.javaClass.simpleName + "@" + System.identityHashCode(obj).toHexString()}, className=${clazz.simpleName}, fieldName=${field.name}")
+        val childNode = createMemoryNode(
+            obj,
+            FieldDescriptor(field, getFieldOffset(field)),
+            fieldValue
+        )
+
+        nodesList.add(childNode)
+        if (isTrackableObject(childNode.initialValue)) {
+            trackedObjects.putIfAbsent(childNode.initialValue, mutableListOf<MemoryNode>())
+            callback?.invoke()
+        }
+    }
+
+    @OptIn(ExperimentalStdlibApi::class)
+    private fun trackSingleArrayCell(array: Any, index: Int, elementValue: Any?, callback: (() -> Unit)? = null) {
+        val nodesList = trackedObjects[array]
+
+        if (
+            nodesList == null || // array is not tracked
+            nodesList.any { it is ArrayCellNode && (it.descriptor as ArrayCellDescriptor).index == index } // this array cell is already tracked
+        ) return
+
+//        println("SNAPSHOT: array=${array.javaClass.simpleName}@${System.identityHashCode(array).toHexString()}, index=$index")
+        val childNode = createMemoryNode(array, ArrayCellDescriptor(index), elementValue)
+
+        nodesList.add(childNode)
+        if (isTrackableObject(childNode.initialValue)) {
+            trackedObjects.putIfAbsent(childNode.initialValue, mutableListOf<MemoryNode>())
+            callback?.invoke()
+        }
+    }
+
     @OptIn(ExperimentalStdlibApi::class)
     private fun trackHierarchy(obj: Any) {
-        // TODO: iterate over object hierarchy
-        println("Track hierarchy for object: ${obj.javaClass.simpleName}@${System.identityHashCode(obj).toHexString()}")
+//        println("Track hierarchy for object: ${obj.javaClass.simpleName}@${System.identityHashCode(obj).toHexString()}")
         traverseObjectGraph(
             obj,
             onArrayElement = { array, index, elementValue ->

@@ -14,10 +14,14 @@ import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.junit.Test
 
+// TODO: make each test check values on each invocation and not on test end
 abstract class SnapshotAbstractTest {
     @Test
     fun testModelChecking() = ModelCheckingOptions()
         .iterations(1)
+        .actorsBefore(0)
+        .actorsAfter(0)
+        .actorsPerThread(3)
         .restoreStaticMemory(true)
         .check(this::class)
 }

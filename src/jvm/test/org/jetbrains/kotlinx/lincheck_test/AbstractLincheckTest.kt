@@ -21,7 +21,9 @@ import kotlin.reflect.*
 abstract class AbstractLincheckTest(
     private vararg val expectedFailures: KClass<out LincheckFailure>
 ) {
-    open fun <O: Options<O, *>> O.customize() {}
+    open fun <O: Options<O, *>> O.customize() {
+        if (this is ModelCheckingOptions) restoreStaticMemory(true)
+    }
 
     private fun <O : Options<O, *>> O.runInternalTest() {
         val failure: LincheckFailure? = checkImpl(this@AbstractLincheckTest::class.java)
