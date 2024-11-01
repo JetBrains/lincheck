@@ -77,6 +77,10 @@ class MinimizationTest {
     }
 }
 
+fun foo() {
+   MinimizationWithExceptionTest.IncorrectImplementationWithException()
+}
+
 class MinimizationWithExceptionTest {
 
     /* This test should find a bug in counter implementation and correctly minimize it

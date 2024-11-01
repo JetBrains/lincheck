@@ -182,8 +182,25 @@ internal open class ParallelThreadsRunner(
 
     private var ensuredTestInstanceIsTransformed = false
 
+    private fun <T> Class<T>.newInstanceRecursive(): T {
+        @Suppress("UNCHECKED_CAST")
+        val constructor = this.declaredConstructors.singleOrNull { it.parameterCount == 0 } as? Constructor<T>
+        if (constructor != null) {
+            return constructor.newInstance()
+        }
+
+        if (this.enclosingClass != null) {
+            val enclosingObject = this.enclosingClass.newInstanceRecursive()
+            return this.getDeclaredConstructor(this.enclosingClass)
+                .also { it.isAccessible = true }
+                .newInstance(enclosingObject)
+        }
+
+        throw IllegalStateException("No suitable constructor found for ${this.canonicalName}")
+    }
+
     private fun createTestInstance() {
-        testInstance = testClass.getDeclaredConstructor().newInstance()
+        testInstance = testClass.newInstanceRecursive()
         if (strategy is ModelCheckingStrategy) {
             // We pass the test instance to the strategy to initialize the call stack.
             // It should be done here as we create the test instance in the `run` method in the runner, after
