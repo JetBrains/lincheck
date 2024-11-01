@@ -21,6 +21,9 @@
 package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.getObjectNumber
+import org.jetbrains.kotlinx.lincheck.util.isAtomic
+import org.jetbrains.kotlinx.lincheck.util.isAtomicFU
+import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
 import java.lang.reflect.Modifier
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -48,17 +51,44 @@ private fun enumerateObjects(obj: Any, objectNumberMap: MutableMap<Any, Int>) {
     if (obj is Class<*> || obj is ClassLoader) return
     objectNumberMap[obj] = getObjectNumber(obj.javaClass, obj)
 
-    val processObject: (Any?) -> Boolean = processObject@{ value: Any? ->
-        if (value == null || value is Class<*> || value is ClassLoader) return@processObject false
+    val processObject: (Any?) -> Any? = processObject@{ value: Any? ->
+        if (value == null || value is Class<*> || value is ClassLoader) return@processObject null
 
-        objectNumberMap[value] = getObjectNumber(value.javaClass, value)
-        return@processObject shouldAnalyseObjectRecursively(value, objectNumberMap)
+        // we jump through most of the atomic classes
+        var jumpObj: Any? = value
+
+        if (isAtomic(jumpObj)) {
+            jumpObj = jumpObj?.javaClass?.getMethod("get")?.invoke(jumpObj)
+        }
+
+        if (isAtomicFU(jumpObj)) {
+            val readNextJumpObjectByFieldName = { fieldName: String ->
+                readFieldViaUnsafe(jumpObj, jumpObj?.javaClass?.getDeclaredField(fieldName)!!)
+            }
+
+            if (jumpObj is kotlinx.atomicfu.AtomicRef<*>) {
+                jumpObj = readNextJumpObjectByFieldName("value")
+            }
+
+            if (isAtomicFU(jumpObj)) {
+                jumpObj =
+                    if (jumpObj is kotlinx.atomicfu.AtomicBoolean) readNextJumpObjectByFieldName("_value")
+                    else readNextJumpObjectByFieldName("value")
+            }
+        }
+
+        if (jumpObj != null) {
+            objectNumberMap[jumpObj] = getObjectNumber(jumpObj.javaClass, jumpObj)
+            return@processObject if (shouldAnalyseObjectRecursively(jumpObj, objectNumberMap)) jumpObj else null
+        }
+
+        return@processObject null
     }
 
     traverseObjectGraph(
         obj,
         onArrayElement = { _, _, value ->
-            if (value?.javaClass?.isEnum == true) return@traverseObjectGraph false
+            if (value?.javaClass?.isEnum == true) return@traverseObjectGraph null
 
             try {
                 return@traverseObjectGraph processObject(value)
@@ -67,14 +97,14 @@ private fun enumerateObjects(obj: Any, objectNumberMap: MutableMap<Any, Int>) {
                 e.printStackTrace()
             }
 
-            return@traverseObjectGraph false
+            return@traverseObjectGraph null
         },
         onField = { _, f, value ->
             if (
                 Modifier.isStatic(f.modifiers) ||
                 f.isEnumConstant ||
                 f.name == "serialVersionUID"
-            ) return@traverseObjectGraph false
+            ) return@traverseObjectGraph null
 
             try {
                 return@traverseObjectGraph processObject(value)
@@ -82,7 +112,7 @@ private fun enumerateObjects(obj: Any, objectNumberMap: MutableMap<Any, Int>) {
                 e.printStackTrace()
             }
 
-            return@traverseObjectGraph false
+            return@traverseObjectGraph null
         }
     )
 }

@@ -14,9 +14,7 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
-import org.jetbrains.kotlinx.lincheck.util.isAtomic
 import org.jetbrains.kotlinx.lincheck.util.isAtomicArray
-import org.jetbrains.kotlinx.lincheck.util.isAtomicFU
 import org.jetbrains.kotlinx.lincheck.util.isAtomicFUArray
 import org.jetbrains.kotlinx.lincheck.util.readArrayElementViaUnsafe
 import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
@@ -33,7 +31,6 @@ import java.util.concurrent.atomic.AtomicIntegerArray
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater
 import java.util.concurrent.atomic.AtomicLongArray
 import java.util.concurrent.atomic.AtomicLongFieldUpdater
-import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.atomic.AtomicReferenceArray
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 import kotlin.coroutines.*
@@ -252,29 +249,45 @@ internal val Class<*>.allDeclaredFieldWithSuperclasses get(): List<Field> {
  * Otherwise, fields are traversed and [onField] is called.
  *
  * @param root object from which the traverse starts.
- * @param onArrayElement callback for array elements, accepts `(array, index, elementValue)`. Returns whether this object should be traversed further.
- * @param onField callback for fields, accepts `(fieldOwner, field, fieldValue)`. Returns whether this object should be traversed further.
+ * @param onArrayElement callback for array elements, accepts `(array, index, elementValue)`. Returns what object should be traversed next.
+ * @param onField callback for fields, accepts `(fieldOwner, field, fieldValue)`. Returns what object should be traversed next.
  */
 internal fun traverseObjectGraph(
     root: Any,
-    onArrayElement: (Any, Int, Any?) -> Boolean,
-    onField: (Any, Field, Any?) -> Boolean
+    onArrayElement: (Any, Int, Any?) -> Any?,
+    onField: (Any, Field, Any?) -> Any?
 ) {
     val queue = ArrayDeque<Any>()
     val visitedObjects = Collections.newSetFromMap<Any>(IdentityHashMap())
     val isImmutable = { obj: Any? ->
-        obj is String ||
-        obj is AtomicReferenceFieldUpdater<*, *> ||
-        obj is AtomicIntegerFieldUpdater<*> ||
-        obj is AtomicLongFieldUpdater<*>
+        (
+            obj == null ||
+            obj.javaClass.name == "sun.misc.Unsafe" ||
+            obj.javaClass.name == "jdk.internal.misc.Unsafe" ||
+            obj is String ||
+            obj is AtomicReferenceFieldUpdater<*, *> ||
+            obj is AtomicIntegerFieldUpdater<*> ||
+            obj is AtomicLongFieldUpdater<*>
+        )
     }
+    val shouldTraverse = { obj: Any? ->
+        (
+            obj != null &&
+            !obj.javaClass.isPrimitive && // no primitives traversing
+            !obj.isPrimitiveWrapper && // no primitive wrappers traversing
+            !isImmutable(obj) && // no immutable objects traversing
+            obj !in visitedObjects // no reference-cycles allowed during traversing
+        )
+    }
+
+    if (!shouldTraverse(root)) return
 
     queue.add(root)
     visitedObjects.add(root)
 
     val process: (
         onRead: () -> Any?,
-        onCallback: (Any?) -> Boolean
+        onCallback: (Any?) -> Any?
     ) -> Unit = { onRead, onCallback ->
         // We wrap an unsafe read into `runCatching` to hande `UnsupportedOperationException`,
         // which can be thrown, for instance, when attempting to read a field of
@@ -284,17 +297,17 @@ internal fun traverseObjectGraph(
         // do not pass fields to the user, that are non-readable by Unsafe
         if (result.isSuccess) {
             val fieldValue = result.getOrNull()
+            val nextObject = onCallback(fieldValue)
 
             if (
-                onCallback(fieldValue) && // user determines whether to append to queue
-                fieldValue != null &&
-                !fieldValue.javaClass.isPrimitive && // no primitives traversing
-                !fieldValue.isPrimitiveWrapper && // no primitive wrappers traversing
-                !isImmutable(fieldValue) && // no immutable objects traversing
-                fieldValue !in visitedObjects // no reference-cycles allowed during traversing
+                nextObject != null && // user determines what to append to queue
+                !nextObject.javaClass.isPrimitive && // no primitives traversing
+                !nextObject.isPrimitiveWrapper && // no primitive wrappers traversing
+                !isImmutable(nextObject) && // no immutable objects traversing
+                nextObject !in visitedObjects // no reference-cycles allowed during traversing
             ) {
-                queue.add(fieldValue)
-                visitedObjects.add(fieldValue)
+                queue.add(nextObject)
+                visitedObjects.add(nextObject)
             }
         }
     }
@@ -328,33 +341,10 @@ internal fun traverseObjectGraph(
                 }
             }
             else -> {
-                // we jump through most of the atomic classes
-                var jumpObj: Any? = currentObj
-
-                if (isAtomic(jumpObj) && jumpObj !is AtomicReference<*> && jumpObj !is kotlinx.atomicfu.AtomicRef<*>) {
-                    jumpObj = jumpObj?.javaClass?.getMethod("get")?.invoke(jumpObj)
-                }
-
-                if (isAtomicFU(jumpObj)) {
-                    val readNextJumpObjectByFieldName = { fieldName: String ->
-                        readFieldViaUnsafe(jumpObj, jumpObj?.javaClass?.getDeclaredField(fieldName)!!)
-                    }
-
-                    if (jumpObj is kotlinx.atomicfu.AtomicRef<*>) {
-                        jumpObj = readNextJumpObjectByFieldName("value")
-                    }
-
-                    if (isAtomicFU(jumpObj)) {
-                        jumpObj =
-                            if (jumpObj is kotlinx.atomicfu.AtomicBoolean) readNextJumpObjectByFieldName("_value")
-                            else readNextJumpObjectByFieldName("value")
-                    }
-                }
-
-                jumpObj?.javaClass?.allDeclaredFieldWithSuperclasses?.forEach { field ->
+                currentObj.javaClass.allDeclaredFieldWithSuperclasses.forEach { field ->
                     process(
-                        { readFieldViaUnsafe(jumpObj, field) },
-                        { onField(jumpObj, field, it) }
+                        { readFieldViaUnsafe(currentObj, field) },
+                        { onField(currentObj, field, it) }
                     )
                 }
             }
