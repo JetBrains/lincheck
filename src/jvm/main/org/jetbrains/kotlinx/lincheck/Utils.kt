@@ -306,6 +306,8 @@ internal fun traverseObjectGraph(
             currentObj is Class<*> -> {}
             currentObj.javaClass.isArray || isAtomicArray(currentObj) -> {
                 val length = getArrayLength(currentObj)
+                // TODO: casting currentObj to atomicfu class and accessing its field directly causes compilation error,
+                //  see https://youtrack.jetbrains.com/issue/KT-49792 and https://youtrack.jetbrains.com/issue/KT-47749
                 val cachedAtomicFUGetMethod: Method? = if (isAtomicFUArray(currentObj)) currentObj.javaClass.getMethod("get", Int::class.java) else null
 
                 for (index in 0..length - 1) {
