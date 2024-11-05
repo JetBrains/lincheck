@@ -9,8 +9,10 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.verifier.linearizability
 
+import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.*
 import java.util.concurrent.atomic.*
 import java.util.concurrent.locks.*
@@ -28,8 +30,20 @@ abstract class AbstractSetTest(private val set: Set) : AbstractLincheckTest() {
     operator fun contains(@Param(name = "key") key: Int): Boolean = set.contains(key)
 }
 
-class SpinLockSetTest : AbstractSetTest(SpinLockBasedSet())
-class ReentrantLockSetTest : AbstractSetTest(ReentrantLockBasedSet())
+class SpinLockSetTest : AbstractSetTest(SpinLockBasedSet()) {
+    override fun <O : Options<O, *>> O.customize() {
+        if (this is ModelCheckingOptions) {
+            invocationsPerIteration(1)
+        }
+    }
+}
+class ReentrantLockSetTest : AbstractSetTest(ReentrantLockBasedSet()) {
+    override fun <O : Options<O, *>> O.customize() {
+        if (this is ModelCheckingOptions) {
+            invocationsPerIteration(1)
+        }
+    }
+}
 class SynchronizedLockSetTest : AbstractSetTest(SynchronizedBlockBasedSet())
 class SynchronizedMethodSetTest : AbstractSetTest(SynchronizedMethodBasedSet())
 

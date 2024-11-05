@@ -60,9 +60,12 @@ internal class ModelCheckingStrategy(
     // Tracker of the thread parking.
     override val parkingTracker: ParkingTracker = ModelCheckingParkingTracker(nThreads, allowSpuriousWakeUps = true)
 
+    private var isFirstInvocation = true
     override fun nextInvocation(): Boolean {
+//        if (!isFirstInvocation) return false
         currentInterleaving = root.nextInterleaving()
             ?: return false
+        isFirstInvocation = false
         resetRunNumber()
         return true
     }

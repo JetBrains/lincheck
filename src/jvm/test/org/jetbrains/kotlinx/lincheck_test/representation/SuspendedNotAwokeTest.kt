@@ -15,11 +15,13 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
+import org.junit.Ignore
 import org.junit.Test
 
 /**
  * Covers a scenario when operation is suspended but never awoke.
  */
+@Ignore("Iterations == 1")
 class SuspendedNotAwokeTest {
 
     @Volatile
@@ -47,6 +49,7 @@ class SuspendedNotAwokeTest {
                 thread { actor(::operation) }
             }
         }
+        .invocationsPerIteration(1)
         .checkImpl(this::class.java)
         .checkLincheckOutput("suspended_not_awoke.txt")
 

@@ -1555,12 +1555,18 @@ abstract class ManagedStrategy(
 
     private val methodCallResultsTracker: MethodCallResultsTracker = ConcurrentMethodCallResultsTracker()
     override fun storeEventResult(result: Any?, oldEventAccumulatorCounter: Long) {
-        methodCallResultsTracker.storeNewResult(Result.success(result), oldEventAccumulatorCounter, currentThread.toLong())
+        val resultToSave = when (result) {
+            is ByteArray -> result.copyOf()
+            else -> result
+        }
+        methodCallResultsTracker.storeNewResult(Result.success(resultToSave), oldEventAccumulatorCounter, currentThread.toLong())
     }
 
-    override fun getNextEventResultOrThrow(): Any? {
-        return methodCallResultsTracker.getNextResult(currentThread.toLong()).getOrThrow()
-    }
+    override fun getNextEventResultOrThrow(): Any? =
+        when (val savedResult = methodCallResultsTracker.getNextResult(currentThread.toLong()).getOrThrow()) {
+            is ByteArray -> savedResult.copyOf()
+            else -> savedResult
+        }
 
     override fun storeEventException(t: Throwable, oldEventAccumulatorCounter: Long) {
         methodCallResultsTracker.storeNewResult(Result.failure(t), oldEventAccumulatorCounter, currentThread.toLong())

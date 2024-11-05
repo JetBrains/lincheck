@@ -75,11 +75,13 @@ private class SingleThreadMethodCallResultsTracker {
 }
 
 
+private const val log = false
 class ConcurrentMethodCallResultsTracker : MethodCallResultsTracker {
     private var currentId = AtomicLong(0)
     private val results = ConcurrentHashMap<Long, Pair<Long, Result<Any?>>>()
 
     override fun storeNewResult(result: Result<Any?>, id: Long, threadId: Long) {
+        if (log) println("set $threadId:$id..$currentId $result")
         val newId = currentId.getAndIncrement()
         val previous = results.put(id, newId to result)
         require(previous == null) {
@@ -88,8 +90,14 @@ class ConcurrentMethodCallResultsTracker : MethodCallResultsTracker {
     }
 
     override fun getNextResult(threadId: Long): Result<Any?> {
+        fun hang(): Nothing {
+            if (log) println("get $threadId:$currentId..+∞: hang")
+            while (true) {}
+        }
+        
         val index = currentId.get()
-        val (newId, result) = results[index] ?: error("No result for id=$currentId")
+        val (newId, result) = results[index] ?: hang() // error("No result for id=$currentId")
+        if (log) println("get $threadId:$currentId..$newId: $result")
         currentId.set(newId + 1)
         return result 
     }

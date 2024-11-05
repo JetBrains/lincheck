@@ -343,7 +343,7 @@ internal fun GeneratorAdapter.invokeStatic(function: KFunction<*>) {
 internal inline fun GeneratorAdapter.ifStatement(
     condition: GeneratorAdapter.() -> Unit,
     ifClause: GeneratorAdapter.() -> Unit,
-    elseClause: GeneratorAdapter.() -> Unit
+    elseClause: GeneratorAdapter.() -> Unit = {},
 ) {
     val ifClauseStart = newLabel()
     val end = newLabel()

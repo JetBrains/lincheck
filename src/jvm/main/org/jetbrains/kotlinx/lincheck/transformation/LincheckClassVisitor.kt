@@ -103,6 +103,7 @@ internal class LincheckClassVisitor(
             return mv
         }
         mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
+        mv = SubstitutionDeterminismTransformer(fileName, className, methodName, mv.newAdapter())
         mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
         mv = CoroutineCancellabilitySupportTransformer(mv, access, className, methodName, desc)
         if (access and ACC_SYNCHRONIZED != 0) {
@@ -119,7 +120,6 @@ internal class LincheckClassVisitor(
 //        mv = DeterministicHashCodeTransformer(fileName, className, methodName, mv.newAdapter())
 //        mv = DeterministicTimeTransformer(mv.newAdapter())
 //        mv = DeterministicRandomTransformer(fileName, className, methodName, mv.newAdapter())
-        mv = SubstitutionDeterminismTransformer(fileName, className, methodName, mv.newAdapter())
         mv = UnsafeMethodTransformer(fileName, className, methodName, mv.newAdapter())
         mv = AtomicFieldUpdaterMethodTransformer(fileName, className, methodName, mv.newAdapter())
         mv = VarHandleMethodTransformer(fileName, className, methodName, mv.newAdapter())

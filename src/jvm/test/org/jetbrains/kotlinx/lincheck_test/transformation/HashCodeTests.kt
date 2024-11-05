@@ -78,7 +78,6 @@ class IdentityHashCodeOnNullTest {
     fun test() = ModelCheckingOptions().check(this::class)
 }
 
-@Ignore // TODO: easier to support when `javaagent` is merged
 class IdentityHashCodeDiffersTest() {
     @Operation
     fun operation() {

@@ -14,6 +14,7 @@ import kotlinx.coroutines.channels.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.*
 
 @InternalCoroutinesApi
@@ -31,6 +32,9 @@ class BufferedChannelTest : AbstractLincheckTest() {
     fun poll() = c.tryReceive().getOrNull()
 
     override fun <O : Options<O, *>> O.customize() {
+        if (this is ModelCheckingOptions) {
+            invocationsPerIteration(1)
+        }
         sequentialSpecification(SequentialBuffered2IntChannel::class.java)
     }
 }

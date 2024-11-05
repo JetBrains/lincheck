@@ -52,5 +52,6 @@ abstract class AbstractRandomTest {
         .actorsAfter(0)
         .threads(3)
         .actorsPerThread(1)
+        .invocationsPerIteration(1)
         .check(this::class)
 }

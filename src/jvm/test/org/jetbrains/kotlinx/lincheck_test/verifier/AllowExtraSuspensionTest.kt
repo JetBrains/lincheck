@@ -15,6 +15,7 @@ import kotlinx.coroutines.sync.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import java.util.concurrent.atomic.*
@@ -32,6 +33,9 @@ class AllowExtraSuspensionCorrectTest : AbstractLincheckTest() {
     suspend fun dec() = counter.getAndDecrement()
 
     override fun <O : Options<O, *>> O.customize() {
+        if (this is ModelCheckingOptions) {
+            invocationsPerIteration(1)
+        }
         sequentialSpecification(CounterSequential::class.java)
     }
 }
@@ -49,6 +53,9 @@ class AllowExtraSuspensionIncorrectTest : AbstractLincheckTest() {
     suspend fun dec() = counter.getAndDecrement()
 
     override fun <O : Options<O, *>> O.customize() {
+        if (this is ModelCheckingOptions) {
+            invocationsPerIteration(1)
+        }
         sequentialSpecification(CounterSequential::class.java)
     }
 }

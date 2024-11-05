@@ -11,9 +11,9 @@ package org.jetbrains.kotlinx.lincheck_test;
 
 import org.jctools.queues.atomic.*;
 import org.jetbrains.annotations.*;
+import org.jetbrains.kotlinx.lincheck.Options;
 import org.jetbrains.kotlinx.lincheck.annotations.*;
-
-import java.util.*;
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions;
 
 public class NonParallelOpGroupTest extends AbstractLincheckTest {
     private final SpscLinkedAtomicQueue<Integer> queue = new SpscLinkedAtomicQueue<>();
@@ -26,5 +26,12 @@ public class NonParallelOpGroupTest extends AbstractLincheckTest {
     @Operation(nonParallelGroup = "consumer")
     public Integer poll() {
         return queue.poll();
+    }
+
+    @Override
+    public <O extends Options<O, ?>> void customize(@NotNull O $this$customize) {
+        if ($this$customize instanceof ModelCheckingOptions) {
+            ((ModelCheckingOptions)$this$customize).invocationsPerIteration(1);
+        }
     }
 }

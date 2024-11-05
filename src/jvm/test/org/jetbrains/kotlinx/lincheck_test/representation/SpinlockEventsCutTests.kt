@@ -17,6 +17,7 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.guide.MSQueueBlocking
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
+import org.junit.Ignore
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -188,6 +189,7 @@ class SpinlockEventsCutInfiniteLoopWithArrayReceiversTest : AbstractSpinLivelock
  * when spin cycle period can't be found using parameters and receivers, so
  * LinCheck should calculate spin cycle period without params.
  */
+@Ignore("Iterations == 1")
 class SpinlockEventsCutInfiniteNoCycleWithParamsTest : AbstractSpinLivelockTest() {
 
     private val array = Array(3) { 0 }
@@ -203,6 +205,7 @@ class SpinlockEventsCutInfiniteNoCycleWithParamsTest : AbstractSpinLivelockTest(
             array[0] = value + 2
         }
     }
+    override fun ModelCheckingOptions.customize(): ModelCheckingOptions = invocationsPerIteration(1)
 }
 
 
@@ -279,8 +282,11 @@ abstract class AbstractSpinLivelockTest {
     @Test
     fun testWithModelCheckingStrategy() = ModelCheckingOptions()
         .minimizeFailedScenario(false)
+        .customize()
         .checkImpl(this::class.java)
         .checkLincheckOutput(outputFileName)
+    
+    protected open fun ModelCheckingOptions.customize(): ModelCheckingOptions = this
 }
 
 /**

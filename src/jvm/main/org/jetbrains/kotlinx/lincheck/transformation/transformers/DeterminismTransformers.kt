@@ -18,8 +18,8 @@ import org.jetbrains.kotlinx.lincheck.transformation.transformers.DeterministicH
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.DeterministicRandomTransformer.Companion.randomInstanceMethodsFilter
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.DeterministicRandomTransformer.Companion.restRandomMethodsFilter
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.DeterministicTimeTransformer.Companion.timeFilter
+import org.objectweb.asm.Handle
 import org.objectweb.asm.Label
-import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.Type.*
@@ -78,12 +78,16 @@ internal class DeterministicHashCodeTransformer(
     }
 
     internal companion object {
-        private val overriddenHashCodeFilter =
-            MethodFilter { _, _, name, desc, _ -> name == "hashCode" && desc == "()I" }
-        private val identityHashCodeFilter = MethodFilter { _, owner, name, desc, _ ->
-            owner == "java/lang/System" && name == "identityHashCode" && desc == "(Ljava/lang/Object;)I"
+        private val overriddenHashCodeFilter = MethodFilter { opcode, _, name, desc, _ ->
+            (opcode == INVOKEVIRTUAL || opcode == INVOKEINTERFACE) && name == "hashCode" && desc == "()I"
         }
-        val hashCodeFilter = overriddenHashCodeFilter + identityHashCodeFilter
+        private val identityHashCodeFilter = MethodFilter { opcode, owner, name, desc, _ ->
+            opcode == INVOKESTATIC && owner == "java/lang/System" && name == "identityHashCode" && desc == "(Ljava/lang/Object;)I"
+        }
+        private val objectsHashCode = MethodFilter { opcode, owner, name, desc, itf ->
+            opcode == INVOKESTATIC && owner == "java/util/Objects" && (name == "hashCode" || name == "hash")
+        }
+        val hashCodeFilter = overriddenHashCodeFilter + identityHashCodeFilter + objectsHashCode
     }
 }
 
@@ -259,6 +263,10 @@ private interface SpecialArgumentHandler {
     fun executeAfterFollowingRun(generatorAdapter: GeneratorAdapter, load: GeneratorAdapter.() -> Unit) {}
 }
 
+private val testFilter = MethodFilter { _, owner, _, _, _ ->
+    owner == "org/jetbrains/kotlinx/lincheck_test/traceDebugger/FakeNativeCalls"
+}
+
 /**
  * [SubstitutionDeterminismTransformer] tracks invocations of general
  * purpose non-deterministic functions by remembering their first value and
@@ -272,26 +280,70 @@ internal class SubstitutionDeterminismTransformer(
     adapter: GeneratorAdapter,
 ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
 
-    private val nonDeterministicUnconditionalFilter = timeFilter + hashCodeFilter + restRandomMethodsFilter
+    private val equalsFilter = MethodFilter { opcode, owner, name, desc, _ ->
+        (opcode == INVOKEVIRTUAL || opcode == INVOKEINTERFACE) && name == "equals" && desc == "(Ljava/lang/Object;)Z"
+                || opcode == INVOKESTATIC && owner == "java/util/Objects" && (name == "equals" || name == "deepEquals") && desc == "(Ljava/lang/Object;Ljava/lang/Object;)Z"
+    }
+    private val equalsIntrinsicFilter = MethodFilter { opcode, owner, name, desc, _ ->
+        opcode == INVOKESTATIC && owner == "kotlin/jvm/internal/Intrinsics" && name == "areEqual" && desc == "(Ljava/lang/Object;Ljava/lang/Object;)Z"
+    }
+    private val toStringFilter = MethodFilter { opcode, owner, name, desc, _ ->
+        (opcode == INVOKEVIRTUAL || opcode == INVOKEINTERFACE) && name == "toString" && desc == "()Ljava/lang/String;" &&
+                owner != "java/lang/StringBuilder" && owner != "java/io/ByteArrayOutputStream"
+                || opcode == INVOKESTATIC && owner == "java/util/Objects" && (name == "toString" || name == "toIdentityString")
+                || opcode == INVOKESTATIC && owner == "java/lang/String" && name == "format"
+    }
+    private val nonDeterministicUnconditionalFilter =
+        timeFilter + hashCodeFilter + restRandomMethodsFilter + testFilter + equalsFilter + equalsIntrinsicFilter + toStringFilter
+    private val implicitToStringForLastParameterFunctionsFilter = MethodFilter { opcode, owner, name, desc, _ ->
+        opcode == INVOKEVIRTUAL && owner == "java/lang/StringBuilder" && (
+                name == "append" && desc == "(Ljava/lang/Object;)Ljava/lang/StringBuilder;" ||
+                        name == "insert" && desc == "(ILjava/lang/Object;)Ljava/lang/StringBuilder;")
+                // todo printStream
+    }
+
+    override fun visitInvokeDynamicInsn(
+        name: String,
+        descriptor: String,
+        bootstrapMethodHandle: Handle,
+        vararg bootstrapMethodArguments: Any?
+    ) = adapter.run {
+        invokeIfInTestingCode(
+            original = { visitInvokeDynamicInsn(name, descriptor, bootstrapMethodHandle, *bootstrapMethodArguments) },
+        ) {
+            if (bootstrapMethodHandle.owner == "java/lang/invoke/StringConcatFactory") {
+                val returnType = Type.getType(String::class.java)
+                executeWithDetermination(
+                    valueType = returnType,
+                    executeOnFirstRun = {
+                        visitInvokeDynamicInsn(name, descriptor, bootstrapMethodHandle, *bootstrapMethodArguments)
+                    },
+                    executeOnNextRuns = { popArguments(descriptor); getNextEventResultOrThrow(returnType) },
+                )
+            } else {
+                visitInvokeDynamicInsn(name, descriptor, bootstrapMethodHandle, *bootstrapMethodArguments)
+            }
+        }
+    }
 
     override fun visitJumpInsn(opcode: Int, label: Label?) = adapter.run {
-        if (opcode == Opcodes.IF_ACMPEQ || opcode == Opcodes.IF_ACMPNE) {
+        if (opcode == IF_ACMPEQ || opcode == IF_ACMPNE) {
             invokeIfInTestingCode(
                 original = { visitJumpInsn(opcode, label) },
                 code = {
                     ifStatement(
-                        condition = { invokeStatic(Injections::isFirstRun) },
+                        condition = { invokeInIgnoredSection { invokeStatic(Injections::isFirstRun) } },
                         ifClause = {
                             invokeInIgnoredSection {
                                 invokeStatic(Injections::nextEventAccumulatorId)
                             }
                             val id = newLocal(LONG_TYPE)
                             storeLocal(id)
-                            
+
                             val trueLabel = newLabel()
                             val endLabel = newLabel()
                             visitJumpInsn(opcode, trueLabel)
-                            push(true)
+                            push(false)
                             box(BOOLEAN_TYPE)
                             loadLocal(id)
                             invokeInIgnoredSection {
@@ -299,7 +351,7 @@ internal class SubstitutionDeterminismTransformer(
                             }
                             visitJumpInsn(GOTO, endLabel)
                             visitLabel(trueLabel)
-                            push(false)
+                            push(true)
                             box(BOOLEAN_TYPE)
                             loadLocal(id)
                             invokeInIgnoredSection {
@@ -313,7 +365,6 @@ internal class SubstitutionDeterminismTransformer(
                             ifStatement(
                                 condition = { getNextEventResultOrThrow(BOOLEAN_TYPE) },
                                 ifClause = { visitJumpInsn(GOTO, label) },
-                                elseClause = {}
                             )
                         }
                     )
@@ -325,59 +376,44 @@ internal class SubstitutionDeterminismTransformer(
     }
 
     @Suppress("unused")
-    private fun GeneratorAdapter.log(message: String) = invokeInIgnoredSection {
+    private fun GeneratorAdapter.logFromStack(type: Type) = invokeInIgnoredSection {
+        if (type == VOID_TYPE) {
+            visitLdcInsn("<void>")
+        } else {
+            box(type)
+            dup()
+            val onEndIf = newLabel()
+            ifNonNull(onEndIf)
+            pop()
+            visitLdcInsn("<null>")
+            visitLabel(onEndIf)
+        }
+        
         val printStreamType = getType(PrintStream::class.java)
         getStatic(getType(System::class.java), "out", printStreamType)
-        visitLdcInsn(message)
+        swap()
+        invokeVirtual(printStreamType, Method.getMethod(PrintStream::class.java.getMethod("println", Any::class.java)))
+    }
+
+    @Suppress("unused")
+    private fun GeneratorAdapter.logConst(message: Any?) = invokeInIgnoredSection {
+        val printStreamType = getType(PrintStream::class.java)
+        getStatic(getType(System::class.java), "out", printStreamType)
+        visitLdcInsn(message.toString())
         invokeVirtual(printStreamType, Method.getMethod(PrintStream::class.java.getMethod("println", Any::class.java)))
     }
 
     private fun isMethodInsnStatic(opcode: Int) = when (opcode) {
-        Opcodes.INVOKESTATIC, Opcodes.INVOKEDYNAMIC -> true
-        Opcodes.INVOKEVIRTUAL, Opcodes.INVOKEINTERFACE, Opcodes.INVOKESPECIAL -> false
+        INVOKESTATIC, INVOKEDYNAMIC -> true
+        INVOKEVIRTUAL, INVOKEINTERFACE, INVOKESPECIAL -> false
         else -> error("Unexpected method insn: $opcode")
     }
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
-        fun instrumentCode() {
-//            log("$opcode: $owner.$name$desc")
-            val specialArgumentHandlers: Map<Int?, SpecialArgumentHandler> =
-                getSpecialArgumentHandlers(getType("L$owner;"), getArgumentTypes(desc))
-            val returnType = getReturnType(desc)
-            executeWithDetermination(
-                valueType = returnType,
-                executeOnFirstRun = { visitMethodInsn(opcode, owner, name, desc, itf) },
-                executeOnNextRuns = { getNextEventResultOrThrow(returnType) },
-                wrapCall = { isFirstRun, execute ->
-                    if (isFirstRun) {
-                        callHandlingArguments(
-                            opcode = opcode, desc = desc,
-                            specialArgumentHandlers = specialArgumentHandlers,
-                            executeBeforeRun = SpecialArgumentHandler::executeBeforeFirstRun,
-                            executeAfterRun = SpecialArgumentHandler::executeAfterFirstRun,
-                            restoreArgumentsOnStackBeforeCall = true,
-                        ) {
-                            execute()
-                        }
-                    } else {
-                        callHandlingArguments(
-                            opcode = opcode, desc = desc,
-                            specialArgumentHandlers = specialArgumentHandlers,
-                            executeBeforeRun = SpecialArgumentHandler::executeBeforeFollowingRun,
-                            executeAfterRun = SpecialArgumentHandler::executeAfterFollowingRun,
-                            restoreArgumentsOnStackBeforeCall = false,
-                        ) {
-                            execute()
-                        }
-                    }
-                }
-            )
-        }
-
         if (nonDeterministicUnconditionalFilter.matchesMethodCall(opcode, owner, name, desc, itf)) {
             invokeIfInTestingCode(
                 original = { visitMethodInsn(opcode, owner, name, desc, itf) },
-                code = { instrumentCode() }
+                code = { instrumentCode(opcode, owner, name, desc, itf) }
             )
         } else if (
             !isMethodInsnStatic(opcode) && randomInstanceMethodsFilter.matchesMethodCall(opcode, owner, name, desc, itf)
@@ -393,7 +429,7 @@ internal class SubstitutionDeterminismTransformer(
                         },
                         ifClause = {
                             loadLocals(args)
-                            instrumentCode()
+                            instrumentCode(opcode, owner, name, desc, itf)
                         },
                         elseClause = {
                             loadLocals(args)
@@ -402,9 +438,52 @@ internal class SubstitutionDeterminismTransformer(
                     )
                 }
             )
+        } else if (implicitToStringForLastParameterFunctionsFilter.matchesMethodCall(opcode, owner, name, desc, itf)) {
+            invokeIfInTestingCode(
+                original = { visitMethodInsn(opcode, owner, name, desc, itf) },
+                code = {
+                    instrumentCode(INVOKEVIRTUAL, "java/lang/Object", "toString", "()Ljava/lang/String;", false)
+                    visitMethodInsn(opcode, owner, name, desc, itf)
+                }
+            )
         } else {
             visitMethodInsn(opcode, owner, name, desc, itf)
         }
+    }
+    
+    private fun GeneratorAdapter.instrumentCode(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
+//            log("$opcode: $owner.$name$desc")
+        val specialArgumentHandlers: Map<Int?, SpecialArgumentHandler> =
+            getSpecialArgumentHandlers(getType("L$owner;"), getArgumentTypes(desc))
+        val returnType = getReturnType(desc)
+        executeWithDetermination(
+            valueType = returnType,
+            executeOnFirstRun = { visitMethodInsn(opcode, owner, name, desc, itf) },
+            executeOnNextRuns = { getNextEventResultOrThrow(returnType) },
+            wrapCall = { isFirstRun, execute ->
+                if (isFirstRun) {
+                    callHandlingArguments(
+                        opcode = opcode, desc = desc,
+                        specialArgumentHandlers = specialArgumentHandlers,
+                        executeBeforeRun = SpecialArgumentHandler::executeBeforeFirstRun,
+                        executeAfterRun = SpecialArgumentHandler::executeAfterFirstRun,
+                        restoreArgumentsOnStackBeforeCall = true,
+                    ) {
+                        execute()
+                    }
+                } else {
+                    callHandlingArguments(
+                        opcode = opcode, desc = desc,
+                        specialArgumentHandlers = specialArgumentHandlers,
+                        executeBeforeRun = SpecialArgumentHandler::executeBeforeFollowingRun,
+                        executeAfterRun = SpecialArgumentHandler::executeAfterFollowingRun,
+                        restoreArgumentsOnStackBeforeCall = false,
+                    ) {
+                        execute()
+                    }
+                }
+            }
+        )
     }
 
     private fun GeneratorAdapter.callHandlingArguments(

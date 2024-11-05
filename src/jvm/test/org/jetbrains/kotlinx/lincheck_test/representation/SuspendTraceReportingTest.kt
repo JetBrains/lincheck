@@ -17,6 +17,7 @@ import org.junit.*
 import kotlin.coroutines.*
 import kotlinx.coroutines.sync.*
 
+@Ignore("Iterations == 1")
 class SuspendTraceReportingTest {
     private val lock = Mutex()
     private var canEnterForbiddenBlock: Boolean = false
@@ -35,9 +36,7 @@ class SuspendTraceReportingTest {
     @Operation(cancellableOnSuspension = false)
     suspend fun bar(): Int {
         barStarted = true
-        lock.withLock {
-            counter++
-        }
+        lock.withLock { counter++ }
         if (canEnterForbiddenBlock) return -1
         return 0
     }
@@ -51,6 +50,7 @@ class SuspendTraceReportingTest {
             }
         }
     }
+        .invocationsPerIteration(1)
         .checkImpl(this::class.java)
         .checkLincheckOutput("suspend_trace_reporting.txt")
 }

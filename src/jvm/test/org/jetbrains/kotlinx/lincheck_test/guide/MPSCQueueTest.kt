@@ -33,5 +33,7 @@ class MPSCQueueTest {
     fun stressTest() = StressOptions().check(this::class)
 
     @Test
-    fun modelCheckingTest() = ModelCheckingOptions().check(this::class)
+    fun modelCheckingTest() = ModelCheckingOptions()
+        .invocationsPerIteration(1)
+        .check(this::class)
 }

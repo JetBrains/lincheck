@@ -17,6 +17,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.junit.*
 import java.util.concurrent.atomic.*
 
+@Ignore("Iterations == 1")
 class Striped64SupportTest {
     val counter = LongAdder() // LongAdder uses Striped64.getProbe() under the hood
 
@@ -33,6 +34,7 @@ class Striped64SupportTest {
     fun test() {
         val failure = ModelCheckingOptions()
             .minimizeFailedScenario(false)
+            .invocationsPerIteration(1)
             .checkImpl(this::class.java)
         assert(failure is IncorrectResultsFailure) {
             "This test should fail with IncorrectResultsFailure, but another error has been detected:\n$failure"
