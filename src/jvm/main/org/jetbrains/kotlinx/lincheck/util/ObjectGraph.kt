@@ -39,7 +39,7 @@ import java.util.*
  * @param onArrayElement callback for array elements traversal, accepts `(array, index, elementValue)`.
  *   Returns an object to be traversed next.
  */
-internal fun traverseObjectGraph(
+internal inline fun traverseObjectGraph(
     root: Any,
     onField: (obj: Any, field: Field, value: Any?) -> Any?,
     onArrayElement: (array: Any, index: Int, element: Any?) -> Any?,
@@ -107,7 +107,7 @@ internal fun traverseObjectGraph(
  * @param obj array which elements to traverse.
  * @param onArrayElement callback which accepts `(obj, index, elementValue)`.
  */
-internal fun traverseArrayElements(obj: Any, onArrayElement: (array: Any, index: Int, element: Any?) -> Unit) {
+internal inline fun traverseArrayElements(obj: Any, onArrayElement: (array: Any, index: Int, element: Any?) -> Unit) {
     if (!obj.javaClass.isArray && !isAtomicArray(obj)) return
 
     val length = getArrayLength(obj)
@@ -140,7 +140,7 @@ internal fun traverseArrayElements(obj: Any, onArrayElement: (array: Any, index:
  * @param obj array which elements to traverse.
  * @param onField callback which accepts `(obj, field, fieldValue)`.
  */
-internal fun traverseObjectFields(obj: Any, onField: (obj: Any, field: Field, value: Any?) -> Unit) {
+internal inline fun traverseObjectFields(obj: Any, onField: (obj: Any, field: Field, value: Any?) -> Unit) {
     obj.javaClass.allDeclaredFieldWithSuperclasses.forEach { field ->
         // We wrap an unsafe read into `runCatching` to handle `UnsupportedOperationException`,
         // which can be thrown, for instance, when attempting to read a field of
