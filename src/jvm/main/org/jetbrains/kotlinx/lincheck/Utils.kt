@@ -14,10 +14,6 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
-import org.jetbrains.kotlinx.lincheck.util.isAtomicArray
-import org.jetbrains.kotlinx.lincheck.util.isAtomicFUArray
-import org.jetbrains.kotlinx.lincheck.util.readArrayElementViaUnsafe
-import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import sun.nio.ch.lincheck.EventTracker
 import sun.nio.ch.lincheck.TestThread
@@ -27,12 +23,6 @@ import java.lang.ref.*
 import java.lang.reflect.*
 import java.lang.reflect.Method
 import java.util.*
-import java.util.concurrent.atomic.AtomicIntegerArray
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater
-import java.util.concurrent.atomic.AtomicLongArray
-import java.util.concurrent.atomic.AtomicLongFieldUpdater
-import java.util.concurrent.atomic.AtomicReferenceArray
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
 

@@ -38,12 +38,9 @@ internal fun traverseObjectGraph(
     val isImmutable = { obj: Any? ->
         (
             obj == null ||
-            obj.javaClass.name == "sun.misc.Unsafe" ||
-            obj.javaClass.name == "jdk.internal.misc.Unsafe" ||
             obj is String ||
-            obj is AtomicReferenceFieldUpdater<*, *> ||
-            obj is AtomicIntegerFieldUpdater<*> ||
-            obj is AtomicLongFieldUpdater<*>
+            isAtomicFieldUpdater(obj) ||
+            isUnsafeClass(obj.javaClass.name)
         )
     }
     val shouldTraverse = { obj: Any? ->
