@@ -30,8 +30,8 @@ import java.util.*
  */
 internal fun traverseObjectGraph(
     root: Any,
-    onArrayElement: (Any, Int, Any?) -> Any?,
-    onField: (Any, Field, Any?) -> Any?
+    onArrayElement: (array: Any, index: Int, element: Any?) -> Any?,
+    onField: (obj: Any, field: Field, value: Any?) -> Any?
 ) {
     val queue = ArrayDeque<Any>()
     val visitedObjects = Collections.newSetFromMap<Any>(IdentityHashMap())
@@ -96,7 +96,7 @@ internal fun traverseObjectGraph(
  * @param obj array which elements to traverse.
  * @param onArrayElement callback which accepts `(obj, index, elementValue)`.
  */
-internal fun traverseArrayElements(obj: Any, onArrayElement: (Any /* array */, Int /* index */, Any? /* element value */) -> Unit) {
+internal fun traverseArrayElements(obj: Any, onArrayElement: (array: Any, index: Int, element: Any?) -> Unit) {
     if (!obj.javaClass.isArray && !isAtomicArray(obj)) return
 
     val length = getArrayLength(obj)
@@ -129,7 +129,7 @@ internal fun traverseArrayElements(obj: Any, onArrayElement: (Any /* array */, I
  * @param obj array which elements to traverse.
  * @param onField callback which accepts `(obj, field, fieldValue)`.
  */
-internal fun traverseObjectFields(obj: Any, onField: (Any /* obj */, Field, Any? /* field value */) -> Unit) {
+internal fun traverseObjectFields(obj: Any, onField: (obj: Any, field: Field, value: Any?) -> Unit) {
     obj.javaClass.allDeclaredFieldWithSuperclasses.forEach { field ->
         // We wrap an unsafe read into `runCatching` to hande `UnsupportedOperationException`,
         // which can be thrown, for instance, when attempting to read a field of
