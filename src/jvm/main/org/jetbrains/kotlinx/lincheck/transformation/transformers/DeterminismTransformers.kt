@@ -216,8 +216,8 @@ internal class DeterministicRandomTransformer(
             Random::class.getDeclaredAsmMethods()// + randomGeneratorMethods.orEmpty() + kotlin.random.Random::class.getDeclaredAsmMethods()
         }
         private val randomInstanceMethods by lazy {
-            Random::class.java.declaredMethods.filter { !Modifier.isStatic(it.modifiers) }.map(Method::getMethod) +
-                    randomGeneratorMethods.orEmpty()
+            (Random::class.java.declaredMethods + kotlin.random.Random::class.java.declaredMethods)
+                .filter { !Modifier.isStatic(it.modifiers) }.map(Method::getMethod) + randomGeneratorMethods.orEmpty()
         }
         private val regularRandomMethodFilter = MethodFilter { _, _, name, desc, _ ->
             declaredRandomMethods.any { it.name == name && it.descriptor == desc }
