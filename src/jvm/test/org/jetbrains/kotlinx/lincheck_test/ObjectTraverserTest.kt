@@ -14,6 +14,7 @@ import org.jetbrains.kotlinx.lincheck.enumerateObjects
 import org.junit.Assert
 import org.junit.Test
 import java.util.Optional
+import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.atomic.AtomicReferenceArray
 
 /**
@@ -105,4 +106,21 @@ class ObjectTraverserTest {
         )
     }
 
+    @Test
+    @Suppress("UNUSED_VARIABLE")
+    fun `should jump through atomic refs`() {
+        val myObject = object : Any() {
+            val javaRef = AtomicReference<AtomicReference<Int>>(AtomicReference(1))
+            val atomicFURef: kotlinx.atomicfu.AtomicRef<kotlinx.atomicfu.AtomicRef<Any>?> = kotlinx.atomicfu.atomic(null)
+        }
+        myObject.atomicFURef.value = kotlinx.atomicfu.atomic<Any>(2)
+
+        val objectEnumeration = enumerateObjects(myObject)
+        Assert.assertTrue(
+            objectEnumeration.size == 3 &&
+            objectEnumeration.keys.containsAll(
+                listOf(myObject, 1, 2)
+            )
+        )
+    }
 }

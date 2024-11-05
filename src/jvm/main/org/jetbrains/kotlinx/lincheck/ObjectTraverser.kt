@@ -57,7 +57,7 @@ private fun enumerateObjects(obj: Any, objectNumberMap: MutableMap<Any, Int>) {
 
         // Special treatment for java atomic classes, because they can be extended but user classes,
         // in case if a user extends java atomic class, we do not want to jump through it.
-        while (jumpObj?.javaClass?.name != null && isAtomicClass(jumpObj.javaClass.name)) {
+        while (jumpObj?.javaClass?.name != null && isAtomicJavaClass(jumpObj.javaClass.name)) {
             jumpObj = jumpObj.javaClass.getMethod("get").invoke(jumpObj)
         }
 
@@ -66,7 +66,7 @@ private fun enumerateObjects(obj: Any, objectNumberMap: MutableMap<Any, Int>) {
                 readFieldViaUnsafe(jumpObj, jumpObj?.javaClass?.getDeclaredField(fieldName)!!)
             }
 
-            if (jumpObj is kotlinx.atomicfu.AtomicRef<*>) {
+            while (jumpObj is kotlinx.atomicfu.AtomicRef<*>) {
                 jumpObj = readNextJumpObjectByFieldName("value")
             }
 
