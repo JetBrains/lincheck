@@ -108,7 +108,7 @@ internal inline fun traverseObjectGraph(
  * @param onArrayElement callback which accepts `(obj, index, elementValue)`.
  */
 internal inline fun traverseArrayElements(obj: Any, onArrayElement: (array: Any, index: Int, element: Any?) -> Unit) {
-    if (!obj.javaClass.isArray && !isAtomicArray(obj)) return
+    require(obj.javaClass.isArray || isAtomicArray(obj))
 
     val length = getArrayLength(obj)
     // TODO: casting `obj` to atomicfu class and accessing its field directly causes compilation error,
