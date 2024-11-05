@@ -58,7 +58,7 @@ internal fun traverseObjectGraph(
     queue.add(root)
     visitedObjects.add(root)
 
-    val process: (
+    val processObject: (
         onRead: () -> Any?,
         onCallback: (Any?) -> Any?
     ) -> Unit = { onRead, onCallback ->
@@ -97,7 +97,7 @@ internal fun traverseObjectGraph(
                 val cachedAtomicFUGetMethod: Method? = if (isAtomicFUArray(currentObj)) currentObj.javaClass.getMethod("get", Int::class.java) else null
 
                 for (index in 0..length - 1) {
-                    process(
+                    processObject(
                         {
                             if (isAtomicFUArray(currentObj)) {
                                 cachedAtomicFUGetMethod!!.invoke(currentObj, index) as Int
@@ -115,7 +115,7 @@ internal fun traverseObjectGraph(
             }
             else -> {
                 currentObj.javaClass.allDeclaredFieldWithSuperclasses.forEach { field ->
-                    process(
+                    processObject(
                         { readFieldViaUnsafe(currentObj, field) },
                         { onField(currentObj, field, it) }
                     )
