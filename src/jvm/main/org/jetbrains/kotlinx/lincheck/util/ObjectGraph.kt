@@ -17,21 +17,32 @@ import java.util.*
 
 
 /**
- * Traverses all fields of a given object in bfs order.
+ * Traverses all fields of a given object in BFS order.
  *
- * In case if a reached object is java array, atomic array, or atomicfu array,
- * the elements of such arrays will be traversed and [onArrayElement] will be called on them.
+ * For a given reachable (non-array) object,
+ * all its fields are traversed and [onField] callback is called on each field value.
  *
- * Otherwise, fields are traversed and [onField] is called.
+ * In case if a reachable object is java array, atomic array, or atomicfu array,
+ * the elements of the array are traversed and [onArrayElement] callback is called on each array element.
  *
- * @param root object from which the traverse starts.
- * @param onArrayElement callback for array elements, accepts `(array, index, elementValue)`. Returns what object should be traversed next.
- * @param onField callback for fields, accepts `(fieldOwner, field, fieldValue)`. Returns what object should be traversed next.
+ * Both [onField] and [onArrayElement] callbacks should return the next object to be traversed,
+ * or null if further traversal is not required for given field or array element.
+ * In general, the returned object should be a field value or an array element itself;
+ * however, the callbacks can implement object skipping by returning some other reachable object.
+ *
+ * Some objects are skipped and are not traversed,
+ * for instance, primitive boxed objects, immutable objects (e.g., String), and some others.
+ *
+ * @param root object to start the traversal from.
+ * @param onField callback for fields traversal, accepts `(fieldOwner, field, fieldValue)`.
+ *   Returns an object to be traversed next.
+ * @param onArrayElement callback for array elements traversal, accepts `(array, index, elementValue)`.
+ *   Returns an object to be traversed next.
  */
 internal fun traverseObjectGraph(
     root: Any,
+    onField: (obj: Any, field: Field, value: Any?) -> Any?,
     onArrayElement: (array: Any, index: Int, element: Any?) -> Any?,
-    onField: (obj: Any, field: Field, value: Any?) -> Any?
 ) {
     val queue = ArrayDeque<Any>()
     val visitedObjects = Collections.newSetFromMap<Any>(IdentityHashMap())
@@ -131,12 +142,12 @@ internal fun traverseArrayElements(obj: Any, onArrayElement: (array: Any, index:
  */
 internal fun traverseObjectFields(obj: Any, onField: (obj: Any, field: Field, value: Any?) -> Unit) {
     obj.javaClass.allDeclaredFieldWithSuperclasses.forEach { field ->
-        // We wrap an unsafe read into `runCatching` to hande `UnsupportedOperationException`,
+        // We wrap an unsafe read into `runCatching` to handle `UnsupportedOperationException`,
         // which can be thrown, for instance, when attempting to read a field of
         // a hidden class (starting from Java 15).
         val result = runCatching { readFieldViaUnsafe(obj, field) }
 
-        // do not pass fields to the user, that are non-readable by Unsafe
+        // do not pass fields to the user that are non-readable by Unsafe
         if (result.isSuccess) {
             val fieldValue = result.getOrNull()
             onField(obj, field, fieldValue)
