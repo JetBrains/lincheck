@@ -52,11 +52,13 @@ private fun enumerateObjects(obj: Any, objectNumberMap: MutableMap<Any, Int>) {
     val processObject: (Any?) -> Any? = processObject@{ value: Any? ->
         if (value == null || value is Class<*> || value is ClassLoader) return@processObject null
 
-        // we jump through most of the atomic classes
+        // We jump through most of the atomic classes
         var jumpObj: Any? = value
 
-        if (isAtomic(jumpObj)) {
-            jumpObj = jumpObj?.javaClass?.getMethod("get")?.invoke(jumpObj)
+        // Special treatment for java atomic classes, because they can be extended but user classes,
+        // in case if a user extends java atomic class, we do not want to jump through it.
+        while (jumpObj?.javaClass?.name != null && isAtomicClass(jumpObj.javaClass.name)) {
+            jumpObj = jumpObj.javaClass.getMethod("get").invoke(jumpObj)
         }
 
         if (isAtomicFU(jumpObj)) {

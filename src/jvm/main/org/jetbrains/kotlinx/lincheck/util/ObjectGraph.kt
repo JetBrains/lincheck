@@ -58,30 +58,16 @@ internal fun traverseObjectGraph(
     queue.add(root)
     visitedObjects.add(root)
 
-    val processObject: (
-        onRead: () -> Any?,
-        onCallback: (Any?) -> Any?
-    ) -> Unit = { onRead, onCallback ->
-        // We wrap an unsafe read into `runCatching` to hande `UnsupportedOperationException`,
-        // which can be thrown, for instance, when attempting to read a field of
-        // a hidden class (starting from Java 15).
-        val result = runCatching { onRead() }
-
-        // do not pass fields to the user, that are non-readable by Unsafe
-        if (result.isSuccess) {
-            val fieldValue = result.getOrNull()
-            val nextObject = onCallback(fieldValue)
-
-            if (
-                nextObject != null && // user determines what to append to queue
-                !nextObject.javaClass.isPrimitive && // no primitives traversing
-                !nextObject.isPrimitiveWrapper && // no primitive wrappers traversing
-                !isImmutable(nextObject) && // no immutable objects traversing
-                nextObject !in visitedObjects // no reference-cycles allowed during traversing
-            ) {
-                queue.add(nextObject)
-                visitedObjects.add(nextObject)
-            }
+    val processNextObject: (nextObject: Any?) -> Unit = { nextObject ->
+        if (
+            nextObject != null && // user determines what to append to queue
+            !nextObject.javaClass.isPrimitive && // no primitives traversing
+            !nextObject.isPrimitiveWrapper && // no primitive wrappers traversing
+            !isImmutable(nextObject) && // no immutable objects traversing
+            nextObject !in visitedObjects // no reference-cycles allowed during traversing
+        ) {
+            queue.add(nextObject)
+            visitedObjects.add(nextObject)
         }
     }
 
@@ -91,36 +77,69 @@ internal fun traverseObjectGraph(
         when {
             currentObj is Class<*> -> {}
             currentObj.javaClass.isArray || isAtomicArray(currentObj) -> {
-                val length = getArrayLength(currentObj)
-                // TODO: casting currentObj to atomicfu class and accessing its field directly causes compilation error,
-                //  see https://youtrack.jetbrains.com/issue/KT-49792 and https://youtrack.jetbrains.com/issue/KT-47749
-                val cachedAtomicFUGetMethod: Method? = if (isAtomicFUArray(currentObj)) currentObj.javaClass.getMethod("get", Int::class.java) else null
-
-                for (index in 0..length - 1) {
-                    processObject(
-                        {
-                            if (isAtomicFUArray(currentObj)) {
-                                cachedAtomicFUGetMethod!!.invoke(currentObj, index) as Int
-                            }
-                            else when (currentObj) {
-                                is AtomicReferenceArray<*> -> currentObj.get(index)
-                                is AtomicIntegerArray -> currentObj.get(index)
-                                is AtomicLongArray -> currentObj.get(index)
-                                else -> readArrayElementViaUnsafe(currentObj, index)
-                            }
-                        },
-                        { onArrayElement(currentObj, index, it) }
-                    )
+                traverseArrayElements(currentObj) { _ /* currentObj */, index, elementValue ->
+                    processNextObject(onArrayElement(currentObj, index, elementValue))
                 }
             }
             else -> {
-                currentObj.javaClass.allDeclaredFieldWithSuperclasses.forEach { field ->
-                    processObject(
-                        { readFieldViaUnsafe(currentObj, field) },
-                        { onField(currentObj, field, it) }
-                    )
+                traverseObjectFields(currentObj) { _ /* currentObj */, field, fieldValue ->
+                    processNextObject(onField(currentObj, field, fieldValue))
                 }
             }
+        }
+    }
+}
+
+/**
+ * Traverses [obj] elements if it is a pure array, java atomic array, or atomicfu array, otherwise no-op.
+ *
+ * @param obj array which elements to traverse.
+ * @param onArrayElement callback which accepts `(obj, index, elementValue)`.
+ */
+internal fun traverseArrayElements(obj: Any, onArrayElement: (Any /* array */, Int /* index */, Any? /* element value */) -> Unit) {
+    if (!obj.javaClass.isArray && !isAtomicArray(obj)) return
+
+    val length = getArrayLength(obj)
+    // TODO: casting `obj` to atomicfu class and accessing its field directly causes compilation error,
+    //  see https://youtrack.jetbrains.com/issue/KT-49792 and https://youtrack.jetbrains.com/issue/KT-47749
+    val cachedAtomicFUGetMethod: Method? = if (isAtomicFUArray(obj)) obj.javaClass.getMethod("get", Int::class.java) else null
+
+    for (index in 0..length - 1) {
+        val result = runCatching {
+            if (isAtomicFUArray(obj)) {
+                cachedAtomicFUGetMethod!!.invoke(obj, index) as Int
+            }
+            else when (obj) {
+                is AtomicReferenceArray<*> -> obj.get(index)
+                is AtomicIntegerArray -> obj.get(index)
+                is AtomicLongArray -> obj.get(index)
+                else -> readArrayElementViaUnsafe(obj, index)
+            }
+        }
+
+        if (result.isSuccess) {
+            onArrayElement(obj, index, result.getOrNull())
+        }
+    }
+}
+
+/**
+ * Traverses [obj] fields (including fields from superclasses).
+ *
+ * @param obj array which elements to traverse.
+ * @param onField callback which accepts `(obj, field, fieldValue)`.
+ */
+internal fun traverseObjectFields(obj: Any, onField: (Any /* obj */, Field, Any? /* field value */) -> Unit) {
+    obj.javaClass.allDeclaredFieldWithSuperclasses.forEach { field ->
+        // We wrap an unsafe read into `runCatching` to hande `UnsupportedOperationException`,
+        // which can be thrown, for instance, when attempting to read a field of
+        // a hidden class (starting from Java 15).
+        val result = runCatching { readFieldViaUnsafe(obj, field) }
+
+        // do not pass fields to the user, that are non-readable by Unsafe
+        if (result.isSuccess) {
+            val fieldValue = result.getOrNull()
+            onField(obj, field, fieldValue)
         }
     }
 }
