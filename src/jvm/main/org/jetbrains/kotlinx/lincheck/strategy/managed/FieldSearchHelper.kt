@@ -12,7 +12,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.FieldSearchHelper.TraverseResult.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.OwnerWithName.*
-import org.jetbrains.kotlinx.lincheck.traverseObjectGraph
+import org.jetbrains.kotlinx.lincheck.util.traverseObjectGraph
 import java.lang.reflect.Modifier
 
 
