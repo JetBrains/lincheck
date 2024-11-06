@@ -601,10 +601,7 @@ internal fun collectExceptionStackTraces(executionResult: ExecutionResult): Exce
         .filterIsInstance<ExceptionResult>()
         .forEachIndexed { index, exceptionResult ->
             val exception = exceptionResult.throwable
-            val isInternalLincheckBug = exception.stackTrace?.firstOrNull()
-                ?.let { LINCHECK_PACKAGE_NAME in it.className }
-                ?: false
-            if (isInternalLincheckBug) {
+            if (exception.isInternalLincheckBug()) {
                 return InternalLincheckBugResult(exception)
             }
             val stackTrace = exception.stackTrace
@@ -612,6 +609,14 @@ internal fun collectExceptionStackTraces(executionResult: ExecutionResult): Exce
             exceptionStackTraces[exception] = ExceptionNumberAndStacktrace(index + 1, stackTrace)
         }
     return ExceptionStackTracesResult(exceptionStackTraces)
+}
+
+private fun Throwable.isInternalLincheckBug(): Boolean {
+    // we expect every Lincheck test thread to start from the Lincheck runner routines,
+    // so we filter out stack trace elements of these runner routines
+    val testStackTrace = stackTrace.takeWhile { LINCHECK_RUNNER_PACKAGE_NAME !in it.className }
+    // if the stack trace contains Lincheck functions, we classify it as a Lincheck bug
+    return testStackTrace.any { LINCHECK_PACKAGE_NAME in it.className }
 }
 
 private fun StringBuilder.appendUnexpectedExceptionFailure(
