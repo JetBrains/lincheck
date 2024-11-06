@@ -17,7 +17,7 @@ import java.util.*
 
 
 /**
- * Traverses all fields of a given object in BFS order.
+ * Traverses a subgraph of objects reachable from a given root object in BFS order.
  *
  * For a given reachable (non-array) object,
  * all its fields are traversed and [onField] callback is called on each field value.
