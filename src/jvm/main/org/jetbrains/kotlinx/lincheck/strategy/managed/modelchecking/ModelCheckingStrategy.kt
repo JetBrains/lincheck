@@ -16,6 +16,7 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanObjectNumeration
+import org.jetbrains.kotlinx.lincheck.util.traverseObjectGraph
 import java.lang.reflect.*
 import java.util.*
 import kotlin.random.Random
@@ -547,38 +548,29 @@ internal class LocalObjectManager : ObjectTracker {
      * Each local object is a key, and its value is a list of objects accessible from it.
      * Note that non-local objects are excluded from this map.
      */
-    private val localObjects = IdentityHashMap<Any, MutableList<Any>>()
+    private val localObjects : MutableSet<Any> =
+        Collections.newSetFromMap(IdentityHashMap())
 
     /**
      * Registers a new object as a locally accessible one.
      */
     override fun registerNewObject(obj: Any) {
         check(obj !== StaticObject)
-        localObjects[obj] = mutableListOf()
+        localObjects.add(obj)
     }
 
     override fun registerObjectLink(fromObject: Any, toObject: Any?) {
         if (toObject == null) return
-        if (fromObject === StaticObject) {
-            markObjectNonLocal(toObject)
-        }
-        val reachableObjects = localObjects[fromObject]
-        if (reachableObjects != null) {
-            check(toObject !== StaticObject)
-            reachableObjects.add(toObject)
-        } else {
+        if (!isLocalObject(fromObject)) {
             markObjectNonLocal(toObject)
         }
     }
 
     /**
-     * Removes the specified local object and its dependencies from the set of local objects.
-     * If the removing object references other local objects, they are also removed recursively.
+     * Removes the specified local object and all reachable objects from the set of local objects.
      */
-    private fun markObjectNonLocal(obj: Any?) {
-        if (obj == null) return
-        val objects = localObjects.remove(obj) ?: return
-        objects.forEach { markObjectNonLocal(it) }
+    private fun markObjectNonLocal(obj: Any) {
+        traverseObjectGraph(obj) { localObjects.remove(it) }
     }
 
     override fun shouldTrackObjectAccess(obj: Any): Boolean =
@@ -587,7 +579,8 @@ internal class LocalObjectManager : ObjectTracker {
     /**
      * Checks if an object is only locally accessible.
      */
-    private fun isLocalObject(obj: Any?) = localObjects.containsKey(obj)
+    private fun isLocalObject(obj: Any?) =
+        obj === StaticObject || localObjects.contains(obj)
 
     override fun reset() {
         localObjects.clear()

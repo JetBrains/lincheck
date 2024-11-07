@@ -87,6 +87,23 @@ internal inline fun traverseObjectGraph(
 }
 
 /**
+ * Traverses a subgraph of objects reachable from a given root object in BFS order,
+ * and applies a callback on each visited object.
+ *
+ * @param root the starting object for the traversal.
+ * @param onObject callback that is invoked for each object in the graph.
+ *
+ * @see traverseObjectGraph
+ */
+internal inline fun traverseObjectGraph(root: Any, onObject: (obj: Any) -> Unit) {
+    onObject(root)
+    traverseObjectGraph(root,
+        onField = { _, _, fieldValue -> fieldValue?.also { onObject(it) } },
+        onArrayElement = { _, _, arrayElement -> arrayElement?.also { onObject(it) } }
+    )
+}
+
+/**
  * Traverses [array] elements if it is a pure array, java atomic array, or atomicfu array, otherwise no-op.
  *
  * @param array array which elements to traverse.
