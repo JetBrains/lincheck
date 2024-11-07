@@ -580,7 +580,7 @@ internal class LocalObjectManager : ObjectTracker {
      * Checks if an object is only locally accessible.
      */
     private fun isLocalObject(obj: Any?) =
-        obj === StaticObject || localObjects.contains(obj)
+        localObjects.contains(obj)
 
     override fun reset() {
         localObjects.clear()
