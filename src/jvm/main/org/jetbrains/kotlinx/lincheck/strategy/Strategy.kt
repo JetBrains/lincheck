@@ -110,9 +110,6 @@ abstract class Strategy protected constructor(
      * Restores recorded values of all memory reachable from static state.
      */
     open fun restoreStaticMemorySnapshot() {}
-
-    open fun updateStaticMemorySnapshot(obj: Any?, className: String, fieldName: String) {}
-    open fun updateStaticMemorySnapshot(array: Any, index: Int) {}
 }
 
 /**

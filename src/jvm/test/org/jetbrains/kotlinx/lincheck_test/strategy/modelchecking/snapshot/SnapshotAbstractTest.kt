@@ -10,18 +10,23 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy.modelchecking.snapshot
 
+import org.jetbrains.kotlinx.lincheck.LoggingLevel
+import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.junit.Test
 
-// TODO: make each test check values on each invocation and not on test end
 abstract class SnapshotAbstractTest {
+    open fun <O : Options<O, *>> O.customize() {}
+
     @Test
     fun testModelChecking() = ModelCheckingOptions()
+//        .logLevel(LoggingLevel.INFO)
         .iterations(1)
         .actorsBefore(0)
         .actorsAfter(0)
-        .actorsPerThread(3)
+        .actorsPerThread(2)
         .restoreStaticMemory(true)
+        .apply { customize() }
         .check(this::class)
 }

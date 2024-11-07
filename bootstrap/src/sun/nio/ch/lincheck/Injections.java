@@ -412,6 +412,14 @@ public class Injections {
         getEventTracker().afterNewObjectCreation(obj);
     }
 
+    public static void updateSnapshotOnFieldAccess(Object obj, String className, String fieldName, int codeLocation) {
+        getEventTracker().updateSnapshotOnFieldAccess(obj, className, fieldName, codeLocation);
+    }
+
+    public static void updateSnapshotOnArrayElementAccess(Object array, int index, int codeLocation) {
+        getEventTracker().updateSnapshotOnArrayElementAccess(array, index, codeLocation);
+    }
+
     /**
      * Called from instrumented code before constructors' invocations,
      * where passed objects are subtypes of the constructor class type.

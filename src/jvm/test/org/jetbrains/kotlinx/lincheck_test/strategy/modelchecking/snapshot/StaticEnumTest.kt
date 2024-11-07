@@ -10,9 +10,11 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy.modelchecking.snapshot
 
+import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.junit.After
-import org.junit.Before
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 
 
 private enum class Values {
@@ -23,9 +25,24 @@ private class EnumHolder(var x: Values, var y: Values)
 private var global = EnumHolder(Values.A, Values.B)
 
 class StaticEnumTest : SnapshotAbstractTest() {
-    private var initA: EnumHolder = global
-    private var initX: Values = global.x
-    private var initY: Values = global.y
+    companion object {
+        private var initA: EnumHolder = global
+        private var initX: Values = global.x
+        private var initY: Values = global.y
+    }
+
+    class StaticEnumVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : Verifier {
+        override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
+            check(global == initA)
+            check(global.x == initX)
+            check(global.y == initY)
+            return true
+        }
+    }
+
+    override fun <O : Options<O, *>> O.customize() {
+        verifier(StaticEnumVerifier::class.java)
+    }
 
     @Operation
     fun modifyFields() {
@@ -35,16 +52,5 @@ class StaticEnumTest : SnapshotAbstractTest() {
 
         // assign different instance to the variable
         global = EnumHolder(Values.C, Values.C)
-    }
-
-    @Before
-    fun saveInitStaticState() {
-    }
-
-    @After
-    fun checkStaticStateRestored() {
-        check(global == initA)
-        check(global.x == initX)
-        check(global.y == initY)
     }
 }

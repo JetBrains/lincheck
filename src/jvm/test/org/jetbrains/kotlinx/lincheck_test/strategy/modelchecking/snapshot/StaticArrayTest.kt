@@ -10,27 +10,36 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy.modelchecking.snapshot
 
+import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.junit.After
-import org.junit.Before
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import kotlin.random.Random
 
 
 private var intArray = intArrayOf(1, 2, 3)
 
 class StaticIntArrayTest : SnapshotAbstractTest() {
-    private var ref = intArray
-    private var values = intArray.copyOf()
+    companion object {
+        private var ref = intArray
+        private var values = intArray.copyOf()
+    }
+    class StaticIntArrayVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : Verifier {
+        override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
+            check(intArray == ref)
+            check(ref.contentEquals(values))
+            return true
+        }
+    }
+
+    override fun <O : Options<O, *>> O.customize() {
+        verifier(StaticIntArrayVerifier::class.java)
+    }
 
     @Operation
     fun modify() {
         intArray[0]++
-    }
-
-    @After
-    fun checkStaticStateRestored() {
-        check(intArray == ref)
-        check(ref.contentEquals(values))
     }
 }
 
@@ -43,32 +52,29 @@ private class X(var value: Int) {
 private var objArray = arrayOf<X>(X(1), X(2), X(3))
 
 class StaticObjectArrayTest : SnapshotAbstractTest() {
-    private var ref: Array<X>? = null
-    private var elements: Array<X?>? = null
-    private var values: Array<Int>? = null
+    companion object {
+        private var ref: Array<X> = objArray
+        private var elements: Array<X?> = Array<X?>(3) { null }.also { objArray.forEachIndexed { index, x -> it[index] = x } }
+        private var values: Array<Int> = Array<Int>(3) { 0 }.also { objArray.forEachIndexed { index, x -> it[index] = x.value } }
+    }
+
+    class StaticObjectArrayVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : Verifier {
+        override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
+            check(objArray == ref)
+            check(objArray.contentEquals(elements))
+            check(objArray.map { it.value }.toTypedArray().contentEquals(values))
+            return true
+        }
+    }
+
+    override fun <O : Options<O, *>> O.customize() {
+        verifier(StaticObjectArrayVerifier::class.java)
+    }
 
     @Operation
     fun modify() {
         objArray[0].value++
         objArray[1].value--
         objArray[2] = X(Random.nextInt())
-    }
-
-    @Before
-    fun saveInitStaticState() {
-        ref = objArray
-
-        elements = Array<X?>(3) { null }
-        objArray.forEachIndexed { index, x -> elements!![index] = x }
-
-        values = Array<Int>(3) { 0 }
-        objArray.forEachIndexed { index, x -> values!![index] = x.value }
-    }
-
-    @After
-    fun checkStaticStateRestored() {
-        check(objArray == ref)
-        check(objArray.contentEquals(elements))
-        check(objArray.map { it.value }.toTypedArray().contentEquals(values))
     }
 }
