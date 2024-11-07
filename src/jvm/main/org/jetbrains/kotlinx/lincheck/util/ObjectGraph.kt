@@ -46,22 +46,14 @@ internal inline fun traverseObjectGraph(
 ) {
     val queue = ArrayDeque<Any>()
     val visitedObjects = Collections.newSetFromMap<Any>(IdentityHashMap())
-    val isImmutable = { obj: Any? ->
-        (
-            obj == null ||
-            obj is String ||
-            isAtomicFieldUpdater(obj) ||
-            isUnsafeClass(obj.javaClass.name)
-        )
-    }
+
     val shouldTraverse = { obj: Any? ->
-        (
-            obj != null &&
-            !obj.javaClass.isPrimitive && // no primitives traversing
-            !obj.isPrimitiveWrapper && // no primitive wrappers traversing
-            !isImmutable(obj) && // no immutable objects traversing
-            obj !in visitedObjects // no reference-cycles allowed during traversing
-        )
+        obj != null &&
+        !obj.isImmutable && // no immutable objects traversing
+        !isAtomicFieldUpdater(obj) && // no afu traversing
+        !isUnsafeClass(obj.javaClass.name) && // no unsafe traversing
+        obj !is Class<*> && // no class objects traversing
+        obj !in visitedObjects // no reference-cycles allowed during traversing
     }
 
     if (!shouldTraverse(root)) return
@@ -70,14 +62,8 @@ internal inline fun traverseObjectGraph(
     visitedObjects.add(root)
 
     val processNextObject: (nextObject: Any?) -> Unit = { nextObject ->
-        if (
-            nextObject != null && // user determines what to append to queue
-            !nextObject.javaClass.isPrimitive && // no primitives traversing
-            !nextObject.isPrimitiveWrapper && // no primitive wrappers traversing
-            !isImmutable(nextObject) && // no immutable objects traversing
-            nextObject !in visitedObjects // no reference-cycles allowed during traversing
-        ) {
-            queue.add(nextObject)
+        if (shouldTraverse(nextObject)) {
+            queue.add(nextObject!!)
             visitedObjects.add(nextObject)
         }
     }
@@ -86,7 +72,6 @@ internal inline fun traverseObjectGraph(
         val currentObj = queue.removeFirst()
 
         when {
-            currentObj is Class<*> -> {}
             currentObj.javaClass.isArray || isAtomicArray(currentObj) -> {
                 traverseArrayElements(currentObj) { _ /* currentObj */, index, elementValue ->
                     processNextObject(onArrayElement(currentObj, index, elementValue))
@@ -151,6 +136,10 @@ internal inline fun traverseObjectFields(obj: Any, onField: (obj: Any, field: Fi
         onField(obj, field, fieldValue)
     }
 }
+
+internal val Any.isImmutable get() =
+    this.isPrimitiveWrapper ||
+    this is String
 
 /**
  * Returns all found fields in the hierarchy.
