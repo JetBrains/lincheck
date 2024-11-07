@@ -227,21 +227,6 @@ abstract class ManagedStrategy(
         }
     }
 
-    // TODO: fix bug with the fact, that non-transformed classes are impossible to track lazily
-    override fun updateStaticMemorySnapshot(obj: Any?, className: String, fieldName: String) {
-        if (testCfg.restoreStaticMemory) {
-            staticMemorySnapshot.trackField(obj, className, fieldName)
-            super.updateStaticMemorySnapshot(obj, className, fieldName)
-        }
-    }
-
-    override fun updateStaticMemorySnapshot(array: Any, index: Int) {
-        if (testCfg.restoreStaticMemory) {
-            staticMemorySnapshot.trackArrayCell(array, index)
-            super.updateStaticMemorySnapshot(array, index)
-        }
-    }
-
     /**
      * Runs the current invocation.
      */
@@ -771,7 +756,6 @@ abstract class ManagedStrategy(
                                  isStatic: Boolean, isFinal: Boolean) = runInIgnoredSection {
         // We need to ensure all the classes related to the reading object are instrumented.
         // The following call checks all the static fields.
-        updateStaticMemorySnapshot(obj, className.canonicalClassName, fieldName)
         if (isStatic) {
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(className.canonicalClassName)
         }
@@ -809,7 +793,6 @@ abstract class ManagedStrategy(
         if (!objectTracker.shouldTrackObjectAccess(array)) {
             return@runInIgnoredSection false
         }
-        updateStaticMemorySnapshot(array, index)
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             ReadTracePoint(
@@ -846,7 +829,6 @@ abstract class ManagedStrategy(
         if (!objectTracker.shouldTrackObjectAccess(obj ?: StaticObject)) {
             return@runInIgnoredSection false
         }
-        updateStaticMemorySnapshot(obj, className.canonicalClassName, fieldName)
         // Optimization: do not track final field writes
         if (isFinal) {
             return@runInIgnoredSection false
@@ -876,7 +858,6 @@ abstract class ManagedStrategy(
         if (!objectTracker.shouldTrackObjectAccess(array)) {
             return@runInIgnoredSection false
         }
-        updateStaticMemorySnapshot(array, index)
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             WriteTracePoint(
@@ -937,6 +918,27 @@ abstract class ManagedStrategy(
         if (obj is String || obj is Int || obj is Long || obj is Byte || obj is Char || obj is Float || obj is Double) return
         runInIgnoredSection {
             objectTracker.registerNewObject(obj)
+        }
+    }
+
+    /**
+     * Tracks a specific field of an [obj], if the [obj] is either `null` (which means that field is static),
+     * or one this objects which contains it is already stored.
+     */
+    override fun updateSnapshotOnFieldAccess(obj: Any?, className: String, fieldName: String, codeLocation: Int) = runInIgnoredSection {
+        if (testCfg.restoreStaticMemory) {
+            val location = CodeLocations.stackTrace(codeLocation).toString()
+            staticMemorySnapshot.trackField(obj, className, fieldName, location)
+        }
+    }
+
+    /**
+     * Tracks a specific [array] element at [index], if the [array] is already tracked.
+     */
+    override fun updateSnapshotOnArrayElementAccess(array: Any, index: Int, codeLocation: Int) = runInIgnoredSection {
+        if (testCfg.restoreStaticMemory) {
+            val location = CodeLocations.stackTrace(codeLocation).toString()
+            staticMemorySnapshot.trackArrayCell(array, index, location)
         }
     }
 

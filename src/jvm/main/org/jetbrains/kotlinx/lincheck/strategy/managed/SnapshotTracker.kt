@@ -53,7 +53,9 @@ class SnapshotTracker {
         class ArrayCellNode(descriptor: ArrayCellDescriptor, initialValue: Any?) : MemoryNode(descriptor, initialValue)
     }
 
-    fun trackField(obj: Any?, className: String, fieldName: String) {
+    @OptIn(ExperimentalStdlibApi::class)
+    fun trackField(obj: Any?, className: String, fieldName: String, @Suppress("UNUSED_PARAMETER") location: String = "") {
+        //println("Consider ($location): obj=${obj?.javaClass?.simpleName}${if (obj != null) "@" + System.identityHashCode(obj).toHexString() else ""}, className=$className, fieldName=$fieldName")
         if (obj != null && obj !in trackedObjects) return
 
         val clazz: Class<*> = Class.forName(className).let {
@@ -67,14 +69,16 @@ class SnapshotTracker {
             val fieldValue = readResult.getOrNull()
 
             trackSingleField(obj, clazz, field, fieldValue) {
-                if (isIgnoredClassInstance(fieldValue)) {
+                if (shouldTrackEnergetically(fieldValue)) {
                     trackHierarchy(fieldValue!!)
                 }
             }
         }
     }
 
-    fun trackArrayCell(array: Any, index: Int) {
+    @OptIn(ExperimentalStdlibApi::class)
+    fun trackArrayCell(array: Any, index: Int, @Suppress("UNUSED_PARAMETER") location: String = "") {
+        //println("Consider ($location): array=${array.javaClass.simpleName}@${System.identityHashCode(array).toHexString()}, index=$index")
         if (array !in trackedObjects) return
 
         val readResult = runCatching { readArrayElementViaUnsafe(array, index) }
@@ -83,7 +87,7 @@ class SnapshotTracker {
             val elementValue = readResult.getOrNull()
 
             trackSingleArrayCell(array, index, elementValue) {
-                if (isIgnoredClassInstance(elementValue)) {
+                if (shouldTrackEnergetically(elementValue)) {
                     trackHierarchy(elementValue!!)
                 }
             }
@@ -91,6 +95,7 @@ class SnapshotTracker {
     }
 
     fun restoreValues() {
+        //println("====== START RESTORING ======")
         val visitedObjects = Collections.newSetFromMap(IdentityHashMap<Any, Boolean>())
         trackedObjects.keys
             .filterIsInstance<Class<*>>()
@@ -115,10 +120,10 @@ class SnapshotTracker {
             nodesList
                 .map { it.descriptor }
                 .filterIsInstance<FieldDescriptor>()
-                .any { it.field.name == /*fieldName*/ field.name } // field is already tracked
+                .any { it.field.name == field.name } // field is already tracked
         ) return
 
-//        println("SNAPSHOT: obj=${if (obj == null) "null" else obj.javaClass.simpleName + "@" + System.identityHashCode(obj).toHexString()}, className=${clazz.simpleName}, fieldName=${field.name}")
+        //println("SNAPSHOT: obj=${if (obj == null) "null" else obj.javaClass.simpleName + "@" + System.identityHashCode(obj).toHexString()}, className=${clazz.name}, fieldName=${field.name}")
         val childNode = createMemoryNode(
             obj,
             FieldDescriptor(field, getFieldOffset(field)),
@@ -141,7 +146,7 @@ class SnapshotTracker {
             nodesList.any { it is ArrayCellNode && (it.descriptor as ArrayCellDescriptor).index == index } // this array cell is already tracked
         ) return
 
-//        println("SNAPSHOT: array=${array.javaClass.simpleName}@${System.identityHashCode(array).toHexString()}, index=$index")
+        //println("SNAPSHOT: array=${array.javaClass.simpleName}@${System.identityHashCode(array).toHexString()}, index=$index")
         val childNode = createMemoryNode(array, ArrayCellDescriptor(index), elementValue)
 
         nodesList.add(childNode)
@@ -153,7 +158,7 @@ class SnapshotTracker {
 
     @OptIn(ExperimentalStdlibApi::class)
     private fun trackHierarchy(obj: Any) {
-//        println("Track hierarchy for object: ${obj.javaClass.simpleName}@${System.identityHashCode(obj).toHexString()}")
+        //println("Track hierarchy for object: ${obj.javaClass.simpleName}@${System.identityHashCode(obj).toHexString()}")
         traverseObjectGraph(
             obj,
             onArrayElement = { array, index, elementValue ->
@@ -167,22 +172,30 @@ class SnapshotTracker {
         )
     }
 
-    private fun isIgnoredClassInstance(obj: Any?): Boolean {
-        return obj != null && !shouldTransformClass(obj.javaClass.name)
+    private fun shouldTrackEnergetically(obj: Any?): Boolean {
+        // TODO: We should filter out some standard library classes that we don't care about (like, PrintStream: System.out/in/err)
+        //  and only traverse energetically user classes and important std classes like AtomicInteger, etc.
+        return (
+            obj != null &&
+            (!shouldTransformClass(obj.javaClass.name) && !obj.javaClass.name.startsWith("org.jetbrains.kotlinx.lincheck"))
+        )
     }
 
     @OptIn(ExperimentalStdlibApi::class)
     private fun restoreValues(obj: Any, visitedObjects: MutableSet<Any>) {
         if (obj in visitedObjects) return
+        //println("RESTORE: obj=${if (obj is Class<*>) obj.simpleName else obj.javaClass.simpleName}@${System.identityHashCode(obj).toHexString()}:")
         visitedObjects.add(obj)
 
         trackedObjects[obj]!!
             .forEach { node ->
                 if (node is ArrayCellNode) {
                     val index = (node.descriptor as ArrayCellDescriptor).index
+                    //println("\tRESTORE: arr=${obj.javaClass.simpleName}@${System.identityHashCode(obj).toHexString()}, index=$index, value=${node.initialValue}")
                     writeArrayElementViaUnsafe(obj, index, node.initialValue)
                 }
                 else if (!Modifier.isFinal((node.descriptor as FieldDescriptor).field.modifiers)) {
+                    //println("\tRESTORE: obj=${if (obj is Class<*>) obj.simpleName else obj.javaClass.simpleName}@${System.identityHashCode(obj).toHexString()}, field=${node.descriptor.field.name}, value=${node.initialValue}")
                     writeFieldViaUnsafe(
                         if (node is StaticFieldNode) null else obj,
                         node.descriptor.field,
@@ -208,10 +221,10 @@ class SnapshotTracker {
     private fun createMemoryNode(obj: Any?, descriptor: Descriptor, value: Any?): MemoryNode {
         return when (descriptor) {
             is FieldDescriptor -> {
-                if (obj == null) StaticFieldNode(descriptor, /*readFieldViaUnsafe(null, descriptor.field)*/ value)
-                else RegularFieldNode(descriptor, /*readFieldViaUnsafe(obj, descriptor.field)*/ value)
+                if (obj == null) StaticFieldNode(descriptor, value)
+                else RegularFieldNode(descriptor, value)
             }
-            is ArrayCellDescriptor -> ArrayCellNode(descriptor, /*readArrayElementViaUnsafe(obj!!, descriptor.index)*/ value)
+            is ArrayCellDescriptor -> ArrayCellNode(descriptor, value)
         }
     }
 }

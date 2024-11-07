@@ -294,6 +294,14 @@ public class Injections {
         getEventTracker().afterNewObjectCreation(obj);
     }
 
+    public static void updateSnapshotOnFieldAccess(Object obj, String className, String fieldName, int codeLocation) {
+        getEventTracker().updateSnapshotOnFieldAccess(obj, className, fieldName, codeLocation);
+    }
+
+    public static void updateSnapshotOnArrayElementAccess(Object array, int index, int codeLocation) {
+        getEventTracker().updateSnapshotOnArrayElementAccess(array, index, codeLocation);
+    }
+
     /**
      * Called from the instrumented code to replace [java.lang.Object.hashCode] method call with some
      * deterministic value.

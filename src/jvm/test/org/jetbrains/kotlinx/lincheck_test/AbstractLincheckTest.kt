@@ -22,7 +22,7 @@ abstract class AbstractLincheckTest(
     private vararg val expectedFailures: KClass<out LincheckFailure>
 ) {
     open fun <O: Options<O, *>> O.customize() {
-        if (this is ModelCheckingOptions) restoreStaticMemory(true)
+        if (this is ModelCheckingOptions) restoreStaticMemory(false)
     }
 
     private fun <O : Options<O, *>> O.runInternalTest() {

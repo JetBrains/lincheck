@@ -10,8 +10,11 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy.modelchecking.snapshot
 
+import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.junit.After
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 
 
 private object Static1 {
@@ -25,11 +28,25 @@ private object Static2 {
 }
 
 class StaticObjectAsFieldTest : SnapshotAbstractTest() {
-    private val initS1f1 = Static1.f1
-    private val initS1f2 = Static1.f2
+    companion object {
+        private val initS1f1 = Static1.f1
+        private val initS1f2 = Static1.f2
 
-    private val initS2f1 = Static2.f1
-    private val initS2f2 = Static2.f2
+        private val initS2f1 = Static2.f1
+        private val initS2f2 = Static2.f2
+    }
+
+    class StaticObjectAsFieldVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : Verifier {
+        override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
+            check(Static1.f1 == initS1f1 && Static1.f2 == initS1f2)
+            check(Static2.f1 == initS2f1 && Static2.f2 == initS2f2)
+            return true
+        }
+    }
+
+    override fun <O : Options<O, *>> O.customize() {
+        verifier(StaticObjectAsFieldVerifier::class.java)
+    }
 
     @Operation
     fun modify() {
@@ -38,11 +55,5 @@ class StaticObjectAsFieldTest : SnapshotAbstractTest() {
 
         Static1.f1 = null
         Static1.f2 = 10
-    }
-
-    @After
-    fun checkStaticStateRestored() {
-        check(Static1.f1 == initS1f1 && Static1.f2 == initS1f2)
-        check(Static2.f1 == initS2f1 && Static2.f2 == initS2f2)
     }
 }

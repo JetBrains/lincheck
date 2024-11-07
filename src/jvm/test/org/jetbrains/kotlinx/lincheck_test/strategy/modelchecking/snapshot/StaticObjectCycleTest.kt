@@ -10,8 +10,11 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy.modelchecking.snapshot
 
+import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.junit.After
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 
 private class A(var b: B)
 private class B(var a: A? = null)
@@ -20,23 +23,29 @@ private var globalA = A(B())
 
 class StaticObjectCycleTest : SnapshotAbstractTest() {
     companion object {
+        private var initA = globalA
+        private var initB = globalA.b
+
         init {
             globalA.b.a = globalA
         }
     }
 
-    private var initA = globalA
-    private var initB = globalA.b
+    class StaticObjectCycleVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : Verifier {
+        override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
+            check(globalA == initA)
+            check(globalA.b == initB)
+            check(globalA.b.a == globalA)
+            return true
+        }
+    }
+
+    override fun <O : Options<O, *>> O.customize() {
+        verifier(StaticObjectCycleVerifier::class.java)
+    }
 
     @Operation
     fun modify() {
         globalA = A(B())
-    }
-
-    @After
-    fun checkStaticStateRestored() {
-        check(globalA == initA)
-        check(globalA.b == initB)
-        check(globalA.b.a == globalA)
     }
 }
