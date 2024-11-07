@@ -127,13 +127,18 @@ internal inline fun traverseArrayElements(array: Any, onArrayElement: (array: An
  */
 internal inline fun traverseObjectFields(obj: Any, onField: (obj: Any, field: Field, value: Any?) -> Unit) {
     obj.javaClass.allDeclaredFieldWithSuperclasses.forEach { field ->
-        // We wrap an unsafe read into `runCatching` to handle `UnsupportedOperationException`,
-        // which can be thrown, for instance, when attempting to read a field of
-        // a hidden class (starting from Java 15);
+        // we wrap an unsafe read into `runCatching` to handle `UnsupportedOperationException`,
+        // which can be thrown, for instance, when attempting to read
+        // a field of a hidden or record class (starting from Java 15);
         // in this case we fall back to read via reflection
-        val fieldValue = runCatching { readFieldViaUnsafe(obj, field) }
-            .getOrElse { field.apply { isAccessible = true }.get(obj) }
-        onField(obj, field, fieldValue)
+        val result =
+            runCatching { readFieldViaUnsafe(obj, field) }
+            .flatMapCatching { field.apply { isAccessible = true }.get(obj) }
+        // do not pass non-readable fields
+        if (result.isSuccess) {
+            val fieldValue = result.getOrNull()
+            onField(obj, field, fieldValue)
+        }
     }
 }
 

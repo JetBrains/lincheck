@@ -34,6 +34,12 @@ fun <T> List<T>.isSuffixOf(list: List<T>): Boolean {
     return true
 }
 
+fun <T> kotlin.Result<T>.flatMap(transform: (T) -> kotlin.Result<T>): kotlin.Result<T> =
+    if (isSuccess) transform(getOrNull()!!) else this
+
+fun <T> kotlin.Result<T>.flatMapCatching(transform: (T) -> T): kotlin.Result<T> =
+    if (isSuccess) runCatching { transform(getOrNull()!!) } else this
+
 fun chooseSequentialSpecification(sequentialSpecificationByUser: Class<*>?, testClass: Class<*>): Class<*> =
     if (sequentialSpecificationByUser === DummySequentialSpecification::class.java || sequentialSpecificationByUser == null) testClass
     else sequentialSpecificationByUser
