@@ -102,34 +102,34 @@ internal inline fun traverseObjectGraph(
 }
 
 /**
- * Traverses [obj] elements if it is a pure array, java atomic array, or atomicfu array, otherwise no-op.
+ * Traverses [array] elements if it is a pure array, java atomic array, or atomicfu array, otherwise no-op.
  *
- * @param obj array which elements to traverse.
+ * @param array array which elements to traverse.
  * @param onArrayElement callback which accepts `(obj, index, elementValue)`.
  */
-internal inline fun traverseArrayElements(obj: Any, onArrayElement: (array: Any, index: Int, element: Any?) -> Unit) {
-    require(obj.javaClass.isArray || isAtomicArray(obj))
+internal inline fun traverseArrayElements(array: Any, onArrayElement: (array: Any, index: Int, element: Any?) -> Unit) {
+    require(array.javaClass.isArray || isAtomicArray(array))
 
-    val length = getArrayLength(obj)
+    val length = getArrayLength(array)
     // TODO: casting `obj` to atomicfu class and accessing its field directly causes compilation error,
     //  see https://youtrack.jetbrains.com/issue/KT-49792 and https://youtrack.jetbrains.com/issue/KT-47749
-    val cachedAtomicFUGetMethod: Method? = if (isAtomicFUArray(obj)) obj.javaClass.getMethod("get", Int::class.java) else null
+    val cachedAtomicFUGetMethod: Method? = if (isAtomicFUArray(array)) array.javaClass.getMethod("get", Int::class.java) else null
 
-    for (index in 0..length - 1) {
+    for (index in 0 ..< length) {
         val result = runCatching {
-            if (isAtomicFUArray(obj)) {
-                cachedAtomicFUGetMethod!!.invoke(obj, index) as Int
+            if (isAtomicFUArray(array)) {
+                cachedAtomicFUGetMethod!!.invoke(array, index) as Int
             }
-            else when (obj) {
-                is AtomicReferenceArray<*> -> obj.get(index)
-                is AtomicIntegerArray -> obj.get(index)
-                is AtomicLongArray -> obj.get(index)
-                else -> readArrayElementViaUnsafe(obj, index)
+            else when (array) {
+                is AtomicReferenceArray<*> -> array.get(index)
+                is AtomicIntegerArray -> array.get(index)
+                is AtomicLongArray -> array.get(index)
+                else -> readArrayElementViaUnsafe(array, index)
             }
         }
 
         if (result.isSuccess) {
-            onArrayElement(obj, index, result.getOrNull())
+            onArrayElement(array, index, result.getOrNull())
         }
     }
 }
