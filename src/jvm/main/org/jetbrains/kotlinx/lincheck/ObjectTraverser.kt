@@ -101,11 +101,7 @@ private fun enumerateObjects(obj: Any, objectNumberMap: MutableMap<Any, Int>) {
             }
         },
         onField = { _, f, value ->
-            if (
-                Modifier.isStatic(f.modifiers) ||
-                f.isEnumConstant ||
-                f.name == "serialVersionUID"
-            ) {
+            if (f.isEnumConstant || f.name == "serialVersionUID") {
                 null
             }
             else {

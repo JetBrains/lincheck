@@ -34,6 +34,8 @@ import java.util.*
  * for instance, primitive boxed objects, immutable objects (e.g., String), and some others.
  *
  * @param root object to start the traversal from.
+ * @param traverseStaticFields if true, then all static fields are also traversed,
+ *   otherwise only non-static fields are traversed.
  * @param onField callback for fields traversal, accepts `(fieldOwner, field, fieldValue)`.
  *   Returns an object to be traversed next.
  * @param onArrayElement callback for array elements traversal, accepts `(array, index, elementValue)`.
@@ -41,6 +43,7 @@ import java.util.*
  */
 internal inline fun traverseObjectGraph(
     root: Any,
+    traverseStaticFields: Boolean = false,
     onField: (obj: Any, field: Field, value: Any?) -> Any?,
     onArrayElement: (array: Any, index: Int, element: Any?) -> Any?,
 ) {
@@ -78,7 +81,9 @@ internal inline fun traverseObjectGraph(
                 }
             }
             else -> {
-                traverseObjectFields(currentObj) { _ /* currentObj */, field, fieldValue ->
+                traverseObjectFields(currentObj,
+                    traverseStaticFields = traverseStaticFields
+                ) { _ /* currentObj */, field, fieldValue ->
                     processNextObject(onField(currentObj, field, fieldValue))
                 }
             }
@@ -91,15 +96,22 @@ internal inline fun traverseObjectGraph(
  * and applies a callback on each visited object.
  *
  * @param root the starting object for the traversal.
+ * @param traverseStaticFields if true, then all static fields are also traversed,
+ *   otherwise only non-static fields are traversed.
  * @param onObject callback that is invoked for each object in the graph.
  *
  * @see traverseObjectGraph
  */
-internal inline fun traverseObjectGraph(root: Any, onObject: (obj: Any) -> Unit) {
+internal inline fun traverseObjectGraph(
+    root: Any,
+    traverseStaticFields: Boolean = false,
+    onObject: (obj: Any) -> Unit
+) {
     onObject(root)
     traverseObjectGraph(root,
         onField = { _, _, fieldValue -> fieldValue?.also { onObject(it) } },
-        onArrayElement = { _, _, arrayElement -> arrayElement?.also { onObject(it) } }
+        onArrayElement = { _, _, arrayElement -> arrayElement?.also { onObject(it) } },
+        traverseStaticFields = traverseStaticFields,
     )
 }
 
@@ -140,10 +152,17 @@ internal inline fun traverseArrayElements(array: Any, onArrayElement: (array: An
  * Traverses [obj] fields (including fields from superclasses).
  *
  * @param obj array which elements to traverse.
+ * @param traverseStaticFields if true, then all static fields are also traversed,
+ *   otherwise only non-static fields are traversed.
  * @param onField callback which accepts `(obj, field, fieldValue)`.
  */
-internal inline fun traverseObjectFields(obj: Any, onField: (obj: Any, field: Field, value: Any?) -> Unit) {
+internal inline fun traverseObjectFields(
+    obj: Any,
+    traverseStaticFields: Boolean = false,
+    onField: (obj: Any, field: Field, value: Any?) -> Unit
+) {
     obj.javaClass.allDeclaredFieldWithSuperclasses.forEach { field ->
+        if (!traverseStaticFields && Modifier.isStatic(field.modifiers)) return@forEach
         // we wrap an unsafe read into `runCatching` to handle `UnsupportedOperationException`,
         // which can be thrown, for instance, when attempting to read
         // a field of a hidden or record class (starting from Java 15);
