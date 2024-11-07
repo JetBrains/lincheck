@@ -105,12 +105,12 @@ internal inline fun traverseObjectGraph(
 internal inline fun traverseObjectGraph(
     root: Any,
     traverseStaticFields: Boolean = false,
-    onObject: (obj: Any) -> Unit
+    onObject: (obj: Any) -> Any?
 ) {
-    onObject(root)
-    traverseObjectGraph(root,
-        onField = { _, _, fieldValue -> fieldValue?.also { onObject(it) } },
-        onArrayElement = { _, _, arrayElement -> arrayElement?.also { onObject(it) } },
+    val obj = onObject(root) ?: return
+    traverseObjectGraph(obj,
+        onField = { _, _, fieldValue -> fieldValue?.let(onObject) },
+        onArrayElement = { _, _, arrayElement -> arrayElement?.let(onObject) },
         traverseStaticFields = traverseStaticFields,
     )
 }

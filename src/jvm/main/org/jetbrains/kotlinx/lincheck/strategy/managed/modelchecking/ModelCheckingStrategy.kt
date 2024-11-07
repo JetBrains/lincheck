@@ -569,8 +569,11 @@ internal class LocalObjectManager : ObjectTracker {
     /**
      * Removes the specified local object and all reachable objects from the set of local objects.
      */
-    private fun markObjectNonLocal(obj: Any) {
-        traverseObjectGraph(obj) { localObjects.remove(it) }
+    private fun markObjectNonLocal(root: Any) {
+        traverseObjectGraph(root) { obj ->
+            val wasLocal = localObjects.remove(obj)
+            if (wasLocal) obj else null
+        }
     }
 
     override fun shouldTrackObjectAccess(obj: Any): Boolean =
