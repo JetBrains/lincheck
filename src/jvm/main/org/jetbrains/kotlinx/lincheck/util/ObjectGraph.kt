@@ -171,14 +171,6 @@ internal val Class<*>.allDeclaredFieldWithSuperclasses get(): List<Field> {
     return fields
 }
 
-internal fun getArrayElementOffset(arr: Any, index: Int): Long {
-    val clazz = arr::class.java
-    val baseOffset = UnsafeHolder.UNSAFE.arrayBaseOffset(clazz).toLong()
-    val indexScale = UnsafeHolder.UNSAFE.arrayIndexScale(clazz).toLong()
-
-    return baseOffset + index * indexScale
-}
-
 internal fun getArrayLength(arr: Any): Int {
     return when {
         arr is Array<*>     -> arr.size

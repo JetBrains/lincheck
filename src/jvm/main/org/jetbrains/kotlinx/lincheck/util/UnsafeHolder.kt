@@ -54,7 +54,7 @@ internal fun readFieldViaUnsafe(obj: Any?, field: Field): Any? {
 }
 
 internal fun readArrayElementViaUnsafe(arr: Any, index: Int): Any? {
-    val offset = getArrayElementOffset(arr, index)
+    val offset = getArrayElementOffsetViaUnsafe(arr, index)
     val componentType = arr::class.java.componentType
 
     if (!componentType.isPrimitive) {
@@ -72,4 +72,11 @@ internal fun readArrayElementViaUnsafe(arr: Any, index: Int): Any? {
         Float::class.javaPrimitiveType      -> UnsafeHolder.UNSAFE.getFloat(arr, offset)
         else                                -> error("No more primitive types expected")
     }
+}
+
+internal fun getArrayElementOffsetViaUnsafe(arr: Any, index: Int): Long {
+    val clazz = arr::class.java
+    val baseOffset = UnsafeHolder.UNSAFE.arrayBaseOffset(clazz).toLong()
+    val indexScale = UnsafeHolder.UNSAFE.arrayIndexScale(clazz).toLong()
+    return baseOffset + index * indexScale
 }
