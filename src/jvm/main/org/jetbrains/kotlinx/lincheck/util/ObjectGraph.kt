@@ -99,6 +99,7 @@ internal inline fun traverseObjectGraph(
  * @param traverseStaticFields if true, then all static fields are also traversed,
  *   otherwise only non-static fields are traversed.
  * @param onObject callback that is invoked for each object in the graph.
+ *   Should return the next object to traverse, may return null to prune further traversal.
  *
  * @see traverseObjectGraph
  */
