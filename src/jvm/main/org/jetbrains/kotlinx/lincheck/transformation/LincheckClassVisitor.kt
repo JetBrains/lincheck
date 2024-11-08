@@ -114,7 +114,7 @@ internal class LincheckClassVisitor(
          *   - https://github.com/JetBrains/lincheck/issues/376
          *   - https://github.com/JetBrains/lincheck/issues/419
          */
-        if (containsStackTraceElementInName(className)) {
+        if (isStackTraceElementClass(className.canonicalClassName)) {
             mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
         }

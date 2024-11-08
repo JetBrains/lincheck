@@ -452,5 +452,5 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         // ClassLoader classes, to wrap `loadClass` methods in the ignored section.
         containsClassloaderInName(className) ||
         // StackTraceElement class, to wrap all its methods into the ignored section.
-        containsStackTraceElementInName(className)
+        isStackTraceElementClass(className)
 }
