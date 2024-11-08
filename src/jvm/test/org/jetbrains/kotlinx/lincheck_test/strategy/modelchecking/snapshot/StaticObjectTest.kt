@@ -14,7 +14,6 @@ import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.util.concurrent.atomic.AtomicInteger
 
 
@@ -26,8 +25,9 @@ class StaticObjectTest : SnapshotAbstractTest() {
         private var value: Int = staticInt.get()
     }
 
-    class StaticObjectVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : Verifier {
+    class StaticObjectVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : SnapshotVerifier() {
         override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
+            checkForExceptions(results)
             check(staticInt == ref)
             check(staticInt.get() == value)
             return true

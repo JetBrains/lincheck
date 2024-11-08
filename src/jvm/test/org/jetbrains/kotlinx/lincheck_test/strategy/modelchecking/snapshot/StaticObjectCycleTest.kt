@@ -14,7 +14,6 @@ import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 
 private class A(var b: B)
 private class B(var a: A? = null)
@@ -31,8 +30,9 @@ class StaticObjectCycleTest : SnapshotAbstractTest() {
         }
     }
 
-    class StaticObjectCycleVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : Verifier {
+    class StaticObjectCycleVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : SnapshotVerifier() {
         override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
+            checkForExceptions(results)
             check(globalA == initA)
             check(globalA.b == initB)
             check(globalA.b.a == globalA)

@@ -1,11 +1,9 @@
 package org.jetbrains.kotlinx.lincheck_test.strategy.modelchecking.snapshot
 
-import org.jetbrains.kotlinx.lincheck.ExceptionResult
 import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 
 
 private class Outer {
@@ -29,16 +27,9 @@ private class Outer {
 private val a = Outer()
 
 class InnerClassTest : SnapshotAbstractTest() {
-    class InnerClassVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : Verifier {
+    class InnerClassVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : SnapshotVerifier() {
         override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
-            results?.parallelResults?.forEach { threadsResults ->
-                threadsResults.forEach { result ->
-                    if (result is ExceptionResult) {
-                        throw result.throwable
-                    }
-                }
-            }
-
+            checkForExceptions(results)
             check(a.c.value == 1)
             return true
         }

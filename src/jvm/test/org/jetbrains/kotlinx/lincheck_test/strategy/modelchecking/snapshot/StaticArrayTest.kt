@@ -14,7 +14,6 @@ import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import kotlin.random.Random
 
 
@@ -25,8 +24,10 @@ class StaticIntArrayTest : SnapshotAbstractTest() {
         private var ref = intArray
         private var values = intArray.copyOf()
     }
-    class StaticIntArrayVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : Verifier {
+
+    class StaticIntArrayVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : SnapshotVerifier() {
         override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
+            checkForExceptions(results)
             check(intArray == ref)
             check(ref.contentEquals(values))
             return true
@@ -58,8 +59,9 @@ class StaticObjectArrayTest : SnapshotAbstractTest() {
         private var values: Array<Int> = Array<Int>(3) { 0 }.also { objArray.forEachIndexed { index, x -> it[index] = x.value } }
     }
 
-    class StaticObjectArrayVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : Verifier {
+    class StaticObjectArrayVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : SnapshotVerifier() {
         override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
+            checkForExceptions(results)
             check(objArray == ref)
             check(objArray.contentEquals(elements))
             check(objArray.map { it.value }.toTypedArray().contentEquals(values))

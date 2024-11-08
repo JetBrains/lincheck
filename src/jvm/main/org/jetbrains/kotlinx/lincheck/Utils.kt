@@ -14,6 +14,14 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
+import org.jetbrains.kotlinx.lincheck.util.isAtomicArray
+import org.jetbrains.kotlinx.lincheck.util.isAtomicFUArray
+import org.jetbrains.kotlinx.lincheck.util.isAtomicArray
+import org.jetbrains.kotlinx.lincheck.util.isAtomicFUArray
+import org.jetbrains.kotlinx.lincheck.util.isAtomicFieldUpdater
+import org.jetbrains.kotlinx.lincheck.util.isUnsafeClass
+import org.jetbrains.kotlinx.lincheck.util.readArrayElementViaUnsafe
+import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import sun.nio.ch.lincheck.*
 import java.io.PrintWriter
@@ -22,9 +30,13 @@ import java.lang.ref.*
 import java.lang.reflect.*
 import java.lang.reflect.Method
 import java.util.*
+import java.util.concurrent.atomic.AtomicIntegerArray
+import java.util.concurrent.atomic.AtomicLongArray
+import java.util.concurrent.atomic.AtomicReferenceArray
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
 
+// TODO: put this back to agent class
 fun shouldTransformClass(className: String): Boolean {
     // We do not need to instrument most standard Java classes.
     // It is fine to inject the Lincheck analysis only into the
@@ -328,7 +340,31 @@ internal fun getArrayElementOffset(arr: Any, index: Int): Long {
     return baseOffset + index * indexScale
 }
 
-internal fun getArrayLength(arr: Any): Int = java.lang.reflect.Array.getLength(arr)
+internal fun getArrayLength(arr: Any): Int {
+    return when {
+        arr is Array<*>     -> arr.size
+        arr is IntArray     -> arr.size
+        arr is DoubleArray  -> arr.size
+        arr is FloatArray   -> arr.size
+        arr is LongArray    -> arr.size
+        arr is ShortArray   -> arr.size
+        arr is ByteArray    -> arr.size
+        arr is BooleanArray -> arr.size
+        arr is CharArray    -> arr.size
+        isAtomicArray(arr)  -> getAtomicArrayLength(arr)
+        else -> error("Argument is not an array")
+    }
+}
+
+internal fun getAtomicArrayLength(arr: Any): Int {
+    return when {
+        arr is AtomicReferenceArray<*> -> arr.length()
+        arr is AtomicIntegerArray -> arr.length()
+        arr is AtomicLongArray -> arr.length()
+        isAtomicFUArray(arr) -> arr.javaClass.getMethod("getSize").invoke(arr) as Int
+        else -> error("Argument is not atomic array")
+    }
+}
 
 @Suppress("DEPRECATION")
 internal fun findFieldNameByOffset(targetType: Class<*>, offset: Long): String? {

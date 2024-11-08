@@ -14,7 +14,6 @@ import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 
 
 private object Static1 {
@@ -36,8 +35,9 @@ class StaticObjectAsFieldTest : SnapshotAbstractTest() {
         private val initS2f2 = Static2.f2
     }
 
-    class StaticObjectAsFieldVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : Verifier {
+    class StaticObjectAsFieldVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : SnapshotVerifier() {
         override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
+            checkForExceptions(results)
             check(Static1.f1 == initS1f1 && Static1.f2 == initS1f2)
             check(Static2.f1 == initS2f1 && Static2.f2 == initS2f2)
             return true

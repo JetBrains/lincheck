@@ -10,19 +10,15 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy.modelchecking.snapshot
 
-import org.jetbrains.kotlinx.lincheck.ExceptionResult
 import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import kotlin.random.Random
 
 private class Wrapper(var value: Int)
 private var staticSet = mutableSetOf<Wrapper>()
-private var staticMap = mutableMapOf<Int, Wrapper>()
 
 class StaticCollectionTest : SnapshotAbstractTest() {
     companion object {
@@ -32,26 +28,15 @@ class StaticCollectionTest : SnapshotAbstractTest() {
         private val c = Wrapper(3)
         init {
             staticSet.addAll(listOf(a, b, c))
-            staticMap.put(1, b)
         }
     }
 
-    class StaticCollectionVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : Verifier {
+    class StaticCollectionVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : SnapshotVerifier() {
         override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
-            results?.parallelResults?.forEach { threadsResults ->
-                threadsResults.forEach { result ->
-                    if (result is ExceptionResult) {
-                        throw result.throwable
-                    }
-                }
-            }
-
-            check(staticMap.size == 1 && staticMap.entries.containsAll(mapOf(1 to b).entries))
-
+            checkForExceptions(results)
             check(staticSet == ref)
             check(staticSet.size == 3 && staticSet.containsAll(listOf(a, b, c)))
             check(a.value == 1 && b.value == 2 && c.value == 3)
-
             return true
         }
     }

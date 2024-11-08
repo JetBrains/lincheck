@@ -12,7 +12,6 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.findField
 import org.jetbrains.kotlinx.lincheck.getFieldOffset
-import org.jetbrains.kotlinx.lincheck.shouldTransformClass
 import org.jetbrains.kotlinx.lincheck.strategy.managed.SnapshotTracker.Descriptor.ArrayCellDescriptor
 import org.jetbrains.kotlinx.lincheck.strategy.managed.SnapshotTracker.Descriptor.FieldDescriptor
 import org.jetbrains.kotlinx.lincheck.strategy.managed.SnapshotTracker.MemoryNode.ArrayCellNode
@@ -27,6 +26,9 @@ import java.lang.reflect.Field
 import java.lang.reflect.Modifier
 import java.util.Collections
 import java.util.IdentityHashMap
+import java.util.concurrent.atomic.AtomicIntegerArray
+import java.util.concurrent.atomic.AtomicLongArray
+import java.util.concurrent.atomic.AtomicReferenceArray
 
 
 /**
@@ -52,6 +54,8 @@ class SnapshotTracker {
         class StaticFieldNode(descriptor: FieldDescriptor, initialValue: Any?) : MemoryNode(descriptor, initialValue)
         class ArrayCellNode(descriptor: ArrayCellDescriptor, initialValue: Any?) : MemoryNode(descriptor, initialValue)
     }
+
+    fun size(): Int = (trackedObjects.keys.filter { it !is Class<*> } + trackedObjects.values.flatMap { it }.mapNotNull { it.initialValue }).toSet().size
 
     @OptIn(ExperimentalStdlibApi::class)
     fun trackField(obj: Any?, className: String, fieldName: String, @Suppress("UNUSED_PARAMETER") location: String = "") {
@@ -123,7 +127,7 @@ class SnapshotTracker {
                 .any { it.field.name == field.name } // field is already tracked
         ) return
 
-        //println("SNAPSHOT: obj=${if (obj == null) "null" else obj.javaClass.simpleName + "@" + System.identityHashCode(obj).toHexString()}, className=${clazz.name}, fieldName=${field.name}")
+        //println("SNAPSHOT: obj=${if (obj == null) "null" else obj.javaClass.simpleName + "@" + System.identityHashCode(obj).toHexString()}, className=${clazz.name}, fieldName=${field.name}, value=${fieldValue}")
         val childNode = createMemoryNode(
             obj,
             FieldDescriptor(field, getFieldOffset(field)),
@@ -146,7 +150,7 @@ class SnapshotTracker {
             nodesList.any { it is ArrayCellNode && (it.descriptor as ArrayCellDescriptor).index == index } // this array cell is already tracked
         ) return
 
-        //println("SNAPSHOT: array=${array.javaClass.simpleName}@${System.identityHashCode(array).toHexString()}, index=$index")
+        //println("SNAPSHOT: array=${array.javaClass.simpleName}@${System.identityHashCode(array).toHexString()}, index=$index, value=${elementValue}")
         val childNode = createMemoryNode(array, ArrayCellDescriptor(index), elementValue)
 
         nodesList.add(childNode)
@@ -174,10 +178,10 @@ class SnapshotTracker {
 
     private fun shouldTrackEnergetically(obj: Any?): Boolean {
         // TODO: We should filter out some standard library classes that we don't care about (like, PrintStream: System.out/in/err)
-        //  and only traverse energetically user classes and important std classes like AtomicInteger, etc.
+        //  and only traverse energetically important std classes like AtomicInteger, etc.
         return (
             obj != null &&
-            (!shouldTransformClass(obj.javaClass.name) && !obj.javaClass.name.startsWith("org.jetbrains.kotlinx.lincheck"))
+            (obj.javaClass.name.startsWith("java.util.concurrent") && obj.javaClass.name.contains("Atomic"))
         )
     }
 
@@ -192,7 +196,18 @@ class SnapshotTracker {
                 if (node is ArrayCellNode) {
                     val index = (node.descriptor as ArrayCellDescriptor).index
                     //println("\tRESTORE: arr=${obj.javaClass.simpleName}@${System.identityHashCode(obj).toHexString()}, index=$index, value=${node.initialValue}")
-                    writeArrayElementViaUnsafe(obj, index, node.initialValue)
+
+                    when (obj) {
+                        // TODO: add tests for java atomic and atomicfu arrays
+                        // TODO: add write support for atomicfu arrays
+//                        is kotlinx.atomicfu.AtomicIntArray -> {
+//                            obj.get(index).value = node.initialValue as Int
+//                        }
+                        is AtomicReferenceArray<*> -> @Suppress("UNCHECKED_CAST") (obj as AtomicReferenceArray<Any?>).set(index, node.initialValue)
+                        is AtomicIntegerArray -> obj.set(index, node.initialValue as Int)
+                        is AtomicLongArray -> obj.set(index, node.initialValue as Long)
+                        else -> writeArrayElementViaUnsafe(obj, index, node.initialValue)
+                    }
                 }
                 else if (!Modifier.isFinal((node.descriptor as FieldDescriptor).field.modifiers)) {
                     //println("\tRESTORE: obj=${if (obj is Class<*>) obj.simpleName else obj.javaClass.simpleName}@${System.identityHashCode(obj).toHexString()}, field=${node.descriptor.field.name}, value=${node.initialValue}")
