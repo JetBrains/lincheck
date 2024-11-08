@@ -16,6 +16,7 @@ import org.jetbrains.kotlinx.lincheck.runInIgnoredSection
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.MODEL_CHECKING
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.STRESS
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.shouldTransform
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.isEagerlyInstrumentedClass
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer.transformedClassesStress
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.INSTRUMENT_ALL_CLASSES
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentation
@@ -140,12 +141,13 @@ internal object LincheckJavaAgent {
             // In the model checking mode, Lincheck processes classes lazily, only when they are used.
             instrumentationMode == MODEL_CHECKING -> {
                 check(instrumentedClasses.isEmpty())
-                // Transform class loaders on the start, because it's the only place where we can do it.
-                val classLoaderClasses = getLoadedClassesToInstrument()
-                    .filter { containsClassloaderInName(it.name) || isStackTraceElement(it.name) }
+                // Transform some predefined classes eagerly on start,
+                // because often it's the only place when we can do it
+                val eagerlyTransformedClasses = getLoadedClassesToInstrument()
+                    .filter { isEagerlyInstrumentedClass(it.name) }
                     .toTypedArray()
-                instrumentation.retransformClasses(*classLoaderClasses)
-                instrumentedClasses.addAll(classLoaderClasses.map { it.name })
+                instrumentation.retransformClasses(*eagerlyTransformedClasses)
+                instrumentedClasses.addAll(eagerlyTransformedClasses.map { it.name })
             }
         }
     }
@@ -357,10 +359,10 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         // once they are used in the testing code.
         if (!INSTRUMENT_ALL_CLASSES &&
             instrumentationMode == MODEL_CHECKING &&
+            // do not re-transform already instrumented classes
             internalClassName.canonicalClassName !in instrumentedClasses &&
-            // Always transform classloaders
-            !containsClassloaderInName(internalClassName) &&
-            !isStackTraceElement(internalClassName)) {
+            // always transform eagerly instrumented classes
+            !isEagerlyInstrumentedClass(internalClassName.canonicalClassName)) {
             return null
         }
         return transformImpl(loader, internalClassName, classBytes)
@@ -391,8 +393,8 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         if (instrumentationMode == STRESS) {
             if (className.startsWith("java.") || className.startsWith("kotlin.")) return false
         }
-        // We should transform all the ClassLoader-s to wrap `loadClass` methods in the ignored section.
-        if (containsClassloaderInName(className) || isStackTraceElement(className)) {
+        // We should transform all eagerly instrumented classes.
+        if (isEagerlyInstrumentedClass(className)) {
             return true
         }
         // We do not need to instrument most standard Java classes.
@@ -444,4 +446,11 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         // All the classes that were not filtered out are eligible for transformation.
         return true
     }
+
+    // We should always eagerly transform the following classes.
+    internal fun isEagerlyInstrumentedClass(className: String): Boolean =
+        // ClassLoader classes, to wrap `loadClass` methods in the ignored section.
+        containsClassloaderInName(className) ||
+        // StackTraceElement class, to wrap all its methods into the ignored section.
+        containsStackTraceElementInName(className)
 }

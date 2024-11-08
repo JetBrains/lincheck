@@ -93,13 +93,28 @@ internal class LincheckClassVisitor(
             mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
         }
+        /* Wrap `ClassLoader::loadClass` calls into ignored sections
+         * to ensure their code is not analyzed by the Lincheck.
+         */
         if (containsClassloaderInName(className)) {
             if (methodName == "loadClass") {
                 mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             }
             return mv
         }
-        if (isStackTraceElement(className)) {
+        /* Wrap all methods of the ` StackTraceElement ` class into ignored sections.
+         * Although `StackTraceElement` own bytecode should not be instrumented,
+         * it may call functions from `java.util` classes (e.g., `HashMap`),
+         * which can be instrumented and analyzed.
+         * At the same time, `StackTraceElement` methods can be called almost at any point
+         * (e.g., when an exception is thrown and its stack trace is being collected),
+         * and we should ensure that these calls are not analyzed by Lincheck.
+         *
+         * See the following issues:
+         *   - https://github.com/JetBrains/lincheck/issues/376
+         *   - https://github.com/JetBrains/lincheck/issues/419
+         */
+        if (containsStackTraceElementInName(className)) {
             mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
         }
