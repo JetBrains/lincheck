@@ -15,42 +15,37 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 
+private class A(var b: B)
+private class B(var a: A? = null)
 
-private enum class Values {
-    A, B, C;
-}
-private class EnumHolder(var x: Values, var y: Values)
+private var globalA = A(B())
 
-private var global = EnumHolder(Values.A, Values.B)
-
-class StaticEnumTest : SnapshotAbstractTest() {
+class StaticObjectCycleSnapshotTest : AbstractSnapshotTest() {
     companion object {
-        private var initA: EnumHolder = global
-        private var initX: Values = global.x
-        private var initY: Values = global.y
+        private var initA = globalA
+        private var initB = globalA.b
+
+        init {
+            globalA.b.a = globalA
+        }
     }
 
-    class StaticEnumVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : SnapshotVerifier() {
+    class StaticObjectCycleVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : SnapshotVerifier() {
         override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
             checkForExceptions(results)
-            check(global == initA)
-            check(global.x == initX)
-            check(global.y == initY)
+            check(globalA == initA)
+            check(globalA.b == initB)
+            check(globalA.b.a == globalA)
             return true
         }
     }
 
     override fun <O : Options<O, *>> O.customize() {
-        verifier(StaticEnumVerifier::class.java)
+        verifier(StaticObjectCycleVerifier::class.java)
     }
 
     @Operation
-    fun modifyFields() {
-        // modified fields of the initial instance
-        global.x = Values.B
-        global.y = Values.C
-
-        // assign different instance to the variable
-        global = EnumHolder(Values.C, Values.C)
+    fun modify() {
+        globalA = A(B())
     }
 }

@@ -14,32 +14,43 @@ import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import java.util.concurrent.atomic.AtomicInteger
 
 
-private var staticInt = AtomicInteger(1)
+private enum class Values {
+    A, B, C;
+}
+private class EnumHolder(var x: Values, var y: Values)
 
-class StaticObjectTest : SnapshotAbstractTest() {
+private var global = EnumHolder(Values.A, Values.B)
+
+class StaticEnumSnapshotTest : AbstractSnapshotTest() {
     companion object {
-        private var ref: AtomicInteger = staticInt
-        private var value: Int = staticInt.get()
+        private var initA: EnumHolder = global
+        private var initX: Values = global.x
+        private var initY: Values = global.y
     }
 
-    class StaticObjectVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : SnapshotVerifier() {
+    class StaticEnumVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : SnapshotVerifier() {
         override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
             checkForExceptions(results)
-            check(staticInt == ref)
-            check(staticInt.get() == value)
+            check(global == initA)
+            check(global.x == initX)
+            check(global.y == initY)
             return true
         }
     }
 
     override fun <O : Options<O, *>> O.customize() {
-        verifier(StaticObjectVerifier::class.java)
+        verifier(StaticEnumVerifier::class.java)
     }
 
     @Operation
-    fun modify() {
-        staticInt.getAndIncrement()
+    fun modifyFields() {
+        // modified fields of the initial instance
+        global.x = Values.B
+        global.y = Values.C
+
+        // assign different instance to the variable
+        global = EnumHolder(Values.C, Values.C)
     }
 }
