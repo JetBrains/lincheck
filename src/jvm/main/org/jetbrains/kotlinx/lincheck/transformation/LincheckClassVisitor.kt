@@ -89,9 +89,6 @@ internal class LincheckClassVisitor(
             mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
         }
-        if (isStackTraceElement(className)) {
-            return mv
-        }
         if (methodName == "<init>") {
             mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
@@ -100,6 +97,10 @@ internal class LincheckClassVisitor(
             if (methodName == "loadClass") {
                 mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             }
+            return mv
+        }
+        if (isStackTraceElement(className)) {
+            mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
         }
         if (isCoroutineInternalClass(className)) {
