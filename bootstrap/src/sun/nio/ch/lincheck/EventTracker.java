@@ -42,8 +42,6 @@ public interface EventTracker {
     boolean beforeWriteArrayElement(Object array, int index, Object value, int codeLocation);
     void afterWrite();
 
-    void afterReflectiveSetter(Object receiver, Object value);
-
     void beforeMethodCall(Object owner, String className, String methodName, int codeLocation, int methodId, Object[] params);
     void onMethodCallReturn(Object result);
     void onMethodCallException(Throwable t);
