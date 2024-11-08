@@ -19,7 +19,7 @@ import kotlin.random.Random
 
 private var intArray = intArrayOf(1, 2, 3)
 
-class StaticIntArrayTest : SnapshotAbstractTest() {
+class StaticIntArraySnapshotTest : AbstractSnapshotTest() {
     companion object {
         private var ref = intArray
         private var values = intArray.copyOf()
@@ -52,7 +52,7 @@ private class X(var value: Int) {
 
 private var objArray = arrayOf<X>(X(1), X(2), X(3))
 
-class StaticObjectArrayTest : SnapshotAbstractTest() {
+class StaticObjectArraySnapshotTest : AbstractSnapshotTest() {
     companion object {
         private var ref: Array<X> = objArray
         private var elements: Array<X?> = Array<X?>(3) { null }.also { objArray.forEachIndexed { index, x -> it[index] = x } }

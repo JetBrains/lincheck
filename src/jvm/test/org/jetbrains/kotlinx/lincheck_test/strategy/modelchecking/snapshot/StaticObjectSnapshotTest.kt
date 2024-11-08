@@ -14,46 +14,32 @@ import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import java.util.concurrent.atomic.AtomicInteger
 
 
-private object Static1 {
-    var f1: Static2? = Static2
-    var f2: Int = 0
-}
+private var staticInt = AtomicInteger(1)
 
-private object Static2 {
-    var f1: Int = 1
-    var f2: String = "abc"
-}
-
-class StaticObjectAsFieldTest : SnapshotAbstractTest() {
+class StaticObjectSnapshotTest : AbstractSnapshotTest() {
     companion object {
-        private val initS1f1 = Static1.f1
-        private val initS1f2 = Static1.f2
-
-        private val initS2f1 = Static2.f1
-        private val initS2f2 = Static2.f2
+        private var ref: AtomicInteger = staticInt
+        private var value: Int = staticInt.get()
     }
 
-    class StaticObjectAsFieldVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : SnapshotVerifier() {
+    class StaticObjectVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : SnapshotVerifier() {
         override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
             checkForExceptions(results)
-            check(Static1.f1 == initS1f1 && Static1.f2 == initS1f2)
-            check(Static2.f1 == initS2f1 && Static2.f2 == initS2f2)
+            check(staticInt == ref)
+            check(staticInt.get() == value)
             return true
         }
     }
 
     override fun <O : Options<O, *>> O.customize() {
-        verifier(StaticObjectAsFieldVerifier::class.java)
+        verifier(StaticObjectVerifier::class.java)
     }
 
     @Operation
     fun modify() {
-        Static2.f1 = 10
-        Static2.f2 = "cba"
-
-        Static1.f1 = null
-        Static1.f2 = 10
+        staticInt.getAndIncrement()
     }
 }

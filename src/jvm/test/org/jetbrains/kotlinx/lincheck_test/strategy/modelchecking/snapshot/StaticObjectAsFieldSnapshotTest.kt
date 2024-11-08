@@ -15,37 +15,45 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 
-private class A(var b: B)
-private class B(var a: A? = null)
 
-private var globalA = A(B())
+private object Static1 {
+    var f1: Static2? = Static2
+    var f2: Int = 0
+}
 
-class StaticObjectCycleTest : SnapshotAbstractTest() {
+private object Static2 {
+    var f1: Int = 1
+    var f2: String = "abc"
+}
+
+class StaticObjectAsFieldSnapshotTest : AbstractSnapshotTest() {
     companion object {
-        private var initA = globalA
-        private var initB = globalA.b
+        private val initS1f1 = Static1.f1
+        private val initS1f2 = Static1.f2
 
-        init {
-            globalA.b.a = globalA
-        }
+        private val initS2f1 = Static2.f1
+        private val initS2f2 = Static2.f2
     }
 
-    class StaticObjectCycleVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : SnapshotVerifier() {
+    class StaticObjectAsFieldVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : SnapshotVerifier() {
         override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
             checkForExceptions(results)
-            check(globalA == initA)
-            check(globalA.b == initB)
-            check(globalA.b.a == globalA)
+            check(Static1.f1 == initS1f1 && Static1.f2 == initS1f2)
+            check(Static2.f1 == initS2f1 && Static2.f2 == initS2f2)
             return true
         }
     }
 
     override fun <O : Options<O, *>> O.customize() {
-        verifier(StaticObjectCycleVerifier::class.java)
+        verifier(StaticObjectAsFieldVerifier::class.java)
     }
 
     @Operation
     fun modify() {
-        globalA = A(B())
+        Static2.f1 = 10
+        Static2.f2 = "cba"
+
+        Static1.f1 = null
+        Static1.f2 = 10
     }
 }

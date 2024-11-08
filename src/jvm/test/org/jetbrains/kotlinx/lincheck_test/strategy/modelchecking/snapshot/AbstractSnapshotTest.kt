@@ -11,7 +11,6 @@
 package org.jetbrains.kotlinx.lincheck_test.strategy.modelchecking.snapshot
 
 import org.jetbrains.kotlinx.lincheck.ExceptionResult
-import org.jetbrains.kotlinx.lincheck.LoggingLevel
 import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
@@ -20,7 +19,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelChecki
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import org.junit.Test
 
-abstract class SnapshotAbstractTest {
+abstract class AbstractSnapshotTest {
     abstract class SnapshotVerifier() : Verifier {
         protected fun checkForExceptions(results: ExecutionResult?) {
             results?.parallelResults?.forEach { threadsResults ->

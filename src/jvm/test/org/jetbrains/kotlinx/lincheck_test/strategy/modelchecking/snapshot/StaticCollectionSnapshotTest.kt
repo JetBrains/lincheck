@@ -20,7 +20,7 @@ import kotlin.random.Random
 private class Wrapper(var value: Int)
 private var staticSet = mutableSetOf<Wrapper>()
 
-class StaticCollectionTest : SnapshotAbstractTest() {
+class StaticCollectionSnapshotTest : AbstractSnapshotTest() {
     companion object {
         private val ref = staticSet
         private val a = Wrapper(1)

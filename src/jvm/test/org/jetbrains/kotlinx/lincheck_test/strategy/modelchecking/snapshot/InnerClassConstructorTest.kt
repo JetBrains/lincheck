@@ -26,7 +26,7 @@ private class Outer {
 
 private val a = Outer()
 
-class InnerClassTest : SnapshotAbstractTest() {
+class InnerClassConstructorTest : AbstractSnapshotTest() {
     class InnerClassVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : SnapshotVerifier() {
         override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
             checkForExceptions(results)
