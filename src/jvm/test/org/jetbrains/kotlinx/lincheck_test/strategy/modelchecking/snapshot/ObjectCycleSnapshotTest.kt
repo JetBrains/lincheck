@@ -10,17 +10,17 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy.modelchecking.snapshot
 
-import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedOptions
 
 private class A(var b: B)
 private class B(var a: A? = null)
 
 private var globalA = A(B())
 
-class StaticObjectCycleSnapshotTest : AbstractSnapshotTest() {
+class ObjectCycleSnapshotTest : AbstractSnapshotTest() {
     companion object {
         private var initA = globalA
         private var initB = globalA.b
@@ -40,7 +40,7 @@ class StaticObjectCycleSnapshotTest : AbstractSnapshotTest() {
         }
     }
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun <O : ManagedOptions<O, *>> O.customize() {
         verifier(StaticObjectCycleVerifier::class.java)
     }
 

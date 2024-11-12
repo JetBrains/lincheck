@@ -11,10 +11,10 @@
 package org.jetbrains.kotlinx.lincheck_test.strategy.modelchecking.snapshot
 
 import org.jetbrains.kotlinx.lincheck.ExceptionResult
-import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedOptions
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import org.junit.Test
@@ -32,11 +32,10 @@ abstract class AbstractSnapshotTest {
         }
     }
 
-    protected open fun <O : Options<O, *>> O.customize() {}
+    protected open fun <O : ManagedOptions<O, *>> O.customize() {}
 
     @Test
-    fun testModelChecking() = ModelCheckingOptions()
-//        .logLevel(LoggingLevel.INFO)
+    open fun testModelChecking() = ModelCheckingOptions()
         .iterations(1)
         .actorsBefore(0)
         .actorsAfter(0)

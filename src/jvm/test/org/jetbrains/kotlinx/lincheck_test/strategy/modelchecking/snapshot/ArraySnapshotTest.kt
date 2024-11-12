@@ -10,10 +10,10 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy.modelchecking.snapshot
 
-import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedOptions
 import kotlin.random.Random
 
 
@@ -34,7 +34,7 @@ class StaticIntArraySnapshotTest : AbstractSnapshotTest() {
         }
     }
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun <O : ManagedOptions<O, *>> O.customize() {
         verifier(StaticIntArrayVerifier::class.java)
     }
 
@@ -69,7 +69,7 @@ class StaticObjectArraySnapshotTest : AbstractSnapshotTest() {
         }
     }
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun <O : ManagedOptions<O, *>> O.customize() {
         verifier(StaticObjectArrayVerifier::class.java)
     }
 

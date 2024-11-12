@@ -10,18 +10,51 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy.modelchecking.snapshot
 
-import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedOptions
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
+import org.jetbrains.kotlinx.lincheck_test.strategy.modelchecking.snapshot.SetSnapshotTest.Companion.Wrapper
 import kotlin.random.Random
 
-private class Wrapper(var value: Int)
-private var staticSet = mutableSetOf<Wrapper>()
 
-class StaticCollectionSnapshotTest : AbstractSnapshotTest() {
+abstract class CollectionSnapshotTest : AbstractSnapshotTest() {
+
+    override fun testModelChecking() = ModelCheckingOptions()
+        .actorsBefore(0)
+        .actorsAfter(0)
+        .iterations(100)
+        .invocationsPerIteration(1)
+        .threads(1)
+        .actorsPerThread(10)
+        .restoreStaticMemory(true)
+        .apply { customize() }
+        .check(this::class)
+
+    @Operation
+    open fun addElement() {}
+
+    @Operation
+    open fun removeElement() {}
+
+    @Operation
+    open fun updateElement() {}
+
+    @Operation
+    open fun clear() {}
+
+    @Operation
+    open fun reassign() {}
+}
+
+class SetSnapshotTest : CollectionSnapshotTest() {
     companion object {
+        private class Wrapper(var value: Int)
+        private var staticSet = mutableSetOf<Wrapper>()
+
+        // remember values for restoring
         private val ref = staticSet
         private val a = Wrapper(1)
         private val b = Wrapper(2)
@@ -31,7 +64,7 @@ class StaticCollectionSnapshotTest : AbstractSnapshotTest() {
         }
     }
 
-    class StaticCollectionVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : SnapshotVerifier() {
+    class SetVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : SnapshotVerifier() {
         override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
             checkForExceptions(results)
             check(staticSet == ref)
@@ -41,31 +74,32 @@ class StaticCollectionSnapshotTest : AbstractSnapshotTest() {
         }
     }
 
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(100)
-        if (this is ModelCheckingOptions) invocationsPerIteration(1)
-        threads(1)
-        actorsPerThread(10)
-        verifier(StaticCollectionVerifier::class.java)
+    override fun <O : ManagedOptions<O, *>> O.customize() {
+        verifier(SetVerifier::class.java)
     }
 
     @Operation
-    fun addElement() {
+    override fun addElement() {
         staticSet.add(Wrapper(Random.nextInt()))
     }
 
     @Operation
-    fun removeElement() {
+    override fun removeElement() {
         staticSet.remove(staticSet.randomOrNull() ?: return)
     }
 
     @Operation
-    fun updateElement() {
+    override fun updateElement() {
         staticSet.randomOrNull()?.value = Random.nextInt()
     }
 
     @Operation
-    fun clear() {
+    override fun clear() {
         staticSet.clear()
+    }
+
+    @Operation
+    override fun reassign() {
+        staticSet = mutableSetOf<Wrapper>()
     }
 }

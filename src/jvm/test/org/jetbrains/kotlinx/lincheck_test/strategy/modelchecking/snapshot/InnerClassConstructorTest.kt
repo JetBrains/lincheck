@@ -3,6 +3,7 @@ package org.jetbrains.kotlinx.lincheck_test.strategy.modelchecking.snapshot
 import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedOptions
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 
 
@@ -35,9 +36,9 @@ class InnerClassConstructorTest : AbstractSnapshotTest() {
         }
     }
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun <O : ManagedOptions<O, *>> O.customize() {
         iterations(1)
-        if (this is ModelCheckingOptions) invocationsPerIteration(1)
+        invocationsPerIteration(1)
         verifier(InnerClassVerifier::class.java)
     }
 

@@ -10,10 +10,10 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy.modelchecking.snapshot
 
-import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedOptions
 
 
 private object Static1 {
@@ -26,7 +26,7 @@ private object Static2 {
     var f2: String = "abc"
 }
 
-class StaticObjectAsFieldSnapshotTest : AbstractSnapshotTest() {
+class ObjectAsFieldSnapshotTest : AbstractSnapshotTest() {
     companion object {
         private val initS1f1 = Static1.f1
         private val initS1f2 = Static1.f2
@@ -44,7 +44,7 @@ class StaticObjectAsFieldSnapshotTest : AbstractSnapshotTest() {
         }
     }
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun <O : ManagedOptions<O, *>> O.customize() {
         verifier(StaticObjectAsFieldVerifier::class.java)
     }
 

@@ -31,6 +31,7 @@ internal class SnapshotTrackerTransformer(
             // when initializing our own fields in constructor, we do not want to track that as snapshot modification
             (methodName == "<init>" && className == owner)
         ) {
+            //println("Do not transform access to field '$fieldName' with owner '$owner' of type '$desc' while in class '$className' and method '$methodName' in file '$fileName'.'")
             visitFieldInsn(opcode, owner, fieldName, desc)
             return
         }

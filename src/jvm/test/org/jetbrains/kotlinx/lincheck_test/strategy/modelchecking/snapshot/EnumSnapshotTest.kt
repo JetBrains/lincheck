@@ -10,10 +10,10 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy.modelchecking.snapshot
 
-import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedOptions
 
 
 private enum class Values {
@@ -23,7 +23,7 @@ private class EnumHolder(var x: Values, var y: Values)
 
 private var global = EnumHolder(Values.A, Values.B)
 
-class StaticEnumSnapshotTest : AbstractSnapshotTest() {
+class EnumSnapshotTest : AbstractSnapshotTest() {
     companion object {
         private var initA: EnumHolder = global
         private var initX: Values = global.x
@@ -40,7 +40,7 @@ class StaticEnumSnapshotTest : AbstractSnapshotTest() {
         }
     }
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun <O : ManagedOptions<O, *>> O.customize() {
         verifier(StaticEnumVerifier::class.java)
     }
 

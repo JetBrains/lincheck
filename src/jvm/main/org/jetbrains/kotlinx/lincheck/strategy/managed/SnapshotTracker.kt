@@ -17,6 +17,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.SnapshotTracker.Descripto
 import org.jetbrains.kotlinx.lincheck.strategy.managed.SnapshotTracker.MemoryNode.ArrayCellNode
 import org.jetbrains.kotlinx.lincheck.strategy.managed.SnapshotTracker.MemoryNode.RegularFieldNode
 import org.jetbrains.kotlinx.lincheck.strategy.managed.SnapshotTracker.MemoryNode.StaticFieldNode
+import org.jetbrains.kotlinx.lincheck.util.isAtomicJava
 import org.jetbrains.kotlinx.lincheck.util.readArrayElementViaUnsafe
 import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
 import org.jetbrains.kotlinx.lincheck.util.traverseObjectGraph
@@ -71,6 +72,7 @@ class SnapshotTracker {
 
         if (readResult.isSuccess) {
             val fieldValue = readResult.getOrNull()
+            //println("Consider: value=${fieldValue}")
 
             trackSingleField(obj, clazz, field, fieldValue) {
                 if (shouldTrackEnergetically(fieldValue)) {
@@ -89,6 +91,7 @@ class SnapshotTracker {
 
         if (readResult.isSuccess) {
             val elementValue = readResult.getOrNull()
+            //println("Consider: element=${elementValue}")
 
             trackSingleArrayCell(array, index, elementValue) {
                 if (shouldTrackEnergetically(elementValue)) {
@@ -105,7 +108,6 @@ class SnapshotTracker {
             .filterIsInstance<Class<*>>()
             .forEach { restoreValues(it, visitedObjects) }
     }
-
 
     @OptIn(ExperimentalStdlibApi::class)
     private fun trackSingleField(
@@ -167,11 +169,15 @@ class SnapshotTracker {
             obj,
             onArrayElement = { array, index, elementValue ->
                 trackSingleArrayCell(array, index, elementValue)
-                return@traverseObjectGraph elementValue
+                elementValue
             },
             onField = { owner, field, fieldValue ->
-                trackSingleField(owner, owner.javaClass, field, fieldValue)
-                return@traverseObjectGraph fieldValue
+                // optimization to track only `value` field of java atomic classes
+                if (isAtomicJava(owner) && field.name != "value") null
+                else {
+                    trackSingleField(owner, owner.javaClass, field, fieldValue)
+                    fieldValue
+                }
             }
         )
     }
@@ -179,9 +185,9 @@ class SnapshotTracker {
     private fun shouldTrackEnergetically(obj: Any?): Boolean {
         // TODO: We should filter out some standard library classes that we don't care about (like, PrintStream: System.out/in/err)
         //  and only traverse energetically important std classes like AtomicInteger, etc.
+        if (obj == null) return false
         return (
-            obj != null &&
-            (obj.javaClass.name.startsWith("java.util.concurrent") && obj.javaClass.name.contains("Atomic"))
+            obj.javaClass.name.startsWith("java.util.concurrent.") && obj.javaClass.name.contains("Atomic")
         )
     }
 
@@ -198,11 +204,8 @@ class SnapshotTracker {
                     //println("\tRESTORE: arr=${obj.javaClass.simpleName}@${System.identityHashCode(obj).toHexString()}, index=$index, value=${node.initialValue}")
 
                     when (obj) {
-                        // TODO: add tests for java atomic and atomicfu arrays
-                        // TODO: add write support for atomicfu arrays
-//                        is kotlinx.atomicfu.AtomicIntArray -> {
-//                            obj.get(index).value = node.initialValue as Int
-//                        }
+                        // No need to add support for writing to atomicfu array elements,
+                        // because atomicfu arrays are compiled to atomic java arrays
                         is AtomicReferenceArray<*> -> @Suppress("UNCHECKED_CAST") (obj as AtomicReferenceArray<Any?>).set(index, node.initialValue)
                         is AtomicIntegerArray -> obj.set(index, node.initialValue as Int)
                         is AtomicLongArray -> obj.set(index, node.initialValue as Long)
@@ -223,7 +226,6 @@ class SnapshotTracker {
                 }
             }
     }
-
 
     private fun isTrackableObject(value: Any?): Boolean {
         return (
