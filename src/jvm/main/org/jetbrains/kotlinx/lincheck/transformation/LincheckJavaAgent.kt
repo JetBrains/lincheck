@@ -344,12 +344,17 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
 
     override fun transform(
         loader: ClassLoader?,
-        internalClassName: String,
+        internalClassName: String?,
         classBeingRedefined: Class<*>?,
         protectionDomain: ProtectionDomain?,
         classBytes: ByteArray
     ): ByteArray? = runInIgnoredSection {
         // If the class should not be transformed, return immediately.
+        if (classBeingRedefined == null) {
+            return null
+        } else {
+            require(internalClassName != null) { "Class name must not be null" }
+        }
         if (!shouldTransform(internalClassName.canonicalClassName, instrumentationMode)) {
             return null
         }
