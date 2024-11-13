@@ -58,9 +58,8 @@ internal object FieldSearchHelper {
             testObject,
             onArrayElement = { _, _, _ -> null }, // do not traverse array elements further
             onField = { ownerObject, field, fieldValue ->
-                if (field.type.isPrimitive || fieldValue == null) return@traverseObjectGraph null
-
-                if (value === fieldValue && !isTraverseCompleted()) {
+                if (field.type.isPrimitive || fieldValue == null) null
+                else if (value === fieldValue && !isTraverseCompleted()) {
                     when {
                         fieldName != null -> {
                             traverseResult = MultipleFieldsMatching
@@ -77,10 +76,10 @@ internal object FieldSearchHelper {
                             traverseResult = FieldName(fieldName!!)
                         }
                     }
-                    return@traverseObjectGraph null
+                    null
                 }
-
-                return@traverseObjectGraph if (!isTraverseCompleted()) fieldValue else null
+                else if (!isTraverseCompleted()) fieldValue
+                else null
             }
         )
 

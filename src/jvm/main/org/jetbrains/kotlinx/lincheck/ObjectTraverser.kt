@@ -49,70 +49,65 @@ private fun enumerateObjects(obj: Any, objectNumberMap: MutableMap<Any, Int>) {
     if (obj is Class<*> || obj is ClassLoader) return
     objectNumberMap[obj] = getObjectNumber(obj.javaClass, obj)
 
-    val processObject: (Any?) -> Any? = processObject@{ value: Any? ->
-        if (value == null || value is Class<*> || value is ClassLoader) return@processObject null
+    val processObject: (Any?) -> Any? = { value: Any? ->
+        if (value == null || value is Class<*> || value is ClassLoader) null
+        else {
+            // We jump through most of the atomic classes
+            var jumpObj: Any? = value
 
-        // We jump through most of the atomic classes
-        var jumpObj: Any? = value
-
-        // Special treatment for java atomic classes, because they can be extended but user classes,
-        // in case if a user extends java atomic class, we do not want to jump through it.
-        while (jumpObj?.javaClass?.name != null && isAtomicJavaClass(jumpObj.javaClass.name)) {
-            jumpObj = jumpObj.javaClass.getMethod("get").invoke(jumpObj)
-        }
-
-        if (isAtomicFU(jumpObj)) {
-            val readNextJumpObjectByFieldName = { fieldName: String ->
-                readFieldViaUnsafe(jumpObj, jumpObj?.javaClass?.getDeclaredField(fieldName)!!)
-            }
-
-            while (jumpObj is kotlinx.atomicfu.AtomicRef<*>) {
-                jumpObj = readNextJumpObjectByFieldName("value")
+            // Special treatment for java atomic classes, because they can be extended but user classes,
+            // in case if a user extends java atomic class, we do not want to jump through it.
+            while (jumpObj?.javaClass?.name != null && isAtomicJavaClass(jumpObj.javaClass.name)) {
+                jumpObj = jumpObj.javaClass.getMethod("get").invoke(jumpObj)
             }
 
             if (isAtomicFU(jumpObj)) {
-                jumpObj =
-                    if (jumpObj is kotlinx.atomicfu.AtomicBoolean) readNextJumpObjectByFieldName("_value")
-                    else readNextJumpObjectByFieldName("value")
+                val readNextJumpObjectByFieldName = { fieldName: String ->
+                    readFieldViaUnsafe(jumpObj, jumpObj?.javaClass?.getDeclaredField(fieldName)!!)
+                }
+
+                while (jumpObj is kotlinx.atomicfu.AtomicRef<*>) {
+                    jumpObj = readNextJumpObjectByFieldName("value")
+                }
+
+                if (isAtomicFU(jumpObj)) {
+                    jumpObj =
+                        if (jumpObj is kotlinx.atomicfu.AtomicBoolean) readNextJumpObjectByFieldName("_value")
+                        else readNextJumpObjectByFieldName("value")
+                }
             }
-        }
 
-        if (jumpObj != null) {
-            objectNumberMap[jumpObj] = getObjectNumber(jumpObj.javaClass, jumpObj)
-            return@processObject if (shouldAnalyseObjectRecursively(jumpObj, objectNumberMap)) jumpObj else null
+            if (jumpObj != null) {
+                objectNumberMap[jumpObj] = getObjectNumber(jumpObj.javaClass, jumpObj)
+                if (shouldAnalyseObjectRecursively(jumpObj, objectNumberMap)) jumpObj else null
+            }
+            else null
         }
-
-        return@processObject null
     }
 
     traverseObjectGraph(
         obj,
         onArrayElement = { _, _, value ->
-            if (value?.javaClass?.isEnum == true) return@traverseObjectGraph null
-
-            try {
-                return@traverseObjectGraph processObject(value)
-            }
-            catch (e: Throwable) {
+            if (value?.javaClass?.isEnum == true) null
+            else try {
+                processObject(value)
+            } catch (e: Throwable) {
                 e.printStackTrace()
+                null
             }
-
-            return@traverseObjectGraph null
         },
         onField = { _, f, value ->
             if (
                 Modifier.isStatic(f.modifiers) ||
                 f.isEnumConstant ||
                 f.name == "serialVersionUID"
-            ) return@traverseObjectGraph null
-
-            try {
-                return@traverseObjectGraph processObject(value)
+            ) null
+            else try {
+                processObject(value)
             } catch (e: Throwable) {
                 e.printStackTrace()
+                null
             }
-
-            return@traverseObjectGraph null
         }
     )
 }
