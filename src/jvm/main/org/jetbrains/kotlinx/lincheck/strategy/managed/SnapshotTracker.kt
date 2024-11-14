@@ -183,11 +183,11 @@ class SnapshotTracker {
     }
 
     private fun shouldTrackEnergetically(obj: Any?): Boolean {
-        // TODO: We should filter out some standard library classes that we don't care about (like, PrintStream: System.out/in/err)
-        //  and only traverse energetically important std classes like AtomicInteger, etc.
         if (obj == null) return false
         return (
-            obj.javaClass.name.startsWith("java.util.concurrent.") && obj.javaClass.name.contains("Atomic")
+            // TODO: in further development of snapshot restoring feature this check should be removed
+            //  (and only check for java atomic classes), see https://github.com/JetBrains/lincheck/pull/418#issue-2595977113
+            obj.javaClass.name.startsWith("java.util.")
         )
     }
 
