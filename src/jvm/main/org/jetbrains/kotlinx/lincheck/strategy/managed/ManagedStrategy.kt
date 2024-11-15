@@ -1116,6 +1116,16 @@ abstract class ManagedStrategy(
         staticMemorySnapshot.trackObjects(objs)
     }
 
+    /**
+     * Tracks all objects in [objs] energetically.
+     * Required as a trick to overcome issue with leaking this in constructors, see https://github.com/JetBrains/lincheck/issues/424.
+     */
+    override fun updateSnapshotWithEnergeticTracking(objs: Array<Any?>) = runInIgnoredSection {
+        if (testCfg.restoreStaticMemory) {
+            staticMemorySnapshot.trackObjects(objs)
+        }
+    }
+
     private fun methodGuaranteeType(owner: Any?, className: String, methodName: String): ManagedGuaranteeType? = runInIgnoredSection {
         userDefinedGuarantees?.forEach { guarantee ->
             val ownerName = owner?.javaClass?.canonicalName ?: className
