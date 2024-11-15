@@ -101,6 +101,10 @@ class SnapshotTracker {
         }
     }
 
+    fun trackObjects(objs: Array<Any?>) {
+        objs.filterNotNull().forEach { trackHierarchy(it) }
+    }
+
     fun restoreValues() {
         //println("====== START RESTORING ======")
         val visitedObjects = Collections.newSetFromMap(IdentityHashMap<Any, Boolean>())
@@ -186,7 +190,7 @@ class SnapshotTracker {
         if (obj == null) return false
         return (
             // TODO: in further development of snapshot restoring feature this check should be removed
-            //  (and only check for java atomic classes), see https://github.com/JetBrains/lincheck/pull/418#issue-2595977113
+            //  (and only check for java atomic classes inserted), see https://github.com/JetBrains/lincheck/pull/418#issue-2595977113
             obj.javaClass.name.startsWith("java.util.")
         )
     }

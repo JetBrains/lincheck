@@ -294,12 +294,25 @@ public class Injections {
         getEventTracker().afterNewObjectCreation(obj);
     }
 
+    /**
+     * Called from instrumented code on field access.
+     */
     public static void updateSnapshotOnFieldAccess(Object obj, String className, String fieldName, int codeLocation) {
         getEventTracker().updateSnapshotOnFieldAccess(obj, className, fieldName, codeLocation);
     }
 
+    /**
+     * Called from instrumented code on array element access.
+     */
     public static void updateSnapshotOnArrayElementAccess(Object array, int index, int codeLocation) {
         getEventTracker().updateSnapshotOnArrayElementAccess(array, index, codeLocation);
+    }
+
+    /**
+     * Called from instrumented code on constructor invocation, where passed objects are subtypes of the constructor class type.
+     */
+    public static void updateSnapshotWithEnergeticTracking(Object[] objs) {
+        getEventTracker().updateSnapshotWithEnergeticTracking(objs);
     }
 
     /**
