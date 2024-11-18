@@ -349,6 +349,13 @@ internal val CLASS_TYPE = getType(Class::class.java)
 internal val CLASS_FOR_NAME_METHOD = Method("forName", CLASS_TYPE, arrayOf(STRING_TYPE))
 
 /**
- * Tests if the provided [className] contains `"ClassLoader"` as a substring
+ * Tests if the provided [className] contains `"ClassLoader"` as a substring.
  */
-internal fun containsClassloaderInName(className: String): Boolean = className.contains("ClassLoader")
+internal fun containsClassloaderInName(className: String): Boolean =
+    className.contains("ClassLoader")
+
+/**
+ * Tests if the provided [className] contains `"StackTraceElement"` as a substring.
+ */
+internal fun isStackTraceElementClass(className: String): Boolean =
+    className == "java.lang.StackTraceElement"
