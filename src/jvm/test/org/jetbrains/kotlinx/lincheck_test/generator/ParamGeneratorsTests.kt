@@ -89,6 +89,24 @@ class MethodParameterGenerationTestWithSecondParameterAnnotated {
 }
 
 /**
+ *  Test checks that a named generator matching a parameter name is applied.
+ *
+ *  This relies on the parameter name being available (i.e. by being compiled with `-java-parameters`).
+ */
+@Param(name = "key", gen = IntGen::class, conf = "0:10")
+class MethodParameterGenerationTestWithParameterNameMatchingGenerator {
+    @Operation
+    fun operation(key: Int) {
+        if (key < 0 || key > 10) {
+            throw InternalLincheckTestUnexpectedException
+        }
+    }
+
+    @Test
+    fun test() = ModelCheckingOptions().check(this::class)
+}
+
+/**
  *  Test checks that method with both parameters of the same type won't receive same values all the time
  */
 class MethodParameterGenerationTest {
