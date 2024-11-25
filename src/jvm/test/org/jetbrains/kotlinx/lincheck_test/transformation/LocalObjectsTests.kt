@@ -89,8 +89,7 @@ class LocalObjectEscapeConstructorTest {
          * and thus should insert switch points before accesses to this object's fields,
          * because the `localB` object escapes its thread as it is referenced by the escaped object `localA`
          */
-        if (localB.i != 0)
-            throw LocalEscapedException()
+        if (localB.i != 0) throw LocalEscapedException()
     }
 
     @Operation
