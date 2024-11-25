@@ -9,11 +9,12 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.transformation
 
-import org.jetbrains.kotlinx.lincheck.LinChecker
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.check
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTest
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import org.junit.Test
 import sun.misc.Unsafe
 import java.lang.invoke.MethodHandles
@@ -62,6 +63,61 @@ class LocalObjectEliminationTest {
     private data class A(var value: Int, var any: Any, val array: IntArray)
 }
 
+class LocalObjectEscapeConstructorTest {
+
+    private class A(var b: B)
+
+    private class B(var i: Int)
+
+    private class LocalEscapedException : Exception()
+
+    @Volatile
+    private var a: A? = null
+
+    @Operation
+    fun escapeLocal() {
+        val localB = B(0)
+        val localA = A(localB)
+        /* if we uncomment this line, then there is an explicit write
+         * of `localB` into `localA` field that the model checker will detect;
+         * however, the model checker still should detect object escaping even without explicit write,
+         * because `localB` is assigned to `localA` field in the constructor
+         */
+        // localA.b = localB
+        a = localA
+        /* the model checker should not treat `localB` as a local object
+         * and thus should insert switch points before accesses to this object's fields,
+         * because the `localB` object escapes its thread as it is referenced by the escaped object `localA`
+         */
+        if (localB.i != 0) throw LocalEscapedException()
+    }
+
+    @Operation
+    fun changeState() {
+        val b = a?.b ?: return
+        b.i = 1
+    }
+
+    @Test
+    fun test() {
+        val failure = ModelCheckingOptions()
+            .iterations(0) // we will run only custom scenarios
+            .addCustomScenario {
+                parallel {
+                    thread { actor(::escapeLocal) }
+                    thread { actor(::changeState) }
+                }
+            }
+            .checkImpl(this::class.java)
+        // the test should fail
+        check(failure is IncorrectResultsFailure)
+        // `escapeLocal` function should throw `LocalEscapedException`
+        val result = failure.results.parallelResults[0][0]
+        check(result is ExceptionResult)
+        check(result.throwable is LocalEscapedException)
+    }
+
+}
 
 /**
  * This test checks that despite some object isn't explicitly assigned to some shared value,
