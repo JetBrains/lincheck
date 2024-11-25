@@ -88,12 +88,16 @@ private fun enumerateObjects(obj: Any, objectNumberMap: MutableMap<Any, Int>) {
     traverseObjectGraph(
         obj,
         onArrayElement = { _, _, value ->
-            if (value?.javaClass?.isEnum == true) null
-            else try {
-                processObject(value)
-            } catch (e: Throwable) {
-                e.printStackTrace()
+            if (value?.javaClass?.isEnum == true) {
                 null
+            }
+            else {
+                try {
+                    processObject(value)
+                } catch (e: Throwable) {
+                    e.printStackTrace()
+                    null
+                }
             }
         },
         onField = { _, f, value ->
@@ -101,12 +105,16 @@ private fun enumerateObjects(obj: Any, objectNumberMap: MutableMap<Any, Int>) {
                 Modifier.isStatic(f.modifiers) ||
                 f.isEnumConstant ||
                 f.name == "serialVersionUID"
-            ) null
-            else try {
-                processObject(value)
-            } catch (e: Throwable) {
-                e.printStackTrace()
+            ) {
                 null
+            }
+            else {
+                try {
+                    processObject(value)
+                } catch (e: Throwable) {
+                    e.printStackTrace()
+                    null
+                }
             }
         }
     )

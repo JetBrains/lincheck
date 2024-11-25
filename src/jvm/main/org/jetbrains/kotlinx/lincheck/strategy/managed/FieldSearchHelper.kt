@@ -58,28 +58,35 @@ internal object FieldSearchHelper {
             testObject,
             onArrayElement = { _, _, _ -> null }, // do not traverse array elements further
             onField = { ownerObject, field, fieldValue ->
-                if (field.type.isPrimitive || fieldValue == null) null
-                else if (value === fieldValue && !isTraverseCompleted()) {
-                    when {
-                        fieldName != null -> {
-                            traverseResult = MultipleFieldsMatching
-                        }
-                        !Modifier.isFinal(field.modifiers) -> {
-                            traverseResult = FoundInNonFinalField
-                        }
-                        else -> {
-                            fieldName = if (Modifier.isStatic(field.modifiers)) {
-                                StaticOwnerWithName(field.name, ownerObject::class.java)
-                            } else {
-                                InstanceOwnerWithName(field.name, ownerObject)
+                when {
+                    field.type.isPrimitive || fieldValue == null -> null
+                    // keep traversing `fieldValue`'s fields if terminating
+                    // (MultipleFieldsMatching, FoundInNonFinalField) state is not reached
+                    value !== fieldValue && !isTraverseCompleted() -> fieldValue
+                    value === fieldValue && !isTraverseCompleted() -> {
+                        // when `value === fieldValue`
+                        // and terminating state is not reached yet, then we update the state
+                        when {
+                            fieldName != null -> {
+                                traverseResult = MultipleFieldsMatching
                             }
-                            traverseResult = FieldName(fieldName!!)
+                            !Modifier.isFinal(field.modifiers) -> {
+                                traverseResult = FoundInNonFinalField
+                            }
+                            else -> {
+                                fieldName = if (Modifier.isStatic(field.modifiers)) {
+                                    StaticOwnerWithName(field.name, ownerObject::class.java)
+                                } else {
+                                    InstanceOwnerWithName(field.name, ownerObject)
+                                }
+                                traverseResult = FieldName(fieldName!!)
+                            }
                         }
+                        // return null, indicating that no further traversing of `fieldValue` needed
+                        null
                     }
-                    null
+                    else -> null
                 }
-                else if (!isTraverseCompleted()) fieldValue
-                else null
             }
         )
 
