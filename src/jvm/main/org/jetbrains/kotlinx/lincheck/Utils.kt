@@ -10,13 +10,13 @@
 package org.jetbrains.kotlinx.lincheck
 
 import kotlinx.coroutines.*
-import sun.nio.ch.lincheck.EventTracker
-import sun.nio.ch.lincheck.TestThread
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
 import org.jetbrains.kotlinx.lincheck.verifier.*
+import sun.nio.ch.lincheck.EventTracker
+import sun.nio.ch.lincheck.TestThread
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.lang.ref.*
@@ -102,7 +102,7 @@ internal fun primitiveOrIdentityHashCode(value: Any?): Int {
     return if (value.isPrimitiveWrapper) value.hashCode() else System.identityHashCode(value)
 }
 
-private val Any?.isPrimitiveWrapper get() = when (this) {
+internal val Any?.isPrimitiveWrapper get() = when (this) {
     is Boolean, is Int, is Short, is Long, is Double, is Float, is Char, is Byte -> true
     else -> false
 }
@@ -214,21 +214,9 @@ internal val Throwable.text: String get() {
     return writer.buffer.toString()
 }
 
-/**
- * Returns all found fields in the hierarchy.
- * Multiple fields with the same name and the same type may be returned
- * if they appear in the subclass and a parent class.
- */
-internal val Class<*>.allDeclaredFieldWithSuperclasses get(): List<Field> {
-    val fields: MutableList<Field> = ArrayList<Field>()
-    var currentClass: Class<*>? = this
-    while (currentClass != null) {
-        val declaredFields: Array<Field> = currentClass.declaredFields
-        fields.addAll(declaredFields)
-        currentClass = currentClass.superclass
-    }
-    return fields
-}
+
+
+
 
 @Suppress("DEPRECATION")
 internal fun findFieldNameByOffset(targetType: Class<*>, offset: Long): String? {
@@ -243,7 +231,6 @@ internal fun findFieldNameByOffset(targetType: Class<*>, offset: Long): String? 
             t.printStackTrace()
         }
     }
-
     return null // Field not found
 }
 

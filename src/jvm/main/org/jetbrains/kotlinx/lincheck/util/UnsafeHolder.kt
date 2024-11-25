@@ -35,3 +35,48 @@ internal inline fun <T> readFieldViaUnsafe(obj: Any?, field: Field, getter: Unsa
         return UnsafeHolder.UNSAFE.getter(obj, offset)
     }
 }
+
+internal fun readFieldViaUnsafe(obj: Any?, field: Field): Any? {
+    if (!field.type.isPrimitive) {
+        return readFieldViaUnsafe(obj, field, Unsafe::getObject)
+    }
+    return when (field.type) {
+        Boolean::class.javaPrimitiveType    -> readFieldViaUnsafe(obj, field, Unsafe::getBoolean)
+        Byte::class.javaPrimitiveType       -> readFieldViaUnsafe(obj, field, Unsafe::getByte)
+        Char::class.javaPrimitiveType       -> readFieldViaUnsafe(obj, field, Unsafe::getChar)
+        Short::class.javaPrimitiveType      -> readFieldViaUnsafe(obj, field, Unsafe::getShort)
+        Int::class.javaPrimitiveType        -> readFieldViaUnsafe(obj, field, Unsafe::getInt)
+        Long::class.javaPrimitiveType       -> readFieldViaUnsafe(obj, field, Unsafe::getLong)
+        Double::class.javaPrimitiveType     -> readFieldViaUnsafe(obj, field, Unsafe::getDouble)
+        Float::class.javaPrimitiveType      -> readFieldViaUnsafe(obj, field, Unsafe::getFloat)
+        else                                -> error("No more types expected")
+    }
+}
+
+internal fun readArrayElementViaUnsafe(arr: Any, index: Int): Any? {
+    val offset = getArrayElementOffsetViaUnsafe(arr, index)
+    val componentType = arr::class.java.componentType
+
+    if (!componentType.isPrimitive) {
+        return UnsafeHolder.UNSAFE.getObject(arr, offset)
+    }
+
+    return when (componentType) {
+        Boolean::class.javaPrimitiveType    -> UnsafeHolder.UNSAFE.getBoolean(arr, offset)
+        Byte::class.javaPrimitiveType       -> UnsafeHolder.UNSAFE.getByte(arr, offset)
+        Char::class.javaPrimitiveType       -> UnsafeHolder.UNSAFE.getChar(arr, offset)
+        Short::class.javaPrimitiveType      -> UnsafeHolder.UNSAFE.getShort(arr, offset)
+        Int::class.javaPrimitiveType        -> UnsafeHolder.UNSAFE.getInt(arr, offset)
+        Long::class.javaPrimitiveType       -> UnsafeHolder.UNSAFE.getLong(arr, offset)
+        Double::class.javaPrimitiveType     -> UnsafeHolder.UNSAFE.getDouble(arr, offset)
+        Float::class.javaPrimitiveType      -> UnsafeHolder.UNSAFE.getFloat(arr, offset)
+        else                                -> error("No more primitive types expected")
+    }
+}
+
+internal fun getArrayElementOffsetViaUnsafe(arr: Any, index: Int): Long {
+    val clazz = arr::class.java
+    val baseOffset = UnsafeHolder.UNSAFE.arrayBaseOffset(clazz).toLong()
+    val indexScale = UnsafeHolder.UNSAFE.arrayIndexScale(clazz).toLong()
+    return baseOffset + index * indexScale
+}

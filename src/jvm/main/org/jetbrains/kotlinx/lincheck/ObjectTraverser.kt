@@ -21,14 +21,10 @@
 package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.getObjectNumber
-import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
-import sun.misc.Unsafe
-import java.lang.reflect.Field
+import org.jetbrains.kotlinx.lincheck.util.*
 import java.lang.reflect.Modifier
 import java.math.BigDecimal
 import java.math.BigInteger
-import java.util.*
-import java.util.concurrent.atomic.*
 import kotlin.coroutines.Continuation
 
 /**
@@ -39,8 +35,7 @@ import kotlin.coroutines.Continuation
  */
 internal fun enumerateObjects(obj: Any): Map<Any, Int> {
     val objectNumberMap = hashMapOf<Any, Int>()
-    enumerateObjects(obj, Collections.newSetFromMap(IdentityHashMap()), objectNumberMap)
-
+    enumerateObjects(obj, objectNumberMap)
     return objectNumberMap
 }
 
@@ -48,98 +43,81 @@ internal fun enumerateObjects(obj: Any): Map<Any, Int> {
  * Recursively traverses an object to enumerate it and all nested objects.
  *
  * @param obj object to traverse
- * @param processedObjects a set of already processed objects. Required in case of cyclic references.
  * @param objectNumberMap result enumeration map
  */
-private fun enumerateObjects(obj: Any, processedObjects: MutableSet<Any>, objectNumberMap: MutableMap<Any, Int>) {
+private fun enumerateObjects(obj: Any, objectNumberMap: MutableMap<Any, Int>) {
     if (obj is Class<*> || obj is ClassLoader) return
-    if (!processedObjects.add(obj)) return
-    val objectNumber = getObjectNumber(obj.javaClass, obj)
-    objectNumberMap[obj] = objectNumber
+    objectNumberMap[obj] = getObjectNumber(obj.javaClass, obj)
 
-    var clazz: Class<*>? = obj.javaClass
-    if (clazz!!.isArray) {
-        if (obj is Array<*>) {
-            obj.forEach { element -> element?.let { enumerateObjects(it, processedObjects, objectNumberMap) } }
+    val processObject: (Any?) -> Any? = { value: Any? ->
+        if (value == null || value is Class<*> || value is ClassLoader) null
+        else {
+            // We jump through most of the atomic classes
+            var jumpObj: Any? = value
+
+            // Special treatment for java atomic classes, because they can be extended but user classes,
+            // in case if a user extends java atomic class, we do not want to jump through it.
+            while (jumpObj?.javaClass?.name != null && isAtomicJavaClass(jumpObj.javaClass.name)) {
+                jumpObj = jumpObj.javaClass.getMethod("get").invoke(jumpObj)
+            }
+
+            if (isAtomicFU(jumpObj)) {
+                val readNextJumpObjectByFieldName = { fieldName: String ->
+                    readFieldViaUnsafe(jumpObj, jumpObj?.javaClass?.getDeclaredField(fieldName)!!)
+                }
+
+                while (jumpObj is kotlinx.atomicfu.AtomicRef<*>) {
+                    jumpObj = readNextJumpObjectByFieldName("value")
+                }
+
+                if (isAtomicFU(jumpObj)) {
+                    jumpObj =
+                        if (jumpObj is kotlinx.atomicfu.AtomicBoolean) readNextJumpObjectByFieldName("_value")
+                        else readNextJumpObjectByFieldName("value")
+                }
+            }
+
+            if (jumpObj != null) {
+                objectNumberMap[jumpObj] = getObjectNumber(jumpObj.javaClass, jumpObj)
+                if (shouldAnalyseObjectRecursively(jumpObj, objectNumberMap)) jumpObj else null
+            }
+            else null
         }
-        return
     }
-    while (clazz != null) {
-        clazz.declaredFields.filter { f ->
-            !Modifier.isStatic(f.modifiers) &&
-                    !f.isEnumConstant &&
-                    f.name != "serialVersionUID"
-        }.forEach { f ->
-            try {
-                var value: Any? = readField(obj, f)
 
-                if (isAtomic(value)) {
-                    value = value!!.javaClass.getDeclaredMethod("get").invoke(value)
+    traverseObjectGraph(
+        obj,
+        onArrayElement = { _, _, value ->
+            if (value?.javaClass?.isEnum == true) {
+                null
+            }
+            else {
+                try {
+                    processObject(value)
+                } catch (e: Throwable) {
+                    e.printStackTrace()
+                    null
                 }
-
-                if (value?.javaClass?.canonicalName == "kotlinx.atomicfu.AtomicRef") {
-                    value = readField(value, value.javaClass.getDeclaredField("value"))
+            }
+        },
+        onField = { _, f, value ->
+            if (
+                Modifier.isStatic(f.modifiers) ||
+                f.isEnumConstant ||
+                f.name == "serialVersionUID"
+            ) {
+                null
+            }
+            else {
+                try {
+                    processObject(value)
+                } catch (e: Throwable) {
+                    e.printStackTrace()
+                    null
                 }
-                if (value?.javaClass?.canonicalName == "kotlinx.atomicfu.AtomicInt") {
-                    value = readField(value, value.javaClass.getDeclaredField("value"))
-                }
-                if (value?.javaClass?.canonicalName == "kotlinx.atomicfu.AtomicLong") {
-                    value = readField(value, value.javaClass.getDeclaredField("value"))
-                }
-                if (value?.javaClass?.canonicalName == "kotlinx.atomicfu.AtomicBoolean") {
-                    value = readField(value, value.javaClass.getDeclaredField("_value"))
-                }
-
-                if (value is AtomicIntegerArray) {
-                    value = (0 until value.length()).map { (value as AtomicIntegerArray).get(it) }.toIntArray()
-                }
-                if (value is AtomicReferenceArray<*>) {
-                    value = (0 until value.length()).map { (value as AtomicReferenceArray<*>).get(it) }.toTypedArray()
-                }
-
-                if (value is AtomicReferenceFieldUpdater<*, *> || value is AtomicIntegerFieldUpdater<*> || value is AtomicLongFieldUpdater<*>) {
-                    // Ignore
-                } else {
-                    if (shouldAnalyseObjectRecursively(value, objectNumberMap)) {
-                        if (value != null) {
-                            enumerateObjects(value, processedObjects, objectNumberMap)
-                        }
-                    }
-                }
-            } catch (e: Throwable) {
-                e.printStackTrace()
-                // Ignore
             }
         }
-        clazz = clazz.superclass
-    }
-}
-
-private fun readField(obj: Any?, field: Field): Any? {
-    if (!field.type.isPrimitive) {
-        return readFieldViaUnsafe(obj, field, Unsafe::getObject)
-    }
-    return when (field.type) {
-        Boolean::class.javaPrimitiveType    -> readFieldViaUnsafe(obj, field, Unsafe::getBoolean)
-        Byte::class.javaPrimitiveType       -> readFieldViaUnsafe(obj, field, Unsafe::getByte)
-        Char::class.javaPrimitiveType       -> readFieldViaUnsafe(obj, field, Unsafe::getChar)
-        Short::class.javaPrimitiveType      -> readFieldViaUnsafe(obj, field, Unsafe::getShort)
-        Int::class.javaPrimitiveType        -> readFieldViaUnsafe(obj, field, Unsafe::getInt)
-        Long::class.javaPrimitiveType       -> readFieldViaUnsafe(obj, field, Unsafe::getLong)
-        Double::class.javaPrimitiveType     -> readFieldViaUnsafe(obj, field, Unsafe::getDouble)
-        Float::class.javaPrimitiveType      -> readFieldViaUnsafe(obj, field, Unsafe::getFloat)
-        else                                -> error("No more types expected")
-    }
-}
-
-private fun isAtomic(value: Any?): Boolean {
-    if (value == null) return false
-    return value.javaClass.canonicalName.let {
-        it == "java.util.concurrent.atomic.AtomicInteger" ||
-        it == "java.util.concurrent.atomic.AtomicLong" ||
-        it == "java.util.concurrent.atomic.AtomicReference" ||
-        it == "java.util.concurrent.atomic.AtomicBoolean"
-    }
+    )
 }
 
 /**

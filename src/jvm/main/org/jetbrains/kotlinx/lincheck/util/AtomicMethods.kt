@@ -55,11 +55,17 @@ internal fun getAtomicMethodDescriptor(obj: Any?, methodName: String): AtomicMet
 }
 
 internal fun isAtomic(receiver: Any?) =
+    isAtomicJava(receiver) ||
+    isAtomicFU(receiver)
+
+internal fun isAtomicJava(receiver: Any?) =
     // java.util.concurrent
     receiver is AtomicReference<*> ||
     receiver is AtomicBoolean ||
     receiver is AtomicInteger ||
-    receiver is AtomicLong ||
+    receiver is AtomicLong
+
+internal fun isAtomicFU(receiver: Any?) =
     // kotlinx.atomicfu
     receiver is kotlinx.atomicfu.AtomicRef<*> ||
     receiver is kotlinx.atomicfu.AtomicBoolean ||
@@ -68,11 +74,17 @@ internal fun isAtomic(receiver: Any?) =
 
 
 internal fun isAtomicClass(className: String) =
+    isAtomicJavaClass(className) ||
+    isAtomicFUClass(className)
+
+internal fun isAtomicJavaClass(className: String) =
     // java.util.concurrent
     className == "java.util.concurrent.atomic.AtomicInteger" ||
     className == "java.util.concurrent.atomic.AtomicLong" ||
     className == "java.util.concurrent.atomic.AtomicBoolean" ||
-    className == "java.util.concurrent.atomic.AtomicReference" ||
+    className == "java.util.concurrent.atomic.AtomicReference"
+
+internal fun isAtomicFUClass(className: String) =
     // kotlinx.atomicfu
     className == "kotlinx.atomicfu.AtomicRef" ||
     className == "kotlinx.atomicfu.AtomicBoolean" ||
@@ -84,10 +96,16 @@ internal fun isAtomicMethod(className: String, methodName: String) =
     isAtomicClass(className) && methodName in atomicMethods
 
 internal fun isAtomicArray(receiver: Any?) =
+    isAtomicArrayJava(receiver) ||
+    isAtomicFUArray(receiver)
+
+internal fun isAtomicArrayJava(receiver: Any?) =
     // java.util.concurrent
     receiver is AtomicReferenceArray<*> ||
     receiver is AtomicIntegerArray ||
-    receiver is AtomicLongArray ||
+    receiver is AtomicLongArray
+
+internal fun isAtomicFUArray(receiver: Any?) =
     // kotlinx.atomicfu
     receiver is kotlinx.atomicfu.AtomicArray<*> ||
     receiver is kotlinx.atomicfu.AtomicBooleanArray ||
