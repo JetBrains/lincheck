@@ -1274,7 +1274,7 @@ abstract class ManagedStrategy(
 
     private fun initializeVarHandleMethodCallTracePoint(
         tracePoint: MethodCallTracePoint,
-        varHandle: Any, // for Java 8 VarHandle class does not exist
+        varHandle: Any, // for Java 8, the VarHandle class does not exist
         parameters: Array<Any?>,
     ): MethodCallTracePoint {
         when (val varHandleMethodType = VarHandleNames.varHandleMethodType(varHandle, parameters)) {

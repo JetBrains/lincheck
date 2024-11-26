@@ -40,6 +40,7 @@ class ConcurrentLinkedDequeTest {
 
     @Test
     fun modelCheckingTest() = ModelCheckingOptions()
+        // The custom scenario is to fix the scenario to have the same interleaving caught for both JDK8 and JDK11+.
         .addCustomScenario {
             initial {
                 actor(ConcurrentLinkedDequeTest::addLast, 1)

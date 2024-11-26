@@ -14,7 +14,6 @@ import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.junit.*
 
@@ -42,6 +41,6 @@ class CoroutineCancellationTraceReportingTest {
         actorsAfter(0)
     }
         .checkImpl(this::class.java)
-        .checkLincheckOutput("coroutine_cancellation${if (isJdk8) "_jdk8" else ""}.txt")
+        .checkLincheckOutput(if (isJdk8) "coroutine_cancellation_jdk8.txt" else "coroutine_cancellation.txt")
 
 }
