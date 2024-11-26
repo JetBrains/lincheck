@@ -10,13 +10,13 @@
 package org.jetbrains.kotlinx.lincheck
 
 import kotlinx.coroutines.*
+import sun.nio.ch.lincheck.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
 import org.jetbrains.kotlinx.lincheck.verifier.*
-import sun.nio.ch.lincheck.EventTracker
-import sun.nio.ch.lincheck.TestThread
+import org.jetbrains.kotlinx.lincheck.util.*
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.lang.ref.*
@@ -203,9 +203,8 @@ internal val String.canonicalClassName get() = this.replace('/', '.')
 
 @Suppress("DEPRECATION") // ThreadDeath
 internal fun exceptionCanBeValidExecutionResult(exception: Throwable): Boolean {
-    return exception !is ThreadDeath && // used to stop thread in FixedActiveThreadsExecutor by calling thread.stop method
-            exception !is InternalLincheckTestUnexpectedException &&
-            exception !is ForcibleExecutionFinishError
+    return exception !is ThreadDeath && // is used to stop thread in `FixedActiveThreadsExecutor` via `thread.stop()`
+           exception !is ForcibleExecutionFinishError // is used to abort thread in `ManagedStrategy`
 }
 
 internal val Throwable.text: String get() {
@@ -213,9 +212,6 @@ internal val Throwable.text: String get() {
     printStackTrace(PrintWriter(writer))
     return writer.buffer.toString()
 }
-
-
-
 
 
 @Suppress("DEPRECATION")
@@ -233,13 +229,6 @@ internal fun findFieldNameByOffset(targetType: Class<*>, offset: Long): String? 
     }
     return null // Field not found
 }
-
-/**
- * Utility exception for test purposes.
- * When this exception is thrown by an operation, it will halt testing with [UnexpectedExceptionInvocationResult].
- */
-@Suppress("JavaIoSerializableObjectMustHaveReadResolve")
-internal object InternalLincheckTestUnexpectedException : Exception()
 
 /**
  * Thrown in case when `cause` exception is unexpected by Lincheck internal logic.

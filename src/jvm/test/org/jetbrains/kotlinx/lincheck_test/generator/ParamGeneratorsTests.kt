@@ -14,19 +14,21 @@ package org.jetbrains.kotlinx.lincheck_test.generator
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.annotations.Param
-import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
-import org.jetbrains.kotlinx.lincheck.paramgen.StringGen
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.junit.Test
+import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
+import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import org.jetbrains.kotlinx.lincheck_test.verifier.linearizability.SpinLockBasedSet
-import org.junit.Assert.*
 import kotlin.math.pow
+import org.junit.Assert.*
+import org.junit.Test
+
 
 /**
- * This test checks that parameter generators random use different seeds than executions generator.
+ * This test checks that parameter generators' random instances use different seeds than execution's generator.
  * This test fails if seeds are equals.
- * [Corresponding bug description](https://github.com/Kotlin/kotlinx-lincheck/issues/120).
+ *
+ * Corresponding bug description: https://github.com/Kotlin/kotlinx-lincheck/issues/120.
  */
 @Param(name = "key", gen = IntGen::class, conf = "0:1")
 class GeneratorSeedTest {
@@ -46,7 +48,8 @@ class GeneratorSeedTest {
 }
 
 /**
- *  Test checks that method with both parameters of the same type annotated with [Param] won't receive same values all the time
+ * Test checks that method with both parameters of the same type annotated with [Param]
+ * won't receive same values all the time.
  */
 @Param(name = "key", gen = IntGen::class, conf = "0:1000")
 class MethodParameterGenerationTestWithBothParametersAnnotated {
@@ -55,7 +58,9 @@ class MethodParameterGenerationTestWithBothParametersAnnotated {
         throwInternalExceptionIfParamsNotEquals(first, second)
 
     @Test(expected = LincheckAssertionError::class)
-    fun test() = ModelCheckingOptions().check(this::class)
+    fun test() = ModelCheckingOptions()
+        .configureInternalExceptionVerifier()
+        .check(this::class)
 
 }
 
@@ -67,10 +72,13 @@ class MethodParameterGenerationTestWithBothParametersAnnotated {
 class MethodParameterGenerationTestWithFirstParameterAnnotated {
 
     @Operation
-    fun operation(@Param(name = "key") first: Int, second: Int) = throwInternalExceptionIfParamsNotEquals(first, second)
+    fun operation(@Param(name = "key") first: Int, second: Int) =
+        throwInternalExceptionIfParamsNotEquals(first, second)
 
     @Test(expected = LincheckAssertionError::class)
-    fun test() = ModelCheckingOptions().check(this::class)
+    fun test() = ModelCheckingOptions()
+        .configureInternalExceptionVerifier()
+        .check(this::class)
 
 }
 
@@ -81,30 +89,53 @@ class MethodParameterGenerationTestWithFirstParameterAnnotated {
 @Param(name = "key", gen = IntGen::class, conf = "0:1000")
 class MethodParameterGenerationTestWithSecondParameterAnnotated {
     @Operation
-    fun operation(first: Int, @Param(name = "key") second: Int) = throwInternalExceptionIfParamsNotEquals(first, second)
+    fun operation(first: Int, @Param(name = "key") second: Int) =
+        throwInternalExceptionIfParamsNotEquals(first, second)
 
     @Test(expected = LincheckAssertionError::class)
-    fun test() = ModelCheckingOptions().check(this::class)
+    fun test() = ModelCheckingOptions()
+        .configureInternalExceptionVerifier()
+        .check(this::class)
 
 }
 
 /**
- *  Test checks that method with both parameters of the same type won't receive same values all the time
+ * Test checks that method with both parameters of the same type won't receive the same values all the time
  */
 class MethodParameterGenerationTest {
     @Operation
-    fun operation(first: Int, second: Int) = throwInternalExceptionIfParamsNotEquals(first, second)
+    fun operation(first: Int, second: Int) =
+        throwInternalExceptionIfParamsNotEquals(first, second)
 
     @Test(expected = LincheckAssertionError::class)
-    fun test() = ModelCheckingOptions().check(this::class)
+    fun test() = ModelCheckingOptions()
+        .configureInternalExceptionVerifier()
+        .check(this::class)
 
 }
 
 private fun throwInternalExceptionIfParamsNotEquals(first: Int, second: Int) {
-    if (first != second) {
-        throw InternalLincheckTestUnexpectedException
+    if (first != second) throw InternalException
+}
+
+// Verifier checking that the first actor result is not `InternalException`
+@Suppress("UNUSED_PARAMETER")
+class InternalExceptionVerifier(sequentialSpecification: Class<*>) : Verifier {
+    override fun verifyResults(scenario: ExecutionScenario, results: ExecutionResult): Boolean {
+        val result = results.parallelResults[0][0]
+        return !(result is ExceptionResult && result.throwable is InternalException)
     }
 }
+
+private fun ModelCheckingOptions.configureInternalExceptionVerifier(): ModelCheckingOptions = this
+    .threads(1)
+    .actorsPerThread(1)
+    .actorsBefore(0)
+    .actorsAfter(0)
+    .verifier(InternalExceptionVerifier::class.java)
+
+@Suppress("JavaIoSerializableObjectMustHaveReadResolve")
+private object InternalException : Exception()
 
 class StringParamGeneratorTest {
 

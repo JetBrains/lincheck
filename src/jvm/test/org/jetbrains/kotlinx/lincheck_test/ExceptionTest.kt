@@ -13,21 +13,23 @@ package org.jetbrains.kotlinx.lincheck_test
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import kotlin.coroutines.resumeWithException
+import kotlinx.coroutines.suspendCancellableCoroutine
 
 class ExceptionInParallelPartTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
 
     @Operation
-    fun exception() {
+    fun operation() {
         throw IllegalStateException()
     }
 
     val scenario = scenario {
         parallel {
             thread {
-                actor(::exception)
+                actor(::operation)
             }
             thread {
-                actor(::exception)
+                actor(::operation)
             }
         }
     }
@@ -44,7 +46,7 @@ class ExceptionInParallelPartTest : AbstractLincheckTest(IncorrectResultsFailure
 class ExceptionInInitPartTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
 
     @Operation
-    fun exception() {
+    fun operation() {
         throw IllegalStateException()
     }
 
@@ -53,7 +55,7 @@ class ExceptionInInitPartTest : AbstractLincheckTest(IncorrectResultsFailure::cl
 
     val scenario = scenario {
         initial {
-            actor(ExceptionInInitPartTest::exception)
+            actor(ExceptionInInitPartTest::operation)
         }
         parallel {
             thread {
@@ -74,7 +76,7 @@ class ExceptionInInitPartTest : AbstractLincheckTest(IncorrectResultsFailure::cl
 class ExceptionInPostPartTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
 
     @Operation
-    fun exception() {
+    fun operation() {
         throw IllegalStateException()
     }
 
@@ -88,7 +90,7 @@ class ExceptionInPostPartTest : AbstractLincheckTest(IncorrectResultsFailure::cl
             }
         }
         post {
-            actor(ExceptionInPostPartTest::exception)
+            actor(ExceptionInPostPartTest::operation)
         }
     }
 
@@ -102,6 +104,90 @@ class ExceptionInPostPartTest : AbstractLincheckTest(IncorrectResultsFailure::cl
 }
 
 class ExceptionTestSequentialImplementation {
-    fun exception() {}
+    fun operation() {}
     fun idle() {}
+}
+
+class ExceptionTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
+    private var canEnterForbiddenSection = false
+
+    @Operation
+    fun operation1() {
+        canEnterForbiddenSection = true
+        canEnterForbiddenSection = false
+    }
+
+    @Operation
+    fun operation2() {
+        if (canEnterForbiddenSection) throw IllegalStateException()
+    }
+
+    val scenario = scenario {
+        parallel {
+            thread {
+                actor(ExceptionTest::operation1)
+            }
+            thread {
+                actor(ExceptionTest::operation2)
+            }
+        }
+    }
+
+    override fun <O : Options<O, *>> O.customize() {
+        iterations(0)
+        addCustomScenario(scenario)
+        minimizeFailedScenario(false)
+    }
+
+}
+
+class CoroutineResumedWithExceptionTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
+
+    @Operation
+    suspend fun operation() {
+        suspendCancellableCoroutine<Unit> { cont ->
+            cont.resumeWithException(IllegalStateException())
+        }
+    }
+
+    val scenario = scenario {
+        parallel {
+            thread {
+                actor(::operation)
+            }
+            thread {
+                actor(::operation)
+            }
+        }
+    }
+
+    override fun <O : Options<O, *>> O.customize() {
+        iterations(0)
+        addCustomScenario(scenario)
+        minimizeFailedScenario(false)
+        sequentialSpecification(CoroutineExceptionTestSequentialImplementation::class.java)
+    }
+}
+
+class ExceptionInCancellationHandlerTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
+
+    @Operation(cancellableOnSuspension = true)
+    suspend fun operation() {
+        suspendCancellableCoroutine<Unit> { cont ->
+            cont.invokeOnCancellation {
+                throw IllegalStateException()
+            }
+        }
+    }
+
+    override fun <O : Options<O, *>> O.customize() {
+        iterations(10)
+        sequentialSpecification(CoroutineExceptionTestSequentialImplementation::class.java)
+    }
+}
+
+class CoroutineExceptionTestSequentialImplementation {
+    suspend fun operation() {
+        suspendCancellableCoroutine<Unit> {}
+    }
 }
