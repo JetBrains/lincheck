@@ -10,18 +10,29 @@
 
 package org.jetbrains.kotlinx.lincheck_test
 
-import org.jetbrains.kotlinx.lincheck.enumerateObjects
-import java.util.Optional
+import org.jetbrains.kotlinx.lincheck.strategy.managed.enumerateReachableObjects
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.LocalObjectManager
 import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.atomic.AtomicReferenceArray
-import kotlinx.atomicfu.AtomicIntArray
+import kotlinx.atomicfu.AtomicRef
+import kotlinx.atomicfu.AtomicArray
+import kotlinx.atomicfu.atomic
+import kotlinx.atomicfu.atomicArrayOfNulls
 import org.junit.Assert
+import org.junit.Before
 import org.junit.Test
 
 /**
- * Checks invariants and restrictions on [enumerateObjects] method.
+ * Checks invariants and restrictions on [enumerateReachableObjects] method.
  */
 class ObjectTraverserTest {
+
+    private val objectTracker = LocalObjectManager()
+
+    @Before
+    fun setUp() {
+        objectTracker.reset()
+    }
 
     @Test
     fun `should not traverse class and classLoader recursively while enumerating objects`() {
@@ -30,7 +41,7 @@ class ObjectTraverserTest {
             var classLoader: ClassLoader? = this::class.java.classLoader
             var integer: Int = 10
         }
-        val objectEnumeration = enumerateObjects(myObject)
+        val objectEnumeration = objectTracker.enumerateReachableObjects(myObject)
 
         Assert.assertTrue(objectEnumeration.keys.none { it is Class<*> || it is ClassLoader })
     }
@@ -44,35 +55,38 @@ class ObjectTraverserTest {
             val A: Any = objectA
         }
         objectA.B = objectB
-        val objectEnumeration = enumerateObjects(objectA)
+        val objectEnumeration = objectTracker.enumerateReachableObjects(objectA)
 
         Assert.assertTrue(objectEnumeration.keys.size == 2 && objectEnumeration.keys.containsAll(listOf(objectA, objectB)))
     }
 
     @Test
     fun `should traverse reference-array elements for java arrays`() {
-        val o1 = Optional.of(1)
-        val o2 = Optional.of(2)
-        val o3 = Optional.of(3)
+        val a = Any()
+        val b = Any()
+        val c = Any()
         val myObject = object : Any() {
-            val array = arrayOf(o1, o2, o3)
+            val array = arrayOf(a, b, c)
         }
-        val objectEnumeration = enumerateObjects(myObject)
+        val objectEnumeration = objectTracker.enumerateReachableObjects(myObject)
 
         Assert.assertTrue(
-            objectEnumeration.size == 8 &&
+            objectEnumeration.size == 5 &&
             objectEnumeration.keys.containsAll(
-                listOf(myObject, myObject.array, *myObject.array, o1.get(), o2.get(), o3.get())
+                listOf(myObject, myObject.array, *myObject.array)
             )
         )
     }
 
     @Test
     fun `should traverse array elements for atomic arrays`() {
+        val a = Any()
+        val b = Any()
+        val c = Any()
         val myObject = object : Any() {
-            val array = AtomicReferenceArray(arrayOf(1, 2, 3))
+            val array = AtomicReferenceArray(arrayOf(a, b, c))
         }
-        val objectEnumeration = enumerateObjects(myObject)
+        val objectEnumeration = objectTracker.enumerateReachableObjects(myObject)
 
         Assert.assertTrue(
             objectEnumeration.size == 5 &&
@@ -84,25 +98,28 @@ class ObjectTraverserTest {
 
     @Test
     fun `should traverse array elements for atomicfu arrays`() {
+        val a = Any()
+        val b = Any()
+        val c = Any()
         val arraySize = 3
         val myObject = object : Any() {
             val array = AtomicIntArray(arraySize)
             init {
-                for (i in 0 until arraySize) {
-                    array[i].value = i + 1
-                }
+                array[0].value = a
+                array[1].value = b
+                array[2].value = c
             }
         }
-        val objectEnumeration = enumerateObjects(myObject)
+        val objectEnumeration = objectTracker.enumerateReachableObjects(myObject)
 
         Assert.assertTrue(
             objectEnumeration.size == 5 &&
             objectEnumeration.keys.containsAll(
                 listOf(
                     myObject,
-                    // atomicfu transformers are insane and don't allow compile direct reference to `myObject.array`
+                    // atomicfu transformers [are insane and] don't allow to compile direct reference to `myObject.array`
                     myObject.javaClass.getDeclaredField("array").apply { setAccessible(true) }.get(myObject),
-                    1, 2, 3,
+                    a, b, c
                 )
             )
         )
@@ -111,17 +128,19 @@ class ObjectTraverserTest {
     @Test
     @Suppress("UNUSED_VARIABLE")
     fun `should jump through atomic refs`() {
+        val a = Any()
+        val b = Any()
         val myObject = object : Any() {
-            val javaRef = AtomicReference<AtomicReference<Int>>(AtomicReference(1))
-            val atomicFURef: kotlinx.atomicfu.AtomicRef<AtomicReference<Any>?> = kotlinx.atomicfu.atomic(null)
+            val javaRef = AtomicReference<AtomicReference<Any>>(AtomicReference(a))
+            val atomicFURef: AtomicRef<AtomicReference<Any>?> = atomic(null)
         }
-        myObject.atomicFURef.value = AtomicReference<Any>(2)
+        myObject.atomicFURef.value = atomic<Any>(b)
 
-        val objectEnumeration = enumerateObjects(myObject)
+        val objectEnumeration = objectTracker.enumerateReachableObjects(myObject)
         Assert.assertTrue(
             objectEnumeration.size == 3 &&
             objectEnumeration.keys.containsAll(
-                listOf(myObject, 1, 2)
+                listOf(myObject, a, b)
             )
         )
     }

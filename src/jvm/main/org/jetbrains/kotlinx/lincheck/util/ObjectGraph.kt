@@ -11,15 +11,16 @@
 package org.jetbrains.kotlinx.lincheck.util
 
 import java.util.concurrent.atomic.*
+import kotlin.reflect.jvm.jvmName
 import java.lang.reflect.*
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.util.*
-import kotlin.reflect.jvm.jvmName
 
 
 private typealias FieldCallback = (obj: Any, field: Field, value: Any?) -> Any?
 private typealias ArrayElementCallback = (array: Any, index: Int, element: Any?) -> Any?
+private typealias ObjectCallback = (obj: Any) -> Boolean
 
 /**
  * Traverses a subgraph of objects reachable from a given root object in BFS order.
@@ -39,86 +40,85 @@ private typealias ArrayElementCallback = (array: Any, index: Int, element: Any?)
  * for instance, primitive boxed objects, immutable objects (e.g., String), and some others.
  *
  * @param root object to start the traversal from.
- * @param traverseStaticFields if true, then all static fields are also traversed,
- *   otherwise only non-static fields are traversed.
+ * @param config configuration of the traversal, see [ObjectGraphTraversalConfig].
  * @param onField callback for fields traversal, accepts `(fieldOwner, field, fieldValue)`.
- *   Returns an object to be traversed next.
+ *   Returns an object to be traversed next, or null if the field value should not be traversed.
+ *   If not passed, by default, all fields of objects are traversed.
  * @param onArrayElement callback for array elements traversal, accepts `(array, index, elementValue)`.
- *   Returns an object to be traversed next.
+ *   Returns an object to be traversed next, or null if the array element should not be traversed.
+ *   If not passed, by default, all array elements are traversed.
+ * @param onObject Optional callback invoked for each distinct object encountered during traversal
+ *   before it is traversed recursively.
+ *   Should return boolean indicating whether the object should be traversed recursively.
+ *   If not provided, defaults to true, indicating that any reached objects should be traversed recursively.
  */
 internal fun traverseObjectGraph(
     root: Any,
-    traverseStaticFields: Boolean = false,
-    onField: FieldCallback?,
-    onArrayElement: ArrayElementCallback?,
+    config: ObjectGraphTraversalConfig = ObjectGraphTraversalConfig(),
+    onField: FieldCallback = { _ /* obj */, _ /* field */, fieldValue -> fieldValue },
+    onArrayElement: ArrayElementCallback = { _ /* array */, _ /* index */, elementValue -> elementValue },
+    onObject: ObjectCallback = { _ /* obj */ -> true },
 ) {
+    if (!shouldTraverseObject(root, config)) return
+    if (!onObject(root)) return
+
     val queue = ArrayDeque<Any>()
     val visitedObjects = Collections.newSetFromMap<Any>(IdentityHashMap())
-
-    val shouldTraverse = { obj: Any? ->
-        obj != null &&
-        !obj.isImmutable && // no immutable objects traversing
-        !isAtomicFieldUpdater(obj) && // no afu traversing
-        !isUnsafeClass(obj.javaClass.name) && // no unsafe traversing
-        obj !is Class<*> && // no class objects traversing
-        obj !in visitedObjects // no reference-cycles allowed during traversing
-    }
-
-    if (!shouldTraverse(root)) return
 
     queue.add(root)
     visitedObjects.add(root)
 
     val processNextObject: (nextObject: Any?) -> Unit = { nextObject ->
-        if (shouldTraverse(nextObject)) {
-            queue.add(nextObject!!)
-            visitedObjects.add(nextObject)
+        var promotedObject = nextObject
+        if (config.promoteAtomicObjects) {
+            while (true) {
+                when {
+                    // Special treatment for java atomic classes, because they can be extended but user classes,
+                    // in case if a user extends java atomic class, we do not want to jump through it.
+                    (promotedObject?.javaClass?.name != null && isAtomicJavaClass(promotedObject.javaClass.name)) -> {
+                        val getMethod = promotedObject.javaClass.getMethod("get")
+                        promotedObject = getMethod.invoke(promotedObject)
+                    }
+                    // atomicfu.AtomicBool is handled separately because its value field is named differently
+                    promotedObject is kotlinx.atomicfu.AtomicBoolean -> {
+                        val valueField = promotedObject.javaClass.getDeclaredField("_value")
+                        promotedObject = readFieldViaUnsafe(promotedObject, valueField)
+                    }
+                    // other atomicfu types are handled uniformly
+                    isAtomicFU(promotedObject) -> {
+                        val valueField = promotedObject!!.javaClass.getDeclaredField("value")
+                        promotedObject = readFieldViaUnsafe(promotedObject, valueField)
+                    }
+                    // otherwise, the next object is not an atomic object, so we exit the promotion loop
+                    else -> break
+                }
+            }
+        }
+        if (shouldTraverseObject(promotedObject, config) && promotedObject !in visitedObjects) {
+            if (onObject(promotedObject!!)) {
+                queue.add(promotedObject)
+                visitedObjects.add(promotedObject)
+            }
         }
     }
 
     while (queue.isNotEmpty()) {
         val currentObj = queue.removeFirst()
         when {
-            onArrayElement != null &&
             (currentObj.javaClass.isArray || isAtomicArray(currentObj)) -> {
-                traverseArrayElements(currentObj) { _ /* currentObj */, index, elementValue ->
+                traverseArrayElements(currentObj) { _ /* array */, index, elementValue ->
                     processNextObject(onArrayElement(currentObj, index, elementValue))
                 }
             }
-            onField != null -> {
+            else -> {
                 traverseObjectFields(currentObj,
-                    traverseStaticFields = traverseStaticFields
-                ) { _ /* currentObj */, field, fieldValue ->
+                    traverseStaticFields = config.traverseStaticFields
+                ) { _ /* obj */, field, fieldValue ->
                     processNextObject(onField(currentObj, field, fieldValue))
                 }
             }
         }
     }
-}
-
-/**
- * Traverses a subgraph of objects reachable from a given root object in BFS order,
- * and applies a callback on each visited object.
- *
- * @param root the starting object for the traversal.
- * @param traverseStaticFields if true, then all static fields are also traversed,
- *   otherwise only non-static fields are traversed.
- * @param onObject callback that is invoked for each object in the graph.
- *   Should return the next object to traverse, may return null to prune further traversal.
- *
- * @see traverseObjectGraph
- */
-internal fun traverseObjectGraph(
-    root: Any,
-    traverseStaticFields: Boolean = false,
-    onObject: (obj: Any) -> Any?
-) {
-    val obj = onObject(root) ?: return
-    traverseObjectGraph(obj,
-        onField = { _, _, fieldValue -> fieldValue?.let(onObject) },
-        onArrayElement = { _, _, arrayElement -> arrayElement?.let(onObject) },
-        traverseStaticFields = traverseStaticFields,
-    )
 }
 
 /**
@@ -177,6 +177,51 @@ internal inline fun traverseObjectFields(
         }
     }
 }
+
+/**
+ * Determines whether the given object should be traversed during object graph traversal based on
+ * the provided traversal configuration.
+ * In addition to that, excludes certain types of objects from traversal,
+ * including atomic field updaters, unsafe instance, class objects, and class loaders
+ *
+ * @param obj The object to evaluate for traversal, may be null.
+ * @param config The configuration specifying the rules for object graph traversal.
+ * @return `true` if the object should be traversed, `false` otherwise.
+ */
+internal fun shouldTraverseObject(obj: Any?, config: ObjectGraphTraversalConfig): Boolean =
+    obj != null &&
+    // no immutable objects traversing, unless specified in the config
+    (!obj.isImmutable || config.traverseImmutableObjects) &&
+    // no enum objects traversing, unless specified in the config
+    (obj !is Enum<*> || config.traverseEnumObjects) &&
+    // no afu traversing
+    !isAtomicFieldUpdater(obj) &&
+    // no unsafe traversing
+    !isUnsafeClass(obj.javaClass.name) &&
+    // no class objects traversing
+    obj !is Class<*> &&
+    // no class loader traversing
+    obj !is ClassLoader
+
+/**
+ * Configuration for controlling the behavior of object graph traversal.
+ *
+ * @property traverseStaticFields Determines whether static fields of classes should be traversed.
+ * @property traverseImmutableObjects Determines whether immutable objects should be traversed
+ *   (see [isImmutable] for the list of classes considered immutable).
+ * @property traverseEnumObjects Determines whether enum objects should be traversed.
+ * @property promoteAtomicObjects Determines whether atomic objects should be promoted during traversal.
+ *   Promotion of atomic objects means that instead of the atomic reference object itself,
+ *   its referent will be traversed.
+ *   That is, instead of `AtomicReference<T>` the `T` object will be traversed,
+ *   and instead of `AtomicInteger` the `Integer` object will be traversed.
+ */
+internal data class ObjectGraphTraversalConfig(
+    val traverseStaticFields: Boolean = false,
+    val traverseImmutableObjects: Boolean = false,
+    val traverseEnumObjects: Boolean = true,
+    val promoteAtomicObjects: Boolean = false,
+)
 
 /**
  * Extension property to determine if an object is of an immutable type.

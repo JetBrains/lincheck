@@ -16,6 +16,7 @@ import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.traceagent.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.transformation.isJavaLambdaClass
 import org.jetbrains.kotlinx.lincheck.util.*
+import java.lang.ref.WeakReference
 import java.lang.reflect.*
 import java.util.*
 import kotlin.random.Random
@@ -434,42 +435,62 @@ internal class ModelCheckingStrategy(
  * This tracking helps to avoid exploring unnecessary interleavings, which can occur if access to such local
  * objects triggers switch points in the model checking strategy.
  */
-internal class LocalObjectManager : ObjectTracker {
-    /**
-     * An identity hash map holding each local object and its dependent objects.
-     * Each local object is a key, and its value is a list of objects accessible from it.
-     * Note that non-local objects are excluded from this map.
-     */
-    private val localObjects : MutableSet<Any> =
-        Collections.newSetFromMap(IdentityHashMap())
+internal class LocalObjectManager : AbstractObjectTracker() {
 
     override fun registerThread(threadId: Int, thread: Thread) {
         markObjectNonLocal(thread)
     }
 
     /**
-     * Registers a new object as a locally accessible one.
+     * In addition to the [ObjectEntry] data, [LocalObjectManager] also
+     * tracks the thread-locality of objects via the designated flag.
      */
-    override fun registerNewObject(obj: Any) {
-        check(obj !== StaticObject)
-        localObjects.add(obj)
-    }
+    private class LocalObjectManagerEntry(
+        objNumber: Int,
+        objHashCode: Int,
+        objReference: WeakReference<Any>,
+        var isLocal: Boolean,
+    ) : ObjectEntry(objNumber, objHashCode, objReference)
 
-    override fun registerObjectLink(fromObject: Any, toObject: Any?) {
+    override fun createObjectEntry(
+        objNumber: Int,
+        objHashCode: Int,
+        objReference: WeakReference<Any>,
+        kind: ObjectKind
+    ): ObjectEntry = LocalObjectManagerEntry(
+        objNumber = objNumber,
+        objHashCode = objHashCode,
+        objReference = objReference,
+        isLocal = when (kind) {
+            // every newly registered object is considered local initially
+            ObjectKind.NEW -> true
+            // external objects are considered non-local since we don't have information about them
+            ObjectKind.EXTERNAL -> false
+        }
+    )
+
+    private fun getObjectEntry(obj: Any?): LocalObjectManagerEntry? =
+        get(obj) as? LocalObjectManagerEntry
+
+    override fun registerObjectLink(fromObject: Any?, toObject: Any?) {
         if (toObject == null) return
         if (!isLocalObject(fromObject)) {
             markObjectNonLocal(toObject)
         }
     }
 
+    override fun shouldTrackObjectAccess(obj: Any?): Boolean =
+        !isLocalObject(obj)
+
     /**
      * Removes the specified local object and all reachable objects from the set of local objects.
      */
     private fun markObjectNonLocal(root: Any) {
         traverseObjectGraph(root) { obj ->
-            val wasLocal = localObjects.remove(obj)
-            if (
-                wasLocal ||
+            val entry = getObjectEntry(obj)
+            val wasLocal = (entry?.isLocal == true)
+            entry?.isLocal = false
+            if (wasLocal ||
                 // lambdas do not appear in localObjects because its class is generated at runtime,
                 // so we do not instrument its constructor (<init> blocks) invocations
                 isJavaLambdaClass(obj.javaClass.name)
@@ -478,17 +499,12 @@ internal class LocalObjectManager : ObjectTracker {
         }
     }
 
-    override fun shouldTrackObjectAccess(obj: Any): Boolean =
-        !isLocalObject(obj)
-
     /**
      * Checks if an object is only locally accessible.
      */
-    private fun isLocalObject(obj: Any?) =
-        localObjects.contains(obj)
-
-    override fun reset() {
-        localObjects.clear()
+    private fun isLocalObject(obj: Any?): Boolean {
+        val entry = getObjectEntry(obj) ?: return false
+        return entry.isLocal
     }
 }
 
