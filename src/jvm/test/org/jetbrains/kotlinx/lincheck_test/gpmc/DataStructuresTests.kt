@@ -20,10 +20,8 @@ import org.junit.Test
 
 class DataStructuresTests {
 
-    private val deque = ConcurrentLinkedDeque<Int>()
-
     fun incorrectConcurrentLinkedDeque() {
-        // val deque = ConcurrentLinkedDeque<Int>()
+        val deque = ConcurrentLinkedDeque<Int>()
         var r1: Int = -1
         var r2: Int = -1
         deque.addLast(1)
@@ -47,27 +45,14 @@ class DataStructuresTests {
         invocations = 1_000,
     )
 
-    private val hashMap = HashMap<Int, Int>()
-
     fun incorrectHashMap() {
-        /* If we replace the `hashMap` field with method-local variable, the test would fail.
-         * This is because the local object tracker currently does not handle properly
-         * the situation when an object escapes its thread
-         * by being passed to a new thread via lambda capturing.
-         *
-         * TODO: fix local object tracker to handle this new case correctly
-         */
-        // val hashMap = HashMap<Int, Int>() // <- this object is incorrectly classified as a local object
+        val hashMap = HashMap<Int, Int>()
         var r1: Int? = null
         var r2: Int? = null
         val t1 = thread {
-            // the local object tracker does not detect here that the `hashMap` object,
-            // stored in the local variable, escapes into another thread
             r1 = hashMap.put(0, 1)
         }
         val t2 = thread {
-            // the local object tracker does not detect here that the `hashMap` object,
-            // stored in the local variable, escapes into another thread
             r2 = hashMap.put(0, 1)
         }
         t1.join()
@@ -83,10 +68,9 @@ class DataStructuresTests {
         invocations = 1_000,
     )
 
-    private val concurrentHashMap = ConcurrentHashMap<Int, Int>()
 
     fun correctConcurrentHashMap() {
-        // val concurrentHashMap = ConcurrentHashMap<Int, Int>()
+        val concurrentHashMap = ConcurrentHashMap<Int, Int>()
         var r1: Int? = -1
         var r2: Int? = -1
         val t1 = thread {
@@ -108,10 +92,8 @@ class DataStructuresTests {
         invocations = 1_000,
     )
 
-    private val concurrentSkipListMap = ConcurrentSkipListMap<Int, Int>()
-
     fun correctConcurrentSkipListMap() {
-        // val concurrentSkipListMap = ConcurrentSkipListMap<Int, Int>()
+        val concurrentSkipListMap = ConcurrentSkipListMap<Int, Int>()
         var r1: Int? = -1
         var r2: Int? = -1
         val t1 = thread {
