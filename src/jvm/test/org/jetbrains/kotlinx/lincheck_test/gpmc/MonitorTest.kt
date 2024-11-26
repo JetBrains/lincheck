@@ -42,6 +42,10 @@ class MonitorTest {
         outcomes = setOf(0, 1, 2, 3)
     )
 
+}
+
+class MonitorDeadlockIsolatedTest {
+
     fun deadlock(): Int {
         var counter = 0
         val monitor1 = Any()
