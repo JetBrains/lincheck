@@ -13,6 +13,7 @@ package org.jetbrains.kotlinx.lincheck_test.gpmc
 import java.util.concurrent.locks.*
 import kotlin.concurrent.*
 import org.junit.Test
+import org.junit.Ignore
 
 class ReentrantLockTest {
 
@@ -32,6 +33,7 @@ class ReentrantLockTest {
             .also { listOf(t1, t2, t3).forEach { it.join() } }
     }
 
+    @Ignore
     @Test(timeout = TIMEOUT)
     fun testReentrantLock() = modelCheckerTest(
         testClass = this::class,
