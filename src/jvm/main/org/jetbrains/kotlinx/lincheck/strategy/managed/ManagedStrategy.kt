@@ -760,7 +760,7 @@ abstract class ManagedStrategy(
 
     override fun unpark(thread: Thread, codeLocation: Int): Unit = runInIgnoredSection {
         val currentThreadId = threadScheduler.getCurrentThreadId()
-        val unparkedThreadId = (thread as TestThread).threadId
+        val unparkedThreadId = threadScheduler.getThreadId(thread)
         parkingTracker.unpark(currentThreadId, unparkedThreadId)
         unblockParkedThread(unparkedThreadId)
         if (collectTrace) {
