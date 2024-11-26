@@ -22,9 +22,9 @@ import sun.nio.ch.lincheck.*
 import kotlin.collections.HashSet
 
 internal class LincheckClassVisitor(
-    private val safeClassWriter: SafeClassWriter,
+    classVisitor: ClassVisitor,
     private val instrumentationMode: InstrumentationMode,
-) : ClassVisitor(ASM_API, safeClassWriter) {
+) : ClassVisitor(ASM_API, classVisitor) {
 
     private val ideaPluginEnabled = ideaPluginEnabled()
     private var classVersion = 0
