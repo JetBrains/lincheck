@@ -532,6 +532,10 @@ internal class LocalObjectManager : ObjectTracker {
     private val localObjects : MutableSet<Any> =
         Collections.newSetFromMap(IdentityHashMap())
 
+    override fun registerThread(threadId: Int, thread: Thread) {
+        markObjectNonLocal(thread)
+    }
+
     /**
      * Registers a new object as a locally accessible one.
      */

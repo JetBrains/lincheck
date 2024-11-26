@@ -511,6 +511,7 @@ abstract class ManagedStrategy(
         )
         lastReadTracePoint[threadId] = null
         randoms[threadId] = Random(threadId + 239L)
+        objectTracker.registerThread(threadId, thread)
         monitorTracker.registerThread(threadId)
         parkingTracker.registerThread(threadId)
         return threadId
