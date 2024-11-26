@@ -330,12 +330,9 @@ internal open class ParallelThreadsRunner(
             // in case if invocation thrown an exception,
             // make sure all threads terminate before continuing
             // and handle possible hangings gracefully
-            runCatching { strategy.awaitAllThreads(timeout) }
-                .onFailure { exception ->
-                    if (exception is TimeoutException) {
-                        return RunnerTimeoutInvocationResult()
-                    }
-                }
+            runCatching { strategy.awaitAllThreads(timeout) }.onFailure { exception ->
+                if (exception is TimeoutException) return RunnerTimeoutInvocationResult()
+            }
             return UnexpectedExceptionInvocationResult(e.cause!!, collectExecutionResults())
         } finally {
             resetState()
