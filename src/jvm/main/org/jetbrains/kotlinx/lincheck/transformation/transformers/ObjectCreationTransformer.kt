@@ -10,12 +10,13 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
+import sun.nio.ch.lincheck.*
+import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.jetbrains.kotlinx.lincheck.*
 import org.objectweb.asm.Opcodes.*
+import org.objectweb.asm.Type
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
-import org.jetbrains.kotlinx.lincheck.canonicalClassName
-import org.jetbrains.kotlinx.lincheck.transformation.*
-import sun.nio.ch.lincheck.*
 
 /**
  * [ObjectCreationTransformer] tracks creation of new objects,
@@ -28,26 +29,81 @@ internal class ObjectCreationTransformer(
     adapter: GeneratorAdapter
 ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
 
-    override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) =
-        adapter.run {
-            if (name == "<init>" && owner == "java/lang/Object") {
-                invokeIfInTestingCode(
-                    original = {
-                        visitMethodInsn(opcode, owner, name, desc, itf)
-                    },
-                    code = {
-                        val objectLocal = newLocal(OBJECT_TYPE)
-                        dup()
-                        storeLocal(objectLocal)
-                        visitMethodInsn(opcode, owner, name, desc, itf)
-                        loadLocal(objectLocal)
-                        invokeStatic(Injections::afterNewObjectCreation)
-                    }
-                )
-            } else {
-                visitMethodInsn(opcode, owner, name, desc, itf)
-            }
+    /* To track object creation, this transformer inserts `Injections::afterNewObjectCreation` calls
+     * after an object is allocated and initialized.
+     * The created object is passed into the injected function as an argument.
+     *
+     * In order to achieve this, this transformer tracks the following instructions:
+     * `NEW`, `NEWARRAY`, `ANEWARRAY`, and `MULTIANEWARRAY`;
+     *
+     * It is possible to inject the injection call right after array objects creation
+     * (i.e., after all instructions listed above except `NEW`),
+     * since the array is in initialized state right after its allocation.
+     * However, when an object is allocated via `NEW` it is first in uninitialized state,
+     * until its constructor (i.e., `<init>` method) is called.
+     * Trying to pass the object in uninitialized into the injected function would result
+     * in a bytecode verification error.
+     * Thus, we postpone the injection up after the constructor call (i.e., `<init>`).
+     *
+     * Another difficulty is that because of the inheritance, there could exist several
+     * constructor calls (i.e., `<init>`) for the same object.
+     * We need to distinguish between the base class constructor call inside the derived class constructor,
+     * and the actual initializing constructor call from the object creation call size.
+     *
+     * Therefore, to tackle these issues, we maintain a counter of allocated, but not yet initialized objects.
+     * Whenever we encounter a constructor call (i.e., `<init>`) we check for the counter
+     * and inject the object creation tracking method if the counter is not null.
+     *
+     * TODO: keeping just a counter might be not reliable in some cases,
+     *   perhaps we need more robust solution, checking for particular bytecode instructions sequence, e.g.:
+     *   `NEW; DUP; INVOKESPECIAL <init>`
+     */
+    private var uninitializedObjects = 0
+
+    override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
+        // special handling for a common case of `Object` constructor
+        if (name == "<init>" && owner == "java/lang/Object" && uninitializedObjects > 0) {
+            invokeIfInTestingCode(
+                original = {
+                    visitMethodInsn(opcode, owner, name, desc, itf)
+                },
+                code = {
+                    val objectLocal = newLocal(OBJECT_TYPE)
+                    copyLocal(objectLocal)
+                    visitMethodInsn(opcode, owner, name, desc, itf)
+                    loadLocal(objectLocal)
+                    invokeStatic(Injections::afterNewObjectCreation)
+                }
+            )
+            uninitializedObjects--
+            return
         }
+        if (name == "<init>" && uninitializedObjects > 0) {
+            invokeIfInTestingCode(
+                original = {
+                    visitMethodInsn(opcode, owner, name, desc, itf)
+                },
+                code = {
+                    val objectLocal = newLocal(OBJECT_TYPE)
+                    // save and pop the constructor parameters from the stack
+                    val constructorType = Type.getType(desc)
+                    val params = storeLocals(constructorType.argumentTypes)
+                    // copy the object on which we call the constructor
+                    copyLocal(objectLocal)
+                    // push constructor parameters back on the stack
+                    params.forEach { loadLocal(it) }
+                    // call the constructor
+                    visitMethodInsn(opcode, owner, name, desc, itf)
+                    // call the injected method
+                    loadLocal(objectLocal)
+                    invokeStatic(Injections::afterNewObjectCreation)
+                }
+            )
+            uninitializedObjects--
+            return
+        }
+        visitMethodInsn(opcode, owner, name, desc, itf)
+    }
 
     override fun visitIntInsn(opcode: Int, operand: Int) = adapter.run {
         adapter.visitIntInsn(opcode, operand)
@@ -71,6 +127,7 @@ internal class ObjectCreationTransformer(
                     invokeStatic(Injections::beforeNewObjectCreation)
                 }
             )
+            uninitializedObjects++
         }
         visitTypeInsn(opcode, type)
         if (opcode == ANEWARRAY) {
