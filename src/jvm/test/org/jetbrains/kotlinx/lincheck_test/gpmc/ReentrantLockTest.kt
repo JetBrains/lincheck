@@ -33,7 +33,6 @@ class ReentrantLockTest {
             .also { listOf(t1, t2, t3).forEach { it.join() } }
     }
 
-    @Ignore
     @Test(timeout = TIMEOUT)
     fun testReentrantLock() = modelCheckerTest(
         testClass = this::class,
