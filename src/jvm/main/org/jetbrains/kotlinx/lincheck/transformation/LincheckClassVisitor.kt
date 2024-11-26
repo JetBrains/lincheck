@@ -15,7 +15,6 @@ import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
-import org.objectweb.asm.tree.ClassNode
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.*
 import sun.nio.ch.lincheck.*
