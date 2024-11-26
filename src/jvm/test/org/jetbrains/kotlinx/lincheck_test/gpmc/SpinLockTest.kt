@@ -15,10 +15,10 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 import org.junit.Test
 
-class SpinLockLivelockIsolatedTest {
+class SpinLockTest {
 
     fun spinLock(): Int {
-        // var counter = 0
+        var counter = 0
         val lock = SpinLock()
         val t1 = thread {
             lock.withLock { counter++ }
@@ -30,16 +30,19 @@ class SpinLockLivelockIsolatedTest {
             lock.withLock { counter++ }
         }
         return lock.withLock { counter }
-            .also { t1.join(); t2.join(); t3.join() }
+            .also { listOf(t1, t2, t3).forEach { it.join() } }
     }
 
-    // @Ignore
     @Test(timeout = TIMEOUT)
     fun testSpinLock() = modelCheckerTest(
         testClass = this::class,
         testOperation = this::spinLock,
         outcomes = setOf(0, 1, 2, 3),
     )
+
+}
+
+class SpinLockLivelockIsolatedTest {
 
     fun livelock(): Int {
         var counter = 0
