@@ -36,10 +36,9 @@ class SpinLoopTest {
                 }
             }
         }
-        return counter.also {
-            t1.join()
-            t2.join()
-        }
+        t1.join()
+        t2.join()
+        return counter
     }
 
     @Test(timeout = TIMEOUT)

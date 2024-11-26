@@ -28,11 +28,8 @@ class MonitorTest {
         val t3 = thread {
             synchronized(monitor) { counter++ }
         }
-        return counter.also {
-            t1.join()
-            t2.join()
-            t3.join()
-        }
+        return synchronized(monitor) { counter }
+            .also { listOf(t1, t2, t3).forEach { it.join() } }
     }
 
     @Test(timeout = TIMEOUT)
@@ -64,10 +61,9 @@ class MonitorDeadlockIsolatedTest {
                 }
             }
         }
-        return counter.also {
-            t1.join()
-            t2.join()
-        }
+        t1.join()
+        t2.join()
+        return counter
     }
 
     @Test(timeout = TIMEOUT)
