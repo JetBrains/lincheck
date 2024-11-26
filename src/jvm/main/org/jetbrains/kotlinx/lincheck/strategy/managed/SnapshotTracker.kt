@@ -12,17 +12,10 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.findField
 import org.jetbrains.kotlinx.lincheck.getFieldOffset
-import org.jetbrains.kotlinx.lincheck.strategy.managed.SnapshotTracker.Descriptor.ArrayCellDescriptor
-import org.jetbrains.kotlinx.lincheck.strategy.managed.SnapshotTracker.Descriptor.FieldDescriptor
-import org.jetbrains.kotlinx.lincheck.strategy.managed.SnapshotTracker.MemoryNode.ArrayCellNode
-import org.jetbrains.kotlinx.lincheck.strategy.managed.SnapshotTracker.MemoryNode.RegularFieldNode
-import org.jetbrains.kotlinx.lincheck.strategy.managed.SnapshotTracker.MemoryNode.StaticFieldNode
-import org.jetbrains.kotlinx.lincheck.util.isAtomicJava
-import org.jetbrains.kotlinx.lincheck.util.readArrayElementViaUnsafe
-import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
-import org.jetbrains.kotlinx.lincheck.util.traverseObjectGraph
-import org.jetbrains.kotlinx.lincheck.util.writeArrayElementViaUnsafe
-import org.jetbrains.kotlinx.lincheck.util.writeFieldViaUnsafe
+import org.jetbrains.kotlinx.lincheck.isPrimitiveWrapper
+import org.jetbrains.kotlinx.lincheck.strategy.managed.SnapshotTracker.Descriptor.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.SnapshotTracker.MemoryNode.*
+import org.jetbrains.kotlinx.lincheck.util.*
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
 import java.util.Collections
@@ -57,6 +50,54 @@ class SnapshotTracker {
     }
 
     fun size(): Int = (trackedObjects.keys.filter { it !is Class<*> } + trackedObjects.values.flatMap { it }.mapNotNull { it.initialValue }).toSet().size
+
+//    fun printRoots() {
+//        val rootSizes = mutableMapOf<Any, Int>()
+//        val mappedFromRoots = mutableMapOf<Any, MutableList<Any>>()
+//        trackedObjects.keys.filterIsInstance<Class<*>>().forEach { root ->
+//            var size = 0
+//            val countedObjs = mutableSetOf<Any>()
+//            mappedFromRoots[root] = mutableListOf()
+//
+//            trackedObjects[root]!!.forEach nodesTraverse@{ node ->
+//                if (node.initialValue == null) return@nodesTraverse
+//
+//                mappedFromRoots[root]!!.add(node.initialValue)
+//                size++
+//
+//                traverseObjectGraph(
+//                    node.initialValue,
+//                    onArrayElement = { _, _, value ->
+//                        if (value in trackedObjects && value !in countedObjs) {
+//                            countedObjs.add(value!!)
+//                            mappedFromRoots[root]!!.add(value)
+//                            size++
+//                        }
+//                        value
+//                    },
+//                    onField = { _, _, value ->
+//                        if (value in trackedObjects && value !in countedObjs) {
+//                            countedObjs.add(value!!)
+//                            mappedFromRoots[root]!!.add(value)
+//                            size++
+//                        }
+//                        value
+//                    }
+//                )
+//            }
+//
+//            rootSizes[root] = size
+//        }
+//
+//        val sizesSorted = rootSizes.entries
+//            .sortedBy { -it.value } // Sort by values
+//            .associate { it.key to it.value } // Convert back to a map
+//        mappedFromRoots.entries
+//            .sortedBy { -it.value.size }
+//            .toList()
+//
+////        println("Snapshot roots (${sizesSorted.size}): $sizesSorted")
+//    }
 
     @OptIn(ExperimentalStdlibApi::class)
     fun trackField(obj: Any?, className: String, fieldName: String, @Suppress("UNUSED_PARAMETER") location: String = "") {
@@ -102,7 +143,60 @@ class SnapshotTracker {
     }
 
     fun trackObjects(objs: Array<Any?>) {
-        objs.filterNotNull().forEach { trackHierarchy(it) }
+        val processField = { owner: Any, field: Field, fieldValue: Any? ->
+            trackSingleField(owner, owner.javaClass, field, fieldValue) {
+                if (shouldTrackEnergetically(fieldValue) /* also checks for `fieldValue != null` */) {
+                    trackHierarchy(fieldValue!!)
+                }
+            }
+        }
+
+        objs
+            // leave only those objects from constructor arguments that were tracked before the call to constructors itself
+            .filter { it != null && it in trackedObjects }
+            .forEach { obj ->
+            // We want to track the following values:
+            // 1. objects themselves (already tracked because of the filtering)
+            // 2. 1st layer of fields of these objects (tracking the whole hierarchy is too expensive, and full laziness does not work,
+            //    because of the JVM class verificator limitations, see https://github.com/JetBrains/lincheck/issues/424, thus, we collect
+            //    fields which afterward can be used for further lazy tracking)
+            // 3. values that are subclasses of the objects' class and their 1st layer of fields
+            //    (we are not sure if they are going to require restoring, but we still add them preventively,
+            //    again, because there is verificator limitation on tracking such values lazily)
+            traverseObjectGraph(
+                obj!!,
+                // `obj` cannot be an array because it is the same type as some class, which constructor was called, and arrays have not constructors
+                onArrayElement = null,
+                onField = { owner, field, fieldValue ->
+                    when {
+                        // add 1st layer of fields of `obj` (2)
+                        obj == owner -> {
+                            processField(owner, field, fieldValue)
+                            // track subclasses of `obj` and their 1st layer of fields (bullet-point 3) recursively
+                            if (fieldValue?.javaClass?.isInstance(obj) == true) {
+                                // allow traversing further, because `obj`'s 1st layer contains an object which is a subclass of `obj`
+                                // the `owner` of `fieldValue` is already added to `trackedObjects` (because `owner == obj`)
+                                fieldValue
+                            }
+                            else {
+                                null
+                            }
+                        }
+
+                        // track subclasses of `obj` and their 1st layer of fields (3)
+                        fieldValue != null && fieldValue.javaClass.isInstance(obj) -> {
+                            // track the `owner` of `fieldValue`, because otherwise we will not be able to
+                            // restore the initial value of `fieldValue` object
+                            trackedObjects.putIfAbsent(owner, mutableListOf<MemoryNode>())
+                            processField(owner, field, fieldValue)
+                            fieldValue
+                        }
+
+                        else -> null
+                    }
+                }
+            )
+        }
     }
 
     fun restoreValues() {
@@ -233,9 +327,10 @@ class SnapshotTracker {
 
     private fun isTrackableObject(value: Any?): Boolean {
         return (
-            value != null &&
+             value != null &&
             !value.javaClass.isPrimitive &&
-            !value.javaClass.isEnum
+            !value.javaClass.isEnum &&
+            !value.isPrimitiveWrapper
         )
     }
 

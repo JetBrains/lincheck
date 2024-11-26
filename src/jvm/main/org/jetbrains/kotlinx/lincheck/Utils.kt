@@ -16,12 +16,6 @@ import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransforme
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
 import org.jetbrains.kotlinx.lincheck.util.isAtomicArray
 import org.jetbrains.kotlinx.lincheck.util.isAtomicFUArray
-import org.jetbrains.kotlinx.lincheck.util.isAtomicArray
-import org.jetbrains.kotlinx.lincheck.util.isAtomicFUArray
-import org.jetbrains.kotlinx.lincheck.util.isAtomicFieldUpdater
-import org.jetbrains.kotlinx.lincheck.util.isUnsafeClass
-import org.jetbrains.kotlinx.lincheck.util.readArrayElementViaUnsafe
-import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import sun.nio.ch.lincheck.*
 import java.io.PrintWriter

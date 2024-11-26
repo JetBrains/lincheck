@@ -41,11 +41,11 @@ import java.util.*
  * @param onArrayElement callback for array elements traversal, accepts `(array, index, elementValue)`.
  *   Returns an object to be traversed next.
  */
-internal inline fun traverseObjectGraph(
+internal fun traverseObjectGraph(
     root: Any,
     traverseStaticFields: Boolean = false,
-    onField: (obj: Any, field: Field, value: Any?) -> Any?,
-    onArrayElement: (array: Any, index: Int, element: Any?) -> Any?,
+    onField: ((obj: Any, field: Field, value: Any?) -> Any?)?,
+    onArrayElement: ((array: Any, index: Int, element: Any?) -> Any?)?,
 ) {
     val queue = ArrayDeque<Any>()
     val visitedObjects = Collections.newSetFromMap<Any>(IdentityHashMap())
@@ -75,12 +75,13 @@ internal inline fun traverseObjectGraph(
         val currentObj = queue.removeFirst()
 
         when {
-            currentObj.javaClass.isArray || isAtomicArray(currentObj) -> {
+            onArrayElement != null &&
+            (currentObj.javaClass.isArray || isAtomicArray(currentObj)) -> {
                 traverseArrayElements(currentObj) { _ /* currentObj */, index, elementValue ->
                     processNextObject(onArrayElement(currentObj, index, elementValue))
                 }
             }
-            else -> {
+            onField != null -> {
                 traverseObjectFields(currentObj,
                     traverseStaticFields = traverseStaticFields
                 ) { _ /* currentObj */, field, fieldValue ->
@@ -103,7 +104,7 @@ internal inline fun traverseObjectGraph(
  *
  * @see traverseObjectGraph
  */
-internal inline fun traverseObjectGraph(
+internal fun traverseObjectGraph(
     root: Any,
     traverseStaticFields: Boolean = false,
     onObject: (obj: Any) -> Any?
