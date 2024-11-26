@@ -11,7 +11,7 @@
 package org.jetbrains.kotlinx.lincheck_test.gpmc
 
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import kotlin.concurrent.thread
+import kotlin.concurrent.*
 import org.junit.Test
 
 class MonitorTest {
