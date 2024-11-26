@@ -16,6 +16,14 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 interface ObjectTracker {
 
     /**
+     * Registers a thread with the given id in the object tracker.
+     *
+     * @param threadId the id of the thread to register.
+     * @param thread the thread object to register.
+     */
+    fun registerThread(threadId: Int, thread: Thread)
+
+    /**
      * Registers a newly created object in the object tracker.
      *
      * @param obj the object to be registered
