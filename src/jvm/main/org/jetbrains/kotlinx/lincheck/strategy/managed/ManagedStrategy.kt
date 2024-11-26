@@ -220,7 +220,6 @@ abstract class ManagedStrategy(
     }
 
     override fun restoreStaticMemorySnapshot() {
-        // TODO: what is the appropriate location to call this function?
         if (testCfg.restoreStaticMemory) {
             staticMemorySnapshot.restoreValues()
             super.restoreStaticMemorySnapshot()
@@ -942,8 +941,7 @@ abstract class ManagedStrategy(
      */
     override fun updateSnapshotOnFieldAccess(obj: Any?, className: String, fieldName: String, codeLocation: Int) = runInIgnoredSection {
         if (testCfg.restoreStaticMemory) {
-            val location = CodeLocations.stackTrace(codeLocation).toString()
-            staticMemorySnapshot.trackField(obj, className, fieldName, location)
+            staticMemorySnapshot.trackField(obj, className, fieldName)
         }
     }
 
@@ -952,8 +950,7 @@ abstract class ManagedStrategy(
      */
     override fun updateSnapshotOnArrayElementAccess(array: Any, index: Int, codeLocation: Int) = runInIgnoredSection {
         if (testCfg.restoreStaticMemory) {
-            val location = CodeLocations.stackTrace(codeLocation).toString()
-            staticMemorySnapshot.trackArrayCell(array, index, location)
+            staticMemorySnapshot.trackArrayCell(array, index)
         }
     }
 

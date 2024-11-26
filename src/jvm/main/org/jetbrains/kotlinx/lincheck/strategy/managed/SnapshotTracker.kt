@@ -49,59 +49,8 @@ class SnapshotTracker {
         class ArrayCellNode(descriptor: ArrayCellDescriptor, initialValue: Any?) : MemoryNode(descriptor, initialValue)
     }
 
-    fun size(): Int = (trackedObjects.keys.filter { it !is Class<*> } + trackedObjects.values.flatMap { it }.mapNotNull { it.initialValue }).toSet().size
-
-//    fun printRoots() {
-//        val rootSizes = mutableMapOf<Any, Int>()
-//        val mappedFromRoots = mutableMapOf<Any, MutableList<Any>>()
-//        trackedObjects.keys.filterIsInstance<Class<*>>().forEach { root ->
-//            var size = 0
-//            val countedObjs = mutableSetOf<Any>()
-//            mappedFromRoots[root] = mutableListOf()
-//
-//            trackedObjects[root]!!.forEach nodesTraverse@{ node ->
-//                if (node.initialValue == null) return@nodesTraverse
-//
-//                mappedFromRoots[root]!!.add(node.initialValue)
-//                size++
-//
-//                traverseObjectGraph(
-//                    node.initialValue,
-//                    onArrayElement = { _, _, value ->
-//                        if (value in trackedObjects && value !in countedObjs) {
-//                            countedObjs.add(value!!)
-//                            mappedFromRoots[root]!!.add(value)
-//                            size++
-//                        }
-//                        value
-//                    },
-//                    onField = { _, _, value ->
-//                        if (value in trackedObjects && value !in countedObjs) {
-//                            countedObjs.add(value!!)
-//                            mappedFromRoots[root]!!.add(value)
-//                            size++
-//                        }
-//                        value
-//                    }
-//                )
-//            }
-//
-//            rootSizes[root] = size
-//        }
-//
-//        val sizesSorted = rootSizes.entries
-//            .sortedBy { -it.value } // Sort by values
-//            .associate { it.key to it.value } // Convert back to a map
-//        mappedFromRoots.entries
-//            .sortedBy { -it.value.size }
-//            .toList()
-//
-////        println("Snapshot roots (${sizesSorted.size}): $sizesSorted")
-//    }
-
     @OptIn(ExperimentalStdlibApi::class)
-    fun trackField(obj: Any?, className: String, fieldName: String, @Suppress("UNUSED_PARAMETER") location: String = "") {
-        //println("Consider ($location): obj=${obj?.javaClass?.simpleName}${if (obj != null) "@" + System.identityHashCode(obj).toHexString() else ""}, className=$className, fieldName=$fieldName")
+    fun trackField(obj: Any?, className: String, fieldName: String) {
         if (obj != null && obj !in trackedObjects) return
 
         val clazz: Class<*> = Class.forName(className).let {
@@ -113,8 +62,6 @@ class SnapshotTracker {
 
         if (readResult.isSuccess) {
             val fieldValue = readResult.getOrNull()
-            //println("Consider: value=${fieldValue}")
-
             trackSingleField(obj, clazz, field, fieldValue) {
                 if (shouldTrackEnergetically(fieldValue)) {
                     trackHierarchy(fieldValue!!)
@@ -124,16 +71,13 @@ class SnapshotTracker {
     }
 
     @OptIn(ExperimentalStdlibApi::class)
-    fun trackArrayCell(array: Any, index: Int, @Suppress("UNUSED_PARAMETER") location: String = "") {
-        //println("Consider ($location): array=${array.javaClass.simpleName}@${System.identityHashCode(array).toHexString()}, index=$index")
+    fun trackArrayCell(array: Any, index: Int) {
         if (array !in trackedObjects) return
 
         val readResult = runCatching { readArrayElementViaUnsafe(array, index) }
 
         if (readResult.isSuccess) {
             val elementValue = readResult.getOrNull()
-            //println("Consider: element=${elementValue}")
-
             trackSingleArrayCell(array, index, elementValue) {
                 if (shouldTrackEnergetically(elementValue)) {
                     trackHierarchy(elementValue!!)
@@ -200,7 +144,6 @@ class SnapshotTracker {
     }
 
     fun restoreValues() {
-        //println("====== START RESTORING ======")
         val visitedObjects = Collections.newSetFromMap(IdentityHashMap<Any, Boolean>())
         trackedObjects.keys
             .filterIsInstance<Class<*>>()
@@ -227,7 +170,6 @@ class SnapshotTracker {
                 .any { it.field.name == field.name } // field is already tracked
         ) return
 
-        //println("SNAPSHOT: obj=${if (obj == null) "null" else obj.javaClass.simpleName + "@" + System.identityHashCode(obj).toHexString()}, className=${clazz.name}, fieldName=${field.name}, value=${fieldValue}")
         val childNode = createMemoryNode(
             obj,
             FieldDescriptor(field, getFieldOffset(field)),
@@ -250,7 +192,6 @@ class SnapshotTracker {
             nodesList.any { it is ArrayCellNode && (it.descriptor as ArrayCellDescriptor).index == index } // this array cell is already tracked
         ) return
 
-        //println("SNAPSHOT: array=${array.javaClass.simpleName}@${System.identityHashCode(array).toHexString()}, index=$index, value=${elementValue}")
         val childNode = createMemoryNode(array, ArrayCellDescriptor(index), elementValue)
 
         nodesList.add(childNode)
@@ -262,7 +203,6 @@ class SnapshotTracker {
 
     @OptIn(ExperimentalStdlibApi::class)
     private fun trackHierarchy(obj: Any) {
-        //println("Track hierarchy for object: ${obj.javaClass.simpleName}@${System.identityHashCode(obj).toHexString()}")
         traverseObjectGraph(
             obj,
             onArrayElement = { array, index, elementValue ->
@@ -285,6 +225,7 @@ class SnapshotTracker {
         return (
             // TODO: in further development of snapshot restoring feature this check should be removed
             //  (and only check for java atomic classes inserted), see https://github.com/JetBrains/lincheck/pull/418#issue-2595977113
+            //  right it is need for collections to be restored properly (because of missing support for `System.arrayCopy()` and other similar methods)
             obj.javaClass.name.startsWith("java.util.")
         )
     }
@@ -292,14 +233,12 @@ class SnapshotTracker {
     @OptIn(ExperimentalStdlibApi::class)
     private fun restoreValues(obj: Any, visitedObjects: MutableSet<Any>) {
         if (obj in visitedObjects) return
-        //println("RESTORE: obj=${if (obj is Class<*>) obj.simpleName else obj.javaClass.simpleName}@${System.identityHashCode(obj).toHexString()}:")
         visitedObjects.add(obj)
 
         trackedObjects[obj]!!
             .forEach { node ->
                 if (node is ArrayCellNode) {
                     val index = (node.descriptor as ArrayCellDescriptor).index
-                    //println("\tRESTORE: arr=${obj.javaClass.simpleName}@${System.identityHashCode(obj).toHexString()}, index=$index, value=${node.initialValue}")
 
                     when (obj) {
                         // No need to add support for writing to atomicfu array elements,
@@ -311,7 +250,6 @@ class SnapshotTracker {
                     }
                 }
                 else if (!Modifier.isFinal((node.descriptor as FieldDescriptor).field.modifiers)) {
-                    //println("\tRESTORE: obj=${if (obj is Class<*>) obj.simpleName else obj.javaClass.simpleName}@${System.identityHashCode(obj).toHexString()}, field=${node.descriptor.field.name}, value=${node.initialValue}")
                     writeFieldViaUnsafe(
                         if (node is StaticFieldNode) null else obj,
                         node.descriptor.field,
