@@ -28,7 +28,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.adorne
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanObjectNumeration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
-import java.lang.invoke.VarHandle
 import java.lang.reflect.*
 import java.util.*
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
@@ -1191,7 +1190,7 @@ abstract class ManagedStrategy(
         }
         // handle atomic methods
         if (isVarHandle(owner)) {
-            return initializeVarHandleMethodCallTracePoint(tracePoint, owner as VarHandle, params)
+            return initializeVarHandleMethodCallTracePoint(tracePoint, owner, params)
         }
         if (isAtomicFieldUpdater(owner)) {
             return initializeAtomicUpdaterMethodCallTracePoint(tracePoint, owner!!, params)
@@ -1275,7 +1274,7 @@ abstract class ManagedStrategy(
 
     private fun initializeVarHandleMethodCallTracePoint(
         tracePoint: MethodCallTracePoint,
-        varHandle: VarHandle,
+        varHandle: Any, // for Java 8, the VarHandle class does not exist
         parameters: Array<Any?>,
     ): MethodCallTracePoint {
         when (val varHandleMethodType = VarHandleNames.varHandleMethodType(varHandle, parameters)) {

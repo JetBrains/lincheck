@@ -63,7 +63,7 @@ to Gradle (in Preferences -> Build, Execution, Deployment -> Build Tools -> Grad
 
 ### Environment requirements
 
-* JDK >= 11 referred to by the `JAVA_HOME` environment variable.
+* JDK >= 8 referred to by the `JAVA_HOME` environment variable.
 
 ## Releases
 

@@ -39,7 +39,25 @@ class ConcurrentLinkedDequeTest {
     fun peekLast() = deque.peekLast()
 
     @Test
-    fun modelCheckingTest() = ModelCheckingOptions().checkImpl(this::class.java) { failure ->
-        failure.checkLincheckOutput("concurrent_linked_deque.txt")
-    }
+    fun modelCheckingTest() = ModelCheckingOptions()
+        // The custom scenario is to fix the scenario to have the same interleaving caught for both JDK8 and JDK11+.
+        .addCustomScenario {
+            initial {
+                actor(ConcurrentLinkedDequeTest::addLast, 1)
+            }
+            parallel {
+                thread {
+                    actor(::pollFirst)
+                }
+                thread {
+                    actor(ConcurrentLinkedDequeTest::addFirst, 0)
+                    actor(::peekLast)
+                }
+            }
+        }
+        .iterations(0)
+        .checkImpl(this::class.java) { failure ->
+            val expectedOutputFile = if (isJdk8) "concurrent_linked_deque_jdk8.txt" else "concurrent_linked_deque.txt"
+            failure.checkLincheckOutput(expectedOutputFile)
+        }
 }

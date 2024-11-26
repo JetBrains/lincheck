@@ -88,3 +88,12 @@ fun checkTraceHasNoLincheckEvents(trace: String) {
     val lincheckPackageOccurrences = trace.split("org.jetbrains.kotlinx.lincheck.").size - 1
     check(testPackageOccurrences == lincheckPackageOccurrences) { "Internal Lincheck events were found in the trace" }
 }
+
+/**
+ * Indicates whether the current Java Development Kit (JDK) version is JDK 8.
+ *
+ * This property checks the system's Java specification version
+ * and determines if the major version corresponds to '8', signifying JDK 8.
+ */
+// java.specification.version is "1.$x" for Java prior to 8 and "$x" for the newer ones
+internal val isJdk8 = System.getProperty("java.specification.version").removePrefix("1.") == "8"
