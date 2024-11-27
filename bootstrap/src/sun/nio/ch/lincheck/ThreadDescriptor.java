@@ -17,7 +17,7 @@ public class ThreadDescriptor {
     /**
      * The thread instance associated with this descriptor.
      */
-    private final Thread thread;
+    private final WeakReference<Thread> thread;
 
     /**
      * The {@code EventTracker} for tracking events in the model checking mode.
@@ -27,7 +27,7 @@ public class ThreadDescriptor {
     /**
      * Holds additional event-tracker-specific data associated with the thread.
      */
-    private Object eventTrackerData = null;
+    private WeakReference<Object> eventTrackerData = null;
 
     /**
      * This flag indicates whether the Lincheck is currently running analyzed test code.
@@ -47,11 +47,11 @@ public class ThreadDescriptor {
         if (thread == null) {
             throw new IllegalArgumentException("Thread must not be null");
         }
-        this.thread = thread;
+        this.thread = new WeakReference<>(thread);
     }
 
     public Thread getThread() {
-        return thread;
+        return thread.get();
     }
 
     public EventTracker getEventTracker() {
@@ -63,11 +63,11 @@ public class ThreadDescriptor {
     }
 
     public Object getEventTrackerData() {
-        return eventTrackerData;
+        return eventTrackerData.get();
     }
 
     public void setEventTrackerData(Object eventTrackerData) {
-        this.eventTrackerData = eventTrackerData;
+        this.eventTrackerData = new WeakReference<>(eventTrackerData);
     }
 
     public boolean inIgnoredSection() {

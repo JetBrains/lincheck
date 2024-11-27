@@ -11,6 +11,7 @@
 package sun.nio.ch.lincheck;
 
 import java.util.Random;
+import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -60,8 +61,30 @@ public class Injections {
     private static final ThreadLocal<ThreadDescriptor> threadDescriptor =
         ThreadLocal.withInitial(() -> null);
 
-    private static final ConcurrentHashMap<Integer, ThreadDescriptor> threadDescriptorsMap =
-        new ConcurrentHashMap<Integer, ThreadDescriptor>();
+    /*
+     * A global map storing a thread descriptor for each thread object.
+     *
+     * The map should be concurrent, use identity hash code,
+     * and do not prevent garbage collection of thread objects (i.e., use weak keys).
+     * However, because there is no `ConcurrentWeakIdentityHashMap` out of the box in
+     * the java standard library, we use a few tricks to achieve a similar effect.
+     *
+     * - We use `ConcurrentHashMap` to guarantee thread safety.
+     * - We use identity hash codes of the thread objects as keys.
+     * - To accommodate for potential hash code collisions, we store lists of thread descriptors as values.
+     * - These lists use copy-on-write strategy when a new descriptor is added to avoid race conditions.
+     * - Thread descriptors store weak references to thread objects, and thus do not prevent their garbage collection.
+     *
+     * TODO: although the garbage collection of thread objects is not prevented thanks to weak references,
+     *   the hash map entries themself (key - identity hash code, and value - `ThreadDescriptor` object)
+     *   would not be garbage collected, potentially creating a memory leak.
+     *   However, we expect that typical programs would create only a bounded number of threads during
+     *   their whole lifetime, and thus this map also would only occupy a bounded amount of memory.
+     *   Still, it would be good to eventually implement proper periodic clean-up of the map
+     *   to remove obsolete entries.
+     */
+    private static final ConcurrentHashMap<Integer, ArrayList<ThreadDescriptor>> threadDescriptorsMap =
+        new ConcurrentHashMap<Integer, ArrayList<ThreadDescriptor>>();
 
     public static ThreadDescriptor getCurrentThreadDescriptor() {
         Thread thread = Thread.currentThread();
@@ -83,9 +106,15 @@ public class Injections {
         if (thread instanceof TestThread) {
             return ((TestThread) thread).descriptor;
         }
-        // TODO: handle hashcode collisions (?)
         int hashCode = System.identityHashCode(thread);
-        return threadDescriptorsMap.get(hashCode);
+        ArrayList<ThreadDescriptor> threadDescriptors = threadDescriptorsMap.get(hashCode);
+        if (threadDescriptors == null) return null;
+        for (ThreadDescriptor descriptor : threadDescriptors) {
+            if (descriptor.getThread() == thread) {
+                return descriptor;
+            }
+        }
+        return null;
     }
 
     public static void setThreadDescriptor(Thread thread, ThreadDescriptor descriptor) {
@@ -93,17 +122,19 @@ public class Injections {
             ((TestThread) thread).descriptor = descriptor;
             return;
         }
-        // TODO: handle hashcode collisions (?)
         int hashCode = System.identityHashCode(thread);
-        ThreadDescriptor previousDescriptor = threadDescriptorsMap.put(hashCode, descriptor);
-        if (previousDescriptor != null) {
-            String message = String.format(
-                "Thread descriptor of thread %s was already set (previous thread is %s)!",
-                thread.getName(),
-                previousDescriptor.getThread().getName()
-            );
-            throw new IllegalStateException(message);
+        ArrayList<ThreadDescriptor> threadDescriptors = threadDescriptorsMap.get(hashCode);
+        if (threadDescriptors == null) {
+            threadDescriptors = new ArrayList<ThreadDescriptor>(1);
+            threadDescriptors.add(descriptor);
+        } else {
+            // in an unlikely case of hash-code collision,
+            // we create a full copy of the thread descriptors list
+            // to avoid potential race conditions on reads/writes to the descriptors' list
+            threadDescriptors = new ArrayList<ThreadDescriptor>(threadDescriptors);
         }
+        threadDescriptors.add(descriptor);
+        threadDescriptorsMap.put(hashCode, threadDescriptors);
     }
 
     public static EventTracker getEventTracker() {
