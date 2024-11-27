@@ -38,7 +38,7 @@ public class Injections {
         new ConcurrentHashMap<Integer, ThreadDescriptor>();
 
     public static ThreadDescriptor getCurrentThreadDescriptor() {
-        var thread = Thread.currentThread();
+        Thread thread = Thread.currentThread();
         if (thread instanceof TestThread) {
             return ((TestThread) thread).descriptor;
         }
@@ -46,7 +46,7 @@ public class Injections {
     }
 
     public static void setCurrentThreadDescriptor(ThreadDescriptor descriptor) {
-        var thread = Thread.currentThread();
+        Thread thread = Thread.currentThread();
         if (thread instanceof TestThread) {
             return;
         }
@@ -58,7 +58,7 @@ public class Injections {
             return ((TestThread) thread).descriptor;
         }
         // TODO: handle hashcode collisions (?)
-        var hashCode = System.identityHashCode(thread);
+        int hashCode = System.identityHashCode(thread);
         return threadDescriptorsMap.get(hashCode);
     }
 
@@ -68,10 +68,10 @@ public class Injections {
             return;
         }
         // TODO: handle hashcode collisions (?)
-        var hashCode = System.identityHashCode(thread);
-        var previousDescriptor = threadDescriptorsMap.put(hashCode, descriptor);
+        int hashCode = System.identityHashCode(thread);
+        ThreadDescriptor previousDescriptor = threadDescriptorsMap.put(hashCode, descriptor);
         if (previousDescriptor != null) {
-            var message = String.format(
+            String message = String.format(
                 "Thread descriptor of thread %s was already set (previous thread is %s)!",
                 thread.getName(),
                 previousDescriptor.getThread().getName()
@@ -81,7 +81,7 @@ public class Injections {
     }
 
     public static EventTracker getEventTracker() {
-        var descriptor = getCurrentThreadDescriptor();
+        ThreadDescriptor descriptor = getCurrentThreadDescriptor();
         if (descriptor == null) {
             throw new RuntimeException("No event tracker set by Lincheck");
         }
@@ -99,13 +99,13 @@ public class Injections {
     }
 
     public static void enterTestingCode() {
-        var descriptor = getCurrentThreadDescriptor();
+        ThreadDescriptor descriptor = getCurrentThreadDescriptor();
         if (descriptor == null) return;
         descriptor.enterTestingCode();
     }
 
     public static void leaveTestingCode() {
-        var descriptor = getCurrentThreadDescriptor();
+        ThreadDescriptor descriptor = getCurrentThreadDescriptor();
         if (descriptor == null) return;
         descriptor.leaveTestingCode();
     }
@@ -121,7 +121,7 @@ public class Injections {
      * @return true if the thread successfully entered the ignored section, false otherwise.
      */
     public static boolean enterIgnoredSection() {
-        var descriptor = getCurrentThreadDescriptor();
+        ThreadDescriptor descriptor = getCurrentThreadDescriptor();
         if (descriptor == null) return false;
         return descriptor.enterIgnoredSection();
     }
@@ -130,7 +130,7 @@ public class Injections {
      * Leaves an ignored section for the current thread.
      */
     public static void leaveIgnoredSection() {
-        var descriptor = getCurrentThreadDescriptor();
+        ThreadDescriptor descriptor = getCurrentThreadDescriptor();
         if (descriptor == null) return;
         descriptor.leaveIgnoredSection();
     }
@@ -141,7 +141,7 @@ public class Injections {
      * @return true if the current thread is inside an ignored section, false otherwise.
      */
     public static boolean inIgnoredSection() {
-        var descriptor = getCurrentThreadDescriptor();
+        ThreadDescriptor descriptor = getCurrentThreadDescriptor();
         if (descriptor == null) return true;
         return descriptor.inIgnoredSection();
     }
@@ -152,12 +152,12 @@ public class Injections {
     public static void beforeThreadFork(Thread forkedThread) {
         // TestThread is handled separately
         if (forkedThread instanceof TestThread) return;
-        var descriptor = getCurrentThreadDescriptor();
+        ThreadDescriptor descriptor = getCurrentThreadDescriptor();
         if (descriptor == null) {
             return;
         }
-        var tracker = descriptor.getEventTracker();
-        var forkedThreadDescriptor = new ThreadDescriptor(forkedThread);
+        EventTracker tracker = descriptor.getEventTracker();
+        ThreadDescriptor forkedThreadDescriptor = new ThreadDescriptor(forkedThread);
         forkedThreadDescriptor.setEventTracker(tracker);
         /*
          * Method `setThreadDescriptor` calls methods of `ConcurrentHashMap` (instrumented class),
@@ -185,9 +185,9 @@ public class Injections {
     public static void afterThreadFork(Thread forkedThread) {
         // TestThread is handled separately
         if (forkedThread instanceof TestThread) return;
-        var descriptor = getCurrentThreadDescriptor();
+        ThreadDescriptor descriptor = getCurrentThreadDescriptor();
         if (descriptor == null) return;
-        var tracker = descriptor.getEventTracker();
+        EventTracker tracker = descriptor.getEventTracker();
         tracker.afterThreadFork(forkedThread);
     }
 
@@ -195,15 +195,15 @@ public class Injections {
      * Current thread entered its {@code run} method.
      */
     public static void beforeThreadStart() {
-        var thread = Thread.currentThread();
+        Thread thread = Thread.currentThread();
         // TestThread is handled separately
         if (thread instanceof TestThread) return;
-        var descriptor = getThreadDescriptor(thread);
+        ThreadDescriptor descriptor = getThreadDescriptor(thread);
         if (descriptor == null) {
             return;
         }
         setCurrentThreadDescriptor(descriptor);
-        var tracker = descriptor.getEventTracker();
+        EventTracker tracker = descriptor.getEventTracker();
         tracker.beforeThreadStart();
     }
 
@@ -211,12 +211,12 @@ public class Injections {
      * Current thread returned from its {@code run} method.
      */
     public static void afterThreadFinish() {
-        var thread = Thread.currentThread();
+        Thread thread = Thread.currentThread();
         // TestThread is handled separately
         if (thread instanceof TestThread) return;
-        var descriptor = getCurrentThreadDescriptor();
+        ThreadDescriptor descriptor = getCurrentThreadDescriptor();
         if (descriptor == null) return;
-        var tracker = descriptor.getEventTracker();
+        EventTracker tracker = descriptor.getEventTracker();
         tracker.afterThreadFinish();
     }
 
@@ -226,9 +226,9 @@ public class Injections {
      * <b>Does not support joins with time limits yet</b>.
      */
     public static void beforeThreadJoin(Thread t) {
-        var descriptor = getCurrentThreadDescriptor();
+        ThreadDescriptor descriptor = getCurrentThreadDescriptor();
         if (descriptor == null) return;
-        var tracker = descriptor.getEventTracker();
+        EventTracker tracker = descriptor.getEventTracker();
         tracker.beforeThreadJoin(t);
     }
 
