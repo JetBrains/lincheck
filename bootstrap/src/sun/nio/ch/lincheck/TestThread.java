@@ -49,7 +49,7 @@ public class TestThread extends Thread {
 
     @Override
     public void run() {
-        var descriptor = Injections.getThreadDescriptor(this);
+        ThreadDescriptor descriptor = Injections.getThreadDescriptor(this);
         Injections.setCurrentThreadDescriptor(descriptor);
         super.run();
     }
