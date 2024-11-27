@@ -141,7 +141,7 @@ class ExceptionTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
         addCustomScenario(scenario)
         minimizeFailedScenario(false)
         if (this is StressOptions) {
-            invocationsPerIteration(20_000)
+            invocationsPerIteration(50_000)
         }
     }
 
