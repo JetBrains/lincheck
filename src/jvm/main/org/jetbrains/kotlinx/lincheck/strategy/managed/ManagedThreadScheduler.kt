@@ -102,8 +102,8 @@ class ManagedThreadScheduler : ThreadScheduler() {
          *   resulting in `IllegalMonitorStateException`
          */
         // exit the testing code in case of aborting
-        // val descriptor = Injections.getCurrentThreadDescriptor()!!
-        // descriptor.leaveTestingCode()
+        val descriptor = Injections.getCurrentThreadDescriptor()!!
+        descriptor.leaveTestingCode()
 
         // raise the exception
         throw ThreadAbortedError
