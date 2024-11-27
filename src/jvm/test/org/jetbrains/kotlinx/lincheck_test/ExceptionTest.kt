@@ -110,17 +110,19 @@ class ExceptionTestSequentialImplementation {
 }
 
 class ExceptionTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
-    private var canEnterForbiddenSection = false
+
+    @Volatile
+    private var throwException = false
 
     @Operation
     fun operation1() {
-        canEnterForbiddenSection = true
-        canEnterForbiddenSection = false
+        throwException = true
+        throwException = false
     }
 
     @Operation
     fun operation2() {
-        if (canEnterForbiddenSection) throw IllegalStateException()
+        if (throwException) throw IllegalStateException()
     }
 
     val scenario = scenario {
