@@ -110,8 +110,14 @@ open class ThreadScheduler {
      *
      * @return a map from thread ids to thread instances that are currently registered.
      */
-    fun getRegisteredThreads(): ThreadMap<Thread> =
-        threads.mapValues { (_, it) -> it.descriptor.thread }
+    fun getRegisteredThreads() : ThreadMap<Thread> = mutableThreadMapOf<Thread>().apply {
+        for ((threadId, threadData) in threads) {
+            val thread = threadData.descriptor.thread
+            if (thread != null) {
+                put(threadId, thread)
+            }
+        }
+    }
 
     /**
      * Retrieves the identifier of the specified thread.
@@ -353,7 +359,7 @@ open class ThreadScheduler {
         }
         val startTime = System.nanoTime()
         val timeoutMs = timeoutNano / 1_000_000
-        threadData.descriptor.thread.join(timeoutMs, (timeoutNano % 1_000_000).toInt())
+        threadData.descriptor.thread?.join(timeoutMs, (timeoutNano % 1_000_000).toInt())
         val elapsedTime = System.nanoTime() - startTime
         return if (elapsedTime < timeoutNano) elapsedTime else -1
     }
