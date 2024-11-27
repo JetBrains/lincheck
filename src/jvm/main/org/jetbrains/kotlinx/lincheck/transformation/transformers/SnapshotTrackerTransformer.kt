@@ -13,6 +13,7 @@ package org.jetbrains.kotlinx.lincheck.transformation.transformers
 import org.jetbrains.kotlinx.lincheck.canonicalClassName
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.objectweb.asm.Opcodes.*
+import org.objectweb.asm.Type
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.GeneratorAdapter
 import sun.nio.ch.lincheck.Injections
@@ -22,6 +23,8 @@ internal class SnapshotTrackerTransformer(
     className: String,
     methodName: String,
     adapter: GeneratorAdapter,
+    // `SafeClassWriter::isInstanceOf` method which checks the subclassing without loading the classes to VM
+    private val isInstanceOf: (actualType: String, expectedSuperType: String) -> Boolean
 ) : ManagedStrategyWithAnalyzerClassVisitor(fileName, className, methodName, adapter) {
 
     /**
@@ -47,8 +50,11 @@ internal class SnapshotTrackerTransformer(
         if (name == "<init>") {
             val matchedArguments = getArgumentTypes(desc).toList()
                 .mapIndexed { index, type ->
-                    /* TODO: change to type.className.isSubclassOf(owner) */
-                    if (type.className == owner.canonicalClassName) index
+                    if (
+                        !isArray(type) &&
+                        !isPrimitive(type) &&
+                        isInstanceOf(type.className.replace('.', '/'), owner)
+                    ) index
                     else null
                 }
                 .filterNotNull()
@@ -210,5 +216,20 @@ internal class SnapshotTrackerTransformer(
                 visitInsn(opcode)
             }
         }
+    }
+
+    private fun isArray(type: Type): Boolean = type.sort == Type.ARRAY
+
+    private fun isPrimitive(type: Type): Boolean {
+        val sort = type.sort
+        return sort == Type.BOOLEAN ||
+               sort == Type.CHAR    ||
+               sort == Type.BYTE    ||
+               sort == Type.SHORT   ||
+               sort == Type.INT     ||
+               sort == Type.FLOAT   ||
+               sort == Type.LONG    ||
+               sort == Type.DOUBLE  ||
+               sort == Type.VOID
     }
 }
