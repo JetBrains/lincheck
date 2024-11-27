@@ -87,7 +87,7 @@ internal fun AtomicMethodDescriptor.getSetValue(obj: Any?, params: Array<Any?>):
         argOffset += 1
     // VarHandle case
     if (isVarHandle(obj)) {
-        val methodType = VarHandleNames.varHandleMethodType(obj as VarHandle, params)
+        val methodType = VarHandleNames.varHandleMethodType(obj, params)
         // non-static field access case - the first argument is an accessed object
         if (methodType !is VarHandleMethodType.StaticVarHandleMethod)
             argOffset += 1
