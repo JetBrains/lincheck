@@ -753,8 +753,6 @@ abstract class ManagedStrategy(
      */
     override fun beforeReadField(obj: Any?, className: String, fieldName: String, codeLocation: Int,
                                  isStatic: Boolean, isFinal: Boolean) = runInIgnoredSection {
-//        println("FIELD R: obj=${prettyName(obj)}, className=$className, fieldName=$fieldName, loc=${CodeLocations.stackTrace(codeLocation).toString()}")
-//         updateSnapshotOnFieldAccess(obj, className.canonicalClassName, fieldName, codeLocation)
         // We need to ensure all the classes related to the reading object are instrumented.
         // The following call checks all the static fields.
         if (isStatic) {
@@ -791,8 +789,6 @@ abstract class ManagedStrategy(
 
     /** Returns <code>true</code> if a switch point is created. */
     override fun beforeReadArrayElement(array: Any, index: Int, codeLocation: Int): Boolean = runInIgnoredSection {
-//        println("FIELD Rarr: arr=${prettyName(array)}, index=$index, loc=${CodeLocations.stackTrace(codeLocation).toString()}")
-//        updateSnapshotOnArrayElementAccess(array, index, codeLocation)
         if (!objectTracker.shouldTrackObjectAccess(array)) {
             return@runInIgnoredSection false
         }
@@ -834,8 +830,6 @@ abstract class ManagedStrategy(
 
     override fun beforeWriteField(obj: Any?, className: String, fieldName: String, value: Any?, codeLocation: Int,
                                   isStatic: Boolean, isFinal: Boolean): Boolean = runInIgnoredSection {
-//        println("FIELD W: obj=${prettyName(obj)}, className=$className, fieldName=$fieldName, value=${prettyName(value)}, loc=${CodeLocations.stackTrace(codeLocation).toString()}")
-//        updateSnapshotOnFieldAccess(obj, className.canonicalClassName, fieldName, codeLocation)
         objectTracker.registerObjectLink(fromObject = obj ?: StaticObject, toObject = value)
         if (!objectTracker.shouldTrackObjectAccess(obj ?: StaticObject)) {
             return@runInIgnoredSection false
@@ -866,8 +860,6 @@ abstract class ManagedStrategy(
 
     @OptIn(ExperimentalStdlibApi::class)
     override fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int): Boolean = runInIgnoredSection {
-//        println("FIELD Warr: arr=${prettyName(array)}, index=$index, value=${prettyName(value)}, loc=${CodeLocations.stackTrace(codeLocation).toString()}")
-//        updateSnapshotOnArrayElementAccess(array, index, codeLocation)
         objectTracker.registerObjectLink(fromObject = array, toObject = value)
         if (!objectTracker.shouldTrackObjectAccess(array)) {
             return@runInIgnoredSection false

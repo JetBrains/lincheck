@@ -16,7 +16,7 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedOptions
 
 
-class ConstructorNotThisModificationTest : AbstractSnapshotTest() {
+class ConstructorArgumentsTrackingTest : AbstractSnapshotTest() {
     class ConstructorNotThisModificationVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : SnapshotVerifier() {
         override fun verifyResults(
             scenario: ExecutionScenario?,
@@ -24,6 +24,7 @@ class ConstructorNotThisModificationTest : AbstractSnapshotTest() {
         ): Boolean {
             checkForExceptions(results)
             check(staticNode.a == 1)
+            check(staticSubNode.a == 2)
             return true
         }
     }
@@ -35,19 +36,25 @@ class ConstructorNotThisModificationTest : AbstractSnapshotTest() {
         actorsPerThread(1)
     }
 
-    class Node(var a: Int) {
-        constructor(other: Node) : this(2) {
+    open class Node(var a: Int) {
+        constructor(other: Node, other2: SubNode) : this(2) {
             other.a = 0 // this change should be tracked because no 'leaking this' problem exists here
+
+            val castedOther2 = other2 as Node
+            castedOther2.a = 0 // this change should be tracked because no 'leaking this' problem exists here
         }
     }
 
+    class SubNode(a: Int) : Node(a)
+
     companion object {
         val staticNode = Node(1)
+        val staticSubNode = SubNode(2)
     }
 
     @Operation
     @Suppress("UNUSED_VARIABLE")
     fun modify() {
-        val localNode = Node(staticNode)
+        val localNode = Node(staticNode, staticSubNode)
     }
 }

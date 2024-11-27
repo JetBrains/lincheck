@@ -22,7 +22,7 @@ import sun.nio.ch.lincheck.*
 
 internal class LincheckClassVisitor(
     private val instrumentationMode: InstrumentationMode,
-    classVisitor: ClassVisitor
+    private val classVisitor: SafeClassWriter
 ) : ClassVisitor(ASM_API, classVisitor) {
     private val ideaPluginEnabled = ideaPluginEnabled()
     private var classVersion = 0
@@ -92,7 +92,7 @@ internal class LincheckClassVisitor(
         if (methodName == "<init>") {
             mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
             mv = run {
-                val st = SnapshotTrackerTransformer(fileName, className, methodName, mv.newAdapter())
+                val st = SnapshotTrackerTransformer(fileName, className, methodName, mv.newAdapter(), classVisitor::isInstanceOf)
                 val aa = AnalyzerAdapter(className, access, methodName, desc, st)
                 st.analyzer = aa
                 aa
@@ -151,7 +151,7 @@ internal class LincheckClassVisitor(
         // which should be put in front of the byte-code transformer chain,
         // so that it can correctly analyze the byte-code and compute required type-information
         mv = run {
-            val st = SnapshotTrackerTransformer(fileName, className, methodName, mv.newAdapter())
+            val st = SnapshotTrackerTransformer(fileName, className, methodName, mv.newAdapter(), classVisitor::isInstanceOf)
             val sv = SharedMemoryAccessTransformer(fileName, className, methodName, st.newAdapter())
             val aa = AnalyzerAdapter(className, access, methodName, desc, sv)
 
