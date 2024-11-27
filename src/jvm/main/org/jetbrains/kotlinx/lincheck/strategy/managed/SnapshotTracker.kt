@@ -87,60 +87,11 @@ class SnapshotTracker {
     }
 
     fun trackObjects(objs: Array<Any?>) {
-        val processField = { owner: Any, field: Field, fieldValue: Any? ->
-            trackSingleField(owner, owner.javaClass, field, fieldValue) {
-                if (shouldTrackEnergetically(fieldValue) /* also checks for `fieldValue != null` */) {
-                    trackHierarchy(fieldValue!!)
-                }
-            }
-        }
-
+        // in case this works too slowly, an optimization could be used
+        // see https://github.com/JetBrains/lincheck/pull/418/commits/0d708b84dd2bfd5dbfa961549dda128d91dc3a5b#diff-a684b1d7deeda94bbf907418b743ae2c0ec0a129760d3b87d00cdf5adfab56c4R146-R199
         objs
-            // leave only those objects from constructor arguments that were tracked before the call to constructors itself
             .filter { it != null && it in trackedObjects }
-            .forEach { obj ->
-            // We want to track the following values:
-            // 1. objects themselves (already tracked because of the filtering)
-            // 2. 1st layer of fields of these objects (tracking the whole hierarchy is too expensive, and full laziness does not work,
-            //    because of the JVM class verificator limitations, see https://github.com/JetBrains/lincheck/issues/424, thus, we collect
-            //    fields which afterward can be used for further lazy tracking)
-            // 3. values that are subclasses of the objects' class and their 1st layer of fields
-            //    (we are not sure if they are going to require restoring, but we still add them preventively,
-            //    again, because there is verificator limitation on tracking such values lazily)
-            traverseObjectGraph(
-                obj!!,
-                // `obj` cannot be an array because it is the same type as some class, which constructor was called, and arrays have not constructors
-                onArrayElement = null,
-                onField = { owner, field, fieldValue ->
-                    when {
-                        // add 1st layer of fields of `obj` (2)
-                        obj == owner -> {
-                            processField(owner, field, fieldValue)
-                            // track subclasses of `obj` and their 1st layer of fields (bullet-point 3) recursively
-                            if (fieldValue?.javaClass?.isInstance(obj) == true) {
-                                // allow traversing further, because `obj`'s 1st layer contains an object which is a subclass of `obj`
-                                // the `owner` of `fieldValue` is already added to `trackedObjects` (because `owner == obj`)
-                                fieldValue
-                            }
-                            else {
-                                null
-                            }
-                        }
-
-                        // track subclasses of `obj` and their 1st layer of fields (3)
-                        fieldValue != null && fieldValue.javaClass.isInstance(obj) -> {
-                            // track the `owner` of `fieldValue`, because otherwise we will not be able to
-                            // restore the initial value of `fieldValue` object
-                            trackedObjects.putIfAbsent(owner, mutableListOf<MemoryNode>())
-                            processField(owner, field, fieldValue)
-                            fieldValue
-                        }
-
-                        else -> null
-                    }
-                }
-            )
-        }
+            .forEach { trackHierarchy(it!!) }
     }
 
     fun restoreValues() {
@@ -212,6 +163,8 @@ class SnapshotTracker {
             onField = { owner, field, fieldValue ->
                 // optimization to track only `value` field of java atomic classes
                 if (isAtomicJava(owner) && field.name != "value") null
+                // do not traverse fields of var-handles
+                else if (owner.javaClass.typeName == "java.lang.invoke.VarHandle") null
                 else {
                     trackSingleField(owner, owner.javaClass, field, fieldValue)
                     fieldValue
@@ -224,8 +177,8 @@ class SnapshotTracker {
         if (obj == null) return false
         return (
             // TODO: in further development of snapshot restoring feature this check should be removed
-            //  (and only check for java atomic classes inserted), see https://github.com/JetBrains/lincheck/pull/418#issue-2595977113
-            //  right it is need for collections to be restored properly (because of missing support for `System.arrayCopy()` and other similar methods)
+            //  (and only check for java atomic classes should be inserted), see https://github.com/JetBrains/lincheck/pull/418#issue-2595977113
+            //  right now it is needed for collections to be restored properly (because of missing support for `System.arrayCopy()` and other similar methods)
             obj.javaClass.name.startsWith("java.util.")
         )
     }
