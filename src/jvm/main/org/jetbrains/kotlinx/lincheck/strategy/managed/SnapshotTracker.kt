@@ -49,7 +49,6 @@ class SnapshotTracker {
         class ArrayCellNode(descriptor: ArrayCellDescriptor, initialValue: Any?) : MemoryNode(descriptor, initialValue)
     }
 
-    @OptIn(ExperimentalStdlibApi::class)
     fun trackField(obj: Any?, className: String, fieldName: String) {
         if (obj != null && obj !in trackedObjects) return
 
@@ -70,7 +69,6 @@ class SnapshotTracker {
         }
     }
 
-    @OptIn(ExperimentalStdlibApi::class)
     fun trackArrayCell(array: Any, index: Int) {
         if (array !in trackedObjects) return
 
@@ -101,7 +99,6 @@ class SnapshotTracker {
             .forEach { restoreValues(it, visitedObjects) }
     }
 
-    @OptIn(ExperimentalStdlibApi::class)
     private fun trackSingleField(
         obj: Any?,
         clazz: Class<*>,
@@ -134,7 +131,6 @@ class SnapshotTracker {
         }
     }
 
-    @OptIn(ExperimentalStdlibApi::class)
     private fun trackSingleArrayCell(array: Any, index: Int, elementValue: Any?, callback: (() -> Unit)? = null) {
         val nodesList = trackedObjects[array]
 
@@ -152,7 +148,6 @@ class SnapshotTracker {
         }
     }
 
-    @OptIn(ExperimentalStdlibApi::class)
     private fun trackHierarchy(obj: Any) {
         traverseObjectGraph(
             obj,
@@ -183,7 +178,6 @@ class SnapshotTracker {
         )
     }
 
-    @OptIn(ExperimentalStdlibApi::class)
     private fun restoreValues(obj: Any, visitedObjects: MutableSet<Any>) {
         if (obj in visitedObjects) return
         visitedObjects.add(obj)

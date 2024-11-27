@@ -822,12 +822,6 @@ abstract class ManagedStrategy(
         loopDetector.afterRead(value)
     }
 
-    @OptIn(ExperimentalStdlibApi::class)
-    private fun prettyName(obj: Any?): String {
-        if (obj == null) return "null"
-        return "${obj.javaClass.name}@${System.identityHashCode(obj).toHexString()}"
-    }
-
     override fun beforeWriteField(obj: Any?, className: String, fieldName: String, value: Any?, codeLocation: Int,
                                   isStatic: Boolean, isFinal: Boolean): Boolean = runInIgnoredSection {
         objectTracker.registerObjectLink(fromObject = obj ?: StaticObject, toObject = value)
@@ -858,7 +852,6 @@ abstract class ManagedStrategy(
         return@runInIgnoredSection true
     }
 
-    @OptIn(ExperimentalStdlibApi::class)
     override fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int): Boolean = runInIgnoredSection {
         objectTracker.registerObjectLink(fromObject = array, toObject = value)
         if (!objectTracker.shouldTrackObjectAccess(array)) {
