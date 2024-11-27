@@ -54,6 +54,9 @@ internal class ObjectCreationTransformer(
      * Whenever we encounter a constructor call (i.e., `<init>`) we check for the counter
      * and inject the object creation tracking method if the counter is not null.
      *
+     * The solution with allocated objects counter is inspired by:
+     * https://github.com/google/allocation-instrumenter
+     *
      * TODO: keeping just a counter might be not reliable in some cases,
      *   perhaps we need more robust solution, checking for particular bytecode instructions sequence, e.g.:
      *   `NEW; DUP; INVOKESPECIAL <init>`
