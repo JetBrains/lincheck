@@ -12,23 +12,19 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import org.jetbrains.kotlinx.lincheck.scenario
+import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
-import org.junit.Assert
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater
-import org.junit.Test
 import kotlin.concurrent.thread
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
+import org.junit.Test
 
 class CustomThreadsRepresentationTest {
 
