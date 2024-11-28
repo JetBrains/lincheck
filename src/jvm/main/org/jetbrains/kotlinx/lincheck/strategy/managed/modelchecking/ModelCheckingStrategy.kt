@@ -204,8 +204,9 @@ internal class ModelCheckingStrategy(
      * | OBSTRUCTION_FREEDOM_VIOLATION  | 6    |
      */
     private fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Array<String> {
+        val nThreads = trace.trace.maxOf { it.iThread } + 1
         val results = failure.results
-        val nodesList = constructTraceGraph(failure, results, trace, collectExceptionsOrEmpty(failure))
+        val nodesList = constructTraceGraph(nThreads, failure, results, trace, collectExceptionsOrEmpty(failure))
         var sectionIndex = 0
         var node: TraceNode? = nodesList.firstOrNull()
         val representations = mutableListOf<String>()
