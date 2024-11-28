@@ -29,7 +29,8 @@ import org.junit.Test
 class CustomThreadsRepresentationTest {
 
     @Volatile
-    private var value: Int = 0
+    @JvmField
+    var value: Int = 0
 
     fun operation() {
         val block = {
