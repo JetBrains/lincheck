@@ -149,7 +149,7 @@ internal fun constructTraceGraph(
     }
     val actorRepresentations = createActorRepresentation(scenario, failure)
     // custom threads are handled separately
-    val nCustomThreads = nThreads - scenario.nThreads
+    val nCustomThreads = (nThreads - scenario.nThreads).coerceAtLeast(0)
     val customThreadActors = MutableList<ActorNode?>(nCustomThreads) { null }
     // call nodes for each method call
     val callNodes = mutableMapOf<Int, CallNode>()
