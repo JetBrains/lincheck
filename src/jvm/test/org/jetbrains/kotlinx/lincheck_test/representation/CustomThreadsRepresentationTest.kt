@@ -54,6 +54,7 @@ class CustomThreadsRepresentationTest {
         outputFileName = "custom_threads_trace.txt",
     )
 
+    @Suppress("DEPRECATION") // Unsafe
     companion object {
         val unsafe =
             UnsafeHolder.UNSAFE
