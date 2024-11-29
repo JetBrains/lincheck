@@ -46,10 +46,10 @@ class SnapshotTracker {
         class ArrayCellNode(val index: Int, initialValue: Any?) : MemoryNode(initialValue)
     }
 
-    fun trackField(obj: Any?, className: String, fieldName: String) {
+    fun trackField(obj: Any?, accessClass: Class<*>, fieldName: String) {
         if (obj != null && obj !in trackedObjects) return
 
-        val clazz = getDeclaringClass(obj, className, fieldName)
+        val clazz: Class<*> = getDeclaringClass(obj, accessClass, fieldName)
         val field = clazz.findField(fieldName)
         val readResult = readFieldSafely(obj, field)
 
@@ -182,7 +182,8 @@ class SnapshotTracker {
             // TODO: in further development of snapshot restoring feature this check should be removed
             //  (and only check for java atomic classes should be inserted), see https://github.com/JetBrains/lincheck/pull/418#issue-2595977113
             //  right now it is needed for collections to be restored properly (because of missing support for `System.arrayCopy()` and other similar methods)
-            obj.javaClass.name.startsWith("java.util.")
+            // obj.javaClass.name.startsWith("java.util.")
+            obj.javaClass.name.startsWith("java.util.concurrent.") && obj.javaClass.name.contains("Atomic")
         )
     }
 
@@ -237,8 +238,8 @@ class SnapshotTracker {
         )
     }
 
-    private fun getDeclaringClass(obj: Any?, className: String, fieldName: String): Class<*> {
-        return Class.forName(className).let {
+    private fun getDeclaringClass(obj: Any?, clazz: Class<*>, fieldName: String): Class<*> {
+        return clazz.let {
             if (obj != null) it
             else it.findField(fieldName).declaringClass
         }

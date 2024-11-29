@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicReferenceArray
 
 /**
  * Provides method call type to create a more convenient trace point
- * with a owner of this AtomicReference field and a name if it can be found.
+ * with an owner of this AtomicReference field and a name if it can be found.
  * Recursively scans the test object, trying to find the provided AtomicReference
  * instance as a field. If two or more fields contain this AtomicReference field, then we
  * fall back to the default behavior.

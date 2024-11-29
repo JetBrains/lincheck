@@ -1098,7 +1098,7 @@ abstract class ManagedStrategy(
      * or one this objects which contains it is already stored.
      */
     fun updateSnapshotOnFieldAccess(obj: Any?, className: String, fieldName: String) = runInIgnoredSection {
-        staticMemorySnapshot.trackField(obj, className, fieldName)
+        staticMemorySnapshot.trackField(obj, Class.forName(className), fieldName)
     }
 
     /**
@@ -1117,12 +1117,77 @@ abstract class ManagedStrategy(
     }
 
     /**
-     * Tracks all objects in [objs] energetically.
-     * Required as a trick to overcome issue with leaking this in constructors, see https://github.com/JetBrains/lincheck/issues/424.
+     * Tracks fields that are accessed via System.arraycopy, Unsafe API, VarHandle API, Java AFU API, and kotlinx.atomicfu.
      */
-    override fun updateSnapshotWithEnergeticTracking(objs: Array<Any?>) = runInIgnoredSection {
-        if (testCfg.restoreStaticMemory) {
-            staticMemorySnapshot.trackObjects(objs)
+    private fun processMethodEffectOnStaticSnapshot(
+        owner: Any?,
+        className: String,
+        methodName: String,
+        params: Array<Any?>
+    ) = runInIgnoredSection {
+        // TODO:
+        //  1. tests for functionality below
+        //  2. for methods from `Arrays` class (sort, parallelSort, legacyMergeSort,
+        //     mergeSort, swap, parallelPrefix, fill, setAll, parallelSetAll).
+        //  3. for methods from `Collections` class (copyOf, copyOfRange)
+        when {
+            // System.arraycopy
+            className == "java/lang/System" && methodName == "arraycopy" -> {
+                //println("System.arraycopy: $className::$methodName")
+                check(params[2] != null && params[2] is Array<*>)
+                val destArray = params[2] as Array<*>
+                val destPosStart = params[3] as Int
+                val length = params[4] as Int
+
+                for (i in 0..length - 1) {
+                    staticMemorySnapshot.trackArrayCell(destArray, destPosStart + i)
+                }
+            }
+            // Unsafe API
+            isUnsafe(owner) -> {
+                //println("Unsafe: $className::$methodName(${params.contentToString()})")
+                val methodType: UnsafeName = UnsafeNames.getMethodCallType(params)
+                when (methodType) {
+                    is UnsafeInstanceMethod -> {
+                        staticMemorySnapshot.trackField(methodType.owner, methodType.owner.javaClass, methodType.fieldName)
+                    }
+                    is UnsafeStaticMethod -> {
+                        staticMemorySnapshot.trackField(null, methodType.clazz, methodType.fieldName)
+                    }
+                    is UnsafeArrayMethod -> {
+                        staticMemorySnapshot.trackArrayCell(methodType.array, methodType.index)
+                    }
+                    else -> {}
+                }
+            }
+            // VarHandle API
+            isVarHandle(owner) -> {
+                //println("VarHandle: $className::$methodName(${params.contentToString()})")
+                val methodType: VarHandleMethodType = VarHandleNames.varHandleMethodType(owner, params)
+                when (methodType) {
+                    is InstanceVarHandleMethod -> {
+                        staticMemorySnapshot.trackField(methodType.owner, methodType.owner.javaClass, methodType.fieldName)
+                    }
+                    is StaticVarHandleMethod -> {
+                        staticMemorySnapshot.trackField(null, methodType.ownerClass, methodType.fieldName)
+                    }
+                    is ArrayVarHandleMethod -> {
+                        staticMemorySnapshot.trackArrayCell(methodType.array, methodType.index)
+                    }
+                    else -> {}
+                }
+            }
+            // Java AFU
+            isAtomicFieldUpdater(owner) -> {
+                //println("Java AFU: $className::$methodName(${params.contentToString()})")
+                val obj = params[0]
+                val afuDesc: AtomicFieldUpdaterDescriptor? = AtomicFieldUpdaterNames.getAtomicFieldUpdaterName(owner!!)
+                check(afuDesc != null) { "Cannot extract field name referenced by Java AFU object $owner" }
+
+                staticMemorySnapshot.trackField(obj, afuDesc.targetType, afuDesc.fieldName)
+            }
+            // TODO: kotlinx.atomicfu
+            // TODO: reflexivity
         }
     }
 
@@ -1144,6 +1209,10 @@ abstract class ManagedStrategy(
         methodId: Int,
         params: Array<Any?>
     ) {
+        // process method effect on the static memory snapshot
+        processMethodEffectOnStaticSnapshot(owner, className, methodName, params)
+
+        // process known method concurrency guarantee
         val guarantee = runInIgnoredSection {
             val iThread = threadScheduler.getCurrentThreadId()
             // re-throw abort error if the thread was aborted
@@ -1538,7 +1607,7 @@ abstract class ManagedStrategy(
         atomicUpdater: Any,
         parameters: Array<Any?>,
     ): MethodCallTracePoint {
-        getAtomicFieldUpdaterName(atomicUpdater)?.let { tracePoint.initializeOwnerName(it) }
+        getAtomicFieldUpdaterName(atomicUpdater)?.let { tracePoint.initializeOwnerName(it.fieldName) }
         tracePoint.initializeParameters(parameters.drop(1).map { adornedStringRepresentation(it) })
         return tracePoint
     }
