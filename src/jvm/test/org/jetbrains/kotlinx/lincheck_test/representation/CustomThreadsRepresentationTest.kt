@@ -20,6 +20,7 @@ import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
+import org.jetbrains.kotlinx.lincheck_test.util.isJdk8
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater
 import kotlin.concurrent.thread
 import kotlin.reflect.KClass
@@ -51,7 +52,7 @@ class CustomThreadsRepresentationTest {
         testClass = this::class,
         testOperation = this::operation,
         invocations = 1_000,
-        outputFileName = "custom_threads_trace.txt",
+        outputFileName = if (isJdk8) "custom_threads_trace_jdk8.txt" else "custom_threads_trace.txt",
     )
 
     @Suppress("DEPRECATION") // Unsafe
