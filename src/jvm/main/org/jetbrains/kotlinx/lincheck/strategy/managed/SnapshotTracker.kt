@@ -179,10 +179,6 @@ class SnapshotTracker {
     private fun shouldTrackEagerly(obj: Any?): Boolean {
         if (obj == null) return false
         return (
-            // TODO: in further development of snapshot restoring feature this check should be removed
-            //  (and only check for java atomic classes should be inserted), see https://github.com/JetBrains/lincheck/pull/418#issue-2595977113
-            //  right now it is needed for collections to be restored properly (because of missing support for `System.arrayCopy()` and other similar methods)
-            // obj.javaClass.name.startsWith("java.util.")
             obj.javaClass.name.startsWith("java.util.concurrent.") && obj.javaClass.name.contains("Atomic")
         )
     }
