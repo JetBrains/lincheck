@@ -31,6 +31,8 @@ public interface EventTracker {
 
     void beforeNewObjectCreation(String className);
     void afterNewObjectCreation(Object obj);
+    long getNextObjectId();
+    void advanceCurrentObjectIdWithKnownOldObjectId(long oldId);
 
     boolean beforeReadField(Object obj, String className, String fieldName, int codeLocation,
                             boolean isStatic, boolean isFinal);

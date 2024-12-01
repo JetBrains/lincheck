@@ -53,6 +53,8 @@ internal class ModelCheckingStrategy(
     // The interleaving that will be studied on the next invocation.
     private lateinit var currentInterleaving: Interleaving
 
+    // Tracker of objects' identity hash codes.
+    override val identityHashCodeTracker: ObjectInitialHashCodes = ObjectInitialHashCodes()
     // Tracker of the monitors' operations.
     override val monitorTracker: MonitorTracker = ModelCheckingMonitorTracker(nThreads)
     // Tracker of the thread parking.
@@ -61,6 +63,7 @@ internal class ModelCheckingStrategy(
     override fun nextInvocation(): Boolean {
         currentInterleaving = root.nextInterleaving()
             ?: return false
+        identityHashCodeTracker.resetObjectIds()
         return true
     }
 
@@ -133,6 +136,7 @@ internal class ModelCheckingStrategy(
 
     private fun doReplay(): InvocationResult {
         cleanObjectNumeration()
+        identityHashCodeTracker.resetObjectIds()
         currentInterleaving = currentInterleaving.copy()
         resetEventIdProvider()
         return runInvocation()

@@ -305,6 +305,24 @@ public class Injections {
     }
 
     /**
+     * Retrieves the next object id, used for identity hash code substitution, and then advances it by one.
+     */
+    public static long getNextObjectId() {
+        return getEventTracker().getNextObjectId();
+    }
+
+    /**
+     * Ensures that for the same old id, previously received with {@code getNextObjectId},
+     * the counter after calling the function persists.
+     * <p> 
+     * If for given {@code oldId} there is no saved {@code newId}, the function saves the current value.
+     * If for given {@code oldId} there is a saved {@code newId}, the function sets the counter to the {@code newId}.
+     */
+    public static void advanceCurrentObjectIdWithKnownOldObjectId(long oldId) {
+        getEventTracker().advanceCurrentObjectIdWithKnownOldObjectId(oldId);
+    }
+
+    /**
      * Called from the instrumented code to replace [java.lang.Object.hashCode] method call with some
      * deterministic value.
      */
