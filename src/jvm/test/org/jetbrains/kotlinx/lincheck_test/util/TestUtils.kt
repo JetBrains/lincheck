@@ -89,6 +89,10 @@ fun checkTraceHasNoLincheckEvents(trace: String) {
     check(testPackageOccurrences == lincheckPackageOccurrences) { "Internal Lincheck events were found in the trace" }
 }
 
+fun checkFailureIsNotLincheckInternalBug(failure: LincheckFailure) {
+    check("You've caught a bug in Lincheck." !in failure.toString()) { "Internal Lincheck bug was detected" }
+}
+
 /**
  * Indicates whether the current Java Development Kit (JDK) version is JDK 8.
  *
