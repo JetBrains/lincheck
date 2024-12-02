@@ -13,10 +13,10 @@ package org.jetbrains.kotlinx.lincheck_test.strategy.modelchecking.snapshot
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.getArrayElementOffset
-import org.jetbrains.kotlinx.lincheck.getFieldOffset
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedOptions
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
+import org.jetbrains.kotlinx.lincheck.util.getArrayElementOffsetViaUnsafe
+import org.jetbrains.kotlinx.lincheck.util.getFieldOffsetViaUnsafe
 import kotlin.random.Random
 import kotlin.reflect.jvm.javaField
 
@@ -35,10 +35,10 @@ class UnsafeModificationsSnapshotTest : AbstractSnapshotTest() {
 
     private val U = UnsafeHolder.UNSAFE
     private val valueBase = U.staticFieldBase(UnsafeModificationsSnapshotTest.Companion::value.javaField!!)
-    private val valueOffset = getFieldOffset(UnsafeModificationsSnapshotTest.Companion::value.javaField!!)
+    private val valueOffset = getFieldOffsetViaUnsafe(UnsafeModificationsSnapshotTest.Companion::value.javaField!!)
 
     private val refBase = U.staticFieldBase(UnsafeModificationsSnapshotTest.Companion::ref.javaField!!)
-    private val refOffset = getFieldOffset(UnsafeModificationsSnapshotTest.Companion::ref.javaField!!)
+    private val refOffset = getFieldOffsetViaUnsafe(UnsafeModificationsSnapshotTest.Companion::ref.javaField!!)
 
     class UnsafeModificationsVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : SnapshotVerifier() {
         override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
@@ -71,7 +71,7 @@ class UnsafeModificationsSnapshotTest : AbstractSnapshotTest() {
     @Operation
     fun putIntArray() {
         val index = Random.nextInt(0, intArray.size)
-        U.putInt(intArray, getArrayElementOffset(intArray, index), Random.nextInt())
+        U.putInt(intArray, getArrayElementOffsetViaUnsafe(intArray, index), Random.nextInt())
     }
 
     @Operation
