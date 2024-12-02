@@ -54,10 +54,11 @@ class SnapshotTracker {
 
         if (readResult.isSuccess) {
             val fieldValue = readResult.getOrNull()
-            trackSingleField(obj, clazz, field, fieldValue) {
-                if (shouldTrackEagerly(fieldValue)) {
-                    trackReachableObjectSubgraph(fieldValue!!)
-                }
+            if (
+                trackSingleField(obj, clazz, field, fieldValue) &&
+                shouldTrackEagerly(fieldValue)
+            ) {
+                trackReachableObjectSubgraph(fieldValue!!)
             }
         }
     }
@@ -69,10 +70,11 @@ class SnapshotTracker {
 
         if (readResult.isSuccess) {
             val elementValue = readResult.getOrNull()
-            trackSingleArrayCell(array, index, elementValue) {
-                if (shouldTrackEagerly(elementValue)) {
-                    trackReachableObjectSubgraph(elementValue!!)
-                }
+            if (
+                trackSingleArrayCell(array, index, elementValue) &&
+                shouldTrackEagerly(elementValue)
+            ) {
+                trackReachableObjectSubgraph(elementValue!!)
             }
         }
     }
@@ -92,13 +94,16 @@ class SnapshotTracker {
             .forEach { restoreValues(it, visitedObjects) }
     }
 
+    /**
+     * @return `true` if the [fieldValue] is a trackable object, and it is added
+     * as a parent object for its own fields for further lazy tracking.
+     */
     private fun trackSingleField(
         obj: Any?,
         clazz: Class<*>,
         field: Field,
-        fieldValue: Any?,
-        callback: (() -> Unit)? = null
-    ) {
+        fieldValue: Any?
+    ): Boolean {
         val nodesList =
             if (obj != null) trackedObjects[obj]
             else trackedObjects.getOrPut(clazz) { mutableListOf<MemoryNode>() }
@@ -108,32 +113,46 @@ class SnapshotTracker {
             nodesList
                 .filterIsInstance<FieldNode>()
                 .any { it.field.name == field.name } // field is already tracked
-        ) return
+        ) return false
 
         val childNode = createFieldNode(obj, field, fieldValue)
 
         nodesList.add(childNode)
-        if (isTrackableObject(childNode.initialValue)) {
+        val isFieldValueTrackable = isTrackableObject(childNode.initialValue)
+
+        if (isFieldValueTrackable) {
             trackedObjects.putIfAbsent(childNode.initialValue, mutableListOf<MemoryNode>())
-            callback?.invoke()
         }
+
+        return isFieldValueTrackable
     }
 
-    private fun trackSingleArrayCell(array: Any, index: Int, elementValue: Any?, callback: (() -> Unit)? = null) {
+    /**
+     * @return `true` if the [elementValue] is a trackable object, and it is added
+     * as a parent object for its own fields for further lazy tracking.
+     */
+    private fun trackSingleArrayCell(
+        array: Any,
+        index: Int,
+        elementValue: Any?
+    ): Boolean {
         val nodesList = trackedObjects[array]
 
         if (
             nodesList == null || // array is not tracked
             nodesList.any { it is ArrayCellNode && it.index == index } // this array cell is already tracked
-        ) return
+        ) return false
 
         val childNode = createArrayCellNode(index, elementValue)
 
         nodesList.add(childNode)
-        if (isTrackableObject(childNode.initialValue)) {
+        val isElementValueTrackable = isTrackableObject(childNode.initialValue)
+
+        if (isElementValueTrackable) {
             trackedObjects.putIfAbsent(childNode.initialValue, mutableListOf<MemoryNode>())
-            callback?.invoke()
         }
+
+        return isElementValueTrackable
     }
 
     private fun trackReachableObjectSubgraph(obj: Any) {
