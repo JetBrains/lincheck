@@ -20,6 +20,7 @@ import java.lang.reflect.Field
 import java.lang.reflect.Modifier
 import java.util.Collections
 import java.util.IdentityHashMap
+import java.util.Stack
 import java.util.concurrent.atomic.AtomicIntegerArray
 import java.util.concurrent.atomic.AtomicLongArray
 import java.util.concurrent.atomic.AtomicReferenceArray
@@ -185,37 +186,46 @@ class SnapshotTracker {
         )
     }
 
-    private fun restoreValues(obj: Any, visitedObjects: MutableSet<Any>) {
-        if (obj in visitedObjects) return
-        visitedObjects.add(obj)
+    private fun restoreValues(root: Any, visitedObjects: MutableSet<Any>) {
+        val stackOfObjects: Stack<Any> = Stack()
+        stackOfObjects.push(root)
 
-        trackedObjects[obj]!!
-            .forEach { node ->
-                if (node is ArrayCellNode) {
-                    val index = node.index
-                    val initialValue = node.initialValue
+        while (stackOfObjects.isNotEmpty()) {
+            val obj = stackOfObjects.pop()
+            if (obj in visitedObjects) continue
+            visitedObjects.add(obj)
 
-                    when (obj) {
-                        // No need to add support for writing to atomicfu array elements,
-                        // because atomicfu arrays are compiled to atomic java arrays
-                        is AtomicReferenceArray<*> -> @Suppress("UNCHECKED_CAST") (obj as AtomicReferenceArray<Any?>).set(index, initialValue)
-                        is AtomicIntegerArray -> obj.set(index, initialValue as Int)
-                        is AtomicLongArray -> obj.set(index, initialValue as Long)
-                        else -> writeArrayElementViaUnsafe(obj, index, initialValue)
+            trackedObjects[obj]!!
+                .forEach { node ->
+                    if (node is ArrayCellNode) {
+                        val index = node.index
+                        val initialValue = node.initialValue
+
+                        when (obj) {
+                            // No need to add support for writing to atomicfu array elements,
+                            // because atomicfu arrays are compiled to atomic java arrays
+                            is AtomicReferenceArray<*> -> @Suppress("UNCHECKED_CAST") (obj as AtomicReferenceArray<Any?>).set(
+                                index,
+                                initialValue
+                            )
+
+                            is AtomicIntegerArray -> obj.set(index, initialValue as Int)
+                            is AtomicLongArray -> obj.set(index, initialValue as Long)
+                            else -> writeArrayElementViaUnsafe(obj, index, initialValue)
+                        }
+                    } else if (!Modifier.isFinal((node as FieldNode).field.modifiers)) {
+                        writeFieldViaUnsafe(
+                            if (node is StaticFieldNode) null else obj,
+                            node.field,
+                            node.initialValue
+                        )
+                    }
+
+                    if (isTrackableObject(node.initialValue)) {
+                        stackOfObjects.push(node.initialValue!!)
                     }
                 }
-                else if (!Modifier.isFinal((node as FieldNode).field.modifiers)) {
-                    writeFieldViaUnsafe(
-                        if (node is StaticFieldNode) null else obj,
-                        node.field,
-                        node.initialValue
-                    )
-                }
-
-                if (isTrackableObject(node.initialValue)) {
-                    restoreValues(node.initialValue!!, visitedObjects)
-                }
-            }
+        }
     }
 
     private fun isTrackableObject(value: Any?): Boolean {
