@@ -21,6 +21,7 @@ import kotlin.random.Random
 import kotlin.reflect.jvm.javaField
 
 
+@Suppress("DEPRECATION") // Unsafe
 class UnsafeModificationsSnapshotTest : AbstractSnapshotTest() {
     private class Wrapper(var x: Int)
     companion object {
