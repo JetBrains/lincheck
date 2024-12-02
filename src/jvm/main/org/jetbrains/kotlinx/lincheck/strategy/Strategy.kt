@@ -108,19 +108,29 @@ fun Strategy.runIteration(invocations: Int, verifier: Verifier): LincheckFailure
         if (!nextInvocation())
             break
         val result = runInvocation()
+
         try {
             failure = verify(result, verifier)
+        } finally {
+            // verifier calls `@Operation`s of the class under test which can
+            // modify the static memory; thus, we need to restore initial values
+            restoreStaticMemorySnapshot()
         }
-        finally {
-            if (this is ManagedStrategy) {
-                restoreStaticMemorySnapshot()
-            }
-        }
+
         if (failure != null)
             break
     }
 
     return failure
+}
+
+/**
+ * Performs static snapshot restoring if the caller is a [ManagedStrategy].
+ */
+private fun Strategy.restoreStaticMemorySnapshot() {
+    if (this is ManagedStrategy) {
+        restoreStaticMemorySnapshot()
+    }
 }
 
 /**
