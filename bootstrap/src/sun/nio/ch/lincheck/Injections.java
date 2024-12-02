@@ -348,8 +348,9 @@ public class Injections {
     }
 
     @SuppressWarnings("unused")
+    // IDEA plugin installs breakpoint into this method
     public static void beforeEvent(int eventId) {
-        // IDEA plugin installs breakpoint into this method
+        getEventTracker().beforeEvent(eventId);
     }
 
     public static int getNextEventId() {

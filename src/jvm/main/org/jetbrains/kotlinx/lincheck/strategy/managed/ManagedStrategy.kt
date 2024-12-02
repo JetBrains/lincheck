@@ -1275,8 +1275,8 @@ abstract class ManagedStrategy(
         return constructor(iThread, actorId, callStackTrace.getOrNull(iThread)?.toList() ?: emptyList())
     }
 
-    override fun beforeEvent(eventId: Int, type: String) {
-        ideaPluginBeforeEvent(eventId, type)
+    override fun beforeEvent(eventId: Int) {
+        ideaPluginBeforeEvent(eventId)
     }
 
     /**
