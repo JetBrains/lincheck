@@ -615,8 +615,14 @@ private fun Throwable.isInternalLincheckBug(): Boolean {
     // we expect every Lincheck test thread to start from the Lincheck runner routines,
     // so we filter out stack trace elements of these runner routines
     val testStackTrace = stackTrace.takeWhile { LINCHECK_RUNNER_PACKAGE_NAME !in it.className }
-    // if the stack trace contains Lincheck functions, we classify it as a Lincheck bug
-    return testStackTrace.any { LINCHECK_PACKAGE_NAME in it.className }
+    // collect Lincheck functions from the stack trace
+    val lincheckStackFrames = testStackTrace.filter { LINCHECK_PACKAGE_NAME in it.className }
+    // special handling of `cancelByLincheck` primitive
+    if (lincheckStackFrames.size == 1 && "cancelByLincheck" in lincheckStackFrames[0].toString()) {
+        return false
+    }
+    // otherwise, if the stack trace contains any Lincheck functions, we classify it as a Lincheck bug
+    return lincheckStackFrames.isNotEmpty()
 }
 
 private fun StringBuilder.appendUnexpectedExceptionFailure(
