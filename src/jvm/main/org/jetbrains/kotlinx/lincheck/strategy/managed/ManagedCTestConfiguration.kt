@@ -28,7 +28,6 @@ abstract class ManagedCTestConfiguration(
     val checkObstructionFreedom: Boolean,
     val hangingDetectionThreshold: Int,
     val invocationsPerIteration: Int,
-    val restoreStaticMemory: Boolean,
     val guarantees: List<ManagedStrategyGuarantee>,
     minimizeFailedScenario: Boolean,
     sequentialSpecification: Class<*>,

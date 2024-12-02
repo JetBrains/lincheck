@@ -112,11 +112,6 @@ public @interface ModelCheckingCTest {
     boolean requireStateEquivalenceImplCheck() default false;
 
     /**
-     * Should the managed strategy use the static memory tracking and restoring algorithm.
-     */
-    boolean restoreStaticMemory() default DEFAULT_RESTORE_STATIC_MEMORY;
-
-    /**
      * If this feature is enabled and an invalid interleaving has been found,
      * *lincheck* tries to minimize the corresponding scenario in order to
      * construct a smaller one so that the test fails on it as well.
