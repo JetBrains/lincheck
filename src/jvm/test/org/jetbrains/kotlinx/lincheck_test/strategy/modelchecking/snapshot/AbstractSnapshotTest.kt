@@ -40,7 +40,6 @@ abstract class AbstractSnapshotTest {
         .actorsBefore(0)
         .actorsAfter(0)
         .actorsPerThread(2)
-        .restoreStaticMemory(true)
         .apply { customize() }
         .check(this::class)
 }

@@ -260,7 +260,7 @@ internal fun Class<*>.findField(fieldName: String): Field {
 }
 
 /**
- * Reads a [field] of the owner object [obj] via Unsafe, and falls back onto the reflexivity in case of failure.
+ * Reads a [field] of the owner object [obj] via Unsafe,  in case of failure fallbacks into reading the field via reflection.
  */
 internal fun readFieldSafely(obj: Any?, field: Field): kotlin.Result<Any?> {
     // we wrap an unsafe read into `runCatching` to handle `UnsupportedOperationException`,

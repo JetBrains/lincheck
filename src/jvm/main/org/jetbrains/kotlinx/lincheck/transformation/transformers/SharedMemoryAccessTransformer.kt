@@ -36,7 +36,8 @@ internal class SharedMemoryAccessTransformer(
         if (
             isCoroutineInternalClass(owner) ||
             isCoroutineStateMachineClass(owner) ||
-            // when initializing our own fields in constructor, we do not want to track that
+            // when initializing our own fields in constructor, we do not want to track that,
+            // otherwise `VerifyError` will be thrown, see https://github.com/JetBrains/lincheck/issues/424
             (methodName == "<init>" && className == owner)
         ) {
             visitFieldInsn(opcode, owner, fieldName, desc)

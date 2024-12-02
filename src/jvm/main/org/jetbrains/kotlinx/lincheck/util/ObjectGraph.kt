@@ -16,6 +16,9 @@ import java.lang.reflect.*
 import java.util.*
 
 
+private typealias FieldCallback = (obj: Any, field: Field, value: Any?) -> Any?
+private typealias ArrayElementCallback = (array: Any, index: Int, element: Any?) -> Any?
+
 /**
  * Traverses a subgraph of objects reachable from a given root object in BFS order.
  *
@@ -44,8 +47,8 @@ import java.util.*
 internal fun traverseObjectGraph(
     root: Any,
     traverseStaticFields: Boolean = false,
-    onField: ((obj: Any, field: Field, value: Any?) -> Any?)?,
-    onArrayElement: ((array: Any, index: Int, element: Any?) -> Any?)?,
+    onField: FieldCallback?,
+    onArrayElement: ArrayElementCallback?,
 ) {
     val queue = ArrayDeque<Any>()
     val visitedObjects = Collections.newSetFromMap<Any>(IdentityHashMap())

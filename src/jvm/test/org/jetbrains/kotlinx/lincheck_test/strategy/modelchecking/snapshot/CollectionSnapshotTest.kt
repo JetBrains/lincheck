@@ -32,7 +32,6 @@ abstract class CollectionSnapshotTest : AbstractSnapshotTest() {
         .invocationsPerIteration(1)
         .threads(1)
         .actorsPerThread(10)
-        .restoreStaticMemory(true)
         .apply { customize() }
         .check(this::class)
 
