@@ -10,6 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy.modelchecking.snapshot
 
+import kotlinx.atomicfu.AtomicIntArray
+import kotlinx.atomicfu.atomic
+import kotlinx.atomicfu.atomicArrayOfNulls
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
@@ -22,15 +25,15 @@ class AtomicFUSnapshotTest : AbstractSnapshotTest() {
 
         // TODO: atomicfu classes like AtomicInt, AtomicRef are compiled to pure field + java atomic field updater.
         //  Because of this, methods, such as `AtomicInt::getAndIncrement()`, will not be tracked as modification of `value` field.
-        //  Tracking of atomicfu classes should be implemented energetically, the same way as for java atomics
+        //  Tracking of atomicfu classes should be implemented eagerly, the same way as for java atomics
         //  in order to handle modification that do not reference `value` field directly.
-        //  If energetic traversal does not help/not possible to reach `value` field, then such indirect methods should be handled separately,
+        //  If eager traversal does not help/not possible to reach `value` field, then such indirect methods should be handled separately,
         //  the same way as reflexivity, var-handles, and unsafe by tracking the creation of java afu and retrieving the name of the associated field.
-        private val atomicFUInt = kotlinx.atomicfu.atomic(1)
-        private val atomicFURef = kotlinx.atomicfu.atomic<Wrapper>(Wrapper(1))
+        private val atomicFUInt = atomic(1)
+        private val atomicFURef = atomic<Wrapper>(Wrapper(1))
 
-        private val atomicFUIntArray = kotlinx.atomicfu.AtomicIntArray(3)
-        private val atomicFURefArray = kotlinx.atomicfu.atomicArrayOfNulls<Wrapper>(3)
+        private val atomicFUIntArray = AtomicIntArray(3)
+        private val atomicFURefArray = atomicArrayOfNulls<Wrapper>(3)
 
         init {
             for (i in 0..atomicFUIntArray.size - 1) {

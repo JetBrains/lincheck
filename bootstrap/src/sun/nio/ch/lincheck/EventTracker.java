@@ -32,7 +32,7 @@ public interface EventTracker {
     void beforeNewObjectCreation(String className);
     void afterNewObjectCreation(Object obj);
 
-    void updateSnapshotWithEnergeticTracking(Object[] objs);
+    void updateSnapshotWithEagerTracking(Object[] objs);
     boolean beforeReadField(Object obj, String className, String fieldName, int codeLocation,
                             boolean isStatic, boolean isFinal);
     boolean beforeReadArrayElement(Object array, int index, int codeLocation);

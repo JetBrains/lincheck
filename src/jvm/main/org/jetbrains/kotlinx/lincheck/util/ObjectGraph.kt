@@ -165,12 +165,7 @@ internal inline fun traverseObjectFields(
 ) {
     obj.javaClass.allDeclaredFieldWithSuperclasses.forEach { field ->
         if (!traverseStaticFields && Modifier.isStatic(field.modifiers)) return@forEach
-        // we wrap an unsafe read into `runCatching` to handle `UnsupportedOperationException`,
-        // which can be thrown, for instance, when attempting to read
-        // a field of a hidden or record class (starting from Java 15);
-        // in this case we fall back to read via reflection
-        val result = runCatching { readFieldViaUnsafe(obj, field) }
-            .recoverCatching { field.apply { isAccessible = true }.get(obj) }
+        val result = readFieldSafely(obj, field)
         // do not pass non-readable fields
         if (result.isSuccess) {
             val fieldValue = result.getOrNull()

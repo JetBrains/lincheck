@@ -945,10 +945,10 @@ abstract class ManagedStrategy(
     }
 
     /**
-     * Tracks all objects in [objs] energetically.
+     * Tracks all objects in [objs] eagerly.
      * Required as a trick to overcome issue with leaking this in constructors, see https://github.com/JetBrains/lincheck/issues/424.
      */
-    override fun updateSnapshotWithEnergeticTracking(objs: Array<Any?>) = runInIgnoredSection {
+    override fun updateSnapshotWithEagerTracking(objs: Array<Any?>) = runInIgnoredSection {
         staticMemorySnapshot.trackObjects(objs)
     }
 

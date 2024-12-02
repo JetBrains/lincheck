@@ -12,8 +12,10 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.findField
 import org.jetbrains.kotlinx.lincheck.isPrimitiveWrapper
+import org.jetbrains.kotlinx.lincheck.readFieldSafely
 import org.jetbrains.kotlinx.lincheck.strategy.managed.SnapshotTracker.MemoryNode.*
 import org.jetbrains.kotlinx.lincheck.util.*
+import java.lang.Class
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
 import java.util.Collections
@@ -46,18 +48,15 @@ class SnapshotTracker {
     fun trackField(obj: Any?, className: String, fieldName: String) {
         if (obj != null && obj !in trackedObjects) return
 
-        val clazz: Class<*> = Class.forName(className).let {
-            if (obj != null) it
-            else it.findField(fieldName).declaringClass
-        }
+        val clazz = getDeclaringClass(obj, className, fieldName)
         val field = clazz.findField(fieldName)
-        val readResult = runCatching { readFieldViaUnsafe(obj, field) }
+        val readResult = readFieldSafely(obj, field)
 
         if (readResult.isSuccess) {
             val fieldValue = readResult.getOrNull()
             trackSingleField(obj, clazz, field, fieldValue) {
-                if (shouldTrackEnergetically(fieldValue)) {
-                    trackHierarchy(fieldValue!!)
+                if (shouldTrackEagerly(fieldValue)) {
+                    trackReachableObjectSubgraph(fieldValue!!)
                 }
             }
         }
@@ -71,8 +70,8 @@ class SnapshotTracker {
         if (readResult.isSuccess) {
             val elementValue = readResult.getOrNull()
             trackSingleArrayCell(array, index, elementValue) {
-                if (shouldTrackEnergetically(elementValue)) {
-                    trackHierarchy(elementValue!!)
+                if (shouldTrackEagerly(elementValue)) {
+                    trackReachableObjectSubgraph(elementValue!!)
                 }
             }
         }
@@ -83,7 +82,7 @@ class SnapshotTracker {
         // see https://github.com/JetBrains/lincheck/pull/418/commits/0d708b84dd2bfd5dbfa961549dda128d91dc3a5b#diff-a684b1d7deeda94bbf907418b743ae2c0ec0a129760d3b87d00cdf5adfab56c4R146-R199
         objs
             .filter { it != null && it in trackedObjects }
-            .forEach { trackHierarchy(it!!) }
+            .forEach { trackReachableObjectSubgraph(it!!) }
     }
 
     fun restoreValues() {
@@ -137,7 +136,7 @@ class SnapshotTracker {
         }
     }
 
-    private fun trackHierarchy(obj: Any) {
+    private fun trackReachableObjectSubgraph(obj: Any) {
         traverseObjectGraph(
             obj,
             onArrayElement = { array, index, elementValue ->
@@ -157,7 +156,7 @@ class SnapshotTracker {
         )
     }
 
-    private fun shouldTrackEnergetically(obj: Any?): Boolean {
+    private fun shouldTrackEagerly(obj: Any?): Boolean {
         if (obj == null) return false
         return (
             // TODO: in further development of snapshot restoring feature this check should be removed
@@ -207,6 +206,13 @@ class SnapshotTracker {
             !value.javaClass.isEnum &&
             !value.isPrimitiveWrapper
         )
+    }
+
+    private fun getDeclaringClass(obj: Any?, className: String, fieldName: String): Class<*> {
+        return Class.forName(className).let {
+            if (obj != null) it
+            else it.findField(fieldName).declaringClass
+        }
     }
 
     private fun createFieldNode(obj: Any?, field: Field, value: Any?): MemoryNode {

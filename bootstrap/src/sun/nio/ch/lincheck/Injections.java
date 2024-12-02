@@ -297,8 +297,8 @@ public class Injections {
     /**
      * Called from instrumented code on constructor invocation, where passed objects are subtypes of the constructor class type.
      */
-    public static void updateSnapshotWithEnergeticTracking(Object[] objs) {
-        getEventTracker().updateSnapshotWithEnergeticTracking(objs);
+    public static void updateSnapshotWithEagerTracking(Object[] objs) {
+        getEventTracker().updateSnapshotWithEagerTracking(objs);
     }
 
     /**

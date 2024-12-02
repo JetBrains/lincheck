@@ -13,9 +13,7 @@ import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer
-import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
-import org.jetbrains.kotlinx.lincheck.util.isAtomicArray
-import org.jetbrains.kotlinx.lincheck.util.isAtomicFUArray
+import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import sun.nio.ch.lincheck.*
 import java.io.PrintWriter
@@ -24,9 +22,6 @@ import java.lang.ref.*
 import java.lang.reflect.*
 import java.lang.reflect.Method
 import java.util.*
-import java.util.concurrent.atomic.AtomicIntegerArray
-import java.util.concurrent.atomic.AtomicLongArray
-import java.util.concurrent.atomic.AtomicReferenceArray
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
 
@@ -239,7 +234,7 @@ internal val Class<*>.allDeclaredFieldWithSuperclasses get(): List<Field> {
  * @param fieldName the name of the field to find.
  * @return the [java.lang.reflect.Field] object if found, or `null` if not found.
  */
-fun Class<*>.findField(fieldName: String): Field {
+internal fun Class<*>.findField(fieldName: String): Field {
     // Search in the class hierarchy
     var clazz: Class<*>? = this
     while (clazz != null) {
@@ -262,6 +257,18 @@ fun Class<*>.findField(fieldName: String): Field {
     }
 
     throw NoSuchFieldException("Class '${this.name}' does not have field '$fieldName'")
+}
+
+/**
+ * Reads a [field] of the owner object [obj] via Unsafe, and falls back onto the reflexivity in case of failure.
+ */
+internal fun readFieldSafely(obj: Any?, field: Field): kotlin.Result<Any?> {
+    // we wrap an unsafe read into `runCatching` to handle `UnsupportedOperationException`,
+    // which can be thrown, for instance, when attempting to read
+    // a field of a hidden or record class (starting from Java 15);
+    // in this case we fall back to read via reflection
+    return runCatching { readFieldViaUnsafe(obj, field) }
+        .recoverCatching { field.apply { isAccessible = true }.get(obj) }
 }
 
 /**

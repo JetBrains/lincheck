@@ -12,7 +12,6 @@ package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.objectweb.asm.Opcodes.*
-import org.objectweb.asm.Type
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.GeneratorAdapter
 import sun.nio.ch.lincheck.Injections
@@ -29,7 +28,7 @@ internal class ConstructorArgumentsSnapshotTrackerTransformer(
     /**
      * Searches for invocations of constructors `className::<init>(args)` and inserts bytecode
      * that will extract all objects from `args` which types are subtypes of the class `className`.
-     * Snapshot tracker then tracks the extracted objects energetically.
+     * Snapshot tracker then tracks the extracted objects eagerly.
      *
      * This is a hack solution to the problem of impossibility of identifying whether
      * some object on stack in the constructor is a `this` reference or not.
@@ -69,23 +68,11 @@ internal class ConstructorArgumentsSnapshotTrackerTransformer(
                 code = {
                     // STACK: args
                     val arguments = storeArguments(desc)
-                    val matchedLocals = arguments.filterIndexed { index, _ -> matchedArguments.contains(index) }
+                    val matchedLocals = arguments.filterIndexed { index, _ -> matchedArguments.contains(index) }.toIntArray()
                     // STACK: <empty>
-                    push(matchedLocals.size)
-                    // STACK: length
-                    visitTypeInsn(ANEWARRAY, "java/lang/Object")
+                    pushArray(matchedLocals)
                     // STACK: array
-                    matchedLocals.forEachIndexed { index, local ->
-                        // STACK: array
-                        visitInsn(DUP)
-                        push(index)
-                        loadLocal(local)
-                        // STACK: array, array, index, obj
-                        visitInsn(AASTORE)
-                        // STACK: array
-                    }
-                    // STACK: array
-                    invokeStatic(Injections::updateSnapshotWithEnergeticTracking)
+                    invokeStatic(Injections::updateSnapshotWithEagerTracking)
                     // STACK: <empty>
                     loadLocals(arguments)
                     // STACK: args
