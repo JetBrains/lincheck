@@ -56,7 +56,6 @@ public interface EventTracker {
     // Methods required for the plugin integration
 
     boolean shouldInvokeBeforeEvent();
-    void beforeEvent(int eventId, String type);
     int getEventId();
     void setLastMethodCallEventId();
 }

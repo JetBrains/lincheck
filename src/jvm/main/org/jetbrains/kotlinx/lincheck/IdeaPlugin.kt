@@ -75,10 +75,9 @@ fun shouldReplayInterleaving(): Boolean {
  * That's why this method **must** be called from a user-code, not from a nested function.
  *
  * @param eventId id of this trace point. Consistent with `trace`, provided in [testFailed] method.
- * @param type type of this event, just for debugging.
  */
 @Suppress("UNUSED_PARAMETER")
-fun beforeEvent(eventId: Int, type: String) {
+fun beforeEvent(eventId: Int) {
     val strategy = (Thread.currentThread() as? TestThread)?.eventTracker ?: return
     visualize(strategy)
 }
