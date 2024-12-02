@@ -11,9 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.findField
-import org.jetbrains.kotlinx.lincheck.getFieldOffset
 import org.jetbrains.kotlinx.lincheck.isPrimitiveWrapper
-import org.jetbrains.kotlinx.lincheck.strategy.managed.SnapshotTracker.Descriptor.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.SnapshotTracker.MemoryNode.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import java.lang.reflect.Field
@@ -35,18 +33,14 @@ import java.util.concurrent.atomic.AtomicReferenceArray
 class SnapshotTracker {
     private val trackedObjects = IdentityHashMap<Any, MutableList<MemoryNode>>()
 
-    private sealed class Descriptor {
-        class FieldDescriptor(val field: Field, val offset: Long) : Descriptor()
-        class ArrayCellDescriptor(val index: Int) : Descriptor()
-    }
-
     private sealed class MemoryNode(
-        val descriptor: Descriptor,
         val initialValue: Any?
     ) {
-        class RegularFieldNode(descriptor: FieldDescriptor, initialValue: Any?) : MemoryNode(descriptor, initialValue)
-        class StaticFieldNode(descriptor: FieldDescriptor, initialValue: Any?) : MemoryNode(descriptor, initialValue)
-        class ArrayCellNode(descriptor: ArrayCellDescriptor, initialValue: Any?) : MemoryNode(descriptor, initialValue)
+        abstract class FieldNode(val field: Field, initialValue: Any?) : MemoryNode(initialValue)
+
+        class RegularFieldNode(field: Field, initialValue: Any?) : FieldNode(field, initialValue)
+        class StaticFieldNode(field: Field, initialValue: Any?) : FieldNode(field, initialValue)
+        class ArrayCellNode(val index: Int, initialValue: Any?) : MemoryNode(initialValue)
     }
 
     fun trackField(obj: Any?, className: String, fieldName: String) {
@@ -113,16 +107,11 @@ class SnapshotTracker {
         if (
             nodesList == null || // parent object is not tracked
             nodesList
-                .map { it.descriptor }
-                .filterIsInstance<FieldDescriptor>()
+                .filterIsInstance<FieldNode>()
                 .any { it.field.name == field.name } // field is already tracked
         ) return
 
-        val childNode = createMemoryNode(
-            obj,
-            FieldDescriptor(field, getFieldOffset(field)),
-            fieldValue
-        )
+        val childNode = createFieldNode(obj, field, fieldValue)
 
         nodesList.add(childNode)
         if (isTrackableObject(childNode.initialValue)) {
@@ -136,10 +125,10 @@ class SnapshotTracker {
 
         if (
             nodesList == null || // array is not tracked
-            nodesList.any { it is ArrayCellNode && (it.descriptor as ArrayCellDescriptor).index == index } // this array cell is already tracked
+            nodesList.any { it is ArrayCellNode && it.index == index } // this array cell is already tracked
         ) return
 
-        val childNode = createMemoryNode(array, ArrayCellDescriptor(index), elementValue)
+        val childNode = createArrayCellNode(index, elementValue)
 
         nodesList.add(childNode)
         if (isTrackableObject(childNode.initialValue)) {
@@ -185,21 +174,22 @@ class SnapshotTracker {
         trackedObjects[obj]!!
             .forEach { node ->
                 if (node is ArrayCellNode) {
-                    val index = (node.descriptor as ArrayCellDescriptor).index
+                    val index = node.index
+                    val initialValue = node.initialValue
 
                     when (obj) {
                         // No need to add support for writing to atomicfu array elements,
                         // because atomicfu arrays are compiled to atomic java arrays
-                        is AtomicReferenceArray<*> -> @Suppress("UNCHECKED_CAST") (obj as AtomicReferenceArray<Any?>).set(index, node.initialValue)
-                        is AtomicIntegerArray -> obj.set(index, node.initialValue as Int)
-                        is AtomicLongArray -> obj.set(index, node.initialValue as Long)
-                        else -> writeArrayElementViaUnsafe(obj, index, node.initialValue)
+                        is AtomicReferenceArray<*> -> @Suppress("UNCHECKED_CAST") (obj as AtomicReferenceArray<Any?>).set(index, initialValue)
+                        is AtomicIntegerArray -> obj.set(index, initialValue as Int)
+                        is AtomicLongArray -> obj.set(index, initialValue as Long)
+                        else -> writeArrayElementViaUnsafe(obj, index, initialValue)
                     }
                 }
-                else if (!Modifier.isFinal((node.descriptor as FieldDescriptor).field.modifiers)) {
+                else if (!Modifier.isFinal((node as FieldNode).field.modifiers)) {
                     writeFieldViaUnsafe(
                         if (node is StaticFieldNode) null else obj,
-                        node.descriptor.field,
+                        node.field,
                         node.initialValue
                     )
                 }
@@ -219,13 +209,12 @@ class SnapshotTracker {
         )
     }
 
-    private fun createMemoryNode(obj: Any?, descriptor: Descriptor, value: Any?): MemoryNode {
-        return when (descriptor) {
-            is FieldDescriptor -> {
-                if (obj == null) StaticFieldNode(descriptor, value)
-                else RegularFieldNode(descriptor, value)
-            }
-            is ArrayCellDescriptor -> ArrayCellNode(descriptor, value)
-        }
+    private fun createFieldNode(obj: Any?, field: Field, value: Any?): MemoryNode {
+        return if (obj == null) StaticFieldNode(field, value)
+               else RegularFieldNode(field, value)
+    }
+
+    private fun createArrayCellNode(index: Int, value: Any?): MemoryNode {
+        return ArrayCellNode(index, value)
     }
 }

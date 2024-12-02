@@ -306,6 +306,25 @@ internal inline fun GeneratorAdapter.invokeInIgnoredSection(
     )
 }
 
+/**
+ * @param type asm type descriptor.
+ * @return whether [type] is a java array type (primitive or reference).
+ */
+internal fun isArray(type: Type): Boolean = type.sort == Type.ARRAY
+
+/**
+ * @param type asm type descriptor.
+ * @return whether [type] is a non-reference primitive type (e.g. `int`, `boolean`, etc.).
+ */
+internal fun isPrimitive(type: Type): Boolean {
+    return when (type.sort) {
+        Type.BOOLEAN, Type.CHAR, Type.BYTE,
+        Type.SHORT, Type.INT, Type.FLOAT,
+        Type.LONG, Type.DOUBLE, Type.VOID -> true
+        else -> false
+    }
+}
+
 private val isCoroutineStateMachineClassMap = ConcurrentHashMap<String, Boolean>()
 
 internal fun isCoroutineStateMachineClass(internalClassName: String): Boolean {

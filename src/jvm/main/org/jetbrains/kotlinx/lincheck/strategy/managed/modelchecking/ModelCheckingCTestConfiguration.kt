@@ -23,8 +23,8 @@ import java.lang.reflect.*
  */
 class ModelCheckingCTestConfiguration(testClass: Class<*>, iterations: Int, threads: Int, actorsPerThread: Int, actorsBefore: Int,
                                       actorsAfter: Int, generatorClass: Class<out ExecutionGenerator>, verifierClass: Class<out Verifier>,
-                                      checkObstructionFreedom: Boolean, hangingDetectionThreshold: Int, invocationsPerIteration: Int,
-                                      restoreStaticMemory: Boolean, guarantees: List<ManagedStrategyGuarantee>,
+                                      checkObstructionFreedom: Boolean, hangingDetectionThreshold: Int,
+                                      invocationsPerIteration: Int, guarantees: List<ManagedStrategyGuarantee>,
                                       minimizeFailedScenario: Boolean, sequentialSpecification: Class<*>, timeoutMs: Long,
                                       customScenarios: List<ExecutionScenario>
 ) : ManagedCTestConfiguration(
@@ -39,7 +39,6 @@ class ModelCheckingCTestConfiguration(testClass: Class<*>, iterations: Int, thre
     checkObstructionFreedom = checkObstructionFreedom,
     hangingDetectionThreshold = hangingDetectionThreshold,
     invocationsPerIteration = invocationsPerIteration,
-    restoreStaticMemory = restoreStaticMemory,
     guarantees = guarantees,
     minimizeFailedScenario = minimizeFailedScenario,
     sequentialSpecification = sequentialSpecification,

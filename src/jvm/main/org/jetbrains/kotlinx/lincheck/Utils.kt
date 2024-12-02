@@ -264,66 +264,6 @@ fun Class<*>.findField(fieldName: String): Field {
     throw NoSuchFieldException("Class '${this.name}' does not have field '$fieldName'")
 }
 
-@Suppress("DEPRECATION")
-fun getFieldOffset(field: Field): Long {
-    return if (Modifier.isStatic(field.modifiers)) {
-        UnsafeHolder.UNSAFE.staticFieldOffset(field)
-    }
-    else {
-        UnsafeHolder.UNSAFE.objectFieldOffset(field)
-    }
-}
-
-internal fun getArrayElementOffset(arr: Any, index: Int): Long {
-    val clazz = arr::class.java
-    val baseOffset = UnsafeHolder.UNSAFE.arrayBaseOffset(clazz).toLong()
-    val indexScale = UnsafeHolder.UNSAFE.arrayIndexScale(clazz).toLong()
-
-    return baseOffset + index * indexScale
-}
-
-internal fun getArrayLength(arr: Any): Int {
-    return when {
-        arr is Array<*>     -> arr.size
-        arr is IntArray     -> arr.size
-        arr is DoubleArray  -> arr.size
-        arr is FloatArray   -> arr.size
-        arr is LongArray    -> arr.size
-        arr is ShortArray   -> arr.size
-        arr is ByteArray    -> arr.size
-        arr is BooleanArray -> arr.size
-        arr is CharArray    -> arr.size
-        isAtomicArray(arr)  -> getAtomicArrayLength(arr)
-        else -> error("Argument is not an array")
-    }
-}
-
-internal fun getAtomicArrayLength(arr: Any): Int {
-    return when {
-        arr is AtomicReferenceArray<*> -> arr.length()
-        arr is AtomicIntegerArray -> arr.length()
-        arr is AtomicLongArray -> arr.length()
-        isAtomicFUArray(arr) -> arr.javaClass.getMethod("getSize").invoke(arr) as Int
-        else -> error("Argument is not atomic array")
-    }
-}
-
-@Suppress("DEPRECATION")
-internal fun findFieldNameByOffset(targetType: Class<*>, offset: Long): String? {
-    // Extract the private offset value and find the matching field.
-    for (field in targetType.declaredFields) {
-        try {
-            if (Modifier.isNative(field.modifiers)) continue
-            val fieldOffset = if (Modifier.isStatic(field.modifiers)) UnsafeHolder.UNSAFE.staticFieldOffset(field)
-            else UnsafeHolder.UNSAFE.objectFieldOffset(field)
-            if (fieldOffset == offset) return field.name
-        } catch (t: Throwable) {
-            t.printStackTrace()
-        }
-    }
-    return null // Field not found
-}
-
 /**
  * Thrown in case when `cause` exception is unexpected by Lincheck internal logic.
  */

@@ -17,7 +17,6 @@ import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.*
-import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import sun.nio.ch.lincheck.*
 
 internal class LincheckClassVisitor(
@@ -92,9 +91,11 @@ internal class LincheckClassVisitor(
         if (methodName == "<init>") {
             mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
             mv = run {
-                val st = SnapshotTrackerTransformer(fileName, className, methodName, mv.newAdapter(), classVisitor::isInstanceOf)
-                val aa = AnalyzerAdapter(className, access, methodName, desc, st)
-                st.analyzer = aa
+                val st = ConstructorArgumentsSnapshotTrackerTransformer(fileName, className, methodName, mv.newAdapter(), classVisitor::isInstanceOf)
+                val sv = SharedMemoryAccessTransformer(fileName, className, methodName, st.newAdapter())
+                val aa = AnalyzerAdapter(className, access, methodName, desc, sv)
+
+                sv.analyzer = aa
                 aa
             }
             return mv
@@ -151,11 +152,10 @@ internal class LincheckClassVisitor(
         // which should be put in front of the byte-code transformer chain,
         // so that it can correctly analyze the byte-code and compute required type-information
         mv = run {
-            val st = SnapshotTrackerTransformer(fileName, className, methodName, mv.newAdapter(), classVisitor::isInstanceOf)
+            val st = ConstructorArgumentsSnapshotTrackerTransformer(fileName, className, methodName, mv.newAdapter(), classVisitor::isInstanceOf)
             val sv = SharedMemoryAccessTransformer(fileName, className, methodName, st.newAdapter())
             val aa = AnalyzerAdapter(className, access, methodName, desc, sv)
 
-            st.analyzer = aa
             sv.analyzer = aa
             aa
         }
@@ -167,68 +167,6 @@ internal class LincheckClassVisitor(
         return mv
     }
 
-}
-
-internal open class ManagedStrategyWithAnalyzerClassVisitor(
-    fileName: String,
-    className: String,
-    methodName: String,
-    adapter: GeneratorAdapter
-) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
-
-    lateinit var analyzer: AnalyzerAdapter
-
-
-    /*
-     * For an array access instruction (either load or store),
-     * tries to obtain the type of the read/written array element.
-     *
-     * If the type can be determined from the opcode of the instruction itself
-     * (e.g., IALOAD/IASTORE) returns it immediately.
-     *
-     * Otherwise, queries the analyzer to determine the type of the array in the respective stack slot.
-     * This is used in two cases:
-     * - for `BALOAD` and `BASTORE` instructions, since they are used to access both boolean and byte arrays;
-     * - for `AALOAD` and `AASTORE` instructions, to get the class name of the array elements.
-     */
-    protected fun getArrayElementType(opcode: Int): Type = when (opcode) {
-        // Load
-        IALOAD -> INT_TYPE
-        FALOAD -> FLOAT_TYPE
-        CALOAD -> CHAR_TYPE
-        SALOAD -> SHORT_TYPE
-        LALOAD -> LONG_TYPE
-        DALOAD -> DOUBLE_TYPE
-        BALOAD -> getArrayAccessTypeFromStack(2) ?: BYTE_TYPE
-        AALOAD -> getArrayAccessTypeFromStack(2) ?: OBJECT_TYPE
-        // Store
-        IASTORE -> INT_TYPE
-        FASTORE -> FLOAT_TYPE
-        CASTORE -> CHAR_TYPE
-        SASTORE -> SHORT_TYPE
-        LASTORE -> LONG_TYPE
-        DASTORE -> DOUBLE_TYPE
-        BASTORE -> getArrayAccessTypeFromStack(3) ?: BYTE_TYPE
-        AASTORE -> getArrayAccessTypeFromStack(3) ?: OBJECT_TYPE
-        else -> throw IllegalStateException("Unexpected opcode: $opcode")
-    }
-
-    /*
-     * Tries to obtain the type of array elements by inspecting the type of the array itself.
-     * To do this, the method queries the analyzer to get the type of accessed array
-     * which should lie on the stack.
-     * If the analyzer does not know the type, then return null
-     * (according to the ASM docs, this can happen, for example, when the visited instruction is unreachable).
-     */
-    protected fun getArrayAccessTypeFromStack(position: Int): Type? {
-        if (analyzer.stack == null) return null
-        val arrayDesc = analyzer.stack[analyzer.stack.size - position]
-        check(arrayDesc is String)
-        val arrayType = getType(arrayDesc)
-        check(arrayType.sort == ARRAY)
-        check(arrayType.dimensions > 0)
-        return getType(arrayDesc.substring(1))
-    }
 }
 
 internal open class ManagedStrategyMethodVisitor(

@@ -10,7 +10,6 @@
 
 package org.jetbrains.kotlinx.lincheck.util
 
-import org.jetbrains.kotlinx.lincheck.getArrayElementOffset
 import sun.misc.Unsafe
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
@@ -113,7 +112,7 @@ internal fun writeFieldViaUnsafe(obj: Any?, field: Field, value: Any?) {
 }
 
 internal fun writeArrayElementViaUnsafe(arr: Any, index: Int, value: Any?): Any? {
-    val offset = getArrayElementOffset(arr, index)
+    val offset = getArrayElementOffsetViaUnsafe(arr, index)
     val componentType = arr::class.java.componentType
 
     if (!componentType.isPrimitive) {
@@ -131,4 +130,30 @@ internal fun writeArrayElementViaUnsafe(arr: Any, index: Int, value: Any?): Any?
         Float::class.javaPrimitiveType      -> UnsafeHolder.UNSAFE.putFloat(arr, offset, value as Float)
         else                                -> error("No more primitive types expected")
     }
+}
+
+@Suppress("DEPRECATION")
+internal fun getFieldOffsetViaUnsafe(field: Field): Long {
+    return if (Modifier.isStatic(field.modifiers)) {
+        UnsafeHolder.UNSAFE.staticFieldOffset(field)
+    }
+    else {
+        UnsafeHolder.UNSAFE.objectFieldOffset(field)
+    }
+}
+
+@Suppress("DEPRECATION")
+internal fun findFieldNameByOffset(targetType: Class<*>, offset: Long): String? {
+    // Extract the private offset value and find the matching field.
+    for (field in targetType.declaredFields) {
+        try {
+            if (Modifier.isNative(field.modifiers)) continue
+            val fieldOffset = if (Modifier.isStatic(field.modifiers)) UnsafeHolder.UNSAFE.staticFieldOffset(field)
+            else UnsafeHolder.UNSAFE.objectFieldOffset(field)
+            if (fieldOffset == offset) return field.name
+        } catch (t: Throwable) {
+            t.printStackTrace()
+        }
+    }
+    return null // Field not found
 }

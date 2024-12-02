@@ -11,6 +11,7 @@ package org.jetbrains.kotlinx.lincheck.strategy
 
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.Trace
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.io.Closeable
@@ -90,11 +91,6 @@ abstract class Strategy protected constructor(
     override fun close() {
         runner.close()
     }
-
-    /**
-     * Restores recorded values of all memory reachable from static state.
-     */
-    open fun restoreStaticMemorySnapshot() {}
 }
 
 /**
@@ -112,13 +108,18 @@ fun Strategy.runIteration(invocations: Int, verifier: Verifier): LincheckFailure
         if (!nextInvocation())
             break
         val result = runInvocation()
-        restoreStaticMemorySnapshot()
-        failure = verify(result, verifier)
+        try {
+            failure = verify(result, verifier)
+        }
+        finally {
+            if (this is ManagedStrategy) {
+                restoreStaticMemorySnapshot()
+            }
+        }
         if (failure != null)
             break
     }
 
-    restoreStaticMemorySnapshot()
     return failure
 }
 

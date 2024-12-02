@@ -29,7 +29,6 @@ class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingC
             checkObstructionFreedom = checkObstructionFreedom,
             hangingDetectionThreshold = hangingDetectionThreshold,
             invocationsPerIteration = invocationsPerIteration,
-            restoreStaticMemory = restoreStaticMemory,
             guarantees = guarantees,
             minimizeFailedScenario = minimizeFailedScenario,
             sequentialSpecification = chooseSequentialSpecification(sequentialSpecification, testClass),

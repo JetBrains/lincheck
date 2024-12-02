@@ -57,7 +57,7 @@ internal object FieldSearchHelper {
         traverseObjectGraph(
             testObject,
             traverseStaticFields = true,
-            onArrayElement = { _, _, _ -> null }, // do not traverse array elements further
+            onArrayElement = null, // do not traverse array elements further
             onField = { ownerObject, field, fieldValue ->
                 when {
                     field.type.isPrimitive || fieldValue == null -> null
