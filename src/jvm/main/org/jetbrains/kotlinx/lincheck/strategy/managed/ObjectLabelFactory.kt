@@ -89,26 +89,26 @@ object ObjectLabelFactory {
     }
 
     @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
-    private val Class<out Any>?.isImmutableWithNiceToString
-        get() = this?.canonicalName in
-                listOf(
-                    java.lang.Integer::class.java,
-                    java.lang.Long::class.java,
-                    java.lang.Short::class.java,
-                    java.lang.Double::class.java,
-                    java.lang.Float::class.java,
-                    java.lang.Character::class.java,
-                    java.lang.Byte::class.java,
-                    java.lang.Boolean::class.java,
-                    java.lang.String::class.java,
-                    BigInteger::class.java,
-                    BigDecimal::class.java,
-                    kotlinx.coroutines.internal.Symbol::class.java,
-                ).map { it.canonicalName } +
-                listOf(
-                    "java.util.Collections.SingletonList",
-                    "java.util.Collections.SingletonMap",
-                    "java.util.Collections.SingletonSet"
-                )
-
+    private val Class<out Any>?.isImmutableWithNiceToString: Boolean
+        get() = this?.canonicalName in NICE_TO_STRING_FQNS
 }
+
+private val NICE_TO_STRING_FQNS = listOf(
+    java.lang.Integer::class.java,
+    java.lang.Long::class.java,
+    java.lang.Short::class.java,
+    java.lang.Double::class.java,
+    java.lang.Float::class.java,
+    java.lang.Character::class.java,
+    java.lang.Byte::class.java,
+    java.lang.Boolean::class.java,
+    java.lang.String::class.java,
+    BigInteger::class.java,
+    BigDecimal::class.java,
+).map { it.canonicalName } +
+        listOf(
+            "kotlinx.coroutines.internal.Symbol",
+            "java.util.Collections.SingletonList",
+            "java.util.Collections.SingletonMap",
+            "java.util.Collections.SingletonSet"
+        )
