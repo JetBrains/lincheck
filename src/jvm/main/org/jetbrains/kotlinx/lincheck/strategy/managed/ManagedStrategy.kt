@@ -1125,27 +1125,20 @@ abstract class ManagedStrategy(
         methodName: String,
         params: Array<Any?>
     ) = runInIgnoredSection {
-        // TODO:
-        //  1. tests for functionality below
-        //  2. for methods from `Arrays` class (sort, parallelSort, legacyMergeSort,
-        //     mergeSort, swap, parallelPrefix, fill, setAll, parallelSetAll).
-        //  3. for methods from `Collections` class (copyOf, copyOfRange)
         when {
             // System.arraycopy
             className == "java/lang/System" && methodName == "arraycopy" -> {
-                //println("System.arraycopy: $className::$methodName")
-                check(params[2] != null && params[2] is Array<*>)
-                val destArray = params[2] as Array<*>
-                val destPosStart = params[3] as Int
+                check(params[2] != null && params[2]!!.javaClass.isArray)
+                val srcArray = params[0]!!
+                val srcPosStart = params[1] as Int
                 val length = params[4] as Int
 
                 for (i in 0..length - 1) {
-                    staticMemorySnapshot.trackArrayCell(destArray, destPosStart + i)
+                    staticMemorySnapshot.trackArrayCell(srcArray, srcPosStart + i)
                 }
             }
             // Unsafe API
             isUnsafe(owner) -> {
-                //println("Unsafe: $className::$methodName(${params.contentToString()})")
                 val methodType: UnsafeName = UnsafeNames.getMethodCallType(params)
                 when (methodType) {
                     is UnsafeInstanceMethod -> {
@@ -1162,7 +1155,6 @@ abstract class ManagedStrategy(
             }
             // VarHandle API
             isVarHandle(owner) -> {
-                //println("VarHandle: $className::$methodName(${params.contentToString()})")
                 val methodType: VarHandleMethodType = VarHandleNames.varHandleMethodType(owner, params)
                 when (methodType) {
                     is InstanceVarHandleMethod -> {
@@ -1177,16 +1169,14 @@ abstract class ManagedStrategy(
                     else -> {}
                 }
             }
-            // Java AFU
+            // Java AFU (this also automatically handles the `kotlinx.atomicfu`, since they are compiled to Java AFU + Java atomic arrays)
             isAtomicFieldUpdater(owner) -> {
-                //println("Java AFU: $className::$methodName(${params.contentToString()})")
                 val obj = params[0]
                 val afuDesc: AtomicFieldUpdaterDescriptor? = AtomicFieldUpdaterNames.getAtomicFieldUpdaterName(owner!!)
                 check(afuDesc != null) { "Cannot extract field name referenced by Java AFU object $owner" }
 
                 staticMemorySnapshot.trackField(obj, afuDesc.targetType, afuDesc.fieldName)
             }
-            // TODO: kotlinx.atomicfu
             // TODO: reflexivity
         }
     }
