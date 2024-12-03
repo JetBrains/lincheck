@@ -68,43 +68,6 @@ fun shouldReplayInterleaving(): Boolean {
 }
 
 /**
- * This method is called on every trace point shown to the user,
- * but before the actual event, such as the read/write/MONITORENTER/MONITOREXIT/, etc.
- * The Debugger creates a breakpoint inside this method and if [eventId] is the selected one, the breakpoint is triggered.
- * Then the debugger performs step-out action, so we appear in the user's code.
- * That's why this method **must** be called from a user-code, not from a nested function.
- *
- * @param eventId id of this trace point. Consistent with `trace`, provided in [testFailed] method.
- */
-@Suppress("UNUSED_PARAMETER")
-fun beforeEvent(eventId: Int) {
-    val strategy = (Thread.currentThread() as? TestThread)?.eventTracker ?: return
-    visualize(strategy)
-}
-
-
-/**
- * This method receives all information about the test object instance to visualize.
- * The Debugger creates a breakpoint inside this method and uses this method parameters to create the diagram.
- *
- * We pass Maps as Arrays due to difficulties with passing objects (java.util.Map) to the debugger
- * (class version, etc.).
- *
- * @param testInstance tested data structure.
- * @param numbersArrayMap an array structured like [Object, objectNumber, Object, objectNumber, ...]. Represents a `Map<Any, Int>`.
- * @param threadsArrayMap an array structured like [Thread, threadId, Thread, threadId, ...]. Represents a `Map<Any, Int>`.
- * @param threadToLincheckThreadIdMap an array structured like [CancellableContinuation, threadId, CancellableContinuation, threadId, ...]. Represents a `Map<Any, Int>`.
- */
-@Suppress("UNUSED_PARAMETER")
-fun visualizeInstance(
-    testInstance: Any,
-    numbersArrayMap: Array<Any>,
-    threadsArrayMap: Array<Any>,
-    threadToLincheckThreadIdMap: Array<Any>
-) {
-}
-
-/**
  * The Debugger creates a breakpoint on this method call to know when the thread is switched.
  * The following "step over" call expects that the next suspension point is in the same thread.
  * So we have to track if a thread is changed by Lincheck to interrupt stepping,
@@ -119,17 +82,19 @@ fun onThreadSwitchesOrActorFinishes() {}
  */
 internal val eventIdStrictOrderingCheck = System.getProperty("lincheck.debug.withEventIdSequentialCheck") != null
 
-private fun visualize(strategyObject: Any) = runCatching {
-    val strategy = strategyObject as ModelCheckingStrategy
-    val runner = strategy.runner as ParallelThreadsRunner
-    val testObject = runner.testInstance
-    val threads = runner.executor.threads
+/**
+ * This method is called from the debugger evaluation
+ */
+private fun visualize(): Array<Any>? {
+    return try {
+        val strategy = (Thread.currentThread() as? TestThread)?.eventTracker as ModelCheckingStrategy
+        val runner = strategy.runner as ParallelThreadsRunner
+        val testObject = runner.testInstance
 
-    val objectToNumberMap = createObjectToNumberMapAsArray(testObject)
-    val continuationToLincheckThreadIdMap = createContinuationToThreadIdMap(threads)
-    val threadToLincheckThreadIdMap = createThreadToLincheckThreadIdMap(threads)
-
-    visualizeInstance(testObject, objectToNumberMap, continuationToLincheckThreadIdMap, threadToLincheckThreadIdMap)
+        return createObjectToNumberMapAsArray(testObject)
+    } catch (e: Throwable) {
+        null
+    }
 }
 
 

@@ -19,11 +19,16 @@ public class Injections {
     public static final Object VOID_RESULT = new Object();
     // Used in the verification phase to store a suspended continuation.
     public static Object lastSuspendedCancellableContinuationDuringVerification = null;
+
+    private static final int DO_NOT_TRIGGER_BEFORE_EVENT = -1;
+    private static final int STOP_AT_NEXT_EVENT_ID = -2;
     /**
      * This field is used from the debugger to request a specific ID.
      */
-    private static int requestedBeforeEventId = -1;
-    private static final int STOP_AT_NEXT_EVENT_ID = -2;
+    @SuppressWarnings({"FieldMayBeFinal", "FieldCanBeLocal"})
+    private static int requestedBeforeEventId = DO_NOT_TRIGGER_BEFORE_EVENT;
+    @SuppressWarnings({"FieldCanBeLocal", "unused"})
+    private static int currentEventId = -1;
 
     public static void storeCancellableContinuation(Object cont) {
         Thread t = Thread.currentThread();
@@ -350,11 +355,12 @@ public class Injections {
     @SuppressWarnings("unused")
     // IDEA plugin installs breakpoint into this method
     public static void beforeEvent(int eventId) {
-        getEventTracker().beforeEvent(eventId);
     }
 
     public static int getNextEventId() {
-        return getEventTracker().getEventId();
+        int eventId = getEventTracker().getEventId();
+        currentEventId = eventId;
+        return eventId;
     }
 
     public static void setLastMethodCallEventId() {

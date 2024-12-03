@@ -10,7 +10,6 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.beforeEvent as ideaPluginBeforeEvent
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
@@ -1273,10 +1272,6 @@ abstract class ManagedStrategy(
         val iThread = currentThread
         val actorId = currentActorId.getOrElse(iThread) { Int.MIN_VALUE }
         return constructor(iThread, actorId, callStackTrace.getOrNull(iThread)?.toList() ?: emptyList())
-    }
-
-    override fun beforeEvent(eventId: Int) {
-        ideaPluginBeforeEvent(eventId)
     }
 
     /**
