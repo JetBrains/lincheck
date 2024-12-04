@@ -982,11 +982,20 @@ abstract class ManagedStrategy(
             false
         }
 
-    private fun getMethod(className: String, methodName: String, params: Array<Any?>): Method? {
+    private val methodsCache = hashMapOf<String, Array<Method>>()
+    private fun getCachedDeclaredMethods(className: String) = methodsCache.getOrPut(className) {
         val clazz = Class.forName(className)
+        clazz.declaredMethods
+    }
 
-        // Filter methods by name
-        val possibleMethods = clazz.declaredMethods.filter { it.name == methodName }
+    private val filteredMethodsCache = hashMapOf<Pair<String, String>, List<Method>>()
+    private fun getCachedFilteredDeclaredMethods(className: String, methodName: String) = filteredMethodsCache.getOrPut(className to methodName) {
+        val declaredMethods = getCachedDeclaredMethods(className)
+        declaredMethods.filter { it.name == methodName }
+    }
+
+    private fun getMethod(className: String, methodName: String, params: Array<Any?>): Method? {
+        val possibleMethods = getCachedFilteredDeclaredMethods(className, methodName)
 
         for (method in possibleMethods) {
             val parameterTypes = method.parameterTypes
