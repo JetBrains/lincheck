@@ -104,6 +104,15 @@ val bootstrapJar = tasks.register<Copy>("bootstrapJar") {
     into(file("$buildDir/processedResources/jvm/main"))
 }
 
+// This jar is useful to add as a dependency to a test project to be able to debug
+val timeTravelJarNoDeps = tasks.register<Jar>("timeTravelJarNoDeps") {
+    archiveBaseName = "nodeps-time-travel"
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from(sourceSets["main"].output)
+    dependsOn(":bootstrap:jar")
+    from(project.zipTree(file("${project(":bootstrap").buildDir}/libs/bootstrap.jar")))
+}
+
 val timeTravelJar = tasks.register<Jar>("timeTravelJar") {
     archiveBaseName = "fat-time-travel"
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
