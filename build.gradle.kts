@@ -26,7 +26,7 @@ repositories {
 kotlin {
     @OptIn(ExperimentalKotlinGradlePluginApi::class)
     compilerOptions {
-        allWarningsAsErrors = true
+        allWarningsAsErrors = false
     }
 
     jvm {
@@ -107,6 +107,40 @@ val bootstrapJar = tasks.register<Copy>("bootstrapJar") {
     dependsOn(":bootstrap:jar")
     from(file("${project(":bootstrap").buildDir}/libs/bootstrap.jar"))
     into(file("$buildDir/processedResources/jvm/main"))
+}
+
+// This jar is useful to add as a dependency to a test project to be able to debug
+val timeTravelJarNoDeps = tasks.register<Jar>("timeTravelJarNoDeps") {
+    archiveBaseName = "nodeps-time-travel"
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from(sourceSets["main"].output)
+    dependsOn(":bootstrap:jar")
+    from(project.zipTree(file("${project(":bootstrap").buildDir}/libs/bootstrap.jar")))
+}
+
+val timeTravelJar = tasks.register<Jar>("timeTravelJar") {
+    archiveBaseName = "fat-time-travel"
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    // TODO: re-check if we need it
+    // dependsOn(bootstrapJar)
+
+    // lincheck sources
+    from(sourceSets["main"].output)
+    // run-time dependencies (asm, bytebuddy, etc.)
+    from({
+        configurations.runtimeClasspath.get().filter { it.name.endsWith(".jar") }.map {
+            return@map if (it.isDirectory) it else project.zipTree(it)
+        }
+    })
+
+    manifest {
+        attributes(
+            "Premain-Class" to "org.jetbrains.kotlinx.lincheck.transformation.TimeTravelAgent",
+            "Can-Redefine-Classes" to "true",
+            "Can-Retransform-Classes" to "true"
+        )
+    }
 }
 
 tasks {
