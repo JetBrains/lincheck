@@ -141,6 +141,7 @@ tasks {
 
     replace("jvmSourcesJar", Jar::class).run {
         from(sourceSets["main"].allSource)
+        from(project(":bootstrap").file("src"))
     }
 
     fun Test.configureJvmTestCommon() {
