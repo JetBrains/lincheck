@@ -179,103 +179,6 @@ internal class ModelCheckingStrategy(
         val isInternalBugOccurred: Boolean
     )
 
-    /**
-     * Transforms failure trace to the array of string to pass it to the debugger.
-     * (due to difficulties with passing objects like List and TracePoint, as class versions may vary)
-     *
-     * Each trace point is transformed into the line of type:
-     * "type,iThread,callDepth,shouldBeExpanded,eventId,representation".
-     *
-     * Later, when [testFailed] breakpoint is triggered debugger parses these lines back to trace points.
-     *
-     * To help the plugin to create execution view, we provide a type for each trace point.
-     * Below are the codes of trace point types.
-     *
-     * | Value                          | Code |
-     * |--------------------------------|------|
-     * | REGULAR                        | 0    |
-     * | ACTOR                          | 1    |
-     * | RESULT                         | 2    |
-     * | SWITCH                         | 3    |
-     * | SPIN_CYCLE_START               | 4    |
-     * | SPIN_CYCLE_SWITCH              | 5    |
-     * | OBSTRUCTION_FREEDOM_VIOLATION  | 6    |
-     */
-    private fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Array<String> {
-        val results = failure.results
-        val nodesList = constructTraceGraph(failure, results, trace, collectExceptionsOrEmpty(failure))
-        var sectionIndex = 0
-        var node: TraceNode? = nodesList.firstOrNull()
-        val representations = mutableListOf<String>()
-        while (node != null) {
-            when (node) {
-                is TraceLeafEvent -> {
-                    val event = node.event
-                    val eventId = event.eventId
-                    val representation = event.toStringImpl(withLocation = false)
-                    val type = when (event) {
-                        is SwitchEventTracePoint -> {
-                            when (event.reason) {
-                                SwitchReason.ACTIVE_LOCK -> {
-                                    5
-                                }
-                                else -> 3
-                            }
-                        }
-                        is SpinCycleStartTracePoint -> 4
-                        is ObstructionFreedomViolationExecutionAbortTracePoint -> 6
-                        else -> 0
-                    }
-
-                    if (representation.isNotEmpty()) {
-                        representations.add("$type;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${eventId};${representation}")
-                    }
-                }
-
-                is CallNode -> {
-                    val beforeEventId = node.call.eventId
-                    val representation = node.call.toStringImpl(withLocation = false)
-                    if (representation.isNotEmpty()) {
-                        representations.add("0;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation}")
-                    }
-                }
-
-                is ActorNode -> {
-                    val beforeEventId = -1
-                    val representation = node.actorRepresentation
-                    if (representation.isNotEmpty()) {
-                        representations.add("1;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation}")
-                    }
-                }
-
-                is ActorResultNode -> {
-                    val beforeEventId = -1
-                    val representation = node.resultRepresentation.toString()
-                    representations.add("2;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};${node.exceptionNumberIfExceptionResult ?: -1}")
-                }
-
-                else -> {}
-            }
-
-            node = node.next
-            if (node == null && sectionIndex != nodesList.lastIndex) {
-                node = nodesList[++sectionIndex]
-            }
-        }
-        return representations.toTypedArray()
-    }
-
-    private fun collectExceptionsOrEmpty(failure: LincheckFailure): Map<Throwable, ExceptionNumberAndStacktrace> {
-        if (failure is ValidationFailure) {
-            return mapOf(failure.exception to ExceptionNumberAndStacktrace(1, failure.exception.stackTrace.toList()))
-        }
-        val results = (failure as? IncorrectResultsFailure)?.results ?: return emptyMap()
-        return when (val result = collectExceptionStackTraces(results)) {
-            is ExceptionStackTracesResult -> result.exceptionStackTraces
-            is InternalLincheckBugResult -> emptyMap()
-        }
-    }
-
     override fun onNewSwitch(iThread: Int, mustSwitch: Boolean) {
         if (replay && collectTrace) {
             onThreadSwitchesOrActorFinishes()
@@ -673,4 +576,101 @@ class ModelCheckingParkingTracker(val nThreads: Int, val allowSpuriousWakeUps: B
         parked.fill(false)
     }
 
+}
+
+/**
+ * Transforms failure trace to the array of string to pass it to the debugger.
+ * (due to difficulties with passing objects like List and TracePoint, as class versions may vary)
+ *
+ * Each trace point is transformed into the line of type:
+ * "type,iThread,callDepth,shouldBeExpanded,eventId,representation".
+ *
+ * Later, when [testFailed] breakpoint is triggered debugger parses these lines back to trace points.
+ *
+ * To help the plugin to create execution view, we provide a type for each trace point.
+ * Below are the codes of trace point types.
+ *
+ * | Value                          | Code |
+ * |--------------------------------|------|
+ * | REGULAR                        | 0    |
+ * | ACTOR                          | 1    |
+ * | RESULT                         | 2    |
+ * | SWITCH                         | 3    |
+ * | SPIN_CYCLE_START               | 4    |
+ * | SPIN_CYCLE_SWITCH              | 5    |
+ * | OBSTRUCTION_FREEDOM_VIOLATION  | 6    |
+ */
+public fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Array<String> {
+    val results = failure.results
+    val nodesList = constructTraceGraph(failure, results, trace, collectExceptionsOrEmpty(failure))
+    var sectionIndex = 0
+    var node: TraceNode? = nodesList.firstOrNull()
+    val representations = mutableListOf<String>()
+    while (node != null) {
+        when (node) {
+            is TraceLeafEvent -> {
+                val event = node.event
+                val eventId = event.eventId
+                val representation = event.toStringImpl(withLocation = false)
+                val type = when (event) {
+                    is SwitchEventTracePoint -> {
+                        when (event.reason) {
+                            SwitchReason.ACTIVE_LOCK -> {
+                                5
+                            }
+                            else -> 3
+                        }
+                    }
+                    is SpinCycleStartTracePoint -> 4
+                    is ObstructionFreedomViolationExecutionAbortTracePoint -> 6
+                    else -> 0
+                }
+
+                if (representation.isNotEmpty()) {
+                    representations.add("$type;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${eventId};${representation}")
+                }
+            }
+
+            is CallNode -> {
+                val beforeEventId = node.call.eventId
+                val representation = node.call.toStringImpl(withLocation = false)
+                if (representation.isNotEmpty()) {
+                    representations.add("0;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation}")
+                }
+            }
+
+            is ActorNode -> {
+                val beforeEventId = -1
+                val representation = node.actorRepresentation
+                if (representation.isNotEmpty()) {
+                    representations.add("1;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation}")
+                }
+            }
+
+            is ActorResultNode -> {
+                val beforeEventId = -1
+                val representation = node.resultRepresentation.toString()
+                representations.add("2;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};${node.exceptionNumberIfExceptionResult ?: -1}")
+            }
+
+            else -> {}
+        }
+
+        node = node.next
+        if (node == null && sectionIndex != nodesList.lastIndex) {
+            node = nodesList[++sectionIndex]
+        }
+    }
+    return representations.toTypedArray()
+}
+
+private fun collectExceptionsOrEmpty(failure: LincheckFailure): Map<Throwable, ExceptionNumberAndStacktrace> {
+    if (failure is ValidationFailure) {
+        return mapOf(failure.exception to ExceptionNumberAndStacktrace(1, failure.exception.stackTrace.toList()))
+    }
+    val results = (failure as? IncorrectResultsFailure)?.results ?: return emptyMap()
+    return when (val result = collectExceptionStackTraces(results)) {
+        is ExceptionStackTracesResult -> result.exceptionStackTraces
+        is InternalLincheckBugResult -> emptyMap()
+    }
 }

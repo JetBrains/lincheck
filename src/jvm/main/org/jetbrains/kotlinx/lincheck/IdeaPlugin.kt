@@ -40,9 +40,9 @@ fun testFailed(
     trace: Array<String>,
     version: String?,
     minimalPluginVersion: String,
-    exceptions: Array<String>
-) {
-}
+    exceptions: Array<String>,
+    threadNames: Array<String> = arrayOf(), // TODO maybe remove from plugin
+) {}
 
 /**
  * Debugger replaces the result of this method to `true` if idea plugin is enabled.
