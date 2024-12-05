@@ -16,7 +16,6 @@ import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanObjectNumeration
-import org.jetbrains.kotlinx.lincheck.util.traverseObjectGraph
 import java.lang.reflect.*
 import java.util.*
 import kotlin.random.Random
@@ -54,8 +53,6 @@ internal class ModelCheckingStrategy(
     // The interleaving that will be studied on the next invocation.
     private lateinit var currentInterleaving: Interleaving
 
-    // Tracker of objects' allocations and object graph topology.
-    override val objectTracker: ObjectTracker = LocalObjectManager()
     // Tracker of the monitors' operations.
     override val monitorTracker: MonitorTracker = ModelCheckingMonitorTracker(nThreads)
     // Tracker of the thread parking.
@@ -530,61 +527,6 @@ internal class ModelCheckingStrategy(
         }
 
         fun build() = Interleaving(switchPositions, threadSwitchChoices, lastNoninitializedNode)
-    }
-}
-
-/**
- * Manages objects created within the local scope.
- * The purpose of this manager is to keep track of locally created objects that aren't yet shared
- * and automatically delete their dependencies when they become shared.
- * This tracking helps to avoid exploring unnecessary interleavings, which can occur if access to such local
- * objects triggers switch points in the model checking strategy.
- */
-internal class LocalObjectManager : ObjectTracker {
-    /**
-     * An identity hash map holding each local object and its dependent objects.
-     * Each local object is a key, and its value is a list of objects accessible from it.
-     * Note that non-local objects are excluded from this map.
-     */
-    private val localObjects : MutableSet<Any> =
-        Collections.newSetFromMap(IdentityHashMap())
-
-    /**
-     * Registers a new object as a locally accessible one.
-     */
-    override fun registerNewObject(obj: Any) {
-        check(obj !== StaticObject)
-        localObjects.add(obj)
-    }
-
-    override fun registerObjectLink(fromObject: Any, toObject: Any?) {
-        if (toObject == null) return
-        if (!isLocalObject(fromObject)) {
-            markObjectNonLocal(toObject)
-        }
-    }
-
-    /**
-     * Removes the specified local object and all reachable objects from the set of local objects.
-     */
-    private fun markObjectNonLocal(root: Any) {
-        traverseObjectGraph(root) { obj ->
-            val wasLocal = localObjects.remove(obj)
-            if (wasLocal) obj else null
-        }
-    }
-
-    override fun shouldTrackObjectAccess(obj: Any): Boolean =
-        !isLocalObject(obj)
-
-    /**
-     * Checks if an object is only locally accessible.
-     */
-    private fun isLocalObject(obj: Any?) =
-        localObjects.contains(obj)
-
-    override fun reset() {
-        localObjects.clear()
     }
 }
 

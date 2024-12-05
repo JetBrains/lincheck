@@ -72,8 +72,6 @@ abstract class ManagedStrategy(
     // Current actor id for each thread.
     protected val currentActorId = IntArray(nThreads)
 
-    // Tracker of objects' allocations and object graph topology.
-    protected abstract val objectTracker: ObjectTracker
     // Tracker of the monitors' operations.
     protected abstract val monitorTracker: MonitorTracker
     // Tracker of the thread parking.
@@ -208,7 +206,6 @@ abstract class ManagedStrategy(
         callStackTrace.forEach { it.clear() }
         suspendedFunctionsStack.forEach { it.clear() }
         randoms.forEachIndexed { i, r -> r.setSeed(i + 239L) }
-        objectTracker.reset()
         monitorTracker.reset()
         parkingTracker.reset()
     }
@@ -667,10 +664,6 @@ abstract class ManagedStrategy(
         if (isFinal) {
             return@runInIgnoredSection false
         }
-        // Do not track accesses to untracked objects
-        if (!objectTracker.shouldTrackObjectAccess(obj ?: StaticObject)) {
-            return@runInIgnoredSection false
-        }
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             ReadTracePoint(
@@ -693,9 +686,6 @@ abstract class ManagedStrategy(
 
     /** Returns <code>true</code> if a switch point is created. */
     override fun beforeReadArrayElement(array: Any, index: Int, codeLocation: Int): Boolean = runInIgnoredSection {
-        if (!objectTracker.shouldTrackObjectAccess(array)) {
-            return@runInIgnoredSection false
-        }
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             ReadTracePoint(
@@ -726,10 +716,6 @@ abstract class ManagedStrategy(
 
     override fun beforeWriteField(obj: Any?, className: String, fieldName: String, value: Any?, codeLocation: Int,
                                   isStatic: Boolean, isFinal: Boolean): Boolean = runInIgnoredSection {
-        objectTracker.registerObjectLink(fromObject = obj ?: StaticObject, toObject = value)
-        if (!objectTracker.shouldTrackObjectAccess(obj ?: StaticObject)) {
-            return@runInIgnoredSection false
-        }
         // Optimization: do not track final field writes
         if (isFinal) {
             return@runInIgnoredSection false
@@ -754,10 +740,6 @@ abstract class ManagedStrategy(
     }
 
     override fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int): Boolean = runInIgnoredSection {
-        objectTracker.registerObjectLink(fromObject = array, toObject = value)
-        if (!objectTracker.shouldTrackObjectAccess(array)) {
-            return@runInIgnoredSection false
-        }
         val iThread = currentThread
         val tracePoint = if (collectTrace) {
             WriteTracePoint(
@@ -786,7 +768,7 @@ abstract class ManagedStrategy(
     }
 
     override fun afterReflectiveSetter(receiver: Any?, value: Any?) = runInIgnoredSection {
-        objectTracker.registerObjectLink(fromObject = receiver ?: StaticObject, toObject = value)
+
     }
 
     override fun getThreadLocalRandom(): Random = runInIgnoredSection {
@@ -814,10 +796,7 @@ abstract class ManagedStrategy(
     }
 
     override fun afterNewObjectCreation(obj: Any) {
-        if (obj is String || obj is Int || obj is Long || obj is Byte || obj is Char || obj is Float || obj is Double) return
-        runInIgnoredSection {
-            objectTracker.registerNewObject(obj)
-        }
+
     }
 
     private fun methodGuaranteeType(owner: Any?, className: String, methodName: String): ManagedGuaranteeType? = runInIgnoredSection {
