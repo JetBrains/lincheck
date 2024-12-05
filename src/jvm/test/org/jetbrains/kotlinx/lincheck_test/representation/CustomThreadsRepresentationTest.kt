@@ -17,10 +17,10 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
-import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
+import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
-import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
-import org.jetbrains.kotlinx.lincheck_test.util.isJdk8
+import org.jetbrains.kotlinx.lincheck_test.gpmc.*
+import org.jetbrains.kotlinx.lincheck_test.util.*
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater
 import kotlin.concurrent.thread
 import kotlin.reflect.KClass
@@ -33,7 +33,7 @@ class CustomThreadsRepresentationTest {
     @JvmField
     var value: Int = 0
 
-    fun operation() {
+    fun basic() {
         val block = {
             value += 1
             valueUpdater.getAndIncrement(this)
@@ -48,9 +48,9 @@ class CustomThreadsRepresentationTest {
     }
 
     @Test(timeout = TIMEOUT)
-    fun test() = modelCheckerTraceTest(
+    fun basicTest() = modelCheckerTraceTest(
         testClass = this::class,
-        testOperation = this::operation,
+        testOperation = this::basic,
         invocations = 1_000,
         outputFileName = if (isJdk8) "custom_threads_trace_jdk8.txt" else "custom_threads_trace.txt",
     )
