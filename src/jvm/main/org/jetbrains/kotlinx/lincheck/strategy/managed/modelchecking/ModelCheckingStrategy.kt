@@ -308,7 +308,6 @@ internal class ModelCheckingStrategy(
             ExecutionPart.POST -> 0
             ExecutionPart.VALIDATION -> 0
         }
-        loopDetector.beforePart(nextThread)
         currentThread = nextThread
     }
 
@@ -463,7 +462,6 @@ internal class ModelCheckingStrategy(
             executionPosition = -1 // the first execution position will be zero
             interleavingFinishingRandom = Random(2) // random with a constant seed
             nextThreadToSwitch = threadSwitchChoices.iterator()
-            loopDetector.initialize()
             lastNotInitializedNodeChoices = null
             lastNotInitializedNode?.let {
                 // Create a mutable list for the initialization of the not initialized node choices.
