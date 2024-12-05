@@ -67,7 +67,6 @@ class DataStructuresTests {
         invocations = 1_000,
     )
 
-
     fun correctConcurrentHashMap() {
         val concurrentHashMap = ConcurrentHashMap<Int, Int>()
         var r1: Int? = -1
