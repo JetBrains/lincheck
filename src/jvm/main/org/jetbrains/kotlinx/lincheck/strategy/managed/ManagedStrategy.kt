@@ -492,11 +492,19 @@ abstract class ManagedStrategy(
     override fun beforeThreadJoin(thread: Thread?) = runInIgnoredSection {
         val currentThreadId = threadScheduler.getCurrentThreadId()
         val joinThreadId = threadScheduler.getThreadId(thread!!)
-        // TODO: add trace point ?
         while (threadScheduler.getThreadState(joinThreadId) != ThreadState.FINISHED) {
             // TODO: should wait on thread-join be considered an obstruction-freedom violation?
             // Switch to another thread and wait for a moment when the thread is finished
             switchCurrentThread(currentThreadId, SwitchReason.THREAD_JOIN_WAIT)
+        }
+        if (collectTrace) {
+            val tracePoint = ThreadJoinTracePoint(
+                iThread = currentThreadId,
+                actorId = currentActorId[currentThreadId]!!,
+                joinedThreadId = joinThreadId,
+                callStackTrace = callStackTrace[currentThreadId]!!,
+            )
+            traceCollector!!.passCodeLocation(tracePoint)
         }
     }
 

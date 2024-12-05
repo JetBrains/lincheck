@@ -250,6 +250,24 @@ internal class UnparkTracePoint(
     override fun toStringCompact(): String = "UNPARK"
 }
 
+internal class ThreadJoinTracePoint(
+    iThread: Int, actorId: Int,
+    val joinedThreadId: Int,
+    callStackTrace: CallStackTrace,
+) : TracePoint(iThread, actorId, callStackTrace.dropThreadJoinStackTraceElement()) {
+    override fun toStringImpl(withLocation: Boolean): String =
+        "THREAD_JOIN($joinedThreadId)"
+
+    companion object {
+        // we drop the last call stack trace element `Thread::join()` to prettify output
+        private fun CallStackTrace.dropThreadJoinStackTraceElement(): CallStackTrace {
+            val lastElement = last()
+            check(lastElement.tracePoint.methodName == "join")
+            return dropLast(1)
+        }
+    }
+}
+
 internal class CoroutineCancellationTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
