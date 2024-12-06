@@ -1100,10 +1100,10 @@ abstract class ManagedStrategy(
         params: Array<Any?>
     ) {
         val guarantee = runInIgnoredSection {
-            val currentThreadId = threadScheduler.getCurrentThreadId()
-            // exit early if the thread was aborted
-            if (threadScheduler.isAborted(currentThreadId)) {
-                return
+            val iThread = threadScheduler.getCurrentThreadId()
+            // re-throw abort error if the thread was aborted
+            if (threadScheduler.isAborted(iThread)) {
+                threadScheduler.abortCurrentThread()
             }
             // first check if the called method is an atomics API method
             // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
@@ -1130,7 +1130,9 @@ abstract class ManagedStrategy(
             }
             // in case of atomic method we need to create a switch point
             if (guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC) {
-                newSwitchPointOnAtomicMethodCall(codeLocation, params)
+                // re-use last call trace point
+                newSwitchPoint(iThread, codeLocation, callStackTrace[iThread]!!.lastOrNull()?.tracePoint)
+                loopDetector.passParameters(params)
             }
             // notify loop detector about the method call
             if (guarantee == null) {
@@ -1194,13 +1196,6 @@ abstract class ManagedStrategy(
         // an "atomic" or "ignore" guarantee, we need to leave
         // this "ignore" section.
         leaveIgnoredSection()
-    }
-
-    private fun newSwitchPointOnAtomicMethodCall(codeLocation: Int, params: Array<Any?>) {
-        val currentThreadId = threadScheduler.getCurrentThreadId()
-        // re-use last call trace point
-        newSwitchPoint(currentThreadId, codeLocation, callStackTrace[currentThreadId]!!.lastOrNull()?.tracePoint)
-        loopDetector.passParameters(params)
     }
 
     private fun isSuspendFunction(className: String, methodName: String, params: Array<Any?>): Boolean =
