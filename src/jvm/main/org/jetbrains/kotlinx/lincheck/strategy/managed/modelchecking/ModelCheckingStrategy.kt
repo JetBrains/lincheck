@@ -602,7 +602,7 @@ class ModelCheckingParkingTracker(val nThreads: Int, val allowSpuriousWakeUps: B
  */
 public fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Array<String> {
     val results = failure.results
-    val nodesList = constructTraceGraph(failure, results, trace, collectExceptionsOrEmpty(failure))
+    val nodesList = constructTraceGraph(failure, results, trace, emptyMap())
     var sectionIndex = 0
     var node: TraceNode? = nodesList.firstOrNull()
     val representations = mutableListOf<String>()
@@ -627,7 +627,7 @@ public fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Arra
                 }
 
                 if (representation.isNotEmpty()) {
-                    representations.add("$type;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${eventId};${representation}")
+                    representations.add("$type;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${eventId};${representation};null")
                 }
             }
 
@@ -635,7 +635,7 @@ public fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Arra
                 val beforeEventId = node.call.eventId
                 val representation = node.call.toStringImpl(withLocation = false)
                 if (representation.isNotEmpty()) {
-                    representations.add("0;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation}")
+                    representations.add("0;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};null")
                 }
             }
 
@@ -643,14 +643,14 @@ public fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Arra
                 val beforeEventId = -1
                 val representation = node.actorRepresentation
                 if (representation.isNotEmpty()) {
-                    representations.add("1;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation}")
+                    representations.add("1;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};null")
                 }
             }
 
             is ActorResultNode -> {
                 val beforeEventId = -1
                 val representation = node.resultRepresentation.toString()
-                representations.add("2;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};${node.exceptionNumberIfExceptionResult ?: -1}")
+                representations.add("2;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};${node.exceptionNumberIfExceptionResult ?: -1};null")
             }
 
             else -> {}
@@ -662,15 +662,4 @@ public fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Arra
         }
     }
     return representations.toTypedArray()
-}
-
-private fun collectExceptionsOrEmpty(failure: LincheckFailure): Map<Throwable, ExceptionNumberAndStacktrace> {
-    if (failure is ValidationFailure) {
-        return mapOf(failure.exception to ExceptionNumberAndStacktrace(1, failure.exception.stackTrace.toList()))
-    }
-    val results = (failure as? IncorrectResultsFailure)?.results ?: return emptyMap()
-    return when (val result = collectExceptionStackTraces(results)) {
-        is ExceptionStackTracesResult -> result.exceptionStackTraces
-        is InternalLincheckBugResult -> emptyMap()
-    }
 }
