@@ -14,6 +14,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedOptions
+import org.junit.Ignore
 import java.util.Arrays
 import kotlin.random.Random
 
@@ -21,6 +22,7 @@ import kotlin.random.Random
 //  class java.util.concurrent.ForkJoinWorkerThread cannot be cast to class sun.nio.ch.lincheck.TestThread
 //  (java.util.concurrent.ForkJoinWorkerThread is in module java.base of loader 'bootstrap';
 //  sun.nio.ch.lincheck.TestThread is in unnamed module of loader 'bootstrap')
+@Ignore("Without support for System.arraycopy, tracking for copy methods will not work")
 class ArraysAPISnapshotTest : AbstractSnapshotTest() {
     private class Wrapper(var x: Int)
     companion object {

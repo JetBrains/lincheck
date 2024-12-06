@@ -1121,22 +1121,9 @@ abstract class ManagedStrategy(
      */
     private fun processMethodEffectOnStaticSnapshot(
         owner: Any?,
-        className: String,
-        methodName: String,
         params: Array<Any?>
     ) = runInIgnoredSection {
         when {
-            // System.arraycopy
-            className == "java/lang/System" && methodName == "arraycopy" -> {
-                check(params[2] != null && params[2]!!.javaClass.isArray)
-                val srcArray = params[0]!!
-                val srcPosStart = params[1] as Int
-                val length = params[4] as Int
-
-                for (i in 0..length - 1) {
-                    staticMemorySnapshot.trackArrayCell(srcArray, srcPosStart + i)
-                }
-            }
             // Unsafe API
             isUnsafe(owner) -> {
                 val methodType: UnsafeName = UnsafeNames.getMethodCallType(params)
@@ -1177,6 +1164,7 @@ abstract class ManagedStrategy(
 
                 staticMemorySnapshot.trackField(obj, afuDesc.targetType, afuDesc.fieldName)
             }
+            // TODO: System.arraycopy
             // TODO: reflexivity
         }
     }
@@ -1200,7 +1188,7 @@ abstract class ManagedStrategy(
         params: Array<Any?>
     ) {
         // process method effect on the static memory snapshot
-        processMethodEffectOnStaticSnapshot(owner, className, methodName, params)
+        processMethodEffectOnStaticSnapshot(owner, params)
 
         // process known method concurrency guarantee
         val guarantee = runInIgnoredSection {
