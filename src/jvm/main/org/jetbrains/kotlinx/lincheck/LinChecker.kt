@@ -100,29 +100,34 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
         // add a statistics tracker if it is not already present
         val statisticsTracker = tracker.addTrackerIfAbsent { LincheckStatisticsTracker() }
         scenarios.forEachIndexed { i, scenario ->
-            val isCustomScenario = (i < customScenarios.size)
+            var scenarioIndex = i
+            val isCustomScenario = (scenarioIndex < customScenarios.size)
             // For performance reasons, verifier re-uses LTS from previous iterations.
             // This behavior is similar to a memory leak and can potentially cause OutOfMemoryError.
             // This is why we periodically create a new verifier to still have increased performance
             // from re-using LTS and limit the size of potential memory leak.
             // https://github.com/Kotlin/kotlinx-lincheck/issues/124
-            if ((i + 1) % VERIFIER_REFRESH_CYCLE == 0)
+            if ((scenarioIndex + 1) % VERIFIER_REFRESH_CYCLE == 0)
                 verifier = createVerifier()
             scenario.validate()
-            reporter.logIteration(i, scenariosSize, scenario)
-            var failure = scenario.run(i, this, verifier, tracker)
-            reporter.logIterationStatistics(i, statisticsTracker)
+            reporter.logIteration(scenarioIndex, scenariosSize, scenario)
+            var failure = scenario.run(scenarioIndex, this, verifier, tracker).also {
+                reporter.logIterationStatistics(scenarioIndex, statisticsTracker)
+            }
             if (failure == null)
                 return@forEachIndexed
-            var j = i + 1
             if (minimizeFailedScenario && !isCustomScenario) {
                 reporter.logScenarioMinimization(scenario)
                 failure = failure.minimize { minimizedScenario ->
-                    minimizedScenario.run(j++, this, createVerifier(), tracker)
+                    scenarioIndex++
+                    reporter.logMinimizationIteration(scenarioIndex, minimizedScenario)
+                    minimizedScenario.run(scenarioIndex, this, createVerifier(), tracker).also {
+                        reporter.logIterationStatistics(scenarioIndex, statisticsTracker)
+                    }
                 }
             }
             reporter.logFailedIteration(failure)
-            runReplayForPlugin(j++, failure, verifier)
+            runReplayForPlugin(++scenarioIndex, failure, verifier)
             return failure
         }
         return null

@@ -27,6 +27,11 @@ class Reporter(private val logLevel: LoggingLevel) {
         appendExecutionScenario(scenario)
     }
 
+    fun logMinimizationIteration(iteration: Int, scenario: ExecutionScenario) = log(INFO) {
+        appendLine("\n= Iteration ${iteration + 1} (minimization) =")
+        appendExecutionScenario(scenario)
+    }
+
     fun logIterationStatistics(invocations: Int, runningTimeNano: Long) = log(INFO) {
         val runningTime = nanoTimeToString(runningTimeNano)
         appendLine("= Statistics: #invocations=$invocations, running time ${runningTime}s =")
