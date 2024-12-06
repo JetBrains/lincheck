@@ -13,7 +13,6 @@ package org.jetbrains.kotlinx.lincheck_test.gpmc
 import java.util.concurrent.locks.*
 import kotlin.concurrent.*
 import org.junit.Test
-import org.junit.Ignore
 
 class ReentrantLockTest {
 
