@@ -1100,6 +1100,11 @@ abstract class ManagedStrategy(
         params: Array<Any?>
     ) {
         val guarantee = runInIgnoredSection {
+            val currentThreadId = threadScheduler.getCurrentThreadId()
+            // exit early if the thread was aborted
+            if (threadScheduler.isAborted(currentThreadId)) {
+                return
+            }
             // first check if the called method is an atomics API method
             // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
             val atomicMethodDescriptor = getAtomicMethodDescriptor(owner, methodName)
