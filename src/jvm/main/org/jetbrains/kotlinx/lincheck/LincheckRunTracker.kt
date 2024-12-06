@@ -86,6 +86,13 @@ interface LincheckRunTracker {
  * @property strategy The Lincheck testing strategy used on this iteration.
  * @property invocationsBound The maximum number of invocations to be performed on the iteration.
  * @property warmUpInvocationsCount The number of warm-up invocations to be performed.
+ *   Warm-up invocations work similarly as regular invocations, in the sense that
+ *   if a test failure is detected on a warm-up invocation, it will be reported as usual.
+ *   The only difference between the warm-up and regular invocations is how
+ *   they are treated by [LincheckStatisticsTracker].
+ *   This tracker splits the recorded execution time spent running warm-up invocations and regular invocations,
+ *   making it possible to take into account possible execution time outliers of a few first warm-up invocations.
+ *
  */
 data class IterationParameters(
     val strategy: LincheckStrategy,
