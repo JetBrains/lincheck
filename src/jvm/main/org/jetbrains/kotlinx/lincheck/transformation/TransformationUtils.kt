@@ -228,8 +228,19 @@ internal fun GeneratorAdapter.invokeBeforeEvent(debugMessage: String, setMethodE
             }
             push(debugMessage)
             invokeStatic(Injections::getNextEventId)
-            push(debugMessage)
-            invokeStatic(Injections::beforeEvent)
+            dup()
+            ifStatement(
+                condition = {
+                    invokeStatic(Injections::isBeforeEventRequested)
+                },
+                ifClause = {
+                    push(debugMessage)
+                    invokeStatic(Injections::beforeEvent)
+                },
+                elseClause = {
+                    pop()
+                }
+            )
         },
         elseClause = {}
     )
