@@ -77,7 +77,7 @@ class SpinLockLivelockIsolatedTest {
 
 }
 
-private class SpinLock {
+internal class SpinLock {
     private val lock = AtomicBoolean(false)
 
     fun lock() {
@@ -91,7 +91,7 @@ private class SpinLock {
     }
 }
 
-private fun <R> SpinLock.withLock(block: () -> R): R {
+internal fun <R> SpinLock.withLock(block: () -> R): R {
     lock()
     return try {
         block()

@@ -55,6 +55,37 @@ class CustomThreadsRepresentationTest {
         outputFileName = if (isJdk8) "custom_threads_trace_jdk8.txt" else "custom_threads_trace.txt",
     )
 
+    fun livelock(): Int {
+        var counter = 0
+        val lock1 = SpinLock()
+        val lock2 = SpinLock()
+        val t1 = thread {
+            lock1.withLock {
+                lock2.withLock {
+                    counter++
+                }
+            }
+        }
+        val t2 = thread {
+            lock2.withLock {
+                lock1.withLock {
+                    counter++
+                }
+            }
+        }
+        t1.join()
+        t2.join()
+        return counter
+    }
+
+    @Test(timeout = TIMEOUT)
+    fun livelockTest() = modelCheckerTraceTest(
+        testClass = this::class,
+        testOperation = this::livelock,
+        invocations = 1_000,
+        outputFileName = if (isJdk8) "custom_threads_livelock_trace_jdk8.txt" else "custom_threads_livelock_trace.txt",
+    )
+
     @Suppress("DEPRECATION") // Unsafe
     companion object {
         val unsafe =
