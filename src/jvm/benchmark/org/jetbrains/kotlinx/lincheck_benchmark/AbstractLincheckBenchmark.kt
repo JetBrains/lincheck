@@ -8,8 +8,6 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-@file:Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
-
 package org.jetbrains.kotlinx.lincheck_benchmark
 
 import org.jetbrains.kotlinx.lincheck.*
@@ -44,7 +42,9 @@ abstract class AbstractLincheckBenchmark(
         )
         val klass = this@AbstractLincheckBenchmark::class
         val checker = LinChecker(klass.java, this)
-        val failure = checker.checkImpl(customTracker = statisticsTracker)
+        val failure =
+            @Suppress("INVISIBLE_MEMBER") // `checkImpl` API is currently internal in the Lincheck module
+            checker.checkImpl(customTracker = statisticsTracker)
         if (failure == null) {
             assert(expectedFailures.isEmpty()) {
                 "This test should fail, but no error has been occurred (see the logs for details)"
