@@ -47,7 +47,7 @@ kotlin {
         }
 
         val benchmark by compilations.creating {
-            kotlinOptions.jvmTarget = "11"
+            kotlinOptions.jvmTarget = "1.8"
 
             defaultSourceSet {
                 dependencies {
