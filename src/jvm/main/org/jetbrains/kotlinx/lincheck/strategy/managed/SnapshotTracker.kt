@@ -46,6 +46,8 @@ class SnapshotTracker {
         class ArrayCellNode(val index: Int, initialValue: Any?) : MemoryNode(initialValue)
     }
 
+    fun isTracked(obj: Any?): Boolean = obj != null && obj in trackedObjects
+
     fun trackField(obj: Any?, accessClass: Class<*>, fieldName: String) {
         if (obj != null && obj !in trackedObjects) return
 

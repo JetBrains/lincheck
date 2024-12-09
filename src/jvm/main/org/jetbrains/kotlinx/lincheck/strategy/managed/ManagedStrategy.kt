@@ -1116,6 +1116,8 @@ abstract class ManagedStrategy(
         staticMemorySnapshot.trackObjects(objs)
     }
 
+
+
     /**
      * Tracks fields that are accessed via System.arraycopy, Unsafe API, VarHandle API, Java AFU API, and kotlinx.atomicfu.
      */
@@ -1141,7 +1143,12 @@ abstract class ManagedStrategy(
                 }
             }
             // VarHandle API
-            isVarHandle(owner) -> {
+            isVarHandle(owner) &&
+            (
+                VarHandleNames.isInstanceVarHandle(owner) && staticMemorySnapshot.isTracked(params.firstOrNull()) ||
+                VarHandleNames.isArrayVarHandle(owner) && staticMemorySnapshot.isTracked(params.firstOrNull()) ||
+                VarHandleNames.isStaticVarHandle(owner)
+            ) -> {
                 val methodType: VarHandleMethodType = VarHandleNames.varHandleMethodType(owner, params)
                 when (methodType) {
                     is InstanceVarHandleMethod -> {
