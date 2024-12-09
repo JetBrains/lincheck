@@ -54,7 +54,7 @@ abstract class ManagedStrategy(
     // Runner for scenario invocations,
     // can be replaced with a new one for trace construction.
     override var runner = createRunner()
-    
+
     // == EXECUTION CONTROL FIELDS ==
 
     protected val threadScheduler = ManagedThreadScheduler()
