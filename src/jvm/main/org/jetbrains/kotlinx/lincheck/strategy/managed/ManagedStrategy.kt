@@ -456,8 +456,16 @@ abstract class ManagedStrategy(
         if (currentThreadId < 0) return
         // scenario threads are handled separately by the runner itself
         if (thread is TestThread) return
-        @Suppress("UNUSED_VARIABLE")
         val forkedThreadId = registerThread(thread, descriptor)
+        if (collectTrace) {
+            val tracePoint = ThreadStartTracePoint(
+                iThread = currentThreadId,
+                actorId = currentActorId[currentThreadId]!!,
+                startedThreadId = forkedThreadId,
+                callStackTrace = callStackTrace[currentThreadId]!!,
+            )
+            traceCollector!!.passCodeLocation(tracePoint)
+        }
     }
 
     override fun afterThreadFork(thread: Thread?) = runInIgnoredSection {

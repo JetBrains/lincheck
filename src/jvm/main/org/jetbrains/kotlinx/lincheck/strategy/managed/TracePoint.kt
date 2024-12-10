@@ -250,19 +250,43 @@ internal class UnparkTracePoint(
     override fun toStringCompact(): String = "UNPARK"
 }
 
+internal class ThreadStartTracePoint(
+    iThread: Int, actorId: Int,
+    val startedThreadId: Int,
+    callStackTrace: CallStackTrace,
+) : TracePoint(iThread, actorId, callStackTrace.dropThreadStartStackTraceElements()) {
+
+    override fun toStringImpl(withLocation: Boolean): String =
+        "THREAD_START(${startedThreadId + 1})"
+
+    companion object {
+        // we drop the last N call stack trace elements related to `Thread::start()` and `ThreadsKt.thread {...}` calls
+        private fun CallStackTrace.dropThreadStartStackTraceElements(): CallStackTrace {
+            return dropLastWhile { stackTraceElement ->
+                val canonicalClassName = stackTraceElement.tracePoint.className.canonicalClassName
+                val methodName = stackTraceElement.tracePoint.methodName
+                val isKotlinThreadLambda = (canonicalClassName == "kotlin.concurrent.ThreadsKt") && (methodName.startsWith("thread"))
+                val isJavaThreadStart = (stackTraceElement.instance is Thread) && (methodName == "start")
+                isKotlinThreadLambda || isJavaThreadStart
+            }
+        }
+    }
+}
+
 internal class ThreadJoinTracePoint(
     iThread: Int, actorId: Int,
     val joinedThreadId: Int,
     callStackTrace: CallStackTrace,
 ) : TracePoint(iThread, actorId, callStackTrace.dropThreadJoinStackTraceElement()) {
+
     override fun toStringImpl(withLocation: Boolean): String =
-        "THREAD_JOIN($joinedThreadId)"
+        "THREAD_JOIN(${joinedThreadId + 1})"
 
     companion object {
         // we drop the last call stack trace element `Thread::join()` to prettify output
         private fun CallStackTrace.dropThreadJoinStackTraceElement(): CallStackTrace {
-            val lastElement = last()
-            check(lastElement.tracePoint.methodName == "join")
+            val lastStackTraceElement = last()
+            check(lastStackTraceElement.tracePoint.methodName == "join")
             return dropLast(1)
         }
     }
