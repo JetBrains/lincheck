@@ -34,7 +34,7 @@ class CustomThreadsRepresentationTest {
     var value: Int = 0
 
     fun basic() {
-        val block = {
+        val block = Runnable {
             value += 1
             valueUpdater.getAndIncrement(this)
             unsafe.getAndAddInt(this, valueFieldOffset, 1)
@@ -42,7 +42,8 @@ class CustomThreadsRepresentationTest {
                 value += 1
             }
         }
-        val threads = List(3) { thread { block() } }
+        val threads = List(3) { Thread(block) }
+        threads.forEach { it.start() }
         threads.forEach { it.join() }
         check(false) // to trigger failure and trace collection
     }
@@ -52,29 +53,30 @@ class CustomThreadsRepresentationTest {
         testClass = this::class,
         testOperation = this::basic,
         invocations = 1_000,
-        outputFileName = if (isJdk8) "custom_threads_trace_jdk8.txt" else "custom_threads_trace.txt",
+        outputFileName = "custom_threads_trace.txt",
     )
 
     fun livelock(): Int {
         var counter = 0
         val lock1 = SpinLock()
         val lock2 = SpinLock()
-        val t1 = thread {
+        val t1 = Thread {
             lock1.withLock {
                 lock2.withLock {
                     counter++
                 }
             }
         }
-        val t2 = thread {
+        val t2 = Thread {
             lock2.withLock {
                 lock1.withLock {
                     counter++
                 }
             }
         }
-        t1.join()
-        t2.join()
+        val threads = listOf(t1, t2)
+        threads.forEach { it.start() }
+        threads.forEach { it.join() }
         return counter
     }
 
