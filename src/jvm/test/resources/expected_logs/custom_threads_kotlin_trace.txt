@@ -1,0 +1,46 @@
+= Invalid execution results =
+| ---------------------------------------- |
+|                 Thread 1                 |
+| ---------------------------------------- |
+| kotlinThread(): IllegalStateException #1 |
+| ---------------------------------------- |
+
+---
+The number next to an exception name helps you find its stack trace provided after the interleaving section
+---
+
+The following interleaving leads to the error:
+| -------------------------------------------------------- |
+|                   Thread 1                    | Thread 2 |
+| -------------------------------------------------------- |
+| kotlinThread(): IllegalStateException #1      |          |
+|   THREAD_START(2)                             |          |
+|   switch (reason: waiting for thread to join) |          |
+|                                               | run()    |
+|   THREAD_JOIN(2)                              |          |
+|   result: IllegalStateException #1            |          |
+| -------------------------------------------------------- |
+
+Exception stack traces:
+#1: java.lang.IllegalStateException: Check failed.
+	at org.jetbrains.kotlinx.lincheck_test.representation.CustomThreadsRepresentationTest.kotlinThread(CustomThreadsRepresentationTest.kt:64)
+
+Detailed trace:
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                   Thread 1                    |                                                                         Thread 2                                                                         |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| kotlinThread(): IllegalStateException #1      |                                                                                                                                                          |
+|   THREAD_START(2)                             |                                                                                                                                                          |
+|   switch (reason: waiting for thread to join) |                                                                                                                                                          |
+|                                               | run()                                                                                                                                                    |
+|                                               |   t$1.invoke(): Unit#1 at ThreadsKt$thread$thread$1.run(Thread.kt:30)                                                                                    |
+|                                               |     invoke() at CustomThreadsRepresentationTest$kotlinThread$t$1.invoke(CustomThreadsRepresentationTest.kt:60)                                           |
+|                                               |       CustomThreadsRepresentationTest#1.value.READ: 0 at CustomThreadsRepresentationTest$kotlinThread$t$1.invoke(CustomThreadsRepresentationTest.kt:61)  |
+|                                               |       CustomThreadsRepresentationTest#1.value.WRITE(1) at CustomThreadsRepresentationTest$kotlinThread$t$1.invoke(CustomThreadsRepresentationTest.kt:61) |
+|                                               |       CustomThreadsRepresentationTest#1.value.READ: 1 at CustomThreadsRepresentationTest$kotlinThread$t$1.invoke(CustomThreadsRepresentationTest.kt:61)  |
+|                                               |       CustomThreadsRepresentationTest#1.value.WRITE(2) at CustomThreadsRepresentationTest$kotlinThread$t$1.invoke(CustomThreadsRepresentationTest.kt:61) |
+|                                               |       CustomThreadsRepresentationTest#1.value.READ: 2 at CustomThreadsRepresentationTest$kotlinThread$t$1.invoke(CustomThreadsRepresentationTest.kt:61)  |
+|                                               |       CustomThreadsRepresentationTest#1.value.WRITE(3) at CustomThreadsRepresentationTest$kotlinThread$t$1.invoke(CustomThreadsRepresentationTest.kt:61) |
+|   THREAD_JOIN(2)                              |                                                                                                                                                          |
+|   result: IllegalStateException #1            |                                                                                                                                                          |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -56,6 +56,22 @@ class CustomThreadsRepresentationTest {
         outputFileName = "custom_threads_trace.txt",
     )
 
+    fun kotlinThread() {
+        val t = thread {
+            repeat(3) { value += 1 }
+        }
+        t.join()
+        check(false) // to trigger failure and trace collection
+    }
+
+    @Test(timeout = TIMEOUT)
+    fun kotlinThreadTest() = modelCheckerTraceTest(
+        testClass = this::class,
+        testOperation = this::kotlinThread,
+        invocations = 1_000,
+        outputFileName = if (isJdk8) "custom_threads_kotlin_trace_jdk8.txt" else "custom_threads_kotlin_trace.txt",
+    )
+
     fun livelock(): Int {
         var counter = 0
         val lock1 = SpinLock()
