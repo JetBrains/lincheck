@@ -93,10 +93,10 @@ object ObjectLabelFactory {
 
     @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
     private val Class<out Any>?.isImmutableWithNiceToString: Boolean
-        get() = this?.canonicalName in NICE_TO_STRING_FUNCTIONS
+        get() = this?.canonicalName in NICE_TO_STRING_CLASSES
 }
 
-private val NICE_TO_STRING_FUNCTIONS = listOf(
+private val NICE_TO_STRING_CLASSES = listOf(
     java.lang.Integer::class.java,
     java.lang.Long::class.java,
     java.lang.Short::class.java,
