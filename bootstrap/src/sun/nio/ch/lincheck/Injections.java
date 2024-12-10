@@ -20,6 +20,31 @@ public class Injections {
     // Used in the verification phase to store a suspended continuation.
     public static Object lastSuspendedCancellableContinuationDuringVerification = null;
 
+    /**
+     * Mark value of {@link #requestedBeforeEventId} field to skip calls to {@link #beforeEvent}.
+     */
+    @SuppressWarnings("unused")
+    private static final int DO_NOT_TRIGGER_BEFORE_EVENT = -1;
+
+    /**
+     * Mark value of {@link #requestedBeforeEventId} field to always call {@link #beforeEvent}.
+     */
+    private static final int STOP_AT_NEXT_EVENT_ID = -2;
+
+    /**
+     * This field is updated from the debugger to request a specific ID.
+     * <p>
+     * The default value is calling always for compatibility with old plugin versions.
+     */
+    @SuppressWarnings({"FieldMayBeFinal", "FieldCanBeLocal"})
+    private static int requestedBeforeEventId = STOP_AT_NEXT_EVENT_ID;
+
+    /**
+     * This field is used by the debugger to have a fast source of current ID.
+     */
+    @SuppressWarnings({"FieldCanBeLocal", "unused"})
+    private static int currentEventId = -1;
+
     public static void storeCancellableContinuation(Object cont) {
         Thread t = Thread.currentThread();
         if (t instanceof TestThread) {
@@ -337,15 +362,32 @@ public class Injections {
         return getEventTracker().shouldInvokeBeforeEvent();
     }
 
+    /**
+     * This method is introduced for performance purposes.
+     * Instead of calling {@link #beforeEvent} on every event, we call it only at the requested point.
+     * It greatly improves the performance as the debugger installs a breakpoint into {@link #beforeEvent} method,
+     * so each call leads to unnecessary lincheck-debugger communication.
+     * @param eventId current id value
+     * @return whether the current point should lead to {@link #beforeEvent} call
+     */
+    public static boolean isBeforeEventRequested(int eventId) {
+        int requestedId = requestedBeforeEventId;
+        return requestedId == STOP_AT_NEXT_EVENT_ID || requestedId == eventId;
+    }
+
     public static void beforeEvent(int eventId, String type) {
+        // IDEA plugin installs breakpoint to this method
         getEventTracker().beforeEvent(eventId, type);
     }
 
     /**
+     * Gets current ID and sets it into {@link #currentEventId}.
      * @param type type of the next event. Used only for debug purposes.
      */
     public static int getNextEventId(String type) {
-        return getEventTracker().getEventId();
+        int eventId = getEventTracker().getEventId();
+        currentEventId = eventId;
+        return eventId;
     }
 
     public static void setLastMethodCallEventId() {
