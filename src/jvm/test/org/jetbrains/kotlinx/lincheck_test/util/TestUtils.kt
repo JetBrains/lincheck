@@ -66,11 +66,11 @@ private val String.filtered: String get() {
 
 // removing the following lines from the trace (because they may vary):
 // - pattern `org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution(\d+)` (the number of thread may vary)
-// - everything from `java.base/` (because code locations may vary between different versions of JVM)
+// - everything from `java.base/java.lang` (because code locations may vary between different versions of JVM)
 private val TEST_EXECUTION_TRACE_ELEMENT_REGEX = listOf(
     "(\\W*)at org\\.jetbrains\\.kotlinx\\.lincheck\\.runner\\.TestThreadExecution(\\d+)\\.run\\(Unknown Source\\)",
     "(\\W*)at org\\.jetbrains\\.kotlinx\\.lincheck\\.runner\\.FixedActiveThreadsExecutor\\.testThreadRunnable\\\$lambda\\\$(\\d+)\\(FixedActiveThreadsExecutor.kt:(\\d+)\\)",
-    "(\\W*)at java.base\\/(.*)"
+    "(\\W*)at (java.base\\/)?java.lang(.*)"
 ).joinToString(separator = ")|(", prefix = "(", postfix = ")").toRegex()
 
 private val LINE_NUMBER_REGEX = Regex(":(\\d+)")
@@ -87,6 +87,10 @@ fun checkTraceHasNoLincheckEvents(trace: String) {
     val testPackageOccurrences = trace.split("org.jetbrains.kotlinx.lincheck_test.").size - 1
     val lincheckPackageOccurrences = trace.split("org.jetbrains.kotlinx.lincheck.").size - 1
     check(testPackageOccurrences == lincheckPackageOccurrences) { "Internal Lincheck events were found in the trace" }
+}
+
+fun checkFailureIsNotLincheckInternalBug(failure: LincheckFailure) {
+    check("You've caught a bug in Lincheck." !in failure.toString()) { "Internal Lincheck bug was detected" }
 }
 
 /**

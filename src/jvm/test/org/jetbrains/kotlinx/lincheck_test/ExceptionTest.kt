@@ -104,6 +104,61 @@ class ExceptionInPostPartTest : AbstractLincheckTest(IncorrectResultsFailure::cl
 
 }
 
+/*
+ * This test checks that Lincheck correctly handles exceptions with empty stack traces.
+ *
+ * JVM can throw exceptions with empty stack traces in some cases as an optimization.
+ * If the same exception (from a predefined list of classes, like `ClassCastException`)
+ * is thrown multiple times from the same line of code,
+ * at some point the JVM will stop collecting the stack trace of this exception
+ * and will return an empty stack trace.
+ *
+ * See:
+ * - https://stackoverflow.com/questions/2411487/nullpointerexception-in-java-with-no-stacktrace
+ * - https://yoshihisaonoue.wordpress.com/2021/02/07/jvm-option-xx-omitstacktraceinfastthrow/
+ * - https://github.com/JetBrains/lincheck/issues/381
+ *
+ * To trigger this JVM behavior, in this test we use a scenario with multiple actors
+ * all throwing `ClassCastException`, and enable the scenario minimization
+ * to force the Lincheck to execute the code multiple times.
+ * At some large enough minimization iteration, the exception will be thrown with an empty stack trace.
+ */
+class EmptyStackTraceExceptionTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
+
+    @Operation
+    fun operation() {
+        var counter = 0
+        while (true) {
+            var obj: Any?
+            if (counter % 2 == 0) {
+                obj = A()
+            } else {
+                obj = B()
+            }
+            // Cause `ClassCastException`
+            obj as A
+
+            counter++
+        }
+    }
+
+    class A
+    class B
+
+    override fun <O : Options<O, *>> O.customize() {
+        iterations(1)
+        threads(1)
+        actorsBefore(0)
+        actorsAfter(0)
+        actorsPerThread(200)
+        minimizeFailedScenario(true)
+        sequentialSpecification(ExceptionTestSequentialImplementation::class.java)
+        logLevel(LoggingLevel.INFO)
+    }
+
+}
+
+
 class ExceptionTestSequentialImplementation {
     fun operation() {}
     fun idle() {}

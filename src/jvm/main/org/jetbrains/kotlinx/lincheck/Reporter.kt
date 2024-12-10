@@ -597,23 +597,32 @@ internal data class ExceptionStackTracesResult(val exceptionStackTraces: Map<Thr
  */
 internal fun collectExceptionStackTraces(executionResult: ExecutionResult): ExceptionsProcessingResult {
     val exceptionStackTraces = mutableMapOf<Throwable, ExceptionNumberAndStacktrace>()
-
-    (executionResult.initResults.asSequence()
-            + executionResult.parallelResults.asSequence().flatten()
-            + executionResult.postResults.asSequence())
+    executionResult.allResults
         .filterIsInstance<ExceptionResult>()
         .forEachIndexed { index, exceptionResult ->
             val exception = exceptionResult.throwable
-
-            val filteredStacktrace = exception.stackTrace.takeWhile { LINCHECK_PACKAGE_NAME !in it.className }
-            if (filteredStacktrace.isEmpty()) { // Exception in Lincheck itself
+            if (exception.isInternalLincheckBug()) {
                 return InternalLincheckBugResult(exception)
             }
-
-            exceptionStackTraces[exception] = ExceptionNumberAndStacktrace(index + 1, filteredStacktrace)
+            val stackTrace = exception.stackTrace
+                .filter { LINCHECK_PACKAGE_NAME !in it.className }
+            exceptionStackTraces[exception] = ExceptionNumberAndStacktrace(index + 1, stackTrace)
         }
-
     return ExceptionStackTracesResult(exceptionStackTraces)
+}
+
+private fun Throwable.isInternalLincheckBug(): Boolean {
+    // we expect every Lincheck test thread to start from the Lincheck runner routines,
+    // so we filter out stack trace elements of these runner routines
+    val testStackTrace = stackTrace.takeWhile { LINCHECK_RUNNER_PACKAGE_NAME !in it.className }
+    // collect Lincheck functions from the stack trace
+    val lincheckStackFrames = testStackTrace.filter { LINCHECK_PACKAGE_NAME in it.className }
+    // special handling of `cancelByLincheck` primitive
+    if (lincheckStackFrames.size == 1 && "cancelByLincheck" in lincheckStackFrames[0].toString()) {
+        return false
+    }
+    // otherwise, if the stack trace contains any Lincheck functions, we classify it as a Lincheck bug
+    return lincheckStackFrames.isNotEmpty()
 }
 
 private fun StringBuilder.appendUnexpectedExceptionFailure(

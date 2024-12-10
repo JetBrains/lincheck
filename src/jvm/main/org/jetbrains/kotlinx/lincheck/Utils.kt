@@ -283,3 +283,4 @@ internal inline fun <R> ParallelThreadsRunner.runOutsideIgnoredSection(currentTh
 }
 
 internal const val LINCHECK_PACKAGE_NAME = "org.jetbrains.kotlinx.lincheck."
+internal const val LINCHECK_RUNNER_PACKAGE_NAME = "org.jetbrains.kotlinx.lincheck.runner."
