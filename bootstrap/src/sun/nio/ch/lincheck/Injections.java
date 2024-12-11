@@ -295,9 +295,11 @@ public class Injections {
     }
 
     /**
-     * Called from instrumented code on constructor invocation, where passed objects are subtypes of the constructor class type.
+     * Called from instrumented code before constructors' invocations,
+     * where passed objects are subtypes of the constructor class type.
+     * Required to update the static memory snapshot.
      */
-    public static void updateSnapshotWithEagerTracking(Object[] objs) {
+    public static void updateSnapshotBeforeConstructorCall(Object[] objs) {
         getEventTracker().updateSnapshotWithEagerTracking(objs);
     }
 

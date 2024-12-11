@@ -36,7 +36,7 @@ internal class SharedMemoryAccessTransformer(
         if (
             isCoroutineInternalClass(owner) ||
             isCoroutineStateMachineClass(owner) ||
-            // when initializing our own fields in constructor, we do not want to track that,
+            // when initializing our own fields in constructor, we do not want to track that;
             // otherwise `VerifyError` will be thrown, see https://github.com/JetBrains/lincheck/issues/424
             (methodName == "<init>" && className == owner)
         ) {
@@ -276,7 +276,6 @@ internal class SharedMemoryAccessTransformer(
         invokeStatic(Injections::afterRead)
         // STACK: value
     }
-
 
     /*
      * For an array access instruction (either load or store),

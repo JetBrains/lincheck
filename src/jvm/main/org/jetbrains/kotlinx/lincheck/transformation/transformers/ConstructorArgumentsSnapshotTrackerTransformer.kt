@@ -52,8 +52,12 @@ internal class ConstructorArgumentsSnapshotTrackerTransformer(
                         !isArray(type) &&
                         !isPrimitive(type) &&
                         isInstanceOf(type.className.replace('.', '/'), owner)
-                    ) index
-                    else null
+                    ) {
+                        index
+                    }
+                    else {
+                        null
+                    }
                 }
                 .filterNotNull()
                 .toIntArray()
@@ -72,7 +76,7 @@ internal class ConstructorArgumentsSnapshotTrackerTransformer(
                     // STACK: <empty>
                     pushArray(matchedLocals)
                     // STACK: array
-                    invokeStatic(Injections::updateSnapshotWithEagerTracking)
+                    invokeStatic(Injections::updateSnapshotBeforeConstructorCall)
                     // STACK: <empty>
                     loadLocals(arguments)
                     // STACK: args

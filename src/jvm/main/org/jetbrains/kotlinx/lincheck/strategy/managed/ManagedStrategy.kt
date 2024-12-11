@@ -232,11 +232,9 @@ abstract class ManagedStrategy(
     override fun runInvocation(): InvocationResult {
         while (true) {
             initializeInvocation()
-            val result: InvocationResult
-            try {
-                result = runner.run()
-            }
-            finally {
+            val result: InvocationResult = try {
+                runner.run()
+            } finally {
                 restoreStaticMemorySnapshot()
             }
             // In case the runner detects a deadlock, some threads can still manipulate the current strategy,
