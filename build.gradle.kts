@@ -6,11 +6,14 @@ import org.jetbrains.kotlin.gradle.*
 // atomicfu
 buildscript {
     val atomicfuVersion: String by project
+    val serializationPluginVersion: String by project
     dependencies {
         classpath("org.jetbrains.kotlinx:atomicfu-gradle-plugin:$atomicfuVersion")
+        classpath("org.jetbrains.kotlin:kotlin-serialization:$serializationPluginVersion")
     }
 }
 apply(plugin = "kotlinx-atomicfu")
+apply(plugin = "kotlinx-serialization")
 
 plugins {
     java
@@ -29,6 +32,9 @@ kotlin {
         allWarningsAsErrors = true
     }
 
+    // we have to create custom sourceSets in advance before defining corresponding compilation targets
+    sourceSets.create("jvmBenchmark")
+
     jvm {
         withJava()
 
@@ -38,6 +44,51 @@ kotlin {
 
         val test by compilations.getting {
             kotlinOptions.jvmTarget = "1.8"
+        }
+
+        val benchmark by compilations.creating {
+            kotlinOptions.jvmTarget = "1.8"
+
+            defaultSourceSet {
+                dependencies {
+                    implementation(main.compileDependencyFiles + main.output.classesDirs)
+                }
+            }
+
+            val benchmarksClassPath =
+                compileDependencyFiles +
+                runtimeDependencyFiles +
+                output.allOutputs +
+                files("$buildDir/processedResources/jvm/main")
+
+            val benchmarksTestClassesDirs = output.classesDirs
+
+            // task allowing to run benchmarks using JUnit API
+            val benchmark = tasks.register<Test>("jvmBenchmark") {
+                classpath = benchmarksClassPath
+                testClassesDirs = benchmarksTestClassesDirs
+                dependsOn("processResources")
+            }
+
+            // task aggregating all benchmarks into a single suite and producing custom reports
+            val benchmarkSuite = tasks.register<Test>("jvmBenchmarkSuite") {
+                classpath = benchmarksClassPath
+                testClassesDirs = benchmarksTestClassesDirs
+                filter {
+                    includeTestsMatching("LincheckBenchmarkSuite")
+                }
+                // pass the properties
+                systemProperty("statisticsGranularity", System.getProperty("statisticsGranularity"))
+                // always re-run test suite
+                outputs.upToDateWhen { false }
+                dependsOn("processResources")
+            }
+
+            // task producing plots given the benchmarks report file
+            val benchmarkPlots by tasks.register<JavaExec>("runBenchmarkPlots") {
+                classpath = benchmarksClassPath
+                mainClass.set("org.jetbrains.kotlinx.lincheck_benchmark.PlotsKt")
+            }
         }
     }
 
@@ -80,6 +131,51 @@ kotlin {
                 implementation("io.mockk:mockk:${mockkVersion}")
             }
         }
+
+        val jvmBenchmark by getting {
+            kotlin.srcDirs("src/jvm/benchmark")
+
+            val junitVersion: String by project
+            val jctoolsVersion: String by project
+            val serializationVersion: String by project
+            val letsPlotVersion: String by project
+            val letsPlotKotlinVersion: String by project
+            val cliktVersion: String by project
+            dependencies {
+                compileOnly(project(":bootstrap"))
+                implementation("junit:junit:$junitVersion")
+                implementation("org.jctools:jctools-core:$jctoolsVersion")
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
+                implementation("org.jetbrains.lets-plot:lets-plot-common:$letsPlotVersion")
+                implementation("org.jetbrains.lets-plot:lets-plot-kotlin-jvm:$letsPlotKotlinVersion")
+                implementation("com.github.ajalt.clikt:clikt:$cliktVersion")
+
+                /* We need the following line because apparently there is some issue
+                 * with the Kotlin Multiplatform gradle plugin and our non-standard project structure
+                 * with an additional jvmBenchmark source set that should depend on the jvmMain source set.
+                 *
+                 * If we use `jvmBenchmark.dependsOn(jvmMain)`, as the documentation suggests (see link below),
+                 * then the imports in IDEA are working, but running the benchmarks
+                 * results in `java.lang.NoSuchMethodError` exception on call to any method form Lincheck (jvmMain).
+                 * It looks like there are some issues with classloading, as the `jvmBenchmark` classes do not see
+                 * classes from `jvmMain`.
+                 *
+                 * https://kotlinlang.org/docs/multiplatform-advanced-project-structure.html#dependson-and-source-set-hierarchies
+                 *
+                 * If we do not use `jvmBenchmark.dependsOn(jvmMain)`,
+                 * then gradle correctly compiles the benchmarks, and they run with no errors.
+                 * But the imports from `lincheck` package in the benchmarks
+                 * do not work in IDEA (so IDEA cannot resolve classes from `jvmMain`).
+                 *
+                 * To bypass this, we add an implementation dependency on
+                 * the root project for the `jvmBenchmark` source set.
+                 * This way benchmarks are compiled, run with no errors,
+                 * and import and resolve work correctly in IDEA.
+                 */
+                implementation(rootProject)
+            }
+        }
+        // jvmBenchmark.dependsOn(jvmMain)
     }
 }
 
