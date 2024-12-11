@@ -26,6 +26,7 @@ import kotlin.concurrent.thread
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import org.junit.Test
+import java.util.concurrent.ConcurrentLinkedDeque
 
 class CustomThreadsRepresentationTest {
 
@@ -102,6 +103,55 @@ class CustomThreadsRepresentationTest {
         testOperation = this::livelock,
         invocations = 1_000,
         outputFileName = if (isJdk8) "custom_threads_livelock_trace_jdk8.txt" else "custom_threads_livelock_trace.txt",
+    )
+
+    fun incorrectConcurrentLinkedDeque() {
+        val deque = ConcurrentLinkedDeque<Int>()
+        var r1: Int = -1
+        var r2: Int = -1
+        deque.addLast(1)
+        val t1 = Thread {
+            r1 = deque.pollFirst()
+        }
+        val t2 = Thread {
+            deque.addFirst(0)
+            r2 = deque.peekLast()
+        }
+        val threads = listOf(t1, t2)
+        threads.forEach { it.start() }
+        threads.forEach { it.join() }
+        check(!(r1 == 1 && r2 == 1))
+    }
+
+    @Test(timeout = TIMEOUT)
+    fun incorrectConcurrentLinkedDequeTest() = modelCheckerTraceTest(
+        testClass = this::class,
+        testOperation = this::incorrectConcurrentLinkedDeque,
+        invocations = 1_000,
+        outputFileName = if (isJdk8) "custom_threads_deque_trace_jdk8.txt" else "custom_threads_deque_trace.txt",
+    )
+
+    fun incorrectHashMap() {
+        val hashMap = HashMap<Int, Int>()
+        var r1: Int? = null
+        var r2: Int? = null
+        val t1 = thread {
+            r1 = hashMap.put(0, 1)
+        }
+        val t2 = thread {
+            r2 = hashMap.put(0, 1)
+        }
+        t1.join()
+        t2.join()
+        check(!(r1 == null && r2 == null))
+    }
+
+    @Test(timeout = TIMEOUT)
+    fun incorrectHashMapTest() = modelCheckerTraceTest(
+        testClass = this::class,
+        testOperation = this::incorrectHashMap,
+        invocations = 1_000,
+        outputFileName = if (isJdk8) "custom_threads_hashmap_trace_jdk8.txt" else "custom_threads_hashmap_trace.txt",
     )
 
     @Suppress("DEPRECATION") // Unsafe
