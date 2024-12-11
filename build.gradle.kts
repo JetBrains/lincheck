@@ -116,6 +116,7 @@ tasks {
 
     replace("jvmSourcesJar", Jar::class).run {
         from(sourceSets["main"].allSource)
+        // Also collect sources for the injected classes to simplify debugging
         from(project(":bootstrap").file("src"))
     }
 
