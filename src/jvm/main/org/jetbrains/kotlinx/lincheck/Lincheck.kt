@@ -23,24 +23,24 @@ import kotlin.reflect.jvm.javaMethod
 
 
 object Lincheck {
+    /**
+     * This method will explore the interleavings of [block] body
+     * and track exceptions thrown from it.
+     *
+     * @param invocations number of different interleavings of code in the [block]
+     * that should be explored.
+     * @param block lambda which body will be a target for the interleavings exploration.
+     */
     @JvmStatic
     fun <R> verifyWithModelChecker(
         invocations: Int = 1,
         block: () -> R
     ): LincheckFailure? {
-        val scenario = ExecutionScenario(
-            emptyList(),
-            listOf(
-                listOf(
-                    Actor(
-                        Wrapper<R>::run.javaMethod!!,
-                        listOf(block)
-                    )
-                )
-            ),
-            emptyList(),
-            null
-        )
+        val scenario = scenario {
+            parallel {
+                thread { actor(Wrapper<R>::run, block) }
+            }
+        }
 
         val options = ModelCheckingOptions()
             .iterations(0)
@@ -60,10 +60,8 @@ object Lincheck {
                 if (!strategy.nextInvocation()) {
                     break
                 }
-
                 val result = strategy.runInvocation()
                 val failure = strategy.verify(result, verifier)
-
                 if (failure != null) {
                     return failure
                 }
@@ -77,10 +75,14 @@ object Lincheck {
         fun run(block: () -> R) = block()
     }
 
+    /**
+     * [ExecutionExceptionsVerifier] makes sure that in case if user `check(...)`'s
+     * fail and store their exceptions as an execution result (or just any exception is thrown),
+     * such outcomes will be disallowed and the execution will fail.
+     */
     private class ExecutionExceptionsVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : Verifier {
         override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
             if (results == null) return true
-            // User `check(...)`'s will fail and put their exceptions as an execution result, we must track that and disallow such outcomes.
             return results.parallelResults[0][0] !is ExceptionResult
         }
     }
