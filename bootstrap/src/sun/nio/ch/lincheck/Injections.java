@@ -300,7 +300,7 @@ public class Injections {
      * Required to update the static memory snapshot.
      */
     public static void updateSnapshotBeforeConstructorCall(Object[] objs) {
-        getEventTracker().updateSnapshotWithEagerTracking(objs);
+        getEventTracker().updateSnapshotBeforeConstructorCall(objs);
     }
 
     /**
