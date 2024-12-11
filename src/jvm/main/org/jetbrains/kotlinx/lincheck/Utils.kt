@@ -13,6 +13,7 @@ import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer
+import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import sun.nio.ch.lincheck.*
@@ -98,12 +99,7 @@ private fun Class<out Any>.getMethod(name: String, parameterTypes: Array<Class<o
  * of the [value].
  */
 internal fun primitiveOrIdentityHashCode(value: Any?): Int {
-    return if (value.isPrimitiveWrapper) value.hashCode() else System.identityHashCode(value)
-}
-
-internal val Any?.isPrimitiveWrapper get() = when (this) {
-    is Boolean, is Int, is Short, is Long, is Double, is Float, is Char, is Byte -> true
-    else -> false
+    return if (value.isPrimitive) value.hashCode() else System.identityHashCode(value)
 }
 
 /**

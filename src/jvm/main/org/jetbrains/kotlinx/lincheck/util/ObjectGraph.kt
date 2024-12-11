@@ -10,9 +10,10 @@
 
 package org.jetbrains.kotlinx.lincheck.util
 
-import org.jetbrains.kotlinx.lincheck.*
 import java.util.concurrent.atomic.*
 import java.lang.reflect.*
+import java.math.BigDecimal
+import java.math.BigInteger
 import java.util.*
 
 
@@ -76,7 +77,6 @@ internal fun traverseObjectGraph(
 
     while (queue.isNotEmpty()) {
         val currentObj = queue.removeFirst()
-
         when {
             onArrayElement != null &&
             (currentObj.javaClass.isArray || isAtomicArray(currentObj)) -> {
@@ -177,9 +177,32 @@ internal inline fun traverseObjectFields(
     }
 }
 
-internal val Any.isImmutable get() =
-    this.isPrimitiveWrapper ||
-    this is String
+/**
+ * Extension property to determine if an object is of an immutable type.
+ */
+internal val Any?.isImmutable get() = when {
+    this.isPrimitive        -> true
+    this is String          -> true
+    this is BigInteger      -> true
+    this is BigDecimal      -> true
+    this.isCoroutinesSymbol -> true
+    else                    -> false
+}
+
+/**
+ * Extension property to determine if an object is of a primitive type.
+ */
+internal val Any?.isPrimitive get() = when (this) {
+    is Boolean, is Int, is Short, is Long, is Double, is Float, is Char, is Byte -> true
+    else -> false
+}
+
+/**
+ * Extension property to determine if the given object is a [kotlinx.coroutines] symbol.
+ */
+@Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
+private val Any?.isCoroutinesSymbol get() =
+    this is kotlinx.coroutines.internal.Symbol
 
 /**
  * Returns all found fields in the hierarchy.
