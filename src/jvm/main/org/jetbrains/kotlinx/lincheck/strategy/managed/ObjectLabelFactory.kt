@@ -10,10 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import java.math.BigDecimal
-import java.math.BigInteger
-import java.util.*
+import org.jetbrains.kotlinx.lincheck.util.*
 import kotlin.coroutines.Continuation
+import java.util.*
 
 /**
  * Helps to assign number to an object and to create its beautiful representation to provide to the trace.
@@ -29,7 +28,7 @@ object ObjectLabelFactory {
         if (any is String) return "\"$any\""
         // Primitive types (and several others) are immutable and
         // have trivial `toString` implementation, which is used here.
-        if (any.javaClass.isImmutableWithNiceToString)
+        if (any.isImmutable)
             return any.toString()
         // For enum types, we can always display their name.
         if (any.javaClass.isEnum) {
@@ -90,27 +89,4 @@ object ObjectLabelFactory {
         }
     }
 
-    @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
-    private val Class<out Any>?.isImmutableWithNiceToString: Boolean
-        get() = this?.canonicalName in NICE_TO_STRING_CLASSES
 }
-
-private val NICE_TO_STRING_CLASSES = listOf(
-    java.lang.Integer::class.java,
-    java.lang.Long::class.java,
-    java.lang.Short::class.java,
-    java.lang.Double::class.java,
-    java.lang.Float::class.java,
-    java.lang.Character::class.java,
-    java.lang.Byte::class.java,
-    java.lang.Boolean::class.java,
-    java.lang.String::class.java,
-    BigInteger::class.java,
-    BigDecimal::class.java,
-).map { it.canonicalName } +
-        listOf(
-            "kotlinx.coroutines.internal.Symbol",
-            "java.util.Collections.SingletonList",
-            "java.util.Collections.SingletonMap",
-            "java.util.Collections.SingletonSet"
-        )
