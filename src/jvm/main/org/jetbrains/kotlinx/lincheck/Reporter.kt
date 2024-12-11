@@ -605,7 +605,10 @@ internal fun collectExceptionStackTraces(executionResult: ExecutionResult): Exce
                 return InternalLincheckBugResult(exception)
             }
             val stackTrace = exception.stackTrace
+                // filter lincheck methods
                 .filter { LINCHECK_PACKAGE_NAME !in it.className }
+                // remove `TestThread::run`
+                .filter { !(it.className == TestThread::class.java.canonicalName && it.methodName == "run") }
             exceptionStackTraces[exception] = ExceptionNumberAndStacktrace(index + 1, stackTrace)
         }
     return ExceptionStackTracesResult(exceptionStackTraces)
