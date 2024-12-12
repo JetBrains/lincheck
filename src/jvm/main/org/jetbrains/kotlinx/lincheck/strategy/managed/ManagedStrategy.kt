@@ -1098,7 +1098,7 @@ abstract class ManagedStrategy(
      * or one this objects which contains it is already stored.
      */
     fun updateSnapshotOnFieldAccess(obj: Any?, className: String, fieldName: String) = runInIgnoredSection {
-        staticMemorySnapshot.trackField(obj, Class.forName(className), fieldName)
+        staticMemorySnapshot.trackField(obj, className, fieldName)
     }
 
     /**

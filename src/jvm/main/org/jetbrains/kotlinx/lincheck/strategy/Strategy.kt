@@ -105,11 +105,6 @@ abstract class Strategy protected constructor(
     override fun close() {
         runner.close()
     }
-
-    /**
-     * Restores recorded values of all memory reachable from static state.
-     */
-    open fun restoreStaticMemorySnapshot() {}
 }
 
 /**

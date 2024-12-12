@@ -50,8 +50,23 @@ class SnapshotTracker {
 
     fun trackField(obj: Any?, accessClass: Class<*>, fieldName: String) {
         if (obj != null && obj !in trackedObjects) return
+        trackFieldImpl(
+            obj = obj,
+            clazz = getDeclaringClass(obj, accessClass, fieldName),
+            fieldName = fieldName
+        )
+    }
 
-        val clazz: Class<*> = getDeclaringClass(obj, accessClass, fieldName)
+    fun trackField(obj: Any?, accessClassName: String, fieldName: String) {
+        if (obj != null && obj !in trackedObjects) return
+        trackFieldImpl(
+            obj = obj,
+            clazz = getDeclaringClass(obj, Class.forName(accessClassName), fieldName),
+            fieldName = fieldName
+        )
+    }
+
+    private fun trackFieldImpl(obj: Any?, clazz: Class<*>, fieldName: String) {
         val field = clazz.findField(fieldName)
         val readResult = readFieldSafely(obj, field)
 
