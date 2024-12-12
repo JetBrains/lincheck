@@ -123,17 +123,29 @@ public class Injections {
         }
         int hashCode = System.identityHashCode(thread);
         ArrayList<ThreadDescriptor> threadDescriptors = threadDescriptorsMap.get(hashCode);
-        if (threadDescriptors == null) {
-            threadDescriptors = new ArrayList<ThreadDescriptor>(1);
-            threadDescriptors.add(descriptor);
-        } else {
-            // in an unlikely case of hash-code collision,
-            // we create a full copy of the thread descriptors list
-            // to avoid potential race conditions on reads/writes to the descriptors' list
-            threadDescriptors = new ArrayList<ThreadDescriptor>(threadDescriptors);
+        while (true) {
+            // TODO: check there is no other descriptor already associated with the thread
+            ArrayList<ThreadDescriptor> newThreadDescriptors;
+            if (threadDescriptors == null) {
+                newThreadDescriptors = new ArrayList<>(1);
+                newThreadDescriptors.add(descriptor);
+                threadDescriptors = threadDescriptorsMap.putIfAbsent(hashCode, newThreadDescriptors);
+                // the new thread descriptors list was successfully added to the map --- exit
+                if (threadDescriptors == null) return;
+                // otherwise, make another attempt
+            } else {
+                // in an unlikely case of hash-code collision,
+                // we create a full copy of the thread descriptors list
+                // to avoid potential race conditions on reads/writes to the descriptors' list
+                newThreadDescriptors = new ArrayList<>(threadDescriptors);
+                newThreadDescriptors.add(descriptor);
+                boolean wasReplaced = threadDescriptorsMap.replace(hashCode, threadDescriptors, newThreadDescriptors);
+                // the thread descriptors list was successfully updated --- exit
+                if (wasReplaced) return;
+                // otherwise, re-read the thread descriptors list and make another attempt
+                threadDescriptors = threadDescriptorsMap.get(hashCode);
+            }
         }
-        threadDescriptors.add(descriptor);
-        threadDescriptorsMap.put(hashCode, threadDescriptors);
     }
 
     public static EventTracker getEventTracker() {
