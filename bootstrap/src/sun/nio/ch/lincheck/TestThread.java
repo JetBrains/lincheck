@@ -46,11 +46,4 @@ public class TestThread extends Thread {
         this.threadId = threadId;
         Injections.setThreadDescriptor(this, new ThreadDescriptor(this));
     }
-
-    @Override
-    public void run() {
-        ThreadDescriptor descriptor = Injections.getThreadDescriptor(this);
-        Injections.setCurrentThreadDescriptor(descriptor);
-        super.run();
-    }
 }
