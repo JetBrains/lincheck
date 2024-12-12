@@ -120,7 +120,6 @@ public class Injections {
         int hashCode = System.identityHashCode(thread);
         ArrayList<ThreadDescriptor> threadDescriptors = threadDescriptorsMap.get(hashCode);
         while (true) {
-            // TODO: check there is no other descriptor already associated with the thread
             ArrayList<ThreadDescriptor> newThreadDescriptors;
             if (threadDescriptors == null) {
                 newThreadDescriptors = new ArrayList<>(1);
@@ -132,8 +131,16 @@ public class Injections {
             } else {
                 // in an unlikely case of hash-code collision,
                 // we create a full copy of the thread descriptors list
-                // to avoid potential race conditions on reads/writes to the descriptors' list
+                // to avoid potential race conditions on reads/writes to the descriptors' list,
                 newThreadDescriptors = new ArrayList<>(threadDescriptors);
+                // also check there is no other descriptor already associated with the given thread
+                for (ThreadDescriptor existingDescriptor : newThreadDescriptors) {
+                    if (existingDescriptor.getThread() == thread) {
+                        String message = "Descriptor of thread " + thread.getName() + " is already set!";
+                        throw new IllegalStateException(message);
+                    }
+                }
+                // add the descriptor to the list
                 newThreadDescriptors.add(descriptor);
                 boolean wasReplaced = threadDescriptorsMap.replace(hashCode, threadDescriptors, newThreadDescriptors);
                 // the thread descriptors list was successfully updated --- exit
