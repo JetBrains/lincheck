@@ -102,26 +102,23 @@ abstract class Strategy protected constructor(
  * @return the failure, if detected, null otherwise.
  */
 fun Strategy.runIteration(invocations: Int, verifier: Verifier): LincheckFailure? {
-    var failure: LincheckFailure? = null
-
     for (invocation in 0 until invocations) {
-        if (!nextInvocation()) break
+        if (!nextInvocation()) return null
         val result = runInvocation()
 
-        failure =
-            try {
-                verify(result, verifier)
-            } finally {
-                // verifier calls `@Operation`s of the class under test which can
-                // modify the static memory; thus, we need to restore initial values
-                if (this is ManagedStrategy) {
-                    restoreStaticMemorySnapshot()
-                }
+        val failure = try {
+            verify(result, verifier)
+        } finally {
+            // verifier calls `@Operation`s of the class under test which can
+            // modify the static memory; thus, we need to restore initial values
+            if (this is ManagedStrategy) {
+                restoreStaticMemorySnapshot()
             }
-        if (failure != null) break
+        }
+        if (failure != null) return failure
     }
 
-    return failure
+    return null
 }
 
 /**
