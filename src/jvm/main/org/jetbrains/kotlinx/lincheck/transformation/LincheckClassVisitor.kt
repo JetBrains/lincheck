@@ -18,11 +18,10 @@ import org.objectweb.asm.commons.*
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.*
 import sun.nio.ch.lincheck.*
-import kotlin.collections.HashSet
 
 internal class LincheckClassVisitor(
     private val instrumentationMode: InstrumentationMode,
-    classVisitor: ClassVisitor
+    private val classVisitor: SafeClassWriter
 ) : ClassVisitor(ASM_API, classVisitor) {
     private val ideaPluginEnabled = ideaPluginEnabled()
     private var classVersion = 0
@@ -91,6 +90,14 @@ internal class LincheckClassVisitor(
         }
         if (methodName == "<init>") {
             mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
+            mv = run {
+                val st = ConstructorArgumentsSnapshotTrackerTransformer(fileName, className, methodName, mv.newAdapter(), classVisitor::isInstanceOf)
+                val sv = SharedMemoryAccessTransformer(fileName, className, methodName, st.newAdapter())
+                val aa = AnalyzerAdapter(className, access, methodName, desc, sv)
+
+                sv.analyzer = aa
+                aa
+            }
             return mv
         }
         /* Wrap `ClassLoader::loadClass` calls into ignored sections
@@ -145,8 +152,10 @@ internal class LincheckClassVisitor(
         // which should be put in front of the byte-code transformer chain,
         // so that it can correctly analyze the byte-code and compute required type-information
         mv = run {
-            val sv = SharedMemoryAccessTransformer(fileName, className, methodName, mv.newAdapter())
+            val st = ConstructorArgumentsSnapshotTrackerTransformer(fileName, className, methodName, mv.newAdapter(), classVisitor::isInstanceOf)
+            val sv = SharedMemoryAccessTransformer(fileName, className, methodName, st.newAdapter())
             val aa = AnalyzerAdapter(className, access, methodName, desc, sv)
+
             sv.analyzer = aa
             aa
         }

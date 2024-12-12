@@ -10,8 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import org.jetbrains.kotlinx.lincheck.findFieldNameByOffset
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder.UNSAFE
+import org.jetbrains.kotlinx.lincheck.util.findFieldNameByOffsetViaUnsafe
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater
 import java.util.concurrent.atomic.AtomicLongFieldUpdater
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
@@ -37,7 +37,7 @@ internal object AtomicFieldUpdaterNames {
             val offsetField = updater.javaClass.getDeclaredField("offset")
             val offset = UNSAFE.getLong(updater, UNSAFE.objectFieldOffset(offsetField))
 
-            return findFieldNameByOffset(targetType, offset)
+            return findFieldNameByOffsetViaUnsafe(targetType, offset)
         } catch (t: Throwable) {
             t.printStackTrace()
         }

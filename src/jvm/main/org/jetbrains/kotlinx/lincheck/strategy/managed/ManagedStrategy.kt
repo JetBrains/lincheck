@@ -82,6 +82,9 @@ abstract class ManagedStrategy(
     // Tracker of the thread parking.
     protected abstract val parkingTracker: ParkingTracker
 
+    // Snapshot of the memory, reachable from static fields
+    protected val staticMemorySnapshot = SnapshotTracker()
+
     // InvocationResult that was observed by the strategy during the execution (e.g., a deadlock).
     @Volatile
     protected var suddenInvocationResult: InvocationResult? = null
@@ -217,12 +220,23 @@ abstract class ManagedStrategy(
     }
 
     /**
+     * Restores recorded values of all memory reachable from static state.
+     */
+    fun restoreStaticMemorySnapshot() {
+        staticMemorySnapshot.restoreValues()
+    }
+
+    /**
      * Runs the current invocation.
      */
     override fun runInvocation(): InvocationResult {
         while (true) {
             initializeInvocation()
-            val result = runner.run()
+            val result: InvocationResult = try {
+                runner.run()
+            } finally {
+                restoreStaticMemorySnapshot()
+            }
             // In case the runner detects a deadlock, some threads can still manipulate the current strategy,
             // so we're not interested in suddenInvocationResult in this case
             // and immediately return RunnerTimeoutInvocationResult.
@@ -742,6 +756,7 @@ abstract class ManagedStrategy(
      */
     override fun beforeReadField(obj: Any?, className: String, fieldName: String, codeLocation: Int,
                                  isStatic: Boolean, isFinal: Boolean) = runInIgnoredSection {
+         updateSnapshotOnFieldAccess(obj, className.canonicalClassName, fieldName)
         // We need to ensure all the classes related to the reading object are instrumented.
         // The following call checks all the static fields.
         if (isStatic) {
@@ -778,6 +793,7 @@ abstract class ManagedStrategy(
 
     /** Returns <code>true</code> if a switch point is created. */
     override fun beforeReadArrayElement(array: Any, index: Int, codeLocation: Int): Boolean = runInIgnoredSection {
+        updateSnapshotOnArrayElementAccess(array, index)
         if (!objectTracker.shouldTrackObjectAccess(array)) {
             return@runInIgnoredSection false
         }
@@ -813,6 +829,7 @@ abstract class ManagedStrategy(
 
     override fun beforeWriteField(obj: Any?, className: String, fieldName: String, value: Any?, codeLocation: Int,
                                   isStatic: Boolean, isFinal: Boolean): Boolean = runInIgnoredSection {
+        updateSnapshotOnFieldAccess(obj, className.canonicalClassName, fieldName)
         objectTracker.registerObjectLink(fromObject = obj ?: StaticObject, toObject = value)
         if (!objectTracker.shouldTrackObjectAccess(obj ?: StaticObject)) {
             return@runInIgnoredSection false
@@ -842,6 +859,7 @@ abstract class ManagedStrategy(
     }
 
     override fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int): Boolean = runInIgnoredSection {
+        updateSnapshotOnArrayElementAccess(array, index)
         objectTracker.registerObjectLink(fromObject = array, toObject = value)
         if (!objectTracker.shouldTrackObjectAccess(array)) {
             return@runInIgnoredSection false
@@ -907,6 +925,29 @@ abstract class ManagedStrategy(
         runInIgnoredSection {
             objectTracker.registerNewObject(obj)
         }
+    }
+
+    /**
+     * Tracks a specific field of an [obj], if the [obj] is either `null` (which means that field is static),
+     * or one this objects which contains it is already stored.
+     */
+    fun updateSnapshotOnFieldAccess(obj: Any?, className: String, fieldName: String) = runInIgnoredSection {
+        staticMemorySnapshot.trackField(obj, className, fieldName)
+    }
+
+    /**
+     * Tracks a specific [array] element at [index], if the [array] is already tracked.
+     */
+    fun updateSnapshotOnArrayElementAccess(array: Any, index: Int) = runInIgnoredSection {
+        staticMemorySnapshot.trackArrayCell(array, index)
+    }
+
+    /**
+     * Tracks all objects in [objs] eagerly.
+     * Required as a trick to overcome issue with leaking this in constructors, see https://github.com/JetBrains/lincheck/issues/424.
+     */
+    override fun updateSnapshotBeforeConstructorCall(objs: Array<Any?>) = runInIgnoredSection {
+        staticMemorySnapshot.trackObjects(objs)
     }
 
     private fun methodGuaranteeType(owner: Any?, className: String, methodName: String): ManagedGuaranteeType? = runInIgnoredSection {

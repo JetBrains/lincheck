@@ -320,6 +320,15 @@ public class Injections {
     }
 
     /**
+     * Called from instrumented code before constructors' invocations,
+     * where passed objects are subtypes of the constructor class type.
+     * Required to update the static memory snapshot.
+     */
+    public static void updateSnapshotBeforeConstructorCall(Object[] objs) {
+        getEventTracker().updateSnapshotBeforeConstructorCall(objs);
+    }
+
+    /**
      * Called from the instrumented code to replace [java.lang.Object.hashCode] method call with some
      * deterministic value.
      */

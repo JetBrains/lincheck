@@ -11,6 +11,7 @@ package org.jetbrains.kotlinx.lincheck.strategy
 
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.Trace
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.io.Closeable
@@ -102,13 +103,21 @@ abstract class Strategy protected constructor(
  */
 fun Strategy.runIteration(invocations: Int, verifier: Verifier): LincheckFailure? {
     for (invocation in 0 until invocations) {
-        if (!nextInvocation())
-            return null
+        if (!nextInvocation()) return null
         val result = runInvocation()
-        val failure = verify(result, verifier)
-        if (failure != null)
-            return failure
+
+        val failure = try {
+            verify(result, verifier)
+        } finally {
+            // verifier calls `@Operation`s of the class under test which can
+            // modify the static memory; thus, we need to restore initial values
+            if (this is ManagedStrategy) {
+                restoreStaticMemorySnapshot()
+            }
+        }
+        if (failure != null) return failure
     }
+
     return null
 }
 

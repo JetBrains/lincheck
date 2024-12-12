@@ -16,6 +16,9 @@ import java.lang.reflect.*
 import java.util.*
 
 
+private typealias FieldCallback = (obj: Any, field: Field, value: Any?) -> Any?
+private typealias ArrayElementCallback = (array: Any, index: Int, element: Any?) -> Any?
+
 /**
  * Traverses a subgraph of objects reachable from a given root object in BFS order.
  *
@@ -41,11 +44,11 @@ import java.util.*
  * @param onArrayElement callback for array elements traversal, accepts `(array, index, elementValue)`.
  *   Returns an object to be traversed next.
  */
-internal inline fun traverseObjectGraph(
+internal fun traverseObjectGraph(
     root: Any,
     traverseStaticFields: Boolean = false,
-    onField: (obj: Any, field: Field, value: Any?) -> Any?,
-    onArrayElement: (array: Any, index: Int, element: Any?) -> Any?,
+    onField: FieldCallback?,
+    onArrayElement: ArrayElementCallback?,
 ) {
     val queue = ArrayDeque<Any>()
     val visitedObjects = Collections.newSetFromMap<Any>(IdentityHashMap())
@@ -75,12 +78,13 @@ internal inline fun traverseObjectGraph(
         val currentObj = queue.removeFirst()
 
         when {
-            currentObj.javaClass.isArray || isAtomicArray(currentObj) -> {
+            onArrayElement != null &&
+            (currentObj.javaClass.isArray || isAtomicArray(currentObj)) -> {
                 traverseArrayElements(currentObj) { _ /* currentObj */, index, elementValue ->
                     processNextObject(onArrayElement(currentObj, index, elementValue))
                 }
             }
-            else -> {
+            onField != null -> {
                 traverseObjectFields(currentObj,
                     traverseStaticFields = traverseStaticFields
                 ) { _ /* currentObj */, field, fieldValue ->
@@ -103,7 +107,7 @@ internal inline fun traverseObjectGraph(
  *
  * @see traverseObjectGraph
  */
-internal inline fun traverseObjectGraph(
+internal fun traverseObjectGraph(
     root: Any,
     traverseStaticFields: Boolean = false,
     onObject: (obj: Any) -> Any?
@@ -164,12 +168,7 @@ internal inline fun traverseObjectFields(
 ) {
     obj.javaClass.allDeclaredFieldWithSuperclasses.forEach { field ->
         if (!traverseStaticFields && Modifier.isStatic(field.modifiers)) return@forEach
-        // we wrap an unsafe read into `runCatching` to handle `UnsupportedOperationException`,
-        // which can be thrown, for instance, when attempting to read
-        // a field of a hidden or record class (starting from Java 15);
-        // in this case we fall back to read via reflection
-        val result = runCatching { readFieldViaUnsafe(obj, field) }
-            .recoverCatching { field.apply { isAccessible = true }.get(obj) }
+        val result = readFieldSafely(obj, field)
         // do not pass non-readable fields
         if (result.isSuccess) {
             val fieldValue = result.getOrNull()

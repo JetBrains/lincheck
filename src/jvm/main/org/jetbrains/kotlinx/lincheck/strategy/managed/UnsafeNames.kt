@@ -10,9 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import org.jetbrains.kotlinx.lincheck.findFieldNameByOffset
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
+import org.jetbrains.kotlinx.lincheck.util.findFieldNameByOffsetViaUnsafe
 
 /**
  * Helper object to provide the field name and the owner of the Unsafe method call.
@@ -29,7 +29,7 @@ internal object UnsafeNames {
         if (secondParameter is Long) {
             return if (firstParameter is Class<*>) {
                 // The First parameter is a Class object in case of static field access.
-                val fieldName = findFieldNameByOffset(firstParameter, secondParameter)
+                val fieldName = findFieldNameByOffsetViaUnsafe(firstParameter, secondParameter)
                     ?: return TreatAsDefaultMethod
                 UnsafeStaticMethod(firstParameter, fieldName, parameters.drop(2))
             } else if (firstParameter != null && firstParameter::class.java.isArray) {
@@ -46,7 +46,7 @@ internal object UnsafeNames {
                 )
             } else if (firstParameter != null) {
                 // Then is an instance method call.
-                val fieldName = findFieldNameByOffset(firstParameter::class.java, secondParameter)
+                val fieldName = findFieldNameByOffsetViaUnsafe(firstParameter::class.java, secondParameter)
                     ?: return TreatAsDefaultMethod
                 UnsafeInstanceMethod(
                     owner = firstParameter,

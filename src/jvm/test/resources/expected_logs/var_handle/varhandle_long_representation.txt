@@ -20,8 +20,8 @@ Detailed trace:
 |   number.READ: 1 at VarHandleLongRepresentationTest.operation(VarHandleRepresentationTests.kt:253)                                                        |
 |   number.compareAndSet(1,1): true at VarHandleLongRepresentationTest.operation(VarHandleRepresentationTests.kt:253)                                       |
 |   number.set(2) at VarHandleLongRepresentationTest.operation(VarHandleRepresentationTests.kt:254)                                                         |
-|   VarHandleLongRepresentationTest.staticNumber.READ: 3 at VarHandleLongRepresentationTest.operation(VarHandleRepresentationTests.kt:256)                  |
-|   VarHandleLongRepresentationTest.staticNumber.compareAndSet(3,1): true at VarHandleLongRepresentationTest.operation(VarHandleRepresentationTests.kt:256) |
+|   VarHandleLongRepresentationTest.staticNumber.READ: 2 at VarHandleLongRepresentationTest.operation(VarHandleRepresentationTests.kt:256)                  |
+|   VarHandleLongRepresentationTest.staticNumber.compareAndSet(2,1): true at VarHandleLongRepresentationTest.operation(VarHandleRepresentationTests.kt:256) |
 |   VarHandleLongRepresentationTest.staticNumber.set(3) at VarHandleLongRepresentationTest.operation(VarHandleRepresentationTests.kt:257)                   |
 |   array.READ: LongArray#1 at VarHandleLongRepresentationTest.operation(VarHandleRepresentationTests.kt:259)                                               |
 |   LongArray#1[1].compareAndSet(3,1): false at VarHandleLongRepresentationTest.operation(VarHandleRepresentationTests.kt:259)                              |

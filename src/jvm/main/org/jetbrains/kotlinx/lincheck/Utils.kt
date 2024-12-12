@@ -10,13 +10,12 @@
 package org.jetbrains.kotlinx.lincheck
 
 import kotlinx.coroutines.*
-import sun.nio.ch.lincheck.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer
-import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
+import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
 import org.jetbrains.kotlinx.lincheck.verifier.*
-import org.jetbrains.kotlinx.lincheck.util.*
+import sun.nio.ch.lincheck.*
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.lang.ref.*
@@ -213,21 +212,63 @@ internal val Throwable.text: String get() {
     return writer.buffer.toString()
 }
 
-
-@Suppress("DEPRECATION")
-internal fun findFieldNameByOffset(targetType: Class<*>, offset: Long): String? {
-    // Extract the private offset value and find the matching field.
-    for (field in targetType.declaredFields) {
-        try {
-            if (Modifier.isNative(field.modifiers)) continue
-            val fieldOffset = if (Modifier.isStatic(field.modifiers)) UnsafeHolder.UNSAFE.staticFieldOffset(field)
-            else UnsafeHolder.UNSAFE.objectFieldOffset(field)
-            if (fieldOffset == offset) return field.name
-        } catch (t: Throwable) {
-            t.printStackTrace()
-        }
+/**
+ * Returns all found fields in the hierarchy.
+ * Multiple fields with the same name and the same type may be returned
+ * if they appear in the subclass and a parent class.
+ */
+internal val Class<*>.allDeclaredFieldWithSuperclasses get(): List<Field> {
+    val fields: MutableList<Field> = ArrayList<Field>()
+    var currentClass: Class<*>? = this
+    while (currentClass != null) {
+        val declaredFields: Array<Field> = currentClass.declaredFields
+        fields.addAll(declaredFields)
+        currentClass = currentClass.superclass
     }
-    return null // Field not found
+    return fields
+}
+
+/**
+ * Finds a public/protected/private/internal field in the class and its superclasses/interfaces by name.
+ *
+ * @param fieldName the name of the field to find.
+ * @return the [java.lang.reflect.Field] object if found, or `null` if not found.
+ */
+internal fun Class<*>.findField(fieldName: String): Field {
+    // Search in the class hierarchy
+    var clazz: Class<*>? = this
+    while (clazz != null) {
+        // Check class itself
+        try {
+            return clazz.getDeclaredField(fieldName)
+        }
+        catch (_: NoSuchFieldException) {}
+
+        // Check interfaces
+        for (interfaceClass in clazz.interfaces) {
+            try {
+                return interfaceClass.getDeclaredField(fieldName)
+            }
+            catch (_: NoSuchFieldException) {}
+        }
+
+        // Move up the hierarchy
+        clazz = clazz.superclass
+    }
+
+    throw NoSuchFieldException("Class '${this.name}' does not have field '$fieldName'")
+}
+
+/**
+ * Reads a [field] of the owner object [obj] via Unsafe,  in case of failure fallbacks into reading the field via reflection.
+ */
+internal fun readFieldSafely(obj: Any?, field: Field): kotlin.Result<Any?> {
+    // we wrap an unsafe read into `runCatching` to handle `UnsupportedOperationException`,
+    // which can be thrown, for instance, when attempting to read
+    // a field of a hidden or record class (starting from Java 15);
+    // in this case we fall back to read via reflection
+    return runCatching { readFieldViaUnsafe(obj, field) }
+        .recoverCatching { field.apply { isAccessible = true }.get(obj) }
 }
 
 /**

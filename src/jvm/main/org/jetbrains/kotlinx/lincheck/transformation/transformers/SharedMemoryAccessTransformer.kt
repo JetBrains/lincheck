@@ -33,7 +33,13 @@ internal class SharedMemoryAccessTransformer(
     lateinit var analyzer: AnalyzerAdapter
 
     override fun visitFieldInsn(opcode: Int, owner: String, fieldName: String, desc: String) = adapter.run {
-        if (isCoroutineInternalClass(owner) || isCoroutineStateMachineClass(owner)) {
+        if (
+            isCoroutineInternalClass(owner) ||
+            isCoroutineStateMachineClass(owner) ||
+            // when initializing our own fields in constructor, we do not want to track that;
+            // otherwise `VerifyError` will be thrown, see https://github.com/JetBrains/lincheck/issues/424
+            (methodName == "<init>" && className == owner)
+        ) {
             visitFieldInsn(opcode, owner, fieldName, desc)
             return
         }
@@ -305,13 +311,13 @@ internal class SharedMemoryAccessTransformer(
         else -> throw IllegalStateException("Unexpected opcode: $opcode")
     }
 
-   /*
-    * Tries to obtain the type of array elements by inspecting the type of the array itself.
-    * To do this, the method queries the analyzer to get the type of accessed array
-    * which should lie on the stack.
-    * If the analyzer does not know the type, then return null
-    * (according to the ASM docs, this can happen, for example, when the visited instruction is unreachable).
-    */
+    /*
+     * Tries to obtain the type of array elements by inspecting the type of the array itself.
+     * To do this, the method queries the analyzer to get the type of accessed array
+     * which should lie on the stack.
+     * If the analyzer does not know the type, then return null
+     * (according to the ASM docs, this can happen, for example, when the visited instruction is unreachable).
+     */
     private fun getArrayAccessTypeFromStack(position: Int): Type? {
         if (analyzer.stack == null) return null
         val arrayDesc = analyzer.stack[analyzer.stack.size - position]

@@ -10,8 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import org.jetbrains.kotlinx.lincheck.findFieldNameByOffset
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
+import org.jetbrains.kotlinx.lincheck.util.findFieldNameByOffsetViaUnsafe
 import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
 import sun.misc.Unsafe
 import java.lang.reflect.Field
@@ -102,7 +102,7 @@ internal object VarHandleNames {
         override fun getMethodType(varHandle: Any, parameters: Array<Any?>): VarHandleMethodType {
             val ownerType = readFieldViaUnsafe(varHandle, receiverTypeField, Unsafe::getObject) as Class<*>
             val fieldOffset = readFieldViaUnsafe(varHandle, fieldOffsetField, Unsafe::getLong)
-            val fieldName = findFieldNameByOffset(ownerType, fieldOffset) ?: return TreatAsDefaultMethod
+            val fieldName = findFieldNameByOffsetViaUnsafe(ownerType, fieldOffset) ?: return TreatAsDefaultMethod
             val firstParameter = parameters.firstOrNull() ?: return TreatAsDefaultMethod
             if (!ownerType.isInstance(firstParameter)) return TreatAsDefaultMethod
 
@@ -124,7 +124,7 @@ internal object VarHandleNames {
             val ownerType = readFieldViaUnsafe(varHandle, receiverTypeField, Unsafe::getObject) as Class<*>
             val fieldOffset = readFieldViaUnsafe(varHandle, fieldOffsetField, Unsafe::getLong)
 
-            val fieldName = findFieldNameByOffset(ownerType, fieldOffset) ?: return TreatAsDefaultMethod
+            val fieldName = findFieldNameByOffsetViaUnsafe(ownerType, fieldOffset) ?: return TreatAsDefaultMethod
 
             return StaticVarHandleMethod(ownerType, fieldName, parameters.toList())
         }
