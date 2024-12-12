@@ -50,7 +50,6 @@ public class Injections {
     @SuppressWarnings({"FieldCanBeLocal", "unused"})
     private static int currentEventId = -1;
 
-    // Thread local variable storing testing code and ignored section flags.
     /*
      * Thread local variable storing the thread descriptor for each thread.
      *
