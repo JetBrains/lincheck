@@ -73,14 +73,6 @@ public class Injections {
      * - To accommodate for potential hash code collisions, we store lists of thread descriptors as values.
      * - These lists use copy-on-write strategy when a new descriptor is added to avoid race conditions.
      * - Thread descriptors store weak references to thread objects, and thus do not prevent their garbage collection.
-     *
-     * TODO: although the garbage collection of thread objects is not prevented thanks to weak references,
-     *   the hash map entries themself (key - identity hash code, and value - `ThreadDescriptor` object)
-     *   would not be garbage collected, potentially creating a memory leak.
-     *   However, we expect that typical programs would create only a bounded number of threads during
-     *   their whole lifetime, and thus this map also would only occupy a bounded amount of memory.
-     *   Still, it would be good to eventually implement proper periodic clean-up of the map
-     *   to remove obsolete entries.
      */
     private static final ConcurrentHashMap<Integer, ArrayList<ThreadDescriptor>> threadDescriptorsMap =
         new ConcurrentHashMap<Integer, ArrayList<ThreadDescriptor>>();
@@ -121,6 +113,10 @@ public class Injections {
             ((TestThread) thread).descriptor = descriptor;
             return;
         }
+        if (threadDescriptorsCleanupCounter++ > THREAD_DESCRIPTORS_CLEANUP_INTERVAL) {
+            cleanupThreadDescriptors();
+            threadDescriptorsCleanupCounter = 0;
+        }
         int hashCode = System.identityHashCode(thread);
         ArrayList<ThreadDescriptor> threadDescriptors = threadDescriptorsMap.get(hashCode);
         while (true) {
@@ -147,6 +143,19 @@ public class Injections {
             }
         }
     }
+
+    private static void cleanupThreadDescriptors() {
+        threadDescriptorsMap.values().removeIf(threadDescriptors -> {
+            boolean allDescriptorsGarbageCollected = true;
+            for (ThreadDescriptor descriptor : threadDescriptors) {
+                allDescriptorsGarbageCollected &= (descriptor.getThread() == null);
+            }
+            return allDescriptorsGarbageCollected;
+        });
+    }
+
+    private static int threadDescriptorsCleanupCounter = 0;
+    private static final int THREAD_DESCRIPTORS_CLEANUP_INTERVAL = 1000;
 
     public static EventTracker getEventTracker() {
         ThreadDescriptor descriptor = getCurrentThreadDescriptor();
