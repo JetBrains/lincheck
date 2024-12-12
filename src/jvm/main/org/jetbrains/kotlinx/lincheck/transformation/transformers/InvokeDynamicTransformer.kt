@@ -136,7 +136,7 @@ internal class InvokeDynamicTransformer(
             tryBlock = code,
             finallyBlock = {
                 loadLocal(oldId)
-                invokeStatic(Injections::advanceCurrentObjectIdWithKnownOldObjectId)
+                invokeStatic(Injections::advanceCurrentObjectId)
             }
         )
     }

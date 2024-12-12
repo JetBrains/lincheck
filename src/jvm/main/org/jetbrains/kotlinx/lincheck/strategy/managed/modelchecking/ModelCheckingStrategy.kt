@@ -54,7 +54,7 @@ internal class ModelCheckingStrategy(
     private lateinit var currentInterleaving: Interleaving
 
     // Tracker of objects' identity hash codes.
-    override val identityHashCodeTracker: ObjectInitialHashCodes = ObjectInitialHashCodes()
+    override val identityHashCodeTracker: ObjectIdentityHashCodeTracker = ObjectIdentityHashCodeTracker()
     // Tracker of the monitors' operations.
     override val monitorTracker: MonitorTracker = ModelCheckingMonitorTracker(nThreads)
     // Tracker of the thread parking.

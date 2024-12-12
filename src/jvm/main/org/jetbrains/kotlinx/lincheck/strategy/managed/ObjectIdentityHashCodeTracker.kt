@@ -24,7 +24,7 @@ private typealias Id = Long
  *
  * To guarantee correct work, ensure that replays are deterministic.
  */
-internal class ObjectInitialHashCodes {
+internal class ObjectIdentityHashCodeTracker {
     companion object {
         /**
          * Offset (in bytes) of identity hashcode in an object header.
@@ -42,7 +42,7 @@ internal class ObjectInitialHashCodes {
      * @return id of the created object.
      */
     @OptIn(ExperimentalStdlibApi::class)
-    fun onNewTrackedObjectCreation(obj: Any): Id {
+    fun afterNewTrackedObjectCreation(obj: Any): Id {
         val currentObjectId = getNextObjectId()
         val initialIdentityHashCode = getInitialIdentityHashCode(
             currentObjectId,
@@ -62,13 +62,29 @@ internal class ObjectInitialHashCodes {
     }
 
     /**
-     * Ensures that for the same old id, previously received with {@code getNextObjectId},
-     * the counter after calling the function persists.
+     * Advances the current object id with the delta, associated with the old id {@code oldId},
+     * previously received with {@code getNextObjectId}.
      * <p>
-     * If for given {@code oldId} there is no saved {@code newId}, the function saves the current value.
-     * If for given {@code oldId} there is a saved {@code newId}, the function sets the counter to the {@code newId}.
+     * If for the given {@code oldId} there is no saved {@code newId},
+     * the function saves the current object id and associates it with the {@code oldId}.
+     * On subsequent re-runs, when for the given {@code oldId} there exists a saved {@code newId},
+     * the function sets the counter to the {@code newId}.
+     * <p>
+     * This function is typically used to account for some cached computations:
+     * on the first run the actual computation is performed and its result is cached,
+     * and on subsequent runs the cached value is re-used.
+     * One example of such a situation is the {@code invokedynamic} instruction.
+     * <p>
+     * In such cases, on the first run, the performed computation may allocate more objects,
+     * assigning more object ids to them.
+     * On subsequent runs, however, these objects will not be allocated, and thus the object ids numbering may vary.
+     * To account for this, before the first invocation of the cached computation,
+     * the last allocated object id {@code oldId} can be saved, and after the computation,
+     * the new last object id can be associated with it via a call {@code advanceCurrentObjectId(oldId)}.
+     * On subsequent re-runs, the cached computation will be skipped, but the
+     * current object id will still be advanced by the required delta via a call to {@code advanceCurrentObjectId(oldId)}.
      */
-    fun advanceCurrentObjectIdWithKnownOldObjectId(oldObjectId: Id) {
+    fun advanceCurrentObjectId(oldObjectId: Id) {
         val newObjectId = nextObjectId.get()
         val existingAdvance = objectIdAdvances.putIfAbsent(oldObjectId, newObjectId)
         if (existingAdvance != null) {

@@ -72,7 +72,7 @@ abstract class ManagedStrategy(
     protected val currentActorId = IntArray(nThreads)
 
     // Tracker of objects' identity hash codes.
-    internal abstract val identityHashCodeTracker: ObjectInitialHashCodes
+    internal abstract val identityHashCodeTracker: ObjectIdentityHashCodeTracker
     // Tracker of the monitors' operations.
     protected abstract val monitorTracker: MonitorTracker
     // Tracker of the thread parking.
@@ -797,8 +797,8 @@ abstract class ManagedStrategy(
         LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
     }
 
-    override fun advanceCurrentObjectIdWithKnownOldObjectId(oldId: Long) {
-        identityHashCodeTracker.advanceCurrentObjectIdWithKnownOldObjectId(oldId)
+    override fun advanceCurrentObjectId(oldId: Long) {
+        identityHashCodeTracker.advanceCurrentObjectId(oldId)
     }
 
     override fun getNextObjectId(): Long = identityHashCodeTracker.getNextObjectId()
@@ -806,7 +806,7 @@ abstract class ManagedStrategy(
     override fun afterNewObjectCreation(obj: Any) {
         if (obj is String || obj is Int || obj is Long || obj is Byte || obj is Char || obj is Float || obj is Double) return
         runInIgnoredSection {
-            identityHashCodeTracker.onNewTrackedObjectCreation(obj)
+            identityHashCodeTracker.afterNewTrackedObjectCreation(obj)
         }
     }
 
