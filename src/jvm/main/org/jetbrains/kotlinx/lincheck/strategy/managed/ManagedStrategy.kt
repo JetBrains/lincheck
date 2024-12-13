@@ -1250,7 +1250,7 @@ abstract class ManagedStrategy(
         check(threadScheduler.getCurrentThreadId() == iThread)
         isSuspended[iThread] = true
         if (runner.isCoroutineResumed(iThread, currentActorId[iThread]!!)) {
-            // `COROUTINE_SUSPENSION_CODE_LOCATION`, because we do not know the actual code location
+            // `UNKNOWN_CODE_LOCATION`, because we do not know the actual code location
             newSwitchPoint(iThread, UNKNOWN_CODE_LOCATION, null)
         } else {
             // coroutine suspension does not violate obstruction-freedom
@@ -1888,7 +1888,7 @@ internal class ManagedStrategyRunner(
     }
 }
 
-// currently the exact place of coroutine suspension is not known
+// represents an unknown code location
 internal const val UNKNOWN_CODE_LOCATION = -1
 
 private val BlockingReason.obstructionFreedomViolationMessage: String get() = when (this) {

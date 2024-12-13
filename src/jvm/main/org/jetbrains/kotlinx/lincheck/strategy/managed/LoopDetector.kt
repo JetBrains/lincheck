@@ -203,7 +203,7 @@ internal class LoopDetector(
         totalExecutionsCount++
         // Has the thread changed? Reset the counters in this case.
         check(lastExecutedThread == iThread) { "reset expected!" }
-        // Ignore coroutine suspension code locations.
+        // Ignore unknown code locations.
         if (codeLocation == UNKNOWN_CODE_LOCATION) return Decision.Idle
         // Increment the number of times the specified code location is visited.
         val count = currentThreadCodeLocationVisitCountMap.getOrDefault(codeLocation, 0) + 1
