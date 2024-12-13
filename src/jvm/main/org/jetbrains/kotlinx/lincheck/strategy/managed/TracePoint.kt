@@ -344,7 +344,7 @@ private fun StackTraceElement.shorten(): String {
 
 internal sealed class SwitchReason(private val reason: String) {
     // strategy switch decision
-    object StrategySwitch : SwitchReason("strategy switch")
+    object StrategySwitch : SwitchReason("")
 
     // switch because of a thread blocking
     object MonitorWait  : SwitchReason("wait on monitor")
