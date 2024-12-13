@@ -288,6 +288,29 @@ internal fun constructTraceGraph(
         }
     }
 
+    // custom threads are handled separately
+    for (iCustomThread in customThreadActors.indices) {
+        val iThread = scenario.nThreads + iCustomThread
+        var actorNode = customThreadActors[iCustomThread]
+        if (actorNode == null)
+            continue
+        val lastEvent = actorNode.lastInternalEvent
+        val lastEventNext = lastEvent.next
+        val result = VoidResult
+        val resultRepresentation = resultRepresentation(result, exceptionStackTraces)
+        val callDepth = actorNode.callDepth + 1
+        val resultNode = ActorResultNode(
+            prefixProvider = prefixFactory.actorResultPrefix(iThread, callDepth),
+            iThread = iThread,
+            last = lastEvent,
+            callDepth = callDepth,
+            resultRepresentation = resultRepresentation,
+            exceptionNumberIfExceptionResult = null
+        )
+        actorNode.addInternalEvent(resultNode)
+        resultNode.next = lastEventNext
+    }
+
     // add last section
     if (traceGraphNodes.isNotEmpty()) {
         traceGraphNodesSections += traceGraphNodes

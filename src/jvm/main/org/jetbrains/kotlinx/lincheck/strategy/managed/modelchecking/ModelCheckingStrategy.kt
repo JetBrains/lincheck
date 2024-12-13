@@ -111,7 +111,7 @@ internal class ModelCheckingStrategy(
         // as the instrumented code might call `enterIgnoredSection` just before this call.
         return replay && collectTrace &&
                 suddenInvocationResult == null &&
-                !inIgnoredSection() &&
+                !inIgnoredSection() && // TODO: check that thread is registered
                 !shouldSkipNextBeforeEvent()
 
     }

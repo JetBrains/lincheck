@@ -519,7 +519,7 @@ abstract class ManagedStrategy(
     fun registerThread(thread: Thread, descriptor: ThreadDescriptor): ThreadId {
         val threadId = threadScheduler.registerThread(thread, descriptor)
         isSuspended[threadId] = false
-        currentActorId[threadId] = -1
+        currentActorId[threadId] = if (threadId < scenario.nThreads) -1 else 0
         callStackTrace[threadId] = mutableListOf()
         suspendedFunctionsStack[threadId] = mutableListOf()
         callStackContextPerThread[threadId] = arrayListOf(
@@ -548,6 +548,9 @@ abstract class ManagedStrategy(
         if (elapsedTime < 0L) throw TimeoutException()
         return elapsedTime
     }
+
+    fun getRegisteredThreads(): ThreadMap<Thread> =
+        threadScheduler.getRegisteredThreads()
 
     /**
      * This method is executed as the first thread action.
