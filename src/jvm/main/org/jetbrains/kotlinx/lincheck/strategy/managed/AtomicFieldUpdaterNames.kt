@@ -38,8 +38,12 @@ internal object AtomicFieldUpdaterNames {
             val offset = UNSAFE.getLong(updater, UNSAFE.objectFieldOffset(offsetField))
 
             return findFieldNameByOffsetViaUnsafe(targetType, offset).let { fieldName ->
-                if (fieldName != null) AtomicFieldUpdaterDescriptor(targetType, fieldName)
-                else null
+                if (fieldName != null) {
+                    AtomicFieldUpdaterDescriptor(targetType, fieldName)
+                }
+                else {
+                    null
+                }
             }
         } catch (t: Throwable) {
             t.printStackTrace()
