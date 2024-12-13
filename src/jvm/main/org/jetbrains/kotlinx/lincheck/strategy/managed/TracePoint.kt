@@ -257,7 +257,7 @@ internal class ThreadStartTracePoint(
 ) : TracePoint(iThread, actorId, callStackTrace.dropThreadStartStackTraceElements()) {
 
     override fun toStringImpl(withLocation: Boolean): String =
-        "THREAD_START(${startedThreadId + 1})"
+        "start Thread ${startedThreadId + 1}"
 
     companion object {
         // we drop the last N call stack trace elements related to `Thread::start()` and `ThreadsKt.thread {...}` calls
@@ -280,7 +280,7 @@ internal class ThreadJoinTracePoint(
 ) : TracePoint(iThread, actorId, callStackTrace.dropThreadJoinStackTraceElement()) {
 
     override fun toStringImpl(withLocation: Boolean): String =
-        "THREAD_JOIN(${joinedThreadId + 1})"
+        "join Thread ${joinedThreadId + 1}"
 
     companion object {
         // we drop the last call stack trace element `Thread::join()` to prettify output
