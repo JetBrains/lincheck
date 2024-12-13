@@ -418,7 +418,7 @@ abstract class ManagedStrategy(
         }
         // if live-lock failure was detected, then fail immediately
         if (decision is LoopDetector.Decision.LivelockFailureDetected) {
-            traceCollector?.newSwitch(iThread, SwitchReason.ACTIVE_LOCK, beforeMethodCallSwitch = tracePoint is MethodCallTracePoint)
+            traceCollector?.newSwitch(iThread, SwitchReason.ActiveLock, beforeMethodCallSwitch = tracePoint is MethodCallTracePoint)
             failDueToDeadlock()
         }
         // if live-lock was detected, and replay was requested,
@@ -428,7 +428,7 @@ abstract class ManagedStrategy(
         }
         // if the current thread in a live-lock, then try to switch to another thread
         if (decision is LoopDetector.Decision.LivelockThreadSwitch) {
-            val switchHappened = switchCurrentThread(iThread, SwitchReason.ACTIVE_LOCK, tracePoint = tracePoint)
+            val switchHappened = switchCurrentThread(iThread, BlockingReason.LiveLocked, tracePoint)
             if (switchHappened) {
                 loopDetector.initializeFirstCodeLocationAfterSwitch(codeLocation)
             }
@@ -437,7 +437,7 @@ abstract class ManagedStrategy(
         }
         // if strategy requested thread switch, then do it
         if (shouldSwitch) {
-            val switchHappened = switchCurrentThread(iThread, SwitchReason.STRATEGY_SWITCH, tracePoint = tracePoint)
+            val switchHappened = switchCurrentThread(iThread, tracePoint = tracePoint)
             if (switchHappened) {
                 loopDetector.initializeFirstCodeLocationAfterSwitch(codeLocation)
             }
@@ -503,7 +503,7 @@ abstract class ManagedStrategy(
         while (threadScheduler.getThreadState(joinThreadId) != ThreadState.FINISHED) {
             // TODO: should wait on thread-join be considered an obstruction-freedom violation?
             // Switch to another thread and wait for a moment when the thread is finished
-            switchCurrentThread(currentThreadId, SwitchReason.THREAD_JOIN_WAIT)
+            switchCurrentThread(currentThreadId, BlockingReason.ThreadJoin(joinThreadId))
         }
         if (collectTrace) {
             val tracePoint = ThreadJoinTracePoint(
@@ -626,26 +626,31 @@ abstract class ManagedStrategy(
      */
     private fun switchCurrentThread(
         iThread: Int,
-        switchReason: SwitchReason = SwitchReason.STRATEGY_SWITCH,
+        blockingReason: BlockingReason? = null,
         tracePoint: TracePoint? = null
     ): Boolean {
-        val blockingReason = when (switchReason) {
-            SwitchReason.LOCK_WAIT          -> BlockingReason.LOCKED
-            SwitchReason.MONITOR_WAIT       -> BlockingReason.WAITING
-            SwitchReason.PARK_WAIT          -> BlockingReason.PARKED
-            SwitchReason.THREAD_JOIN_WAIT   -> BlockingReason.THREAD_JOIN
-            // TODO: coroutine suspensions are currently handled separately from `ThreadScheduler`
-            // SwitchReason.SUSPENDED   -> BlockingReason.SUSPENDED
-            else                        -> null
+        val switchReason = when (blockingReason) {
+            is BlockingReason.Locked        -> SwitchReason.LockWait
+            is BlockingReason.LiveLocked    -> SwitchReason.ActiveLock
+            is BlockingReason.Waiting       -> SwitchReason.MonitorWait
+            is BlockingReason.Parked        -> SwitchReason.ParkWait
+            is BlockingReason.Suspended     -> SwitchReason.Suspended
+            is BlockingReason.ThreadJoin    -> SwitchReason.ThreadJoinWait(blockingReason.joinedThreadId)
+            else                            -> SwitchReason.StrategySwitch
         }
-        val mustSwitch = (blockingReason != null) || (switchReason == SwitchReason.SUSPENDED)
+        val mustSwitch = (blockingReason != null) && (blockingReason !is BlockingReason.LiveLocked)
         val nextThread = chooseThreadSwitch(iThread, mustSwitch)
         val switchHappened = (iThread != nextThread)
         if (switchHappened) {
             traceCollector?.newSwitch(iThread, switchReason,
                 beforeMethodCallSwitch = (tracePoint != null && tracePoint is MethodCallTracePoint)
             )
-            if (blockingReason != null) {
+            if (blockingReason != null &&
+                // active live-lock currently does not block thread
+                blockingReason !is BlockingReason.LiveLocked &&
+                // TODO: coroutine suspensions are currently handled separately from `ThreadScheduler`
+                blockingReason !is BlockingReason.Suspended
+            ) {
                 blockThread(iThread, blockingReason)
             }
             setCurrentThread(nextThread)
@@ -737,7 +742,7 @@ abstract class ManagedStrategy(
         // Try to acquire the monitor
         while (!monitorTracker.acquireMonitor(iThread, monitor)) {
             // Switch to another thread and wait for a moment when the monitor can be acquired
-            switchCurrentThread(iThread, SwitchReason.LOCK_WAIT)
+            switchCurrentThread(iThread, BlockingReason.Locked)
         }
     }
 
@@ -784,7 +789,7 @@ abstract class ManagedStrategy(
         parkingTracker.park(iThread)
         while (parkingTracker.waitUnpark(iThread)) {
             // switch to another thread and wait till an unpark event happens
-            switchCurrentThread(iThread, SwitchReason.PARK_WAIT)
+            switchCurrentThread(iThread, BlockingReason.Parked)
         }
     }
 
@@ -832,7 +837,7 @@ abstract class ManagedStrategy(
         val iThread = threadScheduler.getCurrentThreadId()
         while (monitorTracker.waitOnMonitor(iThread, monitor)) {
             unblockAcquiringThreads(iThread, monitor)
-            switchCurrentThread(iThread, SwitchReason.MONITOR_WAIT)
+            switchCurrentThread(iThread, BlockingReason.Waiting)
         }
     }
 
@@ -860,15 +865,15 @@ abstract class ManagedStrategy(
     @Suppress("UNUSED_PARAMETER")
     private fun unblockJoiningThreads(finishedThreadId: Int) {
         for (threadId in 0 until threadScheduler.nThreads) {
-            // TODO: unlock only those threads waiting for finishedThreadId
-            if (threadScheduler.getBlockingReason(threadId) == BlockingReason.THREAD_JOIN) {
+            val blockingReason = threadScheduler.getBlockingReason(threadId)
+            if (blockingReason is BlockingReason.ThreadJoin && blockingReason.joinedThreadId == finishedThreadId) {
                 threadScheduler.unblockThread(threadId)
             }
         }
     }
 
     private fun unblockParkedThread(unparkedThreadId: Int) {
-        if (threadScheduler.getBlockingReason(unparkedThreadId) == BlockingReason.PARKED) {
+        if (threadScheduler.getBlockingReason(unparkedThreadId) == BlockingReason.Parked) {
             threadScheduler.unblockThread(unparkedThreadId)
         }
     }
@@ -877,10 +882,10 @@ abstract class ManagedStrategy(
         monitorTracker.acquiringThreads(monitor).forEach { threadId ->
             if (iThread == threadId) return@forEach
             val blockingReason = threadScheduler.getBlockingReason(threadId)?.ensure {
-                it == BlockingReason.LOCKED || it == BlockingReason.WAITING
+                it == BlockingReason.Locked || it == BlockingReason.Waiting
             }
             // do not wake up thread waiting for notification
-            if (blockingReason == BlockingReason.WAITING && monitorTracker.isWaiting(threadId))
+            if (blockingReason == BlockingReason.Waiting && monitorTracker.isWaiting(threadId))
                 return@forEach
             threadScheduler.unblockThread(threadId)
         }
@@ -1254,7 +1259,7 @@ abstract class ManagedStrategy(
             newSwitchPoint(iThread, UNKNOWN_CODE_LOCATION, null)
         } else {
             // coroutine suspension does not violate obstruction-freedom
-            switchCurrentThread(iThread, SwitchReason.SUSPENDED)
+            switchCurrentThread(iThread, BlockingReason.Suspended)
         }
     }
 
@@ -1661,7 +1666,7 @@ abstract class ManagedStrategy(
         private val spinCycleMethodCallsStackTraces: MutableList<List<CallStackTraceElement>> = mutableListOf()
 
         fun newSwitch(iThread: Int, reason: SwitchReason, beforeMethodCallSwitch: Boolean = false) {
-            if (reason == SwitchReason.ACTIVE_LOCK) {
+            if (reason == SwitchReason.ActiveLock) {
                 afterSpinCycleTraceCollected(
                     trace = _trace,
                     callStackTrace = callStackTrace[iThread]!!,
@@ -1892,11 +1897,12 @@ internal class ManagedStrategyRunner(
 internal const val UNKNOWN_CODE_LOCATION = -1
 
 private val BlockingReason.obstructionFreedomViolationMessage: String get() = when (this) {
-    BlockingReason.LOCKED       -> OBSTRUCTION_FREEDOM_LOCK_VIOLATION_MESSAGE
-    BlockingReason.WAITING      -> OBSTRUCTION_FREEDOM_WAIT_VIOLATION_MESSAGE
-    BlockingReason.PARKED       -> OBSTRUCTION_FREEDOM_PARK_VIOLATION_MESSAGE
-    BlockingReason.THREAD_JOIN  -> OBSTRUCTION_FREEDOM_THREAD_JOIN_VIOLATION_MESSAGE
-    BlockingReason.SUSPENDED    -> OBSTRUCTION_FREEDOM_SUSPEND_VIOLATION_MESSAGE
+    is BlockingReason.Locked       -> OBSTRUCTION_FREEDOM_LOCK_VIOLATION_MESSAGE
+    is BlockingReason.LiveLocked   -> OBSTRUCTION_FREEDOM_SPINLOCK_VIOLATION_MESSAGE
+    is BlockingReason.Waiting      -> OBSTRUCTION_FREEDOM_WAIT_VIOLATION_MESSAGE
+    is BlockingReason.Parked       -> OBSTRUCTION_FREEDOM_PARK_VIOLATION_MESSAGE
+    is BlockingReason.ThreadJoin   -> OBSTRUCTION_FREEDOM_THREAD_JOIN_VIOLATION_MESSAGE
+    is BlockingReason.Suspended    -> OBSTRUCTION_FREEDOM_SUSPEND_VIOLATION_MESSAGE
 }
 
 private const val OBSTRUCTION_FREEDOM_SPINLOCK_VIOLATION_MESSAGE =

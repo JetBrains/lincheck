@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
+import org.jetbrains.kotlinx.lincheck.util.ThreadId
 
 data class Trace(val trace: List<TracePoint>)
 
@@ -341,15 +342,20 @@ private fun StackTraceElement.shorten(): String {
     return stackTraceElement
 }
 
-internal enum class SwitchReason(private val reason: String) {
-    MONITOR_WAIT("wait on monitor"),
-    LOCK_WAIT("lock is already acquired"),
-    PARK_WAIT("thread is parked"),
-    ACTIVE_LOCK("active lock detected"),
-    THREAD_JOIN_WAIT("waiting for thread to join"),
-    SUSPENDED("coroutine is suspended"),
-    STRATEGY_SWITCH("");
+internal sealed class SwitchReason(private val reason: String) {
+    // strategy switch decision
+    object StrategySwitch : SwitchReason("strategy switch")
 
+    // switch because of a thread blocking
+    object MonitorWait  : SwitchReason("wait on monitor")
+    object LockWait     : SwitchReason("lock is already acquired")
+    object ParkWait     : SwitchReason("thread is parked")
+    object ActiveLock   : SwitchReason("active lock detected")
+    object Suspended    : SwitchReason("coroutine is suspended")
+    class  ThreadJoinWait(val threadId: ThreadId)
+                        : SwitchReason("waiting for Thread ${threadId + 1} to join")
+
+    // display switch reason
     override fun toString() = reason
 }
 

@@ -219,7 +219,7 @@ internal class ModelCheckingStrategy(
                     val type = when (event) {
                         is SwitchEventTracePoint -> {
                             when (event.reason) {
-                                SwitchReason.ACTIVE_LOCK -> {
+                                SwitchReason.ActiveLock -> {
                                     5
                                 }
                                 else -> 3

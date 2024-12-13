@@ -57,14 +57,15 @@ enum class ThreadState {
 }
 
 /**
- * Enumeration represents possible reasons for thread blocking.
+ * Sealed hierarchy of classes representing possible reasons for thread blocking.
  */
-enum class BlockingReason {
-    LOCKED,
-    WAITING,
-    SUSPENDED,
-    PARKED,
-    THREAD_JOIN,
+sealed class BlockingReason {
+    data object Locked : BlockingReason()
+    data object LiveLocked : BlockingReason()
+    data object Waiting : BlockingReason()
+    data object Suspended : BlockingReason()
+    data object Parked : BlockingReason()
+    data class  ThreadJoin(val joinedThreadId: ThreadId) : BlockingReason()
 }
 
 /**
