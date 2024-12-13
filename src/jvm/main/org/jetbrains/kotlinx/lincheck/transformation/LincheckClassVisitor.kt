@@ -18,7 +18,6 @@ import org.objectweb.asm.commons.*
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.*
 import sun.nio.ch.lincheck.*
-import kotlin.collections.HashSet
 
 internal class LincheckClassVisitor(
     private val instrumentationMode: InstrumentationMode,
@@ -80,17 +79,17 @@ internal class LincheckClassVisitor(
             }
         }
         fun MethodVisitor.newAdapter() = GeneratorAdapter(this, access, methodName, desc)
-        if (methodName == "<clinit>" ||
-            // Debugger implicitly evaluates toString for variables rendering
-            // We need to disable breakpoints in such a case, as the numeration will break.
-            // Breakpoints are disabled as we do not instrument toString and enter an ignored section,
-            // so there are no beforeEvents inside.
-            ideaPluginEnabled && methodName == "toString" && desc == "()Ljava/lang/String;") {
+        if (methodName == "<clinit>") {
             mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
         }
-        if (methodName == "<init>") {
+        // Debugger implicitly evaluates toString for variables rendering
+        // We need to disable breakpoints in such a case, as the numeration will break.
+        // Breakpoints are disabled as we do not instrument toString and enter an ignored section,
+        // so there are no beforeEvents inside.
+        if (methodName == "<init>" || ideaPluginEnabled && methodName == "toString" && desc == "()Ljava/lang/String;") {
             mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
+            mv = InvokeDynamicTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
         }
         /* Wrap `ClassLoader::loadClass` calls into ignored sections
@@ -135,7 +134,8 @@ internal class LincheckClassVisitor(
         mv = WaitNotifyTransformer(fileName, className, methodName, mv.newAdapter())
         mv = ParkingTransformer(fileName, className, methodName, mv.newAdapter())
         mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
-        mv = DeterministicHashCodeTransformer(fileName, className, methodName, mv.newAdapter())
+//        mv = DeterministicHashCodeTransformer(fileName, className, methodName, mv.newAdapter())
+        mv = InvokeDynamicTransformer(fileName, className, methodName, mv.newAdapter())
         mv = DeterministicTimeTransformer(mv.newAdapter())
         mv = DeterministicRandomTransformer(fileName, className, methodName, mv.newAdapter())
         mv = UnsafeMethodTransformer(fileName, className, methodName, mv.newAdapter())
