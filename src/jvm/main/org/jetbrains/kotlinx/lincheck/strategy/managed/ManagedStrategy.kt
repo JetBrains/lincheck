@@ -72,6 +72,8 @@ abstract class ManagedStrategy(
     // Current actor id for each thread.
     protected val currentActorId = IntArray(nThreads)
 
+    // Tracker of objects' identity hash codes.
+    internal abstract val identityHashCodeTracker: ObjectIdentityHashCodeTracker
     // Tracker of the monitors' operations.
     protected abstract val monitorTracker: MonitorTracker
     // Tracker of the thread parking.
@@ -266,6 +268,7 @@ abstract class ManagedStrategy(
 
         collectTrace = true
         cleanObjectNumeration()
+        identityHashCodeTracker.resetObjectIds()
 
         runner.close()
         runner = createRunner()
@@ -795,8 +798,17 @@ abstract class ManagedStrategy(
         LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
     }
 
-    override fun afterNewObjectCreation(obj: Any) {
+    override fun advanceCurrentObjectId(oldId: Long) {
+        identityHashCodeTracker.advanceCurrentObjectId(oldId)
+    }
 
+    override fun getNextObjectId(): Long = identityHashCodeTracker.getNextObjectId()
+
+    override fun afterNewObjectCreation(obj: Any) {
+        if (obj is String || obj is Int || obj is Long || obj is Byte || obj is Char || obj is Float || obj is Double) return
+        runInIgnoredSection {
+            identityHashCodeTracker.afterNewTrackedObjectCreation(obj)
+        }
     }
 
     private fun methodGuaranteeType(owner: Any?, className: String, methodName: String): ManagedGuaranteeType? = runInIgnoredSection {
