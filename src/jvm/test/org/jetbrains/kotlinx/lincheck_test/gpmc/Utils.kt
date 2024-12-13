@@ -22,7 +22,7 @@ import org.junit.Assert
 internal fun modelCheckerTest(
     testClass: KClass<*>,
     testOperation: KFunction<*>,
-    outcomes: Set<Any?> = setOf(),
+    expectedOutcomes: Set<Any?> = setOf(),
     expectedExceptions: Set<KClass<out Throwable>> = setOf(),
     expectedFailure: KClass<out LincheckFailure>? = null,
     invocations: Int = DEFAULT_INVOCATIONS_COUNT,
@@ -61,7 +61,7 @@ internal fun modelCheckerTest(
                 Assert.fail(message)
             }
         }
-        Assert.assertEquals(outcomes, verifier.values)
+        Assert.assertEquals(expectedOutcomes, verifier.values)
     }
 }
 

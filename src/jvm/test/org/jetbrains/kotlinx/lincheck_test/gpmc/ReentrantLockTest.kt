@@ -36,7 +36,7 @@ class ReentrantLockTest {
     fun testReentrantLock() = modelCheckerTest(
         testClass = this::class,
         testOperation = this::reentrantLock,
-        outcomes = setOf(0, 1, 2, 3)
+        expectedOutcomes = setOf(0, 1, 2, 3)
     )
 
 }

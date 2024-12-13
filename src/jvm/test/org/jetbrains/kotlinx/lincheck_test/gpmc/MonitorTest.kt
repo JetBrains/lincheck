@@ -36,7 +36,7 @@ class MonitorTest {
     fun testMutex() = modelCheckerTest(
         testClass = this::class,
         testOperation = this::mutex,
-        outcomes = setOf(0, 1, 2, 3)
+        expectedOutcomes = setOf(0, 1, 2, 3)
     )
 
 }

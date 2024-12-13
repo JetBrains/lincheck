@@ -35,7 +35,7 @@ class ParkingTest {
         testClass = this::class,
         testOperation = this::operation,
         // can be both because of the spurious wake-ups
-        outcomes = setOf(0, 1)
+        expectedOutcomes = setOf(0, 1)
     )
 
 }

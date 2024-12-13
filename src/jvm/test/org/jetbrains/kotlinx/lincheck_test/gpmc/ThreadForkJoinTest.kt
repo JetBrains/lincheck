@@ -28,7 +28,7 @@ class ThreadForkJoinTest {
     fun testFork() = modelCheckerTest(
         testClass = this::class,
         testOperation = this::fork,
-        outcomes = setOf(0, 1),
+        expectedOutcomes = setOf(0, 1),
     )
 
     fun forkJoin(): Int {
@@ -53,7 +53,7 @@ class ThreadForkJoinTest {
     fun testForkJoin() = modelCheckerTest(
         testClass = this::class,
         testOperation = this::forkJoin,
-        outcomes = setOf(0, 1, 2, 3),
+        expectedOutcomes = setOf(0, 1, 2, 3),
     )
 
 }

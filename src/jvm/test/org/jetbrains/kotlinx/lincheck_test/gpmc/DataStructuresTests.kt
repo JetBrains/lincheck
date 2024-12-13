@@ -86,7 +86,7 @@ class DataStructuresTests {
     fun correctConcurrentHashMapTest() = modelCheckerTest(
         testClass = this::class,
         testOperation = this::correctConcurrentHashMap,
-        outcomes = setOf(),
+        expectedOutcomes = setOf(),
         invocations = 1_000,
     )
 
@@ -109,7 +109,7 @@ class DataStructuresTests {
     fun correctConcurrentSkipListMapTest() = modelCheckerTest(
         testClass = this::class,
         testOperation = this::correctConcurrentSkipListMap,
-        outcomes = setOf(),
+        expectedOutcomes = setOf(),
         invocations = 1_000,
     )
 

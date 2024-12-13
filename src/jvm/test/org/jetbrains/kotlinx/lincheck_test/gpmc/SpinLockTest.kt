@@ -14,7 +14,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.ManagedDeadlockFailure
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 import org.junit.Test
-import org.junit.Ignore
 
 class SpinLockTest {
 
@@ -38,7 +37,7 @@ class SpinLockTest {
     fun testSpinLock() = modelCheckerTest(
         testClass = this::class,
         testOperation = this::spinLock,
-        outcomes = setOf(0, 1, 2, 3),
+        expectedOutcomes = setOf(0, 1, 2, 3),
     )
 
 }
