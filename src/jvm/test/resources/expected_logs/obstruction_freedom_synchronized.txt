@@ -14,7 +14,6 @@ The following interleaving leads to the error:
 |                                                                                                                          |   switch                                                                                                                 |
 | operation()                                                                                                              |                                                                                                                          |
 |   MONITORENTER at ObstructionFreedomSynchronizedRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:61) |                                                                                                                          |
-|   switch (reason: lock is already acquired)                                                                              |                                                                                                                          |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 
 Detailed trace:
@@ -26,5 +25,4 @@ Detailed trace:
 |                                                                                                                          |   switch                                                                                                                 |
 | operation()                                                                                                              |                                                                                                                          |
 |   MONITORENTER at ObstructionFreedomSynchronizedRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:61) |                                                                                                                          |
-|   switch (reason: lock is already acquired)                                                                              |                                                                                                                          |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

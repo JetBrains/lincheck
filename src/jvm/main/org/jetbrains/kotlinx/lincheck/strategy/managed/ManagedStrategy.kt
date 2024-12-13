@@ -642,9 +642,6 @@ abstract class ManagedStrategy(
         val nextThread = chooseThreadSwitch(iThread, mustSwitch)
         val switchHappened = (iThread != nextThread)
         if (switchHappened) {
-            traceCollector?.newSwitch(iThread, switchReason,
-                beforeMethodCallSwitch = (tracePoint != null && tracePoint is MethodCallTracePoint)
-            )
             if (blockingReason != null &&
                 // active live-lock currently does not block thread
                 blockingReason !is BlockingReason.LiveLocked &&
@@ -653,6 +650,9 @@ abstract class ManagedStrategy(
             ) {
                 blockThread(iThread, blockingReason)
             }
+            traceCollector?.newSwitch(iThread, switchReason,
+                beforeMethodCallSwitch = (tracePoint != null && tracePoint is MethodCallTracePoint)
+            )
             setCurrentThread(nextThread)
         }
         threadScheduler.awaitTurn(iThread)
