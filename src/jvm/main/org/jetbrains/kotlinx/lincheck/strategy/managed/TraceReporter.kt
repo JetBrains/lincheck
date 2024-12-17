@@ -296,7 +296,17 @@ internal fun constructTraceGraph(
             continue
         val lastEvent = actorNode.lastInternalEvent
         val lastEventNext = lastEvent.next
-        val result = VoidResult
+        // TODO: a hacky-way to detect if the thread was aborted due to a detected live-lock;
+        //   in the future we need a better way to pass the results of the custom threads,
+        //   but currently it is not possible and would require large refactoring of the related code
+        val isHung = (
+            lastEvent is TraceLeafEvent &&
+            lastEvent.event is SwitchEventTracePoint &&
+            lastEvent.event.reason is SwitchReason.ActiveLock
+        )
+        val result = if (isHung) null else VoidResult
+        if (result === null)
+            continue
         val resultRepresentation = resultRepresentation(result, exceptionStackTraces)
         val callDepth = actorNode.callDepth + 1
         val resultNode = ActorResultNode(
