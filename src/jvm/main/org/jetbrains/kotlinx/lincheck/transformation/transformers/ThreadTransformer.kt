@@ -49,13 +49,6 @@ internal class ThreadTransformer(
 
     override fun visitInsn(opcode: Int) = adapter.run {
         // TODO: this approach does not support thread interruptions and any other thrown exceptions
-        if (isThreadStartMethod(methodName, desc) && opcode == Opcodes.RETURN) {
-            // STACK: <empty>
-            loadThis()
-            // STACK: forkedThread
-            invokeStatic(Injections::afterThreadFork)
-            // STACK: <empty>
-        }
         if (isThreadRunMethod(methodName, desc) && opcode == Opcodes.RETURN) {
             // STACK: <empty>
             invokeStatic(Injections::afterThreadFinish)

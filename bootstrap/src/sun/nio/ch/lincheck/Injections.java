@@ -264,18 +264,6 @@ public class Injections {
     }
 
     /**
-     * Current thread reports that it started a new child thread {@code forkedThread}.
-     */
-    public static void afterThreadFork(Thread forkedThread) {
-        // TestThread is handled separately
-        if (forkedThread instanceof TestThread) return;
-        ThreadDescriptor descriptor = getCurrentThreadDescriptor();
-        if (descriptor == null) return;
-        EventTracker tracker = descriptor.getEventTracker();
-        tracker.afterThreadFork(forkedThread);
-    }
-
-    /**
      * Current thread entered its {@code run} method.
      */
     public static void beforeThreadStart() {

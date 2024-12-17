@@ -19,7 +19,6 @@ import java.util.*;
 public interface EventTracker {
 
     void beforeThreadFork(Thread thread, ThreadDescriptor descriptor);
-    void afterThreadFork(Thread thread);
     void beforeThreadStart();
     void afterThreadFinish();
     void beforeThreadJoin(Thread thread);

@@ -468,15 +468,6 @@ abstract class ManagedStrategy(
         }
     }
 
-    override fun afterThreadFork(thread: Thread?) = runInIgnoredSection {
-        val currentThreadId = threadScheduler.getCurrentThreadId()
-        // do not track threads forked from unregistered threads
-        if (currentThreadId < 0) return
-        // scenario threads are handled separately by the runner itself
-        if (thread is TestThread) return
-        newSwitchPoint(currentThreadId, UNKNOWN_CODE_LOCATION, tracePoint = null)
-    }
-
     override fun beforeThreadStart() = runInIgnoredSection {
         val currentThreadId = threadScheduler.getCurrentThreadId()
         // do not track unregistered threads
