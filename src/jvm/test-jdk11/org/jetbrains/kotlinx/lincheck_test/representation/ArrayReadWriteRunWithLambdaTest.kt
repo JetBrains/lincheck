@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 
 import kotlin.random.Random
 
+
 class ArrayReadWriteRunWithLambdaTest : BaseRunWithLambdaRepresentationTest("array_read_write_run_with_lambda.txt") {
     private val array = IntArray(3)
 
