@@ -44,9 +44,9 @@ Detailed trace:
 |       AtomicIntegerArray#2[0].compareAndSet(1,2): false at AtomicReferencesNamesRunWithLambdaTests.operation(AtomicReferencesNamesRunWithLambdaTests.kt:51)                  |
 |       AtomicInteger#2.compareAndSet(0,2): true at AtomicReferencesNamesRunWithLambdaTests.operation(AtomicReferencesNamesRunWithLambdaTests.kt:53)                           |
 |       AtomicInteger#2.set(0) at AtomicReferencesNamesRunWithLambdaTests.operation(AtomicReferencesNamesRunWithLambdaTests.kt:54)                                             |
-|       AtomicInteger#3.compareAndSet(1,2): false at AtomicReferencesNamesRunWithLambdaTests.operation(AtomicReferencesNamesRunWithLambdaTests.kt:56)                          |
+|       AtomicInteger#3.compareAndSet(1,2): true at AtomicReferencesNamesRunWithLambdaTests.operation(AtomicReferencesNamesRunWithLambdaTests.kt:56)                           |
 |       AtomicInteger#3.set(3) at AtomicReferencesNamesRunWithLambdaTests.operation(AtomicReferencesNamesRunWithLambdaTests.kt:57)                                             |
-|       AtomicIntegerArray#3[1].compareAndSet(0,1): false at AtomicReferencesNamesRunWithLambdaTests.operation(AtomicReferencesNamesRunWithLambdaTests.kt:59)                  |
-|       AtomicIntegerArray#4[1].compareAndSet(0,1): false at AtomicReferencesNamesRunWithLambdaTests.operation(AtomicReferencesNamesRunWithLambdaTests.kt:60)                  |
+|       AtomicIntegerArray#3[1].compareAndSet(0,1): true at AtomicReferencesNamesRunWithLambdaTests.operation(AtomicReferencesNamesRunWithLambdaTests.kt:59)                   |
+|       AtomicIntegerArray#4[1].compareAndSet(0,1): true at AtomicReferencesNamesRunWithLambdaTests.operation(AtomicReferencesNamesRunWithLambdaTests.kt:60)                   |
 |   result: kotlin.Unit                                                                                                                                                        |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
