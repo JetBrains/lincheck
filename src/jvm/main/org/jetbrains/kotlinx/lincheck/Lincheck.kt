@@ -14,9 +14,11 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.forClasses
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.verify
+import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.ensureObjectIsTransformed
 import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import kotlin.reflect.jvm.javaMethod
@@ -25,7 +27,7 @@ import kotlin.reflect.jvm.javaMethod
 object Lincheck {
     /**
      * This method will explore the interleavings of [block] body
-     * and track exceptions thrown from it.
+     * and track exceptions thrown from it (threads are created by the user in the [block]).
      *
      * @param invocations number of different interleavings of code in the [block]
      * that should be explored.
@@ -33,7 +35,8 @@ object Lincheck {
      */
     @JvmStatic
     fun <R> verifyWithModelChecker(
-        invocations: Int = 1,
+        invocations: Int = ManagedCTestConfiguration.DEFAULT_INVOCATIONS,
+        verifierClass: Class<out Verifier>? = null,
         block: () -> R
     ): LincheckFailure? {
         val scenario = scenario {
@@ -48,11 +51,12 @@ object Lincheck {
             .addCustomScenario(scenario)
             .addGuarantee(forClasses(Lincheck::class).allMethods().ignore())
             .addGuarantee(forClasses(Wrapper::class).allMethods().ignore())
-            .verifier(ExecutionExceptionsVerifier::class.java)
+            .verifier(verifierClass ?: ExecutionExceptionsVerifier::class.java)
 
         val testCfg = options.createTestConfigurations(Wrapper::class.java)
 
         withLincheckJavaAgent(testCfg.instrumentationMode) {
+            ensureObjectIsTransformed(block)
             val strategy = testCfg.createStrategy(Wrapper::class.java, scenario, null, null)
             val verifier = testCfg.createVerifier()
 
