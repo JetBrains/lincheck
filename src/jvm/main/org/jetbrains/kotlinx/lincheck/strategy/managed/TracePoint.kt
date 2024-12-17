@@ -353,7 +353,7 @@ internal sealed class SwitchReason(private val reason: String) {
     object ActiveLock   : SwitchReason("active lock detected")
     object Suspended    : SwitchReason("coroutine is suspended")
     class  ThreadJoinWait(val threadId: ThreadId)
-                        : SwitchReason("waiting for Thread ${threadId + 1} to join")
+                        : SwitchReason("waiting for Thread ${threadId + 1} to finish")
 
     // display switch reason
     override fun toString() = reason
