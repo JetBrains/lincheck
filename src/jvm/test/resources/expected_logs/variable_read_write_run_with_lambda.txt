@@ -13,16 +13,16 @@ The following interleaving leads to the error:
 | ----------------------------------- |
 
 Detailed trace:
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                Thread 1                                                                                 |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| run(() -> kotlin.Unit): kotlin.Unit                                                                                                                                     |
-|   failure$1.invoke() at BaseRunWithLambdaRepresentationTest$testRunWithModelChecker$failure$1.invoke(BaseTraceRepresentationTest.kt:62)                                 |
-|     VariableReadWriteRunWithLambdaTest#1.operation() at BaseRunWithLambdaRepresentationTest$testRunWithModelChecker$failure$1.invoke(BaseTraceRepresentationTest.kt:65) |
-|       x.READ: 0 at VariableReadWriteRunWithLambdaTest.operation(VariableReadWriteRunWithLambdaTest.kt:18)                                                               |
-|       x.WRITE(1) at VariableReadWriteRunWithLambdaTest.operation(VariableReadWriteRunWithLambdaTest.kt:18)                                                              |
-|       x.READ: 1 at VariableReadWriteRunWithLambdaTest.operation(VariableReadWriteRunWithLambdaTest.kt:19)                                                               |
-|       x.WRITE(0) at VariableReadWriteRunWithLambdaTest.operation(VariableReadWriteRunWithLambdaTest.kt:19)                                                              |
-|       x.READ: 0 at VariableReadWriteRunWithLambdaTest.operation(VariableReadWriteRunWithLambdaTest.kt:19)                                                               |
-|   result: kotlin.Unit                                                                                                                                                   |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                    Thread 1                                                                                     |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| run(() -> kotlin.Unit): kotlin.Unit                                                                                                                                             |
+|   failure$1.invoke() at BaseRunWithLambdaRepresentationTest$testRunWithModelChecker$failure$1.invoke(BaseRunWithLambdaRepresentationTest.kt:28)                                 |
+|     VariableReadWriteRunWithLambdaTest#1.operation() at BaseRunWithLambdaRepresentationTest$testRunWithModelChecker$failure$1.invoke(BaseRunWithLambdaRepresentationTest.kt:31) |
+|       x.READ: 0 at VariableReadWriteRunWithLambdaTest.operation(VariableReadWriteRunWithLambdaTest.kt:18)                                                                       |
+|       x.WRITE(1) at VariableReadWriteRunWithLambdaTest.operation(VariableReadWriteRunWithLambdaTest.kt:18)                                                                      |
+|       x.READ: 1 at VariableReadWriteRunWithLambdaTest.operation(VariableReadWriteRunWithLambdaTest.kt:19)                                                                       |
+|       x.WRITE(0) at VariableReadWriteRunWithLambdaTest.operation(VariableReadWriteRunWithLambdaTest.kt:19)                                                                      |
+|       x.READ: 0 at VariableReadWriteRunWithLambdaTest.operation(VariableReadWriteRunWithLambdaTest.kt:19)                                                                       |
+|   result: kotlin.Unit                                                                                                                                                           |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

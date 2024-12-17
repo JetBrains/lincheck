@@ -10,7 +10,13 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import java.util.concurrent.atomic.*
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicIntegerArray
+import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicLongArray
+import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.atomic.AtomicReferenceArray
 
 class AtomicReferencesNamesRunWithLambdaTests : BaseRunWithLambdaRepresentationTest("atomic_references_names_trace_run_with_lambda.txt") {
 
@@ -100,5 +106,3 @@ class AtomicReferencesFromMultipleFieldsRunWithLambdaTest : BaseRunWithLambdaRep
     private data class Node(val name: Int)
 
 }
-
-

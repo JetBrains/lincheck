@@ -13,14 +13,14 @@ The following interleaving leads to the error:
 | ----------------------------------- |
 
 Detailed trace:
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                               Thread 1                                                                               |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| run(() -> kotlin.Unit): kotlin.Unit                                                                                                                                  |
-|   failure$1.invoke() at BaseRunWithLambdaRepresentationTest$testRunWithModelChecker$failure$1.invoke(BaseTraceRepresentationTest.kt:62)                              |
-|     ArrayReadWriteRunWithLambdaTest#1.operation() at BaseRunWithLambdaRepresentationTest$testRunWithModelChecker$failure$1.invoke(BaseTraceRepresentationTest.kt:65) |
-|       IntArray#1[0].READ: 1 at ArrayReadWriteRunWithLambdaTest.operation(ArrayReadWriteRunWithLambdaTest.kt:21)                                                      |
-|       IntArray#1[0].WRITE(2) at ArrayReadWriteRunWithLambdaTest.operation(ArrayReadWriteRunWithLambdaTest.kt:21)                                                     |
-|       IntArray#1[0].READ: 2 at ArrayReadWriteRunWithLambdaTest.operation(ArrayReadWriteRunWithLambdaTest.kt:22)                                                      |
-|   result: kotlin.Unit                                                                                                                                                |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                   Thread 1                                                                                   |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| run(() -> kotlin.Unit): kotlin.Unit                                                                                                                                          |
+|   failure$1.invoke() at BaseRunWithLambdaRepresentationTest$testRunWithModelChecker$failure$1.invoke(BaseRunWithLambdaRepresentationTest.kt:28)                              |
+|     ArrayReadWriteRunWithLambdaTest#1.operation() at BaseRunWithLambdaRepresentationTest$testRunWithModelChecker$failure$1.invoke(BaseRunWithLambdaRepresentationTest.kt:31) |
+|       IntArray#1[0].READ: 1 at ArrayReadWriteRunWithLambdaTest.operation(ArrayReadWriteRunWithLambdaTest.kt:22)                                                              |
+|       IntArray#1[0].WRITE(2) at ArrayReadWriteRunWithLambdaTest.operation(ArrayReadWriteRunWithLambdaTest.kt:22)                                                             |
+|       IntArray#1[0].READ: 2 at ArrayReadWriteRunWithLambdaTest.operation(ArrayReadWriteRunWithLambdaTest.kt:23)                                                              |
+|   result: kotlin.Unit                                                                                                                                                        |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

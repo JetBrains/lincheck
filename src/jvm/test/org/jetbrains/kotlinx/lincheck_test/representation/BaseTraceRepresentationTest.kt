@@ -10,13 +10,12 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.Lincheck
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
-import org.jetbrains.kotlinx.lincheck.execution.*
 import org.junit.Test
 
 /**
@@ -48,24 +47,6 @@ abstract class BaseTraceRepresentationTest(private val outputFileName: String) {
 
     open fun ModelCheckingOptions.customize() {}
 
-}
-
-abstract class BaseRunWithLambdaRepresentationTest(private val outputFileName: String) {
-    /**
-     * Implement me and place the logic to check its trace.
-     */
-    @Operation
-    abstract fun operation()
-
-    @Test
-    fun testRunWithModelChecker() {
-        val failure = Lincheck.verifyWithModelChecker(
-            verifierClass = FailingVerifier::class.java
-        ) {
-            operation()
-        }
-        failure.checkLincheckOutput(outputFileName)
-    }
 }
 
 class FailingVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : Verifier {
