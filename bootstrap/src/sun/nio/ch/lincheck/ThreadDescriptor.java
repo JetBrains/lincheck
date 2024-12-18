@@ -12,6 +12,10 @@ package sun.nio.ch.lincheck;
 
 import java.lang.ref.WeakReference;
 
+/**
+ * Represents a descriptor for a thread, containing metadata requited
+ * for the Lincheck analysis of the thread execution.
+ */
 public class ThreadDescriptor {
 
     /**

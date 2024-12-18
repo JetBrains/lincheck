@@ -13,7 +13,27 @@ package sun.nio.ch.lincheck;
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 
-
+/**
+ * The thread registry class provides mechanisms to manage and retrieve thread descriptors
+ * (see {@link ThreadDescriptor}) associated with threads within the Lincheck framework.
+ *
+ * <p>
+ * The registry uses a combination of techniques to associate and retrieve thread descriptors with threads.
+ * - For the instances of the {@link TestThread} class, that is threads usually created by the Lincheck itself,
+ *   the descriptor is stored in one of the fields of the class.
+ * - For the other subclasses of the {@link Thread} class, typically those created by the user code,
+ *   the descriptor is stored in the thread-local variable.
+ *
+ * <p>
+ * Moreover, the registry also maintains a global map
+ * to store a mapping from each registered thread to its descriptor
+ * in a thread-safe and garbage collection-friendly manner.
+ * The thread-local variable is used for quick retrieval of the descriptor from within the thread itself,
+ * while the global map is used to access a descriptor of the thread from another thread.
+ *
+ * <p>
+ * This class provides only static members and is not meant to be instantiated.
+ */
 public final class ThreadRegistry {
 
     /*
@@ -43,6 +63,12 @@ public final class ThreadRegistry {
     private static final ConcurrentHashMap<Integer, ArrayList<ThreadDescriptor>> threadDescriptorsMap =
         new ConcurrentHashMap<>();
 
+    /**
+     * Retrieves the current thread's {@code ThreadDescriptor}.
+     *
+     * @return the {@code ThreadDescriptor} associated with the current thread
+     *   or {@code null} if no descriptor is associated with it.
+     */
     public static ThreadDescriptor getCurrentThreadDescriptor() {
         Thread thread = Thread.currentThread();
         if (thread instanceof TestThread) {
@@ -51,6 +77,12 @@ public final class ThreadRegistry {
         return threadDescriptor.get();
     }
 
+    /**
+     * Sets the {@code ThreadDescriptor} for the current thread.
+     *
+     * @param descriptor the {@code ThreadDescriptor} to associate with the current thread
+     *   or {@code null} if no descriptor is associated with it.
+     */
     public static void setCurrentThreadDescriptor(ThreadDescriptor descriptor) {
         Thread thread = Thread.currentThread();
         if (thread instanceof TestThread) {
@@ -59,6 +91,13 @@ public final class ThreadRegistry {
         threadDescriptor.set(descriptor);
     }
 
+    /**
+     * Retrieves the {@code ThreadDescriptor} associated with a given {@code Thread}.
+     *
+     * @param thread the thread for which the descriptor is being retrieved. Must not be null.
+     * @return the {@code ThreadDescriptor} associated with the provided thread,
+     *   or {@code null} if no descriptor is found.
+     */
     public static ThreadDescriptor getThreadDescriptor(Thread thread) {
         if (thread instanceof TestThread) {
             return ((TestThread) thread).descriptor;
@@ -74,6 +113,13 @@ public final class ThreadRegistry {
         return null;
     }
 
+    /**
+     * Associates a {@code ThreadDescriptor} with a given {@code Thread}.
+     *
+     * @param thread the thread for which the {@code ThreadDescriptor} is being set. Must not be null.
+     * @param descriptor the {@code ThreadDescriptor} to associate with the provided thread. Must not be null.
+     * @throws IllegalStateException if another descriptor is already associated with the given thread.
+     */
     public static void setThreadDescriptor(Thread thread, ThreadDescriptor descriptor) {
         if (thread instanceof TestThread) {
             ((TestThread) thread).descriptor = descriptor;
