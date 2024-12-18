@@ -20,11 +20,9 @@ import org.jetbrains.kotlinx.lincheck.transformation.transformers.*
 import sun.nio.ch.lincheck.*
 
 internal class LincheckClassVisitor(
-    loader: ClassLoader?,
     private val classVisitor: SafeClassWriter,
     private val instrumentationMode: InstrumentationMode,
 ) : ClassVisitor(ASM_API, classVisitor) {
-    private val loader = loader ?: ClassLoader.getSystemClassLoader()
 
     private val ideaPluginEnabled = ideaPluginEnabled()
     private var classVersion = 0
@@ -169,21 +167,6 @@ internal class LincheckClassVisitor(
             mv.newAdapter()
         )
         return mv
-    }
-
-    private fun isThreadSubclass(): Boolean {
-        if (className == JAVA_THREAD_CLASSNAME) return true
-        if (className.canonicalClassName in threadSubclasses) return true
-        if (isInstanceOf(className, JAVA_THREAD_CLASSNAME)) {
-            threadSubclasses.add(className.canonicalClassName)
-            return true
-        }
-        return false
-    }
-
-    @Suppress("SameParameterValue")
-    private fun isInstanceOf(subClassName: String, superClassName: String): Boolean {
-        return (classVisitor.getCommonSuperClass(subClassName, superClassName) == superClassName)
     }
 
 }
