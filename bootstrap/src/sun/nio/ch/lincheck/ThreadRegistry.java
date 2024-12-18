@@ -10,8 +10,8 @@
 
 package sun.nio.ch.lincheck;
 
-import java.util.ArrayList;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
+import java.util.Collections;
 
 /**
  * The thread registry class provides mechanisms to manage and retrieve thread descriptors
@@ -35,6 +35,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * This class provides only static members and is not meant to be instantiated.
  */
 public final class ThreadRegistry {
+
+    // forbid instance creation
+    private ThreadRegistry() {}
 
     /*
      * Thread local variable storing the thread descriptor for each thread.
@@ -60,8 +63,8 @@ public final class ThreadRegistry {
      * - These lists use copy-on-write strategy when a new descriptor is added to avoid race conditions.
      * - Thread descriptors store weak references to thread objects, and thus do not prevent their garbage collection.
      */
-    private static final ConcurrentHashMap<Integer, ArrayList<ThreadDescriptor>> threadDescriptorsMap =
-        new ConcurrentHashMap<>();
+    private static final Map<Thread, ThreadDescriptor> threadDescriptorsMap =
+        Collections.synchronizedMap(new WeakIdentityHashMap<>());
 
     /**
      * Retrieves the current thread's {@code ThreadDescriptor}.
@@ -86,6 +89,7 @@ public final class ThreadRegistry {
     public static void setCurrentThreadDescriptor(ThreadDescriptor descriptor) {
         Thread thread = Thread.currentThread();
         if (thread instanceof TestThread) {
+            // TODO: fixme
             return;
         }
         threadDescriptor.set(descriptor);
@@ -102,15 +106,7 @@ public final class ThreadRegistry {
         if (thread instanceof TestThread) {
             return ((TestThread) thread).descriptor;
         }
-        int hashCode = System.identityHashCode(thread);
-        ArrayList<ThreadDescriptor> threadDescriptors = threadDescriptorsMap.get(hashCode);
-        if (threadDescriptors == null) return null;
-        for (ThreadDescriptor descriptor : threadDescriptors) {
-            if (descriptor.getThread() == thread) {
-                return descriptor;
-            }
-        }
-        return null;
+        return threadDescriptorsMap.get(thread);
     }
 
     /**
@@ -125,58 +121,10 @@ public final class ThreadRegistry {
             ((TestThread) thread).descriptor = descriptor;
             return;
         }
-        if (threadDescriptorsCleanupCounter++ > THREAD_DESCRIPTORS_CLEANUP_INTERVAL) {
-            cleanupThreadDescriptors();
-            threadDescriptorsCleanupCounter = 0;
+        if (threadDescriptorsMap.containsKey(thread)) {
+            String message = "Descriptor of thread " + thread.getName() + " is already set!";
+            throw new IllegalStateException(message);
         }
-        int hashCode = System.identityHashCode(thread);
-        ArrayList<ThreadDescriptor> threadDescriptors = threadDescriptorsMap.get(hashCode);
-        while (true) {
-            ArrayList<ThreadDescriptor> newThreadDescriptors;
-            if (threadDescriptors == null) {
-                newThreadDescriptors = new ArrayList<>(1);
-                newThreadDescriptors.add(descriptor);
-                threadDescriptors = threadDescriptorsMap.putIfAbsent(hashCode, newThreadDescriptors);
-                // the new thread descriptors list was successfully added to the map --- exit
-                if (threadDescriptors == null) return;
-                // otherwise, make another attempt
-            } else {
-                // in an unlikely case of hash-code collision,
-                // we create a full copy of the thread descriptors list
-                // to avoid potential race conditions on reads/writes to the descriptors' list,
-                newThreadDescriptors = new ArrayList<>(threadDescriptors);
-                // also check there is no other descriptor already associated with the given thread
-                for (ThreadDescriptor existingDescriptor : newThreadDescriptors) {
-                    if (existingDescriptor.getThread() == thread) {
-                        String message = "Descriptor of thread " + thread.getName() + " is already set!";
-                        throw new IllegalStateException(message);
-                    }
-                }
-                // add the descriptor to the list
-                newThreadDescriptors.add(descriptor);
-                boolean wasReplaced = threadDescriptorsMap.replace(hashCode, threadDescriptors, newThreadDescriptors);
-                // the thread descriptors list was successfully updated --- exit
-                if (wasReplaced) return;
-                // otherwise, re-read the thread descriptors list and make another attempt
-                threadDescriptors = threadDescriptorsMap.get(hashCode);
-            }
-        }
+        threadDescriptorsMap.put(thread, descriptor);
     }
-
-    private static void cleanupThreadDescriptors() {
-        threadDescriptorsMap.values().removeIf(threadDescriptors -> {
-            boolean allDescriptorsGarbageCollected = true;
-            for (ThreadDescriptor descriptor : threadDescriptors) {
-                allDescriptorsGarbageCollected &= (descriptor.getThread() == null);
-            }
-            return allDescriptorsGarbageCollected;
-        });
-    }
-
-    // forbid instance creation
-    private ThreadRegistry() {}
-
-    private static int threadDescriptorsCleanupCounter = 0;
-    private static final int THREAD_DESCRIPTORS_CLEANUP_INTERVAL = 1000;
-
 }
