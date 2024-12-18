@@ -111,11 +111,9 @@ internal class ModelCheckingStrategy(
         // as the instrumented code might call `enterIgnoredSection` just before this call.
         return replay && collectTrace &&
                 suddenInvocationResult == null &&
-                !inIgnoredSection() && // TODO: check that thread is registered
+                isRegisteredThread() &&
                 !shouldSkipNextBeforeEvent()
-
     }
-
 
     /**
      * We provide information about the failure type to the Plugin, but

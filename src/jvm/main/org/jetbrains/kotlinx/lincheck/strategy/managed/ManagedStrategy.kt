@@ -1034,6 +1034,12 @@ abstract class ManagedStrategy(
         getThreadLocalRandom().nextInt()
     }
 
+    protected fun isRegisteredThread(): Boolean {
+        val threadDescriptor = ThreadRegistry.getCurrentThreadDescriptor()
+            ?: return false
+        return (threadDescriptor.eventTracker == this)
+    }
+
     protected fun enterTestingCode() {
         return Injections.enterTestingCode();
     }
