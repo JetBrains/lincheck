@@ -89,9 +89,12 @@ public final class ThreadRegistry {
     public static void setCurrentThreadDescriptor(ThreadDescriptor descriptor) {
         Thread thread = Thread.currentThread();
         if (thread instanceof TestThread) {
-            // TODO: fixme
+            TestThread testThread = (TestThread) thread;
+            if (testThread.descriptor != null) throw DescriptorAlreadySetException(thread);
+            testThread.descriptor = descriptor;
             return;
         }
+        if (threadDescriptor.get() != null) throw DescriptorAlreadySetException(thread);
         threadDescriptor.set(descriptor);
     }
 
@@ -122,9 +125,13 @@ public final class ThreadRegistry {
             return;
         }
         if (threadDescriptorsMap.containsKey(thread)) {
-            String message = "Descriptor of thread " + thread.getName() + " is already set!";
-            throw new IllegalStateException(message);
+            throw DescriptorAlreadySetException(thread);
         }
         threadDescriptorsMap.put(thread, descriptor);
+    }
+
+    private static IllegalStateException DescriptorAlreadySetException(Thread thread) {
+        String message = "Descriptor of thread " + thread.getName() + " is already set!";
+        return new IllegalStateException(message);
     }
 }
