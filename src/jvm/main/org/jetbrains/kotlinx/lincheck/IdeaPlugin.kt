@@ -80,7 +80,7 @@ fun shouldReplayInterleaving(): Boolean {
  */
 @Suppress("UNUSED_PARAMETER")
 fun beforeEvent(eventId: Int, type: String) {
-    val strategy = Injections.getCurrentThreadDescriptor()?.eventTracker
+    val strategy = ThreadRegistry.getCurrentThreadDescriptor()?.eventTracker
         ?: return
     visualize(strategy)
 }

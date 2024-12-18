@@ -368,10 +368,10 @@ internal open class ParallelThreadsRunner(
         if (strategy !is ManagedStrategy)
             return
         executor.threads.forEachIndexed { i, thread ->
-            var descriptor = Injections.getThreadDescriptor(thread)
+            var descriptor = ThreadRegistry.getThreadDescriptor(thread)
             if (descriptor == null) {
                 descriptor = ThreadDescriptor(thread)
-                Injections.setThreadDescriptor(thread, descriptor)
+                ThreadRegistry.setThreadDescriptor(thread, descriptor)
             }
             descriptor.eventTracker = strategy
             strategy.registerThread(thread, descriptor)
@@ -383,7 +383,7 @@ internal open class ParallelThreadsRunner(
         if (strategy !is ManagedStrategy)
             return
         for (thread in executor.threads) {
-            val descriptor = Injections.getThreadDescriptor(thread)
+            val descriptor = ThreadRegistry.getThreadDescriptor(thread)
                 ?: continue
             descriptor.eventTracker = null
         }
