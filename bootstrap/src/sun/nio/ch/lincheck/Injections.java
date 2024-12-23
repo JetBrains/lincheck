@@ -486,4 +486,12 @@ public class Injections {
     public static void setLastMethodCallEventId() {
         getEventTracker().setLastMethodCallEventId();
     }
+
+    public static void afterPossibleBackBranchTarget(int codeLocation, int labelId) {
+        getEventTracker().afterPossibleBackBranchTarget(codeLocation, labelId);
+    }
+
+    public static void beforeBackBranch(int codeLocation, int labelId) {
+        getEventTracker().beforeBackBranch(codeLocation, labelId);
+    }
 }
