@@ -56,6 +56,9 @@ public interface EventTracker {
     Random getThreadLocalRandom();
     int randomNextInt();
 
+    void afterPossibleBackBranchTarget(int codeLocation, int labelId);
+    void beforeBackBranch(int codeLocation, int labelId);
+
     // Methods required for the plugin integration
 
     boolean shouldInvokeBeforeEvent();

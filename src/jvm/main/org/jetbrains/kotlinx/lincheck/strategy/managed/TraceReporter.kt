@@ -644,6 +644,48 @@ internal class ActorResultNode(
     }
 }
 
+internal class IterationNode(
+    prefixProvider: PrefixProvider,
+    iThread: Int,
+    last: TraceNode?,
+    callDepth: Int,
+    private val iterationNumber: Int
+) : TraceInnerNode(prefixProvider, iThread, last, callDepth) {
+    override fun addRepresentationTo(
+        traceRepresentation: MutableList<TraceEventRepresentation>,
+        verboseTrace: Boolean
+    ): TraceNode? =
+        if (!shouldBeExpanded(verboseTrace)) {
+            traceRepresentation.add(TraceEventRepresentation(iThread, prefix + "Iteration #$iterationNumber"))
+            lastState?.let { traceRepresentation.add(stateEventRepresentation(iThread, it)) }
+            lastInternalEvent.next
+        } else {
+            traceRepresentation.add(TraceEventRepresentation(iThread, prefix + "Iteration #$iterationNumber"))
+            next
+        }
+}
+
+internal class LoopNode(
+    prefixProvider: PrefixProvider,
+    iThread: Int,
+    last: TraceNode?,
+    callDepth: Int,
+    private val iterations: Int
+) : TraceInnerNode(prefixProvider, iThread, last, callDepth) {
+    override fun addRepresentationTo(
+        traceRepresentation: MutableList<TraceEventRepresentation>,
+        verboseTrace: Boolean
+    ): TraceNode? =
+        if (!shouldBeExpanded(verboseTrace)) {
+            traceRepresentation.add(TraceEventRepresentation(iThread, prefix + "Loop with ${iterations} iterations"))
+            lastState?.let { traceRepresentation.add(stateEventRepresentation(iThread, it)) }
+            lastInternalEvent.next
+        } else {
+            traceRepresentation.add(TraceEventRepresentation(iThread, prefix + "Loop with ${iterations} iterations"))
+            next
+        }
+}
+
 /**
  * Provides the prefix output for the [TraceNode].
  * @see TraceNodePrefixFactory

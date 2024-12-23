@@ -271,6 +271,24 @@ internal class ThreadJoinTracePoint(
         "join Thread ${joinedThreadId + 1}"
 }
 
+internal class BackBranchTargetTracePoint(
+    iThread: Int, actorId: Int,
+    callStackTrace: CallStackTrace,
+    stackTraceElement: StackTraceElement,
+    val labelId: Int
+) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
+    override fun toStringCompact(): String = "ITERATION $labelId"
+}
+
+internal class BackBranchJumpTracePoint(
+    iThread: Int, actorId: Int,
+    callStackTrace: CallStackTrace,
+    stackTraceElement: StackTraceElement,
+    val labelId: Int
+) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
+    override fun toStringCompact(): String = "JUMP TO $labelId"
+}
+
 internal class CoroutineCancellationTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,

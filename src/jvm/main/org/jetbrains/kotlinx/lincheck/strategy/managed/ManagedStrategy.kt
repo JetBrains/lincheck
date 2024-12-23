@@ -1114,6 +1114,37 @@ abstract class ManagedStrategy(
         return objectTracker!!.shouldTrackObjectAccess(obj ?: StaticObject)
     }
 
+    override fun afterPossibleBackBranchTarget(codeLocation: Int, labelId: Int) = runInIgnoredSection {
+        if (!LabelsTracker.isLabelBackBranched(labelId)) {
+            return
+        }
+        if (collectTrace) {
+            val iThread = currentThread
+            val tracePoint = BackBranchTargetTracePoint(
+                iThread = iThread,
+                actorId = currentActorId[iThread],
+                callStackTrace = callStackTrace[iThread],
+                stackTraceElement = CodeLocations.stackTrace(codeLocation),
+                labelId = labelId
+            )
+            traceCollector!!.passCodeLocation(tracePoint)
+        }
+    }
+
+    override fun beforeBackBranch(codeLocation: Int, labelId: Int) = runInIgnoredSection {
+        if (collectTrace) {
+            val iThread = currentThread
+            val tracePoint = BackBranchJumpTracePoint(
+                iThread = iThread,
+                actorId = currentActorId[iThread],
+                callStackTrace = callStackTrace[iThread],
+                stackTraceElement = CodeLocations.stackTrace(codeLocation),
+                labelId = labelId
+            )
+            traceCollector!!.passCodeLocation(tracePoint)
+        }
+    }
+
     /**
      * Tracks a specific field of an [obj], if the [obj] is either `null` (which means that field is static),
      * or one this objects which contains it is already stored.
