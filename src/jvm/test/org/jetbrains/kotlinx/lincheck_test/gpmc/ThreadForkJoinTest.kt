@@ -14,9 +14,9 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import org.junit.Test
 
-class ThreadForkJoinTest {
+class ThreadStartJoinTest {
 
-    fun fork(): Int {
+    fun threadStart(): Int {
         val counter = AtomicInteger(0)
         thread {
             counter.incrementAndGet()
@@ -25,13 +25,13 @@ class ThreadForkJoinTest {
     }
 
     @Test(timeout = TIMEOUT)
-    fun testFork() = modelCheckerTest(
+    fun testThreadStart() = modelCheckerTest(
         testClass = this::class,
-        testOperation = this::fork,
+        testOperation = this::threadStart,
         expectedOutcomes = setOf(0, 1),
     )
 
-    fun forkJoin(): Int {
+    fun threadJoin(): Int {
         val counter = AtomicInteger(0)
         val t1 = thread {
             counter.incrementAndGet()
@@ -50,10 +50,31 @@ class ThreadForkJoinTest {
     }
 
     @Test(timeout = TIMEOUT)
-    fun testForkJoin() = modelCheckerTest(
+    fun testThreadJoin() = modelCheckerTest(
         testClass = this::class,
-        testOperation = this::forkJoin,
+        testOperation = this::threadJoin,
         expectedOutcomes = setOf(0, 1, 2, 3),
+    )
+
+    fun threadTimedJoin(): Int {
+        val counter = AtomicInteger(0)
+        val t1 = thread {
+            counter.incrementAndGet()
+        }
+        val t2 = thread {
+            counter.incrementAndGet()
+        }
+        return counter.get().also {
+            t1.join(10L)
+            t2.join(10L, 1_000)
+        }
+    }
+
+    @Test(timeout = TIMEOUT)
+    fun testThreadTimedJoin() = modelCheckerTest(
+        testClass = this::class,
+        testOperation = this::threadTimedJoin,
+        expectedOutcomes = setOf(0, 1, 2),
     )
 
 }

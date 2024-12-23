@@ -57,17 +57,29 @@ internal class ThreadTransformer(
     }
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
-        if (isThreadJoinCall(owner, name, desc)) {
+        if (isThreadJoinCall(owner, name, desc) &&
+            // in some JDK implementations, `Thread` methods may themselves call `join`,
+            // so we do not instrument `join` class inside the `Thread` class itself.
+            className != JAVA_THREAD_CLASSNAME
+        ) {
+            // STACK: joiningThread, timeout?, nanos?
+            val nArguments = Type.getArgumentTypes(desc).size
+            val withTimeout = (nArguments > 0) // TODO: `join(0)` should be handled same as `join()`
+            if (nArguments >= 2) {
+                // int nanos
+                pop()
+            }
+            if (nArguments >= 1) {
+                // long timeout
+                pop2()
+            }
+            push(withTimeout)
             // STACK: joiningThread
-            dup()
-            // STACK: joiningThread, joiningThread
-            invokeStatic(Injections::beforeThreadJoin)
-            // STACK: joiningThread
-            adapter.visitMethodInsn(opcode, owner, name, desc, itf)
+            invokeStatic(Injections::threadJoin)
             // STACK: <empty>
-        } else {
-            adapter.visitMethodInsn(opcode, owner, name, desc, itf)
+            return
         }
+        adapter.visitMethodInsn(opcode, owner, name, desc, itf)
     }
 
     private fun isThreadStartMethod(methodName: String, desc: String): Boolean =
@@ -79,7 +91,9 @@ internal class ThreadTransformer(
     // TODO: add support for thread joins with time limit
     private fun isThreadJoinCall(className: String, methodName: String, desc: String) =
         // no need to check for thread subclasses here, since join methods are marked as final
-        className == JAVA_THREAD_CLASSNAME && methodName == "join" && desc == VOID_METHOD_DESCRIPTOR
+        className == JAVA_THREAD_CLASSNAME && methodName == "join" && (
+            desc == "()V" || desc == "(J)V" || desc == "(JI)V"
+        )
 }
 
 private val EMPTY_TYPE_ARRAY = emptyArray<Type>()

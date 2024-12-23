@@ -11,8 +11,6 @@
 package sun.nio.ch.lincheck;
 
 import java.util.Random;
-import java.util.ArrayList;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Methods of this object are called from the instrumented code.
@@ -179,15 +177,13 @@ public class Injections {
     }
 
     /**
-     * Current thread successfully joined thread {@code t}.
-     * <p>
-     * <b>Does not support joins with time limits yet</b>.
+     * Called from instrumented code instead of {@code thread.join()}.
      */
-    public static void beforeThreadJoin(Thread t) {
+    public static void threadJoin(Thread thread, boolean withTimeout) {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) return;
         EventTracker tracker = descriptor.getEventTracker();
-        tracker.beforeThreadJoin(t);
+        tracker.threadJoin(thread, withTimeout);
     }
 
     /**

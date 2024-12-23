@@ -488,7 +488,8 @@ abstract class ManagedStrategy(
         onThreadFinish(currentThreadId)
     }
 
-    override fun beforeThreadJoin(thread: Thread?) = runInIgnoredSection {
+    override fun threadJoin(thread: Thread?, withTimeout: Boolean) = runInIgnoredSection {
+        if (withTimeout) return // timeouts occur instantly
         val currentThreadId = threadScheduler.getCurrentThreadId()
         val joinThreadId = threadScheduler.getThreadId(thread!!)
         while (threadScheduler.getThreadState(joinThreadId) != ThreadState.FINISHED) {
