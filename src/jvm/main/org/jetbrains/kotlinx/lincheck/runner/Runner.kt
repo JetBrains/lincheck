@@ -63,7 +63,7 @@ abstract class Runner protected constructor(
      * This method is invoked by the corresponding test thread
      * when an unexpected exception is thrown.
      */
-    abstract fun onFailure(iThread: Int, e: Throwable)
+    abstract fun onThreadFailure(iThread: Int, e: Throwable)
 
     /**
      * This method is invoked by the corresponding test thread

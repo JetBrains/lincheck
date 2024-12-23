@@ -56,7 +56,7 @@ public abstract class TestThreadExecution implements Runnable {
     // used in byte-code generation
     public void failOnExceptionIsUnexpected(int iThread, Throwable e) throws Throwable {
         if (!exceptionCanBeValidExecutionResult(e)) {
-            runner.onFailure(iThread, e);
+            runner.onThreadFailure(iThread, e);
             throw e;
         }
     }

@@ -571,7 +571,7 @@ abstract class ManagedStrategy(
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
      * @param exception the exception that was thrown
      */
-    open fun onFailure(iThread: Int, exception: Throwable) {
+    open fun onThreadFailure(iThread: Int, exception: Throwable) {
         // This method is called only if exception can't be treated as a normal operation result,
         // so we exit testing code to avoid trace collection resume or some bizarre bugs
         leaveTestingCode()
@@ -1848,8 +1848,8 @@ internal class ManagedStrategyRunner(
         managedStrategy.onThreadFinish(iThread)
     }
 
-    override fun onFailure(iThread: Int, e: Throwable) = runInIgnoredSection {
-        managedStrategy.onFailure(iThread, e)
+    override fun onThreadFailure(iThread: Int, e: Throwable) = runInIgnoredSection {
+        managedStrategy.onThreadFailure(iThread, e)
     }
 
     override fun afterCoroutineSuspended(iThread: Int) = runInIgnoredSection {
