@@ -175,6 +175,7 @@ internal open class ParallelThreadsRunner(
         // reset thread executions
         testThreadExecutions.forEach { it.reset() }
         validationPartExecution?.results?.fill(null)
+        resetEventTracker()
     }
 
     private var ensuredTestInstanceIsTransformed = false
@@ -290,7 +291,7 @@ internal open class ParallelThreadsRunner(
         try {
             // Create a new testing class instance.
             createTestInstance()
-            // set the event tracker
+            // Set the event tracker.
             setEventTracker()
             // Execute the initial part.
             initialPartExecution?.let {
@@ -336,7 +337,6 @@ internal open class ParallelThreadsRunner(
             return UnexpectedExceptionInvocationResult(e.cause!!, collectExecutionResults())
         } finally {
             resetState()
-            resetEventTracker()
         }
     }
 
@@ -365,8 +365,7 @@ internal open class ParallelThreadsRunner(
     )
 
     private fun setEventTracker() {
-        if (strategy !is ManagedStrategy)
-            return
+        if (strategy !is ManagedStrategy) return
         executor.threads.forEachIndexed { i, thread ->
             var descriptor = ThreadRegistry.getThreadDescriptor(thread)
             if (descriptor == null) {
@@ -380,8 +379,7 @@ internal open class ParallelThreadsRunner(
     }
 
     private fun resetEventTracker() {
-        if (strategy !is ManagedStrategy)
-            return
+        if (strategy !is ManagedStrategy) return
         for (thread in executor.threads) {
             val descriptor = ThreadRegistry.getThreadDescriptor(thread)
                 ?: continue
