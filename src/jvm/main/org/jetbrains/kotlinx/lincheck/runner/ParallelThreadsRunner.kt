@@ -366,10 +366,10 @@ internal open class ParallelThreadsRunner(
     private fun setEventTracker() {
         if (strategy !is ManagedStrategy) return
         executor.threads.forEachIndexed { i, thread ->
-            var descriptor = ThreadRegistry.getThreadDescriptor(thread)
+            var descriptor = ThreadDescriptor.getThreadDescriptor(thread)
             if (descriptor == null) {
                 descriptor = ThreadDescriptor(thread)
-                ThreadRegistry.setThreadDescriptor(thread, descriptor)
+                ThreadDescriptor.setThreadDescriptor(thread, descriptor)
             }
             descriptor.eventTracker = strategy
             strategy.registerThread(thread, descriptor)
@@ -380,7 +380,7 @@ internal open class ParallelThreadsRunner(
     private fun resetEventTracker() {
         if (strategy !is ManagedStrategy) return
         for (thread in executor.threads) {
-            val descriptor = ThreadRegistry.getThreadDescriptor(thread)
+            val descriptor = ThreadDescriptor.getThreadDescriptor(thread)
                 ?: continue
             descriptor.eventTracker = null
         }

@@ -51,7 +51,7 @@ public class Injections {
     private static int currentEventId = -1;
 
     public static EventTracker getEventTracker() {
-        ThreadDescriptor descriptor = ThreadRegistry.getCurrentThreadDescriptor();
+        ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) {
             throw new RuntimeException("No event tracker set by Lincheck");
         }
@@ -69,13 +69,13 @@ public class Injections {
     }
 
     public static void enterTestingCode() {
-        ThreadDescriptor descriptor = ThreadRegistry.getCurrentThreadDescriptor();
+        ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) return;
         descriptor.enterTestingCode();
     }
 
     public static void leaveTestingCode() {
-        ThreadDescriptor descriptor = ThreadRegistry.getCurrentThreadDescriptor();
+        ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) return;
         descriptor.leaveTestingCode();
     }
@@ -91,7 +91,7 @@ public class Injections {
      * @return true if the thread successfully entered the ignored section, false otherwise.
      */
     public static boolean enterIgnoredSection() {
-        ThreadDescriptor descriptor = ThreadRegistry.getCurrentThreadDescriptor();
+        ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) return false;
         return descriptor.enterIgnoredSection();
     }
@@ -100,7 +100,7 @@ public class Injections {
      * Leaves an ignored section for the current thread.
      */
     public static void leaveIgnoredSection() {
-        ThreadDescriptor descriptor = ThreadRegistry.getCurrentThreadDescriptor();
+        ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) return;
         descriptor.leaveIgnoredSection();
     }
@@ -111,7 +111,7 @@ public class Injections {
      * @return true if the current thread is inside an ignored section, false otherwise.
      */
     public static boolean inIgnoredSection() {
-        ThreadDescriptor descriptor = ThreadRegistry.getCurrentThreadDescriptor();
+        ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) return true;
         return descriptor.inIgnoredSection();
     }
@@ -122,7 +122,7 @@ public class Injections {
     public static void beforeThreadFork(Thread forkedThread) {
         // TestThread is handled separately
         if (forkedThread instanceof TestThread) return;
-        ThreadDescriptor descriptor = ThreadRegistry.getCurrentThreadDescriptor();
+        ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) {
             return;
         }
@@ -140,7 +140,7 @@ public class Injections {
          *   (2) they do not call any instrumented methods themselves.
          */
         descriptor.enterIgnoredSection();
-        ThreadRegistry.setThreadDescriptor(forkedThread, forkedThreadDescriptor);
+        ThreadDescriptor.setThreadDescriptor(forkedThread, forkedThreadDescriptor);
         descriptor.leaveIgnoredSection();
         /*
          * End of the ignored section, the rest should be
@@ -156,11 +156,11 @@ public class Injections {
         Thread thread = Thread.currentThread();
         // TestThread is handled separately
         if (thread instanceof TestThread) return;
-        ThreadDescriptor descriptor = ThreadRegistry.getThreadDescriptor(thread);
+        ThreadDescriptor descriptor = ThreadDescriptor.getThreadDescriptor(thread);
         if (descriptor == null) {
             return;
         }
-        ThreadRegistry.setCurrentThreadDescriptor(descriptor);
+        ThreadDescriptor.setCurrentThreadDescriptor(descriptor);
         EventTracker tracker = descriptor.getEventTracker();
         tracker.beforeThreadStart();
     }
@@ -172,7 +172,7 @@ public class Injections {
         Thread thread = Thread.currentThread();
         // TestThread is handled separately
         if (thread instanceof TestThread) return;
-        ThreadDescriptor descriptor = ThreadRegistry.getCurrentThreadDescriptor();
+        ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) return;
         EventTracker tracker = descriptor.getEventTracker();
         tracker.afterThreadFinish();
@@ -184,7 +184,7 @@ public class Injections {
      * <b>Does not support joins with time limits yet</b>.
      */
     public static void beforeThreadJoin(Thread t) {
-        ThreadDescriptor descriptor = ThreadRegistry.getCurrentThreadDescriptor();
+        ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) return;
         EventTracker tracker = descriptor.getEventTracker();
         tracker.beforeThreadJoin(t);

@@ -1035,7 +1035,7 @@ abstract class ManagedStrategy(
     }
 
     protected fun isRegisteredThread(): Boolean {
-        val threadDescriptor = ThreadRegistry.getCurrentThreadDescriptor()
+        val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor()
             ?: return false
         return (threadDescriptor.eventTracker === this)
     }

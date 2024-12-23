@@ -46,6 +46,6 @@ public class TestThread extends Thread {
     public TestThread(String testName, int threadId, Runnable block) {
         super(block, "Lincheck-" + testName + "-" + threadId);
         this.threadId = threadId;
-        ThreadRegistry.setThreadDescriptor(this, new ThreadDescriptor(this));
+        ThreadDescriptor.setThreadDescriptor(this, new ThreadDescriptor(this));
     }
 }

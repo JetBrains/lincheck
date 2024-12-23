@@ -10,10 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy
 
-import org.jetbrains.kotlinx.lincheck.util.*
 import sun.nio.ch.lincheck.TestThread
 import sun.nio.ch.lincheck.ThreadDescriptor
-import sun.nio.ch.lincheck.ThreadRegistry
+import org.jetbrains.kotlinx.lincheck.util.*
 
 /**
  * Enumeration representing the various states of a thread.
@@ -128,12 +127,12 @@ open class ThreadScheduler {
      * @return The id of the thread, or -1 if the thread is not found.
      */
     fun getThreadId(thread: Thread): ThreadId {
-        val descriptor = ThreadRegistry.getThreadDescriptor(thread)
+        val descriptor = ThreadDescriptor.getThreadDescriptor(thread)
         return (descriptor?.eventTrackerData as? ThreadData)?.id ?: -1
     }
 
     fun getCurrentThreadId(): ThreadId {
-        val descriptor = ThreadRegistry.getCurrentThreadDescriptor()
+        val descriptor = ThreadDescriptor.getCurrentThreadDescriptor()
         return (descriptor?.eventTrackerData as? ThreadData)?.id ?: -1
     }
 
