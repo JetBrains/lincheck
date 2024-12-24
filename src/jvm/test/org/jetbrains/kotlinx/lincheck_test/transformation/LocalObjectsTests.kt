@@ -17,7 +17,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import org.junit.Test
 import sun.misc.Unsafe
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
+import java.util.concurrent.atomic.*
 import kotlin.concurrent.Volatile
 import kotlin.reflect.KFunction
 
@@ -131,9 +131,188 @@ class LocalObjectEscapeConstructorTest {
 
 /**
  * This test checks that despite some object isn't explicitly assigned to some shared value,
+ * is won't be treated like a local object if we wrote it into some shared object using [AtomicReference].
+ *
+ * If the object is incorrectly classified as a local object,
+ * this test would hang due to infinite spin-loop on a local object operation with
+ * no chances to detect a cycle and switch.
+ */
+class AtomicReferenceLocalObjectsTest {
+
+    val atomicReference: AtomicReference<Node> = AtomicReference(Node(0))
+
+    val node: Node get() = atomicReference.get()
+
+    @Volatile
+    var flag = false
+
+    @Operation
+    fun checkWithSpinCycle() {
+        val curr = node
+        while (curr.value == 1) {
+            // spin-wait
+        }
+    }
+
+    @Operation
+    fun setWithAtomicReference() = updateNode { nextNode ->
+        atomicReference.set(nextNode)
+    }
+
+    @Operation
+    fun lazySetWithAtomicReference()= updateNode { nextNode ->
+        atomicReference.lazySet(nextNode)
+    }
+
+    @Operation
+    fun getAndSetWithAtomicReference() = updateNode { nextNode ->
+        atomicReference.getAndSet(nextNode)
+    }
+
+    @Operation
+    fun compareAndSetWithAtomicReference() = updateNode { nextNode ->
+        atomicReference.compareAndSet(node, nextNode)
+    }
+
+    @Operation
+    fun weakCompareAndSetWithAtomicReference() = updateNode { nextNode ->
+        @Suppress("DEPRECATION")
+        atomicReference.weakCompareAndSet(node, nextNode)
+    }
+
+    @Test
+    fun testAtomicReferenceSet() = testWithUpdate(::setWithAtomicReference)
+
+    @Test
+    fun testAtomicReferenceLazySet() = testWithUpdate(::lazySetWithAtomicReference)
+
+    @Test
+    fun testAtomicReferenceGetAndSet() = testWithUpdate(::getAndSetWithAtomicReference)
+
+    @Test
+    fun testAtomicAtomicReferenceCompareAndSet() = testWithUpdate(::compareAndSetWithAtomicReference)
+
+    @Test
+    fun testAtomicReferenceWeakCompareAndSet() = testWithUpdate(::weakCompareAndSetWithAtomicReference)
+
+    private fun testWithUpdate(operation: KFunction<*>) = ModelCheckingOptions()
+        .iterations(0) // we will run only custom scenarios
+        .addCustomScenario {
+            parallel {
+                thread { actor(operation) }
+                thread { actor(::checkWithSpinCycle) }
+            }
+        }
+        .check(this::class)
+
+    private inline fun updateNode(updateAction: (Node) -> Unit) {
+        val nextNode = Node(1)
+        nextNode.value = 1
+        updateAction(nextNode)
+        // If we have a bug and treat nextNode as a local object, we have to insert here some switch points
+        // to catch a moment when `node.value` is updated to 1
+        flag = true
+
+        nextNode.value = 0
+    }
+
+}
+
+/**
+ * This test checks that despite some object isn't explicitly assigned to some shared value,
+ * is won't be treated like a local object if we wrote it into some shared object using [AtomicReferenceArray].
+ *
+ * If the object is incorrectly classified as a local object,
+ * this test would hang due to infinite spin-loop on a local object operation with
+ * no chances to detect a cycle and switch.
+ */
+class AtomicArrayLocalObjectsTest {
+
+    val atomicArray: AtomicReferenceArray<Node> = AtomicReferenceArray(arrayOf(Node(0)))
+
+    val node: Node get() = atomicArray[0]
+
+    @Volatile
+    var flag = false
+
+    @Operation
+    fun checkWithSpinCycle() {
+        val curr = node
+        while (curr.value == 1) {
+            // spin-wait
+        }
+    }
+
+    @Operation
+    fun setWithAtomicArray() = updateNode { nextNode ->
+        atomicArray.set(0, nextNode)
+    }
+
+    @Operation
+    fun lazySetWithAtomicArray()= updateNode { nextNode ->
+        atomicArray.lazySet(0, nextNode)
+    }
+
+    @Operation
+    fun getAndSetWithAtomicArray() = updateNode { nextNode ->
+        atomicArray.getAndSet(0, nextNode)
+    }
+
+    @Operation
+    fun compareAndSetWithAtomicArray() = updateNode { nextNode ->
+        atomicArray.compareAndSet(0, node, nextNode)
+    }
+
+    @Operation
+    fun weakCompareAndSetWithAtomicArray() = updateNode { nextNode ->
+        @Suppress("DEPRECATION")
+        atomicArray.weakCompareAndSet(0, node, nextNode)
+    }
+
+    @Test
+    fun testAtomicArraySet() = testWithUpdate(::setWithAtomicArray)
+
+    @Test
+    fun testAtomicArrayLazySet() = testWithUpdate(::lazySetWithAtomicArray)
+
+    @Test
+    fun testAtomicArrayGetAndSet() = testWithUpdate(::getAndSetWithAtomicArray)
+
+    @Test
+    fun testAtomicAtomicArrayCompareAndSet() = testWithUpdate(::compareAndSetWithAtomicArray)
+
+    @Test
+    fun testAtomicArrayWeakCompareAndSet() = testWithUpdate(::weakCompareAndSetWithAtomicArray)
+
+    private fun testWithUpdate(operation: KFunction<*>) = ModelCheckingOptions()
+        .iterations(0) // we will run only custom scenarios
+        .addCustomScenario {
+            parallel {
+                thread { actor(operation) }
+                thread { actor(::checkWithSpinCycle) }
+            }
+        }
+        .check(this::class)
+
+    private inline fun updateNode(updateAction: (Node) -> Unit) {
+        val nextNode = Node(1)
+        nextNode.value = 1
+        updateAction(nextNode)
+        // If we have a bug and treat nextNode as a local object, we have to insert here some switch points
+        // to catch a moment when `node.value` is updated to 1
+        flag = true
+
+        nextNode.value = 0
+    }
+
+}
+
+/**
+ * This test checks that despite some object isn't explicitly assigned to some shared value,
  * is won't be treated like a local object if we wrote it into some shared object using [AtomicReferenceFieldUpdater].
  *
- * If we hadn't such check, this test would hang due to infinite spin-loop on a local object operations with
+ * If the object is incorrectly classified as a local object,
+ * this test would hang due to infinite spin-loop on a local object operation with
  * no chances to detect a cycle and switch.
  */
 class AtomicUpdaterLocalObjectsTest {
@@ -146,9 +325,8 @@ class AtomicUpdaterLocalObjectsTest {
         )
     }
 
-
     @Volatile
-     var node: Node = Node(0)
+    var node: Node = Node(0)
 
     @Volatile
     var flag = false
@@ -188,12 +366,16 @@ class AtomicUpdaterLocalObjectsTest {
 
     @Test
     fun testAtomicUpdaterSet() = testWithUpdate(::setWithAtomicUpdater)
+
     @Test
     fun testAtomicUpdaterLazySet() = testWithUpdate(::lazySetWithAtomicUpdater)
+
     @Test
     fun testAtomicUpdaterGetAndSet() = testWithUpdate(::getAndSetWithAtomicUpdater)
+
     @Test
     fun testAtomicUpdaterWeakCompareAndSet() = testWithUpdate(::weakCompareAndSetWithAtomicUpdater)
+
     @Test
     fun testAtomicUpdaterCompareAndSet() = testWithUpdate(::compareAndSetWithAtomicUpdater)
 
@@ -218,14 +400,14 @@ class AtomicUpdaterLocalObjectsTest {
         nextNode.value = 0
     }
 
-
 }
 
 /**
  * This test checks that despite some object isn't explicitly assigned to some shared value,
  * is won't be treated like a local object if we wrote it into some shared object using [Unsafe].
  *
- * If we hadn't such check, this test would hang due to infinite spin-loop on a local object operations with
+ * If the object is incorrectly classified as a local object,
+ * this test would hang due to infinite spin-loop on a local object operation with
  * no chances to detect a cycle and switch.
  */
 class UnsafeLocalObjectsTest {
@@ -255,7 +437,6 @@ class UnsafeLocalObjectsTest {
         @Suppress("DEPRECATION")
         val offset = unsafe.objectFieldOffset(UnsafeLocalObjectsTest::class.java.getDeclaredField("node"))
     }
-
 
     @Operation
     fun compareAndSetWithUnsafe() = updateNode { nextNode ->
