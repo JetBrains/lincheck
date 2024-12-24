@@ -302,8 +302,8 @@ internal open class ParallelThreadsRunner(
             // Execute the parallel part.
             beforePart(PARALLEL)
             timeout -= executor.submitAndAwait(parallelPartExecutions, timeout)
-            // Wait for all threads to finish at the end of the parallel part
-            timeout -= strategy.awaitAllThreads(timeout)
+            // Wait for all user threads to finish at the end of the parallel part
+            timeout -= strategy.awaitUserThreads(timeout)
             val afterParallelStateRepresentation: String? = constructStateRepresentation()
             onThreadSwitchesOrActorFinishes()
             // Execute the post part.
@@ -328,11 +328,11 @@ internal open class ParallelThreadsRunner(
             return RunnerTimeoutInvocationResult()
         } catch (e: ExecutionException) {
             // In case when invocation raised an exception,
-            // we need to wait for all threads to terminate before continuing.
+            // we need to wait for all user threads to finish before continuing.
             // In case if waiting for threads termination abrupt with the timeout,
             // we return `RunnerTimeoutInvocationResult`.
             // Otherwise, we return `UnexpectedExceptionInvocationResult` with the original exception.
-            runCatching { strategy.awaitAllThreads(timeout) }.onFailure { exception ->
+            runCatching { strategy.awaitUserThreads(timeout) }.onFailure { exception ->
                 if (exception is TimeoutException) return RunnerTimeoutInvocationResult()
             }
             return UnexpectedExceptionInvocationResult(e.cause!!, collectExecutionResults())

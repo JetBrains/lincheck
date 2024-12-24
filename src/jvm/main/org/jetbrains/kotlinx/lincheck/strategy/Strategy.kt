@@ -70,13 +70,15 @@ abstract class Strategy protected constructor(
     open fun tryCollectTrace(result: InvocationResult): Trace? = null
 
     /**
-     * Waits for all threads in the current invocation to complete or suspend within the given timeout.
+     * Waits for all user threads created in the current invocation to finish within the given timeout.
      *
      * @param timeoutNano The maximum time to wait in nanoseconds.
      * @return The elapsed time in nanoseconds if all threads finish within the timeout.
      * @throws TimeoutException if more than [timeoutNano] is passed.
      */
-    open fun awaitAllThreads(timeoutNano: Long): Long {
+    open fun awaitUserThreads(timeoutNano: Long): Long {
+        // by default, strategy does not track the start of user threads;
+        // thus default implementation returns `0` immediately
         return 0L
     }
 

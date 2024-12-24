@@ -546,9 +546,19 @@ abstract class ManagedStrategy(
         randoms.clear()
     }
 
-    override fun awaitAllThreads(timeoutNano: Long): Long {
-        val elapsedTime = threadScheduler.awaitAllThreadsFinish(timeoutNano)
-        if (elapsedTime < 0L) throw TimeoutException()
+    override fun awaitUserThreads(timeoutNano: Long): Long {
+        var remainingTime = timeoutNano
+        for ((threadId, _) in getRegisteredThreads()) {
+            if (threadId < scenario.nThreads) continue // do not wait for Lincheck threads
+            val elapsedTime = threadScheduler.awaitThreadFinish(threadId, remainingTime)
+            if (elapsedTime < 0) {
+                remainingTime = -1
+                break
+            }
+            remainingTime -= elapsedTime
+        }
+        if (remainingTime < 0) throw TimeoutException()
+        val elapsedTime = timeoutNano - remainingTime
         return elapsedTime
     }
 
