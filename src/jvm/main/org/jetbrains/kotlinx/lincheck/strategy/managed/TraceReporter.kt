@@ -485,6 +485,12 @@ internal class TraceLeafEvent(
         else -> false
     }
 
+    // virtual trace points are not displayed in the trace
+    private val TracePoint.isVirtual: Boolean get() = when (this) {
+        is ThreadStartTracePoint, is ThreadJoinTracePoint -> true
+        else -> false
+    }
+
     override fun shouldBeExpanded(verboseTrace: Boolean): Boolean {
         return (lastExecutedEvent && event.isBlocking)
                 || event is SwitchEventTracePoint
@@ -496,8 +502,10 @@ internal class TraceLeafEvent(
         traceRepresentation: MutableList<TraceEventRepresentation>,
         verboseTrace: Boolean
     ): TraceNode? {
-        val representation = prefix + event.toString()
-        traceRepresentation.add(TraceEventRepresentation(iThread, representation))
+        if (!event.isVirtual) {
+            val representation = prefix + event.toString()
+            traceRepresentation.add(TraceEventRepresentation(iThread, representation))
+        }
         return next
     }
 }
