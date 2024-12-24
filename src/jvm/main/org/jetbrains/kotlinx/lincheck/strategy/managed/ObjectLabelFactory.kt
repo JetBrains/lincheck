@@ -20,7 +20,7 @@ import kotlin.coroutines.Continuation
  */
 object ObjectLabelFactory {
 
-    private val objectNumeration = Collections.synchronizedMap(WeakHashMap<Class<Any>, MutableMap<Any, Int>>())
+    private val objectNumeration = Collections.synchronizedMap(WeakHashMap<Class<*>, MutableMap<Any, Int>>())
 
     internal fun adornedStringRepresentation(any: Any?): String {
         if (any == null) return "null"
@@ -46,7 +46,7 @@ object ObjectLabelFactory {
         return getObjectName(any)
     }
 
-    internal fun getObjectNumber(clazz: Class<Any>, obj: Any): Int = objectNumeration
+    internal fun getObjectNumber(clazz: Class<*>, obj: Any): Int = objectNumeration
         .computeIfAbsent(clazz) { IdentityHashMap() }
         .computeIfAbsent(obj) { 1 + objectNumeration[clazz]!!.size }
 
@@ -65,16 +65,15 @@ object ObjectLabelFactory {
             return matchResult?.groups?.get(2)?.value ?: withoutPackage
         }
 
-    private fun getObjectName(obj: Any?): String =
-        if (obj != null) {
-            if (obj.javaClass.isAnonymousClass) {
-                obj.javaClass.simpleNameForAnonymous
-            } else {
-                objectName(obj) + "#" + getObjectNumber(obj.javaClass, obj)
-            }
-        } else {
-            "null"
+    internal fun getObjectName(obj: Any): String {
+        if (obj is Thread) {
+            return "Thread#${getObjectNumber(Thread::class.java, obj)}"
         }
+        if (obj.javaClass.isAnonymousClass) {
+            return obj.javaClass.simpleNameForAnonymous
+        }
+        return objectName(obj) + "#" + getObjectNumber(obj.javaClass, obj)
+    }
 
     private fun objectName(obj: Any): String {
         return when (obj) {

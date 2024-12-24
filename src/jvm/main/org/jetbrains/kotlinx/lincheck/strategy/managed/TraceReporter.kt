@@ -26,11 +26,12 @@ internal fun StringBuilder.appendTrace(
     trace: Trace,
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
 ) {
-    val nThreads = trace.trace.maxOf { it.iThread } + 1
+    val nThreads = trace.threadNames.size
+    val threadNames = trace.threadNames
     val startTraceGraphNode = constructTraceGraph(nThreads, failure, results, trace, exceptionStackTraces)
-    appendShortTrace(nThreads, startTraceGraphNode, failure)
+    appendShortTrace(nThreads, threadNames, startTraceGraphNode, failure)
     appendExceptionsStackTracesBlock(exceptionStackTraces)
-    appendDetailedTrace(nThreads, startTraceGraphNode, failure)
+    appendDetailedTrace(nThreads, threadNames, startTraceGraphNode, failure)
 }
 
 /**
@@ -38,12 +39,13 @@ internal fun StringBuilder.appendTrace(
  */
 private fun StringBuilder.appendShortTrace(
     nThreads: Int,
+    threadNames: List<String>,
     sectionsFirstNodes: List<TraceNode>,
     failure: LincheckFailure
 ) {
     val traceRepresentation = traceGraphToRepresentationList(sectionsFirstNodes, false)
     appendLine(TRACE_TITLE)
-    appendTraceRepresentation(nThreads, traceRepresentation)
+    appendTraceRepresentation(nThreads, threadNames, traceRepresentation)
     if (failure is ManagedDeadlockFailure || failure is TimeoutFailure) {
         appendLine(ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE)
     }
@@ -55,12 +57,13 @@ private fun StringBuilder.appendShortTrace(
  */
 private fun StringBuilder.appendDetailedTrace(
     nThreads: Int,
+    threadNames: List<String>,
     sectionsFirstNodes: List<TraceNode>,
     failure: LincheckFailure
 ) {
     appendLine(DETAILED_TRACE_TITLE)
     val traceRepresentationVerbose = traceGraphToRepresentationList(sectionsFirstNodes, true)
-    appendTraceRepresentation(nThreads, traceRepresentationVerbose)
+    appendTraceRepresentation(nThreads, threadNames, traceRepresentationVerbose)
     if (failure is ManagedDeadlockFailure || failure is TimeoutFailure) {
         appendLine(ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE)
     }
@@ -68,10 +71,16 @@ private fun StringBuilder.appendDetailedTrace(
 
 private fun StringBuilder.appendTraceRepresentation(
     nThreads: Int,
-    traceRepresentation: List<List<TraceEventRepresentation>>
+    threadNames: List<String>,
+    traceRepresentation: List<List<TraceEventRepresentation>>,
 ) {
     val traceRepresentationSplitted = splitToColumns(nThreads, traceRepresentation)
-    with(ExecutionLayout(nThreads, traceRepresentationSplitted.map { it.columns })) {
+    val layout = ExecutionLayout(
+        nThreads = nThreads,
+        interleavingSections = traceRepresentationSplitted.map { it.columns },
+        threadNames = threadNames,
+    )
+    with(layout) {
         appendSeparatorLine()
         appendHeader()
         appendSeparatorLine()

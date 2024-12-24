@@ -232,22 +232,23 @@ internal fun ExecutionLayout(
 /**
  * Table layout for interleaving.
  *
- * @param interleavingSections list of sections. Each section is represented by a list of columns related to threads.
- * Must be not empty, i.e. contain at leas one section.
+ * @param interleavingSections list of sections.
+ *   Each section is represented by a list of columns related to threads.
+ *   Must be not empty, that is, contain at least one section.
  */
 internal fun ExecutionLayout(
     nThreads: Int,
     interleavingSections: List<List<List<String>>>,
+    threadNames: List<String>? = null,
 ): TableLayout {
     val columnWidths = MutableList(nThreads) { 0 }
-    val threadHeaders = (0 until nThreads).map { "Thread ${it + 1}" }
+    val threadHeaders = threadNames ?: (0 until nThreads).map { "Thread ${it + 1}" }
     interleavingSections.forEach { section ->
         section.mapIndexed { columnIndex, actors ->
             val maxColumnActorLength = actors.maxOf { it.length }
             columnWidths[columnIndex] = max(columnWidths[columnIndex], maxColumnActorLength)
         }
     }
-
     return TableLayout(threadHeaders, columnWidths)
 }
 

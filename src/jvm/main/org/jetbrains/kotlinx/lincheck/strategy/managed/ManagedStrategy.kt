@@ -297,6 +297,15 @@ abstract class ManagedStrategy(
         // simultaneously adding events to the TraceCollector, which leads to an inconsistent trace.
         // Therefore, if the runner detects deadlock, we don't even try to collect trace.
         if (loggedResults is RunnerTimeoutInvocationResult) return null
+
+        val registeredThreads = getRegisteredThreads()
+        val threadNames = MutableList<String>(registeredThreads.size) { "" }
+        threadScheduler.getRegisteredThreads().forEach { threadId, thread ->
+            val threadNumber = ObjectLabelFactory.getObjectNumber(Thread::class.java, thread)
+            threadNames[threadId] = "Thread $threadNumber"
+        }
+        val trace = Trace(traceCollector!!.trace, threadNames)
+
         val sameResultTypes = loggedResults.javaClass == result.javaClass
         val sameResults = (
             loggedResults !is CompletedInvocationResult ||
@@ -309,11 +318,11 @@ abstract class ManagedStrategy(
                 appendLine("== Reporting the first execution without execution trace ==")
                 appendLine(result.toLincheckFailure(scenario, null))
                 appendLine("== Reporting the second execution ==")
-                appendLine(loggedResults.toLincheckFailure(scenario, Trace(traceCollector!!.trace)).toString())
+                appendLine(loggedResults.toLincheckFailure(scenario, trace).toString())
             }.toString()
         }
 
-        return Trace(traceCollector!!.trace)
+        return trace
     }
 
     private fun failDueToDeadlock(): Nothing {
@@ -522,6 +531,8 @@ abstract class ManagedStrategy(
         objectTracker.registerThread(threadId, thread)
         monitorTracker.registerThread(threadId)
         parkingTracker.registerThread(threadId)
+        // register thread number for trace printing
+        ObjectLabelFactory.getObjectNumber(Thread::class.java, thread)
         return threadId
     }
 

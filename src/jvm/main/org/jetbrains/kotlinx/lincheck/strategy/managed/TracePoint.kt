@@ -14,7 +14,10 @@ import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.kotlinx.lincheck.util.ThreadId
 
-data class Trace(val trace: List<TracePoint>)
+data class Trace(
+    val trace: List<TracePoint>,
+    val threadNames: List<String>,
+)
 
 /**
  * Essentially, a trace is a list of trace points, which represent
