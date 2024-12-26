@@ -970,19 +970,25 @@ abstract class ManagedStrategy(
         params: Array<Any?>
     ) {
         val guarantee = runInIgnoredSection {
+            val threadId = currentThread
             val atomicMethodDescriptor = getAtomicMethodDescriptor(owner, methodName)
             val guarantee = when {
                 (atomicMethodDescriptor != null) -> ManagedGuaranteeType.TREAT_AS_ATOMIC
-                else -> methodGuaranteeType(owner, className, methodName)
+                else -> methodGuaranteeType(owner, className.canonicalClassName, methodName)
             }
             if (owner == null && atomicMethodDescriptor == null && guarantee == null) { // static method
                 LincheckJavaAgent.ensureClassHierarchyIsTransformed(className.canonicalClassName)
             }
             if (collectTrace) {
                 traceCollector!!.checkActiveLockDetected()
-                addBeforeMethodCallTracePoint(owner, codeLocation, methodId, className, methodName, params, atomicMethodDescriptor)
+                addBeforeMethodCallTracePoint(threadId, owner, codeLocation, methodId, className, methodName, params,
+                    atomicMethodDescriptor
+                )
             }
-            if (guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC) {
+            if (guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC &&
+                // do not create a trace point on resumption
+                !isResumptionMethodCall(threadId, className.canonicalClassName, methodName, params, atomicMethodDescriptor)
+            ) {
                 newSwitchPointOnAtomicMethodCall(codeLocation, params)
             }
             if (guarantee == null) {
@@ -1052,39 +1058,18 @@ abstract class ManagedStrategy(
         loopDetector.passParameters(params)
     }
 
-    private fun isSuspendFunction(className: String, methodName: String, params: Array<Any?>): Boolean =
-        try {
-            // While this code is inefficient, it is called only when an error is detected.
-            getMethod(className.canonicalClassName, methodName, params)?.isSuspendable() ?: false
-        } catch (t: Throwable) {
-            // Something went wrong. Ignore it, as the error might lead only
-            // to an extra "<cont>" in the method call line in the trace.
-            false
-        }
-
-    private fun getMethod(className: String, methodName: String, params: Array<Any?>): Method? {
-        val clazz = Class.forName(className)
-
-        // Filter methods by name
-        val possibleMethods = clazz.declaredMethods.filter { it.name == methodName }
-
-        for (method in possibleMethods) {
-            val parameterTypes = method.parameterTypes
-            if (parameterTypes.size != params.size) continue
-
-            var match = true
-            for (i in parameterTypes.indices) {
-                val paramType = params[i]?.javaClass
-                if (paramType != null && !parameterTypes[i].isAssignableFrom(paramType)) {
-                    match = false
-                    break
-                }
-            }
-
-            if (match) return method
-        }
-
-        return null // or throw an exception if a match is mandatory
+    private fun isResumptionMethodCall(
+        threadId: Int,
+        className: String,
+        methodName: String,
+        methodParams: Array<Any?>,
+        atomicMethodDescriptor: AtomicMethodDescriptor?,
+    ): Boolean {
+        // optimization - first quickly check if the method is atomics API method,
+        // in which case it cannot be suspended/resumed method
+        if (atomicMethodDescriptor != null) return false
+        val suspendedMethodStack = suspendedFunctionsStack[threadId]
+        return suspendedMethodStack.isNotEmpty() && isSuspendFunction(className, methodName, methodParams)
     }
 
     /**
@@ -1124,6 +1109,7 @@ abstract class ManagedStrategy(
     }
 
     private fun addBeforeMethodCallTracePoint(
+        iThread: Int,
         owner: Any?,
         codeLocation: Int,
         methodId: Int,
@@ -1132,12 +1118,9 @@ abstract class ManagedStrategy(
         methodParams: Array<Any?>,
         atomicMethodDescriptor: AtomicMethodDescriptor?,
     ) {
-        val iThread = currentThread
         val callStackTrace = callStackTrace[iThread]
         val suspendedMethodStack = suspendedFunctionsStack[iThread]
-        val isSuspending = isSuspendFunction(className, methodName, methodParams)
-        val isResumption = isSuspending && suspendedMethodStack.isNotEmpty()
-        if (isResumption) {
+        if (isResumptionMethodCall(iThread, className.canonicalClassName, methodName, methodParams, atomicMethodDescriptor)) {
             // In case of resumption, we need to find a call stack frame corresponding to the resumed function
             var elementIndex = suspendedMethodStack.indexOfFirst {
                 it.tracePoint.className == className && it.tracePoint.methodName == methodName
@@ -1172,7 +1155,7 @@ abstract class ManagedStrategy(
             return
         }
         val callId = callStackTraceElementId++
-        val params = if (isSuspending) {
+        val params = if (isSuspendFunction(className.canonicalClassName, methodName, methodParams)) {
             methodParams.dropLast(1).toTypedArray()
         } else {
             methodParams
@@ -1513,11 +1496,15 @@ abstract class ManagedStrategy(
                     beforeMethodCallSwitch = beforeMethodCallSwitch
                 )
             }
+            val callStackTrace = when (reason) {
+                SwitchReason.SUSPENDED -> suspendedFunctionsStack[iThread].reversed()
+                else -> callStackTrace[iThread]
+            }
             _trace += SwitchEventTracePoint(
                 iThread = iThread,
                 actorId = currentActorId[iThread],
                 reason = reason,
-                callStackTrace = callStackTrace[iThread]
+                callStackTrace = callStackTrace,
             )
             spinCycleStartAdded = false
         }
