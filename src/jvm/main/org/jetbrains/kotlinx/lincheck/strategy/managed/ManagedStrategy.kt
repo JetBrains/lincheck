@@ -31,7 +31,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
 import java.lang.reflect.*
 import java.util.concurrent.TimeoutException
 import java.util.*
-import kotlin.coroutines.Continuation
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 
 /**
@@ -1209,14 +1208,14 @@ abstract class ManagedStrategy(
             if (threadScheduler.isAborted(iThread)) {
                 threadScheduler.abortCurrentThread()
             }
-            val isSuspending = isSuspendFunction(className, methodName, params)
+            val isSuspending = isSuspendFunction(className.canonicalClassName, methodName, params)
             val isResumption = isSuspending && suspendedMethodStack.isNotEmpty()
             // first check if the called method is an atomics API method
             // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
             val atomicMethodDescriptor = getAtomicMethodDescriptor(owner, methodName)
             val guarantee = when {
                 (atomicMethodDescriptor != null) -> ManagedGuaranteeType.TREAT_AS_ATOMIC
-                else -> methodGuaranteeType(owner, className, methodName)
+                else -> methodGuaranteeType(owner, className.canonicalClassName, methodName)
             }
             // in case if a static method is called, ensure its class is instrumented
             if (owner == null && atomicMethodDescriptor == null && guarantee == null) { // static method
@@ -1307,60 +1306,6 @@ abstract class ManagedStrategy(
         // this "ignore" section.
         leaveIgnoredSection()
     }
-
-    private fun isSuspendFunction(className: String, methodName: String, params: Array<Any?>): Boolean {
-        // fast-path: if the last parameter is not continuation - then this is not suspending function
-        if (params.lastOrNull() !is Continuation<*>) return false
-        val result = runCatching {
-            // While this code is inefficient, it is called only on the slow path.
-            val method = getMethod(className.canonicalClassName, methodName, params)
-            method?.isSuspendable() == true
-        }
-        return result.getOrElse {
-            // Something went wrong. Ignore it, as the error might lead only
-            // to an extra "<cont>" in the method call line in the trace.
-            false
-        }
-    }
-
-    private fun getMethod(className: String, methodName: String, params: Array<Any?>): Method? {
-        val possibleMethods = getCachedFilteredDeclaredMethods(className, methodName)
-
-        for (method in possibleMethods) {
-            val parameterTypes = method.parameterTypes
-            if (parameterTypes.size != params.size) continue
-
-            var match = true
-            for (i in parameterTypes.indices) {
-                val paramType = params[i]?.javaClass
-                if (paramType != null && !parameterTypes[i].isAssignableFrom(paramType)) {
-                    match = false
-                    break
-                }
-            }
-
-            if (match) return method
-        }
-
-        return null // or throw an exception if a match is mandatory
-    }
-
-    // While caching is not important for Lincheck itself,
-    // it is critical for Trace Debugger, as it always collects the trace.
-    private val methodsCache = hashMapOf<String, Array<Method>>()
-    private val filteredMethodsCache = hashMapOf<Pair<String, String>, List<Method>>()
-
-    private fun getCachedDeclaredMethods(className: String) =
-        methodsCache.getOrPut(className) {
-            val clazz = Class.forName(className)
-            clazz.declaredMethods
-        }
-
-    private fun getCachedFilteredDeclaredMethods(className: String, methodName: String) =
-        filteredMethodsCache.getOrPut(className to methodName) {
-            val declaredMethods = getCachedDeclaredMethods(className)
-            declaredMethods.filter { it.name == methodName }
-        }
 
     /**
      * This method is invoked by a test thread
