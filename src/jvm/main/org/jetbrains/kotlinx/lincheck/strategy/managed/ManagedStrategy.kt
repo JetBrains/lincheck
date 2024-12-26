@@ -31,6 +31,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
 import java.lang.reflect.*
 import java.util.concurrent.TimeoutException
 import java.util.*
+import kotlin.coroutines.Continuation
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 
 /**
@@ -1307,14 +1308,20 @@ abstract class ManagedStrategy(
         leaveIgnoredSection()
     }
 
-    private fun isSuspendFunction(className: String, methodName: String, params: Array<Any?>): Boolean =
-        try {
-            getMethod(className.canonicalClassName, methodName, params)?.isSuspendable() ?: false
-        } catch (t: Throwable) {
+    private fun isSuspendFunction(className: String, methodName: String, params: Array<Any?>): Boolean {
+        // fast-path: if the last parameter is not continuation - then this is not suspending function
+        if (params.lastOrNull() !is Continuation<*>) return false
+        val result = runCatching {
+            // While this code is inefficient, it is called only on the slow path.
+            val method = getMethod(className.canonicalClassName, methodName, params)
+            method?.isSuspendable() == true
+        }
+        return result.getOrElse {
             // Something went wrong. Ignore it, as the error might lead only
             // to an extra "<cont>" in the method call line in the trace.
             false
         }
+    }
 
     private fun getMethod(className: String, methodName: String, params: Array<Any?>): Method? {
         val possibleMethods = getCachedFilteredDeclaredMethods(className, methodName)
