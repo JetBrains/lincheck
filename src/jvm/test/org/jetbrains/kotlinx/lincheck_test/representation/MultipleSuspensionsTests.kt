@@ -63,16 +63,16 @@ class MultipleSuspensionTest {
         return 1
     }
 
-    private suspend fun part2(): Boolean {
-        if (counter.get() == 1) {
-            suspendCoroutine<Unit> { continuation2 = it }
+    private suspend fun part1(): Boolean {
+        if (counter.get() == 0) {
+            suspendCoroutine<Unit> { continuation1 = it }
         } else return true
         return false
     }
 
-    private suspend fun part1(): Boolean {
-        if (counter.get() == 0) {
-            suspendCoroutine<Unit> { continuation1 = it }
+    private suspend fun part2(): Boolean {
+        if (counter.get() == 1) {
+            suspendCoroutine<Unit> { continuation2 = it }
         } else return true
         return false
     }
@@ -85,7 +85,10 @@ class MultipleSuspensionTest {
                 thread { actor(::operation) }
             }
         }
-        .addGuarantee(forClasses(this::class.java.name).methods("firstStep", "secondStep", "part1", "part2").treatAsAtomic())
+        .addGuarantee(
+            forClasses(this::class.java.name).methods("firstStep", "secondStep", "part1", "part2")
+                .treatAsAtomic()
+        )
         .checkImpl(this::class.java)
         .checkLincheckOutput("two_suspension_points_bug.txt")
 

@@ -1202,13 +1202,14 @@ abstract class ManagedStrategy(
         val guarantee = runInIgnoredSection {
             // process method effect on the static memory snapshot
             processMethodEffectOnStaticSnapshot(owner, params)
-
             // process known method concurrency guarantee
             val iThread = threadScheduler.getCurrentThreadId()
             // re-throw abort error if the thread was aborted
             if (threadScheduler.isAborted(iThread)) {
                 threadScheduler.abortCurrentThread()
             }
+            val isSuspending = isSuspendFunction(className, methodName, params)
+            val isResumption = isSuspending && suspendedMethodStack.isNotEmpty()
             // first check if the called method is an atomics API method
             // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
             val atomicMethodDescriptor = getAtomicMethodDescriptor(owner, methodName)
@@ -1230,10 +1231,14 @@ abstract class ManagedStrategy(
             // check for livelock and create the method call trace point
             if (collectTrace) {
                 traceCollector!!.checkActiveLockDetected()
-                addBeforeMethodCallTracePoint(owner, codeLocation, methodId, className, methodName, params, atomicMethodDescriptor)
+                addBeforeMethodCallTracePoint(iThread, owner, codeLocation, methodId, className, methodName, params,
+                    atomicMethodDescriptor = atomicMethodDescriptor,
+                    isSuspending = isSuspending,
+                    isResumption = isResumption,
+                )
             }
             // in case of atomic method we need to create a switch point
-            if (guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC) {
+            if (guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC && !isResumption) {
                 // re-use last call trace point
                 newSwitchPoint(iThread, codeLocation, callStackTrace[iThread]!!.lastOrNull()?.tracePoint)
                 loopDetector.passParameters(params)
@@ -1388,6 +1393,7 @@ abstract class ManagedStrategy(
     }
 
     private fun addBeforeMethodCallTracePoint(
+        iThread: Int,
         owner: Any?,
         codeLocation: Int,
         methodId: Int,
@@ -1395,12 +1401,14 @@ abstract class ManagedStrategy(
         methodName: String,
         methodParams: Array<Any?>,
         atomicMethodDescriptor: AtomicMethodDescriptor?,
+        isSuspending: Boolean,
+        isResumption: Boolean,
     ) {
         val iThread = threadScheduler.getCurrentThreadId()
         val callStackTrace = callStackTrace[iThread]!!
         val suspendedMethodStack = suspendedFunctionsStack[iThread]!!
-        val isSuspending = isSuspendFunction(className, methodName, methodParams)
-        val isResumption = isSuspending && suspendedMethodStack.isNotEmpty()
+        val callStackTrace = callStackTrace[iThread]!!
+        val suspendedMethodStack = suspendedFunctionsStack[iThread]
         if (isResumption) {
             // In case of resumption, we need to find a call stack frame corresponding to the resumed function
             var elementIndex = suspendedMethodStack.indexOfFirst {
