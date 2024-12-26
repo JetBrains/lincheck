@@ -1780,11 +1780,15 @@ abstract class ManagedStrategy(
                     beforeMethodCallSwitch = beforeMethodCallSwitch
                 )
             }
+            val callStackTrace = when (reason) {
+                SwitchReason.SUSPENDED -> suspendedFunctionsStack[iThread].reversed()
+                else -> callStackTrace[iThread]
+            }
             _trace += SwitchEventTracePoint(
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
                 reason = reason,
-                callStackTrace = callStackTrace[iThread]!!
+                callStackTrace = callStackTrace,
             )
             spinCycleStartAdded = false
         }
