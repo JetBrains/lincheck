@@ -1236,7 +1236,7 @@ abstract class ManagedStrategy(
             // in case of atomic method we need to create a switch point
             if (guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC &&
                 // do not create a trace point on resumption
-                !isResumptionMethodCall(threadId, className.canonicalClassName, methodName, params)
+                !isResumptionMethodCall(threadId, className.canonicalClassName, methodName, params, atomicMethodDescriptor)
             ) {
                 // re-use last call trace point
                 newSwitchPoint(iThread, codeLocation, callStackTrace[iThread]!!.lastOrNull()?.tracePoint)
@@ -1310,8 +1310,12 @@ abstract class ManagedStrategy(
         threadId: Int,
         className: String,
         methodName: String,
-        methodParams: Array<Any?>
+        methodParams: Array<Any?>,
+        atomicMethodDescriptor: AtomicMethodDescriptor?,
     ): Boolean {
+        // optimization - first quickly check if the method is atomics API method,
+        // in which case it cannot be suspended/resumed method
+        if (atomicMethodDescriptor != null) return false
         val suspendedMethodStack = suspendedFunctionsStack[threadId]
         return suspendedMethodStack.isNotEmpty() && isSuspendFunction(className, methodName, methodParams)
     }
@@ -1368,7 +1372,7 @@ abstract class ManagedStrategy(
         val suspendedMethodStack = suspendedFunctionsStack[iThread]!!
         val callStackTrace = callStackTrace[iThread]!!
         val suspendedMethodStack = suspendedFunctionsStack[iThread]
-        if (isResumptionMethodCall(iThread, className.canonicalClassName, methodName, methodParams)) {
+        if (isResumptionMethodCall(iThread, className.canonicalClassName, methodName, methodParams, atomicMethodDescriptor)) {
             // In case of resumption, we need to find a call stack frame corresponding to the resumed function
             var elementIndex = suspendedMethodStack.indexOfFirst {
                 it.tracePoint.className == className && it.tracePoint.methodName == methodName
