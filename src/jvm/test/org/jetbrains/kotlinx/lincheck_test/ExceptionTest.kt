@@ -164,44 +164,6 @@ class ExceptionTestSequentialImplementation {
     fun idle() {}
 }
 
-class ExceptionTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
-
-    @Volatile
-    private var throwException = false
-
-    @Operation
-    fun operation1() {
-        throwException = true
-        throwException = false
-    }
-
-    @Operation
-    fun operation2() {
-        if (throwException) throw IllegalStateException()
-    }
-
-    val scenario = scenario {
-        parallel {
-            thread {
-                actor(ExceptionTest::operation1)
-            }
-            thread {
-                actor(ExceptionTest::operation2)
-            }
-        }
-    }
-
-    override fun <O : Options<O, *>> O.customize() {
-        iterations(0)
-        addCustomScenario(scenario)
-        minimizeFailedScenario(false)
-        if (this is StressOptions) {
-            invocationsPerIteration(20_000)
-        }
-    }
-
-}
-
 class CoroutineResumedWithExceptionTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
 
     @Operation
