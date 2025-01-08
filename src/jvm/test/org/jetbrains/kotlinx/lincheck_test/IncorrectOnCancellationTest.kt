@@ -11,8 +11,10 @@
 package org.jetbrains.kotlinx.lincheck_test
 
 import kotlinx.coroutines.*
+import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.stress.StressOptions
 
 class IncorrectOnCancellationTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
     @Volatile
@@ -30,5 +32,11 @@ class IncorrectOnCancellationTest : AbstractLincheckTest(IncorrectResultsFailure
             }
         }
         return 0
+    }
+
+    override fun <O : Options<O, *>> O.customize() {
+        if (this is StressOptions) {
+            invocationsPerIteration(10_000)
+        }
     }
 }
