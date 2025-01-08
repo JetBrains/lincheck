@@ -13,6 +13,8 @@ package org.jetbrains.kotlinx.lincheck.util
 import java.util.concurrent.atomic.*
 import org.jetbrains.kotlinx.lincheck.util.AtomicMethodKind.*
 import org.jetbrains.kotlinx.lincheck.util.MemoryOrdering.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleNames
+import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
@@ -30,6 +32,24 @@ internal enum class AtomicMethodKind {
     GET_AND_ADD, ADD_AND_GET,
     GET_AND_INCREMENT, INCREMENT_AND_GET,
     GET_AND_DECREMENT, DECREMENT_AND_GET;
+}
+
+internal val AtomicMethodKind.isSetter get() = when (this) {
+    SET,
+    GET_AND_SET,
+    COMPARE_AND_SET,
+    WEAK_COMPARE_AND_SET,
+    COMPARE_AND_EXCHANGE
+         -> true
+    else -> false
+}
+
+internal val AtomicMethodKind.isCasSetter get() = when (this) {
+    COMPARE_AND_SET,
+    WEAK_COMPARE_AND_SET,
+    COMPARE_AND_EXCHANGE
+         -> true
+    else -> false
 }
 
 internal enum class MemoryOrdering {
@@ -53,6 +73,39 @@ internal fun getAtomicMethodDescriptor(obj: Any?, methodName: String): AtomicMet
         isUnsafe(obj)               -> unsafeMethods[methodName]
         else                        -> null
     }
+}
+
+internal fun AtomicMethodDescriptor.getAccessedObject(obj: Any, params: Array<Any?>): Any = when {
+    (isAtomicFieldUpdater(obj) || isVarHandle(obj) || isUnsafe(obj)) -> params[0]!!
+    else -> obj
+}
+
+internal fun AtomicMethodDescriptor.getSetValue(obj: Any?, params: Array<Any?>): Any? {
+    var argOffset = 0
+    // AFU case - the first argument is an accessed object
+    if (isAtomicFieldUpdater(obj))
+        argOffset += 1
+    // VarHandle case
+    if (isVarHandle(obj)) {
+        val methodType = VarHandleNames.varHandleMethodType(obj, params)
+        // non-static field access case - the first argument is an accessed object
+        if (methodType !is VarHandleMethodType.StaticVarHandleMethod)
+            argOffset += 1
+        // array access case - there is an additional element index argument
+        if (methodType is VarHandleMethodType.ArrayVarHandleMethod)
+            argOffset += 1
+    }
+    // Unsafe case - the first argument is an accessed object, plus an additional offset argument
+    if (isUnsafe(obj))
+        argOffset += 2
+    // Atomic arrays case - the first argument is element index
+    if (isAtomicArray(obj))
+        argOffset += 1
+    // CAS case - there is an expected value additional argument
+    if (kind.isCasSetter)
+        argOffset += 1
+
+    return params[argOffset]
 }
 
 internal fun isAtomic(receiver: Any?) =

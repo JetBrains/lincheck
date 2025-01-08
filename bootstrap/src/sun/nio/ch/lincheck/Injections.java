@@ -263,19 +263,6 @@ public class Injections {
     }
 
     /**
-     * Called from the instrumented code after atomic write is performed through either
-     * the AtomicXXXFieldUpdater, VarHandle, or Unsafe APIs.
-     * Incorporates all atomic methods that can set the field (or array element) of an object,
-     * such as `set`, `compareAndSet`, `compareAndExchange`, etc.
-     *
-     * @param receiver The object to which field (or array element) the value is set.
-     * @param value The value written into [receiver] field (or array element).
-     */
-    public static void afterReflectiveSetter(Object receiver, Object value) {
-        getEventTracker().afterReflectiveSetter(receiver, value);
-    }
-
-    /**
      * Called from the instrumented code before any method call.
      *
      * @param owner is `null` for public static methods.

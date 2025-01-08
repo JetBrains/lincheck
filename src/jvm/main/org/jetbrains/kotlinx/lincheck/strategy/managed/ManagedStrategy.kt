@@ -892,10 +892,6 @@ abstract class ManagedStrategy(
         }
     }
 
-    override fun afterReflectiveSetter(receiver: Any?, value: Any?) = runInIgnoredSection {
-        objectTracker.registerObjectLink(fromObject = receiver ?: StaticObject, toObject = value)
-    }
-
     override fun getThreadLocalRandom(): Random = runInIgnoredSection {
         return randoms[currentThread]
     }
@@ -957,7 +953,6 @@ abstract class ManagedStrategy(
                 return guarantee.type
             }
         }
-
         return null
     }
 
@@ -970,31 +965,46 @@ abstract class ManagedStrategy(
         params: Array<Any?>
     ) {
         val guarantee = runInIgnoredSection {
+            // first check if the called method is an atomics API method
+            // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
             val atomicMethodDescriptor = getAtomicMethodDescriptor(owner, methodName)
             val guarantee = when {
                 (atomicMethodDescriptor != null) -> ManagedGuaranteeType.TREAT_AS_ATOMIC
                 else -> methodGuaranteeType(owner, className, methodName)
             }
+            // in case if a static method is called, ensure its class is instrumented
             if (owner == null && atomicMethodDescriptor == null && guarantee == null) { // static method
                 LincheckJavaAgent.ensureClassHierarchyIsTransformed(className.canonicalClassName)
             }
+            // in case of atomics API setter method call, notify the object tracker about a new link between objects
+            if (atomicMethodDescriptor != null && atomicMethodDescriptor.kind.isSetter) {
+                objectTracker.registerObjectLink(
+                    fromObject = atomicMethodDescriptor.getAccessedObject(owner!!, params),
+                    toObject = atomicMethodDescriptor.getSetValue(owner, params)
+                )
+            }
+            // check for livelock and create the method call trace point
             if (collectTrace) {
                 traceCollector!!.checkActiveLockDetected()
                 addBeforeMethodCallTracePoint(owner, codeLocation, methodId, className, methodName, params, atomicMethodDescriptor)
             }
+            // in case of atomic method we need to create a switch point
             if (guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC) {
                 newSwitchPointOnAtomicMethodCall(codeLocation, params)
             }
+            // notify loop detector about the method call
             if (guarantee == null) {
                 loopDetector.beforeMethodCall(codeLocation, params)
             }
+            // method's guarantee
             guarantee
         }
+        // if the method is atomic or should be ignored, then we enter an ignored section
         if (guarantee == ManagedGuaranteeType.IGNORE ||
             guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC) {
-            // It's important that this method can't be called inside runInIgnoredSection, as the ignored section
-            // flag would be set to false when leaving runInIgnoredSection,
-            // so enterIgnoredSection would have no effect
+            // It's important that this method called outside `runInIgnoredSection`, as the ignored section
+            // flag would be set to false when leaving `runInIgnoredSection`,
+            // so `enterIgnoredSection` would have no effect
             enterIgnoredSection()
         }
     }
