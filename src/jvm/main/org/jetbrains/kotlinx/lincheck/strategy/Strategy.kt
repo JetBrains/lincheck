@@ -14,6 +14,7 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.Trace
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
+import java.util.concurrent.TimeoutException
 import java.io.Closeable
 
 /**
@@ -67,6 +68,19 @@ abstract class Strategy protected constructor(
      * @return The collected trace, or null if it was not possible to collect the trace.
      */
     open fun tryCollectTrace(result: InvocationResult): Trace? = null
+
+    /**
+     * Waits for all user threads created in the current invocation to finish within the given timeout.
+     *
+     * @param timeoutNano The maximum time to wait in nanoseconds.
+     * @return The elapsed time in nanoseconds if all threads finish within the timeout.
+     * @throws TimeoutException if more than [timeoutNano] is passed.
+     */
+    open fun awaitUserThreads(timeoutNano: Long): Long {
+        // by default, strategy does not track the start of user threads;
+        // thus default implementation returns `0` immediately
+        return 0L
+    }
 
     /**
      * This method is called before the execution of a specific scenario part.

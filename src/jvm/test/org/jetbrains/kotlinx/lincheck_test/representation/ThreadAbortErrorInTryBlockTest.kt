@@ -19,7 +19,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.junit.*
 import org.junit.Assert.*
 
-class ForcibleFinishExceptionInTryBlockTest {
+class ThreadAbortErrorInTryBlockTest {
     private val threadsIn = atomic(0)
 
     @Operation
@@ -41,13 +41,15 @@ class ForcibleFinishExceptionInTryBlockTest {
             .threads(2)
         val failure = options.checkImpl(this::class.java)
         check(failure != null) { "the test should fail" }
-        val forcibleFinishExceptionName = ForcibleExecutionFinishError::class.simpleName!!
-        check(failure is ManagedDeadlockFailure) { "$forcibleFinishExceptionName overrode deadlock because of try-finally" }
-        val log = StringBuilder().appendFailure(failure).toString()
-        check(forcibleFinishExceptionName !in log) {
-            "$forcibleFinishExceptionName was logged"
+        val threadAbortedErrorName = ThreadAbortedError::class.simpleName!!
+        check(failure is ManagedDeadlockFailure) {
+            "$threadAbortedErrorName overrode deadlock because of try-finally"
         }
-
-        assertTrue("Lincheck internal events in output mustn't present", "org.jetbrains.kotlinx.lincheck." !in log)
+        val log = StringBuilder().appendFailure(failure).toString()
+        check(threadAbortedErrorName !in log) {
+            "$threadAbortedErrorName was logged"
+        }
+        assertTrue("Lincheck internal events in output must not be present",
+                   "org.jetbrains.kotlinx.lincheck." !in log)
     }
 }

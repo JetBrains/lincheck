@@ -9,14 +9,13 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
-import sun.nio.ch.lincheck.TestThread
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanObjectNumeration
-import org.jetbrains.kotlinx.lincheck.util.traverseObjectGraph
+import org.jetbrains.kotlinx.lincheck.util.*
 import java.lang.reflect.*
 import java.util.*
 import kotlin.random.Random
@@ -57,9 +56,9 @@ internal class ModelCheckingStrategy(
     // Tracker of objects' allocations and object graph topology.
     override val objectTracker: ObjectTracker = LocalObjectManager()
     // Tracker of the monitors' operations.
-    override val monitorTracker: MonitorTracker = ModelCheckingMonitorTracker(nThreads)
+    override val monitorTracker: MonitorTracker = ModelCheckingMonitorTracker()
     // Tracker of the thread parking.
-    override val parkingTracker: ParkingTracker = ModelCheckingParkingTracker(nThreads, allowSpuriousWakeUps = true)
+    override val parkingTracker: ParkingTracker = ModelCheckingParkingTracker(allowSpuriousWakeUps = true)
 
     override fun nextInvocation(): Boolean {
         currentInterleaving = root.nextInterleaving()
@@ -111,12 +110,10 @@ internal class ModelCheckingStrategy(
         // However, we cannot add `!inIgnoredSection` check here
         // as the instrumented code might call `enterIgnoredSection` just before this call.
         return replay && collectTrace &&
-                Thread.currentThread() is TestThread &&
                 suddenInvocationResult == null &&
+                isRegisteredThread() &&
                 !shouldSkipNextBeforeEvent()
-
     }
-
 
     /**
      * We provide information about the failure type to the Plugin, but
@@ -205,8 +202,9 @@ internal class ModelCheckingStrategy(
      * | OBSTRUCTION_FREEDOM_VIOLATION  | 6    |
      */
     private fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Array<String> {
+        val nThreads = trace.trace.maxOf { it.iThread } + 1
         val results = failure.results
-        val nodesList = constructTraceGraph(failure, results, trace, collectExceptionsOrEmpty(failure))
+        val nodesList = constructTraceGraph(nThreads, failure, results, trace, collectExceptionsOrEmpty(failure))
         var sectionIndex = 0
         var node: TraceNode? = nodesList.firstOrNull()
         val representations = mutableListOf<String>()
@@ -219,7 +217,7 @@ internal class ModelCheckingStrategy(
                     val type = when (event) {
                         is SwitchEventTracePoint -> {
                             when (event.reason) {
-                                SwitchReason.ACTIVE_LOCK -> {
+                                SwitchReason.ActiveLock -> {
                                     5
                                 }
                                 else -> 3
@@ -295,30 +293,13 @@ internal class ModelCheckingStrategy(
     override fun shouldSwitch(iThread: Int): Boolean {
         // Crete a new current position in the same place as where the check is,
         // because the position check and the position increment are dual operations.
-        check(iThread == currentThread)
+        check(iThread == threadScheduler.scheduledThreadId)
         currentInterleaving.newExecutionPosition(iThread)
         return currentInterleaving.isSwitchPosition()
     }
 
-    override fun beforePart(part: ExecutionPart) {
-        super.beforePart(part)
-        val nextThread = when (part) {
-            ExecutionPart.INIT -> 0
-            ExecutionPart.PARALLEL -> currentInterleaving.chooseThread(0)
-            ExecutionPart.POST -> 0
-            ExecutionPart.VALIDATION -> 0
-        }
-        loopDetector.beforePart(nextThread)
-        currentThread = nextThread
-    }
-
     override fun chooseThread(iThread: Int): Int =
-        currentInterleaving.chooseThread(iThread).also {
-           check(it in switchableThreads(iThread)) { """
-               Trying to switch the execution to thread $it,
-               but only the following threads are eligible to switch: ${switchableThreads(iThread)}
-           """.trimIndent() }
-        }
+        currentInterleaving.chooseThread(iThread)
 
     /**
      * An abstract node with an execution choice in the interleaving tree.
@@ -463,7 +444,6 @@ internal class ModelCheckingStrategy(
             executionPosition = -1 // the first execution position will be zero
             interleavingFinishingRandom = Random(2) // random with a constant seed
             nextThreadToSwitch = threadSwitchChoices.iterator()
-            loopDetector.initialize()
             lastNotInitializedNodeChoices = null
             lastNotInitializedNode?.let {
                 // Create a mutable list for the initialization of the not initialized node choices.
@@ -551,6 +531,10 @@ internal class LocalObjectManager : ObjectTracker {
     private val localObjects : MutableSet<Any> =
         Collections.newSetFromMap(IdentityHashMap())
 
+    override fun registerThread(threadId: Int, thread: Thread) {
+        markObjectNonLocal(thread)
+    }
+
     /**
      * Registers a new object as a locally accessible one.
      */
@@ -593,7 +577,7 @@ internal class LocalObjectManager : ObjectTracker {
 /**
  * Tracks synchronization operations on the monitors (intrinsic locks)
  */
-internal class ModelCheckingMonitorTracker(nThreads: Int) : MonitorTracker {
+internal class ModelCheckingMonitorTracker : MonitorTracker {
     // Maintains a set of acquired monitors with an information on which thread
     // performed the acquisition and the reentrancy depth.
     private val acquiredMonitors = IdentityHashMap<Any, MonitorAcquiringInfo>()
@@ -601,11 +585,11 @@ internal class ModelCheckingMonitorTracker(nThreads: Int) : MonitorTracker {
     // Maintains a set of monitors on which each thread is waiting.
     // Note, that a thread can wait on a free monitor if it is waiting for a `notify` call.
     // Stores `null` if thread is not waiting on any monitor.
-    private val waitingMonitor = Array<MonitorAcquiringInfo?>(nThreads) { null }
+    private val waitingMonitor = mutableMapOf<ThreadId, MonitorAcquiringInfo?>()
 
-    // Stores `true` for the threads which are waiting for a
-    // `notify` call on the monitor stored in `acquiringMonitor`.
-    private val waitForNotify = BooleanArray(nThreads) { false }
+    override fun registerThread(threadId: Int) {
+        waitingMonitor[threadId] = null
+    }
 
     /**
      * Performs a logical acquisition.
@@ -614,10 +598,10 @@ internal class ModelCheckingMonitorTracker(nThreads: Int) : MonitorTracker {
         // Increment the reentrant depth and store the
         // acquisition info if needed.
         val info = acquiredMonitors.computeIfAbsent(monitor) {
-            MonitorAcquiringInfo(monitor, threadId, 0)
+            MonitorAcquiringInfo(monitor, threadId)
         }
         if (info.threadId != threadId) {
-            waitingMonitor[threadId] = MonitorAcquiringInfo(monitor, threadId, 0)
+            waitingMonitor[threadId] = MonitorAcquiringInfo(monitor, threadId)
             return false
         }
         info.timesAcquired++
@@ -628,21 +612,30 @@ internal class ModelCheckingMonitorTracker(nThreads: Int) : MonitorTracker {
     /**
      * Performs a logical release.
      */
-    override fun releaseMonitor(threadId: Int, monitor: Any) {
+    override fun releaseMonitor(threadId: Int, monitor: Any): Boolean {
         // Decrement the reentrancy depth and remove the acquisition info
         // if the monitor becomes free to acquire by another thread.
         val info = acquiredMonitors[monitor]!!
         info.timesAcquired--
-        if (info.timesAcquired == 0)
+        if (info.timesAcquired == 0) {
             acquiredMonitors.remove(monitor)
+            return true
+        }
+        return false
+    }
+
+    override fun acquiringThreads(monitor: Any): List<ThreadId> {
+        return waitingMonitor.values.mapNotNull { info ->
+            if (info?.monitor === monitor) info.threadId else null
+        }
     }
 
     /**
      * Returns `true` if the corresponding thread is waiting on some monitor.
      */
     override fun isWaiting(threadId: Int): Boolean {
-        val monitor = waitingMonitor[threadId]?.monitor ?: return false
-        return waitForNotify[threadId] || !canAcquireMonitor(threadId, monitor)
+        val info = waitingMonitor[threadId] ?: return false
+        return info.waitForNotify || !canAcquireMonitor(threadId, info.monitor)
     }
 
     /**
@@ -666,7 +659,7 @@ internal class ModelCheckingMonitorTracker(nThreads: Int) : MonitorTracker {
             // in case when current thread owns the lock we release it
             // in order to give other thread a chance to acquire it
             // and put the current thread into waiting state
-            waitForNotify[threadId] = true
+            info.waitForNotify = true
             waitingMonitor[threadId] = info
             acquiredMonitors.remove(monitor)
             return true
@@ -677,7 +670,7 @@ internal class ModelCheckingMonitorTracker(nThreads: Int) : MonitorTracker {
             "Monitor should have been acquired by this thread"
         }
         // if there has been no `notify` yet continue waiting
-        if (waitForNotify[threadId])
+        if (info.waitForNotify)
             return true
         // otherwise acquire monitor restoring its re-entrance depth
         acquiredMonitors[monitor] = info
@@ -690,29 +683,37 @@ internal class ModelCheckingMonitorTracker(nThreads: Int) : MonitorTracker {
      * Always notifies all threads, odd threads will simply have a spurious wakeup.
      */
     override fun notify(threadId: Int, monitor: Any, notifyAll: Boolean) {
-        waitingMonitor.forEachIndexed { tid, info ->
-            if (monitor === info?.monitor)
-                waitForNotify[tid] = false
+        waitingMonitor.values.forEach { info ->
+            if (monitor === info?.monitor && info.waitForNotify) {
+                info.waitForNotify = false
+            }
         }
     }
 
     override fun reset() {
         acquiredMonitors.clear()
-        waitingMonitor.fill(null)
-        waitForNotify.fill(false)
+        waitingMonitor.clear()
     }
 
     /**
      * Stores the [monitor], id of the thread acquired the monitor [threadId],
      * and the number of reentrant acquisitions [timesAcquired].
      */
-    private class MonitorAcquiringInfo(val monitor: Any, val threadId: Int, var timesAcquired: Int)
+    private class MonitorAcquiringInfo(
+        val monitor: Any,
+        val threadId: Int,
+        var timesAcquired: Int = 0,
+        var waitForNotify: Boolean = false,
+    )
 }
 
-class ModelCheckingParkingTracker(val nThreads: Int, val allowSpuriousWakeUps: Boolean = false) : ParkingTracker {
+class ModelCheckingParkingTracker(val allowSpuriousWakeUps: Boolean = false) : ParkingTracker {
 
-    // stores `true` for the parked threads
-    private val parked = BooleanArray(nThreads) { false }
+    private val parked = mutableThreadMapOf<Boolean>()
+
+    override fun registerThread(threadId: Int) {
+        parked[threadId] = false
+    }
 
     override fun park(threadId: Int) {
         parked[threadId] = true
@@ -727,10 +728,10 @@ class ModelCheckingParkingTracker(val nThreads: Int, val allowSpuriousWakeUps: B
     }
 
     override fun isParked(threadId: Int): Boolean =
-        parked[threadId] && !allowSpuriousWakeUps
+        !allowSpuriousWakeUps && parked[threadId]!!
 
     override fun reset() {
-        parked.fill(false)
+        parked.clear()
     }
 
 }

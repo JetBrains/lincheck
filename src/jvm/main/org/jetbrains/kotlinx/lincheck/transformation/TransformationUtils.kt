@@ -12,9 +12,9 @@ package org.jetbrains.kotlinx.lincheck.transformation
 
 import sun.nio.ch.lincheck.Injections
 import org.objectweb.asm.*
-import org.objectweb.asm.Opcodes.ANEWARRAY
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
+import org.objectweb.asm.Opcodes.ANEWARRAY
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import java.io.*
 import java.util.*
@@ -285,20 +285,32 @@ internal inline fun GeneratorAdapter.ifStatement(
 }
 
 /**
- * Executes a piece of code if the current code is being executed in a testing context.
+ * Generates an if-then-else statement, testing if the current execution point
+ * is currently inside a Lincheck tested section
+ * (i.e., not inside the ignored section of the analysis).
+ * If so, the [original] bytecode sequence will be executed, otherwise
+ * the instrumented [code] will be executed.
  *
  * @param original the original code.
- * @param code the code to execute if in a testing context.
+ * @param code the code to execute in the Lincheck's testing context.
  */
 internal inline fun GeneratorAdapter.invokeIfInTestingCode(
     original: GeneratorAdapter.() -> Unit,
     code: GeneratorAdapter.() -> Unit
-) = ifStatement(
-    condition = { invokeStatic(Injections::inTestingCode) },
-    ifClause = code,
-    elseClause = original
-)
+) {
+    ifStatement(
+        condition = { invokeStatic(Injections::inIgnoredSection) },
+        ifClause = original,
+        elseClause = code
+    )
+}
 
+/**
+ * Generates a bytecode sequence to execute a given block of bytecode within an ignored section,
+ * ensuring that any ignored sections are properly entered and exited.
+ *
+ * @param code A block of bytecode to be executed inside the ignored section.
+ */
 internal inline fun GeneratorAdapter.invokeInIgnoredSection(
     code: GeneratorAdapter.() -> Unit
 ) {
@@ -336,6 +348,15 @@ internal fun isPrimitive(type: Type): Boolean {
     }
 }
 
+private val isThreadSubclassMap = ConcurrentHashMap<String, Boolean>()
+
+internal fun isThreadSubClass(internalClassName: String): Boolean {
+    if (internalClassName == JAVA_THREAD_CLASSNAME) return true
+    return isThreadSubclassMap.computeIfAbsent(internalClassName) {
+        isSubClassOf(internalClassName, JAVA_THREAD_CLASSNAME)
+    }
+}
+
 private val isCoroutineStateMachineClassMap = ConcurrentHashMap<String, Boolean>()
 
 internal fun isCoroutineStateMachineClass(internalClassName: String): Boolean {
@@ -360,7 +381,8 @@ private fun getSuperclassName(internalClassName: String): String? {
         }
     }
     try {
-        val classStream: InputStream = ClassLoader.getSystemClassLoader().getResourceAsStream("$internalClassName.class")
+        val classStream: InputStream = ClassLoader.getSystemClassLoader()
+            .getResourceAsStream("$internalClassName.class")
             ?: return null
         val classReader = ClassReader(classStream)
         val superclassVisitor = SuperclassClassVisitor()
@@ -372,11 +394,12 @@ private fun getSuperclassName(internalClassName: String): String? {
     }
 }
 
-internal const val ASM_API = Opcodes.ASM9
-
-internal val STRING_TYPE = getType(String::class.java)
-internal val CLASS_TYPE = getType(Class::class.java)
-internal val CLASS_FOR_NAME_METHOD = Method("forName", CLASS_TYPE, arrayOf(STRING_TYPE))
+private fun isSubClassOf(internalClassName: String, internalSuperClassName: String): Boolean {
+    if (internalClassName == internalSuperClassName) return true
+    val superclassName = getSuperclassName(internalClassName)
+        ?: return false
+    return isSubClassOf(superclassName, internalSuperClassName)
+}
 
 /**
  * Tests if the provided [className] contains `"ClassLoader"` as a substring.
@@ -389,3 +412,13 @@ internal fun containsClassloaderInName(className: String): Boolean =
  */
 internal fun isStackTraceElementClass(className: String): Boolean =
     className == "java.lang.StackTraceElement"
+
+
+internal const val ASM_API = Opcodes.ASM9
+
+internal val STRING_TYPE = getType(String::class.java)
+internal val CLASS_TYPE = getType(Class::class.java)
+
+internal val CLASS_FOR_NAME_METHOD = Method("forName", CLASS_TYPE, arrayOf(STRING_TYPE))
+
+internal const val JAVA_THREAD_CLASSNAME = "java/lang/Thread"

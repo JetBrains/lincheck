@@ -12,8 +12,12 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
+import org.jetbrains.kotlinx.lincheck.util.ThreadId
 
-data class Trace(val trace: List<TracePoint>)
+data class Trace(
+    val trace: List<TracePoint>,
+    val threadNames: List<String>,
+)
 
 /**
  * Essentially, a trace is a list of trace points, which represent
@@ -165,7 +169,7 @@ internal class MethodCallTracePoint(
             append(": ${returnedValue.valueRepresentation}")
         } else if (returnedValue is ReturnedValueResult.CoroutineSuspended) {
             append(": COROUTINE_SUSPENDED")
-        } else if (thrownException != null && thrownException != ForcibleExecutionFinishError) {
+        } else if (thrownException != null && thrownException != ThreadAbortedError) {
             append(": threw ${thrownException!!.javaClass.simpleName}")
         }
     }.toString()
@@ -250,6 +254,26 @@ internal class UnparkTracePoint(
     override fun toStringCompact(): String = "UNPARK"
 }
 
+internal class ThreadStartTracePoint(
+    iThread: Int, actorId: Int,
+    val startedThreadId: Int,
+    callStackTrace: CallStackTrace,
+) : TracePoint(iThread, actorId, callStackTrace) {
+
+    override fun toStringImpl(withLocation: Boolean): String =
+        "start Thread ${startedThreadId + 1}"
+}
+
+internal class ThreadJoinTracePoint(
+    iThread: Int, actorId: Int,
+    val joinedThreadId: Int,
+    callStackTrace: CallStackTrace,
+) : TracePoint(iThread, actorId, callStackTrace) {
+
+    override fun toStringImpl(withLocation: Boolean): String =
+        "join Thread ${joinedThreadId + 1}"
+}
+
 internal class CoroutineCancellationTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
@@ -299,14 +323,20 @@ private fun StackTraceElement.shorten(): String {
     return stackTraceElement
 }
 
-internal enum class SwitchReason(private val reason: String) {
-    MONITOR_WAIT("wait on monitor"),
-    LOCK_WAIT("lock is already acquired"),
-    PARK_WAIT("thread is parked"),
-    ACTIVE_LOCK("active lock detected"),
-    SUSPENDED("coroutine is suspended"),
-    STRATEGY_SWITCH("");
+internal sealed class SwitchReason(private val reason: String) {
+    // strategy switch decision
+    object StrategySwitch : SwitchReason("")
 
+    // switch because of a thread blocking
+    object MonitorWait  : SwitchReason("wait on monitor")
+    object LockWait     : SwitchReason("lock is already acquired")
+    object ParkWait     : SwitchReason("thread is parked")
+    object ActiveLock   : SwitchReason("active lock detected")
+    object Suspended    : SwitchReason("coroutine is suspended")
+    class  ThreadJoinWait(val threadId: ThreadId)
+                        : SwitchReason("waiting for Thread ${threadId + 1} to finish")
+
+    // display switch reason
     override fun toString() = reason
 }
 

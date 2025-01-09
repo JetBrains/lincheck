@@ -14,7 +14,6 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
-import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner.Completion.*
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
@@ -83,9 +82,6 @@ internal open class ParallelThreadsRunner(
     )
 
     init {
-        if (strategy is ManagedStrategy) {
-            executor.threads.forEach { it.eventTracker = strategy }
-        }
         resetState()
     }
 
@@ -178,6 +174,7 @@ internal open class ParallelThreadsRunner(
         // reset thread executions
         testThreadExecutions.forEach { it.reset() }
         validationPartExecution?.results?.fill(null)
+        resetEventTracker()
     }
 
     private var ensuredTestInstanceIsTransformed = false
@@ -186,10 +183,6 @@ internal open class ParallelThreadsRunner(
         @Suppress("DEPRECATION")
         testInstance = testClass.newInstance()
         if (strategy is ModelCheckingStrategy) {
-            // We pass the test instance to the strategy to initialize the call stack.
-            // It should be done here as we create the test instance in the `run` method in the runner, after
-            // `initializeInvocation` method call of ManagedStrategy.
-            strategy.initializeCallStack(testInstance)
             // In the model checking mode, we need to ensure
             // that all the necessary classes and instrumented
             // after creating a test instance.
@@ -264,7 +257,7 @@ internal open class ParallelThreadsRunner(
             val resumedValue = completion.resWithCont.get().first
             // It is important to run the coroutine resumption part outside the ignored section
             // to track the events inside resumption.
-            runOutsideIgnoredSection(thread) {
+            runOutsideIgnoredSection {
                 completion.resWithCont.get().second.resumeWith(resumedValue)
             }
         }
@@ -293,10 +286,12 @@ internal open class ParallelThreadsRunner(
         suspensionPointResults[iThread][actorId] != NoResult || completions[iThread][actorId].resWithCont.get() != null
 
     override fun run(): InvocationResult {
+        var timeout = timeoutMs * 1_000_000
         try {
-            var timeout = timeoutMs * 1_000_000
             // Create a new testing class instance.
             createTestInstance()
+            // Set the event tracker.
+            setEventTracker()
             // Execute the initial part.
             initialPartExecution?.let {
                 beforePart(INIT)
@@ -307,6 +302,8 @@ internal open class ParallelThreadsRunner(
             // Execute the parallel part.
             beforePart(PARALLEL)
             timeout -= executor.submitAndAwait(parallelPartExecutions, timeout)
+            // Wait for all user threads to finish at the end of the parallel part
+            timeout -= strategy.awaitUserThreads(timeout)
             val afterParallelStateRepresentation: String? = constructStateRepresentation()
             onThreadSwitchesOrActorFinishes()
             // Execute the post part.
@@ -328,9 +325,16 @@ internal open class ParallelThreadsRunner(
             // We do not want the transformed code to be reachable outside of the runner and strategy classes.
             return CompletedInvocationResult(collectExecutionResults(afterInitStateRepresentation, afterParallelStateRepresentation, afterPostStateRepresentation))
         } catch (e: TimeoutException) {
-            val threadDump = collectThreadDump(this)
-            return RunnerTimeoutInvocationResult(threadDump, collectExecutionResults())
+            return RunnerTimeoutInvocationResult()
         } catch (e: ExecutionException) {
+            // In case when invocation raised an exception,
+            // we need to wait for all user threads to finish before continuing.
+            // In case if waiting for threads termination abrupt with the timeout,
+            // we return `RunnerTimeoutInvocationResult`.
+            // Otherwise, we return `UnexpectedExceptionInvocationResult` with the original exception.
+            runCatching { strategy.awaitUserThreads(timeout) }.onFailure { exception ->
+                if (exception is TimeoutException) return RunnerTimeoutInvocationResult()
+            }
             return UnexpectedExceptionInvocationResult(e.cause!!, collectExecutionResults())
         } finally {
             resetState()
@@ -361,6 +365,33 @@ internal open class ParallelThreadsRunner(
         afterPostStateRepresentation = afterPostStateRepresentation
     )
 
+    private fun setEventTracker() {
+        if (strategy !is ManagedStrategy) return
+        executor.threads.forEachIndexed { i, thread ->
+            var descriptor = ThreadDescriptor.getThreadDescriptor(thread)
+            if (descriptor == null) {
+                descriptor = ThreadDescriptor(thread)
+                ThreadDescriptor.setThreadDescriptor(thread, descriptor)
+            }
+            descriptor.eventTracker = strategy
+            strategy.registerThread(thread, descriptor)
+                .ensure { threadId -> threadId == i }
+        }
+    }
+
+    private fun resetEventTracker() {
+        if (strategy !is ManagedStrategy) return
+        for (thread in executor.threads) {
+            val descriptor = ThreadDescriptor.getThreadDescriptor(thread)
+                ?: continue
+            descriptor.eventTracker = null
+        }
+    }
+
+    private fun RunnerTimeoutInvocationResult(): RunnerTimeoutInvocationResult {
+        val threadDump = collectThreadDump(this)
+        return RunnerTimeoutInvocationResult(threadDump, collectExecutionResults())
+    }
 
     private fun createInitialPartExecution() =
         if (scenario.initExecution.isNotEmpty()) {
@@ -430,7 +461,7 @@ internal open class ParallelThreadsRunner(
         curClock = 0
     }
 
-    override fun onStart(iThread: Int) {
+    override fun onThreadStart(iThread: Int) {
         if (currentExecutionPart !== PARALLEL) return
         uninitializedThreads.decrementAndGet() // this thread has finished initialization
         // wait for other threads to start
@@ -447,9 +478,9 @@ internal open class ParallelThreadsRunner(
 
     override fun isCurrentRunnerThread(thread: Thread): Boolean = executor.threads.any { it === thread }
 
-    override fun onFinish(iThread: Int) {}
+    override fun onThreadFinish(iThread: Int) {}
 
-    override fun onFailure(iThread: Int, e: Throwable) {}
+    override fun onThreadFailure(iThread: Int, e: Throwable) {}
 }
 
 internal enum class UseClocks { ALWAYS, RANDOM }

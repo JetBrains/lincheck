@@ -20,9 +20,10 @@ import org.jetbrains.kotlinx.lincheck.transformation.transformers.*
 import sun.nio.ch.lincheck.*
 
 internal class LincheckClassVisitor(
+    private val classVisitor: SafeClassWriter,
     private val instrumentationMode: InstrumentationMode,
-    private val classVisitor: SafeClassWriter
 ) : ClassVisitor(ASM_API, classVisitor) {
+
     private val ideaPluginEnabled = ideaPluginEnabled()
     private var classVersion = 0
 
@@ -94,7 +95,6 @@ internal class LincheckClassVisitor(
                 val st = ConstructorArgumentsSnapshotTrackerTransformer(fileName, className, methodName, mv.newAdapter(), classVisitor::isInstanceOf)
                 val sv = SharedMemoryAccessTransformer(fileName, className, methodName, st.newAdapter())
                 val aa = AnalyzerAdapter(className, access, methodName, desc, sv)
-
                 sv.analyzer = aa
                 aa
             }
@@ -131,6 +131,12 @@ internal class LincheckClassVisitor(
         mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
         mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
         mv = CoroutineCancellabilitySupportTransformer(mv, access, className, methodName, desc)
+        mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
+        // We can do further instrumentation in methods of the custom thread subclasses,
+        // but not in the `java.lang.Thread` itself.
+        if (className == JAVA_THREAD_CLASSNAME) {
+            return mv
+        }
         if (access and ACC_SYNCHRONIZED != 0) {
             mv = SynchronizedMethodTransformer(fileName, className, methodName, mv.newAdapter(), classVersion)
         }
@@ -152,7 +158,6 @@ internal class LincheckClassVisitor(
             val st = ConstructorArgumentsSnapshotTrackerTransformer(fileName, className, methodName, mv.newAdapter(), classVisitor::isInstanceOf)
             val sv = SharedMemoryAccessTransformer(fileName, className, methodName, st.newAdapter())
             val aa = AnalyzerAdapter(className, access, methodName, desc, sv)
-
             sv.analyzer = aa
             aa
         }

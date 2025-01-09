@@ -50,20 +50,20 @@ abstract class Runner protected constructor(
      * This method is invoked by every test thread as the first operation.
      * @param iThread number of invoking thread
      */
-    abstract fun onStart(iThread: Int)
+    abstract fun onThreadStart(iThread: Int)
 
     /**
      * This method is invoked by every test thread as the last operation
      * if no exception has been thrown.
      * @param iThread number of invoking thread
      */
-    abstract fun onFinish(iThread: Int)
+    abstract fun onThreadFinish(iThread: Int)
 
     /**
      * This method is invoked by the corresponding test thread
      * when an unexpected exception is thrown.
      */
-    abstract fun onFailure(iThread: Int, e: Throwable)
+    abstract fun onThreadFailure(iThread: Int, e: Throwable)
 
     /**
      * This method is invoked by the corresponding test thread

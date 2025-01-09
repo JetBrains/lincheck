@@ -14,6 +14,7 @@ package org.jetbrains.kotlinx.lincheck
 import sun.nio.ch.lincheck.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.kotlinx.lincheck.util.ThreadMap
 
 const val MINIMAL_PLUGIN_VERSION = "0.2"
 
@@ -79,7 +80,8 @@ fun shouldReplayInterleaving(): Boolean {
  */
 @Suppress("UNUSED_PARAMETER")
 fun beforeEvent(eventId: Int, type: String) {
-    val strategy = (Thread.currentThread() as? TestThread)?.eventTracker ?: return
+    val strategy = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTracker
+        ?: return
     visualize(strategy)
 }
 
@@ -92,15 +94,18 @@ fun beforeEvent(eventId: Int, type: String) {
  * (class version, etc.).
  *
  * @param testInstance tested data structure.
- * @param numbersArrayMap an array structured like [Object, objectNumber, Object, objectNumber, ...]. Represents a `Map<Any, Int>`.
- * @param threadsArrayMap an array structured like [Thread, threadId, Thread, threadId, ...]. Represents a `Map<Any, Int>`.
- * @param threadToLincheckThreadIdMap an array structured like [CancellableContinuation, threadId, CancellableContinuation, threadId, ...]. Represents a `Map<Any, Int>`.
+ * @param numbersArrayMap an array structured like [Object, objectNumber, Object, objectNumber, ...].
+ *   Represents a `Map<Any /* Object */, Int>`.
+ * @param continuationToLincheckThreadIdMap an array structured like [CancellableContinuation, threadId, ...].
+ *   Represents a `Map<Any /* CancellableContinuation */, Int>`.
+ * @param threadToLincheckThreadIdMap an array structured like [Thread, threadId, Thread, threadId, ...].
+ *   Represents a `Map<Any /* Thread */, Int>`.
  */
 @Suppress("UNUSED_PARAMETER")
 fun visualizeInstance(
     testInstance: Any,
     numbersArrayMap: Array<Any>,
-    threadsArrayMap: Array<Any>,
+    continuationToLincheckThreadIdMap: Array<Any>,
     threadToLincheckThreadIdMap: Array<Any>
 ) {
 }
@@ -124,11 +129,12 @@ private fun visualize(strategyObject: Any) = runCatching {
     val strategy = strategyObject as ModelCheckingStrategy
     val runner = strategy.runner as ParallelThreadsRunner
     val testObject = runner.testInstance
-    val threads = runner.executor.threads
+    val lincheckThreads = runner.executor.threads
+    val allThreads = strategy.getRegisteredThreads()
 
     val objectToNumberMap = createObjectToNumberMapAsArray(testObject)
-    val continuationToLincheckThreadIdMap = createContinuationToThreadIdMap(threads)
-    val threadToLincheckThreadIdMap = createThreadToLincheckThreadIdMap(threads)
+    val continuationToLincheckThreadIdMap = createContinuationToThreadIdMap(lincheckThreads)
+    val threadToLincheckThreadIdMap = createThreadToLincheckThreadIdMap(allThreads)
 
     visualizeInstance(testObject, objectToNumberMap, continuationToLincheckThreadIdMap, threadToLincheckThreadIdMap)
 }
@@ -159,13 +165,12 @@ private fun createObjectToNumberMapAsArray(testObject: Any): Array<Any> {
  *
  * The Debugger uses this information to enumerate threads.
  */
-private fun createThreadToLincheckThreadIdMap(threads: Array<TestThread>): Array<Any> {
+private fun createThreadToLincheckThreadIdMap(threadMap: ThreadMap<Thread>): Array<Any> {
     val array = arrayListOf<Any>()
-    for (thread in threads) {
-        array.add(thread)
-        array.add(thread.threadId)
+    for (entry in threadMap) {
+        array.add(entry.value)
+        array.add(entry.key)
     }
-
     return array.toTypedArray()
 }
 
@@ -182,6 +187,5 @@ private fun createContinuationToThreadIdMap(threads: Array<TestThread>): Array<A
         array.add(thread.suspendedContinuation ?: continue)
         array.add(thread.threadId)
     }
-
     return array.toTypedArray()
 }

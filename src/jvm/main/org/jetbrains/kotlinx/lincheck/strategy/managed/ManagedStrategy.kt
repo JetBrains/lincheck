@@ -29,6 +29,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanO
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
 import java.lang.reflect.*
+import java.util.concurrent.TimeoutException
 import java.util.*
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 
@@ -53,24 +54,16 @@ abstract class ManagedStrategy(
     // Runner for scenario invocations,
     // can be replaced with a new one for trace construction.
     override var runner = createRunner()
-
-    // Spin-waiters for each thread
-    private val spinners = SpinnerGroup(nThreads)
-
+    
     // == EXECUTION CONTROL FIELDS ==
 
-    // Which thread is allowed to perform operations?
-    @Volatile
-    protected var currentThread: Int = 0
-
-    // Which threads finished all the operations?
-    private val finished = BooleanArray(nThreads) { false }
+    protected val threadScheduler = ManagedThreadScheduler()
 
     // Which threads are suspended?
-    private val isSuspended = BooleanArray(nThreads) { false }
+    private val isSuspended = mutableThreadMapOf<Boolean>()
 
     // Current actor id for each thread.
-    protected val currentActorId = IntArray(nThreads)
+    protected val currentActorId = mutableThreadMapOf<Int>()
 
     // Detector of loops or hangs (i.e. active locks).
     internal val loopDetector: LoopDetector = LoopDetector(testCfg.hangingDetectionThreshold)
@@ -101,7 +94,7 @@ abstract class ManagedStrategy(
     private var callStackTraceElementId = 0
 
     // Stores the currently executing methods call stack for each thread.
-    private val callStackTrace = Array(nThreads) { mutableListOf<CallStackTraceElement>() }
+    private val callStackTrace = mutableThreadMapOf<MutableList<CallStackTraceElement>>()
 
     // In case of suspension, the call stack of the corresponding `suspend`
     // methods is stored here, so that the same method call identifiers are
@@ -109,15 +102,15 @@ abstract class ManagedStrategy(
     // correspond to the same method call in the trace.
     // NOTE: the call stack is stored in the reverse order,
     // i.e., the first element is the top stack trace element.
-    private val suspendedFunctionsStack = Array(nThreads) { mutableListOf<CallStackTraceElement>() }
+    private val suspendedFunctionsStack = mutableThreadMapOf<MutableList<CallStackTraceElement>>()
 
     // Last read trace point, occurred in the current thread.
     // We store it as we initialize read value after the point is created so we have to store
     // the trace point somewhere to obtain it later.
-    private var lastReadTracePoint = Array<ReadTracePoint?>(nThreads) { null }
+    private var lastReadTracePoint = mutableThreadMapOf<ReadTracePoint?>()
 
     // Random instances with fixed seeds to replace random calls in instrumented code.
-    private var randoms = (0 until nThreads + 2).map { Random(it + 239L) }
+    private var randoms = mutableThreadMapOf<Random>()
 
     // User-specified guarantees on specific function, which can be considered as atomic or ignored.
     private val userDefinedGuarantees: List<ManagedStrategyGuarantee>? = testCfg.guarantees.ifEmpty { null }
@@ -129,7 +122,7 @@ abstract class ManagedStrategy(
      * Current method call context (static or instance).
      * Initialized and used only in the trace collecting stage.
      */
-    private lateinit var callStackContextPerThread: Array<ArrayList<CallContext>>
+    private var callStackContextPerThread = mutableThreadMapOf<ArrayList<CallContext>>()
 
     /**
      * In case when the plugin is enabled, we also enable [eventIdStrictOrderingCheck] property and check
@@ -206,17 +199,13 @@ abstract class ManagedStrategy(
      * Resets all internal data to the initial state and initializes current invocation to be run.
      */
     protected open fun initializeInvocation() {
-        finished.fill(false)
-        isSuspended.fill(false)
-        currentActorId.fill(-1)
         traceCollector = if (collectTrace) TraceCollector() else null
         suddenInvocationResult = null
-        callStackTrace.forEach { it.clear() }
-        suspendedFunctionsStack.forEach { it.clear() }
-        randoms.forEachIndexed { i, r -> r.setSeed(i + 239L) }
+        loopDetector.initialize()
         objectTracker.reset()
         monitorTracker.reset()
         parkingTracker.reset()
+        resetThreads()
     }
 
     /**
@@ -246,7 +235,7 @@ abstract class ManagedStrategy(
             // If strategy has not detected a sudden invocation result,
             // then return, otherwise process the sudden result.
             val suddenResult = suddenInvocationResult ?: return result
-            // Unexpected `ForcibleExecutionFinishError` should be thrown.
+            // Unexpected `ThreadAbortedError` should be thrown.
             check(result is UnexpectedExceptionInvocationResult)
             // Check if an invocation replay is required
             val isReplayRequired = (suddenResult is SpinCycleFoundAndReplayRequired)
@@ -263,8 +252,16 @@ abstract class ManagedStrategy(
 
     // == BASIC STRATEGY METHODS ==
 
-    override fun beforePart(part: ExecutionPart) {
+    override fun beforePart(part: ExecutionPart) = runInIgnoredSection {
         traceCollector?.passCodeLocation(SectionDelimiterTracePoint(part))
+        val nextThread = when (part) {
+            INIT        -> 0
+            PARALLEL    -> chooseThread(0)
+            POST        -> 0
+            VALIDATION  -> 0
+        }
+        loopDetector.beforePart(nextThread)
+        threadScheduler.scheduleThread(nextThread)
     }
 
     /**
@@ -300,6 +297,15 @@ abstract class ManagedStrategy(
         // simultaneously adding events to the TraceCollector, which leads to an inconsistent trace.
         // Therefore, if the runner detects deadlock, we don't even try to collect trace.
         if (loggedResults is RunnerTimeoutInvocationResult) return null
+
+        val registeredThreads = getRegisteredThreads()
+        val threadNames = MutableList<String>(registeredThreads.size) { "" }
+        threadScheduler.getRegisteredThreads().forEach { threadId, thread ->
+            val threadNumber = ObjectLabelFactory.getObjectNumber(Thread::class.java, thread)
+            threadNames[threadId] = "Thread $threadNumber"
+        }
+        val trace = Trace(traceCollector!!.trace, threadNames)
+
         val sameResultTypes = loggedResults.javaClass == result.javaClass
         val sameResults = (
             loggedResults !is CompletedInvocationResult ||
@@ -312,29 +318,21 @@ abstract class ManagedStrategy(
                 appendLine("== Reporting the first execution without execution trace ==")
                 appendLine(result.toLincheckFailure(scenario, null))
                 appendLine("== Reporting the second execution ==")
-                appendLine(loggedResults.toLincheckFailure(scenario, Trace(traceCollector!!.trace)).toString())
+                appendLine(loggedResults.toLincheckFailure(scenario, trace).toString())
             }.toString()
         }
 
-        return Trace(traceCollector!!.trace)
-    }
-
-    fun initializeCallStack(testInstance: Any) {
-        if (collectTrace) {
-            callStackContextPerThread = Array(nThreads) { arrayListOf(CallContext.InstanceCallContext(testInstance)) }
-        }
+        return trace
     }
 
     private fun failDueToDeadlock(): Nothing {
-        suddenInvocationResult = ManagedDeadlockInvocationResult(runner.collectExecutionResults())
-        // Forcibly finish the current execution by throwing an exception.
-        throw ForcibleExecutionFinishError
+        val result = ManagedDeadlockInvocationResult(runner.collectExecutionResults())
+        abortWithSuddenInvocationResult(result)
     }
 
     private fun failDueToLivelock(lazyMessage: () -> String): Nothing {
-        suddenInvocationResult = ObstructionFreedomViolationInvocationResult(lazyMessage(), runner.collectExecutionResults())
-        // Forcibly finish the current execution by throwing an exception.
-        throw ForcibleExecutionFinishError
+        val result = ObstructionFreedomViolationInvocationResult(lazyMessage(), runner.collectExecutionResults())
+        abortWithSuddenInvocationResult(result)
     }
 
     private fun failIfObstructionFreedomIsRequired(lazyMessage: () -> String) {
@@ -343,21 +341,24 @@ abstract class ManagedStrategy(
         }
     }
 
-    private val currentActorIsBlocking: Boolean
-        get() {
-            val actorId = currentActorId[currentThread]
-            // Handle the case when the first actor has not yet started,
-            // see https://github.com/JetBrains/lincheck/pull/277
-            if (actorId < 0) return false
-            return scenario.threads[currentThread][actorId].blocking
-        }
+    private val currentActorIsBlocking: Boolean get() {
+        val currentThreadId = threadScheduler.getCurrentThreadId()
+        val actorId = currentActorId[currentThreadId] ?: -1
+        // Handle the case when the first actor has not yet started,
+        // see https://github.com/JetBrains/lincheck/pull/277
+        if (actorId < 0) return false
+        return scenario.threads[currentThreadId][actorId].blocking
+    }
 
-    private val concurrentActorCausesBlocking: Boolean
-        get() = currentActorId.mapIndexed { iThread, actorId ->
-                    if (iThread != currentThread && actorId >= 0 && !finished[iThread])
-                        scenario.threads[iThread][actorId]
-                    else null
-                }.filterNotNull().any { it.causesBlocking }
+    private val concurrentActorCausesBlocking: Boolean get() {
+        val currentThreadId = threadScheduler.getCurrentThreadId()
+        val currentActiveActorIds = currentActorId.values.mapIndexed { iThread, actorId ->
+            if (iThread != currentThreadId && actorId >= 0 && !threadScheduler.isFinished(iThread)) {
+                scenario.threads[iThread][actorId]
+            } else null
+        }.filterNotNull()
+        return currentActiveActorIds.any { it.causesBlocking }
+    }
 
 
     // == EXECUTION CONTROL METHODS ==
@@ -369,11 +370,12 @@ abstract class ManagedStrategy(
      * @param codeLocation the byte-code location identifier of the point in code.
      */
     private fun newSwitchPoint(iThread: Int, codeLocation: Int, tracePoint: TracePoint?) {
-        // Throw ForcibleExecutionFinishException if the invocation
-        // result is already calculated.
-        if (suddenInvocationResult != null) throw ForcibleExecutionFinishError
+        // re-throw abort error if the thread was aborted
+        if (threadScheduler.isAborted(iThread)) {
+            threadScheduler.abortCurrentThread()
+        }
         // check we are in the right thread
-        check(iThread == currentThread)
+        check(iThread == threadScheduler.scheduledThreadId)
         // check if we need to switch
         val shouldSwitch = when {
             /*
@@ -415,7 +417,7 @@ abstract class ManagedStrategy(
                 if (decision is LoopDetector.Decision.LivelockFailureDetected) {
                     // if failure is detected, add a special obstruction-freedom violation
                     // trace point to account for that
-                    traceCollector?.passObstructionFreedomViolationTracePoint(currentThread, beforeMethodCall = tracePoint is MethodCallTracePoint)
+                    traceCollector?.passObstructionFreedomViolationTracePoint(iThread, beforeMethodCall = tracePoint is MethodCallTracePoint)
                 } else {
                     // otherwise log the last event that caused obstruction-freedom violation
                     traceCollector?.passCodeLocation(tracePoint)
@@ -425,18 +427,17 @@ abstract class ManagedStrategy(
         }
         // if live-lock failure was detected, then fail immediately
         if (decision is LoopDetector.Decision.LivelockFailureDetected) {
-            traceCollector?.newSwitch(currentThread, SwitchReason.ACTIVE_LOCK, beforeMethodCallSwitch = tracePoint is MethodCallTracePoint)
+            traceCollector?.newSwitch(iThread, SwitchReason.ActiveLock, beforeMethodCallSwitch = tracePoint is MethodCallTracePoint)
             failDueToDeadlock()
         }
         // if live-lock was detected, and replay was requested,
         // then abort current execution and start the replay
         if (decision.isReplayRequired) {
-            suddenInvocationResult = SpinCycleFoundAndReplayRequired
-            throw ForcibleExecutionFinishError
+            abortWithSuddenInvocationResult(SpinCycleFoundAndReplayRequired)
         }
         // if the current thread in a live-lock, then try to switch to another thread
         if (decision is LoopDetector.Decision.LivelockThreadSwitch) {
-            val switchHappened = switchCurrentThread(iThread, SwitchReason.ACTIVE_LOCK, tracePoint = tracePoint)
+            val switchHappened = switchCurrentThread(iThread, BlockingReason.LiveLocked, tracePoint)
             if (switchHappened) {
                 loopDetector.initializeFirstCodeLocationAfterSwitch(codeLocation)
             }
@@ -445,7 +446,7 @@ abstract class ManagedStrategy(
         }
         // if strategy requested thread switch, then do it
         if (shouldSwitch) {
-            val switchHappened = switchCurrentThread(iThread, SwitchReason.STRATEGY_SWITCH, tracePoint = tracePoint)
+            val switchHappened = switchCurrentThread(iThread, tracePoint = tracePoint)
             if (switchHappened) {
                 loopDetector.initializeFirstCodeLocationAfterSwitch(codeLocation)
             }
@@ -458,23 +459,131 @@ abstract class ManagedStrategy(
         traceCollector?.passCodeLocation(tracePoint)
     }
 
+    override fun beforeThreadFork(thread: Thread, descriptor: ThreadDescriptor) = runInIgnoredSection {
+        val currentThreadId = threadScheduler.getCurrentThreadId()
+        // do not track threads forked from unregistered threads
+        if (currentThreadId < 0) return
+        // scenario threads are handled separately by the runner itself
+        if (thread is TestThread) return
+        val forkedThreadId = registerThread(thread, descriptor)
+        if (collectTrace) {
+            val tracePoint = ThreadStartTracePoint(
+                iThread = currentThreadId,
+                actorId = currentActorId[currentThreadId]!!,
+                startedThreadId = forkedThreadId,
+                callStackTrace = callStackTrace[currentThreadId]!!,
+            )
+            traceCollector!!.passCodeLocation(tracePoint)
+        }
+    }
+
+    override fun beforeThreadStart() = runInIgnoredSection {
+        val currentThreadId = threadScheduler.getCurrentThreadId()
+        // do not track unregistered threads
+        if (currentThreadId < 0) return
+        // scenario threads are handled separately
+        if (currentThreadId < scenario.nThreads) return
+        onThreadStart(currentThreadId)
+        enterTestingCode()
+    }
+
+    override fun afterThreadFinish() = runInIgnoredSection {
+        val currentThreadId = threadScheduler.getCurrentThreadId()
+        // do not track unregistered threads
+        if (currentThreadId < 0) return
+        // scenario threads are handled separately by the runner itself
+        if (currentThreadId < scenario.nThreads) return
+        leaveTestingCode()
+        onThreadFinish(currentThreadId)
+    }
+
+    override fun threadJoin(thread: Thread?, withTimeout: Boolean) = runInIgnoredSection {
+        if (withTimeout) return // timeouts occur instantly
+        val currentThreadId = threadScheduler.getCurrentThreadId()
+        val joinThreadId = threadScheduler.getThreadId(thread!!)
+        while (threadScheduler.getThreadState(joinThreadId) != ThreadState.FINISHED) {
+            // TODO: should wait on thread-join be considered an obstruction-freedom violation?
+            // Switch to another thread and wait for a moment when the thread is finished
+            switchCurrentThread(currentThreadId, BlockingReason.ThreadJoin(joinThreadId))
+        }
+        if (collectTrace) {
+            val tracePoint = ThreadJoinTracePoint(
+                iThread = currentThreadId,
+                actorId = currentActorId[currentThreadId]!!,
+                joinedThreadId = joinThreadId,
+                callStackTrace = callStackTrace[currentThreadId]!!,
+            )
+            traceCollector!!.passCodeLocation(tracePoint)
+        }
+    }
+
+    fun registerThread(thread: Thread, descriptor: ThreadDescriptor): ThreadId {
+        val threadId = threadScheduler.registerThread(thread, descriptor)
+        isSuspended[threadId] = false
+        currentActorId[threadId] = if (threadId < scenario.nThreads) -1 else 0
+        callStackTrace[threadId] = mutableListOf()
+        suspendedFunctionsStack[threadId] = mutableListOf()
+        callStackContextPerThread[threadId] = arrayListOf(
+            CallContext.InstanceCallContext(runner.testInstance)
+        )
+        lastReadTracePoint[threadId] = null
+        randoms[threadId] = Random(threadId + 239L)
+        objectTracker.registerThread(threadId, thread)
+        monitorTracker.registerThread(threadId)
+        parkingTracker.registerThread(threadId)
+        // register thread number for trace printing
+        ObjectLabelFactory.getObjectNumber(Thread::class.java, thread)
+        return threadId
+    }
+
+    private fun resetThreads() {
+        threadScheduler.reset()
+        isSuspended.clear()
+        currentActorId.clear()
+        callStackTrace.clear()
+        suspendedFunctionsStack.clear()
+        callStackContextPerThread.clear()
+        randoms.clear()
+    }
+
+    override fun awaitUserThreads(timeoutNano: Long): Long {
+        var remainingTime = timeoutNano
+        for ((threadId, _) in getRegisteredThreads()) {
+            if (threadId < scenario.nThreads) continue // do not wait for Lincheck threads
+            val elapsedTime = threadScheduler.awaitThreadFinish(threadId, remainingTime)
+            if (elapsedTime < 0) {
+                remainingTime = -1
+                break
+            }
+            remainingTime -= elapsedTime
+        }
+        if (remainingTime < 0) throw TimeoutException()
+        val elapsedTime = timeoutNano - remainingTime
+        return elapsedTime
+    }
+
+    fun getRegisteredThreads(): ThreadMap<Thread> =
+        threadScheduler.getRegisteredThreads()
+
     /**
      * This method is executed as the first thread action.
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
      */
-    open fun onStart(iThread: Int) {
-        awaitTurn(iThread)
+    open fun onThreadStart(iThread: Int) {
+        threadScheduler.awaitTurn(iThread)
+        threadScheduler.startThread(iThread)
     }
 
     /**
      * This method is executed as the last thread action if no exception has been thrown.
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
      */
-    open fun onFinish(iThread: Int) {
-        awaitTurn(iThread)
-        finished[iThread] = true
+    open fun onThreadFinish(iThread: Int) {
+        threadScheduler.awaitTurn(iThread)
+        threadScheduler.finishThread(iThread)
         loopDetector.onThreadFinish(iThread)
         traceCollector?.onThreadFinish()
+        unblockJoiningThreads(iThread)
         val nextThread = chooseThreadSwitch(iThread, true)
         setCurrentThread(nextThread)
     }
@@ -484,23 +593,29 @@ abstract class ManagedStrategy(
      * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
      * @param exception the exception that was thrown
      */
-    open fun onFailure(iThread: Int, exception: Throwable) {
+    open fun onThreadFailure(iThread: Int, exception: Throwable) {
         // This method is called only if exception can't be treated as a normal operation result,
         // so we exit testing code to avoid trace collection resume or some bizarre bugs
-        (Thread.currentThread() as TestThread).inTestingCode = false
-        // Despite the fact that the corresponding failure will be detected by the runner,
-        // the managed strategy can construct a trace to reproduce this failure.
-        // Let's then store the corresponding failing result and construct the trace.
-        if (exception === ForcibleExecutionFinishError) return // not a forcible execution finish
-        suddenInvocationResult = UnexpectedExceptionInvocationResult(exception, runner.collectExecutionResults())
+        leaveTestingCode()
+        // skip abort exception
+        if (exception !== ThreadAbortedError) {
+            // Despite the fact that the corresponding failure will be detected by the runner,
+            // the managed strategy can construct a trace to reproduce this failure.
+            // Let's then store the corresponding failing result and construct the trace.
+            suddenInvocationResult = UnexpectedExceptionInvocationResult(exception, runner.collectExecutionResults())
+            threadScheduler.abortAllThreads()
+        }
+        // notify the scheduler that the thread is going to be finished
+        threadScheduler.finishThread(iThread)
     }
 
-    override fun onActorStart(iThread: Int) = runInIgnoredSection {
-        currentActorId[iThread]++
-        callStackTrace[iThread].clear()
-        suspendedFunctionsStack[iThread].clear()
+    override fun onActorStart(iThread: Int) {
+        val actorId = 1 + currentActorId[iThread]!!
+        currentActorId[iThread] = actorId
+        callStackTrace[iThread]!!.clear()
+        suspendedFunctionsStack[iThread]!!.clear()
         loopDetector.onActorStart(iThread)
-        (Thread.currentThread() as TestThread).inTestingCode = true
+        enterTestingCode()
     }
 
     override fun onActorFinish() {
@@ -508,7 +623,7 @@ abstract class ManagedStrategy(
         // When stepping out to the TestThreadExecution class, stepping continues unproductively.
         // With this method, we force the debugger to stop at the beginning of the next actor.
         onThreadSwitchesOrActorFinishes()
-        (Thread.currentThread() as TestThread).inTestingCode = false
+        leaveTestingCode()
     }
 
     /**
@@ -516,43 +631,47 @@ abstract class ManagedStrategy(
      * can continue its execution (i.e. is not blocked/finished).
      */
     private fun isActive(iThread: Int): Boolean =
-        !finished[iThread] &&
-        !(isSuspended[iThread] && !runner.isCoroutineResumed(iThread, currentActorId[iThread])) &&
-        !monitorTracker.isWaiting(iThread) &&
-        !parkingTracker.isParked(iThread)
-
-    /**
-     * Waits until the specified thread can continue
-     * the execution according to the strategy decision.
-     */
-    private fun awaitTurn(iThread: Int) = runInIgnoredSection {
-        spinners[iThread].spinWaitUntil {
-            // Finish forcibly if an error occurred and we already have an `InvocationResult`.
-            if (suddenInvocationResult != null) throw ForcibleExecutionFinishError
-            currentThread == iThread
-        }
-    }
+        threadScheduler.isSchedulable(iThread) &&
+        // TODO: coroutine suspensions are currently handled separately from `ThreadScheduler`
+        !(isSuspended[iThread]!! && !runner.isCoroutineResumed(iThread, currentActorId[iThread]!!))
 
     /**
      * A regular context thread switch to another thread.
      *
-     * @return was this thread actually switched to another or not
+     * @return was this thread actually switched to another or not.
      */
     private fun switchCurrentThread(
         iThread: Int,
-        reason: SwitchReason = SwitchReason.STRATEGY_SWITCH,
-        mustSwitch: Boolean = false,
+        blockingReason: BlockingReason? = null,
         tracePoint: TracePoint? = null
     ): Boolean {
+        val switchReason = when (blockingReason) {
+            is BlockingReason.Locked        -> SwitchReason.LockWait
+            is BlockingReason.LiveLocked    -> SwitchReason.ActiveLock
+            is BlockingReason.Waiting       -> SwitchReason.MonitorWait
+            is BlockingReason.Parked        -> SwitchReason.ParkWait
+            is BlockingReason.Suspended     -> SwitchReason.Suspended
+            is BlockingReason.ThreadJoin    -> SwitchReason.ThreadJoinWait(blockingReason.joinedThreadId)
+            else                            -> SwitchReason.StrategySwitch
+        }
+        val mustSwitch = (blockingReason != null) && (blockingReason !is BlockingReason.LiveLocked)
         val nextThread = chooseThreadSwitch(iThread, mustSwitch)
         val switchHappened = (iThread != nextThread)
         if (switchHappened) {
-            traceCollector?.newSwitch(iThread, reason,
+            if (blockingReason != null &&
+                // active live-lock currently does not block thread
+                blockingReason !is BlockingReason.LiveLocked &&
+                // TODO: coroutine suspensions are currently handled separately from `ThreadScheduler`
+                blockingReason !is BlockingReason.Suspended
+            ) {
+                blockThread(iThread, blockingReason)
+            }
+            traceCollector?.newSwitch(iThread, switchReason,
                 beforeMethodCallSwitch = (tracePoint != null && tracePoint is MethodCallTracePoint)
             )
             setCurrentThread(nextThread)
         }
-        awaitTurn(iThread)
+        threadScheduler.awaitTurn(iThread)
         return switchHappened
     }
 
@@ -572,25 +691,31 @@ abstract class ManagedStrategy(
             return nextThread
         }
         // otherwise exit if the thread switch is optional, or all threads are finished
-        if (!mustSwitch || finished.all { it }) {
+        if (!mustSwitch || threadScheduler.areAllThreadsFinished()) {
            return iThread
         }
         // try to resume some suspended thread
         val suspendedThread = (0 until nThreads).firstOrNull {
-           !finished[it] && isSuspended[it]
+           !threadScheduler.isFinished(it) && isSuspended[it]!!
         }
         if (suspendedThread != null) {
            return suspendedThread
         }
         // any other situation is considered to be a deadlock
-        suddenInvocationResult = ManagedDeadlockInvocationResult(runner.collectExecutionResults())
-        throw ForcibleExecutionFinishError
+        val result = ManagedDeadlockInvocationResult(runner.collectExecutionResults())
+        abortWithSuddenInvocationResult(result)
     }
 
     @JvmName("setNextThread")
     private fun setCurrentThread(nextThread: Int) {
         loopDetector.onThreadSwitch(nextThread)
-        currentThread = nextThread
+        threadScheduler.scheduleThread(nextThread)
+    }
+
+    private fun abortWithSuddenInvocationResult(invocationResult: InvocationResult): Nothing {
+        suddenInvocationResult = invocationResult
+        threadScheduler.abortOtherThreads()
+        threadScheduler.abortCurrentThread()
     }
 
     /**
@@ -598,7 +723,7 @@ abstract class ManagedStrategy(
      */
     protected fun switchableThreads(iThread: Int) =
         if (runner.currentExecutionPart == PARALLEL) {
-            (0 until nThreads).filter { it != iThread && isActive(it) }
+            (0 until threadScheduler.nThreads).filter { it != iThread && isActive(it) }
         } else {
             emptyList()
         }
@@ -606,18 +731,17 @@ abstract class ManagedStrategy(
     // == LISTENING METHODS ==
 
     override fun beforeLock(codeLocation: Int): Unit = runInIgnoredSection {
+        val iThread = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
-            val iThread = currentThread
             MonitorEnterTracePoint(
                 iThread = iThread,
-                actorId = currentActorId[iThread],
-                callStackTrace = callStackTrace[iThread],
+                actorId = currentActorId[iThread]!!,
+                callStackTrace = callStackTrace[iThread]!!,
                 stackTraceElement = CodeLocations.stackTrace(codeLocation)
             )
         } else {
             null
         }
-        val iThread = currentThread
         newSwitchPoint(iThread, codeLocation, tracePoint)
     }
 
@@ -630,33 +754,32 @@ abstract class ManagedStrategy(
    Because of this additional switching we had to split this method into two, as the beforeEvent method must be called after the switch point.
     */
     override fun lock(monitor: Any): Unit = runInIgnoredSection {
-        val iThread = currentThread
+        val iThread = threadScheduler.getCurrentThreadId()
         // Try to acquire the monitor
         while (!monitorTracker.acquireMonitor(iThread, monitor)) {
-            failIfObstructionFreedomIsRequired {
-                // TODO: This might be a false positive when this MONITORENTER call never suspends.
-                // TODO: We can keep it as is until refactoring, as this weird case is an anti-pattern anyway.
-                OBSTRUCTION_FREEDOM_LOCK_VIOLATION_MESSAGE
-            }
             // Switch to another thread and wait for a moment when the monitor can be acquired
-            switchCurrentThread(iThread, SwitchReason.LOCK_WAIT, true)
+            switchCurrentThread(iThread, BlockingReason.Locked)
         }
     }
 
     override fun unlock(monitor: Any, codeLocation: Int): Unit = runInIgnoredSection {
+        val iThread = threadScheduler.getCurrentThreadId()
         // We need to be extremely careful with the MONITOREXIT instruction,
         // as it can be put into a recursive "finally" block, releasing
         // the lock over and over until the instruction succeeds.
         // Therefore, we always release the lock in this case,
         // without tracking the event.
-        if (suddenInvocationResult != null) return
-        val iThread = currentThread
-        monitorTracker.releaseMonitor(iThread, monitor)
+        if (threadScheduler.isAborted(iThread)) return
+        check(iThread == threadScheduler.getCurrentThreadId())
+        val isReleased = monitorTracker.releaseMonitor(iThread, monitor)
+        if (isReleased) {
+            unblockAcquiringThreads(iThread, monitor)
+        }
         if (collectTrace) {
             val tracePoint = MonitorExitTracePoint(
                 iThread = iThread,
-                actorId = currentActorId[iThread],
-                callStackTrace = callStackTrace[iThread],
+                actorId = currentActorId[iThread]!!,
+                callStackTrace = callStackTrace[iThread]!!,
                 stackTraceElement = CodeLocations.stackTrace(codeLocation)
             )
             traceCollector!!.passCodeLocation(tracePoint)
@@ -664,12 +787,12 @@ abstract class ManagedStrategy(
     }
 
     override fun park(codeLocation: Int): Unit = runInIgnoredSection {
-        val iThread = currentThread
+        val iThread = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
             ParkTracePoint(
                 iThread = iThread,
-                actorId = currentActorId[iThread],
-                callStackTrace = callStackTrace[iThread],
+                actorId = currentActorId[iThread]!!,
+                callStackTrace = callStackTrace[iThread]!!,
                 stackTraceElement = CodeLocations.stackTrace(codeLocation)
             )
         } else {
@@ -682,18 +805,20 @@ abstract class ManagedStrategy(
         parkingTracker.park(iThread)
         while (parkingTracker.waitUnpark(iThread)) {
             // switch to another thread and wait till an unpark event happens
-            switchCurrentThread(iThread, SwitchReason.PARK_WAIT, true)
+            switchCurrentThread(iThread, BlockingReason.Parked)
         }
     }
 
     override fun unpark(thread: Thread, codeLocation: Int): Unit = runInIgnoredSection {
-        val iThread = currentThread
-        parkingTracker.unpark(iThread, (thread as TestThread).threadId)
+        val currentThreadId = threadScheduler.getCurrentThreadId()
+        val unparkedThreadId = threadScheduler.getThreadId(thread)
+        parkingTracker.unpark(currentThreadId, unparkedThreadId)
+        unblockParkedThread(unparkedThreadId)
         if (collectTrace) {
             val tracePoint = UnparkTracePoint(
-                iThread = iThread,
-                actorId = currentActorId[iThread],
-                callStackTrace = callStackTrace[iThread],
+                iThread = currentThreadId,
+                actorId = currentActorId[currentThreadId]!!,
+                callStackTrace = callStackTrace[currentThreadId]!!,
                 stackTraceElement = CodeLocations.stackTrace(codeLocation)
             )
             traceCollector?.passCodeLocation(tracePoint)
@@ -701,12 +826,12 @@ abstract class ManagedStrategy(
     }
 
     override fun beforeWait(codeLocation: Int): Unit = runInIgnoredSection {
-        val iThread = currentThread
+        val iThread = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
             WaitTracePoint(
                 iThread = iThread,
-                actorId = currentActorId[iThread],
-                callStackTrace = callStackTrace[iThread],
+                actorId = currentActorId[iThread]!!,
+                callStackTrace = callStackTrace[iThread]!!,
                 stackTraceElement = CodeLocations.stackTrace(codeLocation)
             )
         } else {
@@ -724,30 +849,61 @@ abstract class ManagedStrategy(
     Because of this additional switching we had to split this method into two, as the beforeEvent method must be called after the switch point.
      */
     override fun wait(monitor: Any, withTimeout: Boolean): Unit = runInIgnoredSection {
-        val iThread = currentThread
-        failIfObstructionFreedomIsRequired {
-            // TODO: This might be a false positive when this `wait()` call never suspends.
-            // TODO: We can keep it as is until refactoring, as this weird case is an anti-pattern anyway.
-            OBSTRUCTION_FREEDOM_WAIT_VIOLATION_MESSAGE
-        }
         if (withTimeout) return // timeouts occur instantly
+        val iThread = threadScheduler.getCurrentThreadId()
         while (monitorTracker.waitOnMonitor(iThread, monitor)) {
-            val mustSwitch = monitorTracker.isWaiting(iThread)
-            switchCurrentThread(iThread, SwitchReason.MONITOR_WAIT, mustSwitch)
+            unblockAcquiringThreads(iThread, monitor)
+            switchCurrentThread(iThread, BlockingReason.Waiting)
         }
     }
 
     override fun notify(monitor: Any, codeLocation: Int, notifyAll: Boolean): Unit = runInIgnoredSection {
-        val iThread = currentThread
+        val iThread = threadScheduler.getCurrentThreadId()
         monitorTracker.notify(iThread, monitor, notifyAll = notifyAll)
         if (collectTrace) {
             val tracePoint = NotifyTracePoint(
                 iThread = iThread,
-                actorId = currentActorId[iThread],
-                callStackTrace = callStackTrace[iThread],
+                actorId = currentActorId[iThread]!!,
+                callStackTrace = callStackTrace[iThread]!!,
                 stackTraceElement = CodeLocations.stackTrace(codeLocation)
             )
             traceCollector?.passCodeLocation(tracePoint)
+        }
+    }
+
+    private fun blockThread(threadId: ThreadId, blockingReason: BlockingReason) {
+        failIfObstructionFreedomIsRequired {
+            blockingReason.obstructionFreedomViolationMessage
+        }
+        threadScheduler.blockThread(threadId, blockingReason)
+    }
+
+    @Suppress("UNUSED_PARAMETER")
+    private fun unblockJoiningThreads(finishedThreadId: Int) {
+        for (threadId in 0 until threadScheduler.nThreads) {
+            val blockingReason = threadScheduler.getBlockingReason(threadId)
+            if (blockingReason is BlockingReason.ThreadJoin && blockingReason.joinedThreadId == finishedThreadId) {
+                threadScheduler.unblockThread(threadId)
+            }
+        }
+    }
+
+    private fun unblockParkedThread(unparkedThreadId: Int) {
+        if (threadScheduler.getBlockingReason(unparkedThreadId) == BlockingReason.Parked) {
+            threadScheduler.unblockThread(unparkedThreadId)
+        }
+    }
+
+    private fun unblockAcquiringThreads(iThread: Int, monitor: Any) {
+        monitorTracker.acquiringThreads(monitor).forEach { threadId ->
+            if (iThread == threadId) return@forEach
+            val blockingReason = threadScheduler.getBlockingReason(threadId)?.ensure {
+                it == BlockingReason.Locked || it == BlockingReason.Waiting
+            }
+            // do not wake up thread waiting for notification
+            if (blockingReason == BlockingReason.Waiting && monitorTracker.isWaiting(threadId))
+                return@forEach
+            threadScheduler.unblockThread(threadId)
         }
     }
 
@@ -770,13 +926,13 @@ abstract class ManagedStrategy(
         if (!objectTracker.shouldTrackObjectAccess(obj ?: StaticObject)) {
             return@runInIgnoredSection false
         }
-        val iThread = currentThread
+        val iThread = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
             ReadTracePoint(
                 ownerRepresentation = if (isStatic) simpleClassName(className) else findOwnerName(obj!!),
                 iThread = iThread,
-                actorId = currentActorId[iThread],
-                callStackTrace = callStackTrace[iThread],
+                actorId = currentActorId[iThread]!!,
+                callStackTrace = callStackTrace[iThread]!!,
                 fieldName = fieldName,
                 stackTraceElement = CodeLocations.stackTrace(codeLocation)
             )
@@ -797,13 +953,13 @@ abstract class ManagedStrategy(
         if (!objectTracker.shouldTrackObjectAccess(array)) {
             return@runInIgnoredSection false
         }
-        val iThread = currentThread
+        val iThread = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
             ReadTracePoint(
                 ownerRepresentation = null,
                 iThread = iThread,
-                actorId = currentActorId[iThread],
-                callStackTrace = callStackTrace[iThread],
+                actorId = currentActorId[iThread]!!,
+                callStackTrace = callStackTrace[iThread]!!,
                 fieldName = "${adornedStringRepresentation(array)}[$index]",
                 stackTraceElement = CodeLocations.stackTrace(codeLocation)
             )
@@ -820,7 +976,7 @@ abstract class ManagedStrategy(
 
     override fun afterRead(value: Any?) = runInIgnoredSection {
         if (collectTrace) {
-                val iThread = currentThread
+                val iThread = threadScheduler.getCurrentThreadId()
                 lastReadTracePoint[iThread]?.initializeReadValue(adornedStringRepresentation(value))
                 lastReadTracePoint[iThread] = null
         }
@@ -838,13 +994,13 @@ abstract class ManagedStrategy(
         if (isFinal) {
             return@runInIgnoredSection false
         }
-        val iThread = currentThread
+        val iThread = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
             WriteTracePoint(
                 ownerRepresentation = if (isStatic) simpleClassName(className) else findOwnerName(obj!!),
                 iThread = iThread,
-                actorId = currentActorId[iThread],
-                callStackTrace = callStackTrace[iThread],
+                actorId = currentActorId[iThread]!!,
+                callStackTrace = callStackTrace[iThread]!!,
                 fieldName = fieldName,
                 stackTraceElement = CodeLocations.stackTrace(codeLocation)
             ).also {
@@ -864,13 +1020,13 @@ abstract class ManagedStrategy(
         if (!objectTracker.shouldTrackObjectAccess(array)) {
             return@runInIgnoredSection false
         }
-        val iThread = currentThread
+        val iThread = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
             WriteTracePoint(
                 ownerRepresentation = null,
                 iThread = iThread,
-                actorId = currentActorId[iThread],
-                callStackTrace = callStackTrace[iThread],
+                actorId = currentActorId[iThread]!!,
+                callStackTrace = callStackTrace[iThread]!!,
                 fieldName = "${adornedStringRepresentation(array)}[$index]",
                 stackTraceElement = CodeLocations.stackTrace(codeLocation)
             ).also {
@@ -893,23 +1049,37 @@ abstract class ManagedStrategy(
     }
 
     override fun getThreadLocalRandom(): Random = runInIgnoredSection {
-        return randoms[currentThread]
+        return randoms[threadScheduler.getCurrentThreadId()]!!
     }
 
     override fun randomNextInt(): Int = runInIgnoredSection {
         getThreadLocalRandom().nextInt()
     }
 
-    private fun enterIgnoredSection() {
-        val thread = (Thread.currentThread() as? TestThread) ?: return
-        thread.inIgnoredSection = true
+    protected fun isRegisteredThread(): Boolean {
+        val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor()
+            ?: return false
+        return (threadDescriptor.eventTracker === this)
     }
 
-    private fun leaveIgnoredSectionIfEntered() {
-        val thread = (Thread.currentThread() as? TestThread) ?: return
-        if (thread.inIgnoredSection) {
-            thread.inIgnoredSection = false
-        }
+    protected fun enterTestingCode() {
+        return Injections.enterTestingCode();
+    }
+
+    protected fun leaveTestingCode() {
+        return Injections.leaveTestingCode();
+    }
+
+    protected fun inIgnoredSection(): Boolean {
+        return Injections.inIgnoredSection();
+    }
+
+    protected fun enterIgnoredSection(): Boolean {
+        return Injections.enterIgnoredSection()
+    }
+
+    protected fun leaveIgnoredSection() {
+        return Injections.leaveIgnoredSection()
     }
 
     override fun beforeNewObjectCreation(className: String) = runInIgnoredSection {
@@ -965,6 +1135,11 @@ abstract class ManagedStrategy(
         params: Array<Any?>
     ) {
         val guarantee = runInIgnoredSection {
+            val iThread = threadScheduler.getCurrentThreadId()
+            // re-throw abort error if the thread was aborted
+            if (threadScheduler.isAborted(iThread)) {
+                threadScheduler.abortCurrentThread()
+            }
             // first check if the called method is an atomics API method
             // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
             val atomicMethodDescriptor = getAtomicMethodDescriptor(owner, methodName)
@@ -990,7 +1165,9 @@ abstract class ManagedStrategy(
             }
             // in case of atomic method we need to create a switch point
             if (guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC) {
-                newSwitchPointOnAtomicMethodCall(codeLocation, params)
+                // re-use last call trace point
+                newSwitchPoint(iThread, codeLocation, callStackTrace[iThread]!!.lastOrNull()?.tracePoint)
+                loopDetector.passParameters(params)
             }
             // notify loop detector about the method call
             if (guarantee == null) {
@@ -1013,14 +1190,14 @@ abstract class ManagedStrategy(
         runInIgnoredSection {
             loopDetector.afterMethodCall()
             if (collectTrace) {
-                val iThread = currentThread
+                val iThread = threadScheduler.getCurrentThreadId()
                 // this case is possible and can occur when we resume the coroutine,
                 // and it results in a call to a top-level actor `suspend` function;
                 // currently top-level actor functions are not represented in the `callStackTrace`,
                 // we should probably refactor and fix that, because it is very inconvenient
-                if (callStackTrace[iThread].isEmpty())
+                if (callStackTrace[iThread]!!.isEmpty())
                     return@runInIgnoredSection
-                val tracePoint = callStackTrace[iThread].last().tracePoint
+                val tracePoint = callStackTrace[iThread]!!.last().tracePoint
                 when (result) {
                     Injections.VOID_RESULT -> tracePoint.initializeVoidReturnedValue()
                     COROUTINE_SUSPENDED -> tracePoint.initializeCoroutineSuspendedResult()
@@ -1033,7 +1210,7 @@ abstract class ManagedStrategy(
         // In case the code is now in an "ignore" section due to
         // an "atomic" or "ignore" guarantee, we need to leave
         // this "ignore" section.
-        leaveIgnoredSectionIfEntered()
+        leaveIgnoredSection()
     }
 
     override fun onMethodCallException(t: Throwable) {
@@ -1043,23 +1220,17 @@ abstract class ManagedStrategy(
         if (collectTrace) {
             runInIgnoredSection {
                 // We cannot simply read `thread` as Forcible???Exception can be thrown.
-                val iThread = (Thread.currentThread() as TestThread).threadId
-                val tracePoint = callStackTrace[iThread].last().tracePoint
+                val threadId = threadScheduler.getCurrentThreadId()
+                val tracePoint = callStackTrace[threadId]!!.last().tracePoint
                 tracePoint.initializeThrownException(t)
-                afterMethodCall(iThread, tracePoint)
+                afterMethodCall(threadId, tracePoint)
                 traceCollector!!.addStateRepresentation()
             }
         }
         // In case the code is now in an "ignore" section due to
         // an "atomic" or "ignore" guarantee, we need to leave
         // this "ignore" section.
-        leaveIgnoredSectionIfEntered()
-    }
-
-    private fun newSwitchPointOnAtomicMethodCall(codeLocation: Int, params: Array<Any?>) {
-        // re-use last call trace point
-        newSwitchPoint(currentThread, codeLocation, callStackTrace[currentThread].lastOrNull()?.tracePoint)
-        loopDetector.passParameters(params)
+        leaveIgnoredSection()
     }
 
     private fun isSuspendFunction(className: String, methodName: String, params: Array<Any?>): Boolean =
@@ -1103,14 +1274,14 @@ abstract class ManagedStrategy(
      * @param iThread number of invoking thread
      */
     internal fun afterCoroutineSuspended(iThread: Int) {
-        check(currentThread == iThread)
+        check(threadScheduler.getCurrentThreadId() == iThread)
         isSuspended[iThread] = true
-        if (runner.isCoroutineResumed(iThread, currentActorId[iThread])) {
-            // `COROUTINE_SUSPENSION_CODE_LOCATION`, because we do not know the actual code location
-            newSwitchPoint(iThread, COROUTINE_SUSPENSION_CODE_LOCATION, null)
+        if (runner.isCoroutineResumed(iThread, currentActorId[iThread]!!)) {
+            // `UNKNOWN_CODE_LOCATION`, because we do not know the actual code location
+            newSwitchPoint(iThread, UNKNOWN_CODE_LOCATION, null)
         } else {
             // coroutine suspension does not violate obstruction-freedom
-            switchCurrentThread(iThread, SwitchReason.SUSPENDED, true)
+            switchCurrentThread(iThread, BlockingReason.Suspended)
         }
     }
 
@@ -1119,7 +1290,8 @@ abstract class ManagedStrategy(
      * if a coroutine was resumed.
      */
     internal fun afterCoroutineResumed() {
-        isSuspended[currentThread] = false
+        val currentThreadId = threadScheduler.getCurrentThreadId()
+        isSuspended[currentThreadId] = false
     }
 
     /**
@@ -1127,10 +1299,10 @@ abstract class ManagedStrategy(
      * if a coroutine was cancelled.
      */
     internal fun afterCoroutineCancelled() {
-        val iThread = currentThread
+        val iThread = threadScheduler.getCurrentThreadId()
         isSuspended[iThread] = false
         // method will not be resumed after suspension, so clear prepared for resume call stack
-        suspendedFunctionsStack[iThread].clear()
+        suspendedFunctionsStack[iThread]!!.clear()
     }
 
     private fun addBeforeMethodCallTracePoint(
@@ -1142,9 +1314,9 @@ abstract class ManagedStrategy(
         methodParams: Array<Any?>,
         atomicMethodDescriptor: AtomicMethodDescriptor?,
     ) {
-        val iThread = currentThread
-        val callStackTrace = callStackTrace[iThread]
-        val suspendedMethodStack = suspendedFunctionsStack[iThread]
+        val iThread = threadScheduler.getCurrentThreadId()
+        val callStackTrace = callStackTrace[iThread]!!
+        val suspendedMethodStack = suspendedFunctionsStack[iThread]!!
         val isSuspending = isSuspendFunction(className, methodName, methodParams)
         val isResumption = isSuspending && suspendedMethodStack.isNotEmpty()
         if (isResumption) {
@@ -1157,7 +1329,7 @@ abstract class ManagedStrategy(
                 // and it results in a call to a top-level actor `suspend` function;
                 // currently top-level actor functions are not represented in the `callStackTrace`,
                 // we should probably refactor and fix that, because it is very inconvenient
-                val actor = scenario.threads[iThread][currentActorId[iThread]]
+                val actor = scenario.threads[iThread][currentActorId[iThread]!!]
                 check(methodName == actor.method.name)
                 check(className.canonicalClassName == actor.method.declaringClass.name)
                 elementIndex = suspendedMethodStack.size
@@ -1221,10 +1393,10 @@ abstract class ManagedStrategy(
         codeLocation: Int,
         atomicMethodDescriptor: AtomicMethodDescriptor?,
     ): MethodCallTracePoint {
-        val callStackTrace = callStackTrace[iThread]
+        val callStackTrace = callStackTrace[iThread]!!
         val tracePoint = MethodCallTracePoint(
             iThread = iThread,
-            actorId = currentActorId[iThread],
+            actorId = currentActorId[iThread]!!,
             className = className,
             methodName = methodName,
             callStackTrace = callStackTrace,
@@ -1387,7 +1559,8 @@ abstract class ManagedStrategy(
      * Checks if [owner] is the current `this` in the current method context.
      */
     private fun isOwnerCurrentContext(owner: Any): Boolean {
-        return when (val callContext = callStackContextPerThread[currentThread].last()) {
+        val currentThreadId = threadScheduler.getCurrentThreadId()
+        return when (val callContext = callStackContextPerThread[currentThreadId]!!.last()) {
             is CallContext.InstanceCallContext -> callContext.instance === owner
             is CallContext.StaticCallContext -> false
         }
@@ -1396,15 +1569,16 @@ abstract class ManagedStrategy(
     /* Methods to control the current call context. */
 
     private fun beforeMethodEnter(owner: Any?) {
+        val currentThreadId = threadScheduler.getCurrentThreadId()
         if (owner == null) {
-            callStackContextPerThread[currentThread].add(CallContext.StaticCallContext)
+            callStackContextPerThread[currentThreadId]!!.add(CallContext.StaticCallContext)
         } else {
-            callStackContextPerThread[currentThread].add(CallContext.InstanceCallContext(owner))
+            callStackContextPerThread[currentThreadId]!!.add(CallContext.InstanceCallContext(owner))
         }
     }
 
     private fun afterExitMethod(iThread: Int) {
-        val currentContext = callStackContextPerThread[iThread]
+        val currentContext = callStackContextPerThread[iThread]!!
         currentContext.removeLast()
         check(currentContext.isNotEmpty()) { "Context cannot be empty" }
     }
@@ -1417,10 +1591,10 @@ abstract class ManagedStrategy(
      */
     private fun afterMethodCall(iThread: Int, tracePoint: MethodCallTracePoint) {
         afterExitMethod(iThread)
-        val callStackTrace = callStackTrace[iThread]
+        val callStackTrace = callStackTrace[iThread]!!
         if (tracePoint.wasSuspended) {
             // if a method call is suspended, save its call stack element to reuse for continuation resuming
-            suspendedFunctionsStack[iThread].add(callStackTrace.last())
+            suspendedFunctionsStack[iThread]!!.add(callStackTrace.last())
         }
         callStackTrace.removeLast()
     }
@@ -1440,9 +1614,9 @@ abstract class ManagedStrategy(
     }
 
     private fun <T : TracePoint> doCreateTracePoint(constructor: (iThread: Int, actorId: Int, CallStackTrace) -> T): T {
-        val iThread = currentThread
-        val actorId = currentActorId.getOrElse(iThread) { Int.MIN_VALUE }
-        return constructor(iThread, actorId, callStackTrace.getOrNull(iThread)?.toList() ?: emptyList())
+        val iThread = threadScheduler.getCurrentThreadId()
+        val actorId = currentActorId[iThread] ?: Int.MIN_VALUE
+        return constructor(iThread, actorId, callStackTrace[iThread]?.toList() ?: emptyList())
     }
 
     override fun beforeEvent(eventId: Int, type: String) {
@@ -1459,7 +1633,8 @@ abstract class ManagedStrategy(
      * Method call trace points are not added to the event list by default, so their event ids are not set otherwise.
      */
     override fun setLastMethodCallEventId() {
-        val lastMethodCall: MethodCallTracePoint = callStackTrace[currentThread].lastOrNull()?.tracePoint ?: return
+        val currentThreadId = threadScheduler.getCurrentThreadId()
+        val lastMethodCall = callStackTrace[currentThreadId]!!.lastOrNull()?.tracePoint ?: return
         setBeforeEventId(lastMethodCall)
     }
 
@@ -1513,21 +1688,21 @@ abstract class ManagedStrategy(
         private val spinCycleMethodCallsStackTraces: MutableList<List<CallStackTraceElement>> = mutableListOf()
 
         fun newSwitch(iThread: Int, reason: SwitchReason, beforeMethodCallSwitch: Boolean = false) {
-            if (reason == SwitchReason.ACTIVE_LOCK) {
+            if (reason == SwitchReason.ActiveLock) {
                 afterSpinCycleTraceCollected(
                     trace = _trace,
-                    callStackTrace = callStackTrace[currentThread],
+                    callStackTrace = callStackTrace[iThread]!!,
                     spinCycleMethodCallsStackTraces = spinCycleMethodCallsStackTraces,
                     iThread = iThread,
-                    currentActorId = currentActorId[iThread],
+                    currentActorId = currentActorId[iThread]!!,
                     beforeMethodCallSwitch = beforeMethodCallSwitch
                 )
             }
             _trace += SwitchEventTracePoint(
                 iThread = iThread,
-                actorId = currentActorId[iThread],
+                actorId = currentActorId[iThread]!!,
                 reason = reason,
-                callStackTrace = callStackTrace[iThread]
+                callStackTrace = callStackTrace[iThread]!!
             )
             spinCycleStartAdded = false
         }
@@ -1537,15 +1712,16 @@ abstract class ManagedStrategy(
         }
 
         fun checkActiveLockDetected() {
+            val currentThreadId = threadScheduler.getCurrentThreadId()
             if (!loopDetector.replayModeCurrentlyInSpinCycle) return
             if (spinCycleStartAdded) {
-                spinCycleMethodCallsStackTraces += callStackTrace[currentThread].toList()
+                spinCycleMethodCallsStackTraces += callStackTrace[currentThreadId]!!.toList()
                 return
             }
             val spinCycleStartTracePoint = SpinCycleStartTracePoint(
-                iThread = currentThread,
-                actorId = currentActorId[currentThread],
-                callStackTrace = callStackTrace[currentThread]
+                iThread = currentThreadId,
+                actorId = currentActorId[currentThreadId]!!,
+                callStackTrace = callStackTrace[currentThreadId]!!,
             )
             _trace.add(spinCycleStartTracePoint)
             spinCycleStartAdded = true
@@ -1562,30 +1738,32 @@ abstract class ManagedStrategy(
         }
 
         fun addStateRepresentation() {
+            val currentThreadId = threadScheduler.getCurrentThreadId()
             val stateRepresentation = runner.constructStateRepresentation() ?: return
             // use call stack trace of the previous trace point
-            val callStackTrace = callStackTrace[currentThread]
+            val callStackTrace = callStackTrace[currentThreadId]!!
             _trace += StateRepresentationTracePoint(
-                iThread = currentThread,
-                actorId = currentActorId[currentThread],
+                iThread = currentThreadId,
+                actorId = currentActorId[currentThreadId]!!,
                 stateRepresentation = stateRepresentation,
-                callStackTrace = callStackTrace
+                callStackTrace = callStackTrace,
             )
 
         }
 
         fun passObstructionFreedomViolationTracePoint(iThread: Int, beforeMethodCall: Boolean) {
+            val currentThreadId = threadScheduler.getCurrentThreadId()
             afterSpinCycleTraceCollected(
                 trace = _trace,
-                callStackTrace = callStackTrace[currentThread],
+                callStackTrace = callStackTrace[currentThreadId]!!,
                 spinCycleMethodCallsStackTraces = spinCycleMethodCallsStackTraces,
                 iThread = iThread,
-                currentActorId = currentActorId[iThread],
+                currentActorId = currentActorId[iThread]!!,
                 beforeMethodCallSwitch = beforeMethodCall
             )
             _trace += ObstructionFreedomViolationExecutionAbortTracePoint(
                 iThread = iThread,
-                actorId = currentActorId[iThread],
+                actorId = currentActorId[iThread]!!,
                 callStackTrace = _trace.last().callStackTrace
             )
         }
@@ -1681,18 +1859,19 @@ internal class ManagedStrategyRunner(
     testClass: Class<*>, validationFunction: Actor?, stateRepresentationMethod: Method?,
     timeoutMs: Long, useClocks: UseClocks
 ) : ParallelThreadsRunner(managedStrategy, testClass, validationFunction, stateRepresentationMethod, timeoutMs, useClocks) {
-    override fun onStart(iThread: Int) = runInIgnoredSection {
+
+    override fun onThreadStart(iThread: Int) = runInIgnoredSection {
         if (currentExecutionPart !== PARALLEL) return
-        managedStrategy.onStart(iThread)
+        managedStrategy.onThreadStart(iThread)
     }
 
-    override fun onFinish(iThread: Int) = runInIgnoredSection {
+    override fun onThreadFinish(iThread: Int) = runInIgnoredSection {
         if (currentExecutionPart !== PARALLEL) return
-        managedStrategy.onFinish(iThread)
+        managedStrategy.onThreadFinish(iThread)
     }
 
-    override fun onFailure(iThread: Int, e: Throwable) = runInIgnoredSection {
-        managedStrategy.onFailure(iThread, e)
+    override fun onThreadFailure(iThread: Int, e: Throwable) = runInIgnoredSection {
+        managedStrategy.onThreadFailure(iThread, e)
     }
 
     override fun afterCoroutineSuspended(iThread: Int) = runInIgnoredSection {
@@ -1736,23 +1915,17 @@ internal class ManagedStrategyRunner(
     }
 }
 
+// represents an unknown code location
+internal const val UNKNOWN_CODE_LOCATION = -1
 
-/**
- * This exception is used to finish the execution correctly for managed strategies.
- * Otherwise, there is no way to do it in case of (e.g.) deadlocks.
- * If we just leave it, then the execution will not be halted.
- * If we forcibly pass through all barriers, then we can get another exception due to being in an incorrect state.
- */
-internal object ForcibleExecutionFinishError : Error() {
-    // do not create a stack trace -- it simply can be unsafe
-    override fun fillInStackTrace() = this
+private val BlockingReason.obstructionFreedomViolationMessage: String get() = when (this) {
+    is BlockingReason.Locked       -> OBSTRUCTION_FREEDOM_LOCK_VIOLATION_MESSAGE
+    is BlockingReason.LiveLocked   -> OBSTRUCTION_FREEDOM_SPINLOCK_VIOLATION_MESSAGE
+    is BlockingReason.Waiting      -> OBSTRUCTION_FREEDOM_WAIT_VIOLATION_MESSAGE
+    is BlockingReason.Parked       -> OBSTRUCTION_FREEDOM_PARK_VIOLATION_MESSAGE
+    is BlockingReason.ThreadJoin   -> OBSTRUCTION_FREEDOM_THREAD_JOIN_VIOLATION_MESSAGE
+    is BlockingReason.Suspended    -> OBSTRUCTION_FREEDOM_SUSPEND_VIOLATION_MESSAGE
 }
-
-// currently the exact place of coroutine suspension is not known
-internal const val COROUTINE_SUSPENSION_CODE_LOCATION = -1
-
-// when spin-loop is detected, we might need to replay the execution up to N times
-private const val MAX_SPIN_CYCLE_REPLAY_COUNT = 3
 
 private const val OBSTRUCTION_FREEDOM_SPINLOCK_VIOLATION_MESSAGE =
     "The algorithm should be non-blocking, but an active lock is detected"
@@ -1762,6 +1935,15 @@ private const val OBSTRUCTION_FREEDOM_LOCK_VIOLATION_MESSAGE =
 
 private const val OBSTRUCTION_FREEDOM_WAIT_VIOLATION_MESSAGE =
     "The algorithm should be non-blocking, but a wait call is detected"
+
+private const val OBSTRUCTION_FREEDOM_PARK_VIOLATION_MESSAGE =
+    "The algorithm should be non-blocking, but a thread park is detected"
+
+private const val OBSTRUCTION_FREEDOM_THREAD_JOIN_VIOLATION_MESSAGE =
+    "The algorithm should be non-blocking, but a thread join is detected"
+
+private const val OBSTRUCTION_FREEDOM_SUSPEND_VIOLATION_MESSAGE =
+    "The algorithm should be non-blocking, but a coroutine suspension is detected"
 
 /**
  * With idea plugin enabled, we should not use default Lincheck timeout

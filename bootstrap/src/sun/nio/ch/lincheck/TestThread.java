@@ -11,42 +11,32 @@
 package sun.nio.ch.lincheck;
 
 /**
- * When Lincheck runs a test, all threads should be instances of this TestThread class.
+ * A thread subclass to represent test threads created by the Lincheck itself.
  * This class provides additional fields and controls for the Lincheck testing framework.
  * It also names the thread based on the test being run for easier debugging and tracking.
  */
 public class TestThread extends Thread {
+
+    /**
+     * The unique identifier for the thread in the context of the Lincheck test.
+     */
     public final int threadId;
 
     /**
-     * The `EventTracker` for tracking shared memory events in the model checking mode.
+     * The thread descriptor.
      */
-    public EventTracker eventTracker;
+    public ThreadDescriptor descriptor;
 
     /**
      * The currently suspended continuation, if present.
      * It's stored here to provide a handle for resumption during testing.
      *
-     * It's necessary to store it in `Object`type, otherwise we would have to load `CancellableContinuation` class earlier.
-     * But actually `suspendedContinuation` is always of `CancellableContinuation` type.
+     * <p>
+     * It's necessary to store it in {@code Object} type,
+     * otherwise we would have to load {@code CancellableContinuation} class earlier.
+     * But actually {@code suspendedContinuation} is always of {@code CancellableContinuation} type.
      */
     public Object suspendedContinuation;
-
-    /**
-     * This flag indicates whether the Lincheck is currently running user's code.
-     *
-     * - When it is `true`, Lincheck is running user's code and analyzes it.
-     * - When it is `false`, the analysis is disabled.
-     */
-    public boolean inTestingCode = false;
-
-    /**
-     * This flag is used to disable tracking of all code events.
-     * If Lincheck enters a code block for which analysis should be disabled,
-     * this flag is set to `true`. Notably, such code blocks can be nested,
-     * but only the most outer one changes the flag.
-     */
-    public boolean inIgnoredSection = false;
 
     /**
      * @param testName The name of the test currently being run.
@@ -56,5 +46,6 @@ public class TestThread extends Thread {
     public TestThread(String testName, int threadId, Runnable block) {
         super(block, "Lincheck-" + testName + "-" + threadId);
         this.threadId = threadId;
+        ThreadDescriptor.setThreadDescriptor(this, new ThreadDescriptor(this));
     }
 }

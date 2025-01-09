@@ -39,10 +39,12 @@ import java.util.Objects;
 
 
 /**
- * Copied from https://github.com/rohanpadhye/JQF/blob/master/instrument/src/main/java/janala/instrument/SafeClassWriter.java
- *
  * A ClassWriter that computes the common super class of two classes without
  * actually loading them with a ClassLoader.
+ *
+ * <p>
+ * Copied and modified from:
+ * https://github.com/rohanpadhye/JQF/blob/master/instrument/src/main/java/janala/instrument/SafeClassWriter.java
  */
 public class SafeClassWriter extends ClassWriter {
 
