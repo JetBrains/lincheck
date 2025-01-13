@@ -13,6 +13,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.kotlinx.lincheck.util.ThreadId
+import org.jetbrains.kotlinx.lincheck.transformation.LabelsTracker
 
 data class Trace(
     val trace: List<TracePoint>,
@@ -271,22 +272,33 @@ internal class ThreadJoinTracePoint(
         "join Thread ${joinedThreadId + 1}"
 }
 
-internal class BackBranchTargetTracePoint(
+internal abstract class BackBranchTracePoint (
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement,
     val labelId: Int
-) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    override fun toStringCompact(): String = "ITERATION $labelId"
+) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement)
+
+internal class BackBranchTargetTracePoint(
+    iThread: Int, actorId: Int,
+    callStackTrace: CallStackTrace,
+    stackTraceElement: StackTraceElement,
+    labelId: Int
+) : BackBranchTracePoint(iThread, actorId, callStackTrace, stackTraceElement, labelId) {
+    override fun toStringCompact(): String =
+        if (LabelsTracker.isLabelInduceSupportedLoopForm(labelId)) "Loop Label #$labelId (unsupported loop structure)"
+        else "Loop Label #$labelId"
 }
 
 internal class BackBranchJumpTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement,
-    val labelId: Int
-) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
-    override fun toStringCompact(): String = "JUMP TO $labelId"
+    labelId: Int,
+) : BackBranchTracePoint(iThread, actorId, callStackTrace, stackTraceElement, labelId) {
+    override fun toStringCompact(): String =
+        if (LabelsTracker.isLabelInduceSupportedLoopForm(labelId)) "Loop Jump #$labelId (unsupported loop structure)"
+        else "Loop Jump #$labelId"
 }
 
 internal class CoroutineCancellationTracePoint(
@@ -330,7 +342,7 @@ internal class SpinCycleStartTracePoint(iThread: Int, actorId: Int, callStackTra
 /**
  * Removes package info in the stack trace element representation.
  */
-private fun StackTraceElement.shorten(): String {
+internal fun StackTraceElement.shorten(): String {
     val stackTraceElement = this.toString()
     for (i in stackTraceElement.indices.reversed())
         if (stackTraceElement[i] == '/')

@@ -17,6 +17,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.ManagedDeadlockFailure
 import org.jetbrains.kotlinx.lincheck.strategy.ObstructionFreedomViolationFailure
 import org.jetbrains.kotlinx.lincheck.strategy.TimeoutFailure
 import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
+import org.jetbrains.kotlinx.lincheck.transformation.LabelsTracker
 import kotlin.math.*
 import kotlin.reflect.jvm.javaMethod
 
@@ -323,7 +324,7 @@ internal fun constructTraceGraph(
             val resultRepresentation = result?.let { resultRepresentation(result, exceptionStackTraces) }
             val callDepth = actorNode.callDepth + 1
             val resultNode = ActorResultNode(
-                prefixProvider = prefixFactory.actorResultPrefix(iThread, callDepth),
+                prefixProvider = prefixFactory.actorResultPrefix(iThread),
                 iThread = iThread,
                 last = lastEvent,
                 callDepth = callDepth,
@@ -372,9 +373,141 @@ internal fun constructTraceGraph(
     if (traceGraphNodes.isNotEmpty()) {
         traceGraphNodesSections += traceGraphNodes
     }
+    // Post-process all forests to detect and structure loops at each level
+    traceGraphNodesSections.forEach { detectLoops(it.first(), prefixFactory) }
 
     return traceGraphNodesSections.map { it.first() }
 }
+
+private fun detectLoops(node: TraceNode, prefixFactory: TraceNodePrefixFactory) {
+    // Skip all leaf nodes
+    if (node !is TraceInnerNode) {
+        return
+    }
+
+    // Find all iteration boundaries - first and last position of corresponding labels.
+    // It is too cumbersome to detect all loops on-the-fly, as boundaries of the last iteration
+    // could be found only at the end of trace.
+    // It is impossible to distinguish two loops one after another and nested loops till
+    // we see the end of the trace (at one level).
+    // This loop detects only outermost iterations.
+    // Recursive calls will process all nested loops when top-level loops are ready.
+    val labelsPositions = hashMapOf<Int, MutableList<Pair<Int, Boolean>>>()
+    node.children().forEachIndexed { idx, child->
+        if (child is TraceLeafEvent) {
+            if (child.event is BackBranchTargetTracePoint) {
+                labelsPositions.computeIfAbsent(child.event.labelId, { arrayListOf<Pair<Int, Boolean>>() })
+                    .add(Pair(idx, false))
+            } else if (child.event is BackBranchJumpTracePoint) {
+                labelsPositions.computeIfAbsent(child.event.labelId, { arrayListOf<Pair<Int, Boolean>>() })
+                    .add(Pair(idx, true))
+            }
+        }
+    }
+    // Filter-our all non-top-level labels: if label is encountered first inside other label range, it is internal one
+    // It is O(n^2) unfortunately.
+    // Also check that we "know" this form of loop
+    val labelsToRemove = hashSetOf<Int>()
+    labelsPositions.forEach { (label, positions) ->
+        val start = positions.first().first
+        labelsPositions.forEach inner@ { (iLabel, iPositions) ->
+            if (label == iLabel) {
+                return@inner
+            }
+            val iStart = iPositions.first().first
+            val iEnd = iPositions.last().first
+            if (iStart < start && start < iEnd) {
+                labelsToRemove.add(label)
+                return@inner
+            }
+        }
+        // Check loop format. Now we know only one:
+        //
+        // label:
+        // ...
+        // jump
+        // label:
+        // ...
+        // jump
+        // label:
+        //
+        // And the last jump-label pair is really the end of the loop, not the last iteration
+
+        // Check that it starts from target (second = false)
+        if (positions.first().second) {
+            labelsToRemove.add(label)
+            return@forEach
+        }
+        // The total length must be odd and more than 1
+        if (positions.size % 2 == 0 || positions.size == 1) {
+            labelsToRemove.add(label)
+            return@forEach
+        }
+        // Check that next are jump-target pairs without other events between them
+        for (i in 1 .. positions.size - 2 step 2) {
+            // Jump (true) + Label (false), without "pauses"
+            val jump = positions[i]
+            val target = positions[i + 1]
+            if (!jump.second || target.second || jump.first + 1 != target.first) {
+                labelsToRemove.add(label)
+                return@forEach
+            }
+        }
+    }
+    // Remove all inner and unsupported labels
+    labelsPositions.keys.removeAll(labelsToRemove)
+
+    // Process all top-level labels
+    labelsPositions.forEach { (labelId, positions) ->
+        LabelsTracker.markLabelAsSupportedLoopForm(labelId)
+        val last = if (positions.first().first == 0) node else node.children()[positions.first().first - 1]
+        val location = ((node.children()[positions.first().first] as TraceLeafEvent).event as CodeLocationTracePoint).stackTraceElement
+        val loop = LoopNode(
+            prefixProvider = prefixFactory.prefixForCallNode(node.iThread, node.callDepth + 1),
+            iThread = node.iThread,
+            last = last,
+            callDepth = node.callDepth + 1,
+            location = location,
+            labelId = labelId
+        )
+        var lastEvent: TraceNode = loop
+        for (i in 0 .. positions.size - 2 step 2) {
+            val iteration = IterationNode(
+                prefixProvider = prefixFactory.prefixForCallNode(node.iThread, node.callDepth + 1),
+                iThread = node.iThread,
+                last = lastEvent,
+                callDepth = node.callDepth + 2,
+                iterationNumber = i / 2
+            )
+            loop.addInternalEvent(iteration)
+            val start = positions[i].first + 1
+            val end =  positions[i + 1].first - 1
+            // "start" and "end" should be removed from a linked list, all between should go to the new iteration
+            for (childIdx in start .. end) {
+                val child = node.children()[childIdx]
+                child.increaseCallDepth(2)
+                if (childIdx == start) {
+                    iteration.next = child
+                }
+                if (childIdx == end) {
+                    lastEvent = child
+                }
+                iteration.addInternalEvent(child)
+            }
+        }
+        // Remove 2 last 2 technical events
+        lastEvent.next = node.children()[positions.last().first].next
+        node.replaceInternalEvents(positions.first().first, positions.last().first, loop)
+    }
+    // Recursively call itself for all children, including new loop nodes
+    node.children().forEach { detectLoops(it, prefixFactory) }
+}
+
+private fun isStartOfIteration(node: TraceNode, loop: LoopNode?): Boolean =
+    node is TraceLeafEvent && node.event is BackBranchTargetTracePoint && (loop == null || loop.labelId == node.event.labelId)
+
+private fun isEndOfIteration(node: TraceNode, loop: LoopNode?): Boolean =
+    node is TraceLeafEvent && node.event is BackBranchJumpTracePoint && (loop == null || loop.labelId == node.event.labelId)
 
 private fun actorNodeResultRepresentation(result: Result?, failure: LincheckFailure, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): String? {
     // We don't mark actors that violated obstruction freedom as hung.
@@ -471,9 +604,9 @@ internal sealed class TraceNode(
     private val prefixProvider: PrefixProvider,
     val iThread: Int,
     last: TraceNode?,
-    val callDepth: Int // for tree indentation
+    var callDepth: Int // for tree indentation
 ) {
-    protected val prefix get() = prefixProvider.get()
+    protected val prefix get() = prefixProvider.get(callDepth)
     // `next` edges form an ordered single-directed event list
     var next: TraceNode? = null
 
@@ -502,6 +635,11 @@ internal sealed class TraceNode(
 
     protected fun stateEventRepresentation(iThread: Int, stateRepresentation: String) =
         TraceEventRepresentation(iThread, prefix + "STATE: $stateRepresentation")
+
+    open fun increaseCallDepth(delta: Int) {
+        check(delta > 0) { "Depth delta should be positive"}
+        callDepth += delta
+    }
 }
 
 internal class TraceLeafEvent(
@@ -565,8 +703,24 @@ internal abstract class TraceInnerNode(prefixProvider: PrefixProvider, iThread: 
             it.shouldBeExpanded(verboseTrace)
         }
 
-    fun addInternalEvent(node: TraceNode) {
+    open fun addInternalEvent(node: TraceNode) {
         _internalEvents.add(node)
+    }
+
+    override fun increaseCallDepth(delta: Int) {
+        super.increaseCallDepth(delta)
+        _internalEvents.forEach { it.increaseCallDepth(delta) }
+    }
+
+    fun replaceInternalEvents(from: Int, to: Int, newEvent: TraceInnerNode) {
+        for (i in from .. to) {
+            _internalEvents.removeAt(from)
+        }
+        _internalEvents.add(from, newEvent)
+    }
+
+    fun children(): List<TraceNode> {
+        return internalEvents
     }
 }
 
@@ -670,18 +824,25 @@ internal class LoopNode(
     iThread: Int,
     last: TraceNode?,
     callDepth: Int,
-    private val iterations: Int
+    private val location: StackTraceElement,
+    val labelId: Int
 ) : TraceInnerNode(prefixProvider, iThread, last, callDepth) {
+
+    override fun addInternalEvent(node: TraceNode) {
+        check(node is IterationNode) { "Only iteration nodes can be added into loop" }
+        super.addInternalEvent(node)
+    }
+
     override fun addRepresentationTo(
         traceRepresentation: MutableList<TraceEventRepresentation>,
         verboseTrace: Boolean
     ): TraceNode? =
         if (!shouldBeExpanded(verboseTrace)) {
-            traceRepresentation.add(TraceEventRepresentation(iThread, prefix + "Loop with ${iterations} iterations"))
+            traceRepresentation.add(TraceEventRepresentation(iThread, prefix + "Loop with ${internalEvents.size} iterations at " + location.shorten()))
             lastState?.let { traceRepresentation.add(stateEventRepresentation(iThread, it)) }
             lastInternalEvent.next
         } else {
-            traceRepresentation.add(TraceEventRepresentation(iThread, prefix + "Loop with ${iterations} iterations"))
+            traceRepresentation.add(TraceEventRepresentation(iThread, prefix + "Loop with ${internalEvents.size} iterations at " + location.shorten()))
             next
         }
 }
@@ -691,7 +852,7 @@ internal class LoopNode(
  * @see TraceNodePrefixFactory
  */
 internal fun interface PrefixProvider {
-    fun get(): String
+    fun get(callDepth: Int): String
 }
 
 /**
@@ -755,10 +916,10 @@ private class TraceNodePrefixFactory(nThreads: Int) {
      */
     private var arrowDepth: Int = -1
 
-    fun actorNodePrefix(iThread: Int) = PrefixProvider { extraPrefixIfNeeded(iThread) }
+    fun actorNodePrefix(iThread: Int) = PrefixProvider { _ -> extraPrefixIfNeeded(iThread) }
 
-    fun actorResultPrefix(iThread: Int, callDepth: Int) =
-        PrefixProvider { extraPrefixIfNeeded(iThread) + TRACE_INDENTATION.repeat(callDepth) }
+    fun actorResultPrefix(iThread: Int) =
+        PrefixProvider { callDepth -> extraPrefixIfNeeded(iThread) + TRACE_INDENTATION.repeat(callDepth) }
 
     fun prefix(event: TracePoint, callDepth: Int): PrefixProvider {
         val isCycleEnd = inSpinCycle && (event is ObstructionFreedomViolationExecutionAbortTracePoint || event is SwitchEventTracePoint)
@@ -784,26 +945,26 @@ private class TraceNodePrefixFactory(nThreads: Int) {
             }
             arrowDepth = callDepth
             val arrowDepth = arrowDepth
-            return PrefixProvider {
+            return PrefixProvider { callDepthActual ->
                 val extraPrefix = if (arrowDepth == 1) 0 else extraPrefixLength(iThread)
-                TRACE_INDENTATION.repeat(max(0, arrowDepth - 2 + extraPrefix)) + "┌╶> "
+                TRACE_INDENTATION.repeat(max(0, callDepthActual - 2 + extraPrefix)) + "┌╶> "
             }
         }
         if (isCycleEnd) {
             val arrowDepth = arrowDepth
-            return PrefixProvider {
+            return PrefixProvider { callDepthActual ->
                 val extraPrefix = if (arrowDepth == 1) 0 else extraPrefixLength(iThread)
-                TRACE_INDENTATION.repeat(max(0, arrowDepth - 2 + extraPrefix)) + "└╶" + "╶╶".repeat(max(0, callDepth - arrowDepth)) + "╶ "
+                TRACE_INDENTATION.repeat(max(0, callDepthActual - 2 + extraPrefix)) + "└╶" + "╶╶".repeat(max(0, callDepthActual - arrowDepth)) + "╶ "
             }
         }
         if (inSpinCycle) {
             val arrowDepth = arrowDepth
-            return PrefixProvider {
+            return PrefixProvider { callDepthActual ->
                 val extraPrefix = if (arrowDepth == 1) 0 else extraPrefixLength(iThread)
-                TRACE_INDENTATION.repeat(max(0, arrowDepth - 2 + extraPrefix)) + "| " + TRACE_INDENTATION.repeat(max(0, callDepth - arrowDepth + 1))
+                TRACE_INDENTATION.repeat(max(0, callDepthActual - 2 + extraPrefix)) + "| " + TRACE_INDENTATION.repeat(callDepthActual - arrowDepth + 1)
             }
         }
-        return PrefixProvider { extraPrefixIfNeeded(iThread) + TRACE_INDENTATION.repeat(callDepth) }
+        return PrefixProvider { callDepthActual -> extraPrefixIfNeeded(iThread) + TRACE_INDENTATION.repeat(callDepthActual) }
     }
 
     private fun extraPrefixIfNeeded(iThread: Int): String = if (extraIndentPerThread[iThread]) "  " else ""
