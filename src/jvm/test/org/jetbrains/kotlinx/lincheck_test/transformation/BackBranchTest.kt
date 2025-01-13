@@ -21,6 +21,7 @@ class NoBackBranchTest() {
     fun operation() {
         runLoop("A")
         runLoop("B")
+        runWhile("W")
     }
 
 
@@ -33,6 +34,16 @@ class NoBackBranchTest() {
             }
         }
         escape = "$prfx-END"
+    }
+
+    fun runWhile(prfx: String) {
+        escape = "$prfx-WHILE"
+        var i = 0
+        while (i < 2) {
+            escape = prfx + i
+            i++
+        }
+        escape = "$prfx-ELIHW"
     }
 
     @Test
