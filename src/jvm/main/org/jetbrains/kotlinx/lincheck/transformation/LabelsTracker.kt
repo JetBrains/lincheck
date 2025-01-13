@@ -13,7 +13,7 @@ package org.jetbrains.kotlinx.lincheck.transformation
 import org.objectweb.asm.*
 
 
-private class LabelInfo(val id: Int, var backBranched: Boolean = false)
+private class LabelInfo(val id: Int, var backBranched: Boolean = false, var supportedLoopForm: Boolean = false)
 
 /**
  * [LabelsTracker] object is used to maintain the mapping between unique IDs and labels in code.
@@ -46,6 +46,12 @@ internal object LabelsTracker {
 
     @JvmStatic
     fun isLabelBackBranched(id: Int) = labelsById[id].backBranched
+
+    fun isLabelInduceSupportedLoopForm(id: Int) = labelsById[id].supportedLoopForm
+
+    fun markLabelAsSupportedLoopForm(id: Int) {
+        labelsById[id].supportedLoopForm = true
+    }
 
     private fun getLabelKey(className: String, methodName: String, label: Label): String {
         return "$className#$methodName:$label"
