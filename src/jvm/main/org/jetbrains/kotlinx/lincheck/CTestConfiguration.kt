@@ -48,8 +48,6 @@ abstract class CTestConfiguration(
         stateRepresentationMethod: Method?
     ): Strategy
 
-    fun createVerifier() = verifierClass.getConstructor(Class::class.java).newInstance(sequentialSpecification)
-
     companion object {
         const val DEFAULT_ITERATIONS = 100
         const val DEFAULT_THREADS = 2
@@ -62,6 +60,8 @@ abstract class CTestConfiguration(
         const val DEFAULT_TIMEOUT_MS: Long = 10000
     }
 }
+
+internal fun CTestConfiguration.createVerifier() = verifierClass.getConstructor(Class::class.java).newInstance(sequentialSpecification)
 
 internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConfiguration> {
     val stressConfigurations: List<CTestConfiguration> = testClass.getAnnotationsByType(StressCTest::class.java)
