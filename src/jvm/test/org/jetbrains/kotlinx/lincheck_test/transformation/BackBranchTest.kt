@@ -28,7 +28,9 @@ class NoBackBranchTest() {
         escape = "$prfx-START"
         for (i in 1..2) {
             val a: Any = i
-            escape = prfx + a.toString()
+            for (j in 1..3) {
+                escape = prfx + a.toString() + "." + j.toString()
+            }
         }
         escape = "$prfx-END"
     }
