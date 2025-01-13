@@ -358,7 +358,7 @@ internal fun constructTraceGraph(
         val resultRepresentation = resultRepresentation(result, exceptionStackTraces)
         val callDepth = actorNode.callDepth + 1
         val resultNode = ActorResultNode(
-            prefixProvider = prefixFactory.actorResultPrefix(iThread, callDepth),
+            prefixProvider = prefixFactory.actorResultPrefix(iThread),
             iThread = iThread,
             last = lastEvent,
             callDepth = callDepth,
@@ -511,12 +511,6 @@ private fun detectLoops(node: TraceNode, prefixFactory: TraceNodePrefixFactory) 
     // Recursively call itself for all children, including new loop nodes
     node.children().forEach { detectLoops(it, prefixFactory) }
 }
-
-private fun isStartOfIteration(node: TraceNode, loop: LoopNode?): Boolean =
-    node is TraceLeafEvent && node.event is BackBranchTargetTracePoint && (loop == null || loop.labelId == node.event.labelId)
-
-private fun isEndOfIteration(node: TraceNode, loop: LoopNode?): Boolean =
-    node is TraceLeafEvent && node.event is BackBranchJumpTracePoint && (loop == null || loop.labelId == node.event.labelId)
 
 private fun actorNodeResultRepresentation(result: Result?, failure: LincheckFailure, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): String? {
     // We don't mark actors that violated obstruction freedom as hung.
