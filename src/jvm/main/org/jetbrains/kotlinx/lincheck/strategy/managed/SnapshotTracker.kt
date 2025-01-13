@@ -49,7 +49,7 @@ class SnapshotTracker {
     fun isTracked(obj: Any?): Boolean = obj != null && obj in trackedObjects
 
     fun trackField(obj: Any?, accessClass: Class<*>, fieldName: String) {
-        if (obj != null && obj !in trackedObjects) return
+        if (obj != null && !isTracked(obj)) return
         trackFieldImpl(
             obj = obj,
             clazz = getDeclaringClass(obj, accessClass, fieldName),
@@ -58,7 +58,7 @@ class SnapshotTracker {
     }
 
     fun trackField(obj: Any?, accessClassName: String, fieldName: String) {
-        if (obj != null && obj !in trackedObjects) return
+        if (obj != null && !isTracked(obj)) return
         trackFieldImpl(
             obj = obj,
             clazz = getDeclaringClass(obj, Class.forName(accessClassName), fieldName),
@@ -82,7 +82,7 @@ class SnapshotTracker {
     }
 
     fun trackArrayCell(array: Any, index: Int) {
-        if (array !in trackedObjects) return
+        if (!isTracked(array)) return
 
         val readResult = runCatching { readArrayElementViaUnsafe(array, index) }
 
@@ -101,7 +101,7 @@ class SnapshotTracker {
         // in case this works too slowly, an optimization could be used
         // see https://github.com/JetBrains/lincheck/pull/418/commits/0d708b84dd2bfd5dbfa961549dda128d91dc3a5b#diff-a684b1d7deeda94bbf907418b743ae2c0ec0a129760d3b87d00cdf5adfab56c4R146-R199
         objs
-            .filter { it != null && it in trackedObjects }
+            .filter { isTracked(it) }
             .forEach { trackReachableObjectSubgraph(it!!) }
     }
 
@@ -254,10 +254,8 @@ class SnapshotTracker {
     }
 
     private fun getDeclaringClass(obj: Any?, clazz: Class<*>, fieldName: String): Class<*> {
-        return clazz.let {
-            if (obj != null) it
-            else it.findField(fieldName).declaringClass
-        }
+        return if (obj != null) clazz
+               else clazz.findField(fieldName).declaringClass
     }
 
     private fun createFieldNode(obj: Any?, field: Field, value: Any?): MemoryNode {

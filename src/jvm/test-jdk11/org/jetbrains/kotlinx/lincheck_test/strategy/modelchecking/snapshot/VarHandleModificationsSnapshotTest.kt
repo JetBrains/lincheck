@@ -34,12 +34,15 @@ class VarHandleModificationsSnapshotTest : AbstractSnapshotTest() {
     val valueHandle: VarHandle = MethodHandles.lookup()
         .`in`(VarHandleModificationsSnapshotTest::class.java)
         .findStaticVarHandle(VarHandleModificationsSnapshotTest::class.java, "value", Int::class.java)
+
     val refHandle: VarHandle = MethodHandles.lookup()
         .`in`(VarHandleModificationsSnapshotTest::class.java)
         .findStaticVarHandle(VarHandleModificationsSnapshotTest::class.java, "ref", Wrapper::class.java)
+
     val intArrayHandle: VarHandle = MethodHandles.lookup()
         .`in`(VarHandleModificationsSnapshotTest::class.java)
         .findStaticVarHandle(VarHandleModificationsSnapshotTest::class.java, "intArray", IntArray::class.java)
+
     val intArrayElementsHandle: VarHandle = MethodHandles.arrayElementVarHandle(IntArray::class.java)
 
     class VarHandleModificationsVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : SnapshotVerifier() {
@@ -66,6 +69,28 @@ class VarHandleModificationsSnapshotTest : AbstractSnapshotTest() {
     }
 
     @Operation
+    fun compareAndSetValue() {
+        val current = valueHandle.get() as Int
+        valueHandle.compareAndSet(current, current + 1)
+    }
+
+    @Operation
+    fun weakCompareAndSetValue() {
+        val current = valueHandle.get() as Int
+        valueHandle.weakCompareAndSet(current, current + 1)
+    }
+
+    @Operation
+    fun getAndAddValue() {
+        valueHandle.getAndAdd(1)
+    }
+
+    @Operation
+    fun getAndSetValue() {
+        valueHandle.getAndSet(Random.nextInt())
+    }
+
+    @Operation
     fun putRef() {
         refHandle.set(Wrapper(Random.nextInt()))
     }
@@ -74,6 +99,32 @@ class VarHandleModificationsSnapshotTest : AbstractSnapshotTest() {
     fun putIntArrayElement() {
         val idx = Random.nextInt(0, intArray.size)
         intArrayElementsHandle.set(intArray, idx, Random.nextInt())
+    }
+
+    @Operation
+    fun compareAndSetArrayElement() {
+        val idx = Random.nextInt(0, intArray.size)
+        val current = intArrayElementsHandle.get(intArray, idx) as Int
+        intArrayElementsHandle.compareAndSet(intArray, idx, current, current + 1)
+    }
+
+    @Operation
+    fun weakCompareAndSetArrayElement() {
+        val idx = Random.nextInt(0, intArray.size)
+        val current = intArrayElementsHandle.get(intArray, idx) as Int
+        intArrayElementsHandle.weakCompareAndSet(intArray, idx, current, current + 1)
+    }
+
+    @Operation
+    fun getAndAddArrayElement() {
+        val idx = Random.nextInt(0, intArray.size)
+        intArrayElementsHandle.getAndAdd(intArray, idx, 1)
+    }
+
+    @Operation
+    fun getAndSetArrayElement() {
+        val idx = Random.nextInt(0, intArray.size)
+        intArrayElementsHandle.getAndSet(intArray, idx, Random.nextInt())
     }
 
     @Operation

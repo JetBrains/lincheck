@@ -18,10 +18,13 @@ import java.util.Collections
 import kotlin.random.Random
 
 
+private val arrayValue = intArrayOf(2, 1, 4, 3, 6, 5, 8, 7, 10, 9)
+
 class CollectionsAPISnapshotTest : AbstractSnapshotTest() {
+
     private class Wrapper(var x: Int)
     companion object {
-        private var intList = mutableListOf<Int>(2, 1, 4, 3, 6, 5, 8, 7, 10, 9)
+        private var intList = arrayValue.toMutableList()
         private var refList = mutableListOf<Wrapper>(Wrapper(1), Wrapper(3), Wrapper(2))
 
         // save values to restore
@@ -36,7 +39,7 @@ class CollectionsAPISnapshotTest : AbstractSnapshotTest() {
         override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
             checkForExceptions(results)
             check(intList === refIntList)
-            check(intList.toIntArray().contentEquals(intArrayOf(2, 1, 4, 3, 6, 5, 8, 7, 10, 9)))
+            check(intList.toIntArray().contentEquals(arrayValue))
 
             check(refList === refRefList)
             check(refList[0] == a && refList[1] == b && refList[2] == c)

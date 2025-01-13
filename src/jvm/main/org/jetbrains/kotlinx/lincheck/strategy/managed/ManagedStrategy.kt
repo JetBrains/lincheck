@@ -1143,12 +1143,7 @@ abstract class ManagedStrategy(
                 }
             }
             // VarHandle API
-            isVarHandle(owner) &&
-            (
-                VarHandleNames.isInstanceVarHandle(owner) && staticMemorySnapshot.isTracked(params.firstOrNull()) ||
-                VarHandleNames.isArrayVarHandle(owner) && staticMemorySnapshot.isTracked(params.firstOrNull()) ||
-                VarHandleNames.isStaticVarHandle(owner)
-            ) -> {
+            isVarHandle(owner) -> {
                 val methodType: VarHandleMethodType = VarHandleNames.varHandleMethodType(owner, params)
                 when (methodType) {
                     is InstanceVarHandleMethod -> {

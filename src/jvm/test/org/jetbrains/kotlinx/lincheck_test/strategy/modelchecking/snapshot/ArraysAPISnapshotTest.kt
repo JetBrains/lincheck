@@ -18,6 +18,8 @@ import org.junit.Ignore
 import java.util.Arrays
 import kotlin.random.Random
 
+private val arrayValue = intArrayOf(2, 1, 4, 3, 6, 5, 8, 7, 10, 9)
+
 // TODO: parallel operations are not supported because of java.lang.ClassCastException:
 //  class java.util.concurrent.ForkJoinWorkerThread cannot be cast to class sun.nio.ch.lincheck.TestThread
 //  (java.util.concurrent.ForkJoinWorkerThread is in module java.base of loader 'bootstrap';
@@ -26,7 +28,7 @@ import kotlin.random.Random
 class ArraysAPISnapshotTest : AbstractSnapshotTest() {
     private class Wrapper(var x: Int)
     companion object {
-        private var intArray = intArrayOf(2, 1, 4, 3, 6, 5, 8, 7, 10, 9)
+        private var intArray = arrayValue
         private var refArray = arrayOf(Wrapper(1), Wrapper(3), Wrapper(2))
 
         // save values to restore
@@ -41,7 +43,7 @@ class ArraysAPISnapshotTest : AbstractSnapshotTest() {
         override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
             checkForExceptions(results)
             check(intArray === refIntArray)
-            check(intArray.contentEquals(intArrayOf(2, 1, 4, 3, 6, 5, 8, 7, 10, 9)))
+            check(intArray.contentEquals(arrayValue))
 
             check(refArray === refRefArray)
             check(refArray[0] == a && refArray[1] == b && refArray[2] == c)
