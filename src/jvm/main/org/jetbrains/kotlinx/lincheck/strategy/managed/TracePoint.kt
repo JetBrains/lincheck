@@ -286,7 +286,7 @@ internal class BackBranchTargetTracePoint(
     labelId: Int
 ) : BackBranchTracePoint(iThread, actorId, callStackTrace, stackTraceElement, labelId) {
     override fun toStringCompact(): String =
-        if (LabelsTracker.isLabelInduceSupportedLoopForm(labelId)) "Loop Label #$labelId (unsupported loop structure)"
+        if (!LabelsTracker.isLabelInduceSupportedLoopForm(labelId)) "Loop Label #$labelId (unsupported loop structure)"
         else "Loop Label #$labelId"
 }
 
@@ -297,7 +297,7 @@ internal class BackBranchJumpTracePoint(
     labelId: Int,
 ) : BackBranchTracePoint(iThread, actorId, callStackTrace, stackTraceElement, labelId) {
     override fun toStringCompact(): String =
-        if (LabelsTracker.isLabelInduceSupportedLoopForm(labelId)) "Loop Jump #$labelId (unsupported loop structure)"
+        if (!LabelsTracker.isLabelInduceSupportedLoopForm(labelId)) "Loop Jump #$labelId (unsupported loop structure)"
         else "Loop Jump #$labelId"
 }
 

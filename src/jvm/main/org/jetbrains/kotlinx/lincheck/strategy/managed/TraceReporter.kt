@@ -408,20 +408,17 @@ private fun detectLoops(node: TraceNode, prefixFactory: TraceNodePrefixFactory) 
     // It is O(n^2) unfortunately.
     // Also check that we "know" this form of loop
     val labelsToRemove = hashSetOf<Int>()
-    labelsPositions.forEach { (label, positions) ->
+    labelsPositions.forEach allLabels@ { (label, positions) ->
         val start = positions.first().first
-        labelsPositions.forEach inner@ { (iLabel, iPositions) ->
-            if (label == iLabel) {
-                return@inner
-            }
+        labelsPositions.forEach { (iLabel, iPositions) ->
             val iStart = iPositions.first().first
             val iEnd = iPositions.last().first
-            if (iStart < start && start < iEnd) {
+            if (label != iLabel && iStart < start && start < iEnd) {
                 labelsToRemove.add(label)
-                return@inner
+                return@allLabels
             }
         }
-        // Check loop format. Now we know only one:
+        // Check loop format. Now we know only two (with and without last label):
         //
         // label:
         // ...
@@ -429,28 +426,40 @@ private fun detectLoops(node: TraceNode, prefixFactory: TraceNodePrefixFactory) 
         // label:
         // ...
         // jump
-        // label:
+        // label: [OPTIONAL, DOES NOTHING]
         //
-        // And the last jump-label pair is really the end of the loop, not the last iteration
-
-        // Check that it starts from target (second = false)
-        if (positions.first().second) {
+        // And the last jump[-label] combination is really the end of the loop, not the last iteration
+        if (positions.size < 2) {
             labelsToRemove.add(label)
-            return@forEach
+            return@allLabels
         }
-        // The total length must be odd and more than 1
-        if (positions.size % 2 == 0 || positions.size == 1) {
-            labelsToRemove.add(label)
-            return@forEach
-        }
-        // Check that next are jump-target pairs without other events between them
-        for (i in 1 .. positions.size - 2 step 2) {
-            // Jump (true) + Label (false), without "pauses"
-            val jump = positions[i]
-            val target = positions[i + 1]
-            if (!jump.second || target.second || jump.first + 1 != target.first) {
+        for (i in 0 .. positions.size - 2 step 2) {
+            val lab = positions[i]
+            val jmp = positions[i + 1]
+            if (lab.second || !jmp.second) {
                 labelsToRemove.add(label)
-                return@forEach
+                return@allLabels
+            }
+            if (i > 0) {
+                // Previous jump
+                val pjmp = positions[i - 1]
+                if (lab.first != pjmp.first + 1) {
+                    labelsToRemove.add(label)
+                    return@allLabels
+                }
+            }
+        }
+        // Ok, check last label if it presents
+        if (positions.size % 2 == 1) {
+            val jmp = positions[positions.size - 2]
+            val lab = positions.last()
+            if (lab.second) {
+                labelsToRemove.add(label)
+                return@allLabels
+            }
+            if (lab.first != jmp.first + 1) {
+                labelsToRemove.add(label)
+                return@allLabels
             }
         }
     }
@@ -460,8 +469,8 @@ private fun detectLoops(node: TraceNode, prefixFactory: TraceNodePrefixFactory) 
     // Process all top-level labels
     labelsPositions.forEach { (labelId, positions) ->
         LabelsTracker.markLabelAsSupportedLoopForm(labelId)
-        val last = if (positions.first().first == 0) node else node.children()[positions.first().first - 1]
-        val location = ((node.children()[positions.first().first] as TraceLeafEvent).event as CodeLocationTracePoint).stackTraceElement
+        val last = if (positions.first().first == 0) node else node.getChild(positions.first().first - 1)
+        val location = ((node.getChild(positions.first().first) as TraceLeafEvent).event as CodeLocationTracePoint).stackTraceElement
         val loop = LoopNode(
             prefixProvider = prefixFactory.prefixForCallNode(node.iThread, node.callDepth + 1),
             iThread = node.iThread,
@@ -484,7 +493,7 @@ private fun detectLoops(node: TraceNode, prefixFactory: TraceNodePrefixFactory) 
             val end =  positions[i + 1].first - 1
             // "start" and "end" should be removed from a linked list, all between should go to the new iteration
             for (childIdx in start .. end) {
-                val child = node.children()[childIdx]
+                val child = node.getChild(childIdx)
                 child.increaseCallDepth(2)
                 if (childIdx == start) {
                     iteration.next = child
@@ -496,7 +505,7 @@ private fun detectLoops(node: TraceNode, prefixFactory: TraceNodePrefixFactory) 
             }
         }
         // Remove 2 last 2 technical events
-        lastEvent.next = node.children()[positions.last().first].next
+        lastEvent.next = node.getChild(positions.last().first).next
         node.replaceInternalEvents(positions.first().first, positions.last().first, loop)
     }
     // Recursively call itself for all children, including new loop nodes
@@ -721,6 +730,10 @@ internal abstract class TraceInnerNode(prefixProvider: PrefixProvider, iThread: 
 
     fun children(): List<TraceNode> {
         return internalEvents
+    }
+
+    fun getChild(i: Int): TraceNode {
+        return internalEvents[i]
     }
 }
 
