@@ -26,11 +26,10 @@ import kotlin.reflect.jvm.javaMethod
 
 object Lincheck {
     /**
-     * This method will explore the interleavings of [block] body
-     * and track exceptions thrown from it (threads are created by the user in the [block]).
+     * This method will explore different interleavings of the [block] body and all the threads created within it,
+     * searching for the first raised exception.
      *
-     * @param invocations number of different interleavings of code in the [block]
-     * that should be explored.
+     * @param invocations number of different interleavings of code in the [block] that should be explored.
      * @param block lambda which body will be a target for the interleavings exploration.
      */
     @JvmStatic

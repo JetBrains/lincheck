@@ -1,7 +1,7 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2024 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2025 JetBrains s.r.o.
  *
  * This Source Code Form is subject to the terms of the
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
@@ -10,6 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
+import org.jetbrains.kotlinx.lincheck.Lincheck
+import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
+import org.junit.Test
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicIntegerArray
@@ -17,8 +20,39 @@ import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicLongArray
 import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.atomic.AtomicReferenceArray
+import kotlin.random.Random
 
-class AtomicReferencesNamesRunWithLambdaTests : BaseRunWithLambdaRepresentationTest("atomic_references_names_trace_run_with_lambda.txt") {
+
+abstract class BaseRunWithLambdaRepresentationTest(private val outputFileName: String) {
+    /**
+     * Implement me and place the logic to check its trace.
+     */
+    abstract fun block()
+
+    @Test
+    fun testRunWithModelChecker() {
+        val failure = Lincheck.verifyWithModelChecker(
+            verifierClass = FailingVerifier::class.java
+        ) {
+            block()
+        }
+        failure.checkLincheckOutput(outputFileName)
+    }
+}
+
+class ArrayReadWriteRunWithLambdaTest : BaseRunWithLambdaRepresentationTest("array_rw_run_with_lambda.txt") {
+    private val array = IntArray(3)
+
+    @Suppress("UNUSED_VARIABLE")
+    override fun block() {
+        val index = Random.nextInt(array.size)
+        array[index]++
+        val y = array[index]
+    }
+}
+
+
+class AtomicReferencesNamesRunWithLambdaTests : BaseRunWithLambdaRepresentationTest("atomic_refs_trace_run_with_lambda.txt") {
 
     private val atomicReference = AtomicReference(Node(1))
     private val atomicInteger = AtomicInteger(0)
@@ -31,7 +65,7 @@ class AtomicReferencesNamesRunWithLambdaTests : BaseRunWithLambdaRepresentationT
 
     private val wrapper = AtomicReferenceWrapper()
 
-    override fun operation() {
+    override fun block() {
         atomicReference.compareAndSet(atomicReference.get(), Node(2))
         atomicReference.set(Node(3))
 
@@ -88,7 +122,7 @@ class AtomicReferencesNamesRunWithLambdaTests : BaseRunWithLambdaRepresentationT
     }
 }
 
-class AtomicReferencesFromMultipleFieldsRunWithLambdaTest : BaseRunWithLambdaRepresentationTest("atomic_references_name_two_fields_trace_run_with_lambda.txt") {
+class AtomicReferencesFromMultipleFieldsRunWithLambdaTest : BaseRunWithLambdaRepresentationTest("atomic_refs_two_fields_trace_run_with_lambda.txt") {
 
     private var atomicReference1: AtomicReference<Node>
     private var atomicReference2: AtomicReference<Node>
@@ -99,10 +133,20 @@ class AtomicReferencesFromMultipleFieldsRunWithLambdaTest : BaseRunWithLambdaRep
         atomicReference2 = ref
     }
 
-    override fun operation() {
+    override fun block() {
         atomicReference1.compareAndSet(atomicReference2.get(), Node(2))
     }
 
     private data class Node(val name: Int)
 
+}
+
+class VariableReadWriteRunWithLambdaTest : BaseRunWithLambdaRepresentationTest("var_rw_run_with_lambda.txt") {
+    private var x = 0
+
+    @Suppress("UNUSED_VARIABLE")
+    override fun block() {
+        x++
+        val y = --x
+    }
 }

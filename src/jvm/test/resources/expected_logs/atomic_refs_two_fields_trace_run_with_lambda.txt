@@ -1,0 +1,27 @@
+= Invalid execution results =
+| ----------------------------------- |
+|              Thread 1               |
+| ----------------------------------- |
+| run(() -> kotlin.Unit): kotlin.Unit |
+| ----------------------------------- |
+
+The following interleaving leads to the error:
+| ----------------------------------- |
+|              Thread 1               |
+| ----------------------------------- |
+| run(() -> kotlin.Unit): kotlin.Unit |
+| ----------------------------------- |
+
+Detailed trace:
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                         Thread 1                                                                                          |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| run(() -> kotlin.Unit): kotlin.Unit                                                                                                                                                       |
+|   failure$1.invoke() at BaseRunWithLambdaRepresentationTest$testRunWithModelChecker$failure$1.invoke(RunWithLambdaRepresentationTests.kt:34)                                              |
+|     AtomicReferencesFromMultipleFieldsRunWithLambdaTest#1.block() at BaseRunWithLambdaRepresentationTest$testRunWithModelChecker$failure$1.invoke(RunWithLambdaRepresentationTests.kt:37) |
+|       atomicReference1.READ: AtomicReference#1 at AtomicReferencesFromMultipleFieldsRunWithLambdaTest.block(RunWithLambdaRepresentationTests.kt:137)                                      |
+|       atomicReference2.READ: AtomicReference#1 at AtomicReferencesFromMultipleFieldsRunWithLambdaTest.block(RunWithLambdaRepresentationTests.kt:137)                                      |
+|       AtomicReference#1.get(): Node#1 at AtomicReferencesFromMultipleFieldsRunWithLambdaTest.block(RunWithLambdaRepresentationTests.kt:137)                                               |
+|       AtomicReference#1.compareAndSet(Node#1,Node#2): true at AtomicReferencesFromMultipleFieldsRunWithLambdaTest.block(RunWithLambdaRepresentationTests.kt:137)                          |
+|   result: kotlin.Unit                                                                                                                                                                     |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
