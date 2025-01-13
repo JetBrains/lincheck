@@ -1098,11 +1098,11 @@ abstract class ManagedStrategy(
             return
         }
         if (collectTrace) {
-            val iThread = currentThread
+            val iThread = threadScheduler.getCurrentThreadId()
             val tracePoint = BackBranchTargetTracePoint(
                 iThread = iThread,
-                actorId = currentActorId[iThread],
-                callStackTrace = callStackTrace[iThread],
+                actorId = currentActorId[iThread]!!,
+                callStackTrace = callStackTrace[iThread]!!,
                 stackTraceElement = CodeLocations.stackTrace(codeLocation),
                 labelId = labelId
             )
@@ -1112,11 +1112,11 @@ abstract class ManagedStrategy(
 
     override fun beforeBackBranch(codeLocation: Int, labelId: Int) = runInIgnoredSection {
         if (collectTrace) {
-            val iThread = currentThread
+            val iThread = threadScheduler.getCurrentThreadId()
             val tracePoint = BackBranchJumpTracePoint(
                 iThread = iThread,
-                actorId = currentActorId[iThread],
-                callStackTrace = callStackTrace[iThread],
+                actorId = currentActorId[iThread]!!,
+                callStackTrace = callStackTrace[iThread]!!,
                 stackTraceElement = CodeLocations.stackTrace(codeLocation),
                 labelId = labelId
             )

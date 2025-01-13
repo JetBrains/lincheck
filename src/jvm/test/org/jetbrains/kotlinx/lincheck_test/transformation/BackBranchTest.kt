@@ -15,7 +15,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 
-class NoBackBranchTest() {
+class BackBranchTest() {
     var escape: Any? = null
     @Operation
     fun operation() {
