@@ -22,85 +22,58 @@ import java.lang.reflect.Field
 @Suppress("SameParameterValue")
 internal object VarHandleNames {
 
-    private val instanceVarHandles = instanceNameExtractor(
-        "java.lang.invoke.VarHandleInts\$FieldInstanceReadOnly",
-        "java.lang.invoke.VarHandleDoubles\$FieldInstanceReadOnly",
-        "java.lang.invoke.VarHandleLongs\$FieldInstanceReadOnly",
-        "java.lang.invoke.VarHandleFloats\$FieldInstanceReadOnly",
-        "java.lang.invoke.VarHandleBytes\$FieldInstanceReadOnly",
-        "java.lang.invoke.VarHandleShorts\$FieldInstanceReadOnly",
-        "java.lang.invoke.VarHandleChars\$FieldInstanceReadOnly",
-        "java.lang.invoke.VarHandleBooleans\$FieldInstanceReadOnly"
-    )
-
-    private val referenceInstanceVarHandles = referenceExtractor(
-        "java.lang.invoke.VarHandleReferences\$FieldInstanceReadOnly",
-        "java.lang.invoke.VarHandleObjects\$FieldInstanceReadOnly",
-        factory = ::VarHandleInstanceNameExtractor
-    )
-
-    private val staticVarHandles = staticNameExtractor(
-        "java.lang.invoke.VarHandleInts\$FieldStaticReadOnly",
-        "java.lang.invoke.VarHandleDoubles\$FieldStaticReadOnly",
-        "java.lang.invoke.VarHandleLongs\$FieldStaticReadOnly",
-        "java.lang.invoke.VarHandleFloats\$FieldStaticReadOnly",
-        "java.lang.invoke.VarHandleBytes\$FieldStaticReadOnly",
-        "java.lang.invoke.VarHandleShorts\$FieldStaticReadOnly",
-        "java.lang.invoke.VarHandleChars\$FieldStaticReadOnly",
-        "java.lang.invoke.VarHandleBooleans\$FieldStaticReadOnly",
-    )
-
-    private val referenceStaticVarHandles = referenceExtractor(
-        "java.lang.invoke.VarHandleReferences\$FieldStaticReadOnly",
-        "java.lang.invoke.VarHandleObjects\$FieldStaticReadOnly",
-        factory = ::VarHandleStaticNameExtractor
-    )
-
-    private val arrayVarHandles = arrayNameExtractor(
-        "java.lang.invoke.VarHandleInts\$Array",
-        "java.lang.invoke.VarHandleDoubles\$Array",
-        "java.lang.invoke.VarHandleLongs\$Array",
-        "java.lang.invoke.VarHandleFloats\$Array",
-        "java.lang.invoke.VarHandleBytes\$Array",
-        "java.lang.invoke.VarHandleShorts\$Array",
-        "java.lang.invoke.VarHandleChars\$Array",
-        "java.lang.invoke.VarHandleBooleans\$Array",
-    )
-
-    private val referenceArrayVarHandles = referenceExtractor(
-        "java.lang.invoke.VarHandleReferences\$Array",
-        "java.lang.invoke.VarHandleObjects\$Array",
-        factory = ::VarHandeArrayNameExtractor
-    )
-
     private val nameExtractors: List<VarHandleNameExtractor> = listOf(
         // Primitive VarHandles
-        instanceVarHandles,
-        staticVarHandles,
-        arrayVarHandles,
+        instanceNameExtractor(
+            "java.lang.invoke.VarHandleInts\$FieldInstanceReadOnly",
+            "java.lang.invoke.VarHandleDoubles\$FieldInstanceReadOnly",
+            "java.lang.invoke.VarHandleLongs\$FieldInstanceReadOnly",
+            "java.lang.invoke.VarHandleFloats\$FieldInstanceReadOnly",
+            "java.lang.invoke.VarHandleBytes\$FieldInstanceReadOnly",
+            "java.lang.invoke.VarHandleShorts\$FieldInstanceReadOnly",
+            "java.lang.invoke.VarHandleChars\$FieldInstanceReadOnly",
+            "java.lang.invoke.VarHandleBooleans\$FieldInstanceReadOnly"
+        ),
+        staticNameExtractor(
+            "java.lang.invoke.VarHandleInts\$FieldStaticReadOnly",
+            "java.lang.invoke.VarHandleDoubles\$FieldStaticReadOnly",
+            "java.lang.invoke.VarHandleLongs\$FieldStaticReadOnly",
+            "java.lang.invoke.VarHandleFloats\$FieldStaticReadOnly",
+            "java.lang.invoke.VarHandleBytes\$FieldStaticReadOnly",
+            "java.lang.invoke.VarHandleShorts\$FieldStaticReadOnly",
+            "java.lang.invoke.VarHandleChars\$FieldStaticReadOnly",
+            "java.lang.invoke.VarHandleBooleans\$FieldStaticReadOnly",
+        ),
+        arrayNameExtractor(
+            "java.lang.invoke.VarHandleInts\$Array",
+            "java.lang.invoke.VarHandleDoubles\$Array",
+            "java.lang.invoke.VarHandleLongs\$Array",
+            "java.lang.invoke.VarHandleFloats\$Array",
+            "java.lang.invoke.VarHandleBytes\$Array",
+            "java.lang.invoke.VarHandleShorts\$Array",
+            "java.lang.invoke.VarHandleChars\$Array",
+            "java.lang.invoke.VarHandleBooleans\$Array",
+        ),
         // Reference type VarHandle.
         // Many options are present due to different class names in different JDKs.
         listOfNotNull(
-            referenceInstanceVarHandles,
-            referenceStaticVarHandles,
-            referenceArrayVarHandles
+            referenceExtractor(
+                "java.lang.invoke.VarHandleReferences\$FieldInstanceReadOnly",
+                "java.lang.invoke.VarHandleObjects\$FieldInstanceReadOnly",
+                factory = ::VarHandleInstanceNameExtractor
+            ),
+            referenceExtractor(
+                "java.lang.invoke.VarHandleReferences\$FieldStaticReadOnly",
+                "java.lang.invoke.VarHandleObjects\$FieldStaticReadOnly",
+                factory = ::VarHandleStaticNameExtractor
+            ),
+            referenceExtractor(
+                "java.lang.invoke.VarHandleReferences\$Array",
+                "java.lang.invoke.VarHandleObjects\$Array",
+                factory = ::VarHandeArrayNameExtractor
+            )
         )
     ).flatten()
-
-    internal fun isInstanceVarHandle(varHandle: Any): Boolean {
-        return instanceVarHandles.any { it.canExtract(varHandle) } ||
-               referenceInstanceVarHandles?.canExtract(varHandle) == true
-    }
-
-    internal fun isStaticVarHandle(varHandle: Any): Boolean {
-        return staticVarHandles.any { it.canExtract(varHandle) } ||
-               referenceStaticVarHandles?.canExtract(varHandle) == true
-    }
-
-    internal fun isArrayVarHandle(varHandle: Any): Boolean {
-        return arrayVarHandles.any { it.canExtract(varHandle) } ||
-               referenceArrayVarHandles?.canExtract(varHandle) == true
-    }
     
     // varHandle is Any because of Java 8, where VarHandle class does not exist
     internal fun varHandleMethodType(varHandle: Any, parameters: Array<Any?>): VarHandleMethodType = runCatching {
