@@ -35,7 +35,6 @@ object Lincheck {
     @JvmStatic
     fun <R> verifyWithModelChecker(
         invocations: Int = ManagedCTestConfiguration.DEFAULT_INVOCATIONS,
-        verifierClass: Class<out Verifier>? = null,
         block: () -> R
     ): LincheckFailure? {
         val scenario = scenario {
@@ -50,7 +49,7 @@ object Lincheck {
             .addCustomScenario(scenario)
             .addGuarantee(forClasses(Lincheck::class).allMethods().ignore())
             .addGuarantee(forClasses(Wrapper::class).allMethods().ignore())
-            .verifier(verifierClass ?: ExecutionExceptionsVerifier::class.java)
+            .verifier(ExecutionExceptionsVerifier::class.java)
 
         val testCfg = options.createTestConfigurations(Wrapper::class.java)
 
