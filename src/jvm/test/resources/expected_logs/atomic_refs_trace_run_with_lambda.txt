@@ -1,52 +1,63 @@
 = Invalid execution results =
-| ----------------------------------- |
-|              Thread 1               |
-| ----------------------------------- |
-| run(() -> kotlin.Unit): kotlin.Unit |
-| ----------------------------------- |
+| ------------------------------------------------ |
+|                     Thread 1                     |
+| ------------------------------------------------ |
+| run(() -> kotlin.Unit): IllegalStateException #1 |
+| ------------------------------------------------ |
+
+---
+The number next to an exception name helps you find its stack trace provided after the interleaving section
+---
 
 The following interleaving leads to the error:
-| ----------------------------------- |
-|              Thread 1               |
-| ----------------------------------- |
-| run(() -> kotlin.Unit): kotlin.Unit |
-| ----------------------------------- |
+| ------------------------------------------------ |
+|                     Thread 1                     |
+| ------------------------------------------------ |
+| run(() -> kotlin.Unit): IllegalStateException #1 |
+| ------------------------------------------------ |
+
+Exception stack traces:
+#1: java.lang.IllegalStateException: Check failed.
+	at org.jetbrains.kotlinx.lincheck_test.representation.AtomicReferencesNamesRunWithLambdaTests.block(Unknown Source)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunWithLambdaRepresentationTest$testRunWithModelChecker$failure$1.invoke(Unknown Source)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunWithLambdaRepresentationTest$testRunWithModelChecker$failure$1.invoke(Unknown Source)
+	at java.base/java.lang.Thread.run(Thread.java:833)
 
 Detailed trace:
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                   Thread 1                                                                                    |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| run(() -> kotlin.Unit): kotlin.Unit                                                                                                                                           |
-|   failure$1.invoke() at BaseRunWithLambdaRepresentationTest$testRunWithModelChecker$failure$1.invoke(RunWithLambdaRepresentationTests.kt:34)                                  |
-|     AtomicReferencesNamesRunWithLambdaTests#1.block() at BaseRunWithLambdaRepresentationTest$testRunWithModelChecker$failure$1.invoke(RunWithLambdaRepresentationTests.kt:37) |
-|       AtomicReference#1.get(): Node#1 at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:69)                                                |
-|       AtomicReference#1.compareAndSet(Node#1,Node#2): true at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:69)                           |
-|       AtomicReference#1.set(Node#3) at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:70)                                                  |
-|       AtomicInteger#1.get(): 3 at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:72)                                                       |
-|       AtomicInteger#1.compareAndSet(3,2): true at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:72)                                       |
-|       AtomicInteger#1.set(3) at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:73)                                                         |
-|       AtomicLong#1.get(): 3 at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:75)                                                          |
-|       AtomicLong#1.compareAndSet(3,2): true at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:75)                                          |
-|       AtomicLong#1.set(3) at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:76)                                                            |
-|       AtomicBoolean#1.get(): false at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:78)                                                   |
-|       AtomicBoolean#1.compareAndSet(false,true): true at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:78)                                |
-|       AtomicBoolean#1.set(false) at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:79)                                                     |
-|       AtomicReferenceArray#1[0].get(): Node#4 at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:81)                                        |
-|       AtomicReferenceArray#1[0].compareAndSet(Node#4,Node#5): true at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:81)                   |
-|       AtomicReferenceArray#1[0].set(Node#6) at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:82)                                          |
-|       AtomicIntegerArray#1[0].get(): 2 at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:84)                                               |
-|       AtomicIntegerArray#1[0].compareAndSet(2,1): true at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:84)                               |
-|       AtomicIntegerArray#1[0].set(2) at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:85)                                                 |
-|       AtomicLongArray#1[0].get(): 2 at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:87)                                                  |
-|       AtomicLongArray#1[0].compareAndSet(2,1): true at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:87)                                  |
-|       AtomicLongArray#1[0].set(2) at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:88)                                                    |
-|       AtomicReference#2.set(Node#7) at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:90)                                                  |
-|       AtomicIntegerArray#2[0].compareAndSet(1,2): false at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:91)                              |
-|       AtomicInteger#2.compareAndSet(0,2): true at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:93)                                       |
-|       AtomicInteger#2.set(0) at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:94)                                                         |
-|       AtomicInteger#3.compareAndSet(1,2): true at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:96)                                       |
-|       AtomicInteger#3.set(3) at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:97)                                                         |
-|       AtomicIntegerArray#3[1].compareAndSet(0,1): true at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:99)                               |
-|       AtomicIntegerArray#4[1].compareAndSet(0,1): true at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:100)                              |
-|   result: kotlin.Unit                                                                                                                                                         |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                  Thread 1                                                                                                  |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| run(() -> kotlin.Unit): IllegalStateException #1                                                                                                                                                           |
+|   failure$1.invoke(): threw IllegalStateException at BaseRunWithLambdaRepresentationTest$testRunWithModelChecker$failure$1.invoke(RunWithLambdaRepresentationTests.kt:34)                                  |
+|     AtomicReferencesNamesRunWithLambdaTests#1.block(): threw IllegalStateException at BaseRunWithLambdaRepresentationTest$testRunWithModelChecker$failure$1.invoke(RunWithLambdaRepresentationTests.kt:35) |
+|       AtomicReference#1.get(): Node#1 at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:68)                                                                             |
+|       AtomicReference#1.compareAndSet(Node#1,Node#2): true at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:68)                                                        |
+|       AtomicReference#1.set(Node#3) at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:69)                                                                               |
+|       AtomicInteger#1.get(): 3 at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:71)                                                                                    |
+|       AtomicInteger#1.compareAndSet(3,2): true at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:71)                                                                    |
+|       AtomicInteger#1.set(3) at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:72)                                                                                      |
+|       AtomicLong#1.get(): 3 at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:74)                                                                                       |
+|       AtomicLong#1.compareAndSet(3,2): true at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:74)                                                                       |
+|       AtomicLong#1.set(3) at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:75)                                                                                         |
+|       AtomicBoolean#1.get(): false at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:77)                                                                                |
+|       AtomicBoolean#1.compareAndSet(false,true): true at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:77)                                                             |
+|       AtomicBoolean#1.set(false) at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:78)                                                                                  |
+|       AtomicReferenceArray#1[0].get(): Node#4 at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:80)                                                                     |
+|       AtomicReferenceArray#1[0].compareAndSet(Node#4,Node#5): true at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:80)                                                |
+|       AtomicReferenceArray#1[0].set(Node#6) at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:81)                                                                       |
+|       AtomicIntegerArray#1[0].get(): 2 at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:83)                                                                            |
+|       AtomicIntegerArray#1[0].compareAndSet(2,1): true at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:83)                                                            |
+|       AtomicIntegerArray#1[0].set(2) at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:84)                                                                              |
+|       AtomicLongArray#1[0].get(): 2 at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:86)                                                                               |
+|       AtomicLongArray#1[0].compareAndSet(2,1): true at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:86)                                                               |
+|       AtomicLongArray#1[0].set(2) at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:87)                                                                                 |
+|       AtomicReference#2.set(Node#7) at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:89)                                                                               |
+|       AtomicIntegerArray#2[0].compareAndSet(1,2): false at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:90)                                                           |
+|       AtomicInteger#2.compareAndSet(0,2): true at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:92)                                                                    |
+|       AtomicInteger#2.set(0) at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:93)                                                                                      |
+|       AtomicInteger#3.compareAndSet(1,2): true at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:95)                                                                    |
+|       AtomicInteger#3.set(3) at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:96)                                                                                      |
+|       AtomicIntegerArray#3[1].compareAndSet(0,1): true at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:98)                                                            |
+|       AtomicIntegerArray#4[1].compareAndSet(0,1): true at AtomicReferencesNamesRunWithLambdaTests.block(RunWithLambdaRepresentationTests.kt:99)                                                            |
+|   result: IllegalStateException #1                                                                                                                                                                         |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

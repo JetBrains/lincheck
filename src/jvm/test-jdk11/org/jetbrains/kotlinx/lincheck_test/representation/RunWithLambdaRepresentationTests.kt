@@ -31,9 +31,7 @@ abstract class BaseRunWithLambdaRepresentationTest(private val outputFileName: S
 
     @Test
     fun testRunWithModelChecker() {
-        val failure = Lincheck.verifyWithModelChecker(
-            verifierClass = FailingVerifier::class.java
-        ) {
+        val failure = Lincheck.verifyWithModelChecker {
             block()
         }
         failure.checkLincheckOutput(outputFileName)
@@ -48,6 +46,7 @@ class ArrayReadWriteRunWithLambdaTest : BaseRunWithLambdaRepresentationTest("arr
         val index = Random.nextInt(array.size)
         array[index]++
         val y = array[index]
+        check(false)
     }
 }
 
@@ -98,6 +97,7 @@ class AtomicReferencesNamesRunWithLambdaTests : BaseRunWithLambdaRepresentationT
 
         staticArray.compareAndSet(1, 0, 1)
         AtomicReferenceWrapper.staticArray.compareAndSet(1, 0, 1)
+        check(false)
     }
 
     private data class Node(val name: Int)
@@ -135,6 +135,7 @@ class AtomicReferencesFromMultipleFieldsRunWithLambdaTest : BaseRunWithLambdaRep
 
     override fun block() {
         atomicReference1.compareAndSet(atomicReference2.get(), Node(2))
+        check(false)
     }
 
     private data class Node(val name: Int)
@@ -148,5 +149,6 @@ class VariableReadWriteRunWithLambdaTest : BaseRunWithLambdaRepresentationTest("
     override fun block() {
         x++
         val y = --x
+        check(false)
     }
 }

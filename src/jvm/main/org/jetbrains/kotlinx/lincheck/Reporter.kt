@@ -619,8 +619,11 @@ private fun Throwable.isInternalLincheckBug(): Boolean {
     val testStackTrace = stackTrace.takeWhile { LINCHECK_RUNNER_PACKAGE_NAME !in it.className }
     // collect Lincheck functions from the stack trace
     val lincheckStackFrames = testStackTrace.filter { LINCHECK_PACKAGE_NAME in it.className }
-    // special handling of `cancelByLincheck` primitive
-    if (lincheckStackFrames.size == 1 && "cancelByLincheck" in lincheckStackFrames[0].toString()) {
+    // special handling of `cancelByLincheck` primitive and general purpose model checking function call
+    if (
+        lincheckStackFrames.size == 1 &&
+        listOf("cancelByLincheck", "Lincheck\$Wrapper.run").any { it in lincheckStackFrames[0].toString() }
+    ) {
         return false
     }
     // otherwise, if the stack trace contains any Lincheck functions, we classify it as a Lincheck bug
