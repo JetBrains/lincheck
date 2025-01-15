@@ -140,9 +140,9 @@ internal object TimeTravelTransformer : ClassFileTransformer {
         if (className.startsWith("net.rubygrapefruit.platform.")) return false
         if (className.startsWith("io.mockk.")) return false
         if (className.startsWith("it.unimi.dsi.fastutil.")) return false
-//        if (className.startsWith("worker.org.gradle.")) return false
+        if (className.startsWith("worker.org.gradle.")) return false
         if (className.startsWith("org.objectweb.asm.")) return false
-//        if (className.startsWith("org.gradle.")) return false
+        if (className.startsWith("org.gradle.")) return false
         if (className.startsWith("org.slf4j.")) return false
         if (className.startsWith("org.apache.commons.lang.")) return false
         if (className.startsWith("org.junit.")) return false

@@ -200,10 +200,7 @@ internal open class ParallelThreadsRunner(
     }
 
     private fun createTestInstance() {
-//        println("Class loader: ${testClass.classLoader}")
-//        println("Creating test instance\n${Thread.currentThread().stackTrace.joinToString("\n") { "\t$it" }}")
         testInstance = testClass.newInstanceRecursive()
-//        println("Test Instance was created $testInstance\n\n\n")
         if (strategy is ModelCheckingStrategy) {
             // We pass the test instance to the strategy to initialize the call stack.
             // It should be done here as we create the test instance in the `run` method in the runner, after

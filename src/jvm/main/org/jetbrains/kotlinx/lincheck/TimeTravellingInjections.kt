@@ -26,16 +26,13 @@ object TimeTravellingInjections {
     @JvmStatic
     var firstRun = true
 
-    // TODO check hypothesis: hard code class name and method name to use main
-    //  worker.org.gradle.process.internal.worker.GradleWorkerMain
     @JvmStatic
     fun runWithLincheck(testClassName: String, testMethodName: String) {
         firstRun = false
 
         val testClass = Class.forName(testClassName)
         // TODO: get the name from the system property
-//        val testMethod = testClass.getMethod(testMethodName)!!
-        val testMethod = testClass.declaredMethods.single { it.name == testMethodName }
+        val testMethod = testClass.getMethod(testMethodName)!!
 
         val isStaticMethod = Modifier.isStatic(testMethod.modifiers)
         val instanceClass = if (isStaticMethod) StaticMethodWrapper::class.java else testClass
@@ -91,7 +88,7 @@ object TimeTravellingInjections {
 class StaticMethodWrapper {
     fun callStaticMethod(clazz: Class<*>, method: Method) {
         ensureClassHierarchyIsTransformed(clazz.name)
-        method.invoke(null, arrayOf<String>())
+        method.invoke(null)
     }
 }
 
