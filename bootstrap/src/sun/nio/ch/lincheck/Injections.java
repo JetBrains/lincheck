@@ -347,6 +347,16 @@ public class Injections {
     }
 
     /**
+     * Called from the instrumented code to intercept and substitute the result of a read operation
+     * (if reads interception is enabled).
+     *
+     * @return the substituted read result.
+     */
+    public static Object interceptReadResult() {
+        return getEventTracker().interceptReadResult();
+    }
+
+    /**
      * Called from the instrumented code before each field write.
      *
      * @return whether the trace point was created
@@ -384,9 +394,10 @@ public class Injections {
      * Called from the instrumented code before any method call.
      *
      * @param owner is `null` for public static methods.
+     * @return true if the method result should be intercepted.
      */
-    public static void beforeMethodCall(Object owner, String className, String methodName, int codeLocation, int methodId, Object[] params) {
-        getEventTracker().beforeMethodCall(owner, className, methodName, codeLocation, methodId, params);
+    public static boolean beforeMethodCall(Object owner, String className, String methodName, int codeLocation, int methodId, Object[] params) {
+        return getEventTracker().beforeMethodCall(owner, className, methodName, codeLocation, methodId, params);
     }
 
     /**
@@ -408,6 +419,16 @@ public class Injections {
      */
     public static void onMethodCallException(Throwable t) {
         getEventTracker().onMethodCallException(t);
+    }
+
+    /**
+     * Called from the instrumented code to intercept and substitute the result of a method call
+     * (if method results interception is enabled).
+     *
+     * @return The substituted result of the method call.
+     */
+    public static Object interceptMethodCallResult() {
+        return getEventTracker().interceptMethodCallResult();
     }
 
     /**

@@ -44,6 +44,7 @@ public interface EventTracker {
                             boolean isStatic, boolean isFinal);
     boolean beforeReadArrayElement(Object array, int index, Type arrayElementType, int codeLocation);
     void afterRead(Object value);
+    Object interceptReadResult();
 
     boolean beforeWriteField(Object obj, String className, String fieldName, Type fieldType, Object value,
                              int codeLocation,
@@ -52,9 +53,10 @@ public interface EventTracker {
                                     int codeLocation);
     void afterWrite();
 
-    void beforeMethodCall(Object owner, String className, String methodName, int codeLocation, int methodId, Object[] params);
+    boolean beforeMethodCall(Object owner, String className, String methodName, int codeLocation, int methodId, Object[] params);
     void onMethodCallReturn(Object result);
     void onMethodCallException(Throwable t);
+    Object interceptMethodCallResult();
 
     Random getThreadLocalRandom();
     int randomNextInt();

@@ -986,6 +986,12 @@ abstract class ManagedStrategy(
         loopDetector.afterRead(value)
     }
 
+    override fun interceptReadResult(): Any? = runInIgnoredSection {
+        // will be implemented in the new model checking strategy:
+        // https://github.com/JetBrains/lincheck/issues/257
+        throw UnsupportedOperationException()
+    }
+
     override fun beforeWriteField(obj: Any?, className: String, fieldName: String, fieldType: Type, value: Any?,
                                   codeLocation: Int,
                                   isStatic: Boolean, isFinal: Boolean): Boolean = runInIgnoredSection {
@@ -1138,7 +1144,7 @@ abstract class ManagedStrategy(
         codeLocation: Int,
         methodId: Int,
         params: Array<Any?>
-    ) {
+    ): Boolean {
         val guarantee = runInIgnoredSection {
             val iThread = threadScheduler.getCurrentThreadId()
             // re-throw abort error if the thread was aborted
@@ -1189,6 +1195,7 @@ abstract class ManagedStrategy(
             // so `enterIgnoredSection` would have no effect
             enterIgnoredSection()
         }
+        return false // shouldInterceptMethodResult
     }
 
     override fun onMethodCallReturn(result: Any?) {
@@ -1236,6 +1243,12 @@ abstract class ManagedStrategy(
         // an "atomic" or "ignore" guarantee, we need to leave
         // this "ignore" section.
         leaveIgnoredSection()
+    }
+
+    override fun interceptMethodCallResult(): Any? = runInIgnoredSection {
+        // will be implemented in the new model checking strategy:
+        // https://github.com/JetBrains/lincheck/issues/257
+        throw UnsupportedOperationException()
     }
 
     private fun isSuspendFunction(className: String, methodName: String, params: Array<Any?>): Boolean =

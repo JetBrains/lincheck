@@ -28,6 +28,7 @@ internal class SharedMemoryAccessTransformer(
     className: String,
     methodName: String,
     adapter: GeneratorAdapter,
+    private val interceptReadAccesses: Boolean = false,
 ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
 
     lateinit var analyzer: AnalyzerAdapter
@@ -68,11 +69,17 @@ internal class SharedMemoryAccessTransformer(
                             ifClause = {
                                 invokeBeforeEventIfPluginEnabled("read static field")
                             },
-                            elseClause = {})
+                            elseClause = {}
+                        )
                         // STACK: <empty>
-                        visitFieldInsn(opcode, owner, fieldName, desc)
+                        if (interceptReadAccesses) {
+                            invokeStatic(Injections::interceptReadResult)
+                            unbox(valueType)
+                        } else {
+                            visitFieldInsn(opcode, owner, fieldName, desc)
+                        }
                         // STACK: value
-                        invokeAfterRead(getType(desc))
+                        invokeAfterRead(valueType)
                         // STACK: value
                     }
                 )
@@ -106,9 +113,15 @@ internal class SharedMemoryAccessTransformer(
                             elseClause = {}
                         )
                         // STACK: obj
-                        visitFieldInsn(opcode, owner, fieldName, desc)
+                        if (interceptReadAccesses) {
+                            pop()
+                            invokeStatic(Injections::interceptReadResult)
+                            unbox(valueType)
+                        } else {
+                            visitFieldInsn(opcode, owner, fieldName, desc)
+                        }
                         // STACK: value
-                        invokeAfterRead(getType(desc))
+                        invokeAfterRead(valueType)
                         // STACK: value
                     }
                 )
@@ -223,8 +236,15 @@ internal class SharedMemoryAccessTransformer(
                             },
                             elseClause = {}
                         )
-                        // STACK: array: Array, index: Int
-                        visitInsn(opcode)
+                        // STACK: array, index
+                        if (interceptReadAccesses) {
+                            pop()
+                            pop()
+                            invokeStatic(Injections::interceptReadResult)
+                            unbox(arrayElementType)
+                        } else {
+                            visitInsn(opcode)
+                        }
                         // STACK: value
                         invokeAfterRead(arrayElementType)
                         // STACK: value
