@@ -174,15 +174,6 @@ abstract class ManagedStrategy(
             useClocks = UseClocks.ALWAYS
         )
 
-    /**
-     * Adds a new [obj] to the snapshot, which fields will be tracked and restored during execution.
-     * This method is not supposed to be called during execution, its purpose is to account for general purpose model checker functionality.
-     * @see [runConcurrentTest].
-     */
-    fun updateSnapshotWithNewRoot(obj: Any?) {
-        staticMemorySnapshot.trackRoot(obj)
-    }
-
 
     // == STRATEGY INTERFACE METHODS ==
 

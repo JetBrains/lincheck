@@ -38,7 +38,7 @@ abstract class BaseRunWithLambdaRepresentationTest<R>(private val outputFileName
 
     @Test
     fun testRunWithModelChecker() {
-        val failure = runConcurrentTest(this) {
+        val failure = runConcurrentTest {
             return@runConcurrentTest block()
         }
         failure.checkLincheckOutput(outputFileName)
@@ -46,7 +46,9 @@ abstract class BaseRunWithLambdaRepresentationTest<R>(private val outputFileName
 }
 
 class ArrayReadWriteRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit>("array_rw_run_with_lambda.txt") {
-    private val array = IntArray(3)
+    companion object {
+        private val array = IntArray(3) // variable is static in order to trigger snapshot tracker to restore it between iterations (`block` actually will be run twice)
+    }
 
     @Suppress("UNUSED_VARIABLE")
     override fun block() {
@@ -58,17 +60,6 @@ class ArrayReadWriteRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit
 }
 
 class AtomicReferencesNamesRunWithLambdaTests : BaseRunWithLambdaRepresentationTest<Unit>("atomic_refs_trace_run_with_lambda.txt") {
-
-    private val atomicReference = AtomicReference(Node(1))
-    private val atomicInteger = AtomicInteger(0)
-    private val atomicLong = AtomicLong(0L)
-    private val atomicBoolean = AtomicBoolean(true)
-
-    private val atomicReferenceArray = AtomicReferenceArray(arrayOf(Node(1)))
-    private val atomicIntegerArray = AtomicIntegerArray(intArrayOf(0))
-    private val atomicLongArray = AtomicLongArray(longArrayOf(0L))
-
-    private val wrapper = AtomicReferenceWrapper()
 
     override fun block() {
         atomicReference.compareAndSet(atomicReference.get(), Node(2))
@@ -121,6 +112,17 @@ class AtomicReferencesNamesRunWithLambdaTests : BaseRunWithLambdaRepresentationT
     }
 
     companion object {
+        private val atomicReference = AtomicReference(Node(1))
+        private val atomicInteger = AtomicInteger(0)
+        private val atomicLong = AtomicLong(0L)
+        private val atomicBoolean = AtomicBoolean(true)
+
+        private val atomicReferenceArray = AtomicReferenceArray(arrayOf(Node(1)))
+        private val atomicIntegerArray = AtomicIntegerArray(intArrayOf(0))
+        private val atomicLongArray = AtomicLongArray(longArrayOf(0L))
+
+        private val wrapper = AtomicReferenceWrapper()
+
         @JvmStatic
         private val staticValue = AtomicInteger(0)
         @JvmStatic
@@ -129,14 +131,15 @@ class AtomicReferencesNamesRunWithLambdaTests : BaseRunWithLambdaRepresentationT
 }
 
 class AtomicReferencesFromMultipleFieldsRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit>("atomic_refs_two_fields_trace_run_with_lambda.txt") {
+    companion object {
+        private var atomicReference1: AtomicReference<Node>
+        private var atomicReference2: AtomicReference<Node>
 
-    private var atomicReference1: AtomicReference<Node>
-    private var atomicReference2: AtomicReference<Node>
-
-    init {
-        val ref = AtomicReference(Node(1))
-        atomicReference1 = ref
-        atomicReference2 = ref
+        init {
+            val ref = AtomicReference(Node(1))
+            atomicReference1 = ref
+            atomicReference2 = ref
+        }
     }
 
     override fun block() {
@@ -149,7 +152,9 @@ class AtomicReferencesFromMultipleFieldsRunWithLambdaTest : BaseRunWithLambdaRep
 }
 
 class VariableReadWriteRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit>("var_rw_run_with_lambda.txt") {
-    private var x = 0
+    companion object {
+        private var x = 0
+    }
 
     @Suppress("UNUSED_VARIABLE")
     override fun block() {
@@ -160,17 +165,14 @@ class VariableReadWriteRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<U
 }
 
 class BasicCustomThreadsRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit>("basic_custom_threads_run_with_lambda.txt") {
-    @Volatile
-    @JvmField
-    var value = 0
 
     override fun block() {
         val block = Runnable {
-            value += 1
-            valueUpdater.getAndIncrement(this)
-            unsafe.getAndAddInt(this, valueFieldOffset, 1)
+            wrapper.value += 1
+            valueUpdater.getAndIncrement(wrapper)
+            unsafe.getAndAddInt(wrapper, valueFieldOffset, 1)
             synchronized(this) {
-                value += 1
+                wrapper.value += 1
             }
         }
         val threads = List(3) { Thread(block) }
@@ -181,26 +183,32 @@ class BasicCustomThreadsRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<
 
     @Suppress("DEPRECATION") // Unsafe
     companion object {
+        var wrapper = Wrapper(0)
+
         val unsafe =
             UnsafeHolder.UNSAFE
 
         private val valueField =
-            BasicCustomThreadsRunWithLambdaTest::class.java.getDeclaredField("value")
+            Wrapper::class.java.getDeclaredField("value")
 
         private val valueUpdater =
-            AtomicIntegerFieldUpdater.newUpdater(BasicCustomThreadsRunWithLambdaTest::class.java, "value")
+            AtomicIntegerFieldUpdater.newUpdater(Wrapper::class.java, "value")
 
         private val valueFieldOffset =
             unsafe.objectFieldOffset(valueField)
     }
+
+    data class Wrapper(@Volatile @JvmField var value: Int)
 }
 
 class KotlinThreadRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit>(
     if (isJdk8) "kotlin_thread_run_with_lambda_jdk8.txt" else "kotlin_thread_run_with_lambda.txt"
 ) {
-    @Volatile
-    @JvmField
-    var value = 0
+    companion object {
+        @Volatile
+        @JvmField
+        var value = 0
+    }
 
     override fun block() {
         val t = thread {
