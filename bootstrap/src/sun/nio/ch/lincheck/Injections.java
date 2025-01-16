@@ -338,6 +338,8 @@ public class Injections {
     }
 
     public static void beforeEvent(int eventId, String type) {
+        // TODO This call is not needed for trace debugger
+        // TODO Update lincheck plugin with evaluation and remove it completely
         getEventTracker().beforeEvent(eventId, type);
     }
 

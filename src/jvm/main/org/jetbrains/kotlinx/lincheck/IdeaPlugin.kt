@@ -12,8 +12,8 @@
 package org.jetbrains.kotlinx.lincheck
 
 import sun.nio.ch.lincheck.*
-import org.jetbrains.kotlinx.lincheck.runner.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.kotlinx.lincheck.runner.ParallelThreadsRunner
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 
 const val MINIMAL_PLUGIN_VERSION = "0.2"
 
@@ -80,7 +80,18 @@ fun shouldReplayInterleaving(): Boolean {
 @Suppress("UNUSED_PARAMETER")
 fun beforeEvent(eventId: Int, type: String) {
     val strategy = (Thread.currentThread() as? TestThread)?.eventTracker ?: return
-    visualize(strategy)
+    runCatching<Unit> {
+        val strategy = strategy as ModelCheckingStrategy
+        val runner = strategy.runner as ParallelThreadsRunner
+        val testObject = runner.testInstance
+        val threads = runner.executor.threads
+
+        val objectToNumberMap = createObjectToNumberMapAsArray(testObject)
+        val continuationToLincheckThreadIdMap = createContinuationToThreadIdMap(threads)
+        val threadToLincheckThreadIdMap = createThreadToLincheckThreadIdMap(threads)
+
+        visualizeInstance(testObject, objectToNumberMap, continuationToLincheckThreadIdMap, threadToLincheckThreadIdMap)
+    }
 }
 
 
@@ -113,25 +124,29 @@ fun visualizeInstance(
  */
 fun onThreadSwitchesOrActorFinishes() {}
 
+/**
+ * This method is called from the debugger evaluation only when the execution is paused.
+ * Called from trace debugger plugin.
+ */
+@Suppress("unused")
+private fun visualize(): Array<Any>? {
+    return try {
+        val strategy = (Thread.currentThread() as? TestThread)?.eventTracker as ModelCheckingStrategy
+        val runner = strategy.runner as ParallelThreadsRunner
+        val testObject = runner.testInstance
+
+        return createObjectToNumberMapAsArray(testObject)
+    } catch (e: Throwable) {
+        null
+    }
+}
+
 // ======================================================================================================== //
 
 /**
  * Internal property to check that trace point IDs are in a strict sequential order.
  */
 internal val eventIdStrictOrderingCheck = System.getProperty("lincheck.debug.withEventIdSequentialCheck") != null
-
-private fun visualize(strategyObject: Any) = runCatching {
-    val strategy = strategyObject as ModelCheckingStrategy
-    val runner = strategy.runner as ParallelThreadsRunner
-    val testObject = runner.testInstance
-    val threads = runner.executor.threads
-
-    val objectToNumberMap = createObjectToNumberMapAsArray(testObject)
-    val continuationToLincheckThreadIdMap = createContinuationToThreadIdMap(threads)
-    val threadToLincheckThreadIdMap = createThreadToLincheckThreadIdMap(threads)
-
-    visualizeInstance(testObject, objectToNumberMap, continuationToLincheckThreadIdMap, threadToLincheckThreadIdMap)
-}
 
 
 /**
