@@ -76,6 +76,9 @@ abstract class ManagedStrategy(
     // Tracker of the thread parking.
     protected abstract val parkingTracker: ParkingTracker
 
+    // A flag indicating whether final fields should be tracked.
+    protected open val trackFinalFields: Boolean = false
+
     // Snapshot of the memory, reachable from static fields
     protected val staticMemorySnapshot = SnapshotTracker()
 
@@ -921,7 +924,7 @@ abstract class ManagedStrategy(
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(className.canonicalClassName)
         }
         // Optimization: do not track final field reads
-        if (isFinal) {
+        if (isFinal && !trackFinalFields) {
             return@runInIgnoredSection false
         }
         // Do not track accesses to untracked objects
@@ -1001,7 +1004,7 @@ abstract class ManagedStrategy(
             return@runInIgnoredSection false
         }
         // Optimization: do not track final field writes
-        if (isFinal) {
+        if (isFinal && !trackFinalFields) {
             return@runInIgnoredSection false
         }
         val iThread = threadScheduler.getCurrentThreadId()
