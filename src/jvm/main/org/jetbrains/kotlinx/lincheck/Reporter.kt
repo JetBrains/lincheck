@@ -622,7 +622,7 @@ private fun Throwable.isInternalLincheckBug(): Boolean {
     // special handling of `cancelByLincheck` primitive and general purpose model checking function call
     if (
         lincheckStackFrames.size == 1 &&
-        listOf("cancelByLincheck", "Lincheck\$Wrapper.run").any { it in lincheckStackFrames[0].toString() }
+        listOf("cancelByLincheck", "GeneralPurposeMCWrapper.run").any { it in lincheckStackFrames[0].toString() }
     ) {
         return false
     }
