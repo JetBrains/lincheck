@@ -39,14 +39,17 @@ public interface EventTracker {
 
     void updateSnapshotBeforeConstructorCall(Object[] objs);
 
-    boolean beforeReadField(Object obj, String className, String fieldName, int codeLocation,
+    boolean beforeReadField(Object obj, String className, String fieldName, Type fieldType,
+                            int codeLocation,
                             boolean isStatic, boolean isFinal);
-    boolean beforeReadArrayElement(Object array, int index, int codeLocation);
+    boolean beforeReadArrayElement(Object array, int index, Type arrayElementType, int codeLocation);
     void afterRead(Object value);
 
-    boolean beforeWriteField(Object obj, String className, String fieldName, Object value, int codeLocation,
+    boolean beforeWriteField(Object obj, String className, String fieldName, Type fieldType, Object value,
+                             int codeLocation,
                              boolean isStatic, boolean isFinal);
-    boolean beforeWriteArrayElement(Object array, int index, Object value, int codeLocation);
+    boolean beforeWriteArrayElement(Object array, int index, Type arrayElementType, Object value,
+                                    int codeLocation);
     void afterWrite();
 
     void beforeMethodCall(Object owner, String className, String methodName, int codeLocation, int methodId, Object[] params);

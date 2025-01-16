@@ -51,14 +51,16 @@ internal class SharedMemoryAccessTransformer(
                         visitFieldInsn(opcode, owner, fieldName, desc)
                     },
                     code = {
+                        val valueType = getType(desc)
                         // STACK: <empty>
                         pushNull()
                         push(owner)
                         push(fieldName)
+                        push(valueType.sort)
                         loadNewCodeLocationId()
                         push(true) // isStatic
                         push(FinalFields.isFinalField(owner, fieldName)) // isFinal
-                        // STACK: null, className, fieldName, codeLocation, isStatic, isFinal
+                        // STACK: null, className, fieldName, fieldType, codeLocation, isStatic, isFinal
                         invokeStatic(Injections::beforeReadField)
                         // STACK: isTracePointCreated
                         ifStatement(
@@ -83,15 +85,17 @@ internal class SharedMemoryAccessTransformer(
                         visitFieldInsn(opcode, owner, fieldName, desc)
                     },
                     code = {
+                        val valueType = getType(desc)
                         // STACK: obj
                         dup()
                         // STACK: obj, obj
                         push(owner)
                         push(fieldName)
+                        push(valueType.sort)
                         loadNewCodeLocationId()
                         push(false) // isStatic
                         push(FinalFields.isFinalField(owner, fieldName)) // isFinal
-                        // STACK: obj, obj, className, fieldName, codeLocation, isStatic, isFinal
+                        // STACK: obj, obj, className, fieldName, fieldType, codeLocation, isStatic, isFinal
                         invokeStatic(Injections::beforeReadField)
                         // STACK: obj, isTracePointCreated
                         ifStatement(
@@ -124,12 +128,13 @@ internal class SharedMemoryAccessTransformer(
                         pushNull()
                         push(owner)
                         push(fieldName)
+                        push(valueType.sort)
                         loadLocal(valueLocal)
                         box(valueType)
                         loadNewCodeLocationId()
                         push(true) // isStatic
                         push(FinalFields.isFinalField(owner, fieldName)) // isFinal
-                        // STACK: value, null, className, fieldName, value, codeLocation, isStatic, isFinal
+                        // STACK: value, null, className, fieldName, fieldType, value, codeLocation, isStatic, isFinal
                         invokeStatic(Injections::beforeWriteField)
                         // STACK: isTracePointCreated
                         ifStatement(
@@ -162,12 +167,13 @@ internal class SharedMemoryAccessTransformer(
                         // STACK: obj, obj
                         push(owner)
                         push(fieldName)
+                        push(valueType.sort)
                         loadLocal(valueLocal)
                         box(valueType)
                         loadNewCodeLocationId()
                         push(false) // isStatic
                         push(FinalFields.isFinalField(owner, fieldName)) // isFinal
-                        // STACK: obj, obj, className, fieldName, value, codeLocation, isStatic, isFinal
+                        // STACK: obj, obj, className, fieldName, fieldType, value, codeLocation, isStatic, isFinal
                         invokeStatic(Injections::beforeWriteField)
                         // STACK: isTracePointCreated
                         ifStatement(
@@ -202,12 +208,13 @@ internal class SharedMemoryAccessTransformer(
                         visitInsn(opcode)
                     },
                     code = {
-                        // STACK: array: Array, index: Int
+                        // STACK: array, index
                         val arrayElementType = getArrayElementType(opcode)
                         dup2()
-                        // STACK: array: Array, index: Int, array: Array, index: Int
+                        // STACK: array, index, array, index
+                        push(arrayElementType.sort)
                         loadNewCodeLocationId()
-                        // STACK: array: Array, index: Int, array: Array, index: Int, codeLocation: Int
+                        // STACK: array, index, array, index, arrayElementType, codeLocation
                         invokeStatic(Injections::beforeReadArray)
                         ifStatement(
                             condition = { /* already on stack */ },
@@ -231,17 +238,18 @@ internal class SharedMemoryAccessTransformer(
                         visitInsn(opcode)
                     },
                     code = {
-                        // STACK: array: Array, index: Int, value: Object
+                        // STACK: array, index, value
                         val arrayElementType = getArrayElementType(opcode)
                         val valueLocal = newLocal(arrayElementType) // we cannot use DUP as long/double require DUP2
                         storeLocal(valueLocal)
-                        // STACK: array: Array, index: Int
+                        // STACK: array, index
                         dup2()
-                        // STACK: array: Array, index: Int, array: Array, index: Int
+                        // STACK: array, index, array, index
+                        push(arrayElementType.sort)
                         loadLocal(valueLocal)
                         box(arrayElementType)
                         loadNewCodeLocationId()
-                        // STACK: array: Array, index: Int, array: Array, index: Int, value: Object, codeLocation: Int
+                        // STACK: array, index, array, index, arrayElementType, value, codeLocation
                         invokeStatic(Injections::beforeWriteArray)
                         ifStatement(
                             condition = { /* already on stack */ },
@@ -250,9 +258,9 @@ internal class SharedMemoryAccessTransformer(
                             },
                             elseClause = {}
                         )
-                        // STACK: array: Array, index: Int
+                        // STACK: array, index
                         loadLocal(valueLocal)
-                        // STACK: array: Array, index: Int, value: Object
+                        // STACK: array, index, value
                         visitInsn(opcode)
                         // STACK: <EMPTY>
                         invokeStatic(Injections::afterWrite)
