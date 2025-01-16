@@ -1096,15 +1096,19 @@ abstract class ManagedStrategy(
     /**
      * Tracks a specific field of an [obj], if the [obj] is either `null` (which means that field is static),
      * or one this objects which contains it is already stored.
+     *
+     * *Must be called from [runInIgnoredSection].*
      */
-    fun updateSnapshotOnFieldAccess(obj: Any?, className: String, fieldName: String) = runInIgnoredSection {
+    private fun updateSnapshotOnFieldAccess(obj: Any?, className: String, fieldName: String) {
         staticMemorySnapshot.trackField(obj, className, fieldName)
     }
 
     /**
      * Tracks a specific [array] element at [index], if the [array] is already tracked.
+     *
+     * *Must be called from [runInIgnoredSection].*
      */
-    fun updateSnapshotOnArrayElementAccess(array: Any, index: Int) = runInIgnoredSection {
+    private fun updateSnapshotOnArrayElementAccess(array: Any, index: Int) {
         staticMemorySnapshot.trackArrayCell(array, index)
     }
 
@@ -1116,15 +1120,15 @@ abstract class ManagedStrategy(
         staticMemorySnapshot.trackObjects(objs)
     }
 
-
-
     /**
      * Tracks fields that are accessed via System.arraycopy, Unsafe API, VarHandle API, Java AFU API, and kotlinx.atomicfu.
+     *
+     * *Must be called from [runInIgnoredSection].*
      */
     private fun processMethodEffectOnStaticSnapshot(
         owner: Any?,
         params: Array<Any?>
-    ) = runInIgnoredSection {
+    ) {
         when {
             // Unsafe API
             isUnsafe(owner) -> {
@@ -1189,11 +1193,11 @@ abstract class ManagedStrategy(
         methodId: Int,
         params: Array<Any?>
     ) {
-        // process method effect on the static memory snapshot
-        processMethodEffectOnStaticSnapshot(owner, params)
-
-        // process known method concurrency guarantee
         val guarantee = runInIgnoredSection {
+            // process method effect on the static memory snapshot
+            processMethodEffectOnStaticSnapshot(owner, params)
+
+            // process known method concurrency guarantee
             val iThread = threadScheduler.getCurrentThreadId()
             // re-throw abort error if the thread was aborted
             if (threadScheduler.isAborted(iThread)) {

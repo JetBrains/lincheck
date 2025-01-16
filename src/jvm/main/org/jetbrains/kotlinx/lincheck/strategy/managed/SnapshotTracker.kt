@@ -46,8 +46,6 @@ class SnapshotTracker {
         class ArrayCellNode(val index: Int, initialValue: Any?) : MemoryNode(initialValue)
     }
 
-    fun isTracked(obj: Any?): Boolean = obj != null && obj in trackedObjects
-
     fun trackField(obj: Any?, accessClass: Class<*>, fieldName: String) {
         if (obj != null && !isTracked(obj)) return
         trackFieldImpl(
@@ -101,7 +99,7 @@ class SnapshotTracker {
         // in case this works too slowly, an optimization could be used
         // see https://github.com/JetBrains/lincheck/pull/418/commits/0d708b84dd2bfd5dbfa961549dda128d91dc3a5b#diff-a684b1d7deeda94bbf907418b743ae2c0ec0a129760d3b87d00cdf5adfab56c4R146-R199
         objs
-            .filter { isTracked(it) }
+            .filter { it != null && isTracked(it) }
             .forEach { trackReachableObjectSubgraph(it!!) }
     }
 
@@ -111,6 +109,8 @@ class SnapshotTracker {
             .filterIsInstance<Class<*>>()
             .forEach { restoreValues(it, visitedObjects) }
     }
+
+    private fun isTracked(obj: Any): Boolean = obj in trackedObjects
 
     /**
      * @return `true` if the [fieldValue] is a trackable object, and it is added
