@@ -1,37 +1,37 @@
 = Invalid execution results =
-| ------------------------------------------------ |
-|                     Thread 1                     |
-| ------------------------------------------------ |
-| run(() -> kotlin.Unit): IllegalStateException #1 |
-| ------------------------------------------------ |
+| -------------------------------------- |
+|                Thread 1                |
+| -------------------------------------- |
+| run(() -> R): IllegalStateException #1 |
+| -------------------------------------- |
 
 ---
 The number next to an exception name helps you find its stack trace provided after the interleaving section
 ---
 
 The following interleaving leads to the error:
-| ------------------------------------------------ |
-|                     Thread 1                     |
-| ------------------------------------------------ |
-| run(() -> kotlin.Unit): IllegalStateException #1 |
-| ------------------------------------------------ |
+| -------------------------------------- |
+|                Thread 1                |
+| -------------------------------------- |
+| run(() -> R): IllegalStateException #1 |
+| -------------------------------------- |
 
 Exception stack traces:
 #1: java.lang.IllegalStateException: Check failed.
 	at org.jetbrains.kotlinx.lincheck_test.representation.ArrayReadWriteRunWithLambdaTest.block(Unknown Source)
-	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunWithLambdaRepresentationTest$testRunWithModelChecker$failure$1.invoke(Unknown Source)
+	at org.jetbrains.kotlinx.lincheck_test.representation.ArrayReadWriteRunWithLambdaTest.block(Unknown Source)
 	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunWithLambdaRepresentationTest$testRunWithModelChecker$failure$1.invoke(Unknown Source)
 	at java.base/java.lang.Thread.run(Thread.java:833)
 
 Detailed trace:
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                              Thread 1                                                                                              |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| run(() -> kotlin.Unit): IllegalStateException #1                                                                                                                                                   |
-|   failure$1.invoke(): threw IllegalStateException at BaseRunWithLambdaRepresentationTest$testRunWithModelChecker$failure$1.invoke(RunWithLambdaRepresentationTests.kt:34)                          |
-|     ArrayReadWriteRunWithLambdaTest#1.block(): threw IllegalStateException at BaseRunWithLambdaRepresentationTest$testRunWithModelChecker$failure$1.invoke(RunWithLambdaRepresentationTests.kt:37) |
-|       IntArray#1[0].READ: 1 at ArrayReadWriteRunWithLambdaTest.block(RunWithLambdaRepresentationTests.kt:49)                                                                                       |
-|       IntArray#1[0].WRITE(2) at ArrayReadWriteRunWithLambdaTest.block(RunWithLambdaRepresentationTests.kt:49)                                                                                      |
-|       IntArray#1[0].READ: 2 at ArrayReadWriteRunWithLambdaTest.block(RunWithLambdaRepresentationTests.kt:50)                                                                                       |
-|   result: IllegalStateException #1                                                                                                                                                                 |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|                                                                                             Thread 1                                                                                             |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| run(() -> R): IllegalStateException #1                                                                                                                                                           |
+|   ArrayReadWriteRunWithLambdaTest#1.block(): threw IllegalStateException at BaseRunWithLambdaRepresentationTest$testRunWithModelChecker$failure$1.invoke(RunWithLambdaRepresentationTests.kt:41) |
+|     block(): threw IllegalStateException at ArrayReadWriteRunWithLambdaTest.block(RunWithLambdaRepresentationTests.kt:47)                                                                        |
+|       IntArray#1[0].READ: 0 at ArrayReadWriteRunWithLambdaTest.block(RunWithLambdaRepresentationTests.kt:53)                                                                                     |
+|       IntArray#1[0].WRITE(1) at ArrayReadWriteRunWithLambdaTest.block(RunWithLambdaRepresentationTests.kt:53)                                                                                    |
+|       IntArray#1[0].READ: 1 at ArrayReadWriteRunWithLambdaTest.block(RunWithLambdaRepresentationTests.kt:54)                                                                                     |
+|   result: IllegalStateException #1                                                                                                                                                               |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

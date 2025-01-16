@@ -15,6 +15,7 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.forClasses
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.verify
@@ -27,10 +28,13 @@ import org.jetbrains.kotlinx.lincheck.verifier.Verifier
  * This method will explore different interleavings of the [block] body and all the threads created within it,
  * searching for the first raised exception.
  *
+ * @param testClassInstance If [block] is a method that modifies fields of its containing class (`testClassInstance`),
+ *                          this parameter helps to track and restore those fields to their original values between invocations.
  * @param invocations number of different interleavings of code in the [block] that should be explored.
  * @param block lambda which body will be a target for the interleavings exploration.
  */
 fun <R> runConcurrentTest(
+    testClassInstance: Any?,
     invocations: Int = ManagedCTestConfiguration.DEFAULT_INVOCATIONS,
     block: () -> R
 ): LincheckFailure? {
@@ -51,7 +55,9 @@ fun <R> runConcurrentTest(
 
     withLincheckJavaAgent(testCfg.instrumentationMode) {
         ensureObjectIsTransformed(block)
-        val strategy = testCfg.createStrategy(GeneralPurposeMCWrapper::class.java, scenario, null, null)
+        val strategy = testCfg.createStrategy(GeneralPurposeMCWrapper::class.java, scenario, null, null).also {
+            (it as ManagedStrategy).updateSnapshotWithNewRoot(testClassInstance)
+        }
         val verifier = testCfg.createVerifier()
 
         for (i in 1..invocations) {
