@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.Lincheck
+import org.jetbrains.kotlinx.lincheck.runConcurrentTest
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicBoolean
@@ -31,7 +31,7 @@ abstract class BaseRunWithLambdaRepresentationTest(private val outputFileName: S
 
     @Test
     fun testRunWithModelChecker() {
-        val failure = Lincheck.verifyWithModelChecker {
+        val failure = runConcurrentTest {
             block()
         }
         failure.checkLincheckOutput(outputFileName)
