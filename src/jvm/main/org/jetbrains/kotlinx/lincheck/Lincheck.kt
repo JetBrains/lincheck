@@ -34,7 +34,6 @@ import org.jetbrains.kotlinx.lincheck.verifier.Verifier
  * @param block lambda which body will be a target for the interleavings exploration.
  */
 fun <R> runConcurrentTest(
-    testClassInstance: Any?,
     invocations: Int = ManagedCTestConfiguration.DEFAULT_INVOCATIONS,
     block: () -> R
 ): LincheckFailure? {
@@ -55,9 +54,7 @@ fun <R> runConcurrentTest(
 
     withLincheckJavaAgent(testCfg.instrumentationMode) {
         ensureObjectIsTransformed(block)
-        val strategy = testCfg.createStrategy(GeneralPurposeMCWrapper::class.java, scenario, null, null).also {
-            (it as ManagedStrategy).updateSnapshotWithNewRoot(testClassInstance)
-        }
+        val strategy = testCfg.createStrategy(GeneralPurposeMCWrapper::class.java, scenario, null, null)
         val verifier = testCfg.createVerifier()
 
         for (i in 1..invocations) {
