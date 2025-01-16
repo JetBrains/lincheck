@@ -622,7 +622,7 @@ abstract class ManagedStrategy(
         enterTestingCode()
     }
 
-    override fun onActorFinish() {
+    override fun onActorFinish(iThread: Int) {
         // This is a hack to guarantee correct stepping in the plugin.
         // When stepping out to the TestThreadExecution class, stepping continues unproductively.
         // With this method, we force the debugger to stop at the beginning of the next actor.
