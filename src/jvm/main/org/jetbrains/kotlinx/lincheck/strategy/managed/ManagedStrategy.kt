@@ -1235,7 +1235,6 @@ abstract class ManagedStrategy(
 
     private fun isSuspendFunction(className: String, methodName: String, params: Array<Any?>): Boolean =
         try {
-            // While this code is inefficient, it is called only when an error is detected.
             getMethod(className.canonicalClassName, methodName, params)?.isSuspendable() ?: false
         } catch (t: Throwable) {
             // Something went wrong. Ignore it, as the error might lead only
@@ -1244,10 +1243,7 @@ abstract class ManagedStrategy(
         }
 
     private fun getMethod(className: String, methodName: String, params: Array<Any?>): Method? {
-        val clazz = Class.forName(className)
-
-        // Filter methods by name
-        val possibleMethods = clazz.declaredMethods.filter { it.name == methodName }
+        val possibleMethods = getCachedFilteredDeclaredMethods(className, methodName)
 
         for (method in possibleMethods) {
             val parameterTypes = method.parameterTypes
@@ -1267,6 +1263,23 @@ abstract class ManagedStrategy(
 
         return null // or throw an exception if a match is mandatory
     }
+
+    // While caching is not important for Lincheck itself,
+    // it is critical for Trace Debugger, as it always collects the trace.
+    private val methodsCache = hashMapOf<String, Array<Method>>()
+    private val filteredMethodsCache = hashMapOf<Pair<String, String>, List<Method>>()
+
+    private fun getCachedDeclaredMethods(className: String) =
+        methodsCache.getOrPut(className) {
+            val clazz = Class.forName(className)
+            clazz.declaredMethods
+        }
+
+    private fun getCachedFilteredDeclaredMethods(className: String, methodName: String) =
+        filteredMethodsCache.getOrPut(className to methodName) {
+            val declaredMethods = getCachedDeclaredMethods(className)
+            declaredMethods.filter { it.name == methodName }
+        }
 
     /**
      * This method is invoked by a test thread
