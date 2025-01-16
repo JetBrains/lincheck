@@ -1,39 +1,39 @@
 = Invalid execution results =
-| ------------------------------------------------ |
-|                     Thread 1                     |
-| ------------------------------------------------ |
-| run(() -> kotlin.Unit): IllegalStateException #1 |
-| ------------------------------------------------ |
+| -------------------------------------- |
+|                Thread 1                |
+| -------------------------------------- |
+| run(() -> R): IllegalStateException #1 |
+| -------------------------------------- |
 
 ---
 The number next to an exception name helps you find its stack trace provided after the interleaving section
 ---
 
 The following interleaving leads to the error:
-| ------------------------------------------------ |
-|                     Thread 1                     |
-| ------------------------------------------------ |
-| run(() -> kotlin.Unit): IllegalStateException #1 |
-| ------------------------------------------------ |
+| -------------------------------------- |
+|                Thread 1                |
+| -------------------------------------- |
+| run(() -> R): IllegalStateException #1 |
+| -------------------------------------- |
 
 Exception stack traces:
 #1: java.lang.IllegalStateException: Check failed.
 	at org.jetbrains.kotlinx.lincheck_test.representation.VariableReadWriteRunWithLambdaTest.block(Unknown Source)
-	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunWithLambdaRepresentationTest$testRunWithModelChecker$failure$1.invoke(Unknown Source)
+	at org.jetbrains.kotlinx.lincheck_test.representation.VariableReadWriteRunWithLambdaTest.block(Unknown Source)
 	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunWithLambdaRepresentationTest$testRunWithModelChecker$failure$1.invoke(Unknown Source)
 	at java.base/java.lang.Thread.run(Thread.java:833)
 
 Detailed trace:
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                               Thread 1                                                                                                |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| run(() -> kotlin.Unit): IllegalStateException #1                                                                                                                                                      |
-|   failure$1.invoke(): threw IllegalStateException at BaseRunWithLambdaRepresentationTest$testRunWithModelChecker$failure$1.invoke(RunWithLambdaRepresentationTests.kt:34)                             |
-|     VariableReadWriteRunWithLambdaTest#1.block(): threw IllegalStateException at BaseRunWithLambdaRepresentationTest$testRunWithModelChecker$failure$1.invoke(RunWithLambdaRepresentationTests.kt:35) |
-|       x.READ: 0 at VariableReadWriteRunWithLambdaTest.block(RunWithLambdaRepresentationTests.kt:150)                                                                                                  |
-|       x.WRITE(1) at VariableReadWriteRunWithLambdaTest.block(RunWithLambdaRepresentationTests.kt:150)                                                                                                 |
-|       x.READ: 1 at VariableReadWriteRunWithLambdaTest.block(RunWithLambdaRepresentationTests.kt:151)                                                                                                  |
-|       x.WRITE(0) at VariableReadWriteRunWithLambdaTest.block(RunWithLambdaRepresentationTests.kt:151)                                                                                                 |
-|       x.READ: 0 at VariableReadWriteRunWithLambdaTest.block(RunWithLambdaRepresentationTests.kt:151)                                                                                                  |
-|   result: IllegalStateException #1                                                                                                                                                                    |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                              Thread 1                                                                                               |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| run(() -> R): IllegalStateException #1                                                                                                                                                              |
+|   VariableReadWriteRunWithLambdaTest#1.block(): threw IllegalStateException at BaseRunWithLambdaRepresentationTest$testRunWithModelChecker$failure$1.invoke(RunWithLambdaRepresentationTests.kt:41) |
+|     block(): threw IllegalStateException at VariableReadWriteRunWithLambdaTest.block(RunWithLambdaRepresentationTests.kt:151)                                                                       |
+|       x.READ: 0 at VariableReadWriteRunWithLambdaTest.block(RunWithLambdaRepresentationTests.kt:156)                                                                                                |
+|       x.WRITE(1) at VariableReadWriteRunWithLambdaTest.block(RunWithLambdaRepresentationTests.kt:156)                                                                                               |
+|       x.READ: 1 at VariableReadWriteRunWithLambdaTest.block(RunWithLambdaRepresentationTests.kt:157)                                                                                                |
+|       x.WRITE(0) at VariableReadWriteRunWithLambdaTest.block(RunWithLambdaRepresentationTests.kt:157)                                                                                               |
+|       x.READ: 0 at VariableReadWriteRunWithLambdaTest.block(RunWithLambdaRepresentationTests.kt:157)                                                                                                |
+|   result: IllegalStateException #1                                                                                                                                                                  |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

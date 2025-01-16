@@ -34,6 +34,9 @@ import java.util.concurrent.atomic.AtomicReferenceArray
  * which is named *snapshot*.
  */
 class SnapshotTracker {
+    // Stores objects that should be used as starting points for values restoring apart from `Class<*>` instances.
+    // This set allows adding custom class instances, which fields should be restored.
+    private val roots = Collections.newSetFromMap<Any>(IdentityHashMap())
     private val trackedObjects = IdentityHashMap<Any, MutableList<MemoryNode>>()
 
     private sealed class MemoryNode(
@@ -95,9 +98,16 @@ class SnapshotTracker {
         }
     }
 
-    fun trackObjects(objs: Array<Any?>) {
+    fun trackRoot(obj: Any?) {
+        if (obj != null) {
+            trackedObjects.putIfAbsent(obj, mutableListOf<MemoryNode>())
+            roots.add(obj)
+        }
+    }
+
+    fun trackObjectsEagerly(objs: Array<Any?>) {
         // in case this works too slowly, an optimization could be used
-        // see https://github.com/JetBrains/lincheck/pull/418/commits/0d708b84dd2bfd5dbfa961549dda128d91dc3a5b#diff-a684b1d7deeda94bbf907418b743ae2c0ec0a129760d3b87d00cdf5adfab56c4R146-R199
+        // see https://github.com/JetBrains/lincheck/pull/418/commits/eb9a9a25f0c57e5b5bdf55dac8f38273ffc7dd8a#diff-a684b1d7deeda94bbf907418b743ae2c0ec0a129760d3b87d00cdf5adfab56c4R146-R199
         objs
             .filter { it != null && isTracked(it) }
             .forEach { trackReachableObjectSubgraph(it!!) }
@@ -107,6 +117,7 @@ class SnapshotTracker {
         val visitedObjects = Collections.newSetFromMap(IdentityHashMap<Any, Boolean>())
         trackedObjects.keys
             .filterIsInstance<Class<*>>()
+            .union(roots)
             .forEach { restoreValues(it, visitedObjects) }
     }
 
