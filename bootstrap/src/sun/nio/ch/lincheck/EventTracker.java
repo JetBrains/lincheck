@@ -36,6 +36,8 @@ public interface EventTracker {
 
     void beforeNewObjectCreation(String className);
     void afterNewObjectCreation(Object obj);
+    long getNextObjectId();
+    void advanceCurrentObjectId(long oldId);
 
     void updateSnapshotBeforeConstructorCall(Object[] objs);
 

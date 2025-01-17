@@ -75,6 +75,8 @@ abstract class ManagedStrategy(
 
     // Tracker of objects' allocations and object graph topology.
     protected abstract val objectTracker: ObjectTracker?
+    // Tracker of objects' identity hash codes.
+    internal abstract val identityHashCodeTracker: ObjectIdentityHashCodeTracker
     // Tracker of the monitors' operations.
     protected abstract val monitorTracker: MonitorTracker
     // Tracker of the thread parking.
@@ -257,6 +259,7 @@ abstract class ManagedStrategy(
 
     protected open fun initializeReplay() {
         cleanObjectNumeration()
+        identityHashCodeTracker.resetObjectIds()
         resetEventIdProvider()
     }
 
@@ -303,6 +306,7 @@ abstract class ManagedStrategy(
                 result is ObstructionFreedomViolationInvocationResult
         )
         cleanObjectNumeration()
+        identityHashCodeTracker.resetObjectIds()
 
         runner.close()
         runner = createRunner()
@@ -1101,9 +1105,16 @@ abstract class ManagedStrategy(
         LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
     }
 
+    override fun advanceCurrentObjectId(oldId: Long) {
+        identityHashCodeTracker.advanceCurrentObjectId(oldId)
+    }
+
+    override fun getNextObjectId(): Long = identityHashCodeTracker.getNextObjectId()
+
     override fun afterNewObjectCreation(obj: Any) {
         if (obj is String || obj is Int || obj is Long || obj is Byte || obj is Char || obj is Float || obj is Double) return
         runInIgnoredSection {
+            identityHashCodeTracker.afterNewTrackedObjectCreation(obj)
             objectTracker?.registerNewObject(obj)
         }
     }
