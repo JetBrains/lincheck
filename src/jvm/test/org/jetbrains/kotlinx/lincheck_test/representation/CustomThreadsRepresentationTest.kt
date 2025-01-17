@@ -102,7 +102,12 @@ class CustomThreadsRepresentationTest {
         testClass = this::class,
         testOperation = this::livelock,
         invocations = 1_000,
-        outputFileName = if (isJdk8) "custom_threads_livelock_trace_jdk8.txt" else "custom_threads_livelock_trace.txt",
+        outputFileName = when {
+            isJdk8 && TRACE_DEBUGGER_MODE -> "custom_threads_livelock_trace_jdk8_with_trace_debugger.txt"
+            isJdk8 -> "custom_threads_livelock_trace_jdk8.txt"
+            TRACE_DEBUGGER_MODE -> "custom_threads_livelock_trace_with_trace_debugger.txt"
+            else -> "custom_threads_livelock_trace.txt"
+        },
     )
 
     fun incorrectConcurrentLinkedDeque() {
