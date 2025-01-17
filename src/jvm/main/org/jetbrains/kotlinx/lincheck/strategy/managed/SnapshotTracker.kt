@@ -34,6 +34,8 @@ import java.util.concurrent.atomic.AtomicReferenceArray
  * which is named *snapshot*.
  */
 class SnapshotTracker {
+    // stores additional objects that must be included as entry points when memory restoring process starts
+    private val roots = Collections.newSetFromMap<Any>(IdentityHashMap())
     private val trackedObjects = IdentityHashMap<Any, MutableList<MemoryNode>>()
 
     private sealed class MemoryNode(
@@ -95,6 +97,21 @@ class SnapshotTracker {
         }
     }
 
+    @OptIn(ExperimentalStdlibApi::class)
+    fun trackRoot(root: Any) {
+        var added: Boolean = roots.add(root)
+        if (
+            added &&
+            trackedObjects.putIfAbsent(root, mutableListOf<MemoryNode>()) == null &&
+            shouldTrackEagerly(root)
+        ) {
+            trackReachableObjectSubgraph(root)
+        }
+        if (added) {
+            println("Added a new root: ${root.javaClass.simpleName}@${root.hashCode().toHexString()}")
+        }
+    }
+
     fun trackObjects(objs: Array<Any?>) {
         // in case this works too slowly, an optimization could be used
         // see https://github.com/JetBrains/lincheck/pull/418/commits/0d708b84dd2bfd5dbfa961549dda128d91dc3a5b#diff-a684b1d7deeda94bbf907418b743ae2c0ec0a129760d3b87d00cdf5adfab56c4R146-R199
@@ -104,9 +121,11 @@ class SnapshotTracker {
     }
 
     fun restoreValues() {
+        //println("Restoring tracked objects")
         val visitedObjects = Collections.newSetFromMap(IdentityHashMap<Any, Boolean>())
         trackedObjects.keys
             .filterIsInstance<Class<*>>()
+            .union(roots) // include objects which were explicitly added as roots
             .forEach { restoreValues(it, visitedObjects) }
     }
 

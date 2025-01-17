@@ -48,6 +48,9 @@ abstract class ManagedStrategy(
     private val stateRepresentationFunction: Method?,
     private val testCfg: ManagedCTestConfiguration
 ) : Strategy(scenario), EventTracker {
+    init {
+        println("Recreated a ManagedStrategy")
+    }
     // The number of parallel threads.
     protected val nThreads: Int = scenario.nThreads
 
@@ -209,6 +212,14 @@ abstract class ManagedStrategy(
     }
 
     /**
+     * Adds a new object which fields will be tracked and restored between invocation.
+     * This function can be used to add non-static classes as roots as well.
+     */
+    fun addRootToStaticMemorySnapshot(root: Any) {
+        staticMemorySnapshot.trackRoot(root)
+    }
+
+    /**
      * Restores recorded values of all memory reachable from static state.
      */
     fun restoreStaticMemorySnapshot() {
@@ -290,6 +301,7 @@ abstract class ManagedStrategy(
         cleanObjectNumeration()
 
         runner.close()
+        println("Recreating runner")
         runner = createRunner()
 
         val loggedResults = runInvocation()

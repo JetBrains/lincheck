@@ -18,6 +18,7 @@ import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
+import org.jetbrains.kotlinx.lincheck.strategy.stress.StressStrategy
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.util.*
 import sun.nio.ch.lincheck.*
@@ -180,6 +181,17 @@ internal open class ParallelThreadsRunner(
     private var ensuredTestInstanceIsTransformed = false
 
     private fun createTestInstance() {
+        // TODO: if this is the 1st time of creating testInstance, then add it
+        //  to the `root` of snapshot tracker, and allow it to restore it between invocations/iterations instead of recreation.
+        if (
+            /* testClassRestoredViaSnapshot && */
+            ::testInstance.isInitialized &&
+            strategy is ManagedStrategy
+        ) return
+
+        if (strategy is ManagedStrategy) {
+            println("Create a new test instance!")
+        }
         @Suppress("DEPRECATION")
         testInstance = testClass.newInstance()
         if (strategy is ModelCheckingStrategy) {
@@ -190,6 +202,9 @@ internal open class ParallelThreadsRunner(
                 LincheckJavaAgent.ensureObjectIsTransformed(testInstance)
                 ensuredTestInstanceIsTransformed = true
             }
+        }
+        if (strategy is ManagedStrategy) {
+            strategy.addRootToStaticMemorySnapshot(testInstance)
         }
         testThreadExecutions.forEach { it.testInstance = testInstance }
         validationPartExecution?.let { it.testInstance = testInstance }
