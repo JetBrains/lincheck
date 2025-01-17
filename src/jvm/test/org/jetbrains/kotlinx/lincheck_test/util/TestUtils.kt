@@ -13,6 +13,7 @@ package org.jetbrains.kotlinx.lincheck_test.util
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator
 import org.junit.Assert.*
 
 /**
@@ -91,6 +92,21 @@ fun checkTraceHasNoLincheckEvents(trace: String) {
 
 fun checkFailureIsNotLincheckInternalBug(failure: LincheckFailure) {
     check("You've caught a bug in Lincheck." !in failure.toString()) { "Internal Lincheck bug was detected" }
+}
+
+/**
+ * A generator for producing random strings from a predefined pool of constants.
+ */
+@Suppress("UNUSED_PARAMETER")
+class StringPoolGenerator(randomProvider: RandomProvider, configuration: String): ParameterGenerator<String> {
+    private val random = randomProvider.createRandom()
+
+    // TODO: this generator can be generalized to a generator choosing random element
+    //   from an arbitrary user-defined list
+    private val strings = arrayOf("", "abc", "xyz")
+
+    override fun generate(): String =
+        strings[random.nextInt(strings.size)]
 }
 
 /**
