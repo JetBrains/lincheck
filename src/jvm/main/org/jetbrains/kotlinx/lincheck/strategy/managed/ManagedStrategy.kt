@@ -21,7 +21,7 @@ import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import sun.nio.ch.lincheck.*
 import kotlinx.coroutines.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicFieldUpdaterNames.getAtomicFieldUpdaterName
+import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicFieldUpdaterNames.getAtomicFieldUpdaterDescriptor
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.FieldSearchHelper.findFinalFieldWithOwner
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.adornedStringRepresentation
@@ -1165,13 +1165,13 @@ abstract class ManagedStrategy(
             // Java AFU (this also automatically handles the `kotlinx.atomicfu`, since they are compiled to Java AFU + Java atomic arrays)
             isAtomicFieldUpdater(owner) -> {
                 val obj = params[0]
-                val afuDesc: AtomicFieldUpdaterDescriptor? = AtomicFieldUpdaterNames.getAtomicFieldUpdaterName(owner!!)
+                val afuDesc: AtomicFieldUpdaterDescriptor? = AtomicFieldUpdaterNames.getAtomicFieldUpdaterDescriptor(owner!!)
                 check(afuDesc != null) { "Cannot extract field name referenced by Java AFU object $owner" }
 
                 staticMemorySnapshot.trackField(obj, afuDesc.targetType, afuDesc.fieldName)
             }
             // TODO: System.arraycopy
-            // TODO: reflexivity
+            // TODO: reflection
         }
     }
 
@@ -1591,7 +1591,7 @@ abstract class ManagedStrategy(
         atomicUpdater: Any,
         parameters: Array<Any?>,
     ): MethodCallTracePoint {
-        getAtomicFieldUpdaterName(atomicUpdater)?.let { tracePoint.initializeOwnerName(it.fieldName) }
+        getAtomicFieldUpdaterDescriptor(atomicUpdater)?.let { tracePoint.initializeOwnerName(it.fieldName) }
         tracePoint.initializeParameters(parameters.drop(1).map { adornedStringRepresentation(it) })
         return tracePoint
     }

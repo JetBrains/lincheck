@@ -20,10 +20,12 @@ import kotlin.random.Random
 
 private val arrayValue = intArrayOf(2, 1, 4, 3, 6, 5, 8, 7, 10, 9)
 
-// TODO: parallel operations are not supported because of java.lang.ClassCastException:
-//  class java.util.concurrent.ForkJoinWorkerThread cannot be cast to class sun.nio.ch.lincheck.TestThread
-//  (java.util.concurrent.ForkJoinWorkerThread is in module java.base of loader 'bootstrap';
-//  sun.nio.ch.lincheck.TestThread is in unnamed module of loader 'bootstrap')
+// TODO:
+//  1. Instrumented method invocation inserted before `System.arraycopy` calls, get strapped out during execution (possibly jit causes that).
+//  2. Parallel operations are not supported because of java.lang.ClassCastException:
+//     class java.util.concurrent.ForkJoinWorkerThread cannot be casted to class sun.nio.ch.lincheck.TestThread
+//     (java.util.concurrent.ForkJoinWorkerThread is in module java.base of loader 'bootstrap';
+//     sun.nio.ch.lincheck.TestThread is in unnamed module of loader 'bootstrap').
 @Ignore("Without support for System.arraycopy, tracking for copy methods will not work")
 class ArraysAPISnapshotTest : AbstractSnapshotTest() {
     private class Wrapper(var x: Int)

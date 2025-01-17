@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 internal object AtomicFieldUpdaterNames {
 
     @Suppress("DEPRECATION")
-    internal fun getAtomicFieldUpdaterName(updater: Any): AtomicFieldUpdaterDescriptor? {
+    internal fun getAtomicFieldUpdaterDescriptor(updater: Any): AtomicFieldUpdaterDescriptor? {
         if (updater !is AtomicIntegerFieldUpdater<*> && updater !is AtomicLongFieldUpdater<*> && updater !is AtomicReferenceFieldUpdater<*, *>) {
             throw IllegalArgumentException("Provided object is not a recognized Atomic*FieldUpdater type.")
         }

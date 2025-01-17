@@ -254,13 +254,21 @@ class SnapshotTracker {
     }
 
     private fun getDeclaringClass(obj: Any?, clazz: Class<*>, fieldName: String): Class<*> {
-        return if (obj != null) clazz
-               else clazz.findField(fieldName).declaringClass
+        return if (obj != null) {
+            clazz
+        }
+        else {
+            clazz.findField(fieldName).declaringClass
+        }
     }
 
     private fun createFieldNode(obj: Any?, field: Field, value: Any?): MemoryNode {
-        return if (obj == null) StaticFieldNode(field, value)
-               else RegularFieldNode(field, value)
+        return if (obj == null) {
+            StaticFieldNode(field, value)
+        }
+        else {
+            RegularFieldNode(field, value)
+        }
     }
 
     private fun createArrayCellNode(index: Int, value: Any?): MemoryNode {
