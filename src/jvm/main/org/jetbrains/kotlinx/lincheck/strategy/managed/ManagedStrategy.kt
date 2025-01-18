@@ -2207,5 +2207,5 @@ private const val OBSTRUCTION_FREEDOM_SUSPEND_VIOLATION_MESSAGE =
  */
 private const val INFINITE_TIMEOUT = 1000L * 60 * 60 * 24 * 365
 
-private fun getTimeOutMs(strategy: ManagedStrategy, defaultTimeOutMs: Long): Long =
-    if (strategy.inIdeaPluginReplayMode) INFINITE_TIMEOUT else defaultTimeOutMs
+@Suppress("UNUSED_PARAMETER")
+private fun getTimeOutMs(strategy: ManagedStrategy, defaultTimeOutMs: Long): Long = INFINITE_TIMEOUT
