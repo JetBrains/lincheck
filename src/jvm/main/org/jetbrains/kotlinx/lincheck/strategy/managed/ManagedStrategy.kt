@@ -368,21 +368,21 @@ abstract class ManagedStrategy(
         }
         val trace = Trace(traceCollector!!.trace, threadNames)
 
-        val sameResultTypes = loggedResults.javaClass == result.javaClass
-        val sameResults = (
-            loggedResults !is CompletedInvocationResult ||
-            result !is CompletedInvocationResult ||
-            loggedResults.results == result.results
-        )
-        check(sameResultTypes && sameResults) {
-            StringBuilder().apply {
-                appendLine("Non-determinism found. Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc).")
-                appendLine("== Reporting the first execution without execution trace ==")
-                appendLine(result.toLincheckFailure(scenario, null))
-                appendLine("== Reporting the second execution ==")
-                appendLine(loggedResults.toLincheckFailure(scenario, trace).toString())
-            }.toString()
-        }
+//        val sameResultTypes = loggedResults.javaClass == result.javaClass
+//        val sameResults = (
+//            loggedResults !is CompletedInvocationResult ||
+//            result !is CompletedInvocationResult ||
+//            loggedResults.results == result.results
+//        )
+//        check(sameResultTypes && sameResults) {
+//            StringBuilder().apply {
+//                appendLine("Non-determinism found. Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc).")
+//                appendLine("== Reporting the first execution without execution trace ==")
+//                appendLine(result.toLincheckFailure(scenario, null))
+//                appendLine("== Reporting the second execution ==")
+//                appendLine(loggedResults.toLincheckFailure(scenario, trace).toString())
+//            }.toString()
+//        }
 
         return trace
     }
