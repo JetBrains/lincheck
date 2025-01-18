@@ -280,6 +280,7 @@ internal object LincheckJavaAgent {
         processedObjects += obj
 
         var clazz: Class<*> = obj.javaClass
+        if (clazz.name.contains("\$\$Lambda\$")) return
 
         ensureClassHierarchyIsTransformed(clazz)
 
