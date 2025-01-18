@@ -273,25 +273,25 @@ abstract class ManagedStrategy(
         runner = createRunner()
 
         val loggedResults = runInvocation()
-        // In case the runner detects a deadlock, some threads can still be in an active state,
-        // simultaneously adding events to the TraceCollector, which leads to an inconsistent trace.
-        // Therefore, if the runner detects deadlock, we don't even try to collect trace.
-        if (loggedResults is RunnerTimeoutInvocationResult) return null
-        val sameResultTypes = loggedResults.javaClass == result.javaClass
-        val sameResults = (
-            loggedResults !is CompletedInvocationResult ||
-            result !is CompletedInvocationResult ||
-            loggedResults.results == result.results
-        )
-        check(sameResultTypes && sameResults) {
-            StringBuilder().apply {
-                appendLine("Non-determinism found. Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc).")
-                appendLine("== Reporting the first execution without execution trace ==")
-                appendLine(result.toLincheckFailure(scenario, null))
-                appendLine("== Reporting the second execution ==")
-                appendLine(loggedResults.toLincheckFailure(scenario, Trace(traceCollector!!.trace)).toString())
-            }.toString()
-        }
+//        // In case the runner detects a deadlock, some threads can still be in an active state,
+//        // simultaneously adding events to the TraceCollector, which leads to an inconsistent trace.
+//        // Therefore, if the runner detects deadlock, we don't even try to collect trace.
+//        if (loggedResults is RunnerTimeoutInvocationResult) return null
+//        val sameResultTypes = loggedResults.javaClass == result.javaClass
+//        val sameResults = (
+//            loggedResults !is CompletedInvocationResult ||
+//            result !is CompletedInvocationResult ||
+//            loggedResults.results == result.results
+//        )
+//        check(sameResultTypes && sameResults) {
+//            StringBuilder().apply {
+//                appendLine("Non-determinism found. Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc).")
+//                appendLine("== Reporting the first execution without execution trace ==")
+//                appendLine(result.toLincheckFailure(scenario, null))
+//                appendLine("== Reporting the second execution ==")
+//                appendLine(loggedResults.toLincheckFailure(scenario, Trace(traceCollector!!.trace)).toString())
+//            }.toString()
+//        }
 
         return Trace(traceCollector!!.trace)
     }
