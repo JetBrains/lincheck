@@ -1569,5 +1569,4 @@ private const val OBSTRUCTION_FREEDOM_WAIT_VIOLATION_MESSAGE =
  */
 private const val INFINITE_TIMEOUT = 1000L * 60 * 60 * 24 * 365
 
-private fun getTimeOutMs(strategy: ManagedStrategy, defaultTimeOutMs: Long): Long =
-    if (strategy is ModelCheckingStrategy && strategy.replay) INFINITE_TIMEOUT else defaultTimeOutMs
+private fun getTimeOutMs(strategy: ManagedStrategy, defaultTimeOutMs: Long): Long = INFINITE_TIMEOUT
