@@ -19,6 +19,7 @@ import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
 import org.jetbrains.kotlinx.lincheck_test.util.isJdk8
 import org.junit.Test
 import java.util.concurrent.ConcurrentLinkedDeque
+import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicIntegerArray
@@ -55,7 +56,9 @@ abstract class BaseRunWithLambdaRepresentationTest<R>(private val outputFileName
     }
 }
 
-class ArrayReadWriteRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit>("array_rw_run_with_lambda.txt") {
+class ArrayReadWriteRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit>(
+    "array_rw_run_with_lambda.txt"
+) {
     companion object {
         private val array = IntArray(3) // variable is static in order to trigger snapshot tracker to restore it between iterations (`block` actually will be run twice)
     }
@@ -69,7 +72,9 @@ class ArrayReadWriteRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit
     }
 }
 
-class AtomicReferencesNamesRunWithLambdaTests : BaseRunWithLambdaRepresentationTest<Unit>("atomic_refs_trace_run_with_lambda.txt") {
+class AtomicReferencesNamesRunWithLambdaTests : BaseRunWithLambdaRepresentationTest<Unit>(
+    "atomic_refs_trace_run_with_lambda.txt"
+) {
 
     override fun block() {
         atomicReference.compareAndSet(atomicReference.get(), Node(2))
@@ -140,7 +145,9 @@ class AtomicReferencesNamesRunWithLambdaTests : BaseRunWithLambdaRepresentationT
     }
 }
 
-class AtomicReferencesFromMultipleFieldsRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit>("atomic_refs_two_fields_trace_run_with_lambda.txt") {
+class AtomicReferencesFromMultipleFieldsRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit>(
+    "atomic_refs_two_fields_trace_run_with_lambda.txt"
+) {
     companion object {
         private var atomicReference1: AtomicReference<Node>
         private var atomicReference2: AtomicReference<Node>
@@ -161,7 +168,9 @@ class AtomicReferencesFromMultipleFieldsRunWithLambdaTest : BaseRunWithLambdaRep
 
 }
 
-class VariableReadWriteRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit>("var_rw_run_with_lambda.txt") {
+class VariableReadWriteRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit>(
+    "var_rw_run_with_lambda.txt"
+) {
     companion object {
         private var x = 0
     }
@@ -174,8 +183,9 @@ class VariableReadWriteRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<U
     }
 }
 
-class BasicCustomThreadsRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit>("basic_custom_threads_run_with_lambda.txt") {
-
+class BasicCustomThreadsRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit>(
+    "basic_custom_threads_run_with_lambda.txt"
+) {
     override fun block() {
         val block = Runnable {
             wrapper.value += 1
@@ -229,11 +239,10 @@ class KotlinThreadRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit>(
     }
 }
 
-class LivelockRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Int>(
+class LivelockRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit>(
     if (isJdk8) "livelock_run_with_lambda_jdk8.txt" else "livelock_run_with_lambda.txt"
 ) {
-
-    override fun block(): Int {
+    override fun block() {
         var counter = 0
         val lock1 = SpinLock()
         val lock2 = SpinLock()
@@ -254,14 +263,13 @@ class LivelockRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Int>(
         val threads = listOf(t1, t2)
         threads.forEach { it.start() }
         threads.forEach { it.join() }
-        return counter
+        check(counter == 2)
     }
 }
 
 class IncorrectConcurrentLinkedDequeRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit>(
     if (isJdk8) "deque_run_with_lambda_jdk8.txt" else "deque_run_with_lambda.txt"
 ) {
-
     override fun block() {
         val deque = ConcurrentLinkedDeque<Int>()
         var r1: Int = -1
@@ -284,7 +292,6 @@ class IncorrectConcurrentLinkedDequeRunWithLambdaTest : BaseRunWithLambdaReprese
 class IncorrectHashmapRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit>(
     if (isJdk8) "hashmap_run_with_lambda_jdk8.txt" else "hashmap_run_with_lambda.txt"
 ) {
-
     override fun block() {
         val hashMap = HashMap<Int, Int>()
         var r1: Int? = null
