@@ -32,7 +32,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.Verifier
  * @param block lambda which body will be a target for the interleavings exploration.
  */
 fun <R> runConcurrentTest(
-    invocations: Int = ManagedCTestConfiguration.DEFAULT_INVOCATIONS,
+    invocations: Int = DEFAULT_INVOCATIONS_COUNT,
     block: () -> R
 ): LincheckFailure? {
     val scenario = scenario {
@@ -85,3 +85,5 @@ private class ExecutionExceptionsVerifier(@Suppress("UNUSED_PARAMETER") sequenti
         return results.parallelResults[0][0] !is ExceptionResult
     }
 }
+
+private const val DEFAULT_INVOCATIONS_COUNT = 50_000
