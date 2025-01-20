@@ -1,0 +1,40 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| ------------------------------------------------------------------------------------------------------------------- |
+|                                                      Thread 1                                                       |
+| ------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                         |
+|   escape.WRITE("START") at RepeatedForLoopRepresentationTest.operation(RepeatedForLoopRepresentationTest.kt:18)     |
+|   loop("Loop-A") at RepeatedForLoopRepresentationTest.operation(RepeatedForLoopRepresentationTest.kt:19)            |
+|     escape.WRITE("Loop-A-START") at RepeatedForLoopRepresentationTest.loop(RepeatedForLoopRepresentationTest.kt:26) |
+|     Loop with 2 iterations at RepeatedForLoopRepresentationTest.loop(RepeatedForLoopRepresentationTest.kt:27)       |
+|       Iteration #0                                                                                                  |
+|         escape.WRITE("Loop-A-1") at RepeatedForLoopRepresentationTest.loop(RepeatedForLoopRepresentationTest.kt:29) |
+|       Iteration #1                                                                                                  |
+|         escape.WRITE("Loop-A-2") at RepeatedForLoopRepresentationTest.loop(RepeatedForLoopRepresentationTest.kt:29) |
+|     escape.WRITE("Loop-A-END") at RepeatedForLoopRepresentationTest.loop(RepeatedForLoopRepresentationTest.kt:31)   |
+|   escape.WRITE("MID") at RepeatedForLoopRepresentationTest.operation(RepeatedForLoopRepresentationTest.kt:20)       |
+|   loop("Loop-B") at RepeatedForLoopRepresentationTest.operation(RepeatedForLoopRepresentationTest.kt:21)            |
+|     escape.WRITE("Loop-B-START") at RepeatedForLoopRepresentationTest.loop(RepeatedForLoopRepresentationTest.kt:26) |
+|     Loop with 2 iterations at RepeatedForLoopRepresentationTest.loop(RepeatedForLoopRepresentationTest.kt:27)       |
+|       Iteration #0                                                                                                  |
+|         escape.WRITE("Loop-B-1") at RepeatedForLoopRepresentationTest.loop(RepeatedForLoopRepresentationTest.kt:29) |
+|       Iteration #1                                                                                                  |
+|         escape.WRITE("Loop-B-2") at RepeatedForLoopRepresentationTest.loop(RepeatedForLoopRepresentationTest.kt:29) |
+|     escape.WRITE("Loop-B-END") at RepeatedForLoopRepresentationTest.loop(RepeatedForLoopRepresentationTest.kt:31)   |
+|   escape.WRITE("END") at RepeatedForLoopRepresentationTest.operation(RepeatedForLoopRepresentationTest.kt:22)       |
+|   result: void                                                                                                      |
+| ------------------------------------------------------------------------------------------------------------------- |

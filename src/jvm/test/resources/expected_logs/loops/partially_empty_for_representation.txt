@@ -1,0 +1,32 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| ---------------------------------------------------------------------------------------------------------------------------- |
+|                                                           Thread 1                                                           |
+| ---------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                  |
+|   escape.WRITE("START") at PartiallyEmptyForLoopRepresentationTest.operation(PartiallyEmptyForLoopRepresentationTest.kt:18)  |
+|   Loop with 5 iterations at PartiallyEmptyForLoopRepresentationTest.operation(PartiallyEmptyForLoopRepresentationTest.kt:20) |
+|     Iteration #0 (empty)                                                                                                     |
+|     Iteration #1                                                                                                             |
+|       escape.WRITE("12") at PartiallyEmptyForLoopRepresentationTest.operation(PartiallyEmptyForLoopRepresentationTest.kt:23) |
+|     Iteration #2 (empty)                                                                                                     |
+|     Iteration #3                                                                                                             |
+|       escape.WRITE("34") at PartiallyEmptyForLoopRepresentationTest.operation(PartiallyEmptyForLoopRepresentationTest.kt:23) |
+|     Iteration #4 (empty)                                                                                                     |
+|   escape.WRITE("5") at PartiallyEmptyForLoopRepresentationTest.operation(PartiallyEmptyForLoopRepresentationTest.kt:27)      |
+|   escape.WRITE("END") at PartiallyEmptyForLoopRepresentationTest.operation(PartiallyEmptyForLoopRepresentationTest.kt:28)    |
+|   result: void                                                                                                               |
+| ---------------------------------------------------------------------------------------------------------------------------- |

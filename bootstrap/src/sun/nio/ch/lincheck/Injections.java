@@ -56,6 +56,14 @@ public class Injections {
         return descriptor.getEventTracker();
     }
 
+    public static EventTracker getEventTrackerOrNull() {
+        ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
+        if (descriptor == null) {
+            return null;
+        }
+        return descriptor.getEventTracker();
+    }
+
     public static void storeCancellableContinuation(Object cont) {
         Thread t = Thread.currentThread();
         if (t instanceof TestThread) {
@@ -488,10 +496,16 @@ public class Injections {
     }
 
     public static void afterPossibleBackBranchTarget(int codeLocation, int labelId) {
-        getEventTracker().afterPossibleBackBranchTarget(codeLocation, labelId);
+        EventTracker t = getEventTrackerOrNull();
+        if (t != null) {
+            t.afterPossibleBackBranchTarget(codeLocation, labelId);
+        }
     }
 
     public static void beforeBackBranch(int codeLocation, int labelId) {
-        getEventTracker().beforeBackBranch(codeLocation, labelId);
+        EventTracker t = getEventTrackerOrNull();
+        if (t != null) {
+            t.beforeBackBranch(codeLocation, labelId);
+        }
     }
 }

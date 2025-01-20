@@ -1,0 +1,30 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| ---------------------------------------------------------------------------------------------------------------- |
+|                                                     Thread 1                                                     |
+| ---------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                      |
+|   escape.WRITE("START") at SimpleWhileLoopRepresentationTest.operation(SimpleWhileLoopRepresentationTest.kt:18)  |
+|   Loop with 3 iterations at SimpleWhileLoopRepresentationTest.operation(SimpleWhileLoopRepresentationTest.kt:19) |
+|     Iteration #0                                                                                                 |
+|       escape.WRITE("1") at SimpleWhileLoopRepresentationTest.operation(SimpleWhileLoopRepresentationTest.kt:22)  |
+|     Iteration #1                                                                                                 |
+|       escape.WRITE("2") at SimpleWhileLoopRepresentationTest.operation(SimpleWhileLoopRepresentationTest.kt:22)  |
+|     Iteration #2                                                                                                 |
+|       escape.WRITE("3") at SimpleWhileLoopRepresentationTest.operation(SimpleWhileLoopRepresentationTest.kt:22)  |
+|   escape.WRITE("END") at SimpleWhileLoopRepresentationTest.operation(SimpleWhileLoopRepresentationTest.kt:25)    |
+|   result: void                                                                                                   |
+| ---------------------------------------------------------------------------------------------------------------- |
