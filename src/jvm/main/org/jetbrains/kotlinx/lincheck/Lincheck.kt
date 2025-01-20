@@ -28,8 +28,6 @@ import org.jetbrains.kotlinx.lincheck.verifier.Verifier
  * This method will explore different interleavings of the [block] body and all the threads created within it,
  * searching for the first raised exception.
  *
- * @param testClassInstance If [block] is a method that modifies fields of its containing class (`testClassInstance`),
- *                          this parameter helps to track and restore those fields to their original values between invocations.
  * @param invocations number of different interleavings of code in the [block] that should be explored.
  * @param block lambda which body will be a target for the interleavings exploration.
  */
