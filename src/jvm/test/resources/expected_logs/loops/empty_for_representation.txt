@@ -1,0 +1,27 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| ---------------------------------------------------------------------------------------------------------- |
+|                                                  Thread 1                                                  |
+| ---------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                |
+|   escape.WRITE("START") at EmptyForLoopRepresentationTest.operation(EmptyForLoopRepresentationTest.kt:18)  |
+|   Loop with 2 iterations at EmptyForLoopRepresentationTest.operation(EmptyForLoopRepresentationTest.kt:20) |
+|     Iteration #0 (empty)                                                                                   |
+|     Iteration #1 (empty)                                                                                   |
+|   escape.WRITE("12") at EmptyForLoopRepresentationTest.operation(EmptyForLoopRepresentationTest.kt:23)     |
+|   escape.WRITE("END") at EmptyForLoopRepresentationTest.operation(EmptyForLoopRepresentationTest.kt:24)    |
+|   result: void                                                                                             |
+| ---------------------------------------------------------------------------------------------------------- |

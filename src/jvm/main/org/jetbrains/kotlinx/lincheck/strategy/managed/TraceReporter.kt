@@ -489,6 +489,7 @@ private fun detectLoops(node: TraceNode, prefixFactory: TraceNodePrefixFactory) 
                 iterationNumber = i / 2
             )
             loop.addInternalEvent(iteration)
+            lastEvent = iteration
             val start = positions[i].first + 1
             val end =  positions[i + 1].first - 1
             // "start" and "end" should be removed from a linked list, all between should go to the new iteration
@@ -812,18 +813,25 @@ internal class IterationNode(
     callDepth: Int,
     private val iterationNumber: Int
 ) : TraceInnerNode(prefixProvider, iThread, last, callDepth) {
+    override fun shouldBeExpanded(verboseTrace: Boolean): Boolean {
+        return verboseTrace || super.shouldBeExpanded(verboseTrace)
+    }
+
     override fun addRepresentationTo(
         traceRepresentation: MutableList<TraceEventRepresentation>,
         verboseTrace: Boolean
-    ): TraceNode? =
-        if (!shouldBeExpanded(verboseTrace)) {
-            traceRepresentation.add(TraceEventRepresentation(iThread, prefix + "Iteration #$iterationNumber"))
+    ): TraceNode? {
+        val suffix = if (internalEvents.isEmpty()) " (empty)" else ""
+        traceRepresentation.add(TraceEventRepresentation(iThread, prefix + "Iteration #$iterationNumber${suffix}"))
+        return if (!shouldBeExpanded(verboseTrace)) {
             lastState?.let { traceRepresentation.add(stateEventRepresentation(iThread, it)) }
             lastInternalEvent.next
         } else {
-            traceRepresentation.add(TraceEventRepresentation(iThread, prefix + "Iteration #$iterationNumber"))
             next
         }
+    }
+
+    fun hasChildren() = !internalEvents.isEmpty()
 }
 
 internal class LoopNode(
@@ -834,24 +842,36 @@ internal class LoopNode(
     private val location: StackTraceElement,
     val labelId: Int
 ) : TraceInnerNode(prefixProvider, iThread, last, callDepth) {
+    var hasNonEmptyIterations = false
+
+    override fun shouldBeExpanded(verboseTrace: Boolean): Boolean {
+        return verboseTrace || super.shouldBeExpanded(verboseTrace)
+    }
 
     override fun addInternalEvent(node: TraceNode) {
         check(node is IterationNode) { "Only iteration nodes can be added into loop" }
         super.addInternalEvent(node)
+        hasNonEmptyIterations = hasNonEmptyIterations || node.hasChildren()
     }
 
     override fun addRepresentationTo(
         traceRepresentation: MutableList<TraceEventRepresentation>,
         verboseTrace: Boolean
-    ): TraceNode? =
-        if (!shouldBeExpanded(verboseTrace)) {
-            traceRepresentation.add(TraceEventRepresentation(iThread, prefix + "Loop with ${internalEvents.size} iterations at " + location.shorten()))
+    ): TraceNode? {
+        val suffix = if (!verboseTrace && !hasNonEmptyIterations) " (all iterations are empty)" else ""
+        traceRepresentation.add(
+            TraceEventRepresentation(
+                iThread,
+                prefix + "Loop with ${internalEvents.size} iterations${suffix} at " + location.shorten()
+            )
+        )
+        return if (!shouldBeExpanded(verboseTrace)) {
             lastState?.let { traceRepresentation.add(stateEventRepresentation(iThread, it)) }
             lastInternalEvent.next
         } else {
-            traceRepresentation.add(TraceEventRepresentation(iThread, prefix + "Loop with ${internalEvents.size} iterations at " + location.shorten()))
             next
         }
+    }
 }
 
 /**
