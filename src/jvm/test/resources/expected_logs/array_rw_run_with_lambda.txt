@@ -18,20 +18,20 @@ The following interleaving leads to the error:
 
 Exception stack traces:
 #1: java.lang.IllegalStateException: Check failed.
-	at org.jetbrains.kotlinx.lincheck_test.representation.ArrayReadWriteRunWithLambdaTest.block(Unknown Source)
-	at org.jetbrains.kotlinx.lincheck_test.representation.ArrayReadWriteRunWithLambdaTest.block(Unknown Source)
-	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunWithLambdaRepresentationTest$testRunWithModelChecker$failure$1.invoke(Unknown Source)
-	at java.base/java.lang.Thread.run(Thread.java:833)
+	at org.jetbrains.kotlinx.lincheck_test.representation.ArrayReadWriteRunWithLambdaTest.block(RunWithLambdaRepresentationTests.kt:68)
+	at org.jetbrains.kotlinx.lincheck_test.representation.ArrayReadWriteRunWithLambdaTest.block(RunWithLambdaRepresentationTests.kt:58)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunWithLambdaRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunWithLambdaRepresentationTests.kt:44)
+	at java.base/java.lang.Thread.run(Thread.java:840)
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|                                                                                             Thread 1                                                                                             |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| run(() -> R): IllegalStateException #1                                                                                                                                                           |
-|   ArrayReadWriteRunWithLambdaTest#1.block(): threw IllegalStateException at BaseRunWithLambdaRepresentationTest$testRunWithModelChecker$failure$1.invoke(RunWithLambdaRepresentationTests.kt:41) |
-|     block(): threw IllegalStateException at ArrayReadWriteRunWithLambdaTest.block(RunWithLambdaRepresentationTests.kt:47)                                                                        |
-|       IntArray#1[0].READ: 0 at ArrayReadWriteRunWithLambdaTest.block(RunWithLambdaRepresentationTests.kt:53)                                                                                     |
-|       IntArray#1[0].WRITE(1) at ArrayReadWriteRunWithLambdaTest.block(RunWithLambdaRepresentationTests.kt:53)                                                                                    |
-|       IntArray#1[0].READ: 1 at ArrayReadWriteRunWithLambdaTest.block(RunWithLambdaRepresentationTests.kt:54)                                                                                     |
-|   result: IllegalStateException #1                                                                                                                                                               |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                             Thread 1                                                                                              |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| run(() -> R): IllegalStateException #1                                                                                                                                                            |
+|   ArrayReadWriteRunWithLambdaTest#1.block(): threw IllegalStateException at BaseRunWithLambdaRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunWithLambdaRepresentationTests.kt:44) |
+|     block(): threw IllegalStateException at ArrayReadWriteRunWithLambdaTest.block(RunWithLambdaRepresentationTests.kt:58)                                                                         |
+|       IntArray#1[0].READ: 0 at ArrayReadWriteRunWithLambdaTest.block(RunWithLambdaRepresentationTests.kt:66)                                                                                      |
+|       IntArray#1[0].WRITE(1) at ArrayReadWriteRunWithLambdaTest.block(RunWithLambdaRepresentationTests.kt:66)                                                                                     |
+|       IntArray#1[0].READ: 1 at ArrayReadWriteRunWithLambdaTest.block(RunWithLambdaRepresentationTests.kt:67)                                                                                      |
+|   result: IllegalStateException #1                                                                                                                                                                |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

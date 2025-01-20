@@ -34,7 +34,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 fun <R> runConcurrentTest(
     invocations: Int = DEFAULT_INVOCATIONS_COUNT,
     block: () -> R
-): LincheckFailure? {
+) {
     val scenario = scenario {
         parallel {
             thread { actor(GeneralPurposeMCWrapper<R>::run, block) }
@@ -62,12 +62,10 @@ fun <R> runConcurrentTest(
             val result = strategy.runInvocation()
             val failure = strategy.verify(result, verifier)
             if (failure != null) {
-                return failure
+                throw LincheckAssertionError(failure)
             }
         }
     }
-
-    return null
 }
 
 internal class GeneralPurposeMCWrapper<R>() {

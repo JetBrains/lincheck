@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
+import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.runConcurrentTest
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
 import org.jetbrains.kotlinx.lincheck_test.gpmc.SpinLock
@@ -38,10 +39,19 @@ abstract class BaseRunWithLambdaRepresentationTest<R>(private val outputFileName
 
     @Test
     fun testRunWithModelChecker() {
-        val failure = runConcurrentTest {
-            return@runConcurrentTest block()
+        val result = runCatching {
+            runConcurrentTest {
+                block()
+            }
         }
-        failure.checkLincheckOutput(outputFileName)
+        check(result.isFailure) {
+            "The test should fail, but it completed successfully"
+        }
+        val error = result.exceptionOrNull()!!
+        check(error is LincheckAssertionError) {
+            "The test should throw LincheckAssertionError"
+        }
+        error.failure.checkLincheckOutput(outputFileName)
     }
 }
 
