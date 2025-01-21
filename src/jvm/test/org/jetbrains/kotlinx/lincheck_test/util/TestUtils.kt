@@ -69,7 +69,7 @@ private val String.filtered: String get() {
     // Remove lines containing Java's lambda hash-codes;
     // as a temporary workaround we remove the whole line,
     // because hashcodes of different length can lead to additional spaces in the lines
-    filtered = filtered.lines().filter { !it.contains("\$\$Lambda\$") }.joinToString("\n")
+    filtered = filtered.lines().filter { !it.contains("\$\$Lambda") }.joinToString("\n")
     return filtered
 }
 
