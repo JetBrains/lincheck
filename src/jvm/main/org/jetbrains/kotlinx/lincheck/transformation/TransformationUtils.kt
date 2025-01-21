@@ -414,10 +414,12 @@ internal fun isStackTraceElementClass(className: String): Boolean =
     className == "java.lang.StackTraceElement"
 
 /**
- * Tests if the provided [className] contains represents [SharedThreadContainer] class.
-  */
-internal fun isSharedThreadContainerClass(className: String): Boolean =
-    className == "jdk.internal.vm.SharedThreadContainer"
+ * Tests if the provided [className] represents one of jdk internal [ThreadContainer] classes
+ * that use [JavaLangAccess.start] API to start threads.
+ */
+internal fun isThreadContainerClass(className: String): Boolean =
+    className == "jdk.internal.vm.SharedThreadContainer"  ||
+    className == "jdk.internal.misc.ThreadFlock"
 
 internal const val ASM_API = Opcodes.ASM9
 

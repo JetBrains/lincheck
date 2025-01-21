@@ -416,8 +416,8 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         if (className.startsWith("sun.")) return false
         if (className.startsWith("javax.")) return false
         if (className.startsWith("jdk.")) {
-            // Transform `SharedThreadContainer.start` to detect thread forking.
-            if (isSharedThreadContainerClass(className)) return true
+            // Transform `ThreadContainer.start` to detect thread forking.
+            if (isThreadContainerClass(className)) return true
             return false
         }
         // We do not need to instrument most standard Kotlin classes.
@@ -469,6 +469,6 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         containsClassloaderInName(className) ||
         // StackTraceElement class, to wrap all its methods into the ignored section.
         isStackTraceElementClass(className) ||
-        // SharedThreadContainer class, to detect threads started in the thread containers.
-        isSharedThreadContainerClass(className)
+        // ThreadContainer classes, to detect threads started in the thread containers.
+        isThreadContainerClass(className)
 }
