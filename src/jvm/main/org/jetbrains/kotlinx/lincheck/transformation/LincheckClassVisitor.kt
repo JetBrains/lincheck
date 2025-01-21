@@ -89,6 +89,21 @@ internal class LincheckClassVisitor(
             mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
         }
+        // In some newer versions of JDK, `ThreadPoolExecutor` uses
+        // the internal `SharedThreadContainer` class to manage threads in the pool;
+        // This class, in turn, has the method `start,
+        // that does not directly call `Thread.start` to start a thread,
+        // but instead uses internal API `JavaLangAccess.start`.
+        // To detect threads started in this way, we instrument this class
+        // and inject the appropriate hook on calls to the `JavaLangAccess.start` method.
+        if (isSharedThreadContainerClass(className.canonicalClassName)) {
+            if (methodName == "start") {
+                mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
+            } else {
+                mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
+            }
+            return mv
+        }
         if (methodName == "<init>") {
             mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
             mv = run {

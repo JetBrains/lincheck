@@ -408,11 +408,16 @@ internal fun containsClassloaderInName(className: String): Boolean =
     className.contains("ClassLoader")
 
 /**
- * Tests if the provided [className] contains `"StackTraceElement"` as a substring.
+ * Tests if the provided [className] represents [StackTraceElement] class.
  */
 internal fun isStackTraceElementClass(className: String): Boolean =
     className == "java.lang.StackTraceElement"
 
+/**
+ * Tests if the provided [className] contains represents [SharedThreadContainer] class.
+  */
+internal fun isSharedThreadContainerClass(className: String): Boolean =
+    className == "jdk.internal.vm.SharedThreadContainer"
 
 internal const val ASM_API = Opcodes.ASM9
 
