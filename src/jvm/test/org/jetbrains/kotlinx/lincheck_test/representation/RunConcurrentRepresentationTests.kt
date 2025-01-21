@@ -324,3 +324,35 @@ class IncorrectHashmapRunConcurrentRepresentationTest : BaseRunConcurrentReprese
         check(!(r1 == null && r2 == null))
     }
 }
+
+class ThreadPoolRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit>(
+    if (isJdk8) "thread_pool_run_with_lambda_jdk8.txt" else "thread_pool_run_with_lambda.txt"
+) {
+    override fun block() {
+        // TODO: currently there is a problem --- if we declare counter as a local variable the test does not pass;
+        //   after inspecting the generated traces, the hypothesis is that it is most likely because
+        //   the counter is incorrectly classified as a local object,
+        //   and thus accesses to this object are not tracked,
+        //   and the race on counter increment is not detected;
+        // var counter = 0
+        val executorService = Executors.newFixedThreadPool(2)
+        try {
+            val future1 = executorService.submit {
+                counter++
+            }
+            val future2 = executorService.submit {
+                counter++
+            }
+            future1.get()
+            future2.get()
+            check(counter == 2)
+        } finally {
+            executorService.shutdown()
+        }
+    }
+
+    companion object {
+        @JvmStatic
+        private var counter = 0
+    }
+}

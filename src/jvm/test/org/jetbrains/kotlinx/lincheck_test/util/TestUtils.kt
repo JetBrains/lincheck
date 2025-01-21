@@ -66,6 +66,10 @@ private val String.filtered: String get() {
     }.joinToString("\n")
     // Remove line numbers
     filtered = filtered.replace(LINE_NUMBER_REGEX, "")
+    // Remove lines containing Java's lambda hash-codes;
+    // as a temporary workaround we remove the whole line,
+    // because hashcodes of different length can lead to additional spaces in the lines
+    filtered = filtered.lines().filter { !it.contains("\$\$Lambda\$") }.joinToString("\n")
     return filtered
 }
 
