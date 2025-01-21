@@ -326,7 +326,16 @@ class IncorrectHashmapRunConcurrentRepresentationTest : BaseRunConcurrentReprese
 }
 
 class ThreadPoolRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit>(
-    if (isJdk8) "thread_pool_run_with_lambda_jdk8.txt" else "thread_pool_run_with_lambda.txt"
+    when (testJdkVersion) {
+        TestJdkVersion.JDK_8  -> "thread_pool/thread_pool_run_with_lambda_jdk8.txt"
+        TestJdkVersion.JDK_11 -> "thread_pool/thread_pool_run_with_lambda_jdk11.txt"
+        TestJdkVersion.JDK_13 -> "thread_pool/thread_pool_run_with_lambda_jdk13.txt"
+        TestJdkVersion.JDK_15 -> "thread_pool/thread_pool_run_with_lambda_jdk15.txt"
+        TestJdkVersion.JDK_17 -> "thread_pool/thread_pool_run_with_lambda_jdk17.txt"
+        TestJdkVersion.JDK_19 -> "thread_pool/thread_pool_run_with_lambda_jdk19.txt"
+        TestJdkVersion.JDK_20 -> "thread_pool/thread_pool_run_with_lambda_jdk20.txt"
+        TestJdkVersion.JDK_21 -> "thread_pool/thread_pool_run_with_lambda_jdk21.txt"
+    }
 ) {
     override fun block() {
         // TODO: currently there is a problem --- if we declare counter as a local variable the test does not pass;
