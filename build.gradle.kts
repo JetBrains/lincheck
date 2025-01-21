@@ -2,12 +2,17 @@ import groovy.util.*
 import kotlinx.team.infra.*
 import org.gradle.jvm.tasks.Jar
 import org.jetbrains.kotlin.gradle.*
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 // atomicfu
 buildscript {
     val atomicfuVersion: String by project
+    val asmVersion: String by project
     dependencies {
-        classpath("org.jetbrains.kotlinx:atomicfu-gradle-plugin:$atomicfuVersion")
+        classpath("org.jetbrains.kotlinx:atomicfu-gradle-plugin:$atomicfuVersion") {
+            classpath("org.ow2.asm:asm-commons:$asmVersion")
+            classpath("org.ow2.asm:asm-util:$asmVersion")
+        }
     }
 }
 apply(plugin = "kotlinx-atomicfu")
@@ -31,14 +36,6 @@ kotlin {
 
     jvm {
         withJava()
-
-        val main by compilations.getting {
-            kotlinOptions.jvmTarget = "1.8"
-        }
-
-        val test by compilations.getting {
-            kotlinOptions.jvmTarget = "1.8"
-        }
     }
 
     sourceSets {
@@ -84,12 +81,23 @@ kotlin {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
     toolchain {
-        val jdkToolchainVersion: String by project
-        languageVersion = JavaLanguageVersion.of(jdkToolchainVersion)
+        languageVersion = JavaLanguageVersion.of(8)
     }
+}
+
+tasks {
+    val jdkToolchainVersion: String by project
+    compileTestJava {
+        javaToolchains {
+            javaCompiler = compilerFor { languageVersion.set(JavaLanguageVersion.of(jdkToolchainVersion)) }
+        }
+    }
+}
+
+tasks.named<KotlinCompile>("compileTestKotlinJvm") {
+    val jdkToolchainVersion: String by project
+    kotlinJavaToolchain.toolchain.use(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(jdkToolchainVersion)) })
 }
 
 sourceSets.main {
@@ -107,6 +115,15 @@ val bootstrapJar = tasks.register<Copy>("bootstrapJar") {
     dependsOn(":bootstrap:jar")
     from(file("${project(":bootstrap").buildDir}/libs/bootstrap.jar"))
     into(file("$buildDir/processedResources/jvm/main"))
+}
+
+tasks.withType<Test> {
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            val jdkToolchainVersion: String by project
+            languageVersion.set(JavaLanguageVersion.of(jdkToolchainVersion))
+        }
+    )
 }
 
 tasks {

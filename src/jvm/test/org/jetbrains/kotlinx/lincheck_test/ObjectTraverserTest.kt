@@ -111,9 +111,9 @@ class ObjectTraverserTest {
     fun `should jump through atomic refs`() {
         val myObject = object : Any() {
             val javaRef = AtomicReference<AtomicReference<Int>>(AtomicReference(1))
-            val atomicFURef: kotlinx.atomicfu.AtomicRef<kotlinx.atomicfu.AtomicRef<Any>?> = kotlinx.atomicfu.atomic(null)
+            val atomicFURef: kotlinx.atomicfu.AtomicRef<AtomicReference<Any>?> = kotlinx.atomicfu.atomic(null)
         }
-        myObject.atomicFURef.value = kotlinx.atomicfu.atomic<Any>(2)
+        myObject.atomicFURef.value = AtomicReference<Any>(2)
 
         val objectEnumeration = enumerateObjects(myObject)
         Assert.assertTrue(
