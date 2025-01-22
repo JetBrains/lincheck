@@ -21,6 +21,8 @@ import org.jetbrains.kotlinx.lincheck_test.gpmc.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
 import java.util.concurrent.*
 import java.util.concurrent.atomic.*
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import kotlin.concurrent.thread
 import kotlin.random.Random
 import org.junit.*
@@ -364,5 +366,35 @@ class ThreadPoolRunConcurrentRepresentationTest : BaseRunConcurrentRepresentatio
     companion object {
         @JvmStatic
         private var counter = 0
+    }
+}
+
+class CoroutinesRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit>(
+    "coroutines/coroutines_run_with_lambda.txt"
+) {
+    companion object {
+        @JvmStatic var sharedCounter = 0
+
+        @JvmStatic var r1 = -1
+        @JvmStatic var r2 = -1
+
+        private val channel1 = Channel<Int>(capacity = 1)
+        private val channel2 = Channel<Int>(capacity = 1)
+    }
+
+    override fun block() = runBlocking {
+        Executors.newFixedThreadPool(2).asCoroutineDispatcher().use { dispatcher ->
+            val job1 = launch(dispatcher) {
+                channel1.send(sharedCounter++)
+                r1 = channel2.receive()
+            }
+            val job2 = launch(dispatcher) {
+                channel2.send(sharedCounter++)
+                r2 = channel1.receive()
+            }
+            job1.join()
+            job2.join()
+            check(r1 == 1 || r2 == 1)
+        }
     }
 }
