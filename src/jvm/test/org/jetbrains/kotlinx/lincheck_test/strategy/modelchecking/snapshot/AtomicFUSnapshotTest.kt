@@ -120,3 +120,120 @@ class AtomicFUSnapshotTest : AbstractSnapshotTest() {
         atomicFURefArray[Random.nextInt(0, atomicFURefArray.size)].value!!.x = Random.nextInt()
     }
 }
+
+class ImplicitAtomicFUSnapshotTest : AbstractSnapshotTest() {
+    companion object {
+        private class Wrapper(var x: Int)
+
+        private val atomicFUInt = kotlinx.atomicfu.atomic(1)
+        private val atomicFURef = kotlinx.atomicfu.atomic<Wrapper>(Wrapper(1))
+
+        private val atomicFUIntArray = kotlinx.atomicfu.AtomicIntArray(3)
+        private val atomicFURefArray = kotlinx.atomicfu.atomicArrayOfNulls<Wrapper>(3)
+
+        init {
+            for (i in 0..atomicFUIntArray.size - 1) {
+                atomicFUIntArray[i].value = i + 1
+            }
+
+            for (i in 0..atomicFURefArray.size - 1) {
+                atomicFURefArray[i].value = Wrapper(i + 1)
+            }
+        }
+
+        // remember values to restore
+        private val atomicFURefValue = atomicFURef.value
+        private val atomicFUIntValues: List<Int> = mutableListOf<Int>().apply {
+            for (i in 0..atomicFUIntArray.size - 1) {
+                add(atomicFUIntArray[i].value)
+            }
+        }
+        private val atomicFURefArrayValues: List<Wrapper> = mutableListOf<Wrapper>().apply {
+            for (i in 0..atomicFURefArray.size - 1) {
+                add(atomicFURefArray[i].value!!)
+            }
+        }
+    }
+
+    class ImplicitAtomicFUSnapshotVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : SnapshotVerifier() {
+        override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
+            checkForExceptions(results)
+
+            check(atomicFUInt.value == 1)
+
+            check(atomicFURef.value == atomicFURefValue)
+            check(atomicFURef.value.x == 1)
+
+            for (i in 0..atomicFUIntArray.size - 1) {
+                check(atomicFUIntArray[i].value == atomicFUIntValues[i])
+            }
+
+            for (i in 0..atomicFURefArray.size - 1) {
+                check(atomicFURefArray[i].value == atomicFURefArrayValues[i])
+                check(atomicFURefArray[i].value!!.x == i + 1)
+            }
+
+            return true
+        }
+    }
+
+    override fun <O : ManagedOptions<O, *>> O.customize() {
+        verifier(ImplicitAtomicFUSnapshotVerifier::class.java)
+        threads(1)
+        iterations(100)
+        invocationsPerIteration(1)
+        actorsPerThread(10)
+    }
+
+    @Operation
+    fun getAndSetAtomicFUInt() {
+        atomicFUInt.getAndSet(Random.nextInt())
+    }
+
+    @Operation
+    fun compareAndSetAtomicFUInt() {
+        atomicFUInt.compareAndSet(atomicFUInt.value, Random.nextInt())
+    }
+
+    @Operation
+    fun getAndIncrementAtomicFUInt() {
+        atomicFUInt.getAndIncrement()
+    }
+
+    @Operation
+    fun getAndSetAtomicFURef() {
+        atomicFURef.getAndSet(Wrapper(Random.nextInt()))
+    }
+
+    @Operation
+    fun compareAndSetAtomicFURef() {
+        atomicFURef.compareAndSet(atomicFURef.value, Wrapper(Random.nextInt()))
+    }
+
+    @Operation
+    fun incrementAndGetAtomicFUIntArray() {
+        atomicFUIntArray[Random.nextInt(0, atomicFUIntArray.size)].incrementAndGet()
+    }
+
+    @Operation
+    fun decrementAndGetAtomicFUIntArray() {
+        atomicFUIntArray[Random.nextInt(0, atomicFUIntArray.size)].decrementAndGet()
+    }
+
+    @Operation
+    fun compareAndSetAtomicFUIntArray() {
+        val idx = Random.nextInt(0, atomicFUIntArray.size)
+        atomicFUIntArray[idx].compareAndSet(atomicFUIntArray[idx].value, Random.nextInt())
+    }
+
+    @Operation
+    fun getAndSetAtomicFURefArray() {
+        atomicFURefArray[Random.nextInt(0, atomicFURefArray.size)].getAndSet(Wrapper(Random.nextInt()))
+    }
+
+    @Operation
+    fun compareAndSetAtomicFURefArray() {
+        val idx = Random.nextInt(0, atomicFURefArray.size)
+        atomicFURefArray[idx].compareAndSet(atomicFURefArray[idx].value, Wrapper(Random.nextInt()))
+    }
+}

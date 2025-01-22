@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 internal object AtomicFieldUpdaterNames {
 
     @Suppress("DEPRECATION")
-    internal fun getAtomicFieldUpdaterName(updater: Any): String? {
+    internal fun getAtomicFieldUpdaterDescriptor(updater: Any): AtomicFieldUpdaterDescriptor? {
         if (updater !is AtomicIntegerFieldUpdater<*> && updater !is AtomicLongFieldUpdater<*> && updater !is AtomicReferenceFieldUpdater<*, *>) {
             throw IllegalArgumentException("Provided object is not a recognized Atomic*FieldUpdater type.")
         }
@@ -37,7 +37,8 @@ internal object AtomicFieldUpdaterNames {
             val offsetField = updater.javaClass.getDeclaredField("offset")
             val offset = UNSAFE.getLong(updater, UNSAFE.objectFieldOffset(offsetField))
 
-            return findFieldNameByOffsetViaUnsafe(targetType, offset)
+            val fieldName = findFieldNameByOffsetViaUnsafe(targetType, offset) ?: return null
+            return AtomicFieldUpdaterDescriptor(targetType, fieldName)
         } catch (t: Throwable) {
             t.printStackTrace()
         }
@@ -45,3 +46,11 @@ internal object AtomicFieldUpdaterNames {
         return null // Field not found
     }
 }
+
+/**
+ * Descriptor of the Java AFU instance.
+ */
+internal data class AtomicFieldUpdaterDescriptor(
+    val targetType: Class<*>,
+    val fieldName: String
+)

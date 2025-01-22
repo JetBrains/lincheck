@@ -46,10 +46,25 @@ class SnapshotTracker {
         class ArrayCellNode(val index: Int, initialValue: Any?) : MemoryNode(initialValue)
     }
 
-    fun trackField(obj: Any?, className: String, fieldName: String) {
-        if (obj != null && obj !in trackedObjects) return
+    fun trackField(obj: Any?, accessClass: Class<*>, fieldName: String) {
+        if (obj != null && !isTracked(obj)) return
+        trackFieldImpl(
+            obj = obj,
+            clazz = getDeclaringClass(obj, accessClass, fieldName),
+            fieldName = fieldName
+        )
+    }
 
-        val clazz = getDeclaringClass(obj, className, fieldName)
+    fun trackField(obj: Any?, accessClassName: String, fieldName: String) {
+        if (obj != null && !isTracked(obj)) return
+        trackFieldImpl(
+            obj = obj,
+            clazz = getDeclaringClass(obj, Class.forName(accessClassName), fieldName),
+            fieldName = fieldName
+        )
+    }
+
+    private fun trackFieldImpl(obj: Any?, clazz: Class<*>, fieldName: String) {
         val field = clazz.findField(fieldName)
         val readResult = readFieldSafely(obj, field)
 
@@ -65,7 +80,7 @@ class SnapshotTracker {
     }
 
     fun trackArrayCell(array: Any, index: Int) {
-        if (array !in trackedObjects) return
+        if (!isTracked(array)) return
 
         val readResult = runCatching { readArrayElementViaUnsafe(array, index) }
 
@@ -84,7 +99,7 @@ class SnapshotTracker {
         // in case this works too slowly, an optimization could be used
         // see https://github.com/JetBrains/lincheck/pull/418/commits/0d708b84dd2bfd5dbfa961549dda128d91dc3a5b#diff-a684b1d7deeda94bbf907418b743ae2c0ec0a129760d3b87d00cdf5adfab56c4R146-R199
         objs
-            .filter { it != null && it in trackedObjects }
+            .filter { it != null && isTracked(it) }
             .forEach { trackReachableObjectSubgraph(it!!) }
     }
 
@@ -94,6 +109,8 @@ class SnapshotTracker {
             .filterIsInstance<Class<*>>()
             .forEach { restoreValues(it, visitedObjects) }
     }
+
+    private fun isTracked(obj: Any): Boolean = obj in trackedObjects
 
     /**
      * @return `true` if the [fieldValue] is a trackable object, and it is added
@@ -179,9 +196,8 @@ class SnapshotTracker {
     private fun shouldTrackEagerly(obj: Any?): Boolean {
         if (obj == null) return false
         return (
-            // TODO: in further development of snapshot restoring feature this check should be removed
-            //  (and only check for java atomic classes should be inserted), see https://github.com/JetBrains/lincheck/pull/418#issue-2595977113
-            //  right now it is needed for collections to be restored properly (because of missing support for `System.arrayCopy()` and other similar methods)
+            // TODO: after support for System.arraycopy,
+            //  rewrite to `obj.javaClass.name.startsWith("java.util.concurrent.") && obj.javaClass.name.contains("Atomic")`
             obj.javaClass.name.startsWith("java.util.")
         )
     }
@@ -237,16 +253,22 @@ class SnapshotTracker {
         )
     }
 
-    private fun getDeclaringClass(obj: Any?, className: String, fieldName: String): Class<*> {
-        return Class.forName(className).let {
-            if (obj != null) it
-            else it.findField(fieldName).declaringClass
+    private fun getDeclaringClass(obj: Any?, clazz: Class<*>, fieldName: String): Class<*> {
+        return if (obj != null) {
+            clazz
+        }
+        else {
+            clazz.findField(fieldName).declaringClass
         }
     }
 
     private fun createFieldNode(obj: Any?, field: Field, value: Any?): MemoryNode {
-        return if (obj == null) StaticFieldNode(field, value)
-               else RegularFieldNode(field, value)
+        return if (obj == null) {
+            StaticFieldNode(field, value)
+        }
+        else {
+            RegularFieldNode(field, value)
+        }
     }
 
     private fun createArrayCellNode(index: Int, value: Any?): MemoryNode {

@@ -74,7 +74,6 @@ internal object VarHandleNames {
             )
         )
     ).flatten()
-
     
     // varHandle is Any because of Java 8, where VarHandle class does not exist
     internal fun varHandleMethodType(varHandle: Any, parameters: Array<Any?>): VarHandleMethodType = runCatching {
@@ -117,13 +116,11 @@ internal object VarHandleNames {
      */
     private class VarHandleStaticNameExtractor(varHandleClass: Class<*>) : VarHandleNameExtractor(varHandleClass) {
         private val fieldOffsetField: Field = varHandleClass.getDeclaredField("fieldOffset")
-
         private val receiverTypeField: Field = varHandleClass.getDeclaredField("base")
 
         override fun getMethodType(varHandle: Any, parameters: Array<Any?>): VarHandleMethodType {
             val ownerType = readFieldViaUnsafe(varHandle, receiverTypeField, Unsafe::getObject) as Class<*>
             val fieldOffset = readFieldViaUnsafe(varHandle, fieldOffsetField, Unsafe::getLong)
-
             val fieldName = findFieldNameByOffsetViaUnsafe(ownerType, fieldOffset) ?: return TreatAsDefaultMethod
 
             return StaticVarHandleMethod(ownerType, fieldName, parameters.toList())

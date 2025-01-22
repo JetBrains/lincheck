@@ -21,7 +21,7 @@ import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import sun.nio.ch.lincheck.*
 import kotlinx.coroutines.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicFieldUpdaterNames.getAtomicFieldUpdaterName
+import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicFieldUpdaterNames.getAtomicFieldUpdaterDescriptor
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.FieldSearchHelper.findFinalFieldWithOwner
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.adornedStringRepresentation
@@ -54,7 +54,7 @@ abstract class ManagedStrategy(
     // Runner for scenario invocations,
     // can be replaced with a new one for trace construction.
     override var runner = createRunner()
-    
+
     // == EXECUTION CONTROL FIELDS ==
 
     protected val threadScheduler = ManagedThreadScheduler()
@@ -1096,15 +1096,19 @@ abstract class ManagedStrategy(
     /**
      * Tracks a specific field of an [obj], if the [obj] is either `null` (which means that field is static),
      * or one this objects which contains it is already stored.
+     *
+     * *Must be called from [runInIgnoredSection].*
      */
-    fun updateSnapshotOnFieldAccess(obj: Any?, className: String, fieldName: String) = runInIgnoredSection {
+    private fun updateSnapshotOnFieldAccess(obj: Any?, className: String, fieldName: String) {
         staticMemorySnapshot.trackField(obj, className, fieldName)
     }
 
     /**
      * Tracks a specific [array] element at [index], if the [array] is already tracked.
+     *
+     * *Must be called from [runInIgnoredSection].*
      */
-    fun updateSnapshotOnArrayElementAccess(array: Any, index: Int) = runInIgnoredSection {
+    private fun updateSnapshotOnArrayElementAccess(array: Any, index: Int) {
         staticMemorySnapshot.trackArrayCell(array, index)
     }
 
@@ -1114,6 +1118,61 @@ abstract class ManagedStrategy(
      */
     override fun updateSnapshotBeforeConstructorCall(objs: Array<Any?>) = runInIgnoredSection {
         staticMemorySnapshot.trackObjects(objs)
+    }
+
+    /**
+     * Tracks fields that are accessed via System.arraycopy, Unsafe API, VarHandle API, Java AFU API, and kotlinx.atomicfu.
+     *
+     * *Must be called from [runInIgnoredSection].*
+     */
+    private fun processMethodEffectOnStaticSnapshot(
+        owner: Any?,
+        params: Array<Any?>
+    ) {
+        when {
+            // Unsafe API
+            isUnsafe(owner) -> {
+                val methodType: UnsafeName = UnsafeNames.getMethodCallType(params)
+                when (methodType) {
+                    is UnsafeInstanceMethod -> {
+                        staticMemorySnapshot.trackField(methodType.owner, methodType.owner.javaClass, methodType.fieldName)
+                    }
+                    is UnsafeStaticMethod -> {
+                        staticMemorySnapshot.trackField(null, methodType.clazz, methodType.fieldName)
+                    }
+                    is UnsafeArrayMethod -> {
+                        staticMemorySnapshot.trackArrayCell(methodType.array, methodType.index)
+                    }
+                    else -> {}
+                }
+            }
+            // VarHandle API
+            isVarHandle(owner) -> {
+                val methodType: VarHandleMethodType = VarHandleNames.varHandleMethodType(owner, params)
+                when (methodType) {
+                    is InstanceVarHandleMethod -> {
+                        staticMemorySnapshot.trackField(methodType.owner, methodType.owner.javaClass, methodType.fieldName)
+                    }
+                    is StaticVarHandleMethod -> {
+                        staticMemorySnapshot.trackField(null, methodType.ownerClass, methodType.fieldName)
+                    }
+                    is ArrayVarHandleMethod -> {
+                        staticMemorySnapshot.trackArrayCell(methodType.array, methodType.index)
+                    }
+                    else -> {}
+                }
+            }
+            // Java AFU (this also automatically handles the `kotlinx.atomicfu`, since they are compiled to Java AFU + Java atomic arrays)
+            isAtomicFieldUpdater(owner) -> {
+                val obj = params[0]
+                val afuDesc: AtomicFieldUpdaterDescriptor? = AtomicFieldUpdaterNames.getAtomicFieldUpdaterDescriptor(owner!!)
+                check(afuDesc != null) { "Cannot extract field name referenced by Java AFU object $owner" }
+
+                staticMemorySnapshot.trackField(obj, afuDesc.targetType, afuDesc.fieldName)
+            }
+            // TODO: System.arraycopy
+            // TODO: reflection
+        }
     }
 
     private fun methodGuaranteeType(owner: Any?, className: String, methodName: String): ManagedGuaranteeType? = runInIgnoredSection {
@@ -1135,6 +1194,10 @@ abstract class ManagedStrategy(
         params: Array<Any?>
     ) {
         val guarantee = runInIgnoredSection {
+            // process method effect on the static memory snapshot
+            processMethodEffectOnStaticSnapshot(owner, params)
+
+            // process known method concurrency guarantee
             val iThread = threadScheduler.getCurrentThreadId()
             // re-throw abort error if the thread was aborted
             if (threadScheduler.isAborted(iThread)) {
@@ -1541,7 +1604,7 @@ abstract class ManagedStrategy(
         atomicUpdater: Any,
         parameters: Array<Any?>,
     ): MethodCallTracePoint {
-        getAtomicFieldUpdaterName(atomicUpdater)?.let { tracePoint.initializeOwnerName(it) }
+        getAtomicFieldUpdaterDescriptor(atomicUpdater)?.let { tracePoint.initializeOwnerName(it.fieldName) }
         tracePoint.initializeParameters(parameters.drop(1).map { adornedStringRepresentation(it) })
         return tracePoint
     }
