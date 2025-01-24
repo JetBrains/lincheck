@@ -10,29 +10,19 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.runConcurrentTest
+import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
-import org.jetbrains.kotlinx.lincheck_test.gpmc.SpinLock
-import org.jetbrains.kotlinx.lincheck_test.gpmc.withLock
-import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
-import org.jetbrains.kotlinx.lincheck_test.util.isJdk8
-import org.junit.Test
+import org.jetbrains.kotlinx.lincheck_test.gpmc.*
+import org.jetbrains.kotlinx.lincheck_test.util.*
 import java.util.concurrent.ConcurrentLinkedDeque
-import java.util.concurrent.Executors
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicIntegerArray
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater
-import java.util.concurrent.atomic.AtomicLong
-import java.util.concurrent.atomic.AtomicLongArray
-import java.util.concurrent.atomic.AtomicReference
-import java.util.concurrent.atomic.AtomicReferenceArray
+import java.util.concurrent.atomic.*
 import kotlin.concurrent.thread
 import kotlin.random.Random
+import org.junit.Test
 
 
-abstract class BaseRunWithLambdaRepresentationTest<R>(private val outputFileName: String) {
+abstract class BaseRunConcurrentRepresentationTest<R>(private val outputFileName: String) {
     /**
      * Implement me and place the logic to check its trace.
      */
@@ -56,8 +46,8 @@ abstract class BaseRunWithLambdaRepresentationTest<R>(private val outputFileName
     }
 }
 
-class ArrayReadWriteRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit>(
-    "array_rw_run_with_lambda.txt"
+class ArrayReadWriteRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
+    "run_concurrent_test/array_rw.txt"
 ) {
     companion object {
         private val array = IntArray(3) // variable is static in order to trigger snapshot tracker to restore it between iterations (`block` actually will be run twice)
@@ -72,8 +62,8 @@ class ArrayReadWriteRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit
     }
 }
 
-class AtomicReferencesNamesRunWithLambdaTests : BaseRunWithLambdaRepresentationTest<Unit>(
-    "atomic_refs_trace_run_with_lambda.txt"
+class AtomicReferencesNamesRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
+    "run_concurrent_test/atomic_refs.txt"
 ) {
 
     override fun block() {
@@ -145,8 +135,8 @@ class AtomicReferencesNamesRunWithLambdaTests : BaseRunWithLambdaRepresentationT
     }
 }
 
-class AtomicReferencesFromMultipleFieldsRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit>(
-    "atomic_refs_two_fields_trace_run_with_lambda.txt"
+class AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
+    "run_concurrent_test/atomic_refs_two_fields.txt"
 ) {
     companion object {
         private var atomicReference1: AtomicReference<Node>
@@ -168,8 +158,8 @@ class AtomicReferencesFromMultipleFieldsRunWithLambdaTest : BaseRunWithLambdaRep
 
 }
 
-class VariableReadWriteRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit>(
-    "var_rw_run_with_lambda.txt"
+class VariableReadWriteRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
+    "run_concurrent_test/var_rw.txt"
 ) {
     companion object {
         private var x = 0
@@ -183,8 +173,8 @@ class VariableReadWriteRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<U
     }
 }
 
-class BasicCustomThreadsRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit>(
-    "basic_custom_threads_run_with_lambda.txt"
+class CustomThreadsRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
+    "run_concurrent_test/custom_threads.txt"
 ) {
     override fun block() {
         val block = Runnable {
@@ -221,8 +211,8 @@ class BasicCustomThreadsRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<
     data class Wrapper(@Volatile @JvmField var value: Int)
 }
 
-class KotlinThreadRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit>(
-    if (isJdk8) "kotlin_thread_run_with_lambda_jdk8.txt" else "kotlin_thread_run_with_lambda.txt"
+class KotlinThreadRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
+    if (isJdk8) "run_concurrent_test/kotlin_thread_jdk8.txt" else "run_concurrent_test/kotlin_thread.txt"
 ) {
     companion object {
         @Volatile
@@ -239,8 +229,8 @@ class KotlinThreadRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit>(
     }
 }
 
-class LivelockRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit>(
-    if (isJdk8) "livelock_run_with_lambda_jdk8.txt" else "livelock_run_with_lambda.txt"
+class LivelockRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
+    if (isJdk8) "run_concurrent_test/livelock_jdk8.txt" else "run_concurrent_test/livelock.txt"
 ) {
     override fun block() {
         var counter = 0
@@ -267,8 +257,8 @@ class LivelockRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit>(
     }
 }
 
-class IncorrectConcurrentLinkedDequeRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit>(
-    if (isJdk8) "deque_run_with_lambda_jdk8.txt" else "deque_run_with_lambda.txt"
+class IncorrectConcurrentLinkedDequeRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
+    if (isJdk8) "run_concurrent_test/deque_jdk8.txt" else "run_concurrent_test/deque.txt"
 ) {
     override fun block() {
         val deque = ConcurrentLinkedDeque<Int>()
@@ -289,8 +279,8 @@ class IncorrectConcurrentLinkedDequeRunWithLambdaTest : BaseRunWithLambdaReprese
     }
 }
 
-class IncorrectHashmapRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit>(
-    if (isJdk8) "hashmap_run_with_lambda_jdk8.txt" else "hashmap_run_with_lambda.txt"
+class IncorrectHashmapRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
+    if (isJdk8) "run_concurrent_test/hashmap_jdk8.txt" else "run_concurrent_test/hashmap.txt"
 ) {
     override fun block() {
         val hashMap = HashMap<Int, Int>()

@@ -1,0 +1,38 @@
+= Invalid execution results =
+| -------------------------------------- |
+|                Thread 1                |
+| -------------------------------------- |
+| run(() -> R): IllegalStateException #1 |
+| -------------------------------------- |
+
+---
+The number next to an exception name helps you find its stack trace provided after the interleaving section
+---
+
+The following interleaving leads to the error:
+| -------------------------------------- |
+|                Thread 1                |
+| -------------------------------------- |
+| run(() -> R): IllegalStateException #1 |
+| -------------------------------------- |
+
+Exception stack traces:
+#1: java.lang.IllegalStateException: Check failed.
+	at org.jetbrains.kotlinx.lincheck_test.representation.AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:154)
+	at org.jetbrains.kotlinx.lincheck_test.representation.AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:138)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:35)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+
+Detailed trace:
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|                                                                                                               Thread 1                                                                                                               |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| run(() -> R): IllegalStateException #1                                                                                                                                                                                               |
+|   AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest#1.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:35)  |
+|     block(): threw IllegalStateException at AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:138)                                                                         |
+|       AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.atomicReference1.READ: AtomicReference#1 at AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:153) |
+|       AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.atomicReference2.READ: AtomicReference#1 at AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:153) |
+|       AtomicReference#1.get(): Node#1 at AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:153)                                                                            |
+|       AtomicReference#1.compareAndSet(Node#1,Node#2): true at AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:153)                                                       |
+|   result: IllegalStateException #1                                                                                                                                                                                                   |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
