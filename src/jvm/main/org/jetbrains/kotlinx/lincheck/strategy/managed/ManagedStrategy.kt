@@ -174,7 +174,6 @@ abstract class ManagedStrategy(
             useClocks = UseClocks.ALWAYS
         )
 
-
     // == STRATEGY INTERFACE METHODS ==
 
     /**
@@ -1114,7 +1113,7 @@ abstract class ManagedStrategy(
      * Required as a trick to overcome issue with leaking this in constructors, see https://github.com/JetBrains/lincheck/issues/424.
      */
     override fun updateSnapshotBeforeConstructorCall(objs: Array<Any?>) = runInIgnoredSection {
-        staticMemorySnapshot.trackObjectsEagerly(objs)
+        staticMemorySnapshot.trackObjects(objs)
     }
 
     private fun methodGuaranteeType(owner: Any?, className: String, methodName: String): ManagedGuaranteeType? = runInIgnoredSection {
