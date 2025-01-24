@@ -50,7 +50,9 @@ class ArrayReadWriteRunConcurrentRepresentationTest : BaseRunConcurrentRepresent
     "run_concurrent_test/array_rw.txt"
 ) {
     companion object {
-        private val array = IntArray(3) // variable is static in order to trigger snapshot tracker to restore it between iterations (`block` actually will be run twice)
+        // the variable is static to trigger the snapshot tracker to restore it between iterations
+        // (`block` actually will be run twice)
+        private val array = IntArray(3)
     }
 
     @Suppress("UNUSED_VARIABLE")
