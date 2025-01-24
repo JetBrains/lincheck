@@ -13,9 +13,6 @@ package org.jetbrains.kotlinx.lincheck
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
-import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedCTestConfiguration
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.forClasses
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.verify
@@ -46,7 +43,7 @@ fun <R> runConcurrentTest(
         .invocationsPerIteration(invocations)
         .addCustomScenario(scenario)
         .addGuarantee(forClasses(GeneralPurposeMCWrapper::class).allMethods().ignore())
-        .verifier(ExecutionExceptionsVerifier::class.java)
+        .verifier(NoExceptionVerifier::class.java)
 
     val testCfg = options.createTestConfigurations(GeneralPurposeMCWrapper::class.java)
 
@@ -73,15 +70,11 @@ internal class GeneralPurposeMCWrapper<R>() {
 }
 
 /**
- * [ExecutionExceptionsVerifier] makes sure that in case if user `check(...)`'s
- * fail and store their exceptions as an execution result (or just any exception is thrown),
- * such outcomes will be disallowed and the execution will fail.
+ * [NoExceptionVerifier] checks that the lambda passed into [runConcurrentTest] does not throw an exception.
  */
-private class ExecutionExceptionsVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : Verifier {
-    override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
-        if (results == null) return true
-        return results.parallelResults[0][0] !is ExceptionResult
-    }
+internal class NoExceptionVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpecification: Class<*>) : Verifier {
+    override fun verifyResults(scenario: ExecutionScenario, results: ExecutionResult): Boolean =
+        results.parallelResults[0][0] !is ExceptionResult
 }
 
 private const val DEFAULT_INVOCATIONS_COUNT = 50_000
