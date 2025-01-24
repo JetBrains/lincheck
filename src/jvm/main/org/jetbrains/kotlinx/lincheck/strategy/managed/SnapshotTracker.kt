@@ -95,7 +95,7 @@ class SnapshotTracker {
         }
     }
 
-    fun trackObjectsEagerly(objs: Array<Any?>) {
+    fun trackObjects(objs: Array<Any?>) {
         // in case this works too slowly, an optimization could be used
         // see https://github.com/JetBrains/lincheck/pull/418/commits/eb9a9a25f0c57e5b5bdf55dac8f38273ffc7dd8a#diff-a684b1d7deeda94bbf907418b743ae2c0ec0a129760d3b87d00cdf5adfab56c4R146-R199
         objs
