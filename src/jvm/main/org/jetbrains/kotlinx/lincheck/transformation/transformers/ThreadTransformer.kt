@@ -14,6 +14,7 @@ import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import org.objectweb.asm.commons.GeneratorAdapter
+import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import sun.nio.ch.lincheck.*
 
 
@@ -79,11 +80,28 @@ internal class ThreadTransformer(
             // STACK: <empty>
             return
         }
+        // In some newer versions of JDK, some of the java library classes
+        // use internal API `JavaLangAccess.start` to start threads;
+        // so we instrument calls to this method to detect thread starts.
+        if (isJavaLangAccessThreadStartMethod(owner, name)) {
+            // STACK: thread, threadContainer
+            val threadContainerLocal = newLocal(OBJECT_TYPE)
+            storeLocal(threadContainerLocal)
+            dup()
+            // STACK: thread, thread
+            invokeStatic(Injections::beforeThreadFork)
+            // STACK: thread
+            loadLocal(threadContainerLocal)
+            // STACK: thread, threadContainer
+        }
         adapter.visitMethodInsn(opcode, owner, name, desc, itf)
     }
 
     private fun isThreadStartMethod(methodName: String, desc: String): Boolean =
         methodName == "start" && desc == VOID_METHOD_DESCRIPTOR && isThreadSubClass(className)
+    
+    private fun isJavaLangAccessThreadStartMethod(className: String, methodName: String): Boolean =
+        className == "jdk/internal/access/JavaLangAccess" && methodName == "start"
 
     private fun isThreadRunMethod(methodName: String, desc: String): Boolean =
         methodName == "run" && desc == VOID_METHOD_DESCRIPTOR && isThreadSubClass(className)
