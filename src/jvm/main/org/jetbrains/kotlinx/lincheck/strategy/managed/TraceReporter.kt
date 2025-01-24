@@ -717,7 +717,7 @@ private class TraceNodePrefixFactory(nThreads: Int) {
             val arrowDepth = arrowDepth
             return PrefixProvider {
                 val extraPrefix = if (arrowDepth == 1) 0 else extraPrefixLength(iThread)
-                TRACE_INDENTATION.repeat(max(0, arrowDepth - 2 + extraPrefix)) + "| " + TRACE_INDENTATION.repeat(callDepth - arrowDepth + 1)
+                TRACE_INDENTATION.repeat(max(0, arrowDepth - 2 + extraPrefix)) + "| " + TRACE_INDENTATION.repeat(max(0, callDepth - arrowDepth + 1))
             }
         }
         return PrefixProvider { extraPrefixIfNeeded(iThread) + TRACE_INDENTATION.repeat(callDepth) }
