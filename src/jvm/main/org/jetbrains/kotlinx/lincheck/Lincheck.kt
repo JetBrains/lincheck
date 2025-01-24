@@ -18,6 +18,11 @@ import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import org.jetbrains.kotlinx.lincheck.strategy.verify
 
 
+@RequiresOptIn(message = "The model checking API is experimental and could change in the future.")
+@Retention(AnnotationRetention.BINARY)
+@Target(AnnotationTarget.FUNCTION)
+annotation class ExperimentalModelCheckingAPI
+
 /**
  * This method will explore different interleavings of the [block] body and all the threads created within it,
  * searching for the first raised exception.
@@ -25,6 +30,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.verify
  * @param invocations number of different interleavings of code in the [block] that should be explored.
  * @param block lambda which body will be a target for the interleavings exploration.
  */
+@ExperimentalModelCheckingAPI
 fun <R> runConcurrentTest(
     invocations: Int = DEFAULT_INVOCATIONS_COUNT,
     block: () -> R
