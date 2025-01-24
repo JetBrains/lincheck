@@ -10,15 +10,12 @@
 
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.execution.parallelResults
-import org.jetbrains.kotlinx.lincheck.strategy.managed.forClasses
+import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck.strategy.verify
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.ensureObjectIsTransformed
 import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
+import org.jetbrains.kotlinx.lincheck.strategy.verify
 
 
 /**
@@ -40,9 +37,8 @@ fun <R> runConcurrentTest(
 
     val options = ModelCheckingOptions()
         .iterations(0)
-        .invocationsPerIteration(invocations)
         .addCustomScenario(scenario)
-        .addGuarantee(forClasses(GeneralPurposeMCWrapper::class).allMethods().ignore())
+        .invocationsPerIteration(invocations)
         .verifier(NoExceptionVerifier::class.java)
 
     val testCfg = options.createTestConfigurations(GeneralPurposeMCWrapper::class.java)
