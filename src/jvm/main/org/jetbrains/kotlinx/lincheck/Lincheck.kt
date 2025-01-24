@@ -31,7 +31,7 @@ fun <R> runConcurrentTest(
 ) {
     val scenario = scenario {
         parallel {
-            thread { actor(GeneralPurposeMCWrapper<R>::run, block) }
+            thread { actor(GeneralPurposeModelCheckingWrapper<R>::run, block) }
         }
     }
 
@@ -41,11 +41,11 @@ fun <R> runConcurrentTest(
         .invocationsPerIteration(invocations)
         .verifier(NoExceptionVerifier::class.java)
 
-    val testCfg = options.createTestConfigurations(GeneralPurposeMCWrapper::class.java)
+    val testCfg = options.createTestConfigurations(GeneralPurposeModelCheckingWrapper::class.java)
 
     withLincheckJavaAgent(testCfg.instrumentationMode) {
         ensureObjectIsTransformed(block)
-        val strategy = testCfg.createStrategy(GeneralPurposeMCWrapper::class.java, scenario, null, null)
+        val strategy = testCfg.createStrategy(GeneralPurposeModelCheckingWrapper::class.java, scenario, null, null)
         val verifier = testCfg.createVerifier()
 
         for (i in 1..invocations) {
@@ -61,7 +61,7 @@ fun <R> runConcurrentTest(
     }
 }
 
-internal class GeneralPurposeMCWrapper<R>() {
+internal class GeneralPurposeModelCheckingWrapper<R>() {
     fun run(block: () -> R) = block()
 }
 

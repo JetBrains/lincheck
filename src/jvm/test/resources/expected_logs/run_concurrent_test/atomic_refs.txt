@@ -10,11 +10,11 @@ The number next to an exception name helps you find its stack trace provided aft
 ---
 
 The following interleaving leads to the error:
-| -------------------------------------- |
-|                Thread 1                |
-| -------------------------------------- |
-| run(() -> R): IllegalStateException #1 |
-| -------------------------------------- |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                        Thread 1                                                                                                        |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|   AtomicReferencesNamesRunConcurrentRepresentationTest#1.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:35) |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 
 Exception stack traces:
 #1: java.lang.IllegalStateException: Check failed.
@@ -27,7 +27,6 @@ Detailed trace:
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                                                        Thread 1                                                                                                        |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| run(() -> R): IllegalStateException #1                                                                                                                                                                                 |
 |   AtomicReferencesNamesRunConcurrentRepresentationTest#1.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:35) |
 |     block(): threw IllegalStateException at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:65)                                                                         |
 |       AtomicReference#1.get(): Node#1 at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:70)                                                                            |
@@ -59,5 +58,4 @@ Detailed trace:
 |       AtomicInteger#3.set(3) at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:98)                                                                                     |
 |       AtomicIntegerArray#3[1].compareAndSet(0,1): true at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:100)                                                          |
 |       AtomicIntegerArray#4[1].compareAndSet(0,1): true at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:101)                                                          |
-|   result: IllegalStateException #1                                                                                                                                                                                     |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
