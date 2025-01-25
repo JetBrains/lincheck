@@ -55,7 +55,7 @@ internal fun executeActor(
         if (invE !is InvocationTargetException)
             throw invE
         // Exception thrown not during the method invocation should contain underlying exception
-        return ExceptionActorResult.create(
+        return ExceptionActorResult(
             invE.cause?.takeIf { exceptionCanBeValidExecutionResult(it) }
                 ?: throw invE
         )
@@ -121,7 +121,7 @@ internal val Any?.isPrimitiveWrapper get() = when (this) {
  */
 internal fun createLincheckResult(res: Any?) = when {
     (res != null && res.javaClass.isAssignableFrom(Void.TYPE)) || res is Unit -> VoidActorResult
-    res != null && res is Throwable -> ExceptionActorResult.create(res)
+    res != null && res is Throwable -> ExceptionActorResult(res)
     res === COROUTINE_SUSPENDED -> SuspendedActorResult
     res is Result<Any?> -> res.toLinCheckResult()
     else -> ValueActorResult(res)
@@ -133,7 +133,7 @@ private fun Result<Any?>.toLinCheckResult() =
             is Unit -> VoidActorResult
             else -> ValueActorResult(value)
         }
-    } else ExceptionActorResult.create(exceptionOrNull()!!)
+    } else ExceptionActorResult(exceptionOrNull()!!)
 
 inline fun <R> Throwable.catch(vararg exceptions: Class<*>, block: () -> R): R {
     if (exceptions.any { this::class.java.isAssignableFrom(it) }) {

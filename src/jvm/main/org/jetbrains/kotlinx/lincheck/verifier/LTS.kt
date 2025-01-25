@@ -127,8 +127,8 @@ class LTS(private val sequentialSpecification: Class<*>) {
 
         private fun ActorResult.isLegalByFollowUp(transitionInfo: TransitionInfo) =
             this == transitionInfo.result ||
-                    this is ValueActorResult && transitionInfo.result is ValueActorResult && this.value == transitionInfo.result.value ||
-                    this is ExceptionActorResult && transitionInfo.result is ExceptionActorResult && this.tClassCanonicalName == transitionInfo.result.tClassCanonicalName
+            this is ValueActorResult && transitionInfo.result is ValueActorResult && this.value == transitionInfo.result.value ||
+            this is ExceptionActorResult && transitionInfo.result is ExceptionActorResult && this.throwableCanonicalName == transitionInfo.result.throwableCanonicalName
 
         private inline fun <T> copyAndApply(
             action: (

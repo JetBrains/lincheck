@@ -343,11 +343,11 @@ private fun actorNodeResultRepresentation(result: ActorResult?, failure: Linchec
     if (result == null && failure is ObstructionFreedomViolationFailure) return null
     return when (result) {
         null -> "<hung>"
+        VoidActorResult -> null // don't print
         is ExceptionActorResult -> {
             val exceptionNumberRepresentation = exceptionStackTraces[result.throwable]?.let { " #${it.number}" } ?: ""
             "$result$exceptionNumberRepresentation"
         }
-        is VoidActorResult -> null // don't print
         else -> result.toString()
     }
 }
@@ -372,7 +372,7 @@ private class ExecutionResultsProvider(result: ExecutionResult?, failure: Linche
                 .toMap()
         }
         if (failure is ValidationFailure) {
-            results[0 to firstThreadActorCount(failure)] = ExceptionActorResult.create(failure.exception)
+            results[0 to firstThreadActorCount(failure)] = ExceptionActorResult(failure.exception)
         }
         threadNumberToActorResultMap = results
     }

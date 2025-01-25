@@ -14,64 +14,41 @@ import kotlin.coroutines.*
 
 
 /**
- * The instances of this interface represent a result of actor invocation.
+ * Instances of this interface represent a result of actor invocation.
  */
 sealed interface ActorResult
 
 /**
- * Type of result used if the actor invocation returns any value.
+ * Actor result used if the actor invocation completes normally.
  */
 data class ValueActorResult(val value: Any?) : ActorResult {
-    override fun toString() = "$value"
+    override fun toString() = if (value === Unit) "void" else "$value"
 }
 
 /**
- * Type of result used if the actor invocation does not return value.
+ * Actor result used if the actor invocation completes normally and does not return value.
  */
-object VoidActorResult : ActorResult {
-    override fun toString() = VOID
-}
-
-private const val VOID = "void"
-
-object CancelledActorResult : ActorResult {
-    override fun toString() = "CANCELLED"
-}
+val VoidActorResult = ValueActorResult(Unit)
 
 /**
- * Type of result used if the actor invocation fails with the specified in {@link Operation#handleExceptionsAsResult()} exception [tClazzFullName].
+ * Actor result used if the actor invocation fails with an exception.
  */
-class ExceptionActorResult private constructor(
-    /**
-     * Exception is stored to print it's stackTrace in case of incorrect results
-     */
-    val throwable: Throwable
-) : ActorResult {
+class ExceptionActorResult(val throwable: Throwable) : ActorResult {
 
-    internal val tClassCanonicalName: String get() = throwable::class.java.canonicalName
+    internal val throwableCanonicalName: String get() =
+        throwable::class.java.canonicalName
 
     override fun toString(): String = throwable::class.java.simpleName
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is ExceptionActorResult) return false
-
-        if (tClassCanonicalName != other.tClassCanonicalName) return false
-        return true
+        return throwableCanonicalName == other.throwableCanonicalName
     }
 
     override fun hashCode(): Int {
-        return tClassCanonicalName.hashCode()
-    }
-
-
-    companion object {
-        fun create(throwable: Throwable) = ExceptionActorResult(throwable)
+        return throwableCanonicalName.hashCode()
     }
 }
-
-// for byte-code generation
-@JvmSynthetic
-fun createExceptionResult(throwable: Throwable) = ExceptionActorResult.create(throwable)
 
 /**
  * Type of result used if the actor invocation suspended the thread and did not get the final result yet
@@ -85,6 +62,10 @@ object SuspendedActorResult : ActorResult {
     override fun toString() = "Suspended"
 }
 
+object CancelledActorResult : ActorResult {
+    override fun toString() = "CANCELLED"
+}
+
 /**
  * Type of result used for verification.
  * Resuming thread writes result of the suspension point and continuation to be executed in the resumed thread into [contWithSuspensionPointRes].
@@ -93,3 +74,12 @@ internal data class ResumedActorResult(val contWithSuspensionPointRes: Pair<Cont
     lateinit var resumedActor: Actor
     lateinit var by: Actor
 }
+
+
+/* ==== Methods used in byte-code generation ==== */
+
+@JvmSynthetic
+internal fun createVoidActorResult() = VoidActorResult
+
+@JvmSynthetic
+internal fun createExceptionResult(throwable: Throwable) = ExceptionActorResult(throwable)

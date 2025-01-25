@@ -50,17 +50,20 @@ public class TestThreadExecutionGenerator {
     private static final Type NO_RESULT_TYPE = getType(NoActorResult.class);
     private static final String NO_RESULT_CLASS_NAME = NoActorResult.class.getCanonicalName().replace('.', '/');
 
-    private static final Type VOID_RESULT_TYPE = getType(VoidActorResult.class);
-    private static final String VOID_RESULT_CLASS_NAME = VoidActorResult.class.getCanonicalName().replace('.', '/');
-
     private static final String INSTANCE = "INSTANCE";
 
     private static final Type VALUE_RESULT_TYPE = getType(ValueActorResult.class);
-    private static final Method VALUE_RESULT_TYPE_CONSTRUCTOR = new Method("<init>", VOID_TYPE, new Type[] {OBJECT_TYPE});
+    private static final Method VALUE_RESULT_TYPE_CONSTRUCTOR =
+            new Method("<init>", VOID_TYPE, new Type[] {OBJECT_TYPE});
+
+    private static final Type VOID_ACTOR_RESULT_TYPE = getType(ValueActorResult.class);
+    private static final Method CREATE_VOID_ACTOR_RESULT_METHOD =
+            new Method("createVoidActorResult", VOID_ACTOR_RESULT_TYPE, NO_ARGS);
 
     private static final Type EXCEPTION_RESULT_TYPE = getType(ExceptionActorResult.class);
     private static final Type RESULT_KT_TYPE = getType(ActorResultKt.class);
-    private static final Method RESULT_KT_CREATE_EXCEPTION_RESULT_METHOD = new Method("createExceptionResult", EXCEPTION_RESULT_TYPE, new Type[]{THROWABLE_TYPE});
+    private static final Method RESULT_KT_CREATE_EXCEPTION_RESULT_METHOD =
+            new Method("createExceptionResult", EXCEPTION_RESULT_TYPE, new Type[]{THROWABLE_TYPE});
 
     private static final Type RESULT_ARRAY_TYPE = getType(ActorResult[].class);
 
@@ -293,7 +296,7 @@ public class TestThreadExecutionGenerator {
 
     private static void createVoidResult(Actor actor, GeneratorAdapter mv) {
         mv.pop();
-        mv.visitFieldInsn(GETSTATIC, VOID_RESULT_CLASS_NAME, INSTANCE, VOID_RESULT_TYPE.getDescriptor());
+        mv.invokeStatic(RESULT_KT_TYPE, CREATE_VOID_ACTOR_RESULT_METHOD);
     }
 
     // STACK: throwable
