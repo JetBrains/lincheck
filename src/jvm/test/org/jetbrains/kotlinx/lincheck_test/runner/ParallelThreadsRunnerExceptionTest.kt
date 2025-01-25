@@ -66,7 +66,7 @@ class SuspendResumeScenarios {
     fun resumeSuccessfully(value: Int) {
         while (continuation.get() == null) {
         }
-        continuation.get()!!.resumeWith(kotlin.Result.success(value))
+        continuation.get()!!.resumeWith(Result.success(value))
     }
 
     class TestException : Throwable()

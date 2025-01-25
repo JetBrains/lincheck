@@ -28,7 +28,7 @@ import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
 import kotlin.random.*
 
-private typealias SuspensionPointResultWithContinuation = AtomicReference<Pair<kotlin.Result<Any?>, Continuation<Any?>>>
+private typealias SuspensionPointResultWithContinuation = AtomicReference<Pair<Result<Any?>, Continuation<Any?>>>
 
 /**
  * This runner executes parallel scenario part in different threads.

@@ -116,18 +116,18 @@ internal val Any?.isPrimitiveWrapper get() = when (this) {
  * The special [COROUTINE_SUSPENDED] value returned when some coroutine suspended its execution
  * is represented as [NoActorResult].
  *
- * Success values of [kotlin.Result] instances are represented as either [VoidActorResult] or [ValueActorResult].
- * Failure values of [kotlin.Result] instances are represented as [ExceptionActorResult].
+ * Success values of [Result] instances are represented as either [VoidActorResult] or [ValueActorResult].
+ * Failure values of [Result] instances are represented as [ExceptionActorResult].
  */
 internal fun createLincheckResult(res: Any?) = when {
     (res != null && res.javaClass.isAssignableFrom(Void.TYPE)) || res is Unit -> VoidActorResult
     res != null && res is Throwable -> ExceptionActorResult.create(res)
     res === COROUTINE_SUSPENDED -> SuspendedActorResult
-    res is kotlin.Result<Any?> -> res.toLinCheckResult()
+    res is Result<Any?> -> res.toLinCheckResult()
     else -> ValueActorResult(res)
 }
 
-private fun kotlin.Result<Any?>.toLinCheckResult() =
+private fun Result<Any?>.toLinCheckResult() =
     if (isSuccess) {
         when (val value = getOrNull()) {
             is Unit -> VoidActorResult
@@ -177,7 +177,7 @@ internal enum class CancellationResult { CANCELLED_BEFORE_RESUMPTION, CANCELLED_
 /**
  * Returns `true` if the continuation was cancelled by [CancellableContinuation.cancel].
  */
-fun <T> kotlin.Result<T>.cancelledByLincheck() = exceptionOrNull() === cancellationByLincheckException
+fun <T> Result<T>.cancelledByLincheck() = exceptionOrNull() === cancellationByLincheckException
 
 private val cancellationByLincheckException = Exception("Cancelled by lincheck")
 
@@ -253,7 +253,7 @@ internal fun Class<*>.findField(fieldName: String): Field {
 /**
  * Reads a [field] of the owner object [obj] via Unsafe,  in case of failure fallbacks into reading the field via reflection.
  */
-internal fun readFieldSafely(obj: Any?, field: Field): kotlin.Result<Any?> {
+internal fun readFieldSafely(obj: Any?, field: Field): Result<Any?> {
     // we wrap an unsafe read into `runCatching` to handle `UnsupportedOperationException`,
     // which can be thrown, for instance, when attempting to read
     // a field of a hidden or record class (starting from Java 15);

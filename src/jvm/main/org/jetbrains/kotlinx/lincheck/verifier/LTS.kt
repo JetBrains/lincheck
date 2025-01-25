@@ -401,7 +401,7 @@ internal class Completion(
     override val context: CoroutineContext
         get() = VerifierInterceptor(ticket, actor, resumedTicketsWithResults) + StoreExceptionHandler() + Job()
 
-    override fun resumeWith(result: kotlin.Result<Any?>) {
+    override fun resumeWith(result: Result<Any?>) {
         // write the result only if the operation has not been cancelled
         if (!result.cancelledByLincheck())
             resumedTicketsWithResults[ticket] = ResumedActorResult(null to result).also { it.resumedActor = actor }
