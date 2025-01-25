@@ -11,3 +11,4 @@
 package org.jetbrains.kotlinx.lincheck
 
 val TRACE_DEBUGGER_MODE = System.getProperty("lincheck.traceDebuggerMode", "false").toBoolean()
+val isLoopDetectorEnabled get() = System.getProperty("lincheck.loopDetectorEnabled", "true").toBoolean()

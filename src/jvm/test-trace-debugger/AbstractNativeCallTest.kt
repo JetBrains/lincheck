@@ -15,6 +15,7 @@ import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
+import org.jetbrains.kotlinx.lincheck.isLoopDetectorEnabled
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import org.junit.Test
@@ -34,6 +35,9 @@ abstract class AbstractNativeCallTest {
         val myStdErr = PrintStream(stdErrOutputCollector)
         System.setOut(myStdOut)
         System.setErr(myStdErr)
+        val oldIsLoopDetectorEnabled = isLoopDetectorEnabled
+        val loopDetectorPropertyName = "lincheck.loopDetectorEnabled"
+        System.setProperty(loopDetectorPropertyName, "false")
         try {
             ModelCheckingOptions()
                 .actorsBefore(0)
@@ -62,6 +66,7 @@ abstract class AbstractNativeCallTest {
             val stdErrOutput = stdErrOutputCollector.toString()
             System.err.print(stdErrOutput)
             require(!stdOutOutput.contains(forbiddenString) && !stdErrOutput.contains(forbiddenString))
+            System.setProperty(loopDetectorPropertyName, oldIsLoopDetectorEnabled.toString())
         }
     }
     
