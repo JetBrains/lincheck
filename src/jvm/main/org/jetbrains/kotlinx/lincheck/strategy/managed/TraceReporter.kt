@@ -290,7 +290,7 @@ internal fun constructTraceGraph(
                 last = lastEvent,
                 callDepth = callDepth,
                 resultRepresentation = resultRepresentation,
-                exceptionNumberIfExceptionResult = if (result is ExceptionResult) exceptionStackTraces[result.throwable]?.number else null
+                exceptionNumberIfExceptionResult = if (result is ExceptionActorResult) exceptionStackTraces[result.throwable]?.number else null
             )
             actorNode.addInternalEvent(resultNode)
             resultNode.next = lastEventNext
@@ -313,7 +313,7 @@ internal fun constructTraceGraph(
             lastEvent.event is SwitchEventTracePoint &&
             lastEvent.event.reason is SwitchReason.ActiveLock
         )
-        val result = if (isHung) null else VoidResult
+        val result = if (isHung) null else VoidActorResult
         if (result === null)
             continue
         val resultRepresentation = resultRepresentation(result, exceptionStackTraces)
@@ -338,16 +338,16 @@ internal fun constructTraceGraph(
     return traceGraphNodesSections.map { it.first() }
 }
 
-private fun actorNodeResultRepresentation(result: Result?, failure: LincheckFailure, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): String? {
+private fun actorNodeResultRepresentation(result: ActorResult?, failure: LincheckFailure, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): String? {
     // We don't mark actors that violated obstruction freedom as hung.
     if (result == null && failure is ObstructionFreedomViolationFailure) return null
     return when (result) {
         null -> "<hung>"
-        is ExceptionResult -> {
+        is ExceptionActorResult -> {
             val exceptionNumberRepresentation = exceptionStackTraces[result.throwable]?.let { " #${it.number}" } ?: ""
             "$result$exceptionNumberRepresentation"
         }
-        is VoidResult -> null // don't print
+        is VoidActorResult -> null // don't print
         else -> result.toString()
     }
 }
@@ -360,10 +360,10 @@ private class ExecutionResultsProvider(result: ExecutionResult?, failure: Linche
     /**
      * A map of type Map<(threadId, actorId) -> Result>
      */
-    private val threadNumberToActorResultMap: Map<Pair<Int, Int>, Result?>
+    private val threadNumberToActorResultMap: Map<Pair<Int, Int>, ActorResult?>
 
     init {
-        val results = hashMapOf<Pair<Int, Int>, Result?>()
+        val results = hashMapOf<Pair<Int, Int>, ActorResult?>()
         if (result != null) {
             results += result.threadsResults
                 .flatMapIndexed { tId, actors -> actors.flatMapIndexed { actorId, result ->
@@ -372,12 +372,12 @@ private class ExecutionResultsProvider(result: ExecutionResult?, failure: Linche
                 .toMap()
         }
         if (failure is ValidationFailure) {
-            results[0 to firstThreadActorCount(failure)] = ExceptionResult.create(failure.exception)
+            results[0 to firstThreadActorCount(failure)] = ExceptionActorResult.create(failure.exception)
         }
         threadNumberToActorResultMap = results
     }
 
-    operator fun get(iThread: Int, actorId: Int): Result? {
+    operator fun get(iThread: Int, actorId: Int): ActorResult? {
         return threadNumberToActorResultMap[iThread to actorId]
     }
 

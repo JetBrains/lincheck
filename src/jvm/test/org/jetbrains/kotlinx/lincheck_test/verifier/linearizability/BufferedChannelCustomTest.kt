@@ -73,17 +73,17 @@ class BufferedChannelCustomTest {
         verify(BufferedChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {
-                    operation(actor(s,1), VoidResult)
-                    operation(actor(s,2), VoidResult)
-                    operation(actor(s,3), VoidResult)
-                    operation(actor(s,4), VoidResult)
+                    operation(actor(s,1), VoidActorResult)
+                    operation(actor(s,2), VoidActorResult)
+                    operation(actor(s,3), VoidActorResult)
+                    operation(actor(s,4), VoidActorResult)
                 }
                 thread {
-                    operation(actor(r), ValueResult(1))
-                    operation(actor(r), ValueResult(2))
-                    operation(actor(s,5), VoidResult)
-                    operation(actor(s,6), Suspended)
-                    operation(actor(r), NoResult)
+                    operation(actor(r), ValueActorResult(1))
+                    operation(actor(r), ValueActorResult(2))
+                    operation(actor(s,5), VoidActorResult)
+                    operation(actor(s,6), SuspendedActorResult)
+                    operation(actor(r), NoActorResult)
                 }
             }
         }, true)
@@ -94,14 +94,14 @@ class BufferedChannelCustomTest {
         verify(BufferedChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {
-                    operation(actor(s,1), VoidResult)
-                    operation(actor(s,2), VoidResult)
-                    operation(actor(p), ValueResult(1))
+                    operation(actor(s,1), VoidActorResult)
+                    operation(actor(s,2), VoidActorResult)
+                    operation(actor(p), ValueActorResult(1))
                 }
                 thread {
-                    operation(actor(s,3), VoidResult)
-                    operation(actor(s,4), VoidResult)
-                    operation(actor(p), ValueResult(2))
+                    operation(actor(s,3), VoidActorResult)
+                    operation(actor(s,4), VoidActorResult)
+                    operation(actor(p), ValueActorResult(2))
                 }
             }
         }, true)
@@ -112,17 +112,17 @@ class BufferedChannelCustomTest {
         verify(BufferedChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {
-                    operation(actor(p), ValueResult(null))
+                    operation(actor(p), ValueActorResult(null))
                 }
                 thread {
-                    operation(actor(o, 1), ValueResult(true))
-                    operation(actor(o, 2), ValueResult(true))
+                    operation(actor(o, 1), ValueActorResult(true))
+                    operation(actor(o, 2), ValueActorResult(true))
                 }
             }
             post {
-                operation(actor(r), ValueResult(1))
-                operation(actor(r), ValueResult(2))
-                operation(actor(r), Suspended)
+                operation(actor(r), ValueActorResult(1))
+                operation(actor(r), ValueActorResult(2))
+                operation(actor(r), SuspendedActorResult)
             }
         }, true)
     }
@@ -132,11 +132,11 @@ class BufferedChannelCustomTest {
         verify(BufferedChannelCustomTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {
-                    operation(actor(c, 5), VoidResult)
+                    operation(actor(c, 5), VoidActorResult)
                 }
                 thread {
-                    operation(actor(r), ValueResult("Cancelled(5)"))
-                    operation(actor(s, 5), ValueResult("Cancelled(5)"))
+                    operation(actor(r), ValueActorResult("Cancelled(5)"))
+                    operation(actor(s, 5), ValueActorResult("Cancelled(5)"))
                 }
             }
         }, true)

@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy.modelchecking.snapshot
 
-import org.jetbrains.kotlinx.lincheck.ExceptionResult
+import org.jetbrains.kotlinx.lincheck.ExceptionActorResult
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
@@ -24,7 +24,7 @@ abstract class AbstractSnapshotTest {
         protected fun checkForExceptions(results: ExecutionResult?) {
             results?.parallelResults?.forEach { threadsResults ->
                 threadsResults.forEach { result ->
-                    if (result is ExceptionResult) {
+                    if (result is ExceptionActorResult) {
                         throw result.throwable
                     }
                 }

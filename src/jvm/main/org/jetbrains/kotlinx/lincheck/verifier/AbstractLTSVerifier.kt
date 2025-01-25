@@ -101,7 +101,7 @@ abstract class VerifierContext(
      * The number of threads that expectedly suspended their execution.
      */
     private val suspendedThreads: Int get() =
-        threads.count { t -> suspended[t] && results.threadsResultsWithClock[t][executed[t]].result === Suspended }
+        threads.count { t -> suspended[t] && results.threadsResultsWithClock[t][executed[t]].result === SuspendedActorResult }
 
     /**
      * Returns the number of completed threads from the specified range.

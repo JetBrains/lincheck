@@ -52,7 +52,7 @@ internal open class ParallelThreadsRunner(
     internal lateinit var testInstance: Any
 
     private var suspensionPointResults = List(scenario.nThreads) { t ->
-        MutableList<Result>(scenario.threads[t].size) { NoResult }
+        MutableList<ActorResult>(scenario.threads[t].size) { NoActorResult }
     }
 
     private val completions = List(scenario.nThreads) { t ->
@@ -154,7 +154,7 @@ internal open class ParallelThreadsRunner(
     }
 
     private fun resetState() {
-        suspensionPointResults.forEach { it.fill(NoResult) }
+        suspensionPointResults.forEach { it.fill(NoActorResult) }
         completedOrSuspendedThreads.set(0)
         completions.forEach {
             it.forEach { completion ->
@@ -203,7 +203,7 @@ internal open class ParallelThreadsRunner(
      * Otherwise if the invoked actor completed without suspension, then it just writes it's final result.
      */
     @Suppress("unused")
-    fun processInvocationResult(res: Any?, iThread: Int, actorId: Int): Result = runInIgnoredSection {
+    fun processInvocationResult(res: Any?, iThread: Int, actorId: Int): ActorResult = runInIgnoredSection {
         val actor = scenario.parallelExecution[iThread][actorId]
         val finalResult = if (res === COROUTINE_SUSPENDED) {
             val thread = Thread.currentThread() as TestThread
@@ -213,13 +213,13 @@ internal open class ParallelThreadsRunner(
                     // already resumed, increment `completedOrSuspendedThreads` back
                     completedOrSuspendedThreads.incrementAndGet()
                 }
-                Cancelled
+                CancelledActorResult
             } else waitAndInvokeFollowUp(thread, actorId)
         } else createLincheckResult(res)
         val isLastActor = actorId == scenario.parallelExecution[iThread].size - 1
-        if (isLastActor && finalResult !== Suspended)
+        if (isLastActor && finalResult !== SuspendedActorResult)
             completedOrSuspendedThreads.incrementAndGet()
-        suspensionPointResults[iThread][actorId] = NoResult
+        suspensionPointResults[iThread][actorId] = NoActorResult
         return finalResult
     }
 
@@ -227,7 +227,7 @@ internal open class ParallelThreadsRunner(
 
     // We need to run this code in an ignored section,
     // as it is called in the testing code but should not be analyzed.
-    private fun waitAndInvokeFollowUp(thread: TestThread, actorId: Int): Result = runInIgnoredSection {
+    private fun waitAndInvokeFollowUp(thread: TestThread, actorId: Int): ActorResult = runInIgnoredSection {
         val threadId = thread.threadId
         // Coroutine is suspended. Call method so that strategy can learn it.
         afterCoroutineSuspended(threadId)
@@ -241,8 +241,8 @@ internal open class ParallelThreadsRunner(
             spinners[threadId].spinWaitUntil {
                 // Check whether the scenario is completed and the current suspended operation cannot be resumed.
                 if (currentExecutionPart == POST || isParallelExecutionCompleted) {
-                    suspensionPointResults[threadId][actorId] = NoResult
-                    return Suspended
+                    suspensionPointResults[threadId][actorId] = NoActorResult
+                    return SuspendedActorResult
                 }
                 // Wait until coroutine is resumed.
                 isCoroutineResumed(threadId, actorId)
@@ -283,7 +283,7 @@ internal open class ParallelThreadsRunner(
     // We cannot use `completionStatuses` here since
     // they are set _before_ the result is published.
     override fun isCoroutineResumed(iThread: Int, actorId: Int) =
-        suspensionPointResults[iThread][actorId] != NoResult || completions[iThread][actorId].resWithCont.get() != null
+        suspensionPointResults[iThread][actorId] != NoActorResult || completions[iThread][actorId].resWithCont.get() != null
 
     override fun run(): InvocationResult {
         var timeout = timeoutMs * 1_000_000
@@ -317,7 +317,7 @@ internal open class ParallelThreadsRunner(
                 beforePart(VALIDATION)
                 executor.submitAndAwait(arrayOf(validationPart), timeout)
                 val validationResult = validationPart.results.single()
-                if (validationResult is ExceptionResult) {
+                if (validationResult is ExceptionActorResult) {
                     return ValidationFailureInvocationResult(scenario, validationResult.throwable, collectExecutionResults())
                 }
             }

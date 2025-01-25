@@ -44,18 +44,18 @@ internal fun executeActor(
     instance: Any,
     actor: Actor,
     completion: Continuation<Any?>?
-): Result {
+): ActorResult {
     try {
         val m = getMethod(instance, actor.method)
         val args = (if (actor.isSuspendable) actor.arguments + completion else actor.arguments)
         val res = m.invoke(instance, *args.toTypedArray())
-        return if (m.returnType.isAssignableFrom(Void.TYPE)) VoidResult else createLincheckResult(res)
+        return if (m.returnType.isAssignableFrom(Void.TYPE)) VoidActorResult else createLincheckResult(res)
     } catch (invE: Throwable) {
         // If the exception is thrown not during the method invocation - fail immediately
         if (invE !is InvocationTargetException)
             throw invE
         // Exception thrown not during the method invocation should contain underlying exception
-        return ExceptionResult.create(
+        return ExceptionActorResult.create(
             invE.cause?.takeIf { exceptionCanBeValidExecutionResult(it) }
                 ?: throw invE
         )
@@ -107,33 +107,33 @@ internal val Any?.isPrimitiveWrapper get() = when (this) {
 }
 
 /**
- * Creates [Result] of corresponding type from any given value.
+ * Creates [ActorResult] of corresponding type from any given value.
  *
- * Java [Void] and Kotlin [Unit] classes are represented as [VoidResult].
+ * Java [Void] and Kotlin [Unit] classes are represented as [VoidActorResult].
  *
- * Instances of [Throwable] are represented as [ExceptionResult].
+ * Instances of [Throwable] are represented as [ExceptionActorResult].
  *
  * The special [COROUTINE_SUSPENDED] value returned when some coroutine suspended its execution
- * is represented as [NoResult].
+ * is represented as [NoActorResult].
  *
- * Success values of [kotlin.Result] instances are represented as either [VoidResult] or [ValueResult].
- * Failure values of [kotlin.Result] instances are represented as [ExceptionResult].
+ * Success values of [kotlin.Result] instances are represented as either [VoidActorResult] or [ValueActorResult].
+ * Failure values of [kotlin.Result] instances are represented as [ExceptionActorResult].
  */
 internal fun createLincheckResult(res: Any?) = when {
-    (res != null && res.javaClass.isAssignableFrom(Void.TYPE)) || res is Unit -> VoidResult
-    res != null && res is Throwable -> ExceptionResult.create(res)
-    res === COROUTINE_SUSPENDED -> Suspended
+    (res != null && res.javaClass.isAssignableFrom(Void.TYPE)) || res is Unit -> VoidActorResult
+    res != null && res is Throwable -> ExceptionActorResult.create(res)
+    res === COROUTINE_SUSPENDED -> SuspendedActorResult
     res is kotlin.Result<Any?> -> res.toLinCheckResult()
-    else -> ValueResult(res)
+    else -> ValueActorResult(res)
 }
 
 private fun kotlin.Result<Any?>.toLinCheckResult() =
     if (isSuccess) {
         when (val value = getOrNull()) {
-            is Unit -> VoidResult
-            else -> ValueResult(value)
+            is Unit -> VoidActorResult
+            else -> ValueActorResult(value)
         }
-    } else ExceptionResult.create(exceptionOrNull()!!)
+    } else ExceptionActorResult.create(exceptionOrNull()!!)
 
 inline fun <R> Throwable.catch(vararg exceptions: Class<*>, block: () -> R): R {
     if (exceptions.any { this::class.java.isAssignableFrom(it) }) {

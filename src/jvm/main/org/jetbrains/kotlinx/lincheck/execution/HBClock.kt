@@ -9,7 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.execution
 
-import org.jetbrains.kotlinx.lincheck.Result
+import org.jetbrains.kotlinx.lincheck.ActorResult
 
 data class HBClock(val clock: IntArray) {
     val threads: Int get() = clock.size
@@ -37,8 +37,8 @@ data class HBClock(val clock: IntArray) {
 fun emptyClock(size: Int) = HBClock(emptyClockArray(size))
 fun emptyClockArray(size: Int) = IntArray(size) { 0 }
 
-data class ResultWithClock(val result: Result?, val clockOnStart: HBClock)
+data class ResultWithClock(val result: ActorResult?, val clockOnStart: HBClock)
 
-fun Result.withEmptyClock(threads: Int) = ResultWithClock(this, emptyClock(threads))
-fun List<Result>.withEmptyClock(threads: Int): List<ResultWithClock> = map { it.withEmptyClock(threads) }
+fun ActorResult.withEmptyClock(threads: Int) = ResultWithClock(this, emptyClock(threads))
+fun List<ActorResult>.withEmptyClock(threads: Int): List<ResultWithClock> = map { it.withEmptyClock(threads) }
 fun List<ResultWithClock>.withEmptyClock() = mapNotNull { it.result?.withEmptyClock(it.clockOnStart.threads) }

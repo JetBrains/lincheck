@@ -461,12 +461,12 @@ private fun executionResultsRepresentation(
 private data class ResultActorData(
     val threadId: Int,
     val actor: Actor,
-    val result: Result?,
+    val result: ActorResult?,
     val exceptionInfo: ExceptionNumberAndStacktrace? = null,
     val hbClock: HBClock? = null
 ) {
-    constructor(threadId: Int, actor: Actor, result: Result?, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>, hbClock: HBClock?)
-            : this(threadId, actor, result, (result as? ExceptionResult)?.let { exceptionStackTraces[it.throwable] }, hbClock)
+    constructor(threadId: Int, actor: Actor, result: ActorResult?, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>, hbClock: HBClock?)
+            : this(threadId, actor, result, (result as? ExceptionActorResult)?.let { exceptionStackTraces[it.throwable] }, hbClock)
 
     override fun toString(): String {
         return "${actor}${result.toString().let { ": $it" }}" +
@@ -553,9 +553,9 @@ internal data class ExceptionNumberAndStacktrace(
     val stackTrace: List<StackTraceElement>
 )
 
-internal fun resultRepresentation(result: Result, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): String {
+internal fun resultRepresentation(result: ActorResult, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): String {
     return when (result) {
-        is ExceptionResult -> {
+        is ExceptionActorResult -> {
             val exceptionNumberRepresentation = exceptionStackTraces[result.throwable]?.let { " #${it.number}" } ?: ""
             "$result$exceptionNumberRepresentation"
         }
@@ -599,7 +599,7 @@ internal data class ExceptionStackTracesResult(val exceptionStackTraces: Map<Thr
 internal fun collectExceptionStackTraces(executionResult: ExecutionResult): ExceptionsProcessingResult {
     val exceptionStackTraces = mutableMapOf<Throwable, ExceptionNumberAndStacktrace>()
     executionResult.allResults
-        .filterIsInstance<ExceptionResult>()
+        .filterIsInstance<ExceptionActorResult>()
         .forEachIndexed { index, exceptionResult ->
             val exception = exceptionResult.throwable
             if (exception.isInternalLincheckBug()) {

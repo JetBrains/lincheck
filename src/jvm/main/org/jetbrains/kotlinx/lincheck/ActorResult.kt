@@ -14,54 +14,46 @@ import kotlin.coroutines.*
 
 
 /**
- * The instance of this class represents a result of actor invocation.
- *
- * <p> If the actor invocation suspended the thread and did not get the final result yet
- * though it can be resumed later, then the {@link Type#NO_RESULT no_result result type} is used.
- *
- * [wasSuspended] is true if before getting this result the actor invocation suspended the thread.
- * If result is [NoResult] and [wasSuspended] is true it means that
- * the execution thread was suspended without any chance to be resumed,
- * meaning that all other execution threads completed their execution or were suspended too.
+ * The instances of this interface represent a result of actor invocation.
  */
-sealed interface Result
+sealed interface ActorResult
 
 /**
  * Type of result used if the actor invocation returns any value.
  */
-data class ValueResult(val value: Any?) : Result {
+data class ValueActorResult(val value: Any?) : ActorResult {
     override fun toString() = "$value"
 }
 
 /**
  * Type of result used if the actor invocation does not return value.
  */
-object VoidResult : Result {
+object VoidActorResult : ActorResult {
     override fun toString() = VOID
 }
 
 private const val VOID = "void"
 
-object Cancelled : Result {
+object CancelledActorResult : ActorResult {
     override fun toString() = "CANCELLED"
 }
 
 /**
  * Type of result used if the actor invocation fails with the specified in {@link Operation#handleExceptionsAsResult()} exception [tClazzFullName].
  */
-class ExceptionResult private constructor(
+class ExceptionActorResult private constructor(
     /**
      * Exception is stored to print it's stackTrace in case of incorrect results
      */
     val throwable: Throwable
-) : Result {
+) : ActorResult {
 
     internal val tClassCanonicalName: String get() = throwable::class.java.canonicalName
 
     override fun toString(): String = throwable::class.java.simpleName
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is ExceptionResult) return false
+        if (other !is ExceptionActorResult) return false
 
         if (tClassCanonicalName != other.tClassCanonicalName) return false
         return true
@@ -73,23 +65,23 @@ class ExceptionResult private constructor(
 
 
     companion object {
-        fun create(throwable: Throwable) = ExceptionResult(throwable)
+        fun create(throwable: Throwable) = ExceptionActorResult(throwable)
     }
 }
 
 // for byte-code generation
 @JvmSynthetic
-fun createExceptionResult(throwable: Throwable) = ExceptionResult.create(throwable)
+fun createExceptionResult(throwable: Throwable) = ExceptionActorResult.create(throwable)
 
 /**
  * Type of result used if the actor invocation suspended the thread and did not get the final result yet
  * though it can be resumed later
  */
-object NoResult : Result {
+object NoActorResult : ActorResult {
     override fun toString() = "-"
 }
 
-object Suspended : Result {
+object SuspendedActorResult : ActorResult {
     override fun toString() = "Suspended"
 }
 
@@ -97,7 +89,7 @@ object Suspended : Result {
  * Type of result used for verification.
  * Resuming thread writes result of the suspension point and continuation to be executed in the resumed thread into [contWithSuspensionPointRes].
  */
-internal data class ResumedResult(val contWithSuspensionPointRes: Pair<Continuation<Any?>?, kotlin.Result<Any?>>) : Result {
+internal data class ResumedActorResult(val contWithSuspensionPointRes: Pair<Continuation<Any?>?, Result<Any?>>) : ActorResult {
     lateinit var resumedActor: Actor
     lateinit var by: Actor
 }

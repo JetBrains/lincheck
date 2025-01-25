@@ -123,7 +123,7 @@ private fun throwInternalExceptionIfParamsNotEquals(first: Int, second: Int) {
 class InternalExceptionVerifier(sequentialSpecification: Class<*>) : Verifier {
     override fun verifyResults(scenario: ExecutionScenario, results: ExecutionResult): Boolean {
         val result = results.parallelResults[0][0]
-        return !(result is ExceptionResult && result.throwable is InternalException)
+        return !(result is ExceptionActorResult && result.throwable is InternalException)
     }
 }
 

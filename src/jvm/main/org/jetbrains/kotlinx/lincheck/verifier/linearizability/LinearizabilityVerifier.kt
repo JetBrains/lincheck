@@ -48,9 +48,9 @@ class LinearizabilityContext : VerifierContext {
         val expectedResult = results.threadsResults[threadId][actorId]!!
         // Check whether the operation has been suspended and should be followed by cancellation
         val ticket = tickets[threadId]
-        val promptCancel = actor.promptCancellation && ticket != NO_TICKET && expectedResult === Cancelled
+        val promptCancel = actor.promptCancellation && ticket != NO_TICKET && expectedResult === CancelledActorResult
         if (suspended[threadId] || promptCancel) {
-            return if (actor.cancelOnSuspension && expectedResult === Cancelled)
+            return if (actor.cancelOnSuspension && expectedResult === CancelledActorResult)
                 state.nextByCancellation(actor, ticket).createContext(threadId)
             else null
         }
@@ -74,7 +74,7 @@ class LinearizabilityContext : VerifierContext {
         val nextSuspended = suspended.copyOf()
         val nextTickets = tickets.copyOf()
         // update tickets
-        nextTickets[threadId] = if (result == Suspended) ticket else NO_TICKET
+        nextTickets[threadId] = if (result == SuspendedActorResult) ticket else NO_TICKET
         if (rf != null) { // remapping
             nextTickets.forEachIndexed { tid, ticket ->
                 if (tid != threadId && ticket != NO_TICKET)
@@ -82,7 +82,7 @@ class LinearizabilityContext : VerifierContext {
             }
         }
         // update "suspended" statuses
-        nextSuspended[threadId] = result == Suspended
+        nextSuspended[threadId] = result == SuspendedActorResult
         for (tid in threads) {
             if (nextTickets[tid] in resumedTickets) // note, that we have to use remapped tickets here!
                 nextSuspended[tid] = false

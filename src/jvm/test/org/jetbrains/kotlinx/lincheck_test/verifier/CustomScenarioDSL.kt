@@ -55,10 +55,10 @@ fun scenarioWithResults(
     block: ExecutionBuilder.() -> Unit
 ): Pair<ExecutionScenario, ExecutionResult> = ExecutionBuilder().apply(block).buildScenarioWithResults()
 
-data class Operation(val actor: Actor, val result: Result)
+data class Operation(val actor: Actor, val result: ActorResult)
 
 class ThreadExecution : ArrayList<Operation>() {
-    fun operation(actor: Actor, result: Result) {
+    fun operation(actor: Actor, result: ActorResult) {
         add(Operation(actor, result))
     }
 }
@@ -87,7 +87,7 @@ class ExecutionBuilder {
     }
 
     fun buildScenarioWithResults(): Pair<ExecutionScenario, ExecutionResult> {
-        val parallelResults = mutableListOf<List<Result>>()
+        val parallelResults = mutableListOf<List<ActorResult>>()
         val parallelExecution = mutableListOf<List<Actor>>()
         parallel.forEach {
             parallelExecution.add(it.map { it.actor })

@@ -208,7 +208,7 @@ private fun createConfiguration(testClass: Class<*>) =
 private class ExceptionFailingVerifier : Verifier {
     override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
         return when (results!!.parallelResults[0][0]!!) {
-            is ExceptionResult -> false
+            is ExceptionActorResult -> false
             else -> true
         }
     }

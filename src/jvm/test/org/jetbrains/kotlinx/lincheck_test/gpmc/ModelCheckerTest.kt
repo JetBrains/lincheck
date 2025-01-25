@@ -86,11 +86,11 @@ private class CollectResultsVerifier : Verifier {
 
     override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
         when (val result = results!!.parallelResults[0][0]!!) {
-            is VoidResult -> {}
-            is ValueResult -> {
+            is VoidActorResult -> {}
+            is ValueActorResult -> {
                 values.add(result.value)
             }
-            is ExceptionResult -> {
+            is ExceptionActorResult -> {
                 exceptions.add(result.throwable)
             }
             else -> {

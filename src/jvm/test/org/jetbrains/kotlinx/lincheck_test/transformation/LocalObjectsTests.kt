@@ -123,7 +123,7 @@ class LocalObjectEscapeConstructorTest {
         check(failure is IncorrectResultsFailure)
         // `escapeLocal` function should throw `LocalEscapedException`
         val result = failure.results.parallelResults[0][0]
-        check(result is ExceptionResult)
+        check(result is ExceptionActorResult)
         check(result.throwable is LocalEscapedException)
     }
 

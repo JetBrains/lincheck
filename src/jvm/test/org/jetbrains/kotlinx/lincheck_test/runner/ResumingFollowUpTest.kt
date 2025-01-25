@@ -9,8 +9,8 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.runner
 
-import org.jetbrains.kotlinx.lincheck.Suspended
-import org.jetbrains.kotlinx.lincheck.ValueResult
+import org.jetbrains.kotlinx.lincheck.SuspendedActorResult
+import org.jetbrains.kotlinx.lincheck.ValueActorResult
 import org.jetbrains.kotlinx.lincheck_test.verifier.*
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier
 import org.junit.Test
@@ -57,11 +57,11 @@ class ResumingFollowUpTest {
         verify(ResumingFollowUpTest::class.java, LinearizabilityVerifier::class.java, {
             parallel {
                 thread {
-                    operation(actor(f), ValueResult("OK"))
+                    operation(actor(f), ValueActorResult("OK"))
                 }
                 thread {
-                    operation(actor(b, 1), ValueResult(true))
-                    operation(actor(afterB), Suspended) // should be S + 42
+                    operation(actor(b, 1), ValueActorResult(true))
+                    operation(actor(afterB), SuspendedActorResult) // should be S + 42
                 }
             }
         }, false)

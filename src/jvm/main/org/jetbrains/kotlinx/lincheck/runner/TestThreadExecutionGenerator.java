@@ -45,24 +45,24 @@ public class TestThreadExecutionGenerator {
     private static final Method TEST_THREAD_EXECUTION_INC_CLOCK = new Method("incClock", VOID_TYPE, NO_ARGS);
     private static final Method TEST_THREAD_EXECUTION_READ_CLOCKS = new Method("readClocks", VOID_TYPE, new Type[]{INT_TYPE});
 
-    private static final Type RESULT_TYPE = getType(Result.class);
+    private static final Type RESULT_TYPE = getType(ActorResult.class);
 
-    private static final Type NO_RESULT_TYPE = getType(NoResult.class);
-    private static final String NO_RESULT_CLASS_NAME = NoResult.class.getCanonicalName().replace('.', '/');
+    private static final Type NO_RESULT_TYPE = getType(NoActorResult.class);
+    private static final String NO_RESULT_CLASS_NAME = NoActorResult.class.getCanonicalName().replace('.', '/');
 
-    private static final Type VOID_RESULT_TYPE = getType(VoidResult.class);
-    private static final String VOID_RESULT_CLASS_NAME = VoidResult.class.getCanonicalName().replace('.', '/');
+    private static final Type VOID_RESULT_TYPE = getType(VoidActorResult.class);
+    private static final String VOID_RESULT_CLASS_NAME = VoidActorResult.class.getCanonicalName().replace('.', '/');
 
     private static final String INSTANCE = "INSTANCE";
 
-    private static final Type VALUE_RESULT_TYPE = getType(ValueResult.class);
+    private static final Type VALUE_RESULT_TYPE = getType(ValueActorResult.class);
     private static final Method VALUE_RESULT_TYPE_CONSTRUCTOR = new Method("<init>", VOID_TYPE, new Type[] {OBJECT_TYPE});
 
-    private static final Type EXCEPTION_RESULT_TYPE = getType(ExceptionResult.class);
-    private static final Type RESULT_KT_TYPE = getType(ResultKt.class);
+    private static final Type EXCEPTION_RESULT_TYPE = getType(ExceptionActorResult.class);
+    private static final Type RESULT_KT_TYPE = getType(ActorResultKt.class);
     private static final Method RESULT_KT_CREATE_EXCEPTION_RESULT_METHOD = new Method("createExceptionResult", EXCEPTION_RESULT_TYPE, new Type[]{THROWABLE_TYPE});
 
-    private static final Type RESULT_ARRAY_TYPE = getType(Result[].class);
+    private static final Type RESULT_ARRAY_TYPE = getType(ActorResult[].class);
 
     private static final Method RESULT_WAS_SUSPENDED_GETTER_METHOD = new Method("getWasSuspended", BOOLEAN_TYPE, new Type[]{});
 
