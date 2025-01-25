@@ -11,6 +11,7 @@ package org.jetbrains.kotlinx.lincheck.trace
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
+import org.jetbrains.kotlinx.lincheck.VoidResult
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.lincheck.util.isLincheckInternalException
 import org.jetbrains.lincheck.util.LincheckAnalysisAbortedError
@@ -364,15 +365,15 @@ internal class MethodCallTracePoint(
         this.ownerName = ownerName
     }
     
-    fun initializeActorResult(result: Result?) {
+    fun initializeActorResult(result: LincheckResult?) {
         check(isActor)
         this.returnedValue = when (result) {
             null -> ReturnedValueResult.NoValue
+            is VoidResult -> ReturnedValueResult.VoidResult
             is ExceptionResult -> when (result.throwable) {
                 is LincheckAnalysisAbortedError -> ReturnedValueResult.NoValue
                 else -> ReturnedValueResult.ExceptionResult(result.toString())
             }
-            is VoidResult -> ReturnedValueResult.VoidResult
             else -> ReturnedValueResult.ValueResult(result.toString(), "")
         }
     }

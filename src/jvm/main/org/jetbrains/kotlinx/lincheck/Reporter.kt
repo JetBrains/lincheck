@@ -463,11 +463,11 @@ private fun executionResultsRepresentation(
 private data class ResultActorData(
     val threadId: Int,
     val actor: Actor,
-    val result: Result?,
+    val result: LincheckResult?,
     val exceptionInfo: ExceptionNumberAndStacktrace? = null,
     val hbClock: HBClock? = null
 ) {
-    constructor(threadId: Int, actor: Actor, result: Result?, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>, hbClock: HBClock?)
+    constructor(threadId: Int, actor: Actor, result: LincheckResult?, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>, hbClock: HBClock?)
             : this(threadId, actor, result, (result as? ExceptionResult)?.let { exceptionStackTraces[it.throwable] }, hbClock)
 
     override fun toString(): String {

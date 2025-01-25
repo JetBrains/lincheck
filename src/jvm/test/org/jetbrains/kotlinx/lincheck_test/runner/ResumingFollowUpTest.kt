@@ -9,7 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.runner
 
-import org.jetbrains.kotlinx.lincheck.Suspended
+import org.jetbrains.kotlinx.lincheck.SuspendedResult
 import org.jetbrains.kotlinx.lincheck.ValueResult
 import org.jetbrains.kotlinx.lincheck_test.verifier.*
 import org.jetbrains.lincheck.datastructures.verifier.LinearizabilityVerifier
@@ -61,7 +61,7 @@ class ResumingFollowUpTest {
                 }
                 thread {
                     operation(actor(b, 1), ValueResult(true))
-                    operation(actor(afterB), Suspended) // should be S + 42
+                    operation(actor(afterB), SuspendedResult) // should be S + 42
                 }
             }
         }, false)

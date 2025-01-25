@@ -11,7 +11,6 @@ package org.jetbrains.kotlinx.lincheck_test.runner
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.runner.*
-import org.jetbrains.kotlinx.lincheck.ExceptionResult.Companion.create
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.emptyScenario
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
@@ -67,7 +66,7 @@ class TestThreadExecutionHelperTest {
         ex.results = arrayOfNulls(5)
         ex.run()
         Assert.assertArrayEquals(
-            arrayOf<Result>(
+            arrayOf<LincheckResult>(
                 ValueResult(true),
                 ValueResult(true),
                 ValueResult(1),
@@ -103,8 +102,8 @@ class TestThreadExecutionHelperTest {
             arrayOf(
                 VoidResult,
                 ValueResult(1),
-                create(NoSuchElementException()),
-                create(NoSuchElementException())
+                ExceptionResult(NoSuchElementException()),
+                ExceptionResult(NoSuchElementException())
             ),
             ex.results
         )

@@ -67,7 +67,7 @@ class SuspendResumeScenarios {
     fun resumeSuccessfully(value: Int) {
         while (continuation.get() == null) {
         }
-        continuation.get()!!.resumeWith(kotlin.Result.success(value))
+        continuation.get()!!.resumeWith(Result.success(value))
     }
 
     class TestException : Throwable()
@@ -92,7 +92,7 @@ class ExecutionScenarioRunnerExceptionTest {
             parallel {
                 thread {
                     operation(
-                        actor(susWithoutException), ExceptionResult.create(SuspendResumeScenarios.TestException())
+                        actor(susWithoutException), ExceptionResult(SuspendResumeScenarios.TestException())
                     )
                 }
                 thread {
@@ -121,7 +121,7 @@ class ExecutionScenarioRunnerExceptionTest {
             parallel {
                 thread {
                     operation(
-                        actor(susResumeThrow), ExceptionResult.create(SuspendResumeScenarios.TestException())
+                        actor(susResumeThrow), ExceptionResult(SuspendResumeScenarios.TestException())
                     )
                 }
                 thread {
@@ -148,7 +148,7 @@ class ExecutionScenarioRunnerExceptionTest {
         val (scenario, expectedResults) = scenarioWithResults {
             parallel {
                 thread {
-                    operation(actor(susThrow), ExceptionResult.create(SuspendResumeScenarios.TestException()))
+                    operation(actor(susThrow), ExceptionResult(SuspendResumeScenarios.TestException()))
                 }
             }
         }

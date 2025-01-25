@@ -81,7 +81,7 @@ class BufferedChannelCustomTest {
                     operation(actor(r), ValueResult(1))
                     operation(actor(r), ValueResult(2))
                     operation(actor(s, 5), VoidResult)
-                    operation(actor(s, 6), Suspended)
+                    operation(actor(s, 6), SuspendedResult)
                     operation(actor(r), NoResult)
                 }
             }
@@ -121,7 +121,7 @@ class BufferedChannelCustomTest {
             post {
                 operation(actor(r), ValueResult(1))
                 operation(actor(r), ValueResult(2))
-                operation(actor(r), Suspended)
+                operation(actor(r), SuspendedResult)
             }
         }, true)
     }

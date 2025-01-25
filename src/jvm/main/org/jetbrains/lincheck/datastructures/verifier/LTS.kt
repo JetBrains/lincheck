@@ -68,17 +68,17 @@ class LTS(private val sequentialSpecification: Class<*>) {
         /**
          * Computes or gets the existing transition from the current state by the given [actor].
          */
-        fun next(actor: Actor, expectedResult: Result, ticket: Int) = when (ticket) {
+        fun next(actor: Actor, expectedResult: LincheckResult, ticket: Int) = when (ticket) {
             NO_TICKET -> nextByRequest(actor, expectedResult)
             else -> nextByFollowUp(actor, ticket, expectedResult)
         }
 
         private fun createAtomicallySuspendedAndCancelledTransition() =
             copyAndApply { _, _, resumedTicketsWithResults, _ ->
-                TransitionInfo(this, getResumedOperations(resumedTicketsWithResults).map { it.resumedActorTicket }.toSet(), NO_TICKET, null, Cancelled)
+                TransitionInfo(this, getResumedOperations(resumedTicketsWithResults).map { it.resumedActorTicket }.toSet(), NO_TICKET, null, CancelledResult)
             }
 
-        private fun nextByRequest(actor: Actor, expectedResult: Result): TransitionInfo? {
+        private fun nextByRequest(actor: Actor, expectedResult: LincheckResult): TransitionInfo? {
             // Compute the transition following the sequential specification.
             val transitionInfo = transitionsByRequests.computeIfAbsent(actor) { a ->
                 copyAndApply { instance, suspendedOperations, resumedTicketsWithResults, continuationsMap ->
@@ -92,12 +92,12 @@ class LTS(private val sequentialSpecification: Class<*>) {
             // Check whether the current actor allows an extra suspension and the the expected result is `Cancelled` while the
             // constructed transition does not suspend -- we can simply consider that this cancelled invocation does not take
             // any effect and remove it from the history.
-            if (expectedResult == Cancelled && transitionInfo.result != Suspended)
+            if (expectedResult == CancelledResult && transitionInfo.result != SuspendedResult)
                 return atomicallySuspendedAndCancelledTransition
             return if (expectedResult.isLegalByRequest(transitionInfo)) transitionInfo else null
         }
 
-        private fun nextByFollowUp(actor: Actor, ticket: Int, expectedResult: Result): TransitionInfo? {
+        private fun nextByFollowUp(actor: Actor, ticket: Int, expectedResult: LincheckResult): TransitionInfo? {
             val transitionInfo = transitionsByFollowUps.computeIfAbsent(ticket) {
                 copyAndApply { instance, suspendedOperations, resumedTicketsWithResults, continuationsMap ->
                     // Invoke the given operation to count the next transition.
@@ -106,7 +106,7 @@ class LTS(private val sequentialSpecification: Class<*>) {
                     createTransition(op, result, instance, suspendedOperations, getResumedOperations(resumedTicketsWithResults))
                 }
             }
-            check(transitionInfo.result != Suspended) {
+            check(transitionInfo.result != SuspendedResult) {
                 "Execution of the follow-up part of this operation ${actor.method} suspended - this behaviour is not supported"
             }
             return if (expectedResult.isLegalByFollowUp(transitionInfo)) transitionInfo else null
@@ -117,18 +117,18 @@ class LTS(private val sequentialSpecification: Class<*>) {
                 // Invoke the given operation to count the next transition.
                 val op = Operation(actor, ticket, CANCELLATION)
                 val result = op.invoke(instance, suspendedOperations, resumedTicketsWithResults, continuationsMap)
-                check(result === Cancelled)
+                check(result === CancelledResult)
                 createTransition(op, result, instance, suspendedOperations, getResumedOperations(resumedTicketsWithResults))
             }
         }
 
-        private fun Result.isLegalByRequest(transitionInfo: TransitionInfo) =
-            isLegalByFollowUp(transitionInfo) || transitionInfo.result == Suspended
+        private fun LincheckResult.isLegalByRequest(transitionInfo: TransitionInfo) =
+            isLegalByFollowUp(transitionInfo) || transitionInfo.result == SuspendedResult
 
-        private fun Result.isLegalByFollowUp(transitionInfo: TransitionInfo) =
+        private fun LincheckResult.isLegalByFollowUp(transitionInfo: TransitionInfo) =
             this == transitionInfo.result ||
-                    this is ValueResult && transitionInfo.result is ValueResult && this.value == transitionInfo.result.value ||
-                    this is ExceptionResult && transitionInfo.result is ExceptionResult && this.tClassCanonicalName == transitionInfo.result.tClassCanonicalName
+            this is ValueResult && transitionInfo.result is ValueResult && this.value == transitionInfo.result.value ||
+            this is ExceptionResult && transitionInfo.result is ExceptionResult && this.throwableCanonicalName == transitionInfo.result.throwableCanonicalName
 
         private inline fun <T> copyAndApply(
             action: (
@@ -153,7 +153,7 @@ class LTS(private val sequentialSpecification: Class<*>) {
 
         private fun createTransition(
             actorWithTicket: Operation,
-            result: Result,
+            result: LincheckResult,
             instance: Any,
             suspendedActorWithTickets: List<Operation>,
             resumedOperations: List<ResumptionInfo>
@@ -163,7 +163,7 @@ class LTS(private val sequentialSpecification: Class<*>) {
                 TransitionInfo(
                     nextState = nextStateInfo.state,
                     resumedTickets = stateInfo.resumedOperations.map { it.resumedActorTicket }.toSet(),
-                    ticket = if (rf != null && result === Suspended) rf[actorWithTicket.ticket] else actorWithTicket.ticket,
+                    ticket = if (rf != null && result === SuspendedResult) rf[actorWithTicket.ticket] else actorWithTicket.ticket,
                     rf = rf,
                     result = result
                 )
@@ -185,7 +185,7 @@ class LTS(private val sequentialSpecification: Class<*>) {
         suspendedOperations: MutableList<Operation>,
         resumedOperations: MutableMap<Int, ResumedResult>,
         continuationsMap: MutableMap<Operation, CancellableContinuation<*>>
-    ): Result {
+    ): LincheckResult {
         val prevResumedTickets = resumedOperations.keys.toMutableList()
         lastSuspendedCancellableContinuationDuringVerification = null
         val res = when (type) {
@@ -211,10 +211,10 @@ class LTS(private val sequentialSpecification: Class<*>) {
                 if (resumedOperations.remove(ticket) != null) check(actor.promptCancellation) {
                     "The operation can be resumed and then cancelled only with the prompt cancellation enabled"
                 }
-                Cancelled
+                CancelledResult
             }
         }
-        if (res === Suspended) {
+        if (res === SuspendedResult) {
             val cont = lastSuspendedCancellableContinuationDuringVerification
             lastSuspendedCancellableContinuationDuringVerification = null
             if (cont !== null) {
@@ -400,7 +400,7 @@ internal class Completion(
     override val context: CoroutineContext
         get() = VerifierInterceptor(ticket, actor, resumedTicketsWithResults) + StoreExceptionHandler() + Job()
 
-    override fun resumeWith(result: kotlin.Result<Any?>) {
+    override fun resumeWith(result: Result<Any?>) {
         // write the result only if the operation has not been cancelled
         if (!result.cancelledByLincheck())
             resumedTicketsWithResults[ticket] = ResumedResult(null to result).also { it.resumedActor = actor }
@@ -486,10 +486,10 @@ class TransitionInfo(
     /**
      * Transition result
      */
-    val result: Result
+    val result: LincheckResult
 ) {
     /**
      * Returns `true` if the currently invoked operation is completed.
      */
-    val operationCompleted: Boolean get() = result != NoResult && result != Suspended
+    val operationCompleted: Boolean get() = result != NoResult && result != SuspendedResult
 }
