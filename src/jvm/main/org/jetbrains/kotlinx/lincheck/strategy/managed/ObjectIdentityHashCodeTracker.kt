@@ -42,13 +42,11 @@ internal class ObjectIdentityHashCodeTracker {
      * This method substitutes identity hash code of the object in its header with the initial (from the first test execution) identity hashcode.
      * @return id of the created object.
      */
-    @OptIn(ExperimentalStdlibApi::class)
     fun afterNewTrackedObjectCreation(obj: Any): Id {
-        if (!TRACE_DEBUGGER_MODE) return 0
-        val currentObjectId = getNextObjectId()
+        val currentObjectId = if (TRACE_DEBUGGER_MODE) getNextObjectId() else 0
         val initialIdentityHashCode = getInitialIdentityHashCode(
             objectId = currentObjectId,
-            identityHashCode = System.identityHashCode(obj)
+            identityHashCode = if (TRACE_DEBUGGER_MODE) System.identityHashCode(obj) else 0
         )
         // ATTENTION: bizarre and crazy code below (might not work for all JVM implementations)
         UnsafeHolder.UNSAFE.putInt(obj, IDENTITY_HASHCODE_OFFSET, initialIdentityHashCode)

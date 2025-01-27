@@ -150,9 +150,6 @@ internal class LincheckClassVisitor(
         mv = WaitNotifyTransformer(fileName, className, methodName, mv.newAdapter())
         mv = ParkingTransformer(fileName, className, methodName, mv.newAdapter())
         mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
-        if (!TRACE_DEBUGGER_MODE) {
-            mv = DeterministicHashCodeTransformer(fileName, className, methodName, mv.newAdapter())
-        }
         if (TRACE_DEBUGGER_MODE) {
             mv = DeterministicInvokeDynamicTransformer(fileName, className, methodName, mv.newAdapter())
         }
