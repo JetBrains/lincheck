@@ -61,6 +61,9 @@ public class Injections {
         if (descriptor == null) {
             return null;
         }
+        if (descriptor.inIgnoredSection()) {
+            return null;
+        }
         return descriptor.getEventTracker();
     }
 
