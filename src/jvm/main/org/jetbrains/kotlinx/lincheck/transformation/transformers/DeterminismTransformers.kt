@@ -19,53 +19,6 @@ import sun.nio.ch.lincheck.*
 import java.util.*
 
 /**
- * [DeterministicHashCodeTransformer] tracks invocations of [Object.hashCode] and [System.identityHashCode] methods,
- * and replaces them with the [Injections.hashCodeDeterministic] and [Injections.identityHashCodeDeterministic] calls.
- *
- * This transformation aims to prevent non-determinism due to the native [hashCode] implementation,
- * which typically returns memory address of the object.
- * There is no guarantee that memory addresses will be the same in different runs.
- */
-internal class DeterministicHashCodeTransformer(
-    fileName: String,
-    className: String,
-    methodName: String,
-    adapter: GeneratorAdapter,
-) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
-
-    override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
-        when {
-            name == "hashCode" && desc == "()I" -> {
-                invokeIfInTestingCode(
-                    original = {
-                        visitMethodInsn(opcode, owner, name, desc, itf)
-                    },
-                    code = {
-                        invokeStatic(Injections::hashCodeDeterministic)
-                    }
-                )
-            }
-
-            owner == "java/lang/System" && name == "identityHashCode" && desc == "(Ljava/lang/Object;)I" -> {
-                invokeIfInTestingCode(
-                    original = {
-                        visitMethodInsn(opcode, owner, name, desc, itf)
-                    },
-                    code = {
-                        invokeStatic(Injections::identityHashCodeDeterministic)
-                    }
-                )
-            }
-
-            else -> {
-                visitMethodInsn(opcode, owner, name, desc, itf)
-            }
-        }
-    }
-
-}
-
-/**
  * [DeterministicTimeTransformer] tracks invocations of [System.nanoTime] and [System.currentTimeMillis] methods,
  * and replaces them with stubs to prevent non-determinism.
  */

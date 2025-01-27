@@ -12,7 +12,6 @@ package org.jetbrains.kotlinx.lincheck_test.transformation
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.junit.*
 
 /**
@@ -72,19 +71,6 @@ class IdentityHashCodeOnNullTest {
     fun hashCodeOnObject() {
         val o: Any? = null
         System.identityHashCode(o)
-    }
-
-    @Test
-    fun test() = ModelCheckingOptions().check(this::class)
-}
-
-@Ignore // TODO: easier to support when `javaagent` is merged
-class IdentityHashCodeDiffersTest() {
-    @Operation
-    fun operation() {
-        val objects = Array(1000) { Any() }
-        // identityHashCode should differ
-        check(objects.map { it.hashCode() }.distinct().size > 1)
     }
 
     @Test
