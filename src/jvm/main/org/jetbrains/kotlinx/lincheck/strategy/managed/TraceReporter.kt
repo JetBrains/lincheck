@@ -37,6 +37,11 @@ internal fun StringBuilder.appendTrace(
     appendDetailedTrace(nThreads, threadNames, startTraceGraphNode, failure)
 }
 
+private fun isGeneralPurposeModelCheckingScenario(scenario: ExecutionScenario): Boolean {
+    val actor = scenario.parallelExecution.getOrNull(0)?.getOrNull(0)
+    return (actor?.method == GeneralPurposeModelCheckingWrapper<*>::run.javaMethod)
+}
+
 // This is a hack to work around current limitations of the trace representation API
 // to extract the lambda method call on which the general-purpose MC was run.
 // TODO: please refactor me and trace representation API!
@@ -44,11 +49,7 @@ private fun extractLambdaCallIfGeneralPurposeModelCheckingWasUsed(
     scenario: ExecutionScenario,
     startTraceGraphNode: List<TraceNode>,
 ): List<TraceNode> {
-    val actor = scenario.parallelExecution.getOrNull(0)?.getOrNull(0)
-    val isGeneralPurposeModelCheckingCall = run {
-        actor?.method == GeneralPurposeModelCheckingWrapper<*>::run.javaMethod
-    }
-    if (!isGeneralPurposeModelCheckingCall) {
+    if (!isGeneralPurposeModelCheckingScenario(scenario)) {
         return startTraceGraphNode
     }
     val actorNode = startTraceGraphNode.firstOrNull() as? ActorNode
@@ -197,6 +198,7 @@ internal fun constructTraceGraph(
     val traceGraphNodesSections = arrayListOf<MutableList<TraceNode>>()
     var traceGraphNodes = arrayListOf<TraceNode>()
 
+    val isGeneralPurposeMC = isGeneralPurposeModelCheckingScenario(scenario)
 
     for (eventId in tracePoints.indices) {
         val event = tracePoints[eventId]
@@ -267,7 +269,13 @@ internal fun constructTraceGraph(
                 // create a new call node if needed
                 val result = traceGraphNodes.createAndAppend { lastNode ->
                     val callDepth = innerNode.callDepth + 1
-                    CallNode(prefixFactory.prefixForCallNode(iThread, callDepth), iThread, lastNode, callDepth, call.tracePoint)
+                    // TODO: please refactor me
+                    var prefixCallDepth = callDepth
+                    if (isGeneralPurposeMC && iThread == 0) {
+                        prefixCallDepth -= 1
+                    }
+                    val prefix = prefixFactory.prefixForCallNode(iThread, prefixCallDepth)
+                    CallNode(prefix, iThread, lastNode, callDepth, call.tracePoint)
                 }
                 // make it a child of the previous node
                 innerNode.addInternalEvent(result)
@@ -278,7 +286,13 @@ internal fun constructTraceGraph(
         val isLastExecutedEvent = (eventId == lastExecutedEvents[iThread])
         val node = traceGraphNodes.createAndAppend { lastNode ->
             val callDepth = innerNode.callDepth + 1
-            TraceLeafEvent(prefixFactory.prefix(event, callDepth), iThread, lastNode, callDepth, event, isLastExecutedEvent)
+            // TODO: please refactor me
+            var prefixCallDepth = callDepth
+            if (isGeneralPurposeMC && iThread == 0) {
+                prefixCallDepth -= 1
+            }
+            val prefix = prefixFactory.prefix(event, prefixCallDepth)
+            TraceLeafEvent(prefix, iThread, lastNode, callDepth, event, isLastExecutedEvent)
         }
         innerNode.addInternalEvent(node)
     }

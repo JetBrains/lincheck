@@ -10,28 +10,28 @@ The number next to an exception name helps you find its stack trace provided aft
 ---
 
 The following interleaving leads to the error:
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|                                                                                                      Thread 1                                                                                                      |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|   VariableReadWriteRunConcurrentRepresentationTest#1.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:35) |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                     Thread 1                                                                                                     |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| VariableReadWriteRunConcurrentRepresentationTest#1.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:37) |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 
 Exception stack traces:
 #1: java.lang.IllegalStateException: Check failed.
-	at org.jetbrains.kotlinx.lincheck_test.representation.VariableReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:172)
-	at org.jetbrains.kotlinx.lincheck_test.representation.VariableReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:161)
-	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:35)
+	at org.jetbrains.kotlinx.lincheck_test.representation.VariableReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:176)
+	at org.jetbrains.kotlinx.lincheck_test.representation.VariableReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:165)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:37)
 	at java.base/java.lang.Thread.run(Thread.java:840)
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|                                                                                                      Thread 1                                                                                                      |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|   VariableReadWriteRunConcurrentRepresentationTest#1.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:35) |
-|     block(): threw IllegalStateException at VariableReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:161)                                                                        |
-|       VariableReadWriteRunConcurrentRepresentationTest.x.READ: 0 at VariableReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:170)                                                |
-|       VariableReadWriteRunConcurrentRepresentationTest.x.WRITE(1) at VariableReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:170)                                               |
-|       VariableReadWriteRunConcurrentRepresentationTest.x.READ: 1 at VariableReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:171)                                                |
-|       VariableReadWriteRunConcurrentRepresentationTest.x.WRITE(0) at VariableReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:171)                                               |
-|       VariableReadWriteRunConcurrentRepresentationTest.x.READ: 0 at VariableReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:171)                                                |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                     Thread 1                                                                                                     |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| VariableReadWriteRunConcurrentRepresentationTest#1.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:37) |
+|   block(): threw IllegalStateException at VariableReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:165)                                                                        |
+|     VariableReadWriteRunConcurrentRepresentationTest.x.READ: 0 at VariableReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:174)                                                |
+|     VariableReadWriteRunConcurrentRepresentationTest.x.WRITE(1) at VariableReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:174)                                               |
+|     VariableReadWriteRunConcurrentRepresentationTest.x.READ: 1 at VariableReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:175)                                                |
+|     VariableReadWriteRunConcurrentRepresentationTest.x.WRITE(0) at VariableReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:175)                                               |
+|     VariableReadWriteRunConcurrentRepresentationTest.x.READ: 0 at VariableReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:175)                                                |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
