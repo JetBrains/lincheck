@@ -89,7 +89,7 @@ internal class LincheckClassVisitor(
         if (methodName == "<init>" || ideaPluginEnabled && methodName == "toString" && desc == "()Ljava/lang/String;") {
             mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
             if (isInTraceDebuggerMode) {
-                // Lincheck does not support true identity hash codes,
+                // Lincheck does not support true identity hash codes (it always uses zeroes),
                 // so there is no need for the `DeterministicInvokeDynamicTransformer` there.
                 mv = DeterministicInvokeDynamicTransformer(fileName, className, methodName, mv.newAdapter())
             }
@@ -165,11 +165,8 @@ internal class LincheckClassVisitor(
         mv = WaitNotifyTransformer(fileName, className, methodName, mv.newAdapter())
         mv = ParkingTransformer(fileName, className, methodName, mv.newAdapter())
         mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
-        if (!isInTraceDebuggerMode) {
-            mv = DeterministicHashCodeTransformer(fileName, className, methodName, mv.newAdapter())
-        }
         if (isInTraceDebuggerMode) {
-            // Lincheck does not support true identity hash codes,
+            // Lincheck does not support true identity hash codes (it always uses zeroes),
             // so there is no need for the `DeterministicInvokeDynamicTransformer` there.
             mv = DeterministicInvokeDynamicTransformer(fileName, className, methodName, mv.newAdapter())
         }

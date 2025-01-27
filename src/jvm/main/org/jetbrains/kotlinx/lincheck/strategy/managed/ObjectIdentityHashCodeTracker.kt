@@ -19,9 +19,12 @@ import java.util.concurrent.atomic.AtomicLong
 private typealias Id = Long
 
 /**
- * This class stores initial identity hashcodes of created objects.
- * When the program is rerun the firstly calculated hashcodes are left as is and used to
- * substitute new hashcodes via [sun.misc.Unsafe] in the object headers.
+ * This class stores initial identity hash-codes of created objects.
+ * When the program is rerun the firstly calculated hash-codes are left as is and used to
+ * substitute new hash-codes via [sun.misc.Unsafe] in the object headers.
+ * 
+ * In Lincheck mode all objects have identity hash code 0 to temporarily mitigate complexity
+ * created by iterating over interleavings.
  *
  * To guarantee correct work, ensure that replays are deterministic.
  */
@@ -42,13 +45,11 @@ internal class ObjectIdentityHashCodeTracker {
      * This method substitutes identity hash code of the object in its header with the initial (from the first test execution) identity hashcode.
      * @return id of the created object.
      */
-    @OptIn(ExperimentalStdlibApi::class)
     fun afterNewTrackedObjectCreation(obj: Any): Id {
-        if (!isInTraceDebuggerMode) return 0
-        val currentObjectId = getNextObjectId()
+        val currentObjectId = if (isInTraceDebuggerMode) getNextObjectId() else 0
         val initialIdentityHashCode = getInitialIdentityHashCode(
             objectId = currentObjectId,
-            identityHashCode = System.identityHashCode(obj)
+            identityHashCode = if (isInTraceDebuggerMode) System.identityHashCode(obj) else 0
         )
         // ATTENTION: bizarre and crazy code below (might not work for all JVM implementations)
         UnsafeHolder.UNSAFE.putInt(obj, IDENTITY_HASHCODE_OFFSET, initialIdentityHashCode)
