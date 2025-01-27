@@ -1,13 +1,10 @@
-= Invalid execution results =
-| -------------------------------------- |
-|                Thread 1                |
-| -------------------------------------- |
-| run(() -> R): IllegalStateException #1 |
-| -------------------------------------- |
+= Concurrent test failed =
 
----
-The number next to an exception name helps you find its stack trace provided after the interleaving section
----
+java.lang.IllegalStateException: Check failed.
+	at org.jetbrains.kotlinx.lincheck_test.representation.IncorrectConcurrentLinkedDequeRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:282)
+	at org.jetbrains.kotlinx.lincheck_test.representation.IncorrectConcurrentLinkedDequeRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:264)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:37)
+	at java.lang.Thread.run(Thread.java:750)
 
 The following interleaving leads to the error:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -27,13 +24,6 @@ The following interleaving leads to the error:
 |     Thread#2.join() at IncorrectConcurrentLinkedDequeRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:281)                                                                                           |                                                                                                                                                                   |          |
 |     Thread#3.join() at IncorrectConcurrentLinkedDequeRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:281)                                                                                           |                                                                                                                                                                   |          |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-
-Exception stack traces:
-#1: java.lang.IllegalStateException: Check failed.
-	at org.jetbrains.kotlinx.lincheck_test.representation.IncorrectConcurrentLinkedDequeRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:282)
-	at org.jetbrains.kotlinx.lincheck_test.representation.IncorrectConcurrentLinkedDequeRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:264)
-	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:37)
-	at java.lang.Thread.run(Thread.java:750)
 
 Detailed trace:
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -1,13 +1,10 @@
-= Invalid execution results =
-| -------------------------------------- |
-|                Thread 1                |
-| -------------------------------------- |
-| run(() -> R): IllegalStateException #1 |
-| -------------------------------------- |
+= Concurrent test failed =
 
----
-The number next to an exception name helps you find its stack trace provided after the interleaving section
----
+java.lang.IllegalStateException: Check failed.
+	at org.jetbrains.kotlinx.lincheck_test.representation.ArrayReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:65)
+	at org.jetbrains.kotlinx.lincheck_test.representation.ArrayReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:51)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:37)
+	at java.base/java.lang.Thread.run(Thread.java:840)
 
 The following interleaving leads to the error:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -15,13 +12,6 @@ The following interleaving leads to the error:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ArrayReadWriteRunConcurrentRepresentationTest#1.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:37) |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-
-Exception stack traces:
-#1: java.lang.IllegalStateException: Check failed.
-	at org.jetbrains.kotlinx.lincheck_test.representation.ArrayReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:65)
-	at org.jetbrains.kotlinx.lincheck_test.representation.ArrayReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:51)
-	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:37)
-	at java.base/java.lang.Thread.run(Thread.java:840)
 
 Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

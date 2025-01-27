@@ -17,6 +17,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import java.io.*
 import kotlin.math.max
+import kotlin.reflect.jvm.javaMethod
 
 class Reporter(private val logLevel: LoggingLevel) {
     private val out: PrintStream = System.out
@@ -377,6 +378,23 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
         }
     }
 
+    if (isGeneralPurposeModelCheckingScenario(failure.scenario)) {
+        check(exceptionStackTraces.size <= 1)
+        if (exceptionStackTraces.isNotEmpty()) {
+            val (exception, descriptor) = exceptionStackTraces.entries.single()
+            appendLine(GENERAL_PURPOSE_MODEL_CHECKING_FAILURE_TITLE)
+            appendLine()
+            appendExceptionStackTrace(exception, descriptor.stackTrace)
+        } else {
+            appendLine(GENERAL_PURPOSE_MODEL_CHECKING_HUNG_TITLE)
+        }
+        if (failure.trace != null) {
+            appendLine()
+            appendTrace(failure, results, failure.trace, exceptionStackTraces)
+        }
+        return this
+    }
+
     when (failure) {
         is IncorrectResultsFailure -> appendIncorrectResultsFailure(failure, exceptionStackTraces)
         is TimeoutFailure -> appendTimeoutDeadlockWithDumpFailure(failure, exceptionStackTraces)
@@ -395,6 +413,11 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
         appendExceptionsStackTracesBlock(exceptionStackTraces)
     }
     return this
+}
+
+internal fun isGeneralPurposeModelCheckingScenario(scenario: ExecutionScenario): Boolean {
+    val actor = scenario.parallelExecution.getOrNull(0)?.getOrNull(0)
+    return (actor?.method == GeneralPurposeModelCheckingWrapper<*>::run.javaMethod)
 }
 
 private data class ExecutionResultsRepresentationData(
@@ -507,6 +530,12 @@ internal fun StringBuilder.appendExceptionsStackTracesBlock(exceptionStackTraces
         appendExceptionsStackTraces(exceptionStackTraces)
         appendLine()
     }
+}
+
+internal fun StringBuilder.appendExceptionStackTrace(exception: Throwable, stackTrace: List<StackTraceElement>): StringBuilder {
+    appendLine(exception::class.java.canonicalName + ": " + exception.message)
+    stackTrace.forEach { appendLine("\tat $it") }
+    return this
 }
 
 internal fun StringBuilder.appendExceptionsStackTraces(exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): StringBuilder {
@@ -727,5 +756,8 @@ private fun StringBuilder.appendException(t: Throwable) {
     t.printStackTrace(PrintWriter(sw))
     appendLine(sw.toString())
 }
+
+private const val GENERAL_PURPOSE_MODEL_CHECKING_FAILURE_TITLE  = "= Concurrent test failed ="
+private const val GENERAL_PURPOSE_MODEL_CHECKING_HUNG_TITLE     = "= Concurrent test has hung ="
 
 private const val EXCEPTIONS_TRACES_TITLE = "Exception stack traces:"

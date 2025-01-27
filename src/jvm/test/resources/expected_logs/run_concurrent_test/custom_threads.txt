@@ -1,13 +1,10 @@
-= Invalid execution results =
-| -------------------------------------- |
-|                Thread 1                |
-| -------------------------------------- |
-| run(() -> R): IllegalStateException #1 |
-| -------------------------------------- |
+= Concurrent test failed =
 
----
-The number next to an exception name helps you find its stack trace provided after the interleaving section
----
+java.lang.IllegalStateException: Check failed.
+	at org.jetbrains.kotlinx.lincheck_test.representation.CustomThreadsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:195)
+	at org.jetbrains.kotlinx.lincheck_test.representation.CustomThreadsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:180)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:37)
+	at java.base/java.lang.Thread.run(Unknown Source)
 
 The following interleaving leads to the error:
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -26,13 +23,6 @@ The following interleaving leads to the error:
 |     Thread#3.join() at CustomThreadsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:194)                                                                                           |          |          |          |
 |     Thread#4.join() at CustomThreadsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:194)                                                                                           |          |          |          |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-
-Exception stack traces:
-#1: java.lang.IllegalStateException: Check failed.
-	at org.jetbrains.kotlinx.lincheck_test.representation.CustomThreadsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:195)
-	at org.jetbrains.kotlinx.lincheck_test.representation.CustomThreadsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:180)
-	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:37)
-	at java.base/java.lang.Thread.run(Unknown Source)
 
 Detailed trace:
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
