@@ -35,8 +35,8 @@ internal fun StringBuilder.appendTrace(
         appendShortTrace(nThreads, threadNames, startTraceGraphNode, failure)
         appendDetailedTrace(nThreads, threadNames, startTraceGraphNode, failure)
     } else {
-        appendExceptionsStackTracesBlock(exceptionStackTraces)
         appendShortTrace(nThreads, threadNames, startTraceGraphNode, failure)
+        appendExceptionsStackTracesBlock(exceptionStackTraces)
         appendDetailedTrace(nThreads, threadNames, startTraceGraphNode, failure)
     }
 }
