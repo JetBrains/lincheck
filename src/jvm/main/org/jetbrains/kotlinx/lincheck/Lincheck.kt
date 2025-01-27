@@ -18,7 +18,7 @@ import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 
 
-@RequiresOptIn(message = "The model checking API is experimental and could change in the future.")
+@RequiresOptIn(message = "The model checking API is experimental and will change in the future.")
 @Retention(AnnotationRetention.BINARY)
 @Target(AnnotationTarget.FUNCTION)
 annotation class ExperimentalModelCheckingAPI
