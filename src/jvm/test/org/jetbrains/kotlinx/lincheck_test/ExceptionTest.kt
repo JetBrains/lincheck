@@ -153,7 +153,6 @@ class EmptyStackTraceExceptionTest : AbstractLincheckTest(IncorrectResultsFailur
         actorsPerThread(200)
         minimizeFailedScenario(true)
         sequentialSpecification(ExceptionTestSequentialImplementation::class.java)
-        logLevel(LoggingLevel.INFO)
     }
 
 }
