@@ -28,6 +28,22 @@ repositories {
     mavenCentral()
 }
 
+fun SourceDirectorySet.configureTestSources() {
+    srcDir("src/jvm/test-common")
+    val traceDebuggerMode: String by project
+    if (traceDebuggerMode.toBoolean()) {
+        srcDir("src/jvm/test-trace-debugger")
+    } else {
+        srcDir("src/jvm/test")
+        val jdkToolchainVersion: String by project
+        if (jdkToolchainVersion.toInt() >= 11) {
+            srcDir("src/jvm/test-jdk11")
+        } else {
+            srcDir("src/jvm/test-jdk8")
+        }
+    }
+}
+
 kotlin {
     @OptIn(ExperimentalKotlinGradlePluginApi::class)
     compilerOptions {
@@ -60,13 +76,7 @@ kotlin {
         }
 
         val jvmTest by getting {
-            kotlin.srcDir("src/jvm/test")
-            val jdkToolchainVersion: String by project
-            if (jdkToolchainVersion.toInt() >= 11) {
-                kotlin.srcDir("src/jvm/test-jdk11")
-            } else {
-                kotlin.srcDir("src/jvm/test-jdk8")
-            }
+            kotlin.configureTestSources()
 
             val junitVersion: String by project
             val jctoolsVersion: String by project
@@ -105,7 +115,7 @@ sourceSets.main {
 }
 
 sourceSets.test {
-    java.srcDirs("src/jvm/test")
+    java.configureTestSources()
     resources {
         srcDir("src/jvm/test/resources")
     }
