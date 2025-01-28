@@ -144,6 +144,10 @@ tasks {
         if (instrumentAllClasses.toBoolean()) {
             systemProperty("lincheck.instrumentAllClasses", "true")
         }
+        val overwriteRepresentationTestsOutput: String by project
+        if (overwriteRepresentationTestsOutput.toBoolean()) {
+            systemProperty("lincheck.overwriteRepresentationTestsOutput", "true")
+        }
         val extraArgs = mutableListOf<String>()
         val withEventIdSequentialCheck: String by project
         if (withEventIdSequentialCheck.toBoolean()) {

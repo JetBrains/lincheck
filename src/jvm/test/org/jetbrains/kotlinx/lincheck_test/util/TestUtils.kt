@@ -12,9 +12,9 @@ package org.jetbrains.kotlinx.lincheck_test.util
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator
 import org.junit.Assert.*
+import java.io.File
 
 /**
  * Checks output when Lincheck run fails with an exception and don't return [LincheckFailure]
@@ -51,7 +51,11 @@ internal fun LincheckFailure?.checkLincheckOutput(expectedOutputFile: String) {
     val expectedOutput = getExpectedLogFromResources(expectedOutputFile)
 
     if (actualOutput.filtered != expectedOutput.filtered) {
-        assertEquals(expectedOutput, actualOutput)
+        if (OVERWRITE_REPRESENTATION_TESTS_OUTPUT) {
+            getExpectedLogFileFromSources(expectedOutputFile).writeText(actualOutput)
+        } else {
+            assertEquals(expectedOutput, actualOutput)
+        }
     }
 }
 
@@ -76,13 +80,15 @@ private val TEST_EXECUTION_TRACE_ELEMENT_REGEX = listOf(
 
 private val LINE_NUMBER_REGEX = Regex(":(\\d+)")
 
-internal fun getExpectedLogFromResources(testFileName: String): String {
-    val resourceName = "expected_logs/$testFileName"
-    val expectedLogResource = LTS::class.java.classLoader.getResourceAsStream(resourceName)
-        ?: error("Expected log resource: $resourceName does not exist")
+internal fun getExpectedLogFromResources(testFileName: String) =
+    getExpectedLogFileFromResources(testFileName).readText()
 
-    return expectedLogResource.reader().readText()
-}
+internal fun getExpectedLogFileFromResources(fileName: String): File =
+    ClassLoader.getSystemResource("expected_logs/$fileName")?.file?.let { File(it) }
+        ?: error("Expected log resource $fileName does not exist")
+
+internal fun getExpectedLogFileFromSources(fileName: String): File = 
+    File("src/jvm/test/resources/expected_logs/$fileName")
 
 fun checkTraceHasNoLincheckEvents(trace: String) {
     val testPackageOccurrences = trace.split("org.jetbrains.kotlinx.lincheck_test.").size - 1
@@ -108,6 +114,9 @@ class StringPoolGenerator(randomProvider: RandomProvider, configuration: String)
     override fun generate(): String =
         strings[random.nextInt(strings.size)]
 }
+
+internal val OVERWRITE_REPRESENTATION_TESTS_OUTPUT: Boolean =
+    System.getProperty("lincheck.overwriteRepresentationTestsOutput").toBoolean()
 
 /**
  * Indicates whether the current Java Development Kit (JDK) version is JDK 8.
