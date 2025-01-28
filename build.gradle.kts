@@ -149,6 +149,10 @@ tasks {
         if (withEventIdSequentialCheck.toBoolean()) {
             extraArgs.add("-Dlincheck.debug.withEventIdSequentialCheck=true")
         }
+        val traceDebuggerMode: String by project
+        if (traceDebuggerMode.toBoolean()) {
+            extraArgs.add("-Dlincheck.traceDebuggerMode=true")
+        }
         extraArgs.add("-Dlincheck.version=$version")
         jvmArgs(extraArgs)
     }
