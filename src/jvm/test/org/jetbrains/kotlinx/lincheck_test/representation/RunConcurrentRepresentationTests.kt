@@ -20,10 +20,12 @@ import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
 import org.jetbrains.kotlinx.lincheck_test.gpmc.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
 import java.util.concurrent.ConcurrentLinkedDeque
+import java.util.concurrent.Executors
 import java.util.concurrent.atomic.*
 import kotlin.concurrent.thread
 import kotlin.random.Random
 import org.junit.Test
+
 
 abstract class BaseRunConcurrentRepresentationTest<R>(private val outputFileName: String) {
     /**
@@ -325,7 +327,7 @@ class IncorrectHashmapRunConcurrentRepresentationTest : BaseRunConcurrentReprese
     }
 }
 
-class ThreadPoolRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit>(
+class ThreadPoolRunWithLambdaTest : BaseRunConcurrentRepresentationTest<Unit>(
     when (testJdkVersion) {
         TestJdkVersion.JDK_8  -> "thread_pool/thread_pool_run_with_lambda_jdk8.txt"
         TestJdkVersion.JDK_11 -> "thread_pool/thread_pool_run_with_lambda_jdk11.txt"
