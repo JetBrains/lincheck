@@ -327,16 +327,16 @@ class IncorrectHashmapRunConcurrentRepresentationTest : BaseRunConcurrentReprese
     }
 }
 
-class ThreadPoolRunWithLambdaTest : BaseRunConcurrentRepresentationTest<Unit>(
+class ThreadPoolRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
     when (testJdkVersion) {
-        TestJdkVersion.JDK_8  -> "thread_pool/thread_pool_run_with_lambda_jdk8.txt"
-        TestJdkVersion.JDK_11 -> "thread_pool/thread_pool_run_with_lambda_jdk11.txt"
-        TestJdkVersion.JDK_13 -> "thread_pool/thread_pool_run_with_lambda_jdk13.txt"
-        TestJdkVersion.JDK_15 -> "thread_pool/thread_pool_run_with_lambda_jdk15.txt"
-        TestJdkVersion.JDK_17 -> "thread_pool/thread_pool_run_with_lambda_jdk17.txt"
-        TestJdkVersion.JDK_19 -> "thread_pool/thread_pool_run_with_lambda_jdk19.txt"
-        TestJdkVersion.JDK_20 -> "thread_pool/thread_pool_run_with_lambda_jdk20.txt"
-        TestJdkVersion.JDK_21 -> "thread_pool/thread_pool_run_with_lambda_jdk21.txt"
+        TestJdkVersion.JDK_8  -> "run_concurrent_test/thread_pool/thread_pool_jdk8.txt"
+        TestJdkVersion.JDK_11 -> "run_concurrent_test/thread_pool/thread_pool_jdk11.txt"
+        TestJdkVersion.JDK_13 -> "run_concurrent_test/thread_pool/thread_pool_jdk13.txt"
+        TestJdkVersion.JDK_15 -> "run_concurrent_test/thread_pool/thread_pool_jdk15.txt"
+        TestJdkVersion.JDK_17 -> "run_concurrent_test/thread_pool/thread_pool_jdk17.txt"
+        TestJdkVersion.JDK_19 -> "run_concurrent_test/thread_pool/thread_pool_jdk19.txt"
+        TestJdkVersion.JDK_20 -> "run_concurrent_test/thread_pool/thread_pool_jdk20.txt"
+        TestJdkVersion.JDK_21 -> "run_concurrent_test/thread_pool/thread_pool_jdk21.txt"
     }
 ) {
     override fun block() {
