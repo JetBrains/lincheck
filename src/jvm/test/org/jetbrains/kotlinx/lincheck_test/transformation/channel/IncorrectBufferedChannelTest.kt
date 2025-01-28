@@ -46,7 +46,6 @@ class IncorrectBufferedChannelTest {
     @Test
     fun modelCheckingTest() = ModelCheckingOptions()
         .iterations(1)
-        .logLevel(LoggingLevel.INFO)
         .sequentialSpecification(SequentialBufferedChannel::class.java)
         .addCustomScenario {
             parallel {

@@ -86,7 +86,8 @@ abstract class ManagedStrategy(
     // == TRACE CONSTRUCTION FIELDS ==
 
     // Whether an additional information requires for the trace construction should be collected.
-    protected var collectTrace = false
+    // Notably, in the trace debugger mode, Lincheck always needs the trace, so it always collects it.
+    protected var collectTrace = if (isTraceDebuggerEnabled) true else false
 
     // Collector of all events in the execution such as thread switches.
     private var traceCollector: TraceCollector? = null // null when `collectTrace` is false
@@ -281,7 +282,12 @@ abstract class ManagedStrategy(
             // except for the strange cases such as Runner's timeout or exceptions in LinCheck.
             return null
         }
-
+        // In the Trace Debugger mode, Lincheck always collects the execution trace; return it immediately.
+        if (isTraceDebuggerEnabled) {
+            return constructTrace()
+        }
+        // In the standard mode, Lincheck does not collect the execution trace by default for performance reasons.
+        // Therefore, we replay the interleacing collecting the trace.
         collectTrace = true
         loopDetector?.enableReplayMode(
             failDueToDeadlockInTheEnd =
@@ -298,15 +304,10 @@ abstract class ManagedStrategy(
         // simultaneously adding events to the TraceCollector, which leads to an inconsistent trace.
         // Therefore, if the runner detects deadlock, we don't even try to collect trace.
         if (loggedResults is RunnerTimeoutInvocationResult) return null
-
-        val registeredThreads = getRegisteredThreads()
-        val threadNames = MutableList<String>(registeredThreads.size) { "" }
-        threadScheduler.getRegisteredThreads().forEach { threadId, thread ->
-            val threadNumber = ObjectLabelFactory.getObjectNumber(Thread::class.java, thread)
-            threadNames[threadId] = "Thread $threadNumber"
-        }
-        val trace = Trace(traceCollector!!.trace, threadNames)
-
+        // Construct the execution trace.
+        val trace = constructTrace()
+        // Check that the execution results have not been changed
+        // compared to the first run without collecting the trace.
         val sameResultTypes = loggedResults.javaClass == result.javaClass
         val sameResults = (
             loggedResults !is CompletedInvocationResult ||
@@ -323,6 +324,17 @@ abstract class ManagedStrategy(
             }.toString()
         }
 
+        return trace
+    }
+
+    private fun constructTrace(): Trace {
+        val registeredThreads = getRegisteredThreads()
+        val threadNames = MutableList<String>(registeredThreads.size) { "" }
+        threadScheduler.getRegisteredThreads().forEach { threadId, thread ->
+            val threadNumber = ObjectLabelFactory.getObjectNumber(Thread::class.java, thread)
+            threadNames[threadId] = "Thread $threadNumber"
+        }
+        val trace = Trace(traceCollector!!.trace, threadNames)
         return trace
     }
 
