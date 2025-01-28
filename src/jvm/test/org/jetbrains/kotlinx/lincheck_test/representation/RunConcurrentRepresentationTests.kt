@@ -348,12 +348,17 @@ class ThreadPoolRunConcurrentRepresentationTest : BaseRunConcurrentRepresentatio
         // var counter = 0
         val executorService = Executors.newFixedThreadPool(2)
         try {
-            val future1 = executorService.submit {
-                counter++
+            // We use an object here instead of lambda to avoid hustle with Java's lambda.
+            // These lambdas are represented in the trace as `$$Lambda$XX/0x00007766d02076a0`,
+            // and both lambda id and hashcode can differ between test runs,
+            // leading to spurious failures of the test.
+            val task = object : Runnable {
+                override fun run() {
+                    counter++
+                }
             }
-            val future2 = executorService.submit {
-                counter++
-            }
+            val future1 = executorService.submit(task)
+            val future2 = executorService.submit(task)
             future1.get()
             future2.get()
             check(counter == 2)
