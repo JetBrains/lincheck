@@ -1096,6 +1096,7 @@ abstract class ManagedStrategy(
     }
 
     private fun shouldTrackObjectAccess(obj: Any?): Boolean {
+        // by default, we track accesses to all objects
         if (objectTracker == null) return true
         return objectTracker!!.shouldTrackObjectAccess(obj ?: StaticObject)
     }
