@@ -29,11 +29,16 @@ internal fun StringBuilder.appendTrace(
 ) {
     val nThreads = trace.threadNames.size
     val threadNames = trace.threadNames
-    var startTraceGraphNode = constructTraceGraph(nThreads, failure, results, trace, exceptionStackTraces)
+    val startTraceGraphNode = constructTraceGraph(nThreads, failure, results, trace, exceptionStackTraces)
     if (isGeneralPurposeModelCheckingScenario(failure.scenario)) {
-        startTraceGraphNode = extractLambdaCallOfGeneralPurposeModelChecking(startTraceGraphNode)
-        appendShortTrace(nThreads, threadNames, startTraceGraphNode, failure)
-        appendDetailedTrace(nThreads, threadNames, startTraceGraphNode, failure)
+        val (callNode, actorResultNode) = extractLambdaCallOfGeneralPurposeModelChecking(startTraceGraphNode)
+        // do not print the method result if it is not expanded
+        if (!callNode.shouldBeExpanded(verboseTrace = false) && actorResultNode.resultRepresentation != null) {
+            callNode.lastInternalEvent.next = null
+        }
+        appendShortTrace(nThreads, threadNames, listOf(callNode), failure)
+        callNode.lastInternalEvent.next = actorResultNode
+        appendDetailedTrace(nThreads, threadNames, listOf(callNode), failure)
     } else {
         appendShortTrace(nThreads, threadNames, startTraceGraphNode, failure)
         appendExceptionsStackTracesBlock(exceptionStackTraces)
@@ -44,7 +49,9 @@ internal fun StringBuilder.appendTrace(
 // This is a hack to work around current limitations of the trace representation API
 // to extract the lambda method call on which the general-purpose MC was run.
 // TODO: please refactor me and trace representation API!
-private fun extractLambdaCallOfGeneralPurposeModelChecking(startTraceGraphNode: List<TraceNode>): List<TraceNode> {
+private fun extractLambdaCallOfGeneralPurposeModelChecking(
+    startTraceGraphNode: List<TraceNode>
+): Pair<CallNode, ActorResultNode> {
     val actorNode = startTraceGraphNode.firstOrNull() as? ActorNode
     val callNode = actorNode?.internalEvents?.firstOrNull() as? CallNode
     val actorResultNode = callNode?.lastInternalEvent?.next as? ActorResultNode
@@ -53,10 +60,7 @@ private fun extractLambdaCallOfGeneralPurposeModelChecking(startTraceGraphNode: 
     check(actorNode.internalEvents.size == 2)
     check(callNode != null)
     check(actorResultNode != null)
-    if (actorResultNode.resultRepresentation != null) {
-        callNode.lastInternalEvent.next = null
-    }
-    return listOf(callNode)
+    return callNode to actorResultNode
 }
 
 /**
