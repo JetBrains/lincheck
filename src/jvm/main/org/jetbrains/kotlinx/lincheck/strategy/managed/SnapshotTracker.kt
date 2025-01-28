@@ -97,7 +97,7 @@ class SnapshotTracker {
 
     fun trackObjects(objs: Array<Any?>) {
         // in case this works too slowly, an optimization could be used
-        // see https://github.com/JetBrains/lincheck/pull/418/commits/0d708b84dd2bfd5dbfa961549dda128d91dc3a5b#diff-a684b1d7deeda94bbf907418b743ae2c0ec0a129760d3b87d00cdf5adfab56c4R146-R199
+        // see https://github.com/JetBrains/lincheck/pull/418/commits/eb9a9a25f0c57e5b5bdf55dac8f38273ffc7dd8a#diff-a684b1d7deeda94bbf907418b743ae2c0ec0a129760d3b87d00cdf5adfab56c4R146-R199
         objs
             .filter { it != null && isTracked(it) }
             .forEach { trackReachableObjectSubgraph(it!!) }

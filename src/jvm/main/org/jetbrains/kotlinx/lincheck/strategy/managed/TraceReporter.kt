@@ -18,20 +18,45 @@ import org.jetbrains.kotlinx.lincheck.strategy.ObstructionFreedomViolationFailur
 import org.jetbrains.kotlinx.lincheck.strategy.TimeoutFailure
 import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
 import kotlin.math.*
+import kotlin.reflect.jvm.javaMethod
 
 @Synchronized // we should avoid concurrent executions to keep `objectNumeration` consistent
 internal fun StringBuilder.appendTrace(
     failure: LincheckFailure,
     results: ExecutionResult,
     trace: Trace,
-    exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
+    exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>,
 ) {
     val nThreads = trace.threadNames.size
     val threadNames = trace.threadNames
-    val startTraceGraphNode = constructTraceGraph(nThreads, failure, results, trace, exceptionStackTraces)
-    appendShortTrace(nThreads, threadNames, startTraceGraphNode, failure)
-    appendExceptionsStackTracesBlock(exceptionStackTraces)
-    appendDetailedTrace(nThreads, threadNames, startTraceGraphNode, failure)
+    var startTraceGraphNode = constructTraceGraph(nThreads, failure, results, trace, exceptionStackTraces)
+    if (isGeneralPurposeModelCheckingScenario(failure.scenario)) {
+        startTraceGraphNode = extractLambdaCallOfGeneralPurposeModelChecking(startTraceGraphNode)
+        appendShortTrace(nThreads, threadNames, startTraceGraphNode, failure)
+        appendDetailedTrace(nThreads, threadNames, startTraceGraphNode, failure)
+    } else {
+        appendShortTrace(nThreads, threadNames, startTraceGraphNode, failure)
+        appendExceptionsStackTracesBlock(exceptionStackTraces)
+        appendDetailedTrace(nThreads, threadNames, startTraceGraphNode, failure)
+    }
+}
+
+// This is a hack to work around current limitations of the trace representation API
+// to extract the lambda method call on which the general-purpose MC was run.
+// TODO: please refactor me and trace representation API!
+private fun extractLambdaCallOfGeneralPurposeModelChecking(startTraceGraphNode: List<TraceNode>): List<TraceNode> {
+    val actorNode = startTraceGraphNode.firstOrNull() as? ActorNode
+    val callNode = actorNode?.internalEvents?.firstOrNull() as? CallNode
+    val actorResultNode = callNode?.lastInternalEvent?.next as? ActorResultNode
+    check(actorNode != null)
+    check(actorNode.actorRepresentation.startsWith("run"))
+    check(actorNode.internalEvents.size == 2)
+    check(callNode != null)
+    check(actorResultNode != null)
+    if (actorResultNode.resultRepresentation != null) {
+        callNode.lastInternalEvent.next = null
+    }
+    return listOf(callNode)
 }
 
 /**
@@ -166,6 +191,7 @@ internal fun constructTraceGraph(
     val traceGraphNodesSections = arrayListOf<MutableList<TraceNode>>()
     var traceGraphNodes = arrayListOf<TraceNode>()
 
+    val isGeneralPurposeMC = isGeneralPurposeModelCheckingScenario(scenario)
 
     for (eventId in tracePoints.indices) {
         val event = tracePoints[eventId]
@@ -236,7 +262,13 @@ internal fun constructTraceGraph(
                 // create a new call node if needed
                 val result = traceGraphNodes.createAndAppend { lastNode ->
                     val callDepth = innerNode.callDepth + 1
-                    CallNode(prefixFactory.prefixForCallNode(iThread, callDepth), iThread, lastNode, callDepth, call.tracePoint)
+                    // TODO: please refactor me
+                    var prefixCallDepth = callDepth
+                    if (isGeneralPurposeMC && iThread == 0) {
+                        prefixCallDepth -= 1
+                    }
+                    val prefix = prefixFactory.prefixForCallNode(iThread, prefixCallDepth)
+                    CallNode(prefix, iThread, lastNode, callDepth, call.tracePoint)
                 }
                 // make it a child of the previous node
                 innerNode.addInternalEvent(result)
@@ -247,7 +279,13 @@ internal fun constructTraceGraph(
         val isLastExecutedEvent = (eventId == lastExecutedEvents[iThread])
         val node = traceGraphNodes.createAndAppend { lastNode ->
             val callDepth = innerNode.callDepth + 1
-            TraceLeafEvent(prefixFactory.prefix(event, callDepth), iThread, lastNode, callDepth, event, isLastExecutedEvent)
+            // TODO: please refactor me
+            var prefixCallDepth = callDepth
+            if (isGeneralPurposeMC && iThread == 0) {
+                prefixCallDepth -= 1
+            }
+            val prefix = prefixFactory.prefix(event, prefixCallDepth)
+            TraceLeafEvent(prefix, iThread, lastNode, callDepth, event, isLastExecutedEvent)
         }
         innerNode.addInternalEvent(node)
     }
@@ -511,21 +549,24 @@ internal class TraceLeafEvent(
 }
 
 internal abstract class TraceInnerNode(prefixProvider: PrefixProvider, iThread: Int, last: TraceNode?, callDepth: Int) :
-    TraceNode(prefixProvider, iThread, last, callDepth) {
+    TraceNode(prefixProvider, iThread, last, callDepth)
+{
     override val lastState: String?
-        get() = internalEvents.map { it.lastState }.lastOrNull { it != null }
+        get() = _internalEvents.map { it.lastState }.lastOrNull { it != null }
+
     override val lastInternalEvent: TraceNode
-        get() = if (internalEvents.isEmpty()) this else internalEvents.last().lastInternalEvent
+        get() = if (_internalEvents.isEmpty()) this else _internalEvents.last().lastInternalEvent
+
+    private val _internalEvents = mutableListOf<TraceNode>()
+    internal val internalEvents: List<TraceNode> get() = _internalEvents
 
     override fun shouldBeExpanded(verboseTrace: Boolean) =
-        internalEvents.any {
+        _internalEvents.any {
             it.shouldBeExpanded(verboseTrace)
         }
 
-    private val internalEvents = mutableListOf<TraceNode>()
-
     fun addInternalEvent(node: TraceNode) {
-        internalEvents.add(node)
+        _internalEvents.add(node)
     }
 }
 
