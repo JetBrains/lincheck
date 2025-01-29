@@ -32,6 +32,7 @@ import java.lang.reflect.*
 import java.util.concurrent.TimeoutException
 import java.util.*
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
+import kotlin.jvm.javaClass
 
 /**
  * This is an abstraction for all managed strategies, which encapsulated

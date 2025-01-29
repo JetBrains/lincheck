@@ -7,25 +7,25 @@
 
 
 The following interleaving leads to the error:
-| -------------------------------------------------------------------------------------------------- |
-|                                              Thread 1                                              |
-| -------------------------------------------------------------------------------------------------- |
-|   spinLock(): <hung>                                                                               |
-|     /* The following events repeat infinitely: */                                                  |
-| ┌╶> state.WRITE(false) at SingleThreadTopLevelSpinLockTest.spinLock(SpinlockEventsCutTests.kt:459) |
-| |   state.WRITE(true) at SingleThreadTopLevelSpinLockTest.spinLock(SpinlockEventsCutTests.kt:460)  |
-| └╶╶ switch (reason: active lock detected)                                                          |
-| -------------------------------------------------------------------------------------------------- |
+| --------------------------------------------------------------------------------------------- |
+|                                           Thread 1                                            |
+| --------------------------------------------------------------------------------------------- |
+|   spinLock(): <hung>                                                                          |
+|     /* The following events repeat infinitely: */                                             |
+| ┌╶> state = false at SingleThreadTopLevelSpinLockTest.spinLock(SpinlockEventsCutTests.kt:464) |
+| |   state = true at SingleThreadTopLevelSpinLockTest.spinLock(SpinlockEventsCutTests.kt:465)  |
+| └╶╶ switch (reason: active lock detected)                                                     |
+| --------------------------------------------------------------------------------------------- |
 All unfinished threads are in deadlock
 
 Detailed trace:
-| -------------------------------------------------------------------------------------------------- |
-|                                              Thread 1                                              |
-| -------------------------------------------------------------------------------------------------- |
-|   spinLock(): <hung>                                                                               |
-|     /* The following events repeat infinitely: */                                                  |
-| ┌╶> state.WRITE(false) at SingleThreadTopLevelSpinLockTest.spinLock(SpinlockEventsCutTests.kt:459) |
-| |   state.WRITE(true) at SingleThreadTopLevelSpinLockTest.spinLock(SpinlockEventsCutTests.kt:460)  |
-| └╶╶ switch (reason: active lock detected)                                                          |
-| -------------------------------------------------------------------------------------------------- |
+| --------------------------------------------------------------------------------------------- |
+|                                           Thread 1                                            |
+| --------------------------------------------------------------------------------------------- |
+|   spinLock(): <hung>                                                                          |
+|     /* The following events repeat infinitely: */                                             |
+| ┌╶> state = false at SingleThreadTopLevelSpinLockTest.spinLock(SpinlockEventsCutTests.kt:464) |
+| |   state = true at SingleThreadTopLevelSpinLockTest.spinLock(SpinlockEventsCutTests.kt:465)  |
+| └╶╶ switch (reason: active lock detected)                                                     |
+| --------------------------------------------------------------------------------------------- |
 All unfinished threads are in deadlock
