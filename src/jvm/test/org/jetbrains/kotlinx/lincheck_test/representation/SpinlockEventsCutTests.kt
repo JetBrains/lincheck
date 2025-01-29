@@ -17,6 +17,7 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.guide.MSQueueBlocking
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
+import org.jetbrains.kotlinx.lincheck_test.util.IgnoreInTraceDebuggerMode
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -26,6 +27,7 @@ import kotlin.reflect.jvm.*
 /**
  * Checks that spin-cycle repeated events are cut in case of obstruction freedom violation
  */
+@IgnoreInTraceDebuggerMode
 class ObstructionFreedomViolationEventsCutTest {
     private val q = MSQueueBlocking()
 
@@ -46,6 +48,7 @@ class ObstructionFreedomViolationEventsCutTest {
 /**
  * Checks that spin-cycle repeated events are cut in case when spin cycle contains few actions
  */
+@IgnoreInTraceDebuggerMode
 class SpinlockEventsCutShortLengthTest : AbstractSpinLivelockTest() {
 
     private val sharedStateAny = AtomicBoolean(false)
@@ -61,6 +64,7 @@ class SpinlockEventsCutShortLengthTest : AbstractSpinLivelockTest() {
 /**
  * Checks that spin-cycle repeated events are cut in case when spin cycle contains few actions
  */
+@IgnoreInTraceDebuggerMode
 class SpinlockEventsCutMiddleLengthTest : AbstractSpinLivelockTest() {
 
     private val sharedStateAny = AtomicBoolean(false)
@@ -77,6 +81,7 @@ class SpinlockEventsCutMiddleLengthTest : AbstractSpinLivelockTest() {
  * Checks that spin-cycle repeated events are cut in case
  * when one thread runs in the infinite loop while others terminate
  */
+@IgnoreInTraceDebuggerMode
 class SpinlockEventsCutInfiniteLoopTest : AbstractSpinLivelockTest() {
 
     private val sharedStateAny = AtomicBoolean(false)
@@ -95,6 +100,7 @@ class SpinlockEventsCutInfiniteLoopTest : AbstractSpinLivelockTest() {
  * Checks that spin-cycle repeated events are cut in case
  * when one thread runs in the infinite loop while others terminate
  */
+@IgnoreInTraceDebuggerMode
 class SpinlockEventsCutInfiniteLoopWithParametersTest : AbstractSpinLivelockTest() {
 
     @Volatile
@@ -114,6 +120,7 @@ class SpinlockEventsCutInfiniteLoopWithParametersTest : AbstractSpinLivelockTest
  * Checks that spin cycle properly detected, and the spin cycle label is placed correctly
  * when the spin cycle is twice bigger due to a flipping method receivers.
  */
+@IgnoreInTraceDebuggerMode
 class SpinlockEventsCutInfiniteLoopWithReceiversTest : AbstractSpinLivelockTest() {
 
     private val first = Receiver(false)
@@ -139,6 +146,7 @@ class SpinlockEventsCutInfiniteLoopWithReceiversTest : AbstractSpinLivelockTest(
  * Checks that spin cycle properly detected, and the spin cycle label is placed correctly
  * when the spin cycle is bigger due to a different arrays usage and cells access.
  */
+@IgnoreInTraceDebuggerMode
 class SpinlockEventsCutInfiniteLoopWithArrayOperationsTest : AbstractSpinLivelockTest() {
 
     @Volatile
@@ -164,6 +172,7 @@ class SpinlockEventsCutInfiniteLoopWithArrayOperationsTest : AbstractSpinLiveloc
  * Checks that spin cycle properly detected, and the spin cycle label is placed correctly
  * when the spin cycle is twice bigger due to a flipping arrays receivers usage.
  */
+@IgnoreInTraceDebuggerMode
 class SpinlockEventsCutInfiniteLoopWithArrayReceiversTest : AbstractSpinLivelockTest() {
 
     private val first = Array(3) { 0 }
@@ -188,6 +197,7 @@ class SpinlockEventsCutInfiniteLoopWithArrayReceiversTest : AbstractSpinLivelock
  * when spin cycle period can't be found using parameters and receivers, so
  * LinCheck should calculate spin cycle period without params.
  */
+@IgnoreInTraceDebuggerMode
 class SpinlockEventsCutInfiniteNoCycleWithParamsTest : AbstractSpinLivelockTest() {
 
     private val array = Array(3) { 0 }
@@ -209,6 +219,7 @@ class SpinlockEventsCutInfiniteNoCycleWithParamsTest : AbstractSpinLivelockTest(
 /**
  * Checks that spin-cycle repeated events are cut in case when spin cycle contains many actions
  */
+@IgnoreInTraceDebuggerMode
 class SpinlockEventsCutLongCycleActionsTest : AbstractSpinLivelockTest() {
 
     private val data = AtomicReferenceArray<Int>(7)
@@ -228,6 +239,7 @@ class SpinlockEventsCutLongCycleActionsTest : AbstractSpinLivelockTest() {
 /**
  * Checks that spin-cycle repeated events are cut in case when spin cycle contains many actions in nested cycle
  */
+@IgnoreInTraceDebuggerMode
 class SpinlockEventsCutWithInnerLoopActionsTest : AbstractSpinLivelockTest() {
 
     private val data = AtomicReferenceArray<Int>(10)
@@ -287,6 +299,7 @@ abstract class AbstractSpinLivelockTest {
  * Checks that spin-cycle repeated events are shortened
  * when the reason of a failure is not deadlock or obstruction freedom violation (incorrect results failure)
  */
+@IgnoreInTraceDebuggerMode
 class SpinlockInIncorrectResultsWithClocksTest {
 
     @Volatile
@@ -368,6 +381,7 @@ class SpinlockInIncorrectResultsWithClocksTest {
  *
  * Test should not fail.
  */
+@IgnoreInTraceDebuggerMode
 class SpinCycleWithSideEffectsTest {
 
     private val counter = AtomicInteger(0)
@@ -407,6 +421,7 @@ class SpinCycleWithSideEffectsTest {
  * Should correctly detect spin cycle and place spin cycle label in case
  * when all potential switch points are nested in non-atomic methods.
  */
+@IgnoreInTraceDebuggerMode
 class SpinLockWithAllEventsWrappedInMethodsTest {
 
     private val counter = AtomicInteger(0)
@@ -453,6 +468,7 @@ class SpinLockWithAllEventsWrappedInMethodsTest {
  * Checks that spin cycle properly detected, and the spin cycle label is placed correctly
  * when all the trace points are in the top-level, i.e., right in the actor.
  */
+@IgnoreInTraceDebuggerMode
 class SingleThreadTopLevelSpinLockTest {
 
     @Volatile
