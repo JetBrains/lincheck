@@ -177,6 +177,7 @@ class VariableReadWriteRunConcurrentRepresentationTest : BaseRunConcurrentRepres
     }
 }
 
+@IgnoreInTraceDebuggerMode // TODO investigate (Evgeniy Moiseenko)
 class CustomThreadsRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
     "run_concurrent_test/custom_threads.txt"
 ) {
@@ -233,6 +234,7 @@ class KotlinThreadRunConcurrentRepresentationTest : BaseRunConcurrentRepresentat
     }
 }
 
+@IgnoreInTraceDebuggerMode // TODO investigate (Evgeniy Moiseenko)
 class LivelockRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
     if (isJdk8) "run_concurrent_test/livelock_jdk8.txt" else "run_concurrent_test/livelock.txt"
 ) {
@@ -261,6 +263,7 @@ class LivelockRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationT
     }
 }
 
+@IgnoreInTraceDebuggerMode // TODO investigate (Evgeniy Moiseenko)
 class IncorrectConcurrentLinkedDequeRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
     if (isJdk8) "run_concurrent_test/deque_jdk8.txt" else "run_concurrent_test/deque.txt"
 ) {

@@ -101,6 +101,6 @@ private class CollectResultsVerifier : Verifier {
     }
 }
 
-private const val DEFAULT_INVOCATIONS_COUNT = 100
+private const val DEFAULT_INVOCATIONS_COUNT = 500
 
-internal const val TIMEOUT = 30_000L // 30 sec
+internal const val TIMEOUT = 60_000L // 60 sec

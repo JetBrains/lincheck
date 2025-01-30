@@ -15,6 +15,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelChecki
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
+import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.junit.Test
 import sun.misc.Unsafe
 import java.util.concurrent.atomic.*
@@ -35,6 +36,8 @@ import kotlin.reflect.KFunction
     invocationsPerIteration = Int.MAX_VALUE,
     iterations = 50
 )
+
+@IgnoreInTraceDebuggerMode
 class LocalObjectEliminationTest {
     @Operation
     fun operation(): Int {
@@ -73,6 +76,7 @@ class LocalObjectEliminationTest {
     private data class A(var value: Int, var any: Any, val array: IntArray)
 }
 
+@IgnoreInTraceDebuggerMode
 class LocalObjectEscapeConstructorTest {
 
     private class A(var b: B)

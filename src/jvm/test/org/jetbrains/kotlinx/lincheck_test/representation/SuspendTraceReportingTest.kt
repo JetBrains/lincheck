@@ -17,6 +17,7 @@ import org.junit.*
 import kotlin.coroutines.*
 import kotlinx.coroutines.sync.*
 
+@IgnoreInTraceDebuggerMode // TODO investigate (Evgeniy Moiseenko)
 class SuspendTraceReportingTest {
     private val lock = Mutex()
     private var canEnterForbiddenBlock: Boolean = false

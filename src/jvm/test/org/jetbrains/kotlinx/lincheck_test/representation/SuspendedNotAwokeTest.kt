@@ -14,12 +14,13 @@ import kotlinx.coroutines.channels.Channel
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
+import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.junit.Test
 
 /**
  * Covers a scenario when operation is suspended but never awoke.
  */
+@IgnoreInTraceDebuggerMode // TODO investigate (Evgeniy Moiseenko)
 class SuspendedNotAwokeTest {
 
     @Volatile

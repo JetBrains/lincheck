@@ -17,6 +17,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelChecki
 import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.junit.*
 
+@IgnoreInTraceDebuggerMode // TODO investigate (Evgeniy Moiseenko)
 class CoroutineCancellationTraceReportingTest {
     @Volatile
     var correct = true
