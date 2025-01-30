@@ -1,0 +1,30 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| ---------------------------------------------------------------------------------------------------------------------------- |
+|                                                           Thread 1                                                           |
+| ---------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                  |
+|   escape.WRITE("START") at ForLoopWithMethodCallRepresentationTest.operation(ForLoopWithMethodCallRepresentationTest.kt:18)  |
+|   Loop with 2 iterations at ForLoopWithMethodCallRepresentationTest.operation(ForLoopWithMethodCallRepresentationTest.kt:19) |
+|     Iteration #0                                                                                                             |
+|       method(1) at ForLoopWithMethodCallRepresentationTest.operation(ForLoopWithMethodCallRepresentationTest.kt:21)          |
+|         escape.WRITE("1") at ForLoopWithMethodCallRepresentationTest.method(ForLoopWithMethodCallRepresentationTest.kt:27)   |
+|     Iteration #1                                                                                                             |
+|       method(2) at ForLoopWithMethodCallRepresentationTest.operation(ForLoopWithMethodCallRepresentationTest.kt:21)          |
+|         escape.WRITE("2") at ForLoopWithMethodCallRepresentationTest.method(ForLoopWithMethodCallRepresentationTest.kt:27)   |
+|   escape.WRITE("END") at ForLoopWithMethodCallRepresentationTest.operation(ForLoopWithMethodCallRepresentationTest.kt:23)    |
+|   result: void                                                                                                               |
+| ---------------------------------------------------------------------------------------------------------------------------- |

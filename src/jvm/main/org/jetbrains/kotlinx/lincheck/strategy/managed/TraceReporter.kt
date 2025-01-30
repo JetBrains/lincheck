@@ -17,7 +17,6 @@ import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.transformation.LabelsTracker
 import kotlin.math.*
-import kotlin.reflect.jvm.javaMethod
 
 @Synchronized // we should avoid concurrent executions to keep `objectNumeration` consistent
 internal fun StringBuilder.appendTrace(
@@ -367,13 +366,13 @@ internal fun constructTraceGraph(
     }
     // Post-process all forests to detect and structure loops at each level
     traceGraphNodesSections.forEach {
-        it.filter { n -> n is ActorNode }.forEach { detectLoops(it, prefixFactory) }
+        it.filter { n -> n is ActorNode }.forEach { detectLoops(it, prefixFactory, isGeneralPurposeMC) }
     }
 
     return traceGraphNodesSections.map { it.first() }
 }
 
-private fun detectLoops(node: TraceNode, prefixFactory: TraceNodePrefixFactory) {
+private fun detectLoops(node: TraceNode, prefixFactory: TraceNodePrefixFactory, isGeneralPurposeMC: Boolean) {
     // Skip all leaf nodes
     if (node !is TraceInnerNode) {
         return
@@ -474,7 +473,9 @@ private fun detectLoops(node: TraceNode, prefixFactory: TraceNodePrefixFactory) 
     }.forEach { (labelId, positions) ->
         // Remove single-position labels
         if (positions.size < 2) {
-            node.removeChild(positions[0].first + delta)
+            val pos = positions[0].first + delta
+            val prevNode = if (pos == 0) node else node.internalEvents[pos - 1].lastInternalEvent
+            prevNode.next = node.removeChild(pos).next
             delta -= 1
             return@forEach
         }
@@ -484,8 +485,10 @@ private fun detectLoops(node: TraceNode, prefixFactory: TraceNodePrefixFactory) 
 
         val last = if (firstIdx == 0) node else node.internalEvents[firstIdx - 1].lastInternalEvent
         val location = ((node.internalEvents[firstIdx] as TraceLeafEvent).event as CodeLocationTracePoint).stackTraceElement
+        // TODO: please refactor me
+        val prefixCallDepthDelta = if (isGeneralPurposeMC && node.iThread == 0) -1 else 0
         val loop = LoopNode(
-            prefixProvider = prefixFactory.prefixForCallNode(node.iThread, node.callDepth + 1, 0),
+            prefixProvider = prefixFactory.prefixForCallNode(node.iThread, node.callDepth + 1 + prefixCallDepthDelta, prefixCallDepthDelta),
             iThread = node.iThread,
             last = last,
             callDepth = node.callDepth + 1,
@@ -495,7 +498,7 @@ private fun detectLoops(node: TraceNode, prefixFactory: TraceNodePrefixFactory) 
         var lastEvent: TraceNode = loop
         for (i in 0 .. positions.size - 2 step 2) {
             val iteration = IterationNode(
-                prefixProvider = prefixFactory.prefixForCallNode(node.iThread, loop.callDepth + 1, 0),
+                prefixProvider = prefixFactory.prefixForCallNode(node.iThread, loop.callDepth + 1 + prefixCallDepthDelta, prefixCallDepthDelta),
                 iThread = node.iThread,
                 last = lastEvent,
                 callDepth = node.callDepth + 2,
@@ -512,7 +515,7 @@ private fun detectLoops(node: TraceNode, prefixFactory: TraceNodePrefixFactory) 
                     iteration.next = child
                 }
                 if (childIdx == end) {
-                    lastEvent = child
+                    lastEvent = child.lastInternalEvent
                 }
                 iteration.addInternalEvent(child)
             }
@@ -524,7 +527,7 @@ private fun detectLoops(node: TraceNode, prefixFactory: TraceNodePrefixFactory) 
         delta -= positions.last().first -  positions.first().first + 1 - 1 // Account for all replaced events and added loop node
     }
     // Recursively call itself for all children, including new loop nodes
-    node.internalEvents.forEach { detectLoops(it, prefixFactory) }
+    node.internalEvents.forEach { detectLoops(it, prefixFactory, isGeneralPurposeMC) }
 }
 
 private fun actorNodeResultRepresentation(result: Result?, failure: LincheckFailure, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): String? {
