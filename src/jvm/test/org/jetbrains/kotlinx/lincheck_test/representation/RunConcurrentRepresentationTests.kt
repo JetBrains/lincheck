@@ -352,8 +352,8 @@ class ThreadPoolRunConcurrentRepresentationTest : BaseRunConcurrentRepresentatio
     }
 }
 
-class CoroutinesRunWithLambdaTest : BaseRunWithLambdaRepresentationTest<Unit>(
-    "coroutines/coroutines_run_with_lambda.txt"
+class CoroutinesRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
+    "run_concurrent_test/coroutines/coroutines.txt"
 ) {
     companion object {
         @JvmStatic var sharedCounter = 0
