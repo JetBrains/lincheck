@@ -922,6 +922,18 @@ internal fun interface PrefixProvider {
  *
  */
 private class TraceNodePrefixFactory(nThreads: Int) {
+    private class ModifiableDepth(depth: Int) {
+        var depth: Int = depth
+            private set
+        private var modified = false
+
+        fun setFinalDepth(finalDepth: Int) {
+            check(!modified || finalDepth == depth) { "Call Depth can be modified only once" }
+            check(finalDepth >= depth) { "Call Depth can be only increased" }
+            modified = depth != finalDepth
+            depth = finalDepth
+        }
+    }
 
     /**
      * Indicates should we add extra spaces to all the thread lines or not.
@@ -941,7 +953,7 @@ private class TraceNodePrefixFactory(nThreads: Int) {
     /**
      * Call depth of the first node in the current spin cycle.
      */
-    private var arrowDepth: Int = -1
+    private var arrowDepth = ModifiableDepth(-1)
 
     fun actorNodePrefix(iThread: Int) = PrefixProvider { _ -> extraPrefixIfNeeded(iThread) }
 
@@ -971,24 +983,28 @@ private class TraceNodePrefixFactory(nThreads: Int) {
                 extraIndentPerThread[iThread] = true
             }
             arrowDepth = callDepth
+            // New instance for new arrows, maybe will be modified here
+            arrowDepth = ModifiableDepth(callDepth)
             val arrowDepth = arrowDepth
             return PrefixProvider { callDepthActual ->
-                val extraPrefix = if (arrowDepth == 1) 0 else extraPrefixLength(iThread)
+                arrowDepth.setFinalDepth(callDepthActual)
+                val extraPrefix = if (callDepthActual == 1) 0 else extraPrefixLength(iThread)
+                // Arrow depth equla to actual call depth here
                 TRACE_INDENTATION.repeat(max(0, callDepthActual - 2 + extraPrefix)) + "┌╶> "
             }
         }
         if (isCycleEnd) {
             val arrowDepth = arrowDepth
             return PrefixProvider { callDepthActual ->
-                val extraPrefix = if (arrowDepth == 1) 0 else extraPrefixLength(iThread)
-                TRACE_INDENTATION.repeat(max(0, callDepthActual - 2 + extraPrefix)) + "└╶" + "╶╶".repeat(max(0, callDepthActual - arrowDepth)) + "╶ "
+                val extraPrefix = if (arrowDepth.depth == 1) 0 else extraPrefixLength(iThread)
+                TRACE_INDENTATION.repeat(max(0, arrowDepth.depth - 2 + extraPrefix)) + "└╶" + "╶╶".repeat(max(0, callDepthActual - arrowDepth.depth)) + "╶ "
             }
         }
         if (inSpinCycle) {
             val arrowDepth = arrowDepth
             return PrefixProvider { callDepthActual ->
-                val extraPrefix = if (arrowDepth == 1) 0 else extraPrefixLength(iThread)
-                TRACE_INDENTATION.repeat(max(0, callDepthActual - 2 + extraPrefix)) + "| " + TRACE_INDENTATION.repeat(callDepthActual - arrowDepth + 1)
+                val extraPrefix = if (arrowDepth.depth == 1) 0 else extraPrefixLength(iThread)
+                TRACE_INDENTATION.repeat(max(0, arrowDepth.depth - 2 + extraPrefix)) + "| " + TRACE_INDENTATION.repeat(callDepthActual - arrowDepth.depth + 1)
             }
         }
         return PrefixProvider { callDepthActual -> extraPrefixIfNeeded(iThread) + TRACE_INDENTATION.repeat(callDepthActual) }
