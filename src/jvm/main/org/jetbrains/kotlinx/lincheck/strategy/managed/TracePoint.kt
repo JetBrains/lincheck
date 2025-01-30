@@ -104,7 +104,7 @@ internal class ReadTracePoint(
         } else {
             append(fieldName)
         }
-        append(" ⟶")
+        append(" ➜")
         append(" $valueRepresentation")
     }.toString()
 

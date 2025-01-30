@@ -17,11 +17,11 @@ The following interleaving leads to the error:
 | ------------------------------------------------------------------------------------------------------------ |
 |          |   c()                                                                                             |
 |          |     /* The following events repeat infinitely: */                                                 |
-|          | ┌╶> bStarted ⟶ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:306) |
+|          | ┌╶> bStarted➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:306) |
 |          | └╶╶ switch (reason: active lock detected)                                                         |
 | a()      |                                                                                                   |
 | b()      |                                                                                                   |
-|          |     bStarted ⟶ true at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:306)  |
+|          |     bStarted ➜ true at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:306)  |
 |          |     result: void                                                                                  |
 |          |   d(): 0                                                                                          |
 | ------------------------------------------------------------------------------------------------------------ |
@@ -32,13 +32,13 @@ Detailed trace:
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                                                |   c()                                                                                             |
 |                                                                                                |     /* The following events repeat infinitely: */                                                 |
-|                                                                                                | ┌╶> bStarted ⟶ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:306) |
+|                                                                                                | ┌╶> bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:306) |
 |                                                                                                | └╶╶ switch (reason: active lock detected)                                                         |
 | a()                                                                                            |                                                                                                   |
 | b()                                                                                            |                                                                                                   |
 |   bStarted = true at SpinlockInIncorrectResultsWithClocksTest.b(SpinlockEventsCutTests.kt:301) |                                                                                                   |
 |   result: void                                                                                 |                                                                                                   |
-|                                                                                                |     bStarted ⟶ true at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:306)  |
+|                                                                                                |     bStarted ➜ true at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:306)  |
 |                                                                                                |     result: void                                                                                  |
 |                                                                                                |   d(): 0                                                                                          |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

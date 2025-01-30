@@ -17,10 +17,10 @@ Detailed trace:
 |                                                       Thread 1                                                       |
 | -------------------------------------------------------------------------------------------------------------------- |
 | operation()                                                                                                          |
-|   outerClass1 ⟶ OuterDataClass#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:29) |
-|   outerClass2 ⟶ OuterDataClass#2 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:30) |
-|   innerClass ⟶ InnerClass#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:31)      |
-|   innerClass ⟶ InnerClass#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:32)      |
+|   outerClass1 ➜ OuterDataClass#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:29) |
+|   outerClass2 ➜ OuterDataClass#2 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:30) |
+|   innerClass ➜ InnerClass#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:31)      |
+|   innerClass ➜ InnerClass#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:32)      |
 |   otherInnerClass ⟶ InnerClass#2 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:33) |
 |   primitiveArray ⟶ IntArray#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:34)    |
 |   objectArray ⟶ Array<String>#1 at CapturedValueRepresentationTest.operation(CapturedValueRepresentationTest.kt:35)  |
