@@ -407,14 +407,15 @@ private fun detectLoops(node: TraceNode, prefixFactory: TraceNodePrefixFactory) 
     // Filter-our all non-top-level labels: if label is encountered first inside other label range, it is internal one
     // It is O(n^2) unfortunately.
     // Also check that we "know" this form of loop
-    val labelsToRemove = hashSetOf<Int>()
+    val labelsToSkip = hashSetOf<Int>()
+    val lonelyEventsToRemove = arrayListOf<Int>()
     labelsPositions.forEach allLabels@ { (label, positions) ->
         val start = positions.first().first
         labelsPositions.forEach { (iLabel, iPositions) ->
             val iStart = iPositions.first().first
             val iEnd = iPositions.last().first
             if (label != iLabel && iStart < start && start < iEnd) {
-                labelsToRemove.add(label)
+                labelsToSkip.add(label)
                 return@allLabels
             }
         }
@@ -429,22 +430,24 @@ private fun detectLoops(node: TraceNode, prefixFactory: TraceNodePrefixFactory) 
         // label: [OPTIONAL, DOES NOTHING]
         //
         // And the last jump[-label] combination is really the end of the loop, not the last iteration
+        // Cleanup all "inner" lone events, like labels without jumps
         if (positions.size < 2) {
-            labelsToRemove.add(label)
+            labelsToSkip.add(label)
+            lonelyEventsToRemove.add(start)
             return@allLabels
         }
         for (i in 0 .. positions.size - 2 step 2) {
             val lab = positions[i]
             val jmp = positions[i + 1]
             if (lab.second || !jmp.second) {
-                labelsToRemove.add(label)
+                labelsToSkip.add(label)
                 return@allLabels
             }
             if (i > 0) {
                 // Previous jump
                 val pjmp = positions[i - 1]
                 if (lab.first != pjmp.first + 1) {
-                    labelsToRemove.add(label)
+                    labelsToSkip.add(label)
                     return@allLabels
                 }
             }
@@ -454,17 +457,23 @@ private fun detectLoops(node: TraceNode, prefixFactory: TraceNodePrefixFactory) 
             val jmp = positions[positions.size - 2]
             val lab = positions.last()
             if (lab.second) {
-                labelsToRemove.add(label)
+                labelsToSkip.add(label)
                 return@allLabels
             }
             if (lab.first != jmp.first + 1) {
-                labelsToRemove.add(label)
+                labelsToSkip.add(label)
                 return@allLabels
             }
         }
     }
-    // Remove all inner and unsupported labels
-    labelsPositions.keys.removeAll(labelsToRemove)
+    // Remove all inner and unsupported labels from processing
+    labelsPositions.keys.removeAll(labelsToSkip)
+
+    // Remove all lone events from events chain
+    lonelyEventsToRemove.forEach { idx ->
+        val prev = if (idx == 0) node else node.getChild(idx - 1)
+        prev.next = node.removeChild(idx).next
+    }
 
     // Process all top-level labels
     labelsPositions.forEach { (labelId, positions) ->
@@ -729,6 +738,10 @@ internal abstract class TraceInnerNode(prefixProvider: PrefixProvider, iThread: 
 
     fun getChild(i: Int): TraceNode {
         return internalEvents[i]
+    }
+
+    fun removeChild(i: Int): TraceNode {
+        return internalEvents.removeAt(i)
     }
 }
 
