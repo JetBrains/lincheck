@@ -118,7 +118,8 @@ internal class LoopDetector(
      * Indicates that we are in a spin cycle iteration now.
      * Should be called only in replay mode.
      */
-    val replayModeCurrentlyInSpinCycle: Boolean get() = replayModeLoopDetectorHelper!!.currentlyInSpinCycle
+    val replayModeCurrentlyInSpinCycle: Boolean get() =
+        replayModeLoopDetectorHelper!!.currentlyInSpinCycle
 
     fun enableReplayMode(failDueToDeadlockInTheEnd: Boolean) {
         val contextSwitchesBeforeHalt =
@@ -625,14 +626,18 @@ private class ReplayModeLoopDetectorHelper(
     private val failDueToDeadlockInTheEnd: Boolean,
 ) {
 
-    /**
-     * Cycle period if is occurred in during current thread switch or 0 if no spin-cycle happened
-     */
-    val currentCyclePeriod: Int get() = interleavingHistory[currentInterleavingNodeIndex].spinCyclePeriod
-
     private var currentInterleavingNodeIndex = 0
 
     private var executionsPerformedInCurrentThread = 0
+
+    private val currentHistoryNode: InterleavingHistoryNode? get() =
+        interleavingHistory.getOrNull(currentInterleavingNodeIndex)
+
+    /**
+     * Cycle period if is occurred in during current thread switch or 0 if no spin-cycle happened
+     */
+    val currentCyclePeriod: Int get() =
+        currentHistoryNode?.spinCyclePeriod ?: -1
 
     /**
      * A set of thread, executed at least once during this interleaving.
@@ -652,13 +657,11 @@ private class ReplayModeLoopDetectorHelper(
      */
     private val threadsRan = hashSetOf<Int>()
 
-    private val currentHistoryNode: InterleavingHistoryNode get() = interleavingHistory[currentInterleavingNodeIndex]
-
     /**
      * Returns if we ran in the spin cycle and now are performing executions inside it.
      */
-    val currentlyInSpinCycle: Boolean
-        get() = currentHistoryNode.cycleOccurred && currentHistoryNode.executions <= executionsPerformedInCurrentThread
+    val currentlyInSpinCycle: Boolean get() =
+        currentHistoryNode?.let { it.cycleOccurred && it.executions < executionsPerformedInCurrentThread } ?: false
 
     fun initialize() {
         currentInterleavingNodeIndex = 0
@@ -688,15 +691,12 @@ private class ReplayModeLoopDetectorHelper(
      * @return true if the switch is required, false otherwise.
      */
     fun shouldSwitch(): Boolean {
-        require(currentInterleavingNodeIndex <= interleavingHistory.lastIndex) {
-            "Internal error"
-        }
-        val historyNode = interleavingHistory[currentInterleavingNodeIndex]
+        val historyNode = currentHistoryNode ?: return false
         return (executionsPerformedInCurrentThread > historyNode.spinCyclePeriod + historyNode.executions)
     }
 
     fun detectLivelock(): LoopDetector.Decision {
-        val cyclePeriod = interleavingHistory[currentInterleavingNodeIndex].spinCyclePeriod
+        val cyclePeriod = currentCyclePeriod
         if (currentInterleavingNodeIndex == interleavingHistory.lastIndex && failDueToDeadlockInTheEnd) {
             // Fail if we ran into cycle,
             // this cycle node is the last node in the replayed interleaving,
@@ -704,7 +704,7 @@ private class ReplayModeLoopDetectorHelper(
             // traceCollector.newActiveLockDetected(currentThread, cyclePeriod)
             return LoopDetector.Decision.LivelockFailureDetected(cyclePeriod)
         }
-        return if (cyclePeriod != 0)
+        return if (cyclePeriod > 0)
             LoopDetector.Decision.LivelockThreadSwitch(cyclePeriod)
         else
             LoopDetector.Decision.Idle
