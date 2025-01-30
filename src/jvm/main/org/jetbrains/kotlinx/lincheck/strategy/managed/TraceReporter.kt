@@ -262,11 +262,8 @@ internal fun constructTraceGraph(
                 val result = traceGraphNodes.createAndAppend { lastNode ->
                     val callDepth = innerNode.callDepth + 1
                     // TODO: please refactor me
-                    var prefixCallDepth = callDepth
-                    if (isGeneralPurposeMC && iThread == 0) {
-                        prefixCallDepth -= 1
-                    }
-                    val prefix = prefixFactory.prefixForCallNode(iThread, prefixCallDepth)
+                    val prefixCallDepthDelta = if (isGeneralPurposeMC && iThread == 0) -1 else 0
+                    val prefix = prefixFactory.prefixForCallNode(iThread, callDepth + prefixCallDepthDelta, prefixCallDepthDelta)
                     CallNode(prefix, iThread, lastNode, callDepth, call.tracePoint)
                 }
                 // make it a child of the previous node
@@ -279,11 +276,8 @@ internal fun constructTraceGraph(
         val node = traceGraphNodes.createAndAppend { lastNode ->
             val callDepth = innerNode.callDepth + 1
             // TODO: please refactor me
-            var prefixCallDepth = callDepth
-            if (isGeneralPurposeMC && iThread == 0) {
-                prefixCallDepth -= 1
-            }
-            val prefix = prefixFactory.prefix(event, prefixCallDepth)
+            val prefixCallDepthDelta = if (isGeneralPurposeMC && iThread == 0) -1 else 0
+            val prefix = prefixFactory.prefix(event, callDepth + prefixCallDepthDelta, prefixCallDepthDelta)
             TraceLeafEvent(prefix, iThread, lastNode, callDepth, event, isLastExecutedEvent)
         }
         innerNode.addInternalEvent(node)
@@ -491,7 +485,7 @@ private fun detectLoops(node: TraceNode, prefixFactory: TraceNodePrefixFactory) 
         val last = if (firstIdx == 0) node else node.internalEvents[firstIdx - 1].lastInternalEvent
         val location = ((node.internalEvents[firstIdx] as TraceLeafEvent).event as CodeLocationTracePoint).stackTraceElement
         val loop = LoopNode(
-            prefixProvider = prefixFactory.prefixForCallNode(node.iThread, node.callDepth + 1),
+            prefixProvider = prefixFactory.prefixForCallNode(node.iThread, node.callDepth + 1, 0),
             iThread = node.iThread,
             last = last,
             callDepth = node.callDepth + 1,
@@ -501,7 +495,7 @@ private fun detectLoops(node: TraceNode, prefixFactory: TraceNodePrefixFactory) 
         var lastEvent: TraceNode = loop
         for (i in 0 .. positions.size - 2 step 2) {
             val iteration = IterationNode(
-                prefixProvider = prefixFactory.prefixForCallNode(node.iThread, loop.callDepth + 1),
+                prefixProvider = prefixFactory.prefixForCallNode(node.iThread, loop.callDepth + 1, 0),
                 iThread = node.iThread,
                 last = lastEvent,
                 callDepth = node.callDepth + 2,
@@ -976,9 +970,9 @@ private class TraceNodePrefixFactory(nThreads: Int) {
     fun actorResultPrefix(iThread: Int) =
         PrefixProvider { callDepth -> extraPrefixIfNeeded(iThread) + TRACE_INDENTATION.repeat(callDepth) }
 
-    fun prefix(event: TracePoint, callDepth: Int): PrefixProvider {
+    fun prefix(event: TracePoint, callDepth: Int, callDepthDelta: Int = 0): PrefixProvider {
         val isCycleEnd = inSpinCycle && (event is ObstructionFreedomViolationExecutionAbortTracePoint || event is SwitchEventTracePoint)
-        return prefixForNode(event.iThread, callDepth, isCycleEnd).also {
+        return prefixForNode(event.iThread, callDepth, isCycleEnd, callDepthDelta).also {
             nextNodeIsSpinCycleStart = event is SpinCycleStartTracePoint
             if (isCycleEnd) {
                 inSpinCycle = false
@@ -986,11 +980,11 @@ private class TraceNodePrefixFactory(nThreads: Int) {
         }
     }
 
-    fun prefixForCallNode(iThread: Int, callDepth: Int): PrefixProvider {
-        return prefixForNode(iThread, callDepth, false)
+    fun prefixForCallNode(iThread: Int, callDepth: Int, callDepthDelta: Int): PrefixProvider {
+        return prefixForNode(iThread, callDepth, false, callDepthDelta)
     }
 
-    private fun prefixForNode(iThread: Int, callDepth: Int, isCycleEnd: Boolean): PrefixProvider {
+    private fun prefixForNode(iThread: Int, callDepth: Int, isCycleEnd: Boolean, callDepthDelta: Int = 0): PrefixProvider {
         if (nextNodeIsSpinCycleStart) {
             inSpinCycle = true
             nextNodeIsSpinCycleStart = false
@@ -1001,7 +995,8 @@ private class TraceNodePrefixFactory(nThreads: Int) {
             // New instance for new arrows, maybe will be modified here
             arrowDepth = ModifiableDepth(callDepth)
             val arrowDepth = arrowDepth
-            return PrefixProvider { callDepthActual ->
+            return PrefixProvider { callDepthActualNotBiased ->
+                val callDepthActual = callDepthActualNotBiased + callDepthDelta
                 arrowDepth.setFinalDepth(callDepthActual)
                 val extraPrefix = if (callDepthActual == 1) 0 else extraPrefixLength(iThread)
                 // Arrow depth equla to actual call depth here
@@ -1010,19 +1005,24 @@ private class TraceNodePrefixFactory(nThreads: Int) {
         }
         if (isCycleEnd) {
             val arrowDepth = arrowDepth
-            return PrefixProvider { callDepthActual ->
+            return PrefixProvider { callDepthActualNotBiased ->
+                val callDepthActual = callDepthActualNotBiased + callDepthDelta
                 val extraPrefix = if (arrowDepth.depth == 1) 0 else extraPrefixLength(iThread)
                 TRACE_INDENTATION.repeat(max(0, arrowDepth.depth - 2 + extraPrefix)) + "└╶" + "╶╶".repeat(max(0, callDepthActual - arrowDepth.depth)) + "╶ "
             }
         }
         if (inSpinCycle) {
             val arrowDepth = arrowDepth
-            return PrefixProvider { callDepthActual ->
+            return PrefixProvider { callDepthActualNotBiased ->
+                val callDepthActual = callDepthActualNotBiased + callDepthDelta
                 val extraPrefix = if (arrowDepth.depth == 1) 0 else extraPrefixLength(iThread)
                 TRACE_INDENTATION.repeat(max(0, arrowDepth.depth - 2 + extraPrefix)) + "| " + TRACE_INDENTATION.repeat(callDepthActual - arrowDepth.depth + 1)
             }
         }
-        return PrefixProvider { callDepthActual -> extraPrefixIfNeeded(iThread) + TRACE_INDENTATION.repeat(callDepthActual) }
+        return PrefixProvider { callDepthActualNotBiased ->
+            val callDepthActual = callDepthActualNotBiased + callDepthDelta
+            extraPrefixIfNeeded(iThread) + TRACE_INDENTATION.repeat(callDepthActual)
+        }
     }
 
     private fun extraPrefixIfNeeded(iThread: Int): String = if (extraIndentPerThread[iThread]) "  " else ""
