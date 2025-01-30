@@ -393,7 +393,7 @@ private fun detectLoops(node: TraceNode, prefixFactory: TraceNodePrefixFactory) 
     // This loop detects only outermost iterations.
     // Recursive calls will process all nested loops when top-level loops are ready.
     val labelsPositions = hashMapOf<Int, MutableList<Pair<Int, Boolean>>>()
-    node.children().forEachIndexed { idx, child->
+    node.internalEvents.forEachIndexed { idx, child->
         if (child is TraceLeafEvent) {
             if (child.event is BackBranchTargetTracePoint) {
                 labelsPositions.computeIfAbsent(child.event.labelId, { arrayListOf<Pair<Int, Boolean>>() })
@@ -471,15 +471,15 @@ private fun detectLoops(node: TraceNode, prefixFactory: TraceNodePrefixFactory) 
 
     // Remove all lone events from events chain
     lonelyEventsToRemove.forEach { idx ->
-        val prev = if (idx == 0) node else node.getChild(idx - 1)
+        val prev = if (idx == 0) node else node.internalEvents[idx - 1]
         prev.next = node.removeChild(idx).next
     }
 
     // Process all top-level labels
     labelsPositions.forEach { (labelId, positions) ->
         LabelsTracker.markLabelAsSupportedLoopForm(labelId)
-        val last = if (positions.first().first == 0) node else node.getChild(positions.first().first - 1)
-        val location = ((node.getChild(positions.first().first) as TraceLeafEvent).event as CodeLocationTracePoint).stackTraceElement
+        val last = if (positions.first().first == 0) node else node.internalEvents[positions.first().first - 1]
+        val location = ((node.internalEvents[positions.first().first] as TraceLeafEvent).event as CodeLocationTracePoint).stackTraceElement
         val loop = LoopNode(
             prefixProvider = prefixFactory.prefixForCallNode(node.iThread, node.callDepth + 1),
             iThread = node.iThread,
@@ -502,7 +502,7 @@ private fun detectLoops(node: TraceNode, prefixFactory: TraceNodePrefixFactory) 
             val end =  positions[i + 1].first - 1
             // "start" and "end" should be removed from a linked list, all inbetween should go to the new iteration
             for (childIdx in start .. end) {
-                val child = node.getChild(childIdx)
+                val child = node.internalEvents[childIdx]
                 child.increaseCallDepth(2)
                 if (childIdx == start) {
                     iteration.next = child
@@ -515,11 +515,11 @@ private fun detectLoops(node: TraceNode, prefixFactory: TraceNodePrefixFactory) 
             loop.addInternalEvent(iteration)
         }
         // Remove 2 last 2 technical events
-        lastEvent.next = node.getChild(positions.last().first).next
+        lastEvent.next = node.internalEvents[positions.last().first].next
         node.replaceInternalEvents(positions.first().first, positions.last().first, loop)
     }
     // Recursively call itself for all children, including new loop nodes
-    node.children().forEach { detectLoops(it, prefixFactory) }
+    node.internalEvents.forEach { detectLoops(it, prefixFactory) }
 }
 
 private fun actorNodeResultRepresentation(result: Result?, failure: LincheckFailure, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): String? {
@@ -732,16 +732,8 @@ internal abstract class TraceInnerNode(prefixProvider: PrefixProvider, iThread: 
         _internalEvents.add(from, newEvent)
     }
 
-    fun children(): List<TraceNode> {
-        return internalEvents
-    }
-
-    fun getChild(i: Int): TraceNode {
-        return internalEvents[i]
-    }
-
     fun removeChild(i: Int): TraceNode {
-        return internalEvents.removeAt(i)
+        return _internalEvents.removeAt(i)
     }
 }
 
