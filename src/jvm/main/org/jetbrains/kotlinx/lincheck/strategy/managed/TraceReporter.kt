@@ -404,11 +404,11 @@ private fun detectLoops(node: TraceNode, prefixFactory: TraceNodePrefixFactory) 
             }
         }
     }
+
     // Filter-our all non-top-level labels: if label is encountered first inside other label range, it is internal one
     // It is O(n^2) unfortunately.
     // Also check that we "know" this form of loop
     val labelsToSkip = hashSetOf<Int>()
-    val lonelyEventsToRemove = arrayListOf<Int>()
     labelsPositions.forEach allLabels@ { (label, positions) ->
         val start = positions.first().first
         labelsPositions.forEach { (iLabel, iPositions) ->
@@ -430,12 +430,12 @@ private fun detectLoops(node: TraceNode, prefixFactory: TraceNodePrefixFactory) 
         // label: [OPTIONAL, DOES NOTHING]
         //
         // And the last jump[-label] combination is really the end of the loop, not the last iteration
-        // Cleanup all "inner" lone events, like labels without jumps
-        if (positions.size < 2) {
-            labelsToSkip.add(label)
-            lonelyEventsToRemove.add(start)
+
+        // It will be cleaned up later, leave it here
+        if (positions.size == 1) {
             return@allLabels
         }
+
         for (i in 0 .. positions.size - 2 step 2) {
             val lab = positions[i]
             val jmp = positions[i + 1]
@@ -469,17 +469,27 @@ private fun detectLoops(node: TraceNode, prefixFactory: TraceNodePrefixFactory) 
     // Remove all inner and unsupported labels from processing
     labelsPositions.keys.removeAll(labelsToSkip)
 
-    // Remove all lone events from events chain
-    lonelyEventsToRemove.forEach { idx ->
-        val prev = if (idx == 0) node else node.internalEvents[idx - 1]
-        prev.next = node.removeChild(idx).next
-    }
+    // Delta accumulated by removing children
+    var delta = 0
+    // Process all top-level labels, sorted by start positions
+    // to properly accumulate delta
+    labelsPositions.toSortedMap() { a, b ->
+        val p1 = labelsPositions.getValue(a).first().first
+        val p2 = labelsPositions.getValue(b).first().first
+        p1.compareTo(p2)
+    }.forEach { (labelId, positions) ->
+        // Remove single-position labels
+        if (positions.size < 2) {
+            node.removeChild(positions[0].first + delta)
+            delta -= 1
+            return@forEach
+        }
 
-    // Process all top-level labels
-    labelsPositions.forEach { (labelId, positions) ->
         LabelsTracker.markLabelAsSupportedLoopForm(labelId)
-        val last = if (positions.first().first == 0) node else node.internalEvents[positions.first().first - 1]
-        val location = ((node.internalEvents[positions.first().first] as TraceLeafEvent).event as CodeLocationTracePoint).stackTraceElement
+        val firstIdx = positions.first().first + delta
+
+        val last = if (firstIdx == 0) node else node.internalEvents[firstIdx - 1].lastInternalEvent
+        val location = ((node.internalEvents[firstIdx] as TraceLeafEvent).event as CodeLocationTracePoint).stackTraceElement
         val loop = LoopNode(
             prefixProvider = prefixFactory.prefixForCallNode(node.iThread, node.callDepth + 1),
             iThread = node.iThread,
@@ -498,8 +508,8 @@ private fun detectLoops(node: TraceNode, prefixFactory: TraceNodePrefixFactory) 
                 iterationNumber = i / 2
             )
             lastEvent = iteration
-            val start = positions[i].first + 1
-            val end =  positions[i + 1].first - 1
+            val start = positions[i].first + delta + 1
+            val end =  positions[i + 1].first + delta - 1
             // "start" and "end" should be removed from a linked list, all inbetween should go to the new iteration
             for (childIdx in start .. end) {
                 val child = node.internalEvents[childIdx]
@@ -514,9 +524,10 @@ private fun detectLoops(node: TraceNode, prefixFactory: TraceNodePrefixFactory) 
             }
             loop.addInternalEvent(iteration)
         }
-        // Remove 2 last 2 technical events
-        lastEvent.next = node.internalEvents[positions.last().first].next
-        node.replaceInternalEvents(positions.first().first, positions.last().first, loop)
+        // Remove last 2 technical events
+        lastEvent.next = node.internalEvents[positions.last().first + delta].next
+        node.replaceInternalEvents(positions.first().first + delta, positions.last().first + delta, loop)
+        delta -= positions.last().first -  positions.first().first + 1 - 1 // Account for all replaced events and added loop node
     }
     // Recursively call itself for all children, including new loop nodes
     node.internalEvents.forEach { detectLoops(it, prefixFactory) }

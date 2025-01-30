@@ -1,0 +1,33 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| ------------------------------------------------------------------------------------------------------- |
+|                                                Thread 1                                                 |
+| ------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                             |
+|   escape.WRITE("START") at TwoForLoopRepresentationTest.operation(TwoForLoopRepresentationTest.kt:18)   |
+|   Loop with 2 iterations at TwoForLoopRepresentationTest.operation(TwoForLoopRepresentationTest.kt:19)  |
+|     Iteration #0                                                                                        |
+|       escape.WRITE("A.1") at TwoForLoopRepresentationTest.operation(TwoForLoopRepresentationTest.kt:21) |
+|     Iteration #1                                                                                        |
+|       escape.WRITE("A.2") at TwoForLoopRepresentationTest.operation(TwoForLoopRepresentationTest.kt:21) |
+|   Loop with 2 iterations at TwoForLoopRepresentationTest.operation(TwoForLoopRepresentationTest.kt:23)  |
+|     Iteration #0                                                                                        |
+|       escape.WRITE("B.1") at TwoForLoopRepresentationTest.operation(TwoForLoopRepresentationTest.kt:25) |
+|     Iteration #1                                                                                        |
+|       escape.WRITE("B.2") at TwoForLoopRepresentationTest.operation(TwoForLoopRepresentationTest.kt:25) |
+|   escape.WRITE("END") at TwoForLoopRepresentationTest.operation(TwoForLoopRepresentationTest.kt:27)     |
+|   result: void                                                                                          |
+| ------------------------------------------------------------------------------------------------------- |
