@@ -10,13 +10,11 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.execution.threadsResults
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.ManagedDeadlockFailure
-import org.jetbrains.kotlinx.lincheck.strategy.ObstructionFreedomViolationFailure
-import org.jetbrains.kotlinx.lincheck.strategy.TimeoutFailure
-import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
 import org.jetbrains.kotlinx.lincheck.transformation.LabelsTracker
 import kotlin.math.*
 import kotlin.reflect.jvm.javaMethod
@@ -374,7 +372,9 @@ internal fun constructTraceGraph(
         traceGraphNodesSections += traceGraphNodes
     }
     // Post-process all forests to detect and structure loops at each level
-    traceGraphNodesSections.forEach { detectLoops(it.first(), prefixFactory) }
+    traceGraphNodesSections.forEach {
+        it.filter { n -> n is ActorNode }.forEach { detectLoops(it, prefixFactory) }
+    }
 
     return traceGraphNodesSections.map { it.first() }
 }
@@ -482,17 +482,16 @@ private fun detectLoops(node: TraceNode, prefixFactory: TraceNodePrefixFactory) 
         var lastEvent: TraceNode = loop
         for (i in 0 .. positions.size - 2 step 2) {
             val iteration = IterationNode(
-                prefixProvider = prefixFactory.prefixForCallNode(node.iThread, node.callDepth + 1),
+                prefixProvider = prefixFactory.prefixForCallNode(node.iThread, loop.callDepth + 1),
                 iThread = node.iThread,
                 last = lastEvent,
                 callDepth = node.callDepth + 2,
                 iterationNumber = i / 2
             )
-            loop.addInternalEvent(iteration)
             lastEvent = iteration
             val start = positions[i].first + 1
             val end =  positions[i + 1].first - 1
-            // "start" and "end" should be removed from a linked list, all between should go to the new iteration
+            // "start" and "end" should be removed from a linked list, all inbetween should go to the new iteration
             for (childIdx in start .. end) {
                 val child = node.getChild(childIdx)
                 child.increaseCallDepth(2)
@@ -504,6 +503,7 @@ private fun detectLoops(node: TraceNode, prefixFactory: TraceNodePrefixFactory) 
                 }
                 iteration.addInternalEvent(child)
             }
+            loop.addInternalEvent(iteration)
         }
         // Remove 2 last 2 technical events
         lastEvent.next = node.getChild(positions.last().first).next
@@ -982,7 +982,6 @@ private class TraceNodePrefixFactory(nThreads: Int) {
             if (extraPrefixRequired) {
                 extraIndentPerThread[iThread] = true
             }
-            arrowDepth = callDepth
             // New instance for new arrows, maybe will be modified here
             arrowDepth = ModifiableDepth(callDepth)
             val arrowDepth = arrowDepth
