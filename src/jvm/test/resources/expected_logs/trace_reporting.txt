@@ -10,9 +10,9 @@ The following interleaving leads to the error:
 | Thread 1 |                                             Thread 2                                             |
 | ----------------------------------------------------------------------------------------------------------- |
 |          | bar()                                                                                            |
-|          |   a ⟶ 0 at TraceReportingTest.bar(TraceReportingTest.kt:41)                                      |
+|          |   a ➜ 0 at TraceReportingTest.bar(TraceReportingTest.kt:41)                                      |
 |          |   a = 1 at TraceReportingTest.bar(TraceReportingTest.kt:41)                                      |
-|          |   a ⟶ 1 at TraceReportingTest.bar(TraceReportingTest.kt:41)                                      |
+|          |   a ➜ 1 at TraceReportingTest.bar(TraceReportingTest.kt:41)                                      |
 |          |   a = 2 at TraceReportingTest.bar(TraceReportingTest.kt:41)                                      |
 |          |   uselessIncrements(2): false at TraceReportingTest.bar(TraceReportingTest.kt:43)                |
 |          |   intermediateMethod() at TraceReportingTest.bar(TraceReportingTest.kt:44)                       |
@@ -31,14 +31,14 @@ Detailed trace:
 |                                       Thread 1                                        |                                             Thread 2                                             |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                                       | bar()                                                                                            |
-|                                                                                       |   a ⟶ 0 at TraceReportingTest.bar(TraceReportingTest.kt:41)                                      |
+|                                                                                       |   a ➜ 0 at TraceReportingTest.bar(TraceReportingTest.kt:41)                                      |
 |                                                                                       |   a = 1 at TraceReportingTest.bar(TraceReportingTest.kt:41)                                      |
-|                                                                                       |   a ⟶ 1 at TraceReportingTest.bar(TraceReportingTest.kt:41)                                      |
+|                                                                                       |   a ➜ 1 at TraceReportingTest.bar(TraceReportingTest.kt:41)                                      |
 |                                                                                       |   a = 2 at TraceReportingTest.bar(TraceReportingTest.kt:41)                                      |
 |                                                                                       |   uselessIncrements(2): false at TraceReportingTest.bar(TraceReportingTest.kt:43)                |
-|                                                                                       |     b ⟶ 0 at TraceReportingTest.uselessIncrements(TraceReportingTest.kt:59)                      |
+|                                                                                       |     b ➜ 0 at TraceReportingTest.uselessIncrements(TraceReportingTest.kt:59)                      |
 |                                                                                       |     b = 1 at TraceReportingTest.uselessIncrements(TraceReportingTest.kt:59)                      |
-|                                                                                       |     b ⟶ 1 at TraceReportingTest.uselessIncrements(TraceReportingTest.kt:59)                      |
+|                                                                                       |     b ➜ 1 at TraceReportingTest.uselessIncrements(TraceReportingTest.kt:59)                      |
 |                                                                                       |     b = 2 at TraceReportingTest.uselessIncrements(TraceReportingTest.kt:59)                      |
 |                                                                                       |   intermediateMethod() at TraceReportingTest.bar(TraceReportingTest.kt:44)                       |
 |                                                                                       |     resetFlag() at TraceReportingTest.intermediateMethod(TraceReportingTest.kt:48)               |
@@ -46,7 +46,7 @@ Detailed trace:
 |                                                                                       |       canEnterForbiddenSection = true at TraceReportingTest.resetFlag(TraceReportingTest.kt:53)  |
 |                                                                                       |       switch                                                                                     |
 | foo(): 1                                                                              |                                                                                                  |
-|   canEnterForbiddenSection ⟶ true at TraceReportingTest.foo(TraceReportingTest.kt:32) |                                                                                                  |
+|   canEnterForbiddenSection ➜ true at TraceReportingTest.foo(TraceReportingTest.kt:32) |                                                                                                  |
 |   result: 1                                                                           |                                                                                                  |
 |                                                                                       |       canEnterForbiddenSection = false at TraceReportingTest.resetFlag(TraceReportingTest.kt:54) |
 |                                                                                       |       MONITOREXIT at TraceReportingTest.resetFlag(TraceReportingTest.kt:55)                      |

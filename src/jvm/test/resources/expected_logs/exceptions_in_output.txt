@@ -38,7 +38,7 @@ Detailed trace:
 |   canEnterForbiddenSection = true at ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:26)  |                                                                                                      |
 |   switch                                                                                              |                                                                                                      |
 |                                                                                                       | operation2(): IllegalStateException #2                                                               |
-|                                                                                                       |   canEnterForbiddenSection ⟶ true at ExceptionsInOutputTest.operation2(ExceptionsInOutputTest.kt:32) |
+|                                                                                                       |   canEnterForbiddenSection ➜ true at ExceptionsInOutputTest.operation2(ExceptionsInOutputTest.kt:32) |
 |                                                                                                       |   result: IllegalStateException #2                                                                   |
 |   canEnterForbiddenSection = false at ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:27) |                                                                                                      |
 |   result: IllegalStateException #1                                                                    |                                                                                                      |

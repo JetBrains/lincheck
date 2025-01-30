@@ -18,10 +18,10 @@ Detailed trace:
 | ------------------------------------------------------------------------------- |
 | operation()                                                                     |
 |   x = VALUE_1 at EnumRepresentationTest.operation(EnumRepresentationTest.kt:18) |
-|   x ⟶ VALUE_1 at EnumRepresentationTest.operation(EnumRepresentationTest.kt:19) |
+|   x ➜ VALUE_1 at EnumRepresentationTest.operation(EnumRepresentationTest.kt:19) |
 |   y = VALUE_1 at EnumRepresentationTest.operation(EnumRepresentationTest.kt:19) |
 |   x = VALUE_2 at EnumRepresentationTest.operation(EnumRepresentationTest.kt:20) |
-|   x ⟶ VALUE_2 at EnumRepresentationTest.operation(EnumRepresentationTest.kt:21) |
+|   x ➜ VALUE_2 at EnumRepresentationTest.operation(EnumRepresentationTest.kt:21) |
 |   y = VALUE_2 at EnumRepresentationTest.operation(EnumRepresentationTest.kt:21) |
 |   result: void                                                                  |
 | ------------------------------------------------------------------------------- |

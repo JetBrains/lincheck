@@ -18,29 +18,29 @@ Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------- |
 | operation()                                                                                                                     |
 |   readActions() at ArrayNameInTraceRepresentationTest.operation(OwnerNameInTraceRepresentationTests.kt:69)                      |
-|     intArray ⟶ IntArray#1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:74)          |
-|     IntArray#1[0] ⟶ 1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:74)              |
-|     shortArray ⟶ ShortArray#1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:75)      |
-|     ShortArray#1[0] ⟶ 1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:75)            |
-|     charArray ⟶ CharArray#1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:76)        |
-|     CharArray#1[0] ⟶ '1' at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:76)           |
-|     byteArray ⟶ ByteArray#1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:77)        |
-|     ByteArray#1[0] ⟶ 1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:77)             |
-|     booleanArray ⟶ BooleanArray#1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:78)  |
-|     BooleanArray#1[0] ⟶ true at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:78)       |
-|     FloatArray#1[0] ⟶ 1.0 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:80)          |
-|     DoubleArray#1[0] ⟶ 1.0 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:81)         |
-|     LongArray#1[0] ⟶ 1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:82)             |
+|     intArray ➜ IntArray#1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:74)          |
+|     IntArray#1[0] ➜ 1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:74)              |
+|     shortArray ➜ ShortArray#1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:75)      |
+|     ShortArray#1[0] ➜ 1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:75)            |
+|     charArray ➜ CharArray#1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:76)        |
+|     CharArray#1[0] ➜ '1' at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:76)           |
+|     byteArray ➜ ByteArray#1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:77)        |
+|     ByteArray#1[0] ➜ 1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:77)             |
+|     booleanArray ➜ BooleanArray#1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:78)  |
+|     BooleanArray#1[0] ➜ true at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:78)       |
+|     FloatArray#1[0] ➜ 1.0 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:80)          |
+|     DoubleArray#1[0] ➜ 1.0 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:81)         |
+|     LongArray#1[0] ➜ 1 at ArrayNameInTraceRepresentationTest.readActions(OwnerNameInTraceRepresentationTests.kt:82)             |
 |   writeActions() at ArrayNameInTraceRepresentationTest.operation(OwnerNameInTraceRepresentationTests.kt:70)                     |
-|     intArray ⟶ IntArray#1 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:86)         |
+|     intArray ➜ IntArray#1 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:86)         |
 |     IntArray#1[0] = 0 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:86)             |
-|     shortArray ⟶ ShortArray#1 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:87)     |
+|     shortArray ➜ ShortArray#1 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:87)     |
 |     ShortArray#1[0] = 0 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:87)           |
-|     charArray ⟶ CharArray#1 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:88)       |
+|     charArray ➜ CharArray#1 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:88)       |
 |     CharArray#1[0] = '0' at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:88)          |
-|     byteArray ⟶ ByteArray#1 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:89)       |
+|     byteArray ➜ ByteArray#1 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:89)       |
 |     ByteArray#1[0] = 0 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:89)            |
-|     booleanArray ⟶ BooleanArray#1 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:90) |
+|     booleanArray ➜ BooleanArray#1 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:90) |
 |     BooleanArray#1[0] = false at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:90)     |
 |     FloatArray#1[0] = 0.0 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:92)         |
 |     DoubleArray#1[0] = 0.0 at ArrayNameInTraceRepresentationTest.writeActions(OwnerNameInTraceRepresentationTests.kt:93)        |
