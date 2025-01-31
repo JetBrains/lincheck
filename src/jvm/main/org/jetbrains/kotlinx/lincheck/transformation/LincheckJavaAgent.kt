@@ -484,5 +484,8 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         // `StackTraceElement` class, to wrap all its methods into the ignored section.
         isStackTraceElementClass(className) ||
         // `ThreadContainer` classes, to detect threads started in the thread containers.
-        isThreadContainerClass(className)
+        isThreadContainerClass(className) ||
+        // TODO: instead of eagerly instrumenting `DispatchedContinuation`
+        //  we should try to fix lazy class re-transformation logic
+        className.contains("DispatchedContinuation")
 }
