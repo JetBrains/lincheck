@@ -100,12 +100,11 @@ internal class ReadTracePoint(
 
     override fun toStringCompact(): String = StringBuilder().apply {
         if (ownerRepresentation != null) {
-            append("$ownerRepresentation.$fieldName.")
+            append("$ownerRepresentation.$fieldName")
         } else {
-            append("$fieldName.")
+            append(fieldName)
         }
-        append("READ")
-        append(": $valueRepresentation")
+        append(" ➜ $valueRepresentation")
     }.toString()
 
     fun initializeReadValue(value: String) {
@@ -127,13 +126,11 @@ internal class WriteTracePoint(
 
     override fun toStringCompact(): String  = StringBuilder().apply {
         if (ownerRepresentation != null) {
-            append("$ownerRepresentation.$fieldName.")
+            append("$ownerRepresentation.$fieldName")
         } else {
-            append("$fieldName.")
+            append(fieldName)
         }
-        append("WRITE(")
-        append(valueRepresentation)
-        append(")")
+        append(" = $valueRepresentation")
     }.toString()
 
     fun initializeWrittenValue(value: String) {
@@ -161,7 +158,7 @@ internal class MethodCallTracePoint(
         append("$methodName(")
         val parameters = parameters
         if (parameters != null) {
-            append(parameters.joinToString(","))
+            append(parameters.joinToString(", "))
         }
         append(")")
         val returnedValue = returnedValue

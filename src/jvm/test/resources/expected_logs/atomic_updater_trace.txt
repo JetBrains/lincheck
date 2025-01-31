@@ -13,12 +13,12 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                           Thread 1                                                                            |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                                                                   |
-|   node.READ: IntWrapper#1 at AtomicUpdaterTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:68)                             |
-|   node.compareAndSet(IntWrapper#1,IntWrapper#2): true at AtomicUpdaterTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:68) |
-|   node.set(IntWrapper#3) at AtomicUpdaterTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:69)                              |
-|   result: void                                                                                                                                                |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                            Thread 1                                                                            |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                                    |
+|   node ➜ IntWrapper#1 at AtomicUpdaterTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:68)                                  |
+|   node.compareAndSet(IntWrapper#1, IntWrapper#2): true at AtomicUpdaterTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:68) |
+|   node.set(IntWrapper#3) at AtomicUpdaterTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:69)                               |
+|   result: void                                                                                                                                                 |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------- |

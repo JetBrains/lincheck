@@ -13,12 +13,12 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                             Thread 1                                                                             |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                                                                      |
-|   node.READ: IntWrapper#1 at SunUnsafeTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:26)                                    |
-|   node.compareAndSwapObject(IntWrapper#1,IntWrapper#2): true at SunUnsafeTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:26) |
-|   node.getAndSetObject(IntWrapper#3): IntWrapper#2 at SunUnsafeTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:27)           |
-|   result: void                                                                                                                                                   |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                             Thread 1                                                                              |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                                       |
+|   node ➜ IntWrapper#1 at SunUnsafeTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:26)                                         |
+|   node.compareAndSwapObject(IntWrapper#1, IntWrapper#2): true at SunUnsafeTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:26) |
+|   node.getAndSetObject(IntWrapper#3): IntWrapper#2 at SunUnsafeTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:27)            |
+|   result: void                                                                                                                                                    |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -13,12 +13,12 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| ---------------------------------------------------------------------------------------------------------- |
-|                                                  Thread 1                                                  |
-| ---------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                |
-|   counter.get(): 0 at AFUCallRepresentationTest.operation(AFUCallRepresentationTest.kt:25)                 |
-|   counter.set(1) at AFUCallRepresentationTest.operation(AFUCallRepresentationTest.kt:26)                   |
-|   counter.compareAndSet(1,2): true at AFUCallRepresentationTest.operation(AFUCallRepresentationTest.kt:27) |
-|   result: void                                                                                             |
-| ---------------------------------------------------------------------------------------------------------- |
+| ----------------------------------------------------------------------------------------------------------- |
+|                                                  Thread 1                                                   |
+| ----------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                 |
+|   counter.get(): 0 at AFUCallRepresentationTest.operation(AFUCallRepresentationTest.kt:25)                  |
+|   counter.set(1) at AFUCallRepresentationTest.operation(AFUCallRepresentationTest.kt:26)                    |
+|   counter.compareAndSet(1, 2): true at AFUCallRepresentationTest.operation(AFUCallRepresentationTest.kt:27) |
+|   result: void                                                                                              |
+| ----------------------------------------------------------------------------------------------------------- |
