@@ -28,8 +28,7 @@ Detailed trace:
 |     Iteration #2                                                                                                       |
 |       escape.WRITE("3") at BreakedForLoopRepresentationTest.operation(BreakedForLoopRepresentationTest.kt:21)          |
 |       escape.WRITE("3 is saved") at BreakedForLoopRepresentationTest.operation(BreakedForLoopRepresentationTest.kt:25) |
-|     Iteration #3                                                                                                       |
-|       escape.WRITE("4") at BreakedForLoopRepresentationTest.operation(BreakedForLoopRepresentationTest.kt:21)          |
+|   escape.WRITE("4") at BreakedForLoopRepresentationTest.operation(BreakedForLoopRepresentationTest.kt:21)              |
 |   escape.WRITE("END") at BreakedForLoopRepresentationTest.operation(BreakedForLoopRepresentationTest.kt:27)            |
 |   result: void                                                                                                         |
 | ---------------------------------------------------------------------------------------------------------------------- |
