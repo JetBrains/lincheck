@@ -429,7 +429,11 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
             if (className.startsWith("kotlin.coroutines.")) return true
             return false
         }
-        if (className.startsWith("kotlinx.atomicfu.")) return false
+        // We do not instrument AtomicFU atomics.
+        if (className.startsWith("kotlinx.atomicfu.")) {
+            if (className.contains("Atomic")) return false
+            return true
+        }
         // We need to skip the classes related to the debugger support in Kotlin coroutines.
         if (className.startsWith("kotlinx.coroutines.debug.")) return false
         if (className == "kotlinx.coroutines.DebugKt") return false
