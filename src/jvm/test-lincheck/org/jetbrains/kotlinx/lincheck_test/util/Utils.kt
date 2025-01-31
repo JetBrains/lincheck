@@ -11,5 +11,12 @@
 package org.jetbrains.kotlinx.lincheck_test.util
 
 import org.junit.Ignore
+import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 
+/**
+ * Annotation used to mark elements that should be ignored when running in trace debugger mode.
+ *
+ * When [isInTraceDebuggerMode] is true, the annotation is a `type alias` of [Ignore].
+ * Otherwise, it is just a new annotation, doing nothing.
+ */
 annotation class IgnoreInTraceDebuggerMode

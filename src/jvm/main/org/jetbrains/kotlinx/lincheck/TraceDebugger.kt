@@ -10,4 +10,4 @@
 
 package org.jetbrains.kotlinx.lincheck
 
-val isTraceDebuggerEnabled = System.getProperty("lincheck.traceDebuggerMode", "false").toBoolean()
+val isInTraceDebuggerMode = System.getProperty("lincheck.traceDebuggerMode", "false").toBoolean()
