@@ -76,7 +76,6 @@ class LocalObjectEliminationTest {
     private data class A(var value: Int, var any: Any, val array: IntArray)
 }
 
-@IgnoreInTraceDebuggerMode
 class LocalObjectEscapeConstructorTest {
 
     private class A(var b: B)

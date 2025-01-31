@@ -13,11 +13,10 @@
 package org.jetbrains.kotlinx.lincheck_test.representation
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
-import org.jetbrains.kotlinx.lincheck_test.util.IgnoreInTraceDebuggerMode
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -26,7 +25,6 @@ import java.util.concurrent.atomic.AtomicInteger
  * Checks that after we found a spin-cycle, then we will consider interleavings with switches
  * inside the first spin-cycle iteration.
  */
-@IgnoreInTraceDebuggerMode
 class InterleavingAnalysisPresentInSpinCycleFirstIterationTest {
 
     // Counter that causes spin-lock in spinLock operation
@@ -67,6 +65,9 @@ class InterleavingAnalysisPresentInSpinCycleFirstIterationTest {
             }
         }
         .checkImpl(this::class.java) { failure ->
-            failure.checkLincheckOutput("switch_in_the_middle_of_spin_cycle_causes_error.txt")
+            failure.checkLincheckOutput(
+                if (isInTraceDebuggerMode) "switch_in_the_middle_of_spin_cycle_causes_error_trace_debugger.txt"
+                else "switch_in_the_middle_of_spin_cycle_causes_error.txt"
+            )
         }
 }

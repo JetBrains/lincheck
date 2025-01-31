@@ -27,7 +27,6 @@ import kotlin.reflect.jvm.*
 /**
  * Checks that spin-cycle repeated events are cut in case of obstruction freedom violation
  */
-@IgnoreInTraceDebuggerMode
 class ObstructionFreedomViolationEventsCutTest {
     private val q = MSQueueBlocking()
 
@@ -41,19 +40,24 @@ class ObstructionFreedomViolationEventsCutTest {
     fun runModelCheckingTest() = ModelCheckingOptions()
         .checkObstructionFreedom(true)
         .checkImpl(this::class.java)
-        .checkLincheckOutput("obstruction_freedom_violation_events_cut.txt")
+        .checkLincheckOutput(
+            if (isInTraceDebuggerMode) "obstruction_freedom_violation_events_cut_trace_debugger.txt"
+            else "obstruction_freedom_violation_events_cut.txt"
+        )
 
 }
 
 /**
  * Checks that spin-cycle repeated events are cut in case when spin cycle contains few actions
  */
-@IgnoreInTraceDebuggerMode
 class SpinlockEventsCutShortLengthTest : AbstractSpinLivelockTest() {
 
     private val sharedStateAny = AtomicBoolean(false)
 
-    override val outputFileName: String get() = "spin_lock/spin_lock_events_cut_single_action_cycle.txt"
+    override val outputFileName: String
+        get() =
+            if (isInTraceDebuggerMode) "spin_lock/spin_lock_events_cut_single_action_cycle_trace_debugger.txt"
+            else "spin_lock/spin_lock_events_cut_single_action_cycle.txt"
 
     override fun meaninglessActions() {
         sharedStateAny.get()
@@ -64,12 +68,15 @@ class SpinlockEventsCutShortLengthTest : AbstractSpinLivelockTest() {
 /**
  * Checks that spin-cycle repeated events are cut in case when spin cycle contains few actions
  */
-@IgnoreInTraceDebuggerMode
 class SpinlockEventsCutMiddleLengthTest : AbstractSpinLivelockTest() {
 
     private val sharedStateAny = AtomicBoolean(false)
 
-    override val outputFileName: String get() = "spin_lock/spin_lock_events_cut_two_actions_cycle.txt"
+    override val outputFileName: String
+        get() =
+            if (isInTraceDebuggerMode) "spin_lock/spin_lock_events_cut_two_actions_cycle_trace_debugger.txt"
+            else "spin_lock/spin_lock_events_cut_two_actions_cycle.txt"
+    
 
     override fun meaninglessActions() {
         val x = sharedStateAny.get()
@@ -219,11 +226,14 @@ class SpinlockEventsCutInfiniteNoCycleWithParamsTest : AbstractSpinLivelockTest(
 /**
  * Checks that spin-cycle repeated events are cut in case when spin cycle contains many actions
  */
-@IgnoreInTraceDebuggerMode
 class SpinlockEventsCutLongCycleActionsTest : AbstractSpinLivelockTest() {
 
     private val data = AtomicReferenceArray<Int>(7)
-    override val outputFileName: String get() = "spin_lock/spin_lock_events_cut_long_cycle.txt"
+    override val outputFileName: String
+        get() =
+            if (isInTraceDebuggerMode) "spin_lock/spin_lock_events_cut_long_cycle_trace_debugger.txt"
+            else "spin_lock/spin_lock_events_cut_long_cycle.txt"
+    
     override fun meaninglessActions() {
         data[0] = 0
         data[1] = 0
@@ -239,11 +249,13 @@ class SpinlockEventsCutLongCycleActionsTest : AbstractSpinLivelockTest() {
 /**
  * Checks that spin-cycle repeated events are cut in case when spin cycle contains many actions in nested cycle
  */
-@IgnoreInTraceDebuggerMode
 class SpinlockEventsCutWithInnerLoopActionsTest : AbstractSpinLivelockTest() {
 
     private val data = AtomicReferenceArray<Int>(10)
-    override val outputFileName: String get() = "spin_lock/spin_lock_events_cut_inner_loop.txt"
+    override val outputFileName: String
+        get() =
+            if (isInTraceDebuggerMode) "spin_lock/spin_lock_events_cut_inner_loop_trace_debugger.txt"
+            else "spin_lock/spin_lock_events_cut_inner_loop.txt"
     override fun meaninglessActions() {
         for (i in 0 until data.length()) {
             data[i] = 0
@@ -299,7 +311,6 @@ abstract class AbstractSpinLivelockTest {
  * Checks that spin-cycle repeated events are shortened
  * when the reason of a failure is not deadlock or obstruction freedom violation (incorrect results failure)
  */
-@IgnoreInTraceDebuggerMode
 class SpinlockInIncorrectResultsWithClocksTest {
 
     @Volatile
@@ -330,7 +341,10 @@ class SpinlockInIncorrectResultsWithClocksTest {
         .sequentialSpecification(ClocksTestSequential::class.java)
         .minimizeFailedScenario(false)
         .checkImpl(this::class.java)
-        .checkLincheckOutput("spin_lock/spin_lock_in_incorrect_results_failure.txt")
+        .checkLincheckOutput(
+            if (isInTraceDebuggerMode) "spin_lock/spin_lock_in_incorrect_results_failure_trace_debugger.txt"
+            else "spin_lock/spin_lock_in_incorrect_results_failure.txt"
+        )
 
 
     /**
