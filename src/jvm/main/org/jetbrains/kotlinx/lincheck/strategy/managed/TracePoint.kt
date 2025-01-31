@@ -104,8 +104,7 @@ internal class ReadTracePoint(
         } else {
             append(fieldName)
         }
-        append(" ➜")
-        append(" $valueRepresentation")
+        append(" ➜ $valueRepresentation")
     }.toString()
 
     fun initializeReadValue(value: String) {
@@ -131,9 +130,7 @@ internal class WriteTracePoint(
         } else {
             append(fieldName)
         }
-        append(" = ")
-        append(valueRepresentation)
-        append("")
+        append(" = $valueRepresentation")
     }.toString()
 
     fun initializeWrittenValue(value: String) {
