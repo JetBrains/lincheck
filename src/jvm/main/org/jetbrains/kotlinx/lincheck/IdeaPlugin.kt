@@ -43,7 +43,8 @@ fun testFailed(
     trace: Array<String>,
     version: String?,
     minimalPluginVersion: String,
-    exceptions: Array<String>
+    exceptions: Array<String>,
+    threadNames: Array<String> = arrayOf(), // TODO maybe remove from plugin
 ) {}
 
 /**
@@ -329,6 +330,20 @@ private fun visualize(strategy: ManagedStrategy) = runCatching {
 
     visualizeInstance(testObject, objectToNumberMap, continuationToLincheckThreadIdMap, threadToLincheckThreadIdMap)
 }
+
+/**
+ * This method is called from the trace-debugger evaluation.
+ */
+private fun visualizeTrace(): Array<Any>?  = runCatching {
+    val strategyObject = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTracker
+        ?: return@runCatching null
+    val strategy = strategyObject as ModelCheckingStrategy
+
+    val runner = strategy.runner as ParallelThreadsRunner
+    val testObject = runner.testInstance
+
+    return createObjectToNumberMapAsArray(testObject)
+}.getOrNull()
 
 /**
  * Creates an array [Object, objectNumber, Object, objectNumber, ...].
