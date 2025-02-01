@@ -37,13 +37,6 @@ fun SourceDirectorySet.configureTestSources() {
     } else {
         srcDir("src/jvm/test-jdk8")
     }
-    
-    val testInTraceDebuggerMode: String by project
-    if (testInTraceDebuggerMode.toBoolean()) {
-        srcDir("src/jvm/test-trace-debugger")
-    } else {
-        srcDir("src/jvm/test-lincheck")
-    }
 }
 
 kotlin {

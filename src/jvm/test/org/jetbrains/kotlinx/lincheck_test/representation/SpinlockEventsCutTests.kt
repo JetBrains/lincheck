@@ -17,7 +17,8 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.guide.MSQueueBlocking
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
-import org.jetbrains.kotlinx.lincheck_test.util.IgnoreInTraceDebuggerMode
+import org.junit.Assume.assumeFalse
+import org.junit.Before
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -88,8 +89,9 @@ class SpinlockEventsCutMiddleLengthTest : AbstractSpinLivelockTest() {
  * Checks that spin-cycle repeated events are cut in case
  * when one thread runs in the infinite loop while others terminate
  */
-@IgnoreInTraceDebuggerMode
 class SpinlockEventsCutInfiniteLoopTest : AbstractSpinLivelockTest() {
+    @Before
+    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val sharedStateAny = AtomicBoolean(false)
 
@@ -107,8 +109,9 @@ class SpinlockEventsCutInfiniteLoopTest : AbstractSpinLivelockTest() {
  * Checks that spin-cycle repeated events are cut in case
  * when one thread runs in the infinite loop while others terminate
  */
-@IgnoreInTraceDebuggerMode
 class SpinlockEventsCutInfiniteLoopWithParametersTest : AbstractSpinLivelockTest() {
+    @Before
+    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     @Volatile
     private var sharedState: Boolean = false
@@ -127,8 +130,9 @@ class SpinlockEventsCutInfiniteLoopWithParametersTest : AbstractSpinLivelockTest
  * Checks that spin cycle properly detected, and the spin cycle label is placed correctly
  * when the spin cycle is twice bigger due to a flipping method receivers.
  */
-@IgnoreInTraceDebuggerMode
 class SpinlockEventsCutInfiniteLoopWithReceiversTest : AbstractSpinLivelockTest() {
+    @Before
+    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val first = Receiver(false)
     private val second = Receiver(false)
@@ -153,8 +157,9 @@ class SpinlockEventsCutInfiniteLoopWithReceiversTest : AbstractSpinLivelockTest(
  * Checks that spin cycle properly detected, and the spin cycle label is placed correctly
  * when the spin cycle is bigger due to a different arrays usage and cells access.
  */
-@IgnoreInTraceDebuggerMode
 class SpinlockEventsCutInfiniteLoopWithArrayOperationsTest : AbstractSpinLivelockTest() {
+    @Before
+    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     @Volatile
     private var array: Array<Int> = Array(3) { 0 }
@@ -179,8 +184,9 @@ class SpinlockEventsCutInfiniteLoopWithArrayOperationsTest : AbstractSpinLiveloc
  * Checks that spin cycle properly detected, and the spin cycle label is placed correctly
  * when the spin cycle is twice bigger due to a flipping arrays receivers usage.
  */
-@IgnoreInTraceDebuggerMode
 class SpinlockEventsCutInfiniteLoopWithArrayReceiversTest : AbstractSpinLivelockTest() {
+    @Before
+    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val first = Array(3) { 0 }
     private val second = Array(3) { 0 }
@@ -204,8 +210,9 @@ class SpinlockEventsCutInfiniteLoopWithArrayReceiversTest : AbstractSpinLivelock
  * when spin cycle period can't be found using parameters and receivers, so
  * LinCheck should calculate spin cycle period without params.
  */
-@IgnoreInTraceDebuggerMode
 class SpinlockEventsCutInfiniteNoCycleWithParamsTest : AbstractSpinLivelockTest() {
+    @Before
+    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val array = Array(3) { 0 }
     private val random = java.util.Random(0)
@@ -395,8 +402,9 @@ class SpinlockInIncorrectResultsWithClocksTest {
  *
  * Test should not fail.
  */
-@IgnoreInTraceDebuggerMode
 class SpinCycleWithSideEffectsTest {
+    @Before
+    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val counter = AtomicInteger(0)
 
@@ -435,8 +443,9 @@ class SpinCycleWithSideEffectsTest {
  * Should correctly detect spin cycle and place spin cycle label in case
  * when all potential switch points are nested in non-atomic methods.
  */
-@IgnoreInTraceDebuggerMode
 class SpinLockWithAllEventsWrappedInMethodsTest {
+    @Before
+    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val counter = AtomicInteger(0)
     private val someUselessSharedState = AtomicBoolean(false)
@@ -482,8 +491,9 @@ class SpinLockWithAllEventsWrappedInMethodsTest {
  * Checks that spin cycle properly detected, and the spin cycle label is placed correctly
  * when all the trace points are in the top-level, i.e., right in the actor.
  */
-@IgnoreInTraceDebuggerMode
 class SingleThreadTopLevelSpinLockTest {
+    @Before
+    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     @Volatile
     private var state: Boolean = false

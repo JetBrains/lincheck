@@ -15,7 +15,8 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelChecki
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
-import org.jetbrains.kotlinx.lincheck_test.util.*
+import org.junit.Assume.assumeFalse
+import org.junit.Before
 import org.junit.Test
 import sun.misc.Unsafe
 import java.util.concurrent.atomic.*
@@ -37,8 +38,10 @@ import kotlin.reflect.KFunction
     iterations = 50
 )
 
-@IgnoreInTraceDebuggerMode
 class LocalObjectEliminationTest {
+    @Before
+    fun setUp() = assumeFalse(isInTraceDebuggerMode)
+
     @Operation
     fun operation(): Int {
         val a = A(0, this, IntArray(2))
