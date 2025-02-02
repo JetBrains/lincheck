@@ -13,6 +13,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.ExceptionResult.Companion.create
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.execution.emptyScenario
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.withLincheckTestContext
@@ -22,21 +23,28 @@ import org.junit.Test
 import java.util.*
 
 class TestThreadExecutionHelperTest {
-    private var runner: Runner? = null
+    private var runner: ExecutionScenarioRunner? = null
 
     @Before
     fun setUp() {
-        val scenario = ExecutionScenario(emptyList(), emptyList(), emptyList(), null)
-        val strategy: Strategy = object : Strategy(scenario) {
-            override val runner: Runner
-                get() {
-                    throw UnsupportedOperationException()
-                }
+        val strategy: Strategy = object : Strategy() {
+            override val runner: Runner get() {
+                throw UnsupportedOperationException()
+            }
 
             override fun runInvocation(): InvocationResult {
                 throw UnsupportedOperationException()
             }
         }
+        runner = ExecutionScenarioRunner(
+            scenario = emptyScenario(),
+            testClass = ArrayDeque::class.java,
+            validationFunction = null,
+            stateRepresentationFunction = null,
+            timeoutMs = 0L,
+            useClocks = UseClocks.ALWAYS,
+        ).apply {
+            initializeStrategy(strategy)
         runner = object : Runner(
             strategy,
             ArrayDeque::class.java,
@@ -72,7 +80,7 @@ class TestThreadExecutionHelperTest {
     fun testBase() = withLincheckTestContext(InstrumentationMode.STRESS) {
         val ex = TestThreadExecutionGenerator.create(
             runner, 0,
-            Arrays.asList(
+            listOf(
                 Actor(Queue::class.java.getMethod("add", Any::class.java), mutableListOf<Int?>(1)),
                 Actor(Queue::class.java.getMethod("add", Any::class.java), mutableListOf<Int?>(2)),
                 Actor(Queue::class.java.getMethod("remove"), emptyList<Any>()),
@@ -103,7 +111,7 @@ class TestThreadExecutionHelperTest {
     fun testActorExceptionHandling() = withLincheckTestContext(InstrumentationMode.STRESS) {
         val ex = TestThreadExecutionGenerator.create(
             runner, 0,
-            Arrays.asList(
+            listOf(
                 Actor(ArrayDeque::class.java.getMethod("addLast", Any::class.java), mutableListOf<Int?>(1)),
                 Actor(Queue::class.java.getMethod("remove"), emptyList<Any>()),
                 Actor(Queue::class.java.getMethod("remove"), emptyList<Any>()),

@@ -74,9 +74,9 @@ class SuspendResumeScenarios {
 }
 
 /**
- * Test [ParallelThreadsRunner] different suspend-resume scenarios with exceptions.
+ * Test [ExecutionScenarioRunner] different suspend-resume scenarios with exceptions.
  */
-class ParallelThreadsRunnerExceptionTest {
+class ExecutionScenarioRunnerExceptionTest {
     private val testClass = SuspendResumeScenarios::class.java
 
     private val susWithoutException = SuspendResumeScenarios::suspendWithoutException
@@ -100,11 +100,16 @@ class ParallelThreadsRunnerExceptionTest {
                 }
             }
         }
-        ParallelThreadsRunner(
-            strategy = mockStrategy(scenario), testClass = testClass, validationFunction = null,
-            stateRepresentationFunction = null, timeoutMs = DEFAULT_TIMEOUT_MS, useClocks = RANDOM
+        ExecutionScenarioRunner(
+            scenario = scenario,
+            testClass = testClass,
+            validationFunction = null,
+            stateRepresentationFunction = null,
+            timeoutMs = DEFAULT_TIMEOUT_MS,
+            useClocks = RANDOM,
         ).use { runner ->
-            val results = (runner.run() as CompletedInvocationResult).results
+            runner.initializeStrategy(mockStrategy())
+            val results = (runner.runInvocation() as CompletedInvocationResult).results
             assertTrue(results.equalsIgnoringClocks(expectedResults))
         }
 
@@ -124,11 +129,16 @@ class ParallelThreadsRunnerExceptionTest {
                 }
             }
         }
-        ParallelThreadsRunner(
-            strategy = mockStrategy(scenario), testClass = testClass, validationFunction = null,
-            stateRepresentationFunction = null, timeoutMs = DEFAULT_TIMEOUT_MS, useClocks = RANDOM
+        ExecutionScenarioRunner(
+            scenario = scenario,
+            testClass = testClass,
+            validationFunction = null,
+            stateRepresentationFunction = null,
+            timeoutMs = DEFAULT_TIMEOUT_MS,
+            useClocks = RANDOM,
         ).use { runner ->
-            val results = (runner.run() as CompletedInvocationResult).results
+            runner.initializeStrategy(mockStrategy())
+            val results = (runner.runInvocation() as CompletedInvocationResult).results
             assertTrue(results.equalsIgnoringClocks(expectedResults))
         }
     }
@@ -142,17 +152,22 @@ class ParallelThreadsRunnerExceptionTest {
                 }
             }
         }
-        ParallelThreadsRunner(
-            strategy = mockStrategy(scenario), testClass = testClass, validationFunction = null,
-            stateRepresentationFunction = null, timeoutMs = DEFAULT_TIMEOUT_MS, useClocks = RANDOM
+        ExecutionScenarioRunner(
+            scenario = scenario,
+            testClass = testClass,
+            validationFunction = null,
+            stateRepresentationFunction = null,
+            timeoutMs = DEFAULT_TIMEOUT_MS,
+            useClocks = RANDOM,
         ).use { runner ->
-            val results = (runner.run() as CompletedInvocationResult).results
+            runner.initializeStrategy(mockStrategy())
+            val results = (runner.runInvocation() as CompletedInvocationResult).results
             assertTrue(results.equalsIgnoringClocks(expectedResults))
         }
     }
 }
 
-class ParallelThreadExecutionExceptionsTest {
+class ExecutionScenarioRunnerExceptionsTest {
     @Test
     fun shouldCompleteWithUnexpectedException() = withLincheckTestContext(InstrumentationMode.STRESS) {
         val scenario = scenario {
@@ -160,11 +175,16 @@ class ParallelThreadExecutionExceptionsTest {
                 thread { actor(::operation) }
             }
         }
-        ParallelThreadsRunner(
-            strategy = mockStrategy(scenario), testClass = this::class.java, validationFunction = null,
-            stateRepresentationFunction = null, timeoutMs = DEFAULT_TIMEOUT_MS, useClocks = RANDOM
+        ExecutionScenarioRunner(
+            scenario = scenario,
+            testClass = this::class.java,
+            validationFunction = null,
+            stateRepresentationFunction = null,
+            timeoutMs = DEFAULT_TIMEOUT_MS,
+            useClocks = RANDOM,
         ).use { runner ->
-            val result = runner.run()
+            runner.initializeStrategy(mockStrategy())
+            val result = runner.runInvocation()
             check(result is CompletedInvocationResult)
         }
     }
@@ -175,7 +195,7 @@ class ParallelThreadExecutionExceptionsTest {
     }
 }
 
-fun mockStrategy(scenario: ExecutionScenario) = object : Strategy(scenario) {
+fun mockStrategy() = object : Strategy() {
     override val runner: Runner get() = error("Not yet implemented")
     override fun runInvocation(): InvocationResult = error("Not yet implemented")
 }

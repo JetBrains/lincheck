@@ -34,7 +34,7 @@ public class TestThreadExecutionGenerator {
     private static final Type THROWABLE_TYPE = getType(Throwable.class);
     private static final Method EMPTY_CONSTRUCTOR = new Method("<init>", VOID_TYPE, NO_ARGS);
 
-    private static final Type RUNNER_TYPE = getType(Runner.class);
+    private static final Type RUNNER_TYPE = getType(ExecutionScenarioRunner.class);
     private static final Method RUNNER_ON_THREAD_START_METHOD = new Method("onThreadStart", VOID_TYPE, new Type[]{INT_TYPE});
     private static final Method RUNNER_ON_THREAD_FINISH_METHOD = new Method("onThreadFinish", VOID_TYPE, new Type[]{INT_TYPE});
     private static final Method RUNNER_ON_ACTOR_START = new Method("onActorStart", Type.VOID_TYPE, new Type[]{ Type.INT_TYPE });
@@ -66,8 +66,7 @@ public class TestThreadExecutionGenerator {
 
     private static final Method RESULT_WAS_SUSPENDED_GETTER_METHOD = new Method("getWasSuspended", BOOLEAN_TYPE, new Type[]{});
 
-    private static final Type PARALLEL_THREADS_RUNNER_TYPE = getType(ParallelThreadsRunner.class);
-    private static final Method PARALLEL_THREADS_RUNNER_PROCESS_INVOCATION_RESULT_METHOD = new Method("processInvocationResult", RESULT_TYPE, new Type[]{ OBJECT_TYPE, INT_TYPE, INT_TYPE });
+    private static final Method RUNNER_PROCESS_INVOCATION_RESULT_METHOD = new Method("processInvocationResult", RESULT_TYPE, new Type[]{ OBJECT_TYPE, INT_TYPE, INT_TYPE });
     private static final Method RUNNER_IS_PARALLEL_EXECUTION_COMPLETED_METHOD = new Method("isParallelExecutionCompleted", BOOLEAN_TYPE, new Type[]{});
 
     private static final Method RUNNER_ON_ACTOR_FAILURE_METHOD = new Method("onActorFailure", VOID_TYPE, new Type[]{INT_TYPE, THROWABLE_TYPE});
@@ -85,7 +84,7 @@ public class TestThreadExecutionGenerator {
     /**
      * Creates a {@link TestThreadExecution} instance with specified {@link TestThreadExecution#run()} implementation.
      */
-    public static TestThreadExecution create(Runner runner, int iThread, List<Actor> actors,
+    public static TestThreadExecution create(ExecutionScenarioRunner runner, int iThread, List<Actor> actors,
                                              List<Continuation> completions,
                                              boolean scenarioContainsSuspendableActors
     ) {
@@ -191,10 +190,10 @@ public class TestThreadExecutionGenerator {
             mv.loadLocal(resLocal);
             mv.push(i);
             if (scenarioContainsSuspendableActors) {
-                // push the instance of ParallelThreadsRunner on stack to call it's processInvocationResult method
+                // push the instance of ExecutionScenarioRunner on stack to call it's processInvocationResult method
                 mv.loadThis();
                 mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
-                mv.checkCast(PARALLEL_THREADS_RUNNER_TYPE);
+                mv.checkCast(RUNNER_TYPE);
             } else {
                 // Prepare to create non-processed value result of actor invocation (in case of no suspendable actors in scenario)
                 // Load type of result
@@ -214,10 +213,11 @@ public class TestThreadExecutionGenerator {
             mv.invokeVirtual(testType, actorMethod);
             mv.box(actorMethod.getReturnType()); // box if needed
             if (scenarioContainsSuspendableActors) {
-                // process result of method invocation with ParallelThreadsRunner's processInvocationResult(result, iThread, i)
+                // process result of method invocation with
+                // `ExecutionScenarioRunner::processInvocationResult(result, iThread, i)`
                 mv.push(iThread);
                 mv.push(i);
-                mv.invokeVirtual(PARALLEL_THREADS_RUNNER_TYPE, PARALLEL_THREADS_RUNNER_PROCESS_INVOCATION_RESULT_METHOD);
+                mv.invokeVirtual(RUNNER_TYPE, RUNNER_PROCESS_INVOCATION_RESULT_METHOD);
                 if (actor.getMethod().getReturnType() == void.class) {
                     createVoidResult(actor, mv);
                 }
@@ -358,13 +358,13 @@ public class TestThreadExecutionGenerator {
         // Load runner to call processInvocationResult method
         mv.loadThis();
         mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
-        mv.checkCast(PARALLEL_THREADS_RUNNER_TYPE);
+        mv.checkCast(RUNNER_TYPE);
         // Load exception result
         mv.loadLocal(eLocal);
         mv.push(iThread);
         mv.push(actorId);
         // Process result
-        mv.invokeVirtual(PARALLEL_THREADS_RUNNER_TYPE, PARALLEL_THREADS_RUNNER_PROCESS_INVOCATION_RESULT_METHOD);
+        mv.invokeVirtual(RUNNER_TYPE, RUNNER_PROCESS_INVOCATION_RESULT_METHOD);
         mv.arrayStore(RESULT_TYPE);
     }
 

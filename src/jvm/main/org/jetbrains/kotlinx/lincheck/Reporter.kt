@@ -346,6 +346,7 @@ internal fun Appendable.appendExecutionScenarioWithResults(
 
 internal fun Appendable.appendFailure(failure: LincheckFailure): Appendable {
     val results: ExecutionResult = failure.results
+
     // If a result is present - collect exceptions stack traces to print them
     val exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace> = results.let {
         when (val exceptionsProcessingResult = collectExceptionStackTraces(results)) {
@@ -397,8 +398,7 @@ internal fun Appendable.appendFailure(failure: LincheckFailure): Appendable {
 }
 
 internal fun isGeneralPurposeModelCheckingScenario(scenario: ExecutionScenario): Boolean {
-    val actor = scenario.parallelExecution.getOrNull(0)?.getOrNull(0)
-    return (actor?.method == GeneralPurposeModelCheckingWrapper::runGPMCTest.javaMethod)
+    return scenario.isEmpty()
 }
 
 private data class ExecutionResultsRepresentationData(
@@ -599,7 +599,7 @@ internal data class ExceptionStackTracesResult(val exceptionStackTraces: Map<Thr
 internal fun collectExceptionStackTraces(executionResult: ExecutionResult): ExceptionsProcessingResult {
     val exceptionStackTraces = mutableMapOf<Throwable, ExceptionNumberAndStacktrace>()
     listOf(
-        executionResult.initResults + executionResult.parallelResults[0] + executionResult.postResults, 
+        executionResult.initResults + executionResult.parallelResults[0] + executionResult.postResults,
         *executionResult.parallelResults.drop(1).toTypedArray())
         .flatMap { it.mapIndexed { index, result -> Pair(index, result) } }
         .sortedBy { (index, _) -> index }

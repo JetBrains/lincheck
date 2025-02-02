@@ -48,12 +48,11 @@ import kotlin.Result as KResult
  * and class loading problems.
  */
 internal abstract class ManagedStrategy(
-    private val testClass: Class<*>,
-    scenario: ExecutionScenario,
-    private val validationFunction: Actor?,
-    private val stateRepresentationFunction: Method?,
+    final override val runner: Runner,
     internal val settings: ManagedStrategySettings,
-) : Strategy(scenario), EventTracker {
+    // The flag to enable IntelliJ IDEA plugin mode
+    val inIdeaPluginReplayMode: Boolean = false,
+) : Strategy(), EventTracker {
 
     val executionMode: ExecutionMode = when {
         testClass == GeneralPurposeModelCheckingWrapper::class.java -> ExecutionMode.GENERAL_PURPOSE_MODEL_CHECKER
@@ -61,16 +60,20 @@ internal abstract class ManagedStrategy(
         else -> ExecutionMode.DATA_STRUCTURES
     }
 
-    // The flag to enable IntelliJ IDEA plugin mode
-    var inIdeaPluginReplayMode: Boolean = false
-        private set
+    private val scenario: ExecutionScenario?
+        get() = (runner as? ExecutionScenarioRunner)?.scenario
 
     // The number of parallel threads.
-    protected val nThreads: Int = scenario.nThreads
+    protected val nScenarioThreads: Int =
+        scenario?.nThreads ?: 0
 
-    // Runner for scenario invocations,
-    // can be replaced with a new one for trace construction.
-    override var runner = createRunner()
+    // Test instance object, if defined by the runner
+    internal val testInstance: Any?
+        get() = (runner as? ExecutionScenarioRunner)?.testInstance
+
+    // Current execution part, if defined by the runner, `PARALLEL` otherwise
+    private val currentExecutionPart: ExecutionPart
+        get() = (runner as? ExecutionScenarioRunner)?.currentExecutionPart ?: PARALLEL
 
     // == EXECUTION CONTROL FIELDS ==
 
@@ -142,6 +145,9 @@ internal abstract class ManagedStrategy(
     // i.e., the first element is the top stack trace element.
     private val suspendedFunctionsStack = mutableThreadMapOf<MutableList<CallStackTraceElement>>()
 
+    // Last coroutine cancellation trace point, occurred in the current thread.
+    private var lastCoroutineCancellationTracePoint = mutableThreadMapOf<CoroutineCancellationTracePoint?>()
+
     // Random instances with fixed seeds to replace random calls in instrumented code.
     private var randoms = mutableThreadMapOf<InjectedRandom>()
 
@@ -194,16 +200,6 @@ internal abstract class ManagedStrategy(
         traceDebuggerEventTrackers.values.forEach { it.close() }
     }
 
-    private fun createRunner(): ManagedStrategyRunner =
-        ManagedStrategyRunner(
-            managedStrategy = this,
-            testClass = testClass,
-            validationFunction = validationFunction,
-            stateRepresentationMethod = stateRepresentationFunction,
-            timeoutMs = getTimeOutMs(this, settings.timeoutMs),
-            useClocks = UseClocks.ALWAYS
-        )
-
     // == STRATEGY INTERFACE METHODS ==
 
     /**
@@ -250,7 +246,7 @@ internal abstract class ManagedStrategy(
     override fun runInvocation(): InvocationResult {
         initializeInvocation()
         val result: InvocationResult = try {
-            runner.run()
+            runner.runInvocation()
         } finally {
             restoreMemorySnapshot()
         }
@@ -313,16 +309,19 @@ internal abstract class ManagedStrategy(
      * Re-runs the last invocation to collect its trace.
      */
     override fun tryCollectTrace(result: InvocationResult): Pair<Trace?, InvocationResult> {
-        val detectedByStrategy = suddenInvocationResult != null
+        val detectedByStrategy = (suddenInvocationResult != null)
         val canCollectTrace = when {
-            detectedByStrategy -> true // ObstructionFreedomViolationInvocationResult or UnexpectedExceptionInvocationResult
             result is CompletedInvocationResult -> true
             result is ValidationFailureInvocationResult -> true
+            // Timeout poisons the runner, making it impossible to
+            // re-run invocation and collect the trace.
+            result is RunnerTimeoutInvocationResult -> false
+            detectedByStrategy -> true
             else -> false
         }
         if (!canCollectTrace) {
             // Interleaving events can be collected almost always,
-            // except for the strange cases such as Runner's timeout or exceptions in LinCheck.
+            // except for the strange cases such as runner's timeout or exceptions in Lincheck.
             return null to result
         }
 
@@ -333,9 +332,6 @@ internal abstract class ManagedStrategy(
                 result is ObstructionFreedomViolationInvocationResult
         )
         resetTraceDebuggerTrackerIds()
-
-        runner.close()
-        runner = createRunner()
 
         val loggedResults = runInvocation()
         // In case the runner detects a deadlock, some threads can still be in an active state,
@@ -363,9 +359,9 @@ internal abstract class ManagedStrategy(
             StringBuilder().apply {
                 appendLine("Non-determinism found. Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc).")
                 appendLine("== Reporting the first execution without execution trace ==")
-                appendLine(result.toLincheckFailure(scenario, null, analysisProfile))
+                appendLine(result.toLincheckFailure(scenario ?: emptyScenario(), null, analysisProfile))
                 appendLine("== Reporting the second execution ==")
-                appendLine(loggedResults.toLincheckFailure(scenario, trace, analysisProfile).toString())
+                appendLine(loggedResults.toLincheckFailure(scenario ?: emptyScenario(), trace, analysisProfile).toString())
             }.toString()
         }
 
@@ -373,12 +369,12 @@ internal abstract class ManagedStrategy(
     }
 
     private fun failDueToDeadlock(): Nothing {
-        val result = ManagedDeadlockInvocationResult(runner.collectExecutionResults())
+        val result = ManagedDeadlockInvocationResult(collectExecutionResults())
         abortWithSuddenInvocationResult(result)
     }
 
     private fun failDueToLivelock(lazyMessage: () -> String): Nothing {
-        val result = ObstructionFreedomViolationInvocationResult(lazyMessage(), runner.collectExecutionResults())
+        val result = ObstructionFreedomViolationInvocationResult(lazyMessage(), collectExecutionResults())
         abortWithSuddenInvocationResult(result)
     }
 
@@ -391,23 +387,29 @@ internal abstract class ManagedStrategy(
     private val currentActorIsBlocking: Boolean get() {
         val threadId = threadScheduler.getCurrentThreadId()
         val actorId = currentActorId[threadId] ?: -1
+        // only scenario threads can have blocking actors
+        if (currentThreadId >= nScenarioThreads) return false
         // Handle the case when the first actor has not yet started,
         // see https://github.com/JetBrains/lincheck/pull/277
         if (actorId < 0) return false
-        val currentActor = scenario.threads[threadId].getOrNull(actorId)
+        val currentActor = scenario!!.threads[threadId].getOrNull(actorId)
         return currentActor?.blocking ?: false
     }
 
     private val concurrentActorCausesBlocking: Boolean get() {
         val currentThreadId = threadScheduler.getCurrentThreadId()
+        // only scenario threads can have blocking actors
+        if (currentThreadId >= nScenarioThreads) return false
         val currentActiveActorIds = currentActorId.values.mapIndexed { iThread, actorId ->
             if (iThread != currentThreadId && actorId >= 0 && !threadScheduler.isFinished(iThread)) {
-                scenario.threads[iThread].getOrNull(actorId)
+                scenario!!.threads[iThread].getOrNull(actorId)
             } else null
         }.filterNotNull()
         return currentActiveActorIds.any { it.causesBlocking }
     }
 
+    private fun collectExecutionResults(): ExecutionResult =
+        (runner as? ExecutionScenarioRunner)?.collectExecutionResults() ?: emptyExecutionResult()
 
     // == THREAD SCHEDULING METHODS ==
 
@@ -865,7 +867,7 @@ internal abstract class ManagedStrategy(
      *
      * @param threadId the thread id of the started thread.
      */
-    open fun onThreadStart(threadId: ThreadId) {
+    open fun onThreadStart(threadId: ThreadId) = runInIgnoredSection {
         threadScheduler.awaitTurn(threadId)
         threadScheduler.startThread(threadId)
     }
@@ -875,7 +877,8 @@ internal abstract class ManagedStrategy(
      *
      * @param threadId the thread id of the finished thread.
      */
-    open fun onThreadFinish(threadId: ThreadId) {
+    open fun onThreadFinish(threadId: ThreadId) = runInIgnoredSection {
+        if (currentExecutionPart !== PARALLEL) return
         threadScheduler.awaitTurn(threadId)
         threadScheduler.finishThread(threadId)
         loopDetector.onThreadFinish(threadId)
@@ -893,7 +896,7 @@ internal abstract class ManagedStrategy(
      * @param threadId the thread id of the thread where exception was thrown.
      * @param exception the exception that was thrown.
      */
-    open fun onInternalException(threadId: Int, exception: Throwable) {
+    open fun onInternalException(threadId: Int, exception: Throwable) = runInIgnoredSection {
         check(isInternalException(exception))
         // This method is called only if the exception cannot be treated as a normal result,
         // so we exit testing code to avoid trace collection resume or some bizarre bugs
@@ -905,7 +908,7 @@ internal abstract class ManagedStrategy(
         // Let's then store the corresponding failing result and construct the trace.
         suddenInvocationResult = UnexpectedExceptionInvocationResult(
             exception,
-            runner.collectExecutionResults()
+            collectExecutionResults()
         )
         threadScheduler.abortAllThreads()
         throw exception
@@ -1937,12 +1940,13 @@ internal abstract class ManagedStrategy(
     }
 
     /**
-     * This method is invoked by a test thread
-     * if a coroutine was suspended.
-     * @param iThread number of invoking thread
+     * This method is invoked by a test thread if a coroutine was suspended.
+     *
+     * @param iThread number of invoking thread.
      */
-    internal fun afterCoroutineSuspended(iThread: Int) {
+    internal fun afterCoroutineSuspended(iThread: Int) = runInIgnoredSection {
         check(threadScheduler.getCurrentThreadId() == iThread)
+        check(runner is ExecutionScenarioRunner)
         check(isTestThread(iThread)) {
             "Special coroutines handling methods should only be called from test threads"
         }
@@ -1957,30 +1961,37 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    /**
-     * This method is invoked by a test thread
-     * if a coroutine was resumed.
-     */
-    internal fun afterCoroutineResumed() {
-        val iThread = threadScheduler.getCurrentThreadId()
+    internal fun afterCoroutineResumed(iThread: Int) = runInIgnoredSection {
+        check(threadScheduler.getCurrentThreadId() == iThread)
         check(isTestThread(iThread)) {
             "Special coroutines handling methods should only be called from test threads"
         }
         isSuspended[iThread] = false
     }
 
-    /**
-     * This method is invoked by a test thread
-     * if a coroutine was cancelled.
-     */
-    internal fun afterCoroutineCancelled() {
-        val iThread = threadScheduler.getCurrentThreadId()
+    internal fun beforeCoroutineCancellation(iThread: Int) {
+        check(threadScheduler.getCurrentThreadId() == iThread)
         check(isTestThread(iThread)) {
             "Special coroutines handling methods should only be called from test threads"
         }
-        isSuspended[iThread] = false
-        // method will not be resumed after suspension, so clear prepared for resume call stack
-        suspendedFunctionsStack[iThread]!!.clear()
+        lastCoroutineCancellationTracePoint[iThread] = createAndLogCancellationTracePoint()
+    }
+
+    internal fun afterCoroutineCancellation(iThread: Int, cancellationResult: CancellationResult) = runInIgnoredSection {
+        check(threadScheduler.getCurrentThreadId() == iThread)
+        lastCoroutineCancellationTracePoint[iThread]?.initializeCancellationResult(cancellationResult)
+        if (cancellationResult != CANCELLATION_FAILED) {
+            check(isTestThread(iThread)) {
+            "Special coroutines handling methods should only be called from test threads"
+        }isSuspended[iThread] = false
+            // method will not be resumed after suspension, so clear the suspended functions stack
+            suspendedFunctionsStack[iThread]!!.clear()
+        }
+    }
+
+    fun afterCoroutineCancellation(iThread: Int, cancellationException: Throwable) = runInIgnoredSection {
+        check(threadScheduler.getCurrentThreadId() == iThread)
+        lastCoroutineCancellationTracePoint[iThread]?.initializeException(cancellationException)
     }
 
     private fun addBeforeMethodCallTracePoint(
@@ -2008,9 +2019,11 @@ internal abstract class ManagedStrategy(
                 // and it results in a call to a top-level actor `suspend` function;
                 // currently top-level actor functions are not represented in the `callStackTrace`,
                 // we should probably refactor and fix that, because it is very inconvenient
-                val actor = scenario.threads[threadId][currentActorId[threadId]!!]
-                check(methodName == actor.method.name)
-                check(className == actor.method.declaringClass.name)
+                if (scenario != null) {
+                    val actor = scenario!!.threads[threadId][currentActorId[threadId]!!]
+                    check(methodName == actor.method.name)
+                    check(className == actor.method.declaringClass.name)
+                }
                 elementIndex = suspendedMethodStack.size
             }
             // get suspended stack trace elements to restore
@@ -2248,7 +2261,8 @@ internal abstract class ManagedStrategy(
     }
 
     private fun TraceCollector.addStateRepresentation() {
-        val stateRepresentation = runner.constructStateRepresentation() ?: return
+        val scenarioRunner = (runner as? ExecutionScenarioRunner) ?: return
+            val stateRepresentation = scenarioRunner.constructStateRepresentation() ?: return
         val eventId = getNextEventId()
         val threadId = threadScheduler.getCurrentThreadId()
         // use call stack trace of the previous trace point
@@ -2316,77 +2330,6 @@ internal abstract class ManagedStrategy(
     }
 }
 
-/**
- * This class is a [ParallelThreadsRunner] with some overrides that add callbacks
- * to the strategy so that it can known about some required events.
- */
-internal class ManagedStrategyRunner(
-    private val managedStrategy: ManagedStrategy,
-    testClass: Class<*>, validationFunction: Actor?, stateRepresentationMethod: Method?,
-    timeoutMs: Long, useClocks: UseClocks
-) : ParallelThreadsRunner(managedStrategy, testClass, validationFunction, stateRepresentationMethod, timeoutMs, useClocks) {
-
-    override fun onThreadStart(iThread: Int) = runInsideIgnoredSection {
-        if (currentExecutionPart !== PARALLEL) return
-        managedStrategy.onThreadStart(iThread)
-    }
-
-    override fun onThreadFinish(iThread: Int) = runInsideIgnoredSection {
-        if (currentExecutionPart !== PARALLEL) return
-        managedStrategy.onThreadFinish(iThread)
-    }
-
-    override fun onActorFailure(iThread: Int, throwable: Throwable) = runInsideIgnoredSection {
-        if (isInternalException(throwable)) {
-            managedStrategy.onInternalException(iThread, throwable)
-        }
-    }
-
-    override fun afterCoroutineSuspended(iThread: Int) = runInsideIgnoredSection {
-        super.afterCoroutineSuspended(iThread)
-        managedStrategy.afterCoroutineSuspended(iThread)
-    }
-
-    override fun afterCoroutineResumed(iThread: Int) = runInsideIgnoredSection {
-        managedStrategy.afterCoroutineResumed()
-    }
-
-    override fun afterCoroutineCancelled(iThread: Int) = runInsideIgnoredSection {
-        managedStrategy.afterCoroutineCancelled()
-    }
-
-    override fun constructStateRepresentation(): String? {
-        if (stateRepresentationFunction == null) return null
-        // Enter ignored section, because Runner will call transformed state representation method
-        return runInsideIgnoredSection {
-            super.constructStateRepresentation()
-        }
-    }
-
-    override fun <T> cancelByLincheck(cont: CancellableContinuation<T>, promptCancellation: Boolean): CancellationResult =
-        runInsideIgnoredSection {
-            // Create a cancellation trace point before `cancel`, so that cancellation trace point
-            // precede the events in `onCancellation` handler.
-            val cancellationTracePoint = managedStrategy.createAndLogCancellationTracePoint()
-            try {
-                // Call the `cancel` method.
-                val cancellationResult = super.cancelByLincheck(cont, promptCancellation)
-                // Pass the result to `cancellationTracePoint`.
-                cancellationTracePoint?.initializeCancellationResult(cancellationResult)
-                // Invoke `strategy.afterCoroutineCancelled` if the coroutine was cancelled successfully.
-                if (cancellationResult != CANCELLATION_FAILED)
-                    managedStrategy.afterCoroutineCancelled()
-                return cancellationResult
-            } catch (e: Throwable) {
-                cancellationTracePoint?.initializeException(e)
-                throw e // throw further
-            }
-        }
-}
-
-private fun TracePoint.isActorMethodCallTracePoint() =
-    (this is MethodCallTracePoint && this.isRootCall)
-
 // represents an unknown code location
 internal const val UNKNOWN_CODE_LOCATION = -1
 
@@ -2427,12 +2370,3 @@ private const val OBSTRUCTION_FREEDOM_THREAD_JOIN_VIOLATION_MESSAGE =
 
 private const val OBSTRUCTION_FREEDOM_SUSPEND_VIOLATION_MESSAGE =
     "The algorithm should be non-blocking, but a coroutine suspension is detected"
-
-/**
- * With idea plugin enabled, we should not use default Lincheck timeout
- * as debugging may take more time than default timeout.
- */
-private const val INFINITE_TIMEOUT = 1000L * 60 * 60 * 24 * 365
-
-private fun getTimeOutMs(strategy: ManagedStrategy, defaultTimeOutMs: Long): Long =
-    if (strategy.inIdeaPluginReplayMode) INFINITE_TIMEOUT else defaultTimeOutMs

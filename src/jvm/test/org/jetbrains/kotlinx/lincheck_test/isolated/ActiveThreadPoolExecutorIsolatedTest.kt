@@ -16,61 +16,56 @@ import org.junit.*
 import sun.nio.ch.lincheck.TestThread
 import java.util.concurrent.*
 
-class FixedActiveThreadsExecutorIsolatedTest {
+class ActiveThreadPoolExecutorIsolatedTest {
     @Test
     fun testSubmit() = withLincheckTestContext(InstrumentationMode.STRESS) {
-        FixedActiveThreadsExecutor("FixedActiveThreadsExecutorTest.testSubmit", 2).use { executor ->
+        ActiveThreadPoolExecutor("FixedActiveThreadsExecutorTest.testSubmit", 2).use { executor ->
             val executed = arrayOf(false, false)
-            val tasks = Array<TestThreadExecution>(2) { iThread ->
-                object : TestThreadExecution(iThread) {
+            val tasks = Array<Pair<ThreadId, Runnable>>(2) { threadId ->
+                threadId to object : Runnable {
                     override fun run() {
-                        executed[iThread] = true
+                        executed[threadId] = true
                     }
                 }
             }
-            executor.submitAndAwait(tasks, Long.MAX_VALUE / 2)
+            executor.submitAndAwait(threadMapOf(*tasks), Long.MAX_VALUE / 2)
             check(executed.all { it })
         }
     }
 
     @Test
     fun testResubmit() = withLincheckTestContext(InstrumentationMode.STRESS) {
-        FixedActiveThreadsExecutor("FixedActiveThreadsExecutorTest.testResubmit", 2).use { executor ->
+        ActiveThreadPoolExecutor("FixedActiveThreadsExecutorTest.testResubmit", 2).use { executor ->
             val executed = arrayOf(false, false)
-            val tasks = Array<TestThreadExecution>(2) { iThread ->
-                object : TestThreadExecution(iThread) {
+            val tasks = Array<Pair<ThreadId, Runnable>>(2) { threadId ->
+                threadId to object : Runnable {
                     override fun run() {
-                        executed[iThread] = true
+                        executed[threadId] = true
                     }
                 }
             }
-            executor.submitAndAwait(tasks, Long.MAX_VALUE / 2)
+            executor.submitAndAwait(threadMapOf(*tasks), Long.MAX_VALUE / 2)
             executed.fill(false)
-            executor.submitAndAwait(tasks, Long.MAX_VALUE / 2)
+            executor.submitAndAwait(threadMapOf(*tasks), Long.MAX_VALUE / 2)
             check(executed.all { it })
         }
     }
 
     @Test(timeout = 100_000)
     fun testSubmitTimeout() = withLincheckTestContext(InstrumentationMode.STRESS) {
-        FixedActiveThreadsExecutor(
+        ActiveThreadPoolExecutor(
             "FixedActiveThreadsExecutorTest.testSubmitTimeout",
             2
         ).use { executor ->
-            val tasks = Array<TestThreadExecution>(2) { iThread ->
-                object : TestThreadExecution(iThread) {
-                    init {
-                        this.iThread = iThread
-                    }
-
+            val tasks = Array<Pair<ThreadId, Runnable>>(2) { threadId ->
+                threadId to object : Runnable {
                     override fun run() {
-                        if (iThread == 1)
-                            while (true);
+                        if (threadId == 1) while (true);
                     }
                 }
             }
             try {
-                executor.submitAndAwait(tasks, 200)
+                executor.submitAndAwait(threadMapOf(*tasks), 200)
             } catch (e: TimeoutException) {
                 return // TimeoutException is expected
             }
@@ -81,7 +76,7 @@ class FixedActiveThreadsExecutorIsolatedTest {
     @Test(timeout = 100_000)
     fun testShutdown() {
         // executor with unique runner hash
-        val executor = FixedActiveThreadsExecutor("FixedActiveThreadsExecutorTest.testResubmit", 2)
+        val executor = ActiveThreadPoolExecutor("FixedActiveThreadsExecutorTest.testResubmit", 2)
             .also { it.close() }
         while (true) {
             // check that all test threads are finished

@@ -121,7 +121,7 @@ internal fun createLincheckResult(res: Any?) = when {
     else -> ValueResult(res)
 }
 
-private fun kotlin.Result<Any?>.toLinCheckResult() =
+internal fun kotlin.Result<Any?>.toLinCheckResult() =
     if (isSuccess) {
         when (val value = getOrNull()) {
             is Unit -> VoidResult
