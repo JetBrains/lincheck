@@ -423,10 +423,7 @@ private fun visualizeTrace(): Array<Any>? = runCatching {
     val strategyObject = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTracker
         ?: return null
     val strategy = strategyObject as ModelCheckingStrategy
-
-    val runner = strategy.runner as ParallelThreadsRunner
-    val testObject = runner.testInstance
-
+    val testObject = strategy.testInstance!! // TODO: can be null
     return strategy.createObjectToNumberMapAsArray(testObject)
 }.getOrNull()
 

@@ -10,7 +10,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy
 
 import org.jetbrains.kotlinx.lincheck.runner.*
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.trace.Trace
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
@@ -25,9 +25,7 @@ import java.io.Closeable
  * [.createStrategy] method is used. It is impossible to add a new strategy
  * without any code change.
  */
-abstract class Strategy protected constructor(
-    val scenario: ExecutionScenario
-) : Closeable {
+abstract class Strategy : Closeable {
 
     /**
      * Runner used for executing the test scenario.
@@ -117,11 +115,12 @@ abstract class Strategy protected constructor(
  * @return the failure, if detected, null otherwise.
  */
 fun Strategy.runIteration(invocations: Int, verifier: Verifier): LincheckFailure? {
-    for (invocation in 0 until invocations) {
+    val scenario = (runner as? ExecutionScenarioRunner)?.scenario ?: emptyScenario()
+    repeat(invocations) {
         if (!nextInvocation()) return null
         val result = runInvocation()
         val failure = try {
-            verify(result, verifier)
+            verify(scenario, result, verifier)
         } finally {
             // verifier calls `@Operation`s of the class under test which can
             // modify the static memory; thus, we need to restore initial values
@@ -131,7 +130,6 @@ fun Strategy.runIteration(invocations: Int, verifier: Verifier): LincheckFailure
         }
         if (failure != null) return failure
     }
-
     return null
 }
 
@@ -144,7 +142,7 @@ fun Strategy.runIteration(invocations: Int, verifier: Verifier): LincheckFailure
  *
  * @return failure, if invocation results are incorrect, null otherwise.
  */
-fun Strategy.verify(result: InvocationResult, verifier: Verifier): LincheckFailure? {
+fun Strategy.verify(scenario: ExecutionScenario, result: InvocationResult, verifier: Verifier): LincheckFailure? {
     val analysisProfile = if (this is ManagedStrategy) this.analysisProfile else AnalysisProfile.DEFAULT
     return when (result) {
         is SpinCycleFoundAndReplayRequired -> null

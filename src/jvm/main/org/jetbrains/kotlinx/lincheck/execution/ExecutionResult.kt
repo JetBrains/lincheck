@@ -130,6 +130,9 @@ data class ExecutionResult(
     }
 }
 
+fun emptyExecutionResult() =
+    ExecutionResult(listOf(), listOf(), listOf())
+
 val ExecutionResult.withEmptyClocks: ExecutionResult get() = ExecutionResult(
     this.initResults,
     this.afterInitStateRepresentation,
