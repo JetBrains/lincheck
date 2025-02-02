@@ -49,9 +49,7 @@ internal fun isSuspendFunction(className: String, methodName: String, params: Ar
  * @return The matching [Method] object if found, or `null` if no method matches.
  */
 internal fun getMethod(className: String, methodName: String, params: Array<Any?>): Method? {
-    val clazz = Class.forName(className)
-    // filter methods by name
-    val possibleMethods = clazz.declaredMethods.filter { it.name == methodName }
+    val possibleMethods = getCachedFilteredDeclaredMethods(className, methodName)
     // search through all possible methods, matching the arguments' types
     for (method in possibleMethods) {
         val parameterTypes = method.parameterTypes
@@ -68,3 +66,20 @@ internal fun getMethod(className: String, methodName: String, params: Array<Any?
     }
     return null // or throw an exception if a match is mandatory
 }
+
+// While caching is not important for Lincheck itself,
+// it is critical for Trace Debugger, as it always collects the trace.
+private val methodsCache = hashMapOf<String, Array<Method>>()
+private val filteredMethodsCache = hashMapOf<Pair<String, String>, List<Method>>()
+
+private fun getCachedDeclaredMethods(className: String) =
+    methodsCache.getOrPut(className) {
+        val clazz = Class.forName(className)
+        clazz.declaredMethods
+    }
+
+private fun getCachedFilteredDeclaredMethods(className: String, methodName: String) =
+    filteredMethodsCache.getOrPut(className to methodName) {
+        val declaredMethods = getCachedDeclaredMethods(className)
+        declaredMethods.filter { it.name == methodName }
+    }
