@@ -119,10 +119,14 @@ internal val OVERWRITE_REPRESENTATION_TESTS_OUTPUT: Boolean =
     System.getProperty("lincheck.overwriteRepresentationTestsOutput").toBoolean()
 
 /**
- * Indicates whether the current Java Development Kit (JDK) version is JDK 8.
+ * Retrieves the current Java Development Kit (JDK) version.
  *
- * This property checks the system's Java specification version
- * and determines if the major version corresponds to '8', signifying JDK 8.
+ * This property checks the system's Java specification version.
  */
 // java.specification.version is "1.$x" for Java prior to 8 and "$x" for the newer ones
-internal val isJdk8 = System.getProperty("java.specification.version").removePrefix("1.") == "8"
+internal val jdkVersion = System.getProperty("java.specification.version").removePrefix("1.").toInt()
+
+/**
+ * Indicates whether the current Java Development Kit (JDK) version is JDK 8.
+ */
+internal val isJdk8 = jdkVersion == 8

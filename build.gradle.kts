@@ -28,6 +28,17 @@ repositories {
     mavenCentral()
 }
 
+fun SourceDirectorySet.configureTestSources() {
+    srcDir("src/jvm/test")
+    
+    val jdkToolchainVersion: String by project
+    if (jdkToolchainVersion.toInt() >= 11) {
+        srcDir("src/jvm/test-jdk11")
+    } else {
+        srcDir("src/jvm/test-jdk8")
+    }
+}
+
 kotlin {
     @OptIn(ExperimentalKotlinGradlePluginApi::class)
     compilerOptions {
@@ -60,13 +71,7 @@ kotlin {
         }
 
         val jvmTest by getting {
-            kotlin.srcDir("src/jvm/test")
-            val jdkToolchainVersion: String by project
-            if (jdkToolchainVersion.toInt() >= 11) {
-                kotlin.srcDir("src/jvm/test-jdk11")
-            } else {
-                kotlin.srcDir("src/jvm/test-jdk8")
-            }
+            kotlin.configureTestSources()
 
             val junitVersion: String by project
             val jctoolsVersion: String by project
@@ -105,7 +110,7 @@ sourceSets.main {
 }
 
 sourceSets.test {
-    java.srcDirs("src/jvm/test")
+    java.configureTestSources()
     resources {
         srcDir("src/jvm/test/resources")
     }
@@ -163,6 +168,10 @@ tasks {
         val withEventIdSequentialCheck: String by project
         if (withEventIdSequentialCheck.toBoolean()) {
             extraArgs.add("-Dlincheck.debug.withEventIdSequentialCheck=true")
+        }
+        val testInTraceDebuggerMode: String by project
+        if (testInTraceDebuggerMode.toBoolean()) {
+            extraArgs.add("-Dlincheck.traceDebuggerMode=true")
         }
         extraArgs.add("-Dlincheck.version=$version")
         jvmArgs(extraArgs)

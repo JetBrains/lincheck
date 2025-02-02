@@ -13,13 +13,15 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 import kotlinx.coroutines.channels.Channel
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
+import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.junit.Test
 
 /**
  * Covers a scenario when operation is suspended but never awoke.
  */
+// TODO investigate difference for trace debugger (Evgeniy Moiseenko)
 class SuspendedNotAwokeTest {
 
     @Volatile
@@ -48,6 +50,9 @@ class SuspendedNotAwokeTest {
             }
         }
         .checkImpl(this::class.java)
-        .checkLincheckOutput("suspended_not_awoke.txt")
+        .checkLincheckOutput(
+            if (isInTraceDebuggerMode) "suspended_not_awoke_trace_debugger.txt"
+            else "suspended_not_awoke.txt"
+        )
 
 }

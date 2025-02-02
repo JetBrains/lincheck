@@ -13,8 +13,8 @@
 package org.jetbrains.kotlinx.lincheck_test.representation
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
 import org.junit.Test
@@ -65,6 +65,9 @@ class InterleavingAnalysisPresentInSpinCycleFirstIterationTest {
             }
         }
         .checkImpl(this::class.java) { failure ->
-            failure.checkLincheckOutput("switch_in_the_middle_of_spin_cycle_causes_error.txt")
+            failure.checkLincheckOutput(
+                if (isInTraceDebuggerMode) "switch_in_the_middle_of_spin_cycle_causes_error_trace_debugger.txt"
+                else "switch_in_the_middle_of_spin_cycle_causes_error.txt"
+            )
         }
 }

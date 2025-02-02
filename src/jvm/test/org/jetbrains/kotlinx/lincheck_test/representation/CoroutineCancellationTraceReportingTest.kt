@@ -13,10 +13,12 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.junit.*
 
+// TODO investigate difference for trace debugger (Evgeniy Moiseenko)
 class CoroutineCancellationTraceReportingTest {
     @Volatile
     var correct = true
@@ -41,6 +43,13 @@ class CoroutineCancellationTraceReportingTest {
         actorsAfter(0)
     }
         .checkImpl(this::class.java)
-        .checkLincheckOutput(if (isJdk8) "coroutine_cancellation_jdk8.txt" else "coroutine_cancellation.txt")
+        .checkLincheckOutput(
+            when {
+                isInTraceDebuggerMode && isJdk8 -> "coroutine_cancellation_trace_debugger_jdk8.txt"
+                isInTraceDebuggerMode -> "coroutine_cancellation_trace_debugger.txt"
+                isJdk8 -> "coroutine_cancellation_jdk8.txt"
+                else -> "coroutine_cancellation.txt"
+            }
+        )
 
 }

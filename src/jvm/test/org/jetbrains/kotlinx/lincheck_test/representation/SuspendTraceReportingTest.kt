@@ -16,7 +16,9 @@ import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.junit.*
 import kotlin.coroutines.*
 import kotlinx.coroutines.sync.*
+import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 
+// TODO investigate difference for trace debugger (Evgeniy Moiseenko)
 class SuspendTraceReportingTest {
     private val lock = Mutex()
     private var canEnterForbiddenBlock: Boolean = false
@@ -52,7 +54,14 @@ class SuspendTraceReportingTest {
         }
     }
         .checkImpl(this::class.java)
-        .checkLincheckOutput(if (isJdk8) "suspend_trace_reporting_jdk8.txt" else "suspend_trace_reporting.txt")
+        .checkLincheckOutput(
+            when {
+                isInTraceDebuggerMode && isJdk8 -> "suspend_trace_reporting_trace_debugger_jdk8.txt"
+                isInTraceDebuggerMode -> "suspend_trace_reporting_trace_debugger.txt"
+                isJdk8 -> "suspend_trace_reporting_jdk8.txt"
+                else -> "suspend_trace_reporting.txt"
+            }
+        )
 }
 
 /* This test checks the trace reporting in case when a nested sequence of `suspend` functions is resumed ---

@@ -54,7 +54,7 @@ internal class ModelCheckingStrategy(
     private lateinit var currentInterleaving: Interleaving
 
     // Tracker of objects' allocations and object graph topology.
-    override val objectTracker: ObjectTracker = LocalObjectManager()
+    override val objectTracker: ObjectTracker? = if (isInTraceDebuggerMode) null else LocalObjectManager()
     // Tracker of the monitors' operations.
     override val monitorTracker: MonitorTracker = ModelCheckingMonitorTracker()
     // Tracker of the thread parking.

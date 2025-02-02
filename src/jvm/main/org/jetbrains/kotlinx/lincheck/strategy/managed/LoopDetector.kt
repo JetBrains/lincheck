@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.primitiveOrIdentityHashCode
 import org.jetbrains.kotlinx.lincheck.strategy.managed.LoopDetector.CodeIdentity.RegularCodeLocationIdentity
 import org.jetbrains.kotlinx.lincheck.transformation.MethodIds
@@ -214,6 +215,15 @@ internal class LoopDetector(
         // DetectedFirstTime and detectedEarly can both sometimes be true
         // when we can't find a cycle period and can't switch to another thread.
         // Check whether the count exceeds the maximum number of repetitions for loop/hang detection.
+        if (isInTraceDebuggerMode) {
+            return when {
+                count > hangingDetectionThreshold -> Decision.LivelockThreadSwitch(hangingDetectionThreshold)
+                totalExecutionsCount > ManagedCTestConfiguration.LIVELOCK_EVENTS_THRESHOLD ->
+                    Decision.EventsThresholdReached
+                else -> Decision.Idle
+            }
+        }
+        
         if (detectedFirstTime && !detectedEarly) {
             if (mode == Mode.DEFAULT) {
                 // Turn on parameters and read/write values and receivers tracking and request one more replay.

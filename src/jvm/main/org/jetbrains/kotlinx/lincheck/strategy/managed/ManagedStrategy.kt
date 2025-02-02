@@ -69,7 +69,7 @@ abstract class ManagedStrategy(
     internal val loopDetector: LoopDetector = LoopDetector(testCfg.hangingDetectionThreshold)
 
     // Tracker of objects' allocations and object graph topology.
-    protected abstract val objectTracker: ObjectTracker
+    protected abstract val objectTracker: ObjectTracker?
     // Tracker of the monitors' operations.
     protected abstract val monitorTracker: MonitorTracker
     // Tracker of the thread parking.
@@ -202,7 +202,7 @@ abstract class ManagedStrategy(
         traceCollector = if (collectTrace) TraceCollector() else null
         suddenInvocationResult = null
         loopDetector.initialize()
-        objectTracker.reset()
+        objectTracker?.reset()
         monitorTracker.reset()
         parkingTracker.reset()
         resetThreads()
@@ -528,7 +528,7 @@ abstract class ManagedStrategy(
         )
         lastReadTracePoint[threadId] = null
         randoms[threadId] = Random(threadId + 239L)
-        objectTracker.registerThread(threadId, thread)
+        objectTracker?.registerThread(threadId, thread)
         monitorTracker.registerThread(threadId)
         parkingTracker.registerThread(threadId)
         // register thread number for trace printing
@@ -923,7 +923,7 @@ abstract class ManagedStrategy(
             return@runInIgnoredSection false
         }
         // Do not track accesses to untracked objects
-        if (!objectTracker.shouldTrackObjectAccess(obj ?: StaticObject)) {
+        if (!shouldTrackObjectAccess(obj)) {
             return@runInIgnoredSection false
         }
         val iThread = threadScheduler.getCurrentThreadId()
@@ -950,7 +950,7 @@ abstract class ManagedStrategy(
     /** Returns <code>true</code> if a switch point is created. */
     override fun beforeReadArrayElement(array: Any, index: Int, codeLocation: Int): Boolean = runInIgnoredSection {
         updateSnapshotOnArrayElementAccess(array, index)
-        if (!objectTracker.shouldTrackObjectAccess(array)) {
+        if (!shouldTrackObjectAccess(array)) {
             return@runInIgnoredSection false
         }
         val iThread = threadScheduler.getCurrentThreadId()
@@ -986,8 +986,8 @@ abstract class ManagedStrategy(
     override fun beforeWriteField(obj: Any?, className: String, fieldName: String, value: Any?, codeLocation: Int,
                                   isStatic: Boolean, isFinal: Boolean): Boolean = runInIgnoredSection {
         updateSnapshotOnFieldAccess(obj, className.canonicalClassName, fieldName)
-        objectTracker.registerObjectLink(fromObject = obj ?: StaticObject, toObject = value)
-        if (!objectTracker.shouldTrackObjectAccess(obj ?: StaticObject)) {
+        objectTracker?.registerObjectLink(fromObject = obj ?: StaticObject, toObject = value)
+        if (!shouldTrackObjectAccess(obj)) {
             return@runInIgnoredSection false
         }
         // Optimization: do not track final field writes
@@ -1016,8 +1016,8 @@ abstract class ManagedStrategy(
 
     override fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int): Boolean = runInIgnoredSection {
         updateSnapshotOnArrayElementAccess(array, index)
-        objectTracker.registerObjectLink(fromObject = array, toObject = value)
-        if (!objectTracker.shouldTrackObjectAccess(array)) {
+        objectTracker?.registerObjectLink(fromObject = array, toObject = value)
+        if (!shouldTrackObjectAccess(array)) {
             return@runInIgnoredSection false
         }
         val iThread = threadScheduler.getCurrentThreadId()
@@ -1089,8 +1089,14 @@ abstract class ManagedStrategy(
     override fun afterNewObjectCreation(obj: Any) {
         if (obj is String || obj is Int || obj is Long || obj is Byte || obj is Char || obj is Float || obj is Double) return
         runInIgnoredSection {
-            objectTracker.registerNewObject(obj)
+            objectTracker?.registerNewObject(obj)
         }
+    }
+
+    private fun shouldTrackObjectAccess(obj: Any?): Boolean {
+        // by default, we track accesses to all objects
+        if (objectTracker == null) return true
+        return objectTracker!!.shouldTrackObjectAccess(obj ?: StaticObject)
     }
 
     /**
@@ -1216,7 +1222,7 @@ abstract class ManagedStrategy(
             }
             // in case of atomics API setter method call, notify the object tracker about a new link between objects
             if (atomicMethodDescriptor != null && atomicMethodDescriptor.kind.isSetter) {
-                objectTracker.registerObjectLink(
+                objectTracker?.registerObjectLink(
                     fromObject = atomicMethodDescriptor.getAccessedObject(owner!!, params),
                     toObject = atomicMethodDescriptor.getSetValue(owner, params)
                 )

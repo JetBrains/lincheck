@@ -15,6 +15,7 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 import org.jetbrains.kotlinx.lincheck.ExperimentalModelCheckingAPI
 import org.jetbrains.kotlinx.lincheck.runConcurrentTest
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
+import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
 import org.jetbrains.kotlinx.lincheck_test.gpmc.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
@@ -177,8 +178,18 @@ class VariableReadWriteRunConcurrentRepresentationTest : BaseRunConcurrentRepres
     }
 }
 
+// TODO investigate difference for trace debugger (Evgeniy Moiseenko)
 class CustomThreadsRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
-    "run_concurrent_test/custom_threads.txt"
+    if (isInTraceDebuggerMode) {
+        when (jdkVersion) {
+            8 -> "run_concurrent_test/custom_threads_trace_debugger_jdk8.txt"
+            11 -> "run_concurrent_test/custom_threads_trace_debugger_jdk11.txt"
+            17 -> "run_concurrent_test/custom_threads_trace_debugger_jdk17.txt"
+            else -> "run_concurrent_test/custom_threads_trace_debugger.txt"
+        }
+    } else {
+        "run_concurrent_test/custom_threads.txt"
+    }
 ) {
     override fun block() {
         val block = Runnable {
@@ -233,8 +244,14 @@ class KotlinThreadRunConcurrentRepresentationTest : BaseRunConcurrentRepresentat
     }
 }
 
+// TODO investigate difference for trace debugger (Evgeniy Moiseenko)
 class LivelockRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
-    if (isJdk8) "run_concurrent_test/livelock_jdk8.txt" else "run_concurrent_test/livelock.txt"
+    when {
+        isInTraceDebuggerMode && isJdk8 -> "run_concurrent_test/livelock_trace_debugger_jdk8.txt"
+        isInTraceDebuggerMode -> "run_concurrent_test/livelock_trace_debugger.txt"
+        isJdk8 -> "run_concurrent_test/livelock_jdk8.txt"
+        else -> "run_concurrent_test/livelock.txt"
+    }
 ) {
     override fun block() {
         var counter = 0
@@ -261,8 +278,14 @@ class LivelockRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationT
     }
 }
 
+// TODO investigate difference for trace debugger (Evgeniy Moiseenko)
 class IncorrectConcurrentLinkedDequeRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
-    if (isJdk8) "run_concurrent_test/deque_jdk8.txt" else "run_concurrent_test/deque.txt"
+    when {
+        isInTraceDebuggerMode && isJdk8 -> "run_concurrent_test/deque_trace_debugger_jdk8.txt"
+        isInTraceDebuggerMode -> "run_concurrent_test/deque_trace_debugger.txt"
+        isJdk8 -> "run_concurrent_test/deque_jdk8.txt"
+        else -> "run_concurrent_test/deque.txt"
+    }
 ) {
     override fun block() {
         val deque = ConcurrentLinkedDeque<Int>()

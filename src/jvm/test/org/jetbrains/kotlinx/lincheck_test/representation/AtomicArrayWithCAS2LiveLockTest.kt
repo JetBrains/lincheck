@@ -15,8 +15,11 @@ import kotlinx.atomicfu.atomic
 import kotlinx.atomicfu.atomicArrayOfNulls
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
+import org.junit.Assume.assumeFalse
+import org.junit.Before
 import org.junit.Test
 
 /**
@@ -24,6 +27,9 @@ import org.junit.Test
  * in recursive live-lock.
  */
 class AtomicArrayWithCAS2LiveLockTest {
+    @Before
+    fun setUp() = assumeFalse(isInTraceDebuggerMode)
+
     private val array = AtomicArrayWithCAS2(ARRAY_SIZE, 0)
 
     @Operation

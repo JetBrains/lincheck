@@ -1,0 +1,242 @@
+= Invalid execution results =
+| ------------------------ |
+| Thread 1  |   Thread 2   |
+| ------------------------ |
+| a(): void | c(): void    |
+| b(): void | d(): 0 [2,1] |
+| ------------------------ |
+
+---
+Values in "[..]" brackets indicate the number of completed operations
+in each of the parallel threads seen at the beginning of the current operation
+---
+
+The following interleaving leads to the error:
+| ---------------------------------------------------------------------------------------------------------- |
+| Thread 1 |                                            Thread 2                                             |
+| ---------------------------------------------------------------------------------------------------------- |
+|          | c()                                                                                             |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|          |   switch                                                                                        |
+| a()      |                                                                                                 |
+| b()      |                                                                                                 |
+|          |   bStarted ➜ true at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330)  |
+|          |   result: void                                                                                  |
+|          | d(): 0                                                                                          |
+| ---------------------------------------------------------------------------------------------------------- |
+
+Detailed trace:
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|                                            Thread 1                                            |                                            Thread 2                                             |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|                                                                                                | c()                                                                                             |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   bStarted ➜ false at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330) |
+|                                                                                                |   switch                                                                                        |
+| a()                                                                                            |                                                                                                 |
+| b()                                                                                            |                                                                                                 |
+|   bStarted = true at SpinlockInIncorrectResultsWithClocksTest.b(SpinlockEventsCutTests.kt:325) |                                                                                                 |
+|   result: void                                                                                 |                                                                                                 |
+|                                                                                                |   bStarted ➜ true at SpinlockInIncorrectResultsWithClocksTest.c(SpinlockEventsCutTests.kt:330)  |
+|                                                                                                |   result: void                                                                                  |
+|                                                                                                | d(): 0                                                                                          |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

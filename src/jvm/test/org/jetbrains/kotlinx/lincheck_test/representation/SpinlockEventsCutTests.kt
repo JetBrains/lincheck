@@ -17,6 +17,8 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.guide.MSQueueBlocking
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
+import org.junit.Assume.assumeFalse
+import org.junit.Before
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -39,7 +41,10 @@ class ObstructionFreedomViolationEventsCutTest {
     fun runModelCheckingTest() = ModelCheckingOptions()
         .checkObstructionFreedom(true)
         .checkImpl(this::class.java)
-        .checkLincheckOutput("obstruction_freedom_violation_events_cut.txt")
+        .checkLincheckOutput(
+            if (isInTraceDebuggerMode) "obstruction_freedom_violation_events_cut_trace_debugger.txt"
+            else "obstruction_freedom_violation_events_cut.txt"
+        )
 
 }
 
@@ -50,7 +55,10 @@ class SpinlockEventsCutShortLengthTest : AbstractSpinLivelockTest() {
 
     private val sharedStateAny = AtomicBoolean(false)
 
-    override val outputFileName: String get() = "spin_lock/spin_lock_events_cut_single_action_cycle.txt"
+    override val outputFileName: String
+        get() =
+            if (isInTraceDebuggerMode) "spin_lock/spin_lock_events_cut_single_action_cycle_trace_debugger.txt"
+            else "spin_lock/spin_lock_events_cut_single_action_cycle.txt"
 
     override fun meaninglessActions() {
         sharedStateAny.get()
@@ -65,7 +73,11 @@ class SpinlockEventsCutMiddleLengthTest : AbstractSpinLivelockTest() {
 
     private val sharedStateAny = AtomicBoolean(false)
 
-    override val outputFileName: String get() = "spin_lock/spin_lock_events_cut_two_actions_cycle.txt"
+    override val outputFileName: String
+        get() =
+            if (isInTraceDebuggerMode) "spin_lock/spin_lock_events_cut_two_actions_cycle_trace_debugger.txt"
+            else "spin_lock/spin_lock_events_cut_two_actions_cycle.txt"
+    
 
     override fun meaninglessActions() {
         val x = sharedStateAny.get()
@@ -78,6 +90,8 @@ class SpinlockEventsCutMiddleLengthTest : AbstractSpinLivelockTest() {
  * when one thread runs in the infinite loop while others terminate
  */
 class SpinlockEventsCutInfiniteLoopTest : AbstractSpinLivelockTest() {
+    @Before
+    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val sharedStateAny = AtomicBoolean(false)
 
@@ -96,6 +110,8 @@ class SpinlockEventsCutInfiniteLoopTest : AbstractSpinLivelockTest() {
  * when one thread runs in the infinite loop while others terminate
  */
 class SpinlockEventsCutInfiniteLoopWithParametersTest : AbstractSpinLivelockTest() {
+    @Before
+    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     @Volatile
     private var sharedState: Boolean = false
@@ -115,6 +131,8 @@ class SpinlockEventsCutInfiniteLoopWithParametersTest : AbstractSpinLivelockTest
  * when the spin cycle is twice bigger due to a flipping method receivers.
  */
 class SpinlockEventsCutInfiniteLoopWithReceiversTest : AbstractSpinLivelockTest() {
+    @Before
+    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val first = Receiver(false)
     private val second = Receiver(false)
@@ -140,6 +158,8 @@ class SpinlockEventsCutInfiniteLoopWithReceiversTest : AbstractSpinLivelockTest(
  * when the spin cycle is bigger due to a different arrays usage and cells access.
  */
 class SpinlockEventsCutInfiniteLoopWithArrayOperationsTest : AbstractSpinLivelockTest() {
+    @Before
+    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     @Volatile
     private var array: Array<Int> = Array(3) { 0 }
@@ -165,6 +185,8 @@ class SpinlockEventsCutInfiniteLoopWithArrayOperationsTest : AbstractSpinLiveloc
  * when the spin cycle is twice bigger due to a flipping arrays receivers usage.
  */
 class SpinlockEventsCutInfiniteLoopWithArrayReceiversTest : AbstractSpinLivelockTest() {
+    @Before
+    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val first = Array(3) { 0 }
     private val second = Array(3) { 0 }
@@ -189,6 +211,8 @@ class SpinlockEventsCutInfiniteLoopWithArrayReceiversTest : AbstractSpinLivelock
  * LinCheck should calculate spin cycle period without params.
  */
 class SpinlockEventsCutInfiniteNoCycleWithParamsTest : AbstractSpinLivelockTest() {
+    @Before
+    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val array = Array(3) { 0 }
     private val random = java.util.Random(0)
@@ -212,7 +236,11 @@ class SpinlockEventsCutInfiniteNoCycleWithParamsTest : AbstractSpinLivelockTest(
 class SpinlockEventsCutLongCycleActionsTest : AbstractSpinLivelockTest() {
 
     private val data = AtomicReferenceArray<Int>(7)
-    override val outputFileName: String get() = "spin_lock/spin_lock_events_cut_long_cycle.txt"
+    override val outputFileName: String
+        get() =
+            if (isInTraceDebuggerMode) "spin_lock/spin_lock_events_cut_long_cycle_trace_debugger.txt"
+            else "spin_lock/spin_lock_events_cut_long_cycle.txt"
+    
     override fun meaninglessActions() {
         data[0] = 0
         data[1] = 0
@@ -231,7 +259,10 @@ class SpinlockEventsCutLongCycleActionsTest : AbstractSpinLivelockTest() {
 class SpinlockEventsCutWithInnerLoopActionsTest : AbstractSpinLivelockTest() {
 
     private val data = AtomicReferenceArray<Int>(10)
-    override val outputFileName: String get() = "spin_lock/spin_lock_events_cut_inner_loop.txt"
+    override val outputFileName: String
+        get() =
+            if (isInTraceDebuggerMode) "spin_lock/spin_lock_events_cut_inner_loop_trace_debugger.txt"
+            else "spin_lock/spin_lock_events_cut_inner_loop.txt"
     override fun meaninglessActions() {
         for (i in 0 until data.length()) {
             data[i] = 0
@@ -317,7 +348,10 @@ class SpinlockInIncorrectResultsWithClocksTest {
         .sequentialSpecification(ClocksTestSequential::class.java)
         .minimizeFailedScenario(false)
         .checkImpl(this::class.java)
-        .checkLincheckOutput("spin_lock/spin_lock_in_incorrect_results_failure.txt")
+        .checkLincheckOutput(
+            if (isInTraceDebuggerMode) "spin_lock/spin_lock_in_incorrect_results_failure_trace_debugger.txt"
+            else "spin_lock/spin_lock_in_incorrect_results_failure.txt"
+        )
 
 
     /**
@@ -369,6 +403,8 @@ class SpinlockInIncorrectResultsWithClocksTest {
  * Test should not fail.
  */
 class SpinCycleWithSideEffectsTest {
+    @Before
+    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val counter = AtomicInteger(0)
 
@@ -408,6 +444,8 @@ class SpinCycleWithSideEffectsTest {
  * when all potential switch points are nested in non-atomic methods.
  */
 class SpinLockWithAllEventsWrappedInMethodsTest {
+    @Before
+    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val counter = AtomicInteger(0)
     private val someUselessSharedState = AtomicBoolean(false)
@@ -454,6 +492,8 @@ class SpinLockWithAllEventsWrappedInMethodsTest {
  * when all the trace points are in the top-level, i.e., right in the actor.
  */
 class SingleThreadTopLevelSpinLockTest {
+    @Before
+    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     @Volatile
     private var state: Boolean = false
