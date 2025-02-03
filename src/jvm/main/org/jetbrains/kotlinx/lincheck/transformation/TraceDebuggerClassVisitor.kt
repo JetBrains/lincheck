@@ -11,6 +11,8 @@
 package org.jetbrains.kotlinx.lincheck.transformation
 
 import org.jetbrains.kotlinx.lincheck.TraceDebuggerInjections
+import org.jetbrains.kotlinx.lincheck.TraceDebuggerInjections.classUnderTimeTravel
+import org.jetbrains.kotlinx.lincheck.TraceDebuggerInjections.methodUnderTimeTravel
 import org.jetbrains.kotlinx.lincheck.canonicalClassName
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.MethodVisitor
@@ -18,9 +20,7 @@ import org.objectweb.asm.commons.GeneratorAdapter
 
 
 class TraceDebuggerClassVisitor(
-    classVisitor: ClassVisitor,
-    private val classUnderTimeTravel: String,
-    private val methodUnderTimeTravel: String
+    classVisitor: ClassVisitor
 ): ClassVisitor(ASM_API, classVisitor) {
     private lateinit var className: String
 
@@ -47,7 +47,7 @@ class TraceDebuggerClassVisitor(
 
         var mv = super.visitMethod(access, methodName, desc, signature, exceptions)
         if (className == classUnderTimeTravel && methodName == methodUnderTimeTravel) {
-            mv = JUnitTestMethodTransformer(classUnderTimeTravel, methodUnderTimeTravel, mv.newAdapter())
+            mv = TraceDebuggerRunMethodTransformer(mv.newAdapter())
         }
 
         return mv
@@ -59,12 +59,12 @@ class TraceDebuggerClassVisitor(
  *
  * The method body is transformed from:
  * ```kotlin
- * fun methodUnderTimeTravel() {/* code */}
+ * fun methodUnderTraceDebugging() {/* code */}
  * ```
  *
  * To:
  * ```kotlin
- * fun methodUnderTimeTravel() {
+ * fun methodUnderTraceDebugging() {
  *   if (TraceDebuggerAgent.isFirstRun) {
  *     TraceDebuggerAgent.isFirstRun = false
  *     setupLincheck() // lincheck internally calls `method` again
@@ -74,9 +74,7 @@ class TraceDebuggerClassVisitor(
  * }
  * ```
  */
-private class JUnitTestMethodTransformer(
-    private val classUnderTimeTravel: String,
-    private val methodUnderTimeTravel: String,
+private class TraceDebuggerRunMethodTransformer(
     private val adapter: GeneratorAdapter
 ) : MethodVisitor(ASM_API, adapter) {
 

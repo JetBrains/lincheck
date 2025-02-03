@@ -123,44 +123,7 @@ val bootstrapJar = tasks.register<Copy>("bootstrapJar") {
     into(file("$buildDir/processedResources/jvm/main"))
 }
 
-// Below are tasks that are used by the trace debugger plugin.
-// When these jars are loaded the `-Dlincheck.traceDebuggerMode=true` VM argument is expected
-// TODO: when lincheck agent becomes static, it will be possible to remove
-//  these tasks and make a fat-jar of lincheck agent instead
-//  (and use it in the trace-debugger by passing the flag `traceDebuggerMode=true`,
-//  which would apply trace-debugger-specific transformations in addition to linchecks')
-val traceDebuggerJar = tasks.register<Jar>("traceDebuggerJar") {
-    archiveBaseName = "fat-trace-debugger"
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-
-    dependsOn(bootstrapJar)
-
-    // lincheck sources
-    from(sourceSets["main"].output)
-    // run-time dependencies (asm, bytebuddy, etc.)
-    from({
-        configurations.runtimeClasspath.get().filter { it.name.endsWith(".jar") }.map {
-            return@map if (it.isDirectory) it else project.zipTree(it)
-        }
-    })
-
-    manifest {
-        attributes(
-            "Premain-Class" to "org.jetbrains.kotlinx.lincheck.transformation.TraceDebuggerAgent",
-            "Can-Redefine-Classes" to "true",
-            "Can-Retransform-Classes" to "true"
-        )
-    }
-}
-
-// This jar is useful to add as a dependency to a test project to be able to debug
-val traceDebuggerJarNoDeps = tasks.register<Jar>("traceDebuggerJarNoDeps") {
-    archiveBaseName = "nodeps-trace-debugger"
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    from(sourceSets["main"].output)
-    dependsOn(":bootstrap:jar")
-    from(project.zipTree(file("${project(":bootstrap").buildDir}/libs/bootstrap.jar")))
-}
+registerTraceDebuggerTasks()
 
 tasks.withType<Test> {
     javaLauncher.set(

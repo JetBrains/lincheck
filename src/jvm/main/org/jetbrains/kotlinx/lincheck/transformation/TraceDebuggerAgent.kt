@@ -63,16 +63,13 @@ internal object TraceDebuggerTransformer : ClassFileTransformer {
         internalClassName: String,
         classBytes: ByteArray
     ): ByteArray {
-        val classUnderTimeTravel = classUnderTimeTravel!!
-        val methodUnderTimeTravel = methodUnderTimeTravel!!
-
         try {
             val bytes: ByteArray
             val reader = ClassReader(classBytes)
             val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
 
             reader.accept(
-                TraceDebuggerClassVisitor(writer, classUnderTimeTravel, methodUnderTimeTravel),
+                TraceDebuggerClassVisitor(writer),
                 ClassReader.SKIP_FRAMES
             )
             bytes = writer.toByteArray()
