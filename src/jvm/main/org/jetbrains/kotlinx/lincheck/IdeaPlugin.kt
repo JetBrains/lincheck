@@ -13,8 +13,10 @@ package org.jetbrains.kotlinx.lincheck
 
 import sun.nio.ch.lincheck.*
 import org.jetbrains.kotlinx.lincheck.runner.*
-import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
+import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.util.ThreadMap
 
 const val MINIMAL_PLUGIN_VERSION = "0.2"
@@ -124,6 +126,191 @@ fun onThreadSwitchesOrActorFinishes() {}
  */
 internal val eventIdStrictOrderingCheck = System.getProperty("lincheck.debug.withEventIdSequentialCheck") != null
 
+/**
+ * If the plugin enabled and the failure has a trace, passes information about
+ * the trace and the failure to the Plugin and run re-run execution to debug it.
+ */
+internal fun ManagedStrategy.runReplayIfPluginEnabled(failure: LincheckFailure) {
+    if (replay && failure.trace != null) {
+        // Extract trace representation in the appropriate view.
+        val trace = constructTraceForPlugin(failure, failure.trace)
+        // Collect and analyze the exceptions thrown.
+        val (exceptionsRepresentation, internalBugOccurred) = collectExceptionsForPlugin(failure)
+        // If an internal bug occurred - print it on the console, no need to debug it.
+        if (internalBugOccurred) return
+        // Provide all information about the failed test to the debugger.
+        testFailed(
+            failureType = failure.type,
+            trace = trace,
+            version = lincheckVersion,
+            minimalPluginVersion = MINIMAL_PLUGIN_VERSION,
+            exceptions = exceptionsRepresentation
+        )
+        // Replay execution while it's needed.
+        do {
+            doReplay()
+        } while (shouldReplayInterleaving())
+    }
+}
+
+/**
+ * Transforms failure trace to the array of string to pass it to the debugger.
+ * (due to difficulties with passing objects like List and TracePoint, as class versions may vary)
+ *
+ * Each trace point is transformed into the line of the following form:
+ * `type,iThread,callDepth,shouldBeExpanded,eventId,representation`.
+ *
+ * Later, when [testFailed] breakpoint is triggered debugger parses these lines back to trace points.
+ *
+ * To help the plugin to create an execution view, we provide a type for each trace point.
+ * Below are the codes of trace point types.
+ *
+ * | Value                          | Code |
+ * |--------------------------------|------|
+ * | REGULAR                        | 0    |
+ * | ACTOR                          | 1    |
+ * | RESULT                         | 2    |
+ * | SWITCH                         | 3    |
+ * | SPIN_CYCLE_START               | 4    |
+ * | SPIN_CYCLE_SWITCH              | 5    |
+ * | OBSTRUCTION_FREEDOM_VIOLATION  | 6    |
+ */
+private fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Array<String> {
+    val nThreads = trace.trace.maxOf { it.iThread } + 1
+    val results = failure.results
+    val nodesList = constructTraceGraph(nThreads, failure, results, trace, collectExceptionsOrEmpty(failure))
+    var sectionIndex = 0
+    var node: TraceNode? = nodesList.firstOrNull()
+    val representations = mutableListOf<String>()
+    while (node != null) {
+        when (node) {
+            is TraceLeafEvent -> {
+                val event = node.event
+                val eventId = event.eventId
+                val representation = event.toStringImpl(withLocation = false)
+                val type = when (event) {
+                    is SwitchEventTracePoint -> {
+                        when (event.reason) {
+                            SwitchReason.ActiveLock -> {
+                                5
+                            }
+                            else -> 3
+                        }
+                    }
+                    is SpinCycleStartTracePoint -> 4
+                    is ObstructionFreedomViolationExecutionAbortTracePoint -> 6
+                    else -> 0
+                }
+
+                if (representation.isNotEmpty()) {
+                    representations.add("$type;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${eventId};${representation}")
+                }
+            }
+
+            is CallNode -> {
+                val beforeEventId = node.call.eventId
+                val representation = node.call.toStringImpl(withLocation = false)
+                if (representation.isNotEmpty()) {
+                    representations.add("0;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation}")
+                }
+            }
+
+            is ActorNode -> {
+                val beforeEventId = -1
+                val representation = node.actorRepresentation
+                if (representation.isNotEmpty()) {
+                    representations.add("1;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation}")
+                }
+            }
+
+            is ActorResultNode -> {
+                val beforeEventId = -1
+                val representation = node.resultRepresentation.toString()
+                representations.add("2;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};${node.exceptionNumberIfExceptionResult ?: -1}")
+            }
+
+            else -> {}
+        }
+
+        node = node.next
+        if (node == null && sectionIndex != nodesList.lastIndex) {
+            node = nodesList[++sectionIndex]
+        }
+    }
+    return representations.toTypedArray()
+}
+
+/**
+ * We provide information about the failure type to the Plugin, but
+ * due to difficulties with passing objects like LincheckFailure (as class versions may vary),
+ * we use its string representation.
+ * The Plugin uses this information to show the failure type to a user.
+ */
+private val LincheckFailure.type: String
+    get() = when (this) {
+        is IncorrectResultsFailure -> "INCORRECT_RESULTS"
+        is ObstructionFreedomViolationFailure -> "OBSTRUCTION_FREEDOM_VIOLATION"
+        is UnexpectedExceptionFailure -> "UNEXPECTED_EXCEPTION"
+        is ValidationFailure -> "VALIDATION_FAILURE"
+        is ManagedDeadlockFailure, is TimeoutFailure -> "DEADLOCK"
+    }
+
+/**
+ * Processes the exceptions thrown during the execution.
+ * @return exceptions string representation to pass to the plugin with a flag,
+ *   indicating if an internal bug was the cause of the failure, or not.
+ */
+private fun collectExceptionsForPlugin(failure: LincheckFailure): ExceptionProcessingResult {
+    val results: ExecutionResult = when (failure) {
+        is IncorrectResultsFailure -> failure.results
+        is ValidationFailure -> {
+            return ExceptionProcessingResult(arrayOf(failure.exception.text), isInternalBugOccurred = false)
+        }
+        else -> {
+            return ExceptionProcessingResult(emptyArray(), isInternalBugOccurred = false)
+        }
+    }
+    return when (val exceptionsProcessingResult = collectExceptionStackTraces(results)) {
+        // If some exception was thrown from the Lincheck itself, we'll ask for bug reporting
+        is InternalLincheckBugResult ->
+            ExceptionProcessingResult(arrayOf(exceptionsProcessingResult.exception.text), isInternalBugOccurred = true)
+        // Otherwise collect all the exceptions
+        is ExceptionStackTracesResult -> {
+            exceptionsProcessingResult.exceptionStackTraces.entries
+                .sortedBy { (_, numberAndStackTrace) -> numberAndStackTrace.number }
+                .map { (exception, numberAndStackTrace) ->
+                    val header = exception::class.java.canonicalName + ": " + exception.message
+                    header + numberAndStackTrace.stackTrace.joinToString("") { "\n\tat $it" }
+                }
+                .let { ExceptionProcessingResult(it.toTypedArray(), isInternalBugOccurred = false) }
+        }
+    }
+}
+
+private fun collectExceptionsOrEmpty(failure: LincheckFailure): Map<Throwable, ExceptionNumberAndStacktrace> {
+    if (failure is ValidationFailure) {
+        return mapOf(failure.exception to ExceptionNumberAndStacktrace(1, failure.exception.stackTrace.toList()))
+    }
+    val results = (failure as? IncorrectResultsFailure)?.results ?: return emptyMap()
+    return when (val result = collectExceptionStackTraces(results)) {
+        is ExceptionStackTracesResult -> result.exceptionStackTraces
+        is InternalLincheckBugResult -> emptyMap()
+    }
+}
+
+/**
+ * Result of creating string representations of exceptions
+ * thrown during the execution before passing them to the plugin.
+ *
+ * @param exceptionsRepresentation string representation of all the exceptions
+ * @param isInternalBugOccurred a flag indicating that the exception is caused by a bug in the Lincheck.
+ */
+@Suppress("ArrayInDataClass")
+private data class ExceptionProcessingResult(
+    val exceptionsRepresentation: Array<String>,
+    val isInternalBugOccurred: Boolean
+)
+
 private fun visualize(strategyObject: Any) = runCatching {
     val strategy = strategyObject as ModelCheckingStrategy
     val runner = strategy.runner as ParallelThreadsRunner
@@ -137,7 +324,6 @@ private fun visualize(strategyObject: Any) = runCatching {
 
     visualizeInstance(testObject, objectToNumberMap, continuationToLincheckThreadIdMap, threadToLincheckThreadIdMap)
 }
-
 
 /**
  * Creates an array [Object, objectNumber, Object, objectNumber, ...].

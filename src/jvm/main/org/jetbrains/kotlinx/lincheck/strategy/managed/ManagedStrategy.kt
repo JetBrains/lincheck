@@ -46,7 +46,8 @@ abstract class ManagedStrategy(
     scenario: ExecutionScenario,
     private val validationFunction: Actor?,
     private val stateRepresentationFunction: Method?,
-    private val testCfg: ManagedCTestConfiguration
+    private val testCfg: ManagedCTestConfiguration,
+    val replay: Boolean,
 ) : Strategy(scenario), EventTracker {
     // The number of parallel threads.
     protected val nThreads: Int = scenario.nThreads
@@ -249,6 +250,16 @@ abstract class ManagedStrategy(
     }
 
     protected open fun enableSpinCycleReplay() {}
+
+    protected open fun initializeReplay() {
+        cleanObjectNumeration()
+        resetEventIdProvider()
+    }
+
+    internal fun doReplay(): InvocationResult {
+        initializeReplay()
+        return runInvocation()
+    }
 
     // == BASIC STRATEGY METHODS ==
 
