@@ -278,10 +278,12 @@ internal object LincheckJavaAgent {
         ensureClassHierarchyIsTransformed(clazz)
 
         while (true) {
-            clazz.declaredFields
+            val declaredFields = clazz.declaredFields
+            val unsafes = declaredFields
                 .filter { !it.type.isPrimitive }
                 .filter { !Modifier.isStatic(it.modifiers) }
                 .mapNotNull { readFieldViaUnsafe(obj, it, Unsafe::getObject) }
+            unsafes
                 .forEach {
                     ensureObjectIsTransformed(it, processedObjects)
                 }
@@ -303,10 +305,12 @@ internal object LincheckJavaAgent {
             return
         }
         // Traverse static fields.
-        clazz.declaredFields
+        val declaredFields = clazz.declaredFields
+        val unsafes = declaredFields
             .filter { !it.type.isPrimitive }
             .filter { Modifier.isStatic(it.modifiers) }
             .mapNotNull { readFieldViaUnsafe(null, it, Unsafe::getObject) }
+        unsafes
             .forEach {
                 ensureObjectIsTransformed(it, processedObjects)
             }
@@ -326,7 +330,7 @@ internal object LincheckJavaAgent {
      * the Lincheck agent re-transforms all the loaded classes on each run.
      */
     internal val INSTRUMENT_ALL_CLASSES =
-        System.getProperty("lincheck.instrumentAllClasses")?.toBoolean() ?: false
+        true//System.getProperty("lincheck.instrumentAllClasses")?.toBoolean() ?: false
 }
 
 internal object LincheckClassFileTransformer : ClassFileTransformer {
@@ -404,6 +408,9 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         if (isEagerlyInstrumentedClass(className)) {
             return true
         }
+
+        if (className.contains("\$\$Lambda\$")) return false
+
         // We do not need to instrument most standard Java classes.
         // It is fine to inject the Lincheck analysis only into the
         // `java.util.*` ones, ignored the known atomic constructs.

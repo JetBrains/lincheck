@@ -200,6 +200,7 @@ internal open class ParallelThreadsRunner(
     }
 
     private fun createTestInstance() {
+        println("createTestInstance")
         testInstance = testClass.newInstanceRecursive()
         if (strategy is ModelCheckingStrategy) {
             // We pass the test instance to the strategy to initialize the call stack.
