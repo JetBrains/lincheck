@@ -258,7 +258,7 @@ internal open class ParallelThreadsRunner(
             val (resumedValue, continuation) = suspendResultToContinuation
             // Erase the current result
             completion.resWithCont.set(null)
-            // We must exit the ignored section to keep tracking execution after the resumption.
+            // We must exit the ignored section to keep tracking events in the resumption.
             runOutsideIgnoredSection {
                 // Resume the execution of the coroutine.
                 continuation.resumeWith(resumedValue)

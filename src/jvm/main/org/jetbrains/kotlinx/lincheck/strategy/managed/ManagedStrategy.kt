@@ -1202,15 +1202,15 @@ abstract class ManagedStrategy(
         val guarantee = runInIgnoredSection {
             // process method effect on the static memory snapshot
             processMethodEffectOnStaticSnapshot(owner, params)
-            // process known method concurrency guarantee
-            val threadId = threadScheduler.getCurrentThreadId()
             // re-throw abort error if the thread was aborted
+            val threadId = threadScheduler.getCurrentThreadId()
             if (threadScheduler.isAborted(threadId)) {
                 threadScheduler.abortCurrentThread()
             }
             // first check if the called method is an atomics API method
             // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
             val atomicMethodDescriptor = getAtomicMethodDescriptor(owner, methodName)
+            // get method's concurrency guarantee
             val guarantee = when {
                 (atomicMethodDescriptor != null) -> ManagedGuaranteeType.TREAT_AS_ATOMIC
                 else -> methodGuaranteeType(owner, className.canonicalClassName, methodName)
@@ -1233,7 +1233,9 @@ abstract class ManagedStrategy(
                     atomicMethodDescriptor
                 )
             }
-            // in case of atomic method we need to create a switch point
+            // in case of an atomic method, we create a switch point before the method call;
+            // note that in case we resume atomic method there is no need to create the switch point,
+            // since there is already a switch point between the suspension point and resumption
             if (guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC &&
                 // do not create a trace point on resumption
                 !isResumptionMethodCall(threadId, className.canonicalClassName, methodName, params, atomicMethodDescriptor)
