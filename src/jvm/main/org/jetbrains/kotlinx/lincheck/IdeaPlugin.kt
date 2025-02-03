@@ -13,6 +13,7 @@ package org.jetbrains.kotlinx.lincheck
 
 import sun.nio.ch.lincheck.*
 import org.jetbrains.kotlinx.lincheck.runner.*
+import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.util.ThreadMap
 
@@ -22,18 +23,17 @@ const val MINIMAL_PLUGIN_VERSION = "0.2"
 
 /**
  * Invoked from the strategy [ModelCheckingStrategy] when Lincheck finds a bug.
- * The debugger creates a breakpoint on this method, so when it's called, the debugger receives all the information about the
- * failed test.
+ * The debugger creates a breakpoint on this method, so when it's called,
+ * the debugger receives all the information about the failed test.
  * When a failure is found this method is called to provide all required information (trace points, failure type),
  * then [beforeEvent] method is called on each trace point.
  *
- * @param failureType string representation of the failure type.
- * (`INCORRECT_RESULTS`, `OBSTRUCTION_FREEDOM_VIOLATION`, `UNEXPECTED_EXCEPTION`, `VALIDATION_FAILURE`, `DEADLOCK` or `INTERNAL_BUG`).
+ * @param failureType string representation of the failure type (see [LincheckFailure.type]).
  * @param trace failed test trace, where each trace point is represented as a string
- * (because it's the easiest way to provide some information to the debugger).
- * @param version current Lincheck version
- * @param minimalPluginVersion minimal compatible plugin version
- * @param exceptions representation of the exceptions with their stacktrace occurred during the execution
+ *   (because it's the easiest way to provide some information to the debugger).
+ * @param version current Lincheck version.
+ * @param minimalPluginVersion minimal compatible plugin version.
+ * @param exceptions representation of the exceptions with their stacktrace occurred during the execution.
  */
 @Suppress("UNUSED_PARAMETER")
 fun testFailed(
@@ -42,8 +42,7 @@ fun testFailed(
     version: String?,
     minimalPluginVersion: String,
     exceptions: Array<String>
-) {
-}
+) {}
 
 /**
  * Debugger replaces the result of this method to `true` if idea plugin is enabled.
@@ -61,8 +60,8 @@ fun ideaPluginEnabled(): Boolean {
 fun lincheckVerificationStarted() {}
 
 /**
- * If the debugger needs to replay the execution (due to earlier trace point selection), it replaces the result of this
- * method to `true`.
+ * If the debugger needs to replay the execution (due to earlier trace point selection),
+ * it replaces the result of this method to `true`.
  */
 fun shouldReplayInterleaving(): Boolean {
     return false // should be replaced with `true` to replay the failure
@@ -71,7 +70,8 @@ fun shouldReplayInterleaving(): Boolean {
 /**
  * This method is called on every trace point shown to the user,
  * but before the actual event, such as the read/write/MONITORENTER/MONITOREXIT/, etc.
- * The Debugger creates a breakpoint inside this method and if [eventId] is the selected one, the breakpoint is triggered.
+ * The Debugger creates a breakpoint inside this method and if [eventId] is the selected one,
+ * the breakpoint is triggered.
  * Then the debugger performs step-out action, so we appear in the user's code.
  * That's why this method **must** be called from a user-code, not from a nested function.
  *
@@ -88,10 +88,10 @@ fun beforeEvent(eventId: Int, type: String) {
 
 /**
  * This method receives all information about the test object instance to visualize.
- * The Debugger creates a breakpoint inside this method and uses this method parameters to create the diagram.
+ * The Debugger creates a breakpoint inside this method and uses its parameters to create the diagram.
  *
- * We pass Maps as Arrays due to difficulties with passing objects (java.util.Map) to the debugger
- * (class version, etc.).
+ * We pass Maps as Arrays due to difficulties with passing objects (java.util.Map)
+ * to the debugger (class version, etc.).
  *
  * @param testInstance tested data structure.
  * @param numbersArrayMap an array structured like [Object, objectNumber, Object, objectNumber, ...].
@@ -107,8 +107,7 @@ fun visualizeInstance(
     numbersArrayMap: Array<Any>,
     continuationToLincheckThreadIdMap: Array<Any>,
     threadToLincheckThreadIdMap: Array<Any>
-) {
-}
+) {}
 
 /**
  * The Debugger creates a breakpoint on this method call to know when the thread is switched.
