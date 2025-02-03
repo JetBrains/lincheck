@@ -334,9 +334,9 @@ private fun visualize(strategy: ManagedStrategy) = runCatching {
 /**
  * This method is called from the trace-debugger evaluation.
  */
-private fun visualizeTrace(): Array<Any>?  = runCatching {
+private fun visualizeTrace(): Array<Any>? = runCatching {
     val strategyObject = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTracker
-        ?: return@runCatching null
+        ?: return null
     val strategy = strategyObject as ModelCheckingStrategy
 
     val runner = strategy.runner as ParallelThreadsRunner
