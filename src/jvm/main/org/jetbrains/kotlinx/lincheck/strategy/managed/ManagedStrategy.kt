@@ -1265,20 +1265,20 @@ abstract class ManagedStrategy(
         runInIgnoredSection {
             loopDetector.afterMethodCall()
             if (collectTrace) {
-                val iThread = threadScheduler.getCurrentThreadId()
+                val threadId = threadScheduler.getCurrentThreadId()
                 // this case is possible and can occur when we resume the coroutine,
                 // and it results in a call to a top-level actor `suspend` function;
                 // currently top-level actor functions are not represented in the `callStackTrace`,
                 // we should probably refactor and fix that, because it is very inconvenient
-                if (callStackTrace[iThread]!!.isEmpty())
+                if (callStackTrace[threadId]!!.isEmpty())
                     return@runInIgnoredSection
-                val tracePoint = callStackTrace[iThread]!!.last().tracePoint
+                val tracePoint = callStackTrace[threadId]!!.last().tracePoint
                 when (result) {
                     Injections.VOID_RESULT -> tracePoint.initializeVoidReturnedValue()
                     COROUTINE_SUSPENDED -> tracePoint.initializeCoroutineSuspendedResult()
                     else -> tracePoint.initializeReturnedValue(adornedStringRepresentation(result))
                 }
-                afterMethodCall(iThread, tracePoint)
+                afterMethodCall(threadId, tracePoint)
                 traceCollector!!.addStateRepresentation()
             }
         }
@@ -1294,8 +1294,14 @@ abstract class ManagedStrategy(
         }
         if (collectTrace) {
             runInIgnoredSection {
-                // We cannot simply read `thread` as Forcible???Exception can be thrown.
+                // We cannot simply read `thread` as `ThreadAbortedError` can be thrown.
                 val threadId = threadScheduler.getCurrentThreadId()
+                // this case is possible and can occur when we resume the coroutine,
+                // and it results in a call to a top-level actor `suspend` function;
+                // currently top-level actor functions are not represented in the `callStackTrace`,
+                // we should probably refactor and fix that, because it is very inconvenient
+                if (callStackTrace[threadId]!!.isEmpty())
+                    return@runInIgnoredSection
                 val tracePoint = callStackTrace[threadId]!!.last().tracePoint
                 tracePoint.initializeThrownException(t)
                 afterMethodCall(threadId, tracePoint)
