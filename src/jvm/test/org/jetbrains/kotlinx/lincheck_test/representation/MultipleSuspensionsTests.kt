@@ -10,22 +10,18 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import kotlinx.atomicfu.atomic
-import kotlinx.coroutines.CancellableContinuation
-import kotlinx.coroutines.InternalCoroutinesApi
-import kotlinx.coroutines.suspendCancellableCoroutine
-import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.forClasses
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
-import org.junit.Test
-import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.coroutines.Continuation
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
+import kotlin.coroutines.*
+import kotlinx.coroutines.channels.Channel
+import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
+import org.jetbrains.kotlinx.lincheck.util.ensure
+import org.jetbrains.kotlinx.lincheck_test.util.isJdk8
+import org.junit.Test
 
 /**
  * Check the proper output in case when one actor cause incorrect behavior only after coroutine resumption.
@@ -145,3 +141,50 @@ class MultipleSuspensionTest {
 
 }
 
+/**
+ * Check the proper output in case when one actor cause incorrect behavior only after coroutine resumption.
+ */
+@Suppress("RemoveExplicitTypeArguments")
+class MultipleSuspensionChannelsTest {
+
+    private var counter: Int = 0
+    private val channel1 = Channel<Int>()
+    private val channel2 = Channel<Int>()
+
+    @Operation
+    suspend fun operation1() {
+        for (i in 1 .. 3) {
+            channel1.send(i)
+            counter++
+            channel2.receive().ensure { it == i }
+        }
+        check(counter == 6)
+    }
+
+    @Operation
+    suspend fun operation2() {
+        for (i in 1 .. 3) {
+            channel1.receive().ensure { it == i }
+            counter++
+            channel2.send(i)
+        }
+        check(counter == 6)
+    }
+
+    @Test
+    fun test(): Unit = ModelCheckingOptions()
+        .addCustomScenario {
+            parallel {
+                thread { actor(::operation1) }
+                thread { actor(::operation2) }
+            }
+        }
+        .checkImpl(this::class.java) { failure ->
+            failure.checkLincheckOutput(
+                when {
+                    isInTraceDebuggerMode   -> "multiple_suspension_points_channels_trace_debugger.txt"
+                    else                    -> "multiple_suspension_points_channels.txt"
+                }
+            )
+        }
+}
