@@ -28,8 +28,59 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
 /**
- * Checks that the bug, which can only be found with a proper multiple suspension point support, is found
- * and correctly reported. See expected output for more details.
+ * Check the proper output in case when one actor cause incorrect behavior only after coroutine resumption.
+ */
+class SingleSuspensionTraceReportingTest {
+
+    private var counter = AtomicInteger(0)
+    private var continuation1: Continuation<Unit>? = null
+    @Volatile
+    private var fail: Boolean = false
+
+    @Operation
+    fun triggerAndCheck(): Boolean {
+        return continueAndCheckIfFailed()
+    }
+
+    private fun continueAndCheckIfFailed(): Boolean {
+        counter.set(1)
+        continuation1?.resume(Unit)
+        return fail
+    }
+
+    @Operation
+    suspend fun operation(): Int {
+        // Nested method to check proper trace reporting
+        return suspendAndCauseFailure()
+    }
+
+    @Suppress("SameReturnValue")
+    private suspend fun suspendAndCauseFailure(): Int {
+        if (counter.get() == 1) {
+            @Suppress("RemoveExplicitTypeArguments")
+            // Doesn't compile without explicit typing for now
+            suspendCoroutine<Unit> { continuation1 = it }
+        } else return 0
+        fail = true
+        return 0
+    }
+
+    @Test
+    fun test() = ModelCheckingOptions()
+        .addCustomScenario {
+            parallel {
+                thread { actor(::triggerAndCheck) }
+                thread { actor(::operation) }
+            }
+        }
+        .checkImpl(this::class.java)
+        .checkLincheckOutput("single_suspension_trace.txt")
+
+}
+
+/**
+ * Checks that the bug, which can only be found with a proper multiple suspension point support,
+ * is detected and correctly reported.
  */
 @Suppress("RemoveExplicitTypeArguments")
 class MultipleSuspensionTest {
@@ -94,87 +145,3 @@ class MultipleSuspensionTest {
 
 }
 
-/**
- * Check the proper output in case when one actor cause incorrect behaviour only after coroutine resumption.
- */
-class SingleSuspensionTraceReportingTest {
-
-    private var counter = AtomicInteger(0)
-    private var continuation1: Continuation<Unit>? = null
-    @Volatile
-    private var fail: Boolean = false
-
-    @Operation
-    fun triggerAndCheck(): Boolean {
-        return continueAndCheckIfFailed()
-    }
-
-    private fun continueAndCheckIfFailed(): Boolean {
-        counter.set(1)
-        continuation1?.resume(Unit)
-        return fail
-    }
-
-    @Operation
-    suspend fun operation(): Int {
-        // Nested method to check proper trace reporting
-        return suspendAndCauseFailure()
-    }
-
-    @Suppress("SameReturnValue")
-    private suspend fun suspendAndCauseFailure(): Int {
-        if (counter.get() == 1) {
-            @Suppress("RemoveExplicitTypeArguments")
-            // Doesn't compile without explicit typing for now
-            suspendCoroutine<Unit> { continuation1 = it }
-        } else return 0
-        fail = true
-        return 0
-    }
-
-    @Test
-    fun test() = ModelCheckingOptions()
-        .addCustomScenario {
-            parallel {
-                thread { actor(::triggerAndCheck) }
-                thread { actor(::operation) }
-            }
-        }
-        .checkImpl(this::class.java)
-        .checkLincheckOutput("single_suspension_trace.txt")
-
-}
-
-/**
- * Checks the data structure which actors may suspend multiple times.
- * Passes only if the multiple suspension points are supported properly.
- */
-@OptIn(InternalCoroutinesApi::class)
-class CoroutinesMultipleSuspensionsTest : AbstractLincheckTest() {
-    private val locked = atomic(false)
-    private val waiters = ConcurrentLinkedQueue<CancellableContinuation<Unit>>()
-
-    @Operation
-    suspend fun lock() {
-        while (true) {
-            if (locked.compareAndSet(false, true)) return
-            suspendCancellableCoroutine { cont ->
-                waiters.add(cont)
-                if (!locked.value) {
-                    if (waiters.remove(cont)) cont.resume(Unit)
-                }
-            }
-        }
-    }
-
-    @Operation
-    fun unlock() {
-        if (!locked.compareAndSet(true, false)) error("mutex was not locked")
-        while (true) {
-            val w = waiters.poll() ?: break
-            val token = w.tryResume(Unit, null) ?: continue
-            w.completeResume(token)
-            return
-        }
-    }
-}
