@@ -82,8 +82,8 @@ fun shouldReplayInterleaving(): Boolean {
  */
 @Suppress("UNUSED_PARAMETER")
 fun beforeEvent(eventId: Int, type: String) {
-    val strategy = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTracker
-        ?: return
+    val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
+    val strategy = threadDescriptor.eventTracker as? ManagedStrategy ?: return
     visualize(strategy)
 }
 
@@ -311,8 +311,13 @@ private data class ExceptionProcessingResult(
     val isInternalBugOccurred: Boolean
 )
 
-private fun visualize(strategyObject: Any) = runCatching {
-    val strategy = strategyObject as ModelCheckingStrategy
+/**
+ * Collects all the necessary data to pass to the debugger plugin and calls [visualizeInstance].
+ *
+ * @param strategy The managed strategy used to obtain data to be passed into the debugger plugin.
+ *   Used to collect the data about the test instance, object numbers, threads, and continuations.
+ */
+private fun visualize(strategy: ManagedStrategy) = runCatching {
     val runner = strategy.runner as ParallelThreadsRunner
     val testObject = runner.testInstance
     val lincheckThreads = runner.executor.threads
@@ -334,7 +339,6 @@ private fun visualize(strategyObject: Any) = runCatching {
  */
 private fun createObjectToNumberMapAsArray(testObject: Any): Array<Any> {
     val resultArray = arrayListOf<Any>()
-
     val numbersMap = enumerateObjects(testObject)
     numbersMap.forEach { (any, objectNumber) ->
         resultArray.add(any)
