@@ -14,7 +14,8 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
-import org.junit.*
+import org.junit.jupiter.api.*
+import kotlin.test.assertFailsWith
 
 class CounterTest {
     private val c = Counter()
@@ -28,25 +29,35 @@ class CounterTest {
     @StateRepresentation
     fun stateRepresentation() = c.get().toString()
 
-    //@Test // TODO: Please, uncomment me and comment the line below to run the test and get the output
-    @Test(expected = AssertionError::class)
-    fun stressTest() = StressOptions() // stress testing options
-        .actorsBefore(2) // number of operations before the parallel part
-        .threads(2) // number of threads in the parallel part
-        .actorsPerThread(2) // number of operations in each thread of the parallel part
-        .actorsAfter(1) // number of operations after the parallel part
-        .iterations(100) // generate 100 random concurrent scenarios
-        .invocationsPerIteration(1000) // run each generated scenario 1000 times
-        .check(this::class) // run the test
+    @Test
+    fun stressTest() {
+        @Suppress("UNUSED_VARIABLE")
+        val error = Assertions.assertThrows(AssertionError::class.java) {
+            StressOptions() // stress testing options
+                .actorsBefore(2) // number of operations before the parallel part
+                .threads(2) // number of threads in the parallel part
+                .actorsPerThread(2) // number of operations in each thread of the parallel part
+                .actorsAfter(1) // number of operations after the parallel part
+                .iterations(100) // generate 100 random concurrent scenarios
+                .invocationsPerIteration(1000) // run each generated scenario 1000 times
+                .check(this::class) // run the test
+        }
+        //throw error // TODO: Please, uncomment me to run the test and get the output
+    }
 
-    //@Test // TODO: Please, uncomment me and comment the line below to run the test and get the output
-    @Test(expected = AssertionError::class)
-    fun modelCheckingTest() = ModelCheckingOptions()
-        .actorsBefore(2) // number of operations before the parallel part
-        .threads(2) // number of threads in the parallel part
-        .actorsPerThread(2) // number of operations in each thread of the parallel part
-        .actorsAfter(1) // number of operations after the parallel part
-        .iterations(100) // generate 100 random concurrent scenarios
-        .invocationsPerIteration(1000) // run each generated scenario 1000 times
-        .check(this::class)
+    @Test
+    fun modelCheckingTest() {
+        @Suppress("UNUSED_VARIABLE")
+        val error = assertFailsWith<AssertionError> {
+            ModelCheckingOptions()
+                .actorsBefore(2) // number of operations before the parallel part
+                .threads(2) // number of threads in the parallel part
+                .actorsPerThread(2) // number of operations in each thread of the parallel part
+                .actorsAfter(1) // number of operations after the parallel part
+                .iterations(100) // generate 100 random concurrent scenarios
+                .invocationsPerIteration(1000) // run each generated scenario 1000 times
+                .check(this::class)
+        }
+//        throw error // TODO: Please, uncomment me to run the test and get the output
+    }
 }

@@ -13,7 +13,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.junit.*
+import org.junit.jupiter.api.*
 
 /**
  * This test checks that model checking strategy can find a many switch bug.

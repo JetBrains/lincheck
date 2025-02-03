@@ -13,8 +13,9 @@ package org.jetbrains.kotlinx.lincheck_test.guide
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.junit.*
+import org.junit.jupiter.api.*
 import java.util.concurrent.*
+import kotlin.test.assertFailsWith
 
 class ConcurrentHashMapTest {
     private val map = ConcurrentHashMap<Int, Int>()
@@ -22,15 +23,20 @@ class ConcurrentHashMapTest {
     @Operation
     public fun put(key: Int, value: Int) = map.put(key, value)
 
-    //@Test // TODO: Please, uncomment me and comment the line below to run the test and get the output
-    @Test(expected = AssertionError::class)
-    fun modelCheckingTest() = ModelCheckingOptions()
-        .actorsBefore(1)
-        .actorsPerThread(1)
-        .actorsAfter(0)
-        .minimizeFailedScenario(false)
-        .checkObstructionFreedom(true)
-        .check(this::class)
+    @Test
+    fun modelCheckingTest() {
+        @Suppress("UNUSED_VARIABLE")
+        val error = assertFailsWith<AssertionError> {
+            ModelCheckingOptions()
+                .actorsBefore(1)
+                .actorsPerThread(1)
+                .actorsAfter(0)
+                .minimizeFailedScenario(false)
+                .checkObstructionFreedom(true)
+                .check(this::class)
+        }
+        // throw error // TODO: Please, uncomment me to run the test and get the output
+    }
 }
 
 class ConcurrentSkipListMapTest {

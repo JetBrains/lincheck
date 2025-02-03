@@ -10,8 +10,9 @@
 package org.jetbrains.kotlinx.lincheck_test
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.junit.*
-import org.junit.Assert.*
+import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.*
+import kotlin.test.assertFailsWith
 
 class CustomScenarioDSLTest {
     @Test
@@ -22,31 +23,37 @@ class CustomScenarioDSLTest {
         assertEquals(0, scenario.postExecution.size)
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun testInitialPartRedeclaration() {
-        scenario {
-            initial {}
-            initial {
-                actor(Object::hashCode)
+        assertFailsWith<IllegalArgumentException> {
+            scenario {
+                initial {}
+                initial {
+                    actor(Object::hashCode)
+                }
             }
         }
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun testParallelPartRedeclaration() {
-        scenario {
-            parallel {}
-            parallel {}
+        assertFailsWith<IllegalArgumentException> {
+            scenario {
+                parallel {}
+                parallel {}
+            }
         }
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test
     fun testPostPartRedeclaration() {
-        scenario {
-            post {
-                actor(Object::hashCode)
+        assertFailsWith<IllegalArgumentException> {
+            scenario {
+                post {
+                    actor(Object::hashCode)
+                }
+                post {}
             }
-            post {}
         }
     }
 

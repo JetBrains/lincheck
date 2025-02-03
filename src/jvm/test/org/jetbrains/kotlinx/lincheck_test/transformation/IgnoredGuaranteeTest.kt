@@ -13,8 +13,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
-import org.junit.*
+import org.junit.jupiter.api.*
 
 /**
  * This test checks that managed strategies do not try to switch
@@ -37,7 +36,8 @@ class IgnoredGuaranteeTest {
         return value++
     }
 
-    @Test(timeout = 100_000)
+    @Test
+    @Timeout(100_000)
     fun test() {
         val options = ModelCheckingOptions()
                 .actorsBefore(0)

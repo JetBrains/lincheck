@@ -10,10 +10,10 @@
 
 package org.jetbrains.kotlinx.lincheck_test.gpmc
 
+import org.junit.jupiter.api.*
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.LockSupport
 import kotlin.concurrent.thread
-import org.junit.Test
 
 class ParkingTest {
 
@@ -30,7 +30,8 @@ class ParkingTest {
         }
     }
 
-    @Test(timeout = TIMEOUT)
+    @Test
+    @Timeout(TIMEOUT)
     fun test() = modelCheckerTest(
         testClass = this::class,
         testOperation = this::operation,

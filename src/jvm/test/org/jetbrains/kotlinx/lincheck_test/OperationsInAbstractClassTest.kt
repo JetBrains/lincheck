@@ -12,7 +12,7 @@ package org.jetbrains.kotlinx.lincheck_test
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
-import org.junit.*
+import org.junit.jupiter.api.*
 
 @StressCTest(iterations = 1, minimizeFailedScenario = false)
 class OperationsInAbstractClassTest : AbstractTestClass() {

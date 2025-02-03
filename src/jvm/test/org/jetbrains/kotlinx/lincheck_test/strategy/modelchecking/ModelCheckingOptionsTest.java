@@ -15,7 +15,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.execution.RandomExecutionGenerator;
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions;
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
 

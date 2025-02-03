@@ -15,7 +15,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
 
-import org.junit.*
+import org.junit.jupiter.api.*
 import java.lang.StringBuilder
 
 /**

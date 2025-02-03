@@ -17,7 +17,9 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import kotlin.reflect.*
-import org.junit.Assert
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+import kotlin.test.fail
 
 internal fun modelCheckerTest(
     testClass: KClass<*>,
@@ -42,11 +44,11 @@ internal fun modelCheckerTest(
         if (expectedExceptions.isNotEmpty()) {
             // check that all expected exceptions are discovered
             expectedExceptions.forEach { exceptionClass ->
-                Assert.assertTrue(verifier.exceptions.any { exceptionClass.isInstance(it) })
+                assertTrue(verifier.exceptions.any { exceptionClass.isInstance(it) })
             }
             // check that each discovered exception is an instance of some expected exception class
             verifier.exceptions.forEach { exception ->
-                Assert.assertTrue(expectedExceptions.any { it.isInstance(exception) })
+                assertTrue(expectedExceptions.any { it.isInstance(exception) })
             }
         } else {
             // check that there was no exception thrown
@@ -58,10 +60,10 @@ internal fun modelCheckerTest(
                         appendLine(exception.stackTraceToString())
                     }
                 }.toString()
-                Assert.fail(message)
+                fail(message)
             }
         }
-        Assert.assertEquals(expectedOutcomes, verifier.values)
+        assertEquals(expectedOutcomes, verifier.values)
     }
 }
 

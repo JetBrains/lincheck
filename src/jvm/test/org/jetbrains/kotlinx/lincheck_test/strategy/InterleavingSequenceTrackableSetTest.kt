@@ -15,16 +15,16 @@ package org.jetbrains.kotlinx.lincheck_test.strategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.InterleavingSequenceTrackableSet
 import org.jetbrains.kotlinx.lincheck.strategy.managed.InterleavingHistoryNode
 import org.jetbrains.kotlinx.lincheck.strategy.managed.findMaxPrefixLengthWithNoCycleOnSuffix
-import org.junit.Assert.*
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 
 class InterleavingSequenceTrackableSetTest {
 
     private var set = InterleavingSequenceTrackableSet()
     private var cursor = set.cursor
 
-    @Before
+    @BeforeEach
     fun setup() {
         set = InterleavingSequenceTrackableSet()
         cursor = set.cursor

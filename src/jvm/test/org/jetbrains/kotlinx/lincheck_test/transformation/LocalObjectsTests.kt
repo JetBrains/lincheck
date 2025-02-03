@@ -15,9 +15,8 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelChecki
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
-import org.junit.Assume.assumeFalse
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.Assumptions.assumeFalse
+import org.junit.jupiter.api.*
 import sun.misc.Unsafe
 import java.util.concurrent.atomic.*
 import kotlin.concurrent.Volatile
@@ -39,7 +38,7 @@ import kotlin.reflect.KFunction
 )
 
 class LocalObjectEliminationTest {
-    @Before
+    @BeforeEach
     fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     @Operation
@@ -71,7 +70,8 @@ class LocalObjectEliminationTest {
         return (a.any as A).array.sum()
     }
 
-    @Test(timeout = 100_000)
+    @Test
+    @Timeout(100_000)
     fun test() {
         LinChecker.check(this::class.java)
     }

@@ -13,7 +13,7 @@ package org.jetbrains.kotlinx.lincheck_test;
 import org.jetbrains.kotlinx.lincheck.LinChecker;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 @StressCTest(threads = 3, iterations = 10, invocationsPerIteration = 10, requireStateEquivalenceImplCheck = false)
 public class RunOnceTest {

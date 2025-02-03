@@ -12,7 +12,7 @@ package org.jetbrains.kotlinx.lincheck_test.transformation
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.junit.*
+import org.junit.jupiter.api.*
 import java.util.*
 import java.util.concurrent.*
 

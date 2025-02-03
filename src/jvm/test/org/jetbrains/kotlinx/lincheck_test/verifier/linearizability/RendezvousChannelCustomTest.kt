@@ -11,12 +11,9 @@ package org.jetbrains.kotlinx.lincheck_test.verifier.linearizability
 
 import kotlinx.coroutines.channels.*
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
-import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck_test.verifier.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*
-import org.junit.*
+import org.junit.jupiter.api.*
 
 class RendezvousChannelCustomTest {
     private val ch = Channel<Int>()

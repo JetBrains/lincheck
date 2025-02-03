@@ -14,7 +14,8 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
-import org.junit.*
+import org.junit.jupiter.api.*
+import kotlin.test.assertFailsWith
 
 class Counter {
     @Volatile
@@ -34,11 +35,17 @@ class BasicCounterTest {
     @Operation
     fun get() = c.get()
 
-    //@Test // TODO: Please, uncomment me and comment the line below to run the test and get the output
-    @Test(expected = AssertionError::class)
-    fun stressTest() = StressOptions().check(this::class) // the magic button
+    @Test
+    fun stressTest() {
+        @Suppress("UNUSED_VARIABLE")
+        val error = assertFailsWith<AssertionError> { StressOptions().check(this::class) /* the magic button */ }
+        //throw error // TODO: Please, uncomment me to run the test and get the output
+    }
 
-    //@Test // TODO: Please, uncomment me and comment the line below to run the test and get the output
-    @Test(expected = AssertionError::class)
-    fun modelCheckingTest() = ModelCheckingOptions().check(this::class)
+    @Test
+    fun modelCheckingTest() {
+        @Suppress("UNUSED_VARIABLE")
+        val error = assertFailsWith<AssertionError> { ModelCheckingOptions().check(this::class) }
+        //throw error // TODO: Please, uncomment me to run the test and get the output
+    }
 }

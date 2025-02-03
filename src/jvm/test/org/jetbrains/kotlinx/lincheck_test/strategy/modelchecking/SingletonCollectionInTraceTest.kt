@@ -13,7 +13,7 @@ package org.jetbrains.kotlinx.lincheck_test.strategy.modelchecking
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.junit.*
+import org.junit.jupiter.api.Test
 
 @Suppress("UNUSED_PARAMETER")
 class SingletonCollectionInTraceTest {

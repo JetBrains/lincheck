@@ -13,7 +13,7 @@ package org.jetbrains.kotlinx.lincheck_test.transformation
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTest
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 // tests wait/notify support in model checking strategy
 @ModelCheckingCTest(iterations = 30)

@@ -13,10 +13,11 @@ package org.jetbrains.kotlinx.lincheck_test.verifier.linearizability
 import kotlinx.atomicfu.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
-import org.junit.*
+import org.junit.jupiter.api.*
+import kotlin.test.assertFailsWith
 
 class LockFreeSetTest {
-    @Test(expected = AssertionError::class)
+    @Test
     fun test() {
         val scenario = scenario {
             parallel {
@@ -36,11 +37,13 @@ class LockFreeSetTest {
             }
         }
 
-        StressOptions()
-            .addCustomScenario(scenario)
-            .invocationsPerIteration(10_000_000)
-            .iterations(0)
-            .check(LockFreeSet::class)
+        assertFailsWith<AssertionError> {
+            StressOptions()
+                .addCustomScenario(scenario)
+                .invocationsPerIteration(10_000_000)
+                .iterations(0)
+                .check(LockFreeSet::class)
+        }
     }
 }
 

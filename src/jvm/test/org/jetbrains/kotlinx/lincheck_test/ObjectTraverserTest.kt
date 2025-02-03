@@ -11,11 +11,11 @@
 package org.jetbrains.kotlinx.lincheck_test
 
 import org.jetbrains.kotlinx.lincheck.enumerateObjects
-import org.junit.Assert
-import org.junit.Test
-import java.util.Optional
+import org.junit.jupiter.api.Test
+import java.util.*
 import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.atomic.AtomicReferenceArray
+import kotlin.test.assertTrue
 
 /**
  * Checks invariants and restrictions on [enumerateObjects] method.
@@ -31,7 +31,7 @@ class ObjectTraverserTest {
         }
         val objectEnumeration = enumerateObjects(myObject)
 
-        Assert.assertTrue(objectEnumeration.keys.none { it is Class<*> || it is ClassLoader })
+        assertTrue(objectEnumeration.keys.none { it is Class<*> || it is ClassLoader })
     }
 
     @Test
@@ -45,7 +45,7 @@ class ObjectTraverserTest {
         objectA.B = objectB
         val objectEnumeration = enumerateObjects(objectA)
 
-        Assert.assertTrue(objectEnumeration.keys.size == 2 && objectEnumeration.keys.containsAll(listOf(objectA, objectB)))
+        assertTrue(objectEnumeration.keys.size == 2 && objectEnumeration.keys.containsAll(listOf(objectA, objectB)))
     }
 
     @Test
@@ -58,7 +58,7 @@ class ObjectTraverserTest {
         }
         val objectEnumeration = enumerateObjects(myObject)
 
-        Assert.assertTrue(
+        assertTrue(
             objectEnumeration.size == 8 &&
             objectEnumeration.keys.containsAll(
                 listOf(myObject, myObject.array, *myObject.array, o1.get(), o2.get(), o3.get())
@@ -73,7 +73,7 @@ class ObjectTraverserTest {
         }
         val objectEnumeration = enumerateObjects(myObject)
 
-        Assert.assertTrue(
+        assertTrue(
             objectEnumeration.size == 5 &&
             objectEnumeration.keys.containsAll(
                 listOf(myObject, myObject.array, myObject.array[0], myObject.array[1], myObject.array[2])
@@ -93,7 +93,7 @@ class ObjectTraverserTest {
         }
         val objectEnumeration = enumerateObjects(myObject)
 
-        Assert.assertTrue(
+        assertTrue(
             objectEnumeration.size == 5 &&
             objectEnumeration.keys.containsAll(
                 listOf(
@@ -116,7 +116,7 @@ class ObjectTraverserTest {
         myObject.atomicFURef.value = AtomicReference<Any>(2)
 
         val objectEnumeration = enumerateObjects(myObject)
-        Assert.assertTrue(
+        assertTrue(
             objectEnumeration.size == 3 &&
             objectEnumeration.keys.containsAll(
                 listOf(myObject, 1, 2)

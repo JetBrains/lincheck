@@ -12,9 +12,11 @@ package org.jetbrains.kotlinx.lincheck_test
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
-import org.junit.*
-import org.junit.Assert.*
+import org.junit.jupiter.api.*
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+import kotlin.test.fail
 
 class MinimizationTest {
     @Volatile
@@ -40,11 +42,13 @@ class MinimizationTest {
             fail("Should fail with LincheckAssertionError")
         } catch (error: LincheckAssertionError) {
             val failedScenario = error.failure.scenario
-            assertTrue("The init part should NOT be minimized", failedScenario.initExecution.isNotEmpty())
-            assertTrue("The post part should NOT be minimized", failedScenario.postExecution.isNotEmpty())
-            assertEquals("The parallel part should NOT be minimized", 4, failedScenario.parallelExecution.size)
+            assertTrue(failedScenario.initExecution.isNotEmpty(), "The init part should NOT be minimized")
+            assertTrue(failedScenario.postExecution.isNotEmpty(), "The post part should NOT be minimized")
+            assertEquals(4, failedScenario.parallelExecution.size,
+                "The parallel part should NOT be minimized")
             for (i in failedScenario.parallelExecution.indices) {
-                assertEquals("The parallel part should NOT be minimized", 4, failedScenario.parallelExecution[i].size)
+                assertEquals(4, failedScenario.parallelExecution[i].size,
+                    "The parallel part should NOT be minimized")
             }
         }
     }
@@ -65,13 +69,13 @@ class MinimizationTest {
             fail("Should fail with LincheckAssertionError")
         } catch (error: LincheckAssertionError) {
             val failedScenario = error.failure.scenario
-            assertTrue("The init part should be minimized", failedScenario.initExecution.isEmpty())
-            assertTrue("The post part should be minimized", failedScenario.postExecution.isEmpty())
-            assertEquals("The error should be reproduced with only two threads",
-                2, failedScenario.parallelExecution.size)
+            assertTrue(failedScenario.initExecution.isEmpty(), "The init part should be minimized")
+            assertTrue(failedScenario.postExecution.isEmpty(), "The post part should be minimized")
+            assertEquals(2, failedScenario.parallelExecution.size,
+                "The error should be reproduced with only two threads")
             for (i in failedScenario.parallelExecution.indices) {
-                assertEquals("The error should be reproduced with one operation per thread (Thread #${i+1})",
-                    1, failedScenario.parallelExecution[i].size)
+                assertEquals(1, failedScenario.parallelExecution[i].size,
+                    "The error should be reproduced with one operation per thread (Thread #${i+1})")
             }
         }
     }
@@ -98,16 +102,16 @@ class MinimizationWithExceptionTest {
             fail("Should fail with LincheckAssertionError")
         } catch (error: LincheckAssertionError) {
             val failedScenario = error.failure.scenario
-            assertTrue("The init part should be minimized", failedScenario.initExecution.isEmpty())
-            assertTrue("The post part should be minimized", failedScenario.postExecution.isEmpty())
-            assertEquals("The error should be reproduced with only two threads",
-                2, failedScenario.parallelExecution.size)
+            assertTrue(failedScenario.initExecution.isEmpty(), "The init part should be minimized")
+            assertTrue(failedScenario.postExecution.isEmpty(), "The post part should be minimized")
+            assertEquals(2, failedScenario.parallelExecution.size,
+                "The error should be reproduced with only two threads")
             for (i in failedScenario.parallelExecution.indices) {
-                assertEquals("The error should be reproduced with one operation per thread (Thread #${i+1})",
-                    1, failedScenario.parallelExecution[i].size)
+                assertEquals(1, failedScenario.parallelExecution[i].size,
+                    "The error should be reproduced with one operation per thread (Thread #${i+1})")
                 val actor = failedScenario.parallelExecution[i][0]
-                assertEquals("The error should be reproduced using only `inc()` operations",
-                    "inc", actor.method.name)
+                assertEquals("inc", actor.method.name,
+                    "The error should be reproduced using only `inc()` operations",)
             }
         }
     }
@@ -130,15 +134,15 @@ class MinimizationWithExceptionTest {
             fail("Should fail with LincheckAssertionError")
         } catch (error: LincheckAssertionError) {
             val failedScenario = error.failure.scenario
-            assertTrue("The init part should be minimized", failedScenario.initExecution.isEmpty())
-            assertTrue("The post part should be minimized", failedScenario.postExecution.isEmpty())
-            assertEquals("The error should be reproduced with only one thread",
-                1, failedScenario.parallelExecution.size)
-            assertEquals("The error should be reproduced with only one operation",
-                1, failedScenario.parallelExecution[0].size)
+            assertTrue(failedScenario.initExecution.isEmpty(), "The init part should be minimized")
+            assertTrue(failedScenario.postExecution.isEmpty(), "The post part should be minimized")
+            assertEquals(1, failedScenario.parallelExecution.size,
+                "The error should be reproduced with only one thread")
+            assertEquals(1, failedScenario.parallelExecution[0].size,
+                "The error should be reproduced with only one operation",)
             val actor = failedScenario.parallelExecution[0][0]
-            assertEquals("The error should be reproduced using only `exception()` operation",
-                "exception", actor.method.name)
+            assertEquals("exception", actor.method.name,
+                "The error should be reproduced using only `exception()` operation",)
         }
     }
 

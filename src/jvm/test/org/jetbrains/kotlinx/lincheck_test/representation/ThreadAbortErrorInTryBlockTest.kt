@@ -16,8 +16,8 @@ import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.junit.*
-import org.junit.Assert.*
+import org.junit.jupiter.api.*
+import kotlin.test.assertTrue
 
 class ThreadAbortErrorInTryBlockTest {
     private val threadsIn = atomic(0)
@@ -49,7 +49,7 @@ class ThreadAbortErrorInTryBlockTest {
         check(threadAbortedErrorName !in log) {
             "$threadAbortedErrorName was logged"
         }
-        assertTrue("Lincheck internal events in output must not be present",
-                   "org.jetbrains.kotlinx.lincheck." !in log)
+        assertTrue("org.jetbrains.kotlinx.lincheck." !in log,
+            "Lincheck internal events in output must not be present")
     }
 }

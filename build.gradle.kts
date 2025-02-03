@@ -77,7 +77,11 @@ kotlin {
             val jctoolsVersion: String by project
             val mockkVersion: String by project
             dependencies {
-                implementation("junit:junit:$junitVersion")
+                implementation(kotlin("test"))
+                implementation(project.dependencies.platform("org.junit:junit-bom:$junitVersion"))
+                implementation("org.junit.jupiter:junit-jupiter")
+                runtimeOnly("org.junit.platform:junit-platform-launcher")
+
                 implementation("org.jctools:jctools-core:$jctoolsVersion")
                 implementation("io.mockk:mockk:${mockkVersion}")
             }
@@ -123,6 +127,7 @@ val bootstrapJar = tasks.register<Copy>("bootstrapJar") {
 }
 
 tasks.withType<Test> {
+    useJUnitPlatform()
     javaLauncher.set(
         javaToolchains.launcherFor {
             val jdkToolchainVersion: String by project

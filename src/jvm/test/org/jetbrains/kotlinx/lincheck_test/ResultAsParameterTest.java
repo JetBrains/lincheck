@@ -15,7 +15,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.annotations.Param;
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 @StressCTest(iterations = 5, actorsBefore = 0, actorsPerThread = 2, actorsAfter = 0)
 public class ResultAsParameterTest {

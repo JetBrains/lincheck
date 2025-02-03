@@ -13,8 +13,9 @@ package org.jetbrains.kotlinx.lincheck_test.guide
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.junit.*
+import org.junit.jupiter.api.*
 import java.util.concurrent.atomic.*
+import kotlin.test.assertFailsWith
 
 class MSQueueBlocking {
     private val DUMMY_NODE = Node(0)
@@ -61,9 +62,14 @@ class ObstructionFreedomViolationTest  {
     @Operation
     fun dequeue(): Int? = q.dequeue()
 
-    //@Test // TODO: Please, uncomment me and comment the line below to run the test and get the output
-    @Test(expected = AssertionError::class)
-    fun runModelCheckingTest() = ModelCheckingOptions()
-        .checkObstructionFreedom(true)
-        .check(this::class)
+    @Test
+    fun runModelCheckingTest() {
+        @Suppress("UNUSED_VARIABLE")
+        val error = assertFailsWith<AssertionError> {
+            ModelCheckingOptions()
+                .checkObstructionFreedom(true)
+                .check(this::class)
+        }
+        //throw error // TODO: Please, uncomment me to run the test and get the output
+    }
 }

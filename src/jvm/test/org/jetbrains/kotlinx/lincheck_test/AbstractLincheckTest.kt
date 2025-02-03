@@ -14,7 +14,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
-import org.junit.*
+import org.junit.jupiter.api.*
 import kotlin.reflect.*
 
 abstract class AbstractLincheckTest(
@@ -37,14 +37,16 @@ abstract class AbstractLincheckTest(
         }
     }
 
-    @Test(timeout = TIMEOUT)
+    @Test
+    @Timeout(TIMEOUT)
     fun testWithStressStrategy(): Unit = StressOptions().run {
         invocationsPerIteration(5_000)
         commonConfiguration()
         runInternalTest()
     }
 
-    @Test(timeout = TIMEOUT)
+    @Test
+    @Timeout(TIMEOUT)
     // NOTE: please do not rename - the name is used to filter tests on CI in the "single-CPU" configuration:
     // https://teamcity.jetbrains.com/buildConfiguration/KotlinTools_KotlinxLincheck_BuildLinuxOnJava17OnlyOneCpu
     // We use this configuration to check the Lincheck's behavior on machines with a single CPU available.

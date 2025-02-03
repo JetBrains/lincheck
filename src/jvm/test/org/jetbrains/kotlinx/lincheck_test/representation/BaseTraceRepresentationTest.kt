@@ -16,7 +16,7 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 /**
  * Failing test that checks that output using [outputFileName].

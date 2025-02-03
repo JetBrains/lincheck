@@ -10,9 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck_test.gpmc
 
+import org.junit.jupiter.api.*
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
-import org.junit.Test
 
 class ThreadStartJoinTest {
 
@@ -24,7 +24,8 @@ class ThreadStartJoinTest {
         return counter.get()
     }
 
-    @Test(timeout = TIMEOUT)
+    @Test
+    @Timeout(TIMEOUT)
     fun testThreadStart() = modelCheckerTest(
         testClass = this::class,
         testOperation = this::threadStart,
@@ -49,7 +50,8 @@ class ThreadStartJoinTest {
         }
     }
 
-    @Test(timeout = TIMEOUT)
+    @Test
+    @Timeout(TIMEOUT)
     fun testThreadJoin() = modelCheckerTest(
         testClass = this::class,
         testOperation = this::threadJoin,
@@ -70,7 +72,8 @@ class ThreadStartJoinTest {
         }
     }
 
-    @Test(timeout = TIMEOUT)
+    @Test
+    @Timeout(TIMEOUT)
     fun testThreadTimedJoin() = modelCheckerTest(
         testClass = this::class,
         testOperation = this::threadTimedJoin,

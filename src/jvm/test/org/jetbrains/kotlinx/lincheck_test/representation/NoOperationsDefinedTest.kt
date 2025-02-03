@@ -13,9 +13,9 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 import org.jetbrains.kotlinx.lincheck.NO_OPERATION_ERROR_MESSAGE
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertThrows
-import org.junit.Test
+import org.junit.jupiter.api.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 /**
  * This class is used to test the exception message when no operations are defined in a tested class.
@@ -24,7 +24,7 @@ class NoOperationsDefinedTest {
 
     @Test
     fun test() {
-        val exception = assertThrows(IllegalStateException::class.java) {
+        val exception = assertFailsWith<IllegalStateException> {
             ModelCheckingOptions().check(this::class)
         }
         assertEquals(NO_OPERATION_ERROR_MESSAGE, exception.message)
