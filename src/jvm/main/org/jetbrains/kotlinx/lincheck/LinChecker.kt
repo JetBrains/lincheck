@@ -110,6 +110,7 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
                     minimizedScenario.run(this, createVerifier())
                 }
             }
+            reporter.logFailedIteration(failure)
             runReplayForPlugin(failure, verifier)
             return failure
         }
