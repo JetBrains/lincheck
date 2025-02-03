@@ -11,9 +11,9 @@
 package org.jetbrains.kotlinx.lincheck.transformation
 
 import org.jetbrains.kotlinx.lincheck.TraceDebuggerInjections
-import org.jetbrains.kotlinx.lincheck.TraceDebuggerInjections.classUnderTimeTravel
-import org.jetbrains.kotlinx.lincheck.TraceDebuggerInjections.methodUnderTimeTravel
 import org.jetbrains.kotlinx.lincheck.canonicalClassName
+import org.jetbrains.kotlinx.lincheck.transformation.TraceDebuggerAgent.classUnderTraceDebugging
+import org.jetbrains.kotlinx.lincheck.transformation.TraceDebuggerAgent.methodUnderTraceDebugging
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.commons.GeneratorAdapter
@@ -46,7 +46,7 @@ class TraceDebuggerClassVisitor(
         fun MethodVisitor.newAdapter() = GeneratorAdapter(this, access, methodName, desc)
 
         var mv = super.visitMethod(access, methodName, desc, signature, exceptions)
-        if (className == classUnderTimeTravel && methodName == methodUnderTimeTravel) {
+        if (className == classUnderTraceDebugging && methodName == methodUnderTraceDebugging) {
             mv = TraceDebuggerRunMethodTransformer(mv.newAdapter())
         }
 
@@ -87,8 +87,8 @@ private class TraceDebuggerRunMethodTransformer(
                 invokeStatic(TraceDebuggerInjections::isFirstRun)
             },
             ifClause = {
-                push(classUnderTimeTravel)
-                push(methodUnderTimeTravel)
+                push(classUnderTraceDebugging)
+                push(methodUnderTraceDebugging)
                 // STACK: testClassName, testMethodName
                 invokeStatic(TraceDebuggerInjections::runWithLincheck)
             },

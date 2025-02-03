@@ -123,8 +123,6 @@ val bootstrapJar = tasks.register<Copy>("bootstrapJar") {
     into(file("$buildDir/processedResources/jvm/main"))
 }
 
-registerTraceDebuggerTasks()
-
 tasks.withType<Test> {
     javaLauncher.set(
         javaToolchains.launcherFor {
@@ -297,3 +295,5 @@ fun XmlProvider.removeAllLicencesExceptOne(licenceName: String) {
         }
     }
 }
+
+registerTraceDebuggerTasks()

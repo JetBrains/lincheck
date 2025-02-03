@@ -10,10 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
-import org.jetbrains.kotlinx.lincheck.TraceDebuggerInjections.classUnderTimeTravel
-import org.jetbrains.kotlinx.lincheck.TraceDebuggerInjections.methodUnderTimeTravel
 import org.jetbrains.kotlinx.lincheck.canonicalClassName
 import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
+import org.jetbrains.kotlinx.lincheck.transformation.TraceDebuggerAgent.classUnderTraceDebugging
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import java.lang.instrument.ClassFileTransformer
@@ -26,6 +25,8 @@ import java.security.ProtectionDomain
  * in order to enable trace debugging plugin functionality.
  */
 internal object TraceDebuggerAgent {
+    val classUnderTraceDebugging: String = System.getProperty("traceDebugger.className", "")
+    val methodUnderTraceDebugging: String = System.getProperty("traceDebugger.methodName", "")
 
     @Suppress("UNUSED_PARAMETER")
     @JvmStatic
@@ -35,8 +36,8 @@ internal object TraceDebuggerAgent {
             "VM parameter `lincheck.traceDebuggerMode` is expected to be true. " +
             "Rerun with -Dlincheck.traceDebuggerMode=true."
         }
-        if (classUnderTimeTravel == null) error("Class name under time travel not found")
-        if (methodUnderTimeTravel == null) error("Method name under time travel not found")
+        check(classUnderTraceDebugging.isNotEmpty()) { "Class name under trace debugging not specified" }
+        check(methodUnderTraceDebugging.isNotEmpty()) { "Method name under trace debugging not specified" }
 
         inst.addTransformer(TraceDebuggerTransformer, true)
     }
@@ -52,7 +53,7 @@ internal object TraceDebuggerTransformer : ClassFileTransformer {
         classBytes: ByteArray
     ): ByteArray? {
         // If the class should not be transformed, return immediately.
-        if (classUnderTimeTravel!! != internalClassName.canonicalClassName) {
+        if (classUnderTraceDebugging != internalClassName.canonicalClassName) {
             return null
         }
         return transformImpl(loader, internalClassName, classBytes)

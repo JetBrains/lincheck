@@ -28,7 +28,7 @@ fun Project.registerTraceDebuggerTasks() {
 
     val runtimeClasspath = configurations.getByName("runtimeClasspath")
 
-    val traceDebuggerJar = tasks.register<Jar>("traceDebuggerJar") {
+    val traceDebuggerFatJar = tasks.register<Jar>("traceDebuggerFatJar") {
         archiveBaseName.set("fat-trace-debugger")
         duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
@@ -55,6 +55,7 @@ fun Project.registerTraceDebuggerTasks() {
         }
     }
 
+    // This jar is useful to add as a dependency to a test project to be able to debug
     val traceDebuggerJarNoDeps = tasks.register<Jar>("traceDebuggerJarNoDeps") {
         archiveBaseName.set("nodeps-trace-debugger")
         duplicatesStrategy = DuplicatesStrategy.EXCLUDE
