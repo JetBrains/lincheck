@@ -505,7 +505,88 @@ public class Injections {
         }
     }
 
+    // Minimize dependencies.
+    // It will never change.
+    private static final class Opcodes {
+        final static int IFEQ = 153; // visitJumpInsn
+        final static int IFNE = 154; // -
+        final static int IFLT = 155; // -
+        final static int IFGE = 156; // -
+        final static int IFGT = 157; // -
+        final static int IFLE = 158; // -
+        final static int IF_ICMPEQ = 159; // -
+        final static int IF_ICMPNE = 160; // -
+        final static int IF_ICMPLT = 161; // -
+        final static int IF_ICMPGE = 162; // -
+        final static int IF_ICMPGT = 163; // -
+        final static int IF_ICMPLE = 164; // -
+        final static int IF_ACMPEQ = 165; // -
+        final static int IF_ACMPNE = 166; // -
+        final static int IFNULL = 198;
+        final static int IFNONNULL = 199;
+    }
+
     public static void beforeBackBranch(int codeLocation, int labelId) {
+        EventTracker t = getEventTrackerOrNull();
+        if (t != null) {
+            t.beforeBackBranch(codeLocation, labelId);
+        }
+    }
+
+    public static void beforeIfBackBranch(int val, int opcode, int codeLocation, int labelId) {
+        boolean valid = false;
+        switch(opcode) {
+            case Opcodes.IFEQ: valid = val == 0; break;
+            case Opcodes.IFNE: valid = val != 0; break;
+            case Opcodes.IFLT: valid = val < 0; break;
+            case Opcodes.IFGE: valid = val >= 0; break;
+            case Opcodes.IFGT: valid = val > 0; break;
+            case Opcodes.IFLE: valid = val <= 0; break;
+        }
+        if (!valid) {
+            return;
+        }
+        EventTracker t = getEventTrackerOrNull();
+        if (t != null) {
+            t.beforeBackBranch(codeLocation, labelId);
+        }
+    }
+
+    public static void beforeIfCmpBackBranch(int val1, int val2, int opcode, int codeLocation, int labelId) {
+        boolean valid = false;
+        switch(opcode) {
+            case Opcodes.IF_ICMPEQ: valid = val1 == val2; break;
+            case Opcodes.IF_ICMPNE: valid = val1 != val2; break;
+            case Opcodes.IF_ICMPLT: valid = val1 < val2; break;
+            case Opcodes.IF_ICMPGE: valid = val1 >= val2; break;
+            case Opcodes.IF_ICMPGT: valid = val1 > val2; break;
+            case Opcodes.IF_ICMPLE: valid = val1 <= val2; break;
+        }
+        if (!valid) {
+            return;
+        }
+        EventTracker t = getEventTrackerOrNull();
+        if (t != null) {
+            t.beforeBackBranch(codeLocation, labelId);
+        }
+    }
+
+    public static void beforeIfRefBackBranch(Object ref1, Object ref2, int opcode, int codeLocation, int labelId) {
+        boolean valid = (opcode == Opcodes.IF_ACMPEQ && ref1 == ref2) || (opcode == Opcodes.IF_ACMPNE && ref1 != ref2);
+        if (!valid) {
+            return;
+        }
+        EventTracker t = getEventTrackerOrNull();
+        if (t != null) {
+            t.beforeBackBranch(codeLocation, labelId);
+        }
+    }
+
+    public static void beforeIfNullBackBranch(Object ref, int opcode, int codeLocation, int labelId) {
+        boolean valid = (opcode == Opcodes.IFNULL && ref == null) || (opcode == Opcodes.IFNONNULL && ref != null);
+        if (!valid) {
+            return;
+        }
         EventTracker t = getEventTrackerOrNull();
         if (t != null) {
             t.beforeBackBranch(codeLocation, labelId);
