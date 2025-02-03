@@ -47,8 +47,12 @@ abstract class ManagedStrategy(
     private val validationFunction: Actor?,
     private val stateRepresentationFunction: Method?,
     private val testCfg: ManagedCTestConfiguration,
-    val replay: Boolean,
 ) : Strategy(scenario), EventTracker {
+
+    // The flag to enable IntelliJ IDEA plugin mode
+    var inIdeaPluginReplayMode: Boolean = false
+        private set
+
     // The number of parallel threads.
     protected val nThreads: Int = scenario.nThreads
 
@@ -1712,6 +1716,10 @@ abstract class ManagedStrategy(
         return constructor(iThread, actorId, callStackTrace[iThread]?.toList() ?: emptyList())
     }
 
+    fun enableReplayModeForIdeaPlugin() {
+        inIdeaPluginReplayMode = true
+    }
+
     override fun beforeEvent(eventId: Int, type: String) {
         ideaPluginBeforeEvent(eventId, type)
     }
@@ -2045,4 +2053,4 @@ private const val OBSTRUCTION_FREEDOM_SUSPEND_VIOLATION_MESSAGE =
 private const val INFINITE_TIMEOUT = 1000L * 60 * 60 * 24 * 365
 
 private fun getTimeOutMs(strategy: ManagedStrategy, defaultTimeOutMs: Long): Long =
-    if (strategy.replay) INFINITE_TIMEOUT else defaultTimeOutMs
+    if (strategy.inIdeaPluginReplayMode) INFINITE_TIMEOUT else defaultTimeOutMs

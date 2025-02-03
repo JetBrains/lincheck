@@ -38,8 +38,7 @@ internal class ModelCheckingStrategy(
     scenario: ExecutionScenario,
     validationFunction: Actor?,
     stateRepresentation: Method?,
-    replay: Boolean,
-) : ManagedStrategy(testClass, scenario, validationFunction, stateRepresentation, testCfg, replay) {
+) : ManagedStrategy(testClass, scenario, validationFunction, stateRepresentation, testCfg) {
     // The maximum number of thread switch choices that strategy should perform
     // (increases when all the interleavings with the current depth are studied).
     private var maxNumberOfSwitches = 0
@@ -83,14 +82,14 @@ internal class ModelCheckingStrategy(
         // that should be invoked only outside the ignored section.
         // However, we cannot add `!inIgnoredSection` check here
         // as the instrumented code might call `enterIgnoredSection` just before this call.
-        return replay && collectTrace &&
+        return inIdeaPluginReplayMode && collectTrace &&
                 suddenInvocationResult == null &&
                 isRegisteredThread() &&
                 !shouldSkipNextBeforeEvent()
     }
 
     override fun onNewSwitch(iThread: Int, mustSwitch: Boolean) {
-        if (replay && collectTrace) {
+        if (inIdeaPluginReplayMode && collectTrace) {
             onThreadSwitchesOrActorFinishes()
         }
         if (mustSwitch) {

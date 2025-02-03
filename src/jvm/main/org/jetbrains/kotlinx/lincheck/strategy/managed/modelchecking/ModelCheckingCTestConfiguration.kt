@@ -48,16 +48,10 @@ class ModelCheckingCTestConfiguration(testClass: Class<*>, iterations: Int, thre
 
     override val instrumentationMode: InstrumentationMode get() = MODEL_CHECKING
 
-    private var isReplayModeForIdeaPluginEnabled = false
-
-    internal fun enableReplayModeForIdeaPlugin() {
-        isReplayModeForIdeaPluginEnabled = true
-    }
-
     override fun createStrategy(
         testClass: Class<*>,
         scenario: ExecutionScenario,
         validationFunction: Actor?,
         stateRepresentationMethod: Method?,
-    ): Strategy = ModelCheckingStrategy(this, testClass, scenario, validationFunction, stateRepresentationMethod, isReplayModeForIdeaPluginEnabled)
+    ): Strategy = ModelCheckingStrategy(this, testClass, scenario, validationFunction, stateRepresentationMethod)
 }

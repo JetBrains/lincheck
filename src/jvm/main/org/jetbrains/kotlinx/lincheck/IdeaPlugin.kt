@@ -131,7 +131,8 @@ internal val eventIdStrictOrderingCheck = System.getProperty("lincheck.debug.wit
  * the trace and the failure to the Plugin and run re-run execution to debug it.
  */
 internal fun ManagedStrategy.runReplayIfPluginEnabled(failure: LincheckFailure) {
-    if (replay && failure.trace != null) {
+    if (failure.trace != null) {
+        enableReplayModeForIdeaPlugin()
         // Extract trace representation in the appropriate view.
         val trace = constructTraceForPlugin(failure, failure.trace)
         // Collect and analyze the exceptions thrown.
