@@ -10,8 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
-import org.jetbrains.kotlinx.lincheck.TraceDebuggerInjections.classUnderTraceDebugging
-import org.jetbrains.kotlinx.lincheck.TraceDebuggerInjections.methodUnderTraceDebugging
+import org.jetbrains.kotlinx.lincheck.TraceDebuggerInjections.classUnderTimeTravel
+import org.jetbrains.kotlinx.lincheck.TraceDebuggerInjections.methodUnderTimeTravel
 import org.jetbrains.kotlinx.lincheck.canonicalClassName
 import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.objectweb.asm.ClassReader
@@ -35,8 +35,8 @@ internal object TraceDebuggerAgent {
             "VM parameter `lincheck.traceDebuggerMode` is expected to be true. " +
             "Rerun with -Dlincheck.traceDebuggerMode=true."
         }
-        if (classUnderTraceDebugging == null) error("Class name under time travel not found")
-        if (methodUnderTraceDebugging == null) error("Method name under time travel not found")
+        if (classUnderTimeTravel == null) error("Class name under time travel not found")
+        if (methodUnderTimeTravel == null) error("Method name under time travel not found")
 
         inst.addTransformer(TraceDebuggerTransformer, true)
     }
@@ -52,7 +52,7 @@ internal object TraceDebuggerTransformer : ClassFileTransformer {
         classBytes: ByteArray
     ): ByteArray? {
         // If the class should not be transformed, return immediately.
-        if (classUnderTraceDebugging!! != internalClassName.canonicalClassName) {
+        if (classUnderTimeTravel!! != internalClassName.canonicalClassName) {
             return null
         }
         return transformImpl(loader, internalClassName, classBytes)
@@ -63,8 +63,8 @@ internal object TraceDebuggerTransformer : ClassFileTransformer {
         internalClassName: String,
         classBytes: ByteArray
     ): ByteArray {
-        val classUnderTimeTravel = classUnderTraceDebugging!!
-        val methodUnderTimeTravel = methodUnderTraceDebugging!!
+        val classUnderTimeTravel = classUnderTimeTravel!!
+        val methodUnderTimeTravel = methodUnderTimeTravel!!
 
         try {
             val bytes: ByteArray
