@@ -20,13 +20,12 @@ import kotlin.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.util.ensure
-import org.jetbrains.kotlinx.lincheck_test.util.isJdk8
 import org.junit.Test
 
 /**
  * Check the proper output in case when one actor cause incorrect behavior only after coroutine resumption.
  */
-class SingleSuspensionTraceReportingTest {
+class SingleSuspensionPointTraceRepresentationTest {
 
     private var counter = AtomicInteger(0)
     private var continuation1: Continuation<Unit>? = null
@@ -70,7 +69,7 @@ class SingleSuspensionTraceReportingTest {
             }
         }
         .checkImpl(this::class.java)
-        .checkLincheckOutput("single_suspension_trace.txt")
+        .checkLincheckOutput("single_suspension_point.txt")
 
 }
 
@@ -79,7 +78,7 @@ class SingleSuspensionTraceReportingTest {
  * is detected and correctly reported.
  */
 @Suppress("RemoveExplicitTypeArguments")
-class MultipleSuspensionTest {
+class MultipleSuspensionPointsTraceRepresentationTest {
 
     private var counter = AtomicInteger(0)
     private var continuation1: Continuation<Unit>? = null
@@ -137,7 +136,7 @@ class MultipleSuspensionTest {
                 .treatAsAtomic()
         )
         .checkImpl(this::class.java)
-        .checkLincheckOutput("two_suspension_points_bug.txt")
+        .checkLincheckOutput("multiple_suspension_points.txt")
 
 }
 
@@ -145,7 +144,7 @@ class MultipleSuspensionTest {
  * Check the proper output in case when one actor cause incorrect behavior only after coroutine resumption.
  */
 @Suppress("RemoveExplicitTypeArguments")
-class MultipleSuspensionChannelsTest {
+class MultipleSuspensionPointsChannelsTraceRepresentationTest {
 
     private var counter: Int = 0
     private val channel1 = Channel<Int>()
