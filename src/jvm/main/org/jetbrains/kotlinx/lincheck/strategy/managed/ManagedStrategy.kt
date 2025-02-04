@@ -1631,10 +1631,8 @@ abstract class ManagedStrategy(
         )
         // handle non-atomic methods
         if (atomicMethodDescriptor == null) {
-            val ownerName = if (owner != null) findOwnerName(owner) else simpleClassName(className)
-            if (ownerName != null) {
-                tracePoint.initializeOwnerName(ownerName)
-            }
+            val ownerName = simpleClassName(className)
+            tracePoint.initializeOwnerName(ownerName)
             tracePoint.initializeParameters(params.toList())
             return tracePoint
         }
@@ -1779,15 +1777,7 @@ abstract class ManagedStrategy(
     private fun findOwnerName(owner: Any): String? {
         // If the current owner is this - no owner needed.
         if (isOwnerCurrentContext(owner)) return null
-        val fieldWithOwner = findFinalFieldWithOwner(runner.testInstance, owner) ?: return adornedStringRepresentation(owner)
-        // If such a field is found - construct representation with its owner and name.
-        return if (fieldWithOwner is OwnerWithName.InstanceOwnerWithName) {
-            val fieldOwner = fieldWithOwner.owner
-            val fieldName = fieldWithOwner.fieldName
-            if (!isOwnerCurrentContext(fieldOwner)) {
-                "${adornedStringRepresentation(fieldOwner)}.$fieldName"
-            } else fieldName
-        } else null
+        return adornedStringRepresentation(owner)
     }
 
     /**
