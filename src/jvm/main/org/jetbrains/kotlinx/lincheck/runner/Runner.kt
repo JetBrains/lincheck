@@ -102,8 +102,8 @@ abstract class Runner protected constructor(
      * Is invoked after each actor execution from the specified thread, even if a legal exception was thrown.
      * The invocations are inserted into the generated code.
      */
-    fun onActorFinish() {
-        strategy.onActorFinish()
+    fun onActorFinish(iThread: Int) {
+        strategy.onActorFinish(iThread)
     }
 
     fun beforePart(part: ExecutionPart) {

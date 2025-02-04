@@ -20,6 +20,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import sun.nio.ch.lincheck.*
+import sun.nio.ch.lincheck.Type
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicFieldUpdaterNames.getAtomicFieldUpdaterDescriptor
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType.*
@@ -79,6 +80,9 @@ abstract class ManagedStrategy(
     protected abstract val monitorTracker: MonitorTracker
     // Tracker of the thread parking.
     protected abstract val parkingTracker: ParkingTracker
+
+    // A flag indicating whether final fields should be tracked.
+    protected open val trackFinalFields: Boolean = false
 
     // Snapshot of the memory, reachable from static fields
     protected val staticMemorySnapshot = SnapshotTracker()
@@ -633,7 +637,7 @@ abstract class ManagedStrategy(
         enterTestingCode()
     }
 
-    override fun onActorFinish() {
+    override fun onActorFinish(iThread: Int) {
         // This is a hack to guarantee correct stepping in the plugin.
         // When stepping out to the TestThreadExecution class, stepping continues unproductively.
         // With this method, we force the debugger to stop at the beginning of the next actor.
@@ -925,7 +929,8 @@ abstract class ManagedStrategy(
     /**
      * Returns `true` if a switch point is created.
      */
-    override fun beforeReadField(obj: Any?, className: String, fieldName: String, codeLocation: Int,
+    override fun beforeReadField(obj: Any?, className: String, fieldName: String, fieldType: Type,
+                                 codeLocation: Int,
                                  isStatic: Boolean, isFinal: Boolean) = runInIgnoredSection {
          updateSnapshotOnFieldAccess(obj, className.canonicalClassName, fieldName)
         // We need to ensure all the classes related to the reading object are instrumented.
@@ -934,7 +939,7 @@ abstract class ManagedStrategy(
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(className.canonicalClassName)
         }
         // Optimization: do not track final field reads
-        if (isFinal) {
+        if (isFinal && !trackFinalFields) {
             return@runInIgnoredSection false
         }
         // Do not track accesses to untracked objects
@@ -963,7 +968,8 @@ abstract class ManagedStrategy(
     }
 
     /** Returns <code>true</code> if a switch point is created. */
-    override fun beforeReadArrayElement(array: Any, index: Int, codeLocation: Int): Boolean = runInIgnoredSection {
+    override fun beforeReadArrayElement(array: Any, index: Int, arrayElementType: Type,
+                                        codeLocation: Int): Boolean = runInIgnoredSection {
         updateSnapshotOnArrayElementAccess(array, index)
         if (!shouldTrackObjectAccess(array)) {
             return@runInIgnoredSection false
@@ -998,7 +1004,14 @@ abstract class ManagedStrategy(
         loopDetector.afterRead(value)
     }
 
-    override fun beforeWriteField(obj: Any?, className: String, fieldName: String, value: Any?, codeLocation: Int,
+    override fun interceptReadResult(): Any? = runInIgnoredSection {
+        // will be implemented in the new model checking strategy:
+        // https://github.com/JetBrains/lincheck/issues/257
+        throw UnsupportedOperationException()
+    }
+
+    override fun beforeWriteField(obj: Any?, className: String, fieldName: String, fieldType: Type, value: Any?,
+                                  codeLocation: Int,
                                   isStatic: Boolean, isFinal: Boolean): Boolean = runInIgnoredSection {
         updateSnapshotOnFieldAccess(obj, className.canonicalClassName, fieldName)
         objectTracker?.registerObjectLink(fromObject = obj ?: StaticObject, toObject = value)
@@ -1006,7 +1019,7 @@ abstract class ManagedStrategy(
             return@runInIgnoredSection false
         }
         // Optimization: do not track final field writes
-        if (isFinal) {
+        if (isFinal && !trackFinalFields) {
             return@runInIgnoredSection false
         }
         val iThread = threadScheduler.getCurrentThreadId()
@@ -1029,7 +1042,8 @@ abstract class ManagedStrategy(
         return@runInIgnoredSection true
     }
 
-    override fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int): Boolean = runInIgnoredSection {
+    override fun beforeWriteArrayElement(array: Any, index: Int, fieldType: Type, value: Any?,
+                                         codeLocation: Int): Boolean = runInIgnoredSection {
         updateSnapshotOnArrayElementAccess(array, index)
         objectTracker?.registerObjectLink(fromObject = array, toObject = value)
         if (!shouldTrackObjectAccess(array)) {
@@ -1213,7 +1227,7 @@ abstract class ManagedStrategy(
         codeLocation: Int,
         methodId: Int,
         params: Array<Any?>
-    ) {
+    ): Boolean {
         val guarantee = runInIgnoredSection {
             // process method effect on the static memory snapshot
             processMethodEffectOnStaticSnapshot(owner, params)
@@ -1268,6 +1282,7 @@ abstract class ManagedStrategy(
             // so `enterIgnoredSection` would have no effect
             enterIgnoredSection()
         }
+        return false // shouldInterceptMethodResult
     }
 
     override fun onMethodCallReturn(result: Any?) {
@@ -1315,6 +1330,12 @@ abstract class ManagedStrategy(
         // an "atomic" or "ignore" guarantee, we need to leave
         // this "ignore" section.
         leaveIgnoredSection()
+    }
+
+    override fun interceptMethodCallResult(): Any? = runInIgnoredSection {
+        // will be implemented in the new model checking strategy:
+        // https://github.com/JetBrains/lincheck/issues/257
+        throw UnsupportedOperationException()
     }
 
     private fun isSuspendFunction(className: String, methodName: String, params: Array<Any?>): Boolean =
