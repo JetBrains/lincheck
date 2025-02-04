@@ -10,7 +10,6 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy.modelchecking.snapshot
 
-import org.jetbrains.kotlinx.lincheck.LoggingLevel
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
@@ -20,12 +19,6 @@ import kotlin.random.Random
 
 private val arrayValue = intArrayOf(2, 1, 4, 3, 6, 5, 8, 7, 10, 9)
 
-// TODO:
-//  1. Instrumented method invocation inserted before `System.arraycopy` calls, get strapped out during execution (possibly jit causes that).
-//  2. Parallel operations are not supported because of java.lang.ClassCastException:
-//     class java.util.concurrent.ForkJoinWorkerThread cannot be casted to class sun.nio.ch.lincheck.TestThread
-//     (java.util.concurrent.ForkJoinWorkerThread is in module java.base of loader 'bootstrap';
-//     sun.nio.ch.lincheck.TestThread is in unnamed module of loader 'bootstrap').
 abstract class BaseArraysAPISnapshotTest : AbstractSnapshotTest() {
     private class Wrapper(var x: Int)
     companion object {
@@ -77,6 +70,14 @@ abstract class BaseArraysAPISnapshotTest : AbstractSnapshotTest() {
         Arrays.sort(refArray) { a, b -> a.x - b.x }
     }
 
+    protected fun arraysParallelSortImpl() {
+        Arrays.parallelSort(intArray)
+    }
+
+    protected fun arraysParallelPrefixImpl() {
+        Arrays.parallelPrefix(intArray) { a, b -> a + b }
+    }
+
     protected fun reverseImpl() {
         intArray.reverse()
         refArray.reverse()
@@ -97,6 +98,11 @@ abstract class BaseArraysAPISnapshotTest : AbstractSnapshotTest() {
         Arrays.setAll(refArray) { Wrapper(Random.nextInt()) }
     }
 
+    protected fun arraysParallelSetAllImpl() {
+        Arrays.parallelSetAll(intArray) { Random.nextInt() }
+        Arrays.parallelSetAll(refArray) { Wrapper(Random.nextInt()) }
+    }
+
     protected fun copyOfImpl() {
         val otherRefArray = refArray.copyOf()
         otherRefArray[Random.nextInt(0, otherRefArray.size)] = Wrapper(Random.nextInt())
@@ -104,7 +110,7 @@ abstract class BaseArraysAPISnapshotTest : AbstractSnapshotTest() {
     }
 
     protected fun arraysCopyOfImpl() {
-        val otherRefArray = Arrays.copyOf(refArray, refArray.size + 1 /* extra size */)
+        val otherRefArray = Arrays.copyOf(refArray, refArray.size)
         otherRefArray[Random.nextInt(0, otherRefArray.size)] = Wrapper(Random.nextInt())
         otherRefArray[Random.nextInt(0, otherRefArray.size)].x = Random.nextInt()
     }
@@ -122,6 +128,48 @@ abstract class BaseArraysAPISnapshotTest : AbstractSnapshotTest() {
     }
 }
 
+class ArraysAPISnapshotTest : BaseArraysAPISnapshotTest() {
+
+    @Operation
+    fun sort() = this::sortImpl
+
+    @Operation
+    fun arraysSort() = this::arraysSortImpl
+
+    @Operation
+    fun arraysParallelSort() = this::arraysParallelSortImpl
+
+    @Operation
+    fun arraysParallelPrefix() = this::arraysParallelPrefixImpl
+
+    @Operation
+    fun reverse() = this::reverseImpl
+
+    @Operation
+    fun fill() = this::fillImpl
+
+    @Operation
+    fun arraysFill() = this::arraysFillImpl
+
+    @Operation
+    fun arraysSetAll() = this::arraysSetAllImpl
+
+    @Operation
+    fun arraysParallelSetAll() = this::arraysParallelSetAllImpl
+
+    @Operation
+    fun copyOf() = this::copyOfImpl
+
+    @Operation
+    fun arraysCopyOf() = this::arraysCopyOfImpl
+
+    @Operation
+    fun copyOfRange() = this::copyOfRangeImpl
+
+    @Operation
+    fun arraysCopyOfRange() = this::arraysCopyOfRangeImpl
+}
+
 /**
  * Isolated tests are aimed to trigger jit to optimize the bytecode in the `Arrays` methods.
  * Previously we encountered a bug (https://github.com/JetBrains/lincheck/issues/470), when hooks,
@@ -134,9 +182,8 @@ abstract class BaseArraysAPISnapshotTest : AbstractSnapshotTest() {
 abstract class BaseIsolatedArraysAPISnapshotTest : BaseArraysAPISnapshotTest() {
     override fun <O : ManagedOptions<O, *>> O.customize() {
         setup()
-        iterations(600)
+        iterations(1000)
         actorsPerThread(1)
-        logLevel(LoggingLevel.INFO)
     }
 }
 
@@ -148,6 +195,16 @@ class IsolatedSortTest : BaseIsolatedArraysAPISnapshotTest() {
 class IsolatedArraysSortTest : BaseIsolatedArraysAPISnapshotTest() {
     @Operation
     fun arraysSort() = this::arraysSortImpl
+}
+
+class IsolatedArraysParallelSortTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun arraysParallelSort() = this::arraysParallelSortImpl
+}
+
+class IsolatedArraysParallelPrefixTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun arraysParallelPrefix() = this::arraysParallelPrefixImpl
 }
 
 class IsolatedReverseTest : BaseIsolatedArraysAPISnapshotTest() {
@@ -168,6 +225,11 @@ class IsolatedArraysFillTest : BaseIsolatedArraysAPISnapshotTest() {
 class IsolatedArraysSetAllTest : BaseIsolatedArraysAPISnapshotTest() {
     @Operation
     fun arraysSetAll() = this::arraysSetAllImpl
+}
+
+class IsolatedArraysParallelSetAllTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun arraysParallelSetAll() = this::arraysParallelSetAllImpl
 }
 
 class IsolatedCopyOfTest : BaseIsolatedArraysAPISnapshotTest() {

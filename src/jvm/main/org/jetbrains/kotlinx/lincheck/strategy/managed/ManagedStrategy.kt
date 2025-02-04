@@ -1403,6 +1403,7 @@ abstract class ManagedStrategy(
                     staticMemorySnapshot.trackArrayCell(srcArray, srcPosStart + i)
                 }
             }
+            // Arrays API (we handle it separately because of https://github.com/JetBrains/lincheck/issues/470)
             className == "java/util/Arrays" -> {
                 val srcArray = params[0]!!
                 var from: Int = 0
