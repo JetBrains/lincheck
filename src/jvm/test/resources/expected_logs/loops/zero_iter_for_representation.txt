@@ -13,11 +13,11 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| --------------------------------------------------------------------------------------------------------------- |
-|                                                    Thread 1                                                     |
-| --------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                     |
-|   escape.WRITE("START") at ZeroIterForLoopRepresentationTest.operation(ZeroIterForLoopRepresentationTest.kt:18) |
-|   escape.WRITE("END") at ZeroIterForLoopRepresentationTest.operation(ZeroIterForLoopRepresentationTest.kt:25)   |
-|   result: void                                                                                                  |
-| --------------------------------------------------------------------------------------------------------------- |
+| ---------------------------------------------------------------------------------------------------------- |
+|                                                  Thread 1                                                  |
+| ---------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                |
+|   escape = "START" at ZeroIterForLoopRepresentationTest.operation(ZeroIterForLoopRepresentationTest.kt:18) |
+|   escape = "END" at ZeroIterForLoopRepresentationTest.operation(ZeroIterForLoopRepresentationTest.kt:25)   |
+|   result: void                                                                                             |
+| ---------------------------------------------------------------------------------------------------------- |

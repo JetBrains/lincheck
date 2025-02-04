@@ -17,10 +17,10 @@ Detailed trace:
 |                                                    Thread 1                                                    |
 | -------------------------------------------------------------------------------------------------------------- |
 | operation()                                                                                                    |
-|   escape.WRITE("START") at OneIterForLoopRepresentationTest.operation(OneIterForLoopRepresentationTest.kt:18)  |
+|   escape = "START" at OneIterForLoopRepresentationTest.operation(OneIterForLoopRepresentationTest.kt:18)       |
 |   Loop with 1 iterations at OneIterForLoopRepresentationTest.operation(OneIterForLoopRepresentationTest.kt:19) |
 |     Iteration #0                                                                                               |
-|       escape.WRITE("1") at OneIterForLoopRepresentationTest.operation(OneIterForLoopRepresentationTest.kt:21)  |
-|   escape.WRITE("END") at OneIterForLoopRepresentationTest.operation(OneIterForLoopRepresentationTest.kt:23)    |
+|       escape = "1" at OneIterForLoopRepresentationTest.operation(OneIterForLoopRepresentationTest.kt:21)       |
+|   escape = "END" at OneIterForLoopRepresentationTest.operation(OneIterForLoopRepresentationTest.kt:23)         |
 |   result: void                                                                                                 |
 | -------------------------------------------------------------------------------------------------------------- |

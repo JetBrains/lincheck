@@ -17,11 +17,11 @@ Detailed trace:
 |                                                  Thread 1                                                  |
 | ---------------------------------------------------------------------------------------------------------- |
 | operation()                                                                                                |
-|   escape.WRITE("START") at EmptyForLoopRepresentationTest.operation(EmptyForLoopRepresentationTest.kt:18)  |
+|   escape = "START" at EmptyForLoopRepresentationTest.operation(EmptyForLoopRepresentationTest.kt:18)       |
 |   Loop with 2 iterations at EmptyForLoopRepresentationTest.operation(EmptyForLoopRepresentationTest.kt:20) |
 |     Iteration #0 (empty)                                                                                   |
 |     Iteration #1 (empty)                                                                                   |
-|   escape.WRITE("12") at EmptyForLoopRepresentationTest.operation(EmptyForLoopRepresentationTest.kt:23)     |
-|   escape.WRITE("END") at EmptyForLoopRepresentationTest.operation(EmptyForLoopRepresentationTest.kt:24)    |
+|   escape = "12" at EmptyForLoopRepresentationTest.operation(EmptyForLoopRepresentationTest.kt:23)          |
+|   escape = "END" at EmptyForLoopRepresentationTest.operation(EmptyForLoopRepresentationTest.kt:24)         |
 |   result: void                                                                                             |
 | ---------------------------------------------------------------------------------------------------------- |

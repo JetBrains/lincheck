@@ -17,12 +17,11 @@ Detailed trace:
 |                                                       Thread 1                                                       |
 | -------------------------------------------------------------------------------------------------------------------- |
 | operation()                                                                                                          |
-|   escape.WRITE("START") at SimpleDoWhileLoopRepresentationTest.operation(SimpleDoWhileLoopRepresentationTest.kt:18)  |
-|   Loop with 2 iterations at SimpleDoWhileLoopRepresentationTest.operation(SimpleDoWhileLoopRepresentationTest.kt:19) |
+|   escape = "START" at SimpleDoWhileLoopRepresentationTest.operation(SimpleDoWhileLoopRepresentationTest.kt:18)       |
+|   Loop with 1 iterations at SimpleDoWhileLoopRepresentationTest.operation(SimpleDoWhileLoopRepresentationTest.kt:19) |
 |     Iteration #0                                                                                                     |
-|       escape.WRITE("2") at SimpleDoWhileLoopRepresentationTest.operation(SimpleDoWhileLoopRepresentationTest.kt:22)  |
-|     Iteration #1                                                                                                     |
-|       escape.WRITE("3") at SimpleDoWhileLoopRepresentationTest.operation(SimpleDoWhileLoopRepresentationTest.kt:22)  |
-|   escape.WRITE("END") at SimpleDoWhileLoopRepresentationTest.operation(SimpleDoWhileLoopRepresentationTest.kt:25)    |
+|       escape = "2" at SimpleDoWhileLoopRepresentationTest.operation(SimpleDoWhileLoopRepresentationTest.kt:22)       |
+|   escape = "3" at SimpleDoWhileLoopRepresentationTest.operation(SimpleDoWhileLoopRepresentationTest.kt:22)           |
+|   escape = "END" at SimpleDoWhileLoopRepresentationTest.operation(SimpleDoWhileLoopRepresentationTest.kt:25)         |
 |   result: void                                                                                                       |
 | -------------------------------------------------------------------------------------------------------------------- |

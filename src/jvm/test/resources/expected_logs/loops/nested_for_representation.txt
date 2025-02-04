@@ -13,28 +13,28 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| ----------------------------------------------------------------------------------------------------------------- |
-|                                                     Thread 1                                                      |
-| ----------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                       |
-|   escape.WRITE("START") at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:18)       |
-|   Loop with 2 iterations at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:19)      |
-|     Iteration #0                                                                                                  |
-|       Loop with 3 iterations at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:21)  |
-|         Iteration #0                                                                                              |
-|           escape.WRITE("1.1") at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:22) |
-|         Iteration #1                                                                                              |
-|           escape.WRITE("1.2") at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:22) |
-|         Iteration #2                                                                                              |
-|           escape.WRITE("1.3") at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:22) |
-|     Iteration #1                                                                                                  |
-|       Loop with 3 iterations at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:21)  |
-|         Iteration #0                                                                                              |
-|           escape.WRITE("2.1") at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:22) |
-|         Iteration #1                                                                                              |
-|           escape.WRITE("2.2") at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:22) |
-|         Iteration #2                                                                                              |
-|           escape.WRITE("2.3") at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:22) |
-|   escape.WRITE("END") at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:25)         |
-|   result: void                                                                                                    |
-| ----------------------------------------------------------------------------------------------------------------- |
+| ---------------------------------------------------------------------------------------------------------------- |
+|                                                     Thread 1                                                     |
+| ---------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                      |
+|   escape = "START" at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:18)           |
+|   Loop with 2 iterations at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:19)     |
+|     Iteration #0                                                                                                 |
+|       Loop with 3 iterations at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:21) |
+|         Iteration #0                                                                                             |
+|           escape = "1.1" at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:22)     |
+|         Iteration #1                                                                                             |
+|           escape = "1.2" at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:22)     |
+|         Iteration #2                                                                                             |
+|           escape = "1.3" at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:22)     |
+|     Iteration #1                                                                                                 |
+|       Loop with 3 iterations at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:21) |
+|         Iteration #0                                                                                             |
+|           escape = "2.1" at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:22)     |
+|         Iteration #1                                                                                             |
+|           escape = "2.2" at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:22)     |
+|         Iteration #2                                                                                             |
+|           escape = "2.3" at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:22)     |
+|   escape = "END" at NestedForLoopRepresentationTest.operation(NestedForLoopRepresentationTest.kt:25)             |
+|   result: void                                                                                                   |
+| ---------------------------------------------------------------------------------------------------------------- |
