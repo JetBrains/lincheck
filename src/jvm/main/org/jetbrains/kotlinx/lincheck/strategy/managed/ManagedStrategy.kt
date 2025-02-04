@@ -851,11 +851,11 @@ abstract class ManagedStrategy(
         callStackTrace[iThread]!!.clear()
         suspendedFunctionsStack[iThread]!!.clear()
         loopDetector.onActorStart(iThread)
-        
-        val actor = if (actorId < scenario.threads[iThread].size) scenario.threads[iThread][actorId] 
+
+        val actor = if (actorId < scenario.threads[iThread].size) scenario.threads[iThread][actorId]
         else validationFunction
         check(actor != null) { "Could not find current actor" }
-        
+
         val methodDescriptor = getAsmMethod(actor.method).descriptor
         addBeforeMethodCallTracePoint(
             owner = runner.testInstance,
@@ -1347,7 +1347,9 @@ abstract class ManagedStrategy(
      */
     private fun processMethodEffectOnStaticSnapshot(
         owner: Any?,
-        params: Array<Any?>
+        params: Array<Any?>,
+        className: String,
+        methodName: String
     ) {
         when {
             // Unsafe API
@@ -1390,7 +1392,50 @@ abstract class ManagedStrategy(
 
                 staticMemorySnapshot.trackField(obj, afuDesc.targetType, afuDesc.fieldName)
             }
-            // TODO: System.arraycopy
+            // System.arraycopy
+            className == "java/lang/System" && methodName == "arraycopy" -> {
+                check(params[2] != null && params[2]!!.javaClass.isArray)
+                val srcArray = params[0]!!
+                val srcPosStart = params[1] as Int
+                val length = params[4] as Int
+
+                for (i in 0..length - 1) {
+                    staticMemorySnapshot.trackArrayCell(srcArray, srcPosStart + i)
+                }
+            }
+            className == "java/util/Arrays" -> {
+                val srcArray = params[0]!!
+                var from: Int = 0
+                var to: Int = 0
+                when (methodName) {
+                    in listOf(
+                        "sort", "parallelSort", "legacyMergeSort",
+                        "fill", "setAll", "parallelSetAll",
+                        "parallelPrefix", "stream"
+                    ) -> {
+                        if (params.size >= 3) {
+                            from = params[1] as Int // fromIndex
+                            to = params[2] as Int // toIndex
+                        }
+                        else {
+                            to = getArrayLength(srcArray)
+                        }
+                    }
+                    "copyOf" -> {
+                        to = params[1] as Int /* newLength */
+                    }
+                    "copyOfRange" -> {
+                        from = params[1] as Int // fromIndex
+                        to = params[2] as Int // toIndex
+                    }
+                }
+
+                if (to > from) {
+                    for (i in from..to.coerceAtMost(getArrayLength(srcArray)) - 1) {
+                        staticMemorySnapshot.trackArrayCell(srcArray, i)
+                    }
+                }
+            }
             // TODO: reflection
         }
     }
@@ -1453,7 +1498,7 @@ abstract class ManagedStrategy(
         params: Array<Any?>
     ): Any? = runInsideIgnoredSection {
         // process method effect on the static memory snapshot
-        processMethodEffectOnStaticSnapshot(receiver, params)
+        processMethodEffectOnStaticSnapshot(receiver, params, className, methodName)
         // re-throw abort error if the thread was aborted
         val threadId = threadScheduler.getCurrentThreadId()
         if (threadScheduler.isAborted(threadId)) {
@@ -1529,7 +1574,7 @@ abstract class ManagedStrategy(
         if (deterministicMethodDescriptor != null) {
             Logger.debug { "On method return with descriptor $deterministicMethodDescriptor: $result" }
         }
-        
+
         require(deterministicMethodDescriptor is DeterministicMethodDescriptor<*, *>?)
         // process intrinsic candidate methods
         if (MethodIds.isIntrinsicMethod(methodId)) {
@@ -2019,7 +2064,7 @@ abstract class ManagedStrategy(
             suspendedFunctionsStack[iThread]!!.add(callStackTrace.last())
             popShadowStackFrame()
             callStackTrace.removeLast()
-            
+
             // Hack to include actor
             if (callStackTrace.size == 1 && callStackTrace.first().tracePoint.isRootCall) {
                 suspendedFunctionsStack[iThread]!!.add(callStackTrace.first())
@@ -2173,7 +2218,7 @@ abstract class ManagedStrategy(
         }
 
         fun passCodeLocation(tracePoint: TracePoint?) {
-            if (tracePoint !is SectionDelimiterTracePoint && tracePoint?.isActorMethodCallTracePoint() == false) 
+            if (tracePoint !is SectionDelimiterTracePoint && tracePoint?.isActorMethodCallTracePoint() == false)
                 checkActiveLockDetected()
             // tracePoint can be null here if trace is not available, e.g. in case of suspension
             if (tracePoint != null) {
