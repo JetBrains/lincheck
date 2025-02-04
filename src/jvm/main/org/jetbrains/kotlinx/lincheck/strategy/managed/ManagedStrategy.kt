@@ -1148,7 +1148,9 @@ abstract class ManagedStrategy(
      */
     private fun processMethodEffectOnStaticSnapshot(
         owner: Any?,
-        params: Array<Any?>
+        params: Array<Any?>,
+        className: String,
+        methodName: String
     ) {
         when {
             // Unsafe API
@@ -1191,7 +1193,50 @@ abstract class ManagedStrategy(
 
                 staticMemorySnapshot.trackField(obj, afuDesc.targetType, afuDesc.fieldName)
             }
-            // TODO: System.arraycopy
+            // System.arraycopy
+            className == "java/lang/System" && methodName == "arraycopy" -> {
+                check(params[2] != null && params[2]!!.javaClass.isArray)
+                val srcArray = params[0]!!
+                val srcPosStart = params[1] as Int
+                val length = params[4] as Int
+
+                for (i in 0..length - 1) {
+                    staticMemorySnapshot.trackArrayCell(srcArray, srcPosStart + i)
+                }
+            }
+            className == "java/util/Arrays" -> {
+                val srcArray = params[0]!!
+                var from: Int = 0
+                var to: Int = 0
+                when (methodName) {
+                    in listOf(
+                        "sort", "parallelSort", "legacyMergeSort",
+                        "fill", "setAll", "parallelSetAll",
+                        "parallelPrefix", "stream"
+                    ) -> {
+                        if (params.size >= 3) {
+                            from = params[1] as Int // fromIndex
+                            to = params[2] as Int // toIndex
+                        }
+                        else {
+                            to = getArrayLength(srcArray)
+                        }
+                    }
+                    "copyOf" -> {
+                        to = params[1] as Int /* newLength */
+                    }
+                    "copyOfRange" -> {
+                        from = params[1] as Int // fromIndex
+                        to = params[2] as Int // toIndex
+                    }
+                }
+
+                if (to > from) {
+                    for (i in from..to.coerceAtMost(getArrayLength(srcArray)) - 1) {
+                        staticMemorySnapshot.trackArrayCell(srcArray, i)
+                    }
+                }
+            }
             // TODO: reflection
         }
     }
@@ -1216,7 +1261,7 @@ abstract class ManagedStrategy(
     ) {
         val guarantee = runInIgnoredSection {
             // process method effect on the static memory snapshot
-            processMethodEffectOnStaticSnapshot(owner, params)
+            processMethodEffectOnStaticSnapshot(owner, params, className, methodName)
             // re-throw abort error if the thread was aborted
             val threadId = threadScheduler.getCurrentThreadId()
             if (threadScheduler.isAborted(threadId)) {
