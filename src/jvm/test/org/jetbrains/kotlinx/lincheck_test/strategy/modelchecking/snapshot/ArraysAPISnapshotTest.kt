@@ -15,7 +15,6 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedOptions
-import org.junit.Ignore
 import java.util.Arrays
 import kotlin.random.Random
 
@@ -27,8 +26,7 @@ private val arrayValue = intArrayOf(2, 1, 4, 3, 6, 5, 8, 7, 10, 9)
 //     class java.util.concurrent.ForkJoinWorkerThread cannot be casted to class sun.nio.ch.lincheck.TestThread
 //     (java.util.concurrent.ForkJoinWorkerThread is in module java.base of loader 'bootstrap';
 //     sun.nio.ch.lincheck.TestThread is in unnamed module of loader 'bootstrap').
-//@Ignore("Without support for System.arraycopy, tracking for copy methods will not work")
-class ArraysAPISnapshotTest : AbstractSnapshotTest() {
+abstract class BaseArraysAPISnapshotTest : AbstractSnapshotTest() {
     private class Wrapper(var x: Int)
     companion object {
         private var intArray = arrayValue
@@ -55,71 +53,139 @@ class ArraysAPISnapshotTest : AbstractSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O, *>> O.customize() {
+    protected fun <O : ManagedOptions<O, *>> O.setup() {
         verifier(ArraysAPIVerifier::class.java)
         actorsBefore(0)
         actorsAfter(0)
-        iterations(600)
+        actorsPerThread(10)
+        iterations(200)
         invocationsPerIteration(1)
         threads(1)
-        actorsPerThread(1)
-        logLevel(LoggingLevel.INFO)
     }
 
-    @Operation
-    fun sort() {
+    override fun <O : ManagedOptions<O, *>> O.customize() {
+        setup()
+    }
+
+    protected fun sortImpl() {
         intArray.sort()
         refArray.sortBy { it.x }
     }
 
-    @Operation
-    fun arraySort() {
+    protected fun arraysSortImpl() {
         Arrays.sort(intArray)
         Arrays.sort(refArray) { a, b -> a.x - b.x }
     }
 
-    @Operation
-    fun reverse() {
+    protected fun reverseImpl() {
         intArray.reverse()
         refArray.reverse()
     }
 
-    @Operation
-    fun fill() {
+    protected fun fillImpl() {
         intArray.fill(Random.nextInt())
         refArray.fill(Wrapper(Random.nextInt()))
     }
 
-    @Operation
-    fun arraysFill() {
+    protected fun arraysFillImpl() {
         Arrays.fill(intArray, Random.nextInt())
         Arrays.fill(refArray, Wrapper(Random.nextInt()))
     }
 
-    @Operation
-    fun arraysSetAll() {
+    protected fun arraysSetAllImpl() {
         Arrays.setAll(intArray) { Random.nextInt() }
         Arrays.setAll(refArray) { Wrapper(Random.nextInt()) }
     }
 
-    @Operation
-    fun copyOf() {
+    protected fun copyOfImpl() {
         val otherRefArray = refArray.copyOf()
         otherRefArray[Random.nextInt(0, otherRefArray.size)] = Wrapper(Random.nextInt())
         otherRefArray[Random.nextInt(0, otherRefArray.size)].x = Random.nextInt()
     }
 
-    @Operation
-    fun copyOfRange() {
+    protected fun arraysCopyOfImpl() {
+        val otherRefArray = Arrays.copyOf(refArray, refArray.size + 1 /* extra size */)
+        otherRefArray[Random.nextInt(0, otherRefArray.size)] = Wrapper(Random.nextInt())
+        otherRefArray[Random.nextInt(0, otherRefArray.size)].x = Random.nextInt()
+    }
+
+    protected fun copyOfRangeImpl() {
         val otherRefArray = refArray.copyOfRange(0, refArray.size)
         otherRefArray[Random.nextInt(0, otherRefArray.size)] = Wrapper(Random.nextInt())
         otherRefArray[Random.nextInt(0, otherRefArray.size)].x = Random.nextInt()
     }
 
-    @Operation
-    fun arraysCopyOf() {
-        val otherRefArray = Arrays.copyOf(refArray, refArray.size + 1)
+    protected fun arraysCopyOfRangeImpl() {
+        val otherRefArray = Arrays.copyOfRange(refArray, 0, refArray.size)
         otherRefArray[Random.nextInt(0, otherRefArray.size)] = Wrapper(Random.nextInt())
         otherRefArray[Random.nextInt(0, otherRefArray.size)].x = Random.nextInt()
     }
+}
+
+/**
+ * Isolated tests are aimed to trigger jit to optimize the bytecode in the `Arrays` methods.
+ * Previously we encountered a bug (https://github.com/JetBrains/lincheck/issues/470), when hooks,
+ * inserted directly before `System.arraycopy`, were missed during execution after
+ * a couple of hundreds iterations due to jit optimizations.
+ *
+ * Thus, in subclasses of [BaseIsolatedArraysAPISnapshotTest] we perform
+ * each operation alone during many iterations.
+ */
+abstract class BaseIsolatedArraysAPISnapshotTest : BaseArraysAPISnapshotTest() {
+    override fun <O : ManagedOptions<O, *>> O.customize() {
+        setup()
+        iterations(600)
+        actorsPerThread(1)
+        logLevel(LoggingLevel.INFO)
+    }
+}
+
+class IsolatedSortTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun sort() = this::sortImpl
+}
+
+class IsolatedArraysSortTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun arraysSort() = this::arraysSortImpl
+}
+
+class IsolatedReverseTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun reverse() = this::reverseImpl
+}
+
+class IsolatedFillTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun fill() = this::fillImpl
+}
+
+class IsolatedArraysFillTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun arraysFill() = this::arraysFillImpl
+}
+
+class IsolatedArraysSetAllTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun arraysSetAll() = this::arraysSetAllImpl
+}
+
+class IsolatedCopyOfTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun copyOf() = this::copyOfImpl
+}
+
+class IsolatedArraysCopyOfTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun arraysCopyOf() = this::arraysCopyOfImpl
+}
+
+class IsolatedCopyOfRangeTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun copyOfRange() = this::copyOfRangeImpl
+}
+
+class IsolatedArraysCopyOfRangeTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun arraysCopyOfRange() = this::arraysCopyOfRangeImpl
 }
