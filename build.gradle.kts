@@ -1,7 +1,6 @@
 import groovy.util.*
 import kotlinx.team.infra.*
 import org.gradle.jvm.tasks.Jar
-import org.gradle.kotlin.dsl.from
 import org.jetbrains.kotlin.gradle.*
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 

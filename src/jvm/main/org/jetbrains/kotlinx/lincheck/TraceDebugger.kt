@@ -24,8 +24,6 @@ import kotlin.reflect.jvm.kotlinFunction
 val isInTraceDebuggerMode = System.getProperty("lincheck.traceDebuggerMode", "false").toBoolean()
 
 internal object TraceDebuggerInjections {
-    val classUnderTimeTravel: String? = System.getProperty("traceDebugger.className")
-    val methodUnderTimeTravel: String? = System.getProperty("traceDebugger.methodName")
     @JvmStatic
     var firstRun = true
 

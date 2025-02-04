@@ -43,7 +43,7 @@ fun testFailed(
     trace: Array<String>,
     version: String?,
     minimalPluginVersion: String,
-    exceptions: Array<String>,
+    exceptions: Array<String>
 ) {}
 
 /**
