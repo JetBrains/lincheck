@@ -196,9 +196,7 @@ class SnapshotTracker {
     private fun shouldTrackEagerly(obj: Any?): Boolean {
         if (obj == null) return false
         return (
-            // TODO: after support for System.arraycopy,
-            //  rewrite to `obj.javaClass.name.startsWith("java.util.concurrent.") && obj.javaClass.name.contains("Atomic")`
-            obj.javaClass.name.startsWith("java.util.")
+            obj.javaClass.name.startsWith("java.util.concurrent.") && obj.javaClass.name.contains("Atomic")
         )
     }
 
