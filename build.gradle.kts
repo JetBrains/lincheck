@@ -294,3 +294,5 @@ fun XmlProvider.removeAllLicencesExceptOne(licenceName: String) {
         }
     }
 }
+
+registerTraceDebuggerTasks()

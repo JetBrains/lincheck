@@ -331,6 +331,21 @@ private fun visualize(strategy: ManagedStrategy) = runCatching {
 }
 
 /**
+ * This method is called from the trace-debugger on each debugger session
+ * pause to recalculate objects numeration and later visualize it.
+ */
+private fun visualizeTrace(): Array<Any>? = runCatching {
+    val strategyObject = ThreadDescriptor.getCurrentThreadDescriptor()?.eventTracker
+        ?: return null
+    val strategy = strategyObject as ModelCheckingStrategy
+
+    val runner = strategy.runner as ParallelThreadsRunner
+    val testObject = runner.testInstance
+
+    return createObjectToNumberMapAsArray(testObject)
+}.getOrNull()
+
+/**
  * Creates an array [Object, objectNumber, Object, objectNumber, ...].
  * It represents a `Map<Any, Int>`, but due to difficulties with passing objects (Map)
  * to debugger, we represent it as an Array.
