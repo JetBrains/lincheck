@@ -1409,9 +1409,11 @@ abstract class ManagedStrategy(
                 var to: Int = 0
                 when (methodName) {
                     in listOf(
-                        "sort", "parallelSort", "legacyMergeSort",
-                        "fill", "setAll", "parallelSetAll",
-                        "parallelPrefix", "stream"
+                        "fill",
+                        "sort", "parallelSort",
+                        "setAll", "parallelSetAll",
+                        "parallelPrefix",
+                        "stream"
                     ) -> {
                         if (params.size >= 3) {
                             from = params[1] as Int // fromIndex
