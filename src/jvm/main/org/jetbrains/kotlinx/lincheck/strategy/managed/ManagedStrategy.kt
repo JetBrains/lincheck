@@ -1217,19 +1217,18 @@ abstract class ManagedStrategy(
         val guarantee = runInIgnoredSection {
             // process method effect on the static memory snapshot
             processMethodEffectOnStaticSnapshot(owner, params)
-
-            // process known method concurrency guarantee
-            val iThread = threadScheduler.getCurrentThreadId()
             // re-throw abort error if the thread was aborted
-            if (threadScheduler.isAborted(iThread)) {
+            val threadId = threadScheduler.getCurrentThreadId()
+            if (threadScheduler.isAborted(threadId)) {
                 threadScheduler.abortCurrentThread()
             }
             // first check if the called method is an atomics API method
             // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
             val atomicMethodDescriptor = getAtomicMethodDescriptor(owner, methodName)
+            // get method's concurrency guarantee
             val guarantee = when {
                 (atomicMethodDescriptor != null) -> ManagedGuaranteeType.TREAT_AS_ATOMIC
-                else -> methodGuaranteeType(owner, className, methodName)
+                else -> methodGuaranteeType(owner, className.canonicalClassName, methodName)
             }
             // in case if a static method is called, ensure its class is instrumented
             if (owner == null && atomicMethodDescriptor == null && guarantee == null) { // static method
@@ -1245,12 +1244,19 @@ abstract class ManagedStrategy(
             // check for livelock and create the method call trace point
             if (collectTrace) {
                 traceCollector!!.checkActiveLockDetected()
-                addBeforeMethodCallTracePoint(owner, codeLocation, methodId, className, methodName, params, atomicMethodDescriptor)
+                addBeforeMethodCallTracePoint(threadId, owner, codeLocation, methodId, className, methodName, params,
+                    atomicMethodDescriptor
+                )
             }
-            // in case of atomic method we need to create a switch point
-            if (guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC) {
+            // in case of an atomic method, we create a switch point before the method call;
+            // note that in case we resume atomic method there is no need to create the switch point,
+            // since there is already a switch point between the suspension point and resumption
+            if (guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC &&
+                // do not create a trace point on resumption
+                !isResumptionMethodCall(threadId, className.canonicalClassName, methodName, params, atomicMethodDescriptor)
+            ) {
                 // re-use last call trace point
-                newSwitchPoint(iThread, codeLocation, callStackTrace[iThread]!!.lastOrNull()?.tracePoint)
+                newSwitchPoint(threadId, codeLocation, callStackTrace[threadId]!!.lastOrNull()?.tracePoint)
                 loopDetector.passParameters(params)
             }
             // notify loop detector about the method call
@@ -1274,20 +1280,20 @@ abstract class ManagedStrategy(
         runInIgnoredSection {
             loopDetector.afterMethodCall()
             if (collectTrace) {
-                val iThread = threadScheduler.getCurrentThreadId()
+                val threadId = threadScheduler.getCurrentThreadId()
                 // this case is possible and can occur when we resume the coroutine,
                 // and it results in a call to a top-level actor `suspend` function;
                 // currently top-level actor functions are not represented in the `callStackTrace`,
                 // we should probably refactor and fix that, because it is very inconvenient
-                if (callStackTrace[iThread]!!.isEmpty())
+                if (callStackTrace[threadId]!!.isEmpty())
                     return@runInIgnoredSection
-                val tracePoint = callStackTrace[iThread]!!.last().tracePoint
+                val tracePoint = callStackTrace[threadId]!!.last().tracePoint
                 when (result) {
                     Injections.VOID_RESULT -> tracePoint.initializeVoidReturnedValue()
                     COROUTINE_SUSPENDED -> tracePoint.initializeCoroutineSuspendedResult()
                     else -> tracePoint.initializeReturnedValue(adornedStringRepresentation(result))
                 }
-                afterMethodCall(iThread, tracePoint)
+                afterMethodCall(threadId, tracePoint)
                 traceCollector!!.addStateRepresentation()
             }
         }
@@ -1303,8 +1309,14 @@ abstract class ManagedStrategy(
         }
         if (collectTrace) {
             runInIgnoredSection {
-                // We cannot simply read `thread` as Forcible???Exception can be thrown.
+                // We cannot simply read `thread` as `ThreadAbortedError` can be thrown.
                 val threadId = threadScheduler.getCurrentThreadId()
+                // this case is possible and can occur when we resume the coroutine,
+                // and it results in a call to a top-level actor `suspend` function;
+                // currently top-level actor functions are not represented in the `callStackTrace`,
+                // we should probably refactor and fix that, because it is very inconvenient
+                if (callStackTrace[threadId]!!.isEmpty())
+                    return@runInIgnoredSection
                 val tracePoint = callStackTrace[threadId]!!.last().tracePoint
                 tracePoint.initializeThrownException(t)
                 afterMethodCall(threadId, tracePoint)
@@ -1317,53 +1329,19 @@ abstract class ManagedStrategy(
         leaveIgnoredSection()
     }
 
-    private fun isSuspendFunction(className: String, methodName: String, params: Array<Any?>): Boolean =
-        try {
-            getMethod(className.canonicalClassName, methodName, params)?.isSuspendable() ?: false
-        } catch (t: Throwable) {
-            // Something went wrong. Ignore it, as the error might lead only
-            // to an extra "<cont>" in the method call line in the trace.
-            false
-        }
-
-    private fun getMethod(className: String, methodName: String, params: Array<Any?>): Method? {
-        val possibleMethods = getCachedFilteredDeclaredMethods(className, methodName)
-
-        for (method in possibleMethods) {
-            val parameterTypes = method.parameterTypes
-            if (parameterTypes.size != params.size) continue
-
-            var match = true
-            for (i in parameterTypes.indices) {
-                val paramType = params[i]?.javaClass
-                if (paramType != null && !parameterTypes[i].isAssignableFrom(paramType)) {
-                    match = false
-                    break
-                }
-            }
-
-            if (match) return method
-        }
-
-        return null // or throw an exception if a match is mandatory
+    private fun isResumptionMethodCall(
+        threadId: Int,
+        className: String,
+        methodName: String,
+        methodParams: Array<Any?>,
+        atomicMethodDescriptor: AtomicMethodDescriptor?,
+    ): Boolean {
+        // optimization - first quickly check if the method is atomics API method,
+        // in which case it cannot be suspended/resumed method
+        if (atomicMethodDescriptor != null) return false
+        val suspendedMethodStack = suspendedFunctionsStack[threadId]!!
+        return suspendedMethodStack.isNotEmpty() && isSuspendFunction(className, methodName, methodParams)
     }
-
-    // While caching is not important for Lincheck itself,
-    // it is critical for Trace Debugger, as it always collects the trace.
-    private val methodsCache = hashMapOf<String, Array<Method>>()
-    private val filteredMethodsCache = hashMapOf<Pair<String, String>, List<Method>>()
-
-    private fun getCachedDeclaredMethods(className: String) =
-        methodsCache.getOrPut(className) {
-            val clazz = Class.forName(className)
-            clazz.declaredMethods
-        }
-
-    private fun getCachedFilteredDeclaredMethods(className: String, methodName: String) =
-        filteredMethodsCache.getOrPut(className to methodName) {
-            val declaredMethods = getCachedDeclaredMethods(className)
-            declaredMethods.filter { it.name == methodName }
-        }
 
     /**
      * This method is invoked by a test thread
@@ -1403,6 +1381,7 @@ abstract class ManagedStrategy(
     }
 
     private fun addBeforeMethodCallTracePoint(
+        threadId: Int,
         owner: Any?,
         codeLocation: Int,
         methodId: Int,
@@ -1411,12 +1390,9 @@ abstract class ManagedStrategy(
         methodParams: Array<Any?>,
         atomicMethodDescriptor: AtomicMethodDescriptor?,
     ) {
-        val iThread = threadScheduler.getCurrentThreadId()
-        val callStackTrace = callStackTrace[iThread]!!
-        val suspendedMethodStack = suspendedFunctionsStack[iThread]!!
-        val isSuspending = isSuspendFunction(className, methodName, methodParams)
-        val isResumption = isSuspending && suspendedMethodStack.isNotEmpty()
-        if (isResumption) {
+        val callStackTrace = callStackTrace[threadId]!!
+        val suspendedMethodStack = suspendedFunctionsStack[threadId]!!
+        if (isResumptionMethodCall(threadId, className.canonicalClassName, methodName, methodParams, atomicMethodDescriptor)) {
             // In case of resumption, we need to find a call stack frame corresponding to the resumed function
             var elementIndex = suspendedMethodStack.indexOfFirst {
                 it.tracePoint.className == className && it.tracePoint.methodName == methodName
@@ -1426,7 +1402,7 @@ abstract class ManagedStrategy(
                 // and it results in a call to a top-level actor `suspend` function;
                 // currently top-level actor functions are not represented in the `callStackTrace`,
                 // we should probably refactor and fix that, because it is very inconvenient
-                val actor = scenario.threads[iThread][currentActorId[iThread]!!]
+                val actor = scenario.threads[threadId][currentActorId[threadId]!!]
                 check(methodName == actor.method.name)
                 check(className.canonicalClassName == actor.method.declaringClass.name)
                 elementIndex = suspendedMethodStack.size
@@ -1451,14 +1427,14 @@ abstract class ManagedStrategy(
             return
         }
         val callId = callStackTraceElementId++
-        val params = if (isSuspending) {
+        val params = if (isSuspendFunction(className.canonicalClassName, methodName, methodParams)) {
             methodParams.dropLast(1).toTypedArray()
         } else {
             methodParams
         }
         // The code location of the new method call is currently the last one
         val tracePoint = createBeforeMethodCallTracePoint(
-            iThread = iThread,
+            iThread = threadId,
             owner = owner,
             className = className,
             methodName = methodName,
@@ -1799,11 +1775,15 @@ abstract class ManagedStrategy(
                     beforeMethodCallSwitch = beforeMethodCallSwitch
                 )
             }
+            val callStackTrace = when (reason) {
+                SwitchReason.Suspended -> suspendedFunctionsStack[iThread]!!.reversed()
+                else -> callStackTrace[iThread]!!
+            }
             _trace += SwitchEventTracePoint(
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
                 reason = reason,
-                callStackTrace = callStackTrace[iThread]!!
+                callStackTrace = callStackTrace,
             )
             spinCycleStartAdded = false
         }

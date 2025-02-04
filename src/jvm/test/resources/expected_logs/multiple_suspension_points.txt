@@ -1,0 +1,48 @@
+= Invalid execution results =
+| -------------------------------- |
+|    Thread 1     |    Thread 2    |
+| -------------------------------- |
+| trigger(): void | operation(): 1 |
+| -------------------------------- |
+
+The following interleaving leads to the error:
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                        Thread 1                                                        |                                                         Thread 2                                                          |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                                        | operation(): 1                                                                                                            |
+|                                                                                                                        |   part1(): false at MultipleSuspensionPointsTraceRepresentationTest.operation(MultipleSuspensionsTests.kt:106)            |
+|                                                                                                                        |   switch (reason: coroutine is suspended)                                                                                 |
+| trigger()                                                                                                              |                                                                                                                           |
+|   firstStep() at MultipleSuspensionPointsTraceRepresentationTest.trigger(MultipleSuspensionsTests.kt:89)               |                                                                                                                           |
+|   switch                                                                                                               |                                                                                                                           |
+|                                                                                                                        |   part2(): false at MultipleSuspensionPointsTraceRepresentationTest.operation(MultipleSuspensionsTests.kt:107)            |
+|                                                                                                                        |   switch (reason: coroutine is suspended)                                                                                 |
+|   secondStep() at MultipleSuspensionPointsTraceRepresentationTest.trigger(MultipleSuspensionsTests.kt:90)              |                                                                                                                           |
+|   counter ➜ AtomicInteger#1 at MultipleSuspensionPointsTraceRepresentationTest.trigger(MultipleSuspensionsTests.kt:91) |                                                                                                                           |
+|   AtomicInteger#1.set(3) at MultipleSuspensionPointsTraceRepresentationTest.trigger(MultipleSuspensionsTests.kt:91)    |                                                                                                                           |
+|   result: void                                                                                                         |                                                                                                                           |
+|                                                                                                                        |   counter ➜ AtomicInteger#1 at MultipleSuspensionPointsTraceRepresentationTest.operation(MultipleSuspensionsTests.kt:108) |
+|                                                                                                                        |   AtomicInteger#1.get(): 3 at MultipleSuspensionPointsTraceRepresentationTest.operation(MultipleSuspensionsTests.kt:108)  |
+|                                                                                                                        |   result: 1                                                                                                               |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+
+Detailed trace:
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                        Thread 1                                                        |                                                         Thread 2                                                          |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                                        | operation(): 1                                                                                                            |
+|                                                                                                                        |   part1(): false at MultipleSuspensionPointsTraceRepresentationTest.operation(MultipleSuspensionsTests.kt:106)            |
+|                                                                                                                        |   switch (reason: coroutine is suspended)                                                                                 |
+| trigger()                                                                                                              |                                                                                                                           |
+|   firstStep() at MultipleSuspensionPointsTraceRepresentationTest.trigger(MultipleSuspensionsTests.kt:89)               |                                                                                                                           |
+|   switch                                                                                                               |                                                                                                                           |
+|                                                                                                                        |   part2(): false at MultipleSuspensionPointsTraceRepresentationTest.operation(MultipleSuspensionsTests.kt:107)            |
+|                                                                                                                        |   switch (reason: coroutine is suspended)                                                                                 |
+|   secondStep() at MultipleSuspensionPointsTraceRepresentationTest.trigger(MultipleSuspensionsTests.kt:90)              |                                                                                                                           |
+|   counter ➜ AtomicInteger#1 at MultipleSuspensionPointsTraceRepresentationTest.trigger(MultipleSuspensionsTests.kt:91) |                                                                                                                           |
+|   AtomicInteger#1.set(3) at MultipleSuspensionPointsTraceRepresentationTest.trigger(MultipleSuspensionsTests.kt:91)    |                                                                                                                           |
+|   result: void                                                                                                         |                                                                                                                           |
+|                                                                                                                        |   counter ➜ AtomicInteger#1 at MultipleSuspensionPointsTraceRepresentationTest.operation(MultipleSuspensionsTests.kt:108) |
+|                                                                                                                        |   AtomicInteger#1.get(): 3 at MultipleSuspensionPointsTraceRepresentationTest.operation(MultipleSuspensionsTests.kt:108)  |
+|                                                                                                                        |   result: 1                                                                                                               |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
