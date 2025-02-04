@@ -10,7 +10,6 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy.modelchecking.snapshot
 
-import org.jetbrains.kotlinx.lincheck.LoggingLevel
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
@@ -59,6 +58,10 @@ abstract class BaseArraysAPISnapshotTest : AbstractSnapshotTest() {
 
     override fun <O : ManagedOptions<O, *>> O.customize() {
         setup()
+    }
+
+    protected fun asListImpl() {
+        Arrays.asList<Wrapper?>(*refArray).random().x = Random.nextInt()
     }
 
     protected fun sortImpl() {
@@ -132,6 +135,9 @@ abstract class BaseArraysAPISnapshotTest : AbstractSnapshotTest() {
 class ArraysAPISnapshotTest : BaseArraysAPISnapshotTest() {
 
     @Operation
+    fun asList() = this::asListImpl
+
+    @Operation
     fun sort() = this::sortImpl
 
     @Operation
@@ -186,6 +192,11 @@ abstract class BaseIsolatedArraysAPISnapshotTest : BaseArraysAPISnapshotTest() {
         iterations(1000)
         actorsPerThread(1)
     }
+}
+
+class IsolatedAsListTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun asList() = this::asListImpl
 }
 
 class IsolatedSortTest : BaseIsolatedArraysAPISnapshotTest() {
