@@ -24,14 +24,34 @@ internal object UnsafeHolder {
     }
 }
 
+// Memorizes field offsets
+internal object OffsetCache {
+    private val map = HashMap<Int, Long>()
+    fun getOffsetOrCompute(field: Field, getOffset: () -> Long): Long {
+        val key = field.hashCode()
+        if (!map.containsKey(key)) map[key] = getOffset()
+        return map[key]!!
+    }
+}
+
+// Memorizes static field bases
+internal object BaseCache {
+    private val map = HashMap<Int, Any?>()
+    fun getBaseOrCompute(field: Field, getBase: () -> Any?): Any? {
+        val key = field.hashCode()
+        if (!map.containsKey(key)) map[key] = getBase()
+        return map[key]
+    }
+}
+
 @Suppress("DEPRECATION")
 internal inline fun <T> readFieldViaUnsafe(obj: Any?, field: Field, getter: Unsafe.(Any?, Long) -> T): T {
     if (Modifier.isStatic(field.modifiers)) {
-        val base = UnsafeHolder.UNSAFE.staticFieldBase(field)
-        val offset = UnsafeHolder.UNSAFE.staticFieldOffset(field)
+        val base = BaseCache.getBaseOrCompute(field) { UnsafeHolder.UNSAFE.staticFieldBase(field) }
+        val offset = OffsetCache.getOffsetOrCompute(field) { UnsafeHolder.UNSAFE.staticFieldOffset(field) }
         return UnsafeHolder.UNSAFE.getter(base, offset)
     } else {
-        val offset = UnsafeHolder.UNSAFE.objectFieldOffset(field)
+        val offset = OffsetCache.getOffsetOrCompute(field) { UnsafeHolder.UNSAFE.objectFieldOffset(field) }
         return UnsafeHolder.UNSAFE.getter(obj, offset)
     }
 }
