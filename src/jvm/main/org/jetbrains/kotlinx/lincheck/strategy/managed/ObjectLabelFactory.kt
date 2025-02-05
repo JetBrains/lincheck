@@ -20,7 +20,7 @@ import kotlin.coroutines.Continuation
  */
 object ObjectLabelFactory {
 
-    private val objectNumeration = Collections.synchronizedMap(WeakHashMap<Class<*>, MutableMap<Any, Int>>())
+    internal val objectNumeration = Collections.synchronizedMap(WeakHashMap<Class<*>, MutableMap<Any, Int>>())
 
     internal fun adornedStringRepresentation(any: Any?): String {
         if (any == null) return "null"
