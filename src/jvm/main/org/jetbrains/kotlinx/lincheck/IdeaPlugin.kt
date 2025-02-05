@@ -43,7 +43,7 @@ fun testFailed(
     trace: Array<String>,
     version: String?,
     minimalPluginVersion: String,
-    exceptions: Array<String>
+    exceptions: Array<String>,
 ) {}
 
 /**
@@ -102,8 +102,10 @@ fun beforeEvent(eventId: Int, type: String) {
  * We pass Maps as Arrays due to difficulties with passing objects (java.util.Map)
  * to the debugger (class version, etc.).
  *
- * @param testInstance tested data structure.
- * @param numbersArrayMap an array structured like [Object, objectNumber, Object, objectNumber, ...].
+ * @param testInstance tested data structure if present.
+ *   If there is no data structure instance (e.g., in the case of general-purpose model checking),
+ *   then null is passed.
+ * @param objectToNumberMap an array structured like [Object, objectNumber, Object, objectNumber, ...].
  *   Represents a `Map<Any /* Object */, Int>`.
  * @param continuationToLincheckThreadIdMap an array structured like [CancellableContinuation, threadId, ...].
  *   Represents a `Map<Any /* CancellableContinuation */, Int>`.
@@ -112,10 +114,11 @@ fun beforeEvent(eventId: Int, type: String) {
  */
 @Suppress("UNUSED_PARAMETER")
 fun visualizeInstance(
-    testInstance: Any,
-    numbersArrayMap: Array<Any>,
+    testInstance: Any?,
+    objectToNumberMap: Array<Any>,
     continuationToLincheckThreadIdMap: Array<Any>,
-    threadToLincheckThreadIdMap: Array<Any>
+    threadToLincheckThreadIdMap: Array<Any>,
+    // TODO: add thread names array parameter
 ) {}
 
 /**
@@ -326,15 +329,17 @@ private data class ExceptionProcessingResult(
  */
 private fun visualize(strategy: ManagedStrategy) = runCatching {
     val runner = strategy.runner as ParallelThreadsRunner
-    val testObject = runner.testInstance
-    val lincheckThreads = runner.executor.threads
     val allThreads = strategy.getRegisteredThreads()
-
-    val objectToNumberMap = createObjectToNumberMapAsArray(testObject)
-    val continuationToLincheckThreadIdMap = createContinuationToThreadIdMap(lincheckThreads)
-    val threadToLincheckThreadIdMap = createThreadToLincheckThreadIdMap(allThreads)
-
-    visualizeInstance(testObject, objectToNumberMap, continuationToLincheckThreadIdMap, threadToLincheckThreadIdMap)
+    val lincheckThreads = runner.executor.threads
+    val testObject = runner.testInstance.takeIf {
+        // in general-purpose model checking mode `testObject` is null
+        it !is GeneralPurposeModelCheckingWrapper<*>
+    }
+    visualizeInstance(testObject,
+        objectToNumberMap = createObjectToNumberMapAsArray(testObject),
+        continuationToLincheckThreadIdMap = createContinuationToThreadIdMap(lincheckThreads),
+        threadToLincheckThreadIdMap = createThreadToLincheckThreadIdMap(allThreads),
+    )
 }
 
 /**
@@ -359,9 +364,9 @@ private fun visualizeTrace(): Array<Any>? = runCatching {
  *
  * The Debugger uses this information to enumerate objects.
  */
-private fun createObjectToNumberMapAsArray(testObject: Any): Array<Any> {
+private fun createObjectToNumberMapAsArray(testObject: Any?): Array<Any> {
     val resultArray = arrayListOf<Any>()
-    val numbersMap = enumerateObjects(testObject)
+    val numbersMap = if (testObject != null) enumerateObjects(testObject) else enumerateObjects()
     numbersMap.forEach { (any, objectNumber) ->
         resultArray.add(any)
         resultArray.add(objectNumber)
