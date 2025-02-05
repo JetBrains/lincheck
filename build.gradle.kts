@@ -126,7 +126,11 @@ tasks.withType<Test> {
     javaLauncher.set(
         javaToolchains.launcherFor {
             val jdkToolchainVersion: String by project
-            languageVersion.set(JavaLanguageVersion.of(jdkToolchainVersion))
+            val testInTraceDebuggerMode: String by project
+            val jdkVersion = jdkToolchainVersion.toInt()
+            // https://github.com/JetBrains/lincheck/issues/500
+            val jreVersion = if (testInTraceDebuggerMode.toBoolean() && jdkVersion == 8) 17 else jdkVersion
+            languageVersion.set(JavaLanguageVersion.of(jreVersion))
         }
     )
 }
