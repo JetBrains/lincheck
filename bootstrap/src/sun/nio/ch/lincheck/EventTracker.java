@@ -10,6 +10,7 @@
 
 package sun.nio.ch.lincheck;
 
+import java.lang.invoke.CallSite;
 import java.util.*;
 
 /**
@@ -38,6 +39,19 @@ public interface EventTracker {
     void afterNewObjectCreation(Object obj);
     long getNextObjectId();
     void advanceCurrentObjectId(long oldId);
+    CallSite getCachedInvokeDynamicCallSite(
+            String name,
+            String descriptor,
+            Injections.HandlePojo bootstrapMethodHandlePojo,
+            Object[] bootstrapMethodArguments
+    );
+    void cacheInvokeDynamicCallSite(
+            String name,
+            String descriptor,
+            Injections.HandlePojo bootstrapMethodHandlePojo,
+            Object[] bootstrapMethodArguments,
+            CallSite callSite
+    );
 
     void updateSnapshotBeforeConstructorCall(Object[] objs);
 

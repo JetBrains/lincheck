@@ -10,6 +10,7 @@
 
 package sun.nio.ch.lincheck;
 
+import java.lang.invoke.CallSite;
 import java.util.Random;
 
 /**
@@ -453,6 +454,66 @@ public class Injections {
      */
     public static void advanceCurrentObjectId(long oldId) {
         getEventTracker().advanceCurrentObjectId(oldId);
+    }
+
+
+    /**
+     * Replacement for ASM {@code Handle} type, not presented in the bootstrap module.
+     */
+    public static class HandlePojo {
+        public final int tag;
+        public final String owner;
+        public final String name;
+        public final String desc;
+        public final boolean isInterface;
+        public HandlePojo(int tag, String owner, String name, String desc, boolean isInterface) {
+            this.tag = tag;
+            this.owner = owner;
+            this.name = name;
+            this.desc = desc;
+            this.isInterface = isInterface;
+        }
+    }
+
+    /**
+     * Retrieves a cached CallSite associated with the provided invoke dynamic parameters.
+     *
+     * @param name the name of the method to be invoked dynamically.
+     * @param descriptor the method descriptor specifying the method signature.
+     * @param bootstrapMethodHandle the bootstrap method handle used to resolve the call site.
+     * @param bootstrapMethodArguments the additional arguments provided to the bootstrap method handle.
+     * @return the cached CallSite corresponding to the provided dynamic invocation parameters.
+     */
+    public static CallSite getCachedInvokeDynamicCallSite(
+            String name,
+            String descriptor,
+            HandlePojo bootstrapMethodHandle,
+            Object[] bootstrapMethodArguments
+    ) {
+        return getEventTracker().getCachedInvokeDynamicCallSite(
+                name, descriptor, bootstrapMethodHandle, bootstrapMethodArguments
+        );
+    }
+
+    /**
+     * Caches an invokedynamic call site for later reuse.
+     *
+     * @param name the name of the invokedynamic instruction.
+     * @param descriptor the method descriptor associated with the invokedynamic instruction.
+     * @param bootstrapMethodHandle the bootstrap method handle used to link the invokedynamic instruction.
+     * @param bootstrapMethodArguments the arguments passed to the bootstrap method.
+     * @param callSite the resolved call site to be cached.
+     */
+    public static void putCachedInvokeDynamicCallSite(
+            String name,
+            String descriptor,
+            HandlePojo bootstrapMethodHandle,
+            Object[] bootstrapMethodArguments,
+            CallSite callSite
+    ) {
+        getEventTracker().cacheInvokeDynamicCallSite(
+                name, descriptor, bootstrapMethodHandle, bootstrapMethodArguments, callSite
+        );
     }
 
     /**

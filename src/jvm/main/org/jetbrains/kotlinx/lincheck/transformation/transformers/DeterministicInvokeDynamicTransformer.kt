@@ -11,13 +11,17 @@
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.jetbrains.kotlinx.lincheck.transformation.invokeInIgnoredSection
 import org.objectweb.asm.Handle
 import org.objectweb.asm.Opcodes
+import org.objectweb.asm.Opcodes.INVOKESTATIC
 import org.objectweb.asm.Type
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.Method
 import sun.nio.ch.lincheck.Injections
+import sun.nio.ch.lincheck.Injections.HandlePojo
 import java.lang.invoke.CallSite
+import java.lang.invoke.MethodHandle
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.MethodType
 
@@ -44,85 +48,191 @@ internal class DeterministicInvokeDynamicTransformer(
         invokeIfInTestingCode(
             original = { visitInvokeDynamicInsn(name, descriptor, bootstrapMethodHandle, *bootstrapMethodArguments) },
         ) {
+            // Emulating invoke dynamic behaviour deterministically
+            
             val arguments = storeArguments(descriptor)
+
+            getOrPutCallSiteForInvokeDynamic(name, descriptor, bootstrapMethodHandle, bootstrapMethodArguments)
+            getCallSiteTarget()
             
-            // InvokeDynamic execution consists of the following steps:
-            // 1. Calling bootstrap method, which creates the actual function to call later;
-            // 2. Caching it by JVM;
-            // 3. Calling it by JVM.
-            // On the subsequent runs, JVM uses cached function.
-            
-            // The current implementation performs these steps manually each time.
-            // Once native calls are supported, it would be possible to cache `MethodHandle`s creation.
-            
-            // Bootstrap method is a function, which creates the actual call-site.
-            // Its first three parameters are predefined and are supplied by JVM when it invokes `invokedynamic`.
-            // After those parameters, there are regular parameters.
-            // Also, there can be `vararg` parameters.
-            
-            // (predefined, predefined, predefined, regular, regular, [Ljava/lang/Object; <- is vararg)
-            // vararg parameter might exist or not
-            
-            // https://openjdk.org/jeps/309
-            // https://www.infoq.com/articles/Invokedynamic-Javas-secret-weapon/
-            // https://www.baeldung.com/java-string-concatenation-invoke-dynamic
-            
-            val bootstrapMethodParameterTypes = Type.getArgumentTypes(bootstrapMethodHandle.desc)
-            require(bootstrapMethodParameterTypes[0] == Type.getType(MethodHandles.Lookup::class.java))
-            require(bootstrapMethodParameterTypes[1] == Type.getType(String::class.java))
-            require(bootstrapMethodParameterTypes[2] == Type.getType(MethodType::class.java))
-            
-            // pushing predefined arguments manually
-            invokeStatic(MethodHandles::lookup)
-            visitLdcInsn(name)
-            visitLdcInsn(Type.getMethodType(descriptor))
-            val jvmPredefinedParametersCount = 3
-            
-            val isMethodWithVarArgs = isMethodVarArgs(bootstrapMethodHandle)
-            val notVarargsArgumentsCount = bootstrapMethodParameterTypes.size - jvmPredefinedParametersCount - (if (isMethodWithVarArgs) 1 else 0)
-            val varargsArgumentsCount = bootstrapMethodArguments.size - notVarargsArgumentsCount
-            // adding regular arguments
-            for (arg in bootstrapMethodArguments.take(notVarargsArgumentsCount)) {
-                visitLdcInsn(arg)
-            }
-            // adding vararg
-            if (isMethodWithVarArgs) {
-                val varargArguments = bootstrapMethodArguments.takeLast(varargsArgumentsCount)
-                visitLdcInsn(varargsArgumentsCount)
-                // [Ljava/lang/Object; -> Ljava/lang/Object;, [[Ljava/lang/Object; -> [Ljava/lang/Object;
-                val arrayElementType = bootstrapMethodParameterTypes.last().descriptor.drop(1).let(Type::getType)
-                newArray(arrayElementType)
-                for ((i, arg) in varargArguments.withIndex()) {
-                    dup()
-                    visitLdcInsn(i)
-                    visitLdcInsn(arg)
-                    if (arg != null && arrayElementType.sort == Type.OBJECT) {
-                        box(Type.getType(arg.javaClass))
-                    }
-                    arrayStore(arrayElementType)
-                }
-            }
-            
-            // creating java.lang.invoke.MethodHandle manually
-            invokeInIgnoredSection {
-                visitMethodInsn(
-                    Opcodes.INVOKESTATIC,
-                    bootstrapMethodHandle.owner,
-                    bootstrapMethodHandle.name,
-                    bootstrapMethodHandle.desc,
-                    bootstrapMethodHandle.isInterface
-                )
-                invokeVirtual(
-                    Type.getType(CallSite::class.java),
-                    Method.getMethod(CallSite::class.java.getMethod("dynamicInvoker"))
-                )
-            }
-            // todo cache all above when native calls are available
             loadLocals(arguments)
-            advancingCounter {
-                visitMethodInsn(
-                    Opcodes.INVOKEVIRTUAL, "java/lang/invoke/MethodHandle", "invokeExact", descriptor, false
-                )
+            invokeMethodHandle(descriptor)
+        }
+    }
+
+    private fun GeneratorAdapter.invokeMethodHandle(descriptor: String) {
+        advancingCounter {
+            visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/invoke/MethodHandle", "invokeExact", descriptor, false)
+        }
+    }
+
+    private fun GeneratorAdapter.getOrPutCallSiteForInvokeDynamic(
+        name: String,
+        descriptor: String,
+        bootstrapMethodHandle: Handle,
+        bootstrapMethodArguments: Array<out Any?>
+    ) {
+        // The key for Map.get(key)
+        putInvokeDynamicCallStaticArgumentsOnStack(name, descriptor, bootstrapMethodHandle, bootstrapMethodArguments)
+
+        // Map.get(key)
+        invokeInIgnoredSection {
+            invokeStatic(Injections::getCachedInvokeDynamicCallSite)
+        }
+
+        // On null value compute and cache the call site
+        dup()
+        advancingCounter {
+            val onCallSite = newLabel()
+            ifNonNull(onCallSite)
+            pop()
+            computeAndCacheInvokeDynamicCallSite(bootstrapMethodHandle, name, descriptor, bootstrapMethodArguments)
+            visitLabel(onCallSite)
+        }
+    }
+
+    private fun GeneratorAdapter.computeAndCacheInvokeDynamicCallSite(
+        bootstrapMethodHandle: Handle,
+        name: String,
+        descriptor: String,
+        bootstrapMethodArguments: Array<out Any?>
+    ) {
+        // The value to return
+        createCallSiteManuallyWithMetafactory(bootstrapMethodHandle, name, descriptor, bootstrapMethodArguments)
+        val callSite = newLocal(callSiteType)
+        storeLocal(callSite)
+        
+        // The key for Map.set(key, value)
+        putInvokeDynamicCallStaticArgumentsOnStack(name, descriptor, bootstrapMethodHandle, bootstrapMethodArguments)
+        
+        // The value for Map.set(key, value)
+        loadLocal(callSite)
+        
+        // Map.set(key, value)
+        invokeInIgnoredSection {
+            invokeStatic(Injections::putCachedInvokeDynamicCallSite)
+        }
+        
+        loadLocal(callSite)
+    }
+
+    private fun GeneratorAdapter.putInvokeDynamicCallStaticArgumentsOnStack(
+        name: String,
+        descriptor: String,
+        bootstrapMethodHandle: Handle,
+        bootstrapMethodArguments: Array<out Any?>
+    ) {
+        visitLdcInsn(name)
+        visitLdcInsn(descriptor)
+        createHandlePojo(bootstrapMethodHandle)
+
+        visitLdcInsn(bootstrapMethodArguments.size)
+        newArray(anyType)
+        for ((i, arg) in bootstrapMethodArguments.withIndex()) {
+            dup()
+            visitLdcInsn(i)
+            visitLdcInsn(arg)
+            if (arg != null) {
+                box(Type.getType(arg.javaClass))
+            }
+            arrayStore(anyType)
+        }
+    }
+
+    private fun GeneratorAdapter.createHandlePojo(bootstrapMethodHandle: Handle) {
+        newInstance(handlePojoType)
+        dup()
+        visitLdcInsn(bootstrapMethodHandle.tag)
+        visitLdcInsn(bootstrapMethodHandle.owner)
+        visitLdcInsn(bootstrapMethodHandle.name)
+        visitLdcInsn(bootstrapMethodHandle.desc)
+        visitLdcInsn(bootstrapMethodHandle.isInterface)
+        invokeConstructor(handlePojoType, handlePojoConstructor)
+    }
+
+    private fun GeneratorAdapter.createCallSiteManuallyWithMetafactory(
+        bootstrapMethodHandle: Handle,
+        name: String,
+        descriptor: String,
+        bootstrapMethodArguments: Array<out Any?>
+    ) {
+        putStackArgumentsForMetafactory(bootstrapMethodHandle, name, descriptor, bootstrapMethodArguments)
+        invokeInIgnoredSection {
+            visitMethodInsn(
+                INVOKESTATIC,
+                bootstrapMethodHandle.owner,
+                bootstrapMethodHandle.name,
+                bootstrapMethodHandle.desc,
+                bootstrapMethodHandle.isInterface
+            )
+        }
+    }
+    
+    private fun GeneratorAdapter.getCallSiteTarget() = invokeInIgnoredSection {
+        invokeVirtual(callSiteType, callSiteTargetMethod)
+    }
+
+    private fun GeneratorAdapter.putStackArgumentsForMetafactory(
+        bootstrapMethodHandle: Handle,
+        name: String,
+        descriptor: String,
+        bootstrapMethodArguments: Array<out Any?>
+    ) {
+        // InvokeDynamic execution consists of the following steps:
+        // 1. Calling bootstrap method, which creates the actual function to call later;
+        // 2. Caching it by JVM;
+        // 3. Calling it by JVM.
+        // On the subsequent runs, JVM uses cached function.
+
+        // The current implementation performs these steps manually each time.
+        // Once native calls are supported, it would be possible to cache `MethodHandle`s creation.
+
+        // Bootstrap method is a function, which creates the actual call-site.
+        // Its first three parameters are predefined and are supplied by JVM when it invokes `invokedynamic`.
+        // After those parameters, there are regular parameters.
+        // Also, there can be `vararg` parameters.
+
+        // (predefined, predefined, predefined, regular, regular, [Ljava/lang/Object; <- is vararg)
+        // vararg parameter might exist or not
+
+        // https://openjdk.org/jeps/309
+        // https://www.infoq.com/articles/Invokedynamic-Javas-secret-weapon/
+        // https://www.baeldung.com/java-string-concatenation-invoke-dynamic
+
+        val bootstrapMethodParameterTypes = Type.getArgumentTypes(bootstrapMethodHandle.desc)
+        require(bootstrapMethodParameterTypes[0] == methodHandlesLookupType)
+        require(bootstrapMethodParameterTypes[1] == STRING_TYPE)
+        require(bootstrapMethodParameterTypes[2] == methodTypeType)
+
+        // pushing predefined arguments manually
+        invokeStatic(MethodHandles::lookup)
+        visitLdcInsn(name)
+        visitLdcInsn(Type.getMethodType(descriptor))
+        val jvmPredefinedParametersCount = 3
+
+        val isMethodWithVarArgs = isMethodVarArgs(bootstrapMethodHandle)
+        val notVarargsArgumentsCount =
+            bootstrapMethodParameterTypes.size - jvmPredefinedParametersCount - (if (isMethodWithVarArgs) 1 else 0)
+        val varargsArgumentsCount = bootstrapMethodArguments.size - notVarargsArgumentsCount
+        // adding regular arguments
+        for (arg in bootstrapMethodArguments.take(notVarargsArgumentsCount)) {
+            visitLdcInsn(arg)
+        }
+        // adding vararg
+        if (isMethodWithVarArgs) {
+            val varargArguments = bootstrapMethodArguments.takeLast(varargsArgumentsCount)
+            visitLdcInsn(varargsArgumentsCount)
+            // [Ljava/lang/Object; -> Ljava/lang/Object;, [[Ljava/lang/Object; -> [Ljava/lang/Object;
+            val arrayElementType = bootstrapMethodParameterTypes.last().descriptor.drop(1).let(Type::getType)
+            newArray(arrayElementType)
+            for ((i, arg) in varargArguments.withIndex()) {
+                dup()
+                visitLdcInsn(i)
+                visitLdcInsn(arg)
+                if (arg != null && arrayElementType.sort == Type.OBJECT) {
+                    box(Type.getType(arg.javaClass))
+                }
+                arrayStore(arrayElementType)
             }
         }
     }
@@ -145,6 +255,24 @@ internal class DeterministicInvokeDynamicTransformer(
                 loadLocal(oldId)
                 invokeStatic(Injections::advanceCurrentObjectId)
             }
+        )
+    }
+    
+    companion object {
+        private val callSiteType = Type.getType(CallSite::class.java)
+        private val handlePojoType = Type.getType(HandlePojo::class.java)
+        private val anyType = Type.getType(Any::class.java)
+        private val methodTypeType = Type.getType(MethodType::class.java)
+        private val methodHandlesLookupType = Type.getType(MethodHandles.Lookup::class.java)
+        private val callSiteTargetMethod = Method.getMethod(CallSite::class.java.getMethod("getTarget"))
+        private val handlePojoConstructor = Method.getMethod(
+            HandlePojo::class.java.getDeclaredConstructor(
+                Int::class.java,
+                String::class.java,
+                String::class.java,
+                String::class.java,
+                Boolean::class.java
+            )
         )
     }
 }
