@@ -46,10 +46,12 @@ fun testFailed(
     exceptions: Array<String>
 ) {}
 
+internal val ideaPluginEnabled = ideaPluginEnabled()
+
 /**
  * Debugger replaces the result of this method to `true` if idea plugin is enabled.
  */
-fun ideaPluginEnabled(): Boolean {
+private fun ideaPluginEnabled(): Boolean {
     // treat as enabled in tests if we want so
     return eventIdStrictOrderingCheck
 }
