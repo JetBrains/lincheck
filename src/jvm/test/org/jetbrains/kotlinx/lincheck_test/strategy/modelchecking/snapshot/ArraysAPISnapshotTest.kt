@@ -133,7 +133,7 @@ abstract class BaseArraysAPISnapshotTest : AbstractSnapshotTest() {
         otherRefArray[Random.nextInt(0, otherRefArray.size)].x = Random.nextInt()
     }
 }
-@Ignore
+
 class ArraysAPISnapshotTest : BaseArraysAPISnapshotTest() {
 
     @Operation
@@ -196,73 +196,73 @@ abstract class BaseIsolatedArraysAPISnapshotTest : BaseArraysAPISnapshotTest() {
     }
 }
 
-//class IsolatedAsListTest : BaseIsolatedArraysAPISnapshotTest() {
-//    @Operation
-//    fun asList() = asListImpl()
-//}
-//
-//class IsolatedSortTest : BaseIsolatedArraysAPISnapshotTest() {
-//    @Operation
-//    fun sort() = sortImpl()
-//}
-//
-//class IsolatedArraysSortTest : BaseIsolatedArraysAPISnapshotTest() {
-//    @Operation
-//    fun arraysSort() = arraysSortImpl()
-//}
-//
-//class IsolatedArraysParallelSortTest : BaseIsolatedArraysAPISnapshotTest() {
-//    @Operation
-//    fun arraysParallelSort() = arraysParallelSortImpl()
-//}
-//
-//class IsolatedArraysParallelPrefixTest : BaseIsolatedArraysAPISnapshotTest() {
-//    @Operation
-//    fun arraysParallelPrefix() = arraysParallelPrefixImpl()
-//}
-//
-//class IsolatedReverseTest : BaseIsolatedArraysAPISnapshotTest() {
-//    @Operation
-//    fun reverse() = reverseImpl()
-//}
-//
-//class IsolatedFillTest : BaseIsolatedArraysAPISnapshotTest() {
-//    @Operation
-//    fun fill() = fillImpl()
-//}
-//
-//class IsolatedArraysFillTest : BaseIsolatedArraysAPISnapshotTest() {
-//    @Operation
-//    fun arraysFill() = arraysFillImpl()
-//}
-//
-//class IsolatedArraysSetAllTest : BaseIsolatedArraysAPISnapshotTest() {
-//    @Operation
-//    fun arraysSetAll() = arraysSetAllImpl()
-//}
-//
-//@Ignore("Execution has hung error")
-//class IsolatedArraysParallelSetAllTest : BaseIsolatedArraysAPISnapshotTest() {
-//    @Operation
-//    fun arraysParallelSetAll() = arraysParallelSetAllImpl()
-//}
-//
-//class IsolatedCopyOfTest : BaseIsolatedArraysAPISnapshotTest() {
-//    @Operation
-//    fun copyOf() = copyOfImpl()
-//}
-//
-//class IsolatedArraysCopyOfTest : BaseIsolatedArraysAPISnapshotTest() {
-//    @Operation
-//    fun arraysCopyOf() = arraysCopyOfImpl()
-//}
-//
-//class IsolatedCopyOfRangeTest : BaseIsolatedArraysAPISnapshotTest() {
-//    @Operation
-//    fun copyOfRange() = copyOfRangeImpl()
-//}
-//
-//class IsolatedArraysCopyOfRangeTest : BaseIsolatedArraysAPISnapshotTest() {
-//    @Operation
-//    fun arraysCopyOfRange() = arraysCopyOfRangeImpl()
-//}
+class IsolatedAsListTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun asList() = asListImpl()
+}
+
+class IsolatedSortTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun sort() = sortImpl()
+}
+
+class IsolatedArraysSortTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun arraysSort() = arraysSortImpl()
+}
+
+class IsolatedArraysParallelSortTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun arraysParallelSort() = arraysParallelSortImpl()
+}
+
+class IsolatedArraysParallelPrefixTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun arraysParallelPrefix() = arraysParallelPrefixImpl()
+}
+
+class IsolatedReverseTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun reverse() = reverseImpl()
+}
+
+class IsolatedFillTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun fill() = fillImpl()
+}
+
+class IsolatedArraysFillTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun arraysFill() = arraysFillImpl()
+}
+
+class IsolatedArraysSetAllTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun arraysSetAll() = arraysSetAllImpl()
+}
+
+@Ignore("Execution has hung error")
+class IsolatedArraysParallelSetAllTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun arraysParallelSetAll() = arraysParallelSetAllImpl()
+}
+
+class IsolatedCopyOfTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun copyOf() = copyOfImpl()
+}
+
+class IsolatedArraysCopyOfTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun arraysCopyOf() = arraysCopyOfImpl()
+}
+
+class IsolatedCopyOfRangeTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun copyOfRange() = copyOfRangeImpl()
+}
+
+class IsolatedArraysCopyOfRangeTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun arraysCopyOfRange() = arraysCopyOfRangeImpl()
+}
