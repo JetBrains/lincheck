@@ -37,7 +37,7 @@ internal class ObjectIdentityHashCodeTracker {
          *
          * | unused:25 hash:31 -->| unused:1   age:4    biased_lock:1 lock:2 (normal object) |
          *
-         * So the hash code starts after the 1 byte (1 unused + 4 age bits + 3 lock bits = 8 bits)
+         * So the hash code starts after the 1st byte (1 unused + 4 age bits + 3 lock bits = 8 bits).
          *
          * Links:
          *   [1] JVM Anatomy Quark #26: Identity Hash Code:
@@ -69,7 +69,6 @@ internal class ObjectIdentityHashCodeTracker {
             identityHashCode = if (isInTraceDebuggerMode) System.identityHashCode(obj) else 0
         )
         // ATTENTION: bizarre and crazy code below (might not work for all JVM implementations)
-        //
         UnsafeHolder.UNSAFE.putInt(obj, IDENTITY_HASHCODE_OFFSET, initialIdentityHashCode)
         return currentObjectId
     }
