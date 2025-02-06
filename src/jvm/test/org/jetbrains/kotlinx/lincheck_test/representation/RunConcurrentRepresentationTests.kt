@@ -46,7 +46,11 @@ abstract class BaseRunConcurrentRepresentationTest<R>(private val outputFileName
         }
         val error = result.exceptionOrNull()!!
         check(error is LincheckAssertionError) {
-            "The test should throw LincheckAssertionError"
+            """
+            |The test should throw LincheckAssertionError, but instead it failed with:
+            |$error
+            """
+            .trimMargin()
         }
         error.failure.checkLincheckOutput(outputFileName)
     }
