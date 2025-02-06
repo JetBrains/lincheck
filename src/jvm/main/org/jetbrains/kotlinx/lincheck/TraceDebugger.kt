@@ -33,7 +33,8 @@ internal object TraceDebuggerInjections {
         firstRun = false
 
         val testClass = Class.forName(testClassName)
-        val testMethod = testClass.getMethod(testMethodName)!!
+        val testMethod = testClass.methods.find { it.name == testMethodName }
+            ?: error("Method \"$testMethodName\" was not found in class \"$testClassName\". Check that method exists and it is public.")
 
         val isStaticMethod = Modifier.isStatic(testMethod.modifiers)
         val instanceClass = if (isStaticMethod) TraceDebuggerStaticMethodWrapper::class.java else testClass
@@ -64,7 +65,6 @@ internal object TraceDebuggerInjections {
             .logLevel(LoggingLevel.OFF)
             .invocationTimeout(5 * 60 * 1000) // 5 mins
 
-        @Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE")
         val failure = lincheckOptions.checkImpl(instanceClass)
 
         val result = failure!!.results.threadsResults[0][0]
