@@ -261,8 +261,7 @@ class LTS(private val sequentialSpecification: Class<*>) {
     }
 
     private fun createInitialStateInstance(): Any {
-        @Suppress("DEPRECATION")
-        return sequentialSpecification.newInstance().also {
+        return sequentialSpecification.newDefaultInstance().also {
             // the sequential version of the data structure used for verification
             // may differ from the original parallel version,
             // in this case we need to ensure that the sequential class is also instrumented
