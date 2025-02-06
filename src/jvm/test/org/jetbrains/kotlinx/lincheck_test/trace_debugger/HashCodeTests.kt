@@ -19,7 +19,7 @@ import org.junit.Before
 import org.junit.Test
 import java.util.*
 
-abstract class HashCodeTest : AbstractNativeCallTest()
+abstract class HashCodeTest : AbstractDeterministicTest()
 
 class SimpleHashCodeTest : HashCodeTest() {
     @Operation

@@ -27,11 +27,15 @@ import java.lang.invoke.MethodType
 
 
 /**
- * A specialized visitor for handling `INVOKEDYNAMIC` instructions in JVM bytecode.
- * 
- * This transformer implements a deterministic execution strategy for dynamic method invocations,
- * which normally rely on the call-site creation and caching called done by JVM itself,
- * leading to the difference between the first and the following executions.
+ * A class that deterministically emulates the behavior of `invokedynamic` bytecode instruction.
+ * It extends the `ManagedStrategyMethodVisitor` to provide specific transformations and augmentations
+ * for managing and executing dynamic invocation instructions. The implementation ensures deterministic
+ * behavior especially in the context of testing or debugging.
+ *
+ * @param fileName The name of the file containing the class being visited.
+ * @param className The name of the class being visited.
+ * @param methodName The name of the method being visited.
+ * @param adapter The `GeneratorAdapter` used to modify and emit bytecode instructions.
  */
 internal class DeterministicInvokeDynamicTransformer(
     fileName: String,
@@ -241,10 +245,15 @@ internal class DeterministicInvokeDynamicTransformer(
         bootstrapMethodHandle: Handle,
     ): Boolean {
         val ownerClassName = bootstrapMethodHandle.owner.replace('/', '.')
+        // Calling Class.forName is considered safe here
+        // because bootstrap methods calling themselves with invoke dynamic seem unpractical.
         val methods = Class.forName(ownerClassName).declaredMethods
         return methods.single { Type.getMethodDescriptor(it) == bootstrapMethodHandle.desc }.isVarArgs
     }
 
+    
+    // TODO: Investigate whether it is possible to refactor this code to remove advanceCurrentObjectId from 
+    //  the event tracker API and solve the problem with the ignored sections instead.
     private fun GeneratorAdapter.advancingCounter(code: GeneratorAdapter.() -> Unit) {
         invokeStatic(Injections::getNextObjectId)
         val oldId = newLocal(Type.LONG_TYPE)
@@ -257,7 +266,7 @@ internal class DeterministicInvokeDynamicTransformer(
             }
         )
     }
-    
+
     companion object {
         private val callSiteType = Type.getType(CallSite::class.java)
         private val handlePojoType = Type.getType(HandlePojo::class.java)

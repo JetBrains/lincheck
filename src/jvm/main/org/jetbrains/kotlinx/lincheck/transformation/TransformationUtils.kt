@@ -164,9 +164,11 @@ internal fun GeneratorAdapter.storeArguments(methodDescriptor: String): IntArray
  * Attention: this method does not insert `finally` blocks before inner return and throw statements.
  *
  * @param tryBlock The code block to be executed in the try section.
- * @param exceptionType The type of exception to be caught in the catch section, or null to catch all exceptions.
- * @param catchBlock The code block to be executed in the catch section if an exception is thrown. By default, it re-throws the exception.
- * @param finallyBlock The code block to be executed in the finally section. This is optional.
+ * @param exceptionType The type of exception to be caught in the `catch` section, or null to catch all exceptions.
+ * @param catchBlock The code block to be executed in the `catch` section if an exception is thrown.
+ * By default, it re-throws the exception.
+ * When called, it expects the exception to be on the top of the stack.
+ * @param finallyBlock The code block to be executed in the `finally` section. This is optional.
  */
 internal fun GeneratorAdapter.tryCatchFinally(
     tryBlock: GeneratorAdapter.() -> Unit,
