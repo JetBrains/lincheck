@@ -46,6 +46,11 @@ fun testFailed(
     exceptions: Array<String>
 ) {}
 
+/**
+ * This property on the top level serves as a cache.
+ * We will call `ideaPluginEnabled` method only once
+ * and so on the plugin side the callback will be called also only once.
+ */
 internal val ideaPluginEnabled = ideaPluginEnabled()
 
 /**
