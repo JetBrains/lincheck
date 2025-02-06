@@ -110,7 +110,7 @@ class SnapshotTracker {
             .forEach { restoreValues(it, visitedObjects) }
     }
 
-    private fun isTracked(obj: Any): Boolean = obj in trackedObjects
+    fun isTracked(obj: Any): Boolean = obj in trackedObjects
 
     /**
      * @return `true` if the [fieldValue] is a trackable object, and it is added
