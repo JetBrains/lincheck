@@ -53,7 +53,7 @@ abstract class BaseArraysAPISnapshotTest : AbstractSnapshotTest() {
         actorsBefore(0)
         actorsAfter(0)
         actorsPerThread(10)
-        iterations(100)
+        iterations(200)
         invocationsPerIteration(1)
         threads(1)
     }
@@ -191,7 +191,7 @@ class ArraysAPISnapshotTest : BaseArraysAPISnapshotTest() {
 abstract class BaseIsolatedArraysAPISnapshotTest : BaseArraysAPISnapshotTest() {
     override fun <O : ManagedOptions<O, *>> O.customize() {
         setup()
-        iterations(500)
+        iterations(1000)
         actorsPerThread(1)
     }
 }
