@@ -26,15 +26,32 @@ val isInTraceDebuggerMode = System.getProperty("lincheck.traceDebuggerMode", "fa
 
 internal object TraceDebuggerInjections {
     @JvmStatic
+    lateinit var classUnderTraceDebugging: String
+
+    @JvmStatic
+    lateinit var methodUnderTraceDebugging: String
+
+    @JvmStatic
+    fun parseArgs(args: String?) {
+        if (args == null) {
+            error("Please provide class and method names as arguments")
+        }
+
+        val actualArguments = args.split(",")
+        classUnderTraceDebugging = actualArguments.getOrNull(0) ?: error("Class name was not provided")
+        methodUnderTraceDebugging = actualArguments.getOrNull(1) ?: error("Method name was not provided")
+    }
+
+    @JvmStatic
     var firstRun = true
 
     @JvmStatic
-    fun runWithLincheck(testClassName: String, testMethodName: String) {
+    fun runWithLincheck() {
         firstRun = false
 
-        val testClass = Class.forName(testClassName)
-        val testMethod = testClass.methods.find { it.name == testMethodName }
-            ?: error("Method \"$testMethodName\" was not found in class \"$testClassName\". Check that method exists and it is public.")
+        val testClass = Class.forName(classUnderTraceDebugging)
+        val testMethod = testClass.methods.find { it.name == methodUnderTraceDebugging }
+            ?: error("Method \"$methodUnderTraceDebugging\" was not found in class \"$classUnderTraceDebugging\". Check that method exists and it is public.")
 
         val isStaticMethod = Modifier.isStatic(testMethod.modifiers)
         val instanceClass = if (isStaticMethod) TraceDebuggerStaticMethodWrapper::class.java else testClass
