@@ -20,14 +20,27 @@ class OuterClass {
         @Operation
         fun zero() = 0
     }
+
+    class NestedClass {
+        @Operation
+        fun zero() = 0
+    }
 }
 
 class InnerClassTest {
     @Test
-    fun someTest() {
+    fun testInnerClass() {
         StressOptions()
             .invocationsPerIteration(1)
             .iterations(1)
             .check(OuterClass.InnerClass::class)
+    }
+
+    @Test
+    fun testNestedClass() {
+        StressOptions()
+            .invocationsPerIteration(1)
+            .iterations(1)
+            .check(OuterClass.NestedClass::class)
     }
 }

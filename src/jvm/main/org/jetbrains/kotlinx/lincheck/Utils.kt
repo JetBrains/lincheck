@@ -330,7 +330,7 @@ internal inline fun <R> runOutsideIgnoredSection(descriptor: ThreadDescriptor?, 
 internal const val LINCHECK_PACKAGE_NAME = "org.jetbrains.kotlinx.lincheck."
 internal const val LINCHECK_RUNNER_PACKAGE_NAME = "org.jetbrains.kotlinx.lincheck.runner."
 
-internal fun <T> Class<T>.newInstanceRecursive(): T {
+internal fun <T> Class<T>.newDefaultInstance(): T {
     @Suppress("UNCHECKED_CAST")
     val constructor = this.declaredConstructors.singleOrNull { it.parameterCount == 0 } as? Constructor<T>
     if (constructor != null) {
@@ -338,7 +338,7 @@ internal fun <T> Class<T>.newInstanceRecursive(): T {
     }
 
     if (this.enclosingClass != null) {
-        val enclosingObject = this.enclosingClass.newInstanceRecursive()
+        val enclosingObject = this.enclosingClass.newDefaultInstance()
         return this.getDeclaredConstructor(this.enclosingClass)
             .also { it.isAccessible = true }
             .newInstance(enclosingObject)

@@ -180,7 +180,7 @@ internal open class ParallelThreadsRunner(
     private var ensuredTestInstanceIsTransformed = false
 
     private fun createTestInstance() {
-        testInstance = testClass.newInstanceRecursive()
+        testInstance = testClass.newDefaultInstance()
         if (strategy is ModelCheckingStrategy) {
             // In the model checking mode, we need to ensure
             // that all the necessary classes and instrumented
