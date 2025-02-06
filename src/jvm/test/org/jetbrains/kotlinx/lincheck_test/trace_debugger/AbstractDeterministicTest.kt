@@ -26,7 +26,7 @@ import java.io.PrintStream
 /**
  * Checks for absence of non-determinism and absence (or existence) of exceptions.
  */
-abstract class AbstractNativeCallTest {
+abstract class AbstractDeterministicTest {
     private fun testTraceDebugger() {
         assumeTrue(isInTraceDebuggerMode)
         val oldStdOut = System.out

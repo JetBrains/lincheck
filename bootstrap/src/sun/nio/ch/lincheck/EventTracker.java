@@ -39,6 +39,7 @@ public interface EventTracker {
     void afterNewObjectCreation(Object obj);
     long getNextObjectId();
     void advanceCurrentObjectId(long oldId);
+    
     CallSite getCachedInvokeDynamicCallSite(
             String name,
             String descriptor,
