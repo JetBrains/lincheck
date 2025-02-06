@@ -47,9 +47,16 @@ fun testFailed(
 ) {}
 
 /**
+ * This property on the top level serves as a cache.
+ * We will call `ideaPluginEnabled` method only once
+ * and so on the plugin side the callback will be called also only once.
+ */
+internal val ideaPluginEnabled = ideaPluginEnabled()
+
+/**
  * Debugger replaces the result of this method to `true` if idea plugin is enabled.
  */
-fun ideaPluginEnabled(): Boolean {
+private fun ideaPluginEnabled(): Boolean {
     // treat as enabled in tests if we want so
     return eventIdStrictOrderingCheck
 }

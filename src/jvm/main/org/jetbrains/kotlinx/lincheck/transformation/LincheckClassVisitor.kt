@@ -23,8 +23,6 @@ internal class LincheckClassVisitor(
     private val classVisitor: SafeClassWriter,
     private val instrumentationMode: InstrumentationMode,
 ) : ClassVisitor(ASM_API, classVisitor) {
-
-    private val ideaPluginEnabled = ideaPluginEnabled()
     private var classVersion = 0
 
     private var fileName: String = ""
@@ -177,9 +175,6 @@ internal open class ManagedStrategyMethodVisitor(
     protected val methodName: String,
     val adapter: GeneratorAdapter
 ) : MethodVisitor(ASM_API, adapter) {
-
-    private val ideaPluginEnabled = ideaPluginEnabled()
-
     private var lineNumber = 0
 
     /**
