@@ -1197,6 +1197,8 @@ abstract class ManagedStrategy(
             className == "java/lang/System" && methodName == "arraycopy" -> {
                 check(params[2] != null && params[2]!!.javaClass.isArray)
                 val srcArray = params[0]!!
+                if (!staticMemorySnapshot.isTracked(srcArray)) return
+
                 val srcPosStart = params[1] as Int
                 val length = params[4] as Int
 
@@ -1207,8 +1209,10 @@ abstract class ManagedStrategy(
             // Arrays API (we handle it separately because of https://github.com/JetBrains/lincheck/issues/470)
             className == "java/util/Arrays" -> {
                 val srcArray = params[0]!!
-                var from: Int = 0
-                var to: Int = 0
+                if (!staticMemorySnapshot.isTracked(srcArray)) return
+
+                var from = 0
+                var to = 0
                 when (methodName) {
                     in listOf("fill", "sort", "parallelSort", "setAll", "parallelSetAll", "parallelPrefix") -> {
                         if (params.size >= 3) {
@@ -1220,7 +1224,7 @@ abstract class ManagedStrategy(
                         }
                     }
                     "copyOf" -> {
-                        to = params[1] as Int /* newLength */
+                        to = params[1] as Int // newLength
                     }
                     "copyOfRange" -> {
                         from = params[1] as Int // fromIndex
