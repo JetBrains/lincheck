@@ -33,7 +33,24 @@ internal class ObjectIdentityHashCodeTracker {
         /**
          * Offset (in bytes) of identity hashcode in an object header.
          *
-         * @see <a href="https://shipilev.net/jvm/anatomy-quarks/26-identity-hash-code/#_hashcode_storage">JVM Anatomy Quark #26: Identity Hash Code</a>
+         * The memory layout of object header mark work from [2] (on 64 bits architectures):
+         *
+         * | unused:25 hash:31 -->| unused:1   age:4    biased_lock:1 lock:2 (normal object) |
+         *
+         * So the hash code starts after the 1 byte (1 unused + 4 age bits + 3 lock bits = 8 bits)
+         *
+         * Links:
+         *   [1] JVM Anatomy Quark #26: Identity Hash Code:
+         *   <a href="https://shipilev.net/jvm/anatomy-quarks/26-identity-hash-code/#_hashcode_storage">JVM Anatomy Quark #26: Identity Hash Code</a>
+         *
+         *   [2] OpenJDK object header source code:
+         *   <a href="https://hg.openjdk.org/jdk8/jdk8/hotspot/file/87ee5ee27509/src/share/vm/oops/markOop.hpp">
+         *
+         * TODO:
+         *   1. Check on 32 bits architectures.
+         *   2. Re-check if CAS is needed to account for concurrent GC.
+         *   3. Re-check wrt. compact identity hash codes:
+         *      https://wiki.openjdk.org/display/lilliput/Compact+Identity+Hashcode
          */
         private const val IDENTITY_HASHCODE_OFFSET: Long = 1L
     }
@@ -52,6 +69,7 @@ internal class ObjectIdentityHashCodeTracker {
             identityHashCode = if (isInTraceDebuggerMode) System.identityHashCode(obj) else 0
         )
         // ATTENTION: bizarre and crazy code below (might not work for all JVM implementations)
+        //
         UnsafeHolder.UNSAFE.putInt(obj, IDENTITY_HASHCODE_OFFSET, initialIdentityHashCode)
         return currentObjectId
     }
