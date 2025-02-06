@@ -1396,24 +1396,24 @@ abstract class ManagedStrategy(
             className == "java/lang/System" && methodName == "arraycopy" -> {
                 check(params[2] != null && params[2]!!.javaClass.isArray)
                 val srcArray = params[0]!!
-                if (!staticMemorySnapshot.isTracked(srcArray)) return
 
                 val srcPosStart = params[1] as Int
                 val length = params[4] as Int
 
-                for (i in 0..length - 1) {
-                    staticMemorySnapshot.trackArrayCell(srcArray, srcPosStart + i)
+                if (staticMemorySnapshot.isTracked(srcArray)) {
+                    for (i in 0..<length) {
+                        staticMemorySnapshot.trackArrayCell(srcArray, srcPosStart + i)
+                    }
                 }
             }
             // Arrays API (we handle it separately because of https://github.com/JetBrains/lincheck/issues/470)
             className == "java/util/Arrays" -> {
-                val srcArray = params[0]!!
-                if (!staticMemorySnapshot.isTracked(srcArray)) return
-
+                var srcArray: Any? = null
                 var from = 0
                 var to = 0
                 when (methodName) {
                     in listOf("fill", "sort", "parallelSort", "setAll", "parallelSetAll", "parallelPrefix") -> {
+                        srcArray = params[0]!!
                         if (params.size >= 3) {
                             from = params[1] as Int // fromIndex
                             to = params[2] as Int // toIndex
@@ -1423,16 +1423,22 @@ abstract class ManagedStrategy(
                         }
                     }
                     "copyOf" -> {
+                        srcArray = params[0]!!
                         to = params[1] as Int // newLength
                     }
                     "copyOfRange" -> {
+                        srcArray = params[0]!!
                         from = params[1] as Int // fromIndex
                         to = params[2] as Int // toIndex
                     }
                 }
 
-                if (to > from) {
-                    for (i in from..to.coerceAtMost(getArrayLength(srcArray)) - 1) {
+                if (
+                    srcArray != null &&
+                    to > from &&
+                    staticMemorySnapshot.isTracked(srcArray)
+                ) {
+                    for (i in from..<to.coerceAtMost(getArrayLength(srcArray))) {
                         staticMemorySnapshot.trackArrayCell(srcArray, i)
                     }
                 }
