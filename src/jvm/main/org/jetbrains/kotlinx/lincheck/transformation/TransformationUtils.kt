@@ -173,7 +173,7 @@ internal fun GeneratorAdapter.storeArguments(methodDescriptor: String): IntArray
 internal fun GeneratorAdapter.tryCatchFinally(
     tryBlock: GeneratorAdapter.() -> Unit,
     exceptionType: Type? = null,
-    catchBlock: GeneratorAdapter.() -> Unit = { throwException() },
+    catchBlock: (GeneratorAdapter.() -> Unit)? = null,
     finallyBlock: (GeneratorAdapter.() -> Unit)? = null,
 ) {
     val startTryBlockLabel = newLabel()
@@ -192,14 +192,19 @@ internal fun GeneratorAdapter.tryCatchFinally(
     if (finallyBlock != null) finallyBlock()
     goTo(endLabel)
     visitLabel(exceptionHandlerLabel)
-    if (finallyBlock != null) {
-        val exception = newLocal(exceptionType ?: getType(Throwable::class.java))
-        storeLocal(exception)
-        finallyBlock()
-        loadLocal(exception)
-        catchBlock()
+    if (catchBlock != null) {
+        if (finallyBlock != null) {
+            tryCatchFinally(
+                tryBlock = catchBlock,
+                catchBlock = null,
+                finallyBlock = finallyBlock,
+            )
+        } else {
+            catchBlock()
+        }
     } else {
-        catchBlock()
+        if (finallyBlock != null) finallyBlock()
+        throwException()
     }
     visitLabel(endLabel)
 }
