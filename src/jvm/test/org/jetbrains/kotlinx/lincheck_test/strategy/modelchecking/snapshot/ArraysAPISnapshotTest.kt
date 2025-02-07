@@ -10,13 +10,12 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy.modelchecking.snapshot
 
-import org.jetbrains.kotlinx.lincheck.LoggingLevel
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedOptions
 import org.junit.Ignore
-import java.util.Arrays
+import java.util.*
 import kotlin.random.Random
 
 private val arrayValue = intArrayOf(2, 1, 4, 3, 6, 5, 8, 7, 10, 9)
