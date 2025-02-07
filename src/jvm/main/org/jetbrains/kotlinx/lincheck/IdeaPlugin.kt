@@ -195,6 +195,13 @@ private fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Arr
                 val event = node.event
                 val eventId = event.eventId
                 val representation = event.toStringImpl(withLocation = false)
+                val (location, locationId) = if (event is CodeLocationTracePoint) {
+                    val ste = event.stackTraceElement
+                    Pair("${ste.className}:${ste.methodName}:${ste.fileName}:${ste.lineNumber}", event.codeLocation)
+                }
+                else {
+                    Pair("null", -1)
+                }
                 val type = when (event) {
                     is SwitchEventTracePoint -> {
                         when (event.reason) {
@@ -210,15 +217,18 @@ private fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Arr
                 }
 
                 if (representation.isNotEmpty()) {
-                    representations.add("$type;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${eventId};${representation}")
+                    representations.add("$type;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${eventId};${representation};${location};${locationId}")
                 }
             }
 
             is CallNode -> {
                 val beforeEventId = node.call.eventId
                 val representation = node.call.toStringImpl(withLocation = false)
+                val ste = node.call.stackTraceElement
+                val location = "${ste.className}:${ste.methodName}:${ste.fileName}:${ste.lineNumber}"
+
                 if (representation.isNotEmpty()) {
-                    representations.add("0;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation}")
+                    representations.add("0;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};${location};${node.call.codeLocation}")
                 }
             }
 
@@ -226,14 +236,14 @@ private fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Arr
                 val beforeEventId = -1
                 val representation = node.actorRepresentation
                 if (representation.isNotEmpty()) {
-                    representations.add("1;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation}")
+                    representations.add("1;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};null;-1")
                 }
             }
 
             is ActorResultNode -> {
                 val beforeEventId = -1
                 val representation = node.resultRepresentation.toString()
-                representations.add("2;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};${node.exceptionNumberIfExceptionResult ?: -1}")
+                representations.add("2;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};${node.exceptionNumberIfExceptionResult ?: -1};null;-1")
             }
 
             else -> {}
