@@ -33,8 +33,12 @@ class CoroutinesMultipleSuspensionsTest : AbstractLincheckTest() {
             if (locked.compareAndSet(false, true)) return
             suspendCancellableCoroutine { cont ->
                 waiters.add(cont)
-                if (!locked.value) {
-                    if (waiters.remove(cont)) cont.resume(Unit)
+                if (!locked.value && waiters.remove(cont)) {
+                    cont.resume(Unit)
+                } else {
+                    cont.invokeOnCancellation {
+                        waiters.remove(cont)
+                    }
                 }
             }
         }
