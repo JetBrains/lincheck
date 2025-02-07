@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
+import org.jetbrains.kotlinx.lincheck.transformation.CodeLocations
 
 data class Trace(val trace: List<TracePoint>)
 
@@ -57,8 +58,9 @@ internal class SwitchEventTracePoint(
 internal abstract class CodeLocationTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
-    val stackTraceElement: StackTraceElement
+    val codeLocation: Int
 ) : TracePoint(iThread, actorId, callStackTrace) {
+    val stackTraceElement = CodeLocations.stackTrace(codeLocation)
 
     protected abstract fun toStringCompact(): String
     override fun toStringImpl(withLocation: Boolean): String {
@@ -90,8 +92,8 @@ internal class ReadTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
     private val fieldName: String,
-    stackTraceElement: StackTraceElement,
-) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
+    codeLocation: Int,
+) : CodeLocationTracePoint(iThread, actorId, callStackTrace, codeLocation) {
     private lateinit var valueRepresentation: String
 
     override fun toStringCompact(): String = StringBuilder().apply {
@@ -117,8 +119,8 @@ internal class WriteTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
     private val fieldName: String,
-    stackTraceElement: StackTraceElement,
-) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
+    codeLocation: Int,
+) : CodeLocationTracePoint(iThread, actorId, callStackTrace, codeLocation) {
     private lateinit var valueRepresentation: String
 
     override fun toStringCompact(): String  = StringBuilder().apply {
@@ -142,8 +144,8 @@ internal class MethodCallTracePoint(
     val className: String,
     val methodName: String,
     callStackTrace: CallStackTrace,
-    stackTraceElement: StackTraceElement
-) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
+    codeLocation: Int
+) : CodeLocationTracePoint(iThread, actorId, callStackTrace, codeLocation) {
     private var returnedValue: ReturnedValueResult = ReturnedValueResult.NoValue
     private var thrownException: Throwable? = null
     private var parameters: List<String>? = null
@@ -205,48 +207,48 @@ private sealed interface ReturnedValueResult {
 internal class MonitorEnterTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
-    stackTraceElement: StackTraceElement
-) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
+    codeLocation: Int
+) : CodeLocationTracePoint(iThread, actorId, callStackTrace, codeLocation) {
     override fun toStringCompact(): String = "MONITORENTER"
 }
 
 internal class MonitorExitTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
-    stackTraceElement: StackTraceElement
-) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
+    codeLocation: Int
+) : CodeLocationTracePoint(iThread, actorId, callStackTrace, codeLocation) {
     override fun toStringCompact(): String = "MONITOREXIT"
 }
 
 internal class WaitTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
-    stackTraceElement: StackTraceElement
-) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
+    codeLocation: Int
+) : CodeLocationTracePoint(iThread, actorId, callStackTrace, codeLocation) {
     override fun toStringCompact(): String = "WAIT"
 }
 
 internal class NotifyTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
-    stackTraceElement: StackTraceElement
-) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
+    codeLocation: Int
+) : CodeLocationTracePoint(iThread, actorId, callStackTrace, codeLocation) {
     override fun toStringCompact(): String = "NOTIFY"
 }
 
 internal class ParkTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
-    stackTraceElement: StackTraceElement
-) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
+    codeLocation: Int
+) : CodeLocationTracePoint(iThread, actorId, callStackTrace, codeLocation) {
     override fun toStringCompact(): String = "PARK"
 }
 
 internal class UnparkTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
-    stackTraceElement: StackTraceElement
-) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
+    codeLocation: Int
+) : CodeLocationTracePoint(iThread, actorId, callStackTrace, codeLocation) {
     override fun toStringCompact(): String = "UNPARK"
 }
 

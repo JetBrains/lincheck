@@ -513,7 +513,7 @@ abstract class ManagedStrategy(
                 iThread = iThread,
                 actorId = currentActorId[iThread],
                 callStackTrace = callStackTrace[iThread],
-                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+                codeLocation = codeLocation
             )
         } else {
             null
@@ -558,7 +558,7 @@ abstract class ManagedStrategy(
                 iThread = iThread,
                 actorId = currentActorId[iThread],
                 callStackTrace = callStackTrace[iThread],
-                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+                codeLocation = codeLocation
             )
             traceCollector!!.passCodeLocation(tracePoint)
         }
@@ -571,7 +571,7 @@ abstract class ManagedStrategy(
                 iThread = iThread,
                 actorId = currentActorId[iThread],
                 callStackTrace = callStackTrace[iThread],
-                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+                codeLocation = codeLocation
             )
         } else {
             null
@@ -595,7 +595,7 @@ abstract class ManagedStrategy(
                 iThread = iThread,
                 actorId = currentActorId[iThread],
                 callStackTrace = callStackTrace[iThread],
-                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+                codeLocation = codeLocation
             )
             traceCollector?.passCodeLocation(tracePoint)
         }
@@ -608,7 +608,7 @@ abstract class ManagedStrategy(
                 iThread = iThread,
                 actorId = currentActorId[iThread],
                 callStackTrace = callStackTrace[iThread],
-                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+                codeLocation = codeLocation
             )
         } else {
             null
@@ -646,7 +646,7 @@ abstract class ManagedStrategy(
                 iThread = iThread,
                 actorId = currentActorId[iThread],
                 callStackTrace = callStackTrace[iThread],
-                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+                codeLocation = codeLocation
             )
             traceCollector?.passCodeLocation(tracePoint)
         }
@@ -674,7 +674,7 @@ abstract class ManagedStrategy(
                 actorId = currentActorId[iThread],
                 callStackTrace = callStackTrace[iThread],
                 fieldName = fieldName,
-                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+                codeLocation = codeLocation
             )
         } else {
             null
@@ -696,7 +696,7 @@ abstract class ManagedStrategy(
                 actorId = currentActorId[iThread],
                 callStackTrace = callStackTrace[iThread],
                 fieldName = "${adornedStringRepresentation(array)}[$index]",
-                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+                codeLocation = codeLocation
             )
         } else {
             null
@@ -730,7 +730,7 @@ abstract class ManagedStrategy(
                 actorId = currentActorId[iThread],
                 callStackTrace = callStackTrace[iThread],
                 fieldName = fieldName,
-                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+                codeLocation = codeLocation
             ).also {
                 it.initializeWrittenValue(adornedStringRepresentation(value))
             }
@@ -750,7 +750,7 @@ abstract class ManagedStrategy(
                 actorId = currentActorId[iThread],
                 callStackTrace = callStackTrace[iThread],
                 fieldName = "${adornedStringRepresentation(array)}[$index]",
-                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+                codeLocation = codeLocation
             ).also {
                 it.initializeWrittenValue(adornedStringRepresentation(value))
             }
@@ -1078,7 +1078,7 @@ abstract class ManagedStrategy(
             className = className,
             methodName = methodName,
             callStackTrace = callStackTrace,
-            stackTraceElement = CodeLocations.stackTrace(codeLocation)
+            codeLocation = codeLocation
         )
         // handle non-atomic methods
         if (atomicMethodDescriptor == null) {
