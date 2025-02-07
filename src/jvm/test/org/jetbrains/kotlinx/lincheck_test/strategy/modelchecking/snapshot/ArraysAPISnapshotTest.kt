@@ -134,7 +134,6 @@ abstract class BaseArraysAPISnapshotTest : AbstractSnapshotTest() {
     }
 }
 
-//@Ignore
 class ArraysAPISnapshotTest : BaseArraysAPISnapshotTest() {
 
     @Operation

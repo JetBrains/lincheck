@@ -1401,7 +1401,6 @@ abstract class ManagedStrategy(
                 val length = params[4] as Int
 
                 if (staticMemorySnapshot.isTracked(srcArray)) {
-                    println("System call: $className::$methodName(${params.joinToString()})")
                     for (i in 0..<length) {
                         staticMemorySnapshot.trackArrayCell(srcArray, srcPosStart + i)
                     }
@@ -1440,7 +1439,6 @@ abstract class ManagedStrategy(
                     to > from &&
                     staticMemorySnapshot.isTracked(srcArray)
                 ) {
-                    println("Arrays call: $className::$methodName(${params.joinToString()})")
                     for (i in from..<to.coerceAtMost(getArrayLength(srcArray))) {
                         staticMemorySnapshot.trackArrayCell(srcArray, i)
                     }
