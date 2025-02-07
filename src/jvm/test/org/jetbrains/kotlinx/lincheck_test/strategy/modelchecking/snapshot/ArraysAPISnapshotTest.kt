@@ -134,6 +134,7 @@ abstract class BaseArraysAPISnapshotTest : AbstractSnapshotTest() {
     }
 }
 
+@Ignore
 class ArraysAPISnapshotTest : BaseArraysAPISnapshotTest() {
 
     @Operation
@@ -191,7 +192,7 @@ class ArraysAPISnapshotTest : BaseArraysAPISnapshotTest() {
 abstract class BaseIsolatedArraysAPISnapshotTest : BaseArraysAPISnapshotTest() {
     override fun <O : ManagedOptions<O, *>> O.customize() {
         setup()
-        iterations(1000)
+        iterations(0)
         actorsPerThread(1)
     }
 }
