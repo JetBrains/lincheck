@@ -18,11 +18,14 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelChecki
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.ensureClassHierarchyIsTransformed
 import org.jetbrains.kotlinx.lincheck.util.LoggingLevel
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
+import java.io.File
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 import kotlin.reflect.jvm.kotlinFunction
+import kotlin.system.exitProcess
 
-val isInTraceDebuggerMode = System.getProperty("lincheck.traceDebuggerMode", "false").toBoolean()
+private const val TRACE_DEBUGGER_MODE_PROPERTY = "lincheck.traceDebuggerMode"
+val isInTraceDebuggerMode by lazy { System.getProperty(TRACE_DEBUGGER_MODE_PROPERTY, "false").toBoolean() }
 
 internal object TraceDebuggerInjections {
     @JvmStatic
@@ -30,6 +33,9 @@ internal object TraceDebuggerInjections {
 
     @JvmStatic
     lateinit var methodUnderTraceDebugging: String
+
+    @JvmStatic
+    var traceDumpFilePath: String? = null
 
     @JvmStatic
     fun parseArgs(args: String?) {
@@ -40,6 +46,7 @@ internal object TraceDebuggerInjections {
         val actualArguments = args.split(",")
         classUnderTraceDebugging = actualArguments.getOrNull(0) ?: error("Class name was not provided")
         methodUnderTraceDebugging = actualArguments.getOrNull(1) ?: error("Method name was not provided")
+        traceDumpFilePath = actualArguments.getOrNull(2)
     }
 
     @JvmStatic
@@ -86,6 +93,13 @@ internal object TraceDebuggerInjections {
 
         val result = failure!!.results.threadsResults[0][0]
         if (result is ExceptionResult) throw result.throwable
+
+        if (!traceDumpFilePath.isNullOrEmpty() && failure.trace != null) {
+            val dumpFile = File(traceDumpFilePath!!)
+            dumpFile.parentFile.mkdirs()
+            dumpFile.createNewFile()
+            dumpFile.writeText(failure.toString())
+        }
     }
 
     @JvmStatic
