@@ -1401,48 +1401,50 @@ abstract class ManagedStrategy(
                 val length = params[4] as Int
 
                 if (staticMemorySnapshot.isTracked(srcArray)) {
+                    println("System call: $className::$methodName(${params.joinToString()})")
                     for (i in 0..<length) {
                         staticMemorySnapshot.trackArrayCell(srcArray, srcPosStart + i)
                     }
                 }
             }
             // Arrays API (we handle it separately because of https://github.com/JetBrains/lincheck/issues/470)
-            className == "java/util/Arrays" -> {
-                var srcArray: Any? = null
-                var from = 0
-                var to = 0
-                when (methodName) {
-                    in listOf("fill", "sort", "parallelSort", "setAll", "parallelSetAll", "parallelPrefix") -> {
-                        srcArray = params[0]!!
-                        if (params.size >= 3) {
-                            from = params[1] as Int // fromIndex
-                            to = params[2] as Int // toIndex
-                        }
-                        else {
-                            to = getArrayLength(srcArray)
-                        }
-                    }
-                    "copyOf" -> {
-                        srcArray = params[0]!!
-                        to = params[1] as Int // newLength
-                    }
-                    "copyOfRange" -> {
-                        srcArray = params[0]!!
-                        from = params[1] as Int // fromIndex
-                        to = params[2] as Int // toIndex
-                    }
-                }
-
-                if (
-                    srcArray != null &&
-                    to > from &&
-                    staticMemorySnapshot.isTracked(srcArray)
-                ) {
-                    for (i in from..<to.coerceAtMost(getArrayLength(srcArray))) {
-                        staticMemorySnapshot.trackArrayCell(srcArray, i)
-                    }
-                }
-            }
+//            className == "java/util/Arrays" -> {
+//                var srcArray: Any? = null
+//                var from = 0
+//                var to = 0
+//                when (methodName) {
+//                    in listOf("fill", "sort", "parallelSort", "setAll", "parallelSetAll", "parallelPrefix") -> {
+//                        srcArray = params[0]!!
+//                        if (params.size >= 3) {
+//                            from = params[1] as Int // fromIndex
+//                            to = params[2] as Int // toIndex
+//                        }
+//                        else {
+//                            to = getArrayLength(srcArray)
+//                        }
+//                    }
+//                    "copyOf" -> {
+//                        srcArray = params[0]!!
+//                        to = params[1] as Int // newLength
+//                    }
+//                    "copyOfRange" -> {
+//                        srcArray = params[0]!!
+//                        from = params[1] as Int // fromIndex
+//                        to = params[2] as Int // toIndex
+//                    }
+//                }
+//
+//                if (
+//                    srcArray != null &&
+//                    to > from &&
+//                    staticMemorySnapshot.isTracked(srcArray)
+//                ) {
+//                    println("Arrays call: $className::$methodName(${params.joinToString()})")
+//                    for (i in from..<to.coerceAtMost(getArrayLength(srcArray))) {
+//                        staticMemorySnapshot.trackArrayCell(srcArray, i)
+//                    }
+//                }
+//            }
             // TODO: reflection
         }
     }
