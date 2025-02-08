@@ -6,127 +6,231 @@
 | ----------- |
 
 The following interleaving leads to the error:
-| --------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                      Thread 1                                                                       |
-| --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                                                         |
-|   incrementManyTimes() at ObstructionFreedomActiveLockRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:33)                      |
-|   incrementManyTimes() at ObstructionFreedomActiveLockRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:36)                      |
-|     counter.get(): 101 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:40)             |
-|     counter.incrementAndGet(): 102 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43) |
-|     /* An active lock was detected */                                                                                                               |
-| --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                  Thread 1                                                                   |
+| ------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                 |
+|   incrementManyTimes() at ObstructionFreedomActiveLockRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:33)              |
+|   incrementManyTimes() at ObstructionFreedomActiveLockRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:36)              |
+|     counter.get(): 101 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:40)     |
+|     Loop with 1 iterations at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:42) |
+|     /* An active lock was detected */                                                                                                       |
+| ------------------------------------------------------------------------------------------------------------------------------------------- |
 
 Detailed trace:
-| --------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                      Thread 1                                                                       |
-| --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                                                         |
-|   incrementManyTimes() at ObstructionFreedomActiveLockRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:33)                      |
-|     counter.get(): 0 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:40)               |
-|     counter.incrementAndGet(): 1 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)   |
-|     counter.incrementAndGet(): 2 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)   |
-|     counter.incrementAndGet(): 3 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)   |
-|     counter.incrementAndGet(): 4 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)   |
-|     counter.incrementAndGet(): 5 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)   |
-|     counter.incrementAndGet(): 6 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)   |
-|     counter.incrementAndGet(): 7 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)   |
-|     counter.incrementAndGet(): 8 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)   |
-|     counter.incrementAndGet(): 9 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)   |
-|     counter.incrementAndGet(): 10 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 11 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 12 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 13 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 14 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 15 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 16 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 17 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 18 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 19 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 20 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 21 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 22 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 23 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 24 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 25 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 26 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 27 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 28 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 29 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 30 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 31 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 32 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 33 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 34 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 35 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 36 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 37 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 38 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 39 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 40 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 41 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 42 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 43 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 44 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 45 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 46 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 47 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 48 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 49 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 50 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 51 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 52 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 53 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 54 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 55 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 56 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 57 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 58 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 59 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 60 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 61 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 62 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 63 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 64 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 65 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 66 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 67 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 68 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 69 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 70 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 71 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 72 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 73 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 74 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 75 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 76 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 77 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 78 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 79 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 80 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 81 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 82 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 83 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 84 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 85 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 86 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 87 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 88 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 89 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 90 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 91 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 92 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 93 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 94 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 95 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 96 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 97 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 98 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 99 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
-|     counter.incrementAndGet(): 100 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43) |
-|     counter.incrementAndGet(): 101 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43) |
-|   incrementManyTimes() at ObstructionFreedomActiveLockRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:36)                      |
-|     counter.get(): 101 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:40)             |
-|     counter.incrementAndGet(): 102 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43) |
-|     /* An active lock was detected */                                                                                                               |
-| --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                        Thread 1                                                                         |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                             |
+|   incrementManyTimes() at ObstructionFreedomActiveLockRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:33)                          |
+|     counter.get(): 0 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:40)                   |
+|     Loop with 101 iterations at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:42)           |
+|       Iteration #0                                                                                                                                      |
+|         counter.incrementAndGet(): 1 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)   |
+|       Iteration #1                                                                                                                                      |
+|         counter.incrementAndGet(): 2 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)   |
+|       Iteration #2                                                                                                                                      |
+|         counter.incrementAndGet(): 3 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)   |
+|       Iteration #3                                                                                                                                      |
+|         counter.incrementAndGet(): 4 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)   |
+|       Iteration #4                                                                                                                                      |
+|         counter.incrementAndGet(): 5 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)   |
+|       Iteration #5                                                                                                                                      |
+|         counter.incrementAndGet(): 6 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)   |
+|       Iteration #6                                                                                                                                      |
+|         counter.incrementAndGet(): 7 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)   |
+|       Iteration #7                                                                                                                                      |
+|         counter.incrementAndGet(): 8 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)   |
+|       Iteration #8                                                                                                                                      |
+|         counter.incrementAndGet(): 9 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)   |
+|       Iteration #9                                                                                                                                      |
+|         counter.incrementAndGet(): 10 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #10                                                                                                                                     |
+|         counter.incrementAndGet(): 11 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #11                                                                                                                                     |
+|         counter.incrementAndGet(): 12 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #12                                                                                                                                     |
+|         counter.incrementAndGet(): 13 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #13                                                                                                                                     |
+|         counter.incrementAndGet(): 14 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #14                                                                                                                                     |
+|         counter.incrementAndGet(): 15 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #15                                                                                                                                     |
+|         counter.incrementAndGet(): 16 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #16                                                                                                                                     |
+|         counter.incrementAndGet(): 17 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #17                                                                                                                                     |
+|         counter.incrementAndGet(): 18 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #18                                                                                                                                     |
+|         counter.incrementAndGet(): 19 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #19                                                                                                                                     |
+|         counter.incrementAndGet(): 20 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #20                                                                                                                                     |
+|         counter.incrementAndGet(): 21 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #21                                                                                                                                     |
+|         counter.incrementAndGet(): 22 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #22                                                                                                                                     |
+|         counter.incrementAndGet(): 23 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #23                                                                                                                                     |
+|         counter.incrementAndGet(): 24 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #24                                                                                                                                     |
+|         counter.incrementAndGet(): 25 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #25                                                                                                                                     |
+|         counter.incrementAndGet(): 26 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #26                                                                                                                                     |
+|         counter.incrementAndGet(): 27 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #27                                                                                                                                     |
+|         counter.incrementAndGet(): 28 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #28                                                                                                                                     |
+|         counter.incrementAndGet(): 29 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #29                                                                                                                                     |
+|         counter.incrementAndGet(): 30 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #30                                                                                                                                     |
+|         counter.incrementAndGet(): 31 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #31                                                                                                                                     |
+|         counter.incrementAndGet(): 32 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #32                                                                                                                                     |
+|         counter.incrementAndGet(): 33 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #33                                                                                                                                     |
+|         counter.incrementAndGet(): 34 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #34                                                                                                                                     |
+|         counter.incrementAndGet(): 35 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #35                                                                                                                                     |
+|         counter.incrementAndGet(): 36 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #36                                                                                                                                     |
+|         counter.incrementAndGet(): 37 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #37                                                                                                                                     |
+|         counter.incrementAndGet(): 38 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #38                                                                                                                                     |
+|         counter.incrementAndGet(): 39 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #39                                                                                                                                     |
+|         counter.incrementAndGet(): 40 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #40                                                                                                                                     |
+|         counter.incrementAndGet(): 41 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #41                                                                                                                                     |
+|         counter.incrementAndGet(): 42 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #42                                                                                                                                     |
+|         counter.incrementAndGet(): 43 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #43                                                                                                                                     |
+|         counter.incrementAndGet(): 44 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #44                                                                                                                                     |
+|         counter.incrementAndGet(): 45 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #45                                                                                                                                     |
+|         counter.incrementAndGet(): 46 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #46                                                                                                                                     |
+|         counter.incrementAndGet(): 47 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #47                                                                                                                                     |
+|         counter.incrementAndGet(): 48 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #48                                                                                                                                     |
+|         counter.incrementAndGet(): 49 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #49                                                                                                                                     |
+|         counter.incrementAndGet(): 50 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #50                                                                                                                                     |
+|         counter.incrementAndGet(): 51 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #51                                                                                                                                     |
+|         counter.incrementAndGet(): 52 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #52                                                                                                                                     |
+|         counter.incrementAndGet(): 53 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #53                                                                                                                                     |
+|         counter.incrementAndGet(): 54 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #54                                                                                                                                     |
+|         counter.incrementAndGet(): 55 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #55                                                                                                                                     |
+|         counter.incrementAndGet(): 56 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #56                                                                                                                                     |
+|         counter.incrementAndGet(): 57 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #57                                                                                                                                     |
+|         counter.incrementAndGet(): 58 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #58                                                                                                                                     |
+|         counter.incrementAndGet(): 59 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #59                                                                                                                                     |
+|         counter.incrementAndGet(): 60 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #60                                                                                                                                     |
+|         counter.incrementAndGet(): 61 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #61                                                                                                                                     |
+|         counter.incrementAndGet(): 62 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #62                                                                                                                                     |
+|         counter.incrementAndGet(): 63 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #63                                                                                                                                     |
+|         counter.incrementAndGet(): 64 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #64                                                                                                                                     |
+|         counter.incrementAndGet(): 65 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #65                                                                                                                                     |
+|         counter.incrementAndGet(): 66 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #66                                                                                                                                     |
+|         counter.incrementAndGet(): 67 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #67                                                                                                                                     |
+|         counter.incrementAndGet(): 68 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #68                                                                                                                                     |
+|         counter.incrementAndGet(): 69 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #69                                                                                                                                     |
+|         counter.incrementAndGet(): 70 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #70                                                                                                                                     |
+|         counter.incrementAndGet(): 71 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #71                                                                                                                                     |
+|         counter.incrementAndGet(): 72 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #72                                                                                                                                     |
+|         counter.incrementAndGet(): 73 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #73                                                                                                                                     |
+|         counter.incrementAndGet(): 74 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #74                                                                                                                                     |
+|         counter.incrementAndGet(): 75 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #75                                                                                                                                     |
+|         counter.incrementAndGet(): 76 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #76                                                                                                                                     |
+|         counter.incrementAndGet(): 77 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #77                                                                                                                                     |
+|         counter.incrementAndGet(): 78 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #78                                                                                                                                     |
+|         counter.incrementAndGet(): 79 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #79                                                                                                                                     |
+|         counter.incrementAndGet(): 80 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #80                                                                                                                                     |
+|         counter.incrementAndGet(): 81 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #81                                                                                                                                     |
+|         counter.incrementAndGet(): 82 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #82                                                                                                                                     |
+|         counter.incrementAndGet(): 83 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #83                                                                                                                                     |
+|         counter.incrementAndGet(): 84 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #84                                                                                                                                     |
+|         counter.incrementAndGet(): 85 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #85                                                                                                                                     |
+|         counter.incrementAndGet(): 86 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #86                                                                                                                                     |
+|         counter.incrementAndGet(): 87 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #87                                                                                                                                     |
+|         counter.incrementAndGet(): 88 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #88                                                                                                                                     |
+|         counter.incrementAndGet(): 89 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #89                                                                                                                                     |
+|         counter.incrementAndGet(): 90 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #90                                                                                                                                     |
+|         counter.incrementAndGet(): 91 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #91                                                                                                                                     |
+|         counter.incrementAndGet(): 92 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #92                                                                                                                                     |
+|         counter.incrementAndGet(): 93 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #93                                                                                                                                     |
+|         counter.incrementAndGet(): 94 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #94                                                                                                                                     |
+|         counter.incrementAndGet(): 95 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #95                                                                                                                                     |
+|         counter.incrementAndGet(): 96 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #96                                                                                                                                     |
+|         counter.incrementAndGet(): 97 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #97                                                                                                                                     |
+|         counter.incrementAndGet(): 98 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #98                                                                                                                                     |
+|         counter.incrementAndGet(): 99 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43)  |
+|       Iteration #99                                                                                                                                     |
+|         counter.incrementAndGet(): 100 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43) |
+|       Iteration #100                                                                                                                                    |
+|         counter.incrementAndGet(): 101 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43) |
+|   incrementManyTimes() at ObstructionFreedomActiveLockRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:36)                          |
+|     counter.get(): 101 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:40)                 |
+|     Loop with 1 iterations at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:42)             |
+|       Iteration #0                                                                                                                                      |
+|         counter.incrementAndGet(): 102 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:43) |
+|     /* An active lock was detected */                                                                                                                   |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -1,0 +1,34 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| ----------------------------------------------------------------------------------------------------------------- |
+|                                                     Thread 1                                                      |
+| ----------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                       |
+|   escape = "START" at BreakedForLoopRepresentationTest.operation(BreakedForLoopRepresentationTest.kt:18)          |
+|   Loop with 3 iterations at BreakedForLoopRepresentationTest.operation(BreakedForLoopRepresentationTest.kt:19)    |
+|     Iteration #0                                                                                                  |
+|       escape = "1" at BreakedForLoopRepresentationTest.operation(BreakedForLoopRepresentationTest.kt:21)          |
+|       escape = "1 is saved" at BreakedForLoopRepresentationTest.operation(BreakedForLoopRepresentationTest.kt:25) |
+|     Iteration #1                                                                                                  |
+|       escape = "2" at BreakedForLoopRepresentationTest.operation(BreakedForLoopRepresentationTest.kt:21)          |
+|       escape = "2 is saved" at BreakedForLoopRepresentationTest.operation(BreakedForLoopRepresentationTest.kt:25) |
+|     Iteration #2                                                                                                  |
+|       escape = "3" at BreakedForLoopRepresentationTest.operation(BreakedForLoopRepresentationTest.kt:21)          |
+|       escape = "3 is saved" at BreakedForLoopRepresentationTest.operation(BreakedForLoopRepresentationTest.kt:25) |
+|   escape = "4" at BreakedForLoopRepresentationTest.operation(BreakedForLoopRepresentationTest.kt:21)              |
+|   escape = "END" at BreakedForLoopRepresentationTest.operation(BreakedForLoopRepresentationTest.kt:27)            |
+|   result: void                                                                                                    |
+| ----------------------------------------------------------------------------------------------------------------- |

@@ -1,0 +1,27 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| -------------------------------------------------------------------------------------------------------- |
+|                                                 Thread 1                                                 |
+| -------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                              |
+|   escape = "START" at JavaDoLoopRepresentationTest.operation(JavaDoLoopRepresentationTest.java:25)       |
+|   Loop with 1 iterations at JavaDoLoopRepresentationTest.operation(JavaDoLoopRepresentationTest.java:25) |
+|     Iteration #0                                                                                         |
+|       escape = "1" at JavaDoLoopRepresentationTest.operation(JavaDoLoopRepresentationTest.java:28)       |
+|   escape = "2" at JavaDoLoopRepresentationTest.operation(JavaDoLoopRepresentationTest.java:28)           |
+|   escape = "END" at JavaDoLoopRepresentationTest.operation(JavaDoLoopRepresentationTest.java:31)         |
+|   result: void                                                                                           |
+| -------------------------------------------------------------------------------------------------------- |
