@@ -214,15 +214,19 @@ class AnonymousObjectRunConcurrentRepresentationTest : BaseRunConcurrentRepresen
 // TODO investigate difference for trace debugger (Evgeniy Moiseenko)
 class CustomThreadsRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>("run_concurrent_test/custom_threads") {
     override fun block() {
-        val block = Runnable {
-            wrapper.value += 1
-            valueUpdater.getAndIncrement(wrapper)
-            unsafe.getAndAddInt(wrapper, valueFieldOffset, 1)
-            synchronized(this) {
+        // We use an object here instead of lambda to avoid hustle
+        // with different representations of lambdas on different JDKs.
+        val task = object : Runnable {
+            override fun run() {
                 wrapper.value += 1
+                valueUpdater.getAndIncrement(wrapper)
+                unsafe.getAndAddInt(wrapper, valueFieldOffset, 1)
+                synchronized(this) {
+                    wrapper.value += 1
+                }
             }
         }
-        val threads = List(3) { Thread(block) }
+        val threads = List(3) { Thread(task) }
         threads.forEach { it.start() }
         threads.forEach { it.join() }
         check(false) // to trigger failure and trace collection
@@ -230,7 +234,7 @@ class CustomThreadsRunConcurrentRepresentationTest : BaseRunConcurrentRepresenta
 
     @Suppress("DEPRECATION") // Unsafe
     companion object {
-        var wrapper = Wrapper(0)
+        @JvmField var wrapper = Wrapper(0)
 
         val unsafe =
             UnsafeHolder.UNSAFE
