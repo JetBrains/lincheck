@@ -27,7 +27,7 @@ class CoroutinesMultipleSuspensionsTest : AbstractLincheckTest() {
     private val locked = atomic(false)
     private val waiters = ConcurrentLinkedQueue<CancellableContinuation<Unit>>()
 
-    @Operation
+    @Operation(cancellableOnSuspension = false)
     suspend fun lock() {
         while (true) {
             if (locked.compareAndSet(false, true)) return
@@ -44,7 +44,7 @@ class CoroutinesMultipleSuspensionsTest : AbstractLincheckTest() {
         }
     }
 
-    @Operation
+    @Operation(cancellableOnSuspension = false)
     fun unlock() {
         if (!locked.compareAndSet(true, false)) error("mutex was not locked")
         while (true) {
