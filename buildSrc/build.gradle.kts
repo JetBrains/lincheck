@@ -15,3 +15,7 @@ plugins {
 repositories {
     mavenCentral()
 }
+
+dependencies {
+    implementation("de.undercouch.download:de.undercouch.download.gradle.plugin:5.6.0")
+}
