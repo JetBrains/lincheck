@@ -69,12 +69,13 @@ object ObjectLabelFactory {
         if (obj is Thread) {
             return "Thread#${getObjectNumber(Thread::class.java, obj)}"
         }
-        val objectName = runCatching {
+        runCatching {
             if (obj.javaClass.isAnonymousClass) {
-                obj.javaClass.simpleNameForAnonymous
-            } else {
-                objectName(obj)
+                return obj.javaClass.simpleNameForAnonymous
             }
+        }
+        val objectName = runCatching {
+            objectName(obj)
         }
         // There is a Kotlin compiler bug that leads to exception
         // `java.lang.InternalError: Malformed class name`
