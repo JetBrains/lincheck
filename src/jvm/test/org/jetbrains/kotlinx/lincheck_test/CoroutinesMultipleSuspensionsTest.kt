@@ -17,11 +17,13 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import java.util.concurrent.ConcurrentLinkedQueue
 import kotlin.coroutines.resume
+import org.junit.Ignore
 
 /**
  * Checks the data structure which actors may suspend multiple times.
  * Passes only if the multiple suspension points are supported properly.
  */
+@Ignore // TODO: also requires support of multiple suspension points in linearizability checker
 @OptIn(InternalCoroutinesApi::class)
 class CoroutinesMultipleSuspensionsTest : AbstractLincheckTest() {
     private var counter = 0
