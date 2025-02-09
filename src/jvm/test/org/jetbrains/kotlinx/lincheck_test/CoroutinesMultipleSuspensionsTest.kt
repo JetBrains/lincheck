@@ -24,11 +24,11 @@ import kotlin.coroutines.resume
  */
 @OptIn(InternalCoroutinesApi::class)
 class CoroutinesMultipleSuspensionsTest : AbstractLincheckTest() {
+    private var counter = 0
     private val locked = atomic(false)
     private val waiters = ConcurrentLinkedQueue<CancellableContinuation<Unit>>()
 
-    @Operation(cancellableOnSuspension = false)
-    suspend fun lock() {
+    private suspend fun lock() {
         while (true) {
             if (locked.compareAndSet(false, true)) return
             suspendCancellableCoroutine { cont ->
@@ -44,8 +44,7 @@ class CoroutinesMultipleSuspensionsTest : AbstractLincheckTest() {
         }
     }
 
-    @Operation(cancellableOnSuspension = false)
-    fun unlock() {
+    private suspend fun unlock() {
         if (!locked.compareAndSet(true, false)) error("mutex was not locked")
         while (true) {
             val w = waiters.poll() ?: break
@@ -53,5 +52,19 @@ class CoroutinesMultipleSuspensionsTest : AbstractLincheckTest() {
             w.completeResume(token)
             return
         }
+    }
+
+    private suspend fun <R> withLock(block: suspend () -> R): R {
+        lock()
+        try {
+            return block()
+        } finally {
+            unlock()
+        }
+    }
+
+    @Operation(cancellableOnSuspension = false)
+    suspend fun operation(): Int {
+        return withLock { counter++ }
     }
 }
