@@ -183,11 +183,11 @@ class VariableReadWriteRunConcurrentRepresentationTest : BaseRunConcurrentRepres
 // TODO investigate difference for trace debugger (Evgeniy Moiseenko)
 class CustomThreadsRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
     if (isInTraceDebuggerMode) {
-        when (jdkVersion) {
-            8 -> "run_concurrent_test/custom_threads_trace_debugger_jdk8.txt"
-            11 -> "run_concurrent_test/custom_threads_trace_debugger_jdk11.txt"
-            17 -> "run_concurrent_test/custom_threads_trace_debugger_jdk17.txt"
-            else -> "run_concurrent_test/custom_threads_trace_debugger.txt"
+        when (testJdkVersion) {
+            TestJdkVersion.JDK_8  -> "run_concurrent_test/custom_threads_trace_debugger_jdk8.txt"
+            TestJdkVersion.JDK_11 -> "run_concurrent_test/custom_threads_trace_debugger_jdk11.txt"
+            TestJdkVersion.JDK_17 -> "run_concurrent_test/custom_threads_trace_debugger_jdk17.txt"
+            else                  -> "run_concurrent_test/custom_threads_trace_debugger.txt"
         }
     } else {
         "run_concurrent_test/custom_threads.txt"
