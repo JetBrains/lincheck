@@ -11,11 +11,7 @@ package org.jetbrains.kotlinx.lincheck_test.transformation
 
 import org.jetbrains.kotlinx.lincheck.Options
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
-import org.jetbrains.kotlinx.lincheck_test.util.jdkVersion
-import org.junit.Assume.assumeFalse
-import org.junit.Before
 
 /**
  * This test checks that some methods in kotlin stdlib related to
