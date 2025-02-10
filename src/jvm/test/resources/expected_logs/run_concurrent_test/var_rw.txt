@@ -1,27 +1,28 @@
 = Concurrent test failed =
 
 java.lang.IllegalStateException: Check failed.
-	at org.jetbrains.kotlinx.lincheck_test.representation.VariableReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:176)
-	at org.jetbrains.kotlinx.lincheck_test.representation.VariableReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:165)
-	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:37)
+	at org.jetbrains.kotlinx.lincheck_test.representation.VariableReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:179)
+	at org.jetbrains.kotlinx.lincheck_test.representation.VariableReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:168)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:40)
 	at java.base/java.lang.Thread.run(Thread.java:840)
 
 The following interleaving leads to the error:
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                                                     Thread 1                                                                                                     |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| VariableReadWriteRunConcurrentRepresentationTest#1.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:37) |
+| VariableReadWriteRunConcurrentRepresentationTest#1.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:40) |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 
 Detailed trace:
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                                                     Thread 1                                                                                                     |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| VariableReadWriteRunConcurrentRepresentationTest#1.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:37) |
-|   block(): threw IllegalStateException at VariableReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:165)                                                                        |
-|     VariableReadWriteRunConcurrentRepresentationTest.x ➜ 0 at VariableReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:174)                                                    |
-|     VariableReadWriteRunConcurrentRepresentationTest.x = 1 at VariableReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:174)                                                    |
-|     VariableReadWriteRunConcurrentRepresentationTest.x ➜ 1 at VariableReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:175)                                                    |
-|     VariableReadWriteRunConcurrentRepresentationTest.x = 0 at VariableReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:175)                                                    |
-|     VariableReadWriteRunConcurrentRepresentationTest.x ➜ 0 at VariableReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:175)                                                    |
+| VariableReadWriteRunConcurrentRepresentationTest#1.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:40) |
+|   block(): threw IllegalStateException at VariableReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:168)                                                                        |
+|     VariableReadWriteRunConcurrentRepresentationTest.x ➜ 0 at VariableReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:177)                                                    |
+|     VariableReadWriteRunConcurrentRepresentationTest.x = 1 at VariableReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:177)                                                    |
+|     VariableReadWriteRunConcurrentRepresentationTest.x ➜ 1 at VariableReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:178)                                                    |
+|     VariableReadWriteRunConcurrentRepresentationTest.x = 0 at VariableReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:178)                                                    |
+|     VariableReadWriteRunConcurrentRepresentationTest.x ➜ 0 at VariableReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:178)                                                    |
+|   result: IllegalStateException #1                                                                                                                                                                               |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

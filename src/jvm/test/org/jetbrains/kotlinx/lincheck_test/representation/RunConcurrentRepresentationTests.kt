@@ -20,10 +20,12 @@ import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
 import org.jetbrains.kotlinx.lincheck_test.gpmc.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
 import java.util.concurrent.ConcurrentLinkedDeque
+import java.util.concurrent.Executors
 import java.util.concurrent.atomic.*
 import kotlin.concurrent.thread
 import kotlin.random.Random
 import org.junit.Test
+
 
 abstract class BaseRunConcurrentRepresentationTest<R>(private val outputFileName: String) {
     /**
@@ -181,11 +183,11 @@ class VariableReadWriteRunConcurrentRepresentationTest : BaseRunConcurrentRepres
 // TODO investigate difference for trace debugger (Evgeniy Moiseenko)
 class CustomThreadsRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
     if (isInTraceDebuggerMode) {
-        when (jdkVersion) {
-            8 -> "run_concurrent_test/custom_threads_trace_debugger_jdk8.txt"
-            11 -> "run_concurrent_test/custom_threads_trace_debugger_jdk11.txt"
-            17 -> "run_concurrent_test/custom_threads_trace_debugger_jdk17.txt"
-            else -> "run_concurrent_test/custom_threads_trace_debugger.txt"
+        when (testJdkVersion) {
+            TestJdkVersion.JDK_8  -> "run_concurrent_test/custom_threads_trace_debugger_jdk8.txt"
+            TestJdkVersion.JDK_11 -> "run_concurrent_test/custom_threads_trace_debugger_jdk11.txt"
+            TestJdkVersion.JDK_17 -> "run_concurrent_test/custom_threads_trace_debugger_jdk17.txt"
+            else                  -> "run_concurrent_test/custom_threads_trace_debugger.txt"
         }
     } else {
         "run_concurrent_test/custom_threads.txt"
@@ -322,5 +324,62 @@ class IncorrectHashmapRunConcurrentRepresentationTest : BaseRunConcurrentReprese
         t1.join()
         t2.join()
         check(!(r1 == null && r2 == null))
+    }
+}
+
+class ThreadPoolRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
+    if (isInTraceDebuggerMode) {
+        when (testJdkVersion) {
+            TestJdkVersion.JDK_8  -> "run_concurrent_test/thread_pool/thread_pool_trace_debugger_jdk8.txt"
+            TestJdkVersion.JDK_11 -> "run_concurrent_test/thread_pool/thread_pool_trace_debugger_jdk11.txt"
+            TestJdkVersion.JDK_17 -> "run_concurrent_test/thread_pool/thread_pool_trace_debugger_jdk17.txt"
+            TestJdkVersion.JDK_21 -> "run_concurrent_test/thread_pool/thread_pool_trace_debugger_jdk21.txt"
+            else ->
+                throw IllegalStateException("Unsupported JDK version for trace debugger mode: $testJdkVersion")
+        }
+    } else {
+        when (testJdkVersion) {
+            TestJdkVersion.JDK_8 -> "run_concurrent_test/thread_pool/thread_pool_jdk8.txt"
+            TestJdkVersion.JDK_11 -> "run_concurrent_test/thread_pool/thread_pool_jdk11.txt"
+            TestJdkVersion.JDK_13 -> "run_concurrent_test/thread_pool/thread_pool_jdk13.txt"
+            TestJdkVersion.JDK_15 -> "run_concurrent_test/thread_pool/thread_pool_jdk15.txt"
+            TestJdkVersion.JDK_17 -> "run_concurrent_test/thread_pool/thread_pool_jdk17.txt"
+            TestJdkVersion.JDK_19 -> "run_concurrent_test/thread_pool/thread_pool_jdk19.txt"
+            TestJdkVersion.JDK_20 -> "run_concurrent_test/thread_pool/thread_pool_jdk20.txt"
+            TestJdkVersion.JDK_21 -> "run_concurrent_test/thread_pool/thread_pool_jdk21.txt"
+        }
+    }
+) {
+    override fun block() {
+        // TODO: currently there is a problem --- if we declare counter as a local variable the test does not pass;
+        //   after inspecting the generated traces, the hypothesis is that it is most likely because
+        //   the counter is incorrectly classified as a local object,
+        //   and thus accesses to this object are not tracked,
+        //   and the race on counter increment is not detected;
+        // var counter = 0
+        val executorService = Executors.newFixedThreadPool(2)
+        try {
+            // We use an object here instead of lambda to avoid hustle with Java's lambda.
+            // These lambdas are represented in the trace as `$$Lambda$XX/0x00007766d02076a0`,
+            // and both lambda id and hashcode can differ between test runs,
+            // leading to spurious failures of the test.
+            val task = object : Runnable {
+                override fun run() {
+                    counter++
+                }
+            }
+            val future1 = executorService.submit(task)
+            val future2 = executorService.submit(task)
+            future1.get()
+            future2.get()
+            check(counter == 2)
+        } finally {
+            executorService.shutdown()
+        }
+    }
+
+    companion object {
+        @JvmStatic
+        private var counter = 0
     }
 }
