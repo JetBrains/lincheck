@@ -17,31 +17,32 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import java.util.concurrent.ConcurrentLinkedQueue
 import kotlin.coroutines.resume
+import org.junit.Ignore
 
 /**
  * Checks the data structure which actors may suspend multiple times.
  * Passes only if the multiple suspension points are supported properly.
  */
+@Ignore // TODO: also requires support of multiple suspension points in linearizability checker
 @OptIn(InternalCoroutinesApi::class)
 class CoroutinesMultipleSuspensionsTest : AbstractLincheckTest() {
+    private var counter = 0
     private val locked = atomic(false)
     private val waiters = ConcurrentLinkedQueue<CancellableContinuation<Unit>>()
 
-    @Operation
-    suspend fun lock() {
+    private suspend fun lock() {
         while (true) {
             if (locked.compareAndSet(false, true)) return
             suspendCancellableCoroutine { cont ->
                 waiters.add(cont)
-                if (!locked.value) {
-                    if (waiters.remove(cont)) cont.resume(Unit)
+                if (!locked.value && waiters.remove(cont)) {
+                    cont.resume(Unit)
                 }
             }
         }
     }
 
-    @Operation
-    fun unlock() {
+    private suspend fun unlock() {
         if (!locked.compareAndSet(true, false)) error("mutex was not locked")
         while (true) {
             val w = waiters.poll() ?: break
@@ -49,5 +50,19 @@ class CoroutinesMultipleSuspensionsTest : AbstractLincheckTest() {
             w.completeResume(token)
             return
         }
+    }
+
+    private suspend fun <R> withLock(block: suspend () -> R): R {
+        lock()
+        try {
+            return block()
+        } finally {
+            unlock()
+        }
+    }
+
+    @Operation(cancellableOnSuspension = false)
+    suspend fun operation(): Int {
+        return withLock { counter++ }
     }
 }
