@@ -1407,14 +1407,16 @@ abstract class ManagedStrategy(
                 }
             }
             // Arrays API (we handle it separately because of https://github.com/JetBrains/lincheck/issues/470)
-            className == "java/util/Arrays" && params.isNotEmpty() -> {
-                var srcArray: Any? = null
+            className == "java/util/Arrays" &&
+            params.isNotEmpty() &&
+            params[0] != null &&
+            params[0]!!.javaClass.isArray -> {
+                val srcArray = params[0]!!
                 var from = 0
                 var to = 0
 
                 when {
                     methodName in listOf("fill", "sort", "parallelSort", "setAll", "parallelSetAll", "parallelPrefix") -> {
-                        srcArray = params[0]!!
                         if (params.size >= 3) {
                             from = params[1] as Int // fromIndex
                             to = params[2] as Int // toIndex
@@ -1424,21 +1426,15 @@ abstract class ManagedStrategy(
                         }
                     }
                     methodName == "copyOf" && params.size >= 2 -> {
-                        srcArray = params[0]!!
                         to = params[1] as Int // newLength
                     }
                     methodName == "copyOfRange" && params.size >= 3 -> {
-                        srcArray = params[0]!!
                         from = params[1] as Int // fromIndex
                         to = params[2] as Int // toIndex
                     }
                 }
 
-                if (
-                    srcArray != null &&
-                    to > from &&
-                    staticMemorySnapshot.isTracked(srcArray)
-                ) {
+                if (to > from && staticMemorySnapshot.isTracked(srcArray)) {
                     for (i in from..<to.coerceAtMost(getArrayLength(srcArray))) {
                         staticMemorySnapshot.trackArrayCell(srcArray, i)
                     }
@@ -1561,6 +1557,8 @@ abstract class ManagedStrategy(
         if (guarantee == null) {
             loopDetector.beforeMethodCall(codeLocation, params)
         }
+        // process method effect on the static memory snapshot before exit
+        processMethodEffectOnStaticSnapshot(receiver, params, className, methodName)
         // if the method is atomic or should be ignored, then we enter an ignored section
         if (guarantee == ManagedGuaranteeType.IGNORE ||
             guarantee == ManagedGuaranteeType.ATOMIC) {
