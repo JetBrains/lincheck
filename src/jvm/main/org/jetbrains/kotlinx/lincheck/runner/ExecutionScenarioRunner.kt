@@ -101,7 +101,7 @@ internal class ExecutionScenarioRunner(
      * Passed as continuation to invoke the suspendable actor from [iThread].
      *
      * If the suspendable actor has follow-up then it's continuation is intercepted after resumption
-     * by [ParallelThreadRunnerInterceptor] stored in [context]
+     * by [ExecutionScenarioRunnerInterceptor] stored in [context]
      * and [Completion] instance will hold the resumption result and reference to the unintercepted continuation in [resWithCont].
      *
      * [resumeWith] is invoked when the coroutine running this actor completes with result or exception.
@@ -109,7 +109,7 @@ internal class ExecutionScenarioRunner(
     private inner class Completion(private val iThread: Int, private val actorId: Int) : Continuation<Any?> {
         val resWithCont = SuspensionPointResultWithContinuation(null)
 
-        override var context = ParallelThreadRunnerInterceptor(resWithCont) + StoreExceptionHandler() + Job()
+        override var context = ExecutionScenarioRunnerInterceptor(resWithCont) + StoreExceptionHandler() + Job()
 
         // We need to run this code in an ignored section,
         // as it is called in the testing code but should not be analyzed.
@@ -131,16 +131,16 @@ internal class ExecutionScenarioRunner(
 
         fun reset() {
             resWithCont.set(null)
-            context = ParallelThreadRunnerInterceptor(resWithCont) + StoreExceptionHandler() + Job()
+            context = ExecutionScenarioRunnerInterceptor(resWithCont) + StoreExceptionHandler() + Job()
         }
 
         /**
          * When suspended actor is resumed by another thread
-         * [ParallelThreadRunnerInterceptor.interceptContinuation] is called to intercept it's continuation.
+         * [ExecutionScenarioRunnerInterceptor.interceptContinuation] is called to intercept it's continuation.
          * Intercepted continuation just writes the result of the suspension point and reference to the unintercepted continuation
          * so that the calling thread could resume this continuation by itself.
          */
-        private inner class ParallelThreadRunnerInterceptor(
+        private inner class ExecutionScenarioRunnerInterceptor(
             private var resWithCont: SuspensionPointResultWithContinuation
         ) : AbstractCoroutineContextElement(ContinuationInterceptor), ContinuationInterceptor {
 
@@ -542,10 +542,6 @@ internal class ExecutionScenarioRunner(
         (strategy as? ManagedStrategy)?.afterCoroutineCancellation(iThread, cancellationException)
     }
 
-    /**
-     * This method is used for communication between `ParallelThreadsRunner` and `ManagedStrategy` via overriding,
-     * so that runner does not know about managed strategy details.
-     */
     internal fun <T> cancelByLincheck(
         iThread: Int,
         cont: CancellableContinuation<T>,

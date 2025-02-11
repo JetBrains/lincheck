@@ -181,7 +181,7 @@ public class TestThreadExecutionGenerator {
             mv.loadLocal(resLocal);
             mv.push(i);
             if (scenarioContainsSuspendableActors) {
-                // push the instance of ParallelThreadsRunner on stack to call it's processInvocationResult method
+                // push the instance of ExecutionScenarioRunner on stack to call it's processInvocationResult method
                 mv.loadThis();
                 mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
                 mv.checkCast(RUNNER_TYPE);
@@ -204,7 +204,8 @@ public class TestThreadExecutionGenerator {
             mv.invokeVirtual(testType, actorMethod);
             mv.box(actorMethod.getReturnType()); // box if needed
             if (scenarioContainsSuspendableActors) {
-                // process result of method invocation with ParallelThreadsRunner's processInvocationResult(result, iThread, i)
+                // process result of method invocation with
+                // `ExecutionScenarioRunner::processInvocationResult(result, iThread, i)`
                 mv.push(iThread);
                 mv.push(i);
                 mv.invokeVirtual(RUNNER_TYPE, RUNNER_PROCESS_INVOCATION_RESULT_METHOD);
