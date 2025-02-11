@@ -28,9 +28,14 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.adorne
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanObjectNumeration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
+import org.objectweb.asm.ConstantDynamic
+import org.objectweb.asm.Handle
+import java.lang.invoke.CallSite
+import java.lang.invoke.MethodHandle
 import java.lang.reflect.*
 import java.util.concurrent.TimeoutException
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 
 /**
@@ -75,6 +80,10 @@ abstract class ManagedStrategy(
 
     // Tracker of objects' allocations and object graph topology.
     protected abstract val objectTracker: ObjectTracker?
+    // Tracker of objects' identity hash codes.
+    internal abstract val identityHashCodeTracker: ObjectIdentityHashCodeTracker
+    // Cache for evaluated invoke dynamic call sites
+    private val invokeDynamicCallSites = ConcurrentHashMap<ConstantDynamic, CallSite>()
     // Tracker of the monitors' operations.
     protected abstract val monitorTracker: MonitorTracker
     // Tracker of the thread parking.
@@ -257,6 +266,7 @@ abstract class ManagedStrategy(
 
     protected open fun initializeReplay() {
         cleanObjectNumeration()
+        identityHashCodeTracker.resetObjectIds()
         resetEventIdProvider()
     }
 
@@ -303,6 +313,7 @@ abstract class ManagedStrategy(
                 result is ObstructionFreedomViolationInvocationResult
         )
         cleanObjectNumeration()
+        identityHashCodeTracker.resetObjectIds()
 
         runner.close()
         runner = createRunner()
@@ -1101,9 +1112,42 @@ abstract class ManagedStrategy(
         LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
     }
 
+    override fun advanceCurrentObjectId(oldId: Long) {
+        identityHashCodeTracker.advanceCurrentObjectId(oldId)
+    }
+
+    override fun getCachedInvokeDynamicCallSite(
+        name: String,
+        descriptor: String,
+        bootstrapMethodHandle: Injections.HandlePojo,
+        bootstrapMethodArguments: Array<Any>
+    ): CallSite? {
+        val trueBootstrapMethodHandle = bootstrapMethodHandle.toAsmHandle()
+        val invokeDynamic = ConstantDynamic(name, descriptor, trueBootstrapMethodHandle, *bootstrapMethodArguments)
+        return invokeDynamicCallSites[invokeDynamic]
+    }
+    
+    override fun cacheInvokeDynamicCallSite(
+        name: String,
+        descriptor: String,
+        bootstrapMethodHandle: Injections.HandlePojo,
+        bootstrapMethodArguments: Array<Any>,
+        callSite: CallSite,
+    ) {
+        val trueBootstrapMethodHandle = bootstrapMethodHandle.toAsmHandle()
+        val invokeDynamic = ConstantDynamic(name, descriptor, trueBootstrapMethodHandle, *bootstrapMethodArguments)
+        invokeDynamicCallSites[invokeDynamic] = callSite
+    }
+
+    private fun Injections.HandlePojo.toAsmHandle(): Handle =
+        Handle(tag, owner, name, desc, isInterface)
+
+    override fun getNextObjectId(): Long = identityHashCodeTracker.getNextObjectId()
+
     override fun afterNewObjectCreation(obj: Any) {
         if (obj is String || obj is Int || obj is Long || obj is Byte || obj is Char || obj is Float || obj is Double) return
         runInIgnoredSection {
+            identityHashCodeTracker.afterNewTrackedObjectCreation(obj)
             objectTracker?.registerNewObject(obj)
         }
     }

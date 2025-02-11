@@ -19,12 +19,12 @@ import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
 import org.jetbrains.kotlinx.lincheck_test.gpmc.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
-import java.util.concurrent.ConcurrentLinkedDeque
-import java.util.concurrent.Executors
+import java.util.concurrent.*
 import java.util.concurrent.atomic.*
 import kotlin.concurrent.thread
 import kotlin.random.Random
-import org.junit.Test
+import org.junit.*
+import org.junit.Assume.assumeFalse
 
 
 abstract class BaseRunConcurrentRepresentationTest<R>(private val outputFileName: String) {
@@ -328,28 +328,22 @@ class IncorrectHashmapRunConcurrentRepresentationTest : BaseRunConcurrentReprese
 }
 
 class ThreadPoolRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
-    if (isInTraceDebuggerMode) {
-        when (testJdkVersion) {
-            TestJdkVersion.JDK_8  -> "run_concurrent_test/thread_pool/thread_pool_trace_debugger_jdk8.txt"
-            TestJdkVersion.JDK_11 -> "run_concurrent_test/thread_pool/thread_pool_trace_debugger_jdk11.txt"
-            TestJdkVersion.JDK_17 -> "run_concurrent_test/thread_pool/thread_pool_trace_debugger_jdk17.txt"
-            TestJdkVersion.JDK_21 -> "run_concurrent_test/thread_pool/thread_pool_trace_debugger_jdk21.txt"
-            else ->
-                throw IllegalStateException("Unsupported JDK version for trace debugger mode: $testJdkVersion")
-        }
-    } else {
-        when (testJdkVersion) {
-            TestJdkVersion.JDK_8 -> "run_concurrent_test/thread_pool/thread_pool_jdk8.txt"
-            TestJdkVersion.JDK_11 -> "run_concurrent_test/thread_pool/thread_pool_jdk11.txt"
-            TestJdkVersion.JDK_13 -> "run_concurrent_test/thread_pool/thread_pool_jdk13.txt"
-            TestJdkVersion.JDK_15 -> "run_concurrent_test/thread_pool/thread_pool_jdk15.txt"
-            TestJdkVersion.JDK_17 -> "run_concurrent_test/thread_pool/thread_pool_jdk17.txt"
-            TestJdkVersion.JDK_19 -> "run_concurrent_test/thread_pool/thread_pool_jdk19.txt"
-            TestJdkVersion.JDK_20 -> "run_concurrent_test/thread_pool/thread_pool_jdk20.txt"
-            TestJdkVersion.JDK_21 -> "run_concurrent_test/thread_pool/thread_pool_jdk21.txt"
-        }
+    when (testJdkVersion) {
+        TestJdkVersion.JDK_8  -> "run_concurrent_test/thread_pool/thread_pool_jdk8.txt"
+        TestJdkVersion.JDK_11 -> "run_concurrent_test/thread_pool/thread_pool_jdk11.txt"
+        TestJdkVersion.JDK_13 -> "run_concurrent_test/thread_pool/thread_pool_jdk13.txt"
+        TestJdkVersion.JDK_15 -> "run_concurrent_test/thread_pool/thread_pool_jdk15.txt"
+        TestJdkVersion.JDK_17 -> "run_concurrent_test/thread_pool/thread_pool_jdk17.txt"
+        TestJdkVersion.JDK_19 -> "run_concurrent_test/thread_pool/thread_pool_jdk19.txt"
+        TestJdkVersion.JDK_20 -> "run_concurrent_test/thread_pool/thread_pool_jdk20.txt"
+        TestJdkVersion.JDK_21 -> "run_concurrent_test/thread_pool/thread_pool_jdk21.txt"
     }
 ) {
+    @Before
+    fun setUp() {
+        assumeFalse(isInTraceDebuggerMode) // unstable hash-code
+    }
+
     override fun block() {
         // TODO: currently there is a problem --- if we declare counter as a local variable the test does not pass;
         //   after inspecting the generated traces, the hypothesis is that it is most likely because

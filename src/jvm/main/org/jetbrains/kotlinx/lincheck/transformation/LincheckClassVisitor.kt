@@ -78,12 +78,7 @@ internal class LincheckClassVisitor(
             }
         }
         fun MethodVisitor.newAdapter() = GeneratorAdapter(this, access, methodName, desc)
-        if (methodName == "<clinit>" ||
-            // Debugger implicitly evaluates toString for variables rendering
-            // We need to disable breakpoints in such a case, as the numeration will break.
-            // Breakpoints are disabled as we do not instrument toString and enter an ignored section,
-            // so there are no beforeEvents inside.
-            ideaPluginEnabled && methodName == "toString" && desc == "()Ljava/lang/String;") {
+        if (methodName == "<clinit>") {
             mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
         }
@@ -99,17 +94,6 @@ internal class LincheckClassVisitor(
                 mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
             } else {
                 mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
-            }
-            return mv
-        }
-        if (methodName == "<init>") {
-            mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
-            mv = run {
-                val st = ConstructorArgumentsSnapshotTrackerTransformer(fileName, className, methodName, mv.newAdapter(), classVisitor::isInstanceOf)
-                val sv = SharedMemoryAccessTransformer(fileName, className, methodName, st.newAdapter())
-                val aa = AnalyzerAdapter(className, access, methodName, desc, sv)
-                sv.analyzer = aa
-                aa
             }
             return mv
         }
@@ -141,6 +125,26 @@ internal class LincheckClassVisitor(
         if (isCoroutineInternalClass(className)) {
             return mv
         }
+        // Debugger implicitly evaluates toString for variables rendering
+        // We need to disable breakpoints in such a case, as the numeration will break.
+        // Breakpoints are disabled as we do not instrument toString and enter an ignored section,
+        // so there are no beforeEvents inside.
+        if (methodName == "<init>" || ideaPluginEnabled && methodName == "toString" && desc == "()Ljava/lang/String;") {
+            mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
+            if (isInTraceDebuggerMode) {
+                // Lincheck does not support true identity hash codes (it always uses zeroes),
+                // so there is no need for the `DeterministicInvokeDynamicTransformer` there.
+                mv = DeterministicInvokeDynamicTransformer(fileName, className, methodName, mv.newAdapter())
+            }
+            mv = run {
+                val st = ConstructorArgumentsSnapshotTrackerTransformer(fileName, className, methodName, mv.newAdapter(), classVisitor::isInstanceOf)
+                val sv = SharedMemoryAccessTransformer(fileName, className, methodName, st.newAdapter())
+                val aa = AnalyzerAdapter(className, access, methodName, desc, sv)
+                sv.analyzer = aa
+                aa
+            }
+            return mv
+        }
         mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
         mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
         mv = CoroutineCancellabilitySupportTransformer(mv, access, className, methodName, desc)
@@ -161,7 +165,16 @@ internal class LincheckClassVisitor(
         mv = WaitNotifyTransformer(fileName, className, methodName, mv.newAdapter())
         mv = ParkingTransformer(fileName, className, methodName, mv.newAdapter())
         mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
-        mv = DeterministicHashCodeTransformer(fileName, className, methodName, mv.newAdapter())
+        if (isInTraceDebuggerMode) {
+            // Lincheck does not support true identity hash codes (it always uses zeroes),
+            // so there is no need for the `DeterministicInvokeDynamicTransformer` there.
+            mv = DeterministicInvokeDynamicTransformer(fileName, className, methodName, mv.newAdapter())
+        } else {
+            // In trace debugger mode we record hash codes of tracked objects and substitute them on re-run, 
+            // otherwise, we track all hash code calls in the instrumented code 
+            // and substitute them with constant.
+            mv = DeterministicHashCodeTransformer(fileName, className, methodName, mv.newAdapter())
+        }
         mv = DeterministicTimeTransformer(mv.newAdapter())
         mv = DeterministicRandomTransformer(fileName, className, methodName, mv.newAdapter())
         // `SharedMemoryAccessTransformer` goes first because it relies on `AnalyzerAdapter`,
