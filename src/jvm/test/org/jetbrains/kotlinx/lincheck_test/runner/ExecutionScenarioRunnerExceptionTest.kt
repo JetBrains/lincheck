@@ -74,7 +74,7 @@ class SuspendResumeScenarios {
 /**
  * Test [ExecutionScenarioRunner] different suspend-resume scenarios with exceptions.
  */
-class ParallelThreadsRunnerExceptionTest {
+class ExecutionScenarioRunnerExceptionTest {
     private val testClass = SuspendResumeScenarios::class.java
 
     private val susWithoutException = SuspendResumeScenarios::suspendWithoutException
@@ -165,7 +165,7 @@ class ParallelThreadsRunnerExceptionTest {
     }
 }
 
-class ParallelThreadExecutionExceptionsTest {
+class ExecutionScenarioRunnerExceptionsTest {
     @Test
     fun shouldCompleteWithUnexpectedException() = withLincheckJavaAgent(InstrumentationMode.STRESS) {
         val scenario = scenario {
