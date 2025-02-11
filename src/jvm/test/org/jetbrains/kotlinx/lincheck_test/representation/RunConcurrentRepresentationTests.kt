@@ -187,7 +187,9 @@ class CustomThreadsRunConcurrentRepresentationTest : BaseRunConcurrentRepresenta
             TestJdkVersion.JDK_8  -> "run_concurrent_test/custom_threads_trace_debugger_jdk8.txt"
             TestJdkVersion.JDK_11 -> "run_concurrent_test/custom_threads_trace_debugger_jdk11.txt"
             TestJdkVersion.JDK_17 -> "run_concurrent_test/custom_threads_trace_debugger_jdk17.txt"
-            else                  -> "run_concurrent_test/custom_threads_trace_debugger.txt"
+            TestJdkVersion.JDK_21 -> "run_concurrent_test/custom_threads_trace_debugger_jdk21.txt"
+            else ->
+                throw IllegalStateException("Unsupported JDK version for trace debugger mode: $testJdkVersion")
         }
     } else {
         "run_concurrent_test/custom_threads.txt"
