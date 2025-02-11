@@ -337,7 +337,7 @@ internal class ExecutionScenarioRunner(
             // Combine the results and convert them for the standard class loader (if they are of non-primitive types).
             // We do not want the transformed code to be reachable outside of the runner and strategy classes.
             return CompletedInvocationResult(collectExecutionResults(afterInitStateRepresentation, afterParallelStateRepresentation, afterPostStateRepresentation))
-        } catch (e: TimeoutException) {
+        } catch (_: TimeoutException) {
             return RunnerTimeoutInvocationResult()
         } catch (e: ExecutionException) {
             // In case when invocation raised an exception,

@@ -37,20 +37,15 @@ internal class LambdaRunner<R>(
         try {
             setEventTracker()
             val tasks = threadMapOf(0 to wrapper)
-            timeout -= executor.submitAndAwait(tasks, timeout)
-            timeout -= strategy.awaitUserThreads(timeout)
+            try {
+                timeout -= executor.submitAndAwait(tasks, timeout)
+            } finally {
+                timeout -= strategy.awaitUserThreads(timeout)
+            }
             return CompletedInvocationResult(collectExecutionResults(wrapper))
-        } catch (e: TimeoutException) {
+        } catch (_: TimeoutException) {
             return RunnerTimeoutInvocationResult(wrapper)
         } catch (e: ExecutionException) {
-            // In case when invocation raised an exception,
-            // we need to wait for all user threads to finish before continuing.
-            // In case if waiting for threads termination abrupt with the timeout,
-            // we return `RunnerTimeoutInvocationResult`.
-            // Otherwise, we return `UnexpectedExceptionInvocationResult` with the original exception.
-            runCatching { strategy.awaitUserThreads(timeout) }.onFailure { exception ->
-                if (exception is TimeoutException) return RunnerTimeoutInvocationResult(wrapper)
-            }
             return UnexpectedExceptionInvocationResult(e.cause!!, collectExecutionResults(wrapper))
         } finally {
             resetEventTracker()
