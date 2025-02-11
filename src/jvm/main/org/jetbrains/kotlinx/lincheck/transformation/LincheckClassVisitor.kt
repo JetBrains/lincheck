@@ -82,26 +82,6 @@ internal class LincheckClassVisitor(
             mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
         }
-        // Debugger implicitly evaluates toString for variables rendering
-        // We need to disable breakpoints in such a case, as the numeration will break.
-        // Breakpoints are disabled as we do not instrument toString and enter an ignored section,
-        // so there are no beforeEvents inside.
-        if (methodName == "<init>" || ideaPluginEnabled && methodName == "toString" && desc == "()Ljava/lang/String;") {
-            mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
-            if (isInTraceDebuggerMode) {
-                // Lincheck does not support true identity hash codes (it always uses zeroes),
-                // so there is no need for the `DeterministicInvokeDynamicTransformer` there.
-                mv = DeterministicInvokeDynamicTransformer(fileName, className, methodName, mv.newAdapter())
-            }
-            mv = run {
-                val st = ConstructorArgumentsSnapshotTrackerTransformer(fileName, className, methodName, mv.newAdapter(), classVisitor::isInstanceOf)
-                val sv = SharedMemoryAccessTransformer(fileName, className, methodName, st.newAdapter())
-                val aa = AnalyzerAdapter(className, access, methodName, desc, sv)
-                sv.analyzer = aa
-                aa
-            }
-            return mv
-        }
         // In some newer versions of JDK, `ThreadPoolExecutor` uses
         // the internal `ThreadContainer` classes to manage threads in the pool;
         // This class, in turn, has the method `start,
@@ -143,6 +123,26 @@ internal class LincheckClassVisitor(
             return mv
         }
         if (isCoroutineInternalClass(className)) {
+            return mv
+        }
+        // Debugger implicitly evaluates toString for variables rendering
+        // We need to disable breakpoints in such a case, as the numeration will break.
+        // Breakpoints are disabled as we do not instrument toString and enter an ignored section,
+        // so there are no beforeEvents inside.
+        if (methodName == "<init>" || ideaPluginEnabled && methodName == "toString" && desc == "()Ljava/lang/String;") {
+            mv = ObjectCreationTransformer(fileName, className, methodName, mv.newAdapter())
+            if (isInTraceDebuggerMode) {
+                // Lincheck does not support true identity hash codes (it always uses zeroes),
+                // so there is no need for the `DeterministicInvokeDynamicTransformer` there.
+                mv = DeterministicInvokeDynamicTransformer(fileName, className, methodName, mv.newAdapter())
+            }
+            mv = run {
+                val st = ConstructorArgumentsSnapshotTrackerTransformer(fileName, className, methodName, mv.newAdapter(), classVisitor::isInstanceOf)
+                val sv = SharedMemoryAccessTransformer(fileName, className, methodName, st.newAdapter())
+                val aa = AnalyzerAdapter(className, access, methodName, desc, sv)
+                sv.analyzer = aa
+                aa
+            }
             return mv
         }
         mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
