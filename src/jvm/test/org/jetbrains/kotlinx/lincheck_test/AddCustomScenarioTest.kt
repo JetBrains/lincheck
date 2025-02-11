@@ -13,7 +13,7 @@ package org.jetbrains.kotlinx.lincheck_test
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
-import org.junit.*
+import org.junit.jupiter.api.*
 
 class AddCustomScenarioTest {
     var x = 0

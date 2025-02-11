@@ -19,8 +19,8 @@ import org.jetbrains.kotlinx.lincheck.annotations.Validate
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import org.junit.jupiter.api.Test
+import kotlin.test.assertTrue
 
 /**
  * This test is created to verify this [bug](https://github.com/JetBrains/lincheck/issues/206) is resolved.

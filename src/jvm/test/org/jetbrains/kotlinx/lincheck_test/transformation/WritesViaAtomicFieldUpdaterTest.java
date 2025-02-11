@@ -14,11 +14,11 @@ import org.jetbrains.kotlinx.lincheck.*;
 import org.jetbrains.kotlinx.lincheck.annotations.Operation;
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*;
 import org.jetbrains.kotlinx.lincheck.verifier.*;
-import org.junit.*;
+import org.junit.jupiter.api.*;
 
 import java.util.concurrent.atomic.*;
 
-import static org.junit.Assert.*;
+import static kotlin.test.AssertionsKt.fail;
 
 /**
  * This test checks that indirect writes via {@link AtomicIntegerFieldUpdater}-s

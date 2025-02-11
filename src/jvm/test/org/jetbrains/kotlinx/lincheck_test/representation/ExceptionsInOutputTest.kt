@@ -14,7 +14,7 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
-import org.junit.Test
+import org.junit.jupiter.api.*
 
 @Suppress("UNUSED")
 class ExceptionsInOutputTest {

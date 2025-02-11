@@ -15,7 +15,8 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.strategy.managed.forClasses
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.junit.Test
+import org.junit.jupiter.api.Test
+import kotlin.test.assertFailsWith
 import java.lang.AssertionError
 
 /**
@@ -28,8 +29,11 @@ class CustomAtomicGuaranteeTest {
     @Operation
     fun increment(): Int = value.increment()
 
-    @Test(expected = AssertionError::class)
-    fun `test without guarantees`() =  modelCheckingConfiguration().check(this::class.java)
+    @Test
+    fun `test without guarantees`() {
+        assertFailsWith<AssertionError> { modelCheckingConfiguration().check(this::class.java) }
+    }
+
     @Test
     fun `test with guarantees`() = modelCheckingConfiguration()
         .addGuarantee(forClasses(NonAtomicCounter::class).allMethods().treatAsAtomic())
@@ -63,9 +67,10 @@ class CustomAtomicGuaranteeWithInheritanceTest {
     @Operation
     fun increment(): Int = value.increment()
 
-    @Test(expected = AssertionError::class)
-    fun `test without guarantees`() = modelCheckingConfiguration()
-        .check(this::class.java)
+    @Test
+    fun `test without guarantees`() {
+        assertFailsWith<AssertionError> { modelCheckingConfiguration().check(this::class.java) }
+    }
     @Test
     fun `test with guarantees`() = modelCheckingConfiguration()
         .addGuarantee(forClasses(ChildNonAtomicCounter::class).allMethods().treatAsAtomic())

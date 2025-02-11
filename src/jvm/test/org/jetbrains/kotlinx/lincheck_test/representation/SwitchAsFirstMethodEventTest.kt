@@ -15,7 +15,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
-import org.junit.*
+import org.junit.jupiter.api.*
 
 /**
  * This test checks that all switches that are the first events in methods are lifted out of the methods in the trace.

@@ -13,9 +13,11 @@ import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTest
-import org.junit.Assert.*
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.util.concurrent.ThreadLocalRandom
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+import kotlin.test.fail
 
 @StressCTest(iterations = 1, requireStateEquivalenceImplCheck = false, actorsBefore = 1, actorsAfter = 1, threads = 3)
 class AlmostEmptyScenarioTest {
@@ -32,12 +34,12 @@ class AlmostEmptyScenarioTest {
             fail("Should fail with LincheckAssertionError")
         } catch (e: LincheckAssertionError) {
             val failedScenario = e.failure.scenario
-            assertTrue("The init part should be empty", failedScenario.initExecution.isEmpty())
-            assertTrue("The post part should be empty", failedScenario.postExecution.isEmpty())
-            assertEquals("The error should be reproduced with one thread",
-                1, failedScenario.parallelExecution.size)
-            assertEquals("The error should be reproduced with one operation",
-                1, failedScenario.parallelExecution[0].size)
+            assertTrue(failedScenario.initExecution.isEmpty(), "The init part should be empty")
+            assertTrue(failedScenario.postExecution.isEmpty(), "The post part should be empty")
+            assertEquals(1, failedScenario.parallelExecution.size,
+                "The error should be reproduced with one thread")
+            assertEquals(1, failedScenario.parallelExecution[0].size,
+                "The error should be reproduced with one operation")
         }
     }
 }

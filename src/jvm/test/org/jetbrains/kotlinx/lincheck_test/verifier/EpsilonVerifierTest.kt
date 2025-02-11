@@ -13,7 +13,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
-import org.junit.*
+import org.junit.jupiter.api.*
 
 @StressCTest(iterations = 5, threads = 2, actorsPerThread = 2, verifier = EpsilonVerifier::class)
 class EpsilonVerifierTest {

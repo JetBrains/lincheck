@@ -13,7 +13,7 @@ import org.jetbrains.kotlinx.lincheck.Suspended
 import org.jetbrains.kotlinx.lincheck.ValueResult
 import org.jetbrains.kotlinx.lincheck_test.verifier.*
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.LinearizabilityVerifier
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
 import org.jetbrains.kotlinx.lincheck.actor

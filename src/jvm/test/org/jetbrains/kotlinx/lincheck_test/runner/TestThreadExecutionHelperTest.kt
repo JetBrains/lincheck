@@ -16,15 +16,15 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
 import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
-import org.junit.Assert
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertArrayEquals
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import java.util.*
 
 class TestThreadExecutionHelperTest {
     private var runner: Runner? = null
 
-    @Before
+    @BeforeEach
     fun setUp() {
         val scenario = ExecutionScenario(emptyList(), emptyList(), emptyList(), null)
         val strategy: Strategy = object : Strategy(scenario) {
@@ -87,7 +87,7 @@ class TestThreadExecutionHelperTest {
         ex.testInstance = ArrayDeque<Any>()
         ex.results = arrayOfNulls(5)
         ex.run()
-        Assert.assertArrayEquals(
+        assertArrayEquals(
             arrayOf<Result>(
                 ValueResult(true),
                 ValueResult(true),
@@ -120,7 +120,7 @@ class TestThreadExecutionHelperTest {
         ex.allThreadExecutions = arrayOfNulls(1)
         ex.allThreadExecutions[0] = ex
         ex.run()
-        Assert.assertArrayEquals(
+        assertArrayEquals(
             arrayOf(
                 VoidResult,
                 ValueResult(1),

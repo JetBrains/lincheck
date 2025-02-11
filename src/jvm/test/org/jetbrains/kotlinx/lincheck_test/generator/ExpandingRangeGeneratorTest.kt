@@ -14,9 +14,9 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import org.jetbrains.kotlinx.lincheck.paramgen.ExpandingRangeIntGenerator
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.util.Random
+import kotlin.test.assertEquals
 
 // This test should be isolated, as the mockK library
 // may change some coroutine test output
@@ -42,7 +42,7 @@ class ExpandingRangeGeneratorIsolatedTest {
 
         // Checking that range is expanded
         val generatedValues = (0 until 5).map { generator.nextInt() }
-        assertEquals("Bad generated range", listOf(10, 8, 11, 7, 12), generatedValues)
+        assertEquals(listOf(10, 8, 11, 7, 12), generatedValues, "Bad generated range")
 
         // Checking that all values after expansion are in the bound
         val restGeneratedValues = listOfRangeValues.map { generator.nextInt() }

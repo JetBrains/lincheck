@@ -11,8 +11,8 @@
 package org.jetbrains.kotlinx.lincheck_test.gpmc
 
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.junit.jupiter.api.*
 import kotlin.concurrent.*
-import org.junit.Test
 
 class MonitorTest {
 
@@ -32,7 +32,8 @@ class MonitorTest {
             .also { listOf(t1, t2, t3).forEach { it.join() } }
     }
 
-    @Test(timeout = TIMEOUT)
+    @Test
+    @Timeout(TIMEOUT)
     fun testMutex() = modelCheckerTest(
         testClass = this::class,
         testOperation = this::mutex,
@@ -66,7 +67,8 @@ class MonitorDeadlockIsolatedTest {
         return counter
     }
 
-    @Test(timeout = TIMEOUT)
+    @Test
+    @Timeout(TIMEOUT)
     fun testDeadlock() = modelCheckerTest(
         testClass = this::class,
         testOperation = this::deadlock,

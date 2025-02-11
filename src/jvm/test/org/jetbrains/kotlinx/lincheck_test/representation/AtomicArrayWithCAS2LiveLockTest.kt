@@ -18,16 +18,16 @@ import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
-import org.junit.Assume.assumeFalse
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.Assumptions.assumeFalse
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 
 /**
  * Checks recursive spin lock representation when execution hung due to alternation of two threads
  * in recursive live-lock.
  */
 class AtomicArrayWithCAS2LiveLockTest {
-    @Before
+    @BeforeEach
     fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val array = AtomicArrayWithCAS2(ARRAY_SIZE, 0)

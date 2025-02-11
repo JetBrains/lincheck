@@ -17,7 +17,7 @@ import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedOptions
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 abstract class AbstractSnapshotTest {
     abstract class SnapshotVerifier() : Verifier {

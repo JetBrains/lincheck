@@ -10,12 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck_test.gpmc
 
+import org.junit.jupiter.api.*
+import java.util.concurrent.*
 import kotlin.concurrent.thread
-import java.util.concurrent.ConcurrentLinkedDeque
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentSkipListMap
-import org.junit.Test
-
 
 class DataStructuresTests {
 
@@ -36,7 +33,8 @@ class DataStructuresTests {
         check(!(r1 == 1 && r2 == 1))
     }
 
-    @Test(timeout = TIMEOUT)
+    @Test
+    @Timeout(TIMEOUT)
     fun incorrectConcurrentLinkedDequeTest() = modelCheckerTest(
         testClass = this::class,
         testOperation = this::incorrectConcurrentLinkedDeque,
@@ -59,7 +57,8 @@ class DataStructuresTests {
         check(!(r1 == null && r2 == null))
     }
 
-    @Test(timeout = TIMEOUT)
+    @Test
+    @Timeout(TIMEOUT)
     fun incorrectHashMapTest() = modelCheckerTest(
         testClass = this::class,
         testOperation = this::incorrectHashMap,
@@ -82,7 +81,8 @@ class DataStructuresTests {
         check(!(r1 == null && r2 == null))
     }
 
-    @Test(timeout = TIMEOUT)
+    @Test
+    @Timeout(TIMEOUT)
     fun correctConcurrentHashMapTest() = modelCheckerTest(
         testClass = this::class,
         testOperation = this::correctConcurrentHashMap,
@@ -105,7 +105,8 @@ class DataStructuresTests {
         check(!(r1 == null && r2 == null))
     }
 
-    @Test(timeout = TIMEOUT)
+    @Test
+    @Timeout(TIMEOUT)
     fun correctConcurrentSkipListMapTest() = modelCheckerTest(
         testClass = this::class,
         testOperation = this::correctConcurrentSkipListMap,

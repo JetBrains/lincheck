@@ -21,10 +21,11 @@ import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode
 import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck_test.verifier.*
 import org.junit.*
-import org.junit.Assert.*
+import org.junit.jupiter.api.Test
 import java.util.concurrent.atomic.*
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
+import kotlin.test.assertTrue
 
 /**
  * Defines suspend-resume cases with exceptions.

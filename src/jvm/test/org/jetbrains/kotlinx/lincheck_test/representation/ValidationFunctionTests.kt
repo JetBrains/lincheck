@@ -15,10 +15,7 @@ import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
-import org.junit.*
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertThrows
-import java.lang.IllegalStateException
+import org.junit.jupiter.api.*
 
 /**
  * Test verifies validation function representation in the trace.

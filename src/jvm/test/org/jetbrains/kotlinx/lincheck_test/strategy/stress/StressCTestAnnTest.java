@@ -17,7 +17,7 @@ import org.jetbrains.kotlinx.lincheck.execution.*;
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*;
 import org.jetbrains.kotlinx.lincheck.verifier.*;
 import org.jetbrains.kotlinx.lincheck.verifier.linearizability.*;
-import org.junit.*;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.*;
 

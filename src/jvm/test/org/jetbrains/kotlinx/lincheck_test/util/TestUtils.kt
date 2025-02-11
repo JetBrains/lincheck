@@ -13,8 +13,9 @@ package org.jetbrains.kotlinx.lincheck_test.util
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.paramgen.ParameterGenerator
-import org.junit.Assert.*
 import java.io.File
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
  * Checks output when Lincheck run fails with an exception and don't return [LincheckFailure]
@@ -27,8 +28,8 @@ internal inline fun <reified E: Exception> Options<*, *>.checkFailsWithException
         LinChecker(testClass, this).check()
     } catch (e: Exception) {
         assertTrue(
+            e is E,
             "Exception of type ${E::class.simpleName} expected, but ${e::class.simpleName} was thrown.\n $e",
-            e is E
         )
         val actualOutput = e.message ?: ""
         val expectedOutput = getExpectedLogFromResources(expectedOutputFile)

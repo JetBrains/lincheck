@@ -13,7 +13,7 @@ package org.jetbrains.kotlinx.lincheck_test.transformation
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.VarHandle
 import kotlin.concurrent.Volatile

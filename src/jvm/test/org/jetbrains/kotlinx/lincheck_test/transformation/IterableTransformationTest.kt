@@ -12,7 +12,7 @@ package org.jetbrains.kotlinx.lincheck_test.transformation
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTest
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 /**
  * Tests that java.lang.Iterable is transformed and

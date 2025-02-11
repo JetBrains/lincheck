@@ -11,8 +11,7 @@ package org.jetbrains.kotlinx.lincheck_test.isolated
 
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
-import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
-import org.junit.*
+import org.junit.jupiter.api.*
 import sun.nio.ch.lincheck.TestThread
 import java.util.concurrent.*
 
@@ -51,7 +50,8 @@ class FixedActiveThreadsExecutorIsolatedTest {
         }
     }
 
-    @Test(timeout = 100_000)
+    @Test
+    @Timeout(100_000)
     fun testSubmitTimeout() = withLincheckJavaAgent(InstrumentationMode.STRESS) {
         FixedActiveThreadsExecutor(
             "FixedActiveThreadsExecutorTest.testSubmitTimeout",
@@ -78,7 +78,8 @@ class FixedActiveThreadsExecutorIsolatedTest {
         }
     }
 
-    @Test(timeout = 100_000)
+    @Test
+    @Timeout(100_000)
     fun testShutdown() {
         // executor with unique runner hash
         val executor = FixedActiveThreadsExecutor("FixedActiveThreadsExecutorTest.testResubmit", 2)

@@ -11,8 +11,9 @@
 package org.jetbrains.kotlinx.lincheck_test.gpmc
 
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Timeout
 import kotlin.concurrent.thread
-import org.junit.Test
 
 class HangIsolatedTest {
 
@@ -27,7 +28,8 @@ class HangIsolatedTest {
         t2.join()
     }
 
-    @Test(timeout = TIMEOUT)
+    @Test
+    @Timeout(TIMEOUT)
     fun testHang() = modelCheckerTest(
         testClass = this::class,
         testOperation = this::hang,
@@ -43,7 +45,8 @@ class HangIsolatedTest {
         }
     }
 
-    @Test(timeout = TIMEOUT)
+    @Test
+    @Timeout(TIMEOUT)
     fun testHangWithoutThreadJoin() = modelCheckerTest(
         testClass = this::class,
         testOperation = this::hangWithoutThreadJoin,

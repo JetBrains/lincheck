@@ -17,10 +17,9 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelChecki
 import org.jetbrains.kotlinx.lincheck.strategy.stress.*
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck_test.util.*
-import org.junit.Test
-import java.lang.IllegalStateException
-import java.lang.StringBuilder
+import org.junit.jupiter.api.Test
 import java.util.concurrent.atomic.*
+import kotlin.test.assertFailsWith
 
 /**
  * This test checks that there are states in reported interleavings for model checking strategy.
@@ -102,13 +101,15 @@ class TwoStateRepresentationFunctionsTest {
     @StateRepresentation
     fun stateRepresentation2() = counter.toString()
 
-    @Test(expected = IllegalStateException::class)
+    @Test
     fun test() {
-        ModelCheckingOptions()
-            .actorsPerThread(1)
-            .actorsBefore(0)
-            .actorsAfter(0)
-            .checkImpl(this::class.java)
+        assertFailsWith<IllegalStateException> {
+            ModelCheckingOptions()
+                .actorsPerThread(1)
+                .actorsBefore(0)
+                .actorsAfter(0)
+                .checkImpl(this::class.java)
+        }
     }
 }
 

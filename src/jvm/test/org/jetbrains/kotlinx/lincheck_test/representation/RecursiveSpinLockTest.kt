@@ -15,9 +15,9 @@ import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
-import org.junit.Assume.assumeFalse
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.Assumptions.assumeFalse
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * Checks proper output in case of recursive spin-lock in one thread.
  */
 class RecursiveSpinLockTest {
-    @Before
+    @BeforeEach
     fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val counter = AtomicInteger(0)
@@ -73,7 +73,7 @@ class RecursiveSpinLockTest {
  * Spin lock should be twice bigger because of flipping parameters of the method.
  */
 class RecursiveSpinWithParamsLockTest {
-    @Before
+    @BeforeEach
     fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val counter = AtomicInteger(0)
@@ -124,7 +124,7 @@ class RecursiveSpinWithParamsLockTest {
  * when all potential switch points are nested in non-atomic methods.
  */
 class RecursiveSpinLockWithInnerEventsTest {
-    @Before
+    @BeforeEach
     fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val counter = AtomicInteger(0)
@@ -175,7 +175,7 @@ class RecursiveSpinLockWithInnerEventsTest {
  * the recursion includes two different method calls.
  */
 class RecursiveSpinLockTwoStepRecursionEventsTest {
-    @Before
+    @BeforeEach
     fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val counter = AtomicInteger(0)
@@ -228,7 +228,7 @@ class RecursiveSpinLockTwoStepRecursionEventsTest {
  * Checks proper output in case of recursive spin-lock in two threads.
  */
 class RecursiveTwoThreadsSpinLockTest {
-    @Before
+    @BeforeEach
     fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val sharedState1 = AtomicBoolean(false)
@@ -282,7 +282,7 @@ class RecursiveTwoThreadsSpinLockTest {
  * different input parameters.
  */
 class RecursiveParametersDependentSpinLockTest {
-    @Before
+    @BeforeEach
     fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val value = AtomicBoolean(false)

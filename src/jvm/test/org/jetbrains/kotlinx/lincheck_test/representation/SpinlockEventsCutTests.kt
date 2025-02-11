@@ -17,9 +17,9 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.guide.MSQueueBlocking
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
-import org.junit.Assume.assumeFalse
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.Assumptions.assumeFalse
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReferenceArray
@@ -90,7 +90,7 @@ class SpinlockEventsCutMiddleLengthTest : AbstractSpinLivelockTest() {
  * when one thread runs in the infinite loop while others terminate
  */
 class SpinlockEventsCutInfiniteLoopTest : AbstractSpinLivelockTest() {
-    @Before
+    @BeforeEach
     fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val sharedStateAny = AtomicBoolean(false)
@@ -110,7 +110,7 @@ class SpinlockEventsCutInfiniteLoopTest : AbstractSpinLivelockTest() {
  * when one thread runs in the infinite loop while others terminate
  */
 class SpinlockEventsCutInfiniteLoopWithParametersTest : AbstractSpinLivelockTest() {
-    @Before
+    @BeforeEach
     fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     @Volatile
@@ -131,7 +131,7 @@ class SpinlockEventsCutInfiniteLoopWithParametersTest : AbstractSpinLivelockTest
  * when the spin cycle is twice bigger due to a flipping method receivers.
  */
 class SpinlockEventsCutInfiniteLoopWithReceiversTest : AbstractSpinLivelockTest() {
-    @Before
+    @BeforeEach
     fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val first = Receiver(false)
@@ -158,7 +158,7 @@ class SpinlockEventsCutInfiniteLoopWithReceiversTest : AbstractSpinLivelockTest(
  * when the spin cycle is bigger due to a different arrays usage and cells access.
  */
 class SpinlockEventsCutInfiniteLoopWithArrayOperationsTest : AbstractSpinLivelockTest() {
-    @Before
+    @BeforeEach
     fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     @Volatile
@@ -185,7 +185,7 @@ class SpinlockEventsCutInfiniteLoopWithArrayOperationsTest : AbstractSpinLiveloc
  * when the spin cycle is twice bigger due to a flipping arrays receivers usage.
  */
 class SpinlockEventsCutInfiniteLoopWithArrayReceiversTest : AbstractSpinLivelockTest() {
-    @Before
+    @BeforeEach
     fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val first = Array(3) { 0 }
@@ -211,7 +211,7 @@ class SpinlockEventsCutInfiniteLoopWithArrayReceiversTest : AbstractSpinLivelock
  * LinCheck should calculate spin cycle period without params.
  */
 class SpinlockEventsCutInfiniteNoCycleWithParamsTest : AbstractSpinLivelockTest() {
-    @Before
+    @BeforeEach
     fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val array = Array(3) { 0 }
@@ -403,7 +403,7 @@ class SpinlockInIncorrectResultsWithClocksTest {
  * Test should not fail.
  */
 class SpinCycleWithSideEffectsTest {
-    @Before
+    @BeforeEach
     fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val counter = AtomicInteger(0)
@@ -444,7 +444,7 @@ class SpinCycleWithSideEffectsTest {
  * when all potential switch points are nested in non-atomic methods.
  */
 class SpinLockWithAllEventsWrappedInMethodsTest {
-    @Before
+    @BeforeEach
     fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val counter = AtomicInteger(0)
@@ -492,7 +492,7 @@ class SpinLockWithAllEventsWrappedInMethodsTest {
  * when all the trace points are in the top-level, i.e., right in the actor.
  */
 class SingleThreadTopLevelSpinLockTest {
-    @Before
+    @BeforeEach
     fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     @Volatile

@@ -12,7 +12,8 @@ package org.jetbrains.kotlinx.lincheck_test.transformation
 import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTest
-import org.junit.Test
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Timeout
 import java.io.Serializable
 
 /**
@@ -33,7 +34,8 @@ class FinalFieldReadingEliminationTest {
     @Operation
     fun readNonPrimitive() = nonPrimitiveValue
 
-    @Test(timeout = 100_000)
+    @Test
+    @Timeout(100_000)
     fun test() {
         LinChecker.check(this::class.java)
     }

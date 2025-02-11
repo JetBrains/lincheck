@@ -12,10 +12,9 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck_test.util.checkFailsWithException
-import org.junit.Assert
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import org.junit.jupiter.api.*
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class IncorrectArgumentsCountInCustomScenarioActorTest {
 
@@ -25,18 +24,18 @@ class IncorrectArgumentsCountInCustomScenarioActorTest {
 
     @Test
     fun testTooFew() {
-        val exception = Assert.assertThrows(IllegalArgumentException::class.java) {
+        val exception = assertFailsWith<IllegalArgumentException> {
             ModelCheckingOptions()
                 .addCustomScenario {
                     parallel { thread { actor(::operation) } }
                 }
         }
-        assertEquals("Invalid number of the operation operation parameters: 1 expected, 0 provided.", exception.message)
+        assertEquals(exception.message, "Invalid number of the operation operation parameters: 1 expected, 0 provided.")
     }
 
     @Test
     fun testTooMany() {
-        val exception = Assert.assertThrows(IllegalArgumentException::class.java) {
+        val exception = assertFailsWith<IllegalArgumentException> {
             ModelCheckingOptions()
                 .addCustomScenario {
                     parallel { thread { actor(::operation, 1, 2) } }

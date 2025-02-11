@@ -13,7 +13,7 @@ package org.jetbrains.kotlinx.lincheck_test.strategy.modelchecking
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import java.util.concurrent.atomic.AtomicInteger
 
 class HangingDetectionThresholdTest {

@@ -12,8 +12,7 @@ package org.jetbrains.kotlinx.lincheck_test.transformation
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
-import org.junit.*
+import org.junit.jupiter.api.*
 
 /**
  * Checks that [Object.hashCode] is replaced with a deterministic
@@ -78,7 +77,7 @@ class IdentityHashCodeOnNullTest {
     fun test() = ModelCheckingOptions().check(this::class)
 }
 
-@Ignore // TODO: easier to support when `javaagent` is merged
+@Disabled // TODO: easier to support when `javaagent` is merged
 class IdentityHashCodeDiffersTest() {
     @Operation
     fun operation() {

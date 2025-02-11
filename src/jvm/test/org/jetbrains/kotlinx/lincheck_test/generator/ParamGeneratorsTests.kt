@@ -19,10 +19,12 @@ import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import org.jetbrains.kotlinx.lincheck_test.verifier.linearizability.SpinLockBasedSet
+import org.junit.jupiter.api.Test
 import kotlin.math.pow
-import org.junit.Assert.*
-import org.junit.Test
-
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 
 /**
  * This test checks that parameter generators' random instances use different seeds than execution's generator.
@@ -42,8 +44,10 @@ class GeneratorSeedTest {
         array[key] += 1
     }
 
-    @Test(expected = LincheckAssertionError::class)
-    fun test() = ModelCheckingOptions().check(this::class)
+    @Test
+    fun test() {
+        assertFailsWith<LincheckAssertionError> { ModelCheckingOptions().check(this::class) }
+    }
 
 }
 
@@ -57,10 +61,14 @@ class MethodParameterGenerationTestWithBothParametersAnnotated {
     fun operation(@Param(name = "key") first: Int, @Param(name = "key") second: Int) =
         throwInternalExceptionIfParamsNotEquals(first, second)
 
-    @Test(expected = LincheckAssertionError::class)
-    fun test() = ModelCheckingOptions()
-        .configureInternalExceptionVerifier()
-        .check(this::class)
+    @Test
+    fun test() {
+        assertFailsWith<LincheckAssertionError> {
+            ModelCheckingOptions()
+                .configureInternalExceptionVerifier()
+                .check(this::class)
+        }
+    }
 
 }
 
@@ -75,10 +83,14 @@ class MethodParameterGenerationTestWithFirstParameterAnnotated {
     fun operation(@Param(name = "key") first: Int, second: Int) =
         throwInternalExceptionIfParamsNotEquals(first, second)
 
-    @Test(expected = LincheckAssertionError::class)
-    fun test() = ModelCheckingOptions()
-        .configureInternalExceptionVerifier()
-        .check(this::class)
+    @Test
+    fun test() {
+        assertFailsWith<LincheckAssertionError> {
+            ModelCheckingOptions()
+                .configureInternalExceptionVerifier()
+                .check(this::class)
+        }
+    }
 
 }
 
@@ -92,10 +104,14 @@ class MethodParameterGenerationTestWithSecondParameterAnnotated {
     fun operation(first: Int, @Param(name = "key") second: Int) =
         throwInternalExceptionIfParamsNotEquals(first, second)
 
-    @Test(expected = LincheckAssertionError::class)
-    fun test() = ModelCheckingOptions()
-        .configureInternalExceptionVerifier()
-        .check(this::class)
+    @Test
+    fun test() {
+        assertFailsWith<LincheckAssertionError> {
+            ModelCheckingOptions()
+                .configureInternalExceptionVerifier()
+                .check(this::class)
+        }
+    }
 
 }
 
@@ -107,10 +123,14 @@ class MethodParameterGenerationTest {
     fun operation(first: Int, second: Int) =
         throwInternalExceptionIfParamsNotEquals(first, second)
 
-    @Test(expected = LincheckAssertionError::class)
-    fun test() = ModelCheckingOptions()
-        .configureInternalExceptionVerifier()
-        .check(this::class)
+    @Test
+    fun test() {
+        assertFailsWith<LincheckAssertionError> {
+            ModelCheckingOptions()
+                .configureInternalExceptionVerifier()
+                .check(this::class)
+        }
+    }
 
 }
 
@@ -269,11 +289,15 @@ class NamedEnumParamGeneratorTest {
         }
     }
 
-    @Test(expected = LincheckAssertionError::class)
-    fun test() = ModelCheckingOptions()
-        .checkObstructionFreedom(true)
-        .minimizeFailedScenario(false)
-        .check(this::class)
+    @Test
+    fun test() {
+        assertFailsWith<LincheckAssertionError> {
+            ModelCheckingOptions()
+                .checkObstructionFreedom(true)
+                .minimizeFailedScenario(false)
+                .check(this::class)
+        }
+    }
 
     enum class OperationType {
         ADD,
@@ -298,11 +322,15 @@ class UnnamedEnumParamGeneratorTest() {
         }
     }
 
-    @Test(expected = LincheckAssertionError::class)
-    fun test() = ModelCheckingOptions()
-        .checkObstructionFreedom(true)
-        .minimizeFailedScenario(false)
-        .check(this::class)
+    @Test
+    fun test() {
+        assertFailsWith<LincheckAssertionError> {
+            ModelCheckingOptions()
+                .checkObstructionFreedom(true)
+                .minimizeFailedScenario(false)
+                .check(this::class)
+        }
+    }
 
     enum class OperationType {
         ADD,
@@ -322,11 +350,15 @@ class EnumParamWithoutAnnotationGeneratorTest: BaseEnumSetTest() {
         return setOperation(operation, key)
     }
 
-    @Test(expected = LincheckAssertionError::class)
-    fun test() = ModelCheckingOptions()
-        .checkObstructionFreedom(true)
-        .minimizeFailedScenario(false)
-        .check(this::class)
+    @Test
+    fun test() {
+        assertFailsWith<LincheckAssertionError> {
+            ModelCheckingOptions()
+                .checkObstructionFreedom(true)
+                .minimizeFailedScenario(false)
+                .check(this::class)
+        }
+    }
 }
 
 abstract class BaseEnumSetTest {
@@ -358,7 +390,7 @@ class MultipleTypesAssociatedWithNamedEnumParameterGeneratorTest {
 
     @Test
     fun test() {
-        val exception = assertThrows(IllegalStateException::class.java) { ModelCheckingOptions().check(this::class) }
+        val exception = assertFailsWith<IllegalStateException> { ModelCheckingOptions().check(this::class) }
         assertEquals(
             "Enum param gen with name type can't be associated with two different types: FirstEnum and SecondEnum",
             exception.message

@@ -15,9 +15,8 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
-
+import org.junit.jupiter.api.*
 import java.util.concurrent.atomic.*
-import org.junit.*
 
 /**
  * This test checks that the last event in the case of an active lock

@@ -16,7 +16,7 @@ import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.util.*
-import org.junit.Test
+import org.junit.jupiter.api.Test
 
 /**
  * Covers a scenario when operation is suspended but never awoke.

@@ -10,12 +10,12 @@
 
 package org.jetbrains.kotlinx.lincheck_test
 
-import junit.framework.TestCase.assertEquals
 import org.jetbrains.kotlinx.lincheck_test.util.isJdk8
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.ClassNode
+import kotlin.test.assertEquals
 
 /**
  * The test checks that if it is run on new JDK (version > 8), its target bytecode version is also new.

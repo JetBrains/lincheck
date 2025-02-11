@@ -11,9 +11,9 @@
 package org.jetbrains.kotlinx.lincheck_test.gpmc
 
 import org.jetbrains.kotlinx.lincheck.strategy.ManagedDeadlockFailure
+import org.junit.jupiter.api.*
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
-import org.junit.Test
 
 class SpinLockTest {
 
@@ -33,7 +33,8 @@ class SpinLockTest {
             .also { listOf(t1, t2, t3).forEach { it.join() } }
     }
 
-    @Test(timeout = TIMEOUT)
+    @Test
+    @Timeout(TIMEOUT)
     fun testSpinLock() = modelCheckerTest(
         testClass = this::class,
         testOperation = this::spinLock,
@@ -67,7 +68,8 @@ class SpinLockLivelockIsolatedTest {
         return counter
     }
 
-    @Test(timeout = TIMEOUT)
+    @Test
+    @Timeout(TIMEOUT)
     fun testLivelock() = modelCheckerTest(
         testClass = this::class,
         testOperation = this::livelock,

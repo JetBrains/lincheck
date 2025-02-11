@@ -13,7 +13,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
-import org.junit.*
+import org.junit.jupiter.api.*
 
 /**
  * This test checks basic interleaving reporting features,
