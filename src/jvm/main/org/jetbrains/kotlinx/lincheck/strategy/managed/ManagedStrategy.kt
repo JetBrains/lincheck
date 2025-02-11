@@ -1333,6 +1333,7 @@ abstract class ManagedStrategy(
                     return@runInIgnoredSection
                 val tracePoint = callStackTrace[threadId]!!.last().tracePoint
                 when (result) {
+                    Unit -> tracePoint.initializeVoidReturnedValue()
                     Injections.VOID_RESULT -> tracePoint.initializeVoidReturnedValue()
                     COROUTINE_SUSPENDED -> tracePoint.initializeCoroutineSuspendedResult()
                     else -> tracePoint.initializeReturnedValue(adornedStringRepresentation(result))
