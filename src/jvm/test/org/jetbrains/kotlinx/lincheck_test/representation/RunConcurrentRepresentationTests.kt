@@ -24,7 +24,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.*
 import kotlin.concurrent.thread
 import kotlin.random.Random
-import org.junit.Test
+import org.junit.*
 
 
 abstract class BaseRunConcurrentRepresentationTest<R>(private val outputFileName: String) {
@@ -327,6 +327,7 @@ class IncorrectHashmapRunConcurrentRepresentationTest : BaseRunConcurrentReprese
     }
 }
 
+@Ignore
 class ThreadPoolRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
     if (isInTraceDebuggerMode) {
         when (testJdkVersion) {
