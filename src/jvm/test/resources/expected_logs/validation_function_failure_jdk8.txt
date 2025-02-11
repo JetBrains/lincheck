@@ -18,8 +18,8 @@ All operations above the horizontal line | ----- | happen before those below the
 
 java.lang.IllegalStateException: Validation works!
 	at org.jetbrains.kotlinx.lincheck_test.representation.ValidationFunctionCallTest.validateWithError(ValidationFunctionTests.kt:44)
-	at org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution4.run(Unknown Source)
-	at org.jetbrains.kotlinx.lincheck.runner.FixedActiveThreadsExecutor.testThreadRunnable$lambda$10(FixedActiveThreadsExecutor.kt:172)
+	at org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution29.run(Unknown Source)
+	at org.jetbrains.kotlinx.lincheck.runner.ActiveThreadPoolExecutor.testThreadRunnable$lambda$10(ActiveThreadPoolExecutor.kt:178)
 	at java.lang.Thread.run(Thread.java:750)
 
 
