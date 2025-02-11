@@ -34,8 +34,7 @@ internal object AtomicReferenceNames {
         atomicReference: Any,
         parameters: Array<Any?>
     ): AtomicReferenceMethodType {
-        if (testObject == null) return TreatAsDefaultMethod
-        val receiverAndName = FieldSearchHelper.findFinalFieldWithOwner(testObject, atomicReference)
+        val receiverAndName = testObject?.let { FieldSearchHelper.findFinalFieldWithOwner(it, atomicReference) }
         return if (receiverAndName != null) {
             if (isAtomicArrayIndexMethodCall(atomicReference, parameters)) {
                 when (receiverAndName) {
