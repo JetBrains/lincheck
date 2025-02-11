@@ -149,6 +149,14 @@ public class TestThreadExecutionGenerator {
         mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
         mv.push(iThread);
         mv.invokeVirtual(RUNNER_TYPE, RUNNER_ON_THREAD_START_METHOD);
+
+        // wrap actor's running loop in try-finally
+        Label actorsRunningLoopBlockStart = mv.newLabel();
+        Label actorsRunningLoopBlockEnd = mv.newLabel();
+        Label actorsRunningLoopBlockFinally = mv.newLabel();
+        mv.visitTryCatchBlock(actorsRunningLoopBlockStart, actorsRunningLoopBlockEnd, actorsRunningLoopBlockFinally, null);
+        
+        mv.visitLabel(actorsRunningLoopBlockStart);
         // Number of current operation (starts with 0)
         int iLocal = mv.newLocal(INT_TYPE);
         mv.push(0);
@@ -270,13 +278,28 @@ public class TestThreadExecutionGenerator {
             mv.iinc(iLocal, 1);
             mv.visitLabel(launchNextActor);
         }
+        mv.visitInsn(ACONST_NULL); // push null exception value indicating normal method's termination
+        mv.goTo(actorsRunningLoopBlockFinally);
+        mv.visitLabel(actorsRunningLoopBlockEnd);
+        
+        mv.visitLabel(actorsRunningLoopBlockFinally);
         // Call runner's onThreadFinish(iThread) method
         mv.loadThis();
         mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
         mv.push(iThread);
         mv.invokeVirtual(RUNNER_TYPE, RUNNER_ON_THREAD_FINISH_METHOD);
+
+        // Check if an exception was thrown in the actors' running loop and re-throw it
+        Label methodReturnLabel = mv.newLabel();
+        mv.dup();
+        mv.ifNull(methodReturnLabel);
+        mv.throwException(); // re-throw exception
+
         // Complete the method
+        mv.visitLabel(methodReturnLabel);
+        mv.pop(); // pop null exception value indicating normal method's termination
         mv.visitInsn(RETURN);
+
         mv.visitMaxs(3, 4);
         mv.visitEnd();
     }

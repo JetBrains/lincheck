@@ -620,8 +620,6 @@ abstract class ManagedStrategy(
             suddenInvocationResult = UnexpectedExceptionInvocationResult(exception, runner.collectExecutionResults())
             threadScheduler.abortAllThreads()
         }
-        // notify the scheduler that the thread is going to be finished
-        threadScheduler.finishThread(iThread)
     }
 
     override fun onActorStart(iThread: Int) {
