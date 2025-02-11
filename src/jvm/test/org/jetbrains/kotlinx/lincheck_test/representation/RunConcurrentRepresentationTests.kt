@@ -327,7 +327,6 @@ class IncorrectHashmapRunConcurrentRepresentationTest : BaseRunConcurrentReprese
     }
 }
 
-@Ignore
 class ThreadPoolRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
     if (isInTraceDebuggerMode) {
         when (testJdkVersion) {
@@ -340,7 +339,7 @@ class ThreadPoolRunConcurrentRepresentationTest : BaseRunConcurrentRepresentatio
         }
     } else {
         when (testJdkVersion) {
-            TestJdkVersion.JDK_8 -> "run_concurrent_test/thread_pool/thread_pool_jdk8.txt"
+            TestJdkVersion.JDK_8  -> "run_concurrent_test/thread_pool/thread_pool_jdk8.txt"
             TestJdkVersion.JDK_11 -> "run_concurrent_test/thread_pool/thread_pool_jdk11.txt"
             TestJdkVersion.JDK_13 -> "run_concurrent_test/thread_pool/thread_pool_jdk13.txt"
             TestJdkVersion.JDK_15 -> "run_concurrent_test/thread_pool/thread_pool_jdk15.txt"
