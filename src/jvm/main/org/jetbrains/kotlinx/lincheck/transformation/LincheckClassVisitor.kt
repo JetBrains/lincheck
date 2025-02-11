@@ -82,6 +82,21 @@ internal class LincheckClassVisitor(
             mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
         }
+        // In some newer versions of JDK, `ThreadPoolExecutor` uses
+        // the internal `ThreadContainer` classes to manage threads in the pool;
+        // This class, in turn, has the method `start,
+        // that does not directly call `Thread.start` to start a thread,
+        // but instead uses internal API `JavaLangAccess.start`.
+        // To detect threads started in this way, we instrument this class
+        // and inject the appropriate hook on calls to the `JavaLangAccess.start` method.
+        if (isThreadContainerClass(className.canonicalClassName)) {
+            if (methodName == "start") {
+                mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
+            } else {
+                mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
+            }
+            return mv
+        }
         // Debugger implicitly evaluates toString for variables rendering
         // We need to disable breakpoints in such a case, as the numeration will break.
         // Breakpoints are disabled as we do not instrument toString and enter an ignored section,
@@ -99,21 +114,6 @@ internal class LincheckClassVisitor(
                 val aa = AnalyzerAdapter(className, access, methodName, desc, sv)
                 sv.analyzer = aa
                 aa
-            }
-            return mv
-        }
-        // In some newer versions of JDK, `ThreadPoolExecutor` uses
-        // the internal `ThreadContainer` classes to manage threads in the pool;
-        // This class, in turn, has the method `start,
-        // that does not directly call `Thread.start` to start a thread,
-        // but instead uses internal API `JavaLangAccess.start`.
-        // To detect threads started in this way, we instrument this class
-        // and inject the appropriate hook on calls to the `JavaLangAccess.start` method.
-        if (isThreadContainerClass(className.canonicalClassName)) {
-            if (methodName == "start") {
-                mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
-            } else {
-                mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             }
             return mv
         }

@@ -12,8 +12,9 @@ package org.jetbrains.kotlinx.lincheck_test
 
 import junit.framework.TestCase.assertEquals
 import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
+import org.jetbrains.kotlinx.lincheck_test.util.TestJdkVersion
 import org.jetbrains.kotlinx.lincheck_test.util.isJdk8
-import org.jetbrains.kotlinx.lincheck_test.util.jdkVersion
+import org.jetbrains.kotlinx.lincheck_test.util.testJdkVersion
 import org.junit.Assume.assumeFalse
 import org.junit.Test
 import org.objectweb.asm.ClassReader
@@ -49,7 +50,7 @@ class KotlinJdkVersionTest {
         // For trace debugger mode there is a hack because JRE 8 has a bug leading to JVM crash on CI,
         // so we need to run trace debugger tests compiled with JDK 8 with some other JDK.
         // I chose JRE 17 as it is the default one.
-        assumeFalse(isInTraceDebuggerMode && jdkVersion == 17 && classNode.version == 52)
+        assumeFalse(isInTraceDebuggerMode && testJdkVersion == TestJdkVersion.JDK_17 && classNode.version == 52)
         
         val shouldContainInvokeDynamic = !isJdk8
         
