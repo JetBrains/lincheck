@@ -48,5 +48,5 @@ Detailed trace:
 |     AtomicInteger#3.set(3) at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:105)                                                                                    |
 |     AtomicIntegerArray#3[1].compareAndSet(0, 1): true at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:107)                                                         |
 |     AtomicIntegerArray#4[1].compareAndSet(0, 1): true at AtomicReferencesNamesRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:108)                                                         |
-|   result: IllegalStateException #1                                                                                                                                                                                   |
+|   result: IllegalStateException                                                                                                                                                                                      |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
