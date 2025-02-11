@@ -169,8 +169,12 @@ internal class LincheckClassVisitor(
             // Lincheck does not support true identity hash codes (it always uses zeroes),
             // so there is no need for the `DeterministicInvokeDynamicTransformer` there.
             mv = DeterministicInvokeDynamicTransformer(fileName, className, methodName, mv.newAdapter())
+        } else {
+            // In trace debugger mode we record hash codes of tracked objects and substitute them on re-run, 
+            // otherwise, we track all hash code calls in the instrumented code 
+            // and substitute them with constant.
+            mv = DeterministicHashCodeTransformer(fileName, className, methodName, mv.newAdapter())
         }
-        mv = DeterministicHashCodeTransformer(fileName, className, methodName, mv.newAdapter())
         mv = DeterministicTimeTransformer(mv.newAdapter())
         mv = DeterministicRandomTransformer(fileName, className, methodName, mv.newAdapter())
         // `SharedMemoryAccessTransformer` goes first because it relies on `AnalyzerAdapter`,
