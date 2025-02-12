@@ -15,19 +15,12 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedOptions
 import org.junit.Ignore
-import java.util.Arrays
+import java.util.*
 import kotlin.random.Random
 
 private val arrayValue = intArrayOf(2, 1, 4, 3, 6, 5, 8, 7, 10, 9)
 
-// TODO:
-//  1. Instrumented method invocation inserted before `System.arraycopy` calls, get strapped out during execution (possibly jit causes that).
-//  2. Parallel operations are not supported because of java.lang.ClassCastException:
-//     class java.util.concurrent.ForkJoinWorkerThread cannot be casted to class sun.nio.ch.lincheck.TestThread
-//     (java.util.concurrent.ForkJoinWorkerThread is in module java.base of loader 'bootstrap';
-//     sun.nio.ch.lincheck.TestThread is in unnamed module of loader 'bootstrap').
-@Ignore("Without support for System.arraycopy, tracking for copy methods will not work")
-class ArraysAPISnapshotTest : AbstractSnapshotTest() {
+abstract class BaseArraysAPISnapshotTest : AbstractSnapshotTest() {
     private class Wrapper(var x: Int)
     companion object {
         private var intArray = arrayValue
@@ -54,63 +47,221 @@ class ArraysAPISnapshotTest : AbstractSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O, *>> O.customize() {
+    protected fun <O : ManagedOptions<O, *>> O.setup() {
         verifier(ArraysAPIVerifier::class.java)
         actorsBefore(0)
         actorsAfter(0)
-        iterations(100)
+        actorsPerThread(10)
+        iterations(200)
         invocationsPerIteration(1)
         threads(1)
-        actorsPerThread(1)
     }
 
-    @Operation
-    fun sort() {
+    override fun <O : ManagedOptions<O, *>> O.customize() {
+        setup()
+    }
+
+    protected fun asListImpl() {
+        Arrays.asList<Wrapper?>(*refArray).random().x = Random.nextInt()
+    }
+
+    protected fun sortImpl() {
         intArray.sort()
         refArray.sortBy { it.x }
     }
 
-    @Operation
-    fun arraySort() {
+    protected fun arraysSortImpl() {
         Arrays.sort(intArray)
         Arrays.sort(refArray) { a, b -> a.x - b.x }
     }
 
-    @Operation
-    fun reverse() {
+    protected fun arraysParallelSortImpl() {
+        Arrays.parallelSort(intArray)
+    }
+
+    protected fun arraysParallelPrefixImpl() {
+        Arrays.parallelPrefix(intArray) { a, b -> a + b }
+    }
+
+    protected fun reverseImpl() {
         intArray.reverse()
         refArray.reverse()
     }
 
-    @Operation
-    fun fill() {
+    protected fun fillImpl() {
         intArray.fill(Random.nextInt())
         refArray.fill(Wrapper(Random.nextInt()))
     }
 
-    @Operation
-    fun arraysFill() {
+    protected fun arraysFillImpl() {
         Arrays.fill(intArray, Random.nextInt())
         Arrays.fill(refArray, Wrapper(Random.nextInt()))
     }
 
-    @Operation
-    fun arraysSetAll() {
+    protected fun arraysSetAllImpl() {
         Arrays.setAll(intArray) { Random.nextInt() }
         Arrays.setAll(refArray) { Wrapper(Random.nextInt()) }
     }
 
-    @Operation
-    fun copyOf() {
+    protected fun arraysParallelSetAllImpl() {
+        Arrays.parallelSetAll(intArray) { Random.nextInt() }
+        Arrays.parallelSetAll(refArray) { Wrapper(Random.nextInt()) }
+    }
+
+    protected fun copyOfImpl() {
         val otherRefArray = refArray.copyOf()
         otherRefArray[Random.nextInt(0, otherRefArray.size)] = Wrapper(Random.nextInt())
         otherRefArray[Random.nextInt(0, otherRefArray.size)].x = Random.nextInt()
     }
 
-    @Operation
-    fun arraysCopyOf() {
-        val otherRefArray = Arrays.copyOf(refArray, refArray.size + 1)
+    protected fun arraysCopyOfImpl() {
+        val otherRefArray = Arrays.copyOf(refArray, refArray.size)
         otherRefArray[Random.nextInt(0, otherRefArray.size)] = Wrapper(Random.nextInt())
         otherRefArray[Random.nextInt(0, otherRefArray.size)].x = Random.nextInt()
     }
+
+    protected fun copyOfRangeImpl() {
+        val otherRefArray = refArray.copyOfRange(0, refArray.size)
+        otherRefArray[Random.nextInt(0, otherRefArray.size)] = Wrapper(Random.nextInt())
+        otherRefArray[Random.nextInt(0, otherRefArray.size)].x = Random.nextInt()
+    }
+
+    protected fun arraysCopyOfRangeImpl() {
+        val otherRefArray = Arrays.copyOfRange(refArray, 0, refArray.size)
+        otherRefArray[Random.nextInt(0, otherRefArray.size)] = Wrapper(Random.nextInt())
+        otherRefArray[Random.nextInt(0, otherRefArray.size)].x = Random.nextInt()
+    }
+}
+
+class ArraysAPISnapshotTest : BaseArraysAPISnapshotTest() {
+
+    @Operation
+    fun asList() = asListImpl()
+
+    @Operation
+    fun sort() = sortImpl()
+
+    @Operation
+    fun arraysSort() = arraysSortImpl()
+
+    @Operation
+    fun arraysParallelSort() = arraysParallelSortImpl()
+
+    @Operation
+    fun arraysParallelPrefix() = arraysParallelPrefixImpl()
+
+    @Operation
+    fun reverse() = reverseImpl()
+
+    @Operation
+    fun fill() = fillImpl()
+
+    @Operation
+    fun arraysFill() = arraysFillImpl()
+
+    @Operation
+    fun arraysSetAll() = arraysSetAllImpl()
+
+    // @Operation // TODO: execution has hung error
+    fun arraysParallelSetAll() = arraysParallelSetAllImpl()
+
+    @Operation
+    fun copyOf() = copyOfImpl()
+
+    @Operation
+    fun arraysCopyOf() = arraysCopyOfImpl()
+
+    @Operation
+    fun copyOfRange() = copyOfRangeImpl()
+
+    @Operation
+    fun arraysCopyOfRange() = arraysCopyOfRangeImpl()
+}
+
+/**
+ * Isolated tests are aimed to trigger jit to optimize the bytecode in the `Arrays` methods.
+ * Previously we encountered a bug (https://github.com/JetBrains/lincheck/issues/470), when hooks,
+ * inserted directly before `System.arraycopy`, were missed during execution after
+ * a couple of hundreds iterations due to jit optimizations.
+ *
+ * Thus, in subclasses of [BaseIsolatedArraysAPISnapshotTest] we perform
+ * each operation alone during many iterations.
+ */
+abstract class BaseIsolatedArraysAPISnapshotTest : BaseArraysAPISnapshotTest() {
+    override fun <O : ManagedOptions<O, *>> O.customize() {
+        setup()
+        iterations(1000)
+        actorsPerThread(1)
+    }
+}
+
+class IsolatedAsListTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun asList() = asListImpl()
+}
+
+class IsolatedSortTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun sort() = sortImpl()
+}
+
+class IsolatedArraysSortTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun arraysSort() = arraysSortImpl()
+}
+
+class IsolatedArraysParallelSortTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun arraysParallelSort() = arraysParallelSortImpl()
+}
+
+class IsolatedArraysParallelPrefixTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun arraysParallelPrefix() = arraysParallelPrefixImpl()
+}
+
+class IsolatedReverseTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun reverse() = reverseImpl()
+}
+
+class IsolatedFillTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun fill() = fillImpl()
+}
+
+class IsolatedArraysFillTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun arraysFill() = arraysFillImpl()
+}
+
+class IsolatedArraysSetAllTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun arraysSetAll() = arraysSetAllImpl()
+}
+
+@Ignore("Execution has hung error")
+class IsolatedArraysParallelSetAllTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun arraysParallelSetAll() = arraysParallelSetAllImpl()
+}
+
+class IsolatedCopyOfTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun copyOf() = copyOfImpl()
+}
+
+class IsolatedArraysCopyOfTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun arraysCopyOf() = arraysCopyOfImpl()
+}
+
+class IsolatedCopyOfRangeTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun copyOfRange() = copyOfRangeImpl()
+}
+
+class IsolatedArraysCopyOfRangeTest : BaseIsolatedArraysAPISnapshotTest() {
+    @Operation
+    fun arraysCopyOfRange() = arraysCopyOfRangeImpl()
 }
