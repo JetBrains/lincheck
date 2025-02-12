@@ -80,9 +80,8 @@ object ObjectLabelFactory {
         // There is a Kotlin compiler bug that leads to exception
         // `java.lang.InternalError: Malformed class name`
         // when trying to query for a class name of an anonymous class on JDK 8:
-        // https://youtrack.jetbrains.com/issue/KT-16727/
-        //
-        // in such a case we fall back to returning `<unknown>` class name
+        // - https://youtrack.jetbrains.com/issue/KT-16727/
+        // in such a case we fall back to returning `<unknown>` class name.
         .getOrElse {
             "<unknown>"
         }
