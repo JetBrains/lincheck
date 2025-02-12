@@ -34,7 +34,7 @@ data class Trace(
 sealed class TracePoint(val iThread: Int, val actorId: Int, callStackTrace: CallStackTrace, var eventId: Int = -1) {
     // This field assignment creates a copy of current callStackTrace using .toList()
     // as CallStackTrace is a mutable list and can be changed after this trace point is created.
-    internal val callStackTrace = callStackTrace.toList()
+    internal var callStackTrace = callStackTrace.toList()
     internal abstract fun toStringImpl(withLocation: Boolean): String
     override fun toString(): String = toStringImpl(withLocation = true)
 }
@@ -141,14 +141,15 @@ internal class WriteTracePoint(
 internal class MethodCallTracePoint(
     iThread: Int, actorId: Int,
     val className: String,
-    val methodName: String,
+    var methodName: String,
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
     private var returnedValue: ReturnedValueResult = ReturnedValueResult.NoValue
     private var thrownException: Throwable? = null
-    private var parameters: List<String>? = null
+    var parameters: List<String>? = null
     private var ownerName: String? = null
+    var isRemoved = false
 
     val wasSuspended get() = (returnedValue == ReturnedValueResult.CoroutineSuspended)
 

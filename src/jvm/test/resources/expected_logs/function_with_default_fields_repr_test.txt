@@ -1,0 +1,41 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| ---------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                    Thread 1                                                                    |
+| ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                    |
+|   FunctionWithDefaultFieldsReprTest.callMe(3, "Hey") at FunctionWithDefaultFieldsReprTest.operation(FunctionWithDefaultFieldsReprTest.kt:23)   |
+|     a ➜ 0 at FunctionWithDefaultFieldsReprTest.callMe(FunctionWithDefaultFieldsReprTest.kt:28)                                                 |
+|     a = 3 at FunctionWithDefaultFieldsReprTest.callMe(FunctionWithDefaultFieldsReprTest.kt:28)                                                 |
+|     a ➜ 3 at FunctionWithDefaultFieldsReprTest.callMe(FunctionWithDefaultFieldsReprTest.kt:29)                                                 |
+|     a = 6 at FunctionWithDefaultFieldsReprTest.callMe(FunctionWithDefaultFieldsReprTest.kt:29)                                                 |
+|     FunctionWithDefaultFieldsReprTest.callOther(5, "Hey") at FunctionWithDefaultFieldsReprTest.callMe(FunctionWithDefaultFieldsReprTest.kt:30) |
+|       a ➜ 6 at FunctionWithDefaultFieldsReprTest.callOther(FunctionWithDefaultFieldsReprTest.kt:35)                                            |
+|       a = 9 at FunctionWithDefaultFieldsReprTest.callOther(FunctionWithDefaultFieldsReprTest.kt:35)                                            |
+|       a ➜ 9 at FunctionWithDefaultFieldsReprTest.callOther(FunctionWithDefaultFieldsReprTest.kt:36)                                            |
+|       a = 14 at FunctionWithDefaultFieldsReprTest.callOther(FunctionWithDefaultFieldsReprTest.kt:36)                                           |
+|   FunctionWithDefaultFieldsReprTest.callMe(1, "Hey") at FunctionWithDefaultFieldsReprTest.operation(FunctionWithDefaultFieldsReprTest.kt:24)   |
+|     a ➜ 14 at FunctionWithDefaultFieldsReprTest.callMe(FunctionWithDefaultFieldsReprTest.kt:28)                                                |
+|     a = 17 at FunctionWithDefaultFieldsReprTest.callMe(FunctionWithDefaultFieldsReprTest.kt:28)                                                |
+|     a ➜ 17 at FunctionWithDefaultFieldsReprTest.callMe(FunctionWithDefaultFieldsReprTest.kt:29)                                                |
+|     a = 18 at FunctionWithDefaultFieldsReprTest.callMe(FunctionWithDefaultFieldsReprTest.kt:29)                                                |
+|     FunctionWithDefaultFieldsReprTest.callOther(5, "Hey") at FunctionWithDefaultFieldsReprTest.callMe(FunctionWithDefaultFieldsReprTest.kt:30) |
+|       a ➜ 18 at FunctionWithDefaultFieldsReprTest.callOther(FunctionWithDefaultFieldsReprTest.kt:35)                                           |
+|       a = 21 at FunctionWithDefaultFieldsReprTest.callOther(FunctionWithDefaultFieldsReprTest.kt:35)                                           |
+|       a ➜ 21 at FunctionWithDefaultFieldsReprTest.callOther(FunctionWithDefaultFieldsReprTest.kt:36)                                           |
+|       a = 26 at FunctionWithDefaultFieldsReprTest.callOther(FunctionWithDefaultFieldsReprTest.kt:36)                                           |
+|   result: void                                                                                                                                 |
+| ---------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -18,7 +18,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.ObstructionFreedomViolationFailur
 import org.jetbrains.kotlinx.lincheck.strategy.TimeoutFailure
 import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
 import kotlin.math.*
-import kotlin.reflect.jvm.javaMethod
 
 @Synchronized // we should avoid concurrent executions to keep `objectNumeration` consistent
 internal fun StringBuilder.appendTrace(
@@ -167,7 +166,7 @@ internal fun constructTraceGraph(
     trace: Trace,
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
 ): List<TraceNode> {
-    val tracePoints = trace.trace
+    val tracePoints = trace.trace.map { it.also { it.callStackTrace = compressCallStackTrace(it.callStackTrace) }}
     val scenario = failure.scenario
     val prefixFactory = TraceNodePrefixFactory(nThreads)
     val resultProvider = ExecutionResultsProvider(results, failure)
@@ -378,6 +377,57 @@ internal fun constructTraceGraph(
     }
 
     return traceGraphNodesSections.map { it.first() }
+}
+
+
+/**
+ * Merges fun$default(...) calls
+ */
+private fun compressCallStackTrace(
+    callStackTrace: List<CallStackTraceElement>, 
+    seen: HashSet<Int> = HashSet(),
+): List<CallStackTraceElement> {
+    val oldStacktrace = callStackTrace.toMutableList()
+    val compressedStackTrace = mutableListOf<CallStackTraceElement>()
+    while (oldStacktrace.isNotEmpty()) {
+        val currentElement = oldStacktrace.removeFirst()
+        
+        // if element was removed (or seen) by previous iteration continue
+        if (currentElement.tracePoint.isRemoved) continue
+        if (seen.contains(currentElement.methodInvocationId)) {
+            compressedStackTrace.add(currentElement)
+            continue
+        }
+        seen.add(currentElement.methodInvocationId)
+        
+        // if next element is null, we reached end of list
+        val nextElement = oldStacktrace.firstOrNull()
+        if (nextElement == null) {
+            currentElement.tracePoint.callStackTrace = 
+                compressCallStackTrace(currentElement.tracePoint.callStackTrace, seen)
+            compressedStackTrace.add(currentElement)
+            break
+        }
+        
+        // Check if current and next are a "default" combo
+        if (currentElement.tracePoint.methodName == "${nextElement.tracePoint.methodName}\$default") {
+            
+            // Combine fields in of current and next in current
+            currentElement.tracePoint.methodName = nextElement.tracePoint.methodName
+            currentElement.tracePoint.parameters = nextElement.tracePoint.parameters
+            currentElement.tracePoint.callStackTrace =
+                compressCallStackTrace(currentElement.tracePoint.callStackTrace, seen)
+            
+            // Mark next as removed
+            nextElement.tracePoint.isRemoved = true
+            compressedStackTrace.add(currentElement)
+            continue
+        }
+        currentElement.tracePoint.callStackTrace = 
+            compressCallStackTrace(currentElement.tracePoint.callStackTrace, seen)
+        compressedStackTrace.add(currentElement)
+    }
+    return compressedStackTrace
 }
 
 private fun actorNodeResultRepresentation(result: Result?, failure: LincheckFailure, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): String? {
