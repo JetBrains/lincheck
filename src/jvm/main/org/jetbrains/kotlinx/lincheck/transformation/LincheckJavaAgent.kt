@@ -351,7 +351,9 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         protectionDomain: ProtectionDomain?,
         classBytes: ByteArray
     ): ByteArray? = runInIgnoredSection {
-        require(internalClassName != null) { "Class name must not be null" }
+        require(internalClassName != null) {
+            "Class name must not be null"
+        }
         // If the class should not be transformed, return immediately.
         if (!shouldTransform(internalClassName.canonicalClassName, instrumentationMode)) {
             return null
