@@ -11,9 +11,12 @@
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.objectweb.asm.Label
 import org.objectweb.asm.Opcodes
+import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.commons.GeneratorAdapter
+import org.objectweb.asm.commons.GeneratorAdapter.*
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import sun.nio.ch.lincheck.*
 
@@ -32,6 +35,10 @@ internal class ThreadTransformer(
     adapter: GeneratorAdapter,
 ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter)  {
 
+    private val runMethodTryBlockStart: Label = adapter.newLabel()
+    private val runMethodTryBlockEnd: Label = adapter.newLabel()
+    private val runMethodCatchBlock: Label = adapter.newLabel()
+
     override fun visitCode() = adapter.run {
         visitCode()
         if (isThreadStartMethod(methodName, desc)) {
@@ -45,6 +52,8 @@ internal class ThreadTransformer(
             // STACK: <empty>
             invokeStatic(Injections::beforeThreadStart)
             // STACK: <empty>
+            visitTryCatchBlock(runMethodTryBlockStart, runMethodTryBlockEnd, runMethodCatchBlock, null)
+            visitLabel(runMethodTryBlockStart)
         }
     }
 
@@ -55,6 +64,40 @@ internal class ThreadTransformer(
             invokeStatic(Injections::afterThreadFinish)
         }
         visitInsn(opcode)
+    }
+
+    override fun visitMaxs(maxStack: Int, maxLocals: Int) = adapter.run {
+        if (isThreadRunMethod(methodName, desc)) {
+            visitLabel(runMethodTryBlockEnd)
+            visitLabel(runMethodCatchBlock)
+
+            // STACK: exception
+            dup()
+            invokeStatic(Injections::onThreadException)
+            // STACK: exception, isSuppressed
+
+            // Notify that the thread has finished.
+            // TODO: currently does not work, because `ManagedStrategy::onThreadFinish`
+            //   assumes the thread finish injection is called under normal managed execution,
+            //   i.e., in non-aborted state
+            // invokeStatic(Injections::afterThreadFinish)
+
+            // Suppress exception if necessary.
+            val suppressLabel = newLabel()
+            // STACK: exception, isSuppressed
+            ifZCmp(NE, suppressLabel)
+
+            // Re-throw exception
+            // STACK: exception
+            visitInsn(ATHROW)
+
+            visitLabel(suppressLabel)
+            // STACK: exception
+            pop()
+            visitInsn(RETURN)
+        }
+        
+        visitMaxs(maxStack, maxLocals)
     }
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {

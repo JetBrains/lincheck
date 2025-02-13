@@ -177,6 +177,22 @@ public class Injections {
     }
 
     /**
+     * Called from instrumented code when the thread finishes with an exception.
+     *
+     * @param exception the exception that was thrown in the current thread.
+     * @return true if the exception was handled by the tracker and should be suppressed, false otherwise.
+     */
+    public static boolean onThreadException(Throwable exception) {
+        Thread thread = Thread.currentThread();
+        // TestThread is handled separately
+        if (thread instanceof TestThread) return false;
+        ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
+        if (descriptor == null) return false;
+        EventTracker tracker = descriptor.getEventTracker();
+        return tracker.onThreadException(exception);
+    }
+
+    /**
      * Called from instrumented code instead of {@code thread.join()}.
      */
     public static void threadJoin(Thread thread, boolean withTimeout) {

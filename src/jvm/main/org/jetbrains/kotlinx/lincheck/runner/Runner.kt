@@ -61,10 +61,10 @@ abstract class Runner protected constructor(
     abstract fun onThreadFinish(iThread: Int)
 
     /**
-     * This method is invoked by the corresponding test thread
-     * when an unexpected exception is thrown.
+     * This method is invoked by the corresponding test thread when an internal exception is thrown.
+     * @return true if the exception should be suppressed, false otherwise.
      */
-    abstract fun onInternalException(iThread: Int, e: Throwable)
+    abstract fun onInternalException(iThread: Int, e: Throwable): Boolean
 
     /**
      * This method is invoked by the corresponding test thread
@@ -131,6 +131,15 @@ abstract class Runner protected constructor(
         get() = completedOrSuspendedThreads.get() == scenario.nThreads
 
     // used in byte-code generation
+    /**
+     * Handles an internal exception encountered during execution.
+     * If the provided exception is identified as an internal exception,
+     * it invokes the `onInternalException` method for the corresponding thread
+     * and rethrows the exception.
+     *
+     * @param iThread the thread number where the exception occurred
+     * @param e the exception to be checked and potentially processed
+     */
     fun failOnInternalException(iThread: Int, e: Throwable) {
         if (isInternalException(e)) {
             onInternalException(iThread, e)

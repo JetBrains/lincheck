@@ -511,6 +511,27 @@ abstract class ManagedStrategy(
         onThreadFinish(currentThreadId)
     }
 
+    /**
+     * Handles exceptions that occur in a specific thread.
+     * This method is called when a thread finishes with an exception.
+     *
+     * @param threadId The thread id of the thread where the exception occurred.
+     * @param exception The exception that was thrown within the thread.
+     * @return true if the exception should be suppressed, false otherwise.
+     */
+    override fun onThreadException(exception: Throwable): Boolean = runInIgnoredSection {
+        val currentThreadId = threadScheduler.getCurrentThreadId()
+        // do not track unregistered threads
+        if (currentThreadId < 0) return false
+        // scenario threads are handled separately by the runner itself
+        if (currentThreadId < scenario.nThreads) return false
+        // check if the exception is internal
+        if (isInternalException(exception)) {
+            return onInternalException(currentThreadId, exception)
+        }
+        return false
+    }
+
     override fun threadJoin(thread: Thread?, withTimeout: Boolean) = runInIgnoredSection {
         if (withTimeout) return // timeouts occur instantly
         val currentThreadId = threadScheduler.getCurrentThreadId()
@@ -609,19 +630,23 @@ abstract class ManagedStrategy(
      *
      * @param threadId the thread id of the thread where exception was thrown.
      * @param exception the exception that was thrown.
+     * @return true if the exception should be suppressed, false otherwise.
      */
-    open fun onInternalException(threadId: Int, exception: Throwable) {
+    open fun onInternalException(threadId: Int, exception: Throwable): Boolean {
         // This method is called only if the exception cannot be treated as a normal result,
         // so we exit testing code to avoid trace collection resume or some bizarre bugs
         leaveTestingCode()
-        // skip abort exception
-        if (exception !== ThreadAbortedError) {
-            // Though the corresponding failure will be detected by the runner,
-            // the managed strategy can construct a trace to reproduce this failure.
-            // Let's then store the corresponding failing result and construct the trace.
-            suddenInvocationResult = UnexpectedExceptionInvocationResult(exception, runner.collectExecutionResults())
-            threadScheduler.abortAllThreads()
-        }
+        // suppress `ThreadAbortedError`
+        if (exception === ThreadAbortedError) return true
+        // Though the corresponding failure will be detected by the runner,
+        // the managed strategy can construct a trace to reproduce this failure.
+        // Let's then store the corresponding failing result and construct the trace.
+        suddenInvocationResult = UnexpectedExceptionInvocationResult(
+            exception, 
+            runner.collectExecutionResults()
+        )
+        threadScheduler.abortAllThreads()
+        return false
     }
 
     override fun onActorStart(iThread: Int) {
@@ -1951,7 +1976,7 @@ internal class ManagedStrategyRunner(
         managedStrategy.onThreadFinish(iThread)
     }
 
-    override fun onInternalException(iThread: Int, e: Throwable) = runInIgnoredSection {
+    override fun onInternalException(iThread: Int, e: Throwable): Boolean = runInIgnoredSection {
         managedStrategy.onInternalException(iThread, e)
     }
 
