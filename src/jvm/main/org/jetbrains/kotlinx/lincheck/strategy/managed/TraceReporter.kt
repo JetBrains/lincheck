@@ -166,7 +166,8 @@ internal fun constructTraceGraph(
     trace: Trace,
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
 ): List<TraceNode> {
-    val tracePoints = trace.deepCopy().trace.apply { forEach { it.callStackTrace = compressCallStackTrace(it.callStackTrace) }}
+    val tracePoints = trace.deepCopy().trace
+    compressTrace(tracePoints)
     val scenario = failure.scenario
     val prefixFactory = TraceNodePrefixFactory(nThreads)
     val resultProvider = ExecutionResultsProvider(results, failure)
@@ -379,6 +380,10 @@ internal fun constructTraceGraph(
     return traceGraphNodesSections.map { it.first() }
 }
 
+private fun compressTrace(trace: List<TracePoint>) =
+    HashSet<Int>().let { removed ->
+        trace.apply {  forEach { it.callStackTrace = compressCallStackTrace(it.callStackTrace, removed) } } 
+    }
 
 /**
  * Merges fun$default(...) calls.
@@ -400,6 +405,7 @@ internal fun constructTraceGraph(
  */
 private fun compressCallStackTrace(
     callStackTrace: List<CallStackTraceElement>, 
+    removed: HashSet<Int>,
     seen: HashSet<Int> = HashSet(),
 ): List<CallStackTraceElement> {
     val oldStacktrace = callStackTrace.toMutableList()
@@ -408,7 +414,7 @@ private fun compressCallStackTrace(
         val currentElement = oldStacktrace.removeFirst()
         
         // if element was removed (or seen) by previous iteration continue
-        if (currentElement.tracePoint.isRemoved) continue
+        if (removed.contains(currentElement.methodInvocationId)) continue
         if (seen.contains(currentElement.methodInvocationId)) {
             compressedStackTrace.add(currentElement)
             continue
@@ -419,7 +425,7 @@ private fun compressCallStackTrace(
         val nextElement = oldStacktrace.firstOrNull()
         if (nextElement == null) {
             currentElement.tracePoint.callStackTrace = 
-                compressCallStackTrace(currentElement.tracePoint.callStackTrace, seen)
+                compressCallStackTrace(currentElement.tracePoint.callStackTrace, removed, seen)
             compressedStackTrace.add(currentElement)
             break
         }
@@ -431,18 +437,18 @@ private fun compressCallStackTrace(
             currentElement.tracePoint.methodName = nextElement.tracePoint.methodName
             currentElement.tracePoint.parameters = nextElement.tracePoint.parameters
             currentElement.tracePoint.callStackTrace =
-                compressCallStackTrace(currentElement.tracePoint.callStackTrace, seen)
+                compressCallStackTrace(currentElement.tracePoint.callStackTrace, removed, seen)
 
             check(currentElement.tracePoint.isReturnedValueEqual(nextElement.tracePoint))
             check(currentElement.tracePoint.thrownException == nextElement.tracePoint.thrownException)
             
             // Mark next as removed
-            nextElement.tracePoint.isRemoved = true
+            removed.add(nextElement.methodInvocationId)
             compressedStackTrace.add(currentElement)
             continue
         }
         currentElement.tracePoint.callStackTrace = 
-            compressCallStackTrace(currentElement.tracePoint.callStackTrace, seen)
+            compressCallStackTrace(currentElement.tracePoint.callStackTrace, removed, seen)
         compressedStackTrace.add(currentElement)
     }
     return compressedStackTrace

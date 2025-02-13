@@ -174,7 +174,6 @@ internal class MethodCallTracePoint(
     var thrownException: Throwable? = null
     var parameters: List<String>? = null
     private var ownerName: String? = null
-    var isRemoved = false
 
     val wasSuspended get() = (returnedValue == ReturnedValueResult.CoroutineSuspended)
 
@@ -205,7 +204,6 @@ internal class MethodCallTracePoint(
                 it.thrownException = thrownException
                 it.parameters = parameters
                 it.ownerName = ownerName
-                it.isRemoved = isRemoved
             }
 
     fun initializeVoidReturnedValue() {
