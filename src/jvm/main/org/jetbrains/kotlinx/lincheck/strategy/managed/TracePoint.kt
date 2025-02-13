@@ -134,7 +134,10 @@ internal class ReadTracePoint(
     
     override fun deepCopy(copiedCallStackTraceElements: HashMap<CallStackTraceElement, CallStackTraceElement>): TracePoint =
         ReadTracePoint(ownerRepresentation, iThread, actorId, callStackTrace.deepCopy(copiedCallStackTraceElements), fieldName, stackTraceElement)
-            .also {it.eventId = eventId; it.valueRepresentation = valueRepresentation}
+            .also {
+                it.eventId = eventId 
+                if (::valueRepresentation.isInitialized) it.valueRepresentation = valueRepresentation
+            }
 }
 
 internal class WriteTracePoint(
@@ -160,7 +163,10 @@ internal class WriteTracePoint(
     }
     override fun deepCopy(copiedCallStackTraceElements: HashMap<CallStackTraceElement, CallStackTraceElement>): TracePoint =
         WriteTracePoint(ownerRepresentation, iThread, actorId, callStackTrace.deepCopy(copiedCallStackTraceElements), fieldName, stackTraceElement)
-            .also {it.eventId = eventId; it.valueRepresentation = valueRepresentation}
+            .also {
+                it.eventId = eventId 
+                if (::valueRepresentation.isInitialized) it.valueRepresentation = valueRepresentation
+            }
 }
 
 internal class MethodCallTracePoint(
@@ -360,7 +366,7 @@ internal class CoroutineCancellationTracePoint(
         CoroutineCancellationTracePoint(iThread, actorId, callStackTrace.deepCopy(copiedCallStackTraceElements))
             .also { 
                 it.eventId = eventId 
-                it.cancellationResult = cancellationResult
+                if (::cancellationResult.isInitialized) it.cancellationResult = cancellationResult
                 it.exception = exception
             }
 }
