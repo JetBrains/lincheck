@@ -130,7 +130,6 @@ abstract class Runner protected constructor(
     val isParallelExecutionCompleted: Boolean
         get() = completedOrSuspendedThreads.get() == scenario.nThreads
 
-    // used in byte-code generation
     /**
      * Handles an internal exception encountered during execution.
      * If the provided exception is identified as an internal exception,
@@ -140,10 +139,11 @@ abstract class Runner protected constructor(
      * @param iThread the thread number where the exception occurred
      * @param e the exception to be checked and potentially processed
      */
+    // used in byte-code generation
     fun failOnInternalException(iThread: Int, e: Throwable) {
         if (isInternalException(e)) {
-            onInternalException(iThread, e)
-            throw e
+            val isSuppressed = onInternalException(iThread, e)
+            if (!isSuppressed) throw e
         }
     }
 }
