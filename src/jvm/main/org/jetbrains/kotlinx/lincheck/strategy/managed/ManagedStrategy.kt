@@ -1145,7 +1145,7 @@ abstract class ManagedStrategy(
     override fun getNextObjectId(): Long = identityHashCodeTracker.getNextObjectId()
 
     override fun afterNewObjectCreation(obj: Any) {
-        if (obj is String || obj is Int || obj is Long || obj is Byte || obj is Char || obj is Float || obj is Double) return
+        if (obj.isImmutable) return
         runInIgnoredSection {
             identityHashCodeTracker.afterNewTrackedObjectCreation(obj)
             objectTracker?.registerNewObject(obj)
