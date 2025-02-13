@@ -166,7 +166,7 @@ internal fun constructTraceGraph(
     trace: Trace,
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
 ): List<TraceNode> {
-    val tracePoints = trace.trace.apply{ forEach { it.callStackTrace = compressCallStackTrace(it.callStackTrace) }}
+    val tracePoints = trace.deepCopy().trace.apply{ forEach { it.callStackTrace = compressCallStackTrace(it.callStackTrace) }}
     val scenario = failure.scenario
     val prefixFactory = TraceNodePrefixFactory(nThreads)
     val resultProvider = ExecutionResultsProvider(results, failure)
@@ -432,6 +432,9 @@ private fun compressCallStackTrace(
             currentElement.tracePoint.parameters = nextElement.tracePoint.parameters
             currentElement.tracePoint.callStackTrace =
                 compressCallStackTrace(currentElement.tracePoint.callStackTrace, seen)
+
+//            check(currentElement.tracePoint.isReturnedValueEqual(nextElement.tracePoint))
+//            check(currentElement.tracePoint.thrownException == nextElement.tracePoint.thrownException)
             
             // Mark next as removed
             nextElement.tracePoint.isRemoved = true
