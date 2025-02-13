@@ -26,6 +26,8 @@ object ObjectLabelFactory {
         // Chars and strings are wrapped in quotes.
         if (any is Char) return "\'$any\'"
         if (any is String) return "\"$any\""
+        // Simple representation of Unit
+        if (any is Unit) return "Unit"
         // Primitive types (and several others) are immutable and
         // have trivial `toString` implementation, which is used here.
         if (any.isImmutable)
