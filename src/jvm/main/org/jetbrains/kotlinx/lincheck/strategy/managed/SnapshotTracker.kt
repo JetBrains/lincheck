@@ -11,8 +11,6 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.findField
-import org.jetbrains.kotlinx.lincheck.isPrimitiveWrapper
-import org.jetbrains.kotlinx.lincheck.readFieldSafely
 import org.jetbrains.kotlinx.lincheck.strategy.managed.SnapshotTracker.MemoryNode.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import java.lang.Class
@@ -249,7 +247,7 @@ class SnapshotTracker {
              value != null &&
             !value.javaClass.isPrimitive &&
             !value.javaClass.isEnum &&
-            !value.isPrimitiveWrapper
+            !value.isPrimitive
         )
     }
 
