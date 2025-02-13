@@ -351,9 +351,15 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         protectionDomain: ProtectionDomain?,
         classBytes: ByteArray
     ): ByteArray? = runInIgnoredSection {
-        require(internalClassName != null) {
-            "Class name must not be null"
+        if (classBeingRedefined != null) {
+            require(internalClassName != null) {
+                "Internal class name of redefined class ${classBeingRedefined.name} must not be null"
+            }
         }
+        // Internal class name could be `null` in some cases (can be witnessed on JDK-8),
+        // this can be related to the Kotlin compiler bug:
+        // - https://youtrack.jetbrains.com/issue/KT-16727/
+        if (internalClassName == null) return null
         // If the class should not be transformed, return immediately.
         if (!shouldTransform(internalClassName.canonicalClassName, instrumentationMode)) {
             return null
