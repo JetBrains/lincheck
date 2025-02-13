@@ -33,6 +33,7 @@ internal class ThreadTransformer(
 ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter)  {
 
     override fun visitCode() = adapter.run {
+        visitCode()
         if (isThreadStartMethod(methodName, desc)) {
             // STACK: <empty>
             loadThis()
@@ -45,7 +46,6 @@ internal class ThreadTransformer(
             invokeStatic(Injections::beforeThreadStart)
             // STACK: <empty>
         }
-        visitCode()
     }
 
     override fun visitInsn(opcode: Int) = adapter.run {
