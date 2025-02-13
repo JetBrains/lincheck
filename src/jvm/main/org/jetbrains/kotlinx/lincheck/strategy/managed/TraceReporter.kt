@@ -166,7 +166,7 @@ internal fun constructTraceGraph(
     trace: Trace,
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
 ): List<TraceNode> {
-    val tracePoints = trace.trace.map { it.also { it.callStackTrace = compressCallStackTrace(it.callStackTrace) }}
+    val tracePoints = trace.trace.apply{ forEach { it.callStackTrace = compressCallStackTrace(it.callStackTrace) }}
     val scenario = failure.scenario
     val prefixFactory = TraceNodePrefixFactory(nThreads)
     val resultProvider = ExecutionResultsProvider(results, failure)
@@ -381,7 +381,22 @@ internal fun constructTraceGraph(
 
 
 /**
- * Merges fun$default(...) calls
+ * Merges fun$default(...) calls.
+ * Kotlin functions with default values are represented as two nested calls in the stack trace.
+ * For example:
+ * ```
+ * A.calLMe$default(A#1, 3, null, 2, null) at A.operation(A.kt:23)
+ *     A.callMe(3, "Hey") at A.callMe$default(A.kt:27)
+ * ```
+ * 
+ * This function collapses such pairs in the provided [callStackTrace]:
+ *
+ * ```
+ * A.callMe(3, "Hey") at A.operation(A.kt:23)
+ * ```
+ * 
+ * Since each tracePoint itself contains a [callStackTrace] of it's own,
+ * we need to recursively traverse each point.
  */
 private fun compressCallStackTrace(
     callStackTrace: List<CallStackTraceElement>, 
@@ -412,7 +427,7 @@ private fun compressCallStackTrace(
         // Check if current and next are a "default" combo
         if (currentElement.tracePoint.methodName == "${nextElement.tracePoint.methodName}\$default") {
             
-            // Combine fields in of current and next in current
+            // Combine fields of next and current, and store in current
             currentElement.tracePoint.methodName = nextElement.tracePoint.methodName
             currentElement.tracePoint.parameters = nextElement.tracePoint.parameters
             currentElement.tracePoint.callStackTrace =
