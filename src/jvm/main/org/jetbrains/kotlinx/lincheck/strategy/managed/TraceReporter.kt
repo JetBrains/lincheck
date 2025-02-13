@@ -166,7 +166,7 @@ internal fun constructTraceGraph(
     trace: Trace,
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
 ): List<TraceNode> {
-    val tracePoints = trace.deepCopy().trace.apply{ forEach { it.callStackTrace = compressCallStackTrace(it.callStackTrace) }}
+    val tracePoints = trace.deepCopy().trace.apply { forEach { it.callStackTrace = compressCallStackTrace(it.callStackTrace) }}
     val scenario = failure.scenario
     val prefixFactory = TraceNodePrefixFactory(nThreads)
     val resultProvider = ExecutionResultsProvider(results, failure)
