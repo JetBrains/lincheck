@@ -177,7 +177,7 @@ internal class MethodCallTracePoint(
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
     private var returnedValue: ReturnedValueResult = ReturnedValueResult.NoValue
-    var thrownException: Throwable? = null
+    private var thrownException: Throwable? = null
     var parameters: List<String>? = null
     private var ownerName: String? = null
 
@@ -218,6 +218,9 @@ internal class MethodCallTracePoint(
     
     fun isReturnedValueEqual(methodCallTracePoint: MethodCallTracePoint) = 
         returnedValue == methodCallTracePoint.returnedValue
+    
+    fun isThrownExceptionEqual(methodCallTracePoint: MethodCallTracePoint) =
+        thrownException == methodCallTracePoint.thrownException
 
     fun initializeCoroutineSuspendedResult() {
         returnedValue = ReturnedValueResult.CoroutineSuspended

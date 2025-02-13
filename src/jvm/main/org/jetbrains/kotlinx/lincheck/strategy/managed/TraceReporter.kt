@@ -440,7 +440,7 @@ private fun compressCallStackTrace(
                 compressCallStackTrace(currentElement.tracePoint.callStackTrace, removed, seen)
 
             check(currentElement.tracePoint.isReturnedValueEqual(nextElement.tracePoint))
-            check(currentElement.tracePoint.thrownException == nextElement.tracePoint.thrownException)
+            check(currentElement.tracePoint.isThrownExceptionEqual(nextElement.tracePoint))
             
             // Mark next as removed
             removed.add(nextElement.methodInvocationId)
