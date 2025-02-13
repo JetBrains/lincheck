@@ -11,8 +11,6 @@ package org.jetbrains.kotlinx.lincheck.runner;
 
 import org.jetbrains.kotlinx.lincheck.Result;
 
-import static org.jetbrains.kotlinx.lincheck.UtilsKt.*;
-
 
 /**
  * Instance of this class represents the test execution for ONE thread. Several instances should be run in parallel.
@@ -51,14 +49,6 @@ public abstract class TestThreadExecution implements Runnable {
     // used in byte-code generation
     public void incClock() {
         curClock++;
-    }
-
-    // used in byte-code generation
-    public void failOnExceptionIsUnexpected(int iThread, Throwable e) throws Throwable {
-        if (!exceptionCanBeValidExecutionResult(e)) {
-            runner.onThreadFailure(iThread, e);
-            throw e;
-        }
     }
 
 }

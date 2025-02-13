@@ -16,7 +16,6 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import sun.nio.ch.lincheck.*
@@ -523,6 +522,26 @@ abstract class ManagedStrategy(
         onThreadFinish(currentThreadId)
     }
 
+    /**
+     * Handles exceptions that occur in a specific thread.
+     * This method is called when a thread finishes with an exception.
+     *
+     * @param exception The exception that was thrown within the thread.
+     * @return true if the exception should be suppressed, false otherwise.
+     */
+    override fun onThreadException(exception: Throwable): Boolean = runInIgnoredSection {
+        val currentThreadId = threadScheduler.getCurrentThreadId()
+        // do not track unregistered threads
+        if (currentThreadId < 0) return false
+        // scenario threads are handled separately by the runner itself
+        if (currentThreadId < scenario.nThreads) return false
+        // check if the exception is internal
+        if (isInternalException(exception)) {
+            return onInternalException(currentThreadId, exception)
+        }
+        return false
+    }
+
     override fun threadJoin(thread: Thread?, withTimeout: Boolean) = runInIgnoredSection {
         if (withTimeout) return // timeouts occur instantly
         val currentThreadId = threadScheduler.getCurrentThreadId()
@@ -593,46 +612,51 @@ abstract class ManagedStrategy(
 
     /**
      * This method is executed as the first thread action.
-     * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
+     *
+     * @param threadId the thread id of the started thread.
      */
-    open fun onThreadStart(iThread: Int) {
-        threadScheduler.awaitTurn(iThread)
-        threadScheduler.startThread(iThread)
+    open fun onThreadStart(threadId: ThreadId) {
+        threadScheduler.awaitTurn(threadId)
+        threadScheduler.startThread(threadId)
     }
 
     /**
-     * This method is executed as the last thread action if no exception has been thrown.
-     * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
+     * This method is executed as the last thread action.
+     *
+     * @param threadId the thread id of the finished thread.
      */
-    open fun onThreadFinish(iThread: Int) {
-        threadScheduler.awaitTurn(iThread)
-        threadScheduler.finishThread(iThread)
-        loopDetector.onThreadFinish(iThread)
+    open fun onThreadFinish(threadId: ThreadId) {
+        threadScheduler.awaitTurn(threadId)
+        threadScheduler.finishThread(threadId)
+        loopDetector.onThreadFinish(threadId)
         traceCollector?.onThreadFinish()
-        unblockJoiningThreads(iThread)
-        val nextThread = chooseThreadSwitch(iThread, true)
+        unblockJoiningThreads(threadId)
+        val nextThread = chooseThreadSwitch(threadId, true)
         setCurrentThread(nextThread)
     }
 
     /**
-     * This method is executed if an illegal exception has been thrown (see [exceptionCanBeValidExecutionResult]).
-     * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
-     * @param exception the exception that was thrown
+     * This method is executed if an internal exception has been thrown (see [isInternalException]).
+     *
+     * @param threadId the thread id of the thread where exception was thrown.
+     * @param exception the exception that was thrown.
+     * @return true if the exception should be suppressed, false otherwise.
      */
-    open fun onThreadFailure(iThread: Int, exception: Throwable) {
-        // This method is called only if exception can't be treated as a normal operation result,
+    open fun onInternalException(threadId: Int, exception: Throwable): Boolean {
+        // This method is called only if the exception cannot be treated as a normal result,
         // so we exit testing code to avoid trace collection resume or some bizarre bugs
         leaveTestingCode()
-        // skip abort exception
-        if (exception !== ThreadAbortedError) {
-            // Despite the fact that the corresponding failure will be detected by the runner,
-            // the managed strategy can construct a trace to reproduce this failure.
-            // Let's then store the corresponding failing result and construct the trace.
-            suddenInvocationResult = UnexpectedExceptionInvocationResult(exception, runner.collectExecutionResults())
-            threadScheduler.abortAllThreads()
-        }
-        // notify the scheduler that the thread is going to be finished
-        threadScheduler.finishThread(iThread)
+        // suppress `ThreadAbortedError`
+        if (exception is ThreadAbortedError) return true
+        // Though the corresponding failure will be detected by the runner,
+        // the managed strategy can construct a trace to reproduce this failure.
+        // Let's then store the corresponding failing result and construct the trace.
+        suddenInvocationResult = UnexpectedExceptionInvocationResult(
+            exception, 
+            runner.collectExecutionResults()
+        )
+        threadScheduler.abortAllThreads()
+        return false
     }
 
     override fun onActorStart(iThread: Int) {
@@ -1995,8 +2019,8 @@ internal class ManagedStrategyRunner(
         managedStrategy.onThreadFinish(iThread)
     }
 
-    override fun onThreadFailure(iThread: Int, e: Throwable) = runInIgnoredSection {
-        managedStrategy.onThreadFailure(iThread, e)
+    override fun onInternalException(iThread: Int, e: Throwable): Boolean = runInIgnoredSection {
+        managedStrategy.onInternalException(iThread, e)
     }
 
     override fun afterCoroutineSuspended(iThread: Int) = runInIgnoredSection {
