@@ -50,10 +50,10 @@ internal class ThreadTransformer(
         }
         if (isThreadRunMethod(methodName, desc)) {
             // STACK: <empty>
-            invokeStatic(Injections::beforeThreadStart)
-            // STACK: <empty>
             visitTryCatchBlock(runMethodTryBlockStart, runMethodTryBlockEnd, runMethodCatchBlock, null)
             visitLabel(runMethodTryBlockStart)
+            // STACK: <empty>
+            invokeStatic(Injections::beforeThreadStart)
         }
     }
 
