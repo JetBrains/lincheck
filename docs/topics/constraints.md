@@ -96,7 +96,7 @@ Here is an example of the scenario generated for this test:
 Note that all consuming `poll()` and `peek()` invocations are performed from a single thread, thus satisfying the
 "single-consumer" restriction.
 
-> [Get the full code](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/MPSCQueueTest.kt).
+> [Get the full code](https://github.com/JetBrains/lincheck/blob/master/src/jvm/test/org/jetbrains/kotlinx/lincheck_test/guide/MPSCQueueTest.kt).
 >
 {style="note"}
 

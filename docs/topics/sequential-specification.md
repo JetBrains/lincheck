@@ -49,6 +49,6 @@ class SequentialQueue {
 }
 ```
 
-> Get the [full code of the examples](https://github.com/Kotlin/kotlinx-lincheck/blob/guide/src/jvm/test/org/jetbrains/kotlinx/lincheck/test/guide/ConcurrentLinkedQueueTest.kt).
+> Get the [full code of the examples](https://github.com/JetBrains/lincheck/blob/master/src/jvm/test/org/jetbrains/kotlinx/lincheck_test/guide/ConcurrentLinkedQueueTest.kt).
 >
 {style="note"}
