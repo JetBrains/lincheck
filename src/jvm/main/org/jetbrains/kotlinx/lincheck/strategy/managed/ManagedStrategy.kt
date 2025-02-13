@@ -581,24 +581,26 @@ abstract class ManagedStrategy(
 
     /**
      * This method is executed as the first thread action.
-     * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
+     *
+     * @param threadId the thread id of the started thread.
      */
-    open fun onThreadStart(iThread: Int) {
-        threadScheduler.awaitTurn(iThread)
-        threadScheduler.startThread(iThread)
+    open fun onThreadStart(threadId: ThreadId) {
+        threadScheduler.awaitTurn(threadId)
+        threadScheduler.startThread(threadId)
     }
 
     /**
-     * This method is executed as the last thread action if no exception has been thrown.
-     * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
+     * This method is executed as the last thread action.
+     *
+     * @param threadId the thread id of the finished thread.
      */
-    open fun onThreadFinish(iThread: Int) {
-        threadScheduler.awaitTurn(iThread)
-        threadScheduler.finishThread(iThread)
-        loopDetector.onThreadFinish(iThread)
+    open fun onThreadFinish(threadId: ThreadId) {
+        threadScheduler.awaitTurn(threadId)
+        threadScheduler.finishThread(threadId)
+        loopDetector.onThreadFinish(threadId)
         traceCollector?.onThreadFinish()
-        unblockJoiningThreads(iThread)
-        val nextThread = chooseThreadSwitch(iThread, true)
+        unblockJoiningThreads(threadId)
+        val nextThread = chooseThreadSwitch(threadId, true)
         setCurrentThread(nextThread)
     }
 
