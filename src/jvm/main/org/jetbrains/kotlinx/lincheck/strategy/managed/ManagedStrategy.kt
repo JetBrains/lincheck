@@ -16,7 +16,6 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import sun.nio.ch.lincheck.*
@@ -604,17 +603,18 @@ abstract class ManagedStrategy(
     }
 
     /**
-     * This method is executed if an illegal exception has been thrown (see [exceptionCanBeValidExecutionResult]).
-     * @param iThread the number of the executed thread according to the [scenario][ExecutionScenario].
-     * @param exception the exception that was thrown
+     * This method is executed if an internal exception has been thrown (see [isInternalException]).
+     *
+     * @param threadId the thread id of the thread where exception was thrown.
+     * @param exception the exception that was thrown.
      */
-    open fun onThreadFailure(iThread: Int, exception: Throwable) {
-        // This method is called only if exception can't be treated as a normal operation result,
+    open fun onInternalException(threadId: Int, exception: Throwable) {
+        // This method is called only if the exception cannot be treated as a normal result,
         // so we exit testing code to avoid trace collection resume or some bizarre bugs
         leaveTestingCode()
         // skip abort exception
         if (exception !== ThreadAbortedError) {
-            // Despite the fact that the corresponding failure will be detected by the runner,
+            // Though the corresponding failure will be detected by the runner,
             // the managed strategy can construct a trace to reproduce this failure.
             // Let's then store the corresponding failing result and construct the trace.
             suddenInvocationResult = UnexpectedExceptionInvocationResult(exception, runner.collectExecutionResults())
@@ -1949,8 +1949,8 @@ internal class ManagedStrategyRunner(
         managedStrategy.onThreadFinish(iThread)
     }
 
-    override fun onThreadFailure(iThread: Int, e: Throwable) = runInIgnoredSection {
-        managedStrategy.onThreadFailure(iThread, e)
+    override fun onInternalException(iThread: Int, e: Throwable) = runInIgnoredSection {
+        managedStrategy.onInternalException(iThread, e)
     }
 
     override fun afterCoroutineSuspended(iThread: Int) = runInIgnoredSection {

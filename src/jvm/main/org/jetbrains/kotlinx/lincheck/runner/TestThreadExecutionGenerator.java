@@ -70,7 +70,8 @@ public class TestThreadExecutionGenerator {
     private static final Method PARALLEL_THREADS_RUNNER_PROCESS_INVOCATION_RESULT_METHOD = new Method("processInvocationResult", RESULT_TYPE, new Type[]{ OBJECT_TYPE, INT_TYPE, INT_TYPE });
     private static final Method RUNNER_IS_PARALLEL_EXECUTION_COMPLETED_METHOD = new Method("isParallelExecutionCompleted", BOOLEAN_TYPE, new Type[]{});
 
-    private static final Method TEST_THREAD_EXECUTION_FAIL_ON_EXCEPTION_IF_UNEXPECTED = new Method("failOnExceptionIsUnexpected", VOID_TYPE, new Type[]{INT_TYPE, THROWABLE_TYPE});
+    private static final Method RUNNER_FAIL_ON_INTERNAL_EXCEPTION_METHOD = new Method("failOnInternalException", VOID_TYPE, new Type[]{INT_TYPE, THROWABLE_TYPE});
+
     private static int generatedClassNumber = 0;
 
     static {
@@ -240,11 +241,14 @@ public class TestThreadExecutionGenerator {
             int eLocal = mv.newLocal(THROWABLE_TYPE);
             mv.storeLocal(eLocal);
 
+            // push the runner on stack to call its method
             mv.loadThis();
+            mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
+            // push iThread and exception on stack
             mv.push(iThread);
             mv.loadLocal(eLocal);
-            // Fail if this exception is not a valid execution result
-            mv.invokeVirtual(TEST_THREAD_EXECUTION_TYPE, TEST_THREAD_EXECUTION_FAIL_ON_EXCEPTION_IF_UNEXPECTED);
+            // Fail if this exception is an internal exception
+            mv.invokeVirtual(RUNNER_TYPE, RUNNER_FAIL_ON_INTERNAL_EXCEPTION_METHOD);
 
             mv.loadLocal(eLocal);
 

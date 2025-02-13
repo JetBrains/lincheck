@@ -13,6 +13,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ThreadAbortedError
 import java.io.*
 import java.lang.reflect.*
 import java.util.concurrent.atomic.*
@@ -63,7 +64,7 @@ abstract class Runner protected constructor(
      * This method is invoked by the corresponding test thread
      * when an unexpected exception is thrown.
      */
-    abstract fun onThreadFailure(iThread: Int, e: Throwable)
+    abstract fun onInternalException(iThread: Int, e: Throwable)
 
     /**
      * This method is invoked by the corresponding test thread
@@ -128,8 +129,28 @@ abstract class Runner protected constructor(
      */
     val isParallelExecutionCompleted: Boolean
         get() = completedOrSuspendedThreads.get() == scenario.nThreads
+
+    // used in byte-code generation
+    fun failOnInternalException(iThread: Int, e: Throwable) {
+        if (isInternalException(e)) {
+            onInternalException(iThread, e)
+            throw e
+        }
+    }
 }
 
 enum class ExecutionPart {
     INIT, PARALLEL, POST, VALIDATION
 }
+
+/**
+ * Checks if the provided exception is considered an internal exception.
+ * Internal exceptions are those used by the Lincheck itself
+ * to control execution of the analyzed code.
+ */
+@Suppress("DEPRECATION") // ThreadDeath
+internal fun isInternalException(exception: Throwable): Boolean =
+    // is used to stop thread in `FixedActiveThreadsExecutor` via `thread.stop()`
+    exception is ThreadDeath ||
+    // is used to abort thread in `ManagedStrategy`
+    exception is ThreadAbortedError
