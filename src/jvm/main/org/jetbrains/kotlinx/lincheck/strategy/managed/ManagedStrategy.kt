@@ -515,7 +515,6 @@ abstract class ManagedStrategy(
      * Handles exceptions that occur in a specific thread.
      * This method is called when a thread finishes with an exception.
      *
-     * @param threadId The thread id of the thread where the exception occurred.
      * @param exception The exception that was thrown within the thread.
      * @return true if the exception should be suppressed, false otherwise.
      */
@@ -637,7 +636,7 @@ abstract class ManagedStrategy(
         // so we exit testing code to avoid trace collection resume or some bizarre bugs
         leaveTestingCode()
         // suppress `ThreadAbortedError`
-        if (exception === ThreadAbortedError) return true
+        if (exception is ThreadAbortedError) return true
         // Though the corresponding failure will be detected by the runner,
         // the managed strategy can construct a trace to reproduce this failure.
         // Let's then store the corresponding failing result and construct the trace.
