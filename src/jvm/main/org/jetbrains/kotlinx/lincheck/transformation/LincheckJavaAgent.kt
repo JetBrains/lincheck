@@ -133,8 +133,10 @@ internal object LincheckJavaAgent {
                     // old classes that were already loaded before and have coroutine method calls inside
                     canonicalClassName in coroutineCallingClasses
                 }
-                instrumentation.retransformClasses(*classes.toTypedArray())
-                instrumentedClasses.addAll(classes.map { it.name })
+                if (classes.isNotEmpty()) {
+                    instrumentation.retransformClasses(*classes.toTypedArray())
+                    instrumentedClasses.addAll(classes.map { it.name })
+                }
             }
 
             // In the model checking mode, Lincheck processes classes lazily, only when they are used.
@@ -193,7 +195,9 @@ internal object LincheckJavaAgent {
             }
         // `retransformClasses` uses initial (loaded in VM from disk) class bytecode and reapplies
         // transformations of all agents that did not remove their transformers to this moment
-        instrumentation.retransformClasses(*classes.toTypedArray())
+        if (classes.isNotEmpty()) {
+            instrumentation.retransformClasses(*classes.toTypedArray())
+        }
         // Clear the set of instrumented classes.
         instrumentedClasses.clear()
     }
