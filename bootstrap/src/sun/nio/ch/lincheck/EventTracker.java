@@ -38,8 +38,8 @@ public interface EventTracker {
 
     void beforeNewObjectCreation(String className);
     void afterNewObjectCreation(Object obj);
-    long getNextObjectId();
-    void advanceCurrentObjectId(long oldId);
+    long getNextTraceDebuggerEventTrackerId(TraceDebuggerTracker tracker);
+    void advanceCurrentTraceDebuggerEventTrackerId(TraceDebuggerTracker tracker, long oldId);
     
     CallSite getCachedInvokeDynamicCallSite(
             String name,
