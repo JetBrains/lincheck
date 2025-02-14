@@ -133,8 +133,10 @@ internal object LincheckJavaAgent {
                     // old classes that were already loaded before and have coroutine method calls inside
                     canonicalClassName in coroutineCallingClasses
                 }
-                instrumentation.retransformClasses(*classes.toTypedArray())
-                instrumentedClasses.addAll(classes.map { it.name })
+                if (classes.isNotEmpty()) {
+                    instrumentation.retransformClasses(*classes.toTypedArray())
+                    instrumentedClasses.addAll(classes.map { it.name })
+                }
             }
 
             // In the model checking mode, Lincheck processes classes lazily, only when they are used.
@@ -193,7 +195,9 @@ internal object LincheckJavaAgent {
             }
         // `retransformClasses` uses initial (loaded in VM from disk) class bytecode and reapplies
         // transformations of all agents that did not remove their transformers to this moment
-        instrumentation.retransformClasses(*classes.toTypedArray())
+        if (classes.isNotEmpty()) {
+            instrumentation.retransformClasses(*classes.toTypedArray())
+        }
         // Clear the set of instrumented classes.
         instrumentedClasses.clear()
     }
@@ -351,12 +355,15 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         protectionDomain: ProtectionDomain?,
         classBytes: ByteArray
     ): ByteArray? = runInIgnoredSection {
-        if (classBeingRedefined == null) {
-            // No internal class name is expected if no class is provided.
-            return null
-        } else {
-            require(internalClassName != null) { "Class name must not be null" }
+        if (classBeingRedefined != null) {
+            require(internalClassName != null) {
+                "Internal class name of redefined class ${classBeingRedefined.name} must not be null"
+            }
         }
+        // Internal class name could be `null` in some cases (can be witnessed on JDK-8),
+        // this can be related to the Kotlin compiler bug:
+        // - https://youtrack.jetbrains.com/issue/KT-16727/
+        if (internalClassName == null) return null
         // If the class should not be transformed, return immediately.
         if (!shouldTransform(internalClassName.canonicalClassName, instrumentationMode)) {
             return null
