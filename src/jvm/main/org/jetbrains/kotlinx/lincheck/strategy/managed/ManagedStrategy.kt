@@ -16,7 +16,6 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import sun.nio.ch.lincheck.*
@@ -31,7 +30,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
 import org.objectweb.asm.ConstantDynamic
 import org.objectweb.asm.Handle
 import java.lang.invoke.CallSite
-import java.lang.invoke.MethodHandle
 import java.lang.reflect.*
 import java.util.concurrent.TimeoutException
 import java.util.*
@@ -83,7 +81,13 @@ abstract class ManagedStrategy(
     // Tracker of objects' allocations and object graph topology.
     protected abstract val objectTracker: ObjectTracker?
     // Tracker of objects' identity hash codes.
-    internal abstract val identityHashCodeTracker: ObjectIdentityHashCodeTracker
+    private val identityHashCodeTracker: ObjectIdentityHashCodeTracker = ObjectIdentityHashCodeTracker()
+    internal val traceDebuggerEventTrackers: Map<TraceDebuggerTracker, AbstractTraceDebuggerEventTracker> = mapOf(
+        TraceDebuggerTracker.IdentityHashCode to identityHashCodeTracker
+    )
+    internal fun resetTraceDebuggerTrackerIds() {
+        traceDebuggerEventTrackers.values.forEach { it.resetIds() }
+    }
     // Cache for evaluated invoke dynamic call sites
     private val invokeDynamicCallSites = ConcurrentHashMap<ConstantDynamic, CallSite>()
     // Tracker of the monitors' operations.
@@ -268,7 +272,7 @@ abstract class ManagedStrategy(
 
     protected open fun initializeReplay() {
         cleanObjectNumeration()
-        identityHashCodeTracker.resetObjectIds()
+        resetTraceDebuggerTrackerIds()
         resetEventIdProvider()
     }
 
@@ -315,7 +319,7 @@ abstract class ManagedStrategy(
                 result is ObstructionFreedomViolationInvocationResult
         )
         cleanObjectNumeration()
-        identityHashCodeTracker.resetObjectIds()
+        resetTraceDebuggerTrackerIds()
 
         runner.close()
         runner = createRunner()
@@ -1114,8 +1118,8 @@ abstract class ManagedStrategy(
         LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
     }
 
-    override fun advanceCurrentObjectId(oldId: Long) {
-        identityHashCodeTracker.advanceCurrentObjectId(oldId)
+    override fun advanceCurrentTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker, oldId: Id) {
+        traceDebuggerEventTrackers[tracker]?.advanceCurrentId(oldId)
     }
 
     override fun getCachedInvokeDynamicCallSite(
@@ -1144,7 +1148,8 @@ abstract class ManagedStrategy(
     private fun Injections.HandlePojo.toAsmHandle(): Handle =
         Handle(tag, owner, name, desc, isInterface)
 
-    override fun getNextObjectId(): Long = identityHashCodeTracker.getNextObjectId()
+    override fun getNextTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker): Id =
+        traceDebuggerEventTrackers[tracker]?.getNextId() ?: 0
 
     override fun afterNewObjectCreation(obj: Any) {
         if (obj.isImmutable) return
