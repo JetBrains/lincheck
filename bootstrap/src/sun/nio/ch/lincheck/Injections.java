@@ -443,8 +443,8 @@ public class Injections {
     /**
      * Retrieves the next object id, used for identity hash code substitution, and then advances it by one.
      */
-    public static long getNextObjectId() {
-        return getEventTracker().getNextObjectId();
+    public static long getNextTraceDebuggerEventTrackerId(TraceDebuggerTracker tracker) {
+        return getEventTracker().getNextTraceDebuggerEventTrackerId(tracker);
     }
 
     /**
@@ -470,8 +470,8 @@ public class Injections {
      * On subsequent re-runs, the cached computation will be skipped, but the
      * current object id will still be advanced by the required delta via a call to {@code advanceCurrentObjectId(oldId)}.
      */
-    public static void advanceCurrentObjectId(long oldId) {
-        getEventTracker().advanceCurrentObjectId(oldId);
+    public static void advanceCurrentTraceDebuggerEventTrackerId(TraceDebuggerTracker tracker, long oldId) {
+        getEventTracker().advanceCurrentTraceDebuggerEventTrackerId(tracker, oldId);
     }
 
 

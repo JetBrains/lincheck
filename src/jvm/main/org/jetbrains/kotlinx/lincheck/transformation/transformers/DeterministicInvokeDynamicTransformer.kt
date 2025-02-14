@@ -20,8 +20,8 @@ import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.Method
 import sun.nio.ch.lincheck.Injections
 import sun.nio.ch.lincheck.Injections.HandlePojo
+import sun.nio.ch.lincheck.TraceDebuggerTracker
 import java.lang.invoke.CallSite
-import java.lang.invoke.MethodHandle
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.MethodType
 
@@ -251,23 +251,31 @@ internal class DeterministicInvokeDynamicTransformer(
         return methods.single { Type.getMethodDescriptor(it) == bootstrapMethodHandle.desc }.isVarArgs
     }
 
-    
     // TODO: Investigate whether it is possible to refactor this code to remove advanceCurrentObjectId from 
     //  the event tracker API and solve the problem with the ignored sections instead.
     private fun GeneratorAdapter.advancingCounter(code: GeneratorAdapter.() -> Unit) {
-        invokeStatic(Injections::getNextObjectId)
-        val oldId = newLocal(Type.LONG_TYPE)
-        storeLocal(oldId)
+        val trackers = TraceDebuggerTracker.entries
+        val oldIds = trackers.map { tracker ->
+            getStatic(trackerEnumType, tracker.name, trackerEnumType)
+            invokeStatic(Injections::getNextTraceDebuggerEventTrackerId)
+            val oldId = newLocal(Type.LONG_TYPE)
+            storeLocal(oldId)
+            oldId
+        }
         tryCatchFinally(
             tryBlock = code,
             finallyBlock = {
-                loadLocal(oldId)
-                invokeStatic(Injections::advanceCurrentObjectId)
+                for ((index, tracker) in trackers.withIndex()) {
+                    getStatic(trackerEnumType, tracker.name, trackerEnumType)
+                    loadLocal(oldIds[index])
+                    invokeStatic(Injections::advanceCurrentTraceDebuggerEventTrackerId)
+                }
             }
         )
     }
 
     companion object {
+        private val trackerEnumType = Type.getType(TraceDebuggerTracker::class.java)
         private val callSiteType = Type.getType(CallSite::class.java)
         private val handlePojoType = Type.getType(HandlePojo::class.java)
         private val anyType = Type.getType(Any::class.java)
