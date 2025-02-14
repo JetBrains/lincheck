@@ -123,14 +123,16 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
      * as the failing scenario might need to be minimized first.
      */
     private fun CTestConfiguration.runReplayForPlugin(failure: LincheckFailure, verifier: Verifier) {
-        if (ideaPluginEnabled && this is ModelCheckingCTestConfiguration) {
-            createStrategy(failure.scenario).use { strategy ->
-                check(strategy is ModelCheckingStrategy)
-                strategy.enableReplayModeForIdeaPlugin()
-                val replayedFailure = strategy.runIteration(invocationsPerIteration, verifier)
-                check(replayedFailure != null)
-                strategy.runReplayIfPluginEnabled(replayedFailure)
-            }
+        if (ideaPluginEnabled() && this is ModelCheckingCTestConfiguration) {
+            runPluginReplay(
+                testCfg = this,
+                testClass = testClass,
+                scenario = failure.scenario,
+                validationFunction = testStructure.validationFunction,
+                stateRepresentationMethod = testStructure.stateRepresentation,
+                invocations = invocationsPerIteration,
+                verifier = verifier
+            )
         }
     }
 

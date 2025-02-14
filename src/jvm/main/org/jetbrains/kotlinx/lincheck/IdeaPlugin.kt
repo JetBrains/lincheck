@@ -17,7 +17,10 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.util.ThreadMap
+import org.jetbrains.kotlinx.lincheck.verifier.Verifier
+import java.lang.reflect.Method
 
 const val MINIMAL_PLUGIN_VERSION = "0.2"
 
@@ -36,6 +39,7 @@ const val MINIMAL_PLUGIN_VERSION = "0.2"
  * @param version current Lincheck version.
  * @param minimalPluginVersion minimal compatible plugin version.
  * @param exceptions representation of the exceptions with their stacktrace occurred during the execution.
+ * @param isGeneralPurposeModelChecking indicates if lincheck is running in the GPMC mode
  */
 @Suppress("UNUSED_PARAMETER")
 fun testFailed(
@@ -44,6 +48,7 @@ fun testFailed(
     version: String?,
     minimalPluginVersion: String,
     exceptions: Array<String>,
+    isGeneralPurposeModelChecking: Boolean,
 ) {}
 
 /**
@@ -131,6 +136,24 @@ fun onThreadSwitchesOrActorFinishes() {}
 
 // ======================================================================================================== //
 
+internal fun runPluginReplay(
+    testCfg: ModelCheckingCTestConfiguration,
+    testClass: Class<*>,
+    scenario: ExecutionScenario,
+    validationFunction: Actor?,
+    stateRepresentationMethod: Method?,
+    invocations: Int,
+    verifier: Verifier
+) {
+    testCfg.createStrategy(testClass, scenario, validationFunction, stateRepresentationMethod).use { replayStrategy ->
+        check(replayStrategy is ModelCheckingStrategy)
+        replayStrategy.enableReplayModeForIdeaPlugin()
+        val replayedFailure = replayStrategy.runIteration(invocations, verifier)
+        check(replayedFailure != null)
+        replayStrategy.runReplayIfPluginEnabled(replayedFailure)
+    }
+}
+
 /**
  * Internal property to check that trace point IDs are in a strict sequential order.
  */
@@ -154,7 +177,8 @@ internal fun ManagedStrategy.runReplayIfPluginEnabled(failure: LincheckFailure) 
             trace = trace,
             version = lincheckVersion,
             minimalPluginVersion = MINIMAL_PLUGIN_VERSION,
-            exceptions = exceptionsRepresentation
+            exceptions = exceptionsRepresentation,
+            isGeneralPurposeModelChecking = isGeneralPurposeModelChecking,
         )
         // Replay execution while it's needed.
         do {
@@ -328,6 +352,8 @@ private data class ExceptionProcessingResult(
  *   Used to collect the data about the test instance, object numbers, threads, and continuations.
  */
 private fun visualize(strategy: ManagedStrategy) = runCatching {
+    if (strategy.isGeneralPurposeModelChecking) return@runCatching
+
     val runner = strategy.runner as ParallelThreadsRunner
     val allThreads = strategy.getRegisteredThreads()
     val lincheckThreads = runner.executor.threads

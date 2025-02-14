@@ -56,8 +56,18 @@ fun <R> runConcurrentTest(
             val failure = strategy.runIteration(invocations, verifier)
             if (failure != null) {
                 check(strategy is ModelCheckingStrategy)
-                strategy.enableReplayModeForIdeaPlugin()
-                strategy.runReplayIfPluginEnabled(failure)
+                if (ideaPluginEnabled()) {
+                    runPluginReplay(
+                        testCfg = testCfg,
+                        testClass = wrapperClass,
+                        scenario = scenario,
+                        validationFunction = null,
+                        stateRepresentationMethod = null,
+                        invocations = invocations,
+                        verifier = verifier
+                    )
+                    throw LincheckAssertionError(failure)
+                }
                 throw LincheckAssertionError(failure)
             }
         }

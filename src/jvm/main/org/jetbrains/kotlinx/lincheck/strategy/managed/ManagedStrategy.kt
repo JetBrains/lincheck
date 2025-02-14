@@ -54,6 +54,8 @@ abstract class ManagedStrategy(
     private val testCfg: ManagedCTestConfiguration,
 ) : Strategy(scenario), EventTracker {
 
+    val isGeneralPurposeModelChecking = testClass == GeneralPurposeModelCheckingWrapper::class.java
+
     // The flag to enable IntelliJ IDEA plugin mode
     var inIdeaPluginReplayMode: Boolean = false
         private set
