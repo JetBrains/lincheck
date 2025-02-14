@@ -21,6 +21,7 @@
 package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.getObjectNumber
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.objectNumeration
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
 import java.math.BigDecimal
@@ -28,10 +29,22 @@ import java.math.BigInteger
 import kotlin.coroutines.Continuation
 
 /**
- * Traverses an object to enumerate it and all nested objects.
- * Enumeration is required for the Plugin as we want to see on the diagram if some object was replaced by a new one.
- * Uses the same a numeration map as TraceReporter via [getObjectNumber] method, so objects have the
- * same numbers, as they have in the trace.
+ * Returns an enumeration of objects appearing in the trace.
+ * Enumeration is required for the IntelliJ IDEA Plugin
+ * as we want to see on the diagram if some object was replaced by a new one.
+ * Uses the same numeration map as the trace reporter via [getObjectNumber] method,
+ * so objects have the same numbers, as they have in the trace.
+ */
+internal fun enumerateObjects(): Map<Any, Int> {
+    val objectNumberMap = hashMapOf<Any, Int>()
+    objectNumeration.forEach { _, numbers ->
+        objectNumberMap.putAll(numbers)
+    }
+    return objectNumberMap
+}
+
+/**
+ * Return an enumeration of objects reachable from the given root object.
  */
 internal fun enumerateObjects(obj: Any): Map<Any, Int> {
     val objectNumberMap = hashMapOf<Any, Int>()
