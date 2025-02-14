@@ -18,7 +18,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.ObstructionFreedomViolationFailur
 import org.jetbrains.kotlinx.lincheck.strategy.TimeoutFailure
 import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
 import kotlin.math.*
-import kotlin.reflect.jvm.javaMethod
 
 @Synchronized // we should avoid concurrent executions to keep `objectNumeration` consistent
 internal fun StringBuilder.appendTrace(
@@ -167,7 +166,8 @@ internal fun constructTraceGraph(
     trace: Trace,
     exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>
 ): List<TraceNode> {
-    val tracePoints = trace.trace
+    val tracePoints = trace.deepCopy().trace
+    compressTrace(tracePoints)
     val scenario = failure.scenario
     val prefixFactory = TraceNodePrefixFactory(nThreads)
     val resultProvider = ExecutionResultsProvider(results, failure)
@@ -378,6 +378,80 @@ internal fun constructTraceGraph(
     }
 
     return traceGraphNodesSections.map { it.first() }
+}
+
+private fun compressTrace(trace: List<TracePoint>) =
+    HashSet<Int>().let { removed ->
+        trace.apply {  forEach { it.callStackTrace = compressCallStackTrace(it.callStackTrace, removed) } } 
+    }
+
+/**
+ * Merges fun$default(...) calls.
+ * Kotlin functions with default values are represented as two nested calls in the stack trace.
+ * For example:
+ * ```
+ * A.calLMe$default(A#1, 3, null, 2, null) at A.operation(A.kt:23)
+ *     A.callMe(3, "Hey") at A.callMe$default(A.kt:27)
+ * ```
+ * 
+ * This function collapses such pairs in the provided [callStackTrace]:
+ *
+ * ```
+ * A.callMe(3, "Hey") at A.operation(A.kt:23)
+ * ```
+ * 
+ * Since each tracePoint itself contains a [callStackTrace] of it's own,
+ * we need to recursively traverse each point.
+ */
+private fun compressCallStackTrace(
+    callStackTrace: List<CallStackTraceElement>, 
+    removed: HashSet<Int>,
+    seen: HashSet<Int> = HashSet(),
+): List<CallStackTraceElement> {
+    val oldStacktrace = callStackTrace.toMutableList()
+    val compressedStackTrace = mutableListOf<CallStackTraceElement>()
+    while (oldStacktrace.isNotEmpty()) {
+        val currentElement = oldStacktrace.removeFirst()
+        
+        // if element was removed (or seen) by previous iteration continue
+        if (removed.contains(currentElement.methodInvocationId)) continue
+        if (seen.contains(currentElement.methodInvocationId)) {
+            compressedStackTrace.add(currentElement)
+            continue
+        }
+        seen.add(currentElement.methodInvocationId)
+        
+        // if next element is null, we reached end of list
+        val nextElement = oldStacktrace.firstOrNull()
+        if (nextElement == null) {
+            currentElement.tracePoint.callStackTrace = 
+                compressCallStackTrace(currentElement.tracePoint.callStackTrace, removed, seen)
+            compressedStackTrace.add(currentElement)
+            break
+        }
+        
+        // Check if current and next are a "default" combo
+        if (currentElement.tracePoint.methodName == "${nextElement.tracePoint.methodName}\$default") {
+            
+            // Combine fields of next and current, and store in current
+            currentElement.tracePoint.methodName = nextElement.tracePoint.methodName
+            currentElement.tracePoint.parameters = nextElement.tracePoint.parameters
+            currentElement.tracePoint.callStackTrace =
+                compressCallStackTrace(currentElement.tracePoint.callStackTrace, removed, seen)
+
+            check(currentElement.tracePoint.returnedValue == nextElement.tracePoint.returnedValue)
+            check(currentElement.tracePoint.thrownException == nextElement.tracePoint.thrownException)
+            
+            // Mark next as removed
+            removed.add(nextElement.methodInvocationId)
+            compressedStackTrace.add(currentElement)
+            continue
+        }
+        currentElement.tracePoint.callStackTrace = 
+            compressCallStackTrace(currentElement.tracePoint.callStackTrace, removed, seen)
+        compressedStackTrace.add(currentElement)
+    }
+    return compressedStackTrace
 }
 
 private fun actorNodeResultRepresentation(result: Result?, failure: LincheckFailure, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): String? {
