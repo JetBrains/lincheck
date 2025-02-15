@@ -10,6 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
+import org.jetbrains.kotlinx.lincheck.strategy.managed.DeterministicCall
+import org.jetbrains.kotlinx.lincheck.strategy.managed.invoke
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Type.getType
 import org.objectweb.asm.commons.Method
@@ -66,22 +68,62 @@ internal class DeterministicHashCodeTransformer(
 }
 
 /**
- * [DeterministicTimeTransformer] tracks invocations of [System.nanoTime] and [System.currentTimeMillis] methods,
+ * [FakeDeterministicTimeTransformer] tracks invocations of [System.nanoTime] and [System.currentTimeMillis] methods,
  * and replaces them with stubs to prevent non-determinism.
  */
-internal class DeterministicTimeTransformer(val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, adapter) {
+internal class FakeDeterministicTimeTransformer(adapter: GeneratorAdapter) : AbstractDeterministicTimeMethodTransformer(adapter) {
+    override fun GeneratorAdapter.generateInstrumentedCode(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
+        push(1337L)// any constant value
+    }
+}
 
-    override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
+internal class TrueDeterministicTimeTransformer(adapter: GeneratorAdapter) : AbstractDeterministicTimeMethodTransformer(adapter) {
+    private class DeterministicTimeCall(private val originalCall: GeneratorAdapter.() -> Unit) : DeterministicCall {
+        override fun invokeFromState(
+            generator: GeneratorAdapter,
+            getState: GeneratorAdapter.() -> Unit,
+            getReceiver: (GeneratorAdapter.() -> Unit)?,
+            getArgument: GeneratorAdapter.(Int) -> Unit,
+        ) = generator.run {
+            getState()
+        }
+
+        override fun invokeSavingState(
+            generator: GeneratorAdapter,
+            saveState: GeneratorAdapter.(GeneratorAdapter.() -> Unit) -> Unit,
+            getReceiver: (GeneratorAdapter.() -> Unit)?,
+            getArgument: GeneratorAdapter.(Int) -> Unit,
+        ) = generator.run {
+            originalCall()
+            val result = newLocal(longType)
+            storeLocal(result)
+            saveState { loadLocal(result) }
+            loadLocal(result)
+        }
+    }
+    
+    override fun GeneratorAdapter.generateInstrumentedCode(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
+        val deterministicCall = DeterministicTimeCall { visitMethodInsn(opcode, owner, name, desc, itf) }
+        invoke(deterministicCall, longType, opcode, owner, desc)
+    }
+    
+    companion object {
+        private val longType = getType(Long::class.java)
+    }
+}
+
+internal abstract class AbstractDeterministicTimeMethodTransformer(val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, adapter) {
+    protected abstract fun GeneratorAdapter.generateInstrumentedCode(opcode: Int, owner: String, name: String, desc: String, itf: Boolean)
+    final override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         if (owner == "java/lang/System" && (name == "nanoTime" || name == "currentTimeMillis")) {
             invokeIfInTestingCode(
                 original = { visitMethodInsn(opcode, owner, name, desc, itf) },
-                code = { push(1337L) } // any constant value
+                code = { generateInstrumentedCode(opcode, owner, name, desc, itf) }
             )
-            return
+        } else {
+            visitMethodInsn(opcode, owner, name, desc, itf)
         }
-        visitMethodInsn(opcode, owner, name, desc, itf)
     }
-
 }
 
 /**
