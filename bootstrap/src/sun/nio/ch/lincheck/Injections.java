@@ -470,6 +470,14 @@ public class Injections {
     public static void advanceCurrentTraceDebuggerEventTrackerId(TraceDebuggerTracker tracker, long oldId) {
         getEventTracker().advanceCurrentTraceDebuggerEventTrackerId(tracker, oldId);
     }
+    
+    public static Object getNativeCallStateOrNull(long id) {
+        return getEventTracker().getNativeCallStateOrNull(id);
+    }
+    
+    public static void setNativeCallState(long id, Object state) {
+        getEventTracker().setNativeCallState(id, state);
+    }
 
 
     /**

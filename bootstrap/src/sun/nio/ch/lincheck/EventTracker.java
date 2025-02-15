@@ -40,6 +40,9 @@ public interface EventTracker {
     void afterNewObjectCreation(Object obj);
     long getNextTraceDebuggerEventTrackerId(TraceDebuggerTracker tracker);
     void advanceCurrentTraceDebuggerEventTrackerId(TraceDebuggerTracker tracker, long oldId);
+
+    Object getNativeCallStateOrNull(long id);
+    void setNativeCallState(long id, Object state);
     
     CallSite getCachedInvokeDynamicCallSite(
             String name,

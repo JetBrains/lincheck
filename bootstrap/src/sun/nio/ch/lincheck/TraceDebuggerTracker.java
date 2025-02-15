@@ -11,5 +11,6 @@
 package sun.nio.ch.lincheck;
 
 public enum TraceDebuggerTracker {
-    IdentityHashCode
+    IdentityHashCode,
+    NativeMethodCall,
 }
