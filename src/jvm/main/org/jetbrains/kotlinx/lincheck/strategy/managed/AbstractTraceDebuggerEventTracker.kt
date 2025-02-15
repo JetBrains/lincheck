@@ -11,8 +11,8 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 internal typealias Id = Long
-internal interface AbstractTraceDebuggerEventTracker {
+internal interface AbstractTraceDebuggerEventTracker: AutoCloseable {
     fun resetIds()
-    fun advanceCurrentId(oldObjectId: Id)
+    fun advanceCurrentId(oldId: Id)
     fun getNextId(): Id
 }
