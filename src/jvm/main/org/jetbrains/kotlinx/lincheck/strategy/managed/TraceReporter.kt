@@ -36,7 +36,6 @@ internal fun StringBuilder.appendTrace(
         if (!isExpanded && actorResultNode?.resultRepresentation != null) {
             callNode.lastInternalEvent.next = null
         }
-        appendExceptionsStackTracesBlock(exceptionStackTraces)
         appendShortTrace(nThreads, threadNames, listOf(callNode), failure)
         // restore the method result if it was hid
         if (!isExpanded && actorResultNode?.resultRepresentation != null) {

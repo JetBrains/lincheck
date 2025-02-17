@@ -380,14 +380,17 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
     }
 
     if (isGeneralPurposeModelCheckingScenario(failure.scenario)) {
+        check(exceptionStackTraces.size <= 1)
         if (exceptionStackTraces.isNotEmpty()) {
+            val (exception, descriptor) = exceptionStackTraces.entries.single()
             appendLine(GENERAL_PURPOSE_MODEL_CHECKING_FAILURE_TITLE)
             appendLine()
+            appendExceptionStackTrace(exception, descriptor.stackTrace)
         } else {
             appendLine(GENERAL_PURPOSE_MODEL_CHECKING_HUNG_TITLE)
-            appendLine()
         }
         if (failure.trace != null) {
+            appendLine()
             appendTrace(failure, results, failure.trace, exceptionStackTraces)
         }
         return this
