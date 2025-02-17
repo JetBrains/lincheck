@@ -13,6 +13,7 @@ import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransformer
+import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
 import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import sun.nio.ch.lincheck.*
@@ -98,12 +99,7 @@ private fun Class<out Any>.getMethod(name: String, parameterTypes: Array<Class<o
  * of the [value].
  */
 internal fun primitiveOrIdentityHashCode(value: Any?): Int {
-    return if (value.isPrimitiveWrapper) value.hashCode() else System.identityHashCode(value)
-}
-
-internal val Any?.isPrimitiveWrapper get() = when (this) {
-    is Boolean, is Int, is Short, is Long, is Double, is Float, is Char, is Byte -> true
-    else -> false
+    return if (value.isPrimitive) value.hashCode() else System.identityHashCode(value)
 }
 
 /**
@@ -248,18 +244,6 @@ internal fun Class<*>.findField(fieldName: String): Field {
     }
 
     throw NoSuchFieldException("Class '${this.name}' does not have field '$fieldName'")
-}
-
-/**
- * Reads a [field] of the owner object [obj] via Unsafe,  in case of failure fallbacks into reading the field via reflection.
- */
-internal fun readFieldSafely(obj: Any?, field: Field): kotlin.Result<Any?> {
-    // we wrap an unsafe read into `runCatching` to handle `UnsupportedOperationException`,
-    // which can be thrown, for instance, when attempting to read
-    // a field of a hidden or record class (starting from Java 15);
-    // in this case we fall back to read via reflection
-    return runCatching { readFieldViaUnsafe(obj, field) }
-        .recoverCatching { field.apply { isAccessible = true }.get(obj) }
 }
 
 /**

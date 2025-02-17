@@ -120,7 +120,7 @@ private fun enumerateObjects(obj: Any, objectNumberMap: MutableMap<Any, Int>) {
  * Determines should we dig recursively into this object's fields.
  */
 private fun shouldAnalyseObjectRecursively(obj: Any?, objectNumberMap: MutableMap<Any, Int>): Boolean {
-    if (obj == null || obj.javaClass.isImmutableWithNiceToString)
+    if (obj == null || obj.isImmutable)
         return false
 
     if (obj is CharSequence) {
@@ -132,19 +132,3 @@ private fun shouldAnalyseObjectRecursively(obj: Any?, objectNumberMap: MutableMa
     }
     return true
 }
-
-@Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
-private val Class<out Any>.isImmutableWithNiceToString
-    get() = this.canonicalName in listOf(
-        java.lang.Integer::class.java,
-        java.lang.Long::class.java,
-        java.lang.Short::class.java,
-        java.lang.Double::class.java,
-        java.lang.Float::class.java,
-        java.lang.Character::class.java,
-        java.lang.Byte::class.java,
-        java.lang.Boolean::class.java,
-        BigInteger::class.java,
-        BigDecimal::class.java,
-        kotlinx.coroutines.internal.Symbol::class.java,
-    ).map { it.canonicalName } || this.isEnum

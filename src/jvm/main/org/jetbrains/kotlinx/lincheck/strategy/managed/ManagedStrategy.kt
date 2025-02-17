@@ -1145,7 +1145,7 @@ abstract class ManagedStrategy(
     override fun getNextObjectId(): Long = identityHashCodeTracker.getNextObjectId()
 
     override fun afterNewObjectCreation(obj: Any) {
-        if (obj is String || obj is Int || obj is Long || obj is Byte || obj is Char || obj is Float || obj is Double) return
+        if (obj.isImmutable) return
         runInIgnoredSection {
             identityHashCodeTracker.afterNewTrackedObjectCreation(obj)
             objectTracker?.registerNewObject(obj)
@@ -1333,6 +1333,7 @@ abstract class ManagedStrategy(
                     return@runInIgnoredSection
                 val tracePoint = callStackTrace[threadId]!!.last().tracePoint
                 when (result) {
+                    Unit -> tracePoint.initializeVoidReturnedValue()
                     Injections.VOID_RESULT -> tracePoint.initializeVoidReturnedValue()
                     COROUTINE_SUSPENDED -> tracePoint.initializeCoroutineSuspendedResult()
                     else -> tracePoint.initializeReturnedValue(adornedStringRepresentation(result))
