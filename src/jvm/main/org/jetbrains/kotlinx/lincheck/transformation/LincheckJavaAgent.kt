@@ -133,6 +133,7 @@ internal object LincheckJavaAgent {
                     // old classes that were already loaded before and have coroutine method calls inside
                     canonicalClassName in coroutineCallingClasses
                 }
+                // for some reason, without `isNotEmpty()` check this code can throw NPE on JVM 8
                 if (classes.isNotEmpty()) {
                     instrumentation.retransformClasses(*classes.toTypedArray())
                     instrumentedClasses.addAll(classes.map { it.name })
@@ -194,7 +195,8 @@ internal object LincheckJavaAgent {
                 canonicalClassName in instrumentedClasses
             }
         // `retransformClasses` uses initial (loaded in VM from disk) class bytecode and reapplies
-        // transformations of all agents that did not remove their transformers to this moment
+        // transformations of all agents that did not remove their transformers to this moment;
+        // for some reason, without `isNotEmpty()` check this code can throw NPE on JVM 8
         if (classes.isNotEmpty()) {
             instrumentation.retransformClasses(*classes.toTypedArray())
         }
