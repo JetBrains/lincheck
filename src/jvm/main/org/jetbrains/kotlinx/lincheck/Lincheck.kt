@@ -12,7 +12,7 @@ package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.runIteration
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.ensureObjectIsTransformed
 import org.jetbrains.kotlinx.lincheck.transformation.withLincheckJavaAgent
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
@@ -50,11 +50,26 @@ fun <R> runConcurrentTest(
     val testCfg = options.createTestConfigurations(GeneralPurposeModelCheckingWrapper::class.java)
     withLincheckJavaAgent(testCfg.instrumentationMode) {
         ensureObjectIsTransformed(block)
-        val strategy = testCfg.createStrategy(GeneralPurposeModelCheckingWrapper::class.java, scenario, null, null)
         val verifier = testCfg.createVerifier()
-        val failure = strategy.runIteration(invocations, verifier)
-        if (failure != null) {
-            throw LincheckAssertionError(failure)
+        val wrapperClass = GeneralPurposeModelCheckingWrapper::class.java
+        testCfg.createStrategy(wrapperClass, scenario, null, null).use { strategy ->
+            val failure = strategy.runIteration(invocations, verifier)
+            if (failure != null) {
+                check(strategy is ModelCheckingStrategy)
+                if (ideaPluginEnabled) {
+                    runPluginReplay(
+                        testCfg = testCfg,
+                        testClass = wrapperClass,
+                        scenario = scenario,
+                        validationFunction = null,
+                        stateRepresentationMethod = null,
+                        invocations = invocations,
+                        verifier = verifier
+                    )
+                    throw LincheckAssertionError(failure)
+                }
+                throw LincheckAssertionError(failure)
+            }
         }
     }
 }

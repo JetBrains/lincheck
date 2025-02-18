@@ -17,9 +17,12 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.util.ThreadMap
+import org.jetbrains.kotlinx.lincheck.verifier.Verifier
+import java.lang.reflect.Method
 
-const val MINIMAL_PLUGIN_VERSION = "0.2"
+const val MINIMAL_PLUGIN_VERSION = "0.11"
 
 // ============== This methods are used by debugger from IDEA plugin to communicate with Lincheck ============== //
 
@@ -36,6 +39,7 @@ const val MINIMAL_PLUGIN_VERSION = "0.2"
  * @param version current Lincheck version.
  * @param minimalPluginVersion minimal compatible plugin version.
  * @param exceptions representation of the exceptions with their stacktrace occurred during the execution.
+ * @param isGeneralPurposeModelChecking indicates if lincheck is running in the GPMC mode
  */
 @Suppress("UNUSED_PARAMETER")
 fun testFailed(
@@ -43,7 +47,8 @@ fun testFailed(
     trace: Array<String>,
     version: String?,
     minimalPluginVersion: String,
-    exceptions: Array<String>
+    exceptions: Array<String>,
+    isGeneralPurposeModelChecking: Boolean,
 ) {}
 
 /**
@@ -102,8 +107,10 @@ fun beforeEvent(eventId: Int, type: String) {
  * We pass Maps as Arrays due to difficulties with passing objects (java.util.Map)
  * to the debugger (class version, etc.).
  *
- * @param testInstance tested data structure.
- * @param numbersArrayMap an array structured like [Object, objectNumber, Object, objectNumber, ...].
+ * @param testInstance tested data structure if present.
+ *   If there is no data structure instance (e.g., in the case of general-purpose model checking),
+ *   then null is passed.
+ * @param objectToNumberMap an array structured like [Object, objectNumber, Object, objectNumber, ...].
  *   Represents a `Map<Any /* Object */, Int>`.
  * @param continuationToLincheckThreadIdMap an array structured like [CancellableContinuation, threadId, ...].
  *   Represents a `Map<Any /* CancellableContinuation */, Int>`.
@@ -112,10 +119,11 @@ fun beforeEvent(eventId: Int, type: String) {
  */
 @Suppress("UNUSED_PARAMETER")
 fun visualizeInstance(
-    testInstance: Any,
-    numbersArrayMap: Array<Any>,
+    testInstance: Any?,
+    objectToNumberMap: Array<Any>,
     continuationToLincheckThreadIdMap: Array<Any>,
-    threadToLincheckThreadIdMap: Array<Any>
+    threadToLincheckThreadIdMap: Array<Any>,
+    // TODO: add thread names array parameter
 ) {}
 
 /**
@@ -127,6 +135,24 @@ fun visualizeInstance(
 fun onThreadSwitchesOrActorFinishes() {}
 
 // ======================================================================================================== //
+
+internal fun runPluginReplay(
+    testCfg: ModelCheckingCTestConfiguration,
+    testClass: Class<*>,
+    scenario: ExecutionScenario,
+    validationFunction: Actor?,
+    stateRepresentationMethod: Method?,
+    invocations: Int,
+    verifier: Verifier
+) {
+    testCfg.createStrategy(testClass, scenario, validationFunction, stateRepresentationMethod).use { replayStrategy ->
+        check(replayStrategy is ModelCheckingStrategy)
+        replayStrategy.enableReplayModeForIdeaPlugin()
+        val replayedFailure = replayStrategy.runIteration(invocations, verifier)
+        check(replayedFailure != null)
+        replayStrategy.runReplayIfPluginEnabled(replayedFailure)
+    }
+}
 
 /**
  * Internal property to check that trace point IDs are in a strict sequential order.
@@ -151,7 +177,8 @@ internal fun ManagedStrategy.runReplayIfPluginEnabled(failure: LincheckFailure) 
             trace = trace,
             version = lincheckVersion,
             minimalPluginVersion = MINIMAL_PLUGIN_VERSION,
-            exceptions = exceptionsRepresentation
+            exceptions = exceptionsRepresentation,
+            isGeneralPurposeModelChecking = isGeneralPurposeModelChecking,
         )
         // Replay execution while it's needed.
         do {
@@ -325,16 +352,20 @@ private data class ExceptionProcessingResult(
  *   Used to collect the data about the test instance, object numbers, threads, and continuations.
  */
 private fun visualize(strategy: ManagedStrategy) = runCatching {
+    if (strategy.isGeneralPurposeModelChecking) return@runCatching
+
     val runner = strategy.runner as ParallelThreadsRunner
-    val testObject = runner.testInstance
-    val lincheckThreads = runner.executor.threads
     val allThreads = strategy.getRegisteredThreads()
-
-    val objectToNumberMap = createObjectToNumberMapAsArray(testObject)
-    val continuationToLincheckThreadIdMap = createContinuationToThreadIdMap(lincheckThreads)
-    val threadToLincheckThreadIdMap = createThreadToLincheckThreadIdMap(allThreads)
-
-    visualizeInstance(testObject, objectToNumberMap, continuationToLincheckThreadIdMap, threadToLincheckThreadIdMap)
+    val lincheckThreads = runner.executor.threads
+    val testObject = runner.testInstance.takeIf {
+        // in general-purpose model checking mode `testObject` is null
+        it !is GeneralPurposeModelCheckingWrapper<*>
+    }
+    visualizeInstance(testObject,
+        objectToNumberMap = createObjectToNumberMapAsArray(testObject),
+        continuationToLincheckThreadIdMap = createContinuationToThreadIdMap(lincheckThreads),
+        threadToLincheckThreadIdMap = createThreadToLincheckThreadIdMap(allThreads),
+    )
 }
 
 /**
@@ -359,9 +390,9 @@ private fun visualizeTrace(): Array<Any>? = runCatching {
  *
  * The Debugger uses this information to enumerate objects.
  */
-private fun createObjectToNumberMapAsArray(testObject: Any): Array<Any> {
+private fun createObjectToNumberMapAsArray(testObject: Any?): Array<Any> {
     val resultArray = arrayListOf<Any>()
-    val numbersMap = enumerateObjects(testObject)
+    val numbersMap = if (testObject != null) enumerateObjects(testObject) else enumerateObjects()
     numbersMap.forEach { (any, objectNumber) ->
         resultArray.add(any)
         resultArray.add(objectNumber)
