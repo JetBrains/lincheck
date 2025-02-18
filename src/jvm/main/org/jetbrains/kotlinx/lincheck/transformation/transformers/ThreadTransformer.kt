@@ -13,7 +13,6 @@ package org.jetbrains.kotlinx.lincheck.transformation.transformers
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.objectweb.asm.Label
 import org.objectweb.asm.Opcodes
-import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.GeneratorAdapter.*
@@ -67,35 +66,39 @@ internal class ThreadTransformer(
     }
 
     override fun visitMaxs(maxStack: Int, maxLocals: Int) = adapter.run {
-        if (isThreadRunMethod(methodName, desc)) {
-            visitLabel(runMethodTryBlockEnd)
-            visitLabel(runMethodCatchBlock)
-
-            // STACK: exception
-            dup()
-            invokeStatic(Injections::onThreadException)
-            // STACK: exception, isSuppressed
-
-            // Notify that the thread has finished.
-            // TODO: currently does not work, because `ManagedStrategy::onThreadFinish`
-            //   assumes the thread finish injection is called under normal managed execution,
-            //   i.e., in non-aborted state
-            // invokeStatic(Injections::afterThreadFinish)
-
-            // Suppress exception if necessary.
-            val suppressLabel = newLabel()
-            // STACK: exception, isSuppressed
-            ifZCmp(NE, suppressLabel)
-
-            // Re-throw exception
-            // STACK: exception
-            visitInsn(ATHROW)
-
-            visitLabel(suppressLabel)
-            // STACK: exception
-            pop()
-            visitInsn(RETURN)
+        // we only need to handle `Thread::run()` method, exit early otherwise
+        if (!isThreadRunMethod(methodName, desc)) {
+            visitMaxs(maxStack, maxLocals)
+            return
         }
+
+        visitLabel(runMethodTryBlockEnd)
+        visitLabel(runMethodCatchBlock)
+
+        // STACK: exception
+        dup()
+        invokeStatic(Injections::onThreadException)
+        // STACK: exception, isSuppressed
+
+        // Notify that the thread has finished.
+        // TODO: currently does not work, because `ManagedStrategy::onThreadFinish`
+        //   assumes the thread finish injection is called under normal managed execution,
+        //   i.e., in non-aborted state
+        // invokeStatic(Injections::afterThreadFinish)
+
+        // Suppress exception if necessary.
+        val suppressLabel = newLabel()
+        // STACK: exception, isSuppressed
+        ifZCmp(NE, suppressLabel)
+
+        // Re-throw exception
+        // STACK: exception
+        visitInsn(Opcodes.ATHROW)
+
+        visitLabel(suppressLabel)
+        // STACK: exception
+        pop()
+        visitInsn(Opcodes.RETURN)
         
         visitMaxs(maxStack, maxLocals)
     }
