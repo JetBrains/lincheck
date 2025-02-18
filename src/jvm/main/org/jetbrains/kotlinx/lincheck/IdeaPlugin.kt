@@ -22,7 +22,7 @@ import org.jetbrains.kotlinx.lincheck.util.ThreadMap
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.reflect.Method
 
-const val MINIMAL_PLUGIN_VERSION = "0.2"
+const val MINIMAL_PLUGIN_VERSION = "0.11"
 
 // ============== This methods are used by debugger from IDEA plugin to communicate with Lincheck ============== //
 
