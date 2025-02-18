@@ -123,7 +123,7 @@ class LinChecker(private val testClass: Class<*>, options: Options<*, *>?) {
      * as the failing scenario might need to be minimized first.
      */
     private fun CTestConfiguration.runReplayForPlugin(failure: LincheckFailure, verifier: Verifier) {
-        if (ideaPluginEnabled() && this is ModelCheckingCTestConfiguration) {
+        if (ideaPluginEnabled && this is ModelCheckingCTestConfiguration) {
             runPluginReplay(
                 testCfg = this,
                 testClass = testClass,

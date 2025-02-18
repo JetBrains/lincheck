@@ -56,7 +56,7 @@ fun <R> runConcurrentTest(
             val failure = strategy.runIteration(invocations, verifier)
             if (failure != null) {
                 check(strategy is ModelCheckingStrategy)
-                if (ideaPluginEnabled()) {
+                if (ideaPluginEnabled) {
                     runPluginReplay(
                         testCfg = testCfg,
                         testClass = wrapperClass,
