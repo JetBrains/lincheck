@@ -637,7 +637,7 @@ private class ReplayModeLoopDetectorHelper(
      * Cycle period if is occurred in during current thread switch or 0 if no spin-cycle happened
      */
     val currentCyclePeriod: Int get() =
-        currentHistoryNode?.spinCyclePeriod ?: -1
+        currentHistoryNode?.spinCyclePeriod ?: 0
 
     /**
      * A set of thread, executed at least once during this interleaving.
@@ -704,7 +704,7 @@ private class ReplayModeLoopDetectorHelper(
             // traceCollector.newActiveLockDetected(currentThread, cyclePeriod)
             return LoopDetector.Decision.LivelockFailureDetected(cyclePeriod)
         }
-        return if (cyclePeriod > 0)
+        return if (cyclePeriod != 0)
             LoopDetector.Decision.LivelockThreadSwitch(cyclePeriod)
         else
             LoopDetector.Decision.Idle
