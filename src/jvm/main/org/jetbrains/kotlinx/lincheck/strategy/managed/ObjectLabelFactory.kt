@@ -75,7 +75,7 @@ object ObjectLabelFactory {
             }
         }
         val objectName = runCatching {
-            objectName(obj)
+            objectName(obj) + "#" + getObjectNumber(obj.javaClass, obj)
         }
         // There is a Kotlin compiler bug that leads to exception
         // `java.lang.InternalError: Malformed class name`
@@ -85,7 +85,7 @@ object ObjectLabelFactory {
         .getOrElse {
             "<unknown>"
         }
-        return objectName + "#" + getObjectNumber(obj.javaClass, obj)
+        return objectName
     }
 
     private fun objectName(obj: Any): String {

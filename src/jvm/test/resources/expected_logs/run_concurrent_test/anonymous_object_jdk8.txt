@@ -19,9 +19,9 @@ Detailed trace:
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | AnonymousObjectRunConcurrentRepresentationTest#1.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:40) |
 |   block(): threw IllegalStateException at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:183)                                                                        |
-|     AnonymousObjectRunConcurrentRepresentationTest.runnable = <unknown>#1 at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:204)                                     |
-|     AnonymousObjectRunConcurrentRepresentationTest.runnable ➜ <unknown>#1 at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:205)                                     |
-|     <unknown>#1.run() at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:205)                                                                                         |
+|     AnonymousObjectRunConcurrentRepresentationTest.runnable = <unknown> at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:204)                                       |
+|     AnonymousObjectRunConcurrentRepresentationTest.runnable ➜ <unknown> at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:205)                                       |
+|     <unknown>.run() at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:205)                                                                                           |
 |       AnonymousObjectRunConcurrentRepresentationTest.x ➜ 0 at AnonymousObjectRunConcurrentRepresentationTest$I$test$1.run(RunConcurrentRepresentationTests.kt:197)                                             |
 |       AnonymousObjectRunConcurrentRepresentationTest.x = 1 at AnonymousObjectRunConcurrentRepresentationTest$I$test$1.run(RunConcurrentRepresentationTests.kt:197)                                             |
 |   result: IllegalStateException #1                                                                                                                                                                             |
