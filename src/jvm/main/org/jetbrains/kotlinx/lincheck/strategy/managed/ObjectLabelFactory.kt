@@ -70,10 +70,23 @@ object ObjectLabelFactory {
         if (obj is Thread) {
             return "Thread#${getObjectNumber(Thread::class.java, obj)}"
         }
-        if (obj.javaClass.isAnonymousClass) {
-            return obj.javaClass.simpleNameForAnonymous
+        runCatching {
+            if (obj.javaClass.isAnonymousClass) {
+                return obj.javaClass.simpleNameForAnonymous
+            }
         }
-        return objectName(obj) + "#" + getObjectNumber(obj.javaClass, obj)
+        val objectName = runCatching {
+            objectName(obj) + "#" + getObjectNumber(obj.javaClass, obj)
+        }
+        // There is a Kotlin compiler bug that leads to exception
+        // `java.lang.InternalError: Malformed class name`
+        // when trying to query for a class name of an anonymous class on JDK 8:
+        // - https://youtrack.jetbrains.com/issue/KT-16727/
+        // in such a case we fall back to returning `<unknown>` class name.
+        .getOrElse {
+            "<unknown>"
+        }
+        return objectName
     }
 
     private fun objectName(obj: Any): String {

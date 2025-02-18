@@ -180,6 +180,33 @@ class VariableReadWriteRunConcurrentRepresentationTest : BaseRunConcurrentRepres
     }
 }
 
+class AnonymousObjectRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
+    if (isJdk8) "run_concurrent_test/anonymous_object_jdk8.txt" else "run_concurrent_test/anonymous_object.txt"
+) {
+    // use static fields to avoid local object optimizations
+    companion object {
+        @JvmField var runnable: Runnable? = null
+        @JvmField var x = 0
+    }
+
+    // use the interface to additionally check that KT-16727 bug is handled:
+    // https://youtrack.jetbrains.com/issue/KT-16727/
+    interface I {
+        fun test() = object : Runnable {
+            override fun run() {
+                x++
+            }
+        }
+    }
+
+    @Suppress("UNUSED_VARIABLE")
+    override fun block() {
+        runnable = (object : I {}).test()
+        runnable!!.run()
+        check(false)
+    }
+}
+
 // TODO investigate difference for trace debugger (Evgeniy Moiseenko)
 class CustomThreadsRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
     if (isInTraceDebuggerMode) {
