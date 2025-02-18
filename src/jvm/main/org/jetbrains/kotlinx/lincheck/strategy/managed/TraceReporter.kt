@@ -436,6 +436,7 @@ private fun compressCallStackTrace(
             // Combine fields of next and current, and store in current
             currentElement.tracePoint.methodName = nextElement.tracePoint.methodName
             currentElement.tracePoint.parameters = nextElement.tracePoint.parameters
+            currentElement.tracePoint.descriptor = nextElement.tracePoint.descriptor
             currentElement.tracePoint.callStackTrace =
                 compressCallStackTrace(currentElement.tracePoint.callStackTrace, removed, seen)
 
@@ -453,6 +454,7 @@ private fun compressCallStackTrace(
     }
     return compressedStackTrace
 }
+
 
 private fun actorNodeResultRepresentation(result: Result?, failure: LincheckFailure, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): String? {
     // We don't mark actors that violated obstruction freedom as hung.

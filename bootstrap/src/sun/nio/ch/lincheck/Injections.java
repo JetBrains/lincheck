@@ -374,8 +374,8 @@ public class Injections {
      *
      * @param owner is `null` for public static methods.
      */
-    public static void beforeMethodCall(Object owner, String className, String methodName, int codeLocation, int methodId, Object[] params) {
-        getEventTracker().beforeMethodCall(owner, className, methodName, codeLocation, methodId, params);
+    public static void beforeMethodCall(Object owner, String className, String methodName, int codeLocation, int methodId, String desc, Object[] params) {
+        getEventTracker().beforeMethodCall(owner, className, methodName, codeLocation, methodId, desc, params);
     }
 
     /**

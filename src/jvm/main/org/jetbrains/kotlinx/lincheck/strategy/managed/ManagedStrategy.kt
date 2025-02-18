@@ -16,7 +16,6 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import sun.nio.ch.lincheck.*
@@ -31,7 +30,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
 import org.objectweb.asm.ConstantDynamic
 import org.objectweb.asm.Handle
 import java.lang.invoke.CallSite
-import java.lang.invoke.MethodHandle
 import java.lang.reflect.*
 import java.util.concurrent.TimeoutException
 import java.util.*
@@ -1258,6 +1256,7 @@ abstract class ManagedStrategy(
         methodName: String,
         codeLocation: Int,
         methodId: Int,
+        desc: String,
         params: Array<Any?>
     ) {
         val guarantee = runInIgnoredSection {
@@ -1291,7 +1290,7 @@ abstract class ManagedStrategy(
             if (collectTrace) {
                 traceCollector!!.checkActiveLockDetected()
                 addBeforeMethodCallTracePoint(threadId, owner, codeLocation, methodId, className, methodName, params,
-                    atomicMethodDescriptor
+                    atomicMethodDescriptor, desc
                 )
             }
             // in case of an atomic method, we create a switch point before the method call;
@@ -1436,6 +1435,7 @@ abstract class ManagedStrategy(
         methodName: String,
         methodParams: Array<Any?>,
         atomicMethodDescriptor: AtomicMethodDescriptor?,
+        desc: String
     ) {
         val callStackTrace = callStackTrace[threadId]!!
         val suspendedMethodStack = suspendedFunctionsStack[threadId]!!
@@ -1488,6 +1488,7 @@ abstract class ManagedStrategy(
             params = params,
             codeLocation = codeLocation,
             atomicMethodDescriptor = atomicMethodDescriptor,
+            desc = desc,
         )
         // Method invocation id used to calculate spin cycle start label call depth.
         // Two calls are considered equals if two same methods were called with the same parameters.
@@ -1512,6 +1513,7 @@ abstract class ManagedStrategy(
         params: Array<Any?>,
         codeLocation: Int,
         atomicMethodDescriptor: AtomicMethodDescriptor?,
+        desc: String
     ): MethodCallTracePoint {
         val callStackTrace = callStackTrace[iThread]!!
         val tracePoint = MethodCallTracePoint(
@@ -1520,7 +1522,8 @@ abstract class ManagedStrategy(
             className = className,
             methodName = methodName,
             callStackTrace = callStackTrace,
-            stackTraceElement = CodeLocations.stackTrace(codeLocation)
+            stackTraceElement = CodeLocations.stackTrace(codeLocation),
+            descriptor = desc,
         )
         // handle non-atomic methods
         if (atomicMethodDescriptor == null) {

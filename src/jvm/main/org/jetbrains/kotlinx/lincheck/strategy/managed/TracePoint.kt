@@ -13,6 +13,11 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.kotlinx.lincheck.util.ThreadId
+import org.objectweb.asm.Type
+import java.lang.Class
+import kotlin.collections.map
+import kotlin.reflect.jvm.kotlinFunction
+import kotlin.text.replace
 
 data class Trace(
     val trace: List<TracePoint>,
@@ -23,6 +28,11 @@ data class Trace(
         return Trace(trace.map { it.deepCopy(copiedCallStackTraceElements) }, threadNames.toList())
     }
 }
+
+private val threadDefaultValues = listOf("true", "false", "null", "null", "-1", "")
+private const val THREAD_CLASS_NAME = "kotlin/concurrent/ThreadsKt"
+private const val THREAD_FUN_DESCRIPTOR = "(ZZLjava/lang/ClassLoader;Ljava/lang/String;ILkotlin/jvm/functions/Function0;)Ljava/lang/Thread;"
+
 
 /**
  * Essentially, a trace is a list of trace points, which represent
@@ -73,7 +83,7 @@ internal class SwitchEventTracePoint(
 internal abstract class CodeLocationTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
-    val stackTraceElement: StackTraceElement
+    var stackTraceElement: StackTraceElement
 ) : TracePoint(iThread, actorId, callStackTrace) {
 
     protected abstract fun toStringCompact(): String
@@ -173,6 +183,7 @@ internal class MethodCallTracePoint(
     iThread: Int, actorId: Int,
     val className: String,
     var methodName: String,
+    var descriptor: String,
     callStackTrace: CallStackTrace,
     stackTraceElement: StackTraceElement
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, stackTraceElement) {
@@ -182,28 +193,45 @@ internal class MethodCallTracePoint(
     private var ownerName: String? = null
 
     val wasSuspended get() = (returnedValue == ReturnedValueResult.CoroutineSuspended)
+    private val paramNames: List<String> by lazy {
+        val methods = Class.forName(className.replace('/', '.')).methods
+        val method = methods.firstOrNull { Type.getMethodDescriptor(it) == descriptor }
+        method?.kotlinFunction?.parameters?.map { it.name ?: "" } ?: emptyList()
+    }
 
     override fun toStringCompact(): String = StringBuilder().apply {
-        if (ownerName != null)
-            append("$ownerName.")
-        append("$methodName(")
-        val parameters = parameters
-        if (parameters != null) {
-            append(parameters.joinToString(", "))
+        // If thread creation site
+        if (descriptor == THREAD_FUN_DESCRIPTOR && className == THREAD_CLASS_NAME) {
+            append("thread")
+            val params = parameters?.checkDefault(paramNames, threadDefaultValues) ?: emptyList()
+            if (!params.isEmpty()) {
+                append("(")
+                append(params.joinToString(", "))
+                append(")")
+            }
+            append(" { ... } ")
+        } else {
+            if (ownerName != null) append("$ownerName.")
+            append("$methodName(")
+            val parameters = parameters
+            if (parameters != null) {
+                append(parameters.joinToString(", "))
+            }
+            append(")")
         }
-        append(")")
-        val returnedValue = returnedValue
-        if (returnedValue is ReturnedValueResult.ValueResult) {
-            append(": ${returnedValue.valueRepresentation}")
-        } else if (returnedValue is ReturnedValueResult.CoroutineSuspended) {
-            append(": COROUTINE_SUSPENDED")
-        } else if (thrownException != null && thrownException != ThreadAbortedError) {
-            append(": threw ${thrownException!!.javaClass.simpleName}")
-        }
+            val returnedValue = returnedValue
+            if (returnedValue is ReturnedValueResult.ValueResult) {
+                append(": ${returnedValue.valueRepresentation}")
+            } else if (returnedValue is ReturnedValueResult.CoroutineSuspended) {
+                append(": COROUTINE_SUSPENDED")
+            } else if (thrownException != null && thrownException != ThreadAbortedError) {
+                append(": threw ${thrownException!!.javaClass.simpleName}")
+            }
+        
     }.toString()
     
     override fun deepCopy(copiedCallStackTraceElements: HashMap<CallStackTraceElement, CallStackTraceElement>): MethodCallTracePoint =
-        MethodCallTracePoint(iThread, actorId, className, methodName, callStackTrace.deepCopy(copiedCallStackTraceElements), stackTraceElement)
+        MethodCallTracePoint(iThread, actorId, className, methodName, descriptor, callStackTrace.deepCopy(copiedCallStackTraceElements), stackTraceElement)
             .also {
                 it.eventId = eventId
                 it.returnedValue = returnedValue
@@ -235,6 +263,16 @@ internal class MethodCallTracePoint(
     fun initializeOwnerName(ownerName: String) {
         this.ownerName = ownerName
     }
+}
+
+private fun List<String>.checkDefault(paramNames: List<String>, defaultValues: List<String>): List<String> {
+    check(this.size == paramNames.size)
+    check(paramNames.size == defaultValues.size)
+    val result = mutableListOf<String>()
+    dropLast(1).forEachIndexed { index, currentValue -> 
+        if (currentValue != defaultValues[index]) result.add("${paramNames[index]} = $currentValue")
+    }
+    return result
 }
 
 internal sealed interface ReturnedValueResult {
