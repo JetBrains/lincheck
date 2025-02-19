@@ -185,7 +185,7 @@ internal class LincheckClassVisitor(
         } else {
             mv = FakeDeterministicTimeTransformer(mv.newAdapter())
         }
-        mv = DeterministicRandomTransformer(fileName, className, methodName, mv.newAdapter())
+        mv = FakeDeterministicRandomTransformer(fileName, className, methodName, mv.newAdapter())
         // `SharedMemoryAccessTransformer` goes first because it relies on `AnalyzerAdapter`,
         // which should be put in front of the byte-code transformer chain,
         // so that it can correctly analyze the byte-code and compute required type-information
@@ -259,7 +259,7 @@ private class WrapMethodInIgnoredSectionTransformer(
             ARETURN, DRETURN, FRETURN, IRETURN, LRETURN, RETURN -> {
                 ifStatement(
                     condition = { loadLocal(enteredInIgnoredSectionLocal) },
-                    ifClause = { invokeStatic(Injections::leaveIgnoredSection) },
+                    thenClause = { invokeStatic(Injections::leaveIgnoredSection) },
                     elseClause = {}
                 )
             }
