@@ -64,13 +64,16 @@ public class ThreadDescriptor {
     private boolean inTestingCode = false;
 
     /**
-     * This flag is used to disable tracking of all events.
+     * Counter keeping track of the ignored section re-entrance depth.
+     * <p>
+     *
+     * Ignored section is used to disable tracking of all events.
      *
      * <p>
-     * If Lincheck enters a code block for which analysis should be disabled, this flag is set to `true`.
-     * Notably, such code blocks can be nested, but only the outermost one changes the flag.
+     * If Lincheck enters a code block for which analysis should be disabled,
+     * it should increment the counter.
      */
-    private boolean inIgnoredSection = false;
+    private int ignoredSectionDepth = 0;
 
     public ThreadDescriptor(Thread thread) {
         if (thread == null) {
@@ -100,17 +103,25 @@ public class ThreadDescriptor {
     }
 
     public boolean inIgnoredSection() {
-        return !inTestingCode || inIgnoredSection;
+        return !inTestingCode || (ignoredSectionDepth > 0);
     }
 
-    public boolean enterIgnoredSection() {
-        if (inIgnoredSection) return false;
-        inIgnoredSection = true;
-        return true;
+    public void enterIgnoredSection() {
+        ignoredSectionDepth++;
     }
 
     public void leaveIgnoredSection() {
-        inIgnoredSection = false;
+        ignoredSectionDepth--;
+    }
+
+    public int saveIgnoredSectionDepth() {
+        int depth = ignoredSectionDepth;
+        ignoredSectionDepth = 0;
+        return depth;
+    }
+
+    public void restoreIgnoredSectionDepth(int depth) {
+        ignoredSectionDepth = depth;
     }
 
     public boolean inTestingCode() {

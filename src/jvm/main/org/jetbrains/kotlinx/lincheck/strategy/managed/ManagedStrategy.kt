@@ -1201,23 +1201,23 @@ abstract class ManagedStrategy(
     }
 
     protected fun enterTestingCode() {
-        return Injections.enterTestingCode();
+        return Injections.enterTestingCode()
     }
 
     protected fun leaveTestingCode() {
-        return Injections.leaveTestingCode();
+        return Injections.leaveTestingCode()
     }
 
     protected fun inIgnoredSection(): Boolean {
-        return Injections.inIgnoredSection();
+        return Injections.inIgnoredSection()
     }
 
-    protected fun enterIgnoredSection(): Boolean {
-        return Injections.enterIgnoredSection()
+    protected fun enterIgnoredSection() {
+        Injections.enterIgnoredSection()
     }
 
     protected fun leaveIgnoredSection() {
-        return Injections.leaveIgnoredSection()
+        Injections.leaveIgnoredSection()
     }
 
     override fun beforeNewObjectCreation(className: String) = runInIgnoredSection {
@@ -1384,7 +1384,7 @@ abstract class ManagedStrategy(
             if (threadScheduler.isAborted(threadId)) {
                 threadScheduler.abortCurrentThread()
             }
-            // first check if the called method is an atomics API method
+            // check if the called method is an atomics API method
             // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
             val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodName)
             // get method's concurrency guarantee
@@ -1431,9 +1431,6 @@ abstract class ManagedStrategy(
         // if the method is atomic or should be ignored, then we enter an ignored section
         if (guarantee == ManagedGuaranteeType.IGNORE ||
             guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC) {
-            // It's important that this method called outside `runInIgnoredSection`, as the ignored section
-            // flag would be set to false when leaving `runInIgnoredSection`,
-            // so `enterIgnoredSection` would have no effect
             enterIgnoredSection()
         }
         val deterministicMethodDescriptor = runInIgnoredSection {
@@ -1457,7 +1454,7 @@ abstract class ManagedStrategy(
         params: Array<Any?>,
         result: Any?
     ) {
-        runInIgnoredSection {
+        val guarantee = runInIgnoredSection {
             if (isInTraceDebuggerMode && isFirstReplay && descriptor != null) {
                 require(descriptor is DeterministicMethodDescriptor<*, *>)
                 descriptor.saveFirstResultWithCast(receiver, params, KResult.success(result)) {
@@ -1465,14 +1462,22 @@ abstract class ManagedStrategy(
                 }
             }
             loopDetector.afterMethodCall()
+            val threadId = threadScheduler.getCurrentThreadId()
+            // check if the called method is an atomics API method
+            // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
+            val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodName)
+            // get method's concurrency guarantee
+            val guarantee = when {
+                (atomicMethodDescriptor != null) -> ManagedGuaranteeType.TREAT_AS_ATOMIC
+                else -> methodGuaranteeType(receiver, className, methodName)
+            }
             if (collectTrace) {
-                val threadId = threadScheduler.getCurrentThreadId()
                 // this case is possible and can occur when we resume the coroutine,
                 // and it results in a call to a top-level actor `suspend` function;
                 // currently top-level actor functions are not represented in the `callStackTrace`,
                 // we should probably refactor and fix that, because it is very inconvenient
                 if (callStackTrace[threadId]!!.isEmpty())
-                    return@runInIgnoredSection
+                    return@runInIgnoredSection guarantee
                 val tracePoint = callStackTrace[threadId]!!.last().tracePoint
                 when (result) {
                     Unit -> tracePoint.initializeVoidReturnedValue()
@@ -1483,11 +1488,13 @@ abstract class ManagedStrategy(
                 afterMethodCall(threadId, tracePoint)
                 traceCollector!!.addStateRepresentation()
             }
+            guarantee
         }
-        // In case the code is now in an "ignore" section due to
-        // an "atomic" or "ignore" guarantee, we need to leave
-        // this "ignore" section.
-        leaveIgnoredSection()
+        // if the method is atomic or ignored, then we leave an ignored section
+        if (guarantee == ManagedGuaranteeType.IGNORE ||
+            guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC) {
+            leaveIgnoredSection()
+        }
     }
 
     override fun onMethodCallException(
@@ -1507,29 +1514,36 @@ abstract class ManagedStrategy(
                 }
             }
         }
-        runInIgnoredSection {
+        val guarantee = runInIgnoredSection {
             loopDetector.afterMethodCall()
-        }
-        if (collectTrace) {
-            runInIgnoredSection {
-                // We cannot simply read `thread` as `ThreadAbortedError` can be thrown.
-                val threadId = threadScheduler.getCurrentThreadId()
+            val threadId = threadScheduler.getCurrentThreadId()
+            // check if the called method is an atomics API method
+            // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
+            val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodName)
+            // get method's concurrency guarantee
+            val guarantee = when {
+                (atomicMethodDescriptor != null) -> ManagedGuaranteeType.TREAT_AS_ATOMIC
+                else -> methodGuaranteeType(receiver, className, methodName)
+            }
+            if (collectTrace) {
                 // this case is possible and can occur when we resume the coroutine,
                 // and it results in a call to a top-level actor `suspend` function;
                 // currently top-level actor functions are not represented in the `callStackTrace`,
                 // we should probably refactor and fix that, because it is very inconvenient
                 if (callStackTrace[threadId]!!.isEmpty())
-                    return@runInIgnoredSection
+                    return@runInIgnoredSection guarantee
                 val tracePoint = callStackTrace[threadId]!!.last().tracePoint
                 tracePoint.initializeThrownException(throwable)
                 afterMethodCall(threadId, tracePoint)
                 traceCollector!!.addStateRepresentation()
             }
+            guarantee
         }
-        // In case the code is now in an "ignore" section due to
-        // an "atomic" or "ignore" guarantee, we need to leave
-        // this "ignore" section.
-        leaveIgnoredSection()
+        // if the method is atomic or ignored, then we leave an ignored section
+        if (guarantee == ManagedGuaranteeType.IGNORE ||
+            guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC) {
+            leaveIgnoredSection()
+        }
     }
 
     private fun <T> KResult<T>.toBootstrapResult() =

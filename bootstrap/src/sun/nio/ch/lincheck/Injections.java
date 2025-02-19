@@ -84,20 +84,22 @@ public class Injections {
      * Enters an ignored section for the current thread.
      * A code inside the ignored section is not analyzed by the Lincheck.
      *
-     * Note that the thread may not actually enter the ignored section in the following cases.
-     *   1. The thread is not registered in the Lincheck strategy.
-     *   2. The thread is already inside the ignored section.
-     *
-     * @return true if the thread successfully entered the ignored section, false otherwise.
+     * <p>
+     * Has no effect on if the current thread is untracked,
+     * that is not registered in the Lincheck strategy.
      */
-    public static boolean enterIgnoredSection() {
+    public static void enterIgnoredSection() {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
-        if (descriptor == null) return false;
-        return descriptor.enterIgnoredSection();
+        if (descriptor == null) return;
+        descriptor.enterIgnoredSection();
     }
 
     /**
      * Leaves an ignored section for the current thread.
+     *
+     * <p>
+     * Has no effect on if the current thread is untracked,
+     * that is not registered in the Lincheck strategy.
      */
     public static void leaveIgnoredSection() {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
@@ -372,21 +374,21 @@ public class Injections {
      * @return Deterministic call descriptor or null.
      */
     public static Object onMethodCall(String className, String methodName, int codeLocation, int methodId, String methodDesc, Object receiver, Object[] params) {
-        // to safely construct the method signature we need to enter ignored section
-        // because it internally calls code which has instrumentation
-        boolean entered = enterIgnoredSection();
+        // to safely construct the method signature, we need to enter an ignored section
+        // because it internally calls code which can be instrumented
+        enterIgnoredSection();
         MethodSignature methodSignature;
         try {
             methodSignature = new MethodSignature(methodName, convertAsmMethodType(methodDesc));
         } finally {
-            if (entered) leaveIgnoredSection();
+            leaveIgnoredSection();
         }
         return getEventTracker().onMethodCall(className, methodName, codeLocation, methodId, methodSignature, receiver, params);
     }
 
     /**
      * Called from the instrumented code after any method successful call, i.e., without any exception.
-     * 
+     *
      * @param descriptor Deterministic call descriptor or null.
      * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
      * @param result The call result.
@@ -397,7 +399,7 @@ public class Injections {
 
     /**
      * Called from the instrumented code after any method that returns void successful call, i.e., without any exception.
-     * 
+     *
      * @param descriptor Deterministic call descriptor or null.
      * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
      */

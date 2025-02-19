@@ -243,23 +243,16 @@ private class WrapMethodInIgnoredSectionTransformer(
     methodName: String,
     adapter: GeneratorAdapter,
 ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
-    private var enteredInIgnoredSectionLocal = 0
 
     override fun visitCode() = adapter.run {
-        enteredInIgnoredSectionLocal = newLocal(BOOLEAN_TYPE)
-        invokeStatic(Injections::enterIgnoredSection)
-        storeLocal(enteredInIgnoredSectionLocal)
         visitCode()
+        invokeStatic(Injections::enterIgnoredSection)
     }
 
     override fun visitInsn(opcode: Int) = adapter.run {
         when (opcode) {
             ARETURN, DRETURN, FRETURN, IRETURN, LRETURN, RETURN -> {
-                ifStatement(
-                    condition = { loadLocal(enteredInIgnoredSectionLocal) },
-                    thenClause = { invokeStatic(Injections::leaveIgnoredSection) },
-                    elseClause = {}
-                )
+                invokeStatic(Injections::leaveIgnoredSection)
             }
         }
         visitInsn(opcode)

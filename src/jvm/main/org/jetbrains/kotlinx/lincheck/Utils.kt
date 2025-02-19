@@ -273,7 +273,7 @@ internal inline fun <R> runInIgnoredSection(descriptor: ThreadDescriptor?, block
     if (descriptor.inIgnoredSection()) {
         return block()
     }
-    descriptor.enterIgnoredSection().ensureTrue()
+    descriptor.enterIgnoredSection()
     return try {
         block()
     } finally {
@@ -296,11 +296,11 @@ internal inline fun <R> runOutsideIgnoredSection(descriptor: ThreadDescriptor?, 
     check(descriptor.inIgnoredSection()) {
         "Current thread must be in ignored section"
     }
-    descriptor.leaveIgnoredSection()
+    val depth = descriptor.saveIgnoredSectionDepth()
     return try {
         block()
     } finally {
-        descriptor.enterIgnoredSection().ensureTrue()
+        descriptor.restoreIgnoredSectionDepth(depth)
     }
 }
 
