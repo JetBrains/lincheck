@@ -86,7 +86,7 @@ private class TraceDebuggerRunMethodTransformer(
             condition = {
                 invokeStatic(TraceDebuggerInjections::isFirstRun)
             },
-            ifClause = {
+            thenClause = {
                 push(classUnderTraceDebugging)
                 push(methodUnderTraceDebugging)
                 // STACK: testClassName, testMethodName

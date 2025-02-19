@@ -133,7 +133,7 @@ fun GeneratorAdapter.customGetOrThrow(successType: Type) {
     dup()
     ifStatement(
         condition = { instanceOf(throwableWrapperType) },
-        ifClause = {
+        thenClause = {
             invokeStatic(ThrowableWrapper::throwable)
             throwException()
         },
