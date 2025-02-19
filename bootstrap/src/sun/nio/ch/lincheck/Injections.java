@@ -291,20 +291,6 @@ public class Injections {
     }
 
     /**
-     * Called from the instrumented code to replace `ThreadLocalRandom.nextInt(origin, bound)` with a deterministic random value.
-     */
-    public static int nextInt2(int origin, int bound) {
-        boolean enteredIgnoredSection = enterIgnoredSection();
-        try {
-            return deterministicRandom().nextInt(bound);
-        } finally {
-            if (enteredIgnoredSection) {
-                leaveIgnoredSection();
-            }
-        }
-    }
-
-    /**
      * Called from the instrumented code to get a random instance that is deterministic and controlled by Lincheck.
      */
     public static Random deterministicRandom() {

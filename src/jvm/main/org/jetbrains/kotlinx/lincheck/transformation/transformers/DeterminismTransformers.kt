@@ -17,7 +17,9 @@ import org.objectweb.asm.Type.getType
 import org.objectweb.asm.commons.Method
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.objectweb.asm.Opcodes
 import sun.nio.ch.lincheck.*
+import java.lang.reflect.Modifier
 import java.util.*
 
 /**
@@ -126,16 +128,25 @@ internal abstract class AbstractDeterministicTimeMethodTransformer(val adapter: 
     }
 }
 
-/**
- * [DeterministicRandomTransformer] tracks invocations of various random number generation functions,
- * such as [Random.nextInt], and replaces them with corresponding [Injections] methods to prevent non-determinism.
- */
-internal class DeterministicRandomTransformer(
+internal abstract class AbstractDeterministicRandomTransformer(
     fileName: String,
     className: String,
     methodName: String,
     adapter: GeneratorAdapter,
 ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
+    protected abstract fun GeneratorAdapter.generateInstrumentedCodeForNextSecondarySeedAndGetProbe(
+        opcode: Int, owner: String, name: String, desc: String, itf: Boolean,
+    )
+
+    protected abstract fun GeneratorAdapter.generateInstrumentedCodeForAdvanceProbe(
+        opcode: Int, owner: String, name: String, desc: String, itf: Boolean,
+    )
+
+    protected abstract fun GeneratorAdapter.generateInstrumentedCodeForRegularRandomMethod(
+        opcode: Int, owner: String, name: String, desc: String, itf: Boolean,
+        receiverLocal: Int,
+        argumentsLocals: IntArray,
+    )
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         if (owner == "java/util/concurrent/ThreadLocalRandom" ||
@@ -151,7 +162,7 @@ internal class DeterministicRandomTransformer(
                         visitMethodInsn(opcode, owner, name, desc, itf)
                     },
                     code = {
-                        invokeStatic(Injections::nextInt)
+                        generateInstrumentedCodeForNextSecondarySeedAndGetProbe(opcode, owner, name, desc, itf)
                     }
                 )
                 return
@@ -162,28 +173,13 @@ internal class DeterministicRandomTransformer(
                         visitMethodInsn(opcode, owner, name, desc, itf)
                     },
                     code = {
-                        pop()
-                        invokeStatic(Injections::nextInt)
-                    }
-                )
-                return
-            }
-            if (name == "nextInt" && desc == "(II)I") {
-                invokeIfInTestingCode(
-                    original = {
-                        visitMethodInsn(opcode, owner, name, desc, itf)
-                    },
-                    code = {
-                        val arguments = storeArguments(desc)
-                        pop()
-                        loadLocals(arguments)
-                        invokeStatic(Injections::nextInt2)
+                        generateInstrumentedCodeForAdvanceProbe(opcode, owner, name, desc, itf)
                     }
                 )
                 return
             }
         }
-        if (isRandomMethod(name, desc)) {
+        if (isRandomMethod(opcode, name, desc)) {
             invokeIfInTestingCode(
                 original = {
                     visitMethodInsn(opcode, owner, name, desc, itf)
@@ -197,17 +193,8 @@ internal class DeterministicRandomTransformer(
                             loadLocal(ownerLocal)
                             invokeStatic(Injections::isRandom)
                         },
-                        ifClause = {
-                            invokeInIgnoredSection {
-                                invokeStatic(Injections::deterministicRandom)
-                                loadLocals(arguments)
-                                /*
-                                 * In Java 21 RandomGenerator interface was introduced,
-                                 * so sometimes data structures interact with java.util.Random through this interface.
-                                 */
-                                val randomOwner = if (owner.endsWith("RandomGenerator")) "java/util/random/RandomGenerator" else "java/util/Random"
-                                visitMethodInsn(opcode, randomOwner, name, desc, itf)
-                            }
+                        thenClause = {
+                            generateInstrumentedCodeForRegularRandomMethod(opcode, owner, name, desc, itf, ownerLocal, arguments)
                         },
                         elseClause = {
                             loadLocal(ownerLocal)
@@ -222,12 +209,75 @@ internal class DeterministicRandomTransformer(
         visitMethodInsn(opcode, owner, name, desc, itf)
     }
 
-    private fun isRandomMethod(methodName: String, desc: String): Boolean = RANDOM_METHODS.any {
-        it.name == methodName && it.descriptor == desc
+    private fun isRandomMethod(opcode: Int, methodName: String, desc: String): Boolean = allRandomMethods.any {
+        opcode.isInstanceMethodOpcode && it.name == methodName && it.descriptor == desc
     }
 
     private companion object {
-        private val RANDOM_METHODS = Random::class.java.declaredMethods.map { Method.getMethod(it) }
+        private val randomGeneratorClass = runCatching { Class.forName("java.util.random.RandomGenerator") }.getOrNull()
+        private fun Class<*>.getMethodsToReplace() = declaredMethods
+            .filter { Modifier.isPublic(it.modifiers) || Modifier.isProtected(it.modifiers) }
+            .map { Method.getMethod(it) }
+        private val randomGeneratorMethods = randomGeneratorClass?.getMethodsToReplace() ?: emptyList()
+        private val randomClassMethods = Random::class.java.getMethodsToReplace()
+        private val allRandomMethods = randomGeneratorMethods + randomClassMethods
+        private val Int.isInstanceMethodOpcode
+            get() = when (this) {
+                Opcodes.INVOKEVIRTUAL, Opcodes.INVOKEINTERFACE, Opcodes.INVOKESPECIAL -> true
+                else -> false
+            }
     }
 }
 
+/**
+ * [FakeDeterministicRandomTransformer] tracks invocations of various random number generation functions,
+ * such as [Random.nextInt], and replaces them with corresponding [Injections] methods to prevent non-determinism.
+ */
+internal class FakeDeterministicRandomTransformer(
+    fileName: String,
+    className: String,
+    methodName: String,
+    adapter: GeneratorAdapter,
+) : AbstractDeterministicRandomTransformer(fileName, className, methodName, adapter) {
+    override fun GeneratorAdapter.generateInstrumentedCodeForNextSecondarySeedAndGetProbe(
+        opcode: Int,
+        owner: String,
+        name: String,
+        desc: String,
+        itf: Boolean
+    ) {
+        invokeStatic(Injections::nextInt)
+    }
+
+    override fun GeneratorAdapter.generateInstrumentedCodeForAdvanceProbe(
+        opcode: Int,
+        owner: String,
+        name: String,
+        desc: String,
+        itf: Boolean
+    ) {
+        pop()
+        invokeStatic(Injections::nextInt)
+    }
+
+    override fun GeneratorAdapter.generateInstrumentedCodeForRegularRandomMethod(
+        opcode: Int,
+        owner: String,
+        name: String,
+        desc: String,
+        itf: Boolean,
+        receiverLocal: Int,
+        argumentsLocals: IntArray,
+    ) {
+        invokeInIgnoredSection {
+            invokeStatic(Injections::deterministicRandom)
+            loadLocals(argumentsLocals)
+            /*
+             * In Java 21 RandomGenerator interface was introduced,
+             * so sometimes data structures interact with java.util.Random through this interface.
+             */
+            val randomOwner = if (owner.endsWith("RandomGenerator")) "java/util/random/RandomGenerator" else "java/util/Random"
+            visitMethodInsn(opcode, randomOwner, name, desc, itf)
+        }
+    }
+}
