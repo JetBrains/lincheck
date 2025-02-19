@@ -251,14 +251,14 @@ abstract class ManagedStrategy(
             // If strategy has not detected a sudden invocation result,
             // then return, otherwise process the sudden result.
             val suddenResult = suddenInvocationResult ?: return result
-            // Unexpected `ThreadAbortedError` should be thrown.
-            check(result is UnexpectedExceptionInvocationResult)
             // Check if an invocation replay is required
             val isReplayRequired = (suddenResult is SpinCycleFoundAndReplayRequired)
             if (isReplayRequired) {
                 enableSpinCycleReplay()
                 continue
             }
+            // Unexpected `ThreadAbortedError` should be thrown.
+            check(result is UnexpectedExceptionInvocationResult)
             // Otherwise return the sudden result
             return suddenResult
         }
