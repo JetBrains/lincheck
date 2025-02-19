@@ -385,13 +385,16 @@ internal inline fun GeneratorAdapter.invokeIfInTestingCode(
  *
  * @param code A block of bytecode to be executed inside the ignored section.
  */
-internal inline fun GeneratorAdapter.invokeInIgnoredSection(
+internal fun GeneratorAdapter.invokeInIgnoredSection(
     code: GeneratorAdapter.() -> Unit
 ) {
-    // TODO: wrap into try-finally
     invokeStatic(Injections::enterIgnoredSection)
-    code()
-    invokeStatic(Injections::leaveIgnoredSection)
+    tryCatchFinally(
+        tryBlock = { code() },
+        finallyBlock = {
+            invokeStatic(Injections::leaveIgnoredSection)
+        },
+    )
 }
 
 /**
