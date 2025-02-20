@@ -649,6 +649,12 @@ abstract class ManagedStrategy(
     fun getRegisteredThreads(): ThreadMap<Thread> =
         threadScheduler.getRegisteredThreads()
 
+    protected fun isRegisteredThread(): Boolean {
+        val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor()
+            ?: return false
+        return (threadDescriptor.eventTracker === this)
+    }
+
     /**
      * This method is executed as the first thread action.
      *
@@ -1000,7 +1006,7 @@ abstract class ManagedStrategy(
      * Returns `true` if a switch point is created.
      */
     override fun beforeReadField(obj: Any?, className: String, fieldName: String, codeLocation: Int,
-                                 isStatic: Boolean, isFinal: Boolean) = runInsideIgnoredSection {
+                                 isStatic: Boolean, isFinal: Boolean): Boolean = runInsideIgnoredSection {
         updateSnapshotOnFieldAccess(obj, className, fieldName)
         // We need to ensure all the classes related to the reading object are instrumented.
         // The following call checks all the static fields.
@@ -1009,11 +1015,11 @@ abstract class ManagedStrategy(
         }
         // Optimization: do not track final field reads
         if (isFinal) {
-            return@runInsideIgnoredSection false
+            return false
         }
         // Do not track accesses to untracked objects
         if (!shouldTrackObjectAccess(obj)) {
-            return@runInsideIgnoredSection false
+            return false
         }
         val iThread = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
@@ -1034,14 +1040,14 @@ abstract class ManagedStrategy(
         }
         newSwitchPoint(iThread, codeLocation, tracePoint)
         loopDetector.beforeReadField(obj)
-        return@runInsideIgnoredSection true
+        return true
     }
 
     /** Returns <code>true</code> if a switch point is created. */
     override fun beforeReadArrayElement(array: Any, index: Int, codeLocation: Int): Boolean = runInsideIgnoredSection {
         updateSnapshotOnArrayElementAccess(array, index)
         if (!shouldTrackObjectAccess(array)) {
-            return@runInsideIgnoredSection false
+            return false
         }
         val iThread = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
@@ -1062,14 +1068,14 @@ abstract class ManagedStrategy(
         }
         newSwitchPoint(iThread, codeLocation, tracePoint)
         loopDetector.beforeReadArrayElement(array, index)
-        true
+        return true
     }
 
     override fun afterRead(value: Any?) = runInsideIgnoredSection {
         if (collectTrace) {
-                val iThread = threadScheduler.getCurrentThreadId()
-                lastReadTracePoint[iThread]?.initializeReadValue(adornedStringRepresentation(value), objectFqTypeName(value))
-                lastReadTracePoint[iThread] = null
+            val iThread = threadScheduler.getCurrentThreadId()
+            lastReadTracePoint[iThread]?.initializeReadValue(adornedStringRepresentation(value), objectFqTypeName(value))
+            lastReadTracePoint[iThread] = null
         }
         loopDetector.afterRead(value)
     }
@@ -1079,11 +1085,11 @@ abstract class ManagedStrategy(
         updateSnapshotOnFieldAccess(obj, className, fieldName)
         objectTracker?.registerObjectLink(fromObject = obj ?: StaticObject, toObject = value)
         if (!shouldTrackObjectAccess(obj)) {
-            return@runInsideIgnoredSection false
+            return false
         }
         // Optimization: do not track final field writes
         if (isFinal) {
-            return@runInsideIgnoredSection false
+            return false
         }
         val iThread = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
@@ -1103,14 +1109,14 @@ abstract class ManagedStrategy(
         }
         newSwitchPoint(iThread, codeLocation, tracePoint)
         loopDetector.beforeWriteField(obj, value)
-        return@runInsideIgnoredSection true
+        return true
     }
 
     override fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int): Boolean = runInsideIgnoredSection {
         updateSnapshotOnArrayElementAccess(array, index)
         objectTracker?.registerObjectLink(fromObject = array, toObject = value)
         if (!shouldTrackObjectAccess(array)) {
-            return@runInsideIgnoredSection false
+            return false
         }
         val iThread = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
@@ -1193,28 +1199,6 @@ abstract class ManagedStrategy(
 
     override fun randomNextInt(): Int = runInsideIgnoredSection {
         getThreadLocalRandom().nextInt()
-    }
-
-    protected fun isRegisteredThread(): Boolean {
-        val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor()
-            ?: return false
-        return (threadDescriptor.eventTracker === this)
-    }
-
-    protected fun enableAnalysis() {
-        return Injections.enableAnalysis()
-    }
-
-    protected fun disableAnalysis() {
-        return Injections.disableAnalysis()
-    }
-
-    protected fun enterIgnoredSection() {
-        Injections.enterIgnoredSection()
-    }
-
-    protected fun leaveIgnoredSection() {
-        Injections.leaveIgnoredSection()
     }
 
     override fun beforeNewObjectCreation(className: String) = runInsideIgnoredSection {
@@ -1372,72 +1356,67 @@ abstract class ManagedStrategy(
         methodSignature: MethodSignature,
         receiver: Any?,
         params: Array<Any?>
-    ): Any? {
-        val guarantee = runInsideIgnoredSection {
-            // process method effect on the static memory snapshot
-            processMethodEffectOnStaticSnapshot(receiver, params)
-            // re-throw abort error if the thread was aborted
-            val threadId = threadScheduler.getCurrentThreadId()
-            if (threadScheduler.isAborted(threadId)) {
-                threadScheduler.abortCurrentThread()
-            }
-            // check if the called method is an atomics API method
-            // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
-            val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodName)
-            // get method's concurrency guarantee
-            val guarantee = when {
-                (atomicMethodDescriptor != null) -> ManagedGuaranteeType.TREAT_AS_ATOMIC
-                else -> methodGuaranteeType(receiver, className, methodName)
-            }
-            // in case if a static method is called, ensure its class is instrumented
-            if (receiver == null && atomicMethodDescriptor == null && guarantee == null) { // static method
-                LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
-            }
-            // in case of atomics API setter method call, notify the object tracker about a new link between objects
-            if (atomicMethodDescriptor != null && atomicMethodDescriptor.kind.isSetter) {
-                objectTracker?.registerObjectLink(
-                    fromObject = atomicMethodDescriptor.getAccessedObject(receiver!!, params),
-                    toObject = atomicMethodDescriptor.getSetValue(receiver, params)
-                )
-            }
-            // check for livelock and create the method call trace point
-            if (collectTrace) {
-                traceCollector!!.checkActiveLockDetected()
-                addBeforeMethodCallTracePoint(threadId, receiver, codeLocation, methodId, className, methodName, params,
-                    atomicMethodDescriptor
-                )
-            }
-            // in case of an atomic method, we create a switch point before the method call;
-            // note that in case we resume atomic method there is no need to create the switch point,
-            // since there is already a switch point between the suspension point and resumption
-            if (guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC &&
-                // do not create a trace point on resumption
-                !isResumptionMethodCall(threadId, className, methodName, params, atomicMethodDescriptor)
-            ) {
-                // re-use last call trace point
-                newSwitchPoint(threadId, codeLocation, callStackTrace[threadId]!!.lastOrNull()?.tracePoint)
-                loopDetector.passParameters(params)
-            }
-            // notify loop detector about the method call
-            if (guarantee == null) {
-                loopDetector.beforeMethodCall(codeLocation, params)
-            }
-            // method's guarantee
-            guarantee
+    ): Any? = runInsideIgnoredSection {
+        // process method effect on the static memory snapshot
+        processMethodEffectOnStaticSnapshot(receiver, params)
+        // re-throw abort error if the thread was aborted
+        val threadId = threadScheduler.getCurrentThreadId()
+        if (threadScheduler.isAborted(threadId)) {
+            threadScheduler.abortCurrentThread()
         }
+        // check if the called method is an atomics API method
+        // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
+        val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodName)
+        // get method's concurrency guarantee
+        val guarantee = when {
+            (atomicMethodDescriptor != null) -> ManagedGuaranteeType.TREAT_AS_ATOMIC
+            else -> methodGuaranteeType(receiver, className, methodName)
+        }
+        // in case if a static method is called, ensure its class is instrumented
+        if (receiver == null && atomicMethodDescriptor == null && guarantee == null) { // static method
+            LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
+        }
+        // in case of atomics API setter method call, notify the object tracker about a new link between objects
+        if (atomicMethodDescriptor != null && atomicMethodDescriptor.kind.isSetter) {
+            objectTracker?.registerObjectLink(
+                fromObject = atomicMethodDescriptor.getAccessedObject(receiver!!, params),
+                toObject = atomicMethodDescriptor.getSetValue(receiver, params)
+            )
+        }
+        // check for livelock and create the method call trace point
+        if (collectTrace) {
+            traceCollector!!.checkActiveLockDetected()
+            addBeforeMethodCallTracePoint(threadId, receiver, codeLocation, methodId, className, methodName, params,
+                atomicMethodDescriptor
+            )
+        }
+        // in case of an atomic method, we create a switch point before the method call;
+        // note that in case we resume atomic method there is no need to create the switch point,
+        // since there is already a switch point between the suspension point and resumption
+        if (guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC &&
+            // do not create a trace point on resumption
+            !isResumptionMethodCall(threadId, className, methodName, params, atomicMethodDescriptor)
+        ) {
+            // re-use last call trace point
+            newSwitchPoint(threadId, codeLocation, callStackTrace[threadId]!!.lastOrNull()?.tracePoint)
+            loopDetector.passParameters(params)
+        }
+        // notify loop detector about the method call
+        if (guarantee == null) {
+            loopDetector.beforeMethodCall(codeLocation, params)
+        }
+        // obtain deterministic method descriptor if required
+        val methodCallInfo = MethodCallInfo(
+            ownerType = Types.ObjectType(className),
+            methodSignature = methodSignature,
+            codeLocation = codeLocation,
+            methodId = methodId,
+        )
+        val deterministicMethodDescriptor = getDeterministicMethodDescriptorOrNull(methodCallInfo)
         // if the method is atomic or should be ignored, then we enter an ignored section
         if (guarantee == ManagedGuaranteeType.IGNORE ||
             guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC) {
             enterIgnoredSection()
-        }
-        val deterministicMethodDescriptor = runInsideIgnoredSection {
-            val methodCallInfo = MethodCallInfo(
-                ownerType = Types.ObjectType(className),
-                methodSignature = methodSignature,
-                codeLocation = codeLocation,
-                methodId = methodId,
-            )
-            getDeterministicMethodDescriptorOrNull(methodCallInfo)
         }
         return deterministicMethodDescriptor
     }
@@ -1450,31 +1429,29 @@ abstract class ManagedStrategy(
         receiver: Any?,
         params: Array<Any?>,
         result: Any?
-    ) {
-        val guarantee = runInsideIgnoredSection {
-            if (isInTraceDebuggerMode && isFirstReplay && descriptor != null) {
-                require(descriptor is DeterministicMethodDescriptor<*, *>)
-                descriptor.saveFirstResultWithCast(receiver, params, KResult.success(result)) {
-                    nativeMethodCallStatesTracker.setState(descriptorId, descriptor.methodCallInfo, it)
-                }
+    ) = runInsideIgnoredSection {
+        if (isInTraceDebuggerMode && isFirstReplay && descriptor != null) {
+            require(descriptor is DeterministicMethodDescriptor<*, *>)
+            descriptor.saveFirstResultWithCast(receiver, params, KResult.success(result)) {
+                nativeMethodCallStatesTracker.setState(descriptorId, descriptor.methodCallInfo, it)
             }
-            loopDetector.afterMethodCall()
-            val threadId = threadScheduler.getCurrentThreadId()
-            // check if the called method is an atomics API method
-            // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
-            val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodName)
-            // get method's concurrency guarantee
-            val guarantee = when {
-                (atomicMethodDescriptor != null) -> ManagedGuaranteeType.TREAT_AS_ATOMIC
-                else -> methodGuaranteeType(receiver, className, methodName)
-            }
-            if (collectTrace) {
-                // this case is possible and can occur when we resume the coroutine,
-                // and it results in a call to a top-level actor `suspend` function;
-                // currently top-level actor functions are not represented in the `callStackTrace`,
-                // we should probably refactor and fix that, because it is very inconvenient
-                if (callStackTrace[threadId]!!.isEmpty())
-                    return@runInsideIgnoredSection guarantee
+        }
+        loopDetector.afterMethodCall()
+        val threadId = threadScheduler.getCurrentThreadId()
+        // check if the called method is an atomics API method
+        // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
+        val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodName)
+        // get method's concurrency guarantee
+        val guarantee = when {
+            (atomicMethodDescriptor != null) -> ManagedGuaranteeType.TREAT_AS_ATOMIC
+            else -> methodGuaranteeType(receiver, className, methodName)
+        }
+        if (collectTrace) {
+            // an empty stack trace case is possible and can occur when we resume the coroutine,
+            // and it results in a call to a top-level actor `suspend` function;
+            // currently top-level actor functions are not represented in the `callStackTrace`,
+            // we should probably refactor and fix that, because it is very inconvenient
+            if (callStackTrace[threadId]!!.isNotEmpty()) {
                 val tracePoint = callStackTrace[threadId]!!.last().tracePoint
                 when (result) {
                     Unit -> tracePoint.initializeVoidReturnedValue()
@@ -1485,7 +1462,6 @@ abstract class ManagedStrategy(
                 afterMethodCall(threadId, tracePoint)
                 traceCollector!!.addStateRepresentation()
             }
-            guarantee
         }
         // if the method is atomic or ignored, then we leave an ignored section
         if (guarantee == ManagedGuaranteeType.IGNORE ||
@@ -1502,39 +1478,33 @@ abstract class ManagedStrategy(
         receiver: Any?,
         params: Array<Any?>,
         throwable: Throwable
-    ) {
+    ) = runInsideIgnoredSection {
         if (isInTraceDebuggerMode && isFirstReplay && descriptor != null) {
             require(descriptor is DeterministicMethodDescriptor<*, *>)
-            runInsideIgnoredSection {
-                descriptor.saveFirstResult(receiver, params, KResult.failure(throwable)) {
-                    nativeMethodCallStatesTracker.setState(descriptorId, descriptor.methodCallInfo, it)
-                }
+            descriptor.saveFirstResult(receiver, params, KResult.failure(throwable)) {
+                nativeMethodCallStatesTracker.setState(descriptorId, descriptor.methodCallInfo, it)
             }
         }
-        val guarantee = runInsideIgnoredSection {
-            loopDetector.afterMethodCall()
-            val threadId = threadScheduler.getCurrentThreadId()
-            // check if the called method is an atomics API method
-            // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
-            val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodName)
-            // get method's concurrency guarantee
-            val guarantee = when {
-                (atomicMethodDescriptor != null) -> ManagedGuaranteeType.TREAT_AS_ATOMIC
-                else -> methodGuaranteeType(receiver, className, methodName)
-            }
-            if (collectTrace) {
-                // this case is possible and can occur when we resume the coroutine,
-                // and it results in a call to a top-level actor `suspend` function;
-                // currently top-level actor functions are not represented in the `callStackTrace`,
-                // we should probably refactor and fix that, because it is very inconvenient
-                if (callStackTrace[threadId]!!.isEmpty())
-                    return@runInsideIgnoredSection guarantee
-                val tracePoint = callStackTrace[threadId]!!.last().tracePoint
-                tracePoint.initializeThrownException(throwable)
-                afterMethodCall(threadId, tracePoint)
-                traceCollector!!.addStateRepresentation()
-            }
-            guarantee
+        loopDetector.afterMethodCall()
+        val threadId = threadScheduler.getCurrentThreadId()
+        // check if the called method is an atomics API method
+        // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
+        val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodName)
+        // get method's concurrency guarantee
+        val guarantee = when {
+            (atomicMethodDescriptor != null) -> ManagedGuaranteeType.TREAT_AS_ATOMIC
+            else -> methodGuaranteeType(receiver, className, methodName)
+        }
+        if (collectTrace) {
+            // this case is possible and can occur when we resume the coroutine,
+            // and it results in a call to a top-level actor `suspend` function;
+            // currently top-level actor functions are not represented in the `callStackTrace`,
+            // we should probably refactor and fix that, because it is very inconvenient
+            if (callStackTrace[threadId]!!.isEmpty()) return
+            val tracePoint = callStackTrace[threadId]!!.last().tracePoint
+            tracePoint.initializeThrownException(throwable)
+            afterMethodCall(threadId, tracePoint)
+            traceCollector!!.addStateRepresentation()
         }
         // if the method is atomic or ignored, then we leave an ignored section
         if (guarantee == ManagedGuaranteeType.IGNORE ||
@@ -1924,6 +1894,22 @@ abstract class ManagedStrategy(
             suspendedFunctionsStack[iThread]!!.add(callStackTrace.last())
         }
         callStackTrace.removeLast()
+    }
+
+    protected fun enableAnalysis() {
+        return Injections.enableAnalysis()
+    }
+
+    protected fun disableAnalysis() {
+        return Injections.disableAnalysis()
+    }
+
+    protected fun enterIgnoredSection() {
+        Injections.enterIgnoredSection()
+    }
+
+    protected fun leaveIgnoredSection() {
+        Injections.leaveIgnoredSection()
     }
 
     // == LOGGING METHODS ==
