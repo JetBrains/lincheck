@@ -25,10 +25,21 @@ data class Trace(
     }
 }
 
-private val threadDefaultValues = listOf("true", "false", "null", "null", "-1", "")
-private val threadParamNames = listOf("start", "isDaemon", "contextClassLoader", "name", "priority", "block")
-private const val THREAD_CLASS_NAME = "kotlin.concurrent.ThreadsKt"
-internal const val THREAD_FUN_NAME = "thread"
+private data class FunctionInfo(
+    val className: String,
+    val functionName: String,
+    val parameterNames: List<String>,
+    val defaultParameterValues: List<String>, 
+) {
+    init { check(parameterNames.size == defaultParameterValues.size) }
+}
+
+private val threadFunctionInfo = FunctionInfo(
+    className = "kotlin.concurrent.ThreadsKt",
+    functionName = "thread",
+    parameterNames = listOf("start", "isDaemon", "contextClassLoader", "name", "priority", "block"),
+    defaultParameterValues = listOf("true", "false", "null", "null", "-1", "")
+)
 
 
 /**
@@ -200,23 +211,16 @@ internal class MethodCallTracePoint(
     
     private fun StringBuilder.appendThreadCreation() {
         append("thread")
-        val params = parameters?.let { getNonDefaultParametersWithName(threadParamNames, threadDefaultValues, it) } 
+        val params = parameters?.let { getNonDefaultParametersWithName(threadFunctionInfo, it) } 
             ?: emptyList()
         if (!params.isEmpty()) {
-            append("(")
-            append(params.joinToString(", "))
-            append(")")
+            append("(${params.joinToString(", ")})")
         }
     }
     
     private fun StringBuilder.appendDefaultMethodCall() {
         if (ownerName != null) append("$ownerName.")
-        append("$methodName(")
-        val parameters = parameters
-        if (parameters != null) {
-            append(parameters.joinToString(", "))
-        }
-        append(")")
+        append("$methodName(${ parameters?.joinToString(", ") ?: "" })")
     }
     
     private fun StringBuilder.appendReturnedValue() {
@@ -264,23 +268,22 @@ internal class MethodCallTracePoint(
         this.ownerName = ownerName
     }
 
-    fun isThreadCreation() = methodName == THREAD_FUN_NAME && className.replace('/', '.') == THREAD_CLASS_NAME
+    fun isThreadCreation() = 
+        methodName == threadFunctionInfo.functionName && className.replace('/', '.') == threadFunctionInfo.className
 
     /**
-     * Checks if [defaultValues] differ from the provided [actualValues].
-     * If so, the value is added as `name = value` with a name provided by [paramNames].
+     * Checks if [FunctionInfo.defaultParameterValues] differ from the provided [actualValues].
+     * If so, the value is added as `name = value` with a name provided by [FunctionInfo.parameterNames].
      * Expects all lists to be of equal size.
      */
     private fun getNonDefaultParametersWithName(
-        paramNames: List<String>, 
-        defaultValues: List<String>, 
+        functionInfo: FunctionInfo,
         actualValues: List<String>
     ): List<String> {
-        check(actualValues.size == paramNames.size)
-        check(paramNames.size == defaultValues.size)
+        check(actualValues.size == functionInfo.parameterNames.size)
         val result = mutableListOf<String>()
         actualValues.forEachIndexed { index, currentValue ->
-            if (currentValue != defaultValues[index]) result.add("${paramNames[index]} = $currentValue")
+            if (currentValue != functionInfo.defaultParameterValues[index]) result.add("${functionInfo.parameterNames[index]} = $currentValue")
         }
         return result
     }
