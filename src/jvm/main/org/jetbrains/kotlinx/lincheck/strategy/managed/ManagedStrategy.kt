@@ -291,9 +291,6 @@ abstract class ManagedStrategy(
                 enableSpinCycleReplay()
                 continue
             }
-            // Unexpected `ThreadAbortedError` should be thrown.
-            check(result is UnexpectedExceptionInvocationResult)
-            // Otherwise return the sudden result
             return suddenResult
         }
     }

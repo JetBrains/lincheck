@@ -9,13 +9,11 @@
  */
 
 package org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.test903
-import org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.test903.RunChecker903.Companion.pool
-import org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.BaseRunCoroutineTests
-import java.util.concurrent.Executors
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import org.junit.Ignore
-import org.junit.Test
+import org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.BaseRunCoroutineTests
+import org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.test903.RunChecker903.Companion.pool
+import java.util.concurrent.Executors
 
 @OptIn(DelicateCoroutinesApi::class)
 fun producerA(channelA: Channel<Int>) = GlobalScope.launch(pool) {
@@ -48,16 +46,14 @@ fun main(): Unit = runBlocking(pool) {
     }
 }
 
-@Ignore("""
-java.lang.IllegalStateException: Check failed. 
-    at org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy.runInvocation(ManagedStrategy.kt:245)
-""")
-class RunChecker903: BaseRunCoroutineTests(false) {
+class RunChecker903: BaseRunCoroutineTests(false, 1000) {
     companion object {
         lateinit var pool: ExecutorCoroutineDispatcher
     }
     override fun block() {
         pool = Executors.newFixedThreadPool(4).asCoroutineDispatcher()
-        runBlocking(pool) { main() }
+        pool.use {
+            runBlocking(pool) { main() }
+        }
     }
 }

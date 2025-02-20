@@ -15,7 +15,6 @@ import java.util.concurrent.Executors
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import org.junit.Ignore
-import org.junit.Test
 
 class Example {
     val inputChannel = Channel<Int>()
@@ -71,15 +70,14 @@ suspend fun processInput(example: Example) = coroutineScope {
 java.lang.IllegalStateException: Check failed.
 	at org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy.runInvocation(ManagedStrategy.kt:245)
 """)
-class RunChecker925: BaseRunCoroutineTests(false) {
+class RunChecker925 : BaseRunCoroutineTests(false) {
     companion object {
         lateinit var pool: ExecutorCoroutineDispatcher
     }
     override fun block() {
         pool = Executors.newFixedThreadPool(4).asCoroutineDispatcher()
-        runBlocking(pool) { main() }
+        pool.use {
+            runBlocking(pool) { main() }
+        }
     }
-
-//    @Test
-//    fun test() = block()
 }

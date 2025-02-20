@@ -26,7 +26,7 @@ class Producer(private val channel: Channel<Int>) {
 class Consumer(private val channel: Channel<Int>) {
     suspend fun consume() {
         for (i in 1..3) {
-            val value = channel.receive()
+            channel.receive()
         }
     }
 }
@@ -53,12 +53,14 @@ fun main(): Unit = runBlocking(pool) {
     // This will never be reached due to deadlock
 }
 
-class RunChecker913: BaseRunCoroutineTests(true) {
+class RunChecker913 : BaseRunCoroutineTests(true) {
     companion object {
         lateinit var pool: ExecutorCoroutineDispatcher
     }
     override fun block() {
         pool = Executors.newFixedThreadPool(4).asCoroutineDispatcher()
-        runBlocking(pool) { main() }
+        pool.use {
+            runBlocking(pool) { main() }
+        }
     }
 }
