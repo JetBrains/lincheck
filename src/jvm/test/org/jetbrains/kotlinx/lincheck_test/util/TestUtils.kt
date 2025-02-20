@@ -113,6 +113,8 @@ private val String.filtered: String get() {
     filtered = filtered.replace(LINE_NUMBER_REGEX, "")
     // Remove inner class indexes
     filtered = filtered.replace(INNER_CLASS_INDEX_REGEX, "")
+    // Remove trailing spaces
+    filtered = filtered.replace(TRAILING_STACKTRACE_SPACES, " |")
     return filtered
 }
 
@@ -127,6 +129,7 @@ private val TEST_EXECUTION_TRACE_ELEMENT_REGEX = listOf(
 
 private val LINE_NUMBER_REGEX = Regex(":(\\d+)")
 private val INNER_CLASS_INDEX_REGEX = Regex("#(\\d+)")
+private val TRAILING_STACKTRACE_SPACES = Regex(" +\\|")
 
 internal fun getExpectedLogFromResources(testFileName: String) =
     getExpectedLogFileFromResources(testFileName).readText()
