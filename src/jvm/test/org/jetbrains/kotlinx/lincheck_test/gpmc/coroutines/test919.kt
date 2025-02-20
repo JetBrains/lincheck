@@ -48,12 +48,14 @@ suspend fun coroutine4(ch5: Channel<Int>, ch1: Channel<Int>) {
     ch5.send(4)
 }
 
-class RunChecker919: BaseRunCoroutineTests(true) {
+class RunChecker919 : BaseRunCoroutineTests(true) {
     companion object {
         lateinit var pool: ExecutorCoroutineDispatcher
     }
     override fun block() {
         pool = Executors.newFixedThreadPool(4).asCoroutineDispatcher()
-        runBlocking(pool) { main() }
+        pool.use {
+            runBlocking(pool) { main() }
+        }
     }
 }

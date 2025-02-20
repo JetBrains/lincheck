@@ -15,11 +15,9 @@ import java.util.concurrent.Executors
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
 import org.junit.Ignore
-import org.junit.Test
 
 class Processor {
     val channel1 = Channel<Int>()
-    val channel2 = Channel<Int>()
 
     suspend fun produceNumbers() {
         for (i in 1..5) {
@@ -54,10 +52,18 @@ class Aggregator {
 }
 
 suspend fun receive(channel: Channel<Int>) {
+    val results = mutableMapOf<Int, Int>()
     for (y in channel) {
         //println("Received: $y")
-        check(y % 2 == 0)
+        results.compute(y) { _, v -> if (v == null) 1 else v + 1 }
     }
+    results.entries.map { Pair(it.key, it.value) }.containsAll(listOf(
+        Pair(2, 1),
+        Pair(4, 1),
+        Pair(6, 1),
+        Pair(8, 1),
+        Pair(10, 1)
+    ))
 }
 
 fun main(): Unit = runBlocking(pool) {
@@ -79,6 +85,8 @@ class RunChecker905: BaseRunCoroutineTests(false) {
     }
     override fun block() {
         pool = Executors.newFixedThreadPool(4).asCoroutineDispatcher()
-        runBlocking(pool) { main() }
+        pool.use {
+            runBlocking(pool) { main() }
+        }
     }
 }

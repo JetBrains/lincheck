@@ -77,12 +77,14 @@ fun main() {
     fourth(chanD, chanA)
 }
 
-class RunChecker912: BaseRunCoroutineTests(true) {
+class RunChecker912 : BaseRunCoroutineTests(true) {
     companion object {
         lateinit var pool: ExecutorCoroutineDispatcher
     }
     override fun block() {
         pool = Executors.newFixedThreadPool(4).asCoroutineDispatcher()
-        runBlocking(pool) { main() }
+        pool.use {
+            runBlocking(pool) { main() }
+        }
     }
 }
