@@ -25,7 +25,7 @@ class ChannelHandler {
     }
 
     suspend fun receiveFromChannel2() {
-        channel2.receive()
+        check(channel2.receive() == 2)
     }
 
     suspend fun sendToChannel2() {
@@ -34,7 +34,7 @@ class ChannelHandler {
     }
 
     suspend fun receiveFromChannel1() {
-        channel1.receive()
+        check(channel1.receive() == 1)
     }
 }
 
@@ -48,7 +48,7 @@ fun main(): Unit = runBlocking(pool) {
 }
 
 class RunChecker901: BaseRunCoroutineTests(true) {
-        companion object {
+    companion object {
         lateinit var pool: ExecutorCoroutineDispatcher
     }
     override fun block() {

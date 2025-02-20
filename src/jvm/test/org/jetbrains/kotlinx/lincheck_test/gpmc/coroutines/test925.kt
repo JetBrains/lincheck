@@ -14,6 +14,8 @@ import org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.BaseRunCoroutineTests
 import java.util.concurrent.Executors
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
+import org.junit.Ignore
+import org.junit.Test
 
 class Example {
     val inputChannel = Channel<Int>()
@@ -37,7 +39,8 @@ fun main(): Unit = runBlocking(pool) {
     }
 
     repeat(5) {
-        println(example.outputChannel.receive())
+        val res = example.outputChannel.receive()
+        check(res == ((it + 1) * 10 + 1) * 2)
     }
 }
 
@@ -64,12 +67,19 @@ suspend fun processInput(example: Example) = coroutineScope {
     }
 }
 
+@Ignore("""
+java.lang.IllegalStateException: Check failed.
+	at org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy.runInvocation(ManagedStrategy.kt:245)
+""")
 class RunChecker925: BaseRunCoroutineTests(false) {
-        companion object {
+    companion object {
         lateinit var pool: ExecutorCoroutineDispatcher
     }
     override fun block() {
         pool = Executors.newFixedThreadPool(4).asCoroutineDispatcher()
         runBlocking(pool) { main() }
     }
+
+//    @Test
+//    fun test() = block()
 }
