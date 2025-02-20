@@ -385,6 +385,11 @@ class CoroutinesRunConcurrentRepresentationTest : BaseRunConcurrentRepresentatio
         TestJdkVersion.JDK_21 -> "run_concurrent_test/coroutines/coroutines_jdk21.txt"
     }
 ) {
+    @Before
+    fun setUp() {
+        assumeFalse(isInTraceDebuggerMode) // unstable hash-code
+    }
+
     companion object {
         @JvmStatic var sharedCounter = 0
 
