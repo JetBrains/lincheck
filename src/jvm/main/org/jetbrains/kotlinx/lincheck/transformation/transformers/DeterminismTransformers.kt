@@ -18,6 +18,8 @@ import org.objectweb.asm.commons.Method
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.objectweb.asm.Opcodes
+import org.objectweb.asm.Type
+import org.objectweb.asm.Type.BYTE_TYPE
 import sun.nio.ch.lincheck.*
 import java.lang.reflect.Modifier
 import java.util.*
@@ -73,13 +75,17 @@ internal class DeterministicHashCodeTransformer(
  * [FakeDeterministicTimeTransformer] tracks invocations of [System.nanoTime] and [System.currentTimeMillis] methods,
  * and replaces them with stubs to prevent non-determinism.
  */
-internal class FakeDeterministicTimeTransformer(adapter: GeneratorAdapter) : AbstractDeterministicTimeMethodTransformer(adapter) {
-    override fun GeneratorAdapter.generateInstrumentedCode(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
+internal class FakeDeterministicTimeTransformer(adapter: GeneratorAdapter) :
+    AbstractDeterministicTimeMethodTransformer(adapter) {
+    override fun GeneratorAdapter.generateInstrumentedCode(
+        opcode: Int, owner: String, name: String, desc: String, itf: Boolean
+    ) {
         push(1337L)// any constant value
     }
 }
 
-internal class TrueDeterministicTimeTransformer(adapter: GeneratorAdapter) : AbstractDeterministicTimeMethodTransformer(adapter) {
+internal class TrueDeterministicTimeTransformer(adapter: GeneratorAdapter) :
+    AbstractDeterministicTimeMethodTransformer(adapter) {
     private class DeterministicTimeCall(private val originalCall: GeneratorAdapter.() -> Unit) : DeterministicCall {
         override fun invokeFromState(
             generator: GeneratorAdapter,
@@ -103,29 +109,36 @@ internal class TrueDeterministicTimeTransformer(adapter: GeneratorAdapter) : Abs
             loadLocal(result)
         }
     }
-    
-    override fun GeneratorAdapter.generateInstrumentedCode(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) {
+
+    override fun GeneratorAdapter.generateInstrumentedCode(
+        opcode: Int, owner: String, name: String, desc: String, itf: Boolean
+    ) {
         val deterministicCall = DeterministicTimeCall { visitMethodInsn(opcode, owner, name, desc, itf) }
         invoke(deterministicCall, longType, opcode, owner, desc)
     }
-    
+
     companion object {
         private val longType = getType(Long::class.java)
     }
 }
 
-internal abstract class AbstractDeterministicTimeMethodTransformer(val adapter: GeneratorAdapter) : MethodVisitor(ASM_API, adapter) {
-    protected abstract fun GeneratorAdapter.generateInstrumentedCode(opcode: Int, owner: String, name: String, desc: String, itf: Boolean)
-    final override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
-        if (owner == "java/lang/System" && (name == "nanoTime" || name == "currentTimeMillis")) {
-            invokeIfInTestingCode(
-                original = { visitMethodInsn(opcode, owner, name, desc, itf) },
-                code = { generateInstrumentedCode(opcode, owner, name, desc, itf) }
-            )
-        } else {
-            visitMethodInsn(opcode, owner, name, desc, itf)
+internal abstract class AbstractDeterministicTimeMethodTransformer(val adapter: GeneratorAdapter) :
+    MethodVisitor(ASM_API, adapter) {
+    protected abstract fun GeneratorAdapter.generateInstrumentedCode(
+        opcode: Int, owner: String, name: String, desc: String, itf: Boolean
+    )
+
+    final override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) =
+        adapter.run {
+            if (owner == "java/lang/System" && (name == "nanoTime" || name == "currentTimeMillis")) {
+                invokeIfInTestingCode(
+                    original = { visitMethodInsn(opcode, owner, name, desc, itf) },
+                    code = { generateInstrumentedCode(opcode, owner, name, desc, itf) }
+                )
+            } else {
+                visitMethodInsn(opcode, owner, name, desc, itf)
+            }
         }
-    }
 }
 
 internal abstract class AbstractDeterministicRandomTransformer(
@@ -194,7 +207,9 @@ internal abstract class AbstractDeterministicRandomTransformer(
                             invokeStatic(Injections::isRandom)
                         },
                         thenClause = {
-                            generateInstrumentedCodeForRegularRandomMethod(opcode, owner, name, desc, itf, ownerLocal, arguments)
+                            generateInstrumentedCodeForRegularRandomMethod(
+                                opcode, owner, name, desc, itf, ownerLocal, arguments
+                            )
                         },
                         elseClause = {
                             loadLocal(ownerLocal)
@@ -218,16 +233,18 @@ internal abstract class AbstractDeterministicRandomTransformer(
         private fun Class<*>.getMethodsToReplace() = declaredMethods
             .filter { Modifier.isPublic(it.modifiers) || Modifier.isProtected(it.modifiers) }
             .map { Method.getMethod(it) }
+
         private val randomGeneratorMethods = randomGeneratorClass?.getMethodsToReplace() ?: emptyList()
         private val randomClassMethods = Random::class.java.getMethodsToReplace()
         private val allRandomMethods = randomGeneratorMethods + randomClassMethods
-        private val Int.isInstanceMethodOpcode
-            get() = when (this) {
-                Opcodes.INVOKEVIRTUAL, Opcodes.INVOKEINTERFACE, Opcodes.INVOKESPECIAL -> true
-                else -> false
-            }
     }
 }
+
+private val Int.isInstanceMethodOpcode
+    get() = when (this) {
+        Opcodes.INVOKEVIRTUAL, Opcodes.INVOKEINTERFACE, Opcodes.INVOKESPECIAL -> true
+        else -> false
+    }
 
 /**
  * [FakeDeterministicRandomTransformer] tracks invocations of various random number generation functions,
@@ -276,8 +293,168 @@ internal class FakeDeterministicRandomTransformer(
              * In Java 21 RandomGenerator interface was introduced,
              * so sometimes data structures interact with java.util.Random through this interface.
              */
-            val randomOwner = if (owner.endsWith("RandomGenerator")) "java/util/random/RandomGenerator" else "java/util/Random"
+            val randomOwner =
+                if (owner.endsWith("RandomGenerator")) "java/util/random/RandomGenerator" else "java/util/Random"
             visitMethodInsn(opcode, randomOwner, name, desc, itf)
         }
     }
+}
+
+internal class TrueDeterministicRandomTransformer(
+    fileName: String,
+    className: String,
+    methodName: String,
+    adapter: GeneratorAdapter,
+) : AbstractDeterministicRandomTransformer(fileName, className, methodName, adapter) {
+    private class RegularDeterministicRandomCall(
+        private val returnType: Type,
+        private val argumentsCount: Int,
+        private val originalCall: GeneratorAdapter.() -> Unit,
+    ) : DeterministicCall {
+        override fun invokeFromState(
+            generator: GeneratorAdapter,
+            getState: GeneratorAdapter.() -> Unit,
+            getReceiver: (GeneratorAdapter.() -> Unit)?,
+            getArgument: GeneratorAdapter.(Int) -> Unit,
+        ) = generator.run {
+            getState()
+        }
+
+        override fun invokeSavingState(
+            generator: GeneratorAdapter,
+            saveState: GeneratorAdapter.(GeneratorAdapter.() -> Unit) -> Unit,
+            getReceiver: (GeneratorAdapter.() -> Unit)?,
+            getArgument: GeneratorAdapter.(Int) -> Unit,
+        ) = generator.run {
+            invokeInIgnoredSection {
+                getReceiver?.invoke(this)
+                for (i in 0 until argumentsCount) {
+                    getArgument(i)
+                }
+
+                originalCall()
+                val result = newLocal(this@RegularDeterministicRandomCall.returnType)
+                storeLocal(result)
+                saveState { loadLocal(result) }
+                loadLocal(result)
+            }
+        }
+    }
+
+    private class RandomBytesDeterministicRandomCall(
+        private val originalCall: GeneratorAdapter.() -> Unit,
+    ) : DeterministicCall {
+        companion object {
+            private val byteArrayType: Type = getType(ByteArray::class.java)
+        }
+        
+        private fun GeneratorAdapter.copyArray(
+            getSource: GeneratorAdapter.() -> Unit,
+            getDestination: GeneratorAdapter.() -> Unit,
+        ) {
+            getSource()
+            push(0)
+            getDestination()
+            push(0)
+            getSource()
+            arrayLength()
+            invokeStatic(System::arraycopy)
+        }
+
+        override fun invokeFromState(
+            generator: GeneratorAdapter,
+            getState: GeneratorAdapter.() -> Unit,
+            getReceiver: (GeneratorAdapter.() -> Unit)?,
+            getArgument: GeneratorAdapter.(Int) -> Unit,
+        ) = generator.run {
+            copyArray(getSource = getState, getDestination = { getArgument(0) })
+        }
+
+        override fun invokeSavingState(
+            generator: GeneratorAdapter,
+            saveState: GeneratorAdapter.(GeneratorAdapter.() -> Unit) -> Unit,
+            getReceiver: (GeneratorAdapter.() -> Unit)?,
+            getArgument: GeneratorAdapter.(Int) -> Unit
+        ) = generator.run {
+            getReceiver!!()
+            getArgument(0)
+            originalCall()
+
+            getArgument(0)
+            arrayLength()
+            newArray(BYTE_TYPE)
+            val copiedArray = newLocal(byteArrayType)
+            storeLocal(copiedArray)
+            copyArray(getSource = { getArgument(0) }, getDestination = { loadLocal(copiedArray) })
+            saveState { loadLocal(copiedArray) }
+        }
+    }
+
+    private fun GeneratorAdapter.wrapMethod(
+        opcode: Int,
+        owner: String,
+        name: String,
+        desc: String,
+        itf: Boolean,
+        receiverLocal: Int?,
+        argumentsLocals: IntArray,
+    ) {
+        val (deterministicCall, stateType) = if (name == "nextBytes" && desc == "([B)V") {
+            val randomBytesDeterministicRandomCall = RandomBytesDeterministicRandomCall(
+                originalCall = { visitMethodInsn(opcode, owner, name, desc, itf) }
+            )
+            randomBytesDeterministicRandomCall to getType(ByteArray::class.java)
+        } else {
+            val argumentTypes = Type.getArgumentTypes(desc)
+            val returnType = Type.getReturnType(desc)
+            argumentTypes.firstOrNull { it.sort == Type.OBJECT || it.sort == Type.ARRAY }?.let {
+                error("$opcode $owner.$name$desc: first argument of type ${it.className} is not supported")
+            }
+            val regularDeterministicRandomCall = RegularDeterministicRandomCall(returnType, argumentTypes.size) {
+                visitMethodInsn(opcode, owner, name, desc, itf)
+            }
+            regularDeterministicRandomCall to returnType
+        }
+
+        invoke(
+            call = deterministicCall,
+            stateType = stateType,
+            getReceiver = receiverLocal?.let { fun GeneratorAdapter.() = loadLocal(it) },
+            getArgument = { loadLocal(argumentsLocals[it]) },
+        )
+    }
+
+    override fun GeneratorAdapter.generateInstrumentedCodeForNextSecondarySeedAndGetProbe(
+        opcode: Int,
+        owner: String,
+        name: String,
+        desc: String,
+        itf: Boolean
+    ) {
+        val arguments = storeArguments(desc)
+        val receiver = if (opcode.isInstanceMethodOpcode) newLocal(getType("L$owner;")).also(::storeLocal) else null
+        wrapMethod(opcode, owner, name, desc, itf, receiver, arguments)
+    }
+
+    override fun GeneratorAdapter.generateInstrumentedCodeForAdvanceProbe(
+        opcode: Int,
+        owner: String,
+        name: String,
+        desc: String,
+        itf: Boolean
+    ) {
+        val arguments = storeArguments(desc)
+        val receiver = if (opcode.isInstanceMethodOpcode) newLocal(getType("L$owner;")).also(::storeLocal) else null
+        wrapMethod(opcode, owner, name, desc, itf, receiver, arguments)
+    }
+
+    override fun GeneratorAdapter.generateInstrumentedCodeForRegularRandomMethod(
+        opcode: Int,
+        owner: String,
+        name: String,
+        desc: String,
+        itf: Boolean,
+        receiverLocal: Int,
+        argumentsLocals: IntArray,
+    ) = wrapMethod(opcode, owner, name, desc, itf, receiverLocal, argumentsLocals)
 }

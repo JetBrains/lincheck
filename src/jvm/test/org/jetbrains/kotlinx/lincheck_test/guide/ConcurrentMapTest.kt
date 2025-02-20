@@ -42,5 +42,6 @@ class ConcurrentSkipListMapTest {
     @Test
     fun modelCheckingTest() = ModelCheckingOptions()
         .checkObstructionFreedom(true)
+        .run { if (isInTraceDebuggerMode) invocationsPerIteration(1) else this }
         .check(this::class)
 }

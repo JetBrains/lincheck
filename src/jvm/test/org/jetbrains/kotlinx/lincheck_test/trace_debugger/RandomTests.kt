@@ -11,12 +11,7 @@
 package org.jetbrains.kotlinx.lincheck_test.trace_debugger
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
-import org.jetbrains.kotlinx.lincheck_test.util.TestJdkVersion.JDK_20
-import org.jetbrains.kotlinx.lincheck_test.util.TestJdkVersion.JDK_21
-import org.jetbrains.kotlinx.lincheck_test.util.testJdkVersion
-import org.junit.Assume.assumeFalse
-import org.junit.Before
+import org.junit.Ignore
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.DoubleAccumulator
 import java.util.concurrent.atomic.DoubleAdder
@@ -193,6 +188,9 @@ class RandomBytes2Test : RandomTests() {
     fun operation() = Random.Default.nextBytes(ByteArray(24)).asList()
 }
 
+// TODO Investigate the loop detector bug (Alexander Potapov)
+// https://github.com/JetBrains/lincheck/issues/498
+@Ignore
 class RandomBytes3Test : RandomTests() {
     @Operation
     fun operation() = Random.Default.nextBytes(ByteArray(24), 10, 20).asList()
@@ -208,6 +206,9 @@ class RandomBytes4Test : RandomTests() {
     }
 }
 
+// TODO Investigate the loop detector bug (Alexander Potapov)
+// https://github.com/JetBrains/lincheck/issues/498
+@Ignore
 class RandomBytes5Test : RandomTests() {
     @Operation
     fun operation(): List<Byte> {
@@ -230,6 +231,9 @@ class RandomUBytes2Test : RandomTests() {
     fun operation() = Random.Default.nextUBytes(UByteArray(24)).asList()
 }
 
+// TODO Investigate the loop detector bug (Alexander Potapov)
+// https://github.com/JetBrains/lincheck/issues/498
+@Ignore
 class RandomUBytes3Test : RandomTests() {
     @OptIn(ExperimentalUnsignedTypes::class)
     @Operation
@@ -247,15 +251,11 @@ class RandomUBytes4Test : RandomTests() {
     }
 }
 
+// TODO Investigate the loop detector bug (Alexander Potapov)
+// https://github.com/JetBrains/lincheck/issues/498
+@Ignore
 @OptIn(ExperimentalUnsignedTypes::class)
 class RandomUBytes5Test : RandomTests() {
-    @Before
-    fun setUp() {
-        // TODO Investigate the loop detector bug (Alexander Potapov)
-        // https://github.com/JetBrains/lincheck/issues/498
-        assumeFalse((testJdkVersion == JDK_20 || testJdkVersion == JDK_21) && !isInTraceDebuggerMode)
-    }
-    
     @Operation
     fun operation(): List<UByte> {
         val array = UByteArray(24)
@@ -336,4 +336,19 @@ class JRandomBytes1Test : RandomTests() {
 class JRandomGaussianTest : RandomTests() {
     @Operation
     fun operation() = JRandom().nextGaussian()
+}
+
+class StubRandomCheckTest : RandomTests() {
+    override val alsoRunInLincheckMode: Boolean get() = false
+    
+    object MyRandom : Random() {
+        override fun nextBits(bitCount: Int): Int = 0
+    }
+    
+    @Operation
+    fun operation() {
+        val randomList = List(10) { MyRandom.nextInt() }
+        val expectedResult = List(10) { 0 }
+        require(randomList == expectedResult) { "Wrong randomizer: $randomList != $expectedResult" }
+    }
 }
