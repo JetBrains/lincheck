@@ -180,16 +180,15 @@ public class Injections {
      * Called from thread's {@code run} method failed with an exception.
      *
      * @param exception the exception that was thrown in the thread.
-     * @return true if the exception was handled by the tracker and should be suppressed, false otherwise.
      */
-    public static boolean onThreadRunException(Throwable exception) {
+    public static void onThreadRunException(Throwable exception) {
         Thread thread = Thread.currentThread();
         // TestThread is handled separately
-        if (thread instanceof TestThread) return false;
+        if (thread instanceof TestThread) return;
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
-        if (descriptor == null) return false;
+        if (descriptor == null) return;
         EventTracker tracker = descriptor.getEventTracker();
-        return tracker.onThreadRunException(exception);
+        tracker.onThreadRunException(exception);
     }
 
     /**

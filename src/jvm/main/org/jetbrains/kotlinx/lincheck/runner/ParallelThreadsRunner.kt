@@ -487,10 +487,6 @@ internal open class ParallelThreadsRunner(
     override fun isCurrentRunnerThread(thread: Thread): Boolean = executor.threads.any { it === thread }
 
     override fun onThreadFinish(iThread: Int) {}
-
-    override fun onInternalException(iThread: Int, e: Throwable): Boolean {
-        return false
-    }
 }
 
 internal enum class UseClocks { ALWAYS, RANDOM }

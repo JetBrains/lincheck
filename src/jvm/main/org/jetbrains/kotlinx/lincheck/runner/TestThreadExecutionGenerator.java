@@ -70,7 +70,7 @@ public class TestThreadExecutionGenerator {
     private static final Method PARALLEL_THREADS_RUNNER_PROCESS_INVOCATION_RESULT_METHOD = new Method("processInvocationResult", RESULT_TYPE, new Type[]{ OBJECT_TYPE, INT_TYPE, INT_TYPE });
     private static final Method RUNNER_IS_PARALLEL_EXECUTION_COMPLETED_METHOD = new Method("isParallelExecutionCompleted", BOOLEAN_TYPE, new Type[]{});
 
-    private static final Method RUNNER_FAIL_ON_INTERNAL_EXCEPTION_METHOD = new Method("failOnInternalException", VOID_TYPE, new Type[]{INT_TYPE, THROWABLE_TYPE});
+    private static final Method RUNNER_ON_ACTOR_FAILURE_METHOD = new Method("onActorFailure", VOID_TYPE, new Type[]{INT_TYPE, THROWABLE_TYPE});
 
     private static int generatedClassNumber = 0;
 
@@ -248,7 +248,7 @@ public class TestThreadExecutionGenerator {
             mv.push(iThread);
             mv.loadLocal(eLocal);
             // Fail if this exception is an internal exception
-            mv.invokeVirtual(RUNNER_TYPE, RUNNER_FAIL_ON_INTERNAL_EXCEPTION_METHOD);
+            mv.invokeVirtual(RUNNER_TYPE, RUNNER_ON_ACTOR_FAILURE_METHOD);
 
             mv.loadLocal(eLocal);
 

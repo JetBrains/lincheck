@@ -61,12 +61,6 @@ abstract class Runner protected constructor(
     abstract fun onThreadFinish(iThread: Int)
 
     /**
-     * This method is invoked by the corresponding test thread when an internal exception is thrown.
-     * @return true if the exception should be suppressed, false otherwise.
-     */
-    abstract fun onInternalException(iThread: Int, e: Throwable): Boolean
-
-    /**
      * This method is invoked by the corresponding test thread
      * when the current coroutine suspends.
      * @param iThread number of invoking thread
@@ -100,11 +94,28 @@ abstract class Runner protected constructor(
     }
 
     /**
-     * Is invoked after each actor execution from the specified thread, even if a legal exception was thrown.
+     * Is invoked after each actor execution from the specified thread.
      * The invocations are inserted into the generated code.
      */
     fun onActorFinish() {
         strategy.onActorFinish()
+    }
+
+    /**
+     * Is invoked if an actor execution has thrown an exception.
+     *
+     * Default implementation checks if the failure
+     * was caused by an internal exception (see [isInternalException]) and re-throw in this case,
+     * otherwise it treats the exception as a normal actor result.
+     *
+     * @param iThread the number of the invoking thread where the failure occurred.
+     * @param throwable the exception that caused the actor failure.
+     */
+    // used in byte-code generation
+    open fun onActorFailure(iThread: Int, throwable: Throwable) {
+        if (isInternalException(throwable)) {
+            throw throwable
+        }
     }
 
     fun beforePart(part: ExecutionPart) {
@@ -129,23 +140,6 @@ abstract class Runner protected constructor(
      */
     val isParallelExecutionCompleted: Boolean
         get() = completedOrSuspendedThreads.get() == scenario.nThreads
-
-    /**
-     * Handles an internal exception encountered during execution.
-     * If the provided exception is identified as an internal exception,
-     * it invokes the `onInternalException` method for the corresponding thread
-     * and rethrows the exception.
-     *
-     * @param iThread the thread number where the exception occurred
-     * @param e the exception to be checked and potentially processed
-     */
-    // used in byte-code generation
-    fun failOnInternalException(iThread: Int, e: Throwable) {
-        if (isInternalException(e)) {
-            val isSuppressed = onInternalException(iThread, e)
-            if (!isSuppressed) throw e
-        }
-    }
 }
 
 enum class ExecutionPart {

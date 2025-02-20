@@ -53,8 +53,6 @@ class TestThreadExecutionHelperTest {
 
             override fun afterCoroutineSuspended(iThread: Int) {}
 
-            override fun onInternalException(iThread: Int, e: Throwable): Boolean = false
-
             override fun onThreadFinish(iThread: Int) {}
 
             override fun onThreadStart(iThread: Int) {}

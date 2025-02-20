@@ -516,19 +516,21 @@ abstract class ManagedStrategy(
      * This method is called when a thread finishes with an exception.
      *
      * @param exception The exception that was thrown within the thread.
-     * @return true if the exception should be suppressed, false otherwise.
      */
-    override fun onThreadRunException(exception: Throwable): Boolean = runInIgnoredSection {
+    override fun onThreadRunException(exception: Throwable) = runInIgnoredSection {
         val currentThreadId = threadScheduler.getCurrentThreadId()
         // do not track unregistered threads
-        if (currentThreadId < 0) return false
+        if (currentThreadId < 0) return
         // scenario threads are handled separately by the runner itself
-        if (currentThreadId < scenario.nThreads) return false
+        if (currentThreadId < scenario.nThreads) return
         // check if the exception is internal
         if (isInternalException(exception)) {
-            return onInternalException(currentThreadId, exception)
+            onInternalException(currentThreadId, exception)
+        } else {
+            // re-throw any non-internal exception,
+            // so it will be treated as the final result of `Thread::run`.
+            throw exception
         }
-        return false
     }
 
     override fun threadJoin(thread: Thread?, withTimeout: Boolean) = runInIgnoredSection {
@@ -629,14 +631,14 @@ abstract class ManagedStrategy(
      *
      * @param threadId the thread id of the thread where exception was thrown.
      * @param exception the exception that was thrown.
-     * @return true if the exception should be suppressed, false otherwise.
      */
-    open fun onInternalException(threadId: Int, exception: Throwable): Boolean {
+    open fun onInternalException(threadId: Int, exception: Throwable) {
+        check(isInternalException(exception))
         // This method is called only if the exception cannot be treated as a normal result,
         // so we exit testing code to avoid trace collection resume or some bizarre bugs
         leaveTestingCode()
         // suppress `ThreadAbortedError`
-        if (exception is LincheckAnalysisAbortedError) return true
+        if (exception is LincheckAnalysisAbortedError) return
         // Though the corresponding failure will be detected by the runner,
         // the managed strategy can construct a trace to reproduce this failure.
         // Let's then store the corresponding failing result and construct the trace.
@@ -645,7 +647,7 @@ abstract class ManagedStrategy(
             runner.collectExecutionResults()
         )
         threadScheduler.abortAllThreads()
-        return false
+        throw exception
     }
 
     override fun onActorStart(iThread: Int) {
@@ -1975,8 +1977,10 @@ internal class ManagedStrategyRunner(
         managedStrategy.onThreadFinish(iThread)
     }
 
-    override fun onInternalException(iThread: Int, e: Throwable): Boolean = runInIgnoredSection {
-        managedStrategy.onInternalException(iThread, e)
+    override fun onActorFailure(iThread: Int, throwable: Throwable) = runInIgnoredSection {
+        if (isInternalException(throwable)) {
+            managedStrategy.onInternalException(iThread, throwable)
+        }
     }
 
     override fun afterCoroutineSuspended(iThread: Int) = runInIgnoredSection {

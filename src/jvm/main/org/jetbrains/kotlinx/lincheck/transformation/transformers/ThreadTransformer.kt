@@ -71,14 +71,11 @@ internal class ThreadTransformer(
             visitMaxs(maxStack, maxLocals)
             return
         }
-
         visitLabel(runMethodTryBlockEnd)
         visitLabel(runMethodCatchBlock)
-
         // STACK: exception
-        dup()
         invokeStatic(Injections::onThreadRunException)
-        // STACK: exception, isSuppressed
+        // STACK: <empty>
 
         // Notify that the thread has finished.
         // TODO: currently does not work, because `ManagedStrategy::onThreadFinish`
@@ -86,20 +83,7 @@ internal class ThreadTransformer(
         //   i.e., in non-aborted state
         // invokeStatic(Injections::afterThreadFinish)
 
-        // Suppress exception if necessary.
-        val suppressLabel = newLabel()
-        // STACK: exception, isSuppressed
-        ifZCmp(NE, suppressLabel)
-
-        // Re-throw exception
-        // STACK: exception
-        visitInsn(Opcodes.ATHROW)
-
-        visitLabel(suppressLabel)
-        // STACK: exception
-        pop()
         visitInsn(Opcodes.RETURN)
-        
         visitMaxs(maxStack, maxLocals)
     }
 
