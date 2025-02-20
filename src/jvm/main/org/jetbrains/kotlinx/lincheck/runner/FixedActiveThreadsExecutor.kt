@@ -10,7 +10,6 @@
 package org.jetbrains.kotlinx.lincheck.runner
 
 import kotlinx.atomicfu.*
-import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import sun.nio.ch.lincheck.TestThread
@@ -161,7 +160,7 @@ internal class FixedActiveThreadsExecutor(private val testName: String, private 
 
     private fun testThreadRunnable(iThread: Int) = Runnable {
         loop@ while (true) {
-            val task = runInIgnoredSection {
+            val task = runInsideIgnoredSection {
                 val task = getTask(iThread)
                 if (task === Shutdown) return@Runnable
                 tasks[iThread].value = null // reset task
@@ -171,10 +170,10 @@ internal class FixedActiveThreadsExecutor(private val testName: String, private 
             try {
                 task.run()
             } catch(e: Throwable) {
-                runInIgnoredSection { setResult(iThread, e) }
+                runInsideIgnoredSection { setResult(iThread, e) }
                 continue@loop
             }
-            runInIgnoredSection { setResult(iThread, Done) }
+            runInsideIgnoredSection { setResult(iThread, Done) }
         }
     }
 

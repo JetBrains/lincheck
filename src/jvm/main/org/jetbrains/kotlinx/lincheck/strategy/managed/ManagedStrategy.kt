@@ -18,6 +18,7 @@ import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.kotlinx.lincheck.util.runInsideIgnoredSection
 import sun.nio.ch.lincheck.*
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicFieldUpdaterNames.getAtomicFieldUpdaterDescriptor
@@ -314,7 +315,7 @@ abstract class ManagedStrategy(
 
     // == BASIC STRATEGY METHODS ==
 
-    override fun beforePart(part: ExecutionPart) = runInIgnoredSection {
+    override fun beforePart(part: ExecutionPart) = runInsideIgnoredSection {
         traceCollector?.passCodeLocation(SectionDelimiterTracePoint(part))
         val nextThread = when (part) {
             INIT        -> 0
@@ -522,7 +523,7 @@ abstract class ManagedStrategy(
         traceCollector?.passCodeLocation(tracePoint)
     }
 
-    override fun beforeThreadFork(thread: Thread, descriptor: ThreadDescriptor) = runInIgnoredSection {
+    override fun beforeThreadFork(thread: Thread, descriptor: ThreadDescriptor) = runInsideIgnoredSection {
         val currentThreadId = threadScheduler.getCurrentThreadId()
         // do not track threads forked from unregistered threads
         if (currentThreadId < 0) return
@@ -540,7 +541,7 @@ abstract class ManagedStrategy(
         }
     }
 
-    override fun beforeThreadStart() = runInIgnoredSection {
+    override fun beforeThreadStart() = runInsideIgnoredSection {
         val currentThreadId = threadScheduler.getCurrentThreadId()
         // do not track unregistered threads
         if (currentThreadId < 0) return
@@ -550,7 +551,7 @@ abstract class ManagedStrategy(
         enableAnalysis()
     }
 
-    override fun afterThreadFinish() = runInIgnoredSection {
+    override fun afterThreadFinish() = runInsideIgnoredSection {
         val currentThreadId = threadScheduler.getCurrentThreadId()
         // do not track unregistered threads
         if (currentThreadId < 0) return
@@ -566,7 +567,7 @@ abstract class ManagedStrategy(
      *
      * @param exception The exception that was thrown within the thread.
      */
-    override fun onThreadRunException(exception: Throwable) = runInIgnoredSection {
+    override fun onThreadRunException(exception: Throwable) = runInsideIgnoredSection {
         val currentThreadId = threadScheduler.getCurrentThreadId()
         // do not track unregistered threads
         if (currentThreadId < 0) return
@@ -582,7 +583,7 @@ abstract class ManagedStrategy(
         }
     }
 
-    override fun threadJoin(thread: Thread?, withTimeout: Boolean) = runInIgnoredSection {
+    override fun threadJoin(thread: Thread?, withTimeout: Boolean) = runInsideIgnoredSection {
         if (withTimeout) return // timeouts occur instantly
         val currentThreadId = threadScheduler.getCurrentThreadId()
         val joinThreadId = threadScheduler.getThreadId(thread!!)
@@ -818,7 +819,7 @@ abstract class ManagedStrategy(
 
     // == LISTENING METHODS ==
 
-    override fun beforeLock(codeLocation: Int): Unit = runInIgnoredSection {
+    override fun beforeLock(codeLocation: Int): Unit = runInsideIgnoredSection {
         val iThread = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
             MonitorEnterTracePoint(
@@ -841,7 +842,7 @@ abstract class ManagedStrategy(
 
    Because of this additional switching we had to split this method into two, as the beforeEvent method must be called after the switch point.
     */
-    override fun lock(monitor: Any): Unit = runInIgnoredSection {
+    override fun lock(monitor: Any): Unit = runInsideIgnoredSection {
         val iThread = threadScheduler.getCurrentThreadId()
         // Try to acquire the monitor
         while (!monitorTracker.acquireMonitor(iThread, monitor)) {
@@ -850,7 +851,7 @@ abstract class ManagedStrategy(
         }
     }
 
-    override fun unlock(monitor: Any, codeLocation: Int): Unit = runInIgnoredSection {
+    override fun unlock(monitor: Any, codeLocation: Int): Unit = runInsideIgnoredSection {
         val iThread = threadScheduler.getCurrentThreadId()
         // We need to be extremely careful with the MONITOREXIT instruction,
         // as it can be put into a recursive "finally" block, releasing
@@ -874,7 +875,7 @@ abstract class ManagedStrategy(
         }
     }
 
-    override fun park(codeLocation: Int): Unit = runInIgnoredSection {
+    override fun park(codeLocation: Int): Unit = runInsideIgnoredSection {
         val iThread = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
             ParkTracePoint(
@@ -897,7 +898,7 @@ abstract class ManagedStrategy(
         }
     }
 
-    override fun unpark(thread: Thread, codeLocation: Int): Unit = runInIgnoredSection {
+    override fun unpark(thread: Thread, codeLocation: Int): Unit = runInsideIgnoredSection {
         val currentThreadId = threadScheduler.getCurrentThreadId()
         val unparkedThreadId = threadScheduler.getThreadId(thread)
         parkingTracker.unpark(currentThreadId, unparkedThreadId)
@@ -913,7 +914,7 @@ abstract class ManagedStrategy(
         }
     }
 
-    override fun beforeWait(codeLocation: Int): Unit = runInIgnoredSection {
+    override fun beforeWait(codeLocation: Int): Unit = runInsideIgnoredSection {
         val iThread = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
             WaitTracePoint(
@@ -936,7 +937,7 @@ abstract class ManagedStrategy(
 
     Because of this additional switching we had to split this method into two, as the beforeEvent method must be called after the switch point.
      */
-    override fun wait(monitor: Any, withTimeout: Boolean): Unit = runInIgnoredSection {
+    override fun wait(monitor: Any, withTimeout: Boolean): Unit = runInsideIgnoredSection {
         if (withTimeout) return // timeouts occur instantly
         val iThread = threadScheduler.getCurrentThreadId()
         while (monitorTracker.waitOnMonitor(iThread, monitor)) {
@@ -945,7 +946,7 @@ abstract class ManagedStrategy(
         }
     }
 
-    override fun notify(monitor: Any, codeLocation: Int, notifyAll: Boolean): Unit = runInIgnoredSection {
+    override fun notify(monitor: Any, codeLocation: Int, notifyAll: Boolean): Unit = runInsideIgnoredSection {
         val iThread = threadScheduler.getCurrentThreadId()
         monitorTracker.notify(iThread, monitor, notifyAll = notifyAll)
         if (collectTrace) {
@@ -999,7 +1000,7 @@ abstract class ManagedStrategy(
      * Returns `true` if a switch point is created.
      */
     override fun beforeReadField(obj: Any?, className: String, fieldName: String, codeLocation: Int,
-                                 isStatic: Boolean, isFinal: Boolean) = runInIgnoredSection {
+                                 isStatic: Boolean, isFinal: Boolean) = runInsideIgnoredSection {
         updateSnapshotOnFieldAccess(obj, className, fieldName)
         // We need to ensure all the classes related to the reading object are instrumented.
         // The following call checks all the static fields.
@@ -1008,11 +1009,11 @@ abstract class ManagedStrategy(
         }
         // Optimization: do not track final field reads
         if (isFinal) {
-            return@runInIgnoredSection false
+            return@runInsideIgnoredSection false
         }
         // Do not track accesses to untracked objects
         if (!shouldTrackObjectAccess(obj)) {
-            return@runInIgnoredSection false
+            return@runInsideIgnoredSection false
         }
         val iThread = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
@@ -1033,14 +1034,14 @@ abstract class ManagedStrategy(
         }
         newSwitchPoint(iThread, codeLocation, tracePoint)
         loopDetector.beforeReadField(obj)
-        return@runInIgnoredSection true
+        return@runInsideIgnoredSection true
     }
 
     /** Returns <code>true</code> if a switch point is created. */
-    override fun beforeReadArrayElement(array: Any, index: Int, codeLocation: Int): Boolean = runInIgnoredSection {
+    override fun beforeReadArrayElement(array: Any, index: Int, codeLocation: Int): Boolean = runInsideIgnoredSection {
         updateSnapshotOnArrayElementAccess(array, index)
         if (!shouldTrackObjectAccess(array)) {
-            return@runInIgnoredSection false
+            return@runInsideIgnoredSection false
         }
         val iThread = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
@@ -1064,7 +1065,7 @@ abstract class ManagedStrategy(
         true
     }
 
-    override fun afterRead(value: Any?) = runInIgnoredSection {
+    override fun afterRead(value: Any?) = runInsideIgnoredSection {
         if (collectTrace) {
                 val iThread = threadScheduler.getCurrentThreadId()
                 lastReadTracePoint[iThread]?.initializeReadValue(adornedStringRepresentation(value), objectFqTypeName(value))
@@ -1074,15 +1075,15 @@ abstract class ManagedStrategy(
     }
 
     override fun beforeWriteField(obj: Any?, className: String, fieldName: String, value: Any?, codeLocation: Int,
-                                  isStatic: Boolean, isFinal: Boolean): Boolean = runInIgnoredSection {
+                                  isStatic: Boolean, isFinal: Boolean): Boolean = runInsideIgnoredSection {
         updateSnapshotOnFieldAccess(obj, className, fieldName)
         objectTracker?.registerObjectLink(fromObject = obj ?: StaticObject, toObject = value)
         if (!shouldTrackObjectAccess(obj)) {
-            return@runInIgnoredSection false
+            return@runInsideIgnoredSection false
         }
         // Optimization: do not track final field writes
         if (isFinal) {
-            return@runInIgnoredSection false
+            return@runInsideIgnoredSection false
         }
         val iThread = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
@@ -1102,14 +1103,14 @@ abstract class ManagedStrategy(
         }
         newSwitchPoint(iThread, codeLocation, tracePoint)
         loopDetector.beforeWriteField(obj, value)
-        return@runInIgnoredSection true
+        return@runInsideIgnoredSection true
     }
 
-    override fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int): Boolean = runInIgnoredSection {
+    override fun beforeWriteArrayElement(array: Any, index: Int, value: Any?, codeLocation: Int): Boolean = runInsideIgnoredSection {
         updateSnapshotOnArrayElementAccess(array, index)
         objectTracker?.registerObjectLink(fromObject = array, toObject = value)
         if (!shouldTrackObjectAccess(array)) {
-            return@runInIgnoredSection false
+            return@runInsideIgnoredSection false
         }
         val iThread = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
@@ -1134,13 +1135,13 @@ abstract class ManagedStrategy(
 
     override fun afterWrite() {
         if (collectTrace) {
-            runInIgnoredSection {
+            runInsideIgnoredSection {
                 traceCollector?.addStateRepresentation()
             }
         }
     }
 
-    override fun afterLocalRead(codeLocation: Int, variableName: String, value: Any?) = runInIgnoredSection {
+    override fun afterLocalRead(codeLocation: Int, variableName: String, value: Any?) = runInsideIgnoredSection {
         if (!collectTrace) return
         val iThread = threadScheduler.getCurrentThreadId()
         val shadowStackFrame = shadowStack[iThread]!!.last()
@@ -1163,7 +1164,7 @@ abstract class ManagedStrategy(
         // traceCollector!!.passCodeLocation(tracePoint)
     }
 
-    override fun afterLocalWrite(codeLocation: Int, variableName: String, value: Any?) = runInIgnoredSection{
+    override fun afterLocalWrite(codeLocation: Int, variableName: String, value: Any?) = runInsideIgnoredSection {
         if (!collectTrace) return
         val iThread = threadScheduler.getCurrentThreadId()
         val shadowStackFrame = shadowStack[iThread]!!.last()
@@ -1186,11 +1187,11 @@ abstract class ManagedStrategy(
         // traceCollector!!.passCodeLocation(tracePoint)
     }
 
-    override fun getThreadLocalRandom(): InjectedRandom = runInIgnoredSection {
+    override fun getThreadLocalRandom(): InjectedRandom = runInsideIgnoredSection {
         return randoms[threadScheduler.getCurrentThreadId()]!!
     }
 
-    override fun randomNextInt(): Int = runInIgnoredSection {
+    override fun randomNextInt(): Int = runInsideIgnoredSection {
         getThreadLocalRandom().nextInt()
     }
 
@@ -1216,7 +1217,7 @@ abstract class ManagedStrategy(
         Injections.leaveIgnoredSection()
     }
 
-    override fun beforeNewObjectCreation(className: String) = runInIgnoredSection {
+    override fun beforeNewObjectCreation(className: String) = runInsideIgnoredSection {
         LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
     }
 
@@ -1255,7 +1256,7 @@ abstract class ManagedStrategy(
 
     override fun afterNewObjectCreation(obj: Any) {
         if (obj.isImmutable) return
-        runInIgnoredSection {
+        runInsideIgnoredSection {
             identityHashCodeTracker.afterNewTrackedObjectCreation(obj)
             objectTracker?.registerNewObject(obj)
         }
@@ -1271,7 +1272,7 @@ abstract class ManagedStrategy(
      * Tracks a specific field of an [obj], if the [obj] is either `null` (which means that field is static),
      * or one this objects which contains it is already stored.
      *
-     * *Must be called from [runInIgnoredSection].*
+     * *Must be called from [runInsideIgnoredSection].*
      */
     private fun updateSnapshotOnFieldAccess(obj: Any?, className: String, fieldName: String) {
         staticMemorySnapshot.trackField(obj, className, fieldName)
@@ -1280,7 +1281,7 @@ abstract class ManagedStrategy(
     /**
      * Tracks a specific [array] element at [index], if the [array] is already tracked.
      *
-     * *Must be called from [runInIgnoredSection].*
+     * *Must be called from [runInsideIgnoredSection].*
      */
     private fun updateSnapshotOnArrayElementAccess(array: Any, index: Int) {
         staticMemorySnapshot.trackArrayCell(array, index)
@@ -1290,14 +1291,14 @@ abstract class ManagedStrategy(
      * Tracks all objects in [objs] eagerly.
      * Required as a trick to overcome issue with leaking this in constructors, see https://github.com/JetBrains/lincheck/issues/424.
      */
-    override fun updateSnapshotBeforeConstructorCall(objs: Array<Any?>) = runInIgnoredSection {
+    override fun updateSnapshotBeforeConstructorCall(objs: Array<Any?>) = runInsideIgnoredSection {
         staticMemorySnapshot.trackObjects(objs)
     }
 
     /**
      * Tracks fields that are accessed via System.arraycopy, Unsafe API, VarHandle API, Java AFU API, and kotlinx.atomicfu.
      *
-     * *Must be called from [runInIgnoredSection].*
+     * *Must be called from [runInsideIgnoredSection].*
      */
     private fun processMethodEffectOnStaticSnapshot(
         owner: Any?,
@@ -1349,7 +1350,7 @@ abstract class ManagedStrategy(
         }
     }
 
-    private fun methodGuaranteeType(owner: Any?, className: String, methodName: String): ManagedGuaranteeType? = runInIgnoredSection {
+    private fun methodGuaranteeType(owner: Any?, className: String, methodName: String): ManagedGuaranteeType? = runInsideIgnoredSection {
         userDefinedGuarantees?.forEach { guarantee ->
             val ownerName = owner?.javaClass?.canonicalName ?: className
             if (guarantee.classPredicate(ownerName) && guarantee.methodPredicate(methodName)) {
@@ -1372,7 +1373,7 @@ abstract class ManagedStrategy(
         receiver: Any?,
         params: Array<Any?>
     ): Any? {
-        val guarantee = runInIgnoredSection {
+        val guarantee = runInsideIgnoredSection {
             // process method effect on the static memory snapshot
             processMethodEffectOnStaticSnapshot(receiver, params)
             // re-throw abort error if the thread was aborted
@@ -1429,7 +1430,7 @@ abstract class ManagedStrategy(
             guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC) {
             enterIgnoredSection()
         }
-        val deterministicMethodDescriptor = runInIgnoredSection {
+        val deterministicMethodDescriptor = runInsideIgnoredSection {
             val methodCallInfo = MethodCallInfo(
                 ownerType = Types.ObjectType(className),
                 methodSignature = methodSignature,
@@ -1450,7 +1451,7 @@ abstract class ManagedStrategy(
         params: Array<Any?>,
         result: Any?
     ) {
-        val guarantee = runInIgnoredSection {
+        val guarantee = runInsideIgnoredSection {
             if (isInTraceDebuggerMode && isFirstReplay && descriptor != null) {
                 require(descriptor is DeterministicMethodDescriptor<*, *>)
                 descriptor.saveFirstResultWithCast(receiver, params, KResult.success(result)) {
@@ -1473,7 +1474,7 @@ abstract class ManagedStrategy(
                 // currently top-level actor functions are not represented in the `callStackTrace`,
                 // we should probably refactor and fix that, because it is very inconvenient
                 if (callStackTrace[threadId]!!.isEmpty())
-                    return@runInIgnoredSection guarantee
+                    return@runInsideIgnoredSection guarantee
                 val tracePoint = callStackTrace[threadId]!!.last().tracePoint
                 when (result) {
                     Unit -> tracePoint.initializeVoidReturnedValue()
@@ -1504,13 +1505,13 @@ abstract class ManagedStrategy(
     ) {
         if (isInTraceDebuggerMode && isFirstReplay && descriptor != null) {
             require(descriptor is DeterministicMethodDescriptor<*, *>)
-            runInIgnoredSection {
+            runInsideIgnoredSection {
                 descriptor.saveFirstResult(receiver, params, KResult.failure(throwable)) {
                     nativeMethodCallStatesTracker.setState(descriptorId, descriptor.methodCallInfo, it)
                 }
             }
         }
-        val guarantee = runInIgnoredSection {
+        val guarantee = runInsideIgnoredSection {
             loopDetector.afterMethodCall()
             val threadId = threadScheduler.getCurrentThreadId()
             // check if the called method is an atomics API method
@@ -1527,7 +1528,7 @@ abstract class ManagedStrategy(
                 // currently top-level actor functions are not represented in the `callStackTrace`,
                 // we should probably refactor and fix that, because it is very inconvenient
                 if (callStackTrace[threadId]!!.isEmpty())
-                    return@runInIgnoredSection guarantee
+                    return@runInsideIgnoredSection guarantee
                 val tracePoint = callStackTrace[threadId]!!.last().tracePoint
                 tracePoint.initializeThrownException(throwable)
                 afterMethodCall(threadId, tracePoint)
@@ -1555,7 +1556,7 @@ abstract class ManagedStrategy(
         descriptor !is DeterministicMethodDescriptor<*, *> -> null
         !isInTraceDebuggerMode -> descriptor.runFake(receiver, params).toBootstrapResult()
         isFirstReplay -> null
-        else -> runInIgnoredSection {
+        else -> runInsideIgnoredSection {
             val state = nativeMethodCallStatesTracker.getState(descriptorId, descriptor.methodCallInfo)
             descriptor.runFromStateWithCast(receiver, params, state).toBootstrapResult()
         }
@@ -2210,44 +2211,44 @@ internal class ManagedStrategyRunner(
     timeoutMs: Long, useClocks: UseClocks
 ) : ParallelThreadsRunner(managedStrategy, testClass, validationFunction, stateRepresentationMethod, timeoutMs, useClocks) {
 
-    override fun onThreadStart(iThread: Int) = runInIgnoredSection {
+    override fun onThreadStart(iThread: Int) = runInsideIgnoredSection {
         if (currentExecutionPart !== PARALLEL) return
         managedStrategy.onThreadStart(iThread)
     }
 
-    override fun onThreadFinish(iThread: Int) = runInIgnoredSection {
+    override fun onThreadFinish(iThread: Int) = runInsideIgnoredSection {
         if (currentExecutionPart !== PARALLEL) return
         managedStrategy.onThreadFinish(iThread)
     }
 
-    override fun onActorFailure(iThread: Int, throwable: Throwable) = runInIgnoredSection {
+    override fun onActorFailure(iThread: Int, throwable: Throwable) = runInsideIgnoredSection {
         if (isInternalException(throwable)) {
             managedStrategy.onInternalException(iThread, throwable)
         }
     }
 
-    override fun afterCoroutineSuspended(iThread: Int) = runInIgnoredSection {
+    override fun afterCoroutineSuspended(iThread: Int) = runInsideIgnoredSection {
         super.afterCoroutineSuspended(iThread)
         managedStrategy.afterCoroutineSuspended(iThread)
     }
 
-    override fun afterCoroutineResumed(iThread: Int) = runInIgnoredSection {
+    override fun afterCoroutineResumed(iThread: Int) = runInsideIgnoredSection {
         managedStrategy.afterCoroutineResumed()
     }
 
-    override fun afterCoroutineCancelled(iThread: Int) = runInIgnoredSection {
+    override fun afterCoroutineCancelled(iThread: Int) = runInsideIgnoredSection {
         managedStrategy.afterCoroutineCancelled()
     }
 
     override fun constructStateRepresentation(): String? {
         if (stateRepresentationFunction == null) return null
         // Enter ignored section, because Runner will call transformed state representation method
-        return runInIgnoredSection {
+        return runInsideIgnoredSection {
             super.constructStateRepresentation()
         }
     }
 
-    override fun <T> cancelByLincheck(cont: CancellableContinuation<T>, promptCancellation: Boolean): CancellationResult = runInIgnoredSection {
+    override fun <T> cancelByLincheck(cont: CancellableContinuation<T>, promptCancellation: Boolean): CancellationResult = runInsideIgnoredSection {
         // Create a cancellation trace point before `cancel`, so that cancellation trace point
         // precede the events in `onCancellation` handler.
         val cancellationTracePoint = managedStrategy.createAndLogCancellationTracePoint()

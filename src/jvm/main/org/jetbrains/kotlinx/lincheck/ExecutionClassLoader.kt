@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution
+import org.jetbrains.kotlinx.lincheck.util.*
 
 /**
  * This classloader is mostly used by runner to separate parallel iterations,
@@ -22,11 +23,11 @@ class ExecutionClassLoader : ClassLoader() {
         return super.defineClass(className, bytecode, 0, bytecode.size) as Class<out TestThreadExecution?>
     }
 
-    override fun loadClass(name: String?): Class<*> = runInIgnoredSection {
+    override fun loadClass(name: String?): Class<*> = runInsideIgnoredSection {
         return super.loadClass(name)
     }
 
-    override fun loadClass(name: String?, resolve: Boolean): Class<*> = runInIgnoredSection {
+    override fun loadClass(name: String?, resolve: Boolean): Class<*> = runInsideIgnoredSection {
         return super.loadClass(name, resolve)
     }
 }

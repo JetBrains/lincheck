@@ -101,7 +101,7 @@ internal open class ParallelThreadsRunner(
 
         // We need to run this code in an ignored section,
         // as it is called in the testing code but should not be analyzed.
-        override fun resumeWith(result: kotlin.Result<Any?>) = runInIgnoredSection {
+        override fun resumeWith(result: kotlin.Result<Any?>) = runInsideIgnoredSection {
             // decrement completed or suspended threads only if the operation was not cancelled and
             // the continuation was not intercepted; it was already decremented before writing `resWithCont` otherwise
             if (!result.cancelledByLincheck()) {
@@ -134,9 +134,9 @@ internal open class ParallelThreadsRunner(
 
             // We need to run this code in an ignored section,
             // as it is called in the testing code but should not be analyzed.
-            override fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T> = runInIgnoredSection {
+            override fun <T> interceptContinuation(continuation: Continuation<T>): Continuation<T> = runInsideIgnoredSection {
                 return Continuation(StoreExceptionHandler() + Job()) { result ->
-                    runInIgnoredSection {
+                    runInsideIgnoredSection {
                         // decrement completed or suspended threads only if the operation was not cancelled
                         if (!result.cancelledByLincheck()) {
                             completedOrSuspendedThreads.decrementAndGet()
@@ -202,7 +202,7 @@ internal open class ParallelThreadsRunner(
      * Otherwise if the invoked actor completed without suspension, then it just writes it's final result.
      */
     @Suppress("unused")
-    fun processInvocationResult(res: Any?, iThread: Int, actorId: Int): Result = runInIgnoredSection {
+    fun processInvocationResult(res: Any?, iThread: Int, actorId: Int): Result = runInsideIgnoredSection {
         val actor = scenario.parallelExecution[iThread][actorId]
         val finalResult = if (res === COROUTINE_SUSPENDED) {
             val thread = Thread.currentThread() as TestThread
@@ -226,7 +226,7 @@ internal open class ParallelThreadsRunner(
 
     // We need to run this code in an ignored section,
     // as it is called in the testing code but should not be analyzed.
-    private fun waitAndInvokeFollowUp(thread: TestThread, actorId: Int): Result = runInIgnoredSection {
+    private fun waitAndInvokeFollowUp(thread: TestThread, actorId: Int): Result = runInsideIgnoredSection {
         val threadId = thread.threadId
         // Coroutine is suspended. Call method so that strategy can learn it.
         afterCoroutineSuspended(threadId)
