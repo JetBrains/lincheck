@@ -111,6 +111,8 @@ private val String.filtered: String get() {
     }.joinToString("\n")
     // Remove line numbers
     filtered = filtered.replace(LINE_NUMBER_REGEX, "")
+    // Remove inner class indexes
+    filtered = filtered.replace(INNER_CLASS_INDEX_REGEX, "")
     return filtered
 }
 
@@ -124,6 +126,7 @@ private val TEST_EXECUTION_TRACE_ELEMENT_REGEX = listOf(
 ).joinToString(separator = ")|(", prefix = "(", postfix = ")").toRegex()
 
 private val LINE_NUMBER_REGEX = Regex(":(\\d+)")
+private val INNER_CLASS_INDEX_REGEX = Regex("#(\\d+)")
 
 internal fun getExpectedLogFromResources(testFileName: String) =
     getExpectedLogFileFromResources(testFileName).readText()
