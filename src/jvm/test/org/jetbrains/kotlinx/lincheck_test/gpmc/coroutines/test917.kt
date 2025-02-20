@@ -15,7 +15,6 @@ import java.util.concurrent.Executors
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import org.junit.Ignore
-import org.junit.Test
 
 class MessageSender(private val channel: Channel<Int>) {
     suspend fun sendMessage(message: Int) {
@@ -60,12 +59,14 @@ fun main(): Unit = runBlocking(pool) {
 java.lang.IllegalStateException: Check failed.
 	at org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy.runInvocation(ManagedStrategy.kt:245)
 """)
-class RunChecker917: BaseRunCoroutineTests(false) {
+class RunChecker917 : BaseRunCoroutineTests(false) {
     companion object {
         lateinit var pool: ExecutorCoroutineDispatcher
     }
     override fun block() {
         pool = Executors.newFixedThreadPool(4).asCoroutineDispatcher()
-        runBlocking(pool) { main() }
+        pool.use {
+            runBlocking(pool) { main() }
+        }
     }
 }

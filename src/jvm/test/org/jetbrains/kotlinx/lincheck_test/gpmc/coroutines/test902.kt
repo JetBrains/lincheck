@@ -15,7 +15,6 @@ import java.util.concurrent.Executors
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.*
 import org.junit.Ignore
-import org.junit.Test
 
 class Producer1(private val outChannel: Channel<Int>) {
     suspend fun produce() {
@@ -85,6 +84,8 @@ class RunChecker902: BaseRunCoroutineTests(false) {
     }
     override fun block() {
         pool = Executors.newFixedThreadPool(4).asCoroutineDispatcher()
-        runBlocking(pool) { main() }
+        pool.use {
+            runBlocking(pool) { main() }
+        }
     }
 }

@@ -60,12 +60,14 @@ fun main(): Unit = runBlocking(pool) {
 java.lang.IllegalStateException: Check failed.
 	at org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy.runInvocation(ManagedStrategy.kt:245)
 """)
-class RunChecker910: BaseRunCoroutineTests(false) {
+class RunChecker910 : BaseRunCoroutineTests(false) {
     companion object {
         lateinit var pool: ExecutorCoroutineDispatcher
     }
     override fun block() {
         pool = Executors.newFixedThreadPool(4).asCoroutineDispatcher()
-        runBlocking(pool) { main() }
+        pool.use {
+            runBlocking(pool) { main() }
+        }
     }
 }

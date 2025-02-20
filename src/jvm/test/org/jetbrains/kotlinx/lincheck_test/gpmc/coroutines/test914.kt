@@ -70,12 +70,14 @@ fun main() {
     FooBar().launchCoroutines()
 }
 
-class RunChecker914: BaseRunCoroutineTests(true) {
+class RunChecker914 : BaseRunCoroutineTests(true) {
     companion object {
         lateinit var pool: ExecutorCoroutineDispatcher
     }
     override fun block() {
         pool = Executors.newFixedThreadPool(4).asCoroutineDispatcher()
-        runBlocking(pool) { main() }
+        pool.use {
+            runBlocking(pool) { main() }
+        }
     }
 }

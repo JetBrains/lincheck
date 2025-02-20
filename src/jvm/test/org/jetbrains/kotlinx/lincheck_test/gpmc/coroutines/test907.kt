@@ -73,12 +73,14 @@ fun main(): Unit = runBlocking(pool) {
 }
 
 @org.junit.Ignore("'All unfinished threads are in deadlock' but should finish")
-class RunChecker907: BaseRunCoroutineTests(false) {
+class RunChecker907 : BaseRunCoroutineTests(false) {
     companion object {
         lateinit var pool: ExecutorCoroutineDispatcher
     }
     override fun block() {
         pool = Executors.newFixedThreadPool(4).asCoroutineDispatcher()
-        runBlocking(pool) { main() }
+        pool.use {
+            runBlocking(pool) { main() }
+        }
     }
 }
