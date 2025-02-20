@@ -268,14 +268,12 @@ internal inline fun<R> ExecutionClassLoader.runInIgnoredSection(block: () -> R):
     runInIgnoredSection(ThreadDescriptor.getCurrentThreadDescriptor(), block)
 
 internal inline fun <R> runInIgnoredSection(descriptor: ThreadDescriptor?, block: () -> R): R {
-    if (descriptor == null || descriptor.eventTracker !is ManagedStrategy)
-        return block()
-    if (descriptor.inIgnoredSection()) {
+    if (descriptor == null || descriptor.eventTracker !is ManagedStrategy) {
         return block()
     }
     descriptor.enterIgnoredSection()
-    return try {
-        block()
+    try {
+        return block()
     } finally {
         descriptor.leaveIgnoredSection()
     }
@@ -291,14 +289,15 @@ internal inline fun <R> ParallelThreadsRunner.runOutsideIgnoredSection(block: ()
  * This method **must** be called in an ignored section.
  */
 internal inline fun <R> runOutsideIgnoredSection(descriptor: ThreadDescriptor?, block: () -> R): R {
-    if (descriptor == null || descriptor.eventTracker !is ManagedStrategy)
+    if (descriptor == null || descriptor.eventTracker !is ManagedStrategy) {
         return block()
+    }
     check(descriptor.inIgnoredSection()) {
         "Current thread must be in ignored section"
     }
     val depth = descriptor.saveIgnoredSectionDepth()
-    return try {
-        block()
+    try {
+        return block()
     } finally {
         descriptor.restoreIgnoredSectionDepth(depth)
     }
