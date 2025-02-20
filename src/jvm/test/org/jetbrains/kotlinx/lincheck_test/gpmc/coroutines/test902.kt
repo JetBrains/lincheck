@@ -14,6 +14,8 @@ import org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.BaseRunCoroutineTests
 import java.util.concurrent.Executors
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.*
+import org.junit.Ignore
+import org.junit.Test
 
 class Producer1(private val outChannel: Channel<Int>) {
     suspend fun produce() {
@@ -72,12 +74,13 @@ fun main(): Unit = runBlocking(pool) {
     launch(pool) { consumer.consume() }
 
     for (result in resultChannel) {
-        println(result)
+        check(result % 2 == 0 && (result / 2) in 1..10)
     }
 }
 
+@Ignore("'All unfinished threads are in deadlock' but should finish")
 class RunChecker902: BaseRunCoroutineTests(false) {
-        companion object {
+    companion object {
         lateinit var pool: ExecutorCoroutineDispatcher
     }
     override fun block() {

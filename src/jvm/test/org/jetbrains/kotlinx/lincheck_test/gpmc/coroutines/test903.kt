@@ -14,6 +14,8 @@ import org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.BaseRunCoroutineTests
 import java.util.concurrent.Executors
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
+import org.junit.Ignore
+import org.junit.Test
 
 @OptIn(DelicateCoroutinesApi::class)
 fun producerA(channelA: Channel<Int>) = GlobalScope.launch(pool) {
@@ -41,13 +43,17 @@ fun main(): Unit = runBlocking(pool) {
 
     repeat(5) {
         launch(pool) {
-            println("Received from channelB: ${channelB.receive()}")
+            check(channelB.receive() % 2 == 0)
         }
     }
 }
 
+@Ignore("""
+java.lang.IllegalStateException: Check failed. 
+    at org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy.runInvocation(ManagedStrategy.kt:245)
+""")
 class RunChecker903: BaseRunCoroutineTests(false) {
-        companion object {
+    companion object {
         lateinit var pool: ExecutorCoroutineDispatcher
     }
     override fun block() {

@@ -58,7 +58,7 @@ fun main(): Unit = runBlocking(pool) {
 }
 
 class RunChecker906: BaseRunCoroutineTests(true) {
-        companion object {
+    companion object {
         lateinit var pool: ExecutorCoroutineDispatcher
     }
     override fun block() {

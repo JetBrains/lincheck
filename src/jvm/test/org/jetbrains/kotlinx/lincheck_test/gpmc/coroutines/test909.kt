@@ -28,22 +28,21 @@ fun main(): Unit = runBlocking(pool) {
 
     launch(pool) {
         simpleClass.sendValue(1)
-        println("Sent: 1")
     }
 
     launch(pool) {
         delay(100)
-        println("Received: ${channel.receive()}")
+        channel.receive()
     }
 
     launch(pool) {
         val received = channel.receive()
-        println("Received: $received")
+        check(received == 1)
     }
 }
 
 class RunChecker909: BaseRunCoroutineTests(true) {
-        companion object {
+    companion object {
         lateinit var pool: ExecutorCoroutineDispatcher
     }
     override fun block() {

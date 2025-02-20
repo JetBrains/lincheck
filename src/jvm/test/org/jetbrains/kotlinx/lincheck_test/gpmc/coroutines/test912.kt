@@ -22,7 +22,7 @@ class ChannelC(val channel: Channel<Int>)
 fun first(channelA: ChannelA, channelB: ChannelB) {
     runBlocking(pool) {
         val jobA = launch(pool) {
-            channelA.channel.send(1)
+            channelA.channel.send(1)  // deadlocks here
             channelB.channel.receive()
         }
         jobA.start()
@@ -60,7 +60,7 @@ fun fourth(channelD: ChannelD, channelA: ChannelA) {
     }
 }
 
-fun main(): Unit{
+fun main() {
     val channelA = Channel<Int>()
     val channelB = Channel<Int>()
     val channelC = Channel<Int>()
@@ -71,14 +71,14 @@ fun main(): Unit{
     val chanC = ChannelC(channelC)
     val chanD = ChannelD(channelD)
     
-    first(chanA, chanB)
+    first(chanA, chanB) // this invocation will block
     second(chanB, chanC)
     third(chanC, chanA)
     fourth(chanD, chanA)
 }
 
 class RunChecker912: BaseRunCoroutineTests(true) {
-        companion object {
+    companion object {
         lateinit var pool: ExecutorCoroutineDispatcher
     }
     override fun block() {

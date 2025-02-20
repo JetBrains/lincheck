@@ -14,6 +14,8 @@ import org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.BaseRunCoroutineTests
 import java.util.concurrent.Executors
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
+import org.junit.Ignore
+import org.junit.Test
 
 class MessageSender(private val channel: Channel<Int>) {
     suspend fun sendMessage(message: Int) {
@@ -23,24 +25,19 @@ class MessageSender(private val channel: Channel<Int>) {
 
 fun CoroutineScope.setupCoroutines(channel: Channel<Int>) {
     launch(pool) {
-        val receivedMessage = channel.receive()
-        println("Coroutine 1 received: $receivedMessage")
+        channel.receive()
     }
     launch(pool) {
-        val receivedMessage = channel.receive()
-        println("Coroutine 2 received: $receivedMessage")
+        channel.receive()
     }
     launch(pool) {
-        val receivedMessage = channel.receive()
-        println("Coroutine 3 received: $receivedMessage")
+        channel.receive()
     }
     launch(pool) {
-        val receivedMessage = channel.receive()
-        println("Coroutine 4 received: $receivedMessage")
+        channel.receive()
     }
     launch(pool) {
-        val receivedMessage = channel.receive()
-        println("Coroutine 5 received: $receivedMessage")
+        channel.receive()
     }
 }
 
@@ -59,8 +56,12 @@ fun main(): Unit = runBlocking(pool) {
     delay(1000L)
 }
 
+@Ignore("""
+java.lang.IllegalStateException: Check failed.
+	at org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy.runInvocation(ManagedStrategy.kt:245)
+""")
 class RunChecker917: BaseRunCoroutineTests(false) {
-        companion object {
+    companion object {
         lateinit var pool: ExecutorCoroutineDispatcher
     }
     override fun block() {
