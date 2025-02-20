@@ -337,7 +337,6 @@ class ThreadPoolRunConcurrentRepresentationTest : BaseRunConcurrentRepresentatio
     @Before
     fun setUp() {
         assumeFalse(isInTraceDebuggerMode) // unstable hash-code
-        assumeFalse(isJdk8) // TODO: investigate why test is unstable on JDK8
     }
 
     override fun block() {
@@ -389,6 +388,7 @@ class CoroutinesRunConcurrentRepresentationTest : BaseRunConcurrentRepresentatio
     @Before
     fun setUp() {
         assumeFalse(isInTraceDebuggerMode) // unstable hash-code
+        assumeFalse(isJdk8) // TODO: investigate why test is unstable on JDK8
     }
 
     companion object {
