@@ -47,7 +47,7 @@ fun main(): Unit = runBlocking(pool) {
     handler.sendToChannel2()
 }
 
-class RunChecker901: BaseRunCoroutineTests(true) {
+class RunChecker901 : BaseRunCoroutineTests(true) {
     companion object {
         lateinit var pool: ExecutorCoroutineDispatcher
     }
