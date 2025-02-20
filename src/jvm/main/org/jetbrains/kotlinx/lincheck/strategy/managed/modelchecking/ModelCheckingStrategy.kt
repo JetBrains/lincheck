@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import java.lang.reflect.*
 import java.util.*
@@ -116,6 +117,7 @@ internal class ModelCheckingStrategy(
         // Crete a new current position in the same place as where the check is,
         // because the position check and the position increment are dual operations.
         check(iThread == threadScheduler.scheduledThreadId)
+        if (runner.currentExecutionPart != PARALLEL) return false
         currentInterleaving.newExecutionPosition(iThread)
         return currentInterleaving.isSwitchPosition()
     }
