@@ -501,7 +501,7 @@ internal fun isThreadContainerClass(className: String): Boolean =
  * Tests if the provided [className] represents an internal coroutine dispatcher class.
  */
 internal fun isCoroutineDispatcherInternalClass(className: String): Boolean =
-    className.contains("DispatchedContinuation")
+    className.startsWith("kotlinx.coroutines.internal") && className.contains("DispatchedContinuation")
 
 internal const val ASM_API = Opcodes.ASM9
 
