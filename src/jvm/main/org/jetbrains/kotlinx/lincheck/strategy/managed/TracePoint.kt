@@ -166,7 +166,7 @@ internal class MethodCallTracePoint(
             append(": ${returnedValue.valueRepresentation}")
         } else if (returnedValue is ReturnedValueResult.CoroutineSuspended) {
             append(": COROUTINE_SUSPENDED")
-        } else if (thrownException != null && thrownException !is ThreadAbortedError) {
+        } else if (thrownException != null && thrownException !is LincheckAnalysisAbortedError) {
             append(": threw ${thrownException!!.javaClass.simpleName}")
         }
     }.toString()

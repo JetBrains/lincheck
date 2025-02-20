@@ -12,7 +12,6 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.util.*
-import sun.nio.ch.lincheck.Injections
 
 
 /**
@@ -61,9 +60,9 @@ class ManagedThreadScheduler : ThreadScheduler() {
 
     /**
      * Aborts the currently running thread.
-     * Throws [ThreadAbortedError] to indicate that the thread has been aborted.
+     * Throws [LincheckAnalysisAbortedError] to indicate that the thread has been aborted.
      *
-     * @return Nothing as this method always throws [ThreadAbortedError].
+     * @return Nothing as this method always throws [LincheckAnalysisAbortedError].
      */
     fun abortCurrentThread(): Nothing {
         val threadId = getCurrentThreadId()
@@ -79,7 +78,7 @@ class ManagedThreadScheduler : ThreadScheduler() {
      * Waits until the specified thread is chosen to continue the execution.
      *
      * @param threadId The identifier of the thread whose turn to wait for.
-     * @throws ThreadAbortedError if the thread was aborted.
+     * @throws LincheckAnalysisAbortedError if the thread was aborted.
      */
     fun awaitTurn(threadId: ThreadId) {
         check(threadId == getCurrentThreadId())
@@ -106,18 +105,18 @@ class ManagedThreadScheduler : ThreadScheduler() {
         // descriptor.leaveTestingCode()
 
         // raise the exception
-        throw ThreadAbortedError
+        throw LincheckAnalysisAbortedError
     }
 
 }
 
 /**
- * This exception is used to abort the execution correctly for managed strategies,
- * for instance, in case of a deadlock.
+ * This exception is used by a Lincheck analysis to abort the execution of a thread,
+ * for instance, in case when a deadlock is detected.
  */
-internal object ThreadAbortedError : Error() {
+internal object LincheckAnalysisAbortedError : Error() {
     // do not create a stack trace -- it simply can be unsafe
     override fun fillInStackTrace() = this
 
-    private fun readResolve(): Any = ThreadAbortedError
+    private fun readResolve(): Any = LincheckAnalysisAbortedError
 }

@@ -636,7 +636,7 @@ abstract class ManagedStrategy(
         // so we exit testing code to avoid trace collection resume or some bizarre bugs
         leaveTestingCode()
         // suppress `ThreadAbortedError`
-        if (exception is ThreadAbortedError) return true
+        if (exception is LincheckAnalysisAbortedError) return true
         // Though the corresponding failure will be detected by the runner,
         // the managed strategy can construct a trace to reproduce this failure.
         // Let's then store the corresponding failing result and construct the trace.

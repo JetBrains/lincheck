@@ -41,7 +41,7 @@ class ThreadAbortErrorInTryBlockTest {
             .threads(2)
         val failure = options.checkImpl(this::class.java)
         check(failure != null) { "the test should fail" }
-        val threadAbortedErrorName = ThreadAbortedError::class.simpleName!!
+        val threadAbortedErrorName = LincheckAnalysisAbortedError::class.simpleName!!
         check(failure is ManagedDeadlockFailure) {
             "$threadAbortedErrorName overrode deadlock because of try-finally"
         }

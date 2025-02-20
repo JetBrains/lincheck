@@ -13,7 +13,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ThreadAbortedError
+import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import java.io.*
 import java.lang.reflect.*
 import java.util.concurrent.atomic.*
@@ -162,4 +162,4 @@ internal fun isInternalException(exception: Throwable): Boolean =
     // is used to stop thread in `FixedActiveThreadsExecutor` via `thread.stop()`
     exception is ThreadDeath ||
     // is used to abort thread in `ManagedStrategy`
-    exception is ThreadAbortedError
+    exception is LincheckAnalysisAbortedError
