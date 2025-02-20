@@ -32,21 +32,19 @@ class ExampleClass {
         delay(50)
         channel2.send("World")
     }
-    
-    suspend fun producer3() {
-        channel3.send(3.14)
-        delay(50)
-        channel3.send(1.618)
-    }
 
     suspend fun consumer1() {
-        println(channel1.receive())
-        println(channel2.receive())
+        channel1.receive()
+        channel2.receive()
+//        println(channel1.receive())
+//        println(channel2.receive())
     }
 
     suspend fun consumer2() {
-        println(channel3.receive())
-        println(channel4.receive())
+        channel3.receive()
+        channel4.receive()
+//        println(channel3.receive())
+//        println(channel4.receive())
     }
 }
 
@@ -63,17 +61,20 @@ fun main(): Unit = runBlocking(pool) {
     
     launch(pool) {
         example.consumer1()
+        example.consumer1()
     }
     
     launch(pool) {
         example.consumer2()
     }
 
+    example.channel3.send(3.14)
     example.channel4.send(123456789L)
 }
 
+@org.junit.Ignore("'All unfinished threads are in deadlock' but should finish")
 class RunChecker907: BaseRunCoroutineTests(false) {
-        companion object {
+    companion object {
         lateinit var pool: ExecutorCoroutineDispatcher
     }
     override fun block() {

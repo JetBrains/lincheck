@@ -66,12 +66,12 @@ class FooBar {
     }
 }
 
-fun main(): Unit{
+fun main() {
     FooBar().launchCoroutines()
 }
 
 class RunChecker914: BaseRunCoroutineTests(true) {
-        companion object {
+    companion object {
         lateinit var pool: ExecutorCoroutineDispatcher
     }
     override fun block() {

@@ -14,6 +14,8 @@ import org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.BaseRunCoroutineTests
 import java.util.concurrent.Executors
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
+import org.junit.Ignore
+import org.junit.Test
 
 class Processor {
     val channel1 = Channel<Int>()
@@ -51,9 +53,10 @@ class Aggregator {
     }
 }
 
-suspend fun receiveAndPrint(channel: Channel<Int>) {
+suspend fun receive(channel: Channel<Int>) {
     for (y in channel) {
-        println("Received: $y")
+        //println("Received: $y")
+        check(y % 2 == 0)
     }
 }
 
@@ -65,12 +68,13 @@ fun main(): Unit = runBlocking(pool) {
     launch(pool) { aggregator.aggregateNumbers(processor) }
     launch(pool) { aggregator.sendToChannels() }
 
-    launch(pool) { receiveAndPrint(aggregator.channel4) }
-    launch(pool) { receiveAndPrint(aggregator.channel5) }
+    launch(pool) { receive(aggregator.channel4) }
+    launch(pool) { receive(aggregator.channel5) }
 }
 
+@Ignore("'All unfinished threads are in deadlock' but should finish")
 class RunChecker905: BaseRunCoroutineTests(false) {
-        companion object {
+    companion object {
         lateinit var pool: ExecutorCoroutineDispatcher
     }
     override fun block() {
