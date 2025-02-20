@@ -77,7 +77,7 @@ internal class ThreadTransformer(
 
         // STACK: exception
         dup()
-        invokeStatic(Injections::onThreadException)
+        invokeStatic(Injections::onThreadRunException)
         // STACK: exception, isSuppressed
 
         // Notify that the thread has finished.

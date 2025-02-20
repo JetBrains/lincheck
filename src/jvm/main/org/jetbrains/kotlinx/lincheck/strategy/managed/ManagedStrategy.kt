@@ -518,7 +518,7 @@ abstract class ManagedStrategy(
      * @param exception The exception that was thrown within the thread.
      * @return true if the exception should be suppressed, false otherwise.
      */
-    override fun onThreadException(exception: Throwable): Boolean = runInIgnoredSection {
+    override fun onThreadRunException(exception: Throwable): Boolean = runInIgnoredSection {
         val currentThreadId = threadScheduler.getCurrentThreadId()
         // do not track unregistered threads
         if (currentThreadId < 0) return false
