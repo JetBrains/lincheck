@@ -68,16 +68,16 @@ public class Injections {
         }
     }
 
-    public static void enterTestingCode() {
+    public static void enableAnalysis() {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) return;
-        descriptor.enterAnalyzedCode();
+        descriptor.enableAnalysis();
     }
 
-    public static void leaveTestingCode() {
+    public static void disableAnalysis() {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) return;
-        descriptor.leaveAnalyzedCode();
+        descriptor.disableAnalysis();
     }
 
     /**

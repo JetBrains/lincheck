@@ -547,7 +547,7 @@ abstract class ManagedStrategy(
         // scenario threads are handled separately
         if (currentThreadId < scenario.nThreads) return
         onThreadStart(currentThreadId)
-        enterTestingCode()
+        enableAnalysis()
     }
 
     override fun afterThreadFinish() = runInIgnoredSection {
@@ -556,7 +556,7 @@ abstract class ManagedStrategy(
         if (currentThreadId < 0) return
         // scenario threads are handled separately by the runner itself
         if (currentThreadId < scenario.nThreads) return
-        leaveTestingCode()
+        disableAnalysis()
         onThreadFinish(currentThreadId)
     }
 
@@ -683,7 +683,7 @@ abstract class ManagedStrategy(
         check(isInternalException(exception))
         // This method is called only if the exception cannot be treated as a normal result,
         // so we exit testing code to avoid trace collection resume or some bizarre bugs
-        leaveTestingCode()
+        disableAnalysis()
         // suppress `ThreadAbortedError`
         if (exception is LincheckAnalysisAbortedError) return
         // Though the corresponding failure will be detected by the runner,
@@ -703,7 +703,7 @@ abstract class ManagedStrategy(
         callStackTrace[iThread]!!.clear()
         suspendedFunctionsStack[iThread]!!.clear()
         loopDetector.onActorStart(iThread)
-        enterTestingCode()
+        enableAnalysis()
     }
 
     override fun onActorFinish() {
@@ -711,7 +711,7 @@ abstract class ManagedStrategy(
         // When stepping out to the TestThreadExecution class, stepping continues unproductively.
         // With this method, we force the debugger to stop at the beginning of the next actor.
         onThreadSwitchesOrActorFinishes()
-        leaveTestingCode()
+        disableAnalysis()
     }
 
     /**
@@ -1200,12 +1200,12 @@ abstract class ManagedStrategy(
         return (threadDescriptor.eventTracker === this)
     }
 
-    protected fun enterTestingCode() {
-        return Injections.enterTestingCode()
+    protected fun enableAnalysis() {
+        return Injections.enableAnalysis()
     }
 
-    protected fun leaveTestingCode() {
-        return Injections.leaveTestingCode()
+    protected fun disableAnalysis() {
+        return Injections.disableAnalysis()
     }
 
     protected fun enterIgnoredSection() {

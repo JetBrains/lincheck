@@ -59,13 +59,14 @@ public class ThreadDescriptor {
     private WeakReference<Object> eventTrackerData = null;
 
     /**
-     * This flag indicates whether the Lincheck is currently running analyzed code.
+     * This flag indicates whether the Lincheck analysis is currently enabled in this thread.
      */
-    private boolean inAnalyzedCode = false;
+    private boolean isAnalysisEnabled = false;
 
     /**
      * Counter keeping track of the ignored section re-entrance depth.
-     * Ignored section is used to temporarily disable tracking of all events.
+     *
+     * @see #inIgnoredSection
      */
     private int ignoredSectionDepth = 0;
 
@@ -96,36 +97,83 @@ public class ThreadDescriptor {
         this.eventTrackerData = new WeakReference<>(eventTrackerData);
     }
 
+    /**
+     * Determines whether the thread is currently within an analyzed code section,
+     * that is analysis was enabled and the thread is not currently within an ignored section.
+     *
+     * @return true if the thread is in a section of analyzed code, false otherwise.
+     */
     public boolean inAnalyzedCode() {
-        return inAnalyzedCode && (ignoredSectionDepth == 0);
+        return isAnalysisEnabled && (ignoredSectionDepth == 0);
     }
 
-    public void enterAnalyzedCode() {
-        inAnalyzedCode = true;
+    /**
+     * Enables analysis for this thread.
+     */
+    public void enableAnalysis() {
+        isAnalysisEnabled = true;
     }
 
-    public void leaveAnalyzedCode() {
-        inAnalyzedCode = false;
+    /**
+     * Disables analysis for this thread.
+     */
+    public void disableAnalysis() {
+        isAnalysisEnabled = false;
     }
 
+    /**
+     * Checks if this thread is currently within an ignored section.
+     * Ignored section is used to temporarily disable tracking of all events.
+     *
+     * @return true if the thread is within an ignored section, false otherwise.
+     */
     public boolean inIgnoredSection() {
         return ignoredSectionDepth > 0;
     }
 
+    /**
+     * Enters an ignored section in this thread.
+     *
+     * <p>
+     * Ignored sections are re-entrant, meaning the thread may enter
+     * the ignored section multiple times before exiting it
+     */
     public void enterIgnoredSection() {
         ignoredSectionDepth++;
     }
 
+    /**
+     * Exits an ignored section for this thread.
+     *
+     * <p>
+     * Ignored sections are re-entrant, meaning the thread may need to exit
+     * the section multiple times if previously it entered it multiple times.
+     */
     public void leaveIgnoredSection() {
         ignoredSectionDepth--;
     }
 
-    public int saveIgnoredSectionDepth() {
+    /**
+     * Resets the ignored section re-entrance depth for this thread to 0 and returns the previous depth.
+     *
+     * <p>
+     * This can be used to temporarily exit the current ignored section
+     * and then later re-enter it with the same re-entrance depth,
+     * using the corresponding restore method.
+     *
+     * @return the previous depth of the ignored section before it was reset.
+     */
+    public int saveAndResetIgnoredSectionDepth() {
         int depth = ignoredSectionDepth;
         ignoredSectionDepth = 0;
         return depth;
     }
 
+    /**
+     * Restores the ignored section re-entrance depth for this thread to the given value.
+     *
+     * @param depth the depth to which the ignored section re-entrance is being restored.
+     */
     public void restoreIgnoredSectionDepth(int depth) {
         ignoredSectionDepth = depth;
     }
