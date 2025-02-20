@@ -18,7 +18,6 @@ import kotlinx.coroutines.channels.Channel
 class Producer(private val channel: Channel<Int>) {
     suspend fun produce() {
         for (i in 1..3) {
-            println("Producing $i")
             channel.send(i)
         }
     }
@@ -28,15 +27,13 @@ class Consumer(private val channel: Channel<Int>) {
     suspend fun consume() {
         for (i in 1..3) {
             val value = channel.receive()
-            println("Consuming $value")
         }
     }
 }
 
 class Processor(private val channel: Channel<Int>) {
     suspend fun process() {
-        val value = channel.receive()
-        println("Processing $value")
+        channel.receive()
     }
 }
 
@@ -50,14 +47,14 @@ fun main(): Unit = runBlocking(pool) {
     launch(pool) { producer.produce() }
     launch(pool) { consumer.consume() }
     launch(pool) { processor.process() }
-    launch(pool) { processor.process() }
+    launch(pool) { processor.process() } // missing additional processor, thus, blocks on send in last produce
     launch(pool) { producer.produce() }
-    
-    println("This will never get printed due to deadlock")
+
+    // This will never be reached due to deadlock
 }
 
 class RunChecker913: BaseRunCoroutineTests(true) {
-        companion object {
+    companion object {
         lateinit var pool: ExecutorCoroutineDispatcher
     }
     override fun block() {

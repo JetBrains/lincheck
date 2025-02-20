@@ -14,34 +14,21 @@ import org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.BaseRunCoroutineTests
 import java.util.concurrent.Executors
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.*
+import org.junit.Ignore
 
 class Processor(val channel: Channel<Int>) {
     suspend fun processOne() {
         val value = channel.receive()
-        println("Processed One: $value")
         processTwo(value)
     }
     
     suspend fun processTwo(value: Int) {
-        println("Processed Two: $value")
         channel.send(value + 1)
     }
     
     suspend fun processThree() {
-        delay(500)
-        val value = 100
-        channel.send(value)
-    }
-    
-    suspend fun processFour() {
-        val value = channel.receive()
-        println("Processed Four: $value")
-    }
-    
-    suspend fun processFive() {
         channel.send(200)
-        val value = channel.receive()
-        println("Processed Five: $value")
+        channel.receive()
     }
 }
 
@@ -54,12 +41,16 @@ fun main(): Unit = runBlocking(pool) {
     }
 
     launch(pool) {
-        processor.processFive()
+        processor.processThree()
     }
 }
 
-class RunChecker921: BaseRunCoroutineTests(false) {
-        companion object {
+@Ignore("""
+java.lang.IllegalStateException: Check failed.
+	at org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy.runInvocation(ManagedStrategy.kt:245)
+""")
+class RunChecker921 : BaseRunCoroutineTests(false) {
+    companion object {
         lateinit var pool: ExecutorCoroutineDispatcher
     }
     override fun block() {

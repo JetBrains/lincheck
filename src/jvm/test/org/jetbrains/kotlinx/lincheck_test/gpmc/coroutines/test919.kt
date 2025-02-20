@@ -49,7 +49,7 @@ suspend fun coroutine4(ch5: Channel<Int>, ch1: Channel<Int>) {
 }
 
 class RunChecker919: BaseRunCoroutineTests(true) {
-        companion object {
+    companion object {
         lateinit var pool: ExecutorCoroutineDispatcher
     }
     override fun block() {
