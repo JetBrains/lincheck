@@ -79,7 +79,7 @@ fun main(): Unit = runBlocking(pool) {
 }
 
 @Ignore("'All unfinished threads are in deadlock' but should finish")
-class RunChecker905: BaseRunCoroutineTests(false) {
+class RunChecker905 : BaseRunCoroutineTests(false) {
     companion object {
         lateinit var pool: ExecutorCoroutineDispatcher
     }

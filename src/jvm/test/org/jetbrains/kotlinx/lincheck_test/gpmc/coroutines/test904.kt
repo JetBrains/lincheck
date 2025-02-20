@@ -83,7 +83,7 @@ fun main(): Unit = runBlocking(pool) {
     initiateDeadlock(classA, classB)
 }
 
-class RunChecker904: BaseRunCoroutineTests(true) {
+class RunChecker904 : BaseRunCoroutineTests(true) {
     companion object {
         lateinit var pool: ExecutorCoroutineDispatcher
     }
