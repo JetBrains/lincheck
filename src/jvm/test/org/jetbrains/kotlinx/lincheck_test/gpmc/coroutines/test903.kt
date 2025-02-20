@@ -46,7 +46,7 @@ fun main(): Unit = runBlocking(pool) {
     }
 }
 
-class RunChecker903: BaseRunCoroutineTests(false, 1000) {
+class RunChecker903 : BaseRunCoroutineTests(false, 1000) {
     companion object {
         lateinit var pool: ExecutorCoroutineDispatcher
     }
