@@ -46,11 +46,11 @@ internal class SharedMemoryAccessTransformer(
         when (opcode) {
             GETSTATIC -> {
                 // STACK: <empty>
-                invokeIfInTestingCode(
+                invokeIfInAnalyzedCode(
                     original = {
                         visitFieldInsn(opcode, owner, fieldName, desc)
                     },
-                    code = {
+                    instrumented = {
                         // STACK: <empty>
                         pushNull()
                         push(owner.toCanonicalClassName())
@@ -78,11 +78,11 @@ internal class SharedMemoryAccessTransformer(
 
             GETFIELD -> {
                 // STACK: obj
-                invokeIfInTestingCode(
+                invokeIfInAnalyzedCode(
                     original = {
                         visitFieldInsn(opcode, owner, fieldName, desc)
                     },
-                    code = {
+                    instrumented = {
                         // STACK: obj
                         dup()
                         // STACK: obj, obj
@@ -112,11 +112,11 @@ internal class SharedMemoryAccessTransformer(
 
             PUTSTATIC -> {
                 // STACK: value
-                invokeIfInTestingCode(
+                invokeIfInAnalyzedCode(
                     original = {
                         visitFieldInsn(opcode, owner, fieldName, desc)
                     },
-                    code = {
+                    instrumented = {
                         val valueType = getType(desc)
                         val valueLocal = newLocal(valueType) // we cannot use DUP as long/double require DUP2
                         copyLocal(valueLocal)
@@ -149,11 +149,11 @@ internal class SharedMemoryAccessTransformer(
 
             PUTFIELD -> {
                 // STACK: obj, value
-                invokeIfInTestingCode(
+                invokeIfInAnalyzedCode(
                     original = {
                         visitFieldInsn(opcode, owner, fieldName, desc)
                     },
-                    code = {
+                    instrumented = {
                         val valueType = getType(desc)
                         val valueLocal = newLocal(valueType) // we cannot use DUP as long/double require DUP2
                         storeLocal(valueLocal)
@@ -197,11 +197,11 @@ internal class SharedMemoryAccessTransformer(
     override fun visitInsn(opcode: Int) = adapter.run {
         when (opcode) {
             AALOAD, LALOAD, FALOAD, DALOAD, IALOAD, BALOAD, CALOAD, SALOAD -> {
-                invokeIfInTestingCode(
+                invokeIfInAnalyzedCode(
                     original = {
                         visitInsn(opcode)
                     },
-                    code = {
+                    instrumented = {
                         // STACK: array: Array, index: Int
                         val arrayElementType = getArrayElementType(opcode)
                         dup2()
@@ -226,11 +226,11 @@ internal class SharedMemoryAccessTransformer(
             }
 
             AASTORE, IASTORE, FASTORE, BASTORE, CASTORE, SASTORE, LASTORE, DASTORE -> {
-                invokeIfInTestingCode(
+                invokeIfInAnalyzedCode(
                     original = {
                         visitInsn(opcode)
                     },
-                    code = {
+                    instrumented = {
                         // STACK: array: Array, index: Int, value: Object
                         val arrayElementType = getArrayElementType(opcode)
                         val valueLocal = newLocal(arrayElementType) // we cannot use DUP as long/double require DUP2

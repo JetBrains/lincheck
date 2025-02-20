@@ -52,11 +52,11 @@ internal class MethodCallTransformer(
             visitMethodInsn(opcode, owner, name, desc, itf)
             return
         }
-        invokeIfInTestingCode(
+        invokeIfInAnalyzedCode(
             original = {
                 visitMethodInsn(opcode, owner, name, desc, itf)
             },
-            code = {
+            instrumented = {
                 processMethodCall(desc, opcode, owner, name, itf)
             }
         )

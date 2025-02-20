@@ -54,11 +54,11 @@ internal class LocalVariablesAccessTransformer(
 
     @Suppress("UNUSED_PARAMETER")
     private fun visitWriteVarInsn(localVariableInfo: LocalVariableInfo, opcode: Int, varIndex: Int) = adapter.run {
-        invokeIfInTestingCode(
+        invokeIfInAnalyzedCode(
             original = {
                 visitVarInsn(opcode, varIndex)
             },
-            code = {
+            instrumented = {
                 // STACK: value
                 val type = getVarInsOpcodeType(opcode)
                 val local = newLocal(type)
@@ -80,11 +80,11 @@ internal class LocalVariablesAccessTransformer(
     }
 
     private fun visitReadVarInsn(localVariableInfo: LocalVariableInfo, opcode: Int, varIndex: Int) = adapter.run {
-        invokeIfInTestingCode(
+        invokeIfInAnalyzedCode(
             original = {
                 visitVarInsn(opcode, varIndex)
             },
-            code = {
+            instrumented = {
                 // STACK: <empty>
                 visitVarInsn(opcode, varIndex)
                 // STACK: value

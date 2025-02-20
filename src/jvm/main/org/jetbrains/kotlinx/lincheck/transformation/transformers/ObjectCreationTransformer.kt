@@ -65,11 +65,11 @@ internal class ObjectCreationTransformer(
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         // special handling for a common case of `Object` constructor
         if (name == "<init>" && owner == "java/lang/Object" && uninitializedObjects > 0) {
-            invokeIfInTestingCode(
+            invokeIfInAnalyzedCode(
                 original = {
                     visitMethodInsn(opcode, owner, name, desc, itf)
                 },
-                code = {
+                instrumented = {
                     val objectLocal = newLocal(OBJECT_TYPE)
                     copyLocal(objectLocal)
                     visitMethodInsn(opcode, owner, name, desc, itf)
@@ -81,11 +81,11 @@ internal class ObjectCreationTransformer(
             return
         }
         if (name == "<init>" && uninitializedObjects > 0) {
-            invokeIfInTestingCode(
+            invokeIfInAnalyzedCode(
                 original = {
                     visitMethodInsn(opcode, owner, name, desc, itf)
                 },
-                code = {
+                instrumented = {
                     val objectLocal = newLocal(OBJECT_TYPE)
                     // save and pop the constructor parameters from the stack
                     val constructorType = Type.getType(desc)
@@ -110,9 +110,9 @@ internal class ObjectCreationTransformer(
     override fun visitIntInsn(opcode: Int, operand: Int) = adapter.run {
         adapter.visitIntInsn(opcode, operand)
         if (opcode == NEWARRAY) {
-            invokeIfInTestingCode(
+            invokeIfInAnalyzedCode(
                 original = {},
-                code = {
+                instrumented = {
                     dup()
                     invokeStatic(Injections::afterNewObjectCreation)
                 }
@@ -122,9 +122,9 @@ internal class ObjectCreationTransformer(
 
     override fun visitTypeInsn(opcode: Int, type: String) = adapter.run {
         if (opcode == NEW) {
-            invokeIfInTestingCode(
+            invokeIfInAnalyzedCode(
                 original = {},
-                code = {
+                instrumented = {
                     push(type.toCanonicalClassName())
                     invokeStatic(Injections::beforeNewObjectCreation)
                 }
@@ -133,9 +133,9 @@ internal class ObjectCreationTransformer(
         }
         visitTypeInsn(opcode, type)
         if (opcode == ANEWARRAY) {
-            invokeIfInTestingCode(
+            invokeIfInAnalyzedCode(
                 original = {},
-                code = {
+                instrumented = {
                     dup()
                     invokeStatic(Injections::afterNewObjectCreation)
                 }
@@ -145,9 +145,9 @@ internal class ObjectCreationTransformer(
 
     override fun visitMultiANewArrayInsn(descriptor: String?, numDimensions: Int) = adapter.run {
         visitMultiANewArrayInsn(descriptor, numDimensions)
-        invokeIfInTestingCode(
+        invokeIfInAnalyzedCode(
             original = {},
-            code = {
+            instrumented = {
                 dup()
                 invokeStatic(Injections::afterNewObjectCreation)
             }

@@ -359,23 +359,23 @@ internal inline fun GeneratorAdapter.ifStatement(
 }
 
 /**
- * Generates an if-then-else statement, testing if the current execution point
- * is currently inside a Lincheck tested section
- * (i.e., not inside the ignored section of the analysis).
- * If so, the [original] bytecode sequence will be executed, otherwise
- * the instrumented [code] will be executed.
+ * Generates an if-then-else statement,
+ * testing if the current execution point is inside a Lincheck analyzed code
+ *
+ * If so, the [original] bytecode sequence will be executed,
+ * otherwise the [instrumented] bytecode will be executed.
  *
  * @param original the original code.
- * @param code the code to execute in the Lincheck's testing context.
+ * @param instrumented the code to execute in the Lincheck's analysis context.
  */
-internal inline fun GeneratorAdapter.invokeIfInTestingCode(
+internal inline fun GeneratorAdapter.invokeIfInAnalyzedCode(
     original: GeneratorAdapter.() -> Unit,
-    code: GeneratorAdapter.() -> Unit
+    instrumented: GeneratorAdapter.() -> Unit
 ) {
     ifStatement(
-        condition = { invokeStatic(Injections::inIgnoredSection) },
-        thenClause = original,
-        elseClause = code
+        condition = { invokeStatic(Injections::inAnalyzedCode) },
+        thenClause = instrumented,
+        elseClause = original,
     )
 }
 

@@ -11,7 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.ManagedStrategyMethodVisitor
-import org.jetbrains.kotlinx.lincheck.transformation.invokeIfInTestingCode
+import org.jetbrains.kotlinx.lincheck.transformation.invokeIfInAnalyzedCode
 import org.jetbrains.kotlinx.lincheck.transformation.invokeStatic
 import org.objectweb.asm.commons.GeneratorAdapter
 import sun.nio.ch.lincheck.Injections
@@ -33,16 +33,16 @@ internal class ConstantHashCodeTransformer(
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         when {
             name == "hashCode" && desc == "()I" -> {
-                invokeIfInTestingCode(
+                invokeIfInAnalyzedCode(
                     original = { visitMethodInsn(opcode, owner, name, desc, itf) },
-                    code = { invokeStatic(Injections::hashCodeDeterministic) }
+                    instrumented = { invokeStatic(Injections::hashCodeDeterministic) }
                 )
             }
 
             owner == "java/lang/System" && name == "identityHashCode" && desc == "(Ljava/lang/Object;)I" -> {
-                invokeIfInTestingCode(
+                invokeIfInAnalyzedCode(
                     original = { visitMethodInsn(opcode, owner, name, desc, itf) },
-                    code = { invokeStatic(Injections::identityHashCodeDeterministic) }
+                    instrumented = { invokeStatic(Injections::identityHashCodeDeterministic) }
                 )
             }
 

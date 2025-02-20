@@ -29,11 +29,11 @@ internal class ParkingTransformer(
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         when {
             isUnsafe(owner) && name == "park" -> {
-                invokeIfInTestingCode(
+                invokeIfInAnalyzedCode(
                     original = {
                         visitMethodInsn(opcode, owner, name, desc, itf)
                     },
-                    code = {
+                    instrumented = {
                         pop2() // time
                         pop() // isAbsolute
                         pop() // Unsafe
@@ -45,11 +45,11 @@ internal class ParkingTransformer(
             }
 
             isUnsafe(owner) && name == "unpark" -> {
-                invokeIfInTestingCode(
+                invokeIfInAnalyzedCode(
                     original = {
                         visitMethodInsn(opcode, owner, name, desc, itf)
                     },
-                    code = {
+                    instrumented = {
                         loadNewCodeLocationId()
                         invokeStatic(Injections::unpark)
                         pop() // pop Unsafe object

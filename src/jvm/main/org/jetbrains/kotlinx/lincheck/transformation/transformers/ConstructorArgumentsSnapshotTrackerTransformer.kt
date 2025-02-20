@@ -11,7 +11,6 @@
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.*
-import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.GeneratorAdapter
 import sun.nio.ch.lincheck.Injections
@@ -67,9 +66,9 @@ internal class ConstructorArgumentsSnapshotTrackerTransformer(
                 return
             }
 
-            invokeIfInTestingCode(
+            invokeIfInAnalyzedCode(
                 original = { visitMethodInsn(opcode, owner, name, desc, itf) },
-                code = {
+                instrumented = {
                     // STACK: args
                     val arguments = storeArguments(desc)
                     val matchedLocals = arguments.filterIndexed { index, _ -> matchedArguments.contains(index) }.toIntArray()

@@ -31,9 +31,9 @@ internal class MonitorTransformer(
     override fun visitInsn(opcode: Int) = adapter.run {
         when (opcode) {
             MONITORENTER -> {
-                invokeIfInTestingCode(
+                invokeIfInAnalyzedCode(
                     original = { monitorEnter() },
-                    code = {
+                    instrumented = {
                         loadNewCodeLocationId()
                         invokeStatic(Injections::beforeLock)
                         invokeBeforeEventIfPluginEnabled("lock")
@@ -43,9 +43,9 @@ internal class MonitorTransformer(
             }
 
             MONITOREXIT -> {
-                invokeIfInTestingCode(
+                invokeIfInAnalyzedCode(
                     original = { monitorExit() },
-                    code = {
+                    instrumented = {
                         loadNewCodeLocationId()
                         invokeStatic(Injections::unlock)
                         invokeBeforeEventIfPluginEnabled("unlock")
@@ -83,17 +83,17 @@ internal class SynchronizedMethodTransformer(
     private val catchLabel = Label()
 
     override fun visitCode() = adapter.run {
-        invokeIfInTestingCode(
+        invokeIfInAnalyzedCode(
             original = {},
-            code = {
+            instrumented = {
                 loadSynchronizedMethodMonitorOwner()
                 monitorExit()
             }
         )
         visitLabel(tryLabel)
-        invokeIfInTestingCode(
+        invokeIfInAnalyzedCode(
             original = {},
-            code = {
+            instrumented = {
                 loadSynchronizedMethodMonitorOwner()
                 loadNewCodeLocationId()
                 invokeStatic(Injections::beforeLock)
@@ -106,9 +106,9 @@ internal class SynchronizedMethodTransformer(
 
     override fun visitMaxs(maxStack: Int, maxLocals: Int) = adapter.run {
         visitLabel(catchLabel)
-        invokeIfInTestingCode(
+        invokeIfInAnalyzedCode(
             original = {},
-            code = {
+            instrumented = {
                 loadSynchronizedMethodMonitorOwner()
                 loadNewCodeLocationId()
                 invokeStatic(Injections::unlock)
@@ -125,9 +125,9 @@ internal class SynchronizedMethodTransformer(
     override fun visitInsn(opcode: Int) = adapter.run {
         when (opcode) {
             ARETURN, DRETURN, FRETURN, IRETURN, LRETURN, RETURN -> {
-                invokeIfInTestingCode(
+                invokeIfInAnalyzedCode(
                     original = {},
-                    code = {
+                    instrumented = {
                         loadSynchronizedMethodMonitorOwner()
                         loadNewCodeLocationId()
                         invokeStatic(Injections::unlock)
@@ -173,11 +173,11 @@ internal class WaitNotifyTransformer(
         if (opcode == INVOKEVIRTUAL) {
             when {
                 isWait0(name, desc) -> {
-                    invokeIfInTestingCode(
+                    invokeIfInAnalyzedCode(
                         original = {
                             visitMethodInsn(opcode, owner, name, desc, itf)
                         },
-                        code = {
+                        instrumented = {
                             loadNewCodeLocationId()
                             invokeStatic(Injections::beforeWait)
                             invokeBeforeEventIfPluginEnabled("wait")
@@ -187,11 +187,11 @@ internal class WaitNotifyTransformer(
                 }
 
                 isWait1(name, desc) -> {
-                    invokeIfInTestingCode(
+                    invokeIfInAnalyzedCode(
                         original = {
                             visitMethodInsn(opcode, owner, name, desc, itf)
                         },
-                        code = {
+                        instrumented = {
                             pop2() // timeMillis
                             loadNewCodeLocationId()
                             invokeStatic(Injections::beforeWait)
@@ -202,11 +202,11 @@ internal class WaitNotifyTransformer(
                 }
 
                 isWait2(name, desc) -> {
-                    invokeIfInTestingCode(
+                    invokeIfInAnalyzedCode(
                         original = {
                             visitMethodInsn(opcode, owner, name, desc, itf)
                         },
-                        code = {
+                        instrumented = {
                             pop() // timeNanos
                             pop2() // timeMillis
                             loadNewCodeLocationId()
@@ -218,11 +218,11 @@ internal class WaitNotifyTransformer(
                 }
 
                 isNotify(name, desc) -> {
-                    invokeIfInTestingCode(
+                    invokeIfInAnalyzedCode(
                         original = {
                             visitMethodInsn(opcode, owner, name, desc, itf)
                         },
-                        code = {
+                        instrumented = {
                             loadNewCodeLocationId()
                             invokeStatic(Injections::notify)
                             invokeBeforeEventIfPluginEnabled("notify")
@@ -231,11 +231,11 @@ internal class WaitNotifyTransformer(
                 }
 
                 isNotifyAll(name, desc) -> {
-                    invokeIfInTestingCode(
+                    invokeIfInAnalyzedCode(
                         original = {
                             visitMethodInsn(opcode, owner, name, desc, itf)
                         },
-                        code = {
+                        instrumented = {
                             loadNewCodeLocationId()
                             invokeStatic(Injections::notifyAll)
                             invokeBeforeEventIfPluginEnabled("notifyAll")

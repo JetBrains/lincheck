@@ -49,7 +49,7 @@ internal class DeterministicInvokeDynamicTransformer(
         bootstrapMethodHandle: Handle,
         vararg bootstrapMethodArguments: Any?
     ) = adapter.run {
-        invokeIfInTestingCode(
+        invokeIfInAnalyzedCode(
             original = { visitInvokeDynamicInsn(name, descriptor, bootstrapMethodHandle, *bootstrapMethodArguments) },
         ) {
             // Emulating invoke dynamic behaviour deterministically

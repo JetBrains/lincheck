@@ -1208,10 +1208,6 @@ abstract class ManagedStrategy(
         return Injections.leaveTestingCode()
     }
 
-    protected fun inIgnoredSection(): Boolean {
-        return Injections.inIgnoredSection()
-    }
-
     protected fun enterIgnoredSection() {
         Injections.enterIgnoredSection()
     }

@@ -59,19 +59,13 @@ public class ThreadDescriptor {
     private WeakReference<Object> eventTrackerData = null;
 
     /**
-     * This flag indicates whether the Lincheck is currently running analyzed test code.
+     * This flag indicates whether the Lincheck is currently running analyzed code.
      */
-    private boolean inTestingCode = false;
+    private boolean inAnalyzedCode = false;
 
     /**
      * Counter keeping track of the ignored section re-entrance depth.
-     * <p>
-     *
-     * Ignored section is used to disable tracking of all events.
-     *
-     * <p>
-     * If Lincheck enters a code block for which analysis should be disabled,
-     * it should increment the counter.
+     * Ignored section is used to temporarily disable tracking of all events.
      */
     private int ignoredSectionDepth = 0;
 
@@ -102,8 +96,20 @@ public class ThreadDescriptor {
         this.eventTrackerData = new WeakReference<>(eventTrackerData);
     }
 
+    public boolean inAnalyzedCode() {
+        return inAnalyzedCode && (ignoredSectionDepth == 0);
+    }
+
+    public void enterAnalyzedCode() {
+        inAnalyzedCode = true;
+    }
+
+    public void leaveAnalyzedCode() {
+        inAnalyzedCode = false;
+    }
+
     public boolean inIgnoredSection() {
-        return !inTestingCode || (ignoredSectionDepth > 0);
+        return ignoredSectionDepth > 0;
     }
 
     public void enterIgnoredSection() {
@@ -122,18 +128,6 @@ public class ThreadDescriptor {
 
     public void restoreIgnoredSectionDepth(int depth) {
         ignoredSectionDepth = depth;
-    }
-
-    public boolean inTestingCode() {
-        return inTestingCode;
-    }
-
-    public void enterTestingCode() {
-        inTestingCode = true;
-    }
-
-    public void leaveTestingCode() {
-        inTestingCode = false;
     }
 
     /*
