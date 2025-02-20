@@ -35,3 +35,20 @@ class ThreadCreationRepresentationTest: BaseRunConcurrentRepresentationTest<Unit
         a += 1
     }
 }
+
+class SimpleThreadCreationRepresentationTest: BaseRunConcurrentRepresentationTest<Unit>(
+        "simple_thread_creation_representation_test"
+) {
+
+    @Volatile
+    private var a = 0
+
+    override fun block() {
+        val t1 = thread { 
+            a +=1
+        }
+        t1.join()
+        check(false)
+    }
+
+}
