@@ -394,7 +394,7 @@ private fun removeNestedThreadStartPoints(trace: List<TracePoint>) = trace
     .filter { it is ThreadStartTracePoint }
     .forEach { tracePoint -> 
         val threadCreationCall = tracePoint.callStackTrace.dropLast(1).lastOrNull()
-        if(threadCreationCall?.tracePoint?.descriptor == THREAD_FUN_DESCRIPTOR) {
+        if(threadCreationCall?.tracePoint?.isThreadCreation() == true) {
             tracePoint.callStackTrace = tracePoint.callStackTrace.dropLast(1)
         }
     }
@@ -455,7 +455,6 @@ private fun compressCallStackTrace(
             // Combine fields of next and current, and store in current
             currentElement.tracePoint.methodName = nextElement.tracePoint.methodName
             currentElement.tracePoint.parameters = nextElement.tracePoint.parameters
-            currentElement.tracePoint.descriptor = nextElement.tracePoint.descriptor
             currentElement.tracePoint.callStackTrace =
                 compressCallStackTrace(currentElement.tracePoint.callStackTrace, removed, seen)
 

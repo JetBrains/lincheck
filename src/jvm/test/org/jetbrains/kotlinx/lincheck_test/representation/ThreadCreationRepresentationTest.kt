@@ -12,12 +12,12 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 
 import kotlin.concurrent.thread
 
-class ThreadCreationRepresentationTest: BaseTraceRepresentationTest("thread_creation_representation_test.txt") {
+class ThreadCreationRepresentationTest: BaseRunConcurrentRepresentationTest<Unit>("thread_creation_representation_test.txt") {
 
     @Volatile
     private var a = 0
 
-    override fun operation() {
+    override fun block() {
         val t1 = thread(false, name = "thread1") { callMe() }
         t1.start()
         
@@ -28,6 +28,7 @@ class ThreadCreationRepresentationTest: BaseTraceRepresentationTest("thread_crea
         t1.join()
         t2.join()
         t3.join()
+        check(false)
     }
 
     private fun callMe() {

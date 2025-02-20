@@ -1256,7 +1256,6 @@ abstract class ManagedStrategy(
         methodName: String,
         codeLocation: Int,
         methodId: Int,
-        desc: String,
         params: Array<Any?>
     ) {
         val guarantee = runInIgnoredSection {
@@ -1290,7 +1289,7 @@ abstract class ManagedStrategy(
             if (collectTrace) {
                 traceCollector!!.checkActiveLockDetected()
                 addBeforeMethodCallTracePoint(threadId, owner, codeLocation, methodId, className, methodName, params,
-                    atomicMethodDescriptor, desc
+                    atomicMethodDescriptor
                 )
             }
             // in case of an atomic method, we create a switch point before the method call;
@@ -1435,7 +1434,6 @@ abstract class ManagedStrategy(
         methodName: String,
         methodParams: Array<Any?>,
         atomicMethodDescriptor: AtomicMethodDescriptor?,
-        desc: String
     ) {
         val callStackTrace = callStackTrace[threadId]!!
         val suspendedMethodStack = suspendedFunctionsStack[threadId]!!
@@ -1488,7 +1486,6 @@ abstract class ManagedStrategy(
             params = params,
             codeLocation = codeLocation,
             atomicMethodDescriptor = atomicMethodDescriptor,
-            desc = desc,
         )
         // Method invocation id used to calculate spin cycle start label call depth.
         // Two calls are considered equals if two same methods were called with the same parameters.
@@ -1513,7 +1510,6 @@ abstract class ManagedStrategy(
         params: Array<Any?>,
         codeLocation: Int,
         atomicMethodDescriptor: AtomicMethodDescriptor?,
-        desc: String
     ): MethodCallTracePoint {
         val callStackTrace = callStackTrace[iThread]!!
         val tracePoint = MethodCallTracePoint(
@@ -1523,7 +1519,6 @@ abstract class ManagedStrategy(
             methodName = methodName,
             callStackTrace = callStackTrace,
             stackTraceElement = CodeLocations.stackTrace(codeLocation),
-            descriptor = desc,
         )
         // handle non-atomic methods
         if (atomicMethodDescriptor == null) {
