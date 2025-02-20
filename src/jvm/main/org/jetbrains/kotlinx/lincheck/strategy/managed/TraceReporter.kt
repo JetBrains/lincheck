@@ -450,8 +450,7 @@ private fun compressCallStackTrace(
         }
         
         // Check if current and next are a "default" combo
-        if (currentElement.tracePoint.methodName == "${nextElement.tracePoint.methodName}\$default") {
-            
+        if (isCompressiblePair(currentElement.tracePoint.methodName, nextElement.tracePoint.methodName)) {
             // Combine fields of next and current, and store in current
             currentElement.tracePoint.methodName = nextElement.tracePoint.methodName
             currentElement.tracePoint.parameters = nextElement.tracePoint.parameters
@@ -487,6 +486,22 @@ private fun actorNodeResultRepresentation(result: Result?, failure: LincheckFail
         else -> result.toString()
     }
 }
+
+/**
+ * Default pair example:
+ * ```
+ * A.calLMe$default(A#1, 3, null, 2, null) at A.operation(A.kt:23)
+ *  A.callMe(3, "Hey") at A.callMe$default(A.kt:27)
+ *```
+ * Access pair example:
+ * ```
+ * A.access$callMe() at A.operation(A.kt:N)
+ *  A.callMe() at A.callMe$default(A.kt:N)
+ *```
+ */
+private fun isCompressiblePair(currentName: String, nextName: String): Boolean =
+    currentName == "${nextName}\$default" || currentName == "access$${nextName}" 
+
 
 /**
  * Helper class to provider execution results, including a validation function result
@@ -867,7 +882,6 @@ private class TraceNodePrefixFactory(nThreads: Int) {
 }
 
 private const val TRACE_INDENTATION = "  "
-
 
 internal class TraceEventRepresentation(val iThread: Int, val representation: String)
 
