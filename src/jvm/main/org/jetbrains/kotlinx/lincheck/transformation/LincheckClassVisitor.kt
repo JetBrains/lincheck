@@ -180,12 +180,16 @@ internal class LincheckClassVisitor(
             // and substitute them with constant.
             mv = DeterministicHashCodeTransformer(fileName, className, methodName, mv.newAdapter())
         }
-        if (isInTraceDebuggerMode) {
-            mv = TrueDeterministicTimeTransformer(mv.newAdapter())
+        mv = if (isInTraceDebuggerMode) {
+            TrueDeterministicTimeTransformer(mv.newAdapter())
         } else {
-            mv = FakeDeterministicTimeTransformer(mv.newAdapter())
+            FakeDeterministicTimeTransformer(mv.newAdapter())
         }
-        mv = FakeDeterministicRandomTransformer(fileName, className, methodName, mv.newAdapter())
+        mv = if (isInTraceDebuggerMode) {
+            TrueDeterministicRandomTransformer(fileName, className, methodName, mv.newAdapter())
+        } else {
+            FakeDeterministicRandomTransformer(fileName, className, methodName, mv.newAdapter())
+        }
         // `SharedMemoryAccessTransformer` goes first because it relies on `AnalyzerAdapter`,
         // which should be put in front of the byte-code transformer chain,
         // so that it can correctly analyze the byte-code and compute required type-information
