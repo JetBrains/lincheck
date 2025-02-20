@@ -57,12 +57,14 @@ fun main(): Unit = runBlocking(pool) {
     launch(pool) { performOperation(producer, consumer, processor) }
 }
 
-class RunChecker906: BaseRunCoroutineTests(true) {
+class RunChecker906 : BaseRunCoroutineTests(true) {
     companion object {
         lateinit var pool: ExecutorCoroutineDispatcher
     }
     override fun block() {
         pool = Executors.newFixedThreadPool(4).asCoroutineDispatcher()
-        runBlocking(pool) { main() }
+        pool.use {
+            runBlocking(pool) { main() }
+        }
     }
 }
