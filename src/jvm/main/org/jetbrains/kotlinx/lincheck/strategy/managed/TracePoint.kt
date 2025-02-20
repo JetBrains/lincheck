@@ -31,7 +31,7 @@ data class Trace(
 
 private val threadDefaultValues = listOf("true", "false", "null", "null", "-1", "")
 private const val THREAD_CLASS_NAME = "kotlin/concurrent/ThreadsKt"
-private const val THREAD_FUN_DESCRIPTOR = "(ZZLjava/lang/ClassLoader;Ljava/lang/String;ILkotlin/jvm/functions/Function0;)Ljava/lang/Thread;"
+internal const val THREAD_FUN_DESCRIPTOR = "(ZZLjava/lang/ClassLoader;Ljava/lang/String;ILkotlin/jvm/functions/Function0;)Ljava/lang/Thread;"
 
 
 /**

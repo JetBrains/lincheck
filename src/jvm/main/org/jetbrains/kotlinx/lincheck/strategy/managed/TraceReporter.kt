@@ -168,6 +168,7 @@ internal fun constructTraceGraph(
 ): List<TraceNode> {
     val tracePoints = trace.deepCopy().trace
     compressTrace(tracePoints)
+    removeNestedThreadStartPoints(tracePoints)
     val scenario = failure.scenario
     val prefixFactory = TraceNodePrefixFactory(nThreads)
     val resultProvider = ExecutionResultsProvider(results, failure)
@@ -379,6 +380,24 @@ internal fun constructTraceGraph(
 
     return traceGraphNodesSections.map { it.first() }
 }
+
+/**
+ * When `thread() { ... }` is called it is represented as
+ * ```
+ * thread creation line: Thread#2 at A.fun(location)
+ *     Thread#2.start()
+ * ```
+ * this function gets rid of the second line.
+ * But only if it has been created with `thread(start = true)`
+ */
+private fun removeNestedThreadStartPoints(trace: List<TracePoint>) = trace
+    .filter { it is ThreadStartTracePoint }
+    .forEach { tracePoint -> 
+        val threadCreationCall = tracePoint.callStackTrace.dropLast(1).lastOrNull()
+        if(threadCreationCall?.tracePoint?.descriptor == THREAD_FUN_DESCRIPTOR) {
+            tracePoint.callStackTrace = tracePoint.callStackTrace.dropLast(1)
+        }
+    }
 
 private fun compressTrace(trace: List<TracePoint>) =
     HashSet<Int>().let { removed ->
