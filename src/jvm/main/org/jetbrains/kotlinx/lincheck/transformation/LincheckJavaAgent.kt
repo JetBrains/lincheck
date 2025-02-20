@@ -487,5 +487,5 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         isThreadContainerClass(className) ||
         // TODO: instead of eagerly instrumenting `DispatchedContinuation`
         //  we should try to fix lazy class re-transformation logic
-        className.contains("DispatchedContinuation")
+        isCoroutineDispatcherInternalClass(className)
 }
