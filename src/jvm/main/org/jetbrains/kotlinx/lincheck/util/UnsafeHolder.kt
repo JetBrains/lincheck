@@ -24,15 +24,21 @@ internal object UnsafeHolder {
     }
 }
 
-@Suppress("DEPRECATION")
+@Suppress("DEPRECATION", "UNCHECKED_CAST")
 internal inline fun <T> readFieldViaUnsafe(obj: Any?, field: Field, getter: Unsafe.(Any?, Long) -> T): T {
     if (Modifier.isStatic(field.modifiers)) {
         val base = UnsafeHolder.UNSAFE.staticFieldBase(field)
         val offset = UnsafeHolder.UNSAFE.staticFieldOffset(field)
         return UnsafeHolder.UNSAFE.getter(base, offset)
     } else {
-        val offset = UnsafeHolder.UNSAFE.objectFieldOffset(field)
-        return UnsafeHolder.UNSAFE.getter(obj, offset)
+        if (field.declaringClass.name.contains("\$\$Lambda\$")) {
+            // Cannot access lambda fields via Unsafe
+            field.isAccessible = true
+            return field.get(obj) as T
+        } else {
+            val offset = UnsafeHolder.UNSAFE.objectFieldOffset(field)
+            return UnsafeHolder.UNSAFE.getter(obj, offset)
+        }
     }
 }
 
