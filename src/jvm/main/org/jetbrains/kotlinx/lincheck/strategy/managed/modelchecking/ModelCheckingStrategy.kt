@@ -382,7 +382,7 @@ internal class LocalObjectManager : ObjectTracker {
      */
     @Suppress("UNUSED_PARAMETER")
     private fun isLocalObject(obj: Any?) =
-        false // localObjects.contains(obj)
+        localObjects.contains(obj)
 
     override fun reset() {
         localObjects.clear()

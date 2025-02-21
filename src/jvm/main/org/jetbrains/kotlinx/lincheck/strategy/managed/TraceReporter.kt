@@ -29,7 +29,8 @@ internal fun StringBuilder.appendTrace(
     val nThreads = trace.threadNames.size
     val threadNames = trace.threadNames
     val startTraceGraphNode = constructTraceGraph(nThreads, failure, results, trace, exceptionStackTraces)
-    if (isGeneralPurposeModelCheckingScenario(failure.scenario)) {
+    // TODO: it was `isGeneralPurposeModelCheckingScenario(failure.scenario)`
+    if (false) {
         val (callNode, actorResultNode) = extractLambdaCallOfGeneralPurposeModelChecking(startTraceGraphNode)
         // do not print the method result if it is not expanded
         if (!callNode.shouldBeExpanded(verboseTrace = false) && actorResultNode.resultRepresentation != null) {
