@@ -398,7 +398,7 @@ private fun visualize(strategy: ManagedStrategy) = runCatching {
     val lincheckThreads = runner.executor.threads
     val testObject = runner.testInstance.takeIf {
         // in general-purpose model checking mode `testObject` is null
-        it !is GeneralPurposeModelCheckingWrapper<*>
+        it !is GeneralPurposeModelCheckingWrapper
     }
     visualizeInstance(testObject,
         objectToNumberMap = createObjectToNumberMapAsArray(testObject),

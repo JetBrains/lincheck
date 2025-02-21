@@ -31,13 +31,30 @@ annotation class ExperimentalModelCheckingAPI
  * @param block lambda which body will be a target for the interleavings exploration.
  */
 @ExperimentalModelCheckingAPI
-fun <R> runConcurrentTest(
+fun runConcurrentTest(
     invocations: Int = DEFAULT_INVOCATIONS_COUNT,
-    block: () -> R
+    block: () -> Unit // TODO: should we keep only the `Runnable` options?
+) = runConcurrentTestImpl(invocations, block)
+
+@ExperimentalModelCheckingAPI
+fun runConcurrentTest(
+    block: Runnable
+) = runConcurrentTestImpl(DEFAULT_INVOCATIONS_COUNT, block)
+
+@ExperimentalModelCheckingAPI
+fun runConcurrentTest(
+    invocations: Int,
+    block: Runnable
+) = runConcurrentTestImpl(invocations, block)
+
+private fun runConcurrentTestImpl(
+    invocations: Int,
+    block: Runnable
 ) {
+    // TODO: do not use DSL to avoid spending 300ms in Kotlin Reflection
     val scenario = scenario {
         parallel {
-            thread { actor(GeneralPurposeModelCheckingWrapper<R>::run, block) }
+            thread { actor(GeneralPurposeModelCheckingWrapper::runGPMCTest, block) }
         }
     }
 
@@ -74,8 +91,8 @@ fun <R> runConcurrentTest(
     }
 }
 
-internal class GeneralPurposeModelCheckingWrapper<R>() {
-    fun run(block: () -> R) = block()
+internal class GeneralPurposeModelCheckingWrapper {
+    fun runGPMCTest(block: Runnable) = block.run()
 }
 
 /**

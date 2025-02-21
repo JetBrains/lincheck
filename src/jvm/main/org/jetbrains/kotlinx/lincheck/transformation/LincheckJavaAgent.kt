@@ -239,13 +239,13 @@ internal object LincheckJavaAgent {
      *
      * The function is called upon a test instance creation, to ensure that all the classes related to it are transformed.
      *
-     * @param testInstance the object to be transformed
+     * @param obj the object to be transformed
      */
-    fun ensureObjectIsTransformed(testInstance: Any) {
+    fun ensureObjectIsTransformed(obj: Any) {
         if (INSTRUMENT_ALL_CLASSES) {
             return
         }
-        ensureObjectIsTransformed(testInstance, Collections.newSetFromMap(IdentityHashMap()))
+        ensureObjectIsTransformed(obj, Collections.newSetFromMap(IdentityHashMap()))
     }
 
     /**
@@ -274,22 +274,23 @@ internal object LincheckJavaAgent {
             return
         }
 
-        if (!instrumentation.isModifiableClass(obj.javaClass) || !shouldTransform(obj.javaClass.name, instrumentationMode)) {
-            return
-        }
-
         if (processedObjects.contains(obj)) return
         processedObjects += obj
 
         var clazz: Class<*> = obj.javaClass
 
-        ensureClassHierarchyIsTransformed(clazz)
+        val lambdaSuffixStart = "\$\$Lambda\$"
+        if (clazz.name.contains(lambdaSuffixStart)) {
+            ensureClassHierarchyIsTransformed(clazz.name.substringBefore(lambdaSuffixStart))
+        } else {
+            ensureClassHierarchyIsTransformed(clazz)
+        }
 
         while (true) {
             clazz.declaredFields
                 .filter { !it.type.isPrimitive }
                 .filter { !Modifier.isStatic(it.modifiers) }
-                .mapNotNull { readFieldViaUnsafe(obj, it, Unsafe::getObject) }
+                .mapNotNull { readFieldSafely(obj, it).getOrNull() }
                 .forEach {
                     ensureObjectIsTransformed(it, processedObjects)
                 }
@@ -304,17 +305,17 @@ internal object LincheckJavaAgent {
      * @param processedObjects Set of objects that have already been processed to prevent duplicate transformation.
      */
     private fun ensureClassHierarchyIsTransformed(clazz: Class<*>, processedObjects: MutableSet<Any>) {
-        if (instrumentation.isModifiableClass(clazz) && shouldTransform(clazz.name, instrumentationMode)) {
+        if (!shouldTransform(clazz.name, instrumentationMode)) return
+        if (instrumentation.isModifiableClass(clazz)) {
             instrumentedClasses += clazz.name
+//            println(clazz.name)
             instrumentation.retransformClasses(clazz)
-        } else {
-            return
         }
         // Traverse static fields.
         clazz.declaredFields
             .filter { !it.type.isPrimitive }
             .filter { Modifier.isStatic(it.modifiers) }
-            .mapNotNull { readFieldViaUnsafe(null, it, Unsafe::getObject) }
+            .mapNotNull { readFieldSafely(null, it).getOrNull() }
             .forEach {
                 ensureObjectIsTransformed(it, processedObjects)
             }
