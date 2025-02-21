@@ -55,7 +55,6 @@ fun main(): Unit = runBlocking(pool) {
 
     startProducer(producer)
     startConsumer(consumer)
-    delay(1000)  // Give some time for coroutines to finish
 }
 
 class RunChecker915 : BaseRunCoroutineTests(true) {
