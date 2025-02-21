@@ -417,7 +417,7 @@ internal fun StringBuilder.appendFailure(failure: LincheckFailure): StringBuilde
 
 internal fun isGeneralPurposeModelCheckingScenario(scenario: ExecutionScenario): Boolean {
     val actor = scenario.parallelExecution.getOrNull(0)?.getOrNull(0)
-    return (actor?.method == GeneralPurposeModelCheckingWrapper::run.javaMethod)
+    return (actor?.method == GeneralPurposeModelCheckingWrapper::runGPMCTest.javaMethod)
 }
 
 private data class ExecutionResultsRepresentationData(
@@ -631,6 +631,7 @@ internal fun collectExceptionStackTraces(executionResult: ExecutionResult): Exce
         .filterIsInstance<ExceptionResult>()
         .forEachIndexed { index, exceptionResult ->
             val exception = exceptionResult.throwable
+            // TODO: fix me
             @Suppress("KotlinConstantConditions")
             if (exception.isInternalLincheckBug() && false) {
                 return InternalLincheckBugResult(exception)
