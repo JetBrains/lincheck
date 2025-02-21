@@ -22,7 +22,7 @@ class Processor {
     suspend fun produceNumbers() {
         for (i in 1..5) {
             channel1.send(i)
-            delay(10)
+            (10)
         }
         channel1.close()
     }
@@ -78,8 +78,8 @@ fun main(): Unit = runBlocking(pool) {
     launch(pool) { receive(aggregator.channel5) }
 }
 
-@Ignore("'All unfinished threads are in deadlock' but should finish")
-class RunChecker905 : BaseRunCoroutineTests(false) {
+@Ignore("java.lang.IllegalStateException: Trying to switch the execution to thread 2, but only the following threads are eligible to switch: [0]")
+class RunChecker905 : BaseRunCoroutineTests(false, 1000) {
     companion object {
         lateinit var pool: ExecutorCoroutineDispatcher
     }
