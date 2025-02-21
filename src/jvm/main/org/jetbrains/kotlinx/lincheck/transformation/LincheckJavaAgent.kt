@@ -28,6 +28,7 @@ import sun.misc.Unsafe
 import java.io.File
 import java.lang.instrument.ClassFileTransformer
 import java.lang.instrument.Instrumentation
+import java.lang.invoke.LambdaMetafactory
 import java.lang.reflect.Modifier
 import java.security.ProtectionDomain
 import java.util.*
@@ -236,13 +237,13 @@ internal object LincheckJavaAgent {
      *
      * The function is called upon a test instance creation, to ensure that all the classes related to it are transformed.
      *
-     * @param testInstance the object to be transformed
+     * @param obj the object to be transformed
      */
-    fun ensureObjectIsTransformed(testInstance: Any) {
+    fun ensureObjectIsTransformed(obj: Any) {
         if (INSTRUMENT_ALL_CLASSES) {
             return
         }
-        ensureObjectIsTransformed(testInstance, Collections.newSetFromMap(IdentityHashMap()))
+        ensureObjectIsTransformed(obj, Collections.newSetFromMap(IdentityHashMap()))
     }
 
     /**
@@ -271,9 +272,15 @@ internal object LincheckJavaAgent {
             return
         }
 
-        if (!instrumentation.isModifiableClass(obj.javaClass) || !shouldTransform(obj.javaClass.name, instrumentationMode)) {
-            return
+        val name: String? = obj.javaClass.name
+        val lambdaSuffixStart = "\$\$Lambda\$"
+        if (name != null && name.contains(lambdaSuffixStart)) {
+            ensureClassHierarchyIsTransformed(name.substringBefore(lambdaSuffixStart))
         }
+
+//        if (!shouldTransform(obj.javaClass.name, instrumentationMode)) {
+//            return
+//        }
 
         if (processedObjects.contains(obj)) return
         processedObjects += obj
@@ -282,6 +289,7 @@ internal object LincheckJavaAgent {
 
         ensureClassHierarchyIsTransformed(clazz)
 
+//        println("Traverse fields: ${clazz.name}")
         while (true) {
             clazz.declaredFields
                 .filter { !it.type.isPrimitive }
