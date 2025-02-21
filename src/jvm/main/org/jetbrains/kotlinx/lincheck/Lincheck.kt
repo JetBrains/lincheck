@@ -51,6 +51,7 @@ private fun runConcurrentTestImpl(
     invocations: Int,
     block: Runnable
 ) {
+    // TODO: do not use DSL to avoid spending 300ms in Kotlin Reflection
     val scenario = scenario {
         parallel {
             thread { actor(GeneralPurposeModelCheckingWrapper::runGPMCTest, block) }

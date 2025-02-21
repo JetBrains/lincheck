@@ -292,6 +292,9 @@ internal object LincheckJavaAgent {
                 .forEach {
                     ensureObjectIsTransformed(it, processedObjects)
                 }
+            // TODO: removing this lines not only results in more classes being instrumented
+            // TODO: but also in Lincheck not working correctly. Needs further investigation.
+            if (!shouldTransform(clazz.name, instrumentationMode)) break
             clazz = clazz.superclass ?: break
         }
     }
@@ -306,6 +309,7 @@ internal object LincheckJavaAgent {
         if (!shouldTransform(clazz.name, instrumentationMode)) return
         if (instrumentation.isModifiableClass(clazz)) {
             instrumentedClasses += clazz.name
+//            println(clazz.name)
             instrumentation.retransformClasses(clazz)
         }
         // Traverse static fields.

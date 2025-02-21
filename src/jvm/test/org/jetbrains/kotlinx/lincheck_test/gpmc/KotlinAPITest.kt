@@ -15,6 +15,7 @@ import org.jetbrains.kotlinx.lincheck.runConcurrentTest
 import org.junit.Assert
 import org.junit.Test
 import java.util.concurrent.ConcurrentLinkedDeque
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 
 @OptIn(ExperimentalModelCheckingAPI::class)
@@ -22,7 +23,7 @@ class KotlinAPITest {
 
     @Test
     fun test() = runConcurrentTest {
-        testImpl()
+        JavaAPITest.testImpl()
     }
 
     @Test
@@ -41,6 +42,34 @@ class KotlinAPITest {
         t1.join()
         t2.join()
         Assert.assertTrue(!(r1 == 1 && r2 == 1))
+    }
+
+    @Test
+    fun test3() = runConcurrentTest {
+        val deque = ConcurrentLinkedDeque<Int?>()
+        val r1 = AtomicInteger(-1)
+        val r2 = AtomicInteger(-1)
+
+        deque.addLast(1)
+
+        val t1 = Thread {
+            r1.set(deque.pollFirst()!!)
+        }
+        val t2 = Thread {
+            deque.addFirst(0)
+            r2.set(deque.peekLast()!!)
+        }
+
+        t1.start()
+        t2.start()
+
+        try {
+            t1.join()
+            t2.join()
+        } catch (e: InterruptedException) {
+            throw RuntimeException(e)
+        }
+        Assert.assertFalse(r1.get() == 1 && r2.get() == 1)
     }
 
     fun testImpl() {
