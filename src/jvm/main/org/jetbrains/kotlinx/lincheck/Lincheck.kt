@@ -53,7 +53,7 @@ private fun runConcurrentTestImpl(
 ) {
     val scenario = scenario {
         parallel {
-            thread { actor(GeneralPurposeModelCheckingWrapper::run, block) }
+            thread { actor(GeneralPurposeModelCheckingWrapper::runGPMCTest, block) }
         }
     }
 
@@ -91,7 +91,7 @@ private fun runConcurrentTestImpl(
 }
 
 internal class GeneralPurposeModelCheckingWrapper {
-    fun run(block: Runnable) = block.run()
+    fun runGPMCTest(block: Runnable) = block.run()
 }
 
 /**
