@@ -53,12 +53,7 @@ fun main(): Unit = runBlocking(pool) {
     }
 }
 
-@Ignore("""
-Check failed.
-java.lang.IllegalStateException: Check failed.
-	at org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy.runInvocation(ManagedStrategy.kt:245)
-""")
-class RunChecker916 : BaseRunCoroutineTests(false) {
+class RunChecker916 : BaseRunCoroutineTests(false, 1000) {
     companion object {
         lateinit var pool: ExecutorCoroutineDispatcher
     }

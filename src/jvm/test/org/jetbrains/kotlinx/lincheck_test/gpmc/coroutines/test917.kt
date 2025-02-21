@@ -51,15 +51,9 @@ fun main(): Unit = runBlocking(pool) {
     messageSender.sendMessage(3)
     messageSender.sendMessage(4)
     messageSender.sendMessage(5)
-    
-    delay(1000L)
 }
 
-@Ignore("""
-java.lang.IllegalStateException: Check failed.
-	at org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy.runInvocation(ManagedStrategy.kt:245)
-""")
-class RunChecker917 : BaseRunCoroutineTests(false) {
+class RunChecker917 : BaseRunCoroutineTests(false, 1000) {
     companion object {
         lateinit var pool: ExecutorCoroutineDispatcher
     }
