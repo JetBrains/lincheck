@@ -273,24 +273,18 @@ internal object LincheckJavaAgent {
             return
         }
 
-        val name: String? = obj.javaClass.name
-        val lambdaSuffixStart = "\$\$Lambda\$"
-        if (name != null && name.contains(lambdaSuffixStart)) {
-            ensureClassHierarchyIsTransformed(name.substringBefore(lambdaSuffixStart))
-        }
-
-//        if (!shouldTransform(obj.javaClass.name, instrumentationMode)) {
-//            return
-//        }
-
         if (processedObjects.contains(obj)) return
         processedObjects += obj
 
         var clazz: Class<*> = obj.javaClass
 
-        ensureClassHierarchyIsTransformed(clazz)
+        val lambdaSuffixStart = "\$\$Lambda\$"
+        if (clazz.name.contains(lambdaSuffixStart)) {
+            ensureClassHierarchyIsTransformed(clazz.name.substringBefore(lambdaSuffixStart))
+        } else {
+            ensureClassHierarchyIsTransformed(clazz)
+        }
 
-//        println("Traverse fields: ${clazz.name}")
         while (true) {
             clazz.declaredFields
                 .filter { !it.type.isPrimitive }
