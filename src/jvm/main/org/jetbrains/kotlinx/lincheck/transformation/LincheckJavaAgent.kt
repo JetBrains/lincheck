@@ -304,11 +304,10 @@ internal object LincheckJavaAgent {
      * @param processedObjects Set of objects that have already been processed to prevent duplicate transformation.
      */
     private fun ensureClassHierarchyIsTransformed(clazz: Class<*>, processedObjects: MutableSet<Any>) {
-        if (instrumentation.isModifiableClass(clazz) && shouldTransform(clazz.name, instrumentationMode)) {
+        if (!shouldTransform(clazz.name, instrumentationMode)) return
+        if (instrumentation.isModifiableClass(clazz)) {
             instrumentedClasses += clazz.name
             instrumentation.retransformClasses(clazz)
-        } else {
-            return
         }
         // Traverse static fields.
         clazz.declaredFields
