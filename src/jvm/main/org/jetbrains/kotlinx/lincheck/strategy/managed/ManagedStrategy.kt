@@ -16,7 +16,6 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import sun.nio.ch.lincheck.*
@@ -31,7 +30,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
 import org.objectweb.asm.ConstantDynamic
 import org.objectweb.asm.Handle
 import java.lang.invoke.CallSite
-import java.lang.invoke.MethodHandle
 import java.lang.reflect.*
 import java.util.concurrent.TimeoutException
 import java.util.*
@@ -1520,7 +1518,7 @@ abstract class ManagedStrategy(
             className = className,
             methodName = methodName,
             callStackTrace = callStackTrace,
-            stackTraceElement = CodeLocations.stackTrace(codeLocation)
+            stackTraceElement = CodeLocations.stackTrace(codeLocation),
         )
         // handle non-atomic methods
         if (atomicMethodDescriptor == null) {

@@ -13,6 +13,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.kotlinx.lincheck.util.ThreadId
+import kotlin.collections.map
 
 data class Trace(
     val trace: List<TracePoint>,
@@ -23,6 +24,23 @@ data class Trace(
         return Trace(trace.map { it.deepCopy(copiedCallStackTraceElements) }, threadNames.toList())
     }
 }
+
+private data class FunctionInfo(
+    val className: String,
+    val functionName: String,
+    val parameterNames: List<String>,
+    val defaultParameterValues: List<String>, 
+) {
+    init { check(parameterNames.size == defaultParameterValues.size) }
+}
+
+private val threadFunctionInfo = FunctionInfo(
+    className = "kotlin.concurrent.ThreadsKt",
+    functionName = "thread",
+    parameterNames = listOf("start", "isDaemon", "contextClassLoader", "name", "priority", "block"),
+    defaultParameterValues = listOf("true", "false", "null", "null", "-1", "")
+)
+
 
 /**
  * Essentially, a trace is a list of trace points, which represent
@@ -184,14 +202,28 @@ internal class MethodCallTracePoint(
     val wasSuspended get() = (returnedValue == ReturnedValueResult.CoroutineSuspended)
 
     override fun toStringCompact(): String = StringBuilder().apply {
-        if (ownerName != null)
-            append("$ownerName.")
-        append("$methodName(")
-        val parameters = parameters
-        if (parameters != null) {
-            append(parameters.joinToString(", "))
+        when {
+            isThreadCreation() -> appendThreadCreation()
+            else -> appendDefaultMethodCall()
         }
-        append(")")
+        appendReturnedValue()
+    }.toString()
+    
+    private fun StringBuilder.appendThreadCreation() {
+        append("thread")
+        val params = parameters?.let { getNonDefaultParametersWithName(threadFunctionInfo, it) } 
+            ?: emptyList()
+        if (!params.isEmpty()) {
+            append("(${params.joinToString(", ")})")
+        }
+    }
+    
+    private fun StringBuilder.appendDefaultMethodCall() {
+        if (ownerName != null) append("$ownerName.")
+        append("$methodName(${ parameters?.joinToString(", ") ?: "" })")
+    }
+    
+    private fun StringBuilder.appendReturnedValue() {
         val returnedValue = returnedValue
         if (returnedValue is ReturnedValueResult.ValueResult) {
             append(": ${returnedValue.valueRepresentation}")
@@ -200,8 +232,8 @@ internal class MethodCallTracePoint(
         } else if (thrownException != null && thrownException != ThreadAbortedError) {
             append(": threw ${thrownException!!.javaClass.simpleName}")
         }
-    }.toString()
-    
+    }
+
     override fun deepCopy(copiedCallStackTraceElements: HashMap<CallStackTraceElement, CallStackTraceElement>): MethodCallTracePoint =
         MethodCallTracePoint(iThread, actorId, className, methodName, callStackTrace.deepCopy(copiedCallStackTraceElements), stackTraceElement)
             .also {
@@ -235,7 +267,28 @@ internal class MethodCallTracePoint(
     fun initializeOwnerName(ownerName: String) {
         this.ownerName = ownerName
     }
+
+    fun isThreadCreation() = 
+        methodName == threadFunctionInfo.functionName && className.replace('/', '.') == threadFunctionInfo.className
+
+    /**
+     * Checks if [FunctionInfo.defaultParameterValues] differ from the provided [actualValues].
+     * If so, the value is added as `name = value` with a name provided by [FunctionInfo.parameterNames].
+     * Expects all lists to be of equal size.
+     */
+    private fun getNonDefaultParametersWithName(
+        functionInfo: FunctionInfo,
+        actualValues: List<String>
+    ): List<String> {
+        check(actualValues.size == functionInfo.parameterNames.size)
+        val result = mutableListOf<String>()
+        actualValues.forEachIndexed { index, currentValue ->
+            if (currentValue != functionInfo.defaultParameterValues[index]) result.add("${functionInfo.parameterNames[index]} = $currentValue")
+        }
+        return result
+    }
 }
+
 
 internal sealed interface ReturnedValueResult {
     data object NoValue: ReturnedValueResult
