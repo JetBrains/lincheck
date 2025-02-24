@@ -57,7 +57,7 @@ internal fun executeActor(
             throw invE
         // Exception thrown not during the method invocation should contain underlying exception
         return ExceptionResult.create(
-            invE.cause?.takeIf { exceptionCanBeValidExecutionResult(it) }
+            invE.cause?.takeIf { !isInternalException(it) }
                 ?: throw invE
         )
     } catch (e: Exception) {
@@ -186,12 +186,6 @@ internal fun collectThreadDump(runner: Runner) = Thread.getAllStackTraces().filt
 }
 
 internal val String.canonicalClassName get() = this.replace('/', '.')
-
-@Suppress("DEPRECATION") // ThreadDeath
-internal fun exceptionCanBeValidExecutionResult(exception: Throwable): Boolean {
-    return exception !is ThreadDeath && // is used to stop thread in `FixedActiveThreadsExecutor` via `thread.stop()`
-           exception !is ThreadAbortedError // is used to abort thread in `ManagedStrategy`
-}
 
 internal val Throwable.text: String get() {
     val writer = StringWriter()

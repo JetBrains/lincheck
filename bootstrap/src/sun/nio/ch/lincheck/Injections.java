@@ -178,6 +178,21 @@ public class Injections {
     }
 
     /**
+     * Called from thread's {@code run} method failed with an exception.
+     *
+     * @param exception the exception that was thrown in the thread.
+     */
+    public static void onThreadRunException(Throwable exception) {
+        Thread thread = Thread.currentThread();
+        // TestThread is handled separately
+        if (thread instanceof TestThread) return;
+        ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
+        if (descriptor == null) return;
+        EventTracker tracker = descriptor.getEventTracker();
+        tracker.onThreadRunException(exception);
+    }
+
+    /**
      * Called from instrumented code instead of {@code thread.join()}.
      */
     public static void threadJoin(Thread thread, boolean withTimeout) {

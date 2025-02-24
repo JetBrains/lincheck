@@ -23,6 +23,7 @@ public interface EventTracker {
     void beforeThreadStart();
     void afterThreadFinish();
     void threadJoin(Thread thread, boolean withTimeout);
+    void onThreadRunException(Throwable exception);
 
     void beforeLock(int codeLocation);
     void lock(Object monitor);

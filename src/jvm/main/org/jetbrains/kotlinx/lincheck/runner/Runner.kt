@@ -13,6 +13,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import java.io.*
 import java.lang.reflect.*
 import java.util.concurrent.atomic.*
@@ -61,12 +62,6 @@ abstract class Runner protected constructor(
 
     /**
      * This method is invoked by the corresponding test thread
-     * when an unexpected exception is thrown.
-     */
-    abstract fun onThreadFailure(iThread: Int, e: Throwable)
-
-    /**
-     * This method is invoked by the corresponding test thread
      * when the current coroutine suspends.
      * @param iThread number of invoking thread
      */
@@ -99,11 +94,28 @@ abstract class Runner protected constructor(
     }
 
     /**
-     * Is invoked after each actor execution from the specified thread, even if a legal exception was thrown.
+     * Is invoked after each actor execution from the specified thread.
      * The invocations are inserted into the generated code.
      */
     fun onActorFinish() {
         strategy.onActorFinish()
+    }
+
+    /**
+     * Is invoked if an actor execution has thrown an exception.
+     *
+     * Default implementation checks if the failure
+     * was caused by an internal exception (see [isInternalException]) and re-throw in this case,
+     * otherwise it treats the exception as a normal actor result.
+     *
+     * @param iThread the number of the invoking thread where the failure occurred.
+     * @param throwable the exception that caused the actor failure.
+     */
+    // used in byte-code generation
+    open fun onActorFailure(iThread: Int, throwable: Throwable) {
+        if (isInternalException(throwable)) {
+            throw throwable
+        }
     }
 
     fun beforePart(part: ExecutionPart) {
@@ -133,3 +145,15 @@ abstract class Runner protected constructor(
 enum class ExecutionPart {
     INIT, PARALLEL, POST, VALIDATION
 }
+
+/**
+ * Checks if the provided exception is considered an internal exception.
+ * Internal exceptions are those used by the Lincheck itself
+ * to control execution of the analyzed code.
+ */
+@Suppress("DEPRECATION") // ThreadDeath
+internal fun isInternalException(exception: Throwable): Boolean =
+    // is used to stop thread in `FixedActiveThreadsExecutor` via `thread.stop()`
+    exception is ThreadDeath ||
+    // is used to abort thread in `ManagedStrategy`
+    exception is LincheckAnalysisAbortedError
