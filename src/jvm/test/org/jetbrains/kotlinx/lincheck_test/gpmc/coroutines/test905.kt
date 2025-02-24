@@ -15,6 +15,7 @@ import java.util.concurrent.Executors
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
 import org.junit.Ignore
+import org.junit.Test
 
 class Processor {
     val channel1 = Channel<Int>()
@@ -22,7 +23,6 @@ class Processor {
     suspend fun produceNumbers() {
         for (i in 1..5) {
             channel1.send(i)
-            (10)
         }
         channel1.close()
     }
@@ -54,7 +54,6 @@ class Aggregator {
 suspend fun receive(channel: Channel<Int>) {
     val results = mutableMapOf<Int, Int>()
     for (y in channel) {
-        //println("Received: $y")
         results.compute(y) { _, v -> if (v == null) 1 else v + 1 }
     }
     results.entries.map { Pair(it.key, it.value) }.containsAll(listOf(
@@ -78,7 +77,6 @@ fun main(): Unit = runBlocking(pool) {
     launch(pool) { receive(aggregator.channel5) }
 }
 
-@Ignore("java.lang.IllegalStateException: Trying to switch the execution to thread 2, but only the following threads are eligible to switch: [0]")
 class RunChecker905 : BaseRunCoroutineTests(false, 1000) {
     companion object {
         lateinit var pool: ExecutorCoroutineDispatcher
