@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
+import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
@@ -54,9 +55,9 @@ internal class ObjectIdentityHashCodeTracker {
          */
         private const val IDENTITY_HASHCODE_OFFSET: Long = 1L
     }
-    private val initialHashCodes = ConcurrentHashMap<Id, Int>()
+    private val initialHashCodes = Collections.synchronizedMap(HashMap<Id, Int>())
     private val nextObjectId = AtomicLong(0)
-    private val objectIdAdvances = ConcurrentHashMap<Id, Id>()
+    private val objectIdAdvances = Collections.synchronizedMap(HashMap<Id, Id>())
 
     /**
      * This method substitutes identity hash code of the object in its header with the initial (from the first test execution) identity hashcode.

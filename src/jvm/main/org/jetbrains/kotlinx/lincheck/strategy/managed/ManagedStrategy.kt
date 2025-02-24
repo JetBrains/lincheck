@@ -83,7 +83,7 @@ abstract class ManagedStrategy(
     // Tracker of objects' identity hash codes.
     internal abstract val identityHashCodeTracker: ObjectIdentityHashCodeTracker
     // Cache for evaluated invoke dynamic call sites
-    private val invokeDynamicCallSites = ConcurrentHashMap<ConstantDynamic, CallSite>()
+    private val invokeDynamicCallSites = Collections.synchronizedMap(HashMap<ConstantDynamic, CallSite>())
     // Tracker of the monitors' operations.
     protected abstract val monitorTracker: MonitorTracker
     // Tracker of the thread parking.
@@ -396,6 +396,9 @@ abstract class ManagedStrategy(
      * @param codeLocation the byte-code location identifier of the point in code.
      */
     private fun newSwitchPoint(iThread: Int, codeLocation: Int, tracePoint: TracePoint?) {
+        if (CodeLocations.stackTrace(codeLocation).className.contains("ConcurrentHashMap"))
+            println("WTF")
+
         // re-throw abort error if the thread was aborted
         if (threadScheduler.isAborted(iThread)) {
             threadScheduler.abortCurrentThread()
