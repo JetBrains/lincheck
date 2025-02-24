@@ -30,6 +30,7 @@ fun Project.registerTraceDebuggerTasks() {
 
     val traceDebuggerFatJar = tasks.register<Jar>("traceDebuggerFatJar") {
         archiveBaseName.set("fat-trace-debugger")
+        archiveVersion.set("SNAPSHOT")
         duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
         dependsOn("bootstrapJar")
