@@ -32,15 +32,63 @@ class KotlinAPITest {
         var r1: Int = -1
         var r2: Int = -1
         deque.addLast(1)
-        val t1 = thread {
+
+        val t1 = Thread {
             r1 = deque.pollFirst()
         }
-        val t2 = thread {
+        val t2 = Thread {
             deque.addFirst(0)
             r2 = deque.peekLast()
         }
+
         t1.join()
         t2.join()
+
+        Assert.assertTrue(!(r1 == 1 && r2 == 1))
+    }
+
+    @Test
+    fun test5() = runConcurrentTest {
+        val deque = ConcurrentLinkedDeque<Int>()
+        var r1: Int = -1
+        var r2: Int = -1
+        deque.addLast(1)
+
+        val t1 = Thread {
+            r1 = deque.pollFirst()
+        }
+        val t2 = Thread {
+            deque.addFirst(0)
+            r2 = deque.peekLast()
+        }
+
+        t1.start()
+        t2.start()
+
+        t1.join()
+        t2.join()
+
+        Assert.assertTrue(!(r1 == 1 && r2 == 1))
+    }
+
+    @Test
+    fun test4() = runConcurrentTest {
+        val deque = ConcurrentLinkedDeque<Int>()
+        var r1: Int = -1
+        var r2: Int = -1
+        deque.addLast(1)
+
+        val t1 = Thread {
+            r1 = deque.pollFirst()
+        }
+        val t2 = Thread {
+            deque.addFirst(0)
+            r2 = deque.peekLast()
+        }
+
+        t1.join()
+        t2.join()
+
         Assert.assertTrue(!(r1 == 1 && r2 == 1))
     }
 
