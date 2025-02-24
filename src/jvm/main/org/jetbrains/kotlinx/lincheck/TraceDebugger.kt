@@ -15,8 +15,6 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.threadsResults
 import org.jetbrains.kotlinx.lincheck.strategy.managed.forClasses
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
-import org.jetbrains.kotlinx.lincheck.strategy.runIteration
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.ensureClassHierarchyIsTransformed
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.io.File
@@ -25,8 +23,8 @@ import java.lang.reflect.Modifier
 import kotlin.reflect.jvm.kotlinFunction
 import kotlin.system.exitProcess
 
-private const val traceDebuggerModeProperty = "lincheck.traceDebuggerMode"
-val isInTraceDebuggerMode by lazy { System.getProperty(traceDebuggerModeProperty, "false").toBoolean() }
+private const val TRACE_DEBUGGER_MODE_PROPERTY = "lincheck.traceDebuggerMode"
+val isInTraceDebuggerMode by lazy { System.getProperty(TRACE_DEBUGGER_MODE_PROPERTY, "false").toBoolean() }
 
 internal object TraceDebuggerInjections {
     @JvmStatic
@@ -36,7 +34,7 @@ internal object TraceDebuggerInjections {
     lateinit var methodUnderTraceDebugging: String
 
     @JvmStatic
-    var dumpTraceIntoFile: String? = null
+    var traceDumpFilePath: String? = null
 
     @JvmStatic
     fun parseArgs(args: String?) {
@@ -47,7 +45,7 @@ internal object TraceDebuggerInjections {
         val actualArguments = args.split(",")
         classUnderTraceDebugging = actualArguments.getOrNull(0) ?: error("Class name was not provided")
         methodUnderTraceDebugging = actualArguments.getOrNull(1) ?: error("Method name was not provided")
-        dumpTraceIntoFile = actualArguments.getOrNull(2)
+        traceDumpFilePath = actualArguments.getOrNull(2)
     }
 
     @JvmStatic
@@ -95,13 +93,12 @@ internal object TraceDebuggerInjections {
         val result = failure!!.results.threadsResults[0][0]
         if (result is ExceptionResult) throw result.throwable
 
-        if (!dumpTraceIntoFile.isNullOrEmpty() && failure.trace != null) {
+        if (!traceDumpFilePath.isNullOrEmpty() && failure.trace != null) {
             val trace = constructTraceForPlugin(failure, failure.trace)
-            val dumpFile = File(dumpTraceIntoFile!!)
+            val dumpFile = File(traceDumpFilePath!!)
             dumpFile.parentFile.mkdirs()
             dumpFile.createNewFile()
             dumpFile.writeText(trace.joinToString("\n"))
-            exitProcess(0)
         }
     }
 
