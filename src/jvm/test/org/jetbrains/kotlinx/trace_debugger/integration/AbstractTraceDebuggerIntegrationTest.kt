@@ -8,15 +8,16 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck_test.integration
+package org.jetbrains.kotlinx.trace_debugger.integration
 
+import org.jetbrains.kotlinx.lincheck_test.util.OVERWRITE_REPRESENTATION_TESTS_OUTPUT
 import org.junit.Assert
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.util.*
 
-abstract class AbstractIntegrationTest {
+abstract class AbstractTraceDebuggerIntegrationTest {
     companion object {
         private val OS: String = System.getProperty("os.name").lowercase(Locale.getDefault())
 
@@ -32,17 +33,14 @@ abstract class AbstractIntegrationTest {
     ): String {
         val pathToFatJar = File("build/libs/fat-trace-debugger-SNAPSHOT.jar")
         return """
-            gradle.taskGraph.whenReady { TaskExecutionGraph taskGraph ->
-                def jvmTasks = taskGraph.allTasks.findAll { task -> task instanceof JavaForkOptions }
-                jvmTasks.each { task ->
+            gradle.taskGraph.whenReady {
+                val jvmTasks = allTasks.filter { task -> task is JavaForkOptions }
+                jvmTasks.forEach { task ->
                     task.doFirst {
-                        def options = task as JavaForkOptions
-                        def jvmArgs = new ArrayList<>()
-                        jvmArgs.addAll(options.jvmArgs)
-                        jvmArgs.addAll([
-                            "-Dlincheck.traceDebuggerMode=true", 
-                            "-javaagent:${pathToFatJar.absolutePath}=$testClassName,$testMethodName,${fileToDump.absolutePath}"
-                        ])
+                        val options = task as JavaForkOptions
+                        val jvmArgs = options.jvmArgs?.toMutableList() ?: mutableListOf()
+                        jvmArgs.add("-Dlincheck.traceDebuggerMode=true")
+                        jvmArgs.add("-javaagent:${pathToFatJar.absolutePath}=$testClassName,$testMethodName,${fileToDump.absolutePath}")
                         options.jvmArgs = jvmArgs
                     }
                 }
@@ -56,7 +54,7 @@ abstract class AbstractIntegrationTest {
     }
 
     private fun createInitScriptAsTempFile(content: String): File {
-        val tempFile = File.createTempFile("initScript", ".gradle")
+        val tempFile = File.createTempFile("initScript", ".gradle.kts")
         tempFile.writeText(content)
         return tempFile
     }
@@ -88,8 +86,13 @@ abstract class AbstractIntegrationTest {
         if (goldDataFile.exists()) {
             Assert.assertEquals(goldDataFile.readText(), tmpFile.readText())
         } else {
-            copy(tmpFile, goldDataFile)
-            Assert.fail("The gold data file was created. Please rerun the test.")
+            if (OVERWRITE_REPRESENTATION_TESTS_OUTPUT) {
+                copy(tmpFile, goldDataFile)
+                Assert.fail("The gold data file was created. Please rerun the test.")
+            } else {
+                Assert.fail("The gold data file was not found. " +
+                        "Please rerun the test with \"overwriteRepresentationTestsOutput\" option enabled.")
+            }
         }
     }
 
