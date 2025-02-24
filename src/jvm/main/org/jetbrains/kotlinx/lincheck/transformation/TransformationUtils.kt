@@ -18,7 +18,6 @@ import org.objectweb.asm.Opcodes.ANEWARRAY
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import java.io.*
 import java.util.*
-import java.util.concurrent.*
 import kotlin.reflect.*
 import kotlin.reflect.jvm.*
 
@@ -399,7 +398,7 @@ internal fun isPrimitive(type: Type): Boolean {
     }
 }
 
-private val isThreadSubclassMap = ConcurrentHashMap<String, Boolean>()
+private val isThreadSubclassMap = Collections.synchronizedMap(HashMap<String, Boolean>())
 
 internal fun isThreadSubClass(internalClassName: String): Boolean {
     if (internalClassName == JAVA_THREAD_CLASSNAME) return true
@@ -408,7 +407,7 @@ internal fun isThreadSubClass(internalClassName: String): Boolean {
     }
 }
 
-private val isCoroutineStateMachineClassMap = ConcurrentHashMap<String, Boolean>()
+private val isCoroutineStateMachineClassMap = Collections.synchronizedMap(HashMap<String, Boolean>())
 
 internal fun isCoroutineStateMachineClass(internalClassName: String): Boolean {
     if (internalClassName.startsWith("java/")) return false

@@ -28,6 +28,7 @@ import sun.misc.Unsafe
 import java.io.File
 import java.lang.instrument.ClassFileTransformer
 import java.lang.instrument.Instrumentation
+import java.lang.invoke.LambdaMetafactory
 import java.lang.reflect.Modifier
 import java.security.ProtectionDomain
 import java.util.*
@@ -236,13 +237,13 @@ internal object LincheckJavaAgent {
      *
      * The function is called upon a test instance creation, to ensure that all the classes related to it are transformed.
      *
-     * @param testInstance the object to be transformed
+     * @param obj the object to be transformed
      */
-    fun ensureObjectIsTransformed(testInstance: Any) {
+    fun ensureObjectIsTransformed(obj: Any) {
         if (INSTRUMENT_ALL_CLASSES) {
             return
         }
-        ensureObjectIsTransformed(testInstance, Collections.newSetFromMap(IdentityHashMap()))
+        ensureObjectIsTransformed(obj, Collections.newSetFromMap(IdentityHashMap()))
     }
 
     /**
@@ -271,16 +272,17 @@ internal object LincheckJavaAgent {
             return
         }
 
-        if (!instrumentation.isModifiableClass(obj.javaClass) || !shouldTransform(obj.javaClass.name, instrumentationMode)) {
-            return
-        }
-
         if (processedObjects.contains(obj)) return
         processedObjects += obj
 
         var clazz: Class<*> = obj.javaClass
 
-        ensureClassHierarchyIsTransformed(clazz)
+        val lambdaSuffixStart = "\$\$Lambda\$"
+        if (clazz.name.contains(lambdaSuffixStart)) {
+            ensureClassHierarchyIsTransformed(clazz.name.substringBefore(lambdaSuffixStart))
+        } else {
+            ensureClassHierarchyIsTransformed(clazz)
+        }
 
         while (true) {
             clazz.declaredFields
@@ -301,11 +303,11 @@ internal object LincheckJavaAgent {
      * @param processedObjects Set of objects that have already been processed to prevent duplicate transformation.
      */
     private fun ensureClassHierarchyIsTransformed(clazz: Class<*>, processedObjects: MutableSet<Any>) {
-        if (instrumentation.isModifiableClass(clazz) && shouldTransform(clazz.name, instrumentationMode)) {
+        if (!shouldTransform(clazz.name, instrumentationMode)) return
+        if (instrumentation.isModifiableClass(clazz)) {
             instrumentedClasses += clazz.name
+//            println(clazz.name)
             instrumentation.retransformClasses(clazz)
-        } else {
-            return
         }
         // Traverse static fields.
         clazz.declaredFields
@@ -341,8 +343,8 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
      * Notice that the transformation depends on the [InstrumentationMode].
      * Additionally, this object caches bytes of non-transformed classes.
      */
-    val transformedClassesModelChecking = ConcurrentHashMap<String, ByteArray>()
-    val transformedClassesStress = ConcurrentHashMap<String, ByteArray>()
+    val transformedClassesModelChecking = Collections.synchronizedMap(HashMap<String, ByteArray>())
+    val transformedClassesStress = Collections.synchronizedMap(HashMap<String, ByteArray>())
 
     private val transformedClassesCache
         get() = when (instrumentationMode) {
@@ -479,5 +481,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         // StackTraceElement class, to wrap all its methods into the ignored section.
         isStackTraceElementClass(className) ||
         // ThreadContainer classes, to detect threads started in the thread containers.
-        isThreadContainerClass(className)
+        isThreadContainerClass(className) ||
+        // TODO document + same logic for VarHandle lookups
+        className.startsWith("java.lang.invoke.") && className.contains("MethodHandle")
 }
