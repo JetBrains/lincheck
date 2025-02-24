@@ -33,7 +33,7 @@ annotation class ExperimentalModelCheckingAPI
 @ExperimentalModelCheckingAPI
 fun runConcurrentTest(
     invocations: Int = DEFAULT_INVOCATIONS_COUNT,
-    block: () -> Unit
+    block: () -> Unit // TODO: should we keep only the `Runnable` options?
 ) = runConcurrentTestImpl(invocations, block)
 
 @ExperimentalModelCheckingAPI

@@ -380,7 +380,6 @@ internal class LocalObjectManager : ObjectTracker {
     /**
      * Checks if an object is only locally accessible.
      */
-    @Suppress("UNUSED_PARAMETER")
     private fun isLocalObject(obj: Any?) =
         localObjects.contains(obj)
 

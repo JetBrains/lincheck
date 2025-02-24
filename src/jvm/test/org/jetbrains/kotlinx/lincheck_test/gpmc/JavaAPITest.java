@@ -17,6 +17,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.jetbrains.kotlinx.lincheck.LincheckKt.runConcurrentTest;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.fail;
 
 public class JavaAPITest {
     @Test
@@ -50,6 +51,7 @@ public class JavaAPITest {
             }
 
             assertFalse(results[0] == 1 && results[1] == 1);
+//            fail();
         });
     }
 
