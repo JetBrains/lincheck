@@ -1219,7 +1219,9 @@ abstract class ManagedStrategy(
      */
     private fun processMethodEffectOnStaticSnapshot(
         owner: Any?,
-        params: Array<Any?>
+        params: Array<Any?>,
+        className: String,
+        methodName: String
     ) {
         when {
             // Unsafe API
@@ -1262,7 +1264,56 @@ abstract class ManagedStrategy(
 
                 staticMemorySnapshot.trackField(obj, afuDesc.targetType, afuDesc.fieldName)
             }
-            // TODO: System.arraycopy
+            // System.arraycopy
+            className == "java/lang/System" && methodName == "arraycopy" -> {
+                check(params[2] != null && params[2]!!.javaClass.isArray)
+                val srcArray = params[0]!!
+
+                val srcPosStart = params[1] as Int
+                val length = params[4] as Int
+
+                if (staticMemorySnapshot.isTracked(srcArray)) {
+                    //println("[Arraycopy]: Modify static memory snapshot ($className::$methodName(${params.joinToString()}))")
+                    for (i in 0..<length) {
+                        staticMemorySnapshot.trackArrayCell(srcArray, srcPosStart + i)
+                    }
+                }
+            }
+            // Arrays API (we handle it separately because of https://github.com/JetBrains/lincheck/issues/470)
+            className == "java/util/Arrays" &&
+            params.isNotEmpty() &&
+            params[0] != null &&
+            params[0]!!.javaClass.isArray -> {
+                val srcArray = params[0]!!
+                var from = 0
+                var to = 0
+
+                when {
+                    methodName in listOf("fill", "sort", "parallelSort", "setAll", "parallelSetAll", "parallelPrefix") -> {
+                        if (params.size >= 3) {
+                            from = params[1] as Int // fromIndex
+                            to = params[2] as Int // toIndex
+                        }
+                        else {
+                            to = getArrayLength(srcArray)
+                        }
+                    }
+                    methodName == "copyOf" && params.size >= 2 -> {
+                        to = params[1] as Int // newLength
+                    }
+                    methodName == "copyOfRange" && params.size >= 3 -> {
+                        from = params[1] as Int // fromIndex
+                        to = params[2] as Int // toIndex
+                    }
+                }
+
+                if (to > from && staticMemorySnapshot.isTracked(srcArray)) {
+                    //println("[Arrays]: Modify static memory snapshot ($className::$methodName(${params.joinToString()}))")
+                    for (i in from..<to.coerceAtMost(getArrayLength(srcArray))) {
+                        staticMemorySnapshot.trackArrayCell(srcArray, i)
+                    }
+                }
+            }
             // TODO: reflection
         }
     }
@@ -1286,8 +1337,6 @@ abstract class ManagedStrategy(
         params: Array<Any?>
     ) {
         val guarantee = runInIgnoredSection {
-            // process method effect on the static memory snapshot
-            processMethodEffectOnStaticSnapshot(owner, params)
             // re-throw abort error if the thread was aborted
             val threadId = threadScheduler.getCurrentThreadId()
             if (threadScheduler.isAborted(threadId)) {
@@ -1334,6 +1383,10 @@ abstract class ManagedStrategy(
             if (guarantee == null) {
                 loopDetector.beforeMethodCall(codeLocation, params)
             }
+
+            // process method effect on the static memory snapshot before exit
+            processMethodEffectOnStaticSnapshot(owner, params, className, methodName)
+
             // method's guarantee
             guarantee
         }
