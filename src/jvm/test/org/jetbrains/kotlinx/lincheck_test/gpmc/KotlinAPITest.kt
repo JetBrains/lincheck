@@ -57,16 +57,13 @@ class KotlinAPITest {
 
         ConcurrentHashMap<String, String>()
 
-        val t1 = Thread {
+        val t1 = thread {
             r1 = deque.pollFirst()
         }
-        val t2 = Thread {
+        val t2 = thread {
             deque.addFirst(0)
             r2 = deque.peekLast()
         }
-
-        t1.start()
-        t2.start()
 
         t1.join()
         t2.join()
@@ -88,6 +85,9 @@ class KotlinAPITest {
             deque.addFirst(0)
             r2 = deque.peekLast()
         }
+
+        t1.start()
+        t2.start()
 
         t1.join()
         t2.join()
