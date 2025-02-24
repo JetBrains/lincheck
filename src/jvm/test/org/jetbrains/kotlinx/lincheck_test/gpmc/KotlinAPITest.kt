@@ -14,6 +14,7 @@ import org.jetbrains.kotlinx.lincheck.ExperimentalModelCheckingAPI
 import org.jetbrains.kotlinx.lincheck.runConcurrentTest
 import org.junit.Assert
 import org.junit.Test
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
@@ -54,6 +55,8 @@ class KotlinAPITest {
         var r2: Int = -1
         deque.addLast(1)
 
+        ConcurrentHashMap<String, String>()
+
         val t1 = Thread {
             r1 = deque.pollFirst()
         }
@@ -69,6 +72,7 @@ class KotlinAPITest {
         t2.join()
 
         Assert.assertTrue(!(r1 == 1 && r2 == 1))
+//        Assert.fail()
     }
 
     @Test
