@@ -21,6 +21,8 @@ import org.jetbrains.kotlinx.lincheck_test.gpmc.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
 import java.util.concurrent.*
 import java.util.concurrent.atomic.*
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import kotlin.concurrent.thread
 import kotlin.random.Random
 import org.junit.*
@@ -218,22 +220,28 @@ class CustomThreadsRunConcurrentRepresentationTest : BaseRunConcurrentRepresenta
             TestJdkVersion.JDK_8  -> "run_concurrent_test/custom_threads_trace_debugger_jdk8.txt"
             TestJdkVersion.JDK_11 -> "run_concurrent_test/custom_threads_trace_debugger_jdk11.txt"
             TestJdkVersion.JDK_17 -> "run_concurrent_test/custom_threads_trace_debugger_jdk17.txt"
-            else                  -> "run_concurrent_test/custom_threads_trace_debugger.txt"
+            TestJdkVersion.JDK_21 -> "run_concurrent_test/custom_threads_trace_debugger_jdk21.txt"
+            else ->
+                throw IllegalStateException("Unsupported JDK version for trace debugger mode: $testJdkVersion")
         }
     } else {
         "run_concurrent_test/custom_threads.txt"
     }
 ) {
     override fun block() {
-        val block = Runnable {
-            wrapper.value += 1
-            valueUpdater.getAndIncrement(wrapper)
-            unsafe.getAndAddInt(wrapper, valueFieldOffset, 1)
-            synchronized(this) {
+        // We use an object here instead of lambda to avoid hustle
+        // with different representations of lambdas on different JDKs.
+        val task = object : Runnable {
+            override fun run() {
                 wrapper.value += 1
+                valueUpdater.getAndIncrement(wrapper)
+                unsafe.getAndAddInt(wrapper, valueFieldOffset, 1)
+                synchronized(this) {
+                    wrapper.value += 1
+                }
             }
         }
-        val threads = List(3) { Thread(block) }
+        val threads = List(3) { Thread(task) }
         threads.forEach { it.start() }
         threads.forEach { it.join() }
         check(false) // to trigger failure and trace collection
@@ -241,7 +249,7 @@ class CustomThreadsRunConcurrentRepresentationTest : BaseRunConcurrentRepresenta
 
     @Suppress("DEPRECATION") // Unsafe
     companion object {
-        var wrapper = Wrapper(0)
+        @JvmField var wrapper = Wrapper(0)
 
         val unsafe =
             UnsafeHolder.UNSAFE
@@ -406,5 +414,50 @@ class ThreadPoolRunConcurrentRepresentationTest : BaseRunConcurrentRepresentatio
     companion object {
         @JvmStatic
         private var counter = 0
+    }
+}
+
+class CoroutinesRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
+    when (testJdkVersion) {
+        TestJdkVersion.JDK_8  -> "run_concurrent_test/coroutines/coroutines_jdk8.txt"
+        TestJdkVersion.JDK_11 -> "run_concurrent_test/coroutines/coroutines_jdk11.txt"
+        TestJdkVersion.JDK_13 -> "run_concurrent_test/coroutines/coroutines_jdk13.txt"
+        TestJdkVersion.JDK_15 -> "run_concurrent_test/coroutines/coroutines_jdk15.txt"
+        TestJdkVersion.JDK_17 -> "run_concurrent_test/coroutines/coroutines_jdk17.txt"
+        TestJdkVersion.JDK_19 -> "run_concurrent_test/coroutines/coroutines_jdk19.txt"
+        TestJdkVersion.JDK_20 -> "run_concurrent_test/coroutines/coroutines_jdk20.txt"
+        TestJdkVersion.JDK_21 -> "run_concurrent_test/coroutines/coroutines_jdk21.txt"
+    }
+) {
+    @Before
+    fun setUp() {
+        assumeFalse(isInTraceDebuggerMode) // unstable hash-code
+        assumeFalse(isJdk8) // TODO: investigate why test is unstable on JDK8
+    }
+
+    companion object {
+        @JvmStatic var sharedCounter = 0
+
+        @JvmStatic var r1 = -1
+        @JvmStatic var r2 = -1
+
+        private val channel1 = Channel<Int>(capacity = 1)
+        private val channel2 = Channel<Int>(capacity = 1)
+    }
+
+    override fun block() = runBlocking {
+        Executors.newFixedThreadPool(2).asCoroutineDispatcher().use { dispatcher ->
+            val job1 = launch(dispatcher) {
+                channel1.send(sharedCounter++)
+                r1 = channel2.receive()
+            }
+            val job2 = launch(dispatcher) {
+                channel2.send(sharedCounter++)
+                r2 = channel1.receive()
+            }
+            job1.join()
+            job2.join()
+            check(r1 == 1 || r2 == 1)
+        }
     }
 }
