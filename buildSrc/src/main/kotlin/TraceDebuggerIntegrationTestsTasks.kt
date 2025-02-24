@@ -10,8 +10,10 @@
 
 import de.undercouch.gradle.tasks.download.Download
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.file.RelativePath
 import org.gradle.api.tasks.Copy
+import org.gradle.api.tasks.TaskProvider
 import org.gradle.kotlin.dsl.register
 
 class ProjectToTest(val name: String, val hash: String, val organization: String = "Kotlin")
@@ -20,7 +22,9 @@ private val projectsToTest = listOf(
     ProjectToTest("kotlinx.collections.immutable", "592f05fce02a1ad9e26cc6f3fdb55cdd97910599")
 )
 
-fun Project.registerIntegrationTestsTasks() {
+lateinit var traceDebuggerIntegrationTestsPrerequisites: TaskProvider<Task>
+
+fun Project.registerIntegrationTestsPrerequisites() {
     val prerequisite = projectsToTest.map { projectToTest ->
         val projectName = projectToTest.name
         val hash = projectToTest.hash
@@ -37,14 +41,14 @@ fun Project.registerIntegrationTestsTasks() {
             into(layout.buildDirectory.dir("integrationTestProjects"))
 
             eachFile {
-                val correctPath = listOf("kotlinx.collections.immutable") + relativePath.segments.drop(1)
+                val correctPath = listOf(projectName) + relativePath.segments.drop(1)
                 relativePath = RelativePath(file.isFile, *correctPath.toTypedArray())
             }
             includeEmptyDirs = false
         }
     }
 
-    tasks.register("integrationTestsPrerequisites") {
+    traceDebuggerIntegrationTestsPrerequisites = tasks.register("traceDebuggerIntegrationTestsPrerequisites") {
         prerequisite.forEach { dependsOn(it) }
     }
 }
