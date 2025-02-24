@@ -346,8 +346,8 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
      * Notice that the transformation depends on the [InstrumentationMode].
      * Additionally, this object caches bytes of non-transformed classes.
      */
-    val transformedClassesModelChecking = ConcurrentHashMap<String, ByteArray>()
-    val transformedClassesStress = ConcurrentHashMap<String, ByteArray>()
+    val transformedClassesModelChecking = Collections.synchronizedMap(HashMap<String, ByteArray>())
+    val transformedClassesStress = Collections.synchronizedMap(HashMap<String, ByteArray>())
 
     private val transformedClassesCache
         get() = when (instrumentationMode) {
@@ -484,5 +484,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         // StackTraceElement class, to wrap all its methods into the ignored section.
         isStackTraceElementClass(className) ||
         // ThreadContainer classes, to detect threads started in the thread containers.
-        isThreadContainerClass(className)
+        isThreadContainerClass(className) ||
+        // TODO document + same logic for VarHandle lookups
+        className.startsWith("java.lang.invoke.") && className.contains("MethodHandle")
 }

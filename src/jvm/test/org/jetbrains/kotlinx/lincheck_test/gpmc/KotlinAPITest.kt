@@ -72,7 +72,6 @@ class KotlinAPITest {
         t2.join()
 
         Assert.assertTrue(!(r1 == 1 && r2 == 1))
-//        Assert.fail()
     }
 
     @Test
