@@ -18,10 +18,8 @@ import org.objectweb.asm.commons.*
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.*
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.native_calls.DeterministicHashCodeTransformer
-import org.jetbrains.kotlinx.lincheck.transformation.transformers.native_calls.FakeDeterministicRandomTransformer
-import org.jetbrains.kotlinx.lincheck.transformation.transformers.native_calls.FakeDeterministicTimeTransformer
-import org.jetbrains.kotlinx.lincheck.transformation.transformers.native_calls.TrueDeterministicRandomTransformer
-import org.jetbrains.kotlinx.lincheck.transformation.transformers.native_calls.TrueDeterministicTimeTransformer
+import org.jetbrains.kotlinx.lincheck.transformation.transformers.native_calls.DeterministicRandomTransformer
+import org.jetbrains.kotlinx.lincheck.transformation.transformers.native_calls.DeterministicTimeTransformer
 import sun.nio.ch.lincheck.*
 
 internal class LincheckClassVisitor(
@@ -185,16 +183,8 @@ internal class LincheckClassVisitor(
             // and substitute them with constant.
             mv = DeterministicHashCodeTransformer(fileName, className, methodName, mv.newAdapter())
         }
-        mv = if (isInTraceDebuggerMode) {
-            TrueDeterministicTimeTransformer(mv.newAdapter())
-        } else {
-            FakeDeterministicTimeTransformer(mv.newAdapter())
-        }
-        mv = if (isInTraceDebuggerMode) {
-            TrueDeterministicRandomTransformer(fileName, className, methodName, mv.newAdapter())
-        } else {
-            FakeDeterministicRandomTransformer(fileName, className, methodName, mv.newAdapter())
-        }
+        mv = DeterministicTimeTransformer(mv.newAdapter())
+        mv = DeterministicRandomTransformer(fileName, className, methodName, mv.newAdapter())
         // `SharedMemoryAccessTransformer` goes first because it relies on `AnalyzerAdapter`,
         // which should be put in front of the byte-code transformer chain,
         // so that it can correctly analyze the byte-code and compute required type-information
