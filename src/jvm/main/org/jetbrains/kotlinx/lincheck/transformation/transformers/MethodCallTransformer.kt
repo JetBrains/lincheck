@@ -10,14 +10,15 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
-import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.transformation.*
-import org.jetbrains.kotlinx.lincheck.util.*
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
+import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import sun.nio.ch.lincheck.*
+import sun.nio.ch.lincheck.TraceDebuggerTracker.NativeMethodCall
 
 /**
  * [MethodCallTransformer] tracks method calls,
@@ -46,6 +47,11 @@ internal class MethodCallTransformer(
             visitMethodInsn(opcode, owner, name, desc, itf)
             return
         }
+        // It is useless for the user, and it depends on static initialization which is not instrumented.
+        if (isThreadLocalRandomCurrent(owner, name)) {
+            visitMethodInsn(opcode, owner, name, desc, itf)
+            return
+        }
         invokeIfInTestingCode(
             original = {
                 visitMethodInsn(opcode, owner, name, desc, itf)
@@ -54,6 +60,10 @@ internal class MethodCallTransformer(
                 processMethodCall(desc, opcode, owner, name, itf)
             }
         )
+    }
+
+    private fun isThreadLocalRandomCurrent(owner: String, methodName: String): Boolean {
+        return owner == "java/util/concurrent/ThreadLocalRandom" && methodName == "current"
     }
 
     private fun processMethodCall(desc: String, opcode: Int, owner: String, name: String, itf: Boolean) = adapter.run {
@@ -76,19 +86,47 @@ internal class MethodCallTransformer(
         adapter.push(MethodIds.getMethodId(owner, name, desc))
         // STACK [INVOKEVIRTUAL]: owner, owner, className, methodName, codeLocation, methodId
         // STACK [INVOKESTATIC]:         null, className, methodName, codeLocation, methodId
+        adapter.push(desc)
+        // STACK [INVOKEVIRTUAL]: owner, owner, className, methodName, codeLocation, methodId, methodDesc
+        // STACK [INVOKESTATIC]:         null, className, methodName, codeLocation, methodId, methodDesc
         pushArray(argumentLocals)
         // STACK: ..., argumentsArray
-        invokeStatic(Injections::beforeMethodCall)
+        invokeStatic(Injections::onMethodCall)
+        val deterministicMethodDescriptor = newLocal(OBJECT_TYPE)
+        storeLocal(deterministicMethodDescriptor)
+        
         invokeBeforeEventIfPluginEnabled("method call $methodName", setMethodEventId = true)
-        // STACK [INVOKEVIRTUAL]: owner, arguments
-        // STACK [INVOKESTATIC] :        arguments
+        // STACK [INVOKEVIRTUAL]: owner
+        // STACK [INVOKESTATIC] :
         val methodCallEndLabel = newLabel()
         val handlerExceptionStartLabel = newLabel()
         visitTryCatchBlock(methodCallStartLabel, methodCallEndLabel, handlerExceptionStartLabel, null)
         visitLabel(methodCallStartLabel)
+        
+        val regularMethodCallLabel = newLabel()
+        val endIfLabel = newLabel()
+        loadLocal(deterministicMethodDescriptor)
+        ifNull(regularMethodCallLabel)
+        // STACK [INVOKEVIRTUAL]: owner
+        // STACK [INVOKESTATIC] :
+        if (opcode != INVOKESTATIC) {
+            pop()
+        }
+        // STACK [INVOKEVIRTUAL]:
+        // STACK [INVOKESTATIC] :
+        val returnType = getReturnType(desc)
+        invokeDeterministicCall(deterministicMethodDescriptor, returnType)
+        goTo(endIfLabel)
+        visitLabel(regularMethodCallLabel)
+        // STACK [INVOKEVIRTUAL]: owner
+        // STACK [INVOKESTATIC] :
         loadLocals(argumentLocals)
+        // STACK [INVOKEVIRTUAL]: owner, arguments
+        // STACK [INVOKESTATIC] :        arguments
         visitMethodInsn(opcode, owner, name, desc, itf)
+        visitLabel(endIfLabel)
         visitLabel(methodCallEndLabel)
+        
         // STACK [INVOKEVIRTUAL]: owner, arguments
         // STACK [INVOKESTATIC] :        arguments
         processMethodCallResult(desc)
@@ -100,6 +138,28 @@ internal class MethodCallTransformer(
         throwException()
         visitLabel(endLabel)
         // STACK: result
+    }
+
+    private fun GeneratorAdapter.invokeDeterministicCall(
+        deterministicMethodDescriptor: Int,
+        returnType: Type?
+    ) {
+        invokeInIgnoredSection {
+            if (isInTraceDebuggerMode) {
+                getStatic(traceDebuggerTrackerEnumType, NativeMethodCall.name, traceDebuggerTrackerEnumType)
+                invokeStatic(Injections::getNextTraceDebuggerEventTrackerId)
+                loadLocal(deterministicMethodDescriptor)
+                invokeStatic(Injections::invokeDeterministicCallDescriptorInTraceDebugger)
+            } else {
+                loadLocal(deterministicMethodDescriptor)
+                invokeStatic(Injections::invokeDeterministicCallDescriptorInLincheck)
+            }
+            if (returnType == VOID_TYPE) {
+                pop()
+            } else {
+                unbox(returnType)
+            }
+        }
     }
 
     private fun processMethodCallResult(desc: String) = adapter.run {
@@ -141,4 +201,7 @@ internal class MethodCallTransformer(
     private fun isCoroutineResumptionSyntheticAccessor(className: String, methodName: String): Boolean =
         (this.methodName == "invokeSuspend") && methodName.startsWith("access\$")
 
+    companion object {
+        private val traceDebuggerTrackerEnumType: Type = getType(TraceDebuggerTracker::class.java)
+    }
 }

@@ -8,7 +8,7 @@ import kotlin.random.*
 class KotlinRandomRepresentationTest : BaseTraceRepresentationTest("kotlin_random_representation") {
     @Before
     fun setUp() {
-        assumeFalse(isInTraceDebuggerMode)
+        assumeFalse(isInTraceDebuggerMode) // The random number is different on each test run
     }
     
     private var a = 0

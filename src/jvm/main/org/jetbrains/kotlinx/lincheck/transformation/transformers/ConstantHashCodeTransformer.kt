@@ -8,7 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.transformation.transformers.native_calls
+package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.ManagedStrategyMethodVisitor
 import org.jetbrains.kotlinx.lincheck.transformation.invokeIfInTestingCode
@@ -17,20 +17,19 @@ import org.objectweb.asm.commons.GeneratorAdapter
 import sun.nio.ch.lincheck.Injections
 
 /**
- * [DeterministicHashCodeTransformer] tracks invocations of [Object.hashCode] and [System.identityHashCode] methods,
+ * [ConstantHashCodeTransformer] tracks invocations of [Object.hashCode] and [System.identityHashCode] methods,
  * and replaces them with the [sun.nio.ch.lincheck.Injections.hashCodeDeterministic] and [sun.nio.ch.lincheck.Injections.identityHashCodeDeterministic] calls.
  *
  * This transformation aims to prevent non-determinism due to the native [Any.hashCode] implementation,
  * which typically returns memory address of the object.
  * There is no guarantee that memory addresses will be the same in different runs.
  */
-internal class DeterministicHashCodeTransformer(
+internal class ConstantHashCodeTransformer(
     fileName: String,
     className: String,
     methodName: String,
     adapter: GeneratorAdapter,
 ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
-
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         when {
             name == "hashCode" && desc == "()I" -> {
@@ -52,5 +51,4 @@ internal class DeterministicHashCodeTransformer(
             }
         }
     }
-
 }

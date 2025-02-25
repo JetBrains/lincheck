@@ -10,7 +10,13 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-internal typealias Id = Long
+internal typealias TraceDebuggerEventId = Long
+
+/**
+ * Internal interface representing an abstract tracker for trace debugger events.
+ * Provides functionality to handle and manipulate trace debugger event IDs to ensure consistency
+ * across multiple runs, especially in scenarios involving cached computations.
+ */
 internal interface AbstractTraceDebuggerEventTracker: AutoCloseable {
     /**
      * Resets ids numeration and starts them from 0.
@@ -41,10 +47,10 @@ internal interface AbstractTraceDebuggerEventTracker: AutoCloseable {
      * On subsequent re-runs, the cached computation will be skipped, but the
      * current trace debugger event id will still be advanced by the required delta via a call to `advanceCurrentId(oldId)`.
      */
-    fun advanceCurrentId(oldId: Id)
+    fun advanceCurrentId(oldId: TraceDebuggerEventId)
     
     /**
      * @return id of the current trace debugger event and increments the global counter.
      */
-    fun getNextId(): Id
+    fun getNextId(): TraceDebuggerEventId
 }

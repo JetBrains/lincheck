@@ -51,15 +51,15 @@ internal class ObjectIdentityHashCodeTracker: AbstractTraceDebuggerEventTracker 
          */
         private const val IDENTITY_HASHCODE_OFFSET: Long = 1L
     }
-    private val initialHashCodes = ConcurrentHashMap<Id, Int>()
+    private val initialHashCodes = ConcurrentHashMap<TraceDebuggerEventId, Int>()
     private val nextObjectId = AtomicLong(0)
-    private val objectIdAdvances = ConcurrentHashMap<Id, Id>()
+    private val objectIdAdvances = ConcurrentHashMap<TraceDebuggerEventId, TraceDebuggerEventId>()
 
     /**
      * This method substitutes identity hash code of the object in its header with the initial (from the first test execution) identity hashcode.
      * @return id of the created object.
      */
-    fun afterNewTrackedObjectCreation(obj: Any): Id {
+    fun afterNewTrackedObjectCreation(obj: Any): TraceDebuggerEventId {
         val currentObjectId = if (isInTraceDebuggerMode) getNextId() else 0
         val initialIdentityHashCode = getInitialIdentityHashCode(
             objectId = currentObjectId,
@@ -101,7 +101,7 @@ internal class ObjectIdentityHashCodeTracker: AbstractTraceDebuggerEventTracker 
      * On subsequent re-runs, the cached computation will be skipped, but the
      * current object id will still be advanced by the required delta via a call to `advanceCurrentObjectId(oldId)`.
      */
-    override fun advanceCurrentId(oldId: Id) {
+    override fun advanceCurrentId(oldId: TraceDebuggerEventId) {
         if (!isInTraceDebuggerMode) return
         val newObjectId = nextObjectId.get()
         val existingAdvance = objectIdAdvances.putIfAbsent(oldId, newObjectId)
@@ -113,7 +113,7 @@ internal class ObjectIdentityHashCodeTracker: AbstractTraceDebuggerEventTracker 
     /**
      * @return id of the current object and increments the global counter.
      */
-    override fun getNextId(): Id {
+    override fun getNextId(): TraceDebuggerEventId {
         if (!isInTraceDebuggerMode) return 0
         return nextObjectId.getAndIncrement()
     }
@@ -122,7 +122,7 @@ internal class ObjectIdentityHashCodeTracker: AbstractTraceDebuggerEventTracker 
      * @return initial identity hashcode for the object with specified [objectId].
      * If this is first time function is called for this object, then provided [identityHashCode] is treated as initial.
      */
-    private fun getInitialIdentityHashCode(objectId: Id, identityHashCode: Int): Int =
+    private fun getInitialIdentityHashCode(objectId: TraceDebuggerEventId, identityHashCode: Int): Int =
         initialHashCodes.getOrPut(objectId) { identityHashCode }
     
     override fun close() {

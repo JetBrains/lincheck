@@ -11,7 +11,6 @@
 package org.jetbrains.kotlinx.lincheck_test.trace_debugger
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.junit.Ignore
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.DoubleAccumulator
 import java.util.concurrent.atomic.DoubleAdder
@@ -188,9 +187,6 @@ class RandomBytes2Test : RandomTests() {
     fun operation() = Random.Default.nextBytes(ByteArray(24)).asList()
 }
 
-// TODO Investigate the loop detector bug (Alexander Potapov)
-// https://github.com/JetBrains/lincheck/issues/498
-@Ignore
 class RandomBytes3Test : RandomTests() {
     @Operation
     fun operation() = Random.Default.nextBytes(ByteArray(24), 10, 20).asList()
@@ -206,9 +202,6 @@ class RandomBytes4Test : RandomTests() {
     }
 }
 
-// TODO Investigate the loop detector bug (Alexander Potapov)
-// https://github.com/JetBrains/lincheck/issues/498
-@Ignore
 class RandomBytes5Test : RandomTests() {
     @Operation
     fun operation(): List<Byte> {
@@ -231,9 +224,6 @@ class RandomUBytes2Test : RandomTests() {
     fun operation() = Random.Default.nextUBytes(UByteArray(24)).asList()
 }
 
-// TODO Investigate the loop detector bug (Alexander Potapov)
-// https://github.com/JetBrains/lincheck/issues/498
-@Ignore
 class RandomUBytes3Test : RandomTests() {
     @OptIn(ExperimentalUnsignedTypes::class)
     @Operation
@@ -251,9 +241,6 @@ class RandomUBytes4Test : RandomTests() {
     }
 }
 
-// TODO Investigate the loop detector bug (Alexander Potapov)
-// https://github.com/JetBrains/lincheck/issues/498
-@Ignore
 @OptIn(ExperimentalUnsignedTypes::class)
 class RandomUBytes5Test : RandomTests() {
     @Operation
