@@ -17,6 +17,11 @@ import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.*
+import org.jetbrains.kotlinx.lincheck.transformation.transformers.native_calls.DeterministicHashCodeTransformer
+import org.jetbrains.kotlinx.lincheck.transformation.transformers.native_calls.FakeDeterministicRandomTransformer
+import org.jetbrains.kotlinx.lincheck.transformation.transformers.native_calls.FakeDeterministicTimeTransformer
+import org.jetbrains.kotlinx.lincheck.transformation.transformers.native_calls.TrueDeterministicRandomTransformer
+import org.jetbrains.kotlinx.lincheck.transformation.transformers.native_calls.TrueDeterministicTimeTransformer
 import sun.nio.ch.lincheck.*
 
 internal class LincheckClassVisitor(
