@@ -82,17 +82,22 @@ abstract class ManagedStrategy(
     protected abstract val objectTracker: ObjectTracker?
     // Tracker of objects' identity hash codes.
     private val identityHashCodeTracker = ObjectIdentityHashCodeTracker()
+    // Tracker of native method call states.
     private val nativeMethodCallStatesTracker = NativeMethodCallStatesTracker()
+    
     internal val traceDebuggerEventTrackers: Map<TraceDebuggerTracker, AbstractTraceDebuggerEventTracker> = mapOf(
         TraceDebuggerTracker.IdentityHashCode to identityHashCodeTracker,
         TraceDebuggerTracker.NativeMethodCall to nativeMethodCallStatesTracker,
     )
+    
     internal fun resetTraceDebuggerTrackerIds() {
         traceDebuggerEventTrackers.values.forEach { it.resetIds() }
     }
+    
     internal fun closeTraceDebuggerTrackers() {
         traceDebuggerEventTrackers.values.forEach { it.close() }
     }
+    
     // Cache for evaluated invoke dynamic call sites
     private val invokeDynamicCallSites = ConcurrentHashMap<ConstantDynamic, CallSite>()
     // Tracker of the monitors' operations.
@@ -1192,12 +1197,16 @@ abstract class ManagedStrategy(
         }
     }
     
-    override fun getNativeCallStateOrNull(id: Id): Any? = nativeMethodCallStatesTracker.getStateOrNull(id)
+    
+    override fun getNativeCallStateOrNull(id: Id): Any? =
+        nativeMethodCallStatesTracker.getStateOrNull(id)
+    
     override fun setNativeCallState(id: Id, state: Any?) {
         require(state != null) { "Native call state must not be null" }
         nativeMethodCallStatesTracker.setState(id, state)
     }
 
+    
     private fun shouldTrackObjectAccess(obj: Any?): Boolean {
         // by default, we track accesses to all objects
         if (objectTracker == null) return true
