@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.trace_debugger.integration
 
+import org.gradle.tooling.GradleConnector
 import org.jetbrains.kotlinx.lincheck_test.util.OVERWRITE_REPRESENTATION_TESTS_OUTPUT
 import org.junit.Assert
 import java.io.File
@@ -65,20 +66,18 @@ abstract class AbstractTraceDebuggerIntegrationTest {
         gradleCommands: List<String>,
     ) {
         val tmpFile = File.createTempFile(testClassName + "_" + testMethodName, "")
-        val processBuilder = ProcessBuilder(
-            if (isWindows()) "gradlew.bat" else "./gradlew",
-            *gradleCommands.toTypedArray(),
-            "--tests",
-            "$testClassName.$testMethodName",
-            "--init-script",
-            createInitScriptAsTempFile(buildGradleInitScriptToDumpTrace(testClassName, testMethodName, tmpFile)).absolutePath,
-        )
-        processBuilder.directory(File(projectPath))
 
-        val process = processBuilder.start()
-        process.errorStream.copyTo(System.err)
-        process.waitFor().let {
-            if (it != 0) error("Gradle tests failed with exit code $it")
+        GradleConnector.newConnector().forProjectDirectory(File(projectPath)).connect().use { connection ->
+            connection
+                .newBuild()
+                .addArguments(
+                    "--init-script",
+                    createInitScriptAsTempFile(buildGradleInitScriptToDumpTrace(testClassName, testMethodName, tmpFile)).absolutePath,
+                ).forTasks(
+                    *gradleCommands.toTypedArray(),
+                    "--tests",
+                    "$testClassName.$testMethodName",
+                ).run()
         }
 
         // TODO decide how to test: with gold data or run twice?

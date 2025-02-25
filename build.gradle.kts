@@ -26,6 +26,7 @@ plugins {
 
 repositories {
     mavenCentral()
+    maven { url = uri("https://repo.gradle.org/gradle/libs-releases/") }
 }
 
 fun SourceDirectorySet.configureTestSources() {
@@ -76,10 +77,13 @@ kotlin {
             val junitVersion: String by project
             val jctoolsVersion: String by project
             val mockkVersion: String by project
+            val gradleToolingApiVersion: String by project
             dependencies {
                 implementation("junit:junit:$junitVersion")
                 implementation("org.jctools:jctools-core:$jctoolsVersion")
                 implementation("io.mockk:mockk:${mockkVersion}")
+                implementation("org.gradle:gradle-tooling-api:${gradleToolingApiVersion}")
+                runtimeOnly("org.slf4j:slf4j-simple:1.7.10")
             }
         }
     }
