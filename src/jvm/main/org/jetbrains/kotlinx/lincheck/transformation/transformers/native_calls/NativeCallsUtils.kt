@@ -10,9 +10,10 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation.transformers.native_calls
 
-import org.jetbrains.kotlinx.lincheck.transformation.ifStatement
+import org.jetbrains.kotlinx.lincheck.transformation.dup
 import org.jetbrains.kotlinx.lincheck.transformation.invokeInIgnoredSection
 import org.jetbrains.kotlinx.lincheck.transformation.invokeStatic
+import org.jetbrains.kotlinx.lincheck.transformation.pushNull
 import org.jetbrains.kotlinx.lincheck.transformation.storeArguments
 import org.jetbrains.kotlinx.lincheck.transformation.tryCatchFinally
 import org.objectweb.asm.Opcodes
@@ -20,6 +21,7 @@ import org.objectweb.asm.Type
 import org.objectweb.asm.Type.VOID_TYPE
 import org.objectweb.asm.Type.getType
 import org.objectweb.asm.commons.GeneratorAdapter
+import sun.nio.ch.lincheck.CustomResult
 import sun.nio.ch.lincheck.Injections
 import sun.nio.ch.lincheck.TraceDebuggerTracker
 
@@ -125,11 +127,11 @@ internal fun GeneratorAdapter.invoke(
         val end = newLabel()
         ifNonNull(nonNull)
         pop()
-        var saveSateInvocationCount = 0
+        var saveStateInvocationCount = 0
         call.invokeSavingState(
             generator = this,
             saveState = { getState ->
-                saveSateInvocationCount++
+                saveStateInvocationCount++
                 loadLocal(id)
                 getState()
                 box(call.stateType)
@@ -143,10 +145,9 @@ internal fun GeneratorAdapter.invoke(
             getReceiver = getReceiver,
             getArgument = getArgument,
         )
-        require(saveSateInvocationCount == 1) {
+        require(saveStateInvocationCount > 0) {
             """
                 |Deterministic call state was not saved or restored correctly:
-                |It was called $saveSateInvocationCount times instead of once.
                 |${call.owner}.${call.name}${call.desc}""".trimMargin()
         }
         goTo(end)
@@ -208,36 +209,6 @@ internal fun GeneratorAdapter.invoke(
     invoke(call = call, receiver = receiver, arguments = arguments)
 }
 
-internal data class ThrowableWrapper(val throwable: Throwable) {
-    companion object {
-        @JvmStatic
-        fun fromThrowable(throwable: Throwable) = ThrowableWrapper(throwable)
-
-        @JvmStatic
-        fun throwable(wrapper: ThrowableWrapper) = wrapper.throwable
-    }
-}
-
-/**
- * Executes a code block within a try-catch construct and boxes the result into [Any] upon success.
- * If an exception occurs during the execution of the code block, it wraps the exception using
- * [ThrowableWrapper.fromThrowable].
- *
- * @param successType The result type of the [block] execution upon its success.
- * @param block The code block that will be executed within a try-catch construct.
- */
-internal fun GeneratorAdapter.customRunCatching(successType: Type, block: GeneratorBuilder) {
-    tryCatchFinally(
-        tryBlock = {
-            block()
-            box(successType)
-        },
-        catchBlock = {
-            invokeStatic(ThrowableWrapper::fromThrowable)
-        },
-    )
-}
-
 /**
  * Handles the evaluation of an object on the stack, either unwrapping it as a successful result or throwing it as an exception
  * if it represents a throwable. Specifically:
@@ -249,26 +220,15 @@ internal fun GeneratorAdapter.customRunCatching(successType: Type, block: Genera
  * @param successType the type representing the successful value that should be unboxed if present.
  */
 fun GeneratorAdapter.customGetOrThrow(successType: Type) {
-    dup()
-    ifStatement(
-        condition = { instanceOf(throwableWrapperType) },
-        thenClause = {
-            invokeStatic(ThrowableWrapper::throwable)
-            throwException()
-        },
-        elseClause = {
-            if (successType != VOID_TYPE) {
-                unbox(successType)
-            } else {
-                pop()
-            }
-        },
-    )
+    invokeStatic(Injections::getOrThrow)
+    if (successType == VOID_TYPE) {
+        pop()
+    } else {
+        unbox(successType)
+    }
 }
 
 private val traceDebuggerTrackerType = getType(TraceDebuggerTracker::class.java)
-
-private val throwableWrapperType = getType(ThrowableWrapper::class.java)
 
 /**
  * Copies the content of a source array into a destination array using the `System.arraycopy` method.
@@ -323,18 +283,19 @@ internal data class PureDeterministicCall(
     override val desc: String,
     override val isInterface: Boolean,
 ) : DeterministicCall {
-    override val stateType: Type = Type.getReturnType(desc)
+    private val originalReturnType: Type = Type.getReturnType(desc)
+    override val stateType: Type = getType(CustomResult::class.java)
     
-    init {
-        require(Type.getReturnType(desc) != VOID_TYPE) { "Pure deterministic native call must return a value" }
-    }
-
     override fun invokeFromState(
         generator: GeneratorAdapter,
         getState: GeneratorBuilder,
         getReceiver: GeneratorBuilder?,
         getArgument: GeneratorAdapter.(Int) -> Unit,
-    ) = generator.getState()
+    ) = generator.run {
+        getState()
+        
+        customGetOrThrow(originalReturnType)
+    }
 
     override fun invokeSavingState(
         generator: GeneratorAdapter,
@@ -342,10 +303,33 @@ internal data class PureDeterministicCall(
         getReceiver: GeneratorBuilder?,
         getArgument: GeneratorAdapter.(Int) -> Unit,
     ) = generator.run {
-        invokeOriginalCall(this, getReceiver, getArgument)
-        val result = newLocal(stateType)
-        storeLocal(result)
-        saveState { loadLocal(result) }
-        loadLocal(result)
+        val savedState = newLocal(stateType)
+        tryCatchFinally(
+            tryBlock = {
+                invokeOriginalCall(this, getReceiver, getArgument)
+                when (originalReturnType) {
+                    VOID_TYPE -> {
+                        pushNull()
+                        invokeStatic(Injections::fromSuccess)
+                        storeLocal(savedState)
+                        saveState { loadLocal(savedState) }
+                    }
+                    else -> {
+                        dup(originalReturnType)
+                        box(originalReturnType)
+                        invokeStatic(Injections::fromSuccess)
+                        storeLocal(savedState)
+                        saveState { loadLocal(savedState) }
+                    }
+                }
+            },
+            catchBlock = {
+                dup()
+                invokeStatic(Injections::fromThrowable)
+                storeLocal(savedState)
+                saveState { loadLocal(savedState) }
+                throwException()
+            },
+        )
     }
 }
