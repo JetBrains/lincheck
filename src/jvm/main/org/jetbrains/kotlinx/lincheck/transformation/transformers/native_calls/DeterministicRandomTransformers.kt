@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation.transformers.native_calls
 
+import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.objectweb.asm.Type.getType
 import org.objectweb.asm.commons.Method
 import org.objectweb.asm.commons.GeneratorAdapter
@@ -21,26 +22,20 @@ import sun.nio.ch.lincheck.*
 import java.lang.reflect.Modifier
 import java.util.*
 
-internal abstract class AbstractDeterministicRandomTransformer(
+/**
+ * [DeterministicRandomTransformer] tracks invocations of various random number generation functions, such as [Random.nextInt].
+ * 
+ * In Lincheck mode it replaces them with corresponding [Injections] methods to prevent non-determinism.
+ * 
+ * In the trace debugger mode, it ensures deterministic behaviour by recording the results of the first invocations
+ * and replaying them during the subsequent calls.
+ */
+internal class DeterministicRandomTransformer(
     fileName: String,
     className: String,
     methodName: String,
     adapter: GeneratorAdapter,
 ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
-    protected abstract fun GeneratorAdapter.generateInstrumentedCodeForNextSecondarySeedAndGetProbe(
-        opcode: Int, owner: String, name: String, desc: String, itf: Boolean,
-    )
-
-    protected abstract fun GeneratorAdapter.generateInstrumentedCodeForAdvanceProbe(
-        opcode: Int, owner: String, name: String, desc: String, itf: Boolean,
-    )
-
-    protected abstract fun GeneratorAdapter.generateInstrumentedCodeForRegularRandomMethod(
-        opcode: Int, owner: String, name: String, desc: String, itf: Boolean,
-        receiverLocal: Int,
-        argumentsLocals: IntArray,
-    )
-
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         when (owner) {
             "java/util/concurrent/ThreadLocalRandom", "java/util/concurrent/atomic/Striped64",
@@ -50,14 +45,27 @@ internal abstract class AbstractDeterministicRandomTransformer(
                     "nextSecondarySeed", "getProbe" -> { // INVOKESTATIC
                         invokeIfInTestingCode(
                             original = { visitMethodInsn(opcode, owner, name, desc, itf) },
-                            code = { generateInstrumentedCodeForNextSecondarySeedAndGetProbe(opcode, owner, name, desc, itf) }
+                            code = {
+                                if (isInTraceDebuggerMode) {
+                                    invoke(PureDeterministicCall(opcode, owner, name, desc, itf))
+                                } else {
+                                    invokeStatic(Injections::nextInt)
+                                }
+                            }
                         )
                         return
                     }
                     "advanceProbe" -> { // INVOKEVIRTUAL
                         invokeIfInTestingCode(
                             original = { visitMethodInsn(opcode, owner, name, desc, itf) },
-                            code = { generateInstrumentedCodeForAdvanceProbe(opcode, owner, name, desc, itf) }
+                            code = {
+                                if (isInTraceDebuggerMode) {
+                                    invoke(PureDeterministicCall(opcode, owner, name, desc, itf))
+                                } else {
+                                    pop()
+                                    invokeStatic(Injections::nextInt)
+                                }
+                            }
                         )
                         return
                     }
@@ -79,9 +87,28 @@ internal abstract class AbstractDeterministicRandomTransformer(
                             invokeStatic(Injections::isRandom)
                         },
                         thenClause = {
-                            generateInstrumentedCodeForRegularRandomMethod(
-                                opcode, owner, name, desc, itf, ownerLocal, arguments
-                            )
+                            if (isInTraceDebuggerMode) {
+                                val deterministicCall = if (name == "nextBytes" && desc == "([B)V") {
+                                    RandomBytesDeterministicRandomCall(opcode, owner, name, desc, itf)
+                                } else {
+                                    ensureNoObjectsOrArraysInArgumentTypes(desc, opcode, owner, name)
+                                    PureDeterministicCall(opcode, owner, name, desc, itf)
+                                }
+
+                                invoke(call = deterministicCall, receiver = ownerLocal, arguments = arguments)
+                            } else {
+                                invokeInIgnoredSection {
+                                    invokeStatic(Injections::deterministicRandom)
+                                    loadLocals(arguments)
+                                    /*
+                                     * In Java 21 RandomGenerator interface was introduced,
+                                     * so sometimes data structures interact with java.util.Random through this interface.
+                                     */
+                                    val randomOwner =
+                                        if (owner.endsWith("RandomGenerator")) "java/util/random/RandomGenerator" else "java/util/Random"
+                                    visitMethodInsn(opcode, randomOwner, name, desc, itf)
+                                }
+                            }
                         },
                         elseClause = {
                             loadLocal(ownerLocal)
@@ -100,104 +127,7 @@ internal abstract class AbstractDeterministicRandomTransformer(
         opcode.isInstanceMethodOpcode && it.name == methodName && it.descriptor == desc
     }
 
-    private companion object {
-        private val randomGeneratorClass = runCatching { Class.forName("java.util.random.RandomGenerator") }.getOrNull()
-        private fun Class<*>.getMethodsToReplace() = declaredMethods
-            .filter { Modifier.isPublic(it.modifiers) || Modifier.isProtected(it.modifiers) }
-            .map { Method.getMethod(it) }
-
-        private val randomGeneratorMethods = randomGeneratorClass?.getMethodsToReplace() ?: emptyList()
-        private val randomClassMethods = Random::class.java.getMethodsToReplace()
-        private val allRandomMethods = randomGeneratorMethods + randomClassMethods
-    }
-}
-
-private val Int.isInstanceMethodOpcode
-    get() = when (this) {
-        Opcodes.INVOKEVIRTUAL, Opcodes.INVOKEINTERFACE, Opcodes.INVOKESPECIAL -> true
-        else -> false
-    }
-
-/**
- * [FakeDeterministicRandomTransformer] tracks invocations of various random number generation functions,
- * such as [Random.nextInt], and replaces them with corresponding [Injections] methods to prevent non-determinism.
- */
-internal class FakeDeterministicRandomTransformer(
-    fileName: String,
-    className: String,
-    methodName: String,
-    adapter: GeneratorAdapter,
-) : AbstractDeterministicRandomTransformer(fileName, className, methodName, adapter) {
-    override fun GeneratorAdapter.generateInstrumentedCodeForNextSecondarySeedAndGetProbe(
-        opcode: Int,
-        owner: String,
-        name: String,
-        desc: String,
-        itf: Boolean
-    ) {
-        invokeStatic(Injections::nextInt)
-    }
-
-    override fun GeneratorAdapter.generateInstrumentedCodeForAdvanceProbe(
-        opcode: Int,
-        owner: String,
-        name: String,
-        desc: String,
-        itf: Boolean
-    ) {
-        pop()
-        invokeStatic(Injections::nextInt)
-    }
-
-    override fun GeneratorAdapter.generateInstrumentedCodeForRegularRandomMethod(
-        opcode: Int,
-        owner: String,
-        name: String,
-        desc: String,
-        itf: Boolean,
-        receiverLocal: Int,
-        argumentsLocals: IntArray,
-    ) {
-        invokeInIgnoredSection {
-            invokeStatic(Injections::deterministicRandom)
-            loadLocals(argumentsLocals)
-            /*
-             * In Java 21 RandomGenerator interface was introduced,
-             * so sometimes data structures interact with java.util.Random through this interface.
-             */
-            val randomOwner =
-                if (owner.endsWith("RandomGenerator")) "java/util/random/RandomGenerator" else "java/util/Random"
-            visitMethodInsn(opcode, randomOwner, name, desc, itf)
-        }
-    }
-}
-
-internal class TrueDeterministicRandomTransformer(
-    fileName: String,
-    className: String,
-    methodName: String,
-    adapter: GeneratorAdapter,
-) : AbstractDeterministicRandomTransformer(fileName, className, methodName, adapter) {
-    private fun GeneratorAdapter.wrapMethod(
-        opcode: Int,
-        owner: String,
-        name: String,
-        desc: String,
-        itf: Boolean,
-        receiverLocal: Int?,
-        argumentsLocals: IntArray,
-    ) {
-        val deterministicCall = if (name == "nextBytes" && desc == "([B)V") {
-            RandomBytesDeterministicRandomCall(opcode, owner, name, desc, itf)
-        } else {
-            ensureNoObjectOrArrayTypes(desc, opcode, owner, name)
-            SimpleDeterministicCall(opcode, owner, name, desc, itf)
-        }
-        
-        invoke(call = deterministicCall, receiver = receiverLocal, arguments = argumentsLocals)
-    }
-
-    private fun ensureNoObjectOrArrayTypes(
+    private fun ensureNoObjectsOrArraysInArgumentTypes(
         desc: String,
         opcode: Int,
         owner: String,
@@ -209,41 +139,38 @@ internal class TrueDeterministicRandomTransformer(
         }
     }
 
-    override fun GeneratorAdapter.generateInstrumentedCodeForNextSecondarySeedAndGetProbe(
-        opcode: Int,
-        owner: String,
-        name: String,
-        desc: String,
-        itf: Boolean
-    ) {
-        val arguments = storeArguments(desc)
-        val receiver = if (opcode.isInstanceMethodOpcode) newLocal(getType("L$owner;")).also(::storeLocal) else null
-        wrapMethod(opcode, owner, name, desc, itf, receiver, arguments)
-    }
+    private companion object {
+        private val randomGeneratorClass = runCatching { Class.forName("java.util.random.RandomGenerator") }.getOrNull()
+        private fun Class<*>.getMethodsToReplace() = declaredMethods
+            .filter { Modifier.isPublic(it.modifiers) || Modifier.isProtected(it.modifiers) }
+            .map { Method.getMethod(it) }
 
-    override fun GeneratorAdapter.generateInstrumentedCodeForAdvanceProbe(
-        opcode: Int,
-        owner: String,
-        name: String,
-        desc: String,
-        itf: Boolean
-    ) {
-        val arguments = storeArguments(desc)
-        val receiver = if (opcode.isInstanceMethodOpcode) newLocal(getType("L$owner;")).also(::storeLocal) else null
-        wrapMethod(opcode, owner, name, desc, itf, receiver, arguments)
+        private val randomGeneratorMethods = randomGeneratorClass?.getMethodsToReplace() ?: emptyList()
+        private val randomClassMethods = Random::class.java.getMethodsToReplace()
+        private val allRandomMethods = randomGeneratorMethods + randomClassMethods
+        private val Int.isInstanceMethodOpcode
+            get() = when (this) {
+                Opcodes.INVOKEVIRTUAL, Opcodes.INVOKEINTERFACE, Opcodes.INVOKESPECIAL -> true
+                else -> false
+            }
     }
-
-    override fun GeneratorAdapter.generateInstrumentedCodeForRegularRandomMethod(
-        opcode: Int,
-        owner: String,
-        name: String,
-        desc: String,
-        itf: Boolean,
-        receiverLocal: Int,
-        argumentsLocals: IntArray,
-    ) = wrapMethod(opcode, owner, name, desc, itf, receiverLocal, argumentsLocals)
 }
 
+/**
+ * Represents a deterministic method call specifically tailored to work with byte arrays in method [Random.nextBytes],
+ * ensuring that certain method invocations are performed deterministically.
+ *
+ * The serializable state of the invocation is a copy of saved random array content.
+ * On the first run the content is copied to a new array that is further saved.
+ * On subsequent runs, its content is copied back to the array in arguments.
+ *
+ * @property opcode The operation code for the method call.
+ * @property owner The fully qualified class name of the method's owner.
+ * @property name The name of the method being invoked.
+ * @property desc The method descriptor specifying its signature.
+ * @property isInterface Whether the method belongs to an interface.
+ * @property stateType The expected type of the state involved in the deterministic call, which is a ByteArray.
+ */
 private data class RandomBytesDeterministicRandomCall(
     override val opcode: Int,
     override val owner: String,
@@ -268,7 +195,7 @@ private data class RandomBytesDeterministicRandomCall(
     ) = generator.run {
         invokeOriginalCall(this, getReceiver, getArgument)
 
-        val copiedArray = copyArray(BYTE_TYPE, getExistingArray = { getArgument(0) })
+        val copiedArray = arrayCopy(elementType = BYTE_TYPE, getExistingArray = { getArgument(0) })
         saveState { loadLocal(copiedArray) }
     }
 }
