@@ -8,6 +8,8 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+@file:JvmName("Lincheck")
+
 package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.execution.*
@@ -31,19 +33,9 @@ annotation class ExperimentalModelCheckingAPI
  * @param block lambda which body will be a target for the interleavings exploration.
  */
 @ExperimentalModelCheckingAPI
+@JvmOverloads
 fun runConcurrentTest(
     invocations: Int = DEFAULT_INVOCATIONS_COUNT,
-    block: () -> Unit // TODO: should we keep only the `Runnable` options?
-) = runConcurrentTestImpl(invocations, block)
-
-@ExperimentalModelCheckingAPI
-fun runConcurrentTest(
-    block: Runnable
-) = runConcurrentTestImpl(DEFAULT_INVOCATIONS_COUNT, block)
-
-@ExperimentalModelCheckingAPI
-fun runConcurrentTest(
-    invocations: Int,
     block: Runnable
 ) = runConcurrentTestImpl(invocations, block)
 
