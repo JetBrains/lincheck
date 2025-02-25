@@ -630,4 +630,22 @@ public class Injections {
     public static void setLastMethodCallEventId() {
         getEventTracker().setLastMethodCallEventId();
     }
+
+    public static CustomResult fromThrowable(Throwable throwable) {
+        return new CustomResult.Failure(throwable);
+    }
+
+    public static CustomResult fromSuccess(Object result) {
+        return new CustomResult.Success(result);
+    }
+
+    public static Object getOrThrow(CustomResult result) throws Throwable {
+        if (result instanceof CustomResult.Failure) {
+            throw ((CustomResult.Failure) result).getThrowable();
+        } else if (result instanceof CustomResult.Success) {
+            return ((CustomResult.Success) result).getResult();
+        } else {
+            throw new IllegalStateException("Unknown result type: " + result);
+        }
+    }
 }
