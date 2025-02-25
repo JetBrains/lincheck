@@ -17,9 +17,7 @@ import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.*
-import org.jetbrains.kotlinx.lincheck.transformation.transformers.native_calls.DeterministicHashCodeTransformer
-import org.jetbrains.kotlinx.lincheck.transformation.transformers.native_calls.DeterministicRandomTransformer
-import org.jetbrains.kotlinx.lincheck.transformation.transformers.native_calls.DeterministicTimeTransformer
+import org.jetbrains.kotlinx.lincheck.transformation.transformers.ConstantHashCodeTransformer
 import sun.nio.ch.lincheck.*
 
 internal class LincheckClassVisitor(
@@ -154,7 +152,6 @@ internal class LincheckClassVisitor(
             return mv
         }
         mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
-        mv = DeterministicRandomTransformer(fileName, className, methodName, mv.newAdapter())
         mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
         mv = CoroutineCancellabilitySupportTransformer(mv, access, className, methodName, desc)
         mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
@@ -182,9 +179,8 @@ internal class LincheckClassVisitor(
             // In trace debugger mode we record hash codes of tracked objects and substitute them on re-run, 
             // otherwise, we track all hash code calls in the instrumented code 
             // and substitute them with constant.
-            mv = DeterministicHashCodeTransformer(fileName, className, methodName, mv.newAdapter())
+            mv = ConstantHashCodeTransformer(fileName, className, methodName, mv.newAdapter())
         }
-        mv = DeterministicTimeTransformer(mv.newAdapter())
         // `SharedMemoryAccessTransformer` goes first because it relies on `AnalyzerAdapter`,
         // which should be put in front of the byte-code transformer chain,
         // so that it can correctly analyze the byte-code and compute required type-information

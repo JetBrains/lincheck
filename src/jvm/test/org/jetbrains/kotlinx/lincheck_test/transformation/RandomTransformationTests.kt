@@ -24,9 +24,6 @@ class JavaThreadLocalRandomTest : AbstractRandomTest() {
     override fun nextInt() = ThreadLocalRandom.current().nextInt()
 }
 
-// TODO Investigate the loop detector bug (Alexander Potapov)
-// https://github.com/JetBrains/lincheck/issues/498
-@Ignore
 class JavaThreadLocalRandomTest2 : AbstractRandomTest() {
     override fun nextInt() = ThreadLocalRandom.current().nextInt(10, 100)
 }
@@ -55,5 +52,6 @@ abstract class AbstractRandomTest {
         .actorsAfter(0)
         .threads(3)
         .actorsPerThread(1)
+        .run { if (isInTraceDebuggerMode) invocationsPerIteration(1) else this }
         .check(this::class)
 }

@@ -57,6 +57,7 @@ internal class ModelCheckingStrategy(
     override val parkingTracker: ParkingTracker = ModelCheckingParkingTracker(allowSpuriousWakeUps = true)
 
     override fun nextInvocation(): Boolean {
+        replayNumber = 0
         currentInterleaving = root.nextInterleaving()
             ?: return false
         resetTraceDebuggerTrackerIds()
@@ -66,6 +67,7 @@ internal class ModelCheckingStrategy(
     override fun initializeInvocation() {
         super.initializeInvocation()
         currentInterleaving.initialize()
+        replayNumber++
     }
 
     override fun enableSpinCycleReplay() {

@@ -27,6 +27,9 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.adorne
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanObjectNumeration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
+import org.jetbrains.kotlinx.lincheck.util.native_calls.DeterministicMethodDescriptor
+import org.jetbrains.kotlinx.lincheck.util.native_calls.MethodCallInfo
+import org.jetbrains.kotlinx.lincheck.util.native_calls.getDeterministicMethodDescriptorOrNull
 import org.objectweb.asm.ConstantDynamic
 import org.objectweb.asm.Handle
 import java.lang.invoke.CallSite
@@ -145,13 +148,19 @@ abstract class ManagedStrategy(
     private var lastReadTracePoint = mutableThreadMapOf<ReadTracePoint?>()
 
     // Random instances with fixed seeds to replace random calls in instrumented code.
-    private var randoms = mutableThreadMapOf<Random>()
+    private var randoms = mutableThreadMapOf<InjectedRandom>()
 
     // User-specified guarantees on specific function, which can be considered as atomic or ignored.
     private val userDefinedGuarantees: List<ManagedStrategyGuarantee>? = testCfg.guarantees.ifEmpty { null }
 
     // Utility class for the plugin integration to provide ids for each trace point
     private var eventIdProvider = EventIdProvider()
+    
+    // Is first run in case of a trace debugger
+    private val isFirstRun get() = replayNumber == 1L
+    
+    protected var replayNumber = 0L
+
 
     /**
      * Current method call context (static or instance).
@@ -164,7 +173,7 @@ abstract class ManagedStrategy(
      * that event ids provided to the [beforeEvent] method
      * and corresponding trace points are sequentially ordered.
      * But we do not add a [MethodCallTracePoint] for the coroutine resumption.
-     * So this field just tracks if the last [beforeMethodCall] invocation was actually a coroutine resumption.
+     * So this field just tracks if the last [onMethodCall] invocation was actually a coroutine resumption.
      * In this case, we just skip the next [beforeEvent] call.
      *
      * So this is a hack to make the plugin integration working without refactoring too much code.
@@ -597,7 +606,7 @@ abstract class ManagedStrategy(
             CallContext.InstanceCallContext(runner.testInstance)
         )
         lastReadTracePoint[threadId] = null
-        randoms[threadId] = Random(threadId + 239L)
+        randoms[threadId] = InjectedRandom(threadId + 239L)
         objectTracker?.registerThread(threadId, thread)
         monitorTracker.registerThread(threadId)
         parkingTracker.registerThread(threadId)
@@ -1123,7 +1132,7 @@ abstract class ManagedStrategy(
         }
     }
 
-    override fun getThreadLocalRandom(): Random = runInIgnoredSection {
+    override fun getThreadLocalRandom(): InjectedRandom = runInIgnoredSection {
         return randoms[threadScheduler.getCurrentThreadId()]!!
     }
 
@@ -1161,7 +1170,7 @@ abstract class ManagedStrategy(
         LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
     }
 
-    override fun advanceCurrentTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker, oldId: Id) {
+    override fun advanceCurrentTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker, oldId: TraceDebuggerEventId) {
         traceDebuggerEventTrackers[tracker]?.advanceCurrentId(oldId)
     }
 
@@ -1191,7 +1200,7 @@ abstract class ManagedStrategy(
     private fun Injections.HandlePojo.toAsmHandle(): Handle =
         Handle(tag, owner, name, desc, isInterface)
 
-    override fun getNextTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker): Id =
+    override fun getNextTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker): TraceDebuggerEventId =
         traceDebuggerEventTrackers[tracker]?.getNextId() ?: 0
 
     override fun afterNewObjectCreation(obj: Any) {
@@ -1201,39 +1210,7 @@ abstract class ManagedStrategy(
             objectTracker?.registerNewObject(obj)
         }
     }
-    
-    internal data class MethodCallInfo(
-        val opcode: Int,
-        val owner: String,
-        val name: String,
-        val descriptor: String,
-        val isInterface: Boolean
-    )
-    
-    override fun getNativeCallStateOrNull(
-        id: Id,
-        opcode: Int,
-        owner: String,
-        name: String,
-        descriptor: String,
-        isInterface: Boolean
-    ): Any? =
-        nativeMethodCallStatesTracker.getStateOrNull(id, MethodCallInfo(opcode, owner, name, descriptor, isInterface))
-    
-    override fun setNativeCallState(
-        id: Id,
-        state: Any?,
-        opcode: Int,
-        owner: String,
-        name: String,
-        descriptor: String,
-        isInterface: Boolean
-    ) {
-        require(state != null) { "Native call state must not be null" }
-        nativeMethodCallStatesTracker.setState(id, state, MethodCallInfo(opcode, owner, name, descriptor, isInterface))
-    }
 
-    
     private fun shouldTrackObjectAccess(obj: Any?): Boolean {
         // by default, we track accesses to all objects
         if (objectTracker == null) return true
@@ -1332,14 +1309,15 @@ abstract class ManagedStrategy(
         return null
     }
 
-    override fun beforeMethodCall(
+    override fun onMethodCall(
         owner: Any?,
         className: String,
         methodName: String,
         codeLocation: Int,
         methodId: Int,
+        methodDesc: String,
         params: Array<Any?>
-    ) {
+    ): Any? {
         val guarantee = runInIgnoredSection {
             // process method effect on the static memory snapshot
             processMethodEffectOnStaticSnapshot(owner, params)
@@ -1400,6 +1378,13 @@ abstract class ManagedStrategy(
             // so `enterIgnoredSection` would have no effect
             enterIgnoredSection()
         }
+        val deterministicMethodDescriptor = runInIgnoredSection {
+            val methodCallInfo = MethodCallInfo(
+                owner, className, methodName, codeLocation, methodId, methodDesc, params.asList()
+            )
+            getDeterministicMethodDescriptorOrNull(methodCallInfo)
+        }
+        return deterministicMethodDescriptor
     }
 
     override fun onMethodCallReturn(result: Any?) {
@@ -1840,6 +1825,34 @@ abstract class ManagedStrategy(
         val currentThreadId = threadScheduler.getCurrentThreadId()
         val lastMethodCall = callStackTrace[currentThreadId]!!.lastOrNull()?.tracePoint ?: return
         setBeforeEventId(lastMethodCall)
+    }
+
+    /**
+     * Executes a deterministic call based on the provided descriptor and identifier in trace debugger mode.
+     * 
+     * The method manages whether to save the state of the execution or to use saved one.
+     *
+     * @param id A unique identifier for the deterministic call state.
+     * @param descriptor The call descriptor that encapsulates the method information and execution details.
+     * @return The result of the deterministic call execution.
+     */
+    override fun invokeDeterministicCallDescriptorInTraceDebugger(id: Long, descriptor: Any?): Any? {
+        require(descriptor is DeterministicMethodDescriptor<*, *>)
+        require(isInTraceDebuggerMode)
+        return when {
+            isFirstRun -> descriptor.runSavingToState {
+                nativeMethodCallStatesTracker.setState(id, it, descriptor.methodCallInfo)
+            }
+            else -> descriptor.runFromStateWithCast(
+                nativeMethodCallStatesTracker.getState(id, descriptor.methodCallInfo)
+            )
+        }
+    }
+
+    override fun invokeDeterministicCallDescriptorInLincheck(descriptor: Any?): Any? {
+        require(descriptor is DeterministicMethodDescriptor<*, *>)
+        require(!isInTraceDebuggerMode)
+        return descriptor.runInLincheckMode()
     }
 
     /**

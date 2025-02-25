@@ -177,8 +177,6 @@ private val String.filtered: String get() {
     }.joinToString("\n")
     // Remove line numbers
     filtered = filtered.replace(LINE_NUMBER_REGEX, "")
-    // Remove inner class indexes
-    filtered = filtered.replace(INNER_CLASS_INDEX_REGEX, "")
     // Remove trailing spaces
     filtered = filtered.replace(TRAILING_STACKTRACE_SPACES, " |")
     // Remove repeating hyphens
@@ -196,7 +194,6 @@ private val TEST_EXECUTION_TRACE_ELEMENT_REGEX = listOf(
 ).joinToString(separator = ")|(", prefix = "(", postfix = ")").toRegex()
 
 private val LINE_NUMBER_REGEX = Regex(":(\\d+)")
-private val INNER_CLASS_INDEX_REGEX = Regex("#(\\d+)")
 private val TRAILING_STACKTRACE_SPACES = Regex(" +\\|")
 private val REPEATING_HYPHENS = Regex(" -+ ")
 
@@ -207,7 +204,7 @@ fun checkTraceHasNoLincheckEvents(trace: String) {
 }
 
 fun checkFailureIsNotLincheckInternalBug(failure: LincheckFailure) {
-    check("You've caught a bug in Lincheck." !in failure.toString()) { "Internal Lincheck bug was detected" }
+    check("You've caught a bug in Lincheck." !in failure.toString()) { "Internal Lincheck bug was detected\n$failure" }
 }
 
 /**

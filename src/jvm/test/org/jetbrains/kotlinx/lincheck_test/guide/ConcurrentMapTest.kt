@@ -14,9 +14,15 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.junit.*
+import org.junit.Assume.assumeFalse
 import java.util.concurrent.*
 
 class ConcurrentHashMapTest {
+    @Before
+    fun setUp() {
+        assumeFalse(isInTraceDebuggerMode) // .invocationsPerIteration must be 1 for the trace debugger
+    }
+    
     private val map = ConcurrentHashMap<Int, Int>()
 
     @Operation
@@ -34,6 +40,11 @@ class ConcurrentHashMapTest {
 }
 
 class ConcurrentSkipListMapTest {
+    @Before
+    fun setUp() {
+        assumeFalse(isInTraceDebuggerMode) // .invocationsPerIteration must be 1 for the trace debugger
+    }
+    
     private val map = ConcurrentSkipListMap<Int, Int>()
 
     @Operation
@@ -42,6 +53,5 @@ class ConcurrentSkipListMapTest {
     @Test
     fun modelCheckingTest() = ModelCheckingOptions()
         .checkObstructionFreedom(true)
-        .run { if (isInTraceDebuggerMode) invocationsPerIteration(1) else this }
         .check(this::class)
 }
