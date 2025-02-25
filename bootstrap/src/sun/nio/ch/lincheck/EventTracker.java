@@ -41,8 +41,23 @@ public interface EventTracker {
     long getNextTraceDebuggerEventTrackerId(TraceDebuggerTracker tracker);
     void advanceCurrentTraceDebuggerEventTrackerId(TraceDebuggerTracker tracker, long oldId);
 
-    Object getNativeCallStateOrNull(long id);
-    void setNativeCallState(long id, Object state);
+    Object getNativeCallStateOrNull(
+            long id,
+            int opcode,
+            final String owner,
+            final String name,
+            final String descriptor,
+            final boolean isInterface
+    );
+    void setNativeCallState(
+            long id,
+            Object state,
+            int opcode,
+            final String owner,
+            final String name,
+            final String descriptor,
+            final boolean isInterface
+    );
     
     CallSite getCachedInvokeDynamicCallSite(
             String name,

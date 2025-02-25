@@ -1197,13 +1197,35 @@ abstract class ManagedStrategy(
         }
     }
     
+    internal data class MethodCallInfo(
+        val opcode: Int,
+        val owner: String,
+        val name: String,
+        val descriptor: String,
+        val isInterface: Boolean
+    )
     
-    override fun getNativeCallStateOrNull(id: Id): Any? =
-        nativeMethodCallStatesTracker.getStateOrNull(id)
+    override fun getNativeCallStateOrNull(
+        id: Id,
+        opcode: Int,
+        owner: String,
+        name: String,
+        descriptor: String,
+        isInterface: Boolean
+    ): Any? =
+        nativeMethodCallStatesTracker.getStateOrNull(id, MethodCallInfo(opcode, owner, name, descriptor, isInterface))
     
-    override fun setNativeCallState(id: Id, state: Any?) {
+    override fun setNativeCallState(
+        id: Id,
+        state: Any?,
+        opcode: Int,
+        owner: String,
+        name: String,
+        descriptor: String,
+        isInterface: Boolean
+    ) {
         require(state != null) { "Native call state must not be null" }
-        nativeMethodCallStatesTracker.setState(id, state)
+        nativeMethodCallStatesTracker.setState(id, state, MethodCallInfo(opcode, owner, name, descriptor, isInterface))
     }
 
     
