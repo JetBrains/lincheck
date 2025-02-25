@@ -114,6 +114,11 @@ internal fun GeneratorAdapter.invoke(
         val id = newLocal(Type.LONG_TYPE)
         storeLocal(id)
         loadLocal(id)
+        push(call.opcode)
+        push(call.owner)
+        push(call.name)
+        push(call.desc)
+        push(call.isInterface)
         invokeStatic(Injections::getNativeCallStateOrNull)
         dup()
         val nonNull = newLabel()
@@ -128,6 +133,11 @@ internal fun GeneratorAdapter.invoke(
                 loadLocal(id)
                 getState()
                 box(call.stateType)
+                push(call.opcode)
+                push(call.owner)
+                push(call.name)
+                push(call.desc)
+                push(call.isInterface)
                 invokeStatic(Injections::setNativeCallState)
             },
             getReceiver = getReceiver,

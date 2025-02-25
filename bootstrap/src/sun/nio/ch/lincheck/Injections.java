@@ -464,21 +464,45 @@ public class Injections {
      * Retrieves the native call state associated with the specified {@code id}, or returns null 
      * if no state is available.
      *
-     * @param id the unique identifier used to locate the native call state.
-     * @return the native call state as an Object, or null if no state is found for the given ID.
+     * @param id          The unique identifier used to locate the native call state.
+     * @param opcode      The operation code used in the native method call.
+     * @param owner       The internal name of the class that owns the method.
+     * @param name        The name of the method being invoked.
+     * @param descriptor  The method descriptor specifying its parameter types and return type.
+     * @param isInterface Indicates whether the method is defined in an interface.
+     * @return The native call state as an Object, or null if no state is found for the given {@code id}.
      */
-    public static Object getNativeCallStateOrNull(long id) {
-        return getEventTracker().getNativeCallStateOrNull(id);
+    public static Object getNativeCallStateOrNull(
+            long id,
+            int opcode,
+            final String owner,
+            final String name,
+            final String descriptor,
+            final boolean isInterface
+    ) {
+        return getEventTracker().getNativeCallStateOrNull(id, opcode, owner, name, descriptor, isInterface);
     }
-    
+
     /**
      * Sets the native call state for a given identifier.
      *
-     * @param id    The unique identifier for the call whose state is being set.
-     * @param state The new state to be assigned to the specified call. <b>Must not be null.</b>
+     * @param id          The unique identifier for the call whose state is being set.
+     * @param state       The new state to be assigned to the specified call. <b>Must not be null.</b>
+     * @param opcode      The operation code used in the native method call.
+     * @param owner       The internal name of the class that owns the method.
+     * @param name        The name of the method being invoked.
+     * @param descriptor  The method descriptor specifying its parameter types and return type.
+     * @param isInterface Indicates whether the method is defined in an interface.
      */
-    public static void setNativeCallState(long id, Object state) {
-        getEventTracker().setNativeCallState(id, state);
+    public static void setNativeCallState(
+            long id, Object state,
+            int opcode,
+            final String owner,
+            final String name,
+            final String descriptor,
+            final boolean isInterface
+    ) {
+        getEventTracker().setNativeCallState(id, state, opcode, owner, name, descriptor, isInterface);
     }
 
 
