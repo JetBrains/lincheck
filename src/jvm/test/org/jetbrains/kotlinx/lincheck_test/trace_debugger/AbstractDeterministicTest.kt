@@ -27,8 +27,12 @@ import java.io.PrintStream
  * Checks for absence of non-determinism and absence (or existence) of exceptions.
  */
 abstract class AbstractDeterministicTest {
+    open val alsoRunInLincheckMode: Boolean get() = false
+    
     private fun testTraceDebugger() {
-        assumeTrue(isInTraceDebuggerMode)
+        if (!alsoRunInLincheckMode) {
+            assumeTrue(isInTraceDebuggerMode)
+        }
         val oldStdOut = System.out
         val oldErr = System.err
         val stdOutOutputCollector = ByteArrayOutputStream()
@@ -51,9 +55,9 @@ abstract class AbstractDeterministicTest {
                     val results = lincheckFailure?.results?.parallelResults?.flatten()?.takeIf { it.isNotEmpty() }
                     require(results != null) { lincheckFailure.toString() }
                     if (shouldFail()) {
-                        require(results.all { it is ExceptionResult })// { lincheckFailure.toString() }
+                        require(results.all { it is ExceptionResult }) { lincheckFailure.toString() }
                     } else {
-                        require(results.none { it is ExceptionResult })// { lincheckFailure.toString() }
+                        require(results.none { it is ExceptionResult }) { lincheckFailure.toString() }
                     }
                 }
         } finally {

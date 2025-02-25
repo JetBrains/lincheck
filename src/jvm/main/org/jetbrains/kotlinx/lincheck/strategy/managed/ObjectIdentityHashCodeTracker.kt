@@ -15,9 +15,6 @@ import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
-
-private typealias Id = Long
-
 /**
  * This class stores initial identity hash-codes of created objects.
  * When the program is rerun the firstly calculated hash-codes are left as is and used to
@@ -28,7 +25,7 @@ private typealias Id = Long
  *
  * To guarantee correct work, ensure that replays are deterministic.
  */
-internal class ObjectIdentityHashCodeTracker {
+internal class ObjectIdentityHashCodeTracker: AbstractTraceDebuggerEventTracker {
     companion object {
         /**
          * Offset (in bytes) of identity hashcode in an object header.
@@ -63,7 +60,7 @@ internal class ObjectIdentityHashCodeTracker {
      * @return id of the created object.
      */
     fun afterNewTrackedObjectCreation(obj: Any): Id {
-        val currentObjectId = if (isInTraceDebuggerMode) getNextObjectId() else 0
+        val currentObjectId = if (isInTraceDebuggerMode) getNextId() else 0
         val initialIdentityHashCode = getInitialIdentityHashCode(
             objectId = currentObjectId,
             identityHashCode = if (isInTraceDebuggerMode) System.identityHashCode(obj) else 0
@@ -76,18 +73,18 @@ internal class ObjectIdentityHashCodeTracker {
     /**
      * Resets ids numeration and starts them from 0.
      */
-    fun resetObjectIds() {
+    override fun resetIds() {
         if (!isInTraceDebuggerMode) return
         nextObjectId.set(0)
     }
 
     /**
-     * Advances the current object id with the delta, associated with the old id [oldObjectId],
-     * previously received with [getNextObjectId].
+     * Advances the current object id with the delta, associated with the old id [oldId],
+     * previously received with [getNextId].
      * 
-     * If for the given [oldObjectId] there is no saved `newObjectId`,
-     * the function saves the current object id and associates it with the [oldObjectId].
-     * On subsequent re-runs, when for the given [oldObjectId] there exists a saved `newObjectId`,
+     * If for the given [oldId] there is no saved `newObjectId`,
+     * the function saves the current object id and associates it with the [oldId].
+     * On subsequent re-runs, when for the given [oldId] there exists a saved `newObjectId`,
      * the function sets the counter to the `newObjectId`.
      * 
      * This function is typically used to account for some cached computations:
@@ -99,15 +96,15 @@ internal class ObjectIdentityHashCodeTracker {
      * assigning more object ids to them.
      * On subsequent runs, however, these objects will not be allocated, and thus the object ids numbering may vary.
      * To account for this, before the first invocation of the cached computation,
-     * the last allocated object id [oldObjectId] can be saved, and after the computation,
+     * the last allocated object id [oldId] can be saved, and after the computation,
      * the new last object id can be associated with it via a call `advanceCurrentObjectId(oldObjectId)`.
      * On subsequent re-runs, the cached computation will be skipped, but the
      * current object id will still be advanced by the required delta via a call to `advanceCurrentObjectId(oldId)`.
      */
-    fun advanceCurrentObjectId(oldObjectId: Id) {
+    override fun advanceCurrentId(oldId: Id) {
         if (!isInTraceDebuggerMode) return
         val newObjectId = nextObjectId.get()
-        val existingAdvance = objectIdAdvances.putIfAbsent(oldObjectId, newObjectId)
+        val existingAdvance = objectIdAdvances.putIfAbsent(oldId, newObjectId)
         if (existingAdvance != null) {
             nextObjectId.set(existingAdvance)
         }
@@ -116,7 +113,7 @@ internal class ObjectIdentityHashCodeTracker {
     /**
      * @return id of the current object and increments the global counter.
      */
-    fun getNextObjectId(): Id {
+    override fun getNextId(): Id {
         if (!isInTraceDebuggerMode) return 0
         return nextObjectId.getAndIncrement()
     }
@@ -127,4 +124,9 @@ internal class ObjectIdentityHashCodeTracker {
      */
     private fun getInitialIdentityHashCode(objectId: Id, identityHashCode: Int): Int =
         initialHashCodes.getOrPut(objectId) { identityHashCode }
+    
+    override fun close() {
+        initialHashCodes.clear()
+        objectIdAdvances.clear()
+    }
 }

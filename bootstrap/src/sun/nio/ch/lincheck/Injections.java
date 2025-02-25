@@ -291,20 +291,6 @@ public class Injections {
     }
 
     /**
-     * Called from the instrumented code to replace `ThreadLocalRandom.nextInt(origin, bound)` with a deterministic random value.
-     */
-    public static int nextInt2(int origin, int bound) {
-        boolean enteredIgnoredSection = enterIgnoredSection();
-        try {
-            return deterministicRandom().nextInt(bound);
-        } finally {
-            if (enteredIgnoredSection) {
-                leaveIgnoredSection();
-            }
-        }
-    }
-
-    /**
      * Called from the instrumented code to get a random instance that is deterministic and controlled by Lincheck.
      */
     public static Random deterministicRandom() {
@@ -440,8 +426,8 @@ public class Injections {
     /**
      * Retrieves the next object id, used for identity hash code substitution, and then advances it by one.
      */
-    public static long getNextObjectId() {
-        return getEventTracker().getNextObjectId();
+    public static long getNextTraceDebuggerEventTrackerId(TraceDebuggerTracker tracker) {
+        return getEventTracker().getNextTraceDebuggerEventTrackerId(tracker);
     }
 
     /**
@@ -467,8 +453,53 @@ public class Injections {
      * On subsequent re-runs, the cached computation will be skipped, but the
      * current object id will still be advanced by the required delta via a call to {@code advanceCurrentObjectId(oldId)}.
      */
-    public static void advanceCurrentObjectId(long oldId) {
-        getEventTracker().advanceCurrentObjectId(oldId);
+    public static void advanceCurrentTraceDebuggerEventTrackerId(TraceDebuggerTracker tracker, long oldId) {
+        getEventTracker().advanceCurrentTraceDebuggerEventTrackerId(tracker, oldId);
+    }
+    
+    /**
+     * Retrieves the native call state associated with the specified {@code id}, or returns null 
+     * if no state is available.
+     *
+     * @param id          The unique identifier used to locate the native call state.
+     * @param opcode      The operation code used in the native method call.
+     * @param owner       The internal name of the class that owns the method.
+     * @param name        The name of the method being invoked.
+     * @param descriptor  The method descriptor specifying its parameter types and return type.
+     * @param isInterface Indicates whether the method is defined in an interface.
+     * @return The native call state as an Object, or null if no state is found for the given {@code id}.
+     */
+    public static Object getNativeCallStateOrNull(
+            long id,
+            int opcode,
+            final String owner,
+            final String name,
+            final String descriptor,
+            final boolean isInterface
+    ) {
+        return getEventTracker().getNativeCallStateOrNull(id, opcode, owner, name, descriptor, isInterface);
+    }
+
+    /**
+     * Sets the native call state for a given identifier.
+     *
+     * @param id          The unique identifier for the call whose state is being set.
+     * @param state       The new state to be assigned to the specified call. <b>Must not be null.</b>
+     * @param opcode      The operation code used in the native method call.
+     * @param owner       The internal name of the class that owns the method.
+     * @param name        The name of the method being invoked.
+     * @param descriptor  The method descriptor specifying its parameter types and return type.
+     * @param isInterface Indicates whether the method is defined in an interface.
+     */
+    public static void setNativeCallState(
+            long id, Object state,
+            int opcode,
+            final String owner,
+            final String name,
+            final String descriptor,
+            final boolean isInterface
+    ) {
+        getEventTracker().setNativeCallState(id, state, opcode, owner, name, descriptor, isInterface);
     }
 
 
@@ -595,5 +626,23 @@ public class Injections {
 
     public static void setLastMethodCallEventId() {
         getEventTracker().setLastMethodCallEventId();
+    }
+
+    public static CustomResult fromThrowable(Throwable throwable) {
+        return new CustomResult.Failure(throwable);
+    }
+
+    public static CustomResult fromSuccess(Object result) {
+        return new CustomResult.Success(result);
+    }
+
+    public static Object getOrThrow(CustomResult result) throws Throwable {
+        if (result instanceof CustomResult.Failure) {
+            throw ((CustomResult.Failure) result).getThrowable();
+        } else if (result instanceof CustomResult.Success) {
+            return ((CustomResult.Success) result).getResult();
+        } else {
+            throw new IllegalStateException("Unknown result type: " + result);
+        }
     }
 }

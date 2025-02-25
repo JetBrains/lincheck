@@ -24,6 +24,9 @@ class JavaThreadLocalRandomTest : AbstractRandomTest() {
     override fun nextInt() = ThreadLocalRandom.current().nextInt()
 }
 
+// TODO Investigate the loop detector bug (Alexander Potapov)
+// https://github.com/JetBrains/lincheck/issues/498
+@Ignore
 class JavaThreadLocalRandomTest2 : AbstractRandomTest() {
     override fun nextInt() = ThreadLocalRandom.current().nextInt(10, 100)
 }

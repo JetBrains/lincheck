@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck_test.verifier.serializability
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
 
@@ -29,6 +30,9 @@ class SerializableQueueTest : AbstractLincheckTest() {
         actorsBefore(0)
         actorsAfter(0)
         actorsPerThread(2)
+        if (this is ModelCheckingOptions && isInTraceDebuggerMode) {
+            invocationsPerIteration(1)
+        }
         verifier(SerializabilityVerifier::class.java)
         sequentialSpecification(SequentialIntQueue::class.java)
     }

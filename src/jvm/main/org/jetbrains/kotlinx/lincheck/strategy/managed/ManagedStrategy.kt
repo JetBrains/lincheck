@@ -81,7 +81,23 @@ abstract class ManagedStrategy(
     // Tracker of objects' allocations and object graph topology.
     protected abstract val objectTracker: ObjectTracker?
     // Tracker of objects' identity hash codes.
-    internal abstract val identityHashCodeTracker: ObjectIdentityHashCodeTracker
+    private val identityHashCodeTracker = ObjectIdentityHashCodeTracker()
+    // Tracker of native method call states.
+    private val nativeMethodCallStatesTracker = NativeMethodCallStatesTracker()
+    
+    internal val traceDebuggerEventTrackers: Map<TraceDebuggerTracker, AbstractTraceDebuggerEventTracker> = mapOf(
+        TraceDebuggerTracker.IdentityHashCode to identityHashCodeTracker,
+        TraceDebuggerTracker.NativeMethodCall to nativeMethodCallStatesTracker,
+    )
+    
+    internal fun resetTraceDebuggerTrackerIds() {
+        traceDebuggerEventTrackers.values.forEach { it.resetIds() }
+    }
+    
+    internal fun closeTraceDebuggerTrackers() {
+        traceDebuggerEventTrackers.values.forEach { it.close() }
+    }
+    
     // Cache for evaluated invoke dynamic call sites
     private val invokeDynamicCallSites = ConcurrentHashMap<ConstantDynamic, CallSite>()
     // Tracker of the monitors' operations.
@@ -176,6 +192,7 @@ abstract class ManagedStrategy(
         super.close()
         // clear object numeration at the end to avoid memory leaks
         cleanObjectNumeration()
+        closeTraceDebuggerTrackers()
     }
 
     private fun createRunner(): ManagedStrategyRunner =
@@ -266,7 +283,7 @@ abstract class ManagedStrategy(
 
     protected open fun initializeReplay() {
         cleanObjectNumeration()
-        identityHashCodeTracker.resetObjectIds()
+        resetTraceDebuggerTrackerIds()
         resetEventIdProvider()
     }
 
@@ -313,7 +330,7 @@ abstract class ManagedStrategy(
                 result is ObstructionFreedomViolationInvocationResult
         )
         cleanObjectNumeration()
-        identityHashCodeTracker.resetObjectIds()
+        resetTraceDebuggerTrackerIds()
 
         runner.close()
         runner = createRunner()
@@ -1139,8 +1156,8 @@ abstract class ManagedStrategy(
         LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
     }
 
-    override fun advanceCurrentObjectId(oldId: Long) {
-        identityHashCodeTracker.advanceCurrentObjectId(oldId)
+    override fun advanceCurrentTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker, oldId: Id) {
+        traceDebuggerEventTrackers[tracker]?.advanceCurrentId(oldId)
     }
 
     override fun getCachedInvokeDynamicCallSite(
@@ -1169,7 +1186,8 @@ abstract class ManagedStrategy(
     private fun Injections.HandlePojo.toAsmHandle(): Handle =
         Handle(tag, owner, name, desc, isInterface)
 
-    override fun getNextObjectId(): Long = identityHashCodeTracker.getNextObjectId()
+    override fun getNextTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker): Id =
+        traceDebuggerEventTrackers[tracker]?.getNextId() ?: 0
 
     override fun afterNewObjectCreation(obj: Any) {
         if (obj.isImmutable) return
@@ -1178,7 +1196,39 @@ abstract class ManagedStrategy(
             objectTracker?.registerNewObject(obj)
         }
     }
+    
+    internal data class MethodCallInfo(
+        val opcode: Int,
+        val owner: String,
+        val name: String,
+        val descriptor: String,
+        val isInterface: Boolean
+    )
+    
+    override fun getNativeCallStateOrNull(
+        id: Id,
+        opcode: Int,
+        owner: String,
+        name: String,
+        descriptor: String,
+        isInterface: Boolean
+    ): Any? =
+        nativeMethodCallStatesTracker.getStateOrNull(id, MethodCallInfo(opcode, owner, name, descriptor, isInterface))
+    
+    override fun setNativeCallState(
+        id: Id,
+        state: Any?,
+        opcode: Int,
+        owner: String,
+        name: String,
+        descriptor: String,
+        isInterface: Boolean
+    ) {
+        require(state != null) { "Native call state must not be null" }
+        nativeMethodCallStatesTracker.setState(id, state, MethodCallInfo(opcode, owner, name, descriptor, isInterface))
+    }
 
+    
     private fun shouldTrackObjectAccess(obj: Any?): Boolean {
         // by default, we track accesses to all objects
         if (objectTracker == null) return true

@@ -107,6 +107,28 @@ internal fun GeneratorAdapter.storeLocals(
 }
 
 /**
+ * Duplicates the value on the top of the stack.
+ * 
+ * Before execution:
+ * STACK: x
+ *
+ * After execution:
+ * STACK: x, x
+ *
+ * @param type The type of the value to duplicate. Determines the duplication behavior.
+ *             For VOID_TYPE, no operation is performed.
+ *             For LONG_TYPE or DOUBLE_TYPE, dup2 is used to duplicate a 64-bit value.
+ *             For all other types, a standard dup is performed.
+ */
+internal fun GeneratorAdapter.dup(type: Type) {
+    when (type) {
+        VOID_TYPE -> {}
+        LONG_TYPE, DOUBLE_TYPE -> dup2()
+        else -> dup()
+    }
+}
+
+/**
  * Copies N top values from the stack in the local variables.
  *
  * Before execution:
@@ -273,7 +295,7 @@ internal fun GeneratorAdapter.invokeBeforeEvent(debugMessage: String, setMethodE
         condition = {
             invokeStatic(Injections::shouldInvokeBeforeEvent)
         },
-        ifClause = {
+        thenClause = {
             if (setMethodEventId) {
                 invokeStatic(Injections::setLastMethodCallEventId)
             }
@@ -284,7 +306,7 @@ internal fun GeneratorAdapter.invokeBeforeEvent(debugMessage: String, setMethodE
                 condition = {
                     invokeStatic(Injections::isBeforeEventRequested)
                 },
-                ifClause = {
+                thenClause = {
                     push(debugMessage)
                     invokeStatic(Injections::beforeEvent)
                 },
@@ -316,13 +338,13 @@ internal fun GeneratorAdapter.invokeStatic(function: KFunction<*>) {
  * Generates an if-statement in bytecode.
  *
  * @param condition the condition code.
- * @param ifClause the if-clause code.
+ * @param thenClause the then-clause code.
  * @param elseClause the else-clause code.
  */
 internal inline fun GeneratorAdapter.ifStatement(
     condition: GeneratorAdapter.() -> Unit,
-    ifClause: GeneratorAdapter.() -> Unit,
-    elseClause: GeneratorAdapter.() -> Unit
+    thenClause: GeneratorAdapter.() -> Unit,
+    elseClause: GeneratorAdapter.() -> Unit = { },
 ) {
     val ifClauseStart = newLabel()
     val end = newLabel()
@@ -331,7 +353,7 @@ internal inline fun GeneratorAdapter.ifStatement(
     elseClause()
     goTo(end)
     visitLabel(ifClauseStart)
-    ifClause()
+    thenClause()
     visitLabel(end)
 }
 
@@ -351,7 +373,7 @@ internal inline fun GeneratorAdapter.invokeIfInTestingCode(
 ) {
     ifStatement(
         condition = { invokeStatic(Injections::inIgnoredSection) },
-        ifClause = original,
+        thenClause = original,
         elseClause = code
     )
 }
@@ -373,7 +395,7 @@ internal inline fun GeneratorAdapter.invokeInIgnoredSection(
         condition = {
             loadLocal(enteredIgnoredSection)
         },
-        ifClause = {
+        thenClause = {
             invokeStatic(Injections::leaveIgnoredSection)
         },
         elseClause = {}

@@ -63,7 +63,7 @@ internal class SharedMemoryAccessTransformer(
                         // STACK: isTracePointCreated
                         ifStatement(
                             condition = { /* already on stack */ },
-                            ifClause = {
+                            thenClause = {
                                 invokeBeforeEventIfPluginEnabled("read static field")
                             },
                             elseClause = {})
@@ -96,7 +96,7 @@ internal class SharedMemoryAccessTransformer(
                         // STACK: obj, isTracePointCreated
                         ifStatement(
                             condition = { /* already on stack */ },
-                            ifClause = {
+                            thenClause = {
                                 invokeBeforeEventIfPluginEnabled("read field")
                             },
                             elseClause = {}
@@ -134,7 +134,7 @@ internal class SharedMemoryAccessTransformer(
                         // STACK: isTracePointCreated
                         ifStatement(
                             condition = { /* already on stack */ },
-                            ifClause = {
+                            thenClause = {
                                 invokeBeforeEventIfPluginEnabled("write static field")
                             },
                             elseClause = {}
@@ -172,7 +172,7 @@ internal class SharedMemoryAccessTransformer(
                         // STACK: isTracePointCreated
                         ifStatement(
                             condition = { /* already on stack */ },
-                            ifClause = {
+                            thenClause = {
                                 invokeBeforeEventIfPluginEnabled("write field")
                             },
                             elseClause = {}
@@ -211,7 +211,7 @@ internal class SharedMemoryAccessTransformer(
                         invokeStatic(Injections::beforeReadArray)
                         ifStatement(
                             condition = { /* already on stack */ },
-                            ifClause = {
+                            thenClause = {
                                 invokeBeforeEventIfPluginEnabled("read array")
                             },
                             elseClause = {}
@@ -245,7 +245,7 @@ internal class SharedMemoryAccessTransformer(
                         invokeStatic(Injections::beforeWriteArray)
                         ifStatement(
                             condition = { /* already on stack */ },
-                            ifClause = {
+                            thenClause = {
                                 invokeBeforeEventIfPluginEnabled("write array")
                             },
                             elseClause = {}
