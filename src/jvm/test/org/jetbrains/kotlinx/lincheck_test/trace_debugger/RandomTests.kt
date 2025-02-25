@@ -352,3 +352,9 @@ class StubRandomCheckTest : RandomTests() {
         require(randomList == expectedResult) { "Wrong randomizer: $randomList != $expectedResult" }
     }
 }
+
+class FailingRecoveringRandomTest : RandomTests() {
+    @Operation
+    fun operation(): List<String> =
+        List(10) { runCatching { if (it % 2 == 0) Random.nextInt(10, 100) else Random.nextInt(100, 10) }.toString() }
+}
