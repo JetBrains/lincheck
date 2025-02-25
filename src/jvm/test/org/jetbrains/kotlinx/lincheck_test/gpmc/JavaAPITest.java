@@ -15,7 +15,7 @@ import org.junit.Test;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.jetbrains.kotlinx.lincheck.LincheckKt.runConcurrentTest;
+import static org.jetbrains.kotlinx.lincheck.Lincheck.runConcurrentTest;
 import static org.junit.Assert.assertFalse;
 
 public class JavaAPITest {
