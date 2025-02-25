@@ -8,7 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.strategy.managed
+package org.jetbrains.kotlinx.lincheck.transformation.transformers.native_calls
 
 import org.jetbrains.kotlinx.lincheck.transformation.ifStatement
 import org.jetbrains.kotlinx.lincheck.transformation.invokeInIgnoredSection
@@ -18,33 +18,51 @@ import org.jetbrains.kotlinx.lincheck.transformation.tryCatchFinally
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import org.objectweb.asm.Type.VOID_TYPE
+import org.objectweb.asm.Type.getType
 import org.objectweb.asm.commons.GeneratorAdapter
 import sun.nio.ch.lincheck.Injections
 import sun.nio.ch.lincheck.TraceDebuggerTracker
 
+internal typealias GeneratorBuilder = GeneratorAdapter.() -> Unit
+
 internal interface DeterministicCall {
+    val opcode: Int
+    val owner: String
+    val name: String
+    val desc: String
+    val isInterface: Boolean
+    val stateType: Type
+    
     fun invokeFromState(
-        generator: GeneratorAdapter,
-        getState: GeneratorAdapter.() -> Unit,
-        getReceiver: (GeneratorAdapter.() -> Unit)?,
+        generator: GeneratorAdapter, getState: GeneratorBuilder, getReceiver: GeneratorBuilder?,
         getArgument: GeneratorAdapter.(index: Int) -> Unit,
     )
 
     fun invokeSavingState(
         generator: GeneratorAdapter,
-        saveState: GeneratorAdapter.(getState: GeneratorAdapter.() -> Unit) -> Unit,
-        getReceiver: (GeneratorAdapter.() -> Unit)?,
+        saveState: GeneratorAdapter.(getState: GeneratorBuilder) -> Unit,
+        getReceiver: GeneratorBuilder?,
         getArgument: GeneratorAdapter.(index: Int) -> Unit,
     )
 }
 
-internal fun GeneratorAdapter.invoke(
-    call: DeterministicCall,
-    stateType: Type,
-    getReceiver: (GeneratorAdapter.() -> Unit)?,
+
+internal fun DeterministicCall.invokeOriginalCall(
+    generator: GeneratorAdapter,
+    getReceiver: GeneratorBuilder?,
     getArgument: GeneratorAdapter.(index: Int) -> Unit,
 ) {
-    require(stateType != VOID_TYPE) { "Cannot have state of the void type" }
+    if (getReceiver != null) getReceiver(generator)
+    Type.getArgumentTypes(desc).forEachIndexed { index, _ -> generator.getArgument(index) }
+    generator.visitMethodInsn(opcode, owner, name, desc, isInterface)
+}
+
+internal fun GeneratorAdapter.invoke(
+    call: DeterministicCall,
+    getReceiver: GeneratorBuilder?,
+    getArgument: GeneratorAdapter.(index: Int) -> Unit,
+) {
+    require(call.stateType != VOID_TYPE) { "Cannot have state of the void type" }
     invokeInIgnoredSection {
         getStatic(traceDebuggerTrackerType, TraceDebuggerTracker.NativeMethodCall.name, traceDebuggerTrackerType)
         invokeStatic(Injections::getNextTraceDebuggerEventTrackerId)
@@ -62,7 +80,7 @@ internal fun GeneratorAdapter.invoke(
             saveState = { getState ->
                 loadLocal(id)
                 getState()
-                box(stateType)
+                box(call.stateType)
                 invokeStatic(Injections::setNativeCallState)
             },
             getReceiver = getReceiver,
@@ -71,8 +89,8 @@ internal fun GeneratorAdapter.invoke(
         goTo(end)
         visitLabel(nonNull)
         // Stack [non-null Object (cached state)]
-        unbox(stateType)
-        val state = newLocal(stateType)
+        unbox(call.stateType)
+        val state = newLocal(call.stateType)
         storeLocal(state)
         call.invokeFromState(
             generator = this,
@@ -86,24 +104,27 @@ internal fun GeneratorAdapter.invoke(
 
 internal fun GeneratorAdapter.invoke(
     call: DeterministicCall,
-    stateType: Type,
-    opcode: Int,
-    owner: String,
-    methodDescriptor: String,
 ) {
-    val arguments = storeArguments(methodDescriptor)
-    val ownerType = Type.getType("L$owner;")
-    val receiver = when (opcode) {
+    val arguments = storeArguments(call.desc)
+    val ownerType = getType("L${call.owner};")
+    val receiver = when (call.opcode) {
         Opcodes.INVOKESTATIC -> null
         Opcodes.INVOKESPECIAL, Opcodes.INVOKEINTERFACE, Opcodes.INVOKEVIRTUAL -> newLocal(ownerType)
-        else -> error("Unsupported opcode: $opcode")
+        else -> error("Unsupported opcode: ${call.opcode}")
     }
     if (receiver != null) storeLocal(receiver)
+    invoke(call = call, receiver = receiver, arguments = arguments)
+}
+
+internal fun GeneratorAdapter.invoke(
+    call: DeterministicCall,
+    receiver: Int?,
+    arguments: IntArray,
+) {
     invoke(
         call = call,
-        stateType = stateType,
         getReceiver = if (receiver != null) fun GeneratorAdapter.() { loadLocal(receiver) } else null,
-        getArgument = { loadArg(arguments[it]) }
+        getArgument = { loadLocal(arguments[it]) }
     )
 }
 
@@ -117,7 +138,7 @@ internal data class ThrowableWrapper(val throwable: Throwable) {
     }
 }
 
-internal fun GeneratorAdapter.customRunCatching(successType: Type, block: GeneratorAdapter.() -> Unit) {
+internal fun GeneratorAdapter.customRunCatching(successType: Type, block: GeneratorBuilder) {
     tryCatchFinally(
         tryBlock = {
             block()
@@ -146,6 +167,60 @@ fun GeneratorAdapter.customGetOrThrow(successType: Type) {
         },
     )
 }
+fun GeneratorAdapter.copyArrayContent(
+    getSource: GeneratorBuilder,
+    getDestination: GeneratorBuilder,
+) {
+    getSource()
+    push(0)
+    getDestination()
+    push(0)
+    getSource()
+    arrayLength()
+    invokeStatic(System::arraycopy)
+}
 
-private val traceDebuggerTrackerType = Type.getType(TraceDebuggerTracker::class.java)
-private val throwableWrapperType = Type.getType(ThrowableWrapper::class.java)
+fun GeneratorAdapter.copyArray(elementType: Type, getExistingArray: GeneratorBuilder): Int {
+    getExistingArray()
+    arrayLength()
+    newArray(elementType)
+    val copiedArray = newLocal(getType("[${elementType.descriptor}"))
+    storeLocal(copiedArray)
+    copyArrayContent(getSource = getExistingArray, getDestination = { loadLocal(copiedArray) })
+    return copiedArray
+}
+
+private val traceDebuggerTrackerType = getType(TraceDebuggerTracker::class.java)
+private val throwableWrapperType = getType(ThrowableWrapper::class.java)
+
+internal data class SimpleDeterministicCall(
+    override val opcode: Int,
+    override val owner: String,
+    override val name: String,
+    override val desc: String,
+    override val isInterface: Boolean,
+) : DeterministicCall {
+    override val stateType: Type = Type.getReturnType(desc)
+
+    override fun invokeFromState(
+        generator: GeneratorAdapter,
+        getState: GeneratorBuilder,
+        getReceiver: GeneratorBuilder?,
+        getArgument: GeneratorAdapter.(Int) -> Unit,
+    ) = generator.run {
+        getState()
+    }
+
+    override fun invokeSavingState(
+        generator: GeneratorAdapter,
+        saveState: GeneratorAdapter.(getState: GeneratorBuilder) -> Unit,
+        getReceiver: GeneratorBuilder?,
+        getArgument: GeneratorAdapter.(Int) -> Unit,
+    ) = generator.run {
+        invokeOriginalCall(this, getReceiver, getArgument)
+        val result = newLocal(stateType)
+        storeLocal(result)
+        saveState { loadLocal(result) }
+        loadLocal(result)
+    }
+}
