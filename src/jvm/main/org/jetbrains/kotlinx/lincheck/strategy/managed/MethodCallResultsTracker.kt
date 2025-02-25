@@ -56,7 +56,12 @@ internal class NativeMethodCallStatesTracker : AbstractTraceDebuggerEventTracker
         currentId.set(0)
     }
 
-    override fun getNextId(): Id = currentId.getAndIncrement()
+    override fun getNextId(): Id {
+        val result = currentId.getAndIncrement()
+        if (logging) println("getNextId++: $result")
+        return result
+    }
+
     override fun advanceCurrentId(oldId: Id) {
         val newId = currentId.get()
         val existingAdvance = idAdvances.putIfAbsent(oldId, newId)

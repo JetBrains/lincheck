@@ -108,6 +108,28 @@ internal fun GeneratorAdapter.storeLocals(
 }
 
 /**
+ * Duplicates the value on the top of the stack.
+ * 
+ * Before execution:
+ * STACK: x
+ *
+ * After execution:
+ * STACK: x, x
+ *
+ * @param type The type of the value to duplicate. Determines the duplication behavior.
+ *             For VOID_TYPE, no operation is performed.
+ *             For LONG_TYPE or DOUBLE_TYPE, dup2 is used to duplicate a 64-bit value.
+ *             For all other types, a standard dup is performed.
+ */
+internal fun GeneratorAdapter.dup(type: Type) {
+    when (type) {
+        VOID_TYPE -> {}
+        LONG_TYPE, DOUBLE_TYPE -> dup2()
+        else -> dup()
+    }
+}
+
+/**
  * Copies N top values from the stack in the local variables.
  *
  * Before execution:
