@@ -460,10 +460,23 @@ public class Injections {
         getEventTracker().advanceCurrentTraceDebuggerEventTrackerId(tracker, oldId);
     }
     
+    /**
+     * Retrieves the native call state associated with the specified {@code id}, or returns null 
+     * if no state is available.
+     *
+     * @param id the unique identifier used to locate the native call state.
+     * @return the native call state as an Object, or null if no state is found for the given ID.
+     */
     public static Object getNativeCallStateOrNull(long id) {
         return getEventTracker().getNativeCallStateOrNull(id);
     }
     
+    /**
+     * Sets the native call state for a given identifier.
+     *
+     * @param id    The unique identifier for the call whose state is being set.
+     * @param state The new state to be assigned to the specified call. <b>Must not be null.</b>
+     */
     public static void setNativeCallState(long id, Object state) {
         getEventTracker().setNativeCallState(id, state);
     }
