@@ -180,6 +180,9 @@ tasks {
         extraArgs.add("-Dlincheck.version=$version")
         findProperty("lincheck.logFile")?.let { extraArgs.add("-Dlincheck.logFile=${it as String}") }
         findProperty("lincheck.logLevel")?.let { extraArgs.add("-Dlincheck.logLevel=${it as String}") }
+        if (javaVersion != JavaVersion.VERSION_1_8 && testInTraceDebuggerMode.toBoolean()) {
+            extraArgs.add("--add-opens=java.base/java.util.concurrent=ALL-UNNAMED")
+        }
         jvmArgs(extraArgs)
     }
 

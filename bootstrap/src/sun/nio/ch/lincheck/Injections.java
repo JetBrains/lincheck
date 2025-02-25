@@ -296,7 +296,7 @@ public class Injections {
     /**
      * Called from the instrumented code to get a random instance that is deterministic and controlled by Lincheck.
      */
-    public static Random deterministicRandom() {
+    public static InjectedRandom deterministicRandom() {
         return getEventTracker().getThreadLocalRandom();
     }
 
@@ -377,9 +377,10 @@ public class Injections {
      * Called from the instrumented code before any method call.
      *
      * @param owner is `null` for public static methods.
+     * @return Deterministic call descriptor or null.
      */
-    public static void beforeMethodCall(Object owner, String className, String methodName, int codeLocation, int methodId, Object[] params) {
-        getEventTracker().beforeMethodCall(owner, className, methodName, codeLocation, methodId, params);
+    public static Object onMethodCall(Object owner, String className, String methodName, int codeLocation, int methodId, String methodDesc, Object[] params) {
+        return getEventTracker().onMethodCall(owner, className, methodName, codeLocation, methodId, methodDesc, params);
     }
 
     /**
@@ -458,51 +459,6 @@ public class Injections {
      */
     public static void advanceCurrentTraceDebuggerEventTrackerId(TraceDebuggerTracker tracker, long oldId) {
         getEventTracker().advanceCurrentTraceDebuggerEventTrackerId(tracker, oldId);
-    }
-    
-    /**
-     * Retrieves the native call state associated with the specified {@code id}, or returns null 
-     * if no state is available.
-     *
-     * @param id          The unique identifier used to locate the native call state.
-     * @param opcode      The operation code used in the native method call.
-     * @param owner       The internal name of the class that owns the method.
-     * @param name        The name of the method being invoked.
-     * @param descriptor  The method descriptor specifying its parameter types and return type.
-     * @param isInterface Indicates whether the method is defined in an interface.
-     * @return The native call state as an Object, or null if no state is found for the given {@code id}.
-     */
-    public static Object getNativeCallStateOrNull(
-            long id,
-            int opcode,
-            final String owner,
-            final String name,
-            final String descriptor,
-            final boolean isInterface
-    ) {
-        return getEventTracker().getNativeCallStateOrNull(id, opcode, owner, name, descriptor, isInterface);
-    }
-
-    /**
-     * Sets the native call state for a given identifier.
-     *
-     * @param id          The unique identifier for the call whose state is being set.
-     * @param state       The new state to be assigned to the specified call. <b>Must not be null.</b>
-     * @param opcode      The operation code used in the native method call.
-     * @param owner       The internal name of the class that owns the method.
-     * @param name        The name of the method being invoked.
-     * @param descriptor  The method descriptor specifying its parameter types and return type.
-     * @param isInterface Indicates whether the method is defined in an interface.
-     */
-    public static void setNativeCallState(
-            long id, Object state,
-            int opcode,
-            final String owner,
-            final String name,
-            final String descriptor,
-            final boolean isInterface
-    ) {
-        getEventTracker().setNativeCallState(id, state, opcode, owner, name, descriptor, isInterface);
     }
 
 
@@ -631,21 +587,11 @@ public class Injections {
         getEventTracker().setLastMethodCallEventId();
     }
 
-    public static CustomResult fromThrowable(Throwable throwable) {
-        return new CustomResult.Failure(throwable);
+    public static Object invokeDeterministicCallDescriptorInTraceDebugger(long id, Object descriptor) {
+        return getEventTracker().invokeDeterministicCallDescriptorInTraceDebugger(id, descriptor);
     }
 
-    public static CustomResult fromSuccess(Object result) {
-        return new CustomResult.Success(result);
-    }
-
-    public static Object getOrThrow(CustomResult result) throws Throwable {
-        if (result instanceof CustomResult.Failure) {
-            throw ((CustomResult.Failure) result).getThrowable();
-        } else if (result instanceof CustomResult.Success) {
-            return ((CustomResult.Success) result).getResult();
-        } else {
-            throw new IllegalStateException("Unknown result type: " + result);
-        }
+    public static Object invokeDeterministicCallDescriptorInLincheck(Object descriptor) {
+        return getEventTracker().invokeDeterministicCallDescriptorInLincheck(descriptor);
     }
 }

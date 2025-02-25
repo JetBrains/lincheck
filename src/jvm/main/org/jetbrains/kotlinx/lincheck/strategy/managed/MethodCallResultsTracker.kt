@@ -10,30 +10,45 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy.MethodCallInfo
+import org.jetbrains.kotlinx.lincheck.util.Logger
+import org.jetbrains.kotlinx.lincheck.util.native_calls.MethodCallInfo
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
-private typealias DeterministicCallData = Any
+private typealias DeterministicCallData = Any?
 
+private data class DeterministicMethodCallInvocationData(
+    val methodCallInfo: MethodCallInfo,
+    val invocationData: DeterministicCallData
+)
+
+/**
+ * Tracks and manages states of native method calls during trace debugging.
+ * This class ensures consistent association of method call states with unique identifiers,
+ * providing functionalities to retrieve and add these states.
+ *
+ * Implements `AbstractTraceDebuggerEventTracker` to handle trace debugger event IDs, ensuring correct
+ * mapping and progression of IDs across multiple runs.
+ */
 internal class NativeMethodCallStatesTracker : AbstractTraceDebuggerEventTracker {
     private var currentId = AtomicLong(0)
-    private val callData = ConcurrentHashMap<Id, Pair<MethodCallInfo, DeterministicCallData>>()
-    private val idAdvances = ConcurrentHashMap<Id, Id>()
-    private val logging = false
+    private val callData = ConcurrentHashMap<TraceDebuggerEventId, DeterministicMethodCallInvocationData>()
+    private val idAdvances = ConcurrentHashMap<TraceDebuggerEventId, TraceDebuggerEventId>()
 
     /**
-     * Retrieves the state associated with the given identifier or returns null if no state is found.
+     * Retrieves the state associated with the given identifier or throws an error if no state is found.
      *
      * @param id The identifier for which the state should be retrieved.
-     * @return The state associated with the given identifier, or null if no state exists.
+     * @return The state associated with the given identifier, or error if no state exists.
      */
-    fun getStateOrNull(id: Id, methodCallInfo: MethodCallInfo): DeterministicCallData? {
+    fun getState(id: TraceDebuggerEventId, methodCallInfo: MethodCallInfo): DeterministicCallData {
         val methodCallAndRetrievedData = callData[id]
-        if (logging) println("getStateOrNull: $id -> $methodCallAndRetrievedData")
-        if (methodCallAndRetrievedData == null) return null
+        Logger.debug { "getStateOrNull: $id -> $methodCallAndRetrievedData" }
+        if (methodCallAndRetrievedData == null) error("No state for id $id and method call $methodCallInfo")
         val (oldMethodCallInfo, retrievedData) = methodCallAndRetrievedData
-        require(oldMethodCallInfo == methodCallInfo) { "Wrong method call info: $oldMethodCallInfo != $methodCallInfo" }
+        require(oldMethodCallInfo seemsToBeTheSameMethodCallWith methodCallInfo) { 
+            "Wrong method call info: $oldMethodCallInfo != $methodCallInfo"
+        }
         return retrievedData
     }
     
@@ -45,10 +60,10 @@ internal class NativeMethodCallStatesTracker : AbstractTraceDebuggerEventTracker
      * @param state The new state to associate with the provided identifier.
      * @throws IllegalStateException if a state is already associated with the given identifier.
      */
-    fun setState(id: Id, state: DeterministicCallData, methodCallInfo: MethodCallInfo) {
-        val methodCallAndState = methodCallInfo to state
+    fun setState(id: TraceDebuggerEventId, state: DeterministicCallData, methodCallInfo: MethodCallInfo) {
+        val methodCallAndState = DeterministicMethodCallInvocationData(methodCallInfo, state)
         val oldState = callData.put(id, methodCallAndState)
-        if (logging) println("setState: $id -> $methodCallAndState")
+        Logger.debug { "setState: $id -> $methodCallAndState" }
         if (oldState != null) error("Duplicate call id $id: $oldState -> $methodCallAndState")
     }
 
@@ -56,13 +71,13 @@ internal class NativeMethodCallStatesTracker : AbstractTraceDebuggerEventTracker
         currentId.set(0)
     }
 
-    override fun getNextId(): Id {
+    override fun getNextId(): TraceDebuggerEventId {
         val result = currentId.getAndIncrement()
-        if (logging) println("getNextId++: $result")
+        Logger.debug { "getNextId++: $result" }
         return result
     }
 
-    override fun advanceCurrentId(oldId: Id) {
+    override fun advanceCurrentId(oldId: TraceDebuggerEventId) {
         val newId = currentId.get()
         val existingAdvance = idAdvances.putIfAbsent(oldId, newId)
         if (existingAdvance != null) {

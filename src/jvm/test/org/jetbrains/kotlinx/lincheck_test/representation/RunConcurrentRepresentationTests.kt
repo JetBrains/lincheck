@@ -60,11 +60,6 @@ abstract class BaseRunConcurrentRepresentationTest<R>(private val outputFileName
 class ArrayReadWriteRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
     "run_concurrent_test/array_rw"
 ) {
-    @Before
-    fun setUp() {
-        assumeFalse(isInTraceDebuggerMode)
-    }
-
     companion object {
         // the variable is static to trigger the snapshot tracker to restore it between iterations
         // (`block` actually will be run twice)
@@ -73,10 +68,11 @@ class ArrayReadWriteRunConcurrentRepresentationTest : BaseRunConcurrentRepresent
 
     @Suppress("UNUSED_VARIABLE")
     override fun block() {
-        val index = Random.nextInt(array.size)
-        array[index]++
-        val y = array[index]
-        check(false)
+        for (index in array.indices) {
+            array[index]++
+            val y = array[index]
+            check(false)
+        }
     }
 }
 
