@@ -142,6 +142,21 @@ class MethodHandlesFindGetterSetterRepresentationTest : BaseMethodHandleLookupRe
     }
 }
 
+class MethodHandlesBindToRepresentationTest : BaseMethodHandleLookupRepresentationTest(
+    "method_handles/bind_to.txt"
+) {
+    override fun doTest() {
+        val counter = Counter.create()
+        val methodHandle = MethodHandles.lookup()
+            .findVirtual(Counter::class.java, "increment",
+                MethodType.methodType(Void.TYPE)
+            )
+            .bindTo(counter)
+        methodHandle.invoke()
+        methodHandle.invokeExact()
+        check(counter.value == 2)
+    }
+}
 
 class MethodHandlesFindVarHandleRepresentationTest : BaseMethodHandleLookupRepresentationTest(
     "method_handles/find_var_handle.txt"
