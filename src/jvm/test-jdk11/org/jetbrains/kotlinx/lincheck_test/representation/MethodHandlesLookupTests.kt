@@ -10,11 +10,17 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
+import org.jetbrains.kotlinx.lincheck_test.util.TestJdkVersion
+import org.jetbrains.kotlinx.lincheck_test.util.testJdkVersion
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.MethodType
 
 class MethodHandlesFindSpecialRepresentationTest : BaseMethodHandleLookupRepresentationTest(
-    "method_handles/find_special.txt"
+    when (testJdkVersion) {
+        TestJdkVersion.JDK_11 -> "method_handles/find_special_jdk11.txt"
+        TestJdkVersion.JDK_13 -> "method_handles/find_special_jdk13.txt"
+        else                  -> "method_handles/find_special.txt"
+    }
 ) {
     override fun doTest() {
         val counter = CounterDerived.create()

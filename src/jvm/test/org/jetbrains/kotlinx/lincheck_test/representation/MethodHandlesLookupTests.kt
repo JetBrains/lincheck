@@ -10,6 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
+import org.jetbrains.kotlinx.lincheck_test.util.TestJdkVersion
+import org.jetbrains.kotlinx.lincheck_test.util.testJdkVersion
 import java.lang.invoke.MethodType
 import java.lang.invoke.MethodHandles
 import java.util.concurrent.ConcurrentHashMap
@@ -95,7 +97,11 @@ class MethodHandlesFindVirtualRepresentationTest : BaseMethodHandleLookupReprese
 }
 
 class MethodHandlesFindStaticRepresentationTest : BaseMethodHandleLookupRepresentationTest(
-    "method_handles/find_static.txt"
+    when (testJdkVersion) {
+        TestJdkVersion.JDK_11 -> "method_handles/find_static_jdk11.txt"
+        TestJdkVersion.JDK_13 -> "method_handles/find_static_jdk13.txt"
+        else                  -> "method_handles/find_static.txt"
+    }
 ) {
     override fun doTest() {
         val counter = Counter.create()

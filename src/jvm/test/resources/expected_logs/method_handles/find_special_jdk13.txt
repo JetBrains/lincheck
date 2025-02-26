@@ -4,7 +4,7 @@ java.lang.IllegalStateException: Check failed.
 	at org.jetbrains.kotlinx.lincheck_test.representation.BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:58)
 	at org.jetbrains.kotlinx.lincheck_test.representation.BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:46)
 	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:40)
-	at java.base/java.lang.Thread.run(Thread.java:840)
+	at java.base/java.lang.Thread.run(Thread.java:830)
 
 The following interleaving leads to the error:
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -26,13 +26,11 @@ Detailed trace:
 |         value ➜ 0 at CounterDerived.increment(MethodHandlesLookupTests.kt:182)                                                                                                                             |
 |         value = 2 at CounterDerived.increment(MethodHandlesLookupTests.kt:182)                                                                                                                             |
 |       Special#1.invoke(CounterDerived#1) at MethodHandlesFindSpecialRepresentationTest.doTest(MethodHandlesLookupTests.kt:34)                                                                              |
-|         MethodHandle.linkToSpecial(CounterDerived#1, MemberName#1) at DirectMethodHandle$Holder.invokeSpecial(DirectMethodHandle$Holder:0)                                                                 |
-|           CounterDerived#1.value ➜ 2 at Counter.increment(MethodHandlesLookupTests.kt:162)                                                                                                                 |
-|           CounterDerived#1.value = 3 at Counter.increment(MethodHandlesLookupTests.kt:162)                                                                                                                 |
+|         CounterDerived#1.value ➜ 2 at Counter.increment(MethodHandlesLookupTests.kt:162)                                                                                                                   |
+|         CounterDerived#1.value = 3 at Counter.increment(MethodHandlesLookupTests.kt:162)                                                                                                                   |
 |       Special#1.invokeExact(CounterDerived#1) at MethodHandlesFindSpecialRepresentationTest.doTest(MethodHandlesLookupTests.kt:35)                                                                         |
-|         MethodHandle.linkToSpecial(CounterDerived#1, MemberName#1) at DirectMethodHandle$Holder.invokeSpecial(DirectMethodHandle$Holder:0)                                                                 |
-|           CounterDerived#1.value ➜ 3 at Counter.increment(MethodHandlesLookupTests.kt:162)                                                                                                                 |
-|           CounterDerived#1.value = 4 at Counter.increment(MethodHandlesLookupTests.kt:162)                                                                                                                 |
+|         CounterDerived#1.value ➜ 3 at Counter.increment(MethodHandlesLookupTests.kt:162)                                                                                                                   |
+|         CounterDerived#1.value = 4 at Counter.increment(MethodHandlesLookupTests.kt:162)                                                                                                                   |
 |       CounterDerived#1.value ➜ 4 at MethodHandlesFindSpecialRepresentationTest.doTest(MethodHandlesLookupTests.kt:36)                                                                                      |
 |   result: IllegalStateException #1                                                                                                                                                                         |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
