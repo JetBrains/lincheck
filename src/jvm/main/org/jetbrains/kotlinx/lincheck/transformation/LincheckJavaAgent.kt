@@ -21,7 +21,7 @@ import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransforme
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.INSTRUMENT_ALL_CLASSES
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentationMode
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentedClasses
-import org.jetbrains.kotlinx.lincheck.util.LincheckLogger
+import org.jetbrains.kotlinx.lincheck.util.Logger
 import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
@@ -389,7 +389,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         internalClassName: String,
         classBytes: ByteArray
     ): ByteArray = transformedClassesCache.computeIfAbsent(internalClassName.canonicalClassName) {
-        LincheckLogger.log("Transform class '${internalClassName.canonicalClassName}'")
+        Logger.debug { "Transforming $internalClassName" }
 
         val reader = ClassReader(classBytes)
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)

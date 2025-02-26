@@ -178,6 +178,8 @@ tasks {
             extraArgs.add("-Dlincheck.traceDebuggerMode=true")
         }
         extraArgs.add("-Dlincheck.version=$version")
+        findProperty("lincheck.log.file")?.let { extraArgs.add("-Dlincheck.log.file=${it as String}") }
+        findProperty("lincheck.log.level")?.let { extraArgs.add("-Dlincheck.log.level=${it as String}") }
         jvmArgs(extraArgs)
     }
 

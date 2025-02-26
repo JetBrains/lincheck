@@ -12,64 +12,45 @@ package org.jetbrains.kotlinx.lincheck.util
 
 import java.io.*
 import java.text.SimpleDateFormat
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.*
 
-object LincheckLogger {
-    private val LINE_SEPARATOR = System.lineSeparator()
-    private val formatter: ThreadLocal<SimpleDateFormat> = object : ThreadLocal<SimpleDateFormat>() {
-        override fun initialValue(): SimpleDateFormat {
-            return SimpleDateFormat("dd.MM.yyyy HH:mm:ss")
+internal object Logger {
+    private val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss.SSS")
+    private var logWriter: Writer = BufferedWriter(
+    System.getProperty("lincheck.log.file")?.let { logFilename ->
+            runCatching {
+                val file = File(logFilename)
+                initFile(file)
+                FileWriter(file)
+            }.getOrNull()
+        } ?: System.err.writer()
+    )
+    private var logLevel: LoggingLevel = System.getProperty("lincheck.log.level")?.uppercase()?.let {
+        runCatching { LoggingLevel.valueOf(it) }.getOrElse { DEFAULT_LOG_LEVEL }
+    } ?: DEFAULT_LOG_LEVEL
+
+    fun error(lazyMessage: () -> String) = log(LoggingLevel.ERROR, lazyMessage)
+    fun error(e: Throwable) = error {
+        StringWriter().use {
+            e.printStackTrace(PrintWriter(it))
+        }.toString()
+    }
+    fun warn(lazyMessage: () -> String) = log(LoggingLevel.WARN, lazyMessage)
+    fun info(lazyMessage: () -> String) = log(LoggingLevel.INFO, lazyMessage)
+    fun debug(lazyMessage: () -> String) = log(LoggingLevel.DEBUG, lazyMessage)
+
+    private inline fun log(logLevel: LoggingLevel, lazyMessage: () -> String) {
+        if (logLevel >= this.logLevel) {
+            write(logLevel, lazyMessage(), logWriter)
         }
     }
 
-    private val logFilename = System.getProperty("lincheck.log.file") ?: null
-    private val logFile = if (logFilename != null) File(logFilename) else null
-    private var logWriter: Writer? = null
-
-    init {
-        println("property: lincheck.log.file = " + System.getProperty("lincheck.log.file"))
-        logFile?.let {
-            initFile(it)
-            logWriter = BufferedWriter(FileWriter(it))
-            println("Lincheck log file could be found at: ${it.absolutePath}")
-        }
-    }
-
-    /**
-     * Logs will be printed to log file if it exists.
-     */
-    fun log(s: String) {
-        logFile?.let {
-            write(s, logWriter!!)
-        }
-    }
-
-    /**
-     * Errors will be printed to log file if it is set.
-     * However, they will always be printed to the `System.err`.
-     */
-    fun error(m: String, e: Throwable) {
-        logFile?.let {
-            write(m, e, logWriter!!)
-        }
-        System.err.println(m)
-        e.printStackTrace(System.err)
-    }
-
-    private fun write(m: String, e: Throwable, writer: Writer) {
+    private fun write(logLevel: LoggingLevel, s: String, writer: Writer) {
         try {
-            writer.write(getCurrentTimeStamp() + " " + m + LINE_SEPARATOR)
-            writer.flush()
-            e.printStackTrace(PrintWriter(writer))
-        }
-        catch (e: IOException) {
-            e.printStackTrace()
-        }
-    }
-
-    private fun write(s: String, writer: Writer) {
-        try {
-            writer.write(getCurrentTimeStamp() + " " + s + LINE_SEPARATOR)
+            writer.write("[${getCurrentTimeStamp()}] [${logLevel.name}] $s$LINE_SEPARATOR")
             writer.flush()
         } catch (e: IOException) {
             e.printStackTrace()
@@ -77,7 +58,7 @@ object LincheckLogger {
     }
 
     private fun getCurrentTimeStamp(): String {
-        return "[" + formatter.get().format(Date()) + "]"
+        return formatter.format(LocalDateTime.now())
     }
 
     private fun initFile(file: File) {
@@ -88,4 +69,11 @@ object LincheckLogger {
         if (file.exists()) file.delete()
         file.createNewFile()
     }
+}
+
+private val LINE_SEPARATOR = System.lineSeparator()
+
+@JvmField val DEFAULT_LOG_LEVEL = LoggingLevel.WARN
+enum class LoggingLevel {
+    DEBUG, INFO, WARN, ERROR, OFF
 }

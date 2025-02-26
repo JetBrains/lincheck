@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.annotations;
 
-import org.jetbrains.kotlinx.lincheck.LoggingLevel;
+import org.jetbrains.kotlinx.lincheck.util.LoggingLevel;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
