@@ -42,6 +42,24 @@ import java.util.concurrent.ConcurrentHashMap
  *   4. Test triggers the trace collection and checks that no events from lookup methods appear in the trace.
  */
 
+class MethodHandlesFindConstructorRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
+    "method_handles/find_constructor.txt"
+) {
+    override fun block() {
+        ensureConcurrentHashMapIsInstrumented()
+
+        val constructorHandle = MethodHandles.lookup()
+            .findConstructor(Counter::class.java, 
+                MethodType.methodType(Void.TYPE, Int::class.java)
+            )
+        val counter = constructorHandle.invoke(42) as Counter
+        check(counter.value == 42)
+
+        check(false) // to trigger trace collection
+    }
+}
+
+
 class MethodHandlesFindVirtualRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
     "method_handles/find_virtual.txt"
 ) {
@@ -50,12 +68,14 @@ class MethodHandlesFindVirtualRepresentationTest : BaseRunConcurrentRepresentati
 
         val counter = Counter.create()
         val methodHandle = MethodHandles.lookup()
-            .findVirtual(Counter::class.java, "increment", MethodType.methodType(Void.TYPE))
+            .findVirtual(Counter::class.java, "increment", 
+                MethodType.methodType(Void.TYPE)
+            )
         methodHandle.invoke(counter)
         methodHandle.invokeExact(counter)
         check(counter.value == 2)
 
-        check(false) // to trigger the trace collection
+        check(false) // to trigger trace collection
     }
 }
 
@@ -74,9 +94,29 @@ class MethodHandlesFindStaticRepresentationTest : BaseRunConcurrentRepresentatio
         methodHandle.invokeExact(counter)
         check(counter.value == 2)
 
-        check(false) // to trigger the trace collection
+        check(false) // to trigger trace collection
     }
 }
+
+class MethodHandlesFindGetterSetterRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
+    "method_handles/find_getter_setter.txt"
+) {
+    override fun block() {
+        ensureConcurrentHashMapIsInstrumented()
+
+        val counter = Counter.create()
+        val getterHandle = MethodHandles.lookup()
+            .findGetter(Counter::class.java, "value", Int::class.java)
+        val setterHandle = MethodHandles.lookup()
+            .findSetter(Counter::class.java, "value", Int::class.java)
+        setterHandle.invoke(counter, 42)
+        check(getterHandle.invoke(counter) == 42)
+        check(counter.value == 42)
+
+        check(false) // to trigger trace collection
+    }
+}
+
 
 class MethodHandlesVarHandleRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
     "method_handles/find_var_handle.txt"
@@ -88,10 +128,10 @@ class MethodHandlesVarHandleRepresentationTest : BaseRunConcurrentRepresentation
         val varHandle = MethodHandles.lookup()
             .findVarHandle(Counter::class.java, "value", Int::class.java)
         varHandle.set(counter, 42)
-        check(counter.value == 42)
         check(varHandle.get(counter) == 42)
+        check(counter.value == 42)
 
-        check(false) // to trigger the trace collection
+        check(false) // to trigger trace collection
     }
 }
 
@@ -100,10 +140,17 @@ private fun ensureConcurrentHashMapIsInstrumented() {
     ConcurrentHashMap<String, String>()
 }
 
-private class Counter {
+private class Counter() {
     @Volatile
     @JvmField
     var value = 0
+    
+    constructor(value: Int) : this() {
+        require(value >= 0) { 
+            "Counter must be non-negative" 
+        }
+        this.value = value 
+    }
 
     fun increment() {
         value++
