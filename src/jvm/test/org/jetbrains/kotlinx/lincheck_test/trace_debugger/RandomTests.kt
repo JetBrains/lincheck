@@ -54,12 +54,8 @@ class RandomInt5Test : RandomTests() {
 }
 
 class FakeRandomTest : RandomTests() {
-    class NotRandom : Random() {
-        private var x = 0
-        override fun nextBits(bitCount: Int): Int = x++
-    }
     @Operation
-    fun operation() = NotRandom().nextBits(10)
+    fun operation() = NotRandom.nextBits(10)
 }
 
 class RandomLong1Test : RandomTests() {
@@ -325,16 +321,16 @@ class JRandomGaussianTest : RandomTests() {
     fun operation() = JRandom().nextGaussian()
 }
 
+object NotRandom : Random() {
+    override fun nextBits(bitCount: Int): Int = 0
+}
+
 class StubRandomCheckTest : RandomTests() {
     override val alsoRunInLincheckMode: Boolean get() = false
     
-    object MyRandom : Random() {
-        override fun nextBits(bitCount: Int): Int = 0
-    }
-    
     @Operation
     fun operation() {
-        val randomList = List(10) { MyRandom.nextInt() }
+        val randomList = List(10) { NotRandom.nextInt() }
         val expectedResult = List(10) { 0 }
         require(randomList == expectedResult) { "Wrong randomizer: $randomList != $expectedResult" }
     }
