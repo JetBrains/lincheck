@@ -26,6 +26,7 @@ internal inline fun <reified E: Exception> Options<*, *>.checkFailsWithException
     try {
         LinChecker(testClass, this).check()
     } catch (e: Exception) {
+        check(!expectedOutputFilePrefix.contains(".txt")) { "should only be prefix of outputfile" }
         assertTrue(
             "Exception of type ${E::class.simpleName} expected, but ${e::class.simpleName} was thrown.\n $e",
             e is E

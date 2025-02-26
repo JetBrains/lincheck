@@ -8,9 +8,9 @@
 # with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #
 
-# jdk 11 is SLOW! So remove it if it's not absolutely necessary
+# jdk 11 is SLOW! So remove it if you don't expect files to change
 jdks=("8" "11" "13" "15" "17")
-testFilter="org.jetbrains.kotlinx.lincheck_test.representation.VarHandle*"
+testFilter="org.jetbrains.kotlinx.lincheck_test.representation.*"
 for jdk in "${jdks[@]}" 
 do
   echo "[Representation Tests Overwrite] Running tests for jdk: $jdk in non-trace mode  ----------------------"
