@@ -11,36 +11,38 @@
 package org.jetbrains.kotlinx.lincheck.util
 
 import java.io.*
-import java.text.SimpleDateFormat
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.util.*
 
 internal object Logger {
     private val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss.SSS")
+
+    private val logFile: File? = System.getProperty("lincheck.logFile")?.let { fileName ->
+        File(fileName).also { runCatching { initFile(it) }.getOrNull() }
+    }
+
     private var logWriter: Writer = BufferedWriter(
-    System.getProperty("lincheck.log.file")?.let { logFilename ->
-            runCatching {
-                val file = File(logFilename)
-                initFile(file)
-                FileWriter(file)
-            }.getOrNull()
-        } ?: System.err.writer()
+        if (logFile != null) FileWriter(logFile)
+        else System.err.writer()
     )
-    private var logLevel: LoggingLevel = System.getProperty("lincheck.log.level")?.uppercase()?.let {
+
+    private var logLevel: LoggingLevel = System.getProperty("lincheck.logLevel")?.uppercase()?.let {
         runCatching { LoggingLevel.valueOf(it) }.getOrElse { DEFAULT_LOG_LEVEL }
     } ?: DEFAULT_LOG_LEVEL
 
-    fun error(lazyMessage: () -> String) = log(LoggingLevel.ERROR, lazyMessage)
+    inline fun error(lazyMessage: () -> String) = log(LoggingLevel.ERROR, lazyMessage)
+
     fun error(e: Throwable) = error {
         StringWriter().use {
             e.printStackTrace(PrintWriter(it))
         }.toString()
     }
-    fun warn(lazyMessage: () -> String) = log(LoggingLevel.WARN, lazyMessage)
-    fun info(lazyMessage: () -> String) = log(LoggingLevel.INFO, lazyMessage)
-    fun debug(lazyMessage: () -> String) = log(LoggingLevel.DEBUG, lazyMessage)
+
+    inline fun warn(lazyMessage: () -> String) = log(LoggingLevel.WARN, lazyMessage)
+
+    inline fun info(lazyMessage: () -> String) = log(LoggingLevel.INFO, lazyMessage)
+
+    inline fun debug(lazyMessage: () -> String) = log(LoggingLevel.DEBUG, lazyMessage)
 
     private inline fun log(logLevel: LoggingLevel, lazyMessage: () -> String) {
         if (logLevel >= this.logLevel) {
@@ -74,6 +76,7 @@ internal object Logger {
 private val LINE_SEPARATOR = System.lineSeparator()
 
 @JvmField val DEFAULT_LOG_LEVEL = LoggingLevel.WARN
+
 enum class LoggingLevel {
     DEBUG, INFO, WARN, ERROR, OFF
 }
