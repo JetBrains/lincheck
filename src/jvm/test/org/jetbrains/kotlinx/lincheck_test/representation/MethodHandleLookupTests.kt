@@ -14,7 +14,7 @@ import java.lang.invoke.MethodType
 import java.lang.invoke.MethodHandles
 import java.util.concurrent.ConcurrentHashMap
 
-/*
+/**
  * Tests in this file check that various methods from the `MethodHandle` API work correctly.
  *
  * The expected behavior is that:
@@ -41,31 +41,48 @@ import java.util.concurrent.ConcurrentHashMap
  *
  *   4. Test triggers the trace collection and checks that no events from lookup methods appear in the trace.
  */
+abstract class BaseMethodHandleLookupRepresentationTest(
+    outputFileName: String
+) : BaseRunConcurrentRepresentationTest<Unit>(outputFileName) {
 
-class MethodHandlesFindConstructorRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
-    "method_handles/find_constructor.txt"
-) {
     override fun block() {
+        // ensure `ConcurrentHashMap` is instrumented before any lookup operations
         ensureConcurrentHashMapIsInstrumented()
 
+        // execute the specific test logic
+        doTest()
+
+        // trigger trace collection
+        check(false)
+    }
+
+    // Abstract method to be implemented by specific test cases
+    protected abstract fun doTest()
+
+    private fun ensureConcurrentHashMapIsInstrumented() {
+        // creating an instance of `ConcurrentHashMap` will trigger instrumentation of this class
+        ConcurrentHashMap<String, String>()
+    }
+}
+
+class MethodHandlesFindConstructorRepresentationTest : BaseMethodHandleLookupRepresentationTest(
+    "method_handles/find_constructor.txt"
+) {
+    override fun doTest() {
         val constructorHandle = MethodHandles.lookup()
             .findConstructor(Counter::class.java, 
                 MethodType.methodType(Void.TYPE, Int::class.java)
             )
         val counter = constructorHandle.invoke(42) as Counter
         check(counter.value == 42)
-
-        check(false) // to trigger trace collection
     }
 }
 
 
-class MethodHandlesFindVirtualRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
+class MethodHandlesFindVirtualRepresentationTest : BaseMethodHandleLookupRepresentationTest(
     "method_handles/find_virtual.txt"
 ) {
-    override fun block() {
-        ensureConcurrentHashMapIsInstrumented()
-
+    override fun doTest() {
         val counter = Counter.create()
         val methodHandle = MethodHandles.lookup()
             .findVirtual(Counter::class.java, "increment", 
@@ -74,17 +91,13 @@ class MethodHandlesFindVirtualRepresentationTest : BaseRunConcurrentRepresentati
         methodHandle.invoke(counter)
         methodHandle.invokeExact(counter)
         check(counter.value == 2)
-
-        check(false) // to trigger trace collection
     }
 }
 
-class MethodHandlesFindStaticRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
+class MethodHandlesFindStaticRepresentationTest : BaseMethodHandleLookupRepresentationTest(
     "method_handles/find_static.txt"
 ) {
-    override fun block() {
-        ensureConcurrentHashMapIsInstrumented()
-
+    override fun doTest() {
         val counter = Counter.create()
         val methodHandle = MethodHandles.lookup()
             .findStatic(Counter::class.java, "increment",
@@ -93,17 +106,31 @@ class MethodHandlesFindStaticRepresentationTest : BaseRunConcurrentRepresentatio
         methodHandle.invoke(counter)
         methodHandle.invokeExact(counter)
         check(counter.value == 2)
-
-        check(false) // to trigger trace collection
     }
 }
 
-class MethodHandlesFindGetterSetterRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
+class MethodHandlesFindSpecialRepresentationTest : BaseMethodHandleLookupRepresentationTest(
+    "method_handles/find_special.txt"
+) {
+    override fun doTest() {
+        val counter = CounterDerived.create()
+        val lookup = MethodHandles.privateLookupIn(CounterDerived::class.java, MethodHandles.lookup())
+        val methodHandle = lookup
+            .findSpecial(Counter::class.java, "increment",
+                MethodType.methodType(Void.TYPE),
+                CounterDerived::class.java
+            )
+        counter.increment()
+        methodHandle.invoke(counter)
+        methodHandle.invokeExact(counter)
+        check(counter.value == 4)
+    }
+}
+
+class MethodHandlesFindGetterSetterRepresentationTest : BaseMethodHandleLookupRepresentationTest(
     "method_handles/find_getter_setter.txt"
 ) {
-    override fun block() {
-        ensureConcurrentHashMapIsInstrumented()
-
+    override fun doTest() {
         val counter = Counter.create()
         val getterHandle = MethodHandles.lookup()
             .findGetter(Counter::class.java, "value", Int::class.java)
@@ -112,39 +139,28 @@ class MethodHandlesFindGetterSetterRepresentationTest : BaseRunConcurrentReprese
         setterHandle.invoke(counter, 42)
         check(getterHandle.invoke(counter) == 42)
         check(counter.value == 42)
-
-        check(false) // to trigger trace collection
     }
 }
 
 
-class MethodHandlesVarHandleRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
+class MethodHandlesVarHandleRepresentationTest : BaseMethodHandleLookupRepresentationTest(
     "method_handles/find_var_handle.txt"
 ) {
-    override fun block() {
-        ensureConcurrentHashMapIsInstrumented()
-
+    override fun doTest() {
         val counter = Counter.create()
         val varHandle = MethodHandles.lookup()
             .findVarHandle(Counter::class.java, "value", Int::class.java)
         varHandle.set(counter, 42)
         check(varHandle.get(counter) == 42)
         check(counter.value == 42)
-
-        check(false) // to trigger trace collection
     }
 }
 
-private fun ensureConcurrentHashMapIsInstrumented() {
-    // creating an instance of `ConcurrentHashMap` will trigger instrumentation of this class
-    ConcurrentHashMap<String, String>()
-}
-
-private class Counter() {
+open class Counter() {
     @Volatile
     @JvmField
     var value = 0
-    
+
     constructor(value: Int) : this() {
         require(value >= 0) { 
             "Counter must be non-negative" 
@@ -152,7 +168,7 @@ private class Counter() {
         this.value = value 
     }
 
-    fun increment() {
+    open fun increment() {
         value++
     }
 
@@ -168,5 +184,17 @@ private class Counter() {
         fun increment(counter: Counter) {
             counter.value++
         }
+    }
+}
+
+class CounterDerived : Counter() {
+    override fun increment() {
+        value += 2
+    }
+
+    companion object {
+        @JvmStatic
+        fun create(): CounterDerived =
+            CounterDerived().also { shared = it } // make the object shared for it to appear in the trace
     }
 }
