@@ -24,11 +24,11 @@ The following interleaving leads to the error:
 Exception stack traces:
 #1: java.lang.IllegalStateException: Legal exception
 	at org.jetbrains.kotlinx.lincheck_test.representation.ExceptionsInOutputTest.operation1(ExceptionsInOutputTest.kt:28)
-	at java.base/java.lang.Thread.run(Thread.java:833)
+	at java.lang.Thread.run(Thread.java:750)
 
 #2: java.lang.IllegalStateException: Violating exception
 	at org.jetbrains.kotlinx.lincheck_test.representation.ExceptionsInOutputTest.operation2(ExceptionsInOutputTest.kt:32)
-	at java.base/java.lang.Thread.run(Thread.java:833)
+	at java.lang.Thread.run(Thread.java:750)
 
 Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

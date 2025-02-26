@@ -12,8 +12,8 @@ The following interleaving leads to the error:
 | --------------------------------------------------------------------------------------------- |
 |   spinLock(): <hung>                                                                          |
 |     /* The following events repeat infinitely: */                                             |
-| ┌╶> state = false at SingleThreadTopLevelSpinLockTest.spinLock(SpinlockEventsCutTests.kt:464) |
-| |   state = true at SingleThreadTopLevelSpinLockTest.spinLock(SpinlockEventsCutTests.kt:465)  |
+| ┌╶> state = false at SingleThreadTopLevelSpinLockTest.spinLock(SpinlockEventsCutTests.kt:490) |
+| |   state = true at SingleThreadTopLevelSpinLockTest.spinLock(SpinlockEventsCutTests.kt:491)  |
 | └╶╶ switch (reason: active lock detected)                                                     |
 | --------------------------------------------------------------------------------------------- |
 All unfinished threads are in deadlock
@@ -24,8 +24,8 @@ Detailed trace:
 | --------------------------------------------------------------------------------------------- |
 |   spinLock(): <hung>                                                                          |
 |     /* The following events repeat infinitely: */                                             |
-| ┌╶> state = false at SingleThreadTopLevelSpinLockTest.spinLock(SpinlockEventsCutTests.kt:464) |
-| |   state = true at SingleThreadTopLevelSpinLockTest.spinLock(SpinlockEventsCutTests.kt:465)  |
+| ┌╶> state = false at SingleThreadTopLevelSpinLockTest.spinLock(SpinlockEventsCutTests.kt:490) |
+| |   state = true at SingleThreadTopLevelSpinLockTest.spinLock(SpinlockEventsCutTests.kt:491)  |
 | └╶╶ switch (reason: active lock detected)                                                     |
 | --------------------------------------------------------------------------------------------- |
 All unfinished threads are in deadlock

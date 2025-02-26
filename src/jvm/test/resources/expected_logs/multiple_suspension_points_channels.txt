@@ -127,13 +127,13 @@ Exception stack traces:
 	at org.jetbrains.kotlinx.lincheck_test.representation.MultipleSuspensionPointsChannelsTraceRepresentationTest.operation1(MultipleSuspensionsTests.kt:160)
 	at org.jetbrains.kotlinx.lincheck_test.representation.MultipleSuspensionPointsChannelsTraceRepresentationTest$operation1$1.invokeSuspend(MultipleSuspensionsTests.kt)
 	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
-	at java.base/java.lang.Thread.run(Thread.java:840)
+	at java.lang.Thread.run(Thread.java:750)
 
 #2: java.lang.IllegalStateException: Check failed.
 	at org.jetbrains.kotlinx.lincheck_test.representation.MultipleSuspensionPointsChannelsTraceRepresentationTest.operation2(MultipleSuspensionsTests.kt:170)
 	at org.jetbrains.kotlinx.lincheck_test.representation.MultipleSuspensionPointsChannelsTraceRepresentationTest$operation2$1.invokeSuspend(MultipleSuspensionsTests.kt)
 	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
-	at java.base/java.lang.Thread.run(Thread.java:840)
+	at java.lang.Thread.run(Thread.java:750)
 
 Detailed trace:
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

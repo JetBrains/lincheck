@@ -57,7 +57,6 @@ class ConcurrentLinkedDequeTest {
         }
         .iterations(0)
         .checkImpl(this::class.java) { failure ->
-            val expectedOutputFile = if (isJdk8) "concurrent_linked_deque_jdk8.txt" else "concurrent_linked_deque.txt"
-            failure.checkLincheckOutput(expectedOutputFile)
+            failure.checkLincheckOutput("concurrent_linked_deque")
         }
 }

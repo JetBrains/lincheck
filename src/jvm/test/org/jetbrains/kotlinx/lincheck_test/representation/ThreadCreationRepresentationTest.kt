@@ -10,16 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck_test.util.TestJdkVersion
-import org.jetbrains.kotlinx.lincheck_test.util.testJdkVersion
 import kotlin.concurrent.thread
 
-class ThreadCreationRepresentationTest: BaseRunConcurrentRepresentationTest<Unit>(
-    when(testJdkVersion) {
-        TestJdkVersion.JDK_8 -> "thread_creation_representation_test_jdk_8.txt"
-        else -> "thread_creation_representation_test.txt"
-    }
-) {
+class ThreadCreationRepresentationTest: BaseRunConcurrentRepresentationTest<Unit>("thread_creation_representation_test") {
 
     @Volatile
     private var a = 0

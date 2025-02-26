@@ -22,7 +22,7 @@ import java.io.File
  * This happens when the configuration of the test is incorrect.
  * @param expectedOutputFile name of file stored in resources/expected_logs, storing the expected lincheck output.
  */
-internal inline fun <reified E: Exception> Options<*, *>.checkFailsWithException(testClass: Class<*>, expectedOutputFile: String) {
+internal inline fun <reified E: Exception> Options<*, *>.checkFailsWithException(testClass: Class<*>, expectedOutputFilePrefix: String) {
     try {
         LinChecker(testClass, this).check()
     } catch (e: Exception) {
@@ -31,10 +31,21 @@ internal inline fun <reified E: Exception> Options<*, *>.checkFailsWithException
             e is E
         )
         val actualOutput = e.message ?: ""
-        val expectedOutput = getExpectedLogFromResources(expectedOutputFile)
+        // Always overwrite jdk8 non-trace
+        if (testJdkVersion == TestJdkVersion.JDK_8 && !isInTraceDebuggerMode && OVERWRITE_REPRESENTATION_TESTS_OUTPUT) {
+            getExpectedLogFileFromSources(getFileNameFor(expectedOutputFilePrefix, TestJdkVersion.JDK_8, false)).writeText(actualOutput)
+            return
+        }
+
+        val compareToFile = getFileToCompareTo(expectedOutputFilePrefix)
+        val expectedOutput = getExpectedLogFromResources(compareToFile)
 
         if (actualOutput.filtered != expectedOutput.filtered) {
-            assertEquals(expectedOutput, actualOutput)
+            if (OVERWRITE_REPRESENTATION_TESTS_OUTPUT) {
+                getExpectedLogFileFromSources(getFileNameFor(expectedOutputFilePrefix, testJdkVersion, isInTraceDebuggerMode)).writeText(actualOutput)
+            } else {
+                assertEquals(expectedOutput, actualOutput)
+            }
         }
     }
 }
@@ -42,21 +53,60 @@ internal inline fun <reified E: Exception> Options<*, *>.checkFailsWithException
 /**
  * Checks that failure output matches the expected one stored in a file.
  *
- * @param expectedOutputFile name of file stored in resources/expected_logs, storing the expected lincheck output.
+ * @param expectedOutputFilePrefix name of file stored in resources/expected_logs, storing the expected lincheck output.
  */
-internal fun LincheckFailure?.checkLincheckOutput(expectedOutputFile: String) {
+internal fun LincheckFailure?.checkLincheckOutput(expectedOutputFilePrefix: String) {
+    check(!expectedOutputFilePrefix.contains(".txt")) { "should only be prefix of outputfile" }
     check(this != null) { "The test should fail" }
-
     val actualOutput = StringBuilder().appendFailure(this).toString()
-    val expectedOutput = getExpectedLogFromResources(expectedOutputFile)
+    
+    // Always overwrite jdk8 non-trace
+    if (testJdkVersion == TestJdkVersion.JDK_8 && !isInTraceDebuggerMode && OVERWRITE_REPRESENTATION_TESTS_OUTPUT) {
+        getExpectedLogFileFromSources(getFileNameFor(expectedOutputFilePrefix, TestJdkVersion.JDK_8, false)).writeText(actualOutput)
+        return
+    }
+    
+    val compareToFile = getFileToCompareTo(expectedOutputFilePrefix)
+    val expectedOutput = getExpectedLogFromResources(compareToFile)
 
     if (actualOutput.filtered != expectedOutput.filtered) {
         if (OVERWRITE_REPRESENTATION_TESTS_OUTPUT) {
-            getExpectedLogFileFromSources(expectedOutputFile).writeText(actualOutput)
+            getExpectedLogFileFromSources(getFileNameFor(expectedOutputFilePrefix, testJdkVersion, isInTraceDebuggerMode)).writeText(actualOutput)
         } else {
             assertEquals(expectedOutput, actualOutput)
         }
     }
+}
+
+// To prevent file duplication this function finds the file to compare the results to.
+// With preference for jdk: 17, 15, 13, 11, 8 (trace mode) and 17, 15, 13, 11, 8 (non trace mode)
+// Search starts at current jdk level
+// For instance we are running tests for jdk 11 (trace mode), we will check file existence in the following order:
+// 11 (trace), 8 (trace), 11 (non-trace) and 8 (non-trace).
+private fun getFileToCompareTo(expectedOutputFilePrefix: String): String {
+    // If in trace mode first check if a trace debugger file can be found
+    if (isInTraceDebuggerMode) {
+        for (i in testJdkVersion.ordinal downTo 0) {
+            val jdkVersion = TestJdkVersion.entries[i]
+            val fileName = getFileNameFor(expectedOutputFilePrefix, jdkVersion, true)
+            if (logFileFromResourcesExists(fileName)) return fileName
+        }
+    }
+    // Check lower sdks in non-trace mode
+    for (i in testJdkVersion.ordinal downTo 0) {
+        val jdkVersion = TestJdkVersion.entries[i]
+        val fileName = getFileNameFor(expectedOutputFilePrefix, jdkVersion, false)
+        if (logFileFromResourcesExists(fileName)) return fileName
+    }
+    error("No file exists yet for this test and current jdk = $testJdkVersion, please run on jdk 8 with overwrite enabled")
+}
+
+// Generates file name in the form of 
+// prefix.txt, prefix_jdk_15.txt, prefix_trace_debugger.txt, prefix_trace_debugger_jdk_15.txt, etc..
+private fun getFileNameFor(expectedOutputFilePrefix: String, jdkVersion: TestJdkVersion, traceMode: Boolean): String {
+    return "${expectedOutputFilePrefix}${if (traceMode) "_trace_debugger" else ""}${
+        if (jdkVersion == TestJdkVersion.JDK_8) "" else "_${jdkVersion.name.lowercase()}"
+    }.txt"
 }
 
 private val String.filtered: String get() {
@@ -86,6 +136,13 @@ internal fun getExpectedLogFromResources(testFileName: String) =
 internal fun getExpectedLogFileFromResources(fileName: String): File =
     ClassLoader.getSystemResource("expected_logs/$fileName")?.file?.let { File(it) }
         ?: error("Expected log resource $fileName does not exist")
+
+// Returns true if file exists.
+internal fun logFileFromResourcesExists(fileName: String): Boolean =
+    try { 
+        getExpectedLogFileFromResources(fileName) 
+        true
+    } catch (_: IllegalStateException) { false }
 
 internal fun getExpectedLogFileFromSources(fileName: String): File = 
     File("src/jvm/test/resources/expected_logs/$fileName")

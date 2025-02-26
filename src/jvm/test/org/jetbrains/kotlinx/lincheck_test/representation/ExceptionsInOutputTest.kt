@@ -40,6 +40,6 @@ class ExceptionsInOutputTest {
             }
         }
         .checkImpl(this::class.java) { failure ->
-            failure.checkLincheckOutput("exceptions_in_output.txt")
+            failure.checkLincheckOutput("exceptions_in_output")
         }
 }

@@ -24,7 +24,7 @@ import org.junit.*
  * that causes obstruction freedom violation is reported.
  */
 class ObstructionFreedomActiveLockRepresentationTest : BaseTraceRepresentationTest(
-    "obstruction_freedom_violation_with_no_detected_cycle.txt"
+    "obstruction_freedom_violation_with_no_detected_cycle"
 ) {
     private val counter = AtomicInteger(0)
 
@@ -70,6 +70,6 @@ class ObstructionFreedomSynchronizedRepresentationTest {
         }
         .checkObstructionFreedom(true)
         .checkImpl(this::class.java)
-        .checkLincheckOutput("obstruction_freedom_synchronized.txt")
+        .checkLincheckOutput("obstruction_freedom_synchronized")
 
 }

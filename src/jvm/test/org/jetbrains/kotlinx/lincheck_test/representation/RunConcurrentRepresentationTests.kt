@@ -56,7 +56,7 @@ abstract class BaseRunConcurrentRepresentationTest<R>(private val outputFileName
 }
 
 class ArrayReadWriteRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
-    "run_concurrent_test/array_rw.txt"
+    "run_concurrent_test/array_rw"
 ) {
     companion object {
         // the variable is static to trigger the snapshot tracker to restore it between iterations
@@ -74,7 +74,7 @@ class ArrayReadWriteRunConcurrentRepresentationTest : BaseRunConcurrentRepresent
 }
 
 class AtomicReferencesNamesRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
-    "run_concurrent_test/atomic_refs.txt"
+    "run_concurrent_test/atomic_refs"
 ) {
 
     override fun block() {
@@ -147,7 +147,7 @@ class AtomicReferencesNamesRunConcurrentRepresentationTest : BaseRunConcurrentRe
 }
 
 class AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
-    "run_concurrent_test/atomic_refs_two_fields.txt"
+    "run_concurrent_test/atomic_refs_two_fields"
 ) {
     companion object {
         private var atomicReference1: AtomicReference<Node>
@@ -170,7 +170,7 @@ class AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest : BaseRu
 }
 
 class VariableReadWriteRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
-    "run_concurrent_test/var_rw.txt"
+    "run_concurrent_test/var_rw"
 ) {
     companion object {
         private var x = 0
@@ -184,9 +184,7 @@ class VariableReadWriteRunConcurrentRepresentationTest : BaseRunConcurrentRepres
     }
 }
 
-class AnonymousObjectRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
-    if (isJdk8) "run_concurrent_test/anonymous_object_jdk8.txt" else "run_concurrent_test/anonymous_object.txt"
-) {
+class AnonymousObjectRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>("run_concurrent_test/anonymous_object") {
     // use static fields to avoid local object optimizations
     companion object {
         @JvmField var runnable: Runnable? = null
@@ -212,18 +210,7 @@ class AnonymousObjectRunConcurrentRepresentationTest : BaseRunConcurrentRepresen
 }
 
 // TODO investigate difference for trace debugger (Evgeniy Moiseenko)
-class CustomThreadsRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
-    if (isInTraceDebuggerMode) {
-        when (testJdkVersion) {
-            TestJdkVersion.JDK_8  -> "run_concurrent_test/custom_threads_trace_debugger_jdk8.txt"
-            TestJdkVersion.JDK_11 -> "run_concurrent_test/custom_threads_trace_debugger_jdk11.txt"
-            TestJdkVersion.JDK_17 -> "run_concurrent_test/custom_threads_trace_debugger_jdk17.txt"
-            else                  -> "run_concurrent_test/custom_threads_trace_debugger.txt"
-        }
-    } else {
-        "run_concurrent_test/custom_threads.txt"
-    }
-) {
+class CustomThreadsRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>("run_concurrent_test/custom_threads") {
     override fun block() {
         val block = Runnable {
             wrapper.value += 1
@@ -259,9 +246,7 @@ class CustomThreadsRunConcurrentRepresentationTest : BaseRunConcurrentRepresenta
     data class Wrapper(@Volatile @JvmField var value: Int)
 }
 
-class KotlinThreadRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
-    if (isJdk8) "run_concurrent_test/kotlin_thread_jdk8.txt" else "run_concurrent_test/kotlin_thread.txt"
-) {
+class KotlinThreadRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>("run_concurrent_test/kotlin_thread") {
     companion object {
         @Volatile
         @JvmField
@@ -278,20 +263,7 @@ class KotlinThreadRunConcurrentRepresentationTest : BaseRunConcurrentRepresentat
 }
 
 // TODO investigate difference for trace debugger (Evgeniy Moiseenko)
-class LivelockRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
-    if (isInTraceDebuggerMode) {
-        if (isJdk8)
-             "run_concurrent_test/livelock_trace_debugger_jdk8.txt"
-        else "run_concurrent_test/livelock_trace_debugger.txt"
-    } else {
-        when (testJdkVersion) {
-            TestJdkVersion.JDK_8  -> "run_concurrent_test/livelock_jdk8.txt"
-            TestJdkVersion.JDK_11 -> "run_concurrent_test/livelock_jdk11.txt"
-            TestJdkVersion.JDK_13 -> "run_concurrent_test/livelock_jdk13.txt"
-            else                  -> "run_concurrent_test/livelock.txt"
-        }
-    }
-) {
+class LivelockRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>("run_concurrent_test/livelock") {
     override fun block() {
         var counter = 0
         val lock1 = SpinLock()
@@ -318,14 +290,7 @@ class LivelockRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationT
 }
 
 // TODO investigate difference for trace debugger (Evgeniy Moiseenko)
-class IncorrectConcurrentLinkedDequeRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
-    when {
-        isInTraceDebuggerMode && isJdk8 -> "run_concurrent_test/deque_trace_debugger_jdk8.txt"
-        isInTraceDebuggerMode -> "run_concurrent_test/deque_trace_debugger.txt"
-        isJdk8 -> "run_concurrent_test/deque_jdk8.txt"
-        else -> "run_concurrent_test/deque.txt"
-    }
-) {
+class IncorrectConcurrentLinkedDequeRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>("run_concurrent_test/deque") {
     override fun block() {
         val deque = ConcurrentLinkedDeque<Int>()
         var r1: Int = -1
@@ -345,9 +310,7 @@ class IncorrectConcurrentLinkedDequeRunConcurrentRepresentationTest : BaseRunCon
     }
 }
 
-class IncorrectHashmapRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
-    if (isJdk8) "run_concurrent_test/hashmap_jdk8.txt" else "run_concurrent_test/hashmap.txt"
-) {
+class IncorrectHashmapRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>("run_concurrent_test/hashmap") {
     override fun block() {
         val hashMap = HashMap<Int, Int>()
         var r1: Int? = null
@@ -364,18 +327,7 @@ class IncorrectHashmapRunConcurrentRepresentationTest : BaseRunConcurrentReprese
     }
 }
 
-class ThreadPoolRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
-    when (testJdkVersion) {
-        TestJdkVersion.JDK_8  -> "run_concurrent_test/thread_pool/thread_pool_jdk8.txt"
-        TestJdkVersion.JDK_11 -> "run_concurrent_test/thread_pool/thread_pool_jdk11.txt"
-        TestJdkVersion.JDK_13 -> "run_concurrent_test/thread_pool/thread_pool_jdk13.txt"
-        TestJdkVersion.JDK_15 -> "run_concurrent_test/thread_pool/thread_pool_jdk15.txt"
-        TestJdkVersion.JDK_17 -> "run_concurrent_test/thread_pool/thread_pool_jdk17.txt"
-        TestJdkVersion.JDK_19 -> "run_concurrent_test/thread_pool/thread_pool_jdk19.txt"
-        TestJdkVersion.JDK_20 -> "run_concurrent_test/thread_pool/thread_pool_jdk20.txt"
-        TestJdkVersion.JDK_21 -> "run_concurrent_test/thread_pool/thread_pool_jdk21.txt"
-    }
-) {
+class ThreadPoolRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>("run_concurrent_test/thread_pool/thread_pool") {
     @Before
     fun setUp() {
         assumeFalse(isInTraceDebuggerMode) // unstable hash-code

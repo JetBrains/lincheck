@@ -13,7 +13,7 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
 
 
-class UnsafeTraceRepresentationTest : BaseTraceRepresentationTest("unsafe_representation_trace.txt") {
+class UnsafeTraceRepresentationTest : BaseTraceRepresentationTest("unsafe_representation_trace") {
 
     private val array = Array(3) { IntWrapper(it) }
     private var value: Int = 2
