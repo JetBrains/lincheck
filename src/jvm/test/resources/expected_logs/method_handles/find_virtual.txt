@@ -1,0 +1,33 @@
+= Concurrent test failed =
+
+java.lang.IllegalStateException: Check failed.
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseMethodHandleLookupRepresentationTest.block(MethodHandleLookupTests.kt:56)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseMethodHandleLookupRepresentationTest.block(MethodHandleLookupTests.kt:44)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:40)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+
+The following interleaving leads to the error:
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                  Thread 1                                                                                                  |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| MethodHandlesFindVirtualRepresentationTest#1.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:40) |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+
+Detailed trace:
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                  Thread 1                                                                                                  |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| MethodHandlesFindVirtualRepresentationTest#1.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:40) |
+|   block(): threw IllegalStateException at BaseMethodHandleLookupRepresentationTest.block(MethodHandleLookupTests.kt:44)                                                                                    |
+|     doTest() at BaseMethodHandleLookupRepresentationTest.block(MethodHandleLookupTests.kt:53)                                                                                                              |
+|       Companion#1.create(): Counter#1 at MethodHandlesFindVirtualRepresentationTest.doTest(MethodHandleLookupTests.kt:86)                                                                                  |
+|         Counter.shared = Counter#1 at Counter$Companion.create(MethodHandleLookupTests.kt:196)                                                                                                             |
+|       DirectMethodHandle#1.invoke(Counter#1) at MethodHandlesFindVirtualRepresentationTest.doTest(MethodHandleLookupTests.kt:91)                                                                           |
+|         Counter#1.value ➜ 0 at Counter.increment(MethodHandleLookupTests.kt:187)                                                                                                                           |
+|         Counter#1.value = 1 at Counter.increment(MethodHandleLookupTests.kt:187)                                                                                                                           |
+|       DirectMethodHandle#1.invokeExact(Counter#1) at MethodHandlesFindVirtualRepresentationTest.doTest(MethodHandleLookupTests.kt:92)                                                                      |
+|         Counter#1.value ➜ 1 at Counter.increment(MethodHandleLookupTests.kt:187)                                                                                                                           |
+|         Counter#1.value = 2 at Counter.increment(MethodHandleLookupTests.kt:187)                                                                                                                           |
+|       Counter#1.value ➜ 2 at MethodHandlesFindVirtualRepresentationTest.doTest(MethodHandleLookupTests.kt:93)                                                                                              |
+|   result: IllegalStateException #1                                                                                                                                                                         |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
