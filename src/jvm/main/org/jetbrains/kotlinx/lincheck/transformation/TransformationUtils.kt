@@ -19,6 +19,7 @@ import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import java.io.*
 import java.util.*
 import java.util.concurrent.*
+import java.lang.invoke.*
 import kotlin.reflect.*
 import kotlin.reflect.jvm.*
 
@@ -457,6 +458,30 @@ private fun isSubClassOf(internalClassName: String, internalSuperClassName: Stri
  */
 internal fun containsClassloaderInName(className: String): Boolean =
     className.contains("ClassLoader")
+
+/**
+ * Determines if a given class name represents a method handle related class,
+ * that is one of the following classes:
+ *   - [MethodHandle]
+ *   - [MethodHandles]
+ *   - [MethodHandles.Lookup]
+ *   - [MethodType]
+ */
+internal fun isMethodHandleRelatedClass(className: String): Boolean =
+    className.startsWith("java.lang.invoke") &&
+    (className.contains("MethodHandle") || className.contains("MethodType"))
+
+/**
+ * Determines whether the specified [MethodHandle] method should be ignored.
+ *
+ * We ignore all methods from [MethodHandle], except various `invoke` methods, such as:
+ *   - [MethodHandle.invoke]
+ *   - [MethodHandle.invokeExact]
+ *   - [MethodHandle.invokeWithArguments]
+ * These methods are not ignored because we need to analyze the invoked target method.
+ */
+internal fun isIgnoredMethodHandleMethod(className: String, methodName: String): Boolean =
+    isMethodHandleRelatedClass(className) && !methodName.contains("invoke")
 
 /**
  * Tests if the provided [className] represents [StackTraceElement] class.

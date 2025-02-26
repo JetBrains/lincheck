@@ -97,13 +97,18 @@ internal class LincheckClassVisitor(
             }
             return mv
         }
-        /* Wrap `ClassLoader::loadClass` calls into ignored sections
-         * to ensure their code is not analyzed by the Lincheck.
-         */
-        if (containsClassloaderInName(className)) {
+        // Wrap `ClassLoader::loadClass` calls into ignored sections
+        // to ensure their code is not analyzed by the Lincheck.
+        if (containsClassloaderInName(className.canonicalClassName)) {
             if (methodName == "loadClass") {
                 mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             }
+            return mv
+        }
+        // Wrap `MethodHandles.Lookup.findX` and related methods into ignored sections
+        // to ensure their code is not analyzed by the Lincheck.
+        if (isIgnoredMethodHandleMethod(className.canonicalClassName, methodName)) {
+            mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
         }
         /* Wrap all methods of the ` StackTraceElement ` class into ignored sections.
