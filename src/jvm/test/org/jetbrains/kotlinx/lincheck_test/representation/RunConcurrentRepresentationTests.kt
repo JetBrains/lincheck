@@ -279,11 +279,17 @@ class KotlinThreadRunConcurrentRepresentationTest : BaseRunConcurrentRepresentat
 
 // TODO investigate difference for trace debugger (Evgeniy Moiseenko)
 class LivelockRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
-    when {
-        isInTraceDebuggerMode && isJdk8 -> "run_concurrent_test/livelock_trace_debugger_jdk8.txt"
-        isInTraceDebuggerMode -> "run_concurrent_test/livelock_trace_debugger.txt"
-        isJdk8 -> "run_concurrent_test/livelock_jdk8.txt"
-        else -> "run_concurrent_test/livelock.txt"
+    if (isInTraceDebuggerMode) {
+        if (isJdk8)
+             "run_concurrent_test/livelock_trace_debugger_jdk8.txt"
+        else "run_concurrent_test/livelock_trace_debugger.txt"
+    } else {
+        when (testJdkVersion) {
+            TestJdkVersion.JDK_8  -> "run_concurrent_test/livelock_jdk8.txt"
+            TestJdkVersion.JDK_11 -> "run_concurrent_test/livelock_jdk11.txt"
+            TestJdkVersion.JDK_13 -> "run_concurrent_test/livelock_jdk13.txt"
+            else                  -> "run_concurrent_test/livelock.txt"
+        }
     }
 ) {
     override fun block() {
