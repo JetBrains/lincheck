@@ -143,7 +143,7 @@ class MethodHandlesFindGetterSetterRepresentationTest : BaseMethodHandleLookupRe
 }
 
 
-class MethodHandlesVarHandleRepresentationTest : BaseMethodHandleLookupRepresentationTest(
+class MethodHandlesFindVarHandleRepresentationTest : BaseMethodHandleLookupRepresentationTest(
     "method_handles/find_var_handle.txt"
 ) {
     override fun doTest() {
