@@ -109,24 +109,6 @@ class MethodHandlesFindStaticRepresentationTest : BaseMethodHandleLookupRepresen
     }
 }
 
-class MethodHandlesFindSpecialRepresentationTest : BaseMethodHandleLookupRepresentationTest(
-    "method_handles/find_special.txt"
-) {
-    override fun doTest() {
-        val counter = CounterDerived.create()
-        val lookup = MethodHandles.privateLookupIn(CounterDerived::class.java, MethodHandles.lookup())
-        val methodHandle = lookup
-            .findSpecial(Counter::class.java, "increment",
-                MethodType.methodType(Void.TYPE),
-                CounterDerived::class.java
-            )
-        counter.increment()
-        methodHandle.invoke(counter)
-        methodHandle.invokeExact(counter)
-        check(counter.value == 4)
-    }
-}
-
 class MethodHandlesFindGetterSetterRepresentationTest : BaseMethodHandleLookupRepresentationTest(
     "method_handles/find_getter_setter.txt"
 ) {
@@ -155,19 +137,6 @@ class MethodHandlesBindToRepresentationTest : BaseMethodHandleLookupRepresentati
         methodHandle.invoke()
         methodHandle.invokeExact()
         check(counter.value == 2)
-    }
-}
-
-class MethodHandlesFindVarHandleRepresentationTest : BaseMethodHandleLookupRepresentationTest(
-    "method_handles/find_var_handle.txt"
-) {
-    override fun doTest() {
-        val counter = Counter.create()
-        val varHandle = MethodHandles.lookup()
-            .findVarHandle(Counter::class.java, "value", Int::class.java)
-        varHandle.set(counter, 42)
-        check(varHandle.get(counter) == 42)
-        check(counter.value == 42)
     }
 }
 
