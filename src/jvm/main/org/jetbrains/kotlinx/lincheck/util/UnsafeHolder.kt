@@ -66,15 +66,15 @@ internal fun readFieldSafely(obj: Any?, field: Field): kotlin.Result<Any?> =
         readFieldViaUnsafe(obj, field)
     }
     .onFailure { exception ->
-        Logger.warn { "Failed to read field ${field.name} via Unsafe" }
-        Logger.warn(exception)
+        Logger.debug { "Failed to read field ${field.name} via Unsafe" }
+        Logger.debug(exception)
     }
     .recoverCatching {
         field.apply { isAccessible = true }.get(obj)
     }
     .onFailure { exception ->
-        Logger.warn { "Failed to read field ${field.name} via reflection." }
-        Logger.warn(exception)
+        Logger.debug { "Failed to read field ${field.name} via reflection." }
+        Logger.debug(exception)
     }
 
 internal fun readArrayElementViaUnsafe(arr: Any, index: Int): Any? {

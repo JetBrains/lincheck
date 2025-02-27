@@ -42,6 +42,10 @@ internal object Logger {
 
     fun warn(e: Throwable) = log(LoggingLevel.WARN, e)
 
+    fun info(e: Throwable) = log(LoggingLevel.INFO, e)
+
+    fun debug(e: Throwable) = log(LoggingLevel.DEBUG, e)
+
     private inline fun log(logLevel: LoggingLevel, lazyMessage: () -> String) {
         if (logLevel >= this.logLevel) {
             write(logLevel, lazyMessage(), logWriter)
