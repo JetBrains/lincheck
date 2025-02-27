@@ -627,9 +627,7 @@ internal fun collectExceptionStackTraces(executionResult: ExecutionResult): Exce
         .filterIsInstance<ExceptionResult>()
         .forEachIndexed { index, exceptionResult ->
             val exception = exceptionResult.throwable
-            // TODO: fix me
-            @Suppress("KotlinConstantConditions")
-            if (exception.isInternalLincheckBug() && false) {
+            if (exception.isInternalLincheckBug()) {
                 return InternalLincheckBugResult(exception)
             }
             val stackTrace = exception.stackTrace

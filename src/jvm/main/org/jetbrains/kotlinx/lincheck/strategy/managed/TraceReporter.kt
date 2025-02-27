@@ -29,8 +29,7 @@ internal fun StringBuilder.appendTrace(
     val nThreads = trace.threadNames.size
     val threadNames = trace.threadNames
     val startTraceGraphNode = constructTraceGraph(nThreads, failure, results, trace, exceptionStackTraces)
-    // TODO: it was `isGeneralPurposeModelCheckingScenario(failure.scenario)`
-    if (false) {
+    if (isGeneralPurposeModelCheckingScenario(failure.scenario)) {
         val (callNode, actorResultNode) = extractLambdaCallOfGeneralPurposeModelChecking(startTraceGraphNode)
         // TODO: remove these workarounds after `TraceReporter.kt` refactoring
         if (callNode == null) {
@@ -392,7 +391,7 @@ private fun removeSyntheticFieldAccessTracePoints(trace: List<TracePoint>) {
         }
 }
 
-private fun isSyntheticFieldAccess(methodName: String): Boolean = 
+private fun isSyntheticFieldAccess(methodName: String): Boolean =
     methodName.contains("access\$get") || methodName.contains("access\$set")
 
 /**
@@ -436,7 +435,7 @@ private fun compressCallStackTrace(
             removed.add(nextElement.id)
             continue
         }
-        
+
         // Check if current and next are compressible
         if (isCompressiblePair(currentElement.tracePoint.methodName, nextElement.tracePoint.methodName)) {
             // Combine fields of next and current, and store in current
@@ -475,7 +474,7 @@ private fun actorNodeResultRepresentation(result: Result?, failure: LincheckFail
 }
 
 /**
- * Used by [compressCallStackTrace] to remove the two `invoke()` lines at the beginning of 
+ * Used by [compressCallStackTrace] to remove the two `invoke()` lines at the beginning of
  * a user-defined thread trace.
  */
 private fun isUserThreadStart(currentElement: CallStackTraceElement, nextElement: CallStackTraceElement): Boolean =
@@ -530,7 +529,7 @@ private fun isDefaultPair(currentName: String, nextName: String): Boolean =
  *
  */
 private fun isAccessPair(currentName: String, nextName: String): Boolean =
-    currentName == "access$${nextName}" 
+    currentName == "access$${nextName}"
 
 /**
  * Helper class to provider execution results, including a validation function result
@@ -711,7 +710,7 @@ internal abstract class TraceInnerNode(prefixProvider: PrefixProvider, iThread: 
     fun addInternalEvent(node: TraceNode) {
         _internalEvents.add(node)
     }
-    
+
 }
 
 internal class CallNode(
@@ -756,12 +755,12 @@ internal class ActorNode(
         val actorRepresentation =
             prefix + actorRepresentation + if (resultRepresentation != null) ": $resultRepresentation" else ""
         traceRepresentation.add(TraceEventRepresentation(iThread, actorRepresentation))
-        
+
         if (!shouldBeExpanded(verboseTrace)) {
             if (isCustomThreadActor) directChildren.forEach { it.addRepresentationTo(traceRepresentation, true) }
             lastState?.let { traceRepresentation.add(stateEventRepresentation(iThread, it)) }
             return lastInternalEvent.next
-        } 
+        }
         return next
     }
 }
