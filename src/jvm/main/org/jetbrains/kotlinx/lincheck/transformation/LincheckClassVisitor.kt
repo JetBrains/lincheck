@@ -130,11 +130,6 @@ internal class LincheckClassVisitor(
         if (isCoroutineInternalClass(className)) {
             return mv
         }
-        // TODO: refactor me
-        if (className.startsWith("java/lang/invoke/") && className.contains("MethodHandle") && !methodName.contains("invoke")) {
-            mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
-            return mv
-        }
         // Debugger implicitly evaluates toString for variables rendering
         // We need to disable breakpoints in such a case, as the numeration will break.
         // Breakpoints are disabled as we do not instrument toString and enter an ignored section,
