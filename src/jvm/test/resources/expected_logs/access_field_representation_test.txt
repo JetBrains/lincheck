@@ -1,0 +1,28 @@
+= Concurrent test failed =
+
+java.lang.IllegalStateException: Check failed.
+	at org.jetbrains.kotlinx.lincheck_test.representation.AccessFieldRepresentationTest.block(AccessFunctionRepresentationTest.kt:49)
+	at org.jetbrains.kotlinx.lincheck_test.representation.AccessFieldRepresentationTest.block(AccessFunctionRepresentationTest.kt:42)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:40)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+
+The following interleaving leads to the error:
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                           Thread 1                                                                                            |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AccessFieldRepresentationTest#1.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:40) |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+
+Detailed trace:
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                           Thread 1                                                                                            |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AccessFieldRepresentationTest#1.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:40) |
+|   block(): threw IllegalStateException at AccessFieldRepresentationTest.block(AccessFunctionRepresentationTest.kt:42)                                                                         |
+|     AccessFunctionRepresentationTestKt.runn(block$1) at AccessFieldRepresentationTest.block(AccessFunctionRepresentationTest.kt:48)                                                           |
+|       block$1.invoke() at AccessFunctionRepresentationTestKt.runn(AccessFunctionRepresentationTest.kt:39)                                                                                     |
+|         invoke() at AccessFieldRepresentationTest$block$1.invoke(AccessFunctionRepresentationTest.kt:48)                                                                                      |
+|           AccessFieldRepresentationTest#1.a ➜ 1 at AccessFieldRepresentationTest$block$1.invoke(AccessFunctionRepresentationTest.kt:48)                                                       |
+|           AccessFieldRepresentationTest#1.a = 2 at AccessFieldRepresentationTest$block$1.invoke(AccessFunctionRepresentationTest.kt:48)                                                       |
+|   result: IllegalStateException #1                                                                                                                                                            |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

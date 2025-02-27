@@ -399,10 +399,31 @@ private fun removeNestedThreadStartPoints(trace: List<TracePoint>) = trace
         }
     }
 
-private fun compressTrace(trace: List<TracePoint>) =
+private fun compressTrace(trace: List<TracePoint>) {
+    removeSyntheticFieldAccessTracePoints(trace)
     HashSet<Int>().let { removed ->
-        trace.apply {  forEach { it.callStackTrace = compressCallStackTrace(it.callStackTrace, removed) } } 
+        trace.apply { forEach { it.callStackTrace = compressCallStackTrace(it.callStackTrace, removed) } }
     }
+}
+
+/**
+ * Remove access$get and access$set, which is used when a lambda argument accesses a private field for example.
+ * This is different from fun$access, which is addressed in [compressCallStackTrace].
+ */
+private fun removeSyntheticFieldAccessTracePoints(trace: List<TracePoint>) {
+    trace
+        .filter { it is ReadTracePoint || it is WriteTracePoint }
+        .forEach { point ->
+            val lastCall = point.callStackTrace.last()
+            if (lastCall.tracePoint.methodName.contains("access\$get")
+                || lastCall.tracePoint.methodName.contains("access\$set")) {
+                val secondLast = lastCall.tracePoint.callStackTrace.last()
+                if (point is ReadTracePoint) point.stackTraceElement = secondLast.tracePoint.stackTraceElement
+                if (point is WriteTracePoint) point.stackTraceElement = secondLast.tracePoint.stackTraceElement
+                point.callStackTrace = point.callStackTrace.dropLast(1)
+            }
+        }
+}
 
 /**
  * Merges fun$default(...) calls.
@@ -471,7 +492,6 @@ private fun compressCallStackTrace(
     }
     return compressedStackTrace
 }
-
 
 private fun actorNodeResultRepresentation(result: Result?, failure: LincheckFailure, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>): String? {
     // We don't mark actors that violated obstruction freedom as hung.

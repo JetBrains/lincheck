@@ -38,3 +38,14 @@ class AccessFunctionRepresentationTest: BaseRunConcurrentRepresentationTest<Unit
 fun runn(r: () -> Unit) {
     r()
 }
+
+class AccessFieldRepresentationTest: BaseRunConcurrentRepresentationTest<Unit>("access_field_representation_test.txt") {
+
+    @Volatile
+    private var a = 0
+    
+    override fun block() {
+        runn { a++ }
+        check(false)
+    }
+}
