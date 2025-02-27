@@ -16,11 +16,7 @@ import java.lang.invoke.MethodHandles
 import java.lang.invoke.MethodType
 
 class MethodHandlesFindSpecialRepresentationTest : BaseMethodHandleLookupRepresentationTest(
-    when (testJdkVersion) {
-        TestJdkVersion.JDK_11 -> "method_handles/find_special_jdk11.txt"
-        TestJdkVersion.JDK_13 -> "method_handles/find_special_jdk13.txt"
-        else                  -> "method_handles/find_special.txt"
-    }
+        "method_handles/find_special"
 ) {
     override fun doTest() {
         val counter = CounterDerived.create()
@@ -38,7 +34,7 @@ class MethodHandlesFindSpecialRepresentationTest : BaseMethodHandleLookupReprese
 }
 
 class MethodHandlesFindVarHandleRepresentationTest : BaseMethodHandleLookupRepresentationTest(
-    "method_handles/find_var_handle.txt"
+    "method_handles/find_var_handle"
 ) {
     override fun doTest() {
         val counter = Counter.create()
