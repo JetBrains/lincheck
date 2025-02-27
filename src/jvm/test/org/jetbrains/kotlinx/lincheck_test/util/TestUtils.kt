@@ -26,7 +26,10 @@ internal inline fun <reified E: Exception> Options<*, *>.checkFailsWithException
     try {
         LinChecker(testClass, this).check()
     } catch (e: Exception) {
-        check(!expectedOutputFilePrefix.contains(".txt")) { "should only be prefix of outputfile" }
+        check(!expectedOutputFilePrefix.contains(".txt")) { 
+            "Filename $expectedOutputFilePrefix should not contain a file extension (.txt)"        
+        }
+        
         assertTrue(
             "Exception of type ${E::class.simpleName} expected, but ${e::class.simpleName} was thrown.\n $e",
             e is E
@@ -57,7 +60,9 @@ internal inline fun <reified E: Exception> Options<*, *>.checkFailsWithException
  * @param expectedOutputFilePrefix name of file stored in resources/expected_logs, storing the expected lincheck output.
  */
 internal fun LincheckFailure?.checkLincheckOutput(expectedOutputFilePrefix: String) {
-    check(!expectedOutputFilePrefix.contains(".txt")) { "should only be prefix of outputfile" }
+    check(!expectedOutputFilePrefix.contains(".txt")) {
+        "Filename $expectedOutputFilePrefix should not contain a file extension (.txt)"
+    }
     check(this != null) { "The test should fail" }
     val actualOutput = StringBuilder().appendFailure(this).toString()
     
@@ -106,7 +111,7 @@ private fun getFileToCompareTo(expectedOutputFilePrefix: String): String {
 // prefix.txt, prefix_jdk_15.txt, prefix_trace_debugger.txt, prefix_trace_debugger_jdk_15.txt, etc..
 private fun getFileNameFor(expectedOutputFilePrefix: String, jdkVersion: TestJdkVersion, traceMode: Boolean): String {
     return "${expectedOutputFilePrefix}${if (traceMode) "_trace_debugger" else ""}${
-        if (jdkVersion == TestJdkVersion.JDK_8) "" else "_${jdkVersion.name.lowercase()}"
+        if (jdkVersion == TestJdkVersion.JDK_8) "" else "_${jdkVersion}"
     }.txt"
 }
 
@@ -140,10 +145,7 @@ internal fun getExpectedLogFileFromResources(fileName: String): File =
 
 // Returns true if file exists.
 internal fun logFileFromResourcesExists(fileName: String): Boolean =
-    try { 
-        getExpectedLogFileFromResources(fileName) 
-        true
-    } catch (_: IllegalStateException) { false }
+    runCatching { getExpectedLogFileFromResources(fileName) }.isSuccess
 
 internal fun getExpectedLogFileFromSources(fileName: String): File = 
     File("src/jvm/test/resources/expected_logs/$fileName")
@@ -181,6 +183,9 @@ internal val OVERWRITE_REPRESENTATION_TESTS_OUTPUT: Boolean =
  */
 internal enum class TestJdkVersion {
     JDK_8, JDK_11, JDK_13, JDK_15, JDK_17, JDK_19, JDK_20, JDK_21;
+    override fun toString(): String {
+        return "jdk${name.removePrefix("JDK_").lowercase()}"
+    }
 }
 
 /**
