@@ -275,12 +275,15 @@ internal object LincheckJavaAgent {
         processedObjects += obj
 
         var clazz: Class<*> = obj.javaClass
+        val className = clazz.name
 
-        val lambdaSuffixStart = "\$\$Lambda\$"
-        if (clazz.name.contains(lambdaSuffixStart)) {
-            ensureClassHierarchyIsTransformed(clazz.name.substringBefore(lambdaSuffixStart))
-        } else {
-            ensureClassHierarchyIsTransformed(clazz)
+        when {
+            isJavaLambdaClass(className) -> {
+                ensureClassHierarchyIsTransformed(getJavaLambdaEnclosingClass(className))
+            }
+            else -> {
+                ensureClassHierarchyIsTransformed(clazz)
+            }
         }
 
         while (true) {
@@ -305,7 +308,6 @@ internal object LincheckJavaAgent {
         if (!shouldTransform(clazz.name, instrumentationMode)) return
         if (instrumentation.isModifiableClass(clazz)) {
             instrumentedClasses += clazz.name
-//            println(clazz.name)
             instrumentation.retransformClasses(clazz)
         }
         // Traverse static fields.
