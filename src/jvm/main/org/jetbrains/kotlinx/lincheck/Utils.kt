@@ -305,8 +305,12 @@ internal inline fun <R> runOutsideIgnoredSection(descriptor: ThreadDescriptor?, 
     }
 }
 
+internal fun isInLincheckPackage(className: String) =
+    className.startsWith(LINCHECK_PACKAGE_NAME) || className.startsWith(LINCHECK_BOOTSTRAP_PACKAGE_NAME)
+
 internal const val LINCHECK_PACKAGE_NAME = "org.jetbrains.kotlinx.lincheck."
 internal const val LINCHECK_RUNNER_PACKAGE_NAME = "org.jetbrains.kotlinx.lincheck.runner."
+internal const val LINCHECK_BOOTSTRAP_PACKAGE_NAME = "sun.nio.ch.lincheck."
 
 internal fun <T> Class<T>.newDefaultInstance(): T {
     @Suppress("UNCHECKED_CAST")
