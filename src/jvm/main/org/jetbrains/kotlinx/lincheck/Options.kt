@@ -12,6 +12,8 @@ package org.jetbrains.kotlinx.lincheck
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.verifier.*
+import org.jetbrains.kotlinx.lincheck.util.DEFAULT_LOG_LEVEL
+import org.jetbrains.kotlinx.lincheck.util.LoggingLevel
 
 /**
  * Abstract class for test options.

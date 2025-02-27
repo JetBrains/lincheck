@@ -10,11 +10,12 @@
 
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.LoggingLevel.*
 import sun.nio.ch.lincheck.TestThread
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.util.LoggingLevel
+import org.jetbrains.kotlinx.lincheck.util.LoggingLevel.*
 import java.io.*
 import kotlin.math.max
 import kotlin.reflect.jvm.javaMethod
@@ -44,11 +45,6 @@ class Reporter(private val logLevel: LoggingLevel) {
         val output = if (logLevel == WARN) outErr else out
         output.println(sb)
     }
-}
-
-@JvmField val DEFAULT_LOG_LEVEL = WARN
-enum class LoggingLevel {
-    INFO, WARN, OFF
 }
 
 /**
