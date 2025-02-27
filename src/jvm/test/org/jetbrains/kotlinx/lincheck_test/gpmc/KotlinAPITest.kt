@@ -212,4 +212,28 @@ class KotlinAPITest {
 
         Assert.assertFalse(r1 == 1 && r2 == 1)
     }
+
+    @Test
+    fun `test thread double start`() = runConcurrentTest {
+        var counter = AtomicInteger(0)
+        val t1 = thread {
+            counter.incrementAndGet()
+        }
+        val t2 = thread {
+            counter.incrementAndGet()
+        }
+
+        try {
+            t1.start()
+            t2.start()
+        } catch (_: IllegalThreadStateException) {
+            // expected behavior
+            return@runConcurrentTest
+        }
+
+        t1.join()
+        t2.join()
+
+        Assert.fail()
+    }
 }

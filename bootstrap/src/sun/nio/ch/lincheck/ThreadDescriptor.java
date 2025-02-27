@@ -263,7 +263,6 @@ public class ThreadDescriptor {
             ((TestThread) thread).descriptor = descriptor;
             return;
         }
-        // TODO: do nothing, let JVM fail because of two `start()` calls
         if (threadDescriptorsMap.containsKey(thread)) {
             throw DescriptorAlreadySetException(thread);
         }
