@@ -11,51 +11,24 @@
 package org.jetbrains.kotlinx.lincheck_test.gpmc
 
 import org.jetbrains.kotlinx.lincheck.ExperimentalModelCheckingAPI
+import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
 import org.jetbrains.kotlinx.lincheck.runConcurrentTest
-import org.junit.Assert
-import org.junit.Test
-import java.util.concurrent.ConcurrentHashMap
+import kotlin.concurrent.thread
 import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.concurrent.thread
+import org.junit.Assert
+import org.junit.Test
 
 @OptIn(ExperimentalModelCheckingAPI::class)
 class KotlinAPITest {
 
-    @Test
-    fun test() = runConcurrentTest {
-        JavaAPITest.testImpl()
-    }
-
-    @Test
-    fun test2() = runConcurrentTest {
-        val deque = ConcurrentLinkedDeque<Int>()
+    @Test(expected = LincheckAssertionError::class)
+    fun `test Kotlin thread`() = runConcurrentTest {
         var r1: Int = -1
         var r2: Int = -1
-        deque.addLast(1)
 
-        val t1 = Thread {
-            r1 = deque.pollFirst()
-        }
-        val t2 = Thread {
-            deque.addFirst(0)
-            r2 = deque.peekLast()
-        }
-
-        t1.join()
-        t2.join()
-
-        Assert.assertTrue(!(r1 == 1 && r2 == 1))
-    }
-
-    @Test
-    fun test5() = runConcurrentTest {
         val deque = ConcurrentLinkedDeque<Int>()
-        var r1: Int = -1
-        var r2: Int = -1
         deque.addLast(1)
-
-        ConcurrentHashMap<String, String>()
 
         val t1 = thread {
             r1 = deque.pollFirst()
@@ -68,14 +41,63 @@ class KotlinAPITest {
         t1.join()
         t2.join()
 
-        Assert.assertTrue(!(r1 == 1 && r2 == 1))
+        assert(!(r1 == 1 && r2 == 1))
     }
 
-    @Test
-    fun test4() = runConcurrentTest {
-        val deque = ConcurrentLinkedDeque<Int>()
+    @Test(expected = LincheckAssertionError::class)
+    fun `test Kotlin thread(start=false)`() = runConcurrentTest {
         var r1: Int = -1
         var r2: Int = -1
+
+        val deque = ConcurrentLinkedDeque<Int>()
+        deque.addLast(1)
+
+        val t1 = thread(start = false) {
+            r1 = deque.pollFirst()
+        }
+        val t2 = thread(start = false) {
+            deque.addFirst(0)
+            r2 = deque.peekLast()
+        }
+
+        t1.start()
+        t2.start()
+        t1.join()
+        t2.join()
+
+        assert(!(r1 == 1 && r2 == 1))
+    }
+
+    @Test(expected = LincheckAssertionError::class)
+    fun `test Java Thread`() = runConcurrentTest {
+        var r1: Int = -1
+        var r2: Int = -1
+
+        val deque = ConcurrentLinkedDeque<Int>()
+        deque.addLast(1)
+
+        val t1 = Thread {
+            r1 = deque.pollFirst()
+        }
+        val t2 = Thread {
+            deque.addFirst(0)
+            r2 = deque.peekLast()
+        }
+
+        t1.start()
+        t2.start()
+        t1.join()
+        t2.join()
+
+        assert(!(r1 == 1 && r2 == 1))
+    }
+
+    @Test(expected = LincheckAssertionError::class)
+    fun `test Java Thread and InterruptedException handling`() = runConcurrentTest {
+        var r1: Int = -1
+        var r2: Int = -1
+
+        val deque = ConcurrentLinkedDeque<Int>()
         deque.addLast(1)
 
         val t1 = Thread {
@@ -89,18 +111,22 @@ class KotlinAPITest {
         t1.start()
         t2.start()
 
-        t1.join()
-        t2.join()
+        try {
+            t1.join()
+            t2.join()
+        } catch (e: InterruptedException) {
+            throw RuntimeException(e)
+        }
 
-        Assert.assertTrue(!(r1 == 1 && r2 == 1))
+        assert(!(r1 == 1 && r2 == 1))
     }
 
-    @Test
-    fun test3() = runConcurrentTest {
-        val deque = ConcurrentLinkedDeque<Int?>()
+    @Test(expected = LincheckAssertionError::class)
+    fun `test Java Thread and AtomicInteger`() = runConcurrentTest {
         val r1 = AtomicInteger(-1)
         val r2 = AtomicInteger(-1)
 
+        val deque = ConcurrentLinkedDeque<Int?>()
         deque.addLast(1)
 
         val t1 = Thread {
@@ -113,21 +139,22 @@ class KotlinAPITest {
 
         t1.start()
         t2.start()
+        t1.join()
+        t2.join()
 
-        try {
-            t1.join()
-            t2.join()
-        } catch (e: InterruptedException) {
-            throw RuntimeException(e)
-        }
         Assert.assertFalse(r1.get() == 1 && r2.get() == 1)
     }
 
-    fun testImpl() {
-        val deque = ConcurrentLinkedDeque<Int>()
+    @Test(expected = LincheckAssertionError::class)
+    fun `test method reference`() = runConcurrentTest(block = ::testImpl)
+
+    private fun testImpl() {
         var r1: Int = -1
         var r2: Int = -1
+
+        val deque = ConcurrentLinkedDeque<Int>()
         deque.addLast(1)
+
         val t1 = thread {
             r1 = deque.pollFirst()
         }
@@ -135,8 +162,54 @@ class KotlinAPITest {
             deque.addFirst(0)
             r2 = deque.peekLast()
         }
+
         t1.join()
         t2.join()
-        Assert.assertTrue(!(r1 == 1 && r2 == 1))
+
+        assert(!(r1 == 1 && r2 == 1))
+    }
+
+    @Test(expected = LincheckAssertionError::class)
+    fun `test Kotlin check`() = runConcurrentTest {
+        var r1: Int = -1
+        var r2: Int = -1
+
+        val deque = ConcurrentLinkedDeque<Int>()
+        deque.addLast(1)
+
+        val t1 = thread {
+            r1 = deque.pollFirst()
+        }
+        val t2 = thread {
+            deque.addFirst(0)
+            r2 = deque.peekLast()
+        }
+
+        t1.join()
+        t2.join()
+
+        check(!(r1 == 1 && r2 == 1))
+    }
+
+    @Test(expected = LincheckAssertionError::class)
+    fun `test JUnit assert`() = runConcurrentTest {
+        var r1: Int = -1
+        var r2: Int = -1
+
+        val deque = ConcurrentLinkedDeque<Int>()
+        deque.addLast(1)
+
+        val t1 = thread {
+            r1 = deque.pollFirst()
+        }
+        val t2 = thread {
+            deque.addFirst(0)
+            r2 = deque.peekLast()
+        }
+
+        t1.join()
+        t2.join()
+
+        Assert.assertFalse(r1 == 1 && r2 == 1)
     }
 }
