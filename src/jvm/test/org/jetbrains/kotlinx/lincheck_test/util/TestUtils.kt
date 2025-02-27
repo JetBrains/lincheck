@@ -26,33 +26,15 @@ internal inline fun <reified E: Exception> Options<*, *>.checkFailsWithException
     try {
         LinChecker(testClass, this).check()
     } catch (e: Exception) {
-        check(!expectedOutputFilePrefix.contains(".txt")) { 
-            "Filename $expectedOutputFilePrefix should not contain a file extension (.txt)"        
-        }
-        
         assertTrue(
             "Exception of type ${E::class.simpleName} expected, but ${e::class.simpleName} was thrown.\n $e",
             e is E
         )
         val actualOutput = e.message ?: ""
-        // Always overwrite jdk8 non-trace
-        if (testJdkVersion == TestJdkVersion.JDK_8 && !isInTraceDebuggerMode && OVERWRITE_REPRESENTATION_TESTS_OUTPUT) {
-            getExpectedLogFileFromSources(getFileNameFor(expectedOutputFilePrefix, TestJdkVersion.JDK_8, false)).writeText(actualOutput)
-            return
-        }
-
-        val compareToFile = getFileToCompareTo(expectedOutputFilePrefix)
-        val expectedOutput = getExpectedLogFromResources(compareToFile)
-
-        if (actualOutput.filtered != expectedOutput.filtered) {
-            if (OVERWRITE_REPRESENTATION_TESTS_OUTPUT) {
-                getExpectedLogFileFromSources(getFileNameFor(expectedOutputFilePrefix, testJdkVersion, isInTraceDebuggerMode)).writeText(actualOutput)
-            } else {
-                assertEquals(expectedOutput, actualOutput)
-            }
-        }
+        compareAndOverwrite(expectedOutputFilePrefix, actualOutput)
     }
 }
+
 
 /**
  * Checks that failure output matches the expected one stored in a file.
@@ -60,18 +42,25 @@ internal inline fun <reified E: Exception> Options<*, *>.checkFailsWithException
  * @param expectedOutputFilePrefix name of file stored in resources/expected_logs, storing the expected lincheck output.
  */
 internal fun LincheckFailure?.checkLincheckOutput(expectedOutputFilePrefix: String) {
+    check(this != null) { "The test should fail" }
+    val actualOutput = StringBuilder().appendFailure(this).toString()
+    compareAndOverwrite(expectedOutputFilePrefix, actualOutput)
+}
+
+/**
+ * Compares actual output to expected output on file.
+ * If needed and in [OVERWRITE_REPRESENTATION_TESTS_OUTPUT] mode, overwrite.
+ */
+private fun compareAndOverwrite(expectedOutputFilePrefix: String, actualOutput: String) {
     check(!expectedOutputFilePrefix.contains(".txt")) {
         "Filename $expectedOutputFilePrefix should not contain a file extension (.txt)"
     }
-    check(this != null) { "The test should fail" }
-    val actualOutput = StringBuilder().appendFailure(this).toString()
-    
     // Always overwrite jdk8 non-trace
     if (testJdkVersion == TestJdkVersion.JDK_8 && !isInTraceDebuggerMode && OVERWRITE_REPRESENTATION_TESTS_OUTPUT) {
         getExpectedLogFileFromSources(getFileNameFor(expectedOutputFilePrefix, TestJdkVersion.JDK_8, false)).writeText(actualOutput)
         return
     }
-    
+
     val compareToFile = getFileToCompareTo(expectedOutputFilePrefix)
     val expectedOutput = getExpectedLogFromResources(compareToFile)
 
@@ -184,7 +173,7 @@ internal val OVERWRITE_REPRESENTATION_TESTS_OUTPUT: Boolean =
 internal enum class TestJdkVersion {
     JDK_8, JDK_11, JDK_13, JDK_15, JDK_17, JDK_19, JDK_20, JDK_21;
     override fun toString(): String {
-        return "jdk${name.removePrefix("JDK_").lowercase()}"
+        return "jdk${name.removePrefix("JDK_")}"
     }
 }
 
