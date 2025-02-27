@@ -22,14 +22,12 @@ import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.INSTRUMEN
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentationMode
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentedClasses
 import org.jetbrains.kotlinx.lincheck.util.Logger
-import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
+import org.jetbrains.kotlinx.lincheck.util.readFieldSafely
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
-import sun.misc.Unsafe
 import java.io.File
 import java.lang.instrument.ClassFileTransformer
 import java.lang.instrument.Instrumentation
-import java.lang.invoke.LambdaMetafactory
 import java.lang.reflect.Modifier
 import java.security.ProtectionDomain
 import java.util.*
@@ -289,7 +287,7 @@ internal object LincheckJavaAgent {
             clazz.declaredFields
                 .filter { !it.type.isPrimitive }
                 .filter { !Modifier.isStatic(it.modifiers) }
-                .mapNotNull { readFieldViaUnsafe(obj, it, Unsafe::getObject) }
+                .mapNotNull { readFieldSafely(obj, it).getOrNull() }
                 .forEach {
                     ensureObjectIsTransformed(it, processedObjects)
                 }
@@ -314,7 +312,7 @@ internal object LincheckJavaAgent {
         clazz.declaredFields
             .filter { !it.type.isPrimitive }
             .filter { Modifier.isStatic(it.modifiers) }
-            .mapNotNull { readFieldViaUnsafe(null, it, Unsafe::getObject) }
+            .mapNotNull { readFieldSafely(null, it).getOrNull() }
             .forEach {
                 ensureObjectIsTransformed(it, processedObjects)
             }

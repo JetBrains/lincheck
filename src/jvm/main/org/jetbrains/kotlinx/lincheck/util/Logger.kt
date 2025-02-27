@@ -32,21 +32,28 @@ internal object Logger {
 
     inline fun error(lazyMessage: () -> String) = log(LoggingLevel.ERROR, lazyMessage)
 
-    fun error(e: Throwable) = error {
-        StringWriter().use {
-            e.printStackTrace(PrintWriter(it))
-        }.toString()
-    }
-
     inline fun warn(lazyMessage: () -> String) = log(LoggingLevel.WARN, lazyMessage)
 
     inline fun info(lazyMessage: () -> String) = log(LoggingLevel.INFO, lazyMessage)
 
     inline fun debug(lazyMessage: () -> String) = log(LoggingLevel.DEBUG, lazyMessage)
 
+    fun error(e: Throwable) = log(LoggingLevel.ERROR, e)
+
+    fun warn(e: Throwable) = log(LoggingLevel.WARN, e)
+
     private inline fun log(logLevel: LoggingLevel, lazyMessage: () -> String) {
         if (logLevel >= this.logLevel) {
             write(logLevel, lazyMessage(), logWriter)
+        }
+    }
+
+    private fun log(logLevel: LoggingLevel, throwable: Throwable) {
+        log(logLevel) {
+            StringWriter().use { writer ->
+                throwable.printStackTrace(PrintWriter(writer))
+                writer.toString()
+            }
         }
     }
 

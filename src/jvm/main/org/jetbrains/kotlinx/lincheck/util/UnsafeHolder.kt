@@ -24,36 +24,15 @@ internal object UnsafeHolder {
     }
 }
 
-@Suppress("DEPRECATION", "UNCHECKED_CAST")
+@Suppress("DEPRECATION")
 internal inline fun <T> readFieldViaUnsafe(obj: Any?, field: Field, getter: Unsafe.(Any?, Long) -> T): T {
-    try {
-        if (Modifier.isStatic(field.modifiers)) {
-            if (field.declaringClass.name.contains("\$\$Lambda\$")) {
-                // Cannot access lambda fields via Unsafe
-                field.isAccessible = true
-                return field.get(null) as T
-            } else {
-                val base = UnsafeHolder.UNSAFE.staticFieldBase(field)
-                val offset = UnsafeHolder.UNSAFE.staticFieldOffset(field)
-                return UnsafeHolder.UNSAFE.getter(base, offset)
-            }
-        } else {
-            if (field.declaringClass.name.contains("\$\$Lambda\$")) {
-                // Cannot access lambda fields via Unsafe
-                try {
-                    field.isAccessible = true
-                    return field.get(obj) as T
-                } catch (t: Throwable) {
-                    return null as T
-                }
-            } else {
-                val offset = UnsafeHolder.UNSAFE.objectFieldOffset(field)
-                return UnsafeHolder.UNSAFE.getter(obj, offset)
-            }
-        }
-    } catch (t: Throwable) {
-        t.printStackTrace()
-        throw t
+    if (Modifier.isStatic(field.modifiers)) {
+        val base = UnsafeHolder.UNSAFE.staticFieldBase(field)
+        val offset = UnsafeHolder.UNSAFE.staticFieldOffset(field)
+        return UnsafeHolder.UNSAFE.getter(base, offset)
+    } else {
+        val offset = UnsafeHolder.UNSAFE.objectFieldOffset(field)
+        return UnsafeHolder.UNSAFE.getter(obj, offset)
     }
 }
 
@@ -78,21 +57,25 @@ internal fun readFieldViaUnsafe(obj: Any?, field: Field): Any? {
  * Reads a [field] of the owner object [obj] via Unsafe,
  * in case of failure fallbacks into reading the field via reflection.
  */
-internal fun readFieldSafely(obj: Any?, field: Field): kotlin.Result<Any?> {
+internal fun readFieldSafely(obj: Any?, field: Field): kotlin.Result<Any?> =
     // we wrap an unsafe read into `runCatching` to handle `UnsupportedOperationException`,
     // which can be thrown, for instance, when attempting to read
     // a field of a hidden or record class (starting from Java 15);
     // in this case we fall back to read via reflection
-    return runCatching { readFieldViaUnsafe(obj, field) }
-        .recoverCatching {
-            try {
-                field.apply { isAccessible = true }.get(obj)
-            } catch (t: Throwable) {
-                t.printStackTrace()
-                throw t
-            }
-        }
-}
+    runCatching {
+        readFieldViaUnsafe(obj, field)
+    }
+    .onFailure { exception ->
+        Logger.warn { "Failed to read field ${field.name} via Unsafe" }
+        Logger.warn(exception)
+    }
+    .recoverCatching {
+        field.apply { isAccessible = true }.get(obj)
+    }
+    .onFailure { exception ->
+        Logger.warn { "Failed to read field ${field.name} via reflection." }
+        Logger.warn(exception)
+    }
 
 internal fun readArrayElementViaUnsafe(arr: Any, index: Int): Any? {
     val offset = getArrayElementOffsetViaUnsafe(arr, index)
@@ -124,18 +107,13 @@ internal fun getArrayElementOffsetViaUnsafe(arr: Any, index: Int): Long {
 
 @Suppress("DEPRECATION")
 internal inline fun writeFieldViaUnsafe(obj: Any?, field: Field, value: Any?, setter: Unsafe.(Any?, Long, Any?) -> Unit) {
-    try {
-        if (Modifier.isStatic(field.modifiers)) {
-            val base = UnsafeHolder.UNSAFE.staticFieldBase(field)
-            val offset = UnsafeHolder.UNSAFE.staticFieldOffset(field)
-            return UnsafeHolder.UNSAFE.setter(base, offset, value)
-        } else {
-            val offset = UnsafeHolder.UNSAFE.objectFieldOffset(field)
-            return UnsafeHolder.UNSAFE.setter(obj, offset, value)
-        }
-    } catch (t: Throwable) {
-        t.printStackTrace()
-        throw t
+    if (Modifier.isStatic(field.modifiers)) {
+        val base = UnsafeHolder.UNSAFE.staticFieldBase(field)
+        val offset = UnsafeHolder.UNSAFE.staticFieldOffset(field)
+        return UnsafeHolder.UNSAFE.setter(base, offset, value)
+    } else {
+        val offset = UnsafeHolder.UNSAFE.objectFieldOffset(field)
+        return UnsafeHolder.UNSAFE.setter(obj, offset, value)
     }
 }
 
