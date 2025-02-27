@@ -37,11 +37,6 @@ annotation class ExperimentalModelCheckingAPI
 fun runConcurrentTest(
     invocations: Int = DEFAULT_INVOCATIONS_COUNT,
     block: Runnable
-) = runConcurrentTestImpl(invocations, block)
-
-private fun runConcurrentTestImpl(
-    invocations: Int,
-    block: Runnable
 ) {
     // TODO: do not use DSL to avoid spending 300ms in Kotlin Reflection
     val scenario = scenario {
