@@ -632,7 +632,7 @@ internal fun collectExceptionStackTraces(executionResult: ExecutionResult): Exce
             }
             val stackTrace = exception.stackTrace
                 // filter lincheck methods
-                .filter { LINCHECK_PACKAGE_NAME !in it.className }
+                .filter { !isInLincheckPackage(it.className) }
             exceptionStackTraces[exception] = ExceptionNumberAndStacktrace(index + 1, stackTrace)
         }
     return ExceptionStackTracesResult(exceptionStackTraces)
@@ -643,11 +643,10 @@ private fun Throwable.isInternalLincheckBug(): Boolean {
     // so we filter out stack trace elements of these runner routines
     val testStackTrace = stackTrace.takeWhile { LINCHECK_RUNNER_PACKAGE_NAME !in it.className }
     // collect Lincheck functions from the stack trace
-    val lincheckStackFrames = testStackTrace.filter { LINCHECK_PACKAGE_NAME in it.className }
+    val lincheckStackFrames = testStackTrace.filter { isInLincheckPackage(it.className) }
     // special handling of `cancelByLincheck` primitive and general purpose model checking function call
-    val lincheckLegalStackFrames = listOf("cancelByLincheck", "GeneralPurposeModelCheckingWrapper.run")
-    if (lincheckStackFrames.size == 1 &&
-        lincheckLegalStackFrames.any { it in lincheckStackFrames[0].toString() }) {
+    val lincheckLegalStackFrames = listOf("cancelByLincheck", "runGPMCTest")
+    if (lincheckStackFrames.all { it.methodName in lincheckLegalStackFrames }) {
         return false
     }
     // otherwise, if the stack trace contains any Lincheck functions, we classify it as a Lincheck bug
