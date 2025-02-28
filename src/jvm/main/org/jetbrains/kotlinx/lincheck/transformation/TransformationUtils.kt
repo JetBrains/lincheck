@@ -109,7 +109,7 @@ internal fun GeneratorAdapter.storeLocals(
 
 /**
  * Duplicates the value on the top of the stack.
- * 
+ *
  * Before execution:
  * STACK: x
  *
@@ -524,6 +524,14 @@ internal fun isThreadContainerClass(className: String): Boolean =
  */
 internal fun isCoroutineDispatcherInternalClass(className: String): Boolean =
     className.startsWith("kotlinx.coroutines.internal") && className.contains("DispatchedContinuation")
+
+/**
+ * Converts a string representing a class name in internal format (e.g., "com/example/MyClass")
+ * into a canonical class name format with (e.g., "com.example.MyClass").
+ */
+internal fun String.toCanonicalClassName() =
+    this.replace('/', '.')
+
 
 internal const val ASM_API = Opcodes.ASM9
 

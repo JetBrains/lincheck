@@ -90,7 +90,7 @@ internal class LincheckClassVisitor(
         // but instead uses internal API `JavaLangAccess.start`.
         // To detect threads started in this way, we instrument this class
         // and inject the appropriate hook on calls to the `JavaLangAccess.start` method.
-        if (isThreadContainerClass(className.canonicalClassName)) {
+        if (isThreadContainerClass(className.toCanonicalClassName())) {
             if (methodName == "start") {
                 mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
             } else {
@@ -100,7 +100,7 @@ internal class LincheckClassVisitor(
         }
         // Wrap `ClassLoader::loadClass` calls into ignored sections
         // to ensure their code is not analyzed by the Lincheck.
-        if (containsClassloaderInName(className.canonicalClassName)) {
+        if (containsClassloaderInName(className.toCanonicalClassName())) {
             if (methodName == "loadClass") {
                 mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             }
@@ -108,7 +108,7 @@ internal class LincheckClassVisitor(
         }
         // Wrap `MethodHandles.Lookup.findX` and related methods into ignored sections
         // to ensure their code is not analyzed by the Lincheck.
-        if (isIgnoredMethodHandleMethod(className.canonicalClassName, methodName)) {
+        if (isIgnoredMethodHandleMethod(className.toCanonicalClassName(), methodName)) {
             mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
         }
@@ -124,7 +124,7 @@ internal class LincheckClassVisitor(
          *   - https://github.com/JetBrains/lincheck/issues/376
          *   - https://github.com/JetBrains/lincheck/issues/419
          */
-        if (isStackTraceElementClass(className.canonicalClassName)) {
+        if (isStackTraceElementClass(className.toCanonicalClassName())) {
             mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
         }

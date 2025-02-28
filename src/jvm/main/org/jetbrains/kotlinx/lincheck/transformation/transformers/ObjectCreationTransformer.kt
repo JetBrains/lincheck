@@ -12,7 +12,6 @@ package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import sun.nio.ch.lincheck.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
-import org.jetbrains.kotlinx.lincheck.*
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.commons.GeneratorAdapter
@@ -126,7 +125,7 @@ internal class ObjectCreationTransformer(
             invokeIfInTestingCode(
                 original = {},
                 code = {
-                    push(type.canonicalClassName)
+                    push(type.toCanonicalClassName())
                     invokeStatic(Injections::beforeNewObjectCreation)
                 }
             )
