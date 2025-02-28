@@ -41,10 +41,7 @@ class ObstructionFreedomViolationEventsCutTest {
     fun runModelCheckingTest() = ModelCheckingOptions()
         .checkObstructionFreedom(true)
         .checkImpl(this::class.java)
-        .checkLincheckOutput(
-            if (isInTraceDebuggerMode) "obstruction_freedom_violation_events_cut_trace_debugger.txt"
-            else "obstruction_freedom_violation_events_cut.txt"
-        )
+        .checkLincheckOutput("obstruction_freedom_violation_events_cut")
 
 }
 
@@ -56,9 +53,7 @@ class SpinlockEventsCutShortLengthTest : AbstractSpinLivelockTest() {
     private val sharedStateAny = AtomicBoolean(false)
 
     override val outputFileName: String
-        get() =
-            if (isInTraceDebuggerMode) "spin_lock/spin_lock_events_cut_single_action_cycle_trace_debugger.txt"
-            else "spin_lock/spin_lock_events_cut_single_action_cycle.txt"
+        get() = "spin_lock/spin_lock_events_cut_single_action_cycle"
 
     override fun meaninglessActions() {
         sharedStateAny.get()
@@ -74,9 +69,7 @@ class SpinlockEventsCutMiddleLengthTest : AbstractSpinLivelockTest() {
     private val sharedStateAny = AtomicBoolean(false)
 
     override val outputFileName: String
-        get() =
-            if (isInTraceDebuggerMode) "spin_lock/spin_lock_events_cut_two_actions_cycle_trace_debugger.txt"
-            else "spin_lock/spin_lock_events_cut_two_actions_cycle.txt"
+        get() = "spin_lock/spin_lock_events_cut_two_actions_cycle"
     
 
     override fun meaninglessActions() {
@@ -95,7 +88,7 @@ class SpinlockEventsCutInfiniteLoopTest : AbstractSpinLivelockTest() {
 
     private val sharedStateAny = AtomicBoolean(false)
 
-    override val outputFileName: String get() = "spin_lock/infinite_spin_loop_events_cut.txt"
+    override val outputFileName: String get() = "spin_lock/infinite_spin_loop_events_cut"
 
     override fun meaninglessActions() {
         while (true) {
@@ -116,7 +109,7 @@ class SpinlockEventsCutInfiniteLoopWithParametersTest : AbstractSpinLivelockTest
     @Volatile
     private var sharedState: Boolean = false
 
-    override val outputFileName: String get() = "spin_lock/infinite_spin_loop_events_read_write.txt"
+    override val outputFileName: String get() = "spin_lock/infinite_spin_loop_events_read_write"
 
     override fun meaninglessActions() {
         while (true) {
@@ -137,7 +130,7 @@ class SpinlockEventsCutInfiniteLoopWithReceiversTest : AbstractSpinLivelockTest(
     private val first = Receiver(false)
     private val second = Receiver(false)
 
-    override val outputFileName: String get() = "spin_lock/infinite_spin_loop_events_receivers.txt"
+    override val outputFileName: String get() = "spin_lock/infinite_spin_loop_events_receivers"
 
     override fun meaninglessActions() {
         var pickFirst = false
@@ -164,7 +157,7 @@ class SpinlockEventsCutInfiniteLoopWithArrayOperationsTest : AbstractSpinLiveloc
     @Volatile
     private var array: Array<Int> = Array(3) { 0 }
 
-    override val outputFileName: String get() = "spin_lock/infinite_spin_loop_events_arrays.txt"
+    override val outputFileName: String get() = "spin_lock/infinite_spin_loop_events_arrays"
 
     override fun meaninglessActions() {
         var index = 0
@@ -191,7 +184,7 @@ class SpinlockEventsCutInfiniteLoopWithArrayReceiversTest : AbstractSpinLivelock
     private val first = Array(3) { 0 }
     private val second = Array(3) { 0 }
 
-    override val outputFileName: String get() = "spin_lock/infinite_spin_loop_events_arrays_receivers.txt"
+    override val outputFileName: String get() = "spin_lock/infinite_spin_loop_events_arrays_receivers"
 
     override fun meaninglessActions() {
         var pickFirst = false
@@ -217,7 +210,7 @@ class SpinlockEventsCutInfiniteNoCycleWithParamsTest : AbstractSpinLivelockTest(
     private val array = Array(3) { 0 }
     private val random = java.util.Random(0)
 
-    override val outputFileName: String get() = "spin_lock/infinite_spin_loop_events_no_cycle_params.txt"
+    override val outputFileName: String get() = "spin_lock/infinite_spin_loop_events_no_cycle_params"
 
     override fun meaninglessActions() {
         while (true) {
@@ -237,9 +230,7 @@ class SpinlockEventsCutLongCycleActionsTest : AbstractSpinLivelockTest() {
 
     private val data = AtomicReferenceArray<Int>(7)
     override val outputFileName: String
-        get() =
-            if (isInTraceDebuggerMode) "spin_lock/spin_lock_events_cut_long_cycle_trace_debugger.txt"
-            else "spin_lock/spin_lock_events_cut_long_cycle.txt"
+        get() = "spin_lock/spin_lock_events_cut_long_cycle"
     
     override fun meaninglessActions() {
         data[0] = 0
@@ -260,9 +251,7 @@ class SpinlockEventsCutWithInnerLoopActionsTest : AbstractSpinLivelockTest() {
 
     private val data = AtomicReferenceArray<Int>(10)
     override val outputFileName: String
-        get() =
-            if (isInTraceDebuggerMode) "spin_lock/spin_lock_events_cut_inner_loop_trace_debugger.txt"
-            else "spin_lock/spin_lock_events_cut_inner_loop.txt"
+        get() = "spin_lock/spin_lock_events_cut_inner_loop"
     override fun meaninglessActions() {
         for (i in 0 until data.length()) {
             data[i] = 0
@@ -348,10 +337,7 @@ class SpinlockInIncorrectResultsWithClocksTest {
         .sequentialSpecification(ClocksTestSequential::class.java)
         .minimizeFailedScenario(false)
         .checkImpl(this::class.java)
-        .checkLincheckOutput(
-            if (isInTraceDebuggerMode) "spin_lock/spin_lock_in_incorrect_results_failure_trace_debugger.txt"
-            else "spin_lock/spin_lock_in_incorrect_results_failure.txt"
-        )
+        .checkLincheckOutput("spin_lock/spin_lock_in_incorrect_results_failure")
 
 
     /**
@@ -483,7 +469,7 @@ class SpinLockWithAllEventsWrappedInMethodsTest {
         }
         .minimizeFailedScenario(false)
         .checkImpl(this::class.java)
-        .checkLincheckOutput("spin_lock/spin_lock_nested_events.txt")
+        .checkLincheckOutput("spin_lock/spin_lock_nested_events")
 
 }
 
@@ -509,6 +495,6 @@ class SingleThreadTopLevelSpinLockTest {
     @Test
     fun test() = ModelCheckingOptions()
         .checkImpl(this::class.java)
-        .checkLincheckOutput("spin_lock/spin_lock_top_level.txt")
+        .checkLincheckOutput("spin_lock/spin_lock_top_level")
 
 }

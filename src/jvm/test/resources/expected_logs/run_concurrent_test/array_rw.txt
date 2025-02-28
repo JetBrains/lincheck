@@ -1,10 +1,10 @@
 = Concurrent test failed =
 
 java.lang.IllegalStateException: Check failed.
-	at org.jetbrains.kotlinx.lincheck_test.representation.ArrayReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:68)
-	at org.jetbrains.kotlinx.lincheck_test.representation.ArrayReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:54)
+	at org.jetbrains.kotlinx.lincheck_test.representation.ArrayReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:72)
+	at org.jetbrains.kotlinx.lincheck_test.representation.ArrayReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:58)
 	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:40)
-	at java.base/java.lang.Thread.run(Thread.java:840)
+	at java.lang.Thread.run(Thread.java:750)
 
 The following interleaving leads to the error:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -18,9 +18,9 @@ Detailed trace:
 |                                                                                                   Thread 1                                                                                                    |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ArrayReadWriteRunConcurrentRepresentationTest#1.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:40) |
-|   block(): threw IllegalStateException at ArrayReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:54)                                                                         |
-|     IntArray#1[0] ➜ 0 at ArrayReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:66)                                                                                          |
-|     IntArray#1[0] = 1 at ArrayReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:66)                                                                                          |
-|     IntArray#1[0] ➜ 1 at ArrayReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:67)                                                                                          |
+|   block(): threw IllegalStateException at ArrayReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:58)                                                                         |
+|     IntArray#1[0] ➜ 0 at ArrayReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:70)                                                                                          |
+|     IntArray#1[0] = 1 at ArrayReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:70)                                                                                          |
+|     IntArray#1[0] ➜ 1 at ArrayReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:71)                                                                                          |
 |   result: IllegalStateException #1                                                                                                                                                                            |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -9,15 +9,13 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.ideaPluginEnabled
-
 /**
  * This test checks that values captured in an incorrect interleaving have proper representation.
  * `toString` method is used only for primitive types and their wrappers.
  * For other classes we use simplified representation to avoid problems with concurrent modification or
  * not completely initialized objects (e.g, with `ConcurrentModificationException`)
  */
-class CapturedValueRepresentationTest : BaseTraceRepresentationTest("captured_value.txt") {
+class CapturedValueRepresentationTest : BaseTraceRepresentationTest("captured_value") {
     private var outerClass1 = OuterDataClass(0)
     private var outerClass2 = OuterDataClass(0)
     private var innerClass = InnerClass()

@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.*
  * Instead of `compareAndSet(object, 1, 2)` representation should be `fieldName.compareAndSet(1, 2)`,
  * where `fieldName` is the parameter in constructor for the AFU.
  */
-class AFUCallRepresentationTest : BaseTraceRepresentationTest("afu_call_representation.txt") {
+class AFUCallRepresentationTest : BaseTraceRepresentationTest("afu_call_representation") {
     @Volatile
     private var counter = 0
     private val afu = AtomicIntegerFieldUpdater.newUpdater(AFUCallRepresentationTest::class.java, "counter")

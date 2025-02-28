@@ -56,7 +56,7 @@ The following interleaving leads to the error:
 Exception stack traces:
 #1: java.lang.IllegalStateException: Violating exception
 	at org.jetbrains.kotlinx.lincheck_test.representation.ClocksWithExceptionsInOutputTest.operation2(ClocksWithExceptionsInOutputTest.kt:34)
-	at java.base/java.lang.Thread.run(Thread.java:833)
+	at java.lang.Thread.run(Thread.java:750)
 
 Detailed trace:
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -68,7 +68,7 @@ abstract class BaseMethodHandleLookupRepresentationTest(
 }
 
 class MethodHandlesFindConstructorRepresentationTest : BaseMethodHandleLookupRepresentationTest(
-    "method_handles/find_constructor.txt"
+    "method_handles/find_constructor"
 ) {
     override fun doTest() {
         val constructorHandle = MethodHandles.lookup()
@@ -82,7 +82,7 @@ class MethodHandlesFindConstructorRepresentationTest : BaseMethodHandleLookupRep
 
 
 class MethodHandlesFindVirtualRepresentationTest : BaseMethodHandleLookupRepresentationTest(
-    "method_handles/find_virtual.txt"
+    "method_handles/find_virtual"
 ) {
     override fun doTest() {
         val counter = Counter.create()
@@ -97,11 +97,7 @@ class MethodHandlesFindVirtualRepresentationTest : BaseMethodHandleLookupReprese
 }
 
 class MethodHandlesFindStaticRepresentationTest : BaseMethodHandleLookupRepresentationTest(
-    when (testJdkVersion) {
-        TestJdkVersion.JDK_11 -> "method_handles/find_static_jdk11.txt"
-        TestJdkVersion.JDK_13 -> "method_handles/find_static_jdk13.txt"
-        else                  -> "method_handles/find_static.txt"
-    }
+    "method_handles/find_static"
 ) {
     override fun doTest() {
         val counter = Counter.create()
@@ -116,7 +112,7 @@ class MethodHandlesFindStaticRepresentationTest : BaseMethodHandleLookupRepresen
 }
 
 class MethodHandlesFindGetterSetterRepresentationTest : BaseMethodHandleLookupRepresentationTest(
-    "method_handles/find_getter_setter.txt"
+    "method_handles/find_getter_setter"
 ) {
     override fun doTest() {
         val counter = Counter.create()
@@ -131,7 +127,7 @@ class MethodHandlesFindGetterSetterRepresentationTest : BaseMethodHandleLookupRe
 }
 
 class MethodHandlesBindToRepresentationTest : BaseMethodHandleLookupRepresentationTest(
-    "method_handles/bind_to.txt"
+    "method_handles/bind_to"
 ) {
     override fun doTest() {
         val counter = Counter.create()

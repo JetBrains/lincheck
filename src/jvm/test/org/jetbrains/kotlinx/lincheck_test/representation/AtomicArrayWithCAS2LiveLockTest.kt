@@ -58,7 +58,7 @@ class AtomicArrayWithCAS2LiveLockTest {
             .invocationsPerIteration(1000)
             .sequentialSpecification(IntAtomicArraySequential::class.java)
             .checkImpl(this::class.java)
-            .checkLincheckOutput("spin_lock/broken-cas-2-recursive-live-lock.txt")
+            .checkLincheckOutput("spin_lock/broken-cas-2-recursive-live-lock")
 }
 
 /**

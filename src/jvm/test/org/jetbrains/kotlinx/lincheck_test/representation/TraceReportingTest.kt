@@ -76,7 +76,7 @@ class TraceReportingTest {
                 }
             }
         }.checkImpl(this::class.java)
-        failure.checkLincheckOutput("trace_reporting.txt")
+        failure.checkLincheckOutput("trace_reporting")
         checkTraceHasNoLincheckEvents(failure.toString())
     }
 
@@ -114,7 +114,7 @@ class TraceReportingTest {
                 }
             }
             .checkImpl(this::class.java)
-        failure.checkLincheckOutput("trace_reporting_init_post_parts.txt")
+        failure.checkLincheckOutput("trace_reporting_init_post_parts")
         checkTraceHasNoLincheckEvents(failure.toString())
     }
 
@@ -136,7 +136,7 @@ class TraceReportingTest {
             }
             .sequentialSpecification(EmptySequentialImplementation::class.java)
             .checkImpl(this::class.java) { failure ->
-                failure.checkLincheckOutput("trace_reporting_empty.txt")
+                failure.checkLincheckOutput("trace_reporting_empty")
             }
     }
 
