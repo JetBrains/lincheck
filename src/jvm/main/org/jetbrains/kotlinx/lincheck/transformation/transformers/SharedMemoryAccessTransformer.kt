@@ -34,8 +34,8 @@ internal class SharedMemoryAccessTransformer(
 
     override fun visitFieldInsn(opcode: Int, owner: String, fieldName: String, desc: String) = adapter.run {
         if (
-            isCoroutineInternalClass(owner) ||
-            isCoroutineStateMachineClass(owner) ||
+            isCoroutineInternalClass(owner.toCanonicalClassName()) ||
+            isCoroutineStateMachineClass(owner.toCanonicalClassName()) ||
             // when initializing our own fields in constructor, we do not want to track that;
             // otherwise `VerifyError` will be thrown, see https://github.com/JetBrains/lincheck/issues/424
             (methodName == "<init>" && className == owner)

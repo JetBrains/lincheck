@@ -128,7 +128,7 @@ internal class LincheckClassVisitor(
             mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
         }
-        if (isCoroutineInternalClass(className)) {
+        if (isCoroutineInternalClass(className.toCanonicalClassName())) {
             return mv
         }
         // Debugger implicitly evaluates toString for variables rendering

@@ -475,18 +475,18 @@ private const val JAVA_THREAD_CLASSNAME = "java.lang.Thread"
 /**
  * Determines whether the given class name corresponds to an internal coroutine-related class.
  */
-internal fun isCoroutineInternalClass(internalClassName: String): Boolean =
-    internalClassName == "kotlin/coroutines/intrinsics/IntrinsicsKt" ||
-    internalClassName == "kotlinx/coroutines/internal/StackTraceRecoveryKt"
+internal fun isCoroutineInternalClass(className: String): Boolean =
+    className == "kotlin.coroutines.intrinsics.IntrinsicsKt" ||
+    className == "kotlinx.coroutines.internal.StackTraceRecoveryKt"
 
 /**
  * Checks whether the given class name represents a coroutine state machine class.
  */
-internal fun isCoroutineStateMachineClass(internalClassName: String): Boolean {
-    if (internalClassName.startsWith("java/")) return false
-    if (internalClassName.startsWith("kotlin/") && !internalClassName.startsWith("kotlin/coroutines/")) return false
-    return isCoroutineStateMachineClassMap.computeIfAbsent(internalClassName) {
-        getSuperclassName(internalClassName) == "kotlin/coroutines/jvm/internal/ContinuationImpl"
+internal fun isCoroutineStateMachineClass(className: String): Boolean {
+    if (className.startsWith("java.")) return false
+    if (className.startsWith("kotlin.") && !className.startsWith("kotlin.coroutines.")) return false
+    return isCoroutineStateMachineClassMap.computeIfAbsent(className) {
+        getSuperclassName(className) == "kotlin.coroutines.jvm.internal.ContinuationImpl"
     }
 }
 
