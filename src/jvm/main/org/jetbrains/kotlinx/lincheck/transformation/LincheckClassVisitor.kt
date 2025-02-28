@@ -158,7 +158,7 @@ internal class LincheckClassVisitor(
         mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
         // We can do further instrumentation in methods of the custom thread subclasses,
         // but not in the `java.lang.Thread` itself.
-        if (className == JAVA_THREAD_CLASSNAME) {
+        if (isThreadClass(className.toCanonicalClassName())) {
             return mv
         }
         if (access and ACC_SYNCHRONIZED != 0) {

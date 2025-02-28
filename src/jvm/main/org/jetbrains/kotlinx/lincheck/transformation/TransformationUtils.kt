@@ -422,29 +422,6 @@ internal fun isPrimitive(type: Type): Boolean {
     }
 }
 
-private val isThreadSubclassMap = ConcurrentHashMap<String, Boolean>()
-
-internal fun isThreadSubClass(internalClassName: String): Boolean {
-    if (internalClassName == JAVA_THREAD_CLASSNAME) return true
-    return isThreadSubclassMap.computeIfAbsent(internalClassName) {
-        isSubClassOf(internalClassName, JAVA_THREAD_CLASSNAME)
-    }
-}
-
-private val isCoroutineStateMachineClassMap = ConcurrentHashMap<String, Boolean>()
-
-internal fun isCoroutineStateMachineClass(internalClassName: String): Boolean {
-    if (internalClassName.startsWith("java/")) return false
-    if (internalClassName.startsWith("kotlin/") && !internalClassName.startsWith("kotlin/coroutines/")) return false
-    return isCoroutineStateMachineClassMap.computeIfAbsent(internalClassName) {
-        getSuperclassName(internalClassName) == "kotlin/coroutines/jvm/internal/ContinuationImpl"
-    }
-}
-
-internal fun isCoroutineInternalClass(internalClassName: String): Boolean =
-    internalClassName == "kotlin/coroutines/intrinsics/IntrinsicsKt" ||
-    internalClassName == "kotlinx/coroutines/internal/StackTraceRecoveryKt"
-
 private fun getSuperclassName(internalClassName: String): String? {
     class SuperclassClassVisitor : ClassVisitor(ASM_API) {
         var internalSuperclassName: String? = null
@@ -474,6 +451,46 @@ private fun isSubClassOf(internalClassName: String, internalSuperClassName: Stri
         ?: return false
     return isSubClassOf(superclassName, internalSuperClassName)
 }
+
+/**
+ * Determines whether a given class is a subclass of the `Thread` class.
+ */
+internal fun isThreadSubClass(className: String): Boolean {
+    if (isThreadClass(className)) return true
+    return isThreadSubclassMap.computeIfAbsent(className) {
+        isSubClassOf(className.toInternalClassName(), JAVA_THREAD_CLASSNAME.toInternalClassName())
+    }
+}
+
+/**
+ * Checks if the given class name corresponds to the Java Thread class.
+ */
+internal fun isThreadClass(className: String): Boolean =
+    className == JAVA_THREAD_CLASSNAME
+
+private val isThreadSubclassMap = ConcurrentHashMap<String, Boolean>()
+
+private const val JAVA_THREAD_CLASSNAME = "java.lang.Thread"
+
+/**
+ * Determines whether the given class name corresponds to an internal coroutine-related class.
+ */
+internal fun isCoroutineInternalClass(internalClassName: String): Boolean =
+    internalClassName == "kotlin/coroutines/intrinsics/IntrinsicsKt" ||
+    internalClassName == "kotlinx/coroutines/internal/StackTraceRecoveryKt"
+
+/**
+ * Checks whether the given class name represents a coroutine state machine class.
+ */
+internal fun isCoroutineStateMachineClass(internalClassName: String): Boolean {
+    if (internalClassName.startsWith("java/")) return false
+    if (internalClassName.startsWith("kotlin/") && !internalClassName.startsWith("kotlin/coroutines/")) return false
+    return isCoroutineStateMachineClassMap.computeIfAbsent(internalClassName) {
+        getSuperclassName(internalClassName) == "kotlin/coroutines/jvm/internal/ContinuationImpl"
+    }
+}
+
+private val isCoroutineStateMachineClassMap = ConcurrentHashMap<String, Boolean>()
 
 /**
  * Tests if the provided [className] contains `"ClassLoader"` as a substring.
@@ -520,6 +537,12 @@ internal fun isThreadContainerClass(className: String): Boolean =
     className == "jdk.internal.misc.ThreadFlock"
 
 /**
+ * Checks if the provided class name matches the [JavaLangAccess] class.
+ */
+internal fun isJavaLangAccessClass(className: String): Boolean =
+    className == "jdk.internal.access.JavaLangAccess"
+
+/**
  * Tests if the provided [className] represents an internal coroutine dispatcher class.
  */
 internal fun isCoroutineDispatcherInternalClass(className: String): Boolean =
@@ -532,6 +555,12 @@ internal fun isCoroutineDispatcherInternalClass(className: String): Boolean =
 internal fun String.toCanonicalClassName() =
     this.replace('/', '.')
 
+/**
+ * Converts a string representing a class name in canonical format (e.g., "com.example.MyClass")
+ * into an internal class name format with (e.g., "com/example/MyClass").
+ */
+internal fun String.toInternalClassName() =
+    this.replace('.', '/')
 
 internal const val ASM_API = Opcodes.ASM9
 
@@ -539,5 +568,3 @@ internal val STRING_TYPE = getType(String::class.java)
 internal val CLASS_TYPE = getType(Class::class.java)
 
 internal val CLASS_FOR_NAME_METHOD = Method("forName", CLASS_TYPE, arrayOf(STRING_TYPE))
-
-internal const val JAVA_THREAD_CLASSNAME = "java/lang/Thread"
