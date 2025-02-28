@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-class AccessFunctionRepresentationTest: BaseRunConcurrentRepresentationTest<Unit>("access_function_representation_test.txt") {
+class AccessFunctionRepresentationTest: BaseRunConcurrentRepresentationTest<Unit>("access_function_representation_test") {
     
     @Volatile
     private var a = 0
@@ -39,7 +39,7 @@ fun runn(r: () -> Unit) {
     r()
 }
 
-class AccessFieldRepresentationTest: BaseRunConcurrentRepresentationTest<Unit>("access_field_representation_test.txt") {
+class AccessFieldRepresentationTest: BaseRunConcurrentRepresentationTest<Unit>("access_field_representation_test") {
 
     @Volatile
     private var a = 0

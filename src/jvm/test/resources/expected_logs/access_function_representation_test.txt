@@ -4,7 +4,7 @@ java.lang.IllegalStateException: Check failed.
 	at org.jetbrains.kotlinx.lincheck_test.representation.AccessFunctionRepresentationTest.block(AccessFunctionRepresentationTest.kt:20)
 	at org.jetbrains.kotlinx.lincheck_test.representation.AccessFunctionRepresentationTest.block(AccessFunctionRepresentationTest.kt:13)
 	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:40)
-	at java.base/java.lang.Thread.run(Thread.java:840)
+	at java.lang.Thread.run(Thread.java:750)
 
 The following interleaving leads to the error:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -19,8 +19,8 @@ Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | AccessFunctionRepresentationTest#1.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:40) |
 |   block(): threw IllegalStateException at AccessFunctionRepresentationTest.block(AccessFunctionRepresentationTest.kt:13)                                                                         |
-|     AccessFunctionRepresentationTestKt.runn(block$1) at AccessFunctionRepresentationTest.block(AccessFunctionRepresentationTest.kt:19)                                                           |
-|       block$1.invoke() at AccessFunctionRepresentationTestKt.runn(AccessFunctionRepresentationTest.kt:39)                                                                                        |
+|     AccessFunctionRepresentationTestKt.runn(block$1#1) at AccessFunctionRepresentationTest.block(AccessFunctionRepresentationTest.kt:19)                                                         |
+|       block$1#1.invoke() at AccessFunctionRepresentationTestKt.runn(AccessFunctionRepresentationTest.kt:39)                                                                                      |
 |         invoke() at AccessFunctionRepresentationTest$block$1.invoke(AccessFunctionRepresentationTest.kt:19)                                                                                      |
 |           AccessFunctionRepresentationTest.inc() at AccessFunctionRepresentationTest$block$1.invoke(AccessFunctionRepresentationTest.kt:19)                                                      |
 |             Nested#1.inc2() at AccessFunctionRepresentationTest.inc(AccessFunctionRepresentationTest.kt:24)                                                                                      |

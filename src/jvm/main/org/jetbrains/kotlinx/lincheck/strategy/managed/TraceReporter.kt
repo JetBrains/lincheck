@@ -414,12 +414,11 @@ private fun removeSyntheticFieldAccessTracePoints(trace: List<TracePoint>) {
     trace
         .filter { it is ReadTracePoint || it is WriteTracePoint }
         .forEach { point ->
-            val lastCall = point.callStackTrace.last()
+            val lastCall = point.callStackTrace.lastOrNull() ?: return@forEach
             if (lastCall.tracePoint.methodName.contains("access\$get")
                 || lastCall.tracePoint.methodName.contains("access\$set")) {
-                val secondLast = lastCall.tracePoint.callStackTrace.last()
-                if (point is ReadTracePoint) point.stackTraceElement = secondLast.tracePoint.stackTraceElement
-                if (point is WriteTracePoint) point.stackTraceElement = secondLast.tracePoint.stackTraceElement
+                if (point is ReadTracePoint) point.stackTraceElement = lastCall.tracePoint.stackTraceElement
+                if (point is WriteTracePoint) point.stackTraceElement = lastCall.tracePoint.stackTraceElement
                 point.callStackTrace = point.callStackTrace.dropLast(1)
             }
         }
