@@ -1019,7 +1019,7 @@ abstract class ManagedStrategy(
         val iThread = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
             ReadTracePoint(
-                ownerRepresentation = if (isStatic) simpleClassName(className) else findOwnerName(obj!!),
+                ownerRepresentation = if (isStatic) className.toSimpleClassName() else findOwnerName(obj!!),
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
@@ -1089,7 +1089,7 @@ abstract class ManagedStrategy(
         val iThread = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
             WriteTracePoint(
-                ownerRepresentation = if (isStatic) simpleClassName(className) else findOwnerName(obj!!),
+                ownerRepresentation = if (isStatic) className.toSimpleClassName() else findOwnerName(obj!!),
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
@@ -1682,7 +1682,7 @@ abstract class ManagedStrategy(
         )
         // handle non-atomic methods
         if (atomicMethodDescriptor == null) {
-            val ownerName = if (owner != null) findOwnerName(owner) else simpleClassName(className)
+            val ownerName = if (owner != null) findOwnerName(owner) else className.toSimpleClassName()
             if (ownerName != null) {
                 tracePoint.initializeOwnerName(ownerName)
             }
@@ -1709,8 +1709,6 @@ abstract class ManagedStrategy(
         val enumPrefix = if (obj?.javaClass?.isEnum == true) "Enum:" else ""
         return "$enumPrefix${obj?.javaClass?.name ?: "null"}"
     }
-
-    private fun simpleClassName(className: String) = className.canonicalClassName.takeLastWhile { it != '.' }
 
     private fun initializeUnsafeMethodCallTracePoint(
         tracePoint: MethodCallTracePoint,

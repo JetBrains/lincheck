@@ -53,7 +53,7 @@ internal class SharedMemoryAccessTransformer(
                     code = {
                         // STACK: <empty>
                         pushNull()
-                        push(owner)
+                        push(owner.toCanonicalClassName())
                         push(fieldName)
                         loadNewCodeLocationId()
                         push(true) // isStatic
@@ -86,7 +86,7 @@ internal class SharedMemoryAccessTransformer(
                         // STACK: obj
                         dup()
                         // STACK: obj, obj
-                        push(owner)
+                        push(owner.toCanonicalClassName())
                         push(fieldName)
                         loadNewCodeLocationId()
                         push(false) // isStatic
@@ -122,7 +122,7 @@ internal class SharedMemoryAccessTransformer(
                         copyLocal(valueLocal)
                         // STACK: value
                         pushNull()
-                        push(owner)
+                        push(owner.toCanonicalClassName())
                         push(fieldName)
                         loadLocal(valueLocal)
                         box(valueType)
@@ -160,7 +160,7 @@ internal class SharedMemoryAccessTransformer(
                         // STACK: obj
                         dup()
                         // STACK: obj, obj
-                        push(owner)
+                        push(owner.toCanonicalClassName())
                         push(fieldName)
                         loadLocal(valueLocal)
                         box(valueType)
