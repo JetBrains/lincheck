@@ -10,41 +10,33 @@
 
 package org.jetbrains.kotlinx.lincheck.util.native_calls
 
-import org.objectweb.asm.commons.Method.*
-import java.lang.reflect.Method
-
 internal data class MethodCallInfo(
     val owner: Any?,
-    val className: String,
-    val methodName: String,
+    val ownerType: ArgumentType.Object,
+    val methodDescriptor: MethodDescriptor,
     val codeLocation: Int,
     val methodId: Int,
-    val methodDesc: String,
     val params: List<Any?>,
 ) {
     infix fun seemsToBeTheSameMethodCallWith(other: MethodCallInfo): Boolean =
-        className == other.className && methodName == other.methodName && codeLocation == other.codeLocation &&
-                methodId == other.methodId && methodDesc == other.methodDesc
+        ownerType == other.ownerType && methodDescriptor == other.methodDescriptor &&
+                codeLocation == other.codeLocation && methodId == other.methodId
 }
 
 
 internal abstract class DeterministicMethodDescriptor<State, T> {
     abstract val methodCallInfo: MethodCallInfo
     abstract fun runFromState(state: State): T
-    abstract fun runSavingToState(saver: (State) -> Unit): T
     abstract fun runInLincheckMode(): T
-    @Suppress("UNCHECKED_CAST")
-    fun runFromStateWithCast(state: Any?): T = runFromState(state as State)
-    
-    val originalMethod: Method by lazy {
-        Class.forName(methodCallInfo.className.replace('/', '.')).run { methods + declaredMethods }
-            .first { it.name == methodCallInfo.methodName && getMethod(it).descriptor == methodCallInfo.methodDesc }
-            .also { it.isAccessible = true }
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    fun invokeOriginalCall() = originalMethod.invoke(methodCallInfo.owner, *methodCallInfo.params.toTypedArray()) as T
+    abstract fun onResultOnFirstRun(result: T, saveState: (State) -> Unit)
+    abstract fun onExceptionOnFirstRun(e: Throwable, saveState: (State) -> Unit)
 }
+
+@Suppress("UNCHECKED_CAST")
+internal fun <State, T> DeterministicMethodDescriptor<State, T>.runFromStateWithCast(state: Any?): T = runFromState(state as State)
+
+@Suppress("UNCHECKED_CAST")
+internal fun <State, T> DeterministicMethodDescriptor<State, T>.onResultOnFirstRunWithCast(result: Any?, saveState: (State) -> Unit) = onResultOnFirstRun(result as T, saveState)
 
 internal fun getDeterministicMethodDescriptorOrNull(methodCallInfo: MethodCallInfo) =
     getDeterministicTimeMethodDescriptorOrNull(methodCallInfo)
