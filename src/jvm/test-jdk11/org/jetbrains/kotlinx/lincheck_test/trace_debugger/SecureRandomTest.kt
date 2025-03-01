@@ -1,0 +1,40 @@
+/*
+ * Lincheck
+ *
+ * Copyright (C) 2019 - 2025 JetBrains s.r.o.
+ *
+ * This Source Code Form is subject to the terms of the
+ * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
+ * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+package org.jetbrains.kotlinx.lincheck_test.trace_debugger
+
+import java.security.SecureRandom
+import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
+
+import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.junit.Assume.assumeTrue
+import org.junit.Before
+
+class SecureRandomTest : RandomTests() {
+    @Before
+    fun setUp() {
+        assumeTrue(isInTraceDebuggerMode)
+    }
+    
+    @Operation
+    fun operation(): String {
+        val secureRandom = SecureRandom()
+        val nextInt = secureRandom.nextInt()
+        val seed = secureRandom.generateSeed(3)
+        val seed1 = SecureRandom.getSeed(3)
+        val bytes2 = ByteArray(3)
+        val output = runCatching {
+            secureRandom.nextBytes(bytes2, SecureRandom.getInstance("DRBG").parameters) 
+        }.toString()
+        secureRandom.setSeed(seed)
+        
+        return "$nextInt ${seed.asList()} ${seed1.asList()} ${secureRandom.algorithm}\n$output"
+    }
+}

@@ -341,3 +341,55 @@ class FailingRecoveringRandomTest : RandomTests() {
     fun operation(): List<String> =
         List(10) { runCatching { if (it % 2 == 0) Random.nextInt(10, 100) else Random.nextInt(100, 10) }.toString() }
 }
+
+class FailingRandomBytesTest : RandomTests() {
+    class FailingRandom : JRandom() {
+        override fun nextBytes(bytes: ByteArray) {
+            super.nextBytes(bytes)
+            throw IllegalStateException()
+        }
+    }
+    
+    @OptIn(ExperimentalStdlibApi::class)
+    @Operation
+    fun operation(): String {
+        val bytes = ByteArray(10)
+        val before = bytes.toList()
+        runCatching {
+            FailingRandom().nextBytes(bytes)
+        }
+        val after = bytes.toList()
+        require(after.any { it != 0.toByte() }) { "Has not performed: $after" }
+        return "${before.joinToString(" ") { it.toHexString() }}\n${after.joinToString(" ") { it.toHexString() }}"
+    }
+}
+
+class RandomMethodWithSideEffectTest : RandomTests() {
+    class RandomWithSideEffect : JRandom() {
+        var counter = 0
+            private set
+        fun changeArray(x: ByteArray) {
+            x[0] = counter.toByte()
+            counter++
+        }
+        override fun nextInt(): Int {
+            counter++
+            return super.nextInt()
+        }
+    }
+    
+    @Operation
+    fun operation(): String {
+        val random = RandomWithSideEffect()
+        val counter1 = random.counter
+        val randomValue = random.nextInt()
+        val counter2 = random.counter
+        require(counter1 + 1 == counter2) { "Wrong counter: $counter1 + 1 = $counter2" }
+        val wrapper = ByteArray(1)
+        require(wrapper[0] == 0.toByte()) { "Wrong wrapper value: ${wrapper[0]}"}
+        random.changeArray(wrapper)
+        val counter3 = random.counter
+        require(counter2 + 1 == counter3) { "Wrong wrapper value: $counter2 + 1 = $counter3" }
+        return "$counter1 $randomValue $counter2 $counter3".also(::println)
+    }
+}
