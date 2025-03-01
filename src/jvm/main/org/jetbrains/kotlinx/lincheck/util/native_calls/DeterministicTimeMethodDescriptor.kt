@@ -13,7 +13,10 @@ package org.jetbrains.kotlinx.lincheck.util.native_calls
 internal fun getDeterministicTimeMethodDescriptorOrNull(
     methodCallInfo: MethodCallInfo
 ): DeterministicMethodDescriptor<*, Long>? {
-    if (methodCallInfo.className != "java/lang/System") return null
-    if (methodCallInfo.methodName != "nanoTime" && methodCallInfo.methodName != "currentTimeMillis") return null
+    if (methodCallInfo.ownerType != systemType) return null
+    val methodName = methodCallInfo.methodDescriptor.name
+    if (methodName != "nanoTime" && methodName != "currentTimeMillis") return null
     return PureDeterministicMethodDescriptor<Long>(methodCallInfo) { 1337L /* any constant value */ }
 }
+
+private val systemType = ArgumentType.Object("java.lang.System")

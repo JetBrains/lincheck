@@ -15,7 +15,16 @@ internal data class PureDeterministicMethodDescriptor<T>(
     val lincheckModeBehaviour: PureDeterministicMethodDescriptor<T>.() -> T
 ) : DeterministicMethodDescriptor<Result<T>, T>() {
     override fun runInLincheckMode(): T = lincheckModeBehaviour()
-    override fun runFromState(state: Result<T>): T = state.getOrThrow()
-    override fun runSavingToState(saver: (Result<T>) -> Unit): T =
-        runCatching { invokeOriginalCall() }.also(saver).getOrThrow()
+    override fun runFromState(state: Result<T>): T = postProcess(state.getOrThrow())
+    override fun onExceptionOnFirstRun(e: Throwable, saveState: (Result<T>) -> Unit) =
+        saveState(Result.failure(e))
+
+    override fun onResultOnFirstRun(result: T, saveState: (Result<T>) -> Unit) =
+        saveState(Result.success(postProcess(result)))
+    
+    @Suppress("UNCHECKED_CAST")
+    private fun postProcess(x: T): T = when (x) {
+        is ByteArray -> x.copyOf() as T
+        else -> x
+    }
 }

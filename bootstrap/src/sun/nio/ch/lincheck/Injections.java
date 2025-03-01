@@ -11,7 +11,6 @@
 package sun.nio.ch.lincheck;
 
 import java.lang.invoke.CallSite;
-import java.util.Random;
 
 /**
  * Methods of this object are called from the instrumented code.
@@ -298,23 +297,6 @@ public class Injections {
     }
 
     /**
-     * Called from the instrumented code to check whether the object is a [Random] instance.
-     */
-    public static boolean isRandom(Object any) {
-        // Is this a Java random?
-        if (any instanceof Random) return  true;
-        // Is this a Kotlin random?
-        try {
-            Class<?> kotlinRandomClass = any.getClass().getClassLoader().loadClass("kotlin.random.Random");
-            return kotlinRandomClass.isInstance(any);
-        } catch (ClassNotFoundException e) {
-            // Kotlin is not used in the user project.
-        }
-        // No, this is not a random instance.
-        return false;
-    }
-
-    /**
      * Called from the instrumented code before each field read.
      *
      * @return whether the trace point was created
@@ -382,23 +364,34 @@ public class Injections {
 
     /**
      * Called from the instrumented code after any method successful call, i.e., without any exception.
+     * 
+     * @param descriptor Deterministic call descriptor or null.
+     * @param id Deterministic call descriptor id when applicable, or any other value otherwise.
+     * @param result The call result.
      */
-    public static void onMethodCallReturn(Object result) {
-        getEventTracker().onMethodCallReturn(result);
+    public static void onMethodCallReturn(long id, Object descriptor, Object result) {
+        getEventTracker().onMethodCallReturn(id, descriptor, result);
     }
 
     /**
      * Called from the instrumented code after any method that returns void successful call, i.e., without any exception.
+     * 
+     * @param descriptor Deterministic call descriptor or null.
+     * @param id Deterministic call descriptor id when applicable, or any other value otherwise.
      */
-    public static void onMethodCallReturnVoid() {
-        getEventTracker().onMethodCallReturn(VOID_RESULT);
+    public static void onMethodCallReturnVoid(long id, Object descriptor) {
+        getEventTracker().onMethodCallReturn(id, descriptor, VOID_RESULT);
     }
 
     /**
      * Called from the instrumented code after any method call threw an exception
+     * 
+     * @param descriptor Deterministic call descriptor or null.
+     * @param id Deterministic call descriptor id when applicable, or any other value otherwise.
+     * @param t Thrown exception.
      */
-    public static void onMethodCallException(Throwable t) {
-        getEventTracker().onMethodCallException(t);
+    public static void onMethodCallException(long id, Object descriptor, Throwable t) {
+        getEventTracker().onMethodCallException(id, descriptor, t);
     }
 
     /**
@@ -584,10 +577,32 @@ public class Injections {
         getEventTracker().setLastMethodCallEventId();
     }
 
-    public static Object invokeDeterministicCallDescriptorInTraceDebugger(long id, Object descriptor) {
-        return getEventTracker().invokeDeterministicCallDescriptorInTraceDebugger(id, descriptor);
+    /**
+     * Determines whether the current event is the first replay within invocation.
+     *
+     * @return true if the current event is the first replay, false otherwise.
+     */
+    public static boolean isFirstReplay() {
+        return getEventTracker().isFirstReplay();
     }
 
+    /**
+     * Invokes a deterministic call from the state within the trace debugger using the provided identifier and descriptor.
+     *
+     * @param id The unique identifier representing the state of the deterministic call in the trace debugger.
+     * @param descriptor An object descriptor providing additional context or parameters for the deterministic call.
+     * @return The result of the deterministic call execution as an Object.
+     */
+    public static Object invokeDeterministicCallFromStateInTraceDebugger(long id, Object descriptor) {
+        return getEventTracker().invokeFollowingDeterministicCallFromStateInTraceDebugger(id, descriptor);
+    }
+
+    /**
+     * Invokes a deterministic call descriptor in the Lincheck testing framework.
+     *
+     * @param descriptor the call descriptor object to be invoked deterministically.
+     * @return the result of invoking the deterministic call descriptor
+     */
     public static Object invokeDeterministicCallDescriptorInLincheck(Object descriptor) {
         return getEventTracker().invokeDeterministicCallDescriptorInLincheck(descriptor);
     }

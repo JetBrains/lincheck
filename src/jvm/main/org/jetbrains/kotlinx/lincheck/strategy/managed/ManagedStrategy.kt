@@ -27,9 +27,13 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.adorne
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanObjectNumeration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
+import org.jetbrains.kotlinx.lincheck.util.native_calls.ArgumentType
 import org.jetbrains.kotlinx.lincheck.util.native_calls.DeterministicMethodDescriptor
 import org.jetbrains.kotlinx.lincheck.util.native_calls.MethodCallInfo
+import org.jetbrains.kotlinx.lincheck.util.native_calls.convertAsmMethodToMethodDescriptor
 import org.jetbrains.kotlinx.lincheck.util.native_calls.getDeterministicMethodDescriptorOrNull
+import org.jetbrains.kotlinx.lincheck.util.native_calls.onResultOnFirstRunWithCast
+import org.jetbrains.kotlinx.lincheck.util.native_calls.runFromStateWithCast
 import org.objectweb.asm.ConstantDynamic
 import org.objectweb.asm.Handle
 import java.lang.invoke.CallSite
@@ -151,8 +155,8 @@ abstract class ManagedStrategy(
     // Utility class for the plugin integration to provide ids for each trace point
     private var eventIdProvider = EventIdProvider()
     
-    // Is first run in case of a trace debugger
-    private val isFirstRun get() = replayNumber == 1L
+    // Is first replay within one invocation
+    override fun isFirstReplay() = replayNumber == 1L
     
     protected var replayNumber = 0L
 
@@ -1327,11 +1331,11 @@ abstract class ManagedStrategy(
             // get method's concurrency guarantee
             val guarantee = when {
                 (atomicMethodDescriptor != null) -> ManagedGuaranteeType.TREAT_AS_ATOMIC
-                else -> methodGuaranteeType(owner, className.canonicalClassName, methodName)
+                else -> methodGuaranteeType(owner, className, methodName)
             }
             // in case if a static method is called, ensure its class is instrumented
             if (owner == null && atomicMethodDescriptor == null && guarantee == null) { // static method
-                LincheckJavaAgent.ensureClassHierarchyIsTransformed(className.canonicalClassName)
+                LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
             }
             // in case of atomics API setter method call, notify the object tracker about a new link between objects
             if (atomicMethodDescriptor != null && atomicMethodDescriptor.kind.isSetter) {
@@ -1352,7 +1356,7 @@ abstract class ManagedStrategy(
             // since there is already a switch point between the suspension point and resumption
             if (guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC &&
                 // do not create a trace point on resumption
-                !isResumptionMethodCall(threadId, className.canonicalClassName, methodName, params, atomicMethodDescriptor)
+                !isResumptionMethodCall(threadId, className, methodName, params, atomicMethodDescriptor)
             ) {
                 // re-use last call trace point
                 newSwitchPoint(threadId, codeLocation, callStackTrace[threadId]!!.lastOrNull()?.tracePoint)
@@ -1375,15 +1379,26 @@ abstract class ManagedStrategy(
         }
         val deterministicMethodDescriptor = runInIgnoredSection {
             val methodCallInfo = MethodCallInfo(
-                owner, className, methodName, codeLocation, methodId, methodDesc, params.asList()
+                owner = owner,
+                ownerType = ArgumentType.Object(className),
+                methodDescriptor = convertAsmMethodToMethodDescriptor(methodName, methodDesc),
+                codeLocation = codeLocation,
+                methodId = methodId,
+                params = params.asList(),
             )
             getDeterministicMethodDescriptorOrNull(methodCallInfo)
         }
         return deterministicMethodDescriptor
     }
 
-    override fun onMethodCallReturn(result: Any?) {
+    override fun onMethodCallReturn(id: Long, descriptor: Any?, result: Any?) {
         runInIgnoredSection {
+            if (isInTraceDebuggerMode && isFirstReplay && descriptor != null) {
+                require(descriptor is DeterministicMethodDescriptor<*, *>)
+                descriptor.onResultOnFirstRunWithCast(result) {
+                    nativeMethodCallStatesTracker.setState(id, it, descriptor.methodCallInfo)
+                }
+            }
             loopDetector.afterMethodCall()
             if (collectTrace) {
                 val threadId = threadScheduler.getCurrentThreadId()
@@ -1410,7 +1425,15 @@ abstract class ManagedStrategy(
         leaveIgnoredSection()
     }
 
-    override fun onMethodCallException(t: Throwable) {
+    override fun onMethodCallException(id: Long, descriptor: Any?, t: Throwable) {
+        if (isInTraceDebuggerMode && isFirstReplay && descriptor != null) {
+            require(descriptor is DeterministicMethodDescriptor<*, *>)
+            runInIgnoredSection {
+                descriptor.onExceptionOnFirstRun(t) {
+                    nativeMethodCallStatesTracker.setState(id, it, descriptor.methodCallInfo)
+                }
+            }
+        }
         runInIgnoredSection {
             loopDetector.afterMethodCall()
         }
@@ -1434,6 +1457,20 @@ abstract class ManagedStrategy(
         // an "atomic" or "ignore" guarantee, we need to leave
         // this "ignore" section.
         leaveIgnoredSection()
+    }
+
+    override fun invokeFollowingDeterministicCallFromStateInTraceDebugger(id: Long, descriptor: Any): Any? {
+        require(!isFirstReplay && isInTraceDebuggerMode)
+        descriptor as DeterministicMethodDescriptor<*, *>
+        return runInIgnoredSection {
+            descriptor.runFromStateWithCast(nativeMethodCallStatesTracker.getState(id, descriptor.methodCallInfo))
+        }
+    }
+
+    override fun invokeDeterministicCallDescriptorInLincheck(descriptor: Any?): Any? {
+        require(!isInTraceDebuggerMode)
+        require(descriptor is DeterministicMethodDescriptor<*, *>)
+        return descriptor.runInLincheckMode()
     }
 
     private fun isResumptionMethodCall(
@@ -1499,7 +1536,7 @@ abstract class ManagedStrategy(
     ) {
         val callStackTrace = callStackTrace[threadId]!!
         val suspendedMethodStack = suspendedFunctionsStack[threadId]!!
-        if (isResumptionMethodCall(threadId, className.canonicalClassName, methodName, methodParams, atomicMethodDescriptor)) {
+        if (isResumptionMethodCall(threadId, className, methodName, methodParams, atomicMethodDescriptor)) {
             // In case of resumption, we need to find a call stack frame corresponding to the resumed function
             var elementIndex = suspendedMethodStack.indexOfFirst {
                 it.tracePoint.className == className && it.tracePoint.methodName == methodName
@@ -1511,7 +1548,7 @@ abstract class ManagedStrategy(
                 // we should probably refactor and fix that, because it is very inconvenient
                 val actor = scenario.threads[threadId][currentActorId[threadId]!!]
                 check(methodName == actor.method.name)
-                check(className.canonicalClassName == actor.method.declaringClass.name)
+                check(className == actor.method.declaringClass.name)
                 elementIndex = suspendedMethodStack.size
             }
             // get suspended stack trace elements to restore
@@ -1534,7 +1571,7 @@ abstract class ManagedStrategy(
             return
         }
         val callId = callStackTraceElementId++
-        val params = if (isSuspendFunction(className.canonicalClassName, methodName, methodParams)) {
+        val params = if (isSuspendFunction(className, methodName, methodParams)) {
             methodParams.dropLast(1).toTypedArray()
         } else {
             methodParams
@@ -1607,7 +1644,7 @@ abstract class ManagedStrategy(
         error("Unknown atomic method $className::$methodName")
     }
 
-    private fun simpleClassName(className: String) = className.takeLastWhile { it != '/' }
+    private fun simpleClassName(className: String) = className.canonicalClassName.takeLastWhile { it != '.' }
 
     private fun initializeUnsafeMethodCallTracePoint(
         tracePoint: MethodCallTracePoint,
@@ -1820,34 +1857,6 @@ abstract class ManagedStrategy(
         val currentThreadId = threadScheduler.getCurrentThreadId()
         val lastMethodCall = callStackTrace[currentThreadId]!!.lastOrNull()?.tracePoint ?: return
         setBeforeEventId(lastMethodCall)
-    }
-
-    /**
-     * Executes a deterministic call based on the provided descriptor and identifier in trace debugger mode.
-     * 
-     * The method manages whether to save the state of the execution or to use saved one.
-     *
-     * @param id A unique identifier for the deterministic call state.
-     * @param descriptor The call descriptor that encapsulates the method information and execution details.
-     * @return The result of the deterministic call execution.
-     */
-    override fun invokeDeterministicCallDescriptorInTraceDebugger(id: Long, descriptor: Any?): Any? {
-        require(descriptor is DeterministicMethodDescriptor<*, *>)
-        require(isInTraceDebuggerMode)
-        return when {
-            isFirstRun -> descriptor.runSavingToState {
-                nativeMethodCallStatesTracker.setState(id, it, descriptor.methodCallInfo)
-            }
-            else -> descriptor.runFromStateWithCast(
-                nativeMethodCallStatesTracker.getState(id, descriptor.methodCallInfo)
-            )
-        }
-    }
-
-    override fun invokeDeterministicCallDescriptorInLincheck(descriptor: Any?): Any? {
-        require(descriptor is DeterministicMethodDescriptor<*, *>)
-        require(!isInTraceDebuggerMode)
-        return descriptor.runInLincheckMode()
     }
 
     /**

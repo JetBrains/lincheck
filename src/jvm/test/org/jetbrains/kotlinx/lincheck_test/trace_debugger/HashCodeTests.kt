@@ -193,3 +193,15 @@ class IdentityHashCodeDiffersTest() {
         .threads(1)
         .check(this::class)
 }
+
+class ArraysClassTest: AbstractDeterministicTest() {
+    @Operation
+    fun operation(): String {
+        val result = ByteArray(10)
+        val hashCode1 = result.hashCode()
+        val hashCode = Arrays.hashCode(result)
+        return """
+            |$hashCode1 $hashCode
+        """.trimMargin()
+    }
+}

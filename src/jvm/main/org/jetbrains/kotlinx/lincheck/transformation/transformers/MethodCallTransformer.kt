@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
+import org.jetbrains.kotlinx.lincheck.canonicalClassName
 import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.objectweb.asm.Opcodes.*
@@ -67,18 +68,17 @@ internal class MethodCallTransformer(
     }
 
     private fun processMethodCall(desc: String, opcode: Int, owner: String, name: String, itf: Boolean) = adapter.run {
-        val endLabel = newLabel()
-        val methodCallStartLabel = newLabel()
         // STACK [INVOKEVIRTUAL]: owner, arguments
         // STACK [INVOKESTATIC] :        arguments
         val argumentLocals = storeArguments(desc)
-        // STACK [INVOKEVIRTUAL]: owner
-        // STACK [INVOKESTATIC] : <empty>
-        when (opcode) {
-            INVOKESTATIC -> visitInsn(ACONST_NULL)
-            else -> dup()
+        val receiver = if (opcode == INVOKESTATIC) null else newLocal(getType("L$owner;"))
+        receiver?.let { storeLocal(it) }
+        // STACK : <empty>
+        when (receiver) {
+            null -> pushNull()
+            else -> loadLocal(receiver)
         }
-        push(owner)
+        push(owner.canonicalClassName)
         push(name)
         loadNewCodeLocationId()
         // STACK [INVOKEVIRTUAL]: owner, owner, className, methodName, codeLocation
@@ -92,87 +92,127 @@ internal class MethodCallTransformer(
         pushArray(argumentLocals)
         // STACK: ..., argumentsArray
         invokeStatic(Injections::onMethodCall)
+        
         val deterministicMethodDescriptor = newLocal(OBJECT_TYPE)
         storeLocal(deterministicMethodDescriptor)
         
+        val deterministicCallIdLocal = newLocal(LONG_TYPE)
+        pushDeterministicCallId(deterministicMethodDescriptor)
+        storeLocal(deterministicCallIdLocal)
+        
         invokeBeforeEventIfPluginEnabled("method call $methodName", setMethodEventId = true)
-        // STACK [INVOKEVIRTUAL]: owner
-        // STACK [INVOKESTATIC] :
-        val methodCallEndLabel = newLabel()
-        val handlerExceptionStartLabel = newLabel()
-        visitTryCatchBlock(methodCallStartLabel, methodCallEndLabel, handlerExceptionStartLabel, null)
-        visitLabel(methodCallStartLabel)
         
-        val regularMethodCallLabel = newLabel()
-        val endIfLabel = newLabel()
-        loadLocal(deterministicMethodDescriptor)
-        ifNull(regularMethodCallLabel)
-        // STACK [INVOKEVIRTUAL]: owner
-        // STACK [INVOKESTATIC] :
-        if (opcode != INVOKESTATIC) {
-            pop()
-        }
-        // STACK [INVOKEVIRTUAL]:
-        // STACK [INVOKESTATIC] :
-        val returnType = getReturnType(desc)
-        invokeDeterministicCall(deterministicMethodDescriptor, returnType)
-        goTo(endIfLabel)
-        visitLabel(regularMethodCallLabel)
-        // STACK [INVOKEVIRTUAL]: owner
-        // STACK [INVOKESTATIC] :
-        loadLocals(argumentLocals)
-        // STACK [INVOKEVIRTUAL]: owner, arguments
-        // STACK [INVOKESTATIC] :        arguments
-        visitMethodInsn(opcode, owner, name, desc, itf)
-        visitLabel(endIfLabel)
-        visitLabel(methodCallEndLabel)
-        
-        // STACK [INVOKEVIRTUAL]: owner, arguments
-        // STACK [INVOKESTATIC] :        arguments
-        processMethodCallResult(desc)
-        // STACK: result
-        goTo(endLabel)
-        visitLabel(handlerExceptionStartLabel)
-        dup()
-        invokeStatic(Injections::onMethodCallException)
-        throwException()
-        visitLabel(endLabel)
-        // STACK: result
-    }
+        tryCatchFinally(
+            tryBlock = {
+                val returnType = getReturnType(desc)
+                invokeMethodOrDeterministicCall(deterministicMethodDescriptor, deterministicCallIdLocal, returnType) {
+                    // STACK: <empty>
+                    receiver?.let { loadLocal(it) }
+                    loadLocals(argumentLocals)
+                    // STACK [INVOKEVIRTUAL]: owner, arguments
+                    // STACK [INVOKESTATIC] :        arguments
+                    visitMethodInsn(opcode, owner, name, desc, itf)
+                    // STACK: result/<empty> for void
+                }
 
-    private fun GeneratorAdapter.invokeDeterministicCall(
-        deterministicMethodDescriptor: Int,
-        returnType: Type?
+                // STACK: result/<empty> for void
+                processMethodCallResult(deterministicCallIdLocal, deterministicMethodDescriptor, desc)
+                // STACK: result/<empty> for void
+            },
+            catchBlock = {
+                val exceptionLocal = newLocal(getType(Throwable::class.java))
+                storeLocal(exceptionLocal)
+                // STACK: <empty>
+                loadLocal(deterministicCallIdLocal)
+                loadLocal(deterministicMethodDescriptor)
+                loadLocal(exceptionLocal)
+                // STACK: deterministicCallId, deterministicMethodDescriptor, exception
+                invokeStatic(Injections::onMethodCallException)
+                // STACK: <empty>
+                loadLocal(exceptionLocal)
+                throwException()
+            }
+        )
+    }
+    
+    private fun GeneratorAdapter.pushDeterministicCallId(deterministicMethodDescriptor: Int) {
+        if (!isInTraceDebuggerMode) {
+            push(0L)
+            return
+        }
+        val elseIf = newLabel()
+        val endIf = newLabel()
+        loadLocal(deterministicMethodDescriptor)
+        ifNull(elseIf)
+        getStatic(traceDebuggerTrackerEnumType, NativeMethodCall.name, traceDebuggerTrackerEnumType)
+        invokeStatic(Injections::getNextTraceDebuggerEventTrackerId)
+        goTo(endIf)
+        visitLabel(elseIf)
+        push(0L)
+        visitLabel(endIf)
+    }
+    
+    private fun GeneratorAdapter.invokeMethodOrDeterministicCall(
+        deterministicMethodDescriptor: Int, deterministicCallIdLocal: Int, returnType: Type,
+        invokeDefault: GeneratorAdapter.() -> Unit,
     ) {
+        val onDefaultMethodCall = newLabel()
+        val endIf = newLabel()
+        // STACK: <empty>
+        loadLocal(deterministicMethodDescriptor)
+        ifNull(onDefaultMethodCall) // If not deterministic call, we just call it regularly
+        // STACK: <empty>
         invokeInIgnoredSection {
             if (isInTraceDebuggerMode) {
-                getStatic(traceDebuggerTrackerEnumType, NativeMethodCall.name, traceDebuggerTrackerEnumType)
-                invokeStatic(Injections::getNextTraceDebuggerEventTrackerId)
-                loadLocal(deterministicMethodDescriptor)
-                invokeStatic(Injections::invokeDeterministicCallDescriptorInTraceDebugger)
+                // In trace debugger mode we behave regularly for the first replay to save state
+                ifStatement(
+                    condition = { invokeStatic(Injections::isFirstReplay) },
+                    thenClause = { goTo(onDefaultMethodCall) }, // go to the regular execution
+                    elseClause = {
+                        // STACK: <empty>
+                        loadLocal(deterministicCallIdLocal)
+                        loadLocal(deterministicMethodDescriptor)
+                        // STACK: deterministicCallId, deterministicMethodDescriptor
+                        invokeStatic(Injections::invokeDeterministicCallFromStateInTraceDebugger) // execute from the state
+                    }
+                )
             } else {
+                // in Lincheck mode we just call replacer
+                // STACK: <empty>
                 loadLocal(deterministicMethodDescriptor)
+                // STACK: deterministicMethodDescriptor
                 invokeStatic(Injections::invokeDeterministicCallDescriptorInLincheck)
             }
-            if (returnType == VOID_TYPE) {
-                pop()
-            } else {
-                unbox(returnType)
-            }
+            if (returnType == VOID_TYPE) pop() else unbox(returnType)
         }
+        goTo(endIf)
+        visitLabel(onDefaultMethodCall)
+        // STACK: <empty>
+        invokeDefault()
+        // STACK: <returnType>/<empty> (for void)
+        visitLabel(endIf)
     }
 
-    private fun processMethodCallResult(desc: String) = adapter.run {
+    private fun processMethodCallResult(
+        deterministicCallIdLocal: Int,
+        deterministicMethodDescriptorLocal: Int,
+        desc: String
+    ) = adapter.run {
         // STACK: result?
         val resultType = Type.getReturnType(desc)
         if (resultType == VOID_TYPE) {
             // STACK: <empty>
+            loadLocal(deterministicCallIdLocal)
+            loadLocal(deterministicMethodDescriptorLocal)
             invokeStatic(Injections::onMethodCallReturnVoid)
             // STACK: <empty>
         } else {
             // STACK: result
             val resultLocal = newLocal(resultType)
-            copyLocal(resultLocal)
+            storeLocal(resultLocal)
+            loadLocal(deterministicCallIdLocal)
+            loadLocal(deterministicMethodDescriptorLocal)
+            loadLocal(resultLocal)
             box(resultType)
             invokeStatic(Injections::onMethodCallReturn)
             loadLocal(resultLocal)
@@ -195,7 +235,8 @@ internal class MethodCallTransformer(
         className == "java/lang/Float" ||
         className == "java/util/Locale" ||
         className == "org/slf4j/helpers/Util" ||
-        className == "java/util/Properties"
+        className == "java/util/Properties" ||
+        className == "java/lang/invoke/MethodHandles"
 
     @Suppress("UNUSED_PARAMETER")
     private fun isCoroutineResumptionSyntheticAccessor(className: String, methodName: String): Boolean =
