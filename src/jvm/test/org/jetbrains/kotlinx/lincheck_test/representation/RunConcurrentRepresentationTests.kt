@@ -374,16 +374,7 @@ class ThreadPoolRunConcurrentRepresentationTest : BaseRunConcurrentRepresentatio
 }
 
 class CoroutinesRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
-    when (testJdkVersion) {
-        TestJdkVersion.JDK_8  -> "run_concurrent_test/coroutines/coroutines_jdk8.txt"
-        TestJdkVersion.JDK_11 -> "run_concurrent_test/coroutines/coroutines_jdk11.txt"
-        TestJdkVersion.JDK_13 -> "run_concurrent_test/coroutines/coroutines_jdk13.txt"
-        TestJdkVersion.JDK_15 -> "run_concurrent_test/coroutines/coroutines_jdk15.txt"
-        TestJdkVersion.JDK_17 -> "run_concurrent_test/coroutines/coroutines_jdk17.txt"
-        TestJdkVersion.JDK_19 -> "run_concurrent_test/coroutines/coroutines_jdk19.txt"
-        TestJdkVersion.JDK_20 -> "run_concurrent_test/coroutines/coroutines_jdk20.txt"
-        TestJdkVersion.JDK_21 -> "run_concurrent_test/coroutines/coroutines_jdk21.txt"
-    }
+    "run_concurrent_test/coroutines/coroutines"
 ) {
     @Before
     fun setUp() {
