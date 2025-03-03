@@ -15,11 +15,11 @@ import org.jetbrains.kotlinx.lincheck.util.native_calls.MethodCallInfo
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
-private typealias DeterministicCallData = Any?
+private typealias DeterministicCallState = Any?
 
-private data class DeterministicMethodCallInvocationData(
+private data class DeterministicMethodCallInstantiationData(
     val methodCallInfo: MethodCallInfo,
-    val invocationData: DeterministicCallData
+    val invocationData: DeterministicCallState
 )
 
 /**
@@ -32,7 +32,7 @@ private data class DeterministicMethodCallInvocationData(
  */
 internal class NativeMethodCallStatesTracker : AbstractTraceDebuggerEventTracker {
     private var currentId = AtomicLong(0)
-    private val callData = ConcurrentHashMap<TraceDebuggerEventId, DeterministicMethodCallInvocationData>()
+    private val callData = ConcurrentHashMap<TraceDebuggerEventId, DeterministicMethodCallInstantiationData>()
     private val idAdvances = ConcurrentHashMap<TraceDebuggerEventId, TraceDebuggerEventId>()
 
     /**
@@ -41,9 +41,9 @@ internal class NativeMethodCallStatesTracker : AbstractTraceDebuggerEventTracker
      * @param id The identifier for which the state should be retrieved.
      * @return The state associated with the given identifier, or error if no state exists.
      */
-    fun getState(id: TraceDebuggerEventId, methodCallInfo: MethodCallInfo): DeterministicCallData {
+    fun getState(id: TraceDebuggerEventId, methodCallInfo: MethodCallInfo): DeterministicCallState {
         val methodCallAndRetrievedData = callData[id]
-        Logger.debug { "getStateOrNull: $id -> $methodCallAndRetrievedData" }
+        Logger.debug { "Getting deterministic method call state: $id -> $methodCallAndRetrievedData" }
         if (methodCallAndRetrievedData == null) error("No state for id $id and method call $methodCallInfo")
         val (oldMethodCallInfo, retrievedData) = methodCallAndRetrievedData
         require(oldMethodCallInfo seemsToBeTheSameMethodCallWith methodCallInfo) { 
@@ -60,10 +60,10 @@ internal class NativeMethodCallStatesTracker : AbstractTraceDebuggerEventTracker
      * @param state The new state to associate with the provided identifier.
      * @throws IllegalStateException if a state is already associated with the given identifier.
      */
-    fun setState(id: TraceDebuggerEventId, state: DeterministicCallData, methodCallInfo: MethodCallInfo) {
-        val methodCallAndState = DeterministicMethodCallInvocationData(methodCallInfo, state)
+    fun setState(id: TraceDebuggerEventId, methodCallInfo: MethodCallInfo, state: DeterministicCallState) {
+        val methodCallAndState = DeterministicMethodCallInstantiationData(methodCallInfo, state)
         val oldState = callData.put(id, methodCallAndState)
-        Logger.debug { "setState: $id -> $methodCallAndState" }
+        Logger.debug { "Saving deterministic method call state: $id -> $methodCallAndState" }
         if (oldState != null) error("Duplicate call id $id: $oldState -> $methodCallAndState")
     }
 
@@ -73,7 +73,7 @@ internal class NativeMethodCallStatesTracker : AbstractTraceDebuggerEventTracker
 
     override fun getNextId(): TraceDebuggerEventId {
         val result = currentId.getAndIncrement()
-        Logger.debug { "getNextId++: $result" }
+        Logger.debug { "Getting and incrementing deterministic method id: $result" }
         return result
     }
 

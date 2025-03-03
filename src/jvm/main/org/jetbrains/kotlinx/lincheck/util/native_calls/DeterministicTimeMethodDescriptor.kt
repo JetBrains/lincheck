@@ -14,7 +14,7 @@ internal fun getDeterministicTimeMethodDescriptorOrNull(
     methodCallInfo: MethodCallInfo
 ): DeterministicMethodDescriptor<*, Long>? {
     if (methodCallInfo.ownerType != systemType) return null
-    val methodName = methodCallInfo.methodDescriptor.name
+    val methodName = methodCallInfo.methodSignature.name
     if (methodName != "nanoTime" && methodName != "currentTimeMillis") return null
     return PureDeterministicMethodDescriptor<Long>(methodCallInfo) { 1337L /* any constant value */ }
 }
