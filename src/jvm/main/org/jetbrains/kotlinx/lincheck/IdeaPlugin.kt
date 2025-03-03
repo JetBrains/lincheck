@@ -51,20 +51,6 @@ fun testFailed(
     isGeneralPurposeModelChecking: Boolean,
 ) {}
 
-/**
- * This property on the top level serves as a cache.
- * We will call `ideaPluginEnabled` method only once
- * and so on the plugin side the callback will be called also only once.
- */
-internal val ideaPluginEnabled by lazy { ideaPluginEnabled() }
-
-/**
- * Debugger replaces the result of this method to `true` if idea plugin is enabled.
- */
-private fun ideaPluginEnabled(): Boolean {
-    // treat as enabled in tests if we want so
-    return eventIdStrictOrderingCheck
-}
 
 /**
  * This is a marker method for the plugin to detect the Lincheck test start.
@@ -153,11 +139,6 @@ internal fun runPluginReplay(
         replayStrategy.runReplayIfPluginEnabled(replayedFailure)
     }
 }
-
-/**
- * Internal property to check that trace point IDs are in a strict sequential order.
- */
-internal val eventIdStrictOrderingCheck = System.getProperty("lincheck.debug.withEventIdSequentialCheck") != null
 
 /**
  * If the plugin enabled and the failure has a trace, passes information about
@@ -430,4 +411,25 @@ private fun createContinuationToThreadIdMap(threads: Array<TestThread>): Array<A
         array.add(thread.threadId)
     }
     return array.toTypedArray()
+}
+
+/**
+ * Internal property to check that trace point IDs are in a strict sequential order.
+ */
+internal val eventIdStrictOrderingCheck =
+    System.getProperty("lincheck.debug.withEventIdSequentialCheck") != null
+
+/**
+ * This property on the top level serves as a cache.
+ * We will call `ideaPluginEnabled` method only once
+ * and so on the plugin side the callback will be called also only once.
+ */
+internal val ideaPluginEnabled = ideaPluginEnabled()
+
+/**
+ * Debugger replaces the result of this method to `true` if idea plugin is enabled.
+ */
+private fun ideaPluginEnabled(): Boolean {
+    // treat as enabled in tests if we want so
+    return eventIdStrictOrderingCheck
 }
