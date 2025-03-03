@@ -82,12 +82,13 @@ abstract class AbstractTraceDebuggerIntegrationTest {
         }
 
         // TODO decide how to test: with gold data or run twice?
-        val goldDataFile = File(getGolderDataPathFor(testClassName, testMethodName))
-        if (goldDataFile.exists()) {
-            Assert.assertEquals(goldDataFile.readText(), tmpFile.readText())
+        val expectedOutput = File(getGolderDataPathFor(testClassName, testMethodName))
+        if (expectedOutput.exists()) {
+            Assert.assertEquals(expectedOutput.readText(), tmpFile.readText())
         } else {
             if (OVERWRITE_REPRESENTATION_TESTS_OUTPUT) {
-                copy(tmpFile, goldDataFile)
+                expectedOutput.parentFile.mkdirs()
+                copy(tmpFile, expectedOutput)
                 Assert.fail("The gold data file was created. Please rerun the test.")
             } else {
                 Assert.fail("The gold data file was not found. " +
