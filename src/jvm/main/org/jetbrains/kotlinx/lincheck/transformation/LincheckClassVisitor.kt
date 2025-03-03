@@ -17,7 +17,6 @@ import org.objectweb.asm.Type.*
 import org.objectweb.asm.commons.*
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.*
 import org.jetbrains.kotlinx.lincheck.transformation.transformers.*
-import org.jetbrains.kotlinx.lincheck.transformation.transformers.ConstantHashCodeTransformer
 import sun.nio.ch.lincheck.*
 
 internal class LincheckClassVisitor(

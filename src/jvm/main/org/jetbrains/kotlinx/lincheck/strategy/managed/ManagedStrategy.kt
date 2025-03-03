@@ -27,13 +27,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.adorne
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanObjectNumeration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
-import org.jetbrains.kotlinx.lincheck.util.native_calls.ArgumentType
-import org.jetbrains.kotlinx.lincheck.util.native_calls.DeterministicMethodDescriptor
-import org.jetbrains.kotlinx.lincheck.util.native_calls.MethodCallInfo
-import org.jetbrains.kotlinx.lincheck.util.native_calls.convertAsmMethodToMethodDescriptor
-import org.jetbrains.kotlinx.lincheck.util.native_calls.getDeterministicMethodDescriptorOrNull
-import org.jetbrains.kotlinx.lincheck.util.native_calls.onResultOnFirstRunWithCast
-import org.jetbrains.kotlinx.lincheck.util.native_calls.runFromStateWithCast
+import org.jetbrains.kotlinx.lincheck.util.native_calls.*
 import org.objectweb.asm.ConstantDynamic
 import org.objectweb.asm.Handle
 import java.lang.invoke.CallSite
@@ -97,14 +91,6 @@ abstract class ManagedStrategy(
         TraceDebuggerTracker.NativeMethodCall to nativeMethodCallStatesTracker,
     )
     
-    internal fun resetTraceDebuggerTrackerIds() {
-        traceDebuggerEventTrackers.values.forEach { it.resetIds() }
-    }
-    
-    internal fun closeTraceDebuggerTrackers() {
-        traceDebuggerEventTrackers.values.forEach { it.close() }
-    }
-    
     // Cache for evaluated invoke dynamic call sites
     private val invokeDynamicCallSites = ConcurrentHashMap<ConstantDynamic, CallSite>()
     // Tracker of the monitors' operations.
@@ -155,9 +141,6 @@ abstract class ManagedStrategy(
     // Utility class for the plugin integration to provide ids for each trace point
     private var eventIdProvider = EventIdProvider()
     
-    // Is first replay within one invocation
-    override fun isFirstReplay() = replayNumber == 1L
-    
     protected var replayNumber = 0L
 
 
@@ -207,6 +190,17 @@ abstract class ManagedStrategy(
         cleanObjectNumeration()
         closeTraceDebuggerTrackers()
     }
+
+    internal fun resetTraceDebuggerTrackerIds() {
+        traceDebuggerEventTrackers.values.forEach { it.resetIds() }
+    }
+
+    internal fun closeTraceDebuggerTrackers() {
+        traceDebuggerEventTrackers.values.forEach { it.close() }
+    }
+
+    // Is first replay within one invocation
+    override fun isFirstReplay() = replayNumber == 1L
 
     private fun createRunner(): ManagedStrategyRunner =
         ManagedStrategyRunner(
@@ -1381,7 +1375,7 @@ abstract class ManagedStrategy(
             val methodCallInfo = MethodCallInfo(
                 owner = owner,
                 ownerType = ArgumentType.Object(className),
-                methodDescriptor = convertAsmMethodToMethodDescriptor(methodName, methodDesc),
+                methodSignature = convertAsmMethodToMethodSignature(methodName, methodDesc),
                 codeLocation = codeLocation,
                 methodId = methodId,
                 params = params.asList(),
@@ -1396,7 +1390,7 @@ abstract class ManagedStrategy(
             if (isInTraceDebuggerMode && isFirstReplay && descriptor != null) {
                 require(descriptor is DeterministicMethodDescriptor<*, *>)
                 descriptor.onResultOnFirstRunWithCast(result) {
-                    nativeMethodCallStatesTracker.setState(id, it, descriptor.methodCallInfo)
+                    nativeMethodCallStatesTracker.setState(id, descriptor.methodCallInfo, it)
                 }
             }
             loopDetector.afterMethodCall()
@@ -1429,8 +1423,8 @@ abstract class ManagedStrategy(
         if (isInTraceDebuggerMode && isFirstReplay && descriptor != null) {
             require(descriptor is DeterministicMethodDescriptor<*, *>)
             runInIgnoredSection {
-                descriptor.onExceptionOnFirstRun(t) {
-                    nativeMethodCallStatesTracker.setState(id, it, descriptor.methodCallInfo)
+                descriptor.saveFirstException(t) {
+                    nativeMethodCallStatesTracker.setState(id, descriptor.methodCallInfo, it)
                 }
             }
         }
@@ -1470,7 +1464,7 @@ abstract class ManagedStrategy(
     override fun invokeDeterministicCallDescriptorInLincheck(descriptor: Any?): Any? {
         require(!isInTraceDebuggerMode)
         require(descriptor is DeterministicMethodDescriptor<*, *>)
-        return descriptor.runInLincheckMode()
+        return descriptor.runFake()
     }
 
     private fun isResumptionMethodCall(

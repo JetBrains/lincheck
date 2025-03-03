@@ -17,6 +17,9 @@ import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 
+/**
+ * A test class for validating the determinism of the [SecureRandom`-specific methods.
+ */
 class SecureRandomTest : RandomTests() {
     @Before
     fun setUp() {
