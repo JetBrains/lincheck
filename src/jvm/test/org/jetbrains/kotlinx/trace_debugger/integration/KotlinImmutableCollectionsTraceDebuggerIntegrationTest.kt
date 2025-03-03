@@ -20,8 +20,8 @@ class KotlinImmutableCollectionsTraceDebuggerIntegrationTest: AbstractTraceDebug
     @Test
     fun `tests contract list GuavaImmutableListTest_list`() {
         runGradleTest(
-            "tests.contract.list.GuavaImmutableListTest",
-            "list",
+            testClassName = "tests.contract.list.GuavaImmutableListTest",
+            testMethodName = "list",
             ":kotlinx-collections-immutable:cleanJvmTest",
             ":kotlinx-collections-immutable:jvmTest",
         )
