@@ -16,18 +16,21 @@ import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.kotlin.dsl.register
 
-class ProjectToTest(val name: String, val hash: String, val organization: String = "Kotlin")
+class GithubProjectSnapshot(val organization: String = "Kotlin", val repositoryName: String, val commitHash: String)
 
 private val projectsToTest = listOf(
-    ProjectToTest("kotlinx.collections.immutable", "592f05fce02a1ad9e26cc6f3fdb55cdd97910599")
+    GithubProjectSnapshot(
+        repositoryName = "kotlinx.collections.immutable",
+        commitHash = "592f05fce02a1ad9e26cc6f3fdb55cdd97910599"
+    )
 )
 
 lateinit var traceDebuggerIntegrationTestsPrerequisites: TaskProvider<Task>
 
 fun Project.registerIntegrationTestsPrerequisites() {
     val prerequisite = projectsToTest.map { projectToTest ->
-        val projectName = projectToTest.name
-        val hash = projectToTest.hash
+        val projectName = projectToTest.repositoryName
+        val hash = projectToTest.commitHash
 
         val downloadIntegrationTestsDependency = tasks.register<Download>("download_${projectName}_ForTest") {
             src("https://github.com/${projectToTest.organization}/$projectName/archive/$hash.zip")
