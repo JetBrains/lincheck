@@ -14,7 +14,7 @@ import org.objectweb.asm.Type.getArgumentTypes
 import org.objectweb.asm.Type.getReturnType
 import org.objectweb.asm.commons.Method
 
-internal data class MethodDescriptor(val name: String, val methodType: MethodType)
+internal data class MethodSignature(val name: String, val methodType: MethodType)
 internal data class MethodType(val argumentTypes: List<ArgumentType>, val returnType: Type)
 
 internal sealed class ArgumentType: Type() {
@@ -69,6 +69,6 @@ private fun convertAsmMethodType(methodDesc: String): MethodType {
     )
 }
 
-internal fun Method.toMethodDescriptor() = MethodDescriptor(this.name, convertAsmMethodType(this.descriptor))
-internal fun java.lang.reflect.Method.toMethodDescriptor() = Method.getMethod(this).toMethodDescriptor()
-internal fun convertAsmMethodToMethodDescriptor(methodName: String, methodDesc: String) = MethodDescriptor(methodName, convertAsmMethodType(methodDesc))
+internal fun Method.toMethodSignature() = MethodSignature(this.name, convertAsmMethodType(this.descriptor))
+internal fun java.lang.reflect.Method.toMethodSignature() = Method.getMethod(this).toMethodSignature()
+internal fun convertAsmMethodToMethodSignature(methodName: String, methodDesc: String) = MethodSignature(methodName, convertAsmMethodType(methodDesc))
