@@ -16,17 +16,18 @@ class AccessFunctionRepresentationTest: BaseRunConcurrentRepresentationTest<Unit
     private var a = 0
     
     override fun block() {
-        runn { inc() } 
+        runLambda { inc1() } 
         check(false)
     }
     
-    private fun inc() {
+    private fun inc1() {
         Nested().inc2()
     }
     
     private fun inc3() {
         a++
     }
+    
     private inner class Nested {
          fun inc2() {
             inc3()
@@ -35,7 +36,7 @@ class AccessFunctionRepresentationTest: BaseRunConcurrentRepresentationTest<Unit
     }
 }
 
-fun runn(r: () -> Unit) {
+private fun runLambda(r: () -> Unit) {
     r()
 }
 
@@ -45,7 +46,7 @@ class AccessFieldRepresentationTest: BaseRunConcurrentRepresentationTest<Unit>("
     private var a = 0
     
     override fun block() {
-        runn { a++ }
+        runLambda { a++ }
         check(false)
     }
 }

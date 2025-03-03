@@ -415,14 +415,16 @@ private fun removeSyntheticFieldAccessTracePoints(trace: List<TracePoint>) {
         .filter { it is ReadTracePoint || it is WriteTracePoint }
         .forEach { point ->
             val lastCall = point.callStackTrace.lastOrNull() ?: return@forEach
-            if (lastCall.tracePoint.methodName.contains("access\$get")
-                || lastCall.tracePoint.methodName.contains("access\$set")) {
+            if (isSyntheticFieldAccess(lastCall.tracePoint.methodName)) {
                 if (point is ReadTracePoint) point.stackTraceElement = lastCall.tracePoint.stackTraceElement
                 if (point is WriteTracePoint) point.stackTraceElement = lastCall.tracePoint.stackTraceElement
                 point.callStackTrace = point.callStackTrace.dropLast(1)
             }
         }
 }
+
+private fun isSyntheticFieldAccess(methodName: String): Boolean = methodName.contains("access\$get") 
+    || methodName.contains("access\$set")
 
 /**
  * Merges fun$default(...) calls.
@@ -470,7 +472,8 @@ private fun compressCallStackTrace(
         }
         
         // Check if current and next are a "default" combo
-        if (isCompressiblePair(currentElement.tracePoint.methodName, nextElement.tracePoint.methodName)) {
+        if (isDefaultPair(currentElement.tracePoint.methodName, nextElement.tracePoint.methodName)
+            || isAccessPair(currentElement.tracePoint.methodName, nextElement.tracePoint.methodName)) {
             // Combine fields of next and current, and store in current
             currentElement.tracePoint.methodName = nextElement.tracePoint.methodName
             currentElement.tracePoint.parameters = nextElement.tracePoint.parameters
@@ -512,15 +515,19 @@ private fun actorNodeResultRepresentation(result: Result?, failure: LincheckFail
  * A.calLMe$default(A#1, 3, null, 2, null) at A.operation(A.kt:23)
  *  A.callMe(3, "Hey") at A.callMe$default(A.kt:27)
  *```
+ */
+private fun isDefaultPair(currentName: String, nextName: String): Boolean =
+    currentName == "${nextName}\$default"
+
+/**
  * Access pair example:
  * ```
  * A.access$callMe() at A.operation(A.kt:N)
  *  A.callMe() at A.callMe$default(A.kt:N)
  *```
  */
-private fun isCompressiblePair(currentName: String, nextName: String): Boolean =
-    currentName == "${nextName}\$default" || currentName == "access$${nextName}" 
-
+private fun isAccessPair(currentName: String, nextName: String): Boolean =
+    currentName == "access$${nextName}" 
 
 /**
  * Helper class to provider execution results, including a validation function result
