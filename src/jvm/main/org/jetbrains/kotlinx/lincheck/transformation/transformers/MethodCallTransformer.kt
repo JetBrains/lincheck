@@ -249,8 +249,8 @@ internal class MethodCallTransformer(
         className == "java/lang/Float" ||
         className == "java/util/Locale" ||
         className == "org/slf4j/helpers/Util" ||
-        className == "java/util/Properties" ||
-        className == "java/lang/invoke/MethodHandles"
+        className == "java/util/Properties"/* ||
+        className == "java/lang/invoke/MethodHandles"*/
 
     @Suppress("UNUSED_PARAMETER")
     private fun isCoroutineResumptionSyntheticAccessor(className: String, methodName: String): Boolean =
