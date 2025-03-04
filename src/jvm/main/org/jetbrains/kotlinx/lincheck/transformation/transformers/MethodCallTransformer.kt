@@ -91,6 +91,9 @@ internal class MethodCallTransformer(
         // STACK [INVOKESTATIC]:         null, className, methodName, codeLocation, methodId, methodDesc
         pushArray(argumentLocals)
         // STACK: ..., argumentsArray
+        val argumentsArrayLocal = newLocal(getType("[Ljava/lang/Object;"))
+        storeLocal(argumentsArrayLocal)
+        loadLocal(argumentsArrayLocal)
         invokeStatic(Injections::onMethodCall)
         
         val deterministicMethodDescriptor = newLocal(OBJECT_TYPE)
@@ -105,7 +108,9 @@ internal class MethodCallTransformer(
         tryCatchFinally(
             tryBlock = {
                 val returnType = getReturnType(desc)
-                invokeMethodOrDeterministicCall(deterministicMethodDescriptor, deterministicCallIdLocal, returnType) {
+                invokeMethodOrDeterministicCall(
+                    deterministicMethodDescriptor, deterministicCallIdLocal, returnType, receiver, argumentsArrayLocal
+                ) {
                     // STACK: <empty>
                     receiver?.let { loadLocal(it) }
                     loadLocals(argumentLocals)
@@ -116,7 +121,9 @@ internal class MethodCallTransformer(
                 }
 
                 // STACK: result/<empty> for void
-                processMethodCallResult(deterministicCallIdLocal, deterministicMethodDescriptor, desc)
+                processMethodCallResult(
+                    deterministicCallIdLocal, deterministicMethodDescriptor, desc, receiver, argumentsArrayLocal
+                )
                 // STACK: result/<empty> for void
             },
             catchBlock = {
@@ -125,8 +132,10 @@ internal class MethodCallTransformer(
                 // STACK: <empty>
                 loadLocal(deterministicCallIdLocal)
                 loadLocal(deterministicMethodDescriptor)
+                if (receiver == null) pushNull() else loadLocal(receiver)
+                loadLocal(argumentsArrayLocal)
                 loadLocal(exceptionLocal)
-                // STACK: deterministicCallId, deterministicMethodDescriptor, exception
+                // STACK: deterministicCallId, deterministicMethodDescriptor, receiver, params, exception
                 invokeStatic(Injections::onMethodCallException)
                 // STACK: <empty>
                 loadLocal(exceptionLocal)
@@ -154,6 +163,7 @@ internal class MethodCallTransformer(
     
     private fun GeneratorAdapter.invokeMethodOrDeterministicCall(
         deterministicMethodDescriptor: Int, deterministicCallIdLocal: Int, returnType: Type,
+        receiverLocal: Int?, parametersLocal: Int,
         invokeDefault: GeneratorAdapter.() -> Unit,
     ) {
         val onDefaultMethodCall = newLabel()
@@ -172,7 +182,9 @@ internal class MethodCallTransformer(
                         // STACK: <empty>
                         loadLocal(deterministicCallIdLocal)
                         loadLocal(deterministicMethodDescriptor)
-                        // STACK: deterministicCallId, deterministicMethodDescriptor
+                        if (receiverLocal == null) pushNull() else loadLocal(receiverLocal)
+                        loadLocal(parametersLocal)
+                        // STACK: deterministicCallId, deterministicMethodDescriptor, receiver, parameters
                         invokeStatic(Injections::invokeDeterministicCallFromStateInTraceDebugger) // execute from the state
                     }
                 )
@@ -180,7 +192,9 @@ internal class MethodCallTransformer(
                 // in Lincheck mode we just call replacer
                 // STACK: <empty>
                 loadLocal(deterministicMethodDescriptor)
-                // STACK: deterministicMethodDescriptor
+                if (receiverLocal == null) pushNull() else loadLocal(receiverLocal)
+                loadLocal(parametersLocal)
+                // STACK: deterministicMethodDescriptor, receiver, parameters
                 invokeStatic(Injections::invokeDeterministicCallDescriptorInLincheck)
             }
             if (returnType == VOID_TYPE) pop() else unbox(returnType)
@@ -196,7 +210,9 @@ internal class MethodCallTransformer(
     private fun processMethodCallResult(
         deterministicCallIdLocal: Int,
         deterministicMethodDescriptorLocal: Int,
-        desc: String
+        desc: String,
+        receiver: Int?,
+        argumentsArrayLocal: Int
     ) = adapter.run {
         // STACK: result?
         val resultType = Type.getReturnType(desc)
@@ -204,6 +220,8 @@ internal class MethodCallTransformer(
             // STACK: <empty>
             loadLocal(deterministicCallIdLocal)
             loadLocal(deterministicMethodDescriptorLocal)
+            if (receiver == null) pushNull() else loadLocal(receiver)
+            loadLocal(argumentsArrayLocal)
             invokeStatic(Injections::onMethodCallReturnVoid)
             // STACK: <empty>
         } else {
@@ -212,6 +230,8 @@ internal class MethodCallTransformer(
             storeLocal(resultLocal)
             loadLocal(deterministicCallIdLocal)
             loadLocal(deterministicMethodDescriptorLocal)
+            if (receiver == null) pushNull() else loadLocal(receiver)
+            loadLocal(argumentsArrayLocal)
             loadLocal(resultLocal)
             box(resultType)
             invokeStatic(Injections::onMethodCallReturn)

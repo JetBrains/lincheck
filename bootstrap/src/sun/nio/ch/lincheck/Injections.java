@@ -369,8 +369,8 @@ public class Injections {
      * @param id Deterministic call descriptor id when applicable, or any other value otherwise.
      * @param result The call result.
      */
-    public static void onMethodCallReturn(long id, Object descriptor, Object result) {
-        getEventTracker().onMethodCallReturn(id, descriptor, result);
+    public static void onMethodCallReturn(long id, Object descriptor, Object receiver, Object[] params, Object result) {
+        getEventTracker().onMethodCallReturn(id, descriptor, receiver, params, result);
     }
 
     /**
@@ -379,8 +379,8 @@ public class Injections {
      * @param descriptor Deterministic call descriptor or null.
      * @param id Deterministic call descriptor id when applicable, or any other value otherwise.
      */
-    public static void onMethodCallReturnVoid(long id, Object descriptor) {
-        getEventTracker().onMethodCallReturn(id, descriptor, VOID_RESULT);
+    public static void onMethodCallReturnVoid(long id, Object descriptor, Object receiver, Object[] params) {
+        getEventTracker().onMethodCallReturn(id, descriptor, receiver, params, VOID_RESULT);
     }
 
     /**
@@ -390,8 +390,8 @@ public class Injections {
      * @param id Deterministic call descriptor id when applicable, or any other value otherwise.
      * @param t Thrown exception.
      */
-    public static void onMethodCallException(long id, Object descriptor, Throwable t) {
-        getEventTracker().onMethodCallException(id, descriptor, t);
+    public static void onMethodCallException(long id, Object descriptor, Object receiver, Object[] params, Throwable t) {
+        getEventTracker().onMethodCallException(id, descriptor, receiver, params, t);
     }
 
     /**
@@ -593,8 +593,8 @@ public class Injections {
      * @param descriptor An object descriptor providing additional context or parameters for the deterministic call.
      * @return The result of the deterministic call execution as an Object.
      */
-    public static Object invokeDeterministicCallFromStateInTraceDebugger(long id, Object descriptor) {
-        return getEventTracker().invokeFollowingDeterministicCallFromStateInTraceDebugger(id, descriptor);
+    public static Object invokeDeterministicCallFromStateInTraceDebugger(long id, Object descriptor, Object receiver, Object[] params) {
+        return getEventTracker().invokeFollowingDeterministicCallFromStateInTraceDebugger(id, descriptor, receiver, params);
     }
 
     /**
@@ -603,7 +603,7 @@ public class Injections {
      * @param descriptor the call descriptor object to be invoked deterministically.
      * @return the result of invoking the deterministic call descriptor
      */
-    public static Object invokeDeterministicCallDescriptorInLincheck(Object descriptor) {
-        return getEventTracker().invokeDeterministicCallDescriptorInLincheck(descriptor);
+    public static Object invokeDeterministicCallDescriptorInLincheck(Object descriptor, Object receiver, Object[] params) {
+        return getEventTracker().invokeDeterministicCallDescriptorInLincheck(descriptor, receiver, params);
     }
 }

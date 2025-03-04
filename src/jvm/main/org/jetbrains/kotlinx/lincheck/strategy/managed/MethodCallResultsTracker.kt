@@ -46,7 +46,7 @@ internal class NativeMethodCallStatesTracker : AbstractTraceDebuggerEventTracker
         Logger.debug { "Getting deterministic method call state: $id -> $methodCallAndRetrievedData" }
         if (methodCallAndRetrievedData == null) error("No state for id $id and method call $methodCallInfo")
         val (oldMethodCallInfo, retrievedData) = methodCallAndRetrievedData
-        require(oldMethodCallInfo seemsToBeTheSameMethodCallWith methodCallInfo) { 
+        require(oldMethodCallInfo == methodCallInfo) { 
             "Wrong method call info: $oldMethodCallInfo != $methodCallInfo"
         }
         return retrievedData
