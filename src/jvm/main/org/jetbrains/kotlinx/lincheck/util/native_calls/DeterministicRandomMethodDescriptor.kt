@@ -12,14 +12,15 @@ package org.jetbrains.kotlinx.lincheck.util.native_calls
 
 import sun.nio.ch.lincheck.InjectedRandom
 import sun.nio.ch.lincheck.Injections
+import sun.nio.ch.lincheck.JavaResult
 import java.lang.reflect.Modifier
 import java.util.concurrent.ConcurrentHashMap
 
 internal fun getDeterministicRandomMethodDescriptorOrNull(
     methodCallInfo: MethodCallInfo,
-): DeterministicMethodDescriptor<*, *>? {
+): DeterministicMethodDescriptor<*>? {
     if (methodCallInfo.isRandomClassProbesMethod()) {
-        return PureDeterministicMethodDescriptor<Int>(methodCallInfo) { _, _ -> Injections.nextInt() }
+        return PureDeterministicMethodDescriptor(methodCallInfo) { _, _ -> Injections.nextInt() }
     }
     if (methodCallInfo.ownerType.isSecureRandom() && methodCallInfo.methodSignature.isSecureRandomMethodToSkip()) {
         return null
@@ -42,7 +43,7 @@ internal fun getDeterministicRandomMethodDescriptorOrNull(
             }) {
                 "Only primitive arguments and ByteArrays are supported for default deterministic random: $methodCallInfo"
             }
-            PureDeterministicMethodDescriptor<Any?>(methodCallInfo) { _: Any?, params: Array<Any?>, ->
+            PureDeterministicMethodDescriptor(methodCallInfo) { _: Any?, params: Array<Any?>, ->
                 callWithGivenReceiver(Injections.deterministicRandom(), params)
             }
         }
@@ -91,33 +92,28 @@ private fun getPublicOrProtectedClassMethods(clazz: Class<*>): Set<MethodSignatu
 
 private data class RandomBytesDeterministicMethodDescriptor(
     override val methodCallInfo: MethodCallInfo
-) : DeterministicMethodDescriptor<Result<ByteArray>, Any>() {
-    override fun runFake(receiver: Any?, params: Array<Any?>) {
+) : DeterministicMethodDescriptor<JavaResult>() {
+    override fun runFake(receiver: Any?, params: Array<Any?>): JavaResult = JavaResult.fromCallable {
         callWithGivenReceiver(Injections.deterministicRandom(), params)
     }
 
-    override fun replay(receiver: Any?, params: Array<Any?>, state: Result<ByteArray>) {
+    override fun replay(receiver: Any?, params: Array<Any?>, state: JavaResult): JavaResult = state.map { safeState ->
         val argument = params[0] as ByteArray
-        state.getOrThrow().copyInto(argument)
+        val savedBytes = safeState as ByteArray
+        savedBytes.copyInto(argument)
     }
 
     override fun saveFirstResult(
         receiver: Any?,
         params: Array<Any?>,
-        result: Any,
-        saveState: (Result<ByteArray>) -> Unit
+        result: JavaResult,
+        saveState: (JavaResult) -> Unit
     ) {
-        val argument = params[0] as ByteArray
-        saveState(Result.success(argument.copyOf()))
-    }
-
-    override fun saveFirstException(
-        receiver: Any?,
-        params: Array<Any?>,
-        e: Throwable,
-        saveState: (Result<ByteArray>) -> Unit
-    ) {
-        saveState(Result.failure(e))
+        val state = result.map {
+            val argument = params[0] as ByteArray
+            argument.copyOf()
+        }
+        saveState(state)
     }
 }
 
@@ -126,7 +122,7 @@ private fun Class<*>.getMethodsToReplace(): List<MethodSignature> = (declaredMet
     .map { it.toMethodSignature() }
 
 
-private fun DeterministicMethodDescriptor<*, *>.callWithGivenReceiver(random: InjectedRandom, params: Array<Any?>): Any? {
+private fun DeterministicMethodDescriptor<*>.callWithGivenReceiver(random: InjectedRandom, params: Array<Any?>): Any? {
     val method = InjectedRandom::class.java.methods
         .singleOrNull { it.toMethodSignature() == methodCallInfo.methodSignature }
         ?: error("No method found for $methodCallInfo")

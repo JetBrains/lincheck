@@ -200,7 +200,7 @@ abstract class ManagedStrategy(
     }
 
     // Is first replay within one invocation
-    override fun isFirstReplay() = replayNumber == 1L
+    private val isFirstReplay get() = replayNumber == 1L
 
     private fun createRunner(): ManagedStrategyRunner =
         ManagedStrategyRunner(
@@ -1383,12 +1383,12 @@ abstract class ManagedStrategy(
         return deterministicMethodDescriptor
     }
 
-    override fun onMethodCallReturn(id: Long, descriptor: Any?, receiver: Any?, params: Array<Any?>, result: Any?) {
+    override fun onMethodCallReturn(descriptorId: Long, descriptor: Any?, receiver: Any?, params: Array<Any?>, result: Any?) {
         runInIgnoredSection {
             if (isInTraceDebuggerMode && isFirstReplay && descriptor != null) {
-                require(descriptor is DeterministicMethodDescriptor<*, *>)
-                descriptor.onResultOnFirstRunWithCast(receiver, params, result) {
-                    nativeMethodCallStatesTracker.setState(id, descriptor.methodCallInfo, it)
+                require(descriptor is DeterministicMethodDescriptor<*>)
+                descriptor.saveFirstResult(receiver, params, JavaResult.fromSuccess(result)) {
+                    nativeMethodCallStatesTracker.setState(descriptorId, descriptor.methodCallInfo, it)
                 }
             }
             loopDetector.afterMethodCall()
@@ -1417,12 +1417,12 @@ abstract class ManagedStrategy(
         leaveIgnoredSection()
     }
 
-    override fun onMethodCallException(id: Long, descriptor: Any?, receiver: Any?, params: Array<Any?>, t: Throwable) {
+    override fun onMethodCallException(descriptorId: Long, descriptor: Any?, receiver: Any?, params: Array<Any?>, t: Throwable) {
         if (isInTraceDebuggerMode && isFirstReplay && descriptor != null) {
-            require(descriptor is DeterministicMethodDescriptor<*, *>)
+            require(descriptor is DeterministicMethodDescriptor<*>)
             runInIgnoredSection {
-                descriptor.saveFirstException(receiver, params, t) {
-                    nativeMethodCallStatesTracker.setState(id, descriptor.methodCallInfo, it)
+                descriptor.saveFirstResult(receiver, params, JavaResult.fromFailure(t)) {
+                    nativeMethodCallStatesTracker.setState(descriptorId, descriptor.methodCallInfo, it)
                 }
             }
         }
@@ -1451,18 +1451,18 @@ abstract class ManagedStrategy(
         leaveIgnoredSection()
     }
 
-    override fun invokeFollowingDeterministicCallFromStateInTraceDebugger(id: Long, descriptor: Any, receiver: Any?, params: Array<Any?>): Any? {
-        require(!isFirstReplay && isInTraceDebuggerMode)
-        descriptor as DeterministicMethodDescriptor<*, *>
-        return runInIgnoredSection {
-            descriptor.runFromStateWithCast(receiver, params, nativeMethodCallStatesTracker.getState(id, descriptor.methodCallInfo))
+    override fun invokeDeterministicallyOrNull(
+        descriptorId: Long,
+        descriptor: Any?,
+        receiver: Any?,
+        params: Array<Any?>
+    ): JavaResult? = when {
+        descriptor !is DeterministicMethodDescriptor<*> -> null
+        !isInTraceDebuggerMode -> descriptor.runFake(receiver, params)
+        isFirstReplay -> null
+        else -> runInIgnoredSection {
+            descriptor.runFromStateWithCast(receiver, params, nativeMethodCallStatesTracker.getState(descriptorId, descriptor.methodCallInfo))
         }
-    }
-
-    override fun invokeDeterministicCallDescriptorInLincheck(descriptor: Any?, receiver: Any?, params: Array<Any?>): Any? {
-        require(!isInTraceDebuggerMode)
-        require(descriptor is DeterministicMethodDescriptor<*, *>)
-        return descriptor.runFake(receiver, params)
     }
 
     private fun isResumptionMethodCall(
