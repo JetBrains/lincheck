@@ -8,12 +8,14 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.test915
-import org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.test915.RunChecker915.Companion.pool
-import org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.BaseRunCoroutineTests
-import java.util.concurrent.Executors
-import kotlinx.coroutines.*
+package org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.channels.channel14
+
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.channels.BaseChannelTest
 
 class Producer(private val channel: Channel<Int>) {
     suspend fun produce() {
@@ -36,35 +38,30 @@ class Consumer(private val channel: Channel<Int>) {
     }
 }
 
-suspend fun startProducer(producer: Producer) = coroutineScope {
-    launch(pool) {
+suspend fun startProducer(producer: Producer, dispatcher: CoroutineDispatcher) = coroutineScope {
+    launch(dispatcher) {
         producer.produce()
     }
 }
 
-suspend fun startConsumer(consumer: Consumer) = coroutineScope {
-    launch(pool) {
+suspend fun startConsumer(consumer: Consumer, dispatcher: CoroutineDispatcher) = coroutineScope {
+    launch(dispatcher) {
         consumer.consume()
     }
 }
 
-fun main(): Unit = runBlocking(pool) {
+fun main(dispatcher: CoroutineDispatcher): Unit = runBlocking(dispatcher) {
     val channel = Channel<Int>()
     val producer = Producer(channel)
     val consumer = Consumer(channel)
 
-    startProducer(producer)
-    startConsumer(consumer)
+    startProducer(producer, dispatcher)
+    startConsumer(consumer, dispatcher)
 }
 
-class RunChecker915 : BaseRunCoroutineTests(true) {
-    companion object {
-        lateinit var pool: ExecutorCoroutineDispatcher
-    }
-    override fun block() {
-        pool = Executors.newFixedThreadPool(4).asCoroutineDispatcher()
-        pool.use {
-            runBlocking(pool) { main() }
-        }
+class ChannelTest14 : BaseChannelTest(true) {
+
+    override fun block(dispatcher: CoroutineDispatcher) {
+        runBlocking(dispatcher) { main(dispatcher) }
     }
 }

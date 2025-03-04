@@ -8,14 +8,15 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.test914
-import org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.test914.RunChecker914.Companion.pool
-import org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.BaseRunCoroutineTests
-import java.util.concurrent.Executors
-import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.Channel
+package org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.channels.channel13
 
-class FooBar {
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.channels.BaseChannelTest
+
+class FooBar(private val dispatcher: CoroutineDispatcher) {
     private val channel1 = Channel<Int>()
     private val channel2 = Channel<Int>()
     private val channel3 = Channel<Int>()
@@ -36,12 +37,12 @@ class FooBar {
     }
 
     fun launchCoroutines() {
-        runBlocking(pool) {
-            launch(pool) { alpha() }
-            launch(pool) { beta() }
-            launch(pool) { gamma() }
-            launch(pool) { delta() }
-            launch(pool) { epsilon() }
+        runBlocking(dispatcher) {
+            launch(dispatcher) { alpha() }
+            launch(dispatcher) { beta() }
+            launch(dispatcher) { gamma() }
+            launch(dispatcher) { delta() }
+            launch(dispatcher) { epsilon() }
         }
     }
 
@@ -66,18 +67,13 @@ class FooBar {
     }
 }
 
-fun main() {
-    FooBar().launchCoroutines()
+fun main(dispatcher: CoroutineDispatcher) {
+    FooBar(dispatcher).launchCoroutines()
 }
 
-class RunChecker914 : BaseRunCoroutineTests(true) {
-    companion object {
-        lateinit var pool: ExecutorCoroutineDispatcher
-    }
-    override fun block() {
-        pool = Executors.newFixedThreadPool(4).asCoroutineDispatcher()
-        pool.use {
-            runBlocking(pool) { main() }
-        }
+class ChannelTest13 : BaseChannelTest(true) {
+
+    override fun block(dispatcher: CoroutineDispatcher) {
+        runBlocking(dispatcher) { main(dispatcher) }
     }
 }
