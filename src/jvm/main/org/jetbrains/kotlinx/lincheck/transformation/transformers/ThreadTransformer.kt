@@ -126,6 +126,12 @@ internal class ThreadTransformer(
             dup()
             // STACK: thread, thread
             invokeStatic(Injections::beforeThreadFork)
+            // STACK: thread, isTracePoint
+            ifStatement(
+                condition = {},
+                ifClause = { invokeBeforeEventIfPluginEnabled("thread fork") },
+                elseClause = {},
+            )
             // STACK: thread
             loadLocal(threadContainerLocal)
             // STACK: thread, threadContainer
