@@ -19,7 +19,7 @@ internal fun getDeterministicRandomMethodDescriptorOrNull(
     methodCallInfo: MethodCallInfo,
 ): DeterministicMethodDescriptor<*, *>? {
     if (methodCallInfo.isRandomClassProbesMethod()) {
-        return PureDeterministicMethodDescriptor<Int>(methodCallInfo) { Injections.nextInt() }
+        return PureDeterministicMethodDescriptor<Int>(methodCallInfo) { _, _ -> Injections.nextInt() }
     }
     if (methodCallInfo.ownerType.isSecureRandom() && methodCallInfo.methodSignature.isSecureRandomMethodToSkip()) {
         return null
@@ -35,14 +35,15 @@ internal fun getDeterministicRandomMethodDescriptorOrNull(
             }
             RandomBytesDeterministicMethodDescriptor(methodCallInfo)
         }
+
         else -> {
             require(currentMethodType.argumentTypes.all {
                 it is ArgumentType.Primitive || it == ArgumentType.Array(ArgumentType.Primitive.Byte)
             }) {
                 "Only primitive arguments and ByteArrays are supported for default deterministic random: $methodCallInfo"
             }
-            PureDeterministicMethodDescriptor<Any?>(methodCallInfo) {
-                callWithGivenReceiver(Injections.deterministicRandom())
+            PureDeterministicMethodDescriptor<Any?>(methodCallInfo) { _: Any?, params: Array<Any?>, ->
+                callWithGivenReceiver(Injections.deterministicRandom(), params)
             }
         }
     }
@@ -53,6 +54,7 @@ internal fun getDeterministicRandomMethodDescriptorOrNull(
 private fun ArgumentType.Object.isRandom() = when (className) {
     "java.util.Random", "java.util.random.RandomGenerator", "java.util.concurrent.ThreadLocalRandom",
     "java.security.SecureRandom" -> true
+
     else -> false
 }
 
@@ -72,7 +74,10 @@ private val byteArrayMethodType = MethodType(
 )
 
 private val secureByteArrayMethodType = MethodType(
-    argumentTypes = listOf(ArgumentType.Array(ArgumentType.Primitive.Byte), ArgumentType.Object("java.security.SecureRandomParameters")),
+    argumentTypes = listOf(
+        ArgumentType.Array(ArgumentType.Primitive.Byte),
+        ArgumentType.Object("java.security.SecureRandomParameters")
+    ),
     returnType = Type.Void,
 )
 
@@ -86,22 +91,32 @@ private fun getPublicOrProtectedClassMethods(clazz: Class<*>): Set<MethodSignatu
 
 private data class RandomBytesDeterministicMethodDescriptor(
     override val methodCallInfo: MethodCallInfo
-): DeterministicMethodDescriptor<Result<ByteArray>, Any>() {
-    val argument = methodCallInfo.params[0] as ByteArray
-    
-    override fun runFake() {
-        callWithGivenReceiver(Injections.deterministicRandom())
+) : DeterministicMethodDescriptor<Result<ByteArray>, Any>() {
+    override fun runFake(receiver: Any?, params: Array<Any?>) {
+        callWithGivenReceiver(Injections.deterministicRandom(), params)
     }
-    
-    override fun replay(state: Result<ByteArray>) {
+
+    override fun replay(receiver: Any?, params: Array<Any?>, state: Result<ByteArray>) {
+        val argument = params[0] as ByteArray
         state.getOrThrow().copyInto(argument)
     }
 
-    override fun saveFirstResult(result: Any, saveState: (Result<ByteArray>) -> Unit) {
+    override fun saveFirstResult(
+        receiver: Any?,
+        params: Array<Any?>,
+        result: Any,
+        saveState: (Result<ByteArray>) -> Unit
+    ) {
+        val argument = params[0] as ByteArray
         saveState(Result.success(argument.copyOf()))
     }
 
-    override fun saveFirstException(e: Throwable, saveState: (Result<ByteArray>) -> Unit) {
+    override fun saveFirstException(
+        receiver: Any?,
+        params: Array<Any?>,
+        e: Throwable,
+        saveState: (Result<ByteArray>) -> Unit
+    ) {
         saveState(Result.failure(e))
     }
 }
@@ -111,11 +126,11 @@ private fun Class<*>.getMethodsToReplace(): List<MethodSignature> = (declaredMet
     .map { it.toMethodSignature() }
 
 
-private fun DeterministicMethodDescriptor<*, *>.callWithGivenReceiver(random: InjectedRandom): Any? {
+private fun DeterministicMethodDescriptor<*, *>.callWithGivenReceiver(random: InjectedRandom, params: Array<Any?>): Any? {
     val method = InjectedRandom::class.java.methods
         .singleOrNull { it.toMethodSignature() == methodCallInfo.methodSignature }
         ?: error("No method found for $methodCallInfo")
-    return method.invoke(random, *methodCallInfo.params.toTypedArray())
+    return method.invoke(random, *params)
 }
 
 private fun MethodCallInfo.isRandomClassProbesMethod() =

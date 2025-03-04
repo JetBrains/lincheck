@@ -11,17 +11,11 @@
 package org.jetbrains.kotlinx.lincheck.util.native_calls
 
 internal data class MethodCallInfo(
-    val owner: Any?,
     val ownerType: ArgumentType.Object,
     val methodSignature: MethodSignature,
     val codeLocation: Int,
     val methodId: Int,
-    val params: List<Any?>,
-) {
-    infix fun seemsToBeTheSameMethodCallWith(other: MethodCallInfo): Boolean =
-        ownerType == other.ownerType && methodSignature == other.methodSignature &&
-                codeLocation == other.codeLocation && methodId == other.methodId
-}
+)
 
 
 /**
@@ -39,17 +33,21 @@ internal data class MethodCallInfo(
  */
 internal abstract class DeterministicMethodDescriptor<State, T> {
     abstract val methodCallInfo: MethodCallInfo
-    abstract fun replay(state: State): T
-    abstract fun runFake(): T
-    abstract fun saveFirstResult(result: T, saveState: (State) -> Unit)
-    abstract fun saveFirstException(e: Throwable, saveState: (State) -> Unit)
+    abstract fun replay(receiver: Any?, params: Array<Any?>, state: State): T
+    abstract fun runFake(receiver: Any?, params: Array<Any?>): T
+    abstract fun saveFirstResult(receiver: Any?, params: Array<Any?>, result: T, saveState: (State) -> Unit)
+    abstract fun saveFirstException(receiver: Any?, params: Array<Any?>, e: Throwable, saveState: (State) -> Unit)
 }
 
 @Suppress("UNCHECKED_CAST")
-internal fun <State, T> DeterministicMethodDescriptor<State, T>.runFromStateWithCast(state: Any?): T = replay(state as State)
+internal fun <State, T> DeterministicMethodDescriptor<State, T>.runFromStateWithCast(
+    receiver: Any?, params: Array<Any?>, state: Any?
+): T = replay(receiver, params, state as State)
 
 @Suppress("UNCHECKED_CAST")
-internal fun <State, T> DeterministicMethodDescriptor<State, T>.onResultOnFirstRunWithCast(result: Any?, saveState: (State) -> Unit) = saveFirstResult(result as T, saveState)
+internal fun <State, T> DeterministicMethodDescriptor<State, T>.onResultOnFirstRunWithCast(
+    receiver: Any?, params: Array<Any?>, result: Any?, saveState: (State) -> Unit
+) = saveFirstResult(receiver, params, result as T, saveState)
 
 internal fun getDeterministicMethodDescriptorOrNull(methodCallInfo: MethodCallInfo) =
     getDeterministicTimeMethodDescriptorOrNull(methodCallInfo)

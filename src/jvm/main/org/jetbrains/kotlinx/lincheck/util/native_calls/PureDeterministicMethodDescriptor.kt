@@ -26,14 +26,14 @@ package org.jetbrains.kotlinx.lincheck.util.native_calls
  */
 internal data class PureDeterministicMethodDescriptor<T>(
     override val methodCallInfo: MethodCallInfo,
-    val fakeBehaviour: PureDeterministicMethodDescriptor<T>.() -> T
+    val fakeBehaviour: PureDeterministicMethodDescriptor<T>.(receiver: Any?, params: Array<Any?>) -> T
 ) : DeterministicMethodDescriptor<Result<T>, T>() {
-    override fun runFake(): T = fakeBehaviour()
-    override fun replay(state: Result<T>): T = postProcess(state.getOrThrow())
-    override fun saveFirstException(e: Throwable, saveState: (Result<T>) -> Unit) =
+    override fun runFake(receiver: Any?, params: Array<Any?>): T = fakeBehaviour(receiver, params)
+    override fun replay(receiver: Any?, params: Array<Any?>, state: Result<T>): T = postProcess(state.getOrThrow())
+    override fun saveFirstException(receiver: Any?, params: Array<Any?>, e: Throwable, saveState: (Result<T>) -> Unit) =
         saveState(Result.failure(e))
 
-    override fun saveFirstResult(result: T, saveState: (Result<T>) -> Unit) =
+    override fun saveFirstResult(receiver: Any?, params: Array<Any?>, result: T, saveState: (Result<T>) -> Unit) =
         saveState(Result.success(postProcess(result)))
     
     @Suppress("UNCHECKED_CAST")
