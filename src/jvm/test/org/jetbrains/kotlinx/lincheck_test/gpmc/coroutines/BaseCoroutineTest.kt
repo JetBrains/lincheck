@@ -21,16 +21,14 @@ import java.util.concurrent.Executors
 @OptIn(ExperimentalModelCheckingAPI::class)
 abstract class BaseCoroutineTest(
     private val shouldFail: Boolean = false,
-    private val iterations: Int = -1,
+    private val iterations: Int = DEFAULT_INVOCATIONS_COUNT,
 ) {
 
     protected abstract fun createDispatcher(): CoroutineDispatcher
 
     protected fun executeCoroutineTest(block: (CoroutineDispatcher) -> Unit) {
         val result = runCatching {
-            val iterationsCount = if (iterations != -1) iterations else DEFAULT_INVOCATIONS_COUNT
-
-            runConcurrentTest(iterationsCount) {
+            runConcurrentTest(iterations) {
                 val dispatcher = createDispatcher()
                 block(dispatcher)
                 if (dispatcher is Closeable) {
