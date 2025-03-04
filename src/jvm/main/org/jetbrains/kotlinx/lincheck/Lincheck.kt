@@ -86,4 +86,4 @@ internal class NoExceptionVerifier(@Suppress("UNUSED_PARAMETER") sequentialSpeci
         results.parallelResults[0][0] !is ExceptionResult
 }
 
-private const val DEFAULT_INVOCATIONS_COUNT = 50_000
+internal const val DEFAULT_INVOCATIONS_COUNT = 50_000
