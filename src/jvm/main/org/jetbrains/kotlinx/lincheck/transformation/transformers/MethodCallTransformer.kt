@@ -173,30 +173,24 @@ internal class MethodCallTransformer(
         ifNull(onDefaultMethodCall) // If not deterministic call, we just call it regularly
         // STACK: <empty>
         invokeInIgnoredSection {
-            if (isInTraceDebuggerMode) {
-                // In trace debugger mode we behave regularly for the first replay to save state
-                ifStatement(
-                    condition = { invokeStatic(Injections::isFirstReplay) },
-                    thenClause = { goTo(onDefaultMethodCall) }, // go to the regular execution
-                    elseClause = {
-                        // STACK: <empty>
-                        loadLocal(deterministicCallIdLocal)
-                        loadLocal(deterministicMethodDescriptor)
-                        if (receiverLocal == null) pushNull() else loadLocal(receiverLocal)
-                        loadLocal(parametersLocal)
-                        // STACK: deterministicCallId, deterministicMethodDescriptor, receiver, parameters
-                        invokeStatic(Injections::invokeDeterministicCallFromStateInTraceDebugger) // execute from the state
-                    }
-                )
-            } else {
-                // in Lincheck mode we just call replacer
-                // STACK: <empty>
-                loadLocal(deterministicMethodDescriptor)
-                if (receiverLocal == null) pushNull() else loadLocal(receiverLocal)
-                loadLocal(parametersLocal)
-                // STACK: deterministicMethodDescriptor, receiver, parameters
-                invokeStatic(Injections::invokeDeterministicCallDescriptorInLincheck)
-            }
+            loadLocal(deterministicCallIdLocal)
+            loadLocal(deterministicMethodDescriptor)
+            if (receiverLocal == null) pushNull() else loadLocal(receiverLocal)
+            loadLocal(parametersLocal)
+            // STACK: deterministicCallId, deterministicMethodDescriptor, receiver, parameters
+            invokeStatic(Injections::invokeDeterministicallyOrNull)
+            // STACK: JavaResult
+            val result = newLocal(getType(JavaResult::class.java))
+            storeLocal(result)
+            // STACK: <empty>
+            loadLocal(result)
+            // STACK: JavaResult
+            ifNull(onDefaultMethodCall)
+            // STACK: <empty>
+            loadLocal(result)
+            // STACK: JavaResult
+            invokeStatic(JavaResult::getFromOrThrow)
+            // STACK: Object
             if (returnType == VOID_TYPE) pop() else unbox(returnType)
         }
         goTo(endIf)

@@ -68,8 +68,8 @@ public interface EventTracker {
     void afterWrite();
 
     Object onMethodCall(Object owner, String className, String methodName, int codeLocation, int methodId, String methodDes, Object[] params);
-    void onMethodCallReturn(long id, Object descriptor, Object receiver, Object[] params, Object result);
-    void onMethodCallException(long id, Object descriptor, Object receiver, Object[] params, Throwable t);
+    void onMethodCallReturn(long descriptorId, Object descriptor, Object receiver, Object[] params, Object result);
+    void onMethodCallException(long descriptorId, Object descriptor, Object receiver, Object[] params, Throwable t);
 
     InjectedRandom getThreadLocalRandom();
     int randomNextInt();
@@ -81,9 +81,5 @@ public interface EventTracker {
     int getEventId();
     void setLastMethodCallEventId();
 
-    boolean isFirstReplay();
-
-    Object invokeDeterministicCallDescriptorInLincheck(Object descriptor, Object receiver, Object[] params);
-
-    Object invokeFollowingDeterministicCallFromStateInTraceDebugger(long id, Object descriptor, Object receiver, Object[] params);
+    JavaResult invokeDeterministicallyOrNull(long descriptorId, Object descriptor, Object receiver, Object[] params);
 }
