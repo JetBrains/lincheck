@@ -10,6 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck.util.native_calls
 
+import sun.nio.ch.lincheck.JavaResult
+
 internal data class MethodCallInfo(
     val ownerType: ArgumentType.Object,
     val methodSignature: MethodSignature,
@@ -31,23 +33,17 @@ internal data class MethodCallInfo(
  * @param State The state type associated with this descriptor's operations, storing the result and side effects.
  * @param T The return type of the described method call.
  */
-internal abstract class DeterministicMethodDescriptor<State, T> {
+internal abstract class DeterministicMethodDescriptor<State> {
     abstract val methodCallInfo: MethodCallInfo
-    abstract fun replay(receiver: Any?, params: Array<Any?>, state: State): T
-    abstract fun runFake(receiver: Any?, params: Array<Any?>): T
-    abstract fun saveFirstResult(receiver: Any?, params: Array<Any?>, result: T, saveState: (State) -> Unit)
-    abstract fun saveFirstException(receiver: Any?, params: Array<Any?>, e: Throwable, saveState: (State) -> Unit)
+    abstract fun replay(receiver: Any?, params: Array<Any?>, state: State): JavaResult
+    abstract fun runFake(receiver: Any?, params: Array<Any?>): JavaResult
+    abstract fun saveFirstResult(receiver: Any?, params: Array<Any?>, result: JavaResult, saveState: (State) -> Unit)
 }
 
 @Suppress("UNCHECKED_CAST")
-internal fun <State, T> DeterministicMethodDescriptor<State, T>.runFromStateWithCast(
+internal fun <State> DeterministicMethodDescriptor<State>.runFromStateWithCast(
     receiver: Any?, params: Array<Any?>, state: Any?
-): T = replay(receiver, params, state as State)
-
-@Suppress("UNCHECKED_CAST")
-internal fun <State, T> DeterministicMethodDescriptor<State, T>.onResultOnFirstRunWithCast(
-    receiver: Any?, params: Array<Any?>, result: Any?, saveState: (State) -> Unit
-) = saveFirstResult(receiver, params, result as T, saveState)
+): JavaResult = replay(receiver, params, state as State)
 
 internal fun getDeterministicMethodDescriptorOrNull(methodCallInfo: MethodCallInfo) =
     getDeterministicTimeMethodDescriptorOrNull(methodCallInfo)

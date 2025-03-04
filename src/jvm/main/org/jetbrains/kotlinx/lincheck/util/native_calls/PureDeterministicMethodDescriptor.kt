@@ -10,6 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck.util.native_calls
 
+import sun.nio.ch.lincheck.JavaResult
+import sun.nio.ch.lincheck.JavaResult.fromCallable
+
 /**
  * Represents a pure deterministic method descriptor.
  *
@@ -24,21 +27,25 @@ package org.jetbrains.kotlinx.lincheck.util.native_calls
  * @property methodCallInfo Information about the method call, including its owner, parameters, and identifying details.
  * @property fakeBehaviour The lambda function that specifies the deterministic behaviour of the method.
  */
-internal data class PureDeterministicMethodDescriptor<T>(
+internal data class PureDeterministicMethodDescriptor(
     override val methodCallInfo: MethodCallInfo,
-    val fakeBehaviour: PureDeterministicMethodDescriptor<T>.(receiver: Any?, params: Array<Any?>) -> T
-) : DeterministicMethodDescriptor<Result<T>, T>() {
-    override fun runFake(receiver: Any?, params: Array<Any?>): T = fakeBehaviour(receiver, params)
-    override fun replay(receiver: Any?, params: Array<Any?>, state: Result<T>): T = postProcess(state.getOrThrow())
-    override fun saveFirstException(receiver: Any?, params: Array<Any?>, e: Throwable, saveState: (Result<T>) -> Unit) =
-        saveState(Result.failure(e))
-
-    override fun saveFirstResult(receiver: Any?, params: Array<Any?>, result: T, saveState: (Result<T>) -> Unit) =
-        saveState(Result.success(postProcess(result)))
+    val fakeBehaviour: PureDeterministicMethodDescriptor.(receiver: Any?, params: Array<Any?>) -> Any?
+) : DeterministicMethodDescriptor<JavaResult>() {
+    override fun runFake(receiver: Any?, params: Array<Any?>): JavaResult =
+        fromCallable { fakeBehaviour(receiver, params) }
+    override fun replay(receiver: Any?, params: Array<Any?>, state: JavaResult): JavaResult = state.map(::postProcess)
     
-    @Suppress("UNCHECKED_CAST")
-    private fun postProcess(x: T): T = when (x) {
-        is ByteArray -> x.copyOf() as T
+    override fun saveFirstResult(
+        receiver: Any?,
+        params: Array<Any?>,
+        result: JavaResult,
+        saveState: (JavaResult) -> Unit
+    ) {
+        saveState(result.map(::postProcess))
+    }
+    
+    private fun postProcess(x: Any?): Any? = when (x) {
+        is ByteArray -> x.copyOf()
         else -> x
     }
 }

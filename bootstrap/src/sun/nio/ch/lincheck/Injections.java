@@ -369,32 +369,51 @@ public class Injections {
      * Called from the instrumented code after any method successful call, i.e., without any exception.
      * 
      * @param descriptor Deterministic call descriptor or null.
-     * @param id Deterministic call descriptor id when applicable, or any other value otherwise.
+     * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
      * @param result The call result.
      */
-    public static void onMethodCallReturn(long id, Object descriptor, Object receiver, Object[] params, Object result) {
-        getEventTracker().onMethodCallReturn(id, descriptor, receiver, params, result);
+    public static void onMethodCallReturn(
+            long descriptorId, Object descriptor, Object receiver, Object[] params, Object result
+    ) {
+        getEventTracker().onMethodCallReturn(descriptorId, descriptor, receiver, params, result);
     }
 
     /**
      * Called from the instrumented code after any method that returns void successful call, i.e., without any exception.
      * 
      * @param descriptor Deterministic call descriptor or null.
-     * @param id Deterministic call descriptor id when applicable, or any other value otherwise.
+     * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
      */
-    public static void onMethodCallReturnVoid(long id, Object descriptor, Object receiver, Object[] params) {
-        getEventTracker().onMethodCallReturn(id, descriptor, receiver, params, VOID_RESULT);
+    public static void onMethodCallReturnVoid(long descriptorId, Object descriptor, Object receiver, Object[] params) {
+        getEventTracker().onMethodCallReturn(descriptorId, descriptor, receiver, params, VOID_RESULT);
+    }
+
+    /**
+     * Invokes a method deterministically based on the provided descriptor and parameters, or returns null
+     * if the original method should be called.
+     *
+     * @param descriptorId the unique identifier for the deterministic method descriptor or any value if not applicable.
+     * @param descriptor the deterministic method descriptor object providing details about the method to invoke or null.
+     * @param receiver the object on which the method is to be invoked.
+     * @param params The array of parameters to pass to the method during invocation.
+     * @return The result of the method invocation wrapped in a {@link JavaResult},
+     * or {@code null} if the original method should be called.
+     */
+    public static JavaResult invokeDeterministicallyOrNull(long descriptorId, Object descriptor, Object receiver, Object[] params) {
+        return getEventTracker().invokeDeterministicallyOrNull(descriptorId, descriptor, receiver, params);
     }
 
     /**
      * Called from the instrumented code after any method call threw an exception
      * 
      * @param descriptor Deterministic call descriptor or null.
-     * @param id Deterministic call descriptor id when applicable, or any other value otherwise.
+     * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
      * @param t Thrown exception.
      */
-    public static void onMethodCallException(long id, Object descriptor, Object receiver, Object[] params, Throwable t) {
-        getEventTracker().onMethodCallException(id, descriptor, receiver, params, t);
+    public static void onMethodCallException(
+            long descriptorId, Object descriptor, Object receiver, Object[] params, Throwable t
+    ) {
+        getEventTracker().onMethodCallException(descriptorId, descriptor, receiver, params, t);
     }
 
     /**
@@ -578,35 +597,5 @@ public class Injections {
 
     public static void setLastMethodCallEventId() {
         getEventTracker().setLastMethodCallEventId();
-    }
-
-    /**
-     * Determines whether the current event is the first replay within invocation.
-     *
-     * @return true if the current event is the first replay, false otherwise.
-     */
-    public static boolean isFirstReplay() {
-        return getEventTracker().isFirstReplay();
-    }
-
-    /**
-     * Invokes a deterministic call from the state within the trace debugger using the provided identifier and descriptor.
-     *
-     * @param id The unique identifier representing the state of the deterministic call in the trace debugger.
-     * @param descriptor An object descriptor providing additional context or parameters for the deterministic call.
-     * @return The result of the deterministic call execution as an Object.
-     */
-    public static Object invokeDeterministicCallFromStateInTraceDebugger(long id, Object descriptor, Object receiver, Object[] params) {
-        return getEventTracker().invokeFollowingDeterministicCallFromStateInTraceDebugger(id, descriptor, receiver, params);
-    }
-
-    /**
-     * Invokes a deterministic call descriptor in the Lincheck testing framework.
-     *
-     * @param descriptor the call descriptor object to be invoked deterministically.
-     * @return the result of invoking the deterministic call descriptor
-     */
-    public static Object invokeDeterministicCallDescriptorInLincheck(Object descriptor, Object receiver, Object[] params) {
-        return getEventTracker().invokeDeterministicCallDescriptorInLincheck(descriptor, receiver, params);
     }
 }
