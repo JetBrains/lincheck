@@ -423,8 +423,8 @@ private fun removeSyntheticFieldAccessTracePoints(trace: List<TracePoint>) {
         }
 }
 
-private fun isSyntheticFieldAccess(methodName: String): Boolean = methodName.contains("access\$get") 
-    || methodName.contains("access\$set")
+private fun isSyntheticFieldAccess(methodName: String): Boolean = 
+    methodName.contains("access\$get") || methodName.contains("access\$set")
 
 /**
  * Merges fun$default(...) calls.
@@ -471,7 +471,7 @@ private fun compressCallStackTrace(
             break
         }
         
-        // Check if current and next are a "default" combo
+        // Check if current and next are a "default" or "access" combo
         if (isDefaultPair(currentElement.tracePoint.methodName, nextElement.tracePoint.methodName)
             || isAccessPair(currentElement.tracePoint.methodName, nextElement.tracePoint.methodName)) {
             // Combine fields of next and current, and store in current
