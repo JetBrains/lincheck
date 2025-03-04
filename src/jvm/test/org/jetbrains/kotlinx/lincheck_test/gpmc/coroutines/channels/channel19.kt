@@ -8,13 +8,13 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.test923
-import org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.test923.RunChecker923.Companion.pool
-import org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.BaseRunCoroutineTests
-import java.util.concurrent.Executors
-import kotlinx.coroutines.*
+package org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.channels.channel19
+
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.channels.Channel
-import org.junit.Ignore
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.channels.BaseChannelTest
 
 class Worker {
     suspend fun process(ch1: Channel<Int>, ch2: Channel<Int>) {
@@ -38,24 +38,19 @@ suspend fun receiver(ch: Channel<Int>) {
     }
 }
 
-fun main(): Unit = runBlocking(pool) {
+fun main(dispatcher: CoroutineDispatcher): Unit = runBlocking(dispatcher) {
     val ch1 = Channel<Int>()
     val ch2 = Channel<Int>()
     val worker = Worker()
 
-    launch(pool) { sender(ch1) }
-    launch(pool) { worker.process(ch1, ch2) }
-    launch(pool) { receiver(ch2) }
+    launch(dispatcher) { sender(ch1) }
+    launch(dispatcher) { worker.process(ch1, ch2) }
+    launch(dispatcher) { receiver(ch2) }
 }
 
-class RunChecker923 : BaseRunCoroutineTests(false, 1000) {
-    companion object {
-        lateinit var pool: ExecutorCoroutineDispatcher
-    }
-    override fun block() {
-        pool = Executors.newFixedThreadPool(4).asCoroutineDispatcher()
-        pool.use {
-            runBlocking(pool) { main() }
-        }
+class ChannelTest19 : BaseChannelTest() {
+
+    override fun block(dispatcher: CoroutineDispatcher) {
+        runBlocking(dispatcher) { main(dispatcher) }
     }
 }

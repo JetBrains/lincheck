@@ -8,12 +8,13 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.test904
-import org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.test904.RunChecker904.Companion.pool
-import org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.BaseRunCoroutineTests
-import java.util.concurrent.Executors
-import kotlinx.coroutines.*
+package org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.channels.channel04
+
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.channels.BaseChannelTest
 
 class ClassA {
     val channel1 = Channel<Int>()
@@ -41,26 +42,30 @@ class ClassB {
     }
 }
 
-fun configChannelA(classA: ClassA) = runBlocking(pool) {
-    launch(pool) {
+fun configChannelA(classA: ClassA, dispatcher: CoroutineDispatcher) = runBlocking(dispatcher) {
+    launch(dispatcher) {
         classA.sendToChannel1(1)
         classA.receiveFromChannel2()
     }
 }
 
-fun configChannelB(classB: ClassB) = runBlocking(pool) {
-    launch(pool) {
+fun configChannelB(classB: ClassB, dispatcher: CoroutineDispatcher) = runBlocking(dispatcher) {
+    launch(dispatcher) {
         classB.sendToChannel3(2)
         classB.receiveFromChannel4()
     }
 }
 
-fun initiateDeadlock(classA: ClassA, classB: ClassB) = runBlocking(pool) {
-    val job1 = launch(pool) {
+fun initiateDeadlock(
+    classA: ClassA,
+    classB: ClassB,
+    dispatcher: CoroutineDispatcher
+) = runBlocking(dispatcher) {
+    val job1 = launch(dispatcher) {
         classA.sendToChannel1(classB.receiveFromChannel4())
     }
 
-    val job2 = launch(pool) {
+    val job2 = launch(dispatcher) {
         classB.sendToChannel3(classA.receiveFromChannel2())
     }
 
@@ -68,29 +73,24 @@ fun initiateDeadlock(classA: ClassA, classB: ClassB) = runBlocking(pool) {
     job2.join()
 }
 
-fun main(): Unit = runBlocking(pool) {
+fun main(dispatcher: CoroutineDispatcher): Unit = runBlocking(dispatcher) {
     val classA = ClassA()
     val classB = ClassB()
 
-    launch(pool) {
-        configChannelA(classA)
+    launch(dispatcher) {
+        configChannelA(classA, dispatcher)
     }
 
-    launch(pool) {
-        configChannelB(classB)
+    launch(dispatcher) {
+        configChannelB(classB, dispatcher)
     }
 
-    initiateDeadlock(classA, classB)
+    initiateDeadlock(classA, classB, dispatcher)
 }
 
-class RunChecker904 : BaseRunCoroutineTests(true) {
-    companion object {
-        lateinit var pool: ExecutorCoroutineDispatcher
-    }
-    override fun block() {
-        pool = Executors.newFixedThreadPool(4).asCoroutineDispatcher()
-        pool.use {
-            runBlocking(pool) { main() }
-        }
+class ChannelTest01 : BaseChannelTest(true) {
+
+    override fun block(dispatcher: CoroutineDispatcher) {
+        runBlocking(dispatcher) { main(dispatcher) }
     }
 }

@@ -8,12 +8,13 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.test902
-import org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.test902.RunChecker902.Companion.pool
-import org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.BaseRunCoroutineTests
-import java.util.concurrent.Executors
+package org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.channels.channel02
+
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.*
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.channels.BaseChannelTest
 
 class Producer1(private val outChannel: Channel<Int>) {
     suspend fun produce() {
@@ -52,7 +53,7 @@ suspend fun relay(from: Channel<Int>, to: Channel<Int>) {
     to.close()
 }
 
-fun main(): Unit = runBlocking(pool) {
+fun main(dispatcher: CoroutineDispatcher): Unit = runBlocking(dispatcher) {
     val producerChannel1 = Channel<Int>()
     val producerChannel2 = Channel<Int>()
     val consumerChannel1 = Channel<Int>()
@@ -63,25 +64,20 @@ fun main(): Unit = runBlocking(pool) {
     val producer2 = Producer2(producerChannel2)
     val consumer = Consumer(consumerChannel1, consumerChannel2, resultChannel)
 
-    launch(pool) { producer1.produce() }
-    launch(pool) { producer2.produce() }
-    launch(pool) { relay(producerChannel1, consumerChannel1) }
-    launch(pool) { relay(producerChannel2, consumerChannel2) }
-    launch(pool) { consumer.consume() }
+    launch(dispatcher) { producer1.produce() }
+    launch(dispatcher) { producer2.produce() }
+    launch(dispatcher) { relay(producerChannel1, consumerChannel1) }
+    launch(dispatcher) { relay(producerChannel2, consumerChannel2) }
+    launch(dispatcher) { consumer.consume() }
 
     for (result in resultChannel) {
         check(result % 2 == 0 && (result / 2) in 1..10)
     }
 }
 
-class RunChecker902 : BaseRunCoroutineTests(false, 1000) {
-    companion object {
-        lateinit var pool: ExecutorCoroutineDispatcher
-    }
-    override fun block() {
-        pool = Executors.newFixedThreadPool(4).asCoroutineDispatcher()
-        pool.use {
-            runBlocking(pool) { main() }
-        }
+class ChannelTest01 : BaseChannelTest() {
+
+    override fun block(dispatcher: CoroutineDispatcher) {
+        runBlocking(dispatcher) { main(dispatcher) }
     }
 }

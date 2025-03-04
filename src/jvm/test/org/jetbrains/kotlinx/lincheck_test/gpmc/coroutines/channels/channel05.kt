@@ -8,14 +8,13 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.test905
-import org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.test905.RunChecker905.Companion.pool
-import org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.BaseRunCoroutineTests
-import java.util.concurrent.Executors
-import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.*
-import org.junit.Ignore
-import org.junit.Test
+package org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.channels.channel05
+
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.channels.BaseChannelTest
 
 class Processor {
     val channel1 = Channel<Int>()
@@ -65,26 +64,21 @@ suspend fun receive(channel: Channel<Int>) {
     ))
 }
 
-fun main(): Unit = runBlocking(pool) {
+fun main(dispatcher: CoroutineDispatcher): Unit = runBlocking(dispatcher) {
     val processor = Processor()
     val aggregator = Aggregator()
 
-    launch(pool) { processor.produceNumbers() }
-    launch(pool) { aggregator.aggregateNumbers(processor) }
-    launch(pool) { aggregator.sendToChannels() }
+    launch(dispatcher) { processor.produceNumbers() }
+    launch(dispatcher) { aggregator.aggregateNumbers(processor) }
+    launch(dispatcher) { aggregator.sendToChannels() }
 
-    launch(pool) { receive(aggregator.channel4) }
-    launch(pool) { receive(aggregator.channel5) }
+    launch(dispatcher) { receive(aggregator.channel4) }
+    launch(dispatcher) { receive(aggregator.channel5) }
 }
 
-class RunChecker905 : BaseRunCoroutineTests(false, 1000) {
-    companion object {
-        lateinit var pool: ExecutorCoroutineDispatcher
-    }
-    override fun block() {
-        pool = Executors.newFixedThreadPool(4).asCoroutineDispatcher()
-        pool.use {
-            runBlocking(pool) { main() }
-        }
+class ChannelTest05 : BaseChannelTest() {
+
+    override fun block(dispatcher: CoroutineDispatcher) {
+        runBlocking(dispatcher) { main(dispatcher) }
     }
 }
