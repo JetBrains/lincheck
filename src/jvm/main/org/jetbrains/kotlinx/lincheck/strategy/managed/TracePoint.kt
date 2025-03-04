@@ -91,7 +91,7 @@ internal class SwitchEventTracePoint(
 internal abstract class CodeLocationTracePoint(
     iThread: Int, actorId: Int,
     callStackTrace: CallStackTrace,
-    val stackTraceElement: StackTraceElement
+    var stackTraceElement: StackTraceElement
 ) : TracePoint(iThread, actorId, callStackTrace) {
 
     protected abstract fun toStringCompact(): String
