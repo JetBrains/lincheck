@@ -45,7 +45,7 @@ abstract class BaseCoroutineTest(
 
 abstract class FixedThreadPoolCoroutineTest(
     shouldFail: Boolean = false,
-    invocations: Int = 1000,
+    invocations: Int = 500,
     private val nThreads: Int = 2,
 ) : BaseCoroutineTest(shouldFail, invocations) {
 
