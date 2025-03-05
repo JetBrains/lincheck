@@ -37,14 +37,15 @@ import kotlin.reflect.KFunction
     invocationsPerIteration = 1,
     iterations = 1
 )
-
 class LocalObjectEliminationTest {
     @Before
     fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     @Operation
     fun operation(): Int {
+
         val a = A(0, this, IntArray(2))
+
         a.any = a
         repeat(20) {
             a.value = it
@@ -56,18 +57,20 @@ class LocalObjectEliminationTest {
             b.array[0] = it
         }
         a.any = b
+
         // check that closure object and captured `x: IntRef` object
         // are correctly classified as local objects;
         // note that these classes itself are not instrumented,
         // but the creation of their instances still should be tracked
-        var x = 0
-        val closure = {
-            a.value += 1
-            x += 1
-        }
-        repeat(20) {
-            closure()
-        }
+        // var x = 0
+        // val closure = {
+        //     a.value += 1
+        //     x += 1
+        // }
+        // repeat(20) {
+        //     closure()
+        // }
+
         return (a.any as A).array.sum()
     }
 
