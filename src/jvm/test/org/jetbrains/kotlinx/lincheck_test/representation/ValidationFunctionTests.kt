@@ -11,13 +11,10 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.junit.*
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertThrows
 import java.lang.IllegalStateException
 
 /**
@@ -65,8 +62,7 @@ class ValidationFunctionCallTest {
         }
     }
     .checkImpl(this::class.java) { failure ->
-        val expectedOutputFile = if (isJdk8) "validation_function_failure_jdk8.txt" else "validation_function_failure.txt"
-        failure.checkLincheckOutput(expectedOutputFile)
+        failure.checkLincheckOutput("validation_function_failure")
     }
 
 }
@@ -94,7 +90,7 @@ class IncorrectResultsFailureWithCorrectValidationFunctionTest {
     @Test
     fun test() = ModelCheckingOptions()
         .checkImpl(this::class.java)
-        .checkLincheckOutput("incorrect_results_with_validation_function.txt")
+        .checkLincheckOutput("incorrect_results_with_validation_function")
 }
 
 class MoreThenOneValidationFunctionFailureTest {
@@ -112,5 +108,5 @@ class MoreThenOneValidationFunctionFailureTest {
 
     @Test
     fun test() = ModelCheckingOptions()
-        .checkFailsWithException<IllegalStateException>(this::class.java, "two_validation_functions_exception.txt")
+        .checkFailsWithException<IllegalStateException>(this::class.java, "two_validation_functions_exception")
 }

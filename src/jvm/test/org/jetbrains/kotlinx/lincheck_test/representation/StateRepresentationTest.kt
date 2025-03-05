@@ -19,7 +19,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.junit.Test
 import java.lang.IllegalStateException
-import java.lang.StringBuilder
 import java.util.concurrent.atomic.*
 
 /**
@@ -47,7 +46,7 @@ open class ModelCheckingStateReportingTest {
         requireStateEquivalenceImplCheck(false)
     }
         .checkImpl(this::class.java)
-        .checkLincheckOutput("state_representation.txt")
+        .checkLincheckOutput("state_representation")
 }
 
 /**

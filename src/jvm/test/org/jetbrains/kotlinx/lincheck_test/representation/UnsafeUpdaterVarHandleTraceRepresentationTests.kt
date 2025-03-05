@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 /**
  * Test checks that in case of a field update using Unsafe we remove receiver and offset arguments from the trace.
  */
-class SunUnsafeTraceRepresentationTest : BaseTraceRepresentationTest("sun_unsafe_trace.txt") {
+class SunUnsafeTraceRepresentationTest : BaseTraceRepresentationTest("sun_unsafe_trace") {
 
     @Volatile
     private var node: IntWrapper = IntWrapper(1)
@@ -43,7 +43,7 @@ class SunUnsafeTraceRepresentationTest : BaseTraceRepresentationTest("sun_unsafe
 /**
  * Test checks that in case of a field update using Unsafe we remove receiver and offset arguments from the trace.
  */
-class JdkUnsafeTraceRepresentationTest : BaseTraceRepresentationTest("jdk_unsafe_trace.txt") {
+class JdkUnsafeTraceRepresentationTest : BaseTraceRepresentationTest("jdk_unsafe_trace") {
 
     // We use it just to interact with jdk.internal.misc.Unsafe, which we cannot access directly.
     private val hashMap = ConcurrentHashMap<Int, Int>()
@@ -59,7 +59,7 @@ class JdkUnsafeTraceRepresentationTest : BaseTraceRepresentationTest("jdk_unsafe
  * Test checks that in case of a field update using AtomicReferenceFieldUpdater
  * we remove receiver argument from the trace.
  */
-class AtomicUpdaterTraceRepresentationTest : BaseTraceRepresentationTest("atomic_updater_trace.txt") {
+class AtomicUpdaterTraceRepresentationTest : BaseTraceRepresentationTest("atomic_updater_trace") {
 
     @Volatile
     private var node: IntWrapper = IntWrapper(1)

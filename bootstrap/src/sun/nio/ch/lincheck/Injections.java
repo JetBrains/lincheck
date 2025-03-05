@@ -117,16 +117,18 @@ public class Injections {
 
     /**
      * Current thread reports that it is going to start a new child thread {@code forkedThread}.
+     *
+     * @return whether the trace point was created
      */
-    public static void beforeThreadFork(Thread forkedThread) {
+    public static boolean beforeThreadFork(Thread forkedThread) {
         // TestThread is handled separately
-        if (forkedThread instanceof TestThread) return;
+        if (forkedThread instanceof TestThread) return false;
         // If thread is started return immediately, as in this case, JVM will throw an `IllegalThreadStateException`
-        if (forkedThread.getState() != Thread.State.NEW) return;
+        if (forkedThread.getState() != Thread.State.NEW) return false;
 
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) {
-            return;
+            return false;
         }
         EventTracker tracker = descriptor.getEventTracker();
         ThreadDescriptor forkedThreadDescriptor = new ThreadDescriptor(forkedThread);

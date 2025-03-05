@@ -66,5 +66,5 @@ class SwitchAsFirstMethodEventTest {
         actorsAfter(0)
     }
         .checkImpl(this::class.java)
-        .checkLincheckOutput("switch_as_first_method_event.txt")
+        .checkLincheckOutput("switch_as_first_method_event")
 }

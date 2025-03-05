@@ -16,7 +16,6 @@ import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.junit.*
 import kotlin.coroutines.*
 import kotlinx.coroutines.sync.*
-import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 
 // TODO investigate difference for trace debugger (Evgeniy Moiseenko)
 class SuspendTraceReportingTest {
@@ -54,14 +53,7 @@ class SuspendTraceReportingTest {
         }
     }
         .checkImpl(this::class.java)
-        .checkLincheckOutput(
-            when {
-                isInTraceDebuggerMode && isJdk8 -> "suspend_trace_reporting_trace_debugger_jdk8.txt"
-                isInTraceDebuggerMode -> "suspend_trace_reporting_trace_debugger.txt"
-                isJdk8 -> "suspend_trace_reporting_jdk8.txt"
-                else -> "suspend_trace_reporting.txt"
-            }
-        )
+        .checkLincheckOutput("suspend_trace_reporting" )
 }
 
 /* This test checks the trace reporting in case when a nested sequence of `suspend` functions is resumed ---
@@ -120,7 +112,7 @@ class SuspendTraceResumptionReportingTest {
         }
     }
         .checkImpl(this::class.java)
-        .checkLincheckOutput("suspend_trace_resumption_reporting_test.txt")
+        .checkLincheckOutput("suspend_trace_resumption_reporting_test")
 }
 
 /* This test checks the trace reporting in case when a nested sequence of `suspend` functions is resumed ---
@@ -181,5 +173,5 @@ class SuspendTraceResumptionFrameSkippingReportingTest {
         }
     }
         .checkImpl(this::class.java)
-        .checkLincheckOutput("suspend_trace_resumption_frame_skipping_reporting_test.txt")
+        .checkLincheckOutput("suspend_trace_resumption_frame_skipping_reporting_test")
 }

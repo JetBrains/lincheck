@@ -45,7 +45,12 @@ internal class ThreadTransformer(
             loadThis()
             // STACK: forkedThread
             invokeStatic(Injections::beforeThreadFork)
-            // STACK: <empty>
+            // STACK: isTracePoint
+            ifStatement(
+                condition = {},
+                ifClause = { invokeBeforeEventIfPluginEnabled("thread fork") },
+                elseClause = {},
+            )
         }
         if (isThreadRunMethod(methodName, desc)) {
             // STACK: <empty>
@@ -108,6 +113,7 @@ internal class ThreadTransformer(
             // STACK: joiningThread
             invokeStatic(Injections::threadJoin)
             // STACK: <empty>
+            invokeBeforeEventIfPluginEnabled("thread join")
             return
         }
         // In some newer versions of JDK, some of the java library classes
@@ -120,6 +126,12 @@ internal class ThreadTransformer(
             dup()
             // STACK: thread, thread
             invokeStatic(Injections::beforeThreadFork)
+            // STACK: thread, isTracePoint
+            ifStatement(
+                condition = {},
+                ifClause = { invokeBeforeEventIfPluginEnabled("thread fork") },
+                elseClause = {},
+            )
             // STACK: thread
             loadLocal(threadContainerLocal)
             // STACK: thread, threadContainer

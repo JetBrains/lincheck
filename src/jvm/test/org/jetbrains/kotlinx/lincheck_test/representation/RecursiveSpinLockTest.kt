@@ -64,7 +64,7 @@ class RecursiveSpinLockTest {
         }
         .minimizeFailedScenario(false)
         .checkImpl(this::class.java)
-        .checkLincheckOutput("spin_lock/recursive_spin_lock.txt")
+        .checkLincheckOutput("spin_lock/recursive_spin_lock")
 
 }
 
@@ -114,7 +114,7 @@ class RecursiveSpinWithParamsLockTest {
         }
         .minimizeFailedScenario(false)
         .checkImpl(this::class.java)
-        .checkLincheckOutput("spin_lock/recursive_spin_lock_params.txt")
+        .checkLincheckOutput("spin_lock/recursive_spin_lock_params")
 
 }
 
@@ -165,7 +165,7 @@ class RecursiveSpinLockWithInnerEventsTest {
         }
         .minimizeFailedScenario(false)
         .checkImpl(this::class.java)
-        .checkLincheckOutput("spin_lock/recursive_spin_cycle_inner_events.txt")
+        .checkLincheckOutput("spin_lock/recursive_spin_cycle_inner_events")
 
 }
 
@@ -220,7 +220,7 @@ class RecursiveSpinLockTwoStepRecursionEventsTest {
         }
         .minimizeFailedScenario(false)
         .checkImpl(this::class.java)
-        .checkLincheckOutput("spin_lock/recursive_spin_cycle_two_step.txt")
+        .checkLincheckOutput("spin_lock/recursive_spin_cycle_two_step")
 
 }
 
@@ -271,7 +271,7 @@ class RecursiveTwoThreadsSpinLockTest {
     fun testWithModelCheckingStrategy() = ModelCheckingOptions()
         .minimizeFailedScenario(true)
         .checkImpl(this::class.java)
-        .checkLincheckOutput("spin_lock/recursive_two_threads_spin_lock.txt")
+        .checkLincheckOutput("spin_lock/recursive_two_threads_spin_lock")
 }
 
 
@@ -308,5 +308,5 @@ class RecursiveParametersDependentSpinLockTest {
     fun test() = ModelCheckingOptions()
         .addCustomScenario { parallel { thread { actor(::actorMethod) } } }
         .checkImpl(this::class.java)
-        .checkLincheckOutput("spin_lock/recursive_spin_lock_param_dependent.txt")
+        .checkLincheckOutput("spin_lock/recursive_spin_lock_param_dependent")
 }

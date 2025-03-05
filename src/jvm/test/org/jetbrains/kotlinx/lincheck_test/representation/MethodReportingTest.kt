@@ -16,7 +16,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
 
 import org.junit.*
-import java.lang.StringBuilder
 
 /**
  * This test checks interleaving reporting features related to methods, such as reporting of atomic functions with
@@ -116,6 +115,6 @@ class CaughtExceptionMethodReportingTest {
         }
         .iterations(0)
         .checkImpl(this::class.java)
-        .checkLincheckOutput("method_reporting.txt")
+        .checkLincheckOutput("method_reporting")
 
 }

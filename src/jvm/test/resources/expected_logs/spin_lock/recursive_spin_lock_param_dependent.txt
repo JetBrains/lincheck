@@ -11,11 +11,11 @@ The following interleaving leads to the error:
 |                                                         Thread 1                                                          |
 | ------------------------------------------------------------------------------------------------------------------------- |
 |   actorMethod(): <hung>                                                                                                   |
-|     b(false) at RecursiveParametersDependentSpinLockTest.actorMethod(RecursiveSpinLockTest.kt:275)                        |
+|     b(false) at RecursiveParametersDependentSpinLockTest.actorMethod(RecursiveSpinLockTest.kt:292)                        |
 |     /* The following events repeat infinitely: */                                                                         |
-| ┌╶> b(true) at RecursiveParametersDependentSpinLockTest.actorMethod(RecursiveSpinLockTest.kt:276)                         |
-| |     value.compareAndSet(false, true): false at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:281) |
-| |     c(): true at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:282)                               |
+| ┌╶> b(true) at RecursiveParametersDependentSpinLockTest.actorMethod(RecursiveSpinLockTest.kt:293)                         |
+| |     value.compareAndSet(false, true): false at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:298) |
+| |     c(): true at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:299)                               |
 | └╶╶╶╶ switch (reason: active lock detected)                                                                               |
 | ------------------------------------------------------------------------------------------------------------------------- |
 All unfinished threads are in deadlock
@@ -25,15 +25,15 @@ Detailed trace:
 |                                                         Thread 1                                                          |
 | ------------------------------------------------------------------------------------------------------------------------- |
 |   actorMethod(): <hung>                                                                                                   |
-|     b(false) at RecursiveParametersDependentSpinLockTest.actorMethod(RecursiveSpinLockTest.kt:275)                        |
-|       value.compareAndSet(false, true): true at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:281)  |
-|       c(): true at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:282)                               |
-|         value.get(): true at RecursiveParametersDependentSpinLockTest.c(RecursiveSpinLockTest.kt:288)                     |
+|     b(false) at RecursiveParametersDependentSpinLockTest.actorMethod(RecursiveSpinLockTest.kt:292)                        |
+|       value.compareAndSet(false, true): true at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:298)  |
+|       c(): true at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:299)                               |
+|         value.get(): true at RecursiveParametersDependentSpinLockTest.c(RecursiveSpinLockTest.kt:305)                     |
 |     /* The following events repeat infinitely: */                                                                         |
-| ┌╶> b(true) at RecursiveParametersDependentSpinLockTest.actorMethod(RecursiveSpinLockTest.kt:276)                         |
-| |     value.compareAndSet(false, true): false at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:281) |
-| |     c(): true at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:282)                               |
-| |       value.get(): true at RecursiveParametersDependentSpinLockTest.c(RecursiveSpinLockTest.kt:288)                     |
+| ┌╶> b(true) at RecursiveParametersDependentSpinLockTest.actorMethod(RecursiveSpinLockTest.kt:293)                         |
+| |     value.compareAndSet(false, true): false at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:298) |
+| |     c(): true at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:299)                               |
+| |       value.get(): true at RecursiveParametersDependentSpinLockTest.c(RecursiveSpinLockTest.kt:305)                     |
 | └╶╶╶╶ switch (reason: active lock detected)                                                                               |
 | ------------------------------------------------------------------------------------------------------------------------- |
 All unfinished threads are in deadlock

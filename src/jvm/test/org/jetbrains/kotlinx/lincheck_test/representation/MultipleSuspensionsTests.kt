@@ -18,7 +18,6 @@ import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.util.ensure
 import org.junit.Test
 
@@ -69,7 +68,7 @@ class SingleSuspensionPointTraceRepresentationTest {
             }
         }
         .checkImpl(this::class.java)
-        .checkLincheckOutput("single_suspension_point.txt")
+        .checkLincheckOutput("single_suspension_point")
 
 }
 
@@ -136,7 +135,7 @@ class MultipleSuspensionPointsTraceRepresentationTest {
                 .treatAsAtomic()
         )
         .checkImpl(this::class.java)
-        .checkLincheckOutput("multiple_suspension_points.txt")
+        .checkLincheckOutput("multiple_suspension_points")
 
 }
 
@@ -179,11 +178,6 @@ class MultipleSuspensionPointsChannelsTraceRepresentationTest {
             }
         }
         .checkImpl(this::class.java) { failure ->
-            failure.checkLincheckOutput(
-                when {
-                    isInTraceDebuggerMode   -> "multiple_suspension_points_channels_trace_debugger.txt"
-                    else                    -> "multiple_suspension_points_channels.txt"
-                }
-            )
+            failure.checkLincheckOutput("multiple_suspension_points_channels")
         }
 }

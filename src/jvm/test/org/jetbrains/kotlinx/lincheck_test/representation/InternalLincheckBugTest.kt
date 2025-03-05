@@ -11,7 +11,6 @@
 package org.jetbrains.kotlinx.lincheck_test.representation
 
 import org.jetbrains.kotlinx.lincheck.util.InternalLincheckExceptionEmulator
-import org.jetbrains.kotlinx.lincheck_test.util.isJdk8
 
 /**
  * This test checks that if exception is thrown from the Lincheck itself, it will be reported properly.
@@ -19,9 +18,7 @@ import org.jetbrains.kotlinx.lincheck_test.util.isJdk8
  * which is located in org.jetbrains.kotlinx.lincheck package, so exception will be treated like internal bug.
  */
 @Suppress("UNUSED")
-class InternalLincheckBugTest : BaseTraceRepresentationTest(
-    if (isJdk8) "internal_bug_report_jdk8.txt" else "internal_bug_report.txt"
-) {
+class InternalLincheckBugTest : BaseTraceRepresentationTest("internal_bug_report") {
 
     override fun operation() {
         InternalLincheckExceptionEmulator.throwException()

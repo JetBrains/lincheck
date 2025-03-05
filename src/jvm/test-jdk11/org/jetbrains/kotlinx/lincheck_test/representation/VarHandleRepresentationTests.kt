@@ -13,7 +13,7 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.VarHandle
 
-class VarHandleReferenceRepresentationTest : BaseTraceRepresentationTest("var_handle/varhandle_reference_representation.txt") {
+class VarHandleReferenceRepresentationTest : BaseTraceRepresentationTest("var_handle/varhandle_reference_representation") {
 
     @Volatile
     private var wrapper = IntWrapper(1)
@@ -60,7 +60,7 @@ class VarHandleReferenceRepresentationTest : BaseTraceRepresentationTest("var_ha
     }
 }
 
-class VarHandleIntRepresentationTest : BaseTraceRepresentationTest("var_handle/varhandle_int_representation.txt") {
+class VarHandleIntRepresentationTest : BaseTraceRepresentationTest("var_handle/varhandle_int_representation") {
 
     @Volatile
     private var number: Int = 1
@@ -95,7 +95,7 @@ class VarHandleIntRepresentationTest : BaseTraceRepresentationTest("var_handle/v
     }
 }
 
-class VarHandleShortRepresentationTest : BaseTraceRepresentationTest("var_handle/varhandle_short_representation.txt") {
+class VarHandleShortRepresentationTest : BaseTraceRepresentationTest("var_handle/varhandle_short_representation") {
 
     @Volatile
     private var number: Short = (1).toShort()
@@ -132,7 +132,7 @@ class VarHandleShortRepresentationTest : BaseTraceRepresentationTest("var_handle
 
 
 
-class VarHandleByteRepresentationTest : BaseTraceRepresentationTest("var_handle/varhandle_byte_representation.txt") {
+class VarHandleByteRepresentationTest : BaseTraceRepresentationTest("var_handle/varhandle_byte_representation") {
 
     @Volatile
     private var number: Byte = (1).toByte()
@@ -169,7 +169,7 @@ class VarHandleByteRepresentationTest : BaseTraceRepresentationTest("var_handle/
 
 
 
-class VarHandleCharRepresentationTest : BaseTraceRepresentationTest("var_handle/varhandle_char_representation.txt") {
+class VarHandleCharRepresentationTest : BaseTraceRepresentationTest("var_handle/varhandle_char_representation") {
 
     @Volatile
     private var number: Char = '1'
@@ -206,7 +206,7 @@ class VarHandleCharRepresentationTest : BaseTraceRepresentationTest("var_handle/
 
 
 
-class VarHandleBooleanRepresentationTest : BaseTraceRepresentationTest("var_handle/varhandle_boolean_representation.txt") {
+class VarHandleBooleanRepresentationTest : BaseTraceRepresentationTest("var_handle/varhandle_boolean_representation") {
 
     @Volatile
     private var number: Boolean = false
@@ -243,7 +243,7 @@ class VarHandleBooleanRepresentationTest : BaseTraceRepresentationTest("var_hand
 
 
 
-class VarHandleLongRepresentationTest : BaseTraceRepresentationTest("var_handle/varhandle_long_representation.txt") {
+class VarHandleLongRepresentationTest : BaseTraceRepresentationTest("var_handle/varhandle_long_representation") {
 
     @Volatile
     private var number: Long = 1L
@@ -280,7 +280,7 @@ class VarHandleLongRepresentationTest : BaseTraceRepresentationTest("var_handle/
 
 
 
-class VarHandleFloatRepresentationTest : BaseTraceRepresentationTest("var_handle/varhandle_float_representation.txt") {
+class VarHandleFloatRepresentationTest : BaseTraceRepresentationTest("var_handle/varhandle_float_representation") {
 
     @Volatile
     private var number: Float = 1f
@@ -317,7 +317,7 @@ class VarHandleFloatRepresentationTest : BaseTraceRepresentationTest("var_handle
 
 
 
-class VarHandleDoubleRepresentationTest : BaseTraceRepresentationTest("var_handle/varhandle_double_representation.txt") {
+class VarHandleDoubleRepresentationTest : BaseTraceRepresentationTest("var_handle/varhandle_double_representation") {
 
     @Volatile
     private var number: Double = 1.0

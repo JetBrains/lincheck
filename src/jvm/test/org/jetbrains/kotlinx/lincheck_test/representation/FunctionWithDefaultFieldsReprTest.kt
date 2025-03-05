@@ -11,7 +11,7 @@
 package org.jetbrains.kotlinx.lincheck_test.representation
 
 
-class FunctionWithDefaultFieldsReprTest: BaseTraceRepresentationTest("function_with_default_fields_repr_test.txt") {
+class FunctionWithDefaultFieldsReprTest: BaseTraceRepresentationTest("function_with_default_fields_repr_test") {
     
     @Volatile
     private var a = 0

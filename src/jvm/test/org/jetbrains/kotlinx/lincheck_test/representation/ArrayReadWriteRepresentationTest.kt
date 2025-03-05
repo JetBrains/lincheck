@@ -13,7 +13,7 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 /**
  * Check an array read and write operation representation.
  */
-class ArrayReadWriteRepresentationTest : BaseTraceRepresentationTest("array_read_write.txt") {
+class ArrayReadWriteRepresentationTest : BaseTraceRepresentationTest("array_read_write") {
 
     private val array = IntArray(2)
 
