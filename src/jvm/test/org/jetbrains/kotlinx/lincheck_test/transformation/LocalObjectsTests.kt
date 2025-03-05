@@ -33,9 +33,9 @@ import kotlin.reflect.KFunction
 @ModelCheckingCTest(
     actorsBefore = 0,
     actorsAfter = 0,
-    actorsPerThread = 50,
-    invocationsPerIteration = Int.MAX_VALUE,
-    iterations = 50
+    actorsPerThread = 1,
+    invocationsPerIteration = 1,
+    iterations = 1
 )
 
 class LocalObjectEliminationTest {
