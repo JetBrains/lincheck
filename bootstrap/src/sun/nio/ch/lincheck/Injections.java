@@ -151,6 +151,7 @@ public class Injections {
          * wrapped into an ignored section by the event tracker itself, if necessary.
          */
         tracker.beforeThreadFork(forkedThread, forkedThreadDescriptor);
+        return true;
     }
 
     /**

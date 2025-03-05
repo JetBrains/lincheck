@@ -31,11 +31,11 @@ The following interleaving leads to the error:
 Exception stack traces:
 #1: java.lang.IllegalStateException: Illegal interleaving during spin-cycle found
 	at org.jetbrains.kotlinx.lincheck_test.representation.InterleavingAnalysisPresentInSpinCycleFirstIterationTest.causeSpinLock(InterleavingAnalysisPresentInSpinCycleFirstIterationTest.kt:42)
-	at java.lang.Thread.run(Thread.java:750)
+	at java.lang.Thread.run(Thread.java:748)
 
 #2: java.lang.IllegalStateException: Illegal interleaving during spin-cycle found
 	at org.jetbrains.kotlinx.lincheck_test.representation.InterleavingAnalysisPresentInSpinCycleFirstIterationTest.spinLock(InterleavingAnalysisPresentInSpinCycleFirstIterationTest.kt:52)
-	at java.lang.Thread.run(Thread.java:750)
+	at java.lang.Thread.run(Thread.java:748)
 
 Detailed trace:
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
