@@ -14,6 +14,9 @@ import java.security.SecureRandom
 import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck_test.util.TestJdkVersion
+import org.jetbrains.kotlinx.lincheck_test.util.testJdkVersion
+import org.junit.Assume.assumeFalse
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 
@@ -24,6 +27,8 @@ class SecureRandomTest : RandomTests() {
     @Before
     fun setUp() {
         assumeTrue(isInTraceDebuggerMode)
+        // https://github.com/JetBrains/lincheck/issues/564
+        assumeFalse(testJdkVersion == TestJdkVersion.JDK_21 || testJdkVersion == TestJdkVersion.JDK_20)
     }
     
     @Operation

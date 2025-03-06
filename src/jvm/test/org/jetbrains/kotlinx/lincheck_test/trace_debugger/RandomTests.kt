@@ -11,6 +11,10 @@
 package org.jetbrains.kotlinx.lincheck_test.trace_debugger
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck_test.util.TestJdkVersion
+import org.jetbrains.kotlinx.lincheck_test.util.testJdkVersion
+import org.junit.Assume.assumeFalse
+import org.junit.Before
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.DoubleAccumulator
 import java.util.concurrent.atomic.DoubleAdder
@@ -343,6 +347,12 @@ class FailingRecoveringRandomTest : RandomTests() {
 }
 
 class FailingRandomBytesTest : RandomTests() {
+    @Before
+    fun setUp() {
+        // https://github.com/JetBrains/lincheck/issues/564
+        assumeFalse(testJdkVersion == TestJdkVersion.JDK_21 || testJdkVersion == TestJdkVersion.JDK_20)
+    }
+    
     class FailingRandom : JRandom() {
         override fun nextBytes(bytes: ByteArray) {
             super.nextBytes(bytes)
