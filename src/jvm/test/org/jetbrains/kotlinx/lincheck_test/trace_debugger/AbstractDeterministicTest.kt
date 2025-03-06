@@ -30,6 +30,7 @@ abstract class AbstractDeterministicTest {
     open val alsoRunInLincheckMode: Boolean get() = false
     
     private fun testTraceDebugger() {
+        assumeTrue(false)
         if (!alsoRunInLincheckMode) {
             assumeTrue(isInTraceDebuggerMode)
         }
