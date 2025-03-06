@@ -55,13 +55,53 @@ abstract class BaseRunConcurrentRepresentationTest<R>(private val outputFileName
         check(error is LincheckAssertionError) {
             """
             |The test should throw LincheckAssertionError, but instead it failed with:
-            |$error
+            |${error.stackTraceToString()}
             """
             .trimMargin()
         }
         if (!isFlakyTest) {
             error.failure.checkLincheckOutput(outputFileName)
         }
+    }
+}
+
+// TODO: does not work at all :(
+class NoEventsRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
+    "run_concurrent_test/no_events"
+) {
+    override fun block() {
+        check(false)
+    }
+}
+
+// TODO: does not work at all :(
+class IncrementAndFailConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
+    "run_concurrent_test/increment_and_fail"
+) {
+    var x = 0
+
+    override fun block() {
+        x++
+        check(false)
+    }
+}
+
+
+@Ignore // TODO: does not provide a thread dump
+class InfiniteLoopRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
+    "run_concurrent_test/infinite_loop"
+) {
+    override fun block() {
+        while (true) {}
+    }
+}
+
+class MainThreadParkRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
+    "run_concurrent_test/main_thread_park"
+) {
+    override fun block() {
+       val q = ArrayBlockingQueue<Int>(1)
+        q.take() // should suspend
     }
 }
 

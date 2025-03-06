@@ -31,13 +31,18 @@ internal fun StringBuilder.appendTrace(
     val startTraceGraphNode = constructTraceGraph(nThreads, failure, results, trace, exceptionStackTraces)
     if (isGeneralPurposeModelCheckingScenario(failure.scenario)) {
         val (callNode, actorResultNode) = extractLambdaCallOfGeneralPurposeModelChecking(startTraceGraphNode)
-        // do not print the method result if it is not expanded
-        if (!callNode.shouldBeExpanded(verboseTrace = false) && actorResultNode.resultRepresentation != null) {
-            callNode.lastInternalEvent.next = null
+        // TODO: This work-around is weird
+        if (callNode == null) {
+            appendShortTrace(nThreads, threadNames, listOf(actorResultNode), failure)
+        } else {
+            // do not print the method result if it is not expanded
+            if (!callNode.shouldBeExpanded(verboseTrace = false) && actorResultNode.resultRepresentation != null) {
+                callNode.lastInternalEvent.next = null
+            }
+            appendShortTrace(nThreads, threadNames, listOf(callNode), failure)
+            callNode.lastInternalEvent.next = actorResultNode
+            appendDetailedTrace(nThreads, threadNames, listOf(callNode), failure)
         }
-        appendShortTrace(nThreads, threadNames, listOf(callNode), failure)
-        callNode.lastInternalEvent.next = actorResultNode
-        appendDetailedTrace(nThreads, threadNames, listOf(callNode), failure)
     } else {
         appendShortTrace(nThreads, threadNames, startTraceGraphNode, failure)
         appendExceptionsStackTracesBlock(exceptionStackTraces)
@@ -50,14 +55,12 @@ internal fun StringBuilder.appendTrace(
 // TODO: please refactor me and trace representation API!
 private fun extractLambdaCallOfGeneralPurposeModelChecking(
     startTraceGraphNode: List<TraceNode>
-): Pair<CallNode, ActorResultNode> {
+): Pair<CallNode?, ActorResultNode> {
     val actorNode = startTraceGraphNode.firstOrNull() as? ActorNode
     val callNode = actorNode?.internalEvents?.firstOrNull() as? CallNode
-    val actorResultNode = callNode?.lastInternalEvent?.next as? ActorResultNode
+    val actorResultNode = actorNode?.lastInternalEvent as? ActorResultNode
     check(actorNode != null)
     check(actorNode.actorRepresentation.startsWith("run"))
-    check(actorNode.internalEvents.size == 2)
-    check(callNode != null)
     check(actorResultNode != null)
     return callNode to actorResultNode
 }
