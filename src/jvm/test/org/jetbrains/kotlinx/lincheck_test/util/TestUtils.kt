@@ -55,19 +55,6 @@ private fun compareAndOverwrite(expectedOutputFilePrefix: String, actualOutput: 
         "Filename $expectedOutputFilePrefix should not contain a file extension (.txt)"
     }
 
-    // Always overwrite default jdk in non-trace-debugger mode
-    if (OVERWRITE_REPRESENTATION_TESTS_OUTPUT &&
-        testJdkVersion == DEFAULT_TEST_JDK_VERSION && !isInTraceDebuggerMode) {
-        val overwriteOutputFileName = generateExpectedLogFileName(
-            fileNamePrefix = expectedOutputFilePrefix,
-            jdkVersion = DEFAULT_TEST_JDK_VERSION,
-            inTraceDebuggerMode = false,
-        )
-        val overwriteOutputFile = getExpectedLogFileFromSources(overwriteOutputFileName)
-        overwriteOutputFile.writeText(actualOutput)
-        return
-    }
-
     val expectedOutputFile = getExpectedLogFile(expectedOutputFilePrefix)
     val expectedOutput = expectedOutputFile.readText()
 
