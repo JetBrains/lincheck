@@ -358,21 +358,25 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         protectionDomain: ProtectionDomain?,
         classBytes: ByteArray
     ): ByteArray? = runInIgnoredSection {
+        Logger.debug { "Meow5 $internalClassName" }
         if (classBeingRedefined != null) {
             require(internalClassName != null) {
                 "Internal class name of redefined class ${classBeingRedefined.name} must not be null"
             }
         }
+        Logger.debug { "Meow4 $internalClassName" }
         // Internal class name could be `null` in some cases (can be witnessed on JDK-8),
         // this can be related to the Kotlin compiler bug:
         // - https://youtrack.jetbrains.com/issue/KT-16727/
         if (internalClassName == null) return null
+        Logger.debug { "Meow3 $internalClassName" }
         // If the class should not be transformed, return immediately.
         if (!shouldTransform(internalClassName.canonicalClassName, instrumentationMode)) {
             return null
         }
         // In the model checking mode, we transform classes lazily,
         // once they are used in the testing code.
+        Logger.debug { "Meow2 $internalClassName" }
         if (!INSTRUMENT_ALL_CLASSES &&
             instrumentationMode == MODEL_CHECKING &&
             // do not re-transform already instrumented classes
@@ -381,6 +385,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
             !isEagerlyInstrumentedClass(internalClassName.canonicalClassName)) {
             return null
         }
+        Logger.debug { "Meow1 $internalClassName" }
         return transformImpl(loader, internalClassName, classBytes)
     }
 
