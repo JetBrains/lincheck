@@ -15,21 +15,40 @@
 # One can use this script to verify trace outputs by looking at the local changes after the script ran.
 # And commit the changes if accepted, to update test outputs.
 
+
 # jdk 11 is SLOW! So remove it if you don't expect files to change
 cd ../
+
 jdks=("8" "11" "13" "15" "17" "19" "20" "21")
+# Specify system local paths to the following corretto jdks to match the CI
+jdk_paths=(
+  "path/to/corretto-1.8.x"    #  8
+  "path/to/corretto-11.0.x"   # 11
+  "path/to/corretto-17.0.x"   # 13
+  "path/to/corretto-17.0.x"   # 15
+  "path/to/corretto-17.0.x"   # 17
+  "path/to/corretto-21.0.x"   # 19
+  "path/to/corretto-21.0.x"   # 20
+  "path/to/corretto-21.0.x"   # 21
+)
 testFilter="org.jetbrains.kotlinx.lincheck_test.representation.*"
-for jdk in "${jdks[@]}" 
+
+for i in "${!jdks[@]}"
 do
+  jdk="${jdks[i]}"
+  JDK_PATH="${jdk_paths[i]}"
+
+  echo "[Representation Tests Overwrite] Selected JDK:"
+  JAVA_HOME="$JDK_PATH" ./gradlew -v
+
   echo "[Representation Tests Overwrite] Running tests for jdk: $jdk in non-trace mode  ----------------------"
-  ./gradlew jvmTest --tests "$testFilter" -PjdkToolchainVersion="$jdk" -PoverwriteRepresentationTestsOutput=true -PtestInTraceDebuggerMode=false
-  
-  
+  JAVA_HOME="$JDK_PATH" ./gradlew clean jvmTest --rerun-tasks --tests "$testFilter" -PjdkToolchainVersion="$jdk" -PoverwriteRepresentationTestsOutput=true -PtestInTraceDebuggerMode=false
+
   #https://github.com/JetBrains/lincheck/issues/500
   if [ "$jdk" = "8" ]; then
      continue
-  fi 
-  
+  fi
+
   echo "[Representation Tests Overwrite] Running tests for jdk: $jdk in trace mode  --------------------------"
-  ./gradlew jvmTest --tests "$testFilter" -PjdkToolchainVersion="$jdk" -PoverwriteRepresentationTestsOutput=true -PtestInTraceDebuggerMode=true
-done 
+  JAVA_HOME="$JDK_PATH" ./gradlew clean jvmTest --rerun-tasks --tests "$testFilter" -PjdkToolchainVersion="$jdk" -PoverwriteRepresentationTestsOutput=true -PtestInTraceDebuggerMode=true
+done
