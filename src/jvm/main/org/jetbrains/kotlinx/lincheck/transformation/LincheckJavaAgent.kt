@@ -393,13 +393,13 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         loader: ClassLoader?,
         internalClassName: String,
         classBytes: ByteArray
-    ): ByteArray {
+    ): ByteArray = transformedClassesCache.computeIfAbsent(internalClassName.canonicalClassName) {
         Logger.debug { "Transforming $internalClassName" }
 
         val reader = ClassReader(classBytes)
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
         val visitor = LincheckClassVisitor(writer, instrumentationMode)
-        return try {
+        try {
             reader.accept(visitor, ClassReader.EXPAND_FRAMES)
             writer.toByteArray()
         } catch (e: Throwable) {
