@@ -1,25 +1,27 @@
 = Concurrent test failed =
 
 java.lang.IllegalStateException: Check failed.
-	at org.jetbrains.kotlinx.lincheck_test.representation.BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:58)
-	at org.jetbrains.kotlinx.lincheck_test.representation.BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:46)
-	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:40)
+	at org.jetbrains.kotlinx.lincheck_test.representation.gpmc.BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:56)
+	at org.jetbrains.kotlinx.lincheck_test.representation.gpmc.BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:44)
+	at org.jetbrains.kotlinx.lincheck_test.representation.gpmc.BaseGPMCRepresentationTest$test$1.invoke(BaseGPMCRepresentationTest.kt:27)
+	at org.jetbrains.kotlinx.lincheck_test.representation.gpmc.BaseGPMCRepresentationTest$test$1.invoke(BaseGPMCRepresentationTest.kt:27)
 	at java.lang.Thread.run(Thread.java:750)
 
 The following interleaving leads to the error:
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                                    Thread 1                                                                                                    |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| MethodHandlesFindConstructorRepresentationTest#1.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:40) |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ---------------------------------------------------------------------------------------------------------------------------- |
+|                                                           Thread 1                                                           |
+| ---------------------------------------------------------------------------------------------------------------------------- |
+| test$1#1.invoke(): threw IllegalStateException at BaseGPMCRepresentationTest$test$1.invoke(BaseGPMCRepresentationTest.kt:27) |
+| ---------------------------------------------------------------------------------------------------------------------------- |
 
 Detailed trace:
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                                    Thread 1                                                                                                    |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| MethodHandlesFindConstructorRepresentationTest#1.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:40) |
-|   block(): threw IllegalStateException at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:46)                                                                                       |
-|     doTest() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:55)                                                                                                                 |
-|       Counter#1.value ➜ 42 at MethodHandlesFindConstructorRepresentationTest.doTest(MethodHandlesLookupTests.kt:79)                                                                                            |
-|   result: IllegalStateException #1                                                                                                                                                                             |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                               Thread 1                                                                                |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| test$1#1.invoke(): threw IllegalStateException at BaseGPMCRepresentationTest$test$1.invoke(BaseGPMCRepresentationTest.kt:27)                                          |
+|   MethodHandlesFindConstructorRepresentationTest#1.block(): threw IllegalStateException at BaseGPMCRepresentationTest$test$1.invoke(BaseGPMCRepresentationTest.kt:27) |
+|     block(): threw IllegalStateException at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:44)                                            |
+|       doTest() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:53)                                                                      |
+|         Counter#1.value ➜ 42 at MethodHandlesFindConstructorRepresentationTest.doTest(MethodHandlesLookupTests.kt:77)                                                 |
+|   result: IllegalStateException #1                                                                                                                                    |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

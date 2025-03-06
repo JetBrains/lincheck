@@ -1,25 +1,27 @@
 = Concurrent test failed =
 
 java.lang.IllegalStateException: Check failed.
-	at org.jetbrains.kotlinx.lincheck_test.representation.IncrementAndFailConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:77)
-	at org.jetbrains.kotlinx.lincheck_test.representation.IncrementAndFailConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:70)
-	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:42)
-	at java.base/java.lang.Thread.run(Thread.java:833)
+	at org.jetbrains.kotlinx.lincheck_test.representation.gpmc.IncrementAndFailConcurrentRepresentationTest.block(SimpleGPMCRepresentationTests.kt:41)
+	at org.jetbrains.kotlinx.lincheck_test.representation.gpmc.IncrementAndFailConcurrentRepresentationTest.block(SimpleGPMCRepresentationTests.kt:34)
+	at org.jetbrains.kotlinx.lincheck_test.representation.gpmc.BaseGPMCRepresentationTest$test$1.invoke(BaseGPMCRepresentationTest.kt:27)
+	at org.jetbrains.kotlinx.lincheck_test.representation.gpmc.BaseGPMCRepresentationTest$test$1.invoke(BaseGPMCRepresentationTest.kt:27)
+	at java.lang.Thread.run(Thread.java:750)
 
 The following interleaving leads to the error:
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|                                                                                                   Thread 1                                                                                                   |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| IncrementAndFailConcurrentRepresentationTest#1.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:42) |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ---------------------------------------------------------------------------------------------------------------------------- |
+|                                                           Thread 1                                                           |
+| ---------------------------------------------------------------------------------------------------------------------------- |
+| test$1#1.invoke(): threw IllegalStateException at BaseGPMCRepresentationTest$test$1.invoke(BaseGPMCRepresentationTest.kt:27) |
+| ---------------------------------------------------------------------------------------------------------------------------- |
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|                                                                                                   Thread 1                                                                                                   |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| IncrementAndFailConcurrentRepresentationTest#1.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:42) |
-|   block(): threw IllegalStateException at IncrementAndFailConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:70)                                                                         |
-|     x ➜ 1 at IncrementAndFailConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:76)                                                                                                      |
-|     x = 2 at IncrementAndFailConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:76)                                                                                                      |
-|   result: IllegalStateException #1                                                                                                                                                                           |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                              Thread 1                                                                               |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| test$1#1.invoke(): threw IllegalStateException at BaseGPMCRepresentationTest$test$1.invoke(BaseGPMCRepresentationTest.kt:27)                                        |
+|   IncrementAndFailConcurrentRepresentationTest#1.block(): threw IllegalStateException at BaseGPMCRepresentationTest$test$1.invoke(BaseGPMCRepresentationTest.kt:27) |
+|     block(): threw IllegalStateException at IncrementAndFailConcurrentRepresentationTest.block(SimpleGPMCRepresentationTests.kt:34)                                 |
+|       x ➜ 1 at IncrementAndFailConcurrentRepresentationTest.block(SimpleGPMCRepresentationTests.kt:40)                                                              |
+|       x = 2 at IncrementAndFailConcurrentRepresentationTest.block(SimpleGPMCRepresentationTests.kt:40)                                                              |
+|   result: IllegalStateException #1                                                                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

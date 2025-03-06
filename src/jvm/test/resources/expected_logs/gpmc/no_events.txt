@@ -1,10 +1,11 @@
 = Concurrent test failed =
 
 java.lang.IllegalStateException: Check failed.
-	at org.jetbrains.kotlinx.lincheck_test.representation.NoEventsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:66)
-	at org.jetbrains.kotlinx.lincheck_test.representation.NoEventsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:62)
-	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:43)
-	at java.base/java.lang.Thread.run(Thread.java:833)
+	at org.jetbrains.kotlinx.lincheck_test.representation.gpmc.NoEventsRunConcurrentRepresentationTest.block(SimpleGPMCRepresentationTests.kt:30)
+	at org.jetbrains.kotlinx.lincheck_test.representation.gpmc.NoEventsRunConcurrentRepresentationTest.block(SimpleGPMCRepresentationTests.kt:26)
+	at org.jetbrains.kotlinx.lincheck_test.representation.gpmc.BaseGPMCRepresentationTest$test$1.invoke(BaseGPMCRepresentationTest.kt:27)
+	at org.jetbrains.kotlinx.lincheck_test.representation.gpmc.BaseGPMCRepresentationTest$test$1.invoke(BaseGPMCRepresentationTest.kt:27)
+	at java.lang.Thread.run(Thread.java:750)
 
 The following interleaving leads to the error:
 | ---------------------------------- |

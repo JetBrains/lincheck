@@ -1,0 +1,29 @@
+= Concurrent test failed =
+
+java.lang.IllegalStateException: Check failed.
+	at org.jetbrains.kotlinx.lincheck_test.representation.gpmc.BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:56)
+	at org.jetbrains.kotlinx.lincheck_test.representation.gpmc.BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:44)
+	at org.jetbrains.kotlinx.lincheck_test.representation.gpmc.BaseGPMCRepresentationTest$test$1.invoke(BaseGPMCRepresentationTest.kt:27)
+	at org.jetbrains.kotlinx.lincheck_test.representation.gpmc.BaseGPMCRepresentationTest$test$1.invoke(BaseGPMCRepresentationTest.kt:27)
+	at java.base/java.lang.Thread.run(Thread.java:829)
+
+The following interleaving leads to the error:
+| -------------------------------------------------------------------------------------------------------------------------- |
+|                                                          Thread 1                                                          |
+| -------------------------------------------------------------------------------------------------------------------------- |
+| test$1.invoke(): threw IllegalStateException at BaseGPMCRepresentationTest$test$1.invoke(BaseGPMCRepresentationTest.kt:27) |
+| -------------------------------------------------------------------------------------------------------------------------- |
+
+Detailed trace:
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                Thread 1                                                                                |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| test$1.invoke(): threw IllegalStateException at BaseGPMCRepresentationTest$test$1.invoke(BaseGPMCRepresentationTest.kt:27)                                             |
+|   MethodHandlesFindGetterSetterRepresentationTest#1.block(): threw IllegalStateException at BaseGPMCRepresentationTest$test$1.invoke(BaseGPMCRepresentationTest.kt:27) |
+|     block(): threw IllegalStateException at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:44)                                             |
+|       doTest() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:53)                                                                       |
+|         Companion#1.create(): Counter#1 at MethodHandlesFindGetterSetterRepresentationTest.doTest(MethodHandlesLookupTests.kt:116)                                     |
+|           Counter.shared = Counter#1 at Counter$Companion.create(MethodHandlesLookupTests.kt:165)                                                                      |
+|         Counter#1.value ➜ 42 at MethodHandlesFindGetterSetterRepresentationTest.doTest(MethodHandlesLookupTests.kt:123)                                                |
+|   result: IllegalStateException #1                                                                                                                                     |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
