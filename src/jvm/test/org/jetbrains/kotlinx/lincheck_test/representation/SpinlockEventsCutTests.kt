@@ -29,6 +29,10 @@ import kotlin.reflect.jvm.*
  * Checks that spin-cycle repeated events are cut in case of obstruction freedom violation
  */
 class ObstructionFreedomViolationEventsCutTest {
+
+    @Before // spin-loop detection is unsupported in trace debugger mode
+    fun setUp() = assumeFalse(isInTraceDebuggerMode)
+
     private val q = MSQueueBlocking()
 
     @Operation
@@ -50,6 +54,9 @@ class ObstructionFreedomViolationEventsCutTest {
  */
 class SpinlockEventsCutShortLengthTest : AbstractSpinLivelockTest() {
 
+    @Before // spin-loop detection is unsupported in trace debugger mode
+    fun setUp() = assumeFalse(isInTraceDebuggerMode)
+
     private val sharedStateAny = AtomicBoolean(false)
 
     override val outputFileName: String
@@ -65,6 +72,9 @@ class SpinlockEventsCutShortLengthTest : AbstractSpinLivelockTest() {
  * Checks that spin-cycle repeated events are cut in case when spin cycle contains few actions
  */
 class SpinlockEventsCutMiddleLengthTest : AbstractSpinLivelockTest() {
+
+    @Before // spin-loop detection is unsupported in trace debugger mode
+    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val sharedStateAny = AtomicBoolean(false)
 
@@ -83,7 +93,8 @@ class SpinlockEventsCutMiddleLengthTest : AbstractSpinLivelockTest() {
  * when one thread runs in the infinite loop while others terminate
  */
 class SpinlockEventsCutInfiniteLoopTest : AbstractSpinLivelockTest() {
-    @Before
+
+    @Before // spin-loop detection is unsupported in trace debugger mode
     fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val sharedStateAny = AtomicBoolean(false)
@@ -103,7 +114,8 @@ class SpinlockEventsCutInfiniteLoopTest : AbstractSpinLivelockTest() {
  * when one thread runs in the infinite loop while others terminate
  */
 class SpinlockEventsCutInfiniteLoopWithParametersTest : AbstractSpinLivelockTest() {
-    @Before
+
+    @Before // spin-loop detection is unsupported in trace debugger mode
     fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     @Volatile
@@ -124,7 +136,8 @@ class SpinlockEventsCutInfiniteLoopWithParametersTest : AbstractSpinLivelockTest
  * when the spin cycle is twice bigger due to a flipping method receivers.
  */
 class SpinlockEventsCutInfiniteLoopWithReceiversTest : AbstractSpinLivelockTest() {
-    @Before
+
+    @Before // spin-loop detection is unsupported in trace debugger mode
     fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val first = Receiver(false)
@@ -151,7 +164,8 @@ class SpinlockEventsCutInfiniteLoopWithReceiversTest : AbstractSpinLivelockTest(
  * when the spin cycle is bigger due to a different arrays usage and cells access.
  */
 class SpinlockEventsCutInfiniteLoopWithArrayOperationsTest : AbstractSpinLivelockTest() {
-    @Before
+
+    @Before // spin-loop detection is unsupported in trace debugger mode
     fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     @Volatile
@@ -178,7 +192,8 @@ class SpinlockEventsCutInfiniteLoopWithArrayOperationsTest : AbstractSpinLiveloc
  * when the spin cycle is twice bigger due to a flipping arrays receivers usage.
  */
 class SpinlockEventsCutInfiniteLoopWithArrayReceiversTest : AbstractSpinLivelockTest() {
-    @Before
+
+    @Before // spin-loop detection is unsupported in trace debugger mode
     fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val first = Array(3) { 0 }
@@ -204,7 +219,8 @@ class SpinlockEventsCutInfiniteLoopWithArrayReceiversTest : AbstractSpinLivelock
  * LinCheck should calculate spin cycle period without params.
  */
 class SpinlockEventsCutInfiniteNoCycleWithParamsTest : AbstractSpinLivelockTest() {
-    @Before
+
+    @Before // spin-loop detection is unsupported in trace debugger mode
     fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val array = Array(3) { 0 }
@@ -228,6 +244,9 @@ class SpinlockEventsCutInfiniteNoCycleWithParamsTest : AbstractSpinLivelockTest(
  */
 class SpinlockEventsCutLongCycleActionsTest : AbstractSpinLivelockTest() {
 
+    @Before // spin-loop detection is unsupported in trace debugger mode
+    fun setUp() = assumeFalse(isInTraceDebuggerMode)
+
     private val data = AtomicReferenceArray<Int>(7)
     override val outputFileName: String
         get() = "spin_lock/spin_lock_events_cut_long_cycle"
@@ -249,9 +268,14 @@ class SpinlockEventsCutLongCycleActionsTest : AbstractSpinLivelockTest() {
  */
 class SpinlockEventsCutWithInnerLoopActionsTest : AbstractSpinLivelockTest() {
 
+    @Before // spin-loop detection is unsupported in trace debugger mode
+    fun setUp() = assumeFalse(isInTraceDebuggerMode)
+
     private val data = AtomicReferenceArray<Int>(10)
+
     override val outputFileName: String
         get() = "spin_lock/spin_lock_events_cut_inner_loop"
+
     override fun meaninglessActions() {
         for (i in 0 until data.length()) {
             data[i] = 0
@@ -308,6 +332,9 @@ abstract class AbstractSpinLivelockTest {
  * when the reason of a failure is not deadlock or obstruction freedom violation (incorrect results failure)
  */
 class SpinlockInIncorrectResultsWithClocksTest {
+
+    @Before // spin-loop detection is unsupported in trace debugger mode
+    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     @Volatile
     private var bStarted = false
@@ -389,7 +416,8 @@ class SpinlockInIncorrectResultsWithClocksTest {
  * Test should not fail.
  */
 class SpinCycleWithSideEffectsTest {
-    @Before
+
+    @Before // spin-loop detection is unsupported in trace debugger mode
     fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val counter = AtomicInteger(0)
@@ -430,7 +458,8 @@ class SpinCycleWithSideEffectsTest {
  * when all potential switch points are nested in non-atomic methods.
  */
 class SpinLockWithAllEventsWrappedInMethodsTest {
-    @Before
+
+    @Before // spin-loop detection is unsupported in trace debugger mode
     fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val counter = AtomicInteger(0)
@@ -478,7 +507,8 @@ class SpinLockWithAllEventsWrappedInMethodsTest {
  * when all the trace points are in the top-level, i.e., right in the actor.
  */
 class SingleThreadTopLevelSpinLockTest {
-    @Before
+
+    @Before // spin-loop detection is unsupported in trace debugger mode
     fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     @Volatile
