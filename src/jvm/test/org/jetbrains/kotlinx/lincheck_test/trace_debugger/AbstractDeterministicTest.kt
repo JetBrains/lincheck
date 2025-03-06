@@ -27,6 +27,8 @@ import java.io.PrintStream
  * Checks for absence of non-determinism and absence (or existence) of exceptions.
  */
 abstract class AbstractDeterministicTest {
+    open val alsoRunInLincheckMode: Boolean get() = true
+
     private fun testTraceDebugger() {
         assumeTrue(isInTraceDebuggerMode)
         val oldStdOut = System.out
