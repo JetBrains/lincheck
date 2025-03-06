@@ -126,6 +126,7 @@ data class ValueHolder(val value: Int) : Serializable
 
 @Param(name = "key", gen = NullGen::class)
 class SerializableNullParameterTest : AbstractLincheckTest() {
+    @Suppress("UNUSED_PARAMETER")
     @Operation
     fun operation(@Param(name = "key") key: List<Int>?): Int = 0 // key?.sum() ?: 0
 
