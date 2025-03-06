@@ -93,30 +93,50 @@ private fun compareAndOverwrite(expectedOutputFilePrefix: String, actualOutput: 
  * 11 (trace), 8 (trace), 11 (non-trace) and 8 (non-trace).
  */
 private fun getExpectedLogFile(expectedOutputFilePrefix: String): File {
-    // If in trace mode, first check if a trace debugger file can be found
+    // first try to pick a jdk-specific file if it exists
+    val jdkSpecificFileName = generateExpectedLogFileName(
+        fileNamePrefix = expectedOutputFilePrefix,
+        jdkVersion = testJdkVersion,
+        inTraceDebuggerMode = isInTraceDebuggerMode,
+    )
+    val jdkSpecificFile = getExpectedLogFileFromResources(jdkSpecificFileName)
+    if (jdkSpecificFile != null) return jdkSpecificFile
+
+    // next, if in trace debugger mode, try a non-jdk-specific file with trace debugger suffix
     if (isInTraceDebuggerMode) {
-        for (i in testJdkVersion.ordinal downTo 0) {
-            val jdkVersion = TestJdkVersion.entries[i]
-            val fileName = generateExpectedLogFileName(expectedOutputFilePrefix, jdkVersion, true)
-            val resourceFileName = getExpectedLogFileFromResources(fileName)
-            if (resourceFileName != null) return resourceFileName
-        }
+        val traceDebuggerFileName = generateExpectedLogFileName(
+            fileNamePrefix = expectedOutputFilePrefix,
+            jdkVersion = DEFAULT_TEST_JDK_VERSION,
+            inTraceDebuggerMode = true,
+        )
+        val traceDebuggerFile = getExpectedLogFileFromResources(traceDebuggerFileName)
+        if (traceDebuggerFile != null) return traceDebuggerFile
     }
-    // Check lower sdks in non-trace mode
-    for (i in testJdkVersion.ordinal downTo 0) {
-        val jdkVersion = TestJdkVersion.entries[i]
-        val fileName = generateExpectedLogFileName(expectedOutputFilePrefix, jdkVersion, false)
-        val resourceFileName = getExpectedLogFileFromResources(fileName)
-        if (resourceFileName != null) return resourceFileName
-    }
-    error("No file exists yet for this test and current jdk = $testJdkVersion, please run on jdk 8 with overwrite enabled")
+
+    // finally, try the default file name
+    val defaultFileName = generateExpectedLogFileName(
+        fileNamePrefix = expectedOutputFilePrefix,
+        jdkVersion = DEFAULT_TEST_JDK_VERSION,
+        inTraceDebuggerMode = false,
+    )
+    val defaultFile = getExpectedLogFileFromResources(defaultFileName)
+    if (defaultFile != null) return defaultFile
+
+    error(
+        """
+        No file exists yet for the test $expectedOutputFilePrefix. 
+            JDK version = $testJdkVersion;
+            Trace debugger mode = $isInTraceDebuggerMode.
+        """
+        .trimIndent()
+    )
 }
 
-internal fun getExpectedLogFileFromResources(fileName: String): File? =
-    ClassLoader.getSystemResource("expected_logs/$fileName")?.file?.let { File(it) }
+internal fun getExpectedLogFileFromResources(fullFileName: String): File? =
+    ClassLoader.getSystemResource("expected_logs/$fullFileName")?.file?.let { File(it) }
 
-internal fun getExpectedLogFileFromSources(fileName: String): File =
-    File("src/jvm/test/resources/expected_logs/$fileName")
+internal fun getExpectedLogFileFromSources(fullFileName: String): File =
+    File("src/jvm/test/resources/expected_logs/$fullFileName")
 
 // Generates a file name in one of the following forms:
 // prefix.txt, prefix_jdk15.txt, prefix_trace_debugger.txt, prefix_trace_debugger_jdk15.txt
@@ -125,9 +145,9 @@ private fun generateExpectedLogFileName(
     jdkVersion: TestJdkVersion,
     inTraceDebuggerMode: Boolean
 ): String {
-    return "${fileNamePrefix}${if (inTraceDebuggerMode) "_trace_debugger" else ""}${
-        if (jdkVersion == TestJdkVersion.JDK_8) "" else "_${jdkVersion}"
-    }.txt"
+    val traceDebuggerSuffix = if (inTraceDebuggerMode) "_trace_debugger" else ""
+    val jdkSuffix = if (jdkVersion != DEFAULT_TEST_JDK_VERSION) "_${jdkVersion}" else ""
+    return "${fileNamePrefix}${traceDebuggerSuffix}${jdkSuffix}.txt"
 }
 
 private val String.filtered: String get() {
@@ -188,6 +208,8 @@ internal enum class TestJdkVersion {
         return "jdk${name.removePrefix("JDK_")}"
     }
 }
+
+internal val DEFAULT_TEST_JDK_VERSION = TestJdkVersion.JDK_17
 
 /**
  * Determines the current JDK version based on the `java.specification.version` system property.
