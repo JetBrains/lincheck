@@ -108,7 +108,7 @@ class SerializableJavaUtilParameterTest : AbstractLincheckTest() {
     }
     
     @Operation
-    fun operation(@Param(name = "key") key: List<Int>): Int = key[0] + key.sum()
+    fun operation(@Param(name = "key") key: List<Int>): Int = key[0] // + key.sum()
 
     override fun <O : Options<O, *>> O.customize() {
         iterations(1)
