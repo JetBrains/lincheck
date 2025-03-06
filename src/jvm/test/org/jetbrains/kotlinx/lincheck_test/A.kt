@@ -13,6 +13,8 @@ package org.jetbrains.kotlinx.lincheck_test
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTest
+import org.junit.Assume.assumeFalse
+import org.junit.Before
 import org.junit.Test
 
 @ModelCheckingCTest(
@@ -23,16 +25,42 @@ import org.junit.Test
     iterations = 50
 )
 class A {
-    private data class A(var value: Int, var any: Any, val array: IntArray)
-    
+    @Before
+    fun setUp() = assumeFalse(isInTraceDebuggerMode)
+
     @Operation
-    fun f(): Int {
-        val a = A(0, this, IntArray(10))
-        return a.array.sum()
+    fun operation(): Int {
+        val a = A(0, this, IntArray(2))
+        a.any = a
+        repeat(20) {
+            a.value = it
+        }
+        a.array[1] = 54
+        val b = A(a.value, a.any, a.array)
+        b.value = 65
+        repeat(20) {
+            b.array[0] = it
+        }
+        a.any = b
+        // check that closure object and captured `x: IntRef` object
+        // are correctly classified as local objects;
+        // note that these classes itself are not instrumented,
+        // but the creation of their instances still should be tracked
+        var x = 0
+        val closure = {
+            a.value += 1
+            x += 1
+        }
+        repeat(20) {
+            closure()
+        }
+        return (a.any as A).array.sum()
     }
 
     @Test(timeout = 100_000)
     fun test() {
         LinChecker.check(this::class.java)
     }
+
+    private data class A(var value: Int, var any: Any, val array: IntArray)
 }
