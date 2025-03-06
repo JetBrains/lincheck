@@ -23,6 +23,7 @@ import java.lang.ref.*
 import java.lang.reflect.*
 import java.lang.reflect.Method
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
 
@@ -324,3 +325,6 @@ internal fun <T> Class<T>.newDefaultInstance(): T {
 
     throw IllegalStateException("No suitable constructor found for ${this.canonicalName}")
 }
+
+// We store the class references in a local map to avoid repeated Class.forName calls and reflection overhead
+val classCache = ConcurrentHashMap<String, Class<*>>()
