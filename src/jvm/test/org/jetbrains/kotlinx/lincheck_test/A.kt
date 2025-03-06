@@ -23,10 +23,12 @@ import org.junit.Test
     iterations = 50
 )
 class A {
+    private data class A(var value: Int, var any: Any, val array: IntArray)
+    
     @Operation
     fun f(): Int {
-        val arr = IntArray(10)
-        return arr.sum()
+        val a = A(0, this, IntArray(10))
+        return a.array.sum()
     }
 
     @Test(timeout = 100_000)
