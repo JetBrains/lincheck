@@ -65,7 +65,6 @@ abstract class BaseRunConcurrentRepresentationTest<R>(private val outputFileName
     }
 }
 
-// TODO: does not work at all :(
 class NoEventsRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
     "run_concurrent_test/no_events"
 ) {
@@ -74,7 +73,6 @@ class NoEventsRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationT
     }
 }
 
-// TODO: does not work at all :(
 class IncrementAndFailConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
     "run_concurrent_test/increment_and_fail"
 ) {
