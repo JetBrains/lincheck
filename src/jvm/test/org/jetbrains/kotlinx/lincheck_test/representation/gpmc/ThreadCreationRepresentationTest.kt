@@ -8,11 +8,11 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck_test.representation
+package org.jetbrains.kotlinx.lincheck_test.representation.gpmc
 
 import kotlin.concurrent.thread
 
-class ThreadCreationRepresentationTest: BaseRunConcurrentRepresentationTest<Unit>("thread_creation_representation_test") {
+class ThreadCreationRepresentationTest: BaseGPMCRepresentationTest<Unit>("gpmc/thread_creation_representation_test") {
 
     @Volatile
     private var a = 0
@@ -20,11 +20,11 @@ class ThreadCreationRepresentationTest: BaseRunConcurrentRepresentationTest<Unit
     override fun block() {
         val t1 = thread(false, name = "thread1") { callMe() }
         t1.start()
-        
+
         val t2 = thread(true, name = "thread2") { callMe() }
-        
+
         val t3 = thread(name = "thread3", priority = 8) { callMe() }
-        
+
         t1.join()
         t2.join()
         t3.join()

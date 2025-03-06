@@ -10,8 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck_test.util.TestJdkVersion
-import org.jetbrains.kotlinx.lincheck_test.util.testJdkVersion
+import org.jetbrains.kotlinx.lincheck_test.representation.gpmc.BaseMethodHandleLookupRepresentationTest
+import org.jetbrains.kotlinx.lincheck_test.representation.gpmc.Counter
+import org.jetbrains.kotlinx.lincheck_test.representation.gpmc.CounterDerived
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.MethodType
 

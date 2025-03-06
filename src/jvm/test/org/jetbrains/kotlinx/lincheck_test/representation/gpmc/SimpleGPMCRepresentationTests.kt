@@ -8,65 +8,31 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-@file:OptIn(ExperimentalModelCheckingAPI::class)
+package org.jetbrains.kotlinx.lincheck_test.representation.gpmc
 
-package org.jetbrains.kotlinx.lincheck_test.representation
-
-import org.jetbrains.kotlinx.lincheck.ExperimentalModelCheckingAPI
-import org.jetbrains.kotlinx.lincheck.runConcurrentTest
-import org.jetbrains.kotlinx.lincheck.LincheckAssertionError
-import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
-import org.jetbrains.kotlinx.lincheck.util.UnsafeHolder
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.*
+import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.kotlinx.lincheck_test.gpmc.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
+import org.junit.*
+import org.junit.Assume.*
 import java.util.concurrent.*
 import java.util.concurrent.atomic.*
-import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.Channel
-import kotlin.concurrent.thread
-import kotlin.random.Random
-import org.junit.*
-import org.junit.Assume.assumeFalse
+import kotlin.concurrent.*
+import kotlin.random.*
 
-
-abstract class BaseRunConcurrentRepresentationTest<R>(private val outputFileName: String) {
-    /**
-     * Implement me and place the logic to check its trace.
-     */
-    abstract fun block(): R
-
-    @Test
-    fun testRunWithModelChecker() {
-        val result = runCatching {
-            runConcurrentTest {
-                block()
-            }
-        }
-        check(result.isFailure) {
-            "The test should fail, but it completed successfully"
-        }
-        val error = result.exceptionOrNull()!!
-        check(error is LincheckAssertionError) {
-            """
-            |The test should throw LincheckAssertionError, but instead it failed with:
-            |${error.stackTraceToString()}
-            """
-            .trimMargin()
-        }
-        error.failure.checkLincheckOutput(outputFileName)
-    }
-}
-
-class NoEventsRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
-    "run_concurrent_test/no_events"
+class NoEventsRunConcurrentRepresentationTest : BaseGPMCRepresentationTest<Unit>(
+    "gpmc/no_events"
 ) {
     override fun block() {
         check(false)
     }
 }
 
-class IncrementAndFailConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
-    "run_concurrent_test/increment_and_fail"
+class IncrementAndFailConcurrentRepresentationTest : BaseGPMCRepresentationTest<Unit>(
+    "gpmc/increment_and_fail"
 ) {
     var x = 0
 
@@ -78,25 +44,24 @@ class IncrementAndFailConcurrentRepresentationTest : BaseRunConcurrentRepresenta
 
 
 @Ignore // TODO: does not provide a thread dump
-class InfiniteLoopRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
-    "run_concurrent_test/infinite_loop"
+class InfiniteLoopRunConcurrentRepresentationTest : BaseGPMCRepresentationTest<Unit>(
+    "gpmc/infinite_loop"
 ) {
     override fun block() {
         while (true) {}
     }
 }
 
-class MainThreadParkRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
-    "run_concurrent_test/main_thread_park"
+class MainThreadParkRunConcurrentRepresentationTest : BaseGPMCRepresentationTest<Unit>(
+    "gpmc/main_thread_park"
 ) {
     override fun block() {
-       val q = ArrayBlockingQueue<Int>(1)
+        val q = ArrayBlockingQueue<Int>(1)
         q.take() // should suspend
     }
 }
-
-class ArrayReadWriteRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
-    "run_concurrent_test/array_rw"
+class ArrayReadWriteGPMCRepresentationTest : BaseGPMCRepresentationTest<Unit>(
+    "gpmc/array_rw"
 ) {
     companion object {
         // the variable is static to trigger the snapshot tracker to restore it between iterations
@@ -113,8 +78,8 @@ class ArrayReadWriteRunConcurrentRepresentationTest : BaseRunConcurrentRepresent
     }
 }
 
-class AtomicReferencesNamesRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
-    "run_concurrent_test/atomic_refs"
+class AtomicReferencesNamesGPMCRepresentationTest : BaseGPMCRepresentationTest<Unit>(
+    "gpmc/atomic_refs"
 ) {
 
     override fun block() {
@@ -140,7 +105,7 @@ class AtomicReferencesNamesRunConcurrentRepresentationTest : BaseRunConcurrentRe
         atomicLongArray.set(0, 2)
 
         wrapper.reference.set(Node(5))
-        wrapper.array.compareAndSet(0, 1 ,2)
+        wrapper.array.compareAndSet(0, 1, 2)
 
         staticValue.compareAndSet(0, 2)
         staticValue.set(0)
@@ -162,6 +127,7 @@ class AtomicReferencesNamesRunConcurrentRepresentationTest : BaseRunConcurrentRe
         companion object {
             @JvmStatic
             val staticValue = AtomicInteger(1)
+
             @JvmStatic
             val staticArray = AtomicIntegerArray(3)
         }
@@ -181,13 +147,14 @@ class AtomicReferencesNamesRunConcurrentRepresentationTest : BaseRunConcurrentRe
 
         @JvmStatic
         private val staticValue = AtomicInteger(0)
+
         @JvmStatic
         val staticArray = AtomicIntegerArray(3)
     }
 }
 
-class AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
-    "run_concurrent_test/atomic_refs_two_fields"
+class AtomicReferencesFromMultipleFieldsGPMCRepresentationTest : BaseGPMCRepresentationTest<Unit>(
+    "gpmc/atomic_refs_two_fields"
 ) {
     companion object {
         private var atomicReference1: AtomicReference<Node>
@@ -209,8 +176,8 @@ class AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest : BaseRu
 
 }
 
-class VariableReadWriteRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
-    "run_concurrent_test/var_rw"
+class VariableReadWriteGPMCRepresentationTest : BaseGPMCRepresentationTest<Unit>(
+    "gpmc/var_rw"
 ) {
     companion object {
         private var x = 0
@@ -224,11 +191,13 @@ class VariableReadWriteRunConcurrentRepresentationTest : BaseRunConcurrentRepres
     }
 }
 
-class AnonymousObjectRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>("run_concurrent_test/anonymous_object") {
+class AnonymousObjectGPMCRepresentationTest : BaseGPMCRepresentationTest<Unit>("gpmc/anonymous_object") {
     // use static fields to avoid local object optimizations
     companion object {
-        @JvmField var runnable: Runnable? = null
-        @JvmField var x = 0
+        @JvmField
+        var runnable: Runnable? = null
+        @JvmField
+        var x = 0
     }
 
     // use the interface to additionally check that KT-16727 bug is handled:
@@ -250,7 +219,7 @@ class AnonymousObjectRunConcurrentRepresentationTest : BaseRunConcurrentRepresen
 }
 
 // TODO investigate difference for trace debugger (Evgeniy Moiseenko)
-class CustomThreadsRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>("run_concurrent_test/custom_threads") {
+class CustomThreadsGPMCRepresentationTest : BaseGPMCRepresentationTest<Unit>("gpmc/custom_threads") {
     override fun block() {
         // We use an object here instead of lambda to avoid hustle
         // with different representations of lambdas on different JDKs.
@@ -272,7 +241,8 @@ class CustomThreadsRunConcurrentRepresentationTest : BaseRunConcurrentRepresenta
 
     @Suppress("DEPRECATION") // Unsafe
     companion object {
-        @JvmField var wrapper = Wrapper(0)
+        @JvmField
+        var wrapper = Wrapper(0)
 
         val unsafe =
             UnsafeHolder.UNSAFE
@@ -290,7 +260,7 @@ class CustomThreadsRunConcurrentRepresentationTest : BaseRunConcurrentRepresenta
     data class Wrapper(@Volatile @JvmField var value: Int)
 }
 
-class KotlinThreadRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>("run_concurrent_test/kotlin_thread") {
+class KotlinThreadGPMCRepresentationTest : BaseGPMCRepresentationTest<Unit>("gpmc/kotlin_thread") {
     companion object {
         @Volatile
         @JvmField
@@ -307,7 +277,7 @@ class KotlinThreadRunConcurrentRepresentationTest : BaseRunConcurrentRepresentat
 }
 
 // TODO investigate difference for trace debugger (Evgeniy Moiseenko)
-class LivelockRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>("run_concurrent_test/livelock") {
+class LivelockGPMCRepresentationTest : BaseGPMCRepresentationTest<Unit>("gpmc/livelock") {
     override fun block() {
         var counter = 0
         val lock1 = SpinLock()
@@ -334,7 +304,7 @@ class LivelockRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationT
 }
 
 // TODO investigate difference for trace debugger (Evgeniy Moiseenko)
-class IncorrectConcurrentLinkedDequeRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>("run_concurrent_test/deque") {
+class IncorrectConcurrentLinkedDequeGPMCRepresentationTest : BaseGPMCRepresentationTest<Unit>("gpmc/deque") {
     override fun block() {
         val deque = ConcurrentLinkedDeque<Int>()
         var r1: Int = -1
@@ -354,7 +324,7 @@ class IncorrectConcurrentLinkedDequeRunConcurrentRepresentationTest : BaseRunCon
     }
 }
 
-class IncorrectHashmapRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>("run_concurrent_test/hashmap") {
+class IncorrectHashmapGPMCRepresentationTest : BaseGPMCRepresentationTest<Unit>("gpmc/hashmap") {
     override fun block() {
         val hashMap = HashMap<Int, Int>()
         var r1: Int? = null
@@ -371,7 +341,7 @@ class IncorrectHashmapRunConcurrentRepresentationTest : BaseRunConcurrentReprese
     }
 }
 
-class ThreadPoolRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>("run_concurrent_test/thread_pool/thread_pool") {
+class ThreadPoolGPMCRepresentationTest : BaseGPMCRepresentationTest<Unit>("gpmc/thread_pool/thread_pool") {
     @Before
     fun setUp() {
         assumeFalse(isInTraceDebuggerMode) // unstable hash-code
@@ -411,8 +381,8 @@ class ThreadPoolRunConcurrentRepresentationTest : BaseRunConcurrentRepresentatio
     }
 }
 
-class CoroutinesRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
-    "run_concurrent_test/coroutines/coroutines"
+class CoroutinesGPMCRepresentationTest : BaseGPMCRepresentationTest<Unit>(
+    "gpmc/coroutines/coroutines"
 ) {
     @Before
     fun setUp() {
@@ -421,10 +391,13 @@ class CoroutinesRunConcurrentRepresentationTest : BaseRunConcurrentRepresentatio
     }
 
     companion object {
-        @JvmStatic var sharedCounter = 0
+        @JvmStatic
+        var sharedCounter = 0
 
-        @JvmStatic var r1 = -1
-        @JvmStatic var r2 = -1
+        @JvmStatic
+        var r1 = -1
+        @JvmStatic
+        var r2 = -1
 
         private val channel1 = Channel<Int>(capacity = 1)
         private val channel2 = Channel<Int>(capacity = 1)
@@ -444,5 +417,15 @@ class CoroutinesRunConcurrentRepresentationTest : BaseRunConcurrentRepresentatio
             job2.join()
             check(r1 == 1 || r2 == 1)
         }
+    }
+}
+
+class ThreadStartTwiceRepresentationTest : BaseGPMCRepresentationTest<Unit>(
+    "gpmc/thread_start_twice"
+) {
+    override fun block() {
+        val t = Thread {}
+        t.start()
+        t.start()
     }
 }

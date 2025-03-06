@@ -8,10 +8,8 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck_test.representation
+package org.jetbrains.kotlinx.lincheck_test.representation.gpmc
 
-import org.jetbrains.kotlinx.lincheck_test.util.TestJdkVersion
-import org.jetbrains.kotlinx.lincheck_test.util.testJdkVersion
 import java.lang.invoke.MethodType
 import java.lang.invoke.MethodHandles
 import java.util.concurrent.ConcurrentHashMap
@@ -45,7 +43,7 @@ import java.util.concurrent.ConcurrentHashMap
  */
 abstract class BaseMethodHandleLookupRepresentationTest(
     outputFileName: String
-) : BaseRunConcurrentRepresentationTest<Unit>(outputFileName) {
+) : BaseGPMCRepresentationTest<Unit>(outputFileName) {
 
     override fun block() {
         // ensure `ConcurrentHashMap` is instrumented before any lookup operations

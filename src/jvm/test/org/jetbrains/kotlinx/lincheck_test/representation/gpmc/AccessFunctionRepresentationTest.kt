@@ -8,9 +8,9 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck_test.representation
+package org.jetbrains.kotlinx.lincheck_test.representation.gpmc
 
-class AccessFunctionRepresentationTest: BaseRunConcurrentRepresentationTest<Unit>("access_function_representation_test") {
+class AccessFunctionRepresentationTest: BaseGPMCRepresentationTest<Unit>("access_function_representation_test") {
     
     @Volatile
     private var a = 0
@@ -40,7 +40,7 @@ private fun runLambda(r: () -> Unit) {
     r()
 }
 
-class AccessFieldRepresentationTest: BaseRunConcurrentRepresentationTest<Unit>("access_field_representation_test") {
+class AccessFieldRepresentationTest: BaseGPMCRepresentationTest<Unit>("access_field_representation_test") {
 
     @Volatile
     private var a = 0
