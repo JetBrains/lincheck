@@ -374,7 +374,6 @@ class ThreadPoolRunConcurrentRepresentationTest : BaseRunConcurrentRepresentatio
     }
 }
 
-@Ignore("Unstable on many configurations, not only java 8")
 class CoroutinesRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
     "run_concurrent_test/coroutines/coroutines"
 ) {
