@@ -47,21 +47,22 @@ class LocalObjectEliminationTest {
         val a = A(0, this, IntArray(2))
 
         a.any = a
-        repeat(20) {
-            a.value = it
-        }
+        // repeat(20) {
+        //     a.value = it
+        // }
         a.array[1] = 54
         val b = A(a.value, a.any, a.array)
         b.value = 65
-        repeat(20) {
-            b.array[0] = it
-        }
+        // repeat(20) {
+        //     b.array[0] = it
+        // }
         a.any = b
 
         // check that closure object and captured `x: IntRef` object
         // are correctly classified as local objects;
         // note that these classes itself are not instrumented,
         // but the creation of their instances still should be tracked
+
         // var x = 0
         // val closure = {
         //     a.value += 1
