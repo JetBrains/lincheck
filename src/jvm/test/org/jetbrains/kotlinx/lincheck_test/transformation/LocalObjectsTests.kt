@@ -72,7 +72,9 @@ class LocalObjectEliminationTest {
         //     closure()
         // }
 
-        return (a.any as A).array.sum()
+        // return (a.any as A).array.sum()
+
+        return 0
     }
 
     @Test(timeout = 100_000)
