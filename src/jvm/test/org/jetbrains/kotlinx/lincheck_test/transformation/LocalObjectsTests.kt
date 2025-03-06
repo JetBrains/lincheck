@@ -37,7 +37,6 @@ import kotlin.reflect.KFunction
     invocationsPerIteration = Int.MAX_VALUE,
     iterations = 50
 )
-
 class LocalObjectEliminationTest {
     @Before
     fun setUp() = assumeFalse(isInTraceDebuggerMode)
