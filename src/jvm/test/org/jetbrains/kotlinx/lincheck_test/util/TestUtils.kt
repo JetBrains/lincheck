@@ -56,9 +56,9 @@ private fun compareAndOverwrite(expectedOutputFilePrefix: String, actualOutput: 
     }
 
     val expectedOutputFile = getExpectedLogFile(expectedOutputFilePrefix)
-    val expectedOutput = expectedOutputFile.readText()
+    val expectedOutput = expectedOutputFile?.readText()
 
-    if (actualOutput.filtered != expectedOutput.filtered) {
+    if (actualOutput.filtered != expectedOutput?.filtered) {
         if (OVERWRITE_REPRESENTATION_TESTS_OUTPUT) {
             val overwriteOutputFileName = generateExpectedLogFileName(
                 fileNamePrefix = expectedOutputFilePrefix,
@@ -67,9 +67,21 @@ private fun compareAndOverwrite(expectedOutputFilePrefix: String, actualOutput: 
             )
             val overwriteOutputFile = getExpectedLogFileFromSources(overwriteOutputFileName)
             overwriteOutputFile.writeText(actualOutput)
-        } else {
-            assertEquals(expectedOutput, actualOutput)
+            return
         }
+
+        if (expectedOutputFile == null) {
+            error(
+                """
+                No file exists yet for the test $expectedOutputFilePrefix. 
+                    JDK version = $testJdkVersion;
+                    Trace debugger mode = $isInTraceDebuggerMode.
+                """
+                .trimIndent()
+            )
+        }
+
+        assertEquals(expectedOutput, actualOutput)
     }
 }
 
@@ -84,8 +96,10 @@ private fun compareAndOverwrite(expectedOutputFilePrefix: String, actualOutput: 
  *   fn_jdk11.txt
  *   fn_trace_debugger.txt
  *   fn.txt
+ *
+ * Returns null if none of these files exists.
  */
-private fun getExpectedLogFile(expectedOutputFilePrefix: String): File {
+private fun getExpectedLogFile(expectedOutputFilePrefix: String): File? {
     // first try to pick the most specific file if it exists
     val mostSpecificFileName = generateExpectedLogFileName(
         fileNamePrefix = expectedOutputFilePrefix,
@@ -124,14 +138,7 @@ private fun getExpectedLogFile(expectedOutputFilePrefix: String): File {
     val defaultFile = getExpectedLogFileFromResources(defaultFileName)
     if (defaultFile != null) return defaultFile
 
-    error(
-        """
-        No file exists yet for the test $expectedOutputFilePrefix. 
-            JDK version = $testJdkVersion;
-            Trace debugger mode = $isInTraceDebuggerMode.
-        """
-        .trimIndent()
-    )
+    return null
 }
 
 internal fun getExpectedLogFileFromResources(fullFileName: String): File? =
