@@ -100,43 +100,48 @@ private fun compareAndOverwrite(expectedOutputFilePrefix: String, actualOutput: 
  * Returns null if none of these files exists.
  */
 private fun getExpectedLogFile(expectedOutputFilePrefix: String): File? {
-    // first try to pick the most specific file if it exists
-    val mostSpecificFileName = generateExpectedLogFileName(
-        fileNamePrefix = expectedOutputFilePrefix,
-        jdkVersion = testJdkVersion,
-        inTraceDebuggerMode = isInTraceDebuggerMode,
+    data class TestFileConfiguration(
+        val jdkVersion: TestJdkVersion,
+        val inTraceDebuggerMode: Boolean
     )
-    val mostSpecificFile = getExpectedLogFileFromResources(mostSpecificFileName)
-    if (mostSpecificFile != null) return mostSpecificFile
 
-    // next, try to pick the jdk-specific file
-    val jdkSpecificFileName = generateExpectedLogFileName(
-        fileNamePrefix = expectedOutputFilePrefix,
-        jdkVersion = testJdkVersion,
-        inTraceDebuggerMode = false,
-    )
-    val jdkSpecificFile = getExpectedLogFileFromResources(jdkSpecificFileName)
-    if (jdkSpecificFile != null) return jdkSpecificFile
+    val testConfigurations = listOfNotNull(
+        // first try to pick the most specific file if it exists
+        TestFileConfiguration(
+            jdkVersion = testJdkVersion,
+            inTraceDebuggerMode = isInTraceDebuggerMode
+        ),
 
-    // if in trace-debugger mode, try to pick the trace-debugger-specific file
-    if (isInTraceDebuggerMode) {
-        val traceDebuggerFileName = generateExpectedLogFileName(
-            fileNamePrefix = expectedOutputFilePrefix,
+        // next, try to pick the jdk-specific file
+        TestFileConfiguration(
+            jdkVersion = testJdkVersion,
+            inTraceDebuggerMode = false
+        ),
+
+        // if in trace-debugger mode, try to pick the trace-debugger-specific file
+        if (isInTraceDebuggerMode)
+            TestFileConfiguration(
+                jdkVersion = DEFAULT_TEST_JDK_VERSION,
+                inTraceDebuggerMode = true
+            )
+        else null,
+
+        // finally, try the default file
+        TestFileConfiguration(
             jdkVersion = DEFAULT_TEST_JDK_VERSION,
-            inTraceDebuggerMode = true,
+            inTraceDebuggerMode = false
         )
-        val traceDebuggerFile = getExpectedLogFileFromResources(traceDebuggerFileName)
-        if (traceDebuggerFile != null) return traceDebuggerFile
-    }
-
-    // finally, try the default file
-    val defaultFileName = generateExpectedLogFileName(
-        fileNamePrefix = expectedOutputFilePrefix,
-        jdkVersion = DEFAULT_TEST_JDK_VERSION,
-        inTraceDebuggerMode = false,
     )
-    val defaultFile = getExpectedLogFileFromResources(defaultFileName)
-    if (defaultFile != null) return defaultFile
+
+    for (testConfiguration in testConfigurations) {
+        val fileName = generateExpectedLogFileName(
+            fileNamePrefix = expectedOutputFilePrefix,
+            jdkVersion = testConfiguration.jdkVersion,
+            inTraceDebuggerMode = testConfiguration.inTraceDebuggerMode,
+        )
+        val file = getExpectedLogFileFromResources(fileName)
+        if (file != null) return file
+    }
 
     return null
 }
