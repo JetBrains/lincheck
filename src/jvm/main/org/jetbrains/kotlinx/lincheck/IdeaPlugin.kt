@@ -49,6 +49,7 @@ fun testFailed(
     minimalPluginVersion: String,
     exceptions: Array<String>,
     isGeneralPurposeModelChecking: Boolean,
+    isTraceDebugger: Boolean,
 ) {}
 
 
@@ -160,6 +161,7 @@ internal fun ManagedStrategy.runReplayIfPluginEnabled(failure: LincheckFailure) 
             minimalPluginVersion = MINIMAL_PLUGIN_VERSION,
             exceptions = exceptionsRepresentation,
             isGeneralPurposeModelChecking = isGeneralPurposeModelChecking,
+            isTraceDebugger = isInTraceDebuggerMode
         )
         // Replay execution while it's needed.
         do {
