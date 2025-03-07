@@ -38,7 +38,7 @@ class LockFreeSetTest {
 
         StressOptions()
             .addCustomScenario(scenario)
-            .invocationsPerIteration(10_000_000)
+            .invocationsPerIteration(20_000_000)
             .iterations(0)
             .check(LockFreeSet::class)
     }
