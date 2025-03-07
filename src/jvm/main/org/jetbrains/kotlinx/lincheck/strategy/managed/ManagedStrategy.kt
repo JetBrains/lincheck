@@ -56,7 +56,7 @@ abstract class ManagedStrategy(
         when {
             testClass == GeneralPurposeModelCheckingWrapper::class.java -> ExecutionMode.GENERAL_PURPOSE_MODEL_CHECKER
             isInTraceDebuggerMode -> ExecutionMode.TRACE_DEBUGGER
-            else -> ExecutionMode.REGULAR
+            else -> ExecutionMode.DATA_STRUCTURES
         }
 
     // The flag to enable IntelliJ IDEA plugin mode
@@ -2087,10 +2087,15 @@ private val BlockingReason.obstructionFreedomViolationMessage: String get() = wh
     is BlockingReason.Suspended    -> OBSTRUCTION_FREEDOM_SUSPEND_VIOLATION_MESSAGE
 }
 
-enum class ExecutionMode {
-    REGULAR,
-    GENERAL_PURPOSE_MODEL_CHECKER,
-    TRACE_DEBUGGER
+/**
+ * @param id specifies the string literal that will be parsed on the plugin side,
+ * thus, it should never be changed unconsciously. The plugin will use this values
+ * to determine what kind of UI to show to the user.
+ */
+enum class ExecutionMode(val id: String) {
+    DATA_STRUCTURES("DATA_STRUCTURES"),
+    GENERAL_PURPOSE_MODEL_CHECKER("GENERAL_PURPOSE_MODEL_CHECKER"),
+    TRACE_DEBUGGER("TRACE_DEBUGGER")
 }
 
 private const val OBSTRUCTION_FREEDOM_SPINLOCK_VIOLATION_MESSAGE =
