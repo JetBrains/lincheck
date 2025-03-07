@@ -74,23 +74,37 @@ private fun compareAndOverwrite(expectedOutputFilePrefix: String, actualOutput: 
 }
 
 /* To prevent file duplication, this function finds the file to compare the results to.
- * With preference for jdk: 17, 15, 13, 11, 8 (trace mode) and 17, 15, 13, 11, 8 (non-trace mode).
- * Search starts at the current jdk level.
+ * It first tries to find a jdk- and mode-specific file.
+ * If there is no such file, it then looks up for a default file
+ * (i.e., file for a default JDK version and non-trace mode).
+ *
  * For instance, we are running tests for jdk 11 (trace mode),
  * we will check file existence in the following order:
- * 11 (trace), 8 (trace), 11 (non-trace) and 8 (non-trace).
+ *   fn_trace_debugger_jdk11.txt
+ *   fn_jdk11.txt
+ *   fn_trace_debugger.txt
+ *   fn.txt
  */
 private fun getExpectedLogFile(expectedOutputFilePrefix: String): File {
-    // first try to pick a jdk-specific file if it exists
-    val jdkSpecificFileName = generateExpectedLogFileName(
+    // first try to pick the most specific file if it exists
+    val mostSpecificFileName = generateExpectedLogFileName(
         fileNamePrefix = expectedOutputFilePrefix,
         jdkVersion = testJdkVersion,
         inTraceDebuggerMode = isInTraceDebuggerMode,
     )
+    val mostSpecificFile = getExpectedLogFileFromResources(mostSpecificFileName)
+    if (mostSpecificFile != null) return mostSpecificFile
+
+    // next, try to pick the jdk-specific file
+    val jdkSpecificFileName = generateExpectedLogFileName(
+        fileNamePrefix = expectedOutputFilePrefix,
+        jdkVersion = testJdkVersion,
+        inTraceDebuggerMode = false,
+    )
     val jdkSpecificFile = getExpectedLogFileFromResources(jdkSpecificFileName)
     if (jdkSpecificFile != null) return jdkSpecificFile
 
-    // next, if in trace debugger mode, try a non-jdk-specific file with trace debugger suffix
+    // if in trace-debugger mode, try to pick the trace-debugger-specific file
     if (isInTraceDebuggerMode) {
         val traceDebuggerFileName = generateExpectedLogFileName(
             fileNamePrefix = expectedOutputFilePrefix,
@@ -101,7 +115,7 @@ private fun getExpectedLogFile(expectedOutputFilePrefix: String): File {
         if (traceDebuggerFile != null) return traceDebuggerFile
     }
 
-    // finally, try the default file name
+    // finally, try the default file
     val defaultFileName = generateExpectedLogFileName(
         fileNamePrefix = expectedOutputFilePrefix,
         jdkVersion = DEFAULT_TEST_JDK_VERSION,

@@ -9,8 +9,9 @@
 
 
 # This script runs all representation tests in overwrite mode.
-# It runs the tests on all jdks and both in trace and non-trace modes,
-# in the order jdk8 non-trace -> jdk8 trace -> jdk 11 non-trace -> jdk 11 trace, etc..
+# It runs the tests on all jdks and both in trace and non-trace modes, in the order
+# jdk-default non-trace -> jdk-default trace -> jdk-8 non-trace -> jdk 8 trace -> jdk-11 non-trace, jdk-11 trace, ...
+#
 # Note that due to current issue (https://github.com/JetBrains/lincheck/issues/500) we skip jdk8 trace.
 # Where necessary the output files are created or overwritten.
 # One can use this script to verify trace outputs by looking at the local changes after the script ran.
