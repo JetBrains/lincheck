@@ -52,7 +52,12 @@ abstract class ManagedStrategy(
     private val testCfg: ManagedCTestConfiguration,
 ) : Strategy(scenario), EventTracker {
 
-    val isGeneralPurposeModelChecking = testClass == GeneralPurposeModelCheckingWrapper::class.java
+    val executionMode: ExecutionMode =
+        when {
+            testClass == GeneralPurposeModelCheckingWrapper::class.java -> ExecutionMode.GENERAL_PURPOSE_MODEL_CHECKER
+            isInTraceDebuggerMode -> ExecutionMode.TRACE_DEBUGGER
+            else -> ExecutionMode.REGULAR
+        }
 
     // The flag to enable IntelliJ IDEA plugin mode
     var inIdeaPluginReplayMode: Boolean = false
@@ -2080,6 +2085,12 @@ private val BlockingReason.obstructionFreedomViolationMessage: String get() = wh
     is BlockingReason.Parked       -> OBSTRUCTION_FREEDOM_PARK_VIOLATION_MESSAGE
     is BlockingReason.ThreadJoin   -> OBSTRUCTION_FREEDOM_THREAD_JOIN_VIOLATION_MESSAGE
     is BlockingReason.Suspended    -> OBSTRUCTION_FREEDOM_SUSPEND_VIOLATION_MESSAGE
+}
+
+enum class ExecutionMode {
+    REGULAR,
+    GENERAL_PURPOSE_MODEL_CHECKER,
+    TRACE_DEBUGGER
 }
 
 private const val OBSTRUCTION_FREEDOM_SPINLOCK_VIOLATION_MESSAGE =

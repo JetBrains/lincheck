@@ -48,8 +48,7 @@ fun testFailed(
     version: String?,
     minimalPluginVersion: String,
     exceptions: Array<String>,
-    isGeneralPurposeModelChecking: Boolean,
-    isTraceDebugger: Boolean,
+    executionMode: String
 ) {}
 
 
@@ -160,8 +159,7 @@ internal fun ManagedStrategy.runReplayIfPluginEnabled(failure: LincheckFailure) 
             version = lincheckVersion,
             minimalPluginVersion = MINIMAL_PLUGIN_VERSION,
             exceptions = exceptionsRepresentation,
-            isGeneralPurposeModelChecking = isGeneralPurposeModelChecking,
-            isTraceDebugger = isInTraceDebuggerMode
+            executionMode = executionMode.toString()
         )
         // Replay execution while it's needed.
         do {
@@ -350,7 +348,7 @@ private data class ExceptionProcessingResult(
  *   Used to collect the data about the test instance, object numbers, threads, and continuations.
  */
 private fun visualize(strategy: ManagedStrategy) = runCatching {
-    if (strategy.isGeneralPurposeModelChecking) return@runCatching
+    if (strategy.executionMode == ExecutionMode.GENERAL_PURPOSE_MODEL_CHECKER) return@runCatching
 
     val runner = strategy.runner as ParallelThreadsRunner
     val allThreads = strategy.getRegisteredThreads()
