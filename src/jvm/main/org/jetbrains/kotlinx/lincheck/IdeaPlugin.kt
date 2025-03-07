@@ -439,7 +439,7 @@ internal val eventIdStrictOrderingCheck =
  * We will call `ideaPluginEnabled` method only once
  * and so on the plugin side the callback will be called also only once.
  */
-internal val ideaPluginEnabled = ideaPluginEnabled()
+internal val ideaPluginEnabled by lazy { ideaPluginEnabled() }
 
 /**
  * Debugger replaces the result of this method to `true` if idea plugin is enabled.
