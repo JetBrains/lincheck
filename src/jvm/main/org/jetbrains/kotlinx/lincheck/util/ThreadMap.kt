@@ -19,4 +19,3 @@ fun <T> threadMapOf(): ThreadMap<T> =
 
 fun <T> mutableThreadMapOf(): MutableThreadMap<T> =
     mutableMapOf()
-
