@@ -59,7 +59,10 @@ private fun compareAndOverwrite(expectedOutputFilePrefix: String, actualOutput: 
     val expectedOutput = expectedOutputFile?.readText()
 
     if (actualOutput.filtered != expectedOutput?.filtered) {
-        if (OVERWRITE_REPRESENTATION_TESTS_OUTPUT) {
+        if (OVERWRITE_REPRESENTATION_TESTS_OUTPUT &&
+            // overwrite if the expected log already exists, or we are in the default configuration
+            (expectedOutputFile != null || isDefaultConfiguration(testJdkVersion, isInTraceDebuggerMode))
+        ) {
             val overwriteOutputFileName = generateExpectedLogFileName(
                 fileNamePrefix = expectedOutputFilePrefix,
                 jdkVersion = testJdkVersion,
@@ -100,11 +103,6 @@ private fun compareAndOverwrite(expectedOutputFilePrefix: String, actualOutput: 
  * Returns null if none of these files exists.
  */
 private fun getExpectedLogFile(expectedOutputFilePrefix: String): File? {
-    data class TestFileConfiguration(
-        val jdkVersion: TestJdkVersion,
-        val inTraceDebuggerMode: Boolean
-    )
-
     val testConfigurations = listOfNotNull(
         // first try to pick the most specific file if it exists
         TestFileConfiguration(
@@ -163,6 +161,14 @@ private fun generateExpectedLogFileName(
     val jdkSuffix = if (jdkVersion != DEFAULT_TEST_JDK_VERSION) "_${jdkVersion}" else ""
     return "${fileNamePrefix}${traceDebuggerSuffix}${jdkSuffix}.txt"
 }
+
+private data class TestFileConfiguration(
+    val jdkVersion: TestJdkVersion,
+    val inTraceDebuggerMode: Boolean
+)
+
+private fun isDefaultConfiguration(testJdkVersion: TestJdkVersion, inTraceDebuggerMode: Boolean) =
+    (testJdkVersion == DEFAULT_TEST_JDK_VERSION) && !inTraceDebuggerMode
 
 private val String.filtered: String get() {
     // Remove platform-specific lines
