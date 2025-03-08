@@ -53,10 +53,9 @@ private fun extractLambdaCallOfGeneralPurposeModelChecking(
 ): Pair<CallNode, ActorResultNode> {
     val actorNode = startTraceGraphNode.firstOrNull() as? ActorNode
     val callNode = actorNode?.internalEvents?.firstOrNull() as? CallNode
-    val actorResultNode = callNode?.lastInternalEvent?.next as? ActorResultNode
+    val actorResultNode = actorNode?.lastInternalEvent as? ActorResultNode
     check(actorNode != null)
     check(actorNode.actorRepresentation.startsWith("run"))
-    check(actorNode.internalEvents.size == 2)
     check(callNode != null)
     check(actorResultNode != null)
     return callNode to actorResultNode

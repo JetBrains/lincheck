@@ -67,14 +67,25 @@ internal fun readFieldViaUnsafe(obj: Any?, field: Field): Any? {
  * Reads a [field] of the owner object [obj] via Unsafe,
  * in case of failure fallbacks into reading the field via reflection.
  */
-internal fun readFieldSafely(obj: Any?, field: Field): kotlin.Result<Any?> {
+internal fun readFieldSafely(obj: Any?, field: Field): kotlin.Result<Any?> =
     // we wrap an unsafe read into `runCatching` to handle `UnsupportedOperationException`,
     // which can be thrown, for instance, when attempting to read
     // a field of a hidden or record class (starting from Java 15);
     // in this case we fall back to read via reflection
-    return runCatching { readFieldViaUnsafe(obj, field) }
-        .recoverCatching { field.apply { isAccessible = true }.get(obj) }
-}
+    runCatching {
+        readFieldViaUnsafe(obj, field)
+    }
+    .onFailure { exception ->
+        Logger.debug { "Failed to read field ${field.name} via Unsafe" }
+        Logger.debug(exception)
+    }
+    .recoverCatching {
+        field.apply { isAccessible = true }.get(obj)
+    }
+    .onFailure { exception ->
+        Logger.debug { "Failed to read field ${field.name} via reflection." }
+        Logger.debug(exception)
+    }
 
 internal fun readArrayElementViaUnsafe(arr: Any, index: Int): Any? {
     val offset = getArrayElementOffsetViaUnsafe(arr, index)

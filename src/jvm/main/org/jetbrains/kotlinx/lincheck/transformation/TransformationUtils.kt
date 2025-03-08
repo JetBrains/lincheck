@@ -454,6 +454,20 @@ private fun isSubClassOf(internalClassName: String, internalSuperClassName: Stri
 }
 
 /**
+ * Test if the given class name corresponds to a Java lambda class.
+ */
+internal fun isJavaLambdaClass(className: String): Boolean =
+    className.contains("\$\$Lambda\$")
+
+/**
+ * Extracts and returns the enclosing class name of a Java lambda class.
+ */
+internal fun getJavaLambdaEnclosingClass(className: String): String {
+    require(isJavaLambdaClass(className)) { "Not a Java lambda class: $className" }
+    return className.substringBefore("\$\$Lambda\$")
+}
+
+/**
  * Tests if the provided [className] contains `"ClassLoader"` as a substring.
  */
 internal fun containsClassloaderInName(className: String): Boolean =
