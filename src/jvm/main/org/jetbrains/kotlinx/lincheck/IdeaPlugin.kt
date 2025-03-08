@@ -15,6 +15,7 @@ import sun.nio.ch.lincheck.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ExecutionMode.GENERAL_PURPOSE_MODEL_CHECKER
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
@@ -39,7 +40,7 @@ const val MINIMAL_PLUGIN_VERSION = "0.11"
  * @param version current Lincheck version.
  * @param minimalPluginVersion minimal compatible plugin version.
  * @param exceptions representation of the exceptions with their stacktrace occurred during the execution.
- * @param isGeneralPurposeModelChecking indicates if lincheck is running in the GPMC mode
+ * @param executionMode indicates the mode in which lincheck is running current test (see [ManagedStrategy.executionMode])
  */
 @Suppress("UNUSED_PARAMETER")
 fun testFailed(
@@ -48,7 +49,7 @@ fun testFailed(
     version: String?,
     minimalPluginVersion: String,
     exceptions: Array<String>,
-    isGeneralPurposeModelChecking: Boolean,
+    executionMode: String
 ) {}
 
 
@@ -159,7 +160,7 @@ internal fun ManagedStrategy.runReplayIfPluginEnabled(failure: LincheckFailure) 
             version = lincheckVersion,
             minimalPluginVersion = MINIMAL_PLUGIN_VERSION,
             exceptions = exceptionsRepresentation,
-            isGeneralPurposeModelChecking = isGeneralPurposeModelChecking,
+            executionMode = executionMode.id
         )
         // Replay execution while it's needed.
         do {
@@ -348,7 +349,7 @@ private data class ExceptionProcessingResult(
  *   Used to collect the data about the test instance, object numbers, threads, and continuations.
  */
 private fun visualize(strategy: ManagedStrategy) = runCatching {
-    if (strategy.isGeneralPurposeModelChecking) return@runCatching
+    if (strategy.executionMode == GENERAL_PURPOSE_MODEL_CHECKER) return@runCatching
 
     val runner = strategy.runner as ParallelThreadsRunner
     val allThreads = strategy.getRegisteredThreads()
