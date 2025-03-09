@@ -1,0 +1,15 @@
+= Concurrent test failed =
+
+java.lang.IllegalStateException: Check failed.
+	at org.jetbrains.kotlinx.lincheck_test.representation.NoEventsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:66)
+	at org.jetbrains.kotlinx.lincheck_test.representation.NoEventsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:62)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:43)
+	at java.base/java.lang.Thread.run(Thread.java:833)
+
+The following interleaving leads to the error:
+| ---------------------------------- |
+|              Thread 1              |
+| ---------------------------------- |
+|   result: IllegalStateException #1 |
+| ---------------------------------- |
+
