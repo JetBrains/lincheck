@@ -13,6 +13,7 @@ package org.jetbrains.kotlinx.lincheck.util
 import sun.misc.Unsafe
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
+import java.util.concurrent.ConcurrentHashMap
 
 internal object UnsafeHolder {
     val UNSAFE: Unsafe = try {
@@ -24,14 +25,23 @@ internal object UnsafeHolder {
     }
 }
 
+private val fieldOffsetCache = ConcurrentHashMap<Field, Long>()
+private val fieldBaseObjectCache = ConcurrentHashMap<Field, Any>()
+
 @Suppress("DEPRECATION")
 internal inline fun <T> readFieldViaUnsafe(obj: Any?, field: Field, getter: Unsafe.(Any?, Long) -> T): T {
     if (Modifier.isStatic(field.modifiers)) {
-        val base = UnsafeHolder.UNSAFE.staticFieldBase(field)
-        val offset = UnsafeHolder.UNSAFE.staticFieldOffset(field)
+        val base = fieldBaseObjectCache.computeIfAbsent(field) {
+            UnsafeHolder.UNSAFE.staticFieldBase(it)
+        }
+        val offset = fieldOffsetCache.computeIfAbsent(field) {
+            UnsafeHolder.UNSAFE.staticFieldOffset(it)
+        }
         return UnsafeHolder.UNSAFE.getter(base, offset)
     } else {
-        val offset = UnsafeHolder.UNSAFE.objectFieldOffset(field)
+        val offset = fieldOffsetCache.computeIfAbsent(field) {
+            UnsafeHolder.UNSAFE.objectFieldOffset(it)
+        }
         return UnsafeHolder.UNSAFE.getter(obj, offset)
     }
 }
@@ -155,14 +165,24 @@ internal fun getFieldOffsetViaUnsafe(field: Field): Long {
     }
 }
 
+private val fieldNameByOffsetCache = ConcurrentHashMap<Pair<Class<*>, Long>, String?>()
+private val NULL_FIELD_NAME = ".+-  NULL  -+." // cannot store `null` in the cache.
+
 @Suppress("DEPRECATION")
-internal fun findFieldNameByOffsetViaUnsafe(targetType: Class<*>, offset: Long): String? {
-    // Extract the private offset value and find the matching field.
+internal fun findFieldNameByOffsetViaUnsafe(targetType: Class<*>, offset: Long): String? =
+    fieldNameByOffsetCache.getOrPut(targetType to offset) {
+        findFieldNameByOffsetViaUnsafeImpl(targetType, offset) ?: NULL_FIELD_NAME
+    }.let { if (it == NULL_FIELD_NAME) null else it }
+
+private fun findFieldNameByOffsetViaUnsafeImpl(targetType: Class<*>, offset: Long): String? {
     for (field in targetType.declaredFields) {
         try {
             if (Modifier.isNative(field.modifiers)) continue
-            val fieldOffset = if (Modifier.isStatic(field.modifiers)) UnsafeHolder.UNSAFE.staticFieldOffset(field)
-            else UnsafeHolder.UNSAFE.objectFieldOffset(field)
+            val fieldOffset = if (Modifier.isStatic(field.modifiers)) {
+                UnsafeHolder.UNSAFE.staticFieldOffset(field)
+            } else {
+                UnsafeHolder.UNSAFE.objectFieldOffset(field)
+            }
             if (fieldOffset == offset) return field.name
         } catch (t: Throwable) {
             t.printStackTrace()

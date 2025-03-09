@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import org.jetbrains.kotlinx.lincheck.classCache
 import org.jetbrains.kotlinx.lincheck.findField
 import org.jetbrains.kotlinx.lincheck.strategy.managed.SnapshotTracker.MemoryNode.*
 import org.jetbrains.kotlinx.lincheck.util.*
@@ -19,6 +20,7 @@ import java.lang.reflect.Modifier
 import java.util.Collections
 import java.util.IdentityHashMap
 import java.util.Stack
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicIntegerArray
 import java.util.concurrent.atomic.AtomicLongArray
 import java.util.concurrent.atomic.AtomicReferenceArray
@@ -57,7 +59,7 @@ class SnapshotTracker {
         if (obj != null && !isTracked(obj)) return
         trackFieldImpl(
             obj = obj,
-            clazz = getDeclaringClass(obj, Class.forName(accessClassName), fieldName),
+            clazz = getDeclaringClass(obj, accessClassName, fieldName),
             fieldName = fieldName
         )
     }
@@ -251,14 +253,17 @@ class SnapshotTracker {
         )
     }
 
-    private fun getDeclaringClass(obj: Any?, clazz: Class<*>, fieldName: String): Class<*> {
-        return if (obj != null) {
+    private fun getDeclaringClass(obj: Any?, className: String, fieldName: String): Class<*> {
+        val clazz = classCache.getOrPut(className) { Class.forName(className) }
+        return getDeclaringClass(obj, clazz, fieldName)
+    }
+
+    private fun getDeclaringClass(obj: Any?, clazz: Class<*>, fieldName: String): Class<*> =
+        if (obj != null) {
             clazz
-        }
-        else {
+        } else {
             clazz.findField(fieldName).declaringClass
         }
-    }
 
     private fun createFieldNode(obj: Any?, field: Field, value: Any?): MemoryNode {
         return if (obj == null) {

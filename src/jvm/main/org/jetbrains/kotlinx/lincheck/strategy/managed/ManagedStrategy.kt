@@ -52,7 +52,12 @@ abstract class ManagedStrategy(
     private val testCfg: ManagedCTestConfiguration,
 ) : Strategy(scenario), EventTracker {
 
-    val isGeneralPurposeModelChecking = testClass == GeneralPurposeModelCheckingWrapper::class.java
+    val executionMode: ExecutionMode =
+        when {
+            testClass == GeneralPurposeModelCheckingWrapper::class.java -> ExecutionMode.GENERAL_PURPOSE_MODEL_CHECKER
+            isInTraceDebuggerMode -> ExecutionMode.TRACE_DEBUGGER
+            else -> ExecutionMode.DATA_STRUCTURES
+        }
 
     // The flag to enable IntelliJ IDEA plugin mode
     var inIdeaPluginReplayMode: Boolean = false
@@ -655,7 +660,7 @@ abstract class ManagedStrategy(
         // the managed strategy can construct a trace to reproduce this failure.
         // Let's then store the corresponding failing result and construct the trace.
         suddenInvocationResult = UnexpectedExceptionInvocationResult(
-            exception, 
+            exception,
             runner.collectExecutionResults()
         )
         threadScheduler.abortAllThreads()
@@ -790,7 +795,7 @@ abstract class ManagedStrategy(
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
-                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+                codeLocation = codeLocation
             )
         } else {
             null
@@ -833,7 +838,7 @@ abstract class ManagedStrategy(
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
-                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+                codeLocation = codeLocation
             )
             traceCollector!!.passCodeLocation(tracePoint)
         }
@@ -846,7 +851,7 @@ abstract class ManagedStrategy(
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
-                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+                codeLocation = codeLocation
             )
         } else {
             null
@@ -872,7 +877,7 @@ abstract class ManagedStrategy(
                 iThread = currentThreadId,
                 actorId = currentActorId[currentThreadId]!!,
                 callStackTrace = callStackTrace[currentThreadId]!!,
-                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+                codeLocation = codeLocation
             )
             traceCollector?.passCodeLocation(tracePoint)
         }
@@ -885,7 +890,7 @@ abstract class ManagedStrategy(
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
-                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+                codeLocation = codeLocation
             )
         } else {
             null
@@ -918,7 +923,7 @@ abstract class ManagedStrategy(
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
-                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+                codeLocation = codeLocation
             )
             traceCollector?.passCodeLocation(tracePoint)
         }
@@ -987,7 +992,7 @@ abstract class ManagedStrategy(
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
                 fieldName = fieldName,
-                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+                codeLocation = codeLocation
             )
         } else {
             null
@@ -1014,7 +1019,7 @@ abstract class ManagedStrategy(
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
                 fieldName = "${adornedStringRepresentation(array)}[$index]",
-                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+                codeLocation = codeLocation
             )
         } else {
             null
@@ -1055,7 +1060,7 @@ abstract class ManagedStrategy(
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
                 fieldName = fieldName,
-                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+                codeLocation = codeLocation
             ).also {
                 it.initializeWrittenValue(adornedStringRepresentation(value))
             }
@@ -1081,7 +1086,7 @@ abstract class ManagedStrategy(
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
                 fieldName = "${adornedStringRepresentation(array)}[$index]",
-                stackTraceElement = CodeLocations.stackTrace(codeLocation)
+                codeLocation = codeLocation
             ).also {
                 it.initializeWrittenValue(adornedStringRepresentation(value))
             }
@@ -1153,7 +1158,7 @@ abstract class ManagedStrategy(
         val invokeDynamic = ConstantDynamic(name, descriptor, trueBootstrapMethodHandle, *bootstrapMethodArguments)
         return invokeDynamicCallSites[invokeDynamic]
     }
-    
+
     override fun cacheInvokeDynamicCallSite(
         name: String,
         descriptor: String,
@@ -1545,7 +1550,7 @@ abstract class ManagedStrategy(
             className = className,
             methodName = methodName,
             callStackTrace = callStackTrace,
-            stackTraceElement = CodeLocations.stackTrace(codeLocation),
+            codeLocation = codeLocation
         )
         // handle non-atomic methods
         if (atomicMethodDescriptor == null) {
@@ -2080,6 +2085,17 @@ private val BlockingReason.obstructionFreedomViolationMessage: String get() = wh
     is BlockingReason.Parked       -> OBSTRUCTION_FREEDOM_PARK_VIOLATION_MESSAGE
     is BlockingReason.ThreadJoin   -> OBSTRUCTION_FREEDOM_THREAD_JOIN_VIOLATION_MESSAGE
     is BlockingReason.Suspended    -> OBSTRUCTION_FREEDOM_SUSPEND_VIOLATION_MESSAGE
+}
+
+/**
+ * @param id specifies the string literal that will be parsed on the plugin side,
+ * thus, it should never be changed unconsciously. The plugin will use this values
+ * to determine what kind of UI to show to the user.
+ */
+enum class ExecutionMode(val id: String) {
+    DATA_STRUCTURES("DATA_STRUCTURES"),
+    GENERAL_PURPOSE_MODEL_CHECKER("GENERAL_PURPOSE_MODEL_CHECKER"),
+    TRACE_DEBUGGER("TRACE_DEBUGGER")
 }
 
 private const val OBSTRUCTION_FREEDOM_SPINLOCK_VIOLATION_MESSAGE =
