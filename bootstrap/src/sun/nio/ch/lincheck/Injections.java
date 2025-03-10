@@ -396,11 +396,22 @@ public class Injections {
      * @param descriptor the deterministic method descriptor object providing details about the method to invoke or null.
      * @param receiver the object on which the method is to be invoked.
      * @param params The array of parameters to pass to the method during invocation.
-     * @return The result of the method invocation wrapped in a {@link JavaResult},
+     * @return The result of the method invocation wrapped in a {@link BootstrapResult},
      * or {@code null} if the original method should be called.
      */
-    public static JavaResult invokeDeterministicallyOrNull(long descriptorId, Object descriptor, Object receiver, Object[] params) {
+    public static BootstrapResult<?> invokeDeterministicallyOrNull(long descriptorId, Object descriptor, Object receiver, Object[] params) {
         return getEventTracker().invokeDeterministicallyOrNull(descriptorId, descriptor, receiver, params);
+    }
+
+    /**
+     * Retrieves a value from the provided BootstrapResult object or throws an exception if the result contains it.
+     *
+     * @param result the BootstrapResult object from which the value is to be retrieved
+     * @return the value contained in the BootstrapResult object
+     * @throws Throwable if the result contains it
+     */
+    public static Object getFromOrThrow(BootstrapResult<?> result) throws Throwable {
+        return result.getOrThrow();
     }
 
     /**

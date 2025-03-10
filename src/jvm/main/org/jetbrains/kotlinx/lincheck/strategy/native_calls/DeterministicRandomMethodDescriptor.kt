@@ -8,17 +8,16 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.util.native_calls
+package org.jetbrains.kotlinx.lincheck.strategy.native_calls
 
 import sun.nio.ch.lincheck.InjectedRandom
 import sun.nio.ch.lincheck.Injections
-import sun.nio.ch.lincheck.JavaResult
 import java.lang.reflect.Modifier
 import java.util.concurrent.ConcurrentHashMap
 
 internal fun getDeterministicRandomMethodDescriptorOrNull(
     methodCallInfo: MethodCallInfo,
-): DeterministicMethodDescriptor<*>? {
+): DeterministicMethodDescriptor<*, *>? {
     if (methodCallInfo.isRandomClassProbesMethod()) {
         return PureDeterministicMethodDescriptor(methodCallInfo) { _, _ -> Injections.nextInt() }
     }
@@ -92,22 +91,23 @@ private fun getPublicOrProtectedClassMethods(clazz: Class<*>): Set<MethodSignatu
 
 private data class RandomBytesDeterministicMethodDescriptor(
     override val methodCallInfo: MethodCallInfo
-) : DeterministicMethodDescriptor<JavaResult>() {
-    override fun runFake(receiver: Any?, params: Array<Any?>): JavaResult = JavaResult.fromCallable {
+) : DeterministicMethodDescriptor<Result<ByteArray>, Any>() {
+    override fun runFake(receiver: Any?, params: Array<Any?>): Result<Any> = runCatching {
         callWithGivenReceiver(Injections.deterministicRandom(), params)
+        Injections.VOID_RESULT
     }
 
-    override fun replay(receiver: Any?, params: Array<Any?>, state: JavaResult): JavaResult = state.map { safeState ->
+    override fun replay(receiver: Any?, params: Array<Any?>, state: Result<ByteArray>): Result<Any> = state.map { savedBytes ->
         val argument = params[0] as ByteArray
-        val savedBytes = safeState as ByteArray
         savedBytes.copyInto(argument)
+        Injections.VOID_RESULT
     }
 
     override fun saveFirstResult(
         receiver: Any?,
         params: Array<Any?>,
-        result: JavaResult,
-        saveState: (JavaResult) -> Unit
+        result: Result<Any>,
+        saveState: (Result<ByteArray>) -> Unit
     ) {
         val state = result.map {
             val argument = params[0] as ByteArray
@@ -122,7 +122,7 @@ private fun Class<*>.getMethodsToReplace(): List<MethodSignature> = (declaredMet
     .map { it.toMethodSignature() }
 
 
-private fun DeterministicMethodDescriptor<*>.callWithGivenReceiver(random: InjectedRandom, params: Array<Any?>): Any? {
+private fun DeterministicMethodDescriptor<*, *>.callWithGivenReceiver(random: InjectedRandom, params: Array<Any?>): Any? {
     val method = InjectedRandom::class.java.methods
         .singleOrNull { it.toMethodSignature() == methodCallInfo.methodSignature }
         ?: error("No method found for $methodCallInfo")

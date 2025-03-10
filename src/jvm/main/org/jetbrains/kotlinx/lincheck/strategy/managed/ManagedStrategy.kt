@@ -27,7 +27,13 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.adorne
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanObjectNumeration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
-import org.jetbrains.kotlinx.lincheck.util.native_calls.*
+import org.jetbrains.kotlinx.lincheck.strategy.native_calls.ArgumentType
+import org.jetbrains.kotlinx.lincheck.strategy.native_calls.DeterministicMethodDescriptor
+import org.jetbrains.kotlinx.lincheck.strategy.native_calls.MethodCallInfo
+import org.jetbrains.kotlinx.lincheck.strategy.native_calls.convertAsmMethodToMethodSignature
+import org.jetbrains.kotlinx.lincheck.strategy.native_calls.getDeterministicMethodDescriptorOrNull
+import org.jetbrains.kotlinx.lincheck.strategy.native_calls.runFromStateWithCast
+import org.jetbrains.kotlinx.lincheck.strategy.native_calls.saveFirstResultWithCast
 import org.objectweb.asm.ConstantDynamic
 import org.objectweb.asm.Handle
 import java.lang.invoke.CallSite
@@ -36,6 +42,7 @@ import java.util.concurrent.TimeoutException
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
+import kotlin.Result as KResult
 
 /**
  * This is an abstraction for all managed strategies, which encapsulated
@@ -1386,8 +1393,8 @@ abstract class ManagedStrategy(
     override fun onMethodCallReturn(descriptorId: Long, descriptor: Any?, receiver: Any?, params: Array<Any?>, result: Any?) {
         runInIgnoredSection {
             if (isInTraceDebuggerMode && isFirstReplay && descriptor != null) {
-                require(descriptor is DeterministicMethodDescriptor<*>)
-                descriptor.saveFirstResult(receiver, params, JavaResult.fromSuccess(result)) {
+                require(descriptor is DeterministicMethodDescriptor<*, *>)
+                descriptor.saveFirstResultWithCast(receiver, params, KResult.success(result)) {
                     nativeMethodCallStatesTracker.setState(descriptorId, descriptor.methodCallInfo, it)
                 }
             }
@@ -1419,9 +1426,9 @@ abstract class ManagedStrategy(
 
     override fun onMethodCallException(descriptorId: Long, descriptor: Any?, receiver: Any?, params: Array<Any?>, t: Throwable) {
         if (isInTraceDebuggerMode && isFirstReplay && descriptor != null) {
-            require(descriptor is DeterministicMethodDescriptor<*>)
+            require(descriptor is DeterministicMethodDescriptor<*, *>)
             runInIgnoredSection {
-                descriptor.saveFirstResult(receiver, params, JavaResult.fromFailure(t)) {
+                descriptor.saveFirstResult(receiver, params, KResult.failure(t)) {
                     nativeMethodCallStatesTracker.setState(descriptorId, descriptor.methodCallInfo, it)
                 }
             }
@@ -1450,18 +1457,23 @@ abstract class ManagedStrategy(
         // this "ignore" section.
         leaveIgnoredSection()
     }
+    
+    private fun <T> KResult<T>.toBootstrapResult() =
+        if (isSuccess) BootstrapResult.fromSuccess(getOrThrow())
+        else BootstrapResult.fromFailure(exceptionOrNull()!!)
 
     override fun invokeDeterministicallyOrNull(
         descriptorId: Long,
         descriptor: Any?,
         receiver: Any?,
         params: Array<Any?>
-    ): JavaResult? = when {
-        descriptor !is DeterministicMethodDescriptor<*> -> null
-        !isInTraceDebuggerMode -> descriptor.runFake(receiver, params)
+    ): BootstrapResult<*>? = when {
+        descriptor !is DeterministicMethodDescriptor<*, *> -> null
+        !isInTraceDebuggerMode -> descriptor.runFake(receiver, params).toBootstrapResult()
         isFirstReplay -> null
         else -> runInIgnoredSection {
-            descriptor.runFromStateWithCast(receiver, params, nativeMethodCallStatesTracker.getState(descriptorId, descriptor.methodCallInfo))
+            val state = nativeMethodCallStatesTracker.getState(descriptorId, descriptor.methodCallInfo)
+            descriptor.runFromStateWithCast(receiver, params, state).toBootstrapResult()
         }
     }
 

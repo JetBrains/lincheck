@@ -8,10 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.util.native_calls
-
-import sun.nio.ch.lincheck.JavaResult
-import sun.nio.ch.lincheck.JavaResult.fromCallable
+package org.jetbrains.kotlinx.lincheck.strategy.native_calls
 
 /**
  * Represents a pure deterministic method descriptor.
@@ -27,25 +24,26 @@ import sun.nio.ch.lincheck.JavaResult.fromCallable
  * @property methodCallInfo Information about the method call, including its owner, parameters, and identifying details.
  * @property fakeBehaviour The lambda function that specifies the deterministic behaviour of the method.
  */
-internal data class PureDeterministicMethodDescriptor(
+internal data class PureDeterministicMethodDescriptor<T>(
     override val methodCallInfo: MethodCallInfo,
-    val fakeBehaviour: PureDeterministicMethodDescriptor.(receiver: Any?, params: Array<Any?>) -> Any?
-) : DeterministicMethodDescriptor<JavaResult>() {
-    override fun runFake(receiver: Any?, params: Array<Any?>): JavaResult =
-        fromCallable { fakeBehaviour(receiver, params) }
-    override fun replay(receiver: Any?, params: Array<Any?>, state: JavaResult): JavaResult = state.map(::postProcess)
+    val fakeBehaviour: PureDeterministicMethodDescriptor<T>.(receiver: Any?, params: Array<Any?>) -> T
+) : DeterministicMethodDescriptor<Result<T>, T>() {
+    override fun runFake(receiver: Any?, params: Array<Any?>): Result<T> =
+        runCatching { fakeBehaviour(receiver, params) }
+    override fun replay(receiver: Any?, params: Array<Any?>, state: Result<T>): Result<T> = state.map(::postProcess)
     
     override fun saveFirstResult(
         receiver: Any?,
         params: Array<Any?>,
-        result: JavaResult,
-        saveState: (JavaResult) -> Unit
+        result: Result<T>,
+        saveState: (Result<T>) -> Unit
     ) {
         saveState(result.map(::postProcess))
     }
     
-    private fun postProcess(x: Any?): Any? = when (x) {
-        is ByteArray -> x.copyOf()
+    @Suppress("UNCHECKED_CAST")
+    private fun postProcess(x: T): T = when (x) {
+        is ByteArray -> x.copyOf() as T
         else -> x
     }
 }

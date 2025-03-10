@@ -180,7 +180,7 @@ internal class MethodCallTransformer(
             // STACK: deterministicCallId, deterministicMethodDescriptor, receiver, parameters
             invokeStatic(Injections::invokeDeterministicallyOrNull)
             // STACK: JavaResult
-            val result = newLocal(getType(JavaResult::class.java))
+            val result = newLocal(getType(BootstrapResult::class.java))
             storeLocal(result)
             // STACK: <empty>
             loadLocal(result)
@@ -189,7 +189,7 @@ internal class MethodCallTransformer(
             // STACK: <empty>
             loadLocal(result)
             // STACK: JavaResult
-            invokeStatic(JavaResult::getFromOrThrow)
+            invokeStatic(Injections::getFromOrThrow)
             // STACK: Object
             if (returnType == VOID_TYPE) pop() else unbox(returnType)
         }
