@@ -1,27 +1,27 @@
 = Concurrent test failed =
 
 java.lang.IllegalStateException: Check failed.
-	at org.jetbrains.kotlinx.lincheck_test.representation.AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:167)
-	at org.jetbrains.kotlinx.lincheck_test.representation.AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:151)
-	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:42)
+	at org.jetbrains.kotlinx.lincheck_test.representation.AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:165)
+	at org.jetbrains.kotlinx.lincheck_test.representation.AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:149)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:40)
 	at java.lang.Thread.run(Thread.java:750)
 
 The following interleaving leads to the error:
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                                                             Thread 1                                                                                                              |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest#1.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:42) |
+| AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest#1.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:40) |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 
 Detailed trace:
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                                                             Thread 1                                                                                                              |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest#1.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:42) |
-|   block(): threw IllegalStateException at AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:151)                                                                        |
-|     AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.atomicReference1 ➜ AtomicReference#1 at AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:166)    |
-|     AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.atomicReference2 ➜ AtomicReference#1 at AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:166)    |
-|     AtomicReference#1.get(): Node#1 at AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:166)                                                                           |
-|     AtomicReference#1.compareAndSet(Node#1, Node#2): true at AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:166)                                                     |
+| AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest#1.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:40) |
+|   block(): threw IllegalStateException at AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:149)                                                                        |
+|     AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.atomicReference1 ➜ AtomicReference#1 at AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:164)    |
+|     AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.atomicReference2 ➜ AtomicReference#1 at AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:164)    |
+|     AtomicReference#1.get(): Node#1 at AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:164)                                                                           |
+|     AtomicReference#1.compareAndSet(Node#1, Node#2): true at AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:164)                                                     |
 |   result: IllegalStateException #1                                                                                                                                                                                                |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
