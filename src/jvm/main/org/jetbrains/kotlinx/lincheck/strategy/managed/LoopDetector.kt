@@ -13,6 +13,10 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.primitiveOrIdentityHashCode
 import org.jetbrains.kotlinx.lincheck.strategy.managed.LoopDetector.CodeIdentity.RegularCodeLocationIdentity
+import org.jetbrains.kotlinx.lincheck.trace.CallStackTraceElement
+import org.jetbrains.kotlinx.lincheck.trace.SpinCycleStartTracePoint
+import org.jetbrains.kotlinx.lincheck.trace.SwitchEventTracePoint
+import org.jetbrains.kotlinx.lincheck.trace.TracePoint
 import org.jetbrains.kotlinx.lincheck.transformation.MethodIds
 import org.jetbrains.kotlinx.lincheck.transformation.CodeLocations
 import java.util.ArrayList
@@ -908,7 +912,7 @@ private class ReplayModeLoopDetectorHelper(
  * The count of the call passed the condition above equals to the call we need to lift from the first spin cycle
  * node to get the correct spin cycle start trace point depth.
  *
- * @param beforeMethodCallSwitch flag if this method invoked right after [MethodCallTracePoint] is added to a trace,
+ * @param beforeMethodCallSwitch flag if this method invoked right after [org.jetbrains.kotlinx.lincheck.trace.MethodCallTracePoint] is added to a trace,
  * before the corresponding method is called.
  */
 internal fun afterSpinCycleTraceCollected(

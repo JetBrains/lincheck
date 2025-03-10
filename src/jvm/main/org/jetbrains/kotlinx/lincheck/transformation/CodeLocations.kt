@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
+import org.jetbrains.kotlinx.lincheck.strategy.managed.UNKNOWN_CODE_LOCATION
 import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.FieldInfo.*
 import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.addFinalField
 import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.addMutableField
@@ -30,6 +31,8 @@ import kotlin.collections.HashMap
  * code locations it analyses, and stores more detailed information necessary for trace generation in this object.
  */
 internal object CodeLocations {
+    // actors do not have a code location (for now)
+    private val emptyLocation = StackTraceElement("", "", "", 0)
     private val codeLocations = ArrayList<StackTraceElement>()
 
     /**
@@ -55,6 +58,7 @@ internal object CodeLocations {
     @JvmStatic
     @Synchronized
     fun stackTrace(codeLocationId: Int): StackTraceElement {
+        if (codeLocationId == UNKNOWN_CODE_LOCATION) return emptyLocation
         return codeLocations[codeLocationId]
     }
 }

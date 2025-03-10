@@ -13,7 +13,7 @@ package org.jetbrains.kotlinx.lincheck
 import sun.nio.ch.lincheck.TestThread
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.trace.appendTrace
 import org.jetbrains.kotlinx.lincheck.util.LoggingLevel
 import org.jetbrains.kotlinx.lincheck.util.LoggingLevel.*
 import java.io.*

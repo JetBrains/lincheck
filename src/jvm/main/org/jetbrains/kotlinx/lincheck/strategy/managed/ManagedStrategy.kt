@@ -33,6 +33,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.native_calls.MethodCallInfo
 import org.jetbrains.kotlinx.lincheck.strategy.native_calls.getDeterministicMethodDescriptorOrNull
 import org.jetbrains.kotlinx.lincheck.strategy.native_calls.runFromStateWithCast
 import org.jetbrains.kotlinx.lincheck.strategy.native_calls.saveFirstResultWithCast
+import org.jetbrains.kotlinx.lincheck.trace.*
 import org.objectweb.asm.ConstantDynamic
 import org.objectweb.asm.Handle
 import java.lang.invoke.CallSite
@@ -42,6 +43,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 import kotlin.Result as KResult
+import org.objectweb.asm.commons.Method.getMethod as getAsmMethod
 
 /**
  * This is an abstraction for all managed strategies, which encapsulated
@@ -667,6 +669,19 @@ abstract class ManagedStrategy(
         if (currentThreadId < 0) return
         // scenario threads are handled separately
         if (isTestThread(currentThreadId)) return
+
+        val methodDescriptor = getAsmMethod("void run()").descriptor
+        addBeforeMethodCallTracePoint(
+            owner = runner.testInstance,
+            className = "java.lang.Thread",
+            methodName = "run",
+            codeLocation = UNKNOWN_CODE_LOCATION,
+            methodId = MethodIds.getMethodId("java.lang.Thread", "run", methodDescriptor),
+            threadId = currentThreadId,
+            methodParams = emptyArray(),
+            atomicMethodDescriptor = null,
+            callType = MethodCallTracePoint.CallType.THREAD_RUN
+        )
         onThreadStart(currentThreadId)
         enableAnalysis()
     }
@@ -836,6 +851,25 @@ abstract class ManagedStrategy(
         callStackTrace[iThread]!!.clear()
         suspendedFunctionsStack[iThread]!!.clear()
         loopDetector.onActorStart(iThread)
+        
+        val actor = if (actorId < scenario.threads[iThread].size) scenario.threads[iThread][actorId] 
+        else validationFunction
+        check(actor != null) { "Could not find current actor" }
+        
+        val methodDescriptor = getAsmMethod(actor.method).descriptor
+        addBeforeMethodCallTracePoint(
+            owner = runner.testInstance,
+            // TODO Setting this to "" somehow fixes failing MulitpleSpension....TraceRepresentationTest
+            className = actor.method.declaringClass.name,
+            methodName = actor.method.name,
+            codeLocation = UNKNOWN_CODE_LOCATION,
+            methodId = MethodIds.getMethodId(actor.method.declaringClass.name, actor.method.name, methodDescriptor),
+            threadId = iThread,
+            methodParams = actor.arguments.toTypedArray(),
+            atomicMethodDescriptor = null,
+            callType = MethodCallTracePoint.CallType.ACTOR,
+        )
+        traceCollector?.passCodeLocation(callStackTrace[iThread]!!.first().tracePoint)
         enableAnalysis()
     }
 
@@ -1456,7 +1490,7 @@ abstract class ManagedStrategy(
         if (collectTrace) {
             traceCollector!!.checkActiveLockDetected()
             addBeforeMethodCallTracePoint(threadId, receiver, codeLocation, methodId, className, methodName, params,
-                atomicMethodDescriptor
+                atomicMethodDescriptor, MethodCallTracePoint.CallType.NORMAL
             )
         }
         // in case of an atomic method, we create a switch point before the method call;
@@ -1680,6 +1714,7 @@ abstract class ManagedStrategy(
         methodName: String,
         methodParams: Array<Any?>,
         atomicMethodDescriptor: AtomicMethodDescriptor?,
+        callType: MethodCallTracePoint.CallType,
     ) {
         val callStackTrace = callStackTrace[threadId]!!
         if (isTestThread(threadId) && isResumptionMethodCall(threadId, className, methodName, methodParams, atomicMethodDescriptor)) {
@@ -1705,7 +1740,7 @@ abstract class ManagedStrategy(
             // we assume that all methods lying below the resumed one in stack trace
             // have empty resumption part or were already resumed before,
             // so we remove them from the suspended methods stack.
-            suspendedMethodStack.subList(0, elementIndex).clear()
+            suspendedMethodStack.subList(0, elementIndex + 1).clear()
             // we need to restore suspended stack trace elements
             // if they are not on the top of the current stack trace
             if (!resumedStackTrace.isSuffixOf(callStackTrace)) {
@@ -1732,6 +1767,7 @@ abstract class ManagedStrategy(
             params = params,
             codeLocation = codeLocation,
             atomicMethodDescriptor = atomicMethodDescriptor,
+            callType = callType,
         )
         // Method invocation id used to calculate spin cycle start label call depth.
         // Two calls are considered equals if two same methods were called with the same parameters.
@@ -1756,6 +1792,7 @@ abstract class ManagedStrategy(
         params: Array<Any?>,
         codeLocation: Int,
         atomicMethodDescriptor: AtomicMethodDescriptor?,
+        callType: MethodCallTracePoint.CallType,
     ): MethodCallTracePoint {
         val callStackTrace = callStackTrace[iThread]!!
         val tracePoint = MethodCallTracePoint(
@@ -1765,7 +1802,8 @@ abstract class ManagedStrategy(
             methodName = methodName,
             callStackTrace = callStackTrace,
             codeLocation = codeLocation,
-            isStatic = (owner == null)
+            isStatic = (owner == null),
+            callType = callType,
         )
         // handle non-atomic methods
         if (atomicMethodDescriptor == null) {
@@ -1975,12 +2013,24 @@ abstract class ManagedStrategy(
      * @param tracePoint the corresponding trace point for the invocation
      */
     private fun afterMethodCall(iThread: Int, tracePoint: MethodCallTracePoint) {
-        popShadowStackFrame()
         val callStackTrace = callStackTrace[iThread]!!
         if (tracePoint.wasSuspended) {
             // if a method call is suspended, save its call stack element to reuse for continuation resuming
             suspendedFunctionsStack[iThread]!!.add(callStackTrace.last())
+            popShadowStackFrame()
+            callStackTrace.removeLast()
+            
+            // Hack to include actor
+            if (callStackTrace.size == 1 && callStackTrace.first().tracePoint.isRootCall) {
+                suspendedFunctionsStack[iThread]!!.add(callStackTrace.first())
+                popShadowStackFrame()
+                callStackTrace.removeLast()
+            }
+
+            return
         }
+
+        popShadowStackFrame()
         callStackTrace.removeLast()
     }
 
@@ -2123,11 +2173,14 @@ abstract class ManagedStrategy(
         }
 
         fun passCodeLocation(tracePoint: TracePoint?) {
-            if (tracePoint !is SectionDelimiterTracePoint) checkActiveLockDetected()
+            if (tracePoint !is SectionDelimiterTracePoint && tracePoint?.isActorMethodCallTracePoint() == false) 
+                checkActiveLockDetected()
             // tracePoint can be null here if trace is not available, e.g. in case of suspension
             if (tracePoint != null) {
                 _trace += tracePoint
-                setBeforeEventId(tracePoint)
+                if (!tracePoint.isActorMethodCallTracePoint()) {
+                    setBeforeEventId(tracePoint)
+                }
             }
         }
 
@@ -2325,6 +2378,9 @@ internal class ManagedStrategyRunner(
         }
     }
 }
+
+private fun TracePoint.isActorMethodCallTracePoint() =
+    (this is MethodCallTracePoint && this.isRootCall)
 
 // represents an unknown code location
 internal const val UNKNOWN_CODE_LOCATION = -1

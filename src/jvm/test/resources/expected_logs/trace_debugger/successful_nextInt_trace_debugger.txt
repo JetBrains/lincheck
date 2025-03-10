@@ -12,9 +12,3 @@ The following interleaving leads to the error:
 | operation() |
 | ----------- |
 
-Detailed trace:
-| ----------- |
-|  Thread 1   |
-| ----------- |
-| operation() |
-| ----------- |

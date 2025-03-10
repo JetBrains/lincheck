@@ -12,7 +12,7 @@ package org.jetbrains.kotlinx.lincheck.strategy
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
-import org.jetbrains.kotlinx.lincheck.strategy.managed.Trace
+import org.jetbrains.kotlinx.lincheck.trace.Trace
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.util.concurrent.TimeoutException
 import java.io.Closeable

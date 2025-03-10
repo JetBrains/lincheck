@@ -19,6 +19,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.ExecutionMode.GENERAL_PUR
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.trace.*
 import org.jetbrains.kotlinx.lincheck.util.ThreadMap
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.reflect.Method
@@ -204,89 +205,77 @@ internal fun ManagedStrategy.runReplayIfPluginEnabled(failure: LincheckFailure) 
  * | FIELD_WRITE                    | 10   |
  */
 internal fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Array<String> {
-    val nThreads = trace.trace.maxOf { it.iThread } + 1
     val results = failure.results
-    val nodesList = constructTraceGraph(nThreads, failure, results, trace, collectExceptionsOrEmpty(failure))
-    var sectionIndex = 0
-    var node: TraceNode? = nodesList.firstOrNull()
-    val representations = mutableListOf<String>()
-    while (node != null) {
-        when (node) {
-            is TraceLeafEvent -> {
-                val event = node.event
-                val eventId = event.eventId
-                val representation = event.toStringImpl(withLocation = false)
-                val (location, locationId) = if (event is CodeLocationTracePoint) {
-                    val ste = event.stackTraceElement
-                    "${ste.className}:${ste.methodName}:${ste.fileName}:${ste.lineNumber}" to event.codeLocation
+    val graph = TraceReporter(failure, results, trace, collectExceptionsOrEmpty(failure)).graph
+    val nodeList = graph.flattenNodes(VerboseTraceFlattenPolicy()).reorder()
+    val preExpandedNodeSet = graph.extractPreExpandedNodes(ShortTraceFlattenPolicy()).toHashSet()
+    
+    return nodeList.flatMap { section -> 
+        section.mapNotNull { node ->
+            when (node) {
+                is EventNode -> {
+                    val event = node.tracePoint
+                    val eventId = event.eventId
+                    val representation = event.toStringImpl(withLocation = false)
+                    val (location, locationId) = if (event is CodeLocationTracePoint) {
+                        val ste = event.stackTraceElement
+                        "${ste.className}:${ste.methodName}:${ste.fileName}:${ste.lineNumber}" to event.codeLocation
+                    }
+                    else {
+                        "null" to -1
+                    }
+                    val type = when {
+                        event is ReadTracePoint && event.isLocal ->
+                            TracePointType.LOCAL_READ
+                        event is WriteTracePoint && event.isLocal ->
+                            TracePointType.LOCAL_WRITE
+                        event is ReadTracePoint && !event.isLocal ->
+                            TracePointType.FIELD_READ
+                        event is WriteTracePoint && !event.isLocal ->
+                            TracePointType.FIELD_WRITE
+                        event is SpinCycleStartTracePoint ->
+                            TracePointType.SPIN_CYCLE_START
+                        event is SwitchEventTracePoint && event.reason is SwitchReason.ActiveLock ->
+                            TracePointType.SPIN_CYCLE_SWITCH
+                        event is ObstructionFreedomViolationExecutionAbortTracePoint ->
+                            TracePointType.OBSTRUCTION_FREEDOM_VIOLATION
+                        event is SwitchEventTracePoint ->
+                            TracePointType.SWITCH
+                        else ->
+                            TracePointType.REGULAR
+                    }
+                    val relatedTypes = getRelatedTypeList(event)
+                    "${type.ordinal};${node.iThread};${node.callDepth};${preExpandedNodeSet.contains(node)};${eventId};${representation}${location};${locationId};[${relatedTypes.joinToString(",")}];false"
                 }
-                else {
-                    "null" to -1
-                }
-                val type = when {
-                    event is ReadTracePoint && event.isLocal ->
-                        TracePointType.LOCAL_READ
-                    event is WriteTracePoint && event.isLocal ->
-                        TracePointType.LOCAL_WRITE
-                    event is ReadTracePoint && !event.isLocal ->
-                        TracePointType.FIELD_READ
-                    event is WriteTracePoint && !event.isLocal ->
-                        TracePointType.FIELD_WRITE
-                    event is SpinCycleStartTracePoint ->
-                        TracePointType.SPIN_CYCLE_START
-                    event is SwitchEventTracePoint && event.reason is SwitchReason.ActiveLock ->
-                        TracePointType.SPIN_CYCLE_SWITCH
-                    event is ObstructionFreedomViolationExecutionAbortTracePoint ->
-                        TracePointType.OBSTRUCTION_FREEDOM_VIOLATION
-                    event is SwitchEventTracePoint ->
-                        TracePointType.SWITCH
-                    else ->
-                        TracePointType.REGULAR
-                }
-                val relatedTypes = getRelatedTypeList(event)
-                if (representation.isNotEmpty()) {
-                    representations.add("${type.ordinal};${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${eventId};${representation};${location};${locationId};[${relatedTypes.joinToString(",")}];false")
-                }
-            }
 
-            is CallNode -> {
-                val beforeEventId = node.call.eventId
-                val representation = node.call.toStringImpl(withLocation = false)
-                val ste = node.call.stackTraceElement
-                val location = "${ste.className}:${ste.methodName}:${ste.fileName}:${ste.lineNumber}"
-                val type = TracePointType.REGULAR
-                val relatedTypes = getRelatedTypeList(node.call)
-                if (representation.isNotEmpty()) {
-                    representations.add("${type.ordinal};${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};${location};${node.call.codeLocation};[${relatedTypes.joinToString(",")}];${node.call.isStatic}")
+                is CallNode -> if(node.tracePoint.isRootCall) {
+                    val beforeEventId = node.tracePoint.eventId
+                    val representation = node.tracePoint.toStringImpl(withLocation = false)
+                    val type = TracePointType.ACTOR
+                    "${type.ordinal};${node.iThread};${node.callDepth};${preExpandedNodeSet.contains(node)};${beforeEventId};${representation};null;-1;[];false"
+                } else {
+                    val beforeEventId = -1
+                    val representation = node.tracePoint.toStringImpl(withLocation = false) 
+                    val ste = node.tracePoint.stackTraceElement
+                    val location = "${ste.className}:${ste.methodName}:${ste.fileName}:${ste.lineNumber}"
+                    val type = TracePointType.REGULAR
+                    val relatedTypes = getRelatedTypeList(node.tracePoint)
+                    "${type.ordinal};${node.iThread};${node.callDepth};${preExpandedNodeSet.contains(node)};${beforeEventId};${representation};${location};${node.tracePoint.codeLocation};[${relatedTypes.joinToString(",")}];${node.tracePoint.isStatic}"
                 }
-            }
 
-            is ActorNode -> {
-                val beforeEventId = -1
-                val representation = node.actorRepresentation
-                val type = TracePointType.ACTOR
-                if (representation.isNotEmpty()) {
-                    representations.add("${type.ordinal};${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};null;-1;[];false")
+                is ResultNode -> {
+                    val beforeEventId = -1
+                    val type = TracePointType.RESULT
+                    val representation = node.actorResult.resultRepresentation
+                    val exceptionNumber = node.actorResult.exceptionNumber
+                    "${type.ordinal};${node.iThread};${node.callDepth};${preExpandedNodeSet.contains(node)};${beforeEventId};${representation};${exceptionNumber};null;-1;[];false"
                 }
+                else -> null
             }
-
-            is ActorResultNode -> {
-                val beforeEventId = -1
-                val type = TracePointType.RESULT
-                val representation = node.resultRepresentation.toString()
-                representations.add("${type.ordinal};${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};${node.exceptionNumberIfExceptionResult ?: -1};null;-1;[];false")
-            }
-
-            else -> {}
         }
-
-        node = node.next
-        if (node == null && sectionIndex != nodesList.lastIndex) {
-            node = nodesList[++sectionIndex]
-        }
-    }
-    return representations.toTypedArray()
+    }.toTypedArray()
 }
+
 
 private enum class TracePointType {
     REGULAR,

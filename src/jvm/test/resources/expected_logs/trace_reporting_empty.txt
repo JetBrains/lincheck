@@ -19,11 +19,5 @@ The following interleaving leads to the error:
 Exception stack traces:
 #1: kotlin.NotImplementedError: An operation is not implemented.
 	at org.jetbrains.kotlinx.lincheck_test.representation.TraceReportingTest.notImplemented(TraceReportingTest.kt:123)
-	at java.lang.Thread.run(Thread.java:750)
+	at java.base/java.lang.Thread.run(Thread.java:840)
 
-Detailed trace:
-| ---------------------------------------- |
-|                 Thread 1                 |
-| ---------------------------------------- |
-| notImplemented(): NotImplementedError #1 |
-| ---------------------------------------- |
