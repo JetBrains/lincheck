@@ -13,6 +13,10 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.primitiveOrIdentityHashCode
 import org.jetbrains.kotlinx.lincheck.strategy.managed.LoopDetector.CodeIdentity.RegularCodeLocationIdentity
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.CallStackTraceElement
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.SpinCycleStartTracePoint
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.SwitchEventTracePoint
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.TracePoint
 import org.jetbrains.kotlinx.lincheck.transformation.MethodIds
 import org.jetbrains.kotlinx.lincheck.transformation.CodeLocations
 import java.util.ArrayList
@@ -712,19 +716,19 @@ private class ReplayModeLoopDetectorHelper(
 }
 
 /**
- * Calculates the [SpinCycleStartTracePoint] trace point callStackTrace correctly after all trace points
+ * Calculates the [org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.SpinCycleStartTracePoint] trace point callStackTrace correctly after all trace points
  * related to the spin cycle are collected.
  *
  * # The problem overview
  *
- * [TraceCollector] collects two types of the [TracePoint]:
+ * [TraceCollector] collects two types of the [org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.TracePoint]:
  * 1. TracePoints that represents places where potential context switch points could happened.
  * 2. TracePoints, representing regular, non-atomic method calls.
  *
  * This division is important for us, as [LoopDetector] stores execution points sequences of the
  * first type, causing the challenges, described below.
  *
- * When [SpinCycleStartTracePoint] is added initially to the [trace], its callStackTrace, constructed via
+ * When [org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.SpinCycleStartTracePoint] is added initially to the [trace], its callStackTrace, constructed via
  * `callStackTrace[currentThread]` may be inaccurate. Consider the following example:
  * We have the following code:
  * ```kotlin
@@ -889,7 +893,7 @@ private class ReplayModeLoopDetectorHelper(
  * The count of the call passed the condition above equals to the call we need to lift from the first spin cycle
  * node to get the correct spin cycle start trace point depth.
  *
- * @param beforeMethodCallSwitch flag if this method invoked right after [MethodCallTracePoint] is added to a trace,
+ * @param beforeMethodCallSwitch flag if this method invoked right after [org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.MethodCallTracePoint] is added to a trace,
  * before the corresponding method is called.
  */
 internal fun afterSpinCycleTraceCollected(

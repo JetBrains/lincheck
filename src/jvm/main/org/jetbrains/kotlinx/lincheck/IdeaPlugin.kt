@@ -18,6 +18,17 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.ActorNode
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.ActorResultNode
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.CallNode
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.ObstructionFreedomViolationExecutionAbortTracePoint
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.SpinCycleStartTracePoint
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.SwitchEventTracePoint
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.SwitchReason
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.Trace
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.TraceLeafEvent
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.TraceNodeOld
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.constructTraceGraph
 import org.jetbrains.kotlinx.lincheck.util.ThreadMap
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
 import java.lang.reflect.Method
@@ -195,7 +206,7 @@ private fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Arr
     val results = failure.results
     val nodesList = constructTraceGraph(nThreads, failure, results, trace, collectExceptionsOrEmpty(failure))
     var sectionIndex = 0
-    var node: TraceNode? = nodesList.firstOrNull()
+    var node: TraceNodeOld? = nodesList.firstOrNull()
     val representations = mutableListOf<String>()
     while (node != null) {
         when (node) {

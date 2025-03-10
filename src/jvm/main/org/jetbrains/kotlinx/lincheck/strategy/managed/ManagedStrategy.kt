@@ -27,6 +27,28 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.adorne
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanObjectNumeration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.CallStackTrace
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.CallStackTraceElement
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.CoroutineCancellationTracePoint
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.MethodCallTracePoint
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.MonitorEnterTracePoint
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.MonitorExitTracePoint
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.NotifyTracePoint
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.ObstructionFreedomViolationExecutionAbortTracePoint
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.ParkTracePoint
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.ReadTracePoint
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.SectionDelimiterTracePoint
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.SpinCycleStartTracePoint
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.StateRepresentationTracePoint
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.SwitchEventTracePoint
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.SwitchReason
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.ThreadJoinTracePoint
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.ThreadStartTracePoint
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.Trace
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.TracePoint
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.UnparkTracePoint
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.WaitTracePoint
+import org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.WriteTracePoint
 import org.objectweb.asm.ConstantDynamic
 import org.objectweb.asm.Handle
 import java.lang.invoke.CallSite
@@ -142,7 +164,7 @@ abstract class ManagedStrategy(
      * In case when the plugin is enabled, we also enable [eventIdStrictOrderingCheck] property and check
      * that event ids provided to the [beforeEvent] method
      * and corresponding trace points are sequentially ordered.
-     * But we do not add a [MethodCallTracePoint] for the coroutine resumption.
+     * But we do not add a [org.jetbrains.kotlinx.lincheck.strategy.managed.reporting.MethodCallTracePoint] for the coroutine resumption.
      * So this field just tracks if the last [beforeMethodCall] invocation was actually a coroutine resumption.
      * In this case, we just skip the next [beforeEvent] call.
      *
