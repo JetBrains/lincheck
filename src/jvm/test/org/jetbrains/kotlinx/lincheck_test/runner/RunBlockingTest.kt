@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck_test.runner
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
 import kotlin.coroutines.*
 
@@ -33,5 +34,8 @@ class RunBlockingTest : AbstractLincheckTest() {
     override fun <O : Options<O, *>> O.customize() {
         minimizeFailedScenario(false)
         iterations(1)
+        if (isInTraceDebuggerMode && this is ModelCheckingOptions) {
+            invocationsPerIteration(1)
+        }
     }
 }

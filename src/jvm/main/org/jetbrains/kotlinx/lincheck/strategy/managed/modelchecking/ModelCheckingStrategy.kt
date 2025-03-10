@@ -51,23 +51,23 @@ internal class ModelCheckingStrategy(
 
     // Tracker of objects' allocations and object graph topology.
     override val objectTracker: ObjectTracker? = if (isInTraceDebuggerMode) null else LocalObjectManager()
-    // Tracker of objects' identity hash codes.
-    override val identityHashCodeTracker: ObjectIdentityHashCodeTracker = ObjectIdentityHashCodeTracker()
     // Tracker of the monitors' operations.
     override val monitorTracker: MonitorTracker = ModelCheckingMonitorTracker()
     // Tracker of the thread parking.
     override val parkingTracker: ParkingTracker = ModelCheckingParkingTracker(allowSpuriousWakeUps = true)
 
     override fun nextInvocation(): Boolean {
+        replayNumber = 0
         currentInterleaving = root.nextInterleaving()
             ?: return false
-        identityHashCodeTracker.resetObjectIds()
+        resetTraceDebuggerTrackerIds()
         return true
     }
 
     override fun initializeInvocation() {
         super.initializeInvocation()
         currentInterleaving.initialize()
+        replayNumber++
     }
 
     override fun enableSpinCycleReplay() {

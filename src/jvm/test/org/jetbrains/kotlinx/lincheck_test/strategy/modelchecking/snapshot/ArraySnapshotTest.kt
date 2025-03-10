@@ -13,6 +13,7 @@ package org.jetbrains.kotlinx.lincheck_test.strategy.modelchecking.snapshot
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
+import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedOptions
 import kotlin.random.Random
 
@@ -71,6 +72,7 @@ class StaticObjectArraySnapshotTest : AbstractSnapshotTest() {
 
     override fun <O : ManagedOptions<O, *>> O.customize() {
         verifier(StaticObjectArrayVerifier::class.java)
+        if (isInTraceDebuggerMode) invocationsPerIteration(1)
     }
 
     @Operation
