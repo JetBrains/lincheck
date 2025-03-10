@@ -1023,7 +1023,8 @@ abstract class ManagedStrategy(
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
                 fieldName = fieldName,
-                codeLocation = codeLocation
+                codeLocation = codeLocation,
+                isLocal = false,
             )
         } else {
             null
@@ -1050,7 +1051,8 @@ abstract class ManagedStrategy(
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
                 fieldName = "${adornedStringRepresentation(array)}[$index]",
-                codeLocation = codeLocation
+                codeLocation = codeLocation,
+                isLocal = false,
             )
         } else {
             null
@@ -1091,7 +1093,8 @@ abstract class ManagedStrategy(
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
                 fieldName = fieldName,
-                codeLocation = codeLocation
+                codeLocation = codeLocation,
+                isLocal = false,
             ).also {
                 it.initializeWrittenValue(adornedStringRepresentation(value), objectFqTypeName(value))
             }
@@ -1117,7 +1120,8 @@ abstract class ManagedStrategy(
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
                 fieldName = "${adornedStringRepresentation(array)}[$index]",
-                codeLocation = codeLocation
+                codeLocation = codeLocation,
+                isLocal = false,
             ).also {
                 it.initializeWrittenValue(adornedStringRepresentation(value), objectFqTypeName(value))
             }
@@ -1148,6 +1152,7 @@ abstract class ManagedStrategy(
                 callStackTrace = callStackTrace[iThread]!!,
                 fieldName = name ?: "<unknown variable>",
                 codeLocation = codeLocation,
+                isLocal = true,
             ).also { it.initializeReadValue(adornedStringRepresentation(value), objectFqTypeName(value)) }
         } else {
             null
@@ -1166,6 +1171,7 @@ abstract class ManagedStrategy(
                 callStackTrace = callStackTrace[iThread]!!,
                 fieldName = name ?: "<unknown variable>",
                 codeLocation = codeLocation,
+                isLocal = true,
             ).also { it.initializeWrittenValue(adornedStringRepresentation(value), objectFqTypeName(value)) }
         } else {
             null
