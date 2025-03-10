@@ -146,6 +146,7 @@ internal class ReadTracePoint(
     codeLocation: Int,
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, codeLocation) {
     private lateinit var valueRepresentation: String
+    lateinit var valueType: String
 
     override fun toStringCompact(): String = StringBuilder().apply {
         if (ownerRepresentation != null) {
@@ -156,8 +157,9 @@ internal class ReadTracePoint(
         append(" ➜ $valueRepresentation")
     }.toString()
 
-    fun initializeReadValue(value: String) {
+    fun initializeReadValue(value: String, type: String) {
         this.valueRepresentation = value
+        this.valueType = type
         if (value == "StubClass#19") {
             Unit
         }
@@ -166,6 +168,7 @@ internal class ReadTracePoint(
     override fun deepCopy(copiedCallStackTraceElements: HashMap<CallStackTraceElement, CallStackTraceElement>): TracePoint =
         ReadTracePoint(ownerRepresentation, iThread, actorId, callStackTrace.deepCopy(copiedCallStackTraceElements), fieldName, codeLocation)
             .also {
+                it.valueType = valueType
                 it.eventId = eventId
                 if (::valueRepresentation.isInitialized) it.valueRepresentation = valueRepresentation
             }
@@ -179,6 +182,7 @@ internal class WriteTracePoint(
     codeLocation: Int,
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, codeLocation) {
     private lateinit var valueRepresentation: String
+    lateinit var valueType: String
 
     override fun toStringCompact(): String  = StringBuilder().apply {
         if (ownerRepresentation != null) {
@@ -189,13 +193,16 @@ internal class WriteTracePoint(
         append(" = $valueRepresentation")
     }.toString()
 
-    fun initializeWrittenValue(value: String) {
+    fun initializeWrittenValue(value: String, type: String) {
         this.valueRepresentation = value
+        this.valueType = type
     }
+    
     override fun deepCopy(copiedCallStackTraceElements: HashMap<CallStackTraceElement, CallStackTraceElement>): TracePoint =
         WriteTracePoint(ownerRepresentation, iThread, actorId, callStackTrace.deepCopy(copiedCallStackTraceElements), fieldName, codeLocation)
             .also {
                 it.eventId = eventId
+                it.valueType = valueType
                 if (::valueRepresentation.isInitialized) it.valueRepresentation = valueRepresentation
             }
 }
@@ -205,11 +212,13 @@ internal class MethodCallTracePoint(
     val className: String,
     var methodName: String,
     callStackTrace: CallStackTrace,
-    codeLocation: Int
+    codeLocation: Int,
+    val isStatic: Boolean,
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, codeLocation) {
     var returnedValue: ReturnedValueResult = ReturnedValueResult.NoValue
     var thrownException: Throwable? = null
     var parameters: List<String>? = null
+    var parameterTypes: List<String>? = null
     private var ownerName: String? = null
 
     val wasSuspended get() = (returnedValue == ReturnedValueResult.CoroutineSuspended)
@@ -248,13 +257,14 @@ internal class MethodCallTracePoint(
     }
 
     override fun deepCopy(copiedCallStackTraceElements: HashMap<CallStackTraceElement, CallStackTraceElement>): MethodCallTracePoint =
-        MethodCallTracePoint(iThread, actorId, className, methodName, callStackTrace.deepCopy(copiedCallStackTraceElements), codeLocation)
+        MethodCallTracePoint(iThread, actorId, className, methodName, callStackTrace.deepCopy(copiedCallStackTraceElements), codeLocation, isStatic)
             .also {
                 it.eventId = eventId
                 it.returnedValue = returnedValue
                 it.thrownException = thrownException
                 it.parameters = parameters
                 it.ownerName = ownerName
+                it.parameterTypes = parameterTypes
             }
 
     fun initializeVoidReturnedValue() {
@@ -265,8 +275,8 @@ internal class MethodCallTracePoint(
         returnedValue = ReturnedValueResult.CoroutineSuspended
     }
 
-    fun initializeReturnedValue(valueRepresentation: String) {
-        returnedValue = ReturnedValueResult.ValueResult(valueRepresentation)
+    fun initializeReturnedValue(valueRepresentation: String, valueType: String) {
+        returnedValue = ReturnedValueResult.ValueResult(valueRepresentation, valueType)
     }
 
     fun initializeThrownException(exception: Throwable) {
@@ -275,6 +285,10 @@ internal class MethodCallTracePoint(
 
     fun initializeParameters(parameters: List<String>) {
         this.parameters = parameters
+    }
+    
+    fun initializeParameterTypes(parameters: List<String>) {
+        this.parameterTypes = parameters
     }
 
     fun initializeOwnerName(ownerName: String) {
@@ -307,7 +321,7 @@ internal sealed interface ReturnedValueResult {
     data object NoValue: ReturnedValueResult
     data object VoidResult: ReturnedValueResult
     data object CoroutineSuspended: ReturnedValueResult
-    data class ValueResult(val valueRepresentation: String): ReturnedValueResult
+    data class ValueResult(val valueRepresentation: String, val valueType: String): ReturnedValueResult
 }
 
 internal class MonitorEnterTracePoint(

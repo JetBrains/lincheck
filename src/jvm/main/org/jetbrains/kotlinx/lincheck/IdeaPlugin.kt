@@ -229,9 +229,15 @@ private fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Arr
                     is ObstructionFreedomViolationExecutionAbortTracePoint -> 6
                     else -> 0
                 }
+                
+                val readOrWriteType = when (event) {
+                    is ReadTracePoint -> event.valueType
+                    is WriteTracePoint -> event.valueType
+                    else -> ""
+                }
 
                 if (representation.isNotEmpty()) {
-                    representations.add("$type;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${eventId};${representation};${location};${locationId}")
+                    representations.add("$type;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${eventId};${representation};${location};${locationId};[${readOrWriteType}];false")
                 }
             }
 
@@ -241,8 +247,12 @@ private fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Arr
                 val ste = node.call.stackTraceElement
                 val location = "${ste.className}:${ste.methodName}:${ste.fileName}:${ste.lineNumber}"
 
+                val returnType = if (node.call.returnedValue !is ReturnedValueResult.ValueResult) ""
+                else (node.call.returnedValue as ReturnedValueResult.ValueResult).valueType
+                val types: List<String> = listOf(returnType) + (node.call.parameterTypes ?: emptyList())
+                
                 if (representation.isNotEmpty()) {
-                    representations.add("0;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};${location};${node.call.codeLocation}")
+                    representations.add("0;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};${location};${node.call.codeLocation};[${types.joinToString(",")}];${node.call.isStatic}")
                 }
             }
 
@@ -250,14 +260,14 @@ private fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Arr
                 val beforeEventId = -1
                 val representation = node.actorRepresentation
                 if (representation.isNotEmpty()) {
-                    representations.add("1;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};null;-1")
+                    representations.add("1;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};null;-1;[];false")
                 }
             }
 
             is ActorResultNode -> {
                 val beforeEventId = -1
                 val representation = node.resultRepresentation.toString()
-                representations.add("2;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};${node.exceptionNumberIfExceptionResult ?: -1};null;-1")
+                representations.add("2;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};${node.exceptionNumberIfExceptionResult ?: -1};null;-1;[];false")
             }
 
             else -> {}
