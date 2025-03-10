@@ -81,5 +81,5 @@ public interface EventTracker {
     int getEventId();
     void setLastMethodCallEventId();
 
-    JavaResult invokeDeterministicallyOrNull(long descriptorId, Object descriptor, Object receiver, Object[] params);
+    BootstrapResult<?> invokeDeterministicallyOrNull(long descriptorId, Object descriptor, Object receiver, Object[] params);
 }

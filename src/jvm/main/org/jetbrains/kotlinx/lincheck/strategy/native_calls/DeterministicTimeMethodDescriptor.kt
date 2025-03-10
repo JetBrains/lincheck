@@ -8,11 +8,11 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck.util.native_calls
+package org.jetbrains.kotlinx.lincheck.strategy.native_calls
 
 internal fun getDeterministicTimeMethodDescriptorOrNull(
     methodCallInfo: MethodCallInfo
-): DeterministicMethodDescriptor<*>? {
+): DeterministicMethodDescriptor<*, *>? {
     if (methodCallInfo.ownerType != systemType) return null
     val methodName = methodCallInfo.methodSignature.name
     if (methodName != "nanoTime" && methodName != "currentTimeMillis") return null

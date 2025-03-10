@@ -11,7 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.util.Logger
-import org.jetbrains.kotlinx.lincheck.util.native_calls.MethodCallInfo
+import org.jetbrains.kotlinx.lincheck.strategy.native_calls.MethodCallInfo
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
