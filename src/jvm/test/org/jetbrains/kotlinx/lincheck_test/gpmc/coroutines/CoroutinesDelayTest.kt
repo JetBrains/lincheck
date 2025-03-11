@@ -14,21 +14,22 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import org.junit.Ignore
 import org.junit.Test
+import kotlin.time.DurationUnit
+import kotlin.time.toDuration
 
 class CoroutinesDelayTest : FixedThreadPoolCoroutineTest() {
-    @Ignore("Delay (even 1ms) in coroutine puts all threads in deadlock, see https://github.com/JetBrains/lincheck/issues/543")
     @Test
     fun testDelay() = executeCoroutineTest { dispatcher ->
         runBlocking(dispatcher) {
-            val nElements = 2
+            val nElements = 1
             val channel = Channel<Int>() // RENDEZVOUS
 
             launch(dispatcher) {
                 for (i in 1..nElements) {
                     channel.send(i)
-                    delay(1) // causes hang
+                    delay(100)
+                    delay(100.toDuration(DurationUnit.MILLISECONDS))
                 }
                 channel.close()
             }

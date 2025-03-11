@@ -20,7 +20,6 @@ import kotlin.concurrent.thread
 
 @OptIn(ExperimentalModelCheckingAPI::class)
 class CountDownLatchTest {
-    @Ignore("Invalid thread switch attempt")
     @Test
     fun testLatchCountdown() {
         runConcurrentTest(10000) {
