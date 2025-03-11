@@ -178,10 +178,8 @@ internal class LincheckClassVisitor(
             // In trace debugger mode we record hash codes of tracked objects and substitute them on re-run, 
             // otherwise, we track all hash code calls in the instrumented code 
             // and substitute them with constant.
-            mv = DeterministicHashCodeTransformer(fileName, className, methodName, mv.newAdapter())
+            mv = ConstantHashCodeTransformer(fileName, className, methodName, mv.newAdapter())
         }
-        mv = DeterministicTimeTransformer(mv.newAdapter())
-        mv = DeterministicRandomTransformer(fileName, className, methodName, mv.newAdapter())
         // `SharedMemoryAccessTransformer` goes first because it relies on `AnalyzerAdapter`,
         // which should be put in front of the byte-code transformer chain,
         // so that it can correctly analyze the byte-code and compute required type-information
@@ -255,7 +253,7 @@ private class WrapMethodInIgnoredSectionTransformer(
             ARETURN, DRETURN, FRETURN, IRETURN, LRETURN, RETURN -> {
                 ifStatement(
                     condition = { loadLocal(enteredInIgnoredSectionLocal) },
-                    ifClause = { invokeStatic(Injections::leaveIgnoredSection) },
+                    thenClause = { invokeStatic(Injections::leaveIgnoredSection) },
                     elseClause = {}
                 )
             }

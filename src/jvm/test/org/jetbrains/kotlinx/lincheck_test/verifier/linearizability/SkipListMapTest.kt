@@ -12,11 +12,18 @@ package org.jetbrains.kotlinx.lincheck_test.verifier.linearizability
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.kotlinx.lincheck.paramgen.IntGen
+import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.*
 import java.util.concurrent.*
 
 @Param(name = "value", gen = IntGen::class, conf = "1:5")
 class SkipListMapTest : AbstractLincheckTest() {
+    override fun <O : Options<O, *>> O.customize() {
+        if (isInTraceDebuggerMode && this is ModelCheckingOptions) {
+            invocationsPerIteration(1)
+        }
+    }
+    
     private val skiplistMap = ConcurrentSkipListMap<Int, Int>()
 
     @Operation

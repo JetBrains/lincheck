@@ -48,7 +48,7 @@ internal class ThreadTransformer(
             // STACK: isTracePoint
             ifStatement(
                 condition = {},
-                ifClause = { invokeBeforeEventIfPluginEnabled("thread fork") },
+                thenClause = { invokeBeforeEventIfPluginEnabled("thread fork") },
                 elseClause = {},
             )
         }
@@ -129,7 +129,7 @@ internal class ThreadTransformer(
             // STACK: thread, isTracePoint
             ifStatement(
                 condition = {},
-                ifClause = { invokeBeforeEventIfPluginEnabled("thread fork") },
+                thenClause = { invokeBeforeEventIfPluginEnabled("thread fork") },
                 elseClause = {},
             )
             // STACK: thread

@@ -68,10 +68,11 @@ class ArrayReadWriteRunConcurrentRepresentationTest : BaseRunConcurrentRepresent
 
     @Suppress("UNUSED_VARIABLE")
     override fun block() {
-        val index = Random.nextInt(array.size)
-        array[index]++
-        val y = array[index]
-        check(false)
+        for (index in array.indices) {
+            array[index]++
+            val y = array[index]
+            check(false)
+        }
     }
 }
 

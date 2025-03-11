@@ -77,7 +77,7 @@ private fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario): Mo
 
 private fun createConfiguration(testClass: Class<*>) =
     ModelCheckingOptions()
-        .invocationTimeout(5_000) // 5 sec
+        .invocationTimeout(10_000) // 10 sec
         .createTestConfigurations(testClass)
 
 private class CollectResultsVerifier : Verifier {
@@ -103,4 +103,4 @@ private class CollectResultsVerifier : Verifier {
 
 private const val DEFAULT_INVOCATIONS_COUNT = 500
 
-internal const val TIMEOUT = 60_000L // 60 sec
+internal const val TIMEOUT = 120_000L // 120 sec

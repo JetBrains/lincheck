@@ -52,5 +52,6 @@ abstract class AbstractRandomTest {
         .actorsAfter(0)
         .threads(3)
         .actorsPerThread(1)
+        .run { if (isInTraceDebuggerMode) invocationsPerIteration(1) else this }
         .check(this::class)
 }

@@ -11,7 +11,6 @@
 package sun.nio.ch.lincheck;
 
 import java.lang.invoke.CallSite;
-import java.util.*;
 
 /**
  * Methods of this interface are called from the instrumented tested code during model-checking.
@@ -38,8 +37,9 @@ public interface EventTracker {
 
     void beforeNewObjectCreation(String className);
     void afterNewObjectCreation(Object obj);
-    long getNextObjectId();
-    void advanceCurrentObjectId(long oldId);
+    
+    long getNextTraceDebuggerEventTrackerId(TraceDebuggerTracker tracker);
+    void advanceCurrentTraceDebuggerEventTrackerId(TraceDebuggerTracker tracker, long oldId);
     
     CallSite getCachedInvokeDynamicCallSite(
             String name,
@@ -67,11 +67,11 @@ public interface EventTracker {
     boolean beforeWriteArrayElement(Object array, int index, Object value, int codeLocation);
     void afterWrite();
 
-    void beforeMethodCall(Object owner, String className, String methodName, int codeLocation, int methodId, Object[] params);
-    void onMethodCallReturn(Object result);
-    void onMethodCallException(Throwable t);
+    Object onMethodCall(Object owner, String className, String methodName, int codeLocation, int methodId, String methodDes, Object[] params);
+    void onMethodCallReturn(long descriptorId, Object descriptor, Object receiver, Object[] params, Object result);
+    void onMethodCallException(long descriptorId, Object descriptor, Object receiver, Object[] params, Throwable t);
 
-    Random getThreadLocalRandom();
+    InjectedRandom getThreadLocalRandom();
     int randomNextInt();
 
     // Methods required for the plugin integration
@@ -80,4 +80,6 @@ public interface EventTracker {
     void beforeEvent(int eventId, String type);
     int getEventId();
     void setLastMethodCallEventId();
+
+    BootstrapResult<?> invokeDeterministicallyOrNull(long descriptorId, Object descriptor, Object receiver, Object[] params);
 }

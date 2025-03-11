@@ -11,7 +11,6 @@
 package sun.nio.ch.lincheck;
 
 import java.lang.invoke.CallSite;
-import java.util.Random;
 
 /**
  * Methods of this object are called from the instrumented code.
@@ -294,41 +293,10 @@ public class Injections {
     }
 
     /**
-     * Called from the instrumented code to replace `ThreadLocalRandom.nextInt(origin, bound)` with a deterministic random value.
-     */
-    public static int nextInt2(int origin, int bound) {
-        boolean enteredIgnoredSection = enterIgnoredSection();
-        try {
-            return deterministicRandom().nextInt(bound);
-        } finally {
-            if (enteredIgnoredSection) {
-                leaveIgnoredSection();
-            }
-        }
-    }
-
-    /**
      * Called from the instrumented code to get a random instance that is deterministic and controlled by Lincheck.
      */
-    public static Random deterministicRandom() {
+    public static InjectedRandom deterministicRandom() {
         return getEventTracker().getThreadLocalRandom();
-    }
-
-    /**
-     * Called from the instrumented code to check whether the object is a [Random] instance.
-     */
-    public static boolean isRandom(Object any) {
-        // Is this a Java random?
-        if (any instanceof Random) return  true;
-        // Is this a Kotlin random?
-        try {
-            Class<?> kotlinRandomClass = any.getClass().getClassLoader().loadClass("kotlin.random.Random");
-            return kotlinRandomClass.isInstance(any);
-        } catch (ClassNotFoundException e) {
-            // Kotlin is not used in the user project.
-        }
-        // No, this is not a random instance.
-        return false;
     }
 
     /**
@@ -391,30 +359,72 @@ public class Injections {
      * Called from the instrumented code before any method call.
      *
      * @param owner is `null` for public static methods.
+     * @return Deterministic call descriptor or null.
      */
-    public static void beforeMethodCall(Object owner, String className, String methodName, int codeLocation, int methodId, Object[] params) {
-        getEventTracker().beforeMethodCall(owner, className, methodName, codeLocation, methodId, params);
+    public static Object onMethodCall(Object owner, String className, String methodName, int codeLocation, int methodId, String methodDesc, Object[] params) {
+        return getEventTracker().onMethodCall(owner, className, methodName, codeLocation, methodId, methodDesc, params);
     }
 
     /**
      * Called from the instrumented code after any method successful call, i.e., without any exception.
+     * 
+     * @param descriptor Deterministic call descriptor or null.
+     * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
+     * @param result The call result.
      */
-    public static void onMethodCallReturn(Object result) {
-        getEventTracker().onMethodCallReturn(result);
+    public static void onMethodCallReturn(
+            long descriptorId, Object descriptor, Object receiver, Object[] params, Object result
+    ) {
+        getEventTracker().onMethodCallReturn(descriptorId, descriptor, receiver, params, result);
     }
 
     /**
      * Called from the instrumented code after any method that returns void successful call, i.e., without any exception.
+     * 
+     * @param descriptor Deterministic call descriptor or null.
+     * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
      */
-    public static void onMethodCallReturnVoid() {
-        getEventTracker().onMethodCallReturn(VOID_RESULT);
+    public static void onMethodCallReturnVoid(long descriptorId, Object descriptor, Object receiver, Object[] params) {
+        getEventTracker().onMethodCallReturn(descriptorId, descriptor, receiver, params, VOID_RESULT);
+    }
+
+    /**
+     * Invokes a method deterministically based on the provided descriptor and parameters, or returns null
+     * if the original method should be called.
+     *
+     * @param descriptorId the unique identifier for the deterministic method descriptor or any value if not applicable.
+     * @param descriptor the deterministic method descriptor object providing details about the method to invoke or null.
+     * @param receiver the object on which the method is to be invoked.
+     * @param params The array of parameters to pass to the method during invocation.
+     * @return The result of the method invocation wrapped in a {@link BootstrapResult},
+     * or {@code null} if the original method should be called.
+     */
+    public static BootstrapResult<?> invokeDeterministicallyOrNull(long descriptorId, Object descriptor, Object receiver, Object[] params) {
+        return getEventTracker().invokeDeterministicallyOrNull(descriptorId, descriptor, receiver, params);
+    }
+
+    /**
+     * Retrieves a value from the provided BootstrapResult object or throws an exception if the result contains it.
+     *
+     * @param result the BootstrapResult object from which the value is to be retrieved
+     * @return the value contained in the BootstrapResult object
+     * @throws Throwable if the result contains it
+     */
+    public static Object getFromOrThrow(BootstrapResult<?> result) throws Throwable {
+        return result.getOrThrow();
     }
 
     /**
      * Called from the instrumented code after any method call threw an exception
+     * 
+     * @param descriptor Deterministic call descriptor or null.
+     * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
+     * @param t Thrown exception.
      */
-    public static void onMethodCallException(Throwable t) {
-        getEventTracker().onMethodCallException(t);
+    public static void onMethodCallException(
+            long descriptorId, Object descriptor, Object receiver, Object[] params, Throwable t
+    ) {
+        getEventTracker().onMethodCallException(descriptorId, descriptor, receiver, params, t);
     }
 
     /**
@@ -443,8 +453,8 @@ public class Injections {
     /**
      * Retrieves the next object id, used for identity hash code substitution, and then advances it by one.
      */
-    public static long getNextObjectId() {
-        return getEventTracker().getNextObjectId();
+    public static long getNextTraceDebuggerEventTrackerId(TraceDebuggerTracker tracker) {
+        return getEventTracker().getNextTraceDebuggerEventTrackerId(tracker);
     }
 
     /**
@@ -470,8 +480,8 @@ public class Injections {
      * On subsequent re-runs, the cached computation will be skipped, but the
      * current object id will still be advanced by the required delta via a call to {@code advanceCurrentObjectId(oldId)}.
      */
-    public static void advanceCurrentObjectId(long oldId) {
-        getEventTracker().advanceCurrentObjectId(oldId);
+    public static void advanceCurrentTraceDebuggerEventTrackerId(TraceDebuggerTracker tracker, long oldId) {
+        getEventTracker().advanceCurrentTraceDebuggerEventTrackerId(tracker, oldId);
     }
 
 
