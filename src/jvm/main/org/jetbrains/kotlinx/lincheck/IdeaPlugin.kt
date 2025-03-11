@@ -174,12 +174,15 @@ internal fun ManagedStrategy.runReplayIfPluginEnabled(failure: LincheckFailure) 
  * (due to difficulties with passing objects like List and TracePoint, as class versions may vary)
  *
  * Each trace point is transformed into the line of the following form:
- * `type;iThread;callDepth;shouldBeExpanded;eventId;representation;stackTraceElement;codeLocationId`.
+ * `type;iThread;callDepth;shouldBeExpanded;eventId;representation;stackTraceElement;codeLocationId;relatedTypes;isStatic`.
+ * 
  *
  *   stackTraceElement is "className:methodName:fileName:lineNumber" or "null" string if it is not applicable
  *   codeLocationId is strictly growing abstract id of location, and it must grow in syntactic order to
  *                  be able to order events occurred at same line in the same file. It is `-1` if it is not
  *                  applicable and stackTranceElement is "null".
+ *   relatedTypes for methodCall is "[returnType,arg1,arg2]" for read and write points "[type]".
+ *   isStatic is true for static function calls.
  *
  * Later, when [testFailed] breakpoint is triggered debugger parses these lines back to trace points.
  *
