@@ -11,7 +11,6 @@
 package org.jetbrains.kotlinx.lincheck_test.trace_debugger
 
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
-import org.junit.Ignore
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.DoubleAccumulator
 import java.util.concurrent.atomic.DoubleAdder
@@ -343,7 +342,6 @@ class FailingRecoveringRandomTest : RandomTests() {
         List(10) { runCatching { if (it % 2 == 0) Random.nextInt(10, 100) else Random.nextInt(100, 10) }.toString() }
 }
 
-@Ignore
 class FailingRandomBytesTest : RandomTests() {
     class FailingRandom : JRandom() {
         override fun nextBytes(bytes: ByteArray) {

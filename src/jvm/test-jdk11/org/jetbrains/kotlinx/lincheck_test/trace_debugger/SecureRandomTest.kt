@@ -16,12 +16,10 @@ import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.annotations.Operation
 import org.junit.Assume.assumeTrue
 import org.junit.Before
-import org.junit.Ignore
 
 /**
  * A test class for validating the determinism of the [SecureRandom`-specific methods.
  */
-@Ignore
 class SecureRandomTest : RandomTests() {
     @Before
     fun setUp() {

@@ -13,6 +13,7 @@ package org.jetbrains.kotlinx.lincheck.transformation.transformers
 import org.jetbrains.kotlinx.lincheck.canonicalClassName
 import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.transformation.*
+import org.jetbrains.kotlinx.lincheck.transformation.transformers.DeterministicInvokeDynamicTransformer.Companion.advancingCounter
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.Type.*
@@ -105,43 +106,49 @@ internal class MethodCallTransformer(
         
         invokeBeforeEventIfPluginEnabled("method call $methodName", setMethodEventId = true)
         
-        tryCatchFinally(
-            tryBlock = {
-                val returnType = getReturnType(desc)
-                invokeMethodOrDeterministicCall(
-                    deterministicMethodDescriptor, deterministicCallIdLocal, returnType, receiver, argumentsArrayLocal
-                ) {
-                    // STACK: <empty>
-                    receiver?.let { loadLocal(it) }
-                    loadLocals(argumentLocals)
-                    // STACK [INVOKEVIRTUAL]: owner, arguments
-                    // STACK [INVOKESTATIC] :        arguments
-                    visitMethodInsn(opcode, owner, name, desc, itf)
-                    // STACK: result/<empty> for void
-                }
+        advancingCounter {
+            tryCatchFinally(
+                tryBlock = {
+                    val returnType = getReturnType(desc)
+                    invokeMethodOrDeterministicCall(
+                        deterministicMethodDescriptor,
+                        deterministicCallIdLocal,
+                        returnType,
+                        receiver,
+                        argumentsArrayLocal
+                    ) {
+                        // STACK: <empty>
+                        receiver?.let { loadLocal(it) }
+                        loadLocals(argumentLocals)
+                        // STACK [INVOKEVIRTUAL]: owner, arguments
+                        // STACK [INVOKESTATIC] :        arguments
+                        visitMethodInsn(opcode, owner, name, desc, itf)
+                        // STACK: result/<empty> for void
+                    }
 
-                // STACK: result/<empty> for void
-                processMethodCallResult(
-                    deterministicCallIdLocal, deterministicMethodDescriptor, desc, receiver, argumentsArrayLocal
-                )
-                // STACK: result/<empty> for void
-            },
-            catchBlock = {
-                val exceptionLocal = newLocal(getType(Throwable::class.java))
-                storeLocal(exceptionLocal)
-                // STACK: <empty>
-                loadLocal(deterministicCallIdLocal)
-                loadLocal(deterministicMethodDescriptor)
-                if (receiver == null) pushNull() else loadLocal(receiver)
-                loadLocal(argumentsArrayLocal)
-                loadLocal(exceptionLocal)
-                // STACK: deterministicCallId, deterministicMethodDescriptor, receiver, params, exception
-                invokeStatic(Injections::onMethodCallException)
-                // STACK: <empty>
-                loadLocal(exceptionLocal)
-                throwException()
-            }
-        )
+                    // STACK: result/<empty> for void
+                    processMethodCallResult(
+                        deterministicCallIdLocal, deterministicMethodDescriptor, desc, receiver, argumentsArrayLocal
+                    )
+                    // STACK: result/<empty> for void
+                },
+                catchBlock = {
+                    val exceptionLocal = newLocal(getType(Throwable::class.java))
+                    storeLocal(exceptionLocal)
+                    // STACK: <empty>
+                    loadLocal(deterministicCallIdLocal)
+                    loadLocal(deterministicMethodDescriptor)
+                    if (receiver == null) pushNull() else loadLocal(receiver)
+                    loadLocal(argumentsArrayLocal)
+                    loadLocal(exceptionLocal)
+                    // STACK: deterministicCallId, deterministicMethodDescriptor, receiver, params, exception
+                    invokeStatic(Injections::onMethodCallException)
+                    // STACK: <empty>
+                    loadLocal(exceptionLocal)
+                    throwException()
+                }
+            )
+        }
     }
     
     private fun GeneratorAdapter.pushDeterministicCallId(deterministicMethodDescriptor: Int) {
