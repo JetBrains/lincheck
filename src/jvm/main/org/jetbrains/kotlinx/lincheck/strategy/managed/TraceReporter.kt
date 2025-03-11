@@ -245,7 +245,6 @@ internal fun constructTraceGraph(
                     prefixProvider = prefixFactory.actorNodePrefix(iCustomThread),
                     iThread = iThread,
                     last = lastNode,
-                    callDepth = -1,
                     actorRepresentation = "run()",
                     resultRepresentation = null,
                     isCustomThreadActor = true,
@@ -750,11 +749,9 @@ internal class ActorNode(
         traceRepresentation: MutableList<TraceEventRepresentation>,
         verboseTrace: Boolean
     ): TraceNode? {
-        if (!isCustomThreadActor) {
-            val actorRepresentation =
-                prefix + actorRepresentation + if (resultRepresentation != null) ": $resultRepresentation" else ""
-            traceRepresentation.add(TraceEventRepresentation(iThread, actorRepresentation))
-        }
+        val actorRepresentation =
+            prefix + actorRepresentation + if (resultRepresentation != null) ": $resultRepresentation" else ""
+        traceRepresentation.add(TraceEventRepresentation(iThread, actorRepresentation))
         
         if (!shouldBeExpanded(verboseTrace)) {
             if (isCustomThreadActor) directChildren.forEach { it.addRepresentationTo(traceRepresentation, true) }
