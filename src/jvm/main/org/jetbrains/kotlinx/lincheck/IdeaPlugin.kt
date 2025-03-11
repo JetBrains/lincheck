@@ -223,20 +223,18 @@ internal fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Ar
                 else {
                     "null" to -1
                 }
-                val type = when (event) {
-                    is SwitchEventTracePoint -> {
-                        when (event.reason) {
-                            SwitchReason.ActiveLock -> {
-                                TracePointType.SPIN_CYCLE_SWITCH
-                            }
-                            else -> TracePointType.SWITCH
-                        }
-                    }
-                    is SpinCycleStartTracePoint -> TracePointType.SPIN_CYCLE_START
-                    is ObstructionFreedomViolationExecutionAbortTracePoint -> TracePointType.OBSTRUCTION_FREEDOM_VIOLATION
-                    else -> TracePointType.REGULAR
+                val type = when {
+                    event is SpinCycleStartTracePoint ->
+                        TracePointType.SPIN_CYCLE_START
+                    event is SwitchEventTracePoint && event.reason is SwitchReason.ActiveLock ->
+                        TracePointType.SPIN_CYCLE_SWITCH
+                    event is ObstructionFreedomViolationExecutionAbortTracePoint ->
+                        TracePointType.OBSTRUCTION_FREEDOM_VIOLATION
+                    event is SwitchEventTracePoint ->
+                        TracePointType.SWITCH
+                    else ->
+                        TracePointType.REGULAR
                 }
-
                 val relatedTypes = getRelatedTypeList(event)
                 if (representation.isNotEmpty()) {
                     representations.add("${type.ordinal};${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${eventId};${representation};${location};${locationId};[${relatedTypes.joinToString(",")}];false")
@@ -249,7 +247,6 @@ internal fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Ar
                 val ste = node.call.stackTraceElement
                 val location = "${ste.className}:${ste.methodName}:${ste.fileName}:${ste.lineNumber}"
                 val type = TracePointType.REGULAR
-
                 val relatedTypes = getRelatedTypeList(node.call)
                 if (representation.isNotEmpty()) {
                     representations.add("${type.ordinal};${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};${location};${node.call.codeLocation};[${relatedTypes.joinToString(",")}];${node.call.isStatic}")
