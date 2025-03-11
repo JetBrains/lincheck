@@ -475,10 +475,10 @@ private fun actorNodeResultRepresentation(result: Result?, failure: LincheckFail
  * a user-defined thread trace.
  */
 private fun isUserThreadStart(currentElement: CallStackTraceElement, nextElement: CallStackTraceElement): Boolean =
-    currentElement.tracePoint.stackTraceElement.methodName == "run"
-            && currentElement.tracePoint.stackTraceElement.fileName == "Thread.kt"
-            && currentElement.tracePoint.methodName == "invoke"
-            && nextElement.tracePoint.methodName == "invoke"
+       currentElement.tracePoint.stackTraceElement.methodName == "run"
+    && currentElement.tracePoint.stackTraceElement.fileName == "Thread.kt"
+    && currentElement.tracePoint.methodName == "invoke"
+    && nextElement.tracePoint.methodName == "invoke"
 
 private fun isCompressiblePair(currentName: String, nextName: String): Boolean =
     isDefaultPair(currentName, nextName) || isAccessPair(currentName, nextName)
