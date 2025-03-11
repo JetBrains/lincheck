@@ -1066,7 +1066,7 @@ abstract class ManagedStrategy(
     override fun afterRead(value: Any?) = runInIgnoredSection {
         if (collectTrace) {
                 val iThread = threadScheduler.getCurrentThreadId()
-                lastReadTracePoint[iThread]?.initializeReadValue(adornedStringRepresentation(value))
+                lastReadTracePoint[iThread]?.initializeReadValue(adornedStringRepresentation(value), objectFqTypeName(value))
                 lastReadTracePoint[iThread] = null
         }
         loopDetector.afterRead(value)
@@ -1093,7 +1093,7 @@ abstract class ManagedStrategy(
                 fieldName = fieldName,
                 codeLocation = codeLocation
             ).also {
-                it.initializeWrittenValue(adornedStringRepresentation(value))
+                it.initializeWrittenValue(adornedStringRepresentation(value), objectFqTypeName(value))
             }
         } else {
             null
@@ -1119,7 +1119,7 @@ abstract class ManagedStrategy(
                 fieldName = "${adornedStringRepresentation(array)}[$index]",
                 codeLocation = codeLocation
             ).also {
-                it.initializeWrittenValue(adornedStringRepresentation(value))
+                it.initializeWrittenValue(adornedStringRepresentation(value), objectFqTypeName(value))
             }
         } else {
             null
@@ -1417,7 +1417,7 @@ abstract class ManagedStrategy(
                     Unit -> tracePoint.initializeVoidReturnedValue()
                     Injections.VOID_RESULT -> tracePoint.initializeVoidReturnedValue()
                     COROUTINE_SUSPENDED -> tracePoint.initializeCoroutineSuspendedResult()
-                    else -> tracePoint.initializeReturnedValue(adornedStringRepresentation(result))
+                    else -> tracePoint.initializeReturnedValue(adornedStringRepresentation(result), objectFqTypeName(result))
                 }
                 afterMethodCall(threadId, tracePoint)
                 traceCollector!!.addStateRepresentation()
@@ -1626,7 +1626,8 @@ abstract class ManagedStrategy(
             className = className,
             methodName = methodName,
             callStackTrace = callStackTrace,
-            codeLocation = codeLocation
+            codeLocation = codeLocation,
+            isStatic = owner == null
         )
         // handle non-atomic methods
         if (atomicMethodDescriptor == null) {
@@ -1635,6 +1636,7 @@ abstract class ManagedStrategy(
                 tracePoint.initializeOwnerName(ownerName)
             }
             tracePoint.initializeParameters(params.map { adornedStringRepresentation(it) })
+            tracePoint.initializeParameterTypes(params.map { objectFqTypeName(it) })
             return tracePoint
         }
         // handle atomic methods
@@ -1651,6 +1653,11 @@ abstract class ManagedStrategy(
             return initializeUnsafeMethodCallTracePoint(tracePoint, owner!!, params)
         }
         error("Unknown atomic method $className::$methodName")
+    }
+    
+    private fun objectFqTypeName(obj: Any?): String {
+        val enumPrefix = if (obj?.javaClass?.isEnum == true) "Enum:" else ""
+        return "$enumPrefix${obj?.javaClass?.name ?: "null"}"
     }
 
     private fun simpleClassName(className: String) = className.canonicalClassName.takeLastWhile { it != '.' }
