@@ -224,6 +224,10 @@ internal fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Ar
                     "null" to -1
                 }
                 val type = when {
+                    event is ReadTracePoint ->
+                        TracePointType.FIELD_READ
+                    event is WriteTracePoint ->
+                        TracePointType.FIELD_WRITE
                     event is SpinCycleStartTracePoint ->
                         TracePointType.SPIN_CYCLE_START
                     event is SwitchEventTracePoint && event.reason is SwitchReason.ActiveLock ->
