@@ -22,7 +22,7 @@ class CoroutinesDelayTest : FixedThreadPoolCoroutineTest() {
     @Test
     fun testDelay() = executeCoroutineTest { dispatcher ->
         runBlocking(dispatcher) {
-            val nElements = 1
+            val nElements = 2
             val channel = Channel<Int>() // RENDEZVOUS
 
             launch(dispatcher) {
