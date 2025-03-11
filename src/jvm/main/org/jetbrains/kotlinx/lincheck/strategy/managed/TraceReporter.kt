@@ -409,12 +409,12 @@ private fun compressCallStackTrace(
         val currentElement = oldStacktrace.removeFirst()
         
         // if element was removed (or seen) by previous iteration continue
-        if (removed.contains(currentElement.methodInvocationId)) continue
-        if (seen.contains(currentElement.methodInvocationId)) {
+        if (removed.contains(currentElement.id)) continue
+        if (seen.contains(currentElement.id)) {
             compressedStackTrace.add(currentElement)
             continue
         }
-        seen.add(currentElement.methodInvocationId)
+        seen.add(currentElement.id)
         
         // if next element is null, we reached end of list
         val nextElement = oldStacktrace.firstOrNull()
@@ -429,7 +429,7 @@ private fun compressCallStackTrace(
         if (isUserThreadStart(currentElement, nextElement)) {
             // we do not mark currentElement as removed, since that is a unique call from Thread.kt
             // marking it prevents starts of other threads from being detected.
-            removed.add(nextElement.methodInvocationId)
+            removed.add(nextElement.id)
             continue
         }
         
@@ -445,7 +445,7 @@ private fun compressCallStackTrace(
             check(currentElement.tracePoint.thrownException == nextElement.tracePoint.thrownException)
             
             // Mark next as removed
-            removed.add(nextElement.methodInvocationId)
+            removed.add(nextElement.id)
             compressedStackTrace.add(currentElement)
             continue
         }
