@@ -220,20 +220,18 @@ private fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Arr
                 else {
                     "null" to -1
                 }
-                val type = when (event) {
-                    is SwitchEventTracePoint -> {
-                        when (event.reason) {
-                            SwitchReason.ActiveLock -> {
-                                TracePointType.SPIN_CYCLE_SWITCH
-                            }
-                            else -> TracePointType.SWITCH
-                        }
-                    }
-                    is SpinCycleStartTracePoint -> TracePointType.SPIN_CYCLE_START
-                    is ObstructionFreedomViolationExecutionAbortTracePoint -> TracePointType.OBSTRUCTION_FREEDOM_VIOLATION
-                    else -> TracePointType.REGULAR
+                val type = when {
+                    event is SpinCycleStartTracePoint ->
+                        TracePointType.SPIN_CYCLE_START
+                    event is SwitchEventTracePoint && event.reason is SwitchReason.ActiveLock ->
+                        TracePointType.SPIN_CYCLE_SWITCH
+                    event is ObstructionFreedomViolationExecutionAbortTracePoint ->
+                        TracePointType.OBSTRUCTION_FREEDOM_VIOLATION
+                    event is SwitchEventTracePoint ->
+                        TracePointType.SWITCH
+                    else ->
+                        TracePointType.REGULAR
                 }
-
                 if (representation.isNotEmpty()) {
                     representations.add("${type.ordinal};${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${eventId};${representation};${location};${locationId}")
                 }
