@@ -20,9 +20,6 @@ import java.io.*
 import java.util.*
 import java.util.concurrent.*
 import java.lang.invoke.*
-import kotlin.contracts.ExperimentalContracts
-import kotlin.contracts.InvocationKind
-import kotlin.contracts.contract
 import kotlin.reflect.*
 import kotlin.reflect.jvm.*
 
@@ -388,11 +385,9 @@ internal inline fun GeneratorAdapter.invokeIfInTestingCode(
  *
  * @param code A block of bytecode to be executed inside the ignored section.
  */
-@OptIn(ExperimentalContracts::class)
 internal inline fun GeneratorAdapter.invokeInIgnoredSection(
     code: GeneratorAdapter.() -> Unit
 ) {
-    contract { callsInPlace(code, InvocationKind.EXACTLY_ONCE) }
     invokeStatic(Injections::enterIgnoredSection)
     val enteredIgnoredSection = newLocal(BOOLEAN_TYPE)
     storeLocal(enteredIgnoredSection)

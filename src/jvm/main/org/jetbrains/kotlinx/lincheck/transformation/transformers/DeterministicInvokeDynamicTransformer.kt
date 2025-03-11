@@ -251,38 +251,30 @@ internal class DeterministicInvokeDynamicTransformer(
         return methods.single { Type.getMethodDescriptor(it) == bootstrapMethodHandle.desc }.isVarArgs
     }
 
-    companion object {
-
-        // TODO: Investigate whether it is possible to refactor this code to remove advanceCurrentObjectId from 
-        //  the event tracker API and solve the problem with the ignored sections instead.
-        internal fun GeneratorAdapter.advancingCounter(
-            trackers: List<TraceDebuggerTracker> = TraceDebuggerTracker.entries,
-            code: GeneratorAdapter.() -> Unit
-        ) {
-            val oldIds: List<Int>
-            invokeInIgnoredSection {
-                oldIds = trackers.map { tracker ->
+    // TODO: Investigate whether it is possible to refactor this code to remove advanceCurrentObjectId from 
+    //  the event tracker API and solve the problem with the ignored sections instead.
+    private fun GeneratorAdapter.advancingCounter(code: GeneratorAdapter.() -> Unit) {
+        val trackers = TraceDebuggerTracker.entries
+        val oldIds = trackers.map { tracker ->
+            getStatic(trackerEnumType, tracker.name, trackerEnumType)
+            invokeStatic(Injections::getNextTraceDebuggerEventTrackerId)
+            val oldId = newLocal(Type.LONG_TYPE)
+            storeLocal(oldId)
+            oldId
+        }
+        tryCatchFinally(
+            tryBlock = code,
+            finallyBlock = {
+                for ((index, tracker) in trackers.withIndex()) {
                     getStatic(trackerEnumType, tracker.name, trackerEnumType)
-                    invokeStatic(Injections::getNextTraceDebuggerEventTrackerId)
-                    val oldId = newLocal(Type.LONG_TYPE)
-                    storeLocal(oldId)
-                    oldId
+                    loadLocal(oldIds[index])
+                    invokeStatic(Injections::advanceCurrentTraceDebuggerEventTrackerId)
                 }
             }
-            tryCatchFinally(
-                tryBlock = code,
-                finallyBlock = {
-                    invokeInIgnoredSection {
-                        for ((index, tracker) in trackers.withIndex()) {
-                            getStatic(trackerEnumType, tracker.name, trackerEnumType)
-                            loadLocal(oldIds[index])
-                            invokeStatic(Injections::advanceCurrentTraceDebuggerEventTrackerId)
-                        }
-                    }
-                }
-            )
-        }
-        
+        )
+    }
+
+    companion object {
         private val trackerEnumType = Type.getType(TraceDebuggerTracker::class.java)
         private val callSiteType = Type.getType(CallSite::class.java)
         private val handlePojoType = Type.getType(HandlePojo::class.java)
