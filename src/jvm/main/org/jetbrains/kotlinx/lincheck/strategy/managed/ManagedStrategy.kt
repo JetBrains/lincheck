@@ -1635,8 +1635,7 @@ abstract class ManagedStrategy(
             if (ownerName != null) {
                 tracePoint.initializeOwnerName(ownerName)
             }
-            tracePoint.initializeParameters(params.map { adornedStringRepresentation(it) })
-            tracePoint.initializeParameterTypes(params.map { objectFqTypeName(it) })
+            tracePoint.initializeParametersRepresentationAndType(params.toList(), ::adornedStringRepresentation, ::objectFqTypeName)
             return tracePoint
         }
         // handle atomic methods
@@ -1671,21 +1670,21 @@ abstract class ManagedStrategy(
             is UnsafeArrayMethod -> {
                 val owner = "${adornedStringRepresentation(unsafeMethodName.array)}[${unsafeMethodName.index}]"
                 tracePoint.initializeOwnerName(owner)
-                tracePoint.initializeParameters(unsafeMethodName.parametersToPresent.map { adornedStringRepresentation(it) })
+                tracePoint.initializeParametersRepresentationAndType(unsafeMethodName.parametersToPresent, ::adornedStringRepresentation, ::objectFqTypeName)
             }
             is UnsafeName.TreatAsDefaultMethod -> {
                 tracePoint.initializeOwnerName(adornedStringRepresentation(receiver))
-                tracePoint.initializeParameters(params.map { adornedStringRepresentation(it) })
+                tracePoint.initializeParametersRepresentationAndType(params.toList(), ::adornedStringRepresentation, ::objectFqTypeName)
             }
             is UnsafeInstanceMethod -> {
                 val ownerName = findOwnerName(unsafeMethodName.owner)
                 val owner = ownerName?.let { "$ownerName.${unsafeMethodName.fieldName}" } ?: unsafeMethodName.fieldName
                 tracePoint.initializeOwnerName(owner)
-                tracePoint.initializeParameters(unsafeMethodName.parametersToPresent.map { adornedStringRepresentation(it) })
+                tracePoint.initializeParametersRepresentationAndType(unsafeMethodName.parametersToPresent, ::adornedStringRepresentation, ::objectFqTypeName)
             }
             is UnsafeStaticMethod -> {
                 tracePoint.initializeOwnerName("${unsafeMethodName.clazz.simpleName}.${unsafeMethodName.fieldName}")
-                tracePoint.initializeParameters(unsafeMethodName.parametersToPresent.map { adornedStringRepresentation(it) })
+                tracePoint.initializeParametersRepresentationAndType(unsafeMethodName.parametersToPresent, ::adornedStringRepresentation, ::objectFqTypeName)
             }
         }
 
@@ -1700,29 +1699,29 @@ abstract class ManagedStrategy(
         when (val atomicReferenceInfo = AtomicReferenceNames.getMethodCallType(runner.testInstance, receiver, params)) {
             is AtomicArrayMethod -> {
                 tracePoint.initializeOwnerName("${adornedStringRepresentation(atomicReferenceInfo.atomicArray)}[${atomicReferenceInfo.index}]")
-                tracePoint.initializeParameters(params.drop(1).map { adornedStringRepresentation(it) })
+                tracePoint.initializeParametersRepresentationAndType(params.drop(1), ::adornedStringRepresentation, ::objectFqTypeName)
             }
             is InstanceFieldAtomicArrayMethod -> {
                 val receiverName = findOwnerName(atomicReferenceInfo.owner)
                 tracePoint.initializeOwnerName((receiverName?.let { "$it." } ?: "") + "${atomicReferenceInfo.fieldName}[${atomicReferenceInfo.index}]")
-                tracePoint.initializeParameters(params.drop(1).map { adornedStringRepresentation(it) })
+                tracePoint.initializeParametersRepresentationAndType(params.drop(1), ::adornedStringRepresentation, ::objectFqTypeName)
             }
             is AtomicReferenceInstanceMethod -> {
                 val receiverName = findOwnerName(atomicReferenceInfo.owner)
                 tracePoint.initializeOwnerName(receiverName?.let { "$it.${atomicReferenceInfo.fieldName}" } ?: atomicReferenceInfo.fieldName)
-                tracePoint.initializeParameters(params.map { adornedStringRepresentation(it) })
+                tracePoint.initializeParametersRepresentationAndType(params.toList(), ::adornedStringRepresentation, ::objectFqTypeName)
             }
             is AtomicReferenceStaticMethod ->  {
                 tracePoint.initializeOwnerName("${atomicReferenceInfo.ownerClass.simpleName}.${atomicReferenceInfo.fieldName}")
-                tracePoint.initializeParameters(params.map { adornedStringRepresentation(it) })
+                tracePoint.initializeParametersRepresentationAndType(params.toList(), ::adornedStringRepresentation, ::objectFqTypeName)
             }
             is StaticFieldAtomicArrayMethod -> {
                 tracePoint.initializeOwnerName("${atomicReferenceInfo.ownerClass.simpleName}.${atomicReferenceInfo.fieldName}[${atomicReferenceInfo.index}]")
-                tracePoint.initializeParameters(params.drop(1).map { adornedStringRepresentation(it) })
+                tracePoint.initializeParametersRepresentationAndType(params.drop(1), ::adornedStringRepresentation, ::objectFqTypeName)
             }
             AtomicReferenceMethodType.TreatAsDefaultMethod -> {
                 tracePoint.initializeOwnerName(adornedStringRepresentation(receiver))
-                tracePoint.initializeParameters(params.map { adornedStringRepresentation(it) })
+                tracePoint.initializeParametersRepresentationAndType(params.toList(), ::adornedStringRepresentation, ::objectFqTypeName)
             }
         }
         return tracePoint
@@ -1736,20 +1735,20 @@ abstract class ManagedStrategy(
         when (val varHandleMethodType = VarHandleNames.varHandleMethodType(varHandle, parameters)) {
             is ArrayVarHandleMethod -> {
                 tracePoint.initializeOwnerName("${adornedStringRepresentation(varHandleMethodType.array)}[${varHandleMethodType.index}]")
-                tracePoint.initializeParameters(varHandleMethodType.parameters.map { adornedStringRepresentation(it) })
+                tracePoint.initializeParametersRepresentationAndType(varHandleMethodType.parameters, ::adornedStringRepresentation, ::objectFqTypeName)
             }
             VarHandleMethodType.TreatAsDefaultMethod -> {
                 tracePoint.initializeOwnerName(adornedStringRepresentation(varHandle))
-                tracePoint.initializeParameters(parameters.map { adornedStringRepresentation(it) })
+                tracePoint.initializeParametersRepresentationAndType(parameters.toList(), ::adornedStringRepresentation, ::objectFqTypeName)
             }
             is InstanceVarHandleMethod -> {
                 val receiverName = findOwnerName(varHandleMethodType.owner)
                 tracePoint.initializeOwnerName(receiverName?.let { "$it.${varHandleMethodType.fieldName}" } ?: varHandleMethodType.fieldName)
-                tracePoint.initializeParameters(varHandleMethodType.parameters.map { adornedStringRepresentation(it) })
+                tracePoint.initializeParametersRepresentationAndType(varHandleMethodType.parameters, ::adornedStringRepresentation, ::objectFqTypeName)
             }
             is StaticVarHandleMethod -> {
                 tracePoint.initializeOwnerName("${varHandleMethodType.ownerClass.simpleName}.${varHandleMethodType.fieldName}")
-                tracePoint.initializeParameters(varHandleMethodType.parameters.map { adornedStringRepresentation(it) })
+                tracePoint.initializeParametersRepresentationAndType(varHandleMethodType.parameters, ::adornedStringRepresentation, ::objectFqTypeName)
             }
         }
 
@@ -1762,7 +1761,7 @@ abstract class ManagedStrategy(
         parameters: Array<Any?>,
     ): MethodCallTracePoint {
         getAtomicFieldUpdaterDescriptor(atomicUpdater)?.let { tracePoint.initializeOwnerName(it.fieldName) }
-        tracePoint.initializeParameters(parameters.drop(1).map { adornedStringRepresentation(it) })
+        tracePoint.initializeParametersRepresentationAndType(parameters.drop(1), ::adornedStringRepresentation, ::objectFqTypeName)
         return tracePoint
     }
 
