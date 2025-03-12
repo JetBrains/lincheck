@@ -233,14 +233,9 @@ private fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Arr
                     else -> 0
                 }
                 
-                val readOrWriteType = when (event) {
-                    is ReadTracePoint -> event.valueType
-                    is WriteTracePoint -> event.valueType
-                    else -> ""
-                }
-
+                val relatedTypes = getRelatedTypeList(event)
                 if (representation.isNotEmpty()) {
-                    representations.add("$type;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${eventId};${representation};${location};${locationId};[${readOrWriteType}];false")
+                    representations.add("$type;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${eventId};${representation};${location};${locationId};[${relatedTypes.joinToString(",")}];false")
                 }
             }
 
@@ -250,12 +245,9 @@ private fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Arr
                 val ste = node.call.stackTraceElement
                 val location = "${ste.className}:${ste.methodName}:${ste.fileName}:${ste.lineNumber}"
 
-                val returnType = if (node.call.returnedValue !is ReturnedValueResult.ValueResult) ""
-                else (node.call.returnedValue as ReturnedValueResult.ValueResult).valueType
-                val types: List<String> = listOf(returnType) + (node.call.parameterTypes ?: emptyList())
-                
+                val relatedTypes = getRelatedTypeList(node.call)
                 if (representation.isNotEmpty()) {
-                    representations.add("0;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};${location};${node.call.codeLocation};[${types.joinToString(",")}];${node.call.isStatic}")
+                    representations.add("0;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};${location};${node.call.codeLocation};[${relatedTypes.joinToString(",")}];${node.call.isStatic}")
                 }
             }
 
@@ -282,6 +274,18 @@ private fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Arr
         }
     }
     return representations.toTypedArray()
+}
+
+
+private fun getRelatedTypeList(tracePoint: TracePoint): List<String> = when (tracePoint) {
+    is ReadTracePoint -> listOf(tracePoint.valueType)
+    is WriteTracePoint -> listOf(tracePoint.valueType)
+    is MethodCallTracePoint -> {
+        val returnType = if (tracePoint.returnedValue !is ReturnedValueResult.ValueResult) ""
+        else (tracePoint.returnedValue as ReturnedValueResult.ValueResult).valueType
+        listOf(returnType) + (tracePoint.parameterTypes ?: emptyList())
+    }
+    else -> emptyList<String>()
 }
 
 /**
