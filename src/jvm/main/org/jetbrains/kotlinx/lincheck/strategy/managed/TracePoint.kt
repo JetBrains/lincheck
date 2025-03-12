@@ -283,13 +283,9 @@ internal class MethodCallTracePoint(
         this.thrownException = exception
     }
 
-    fun initializeParametersRepresentationAndType(
-        parameters: List<Any?>, 
-        getValueRepresentation: (Any?) -> String, 
-        getTypeRepresentation: (Any?) -> String, 
-        ) {
-        this.parameters = parameters.map { getValueRepresentation(it) }
-        this.parameterTypes = parameters.map { getTypeRepresentation(it) }
+    fun initializeParameters(parameters: List<String>, parameterTypes: List<String>) {
+        this.parameters = parameters
+        this.parameterTypes = parameterTypes
     }
 
     fun initializeOwnerName(ownerName: String) {
