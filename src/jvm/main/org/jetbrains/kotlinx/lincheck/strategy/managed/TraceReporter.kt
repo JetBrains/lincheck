@@ -225,7 +225,6 @@ internal fun constructTraceGraph(
                         prefixProvider = prefixFactory.actorNodePrefix(iThread),
                         iThread = iThread,
                         last = lastNode,
-                        callDepth = 0,
                         actorRepresentation = actorRepresentations[iThread][nextActor],
                         resultRepresentation = actorNodeResultRepresentation(
                             result = resultProvider[iThread, nextActor],
@@ -246,9 +245,9 @@ internal fun constructTraceGraph(
                     prefixProvider = prefixFactory.actorNodePrefix(iCustomThread),
                     iThread = iThread,
                     last = lastNode,
-                    callDepth = 0,
                     actorRepresentation = "run()",
                     resultRepresentation = null,
+                    isCustomThreadActor = true,
                 )
             }
         }
@@ -308,7 +307,6 @@ internal fun constructTraceGraph(
                     prefixProvider = prefixFactory.actorNodePrefix(iThread),
                     iThread = iThread,
                     last = lastNode,
-                    callDepth = 0,
                     actorRepresentation = actorRepresentations[iThread][actorId],
                     resultRepresentation = actorNodeResultRepresentation(
                         result = actorResult,
@@ -338,39 +336,6 @@ internal fun constructTraceGraph(
             actorNode.addInternalEvent(resultNode)
             resultNode.next = lastEventNext
         }
-    }
-
-    // custom threads are handled separately
-    for (iCustomThread in customThreadActors.indices) {
-        val iThread = scenario.nThreads + iCustomThread
-        var actorNode = customThreadActors[iCustomThread]
-        if (actorNode == null)
-            continue
-        val lastEvent = actorNode.lastInternalEvent
-        val lastEventNext = lastEvent.next
-        // TODO: a hacky-way to detect if the thread was aborted due to a detected live-lock;
-        //   in the future we need a better way to pass the results of the custom threads,
-        //   but currently it is not possible and would require large refactoring of the related code
-        val isHung = (
-            lastEvent is TraceLeafEvent &&
-            lastEvent.event is SwitchEventTracePoint &&
-            lastEvent.event.reason is SwitchReason.ActiveLock
-        )
-        val result = if (isHung) null else VoidResult
-        if (result === null)
-            continue
-        val resultRepresentation = resultRepresentation(result, exceptionStackTraces)
-        val callDepth = actorNode.callDepth + 1
-        val resultNode = ActorResultNode(
-            prefixProvider = prefixFactory.actorResultPrefix(iThread, callDepth),
-            iThread = iThread,
-            last = lastEvent,
-            callDepth = callDepth,
-            resultRepresentation = resultRepresentation,
-            exceptionNumberIfExceptionResult = null
-        )
-        actorNode.addInternalEvent(resultNode)
-        resultNode.next = lastEventNext
     }
 
     // add last section
@@ -444,12 +409,12 @@ private fun compressCallStackTrace(
         val currentElement = oldStacktrace.removeFirst()
         
         // if element was removed (or seen) by previous iteration continue
-        if (removed.contains(currentElement.methodInvocationId)) continue
-        if (seen.contains(currentElement.methodInvocationId)) {
+        if (removed.contains(currentElement.id)) continue
+        if (seen.contains(currentElement.id)) {
             compressedStackTrace.add(currentElement)
             continue
         }
-        seen.add(currentElement.methodInvocationId)
+        seen.add(currentElement.id)
         
         // if next element is null, we reached end of list
         val nextElement = oldStacktrace.firstOrNull()
@@ -458,6 +423,14 @@ private fun compressCallStackTrace(
                 compressCallStackTrace(currentElement.tracePoint.callStackTrace, removed, seen)
             compressedStackTrace.add(currentElement)
             break
+        }
+        
+        // Check if current and next are custom thread start
+        if (isUserThreadStart(currentElement, nextElement)) {
+            // we do not mark currentElement as removed, since that is a unique call from Thread.kt
+            // marking it prevents starts of other threads from being detected.
+            removed.add(nextElement.id)
+            continue
         }
         
         // Check if current and next are compressible
@@ -472,7 +445,7 @@ private fun compressCallStackTrace(
             check(currentElement.tracePoint.thrownException == nextElement.tracePoint.thrownException)
             
             // Mark next as removed
-            removed.add(nextElement.methodInvocationId)
+            removed.add(nextElement.id)
             compressedStackTrace.add(currentElement)
             continue
         }
@@ -496,6 +469,16 @@ private fun actorNodeResultRepresentation(result: Result?, failure: LincheckFail
         else -> result.toString()
     }
 }
+
+/**
+ * Used by [compressCallStackTrace] to remove the two `invoke()` lines at the beginning of 
+ * a user-defined thread trace.
+ */
+private fun isUserThreadStart(currentElement: CallStackTraceElement, nextElement: CallStackTraceElement): Boolean =
+       currentElement.tracePoint.stackTraceElement.methodName == "run"
+    && currentElement.tracePoint.stackTraceElement.fileName == "Thread.kt"
+    && currentElement.tracePoint.methodName == "invoke"
+    && nextElement.tracePoint.methodName == "invoke"
 
 private fun isCompressiblePair(currentName: String, nextName: String): Boolean =
     isDefaultPair(currentName, nextName) || isAccessPair(currentName, nextName)
@@ -714,6 +697,7 @@ internal abstract class TraceInnerNode(prefixProvider: PrefixProvider, iThread: 
 
     private val _internalEvents = mutableListOf<TraceNode>()
     internal val internalEvents: List<TraceNode> get() = _internalEvents
+    internal val directChildren: List<TraceNode> get() = internalEvents.filter { it.callDepth == callDepth + 1 }
 
     override fun shouldBeExpanded(verboseTrace: Boolean) =
         _internalEvents.any {
@@ -723,6 +707,7 @@ internal abstract class TraceInnerNode(prefixProvider: PrefixProvider, iThread: 
     fun addInternalEvent(node: TraceNode) {
         _internalEvents.add(node)
     }
+    
 }
 
 internal class CallNode(
@@ -755,22 +740,25 @@ internal class ActorNode(
     prefixProvider: PrefixProvider,
     iThread: Int,
     last: TraceNode?,
-    callDepth: Int,
+    callDepth: Int = 0,
     internal val actorRepresentation: String,
-    private val resultRepresentation: String?
+    private val resultRepresentation: String?,
+    private val isCustomThreadActor: Boolean = false
 ) : TraceInnerNode(prefixProvider, iThread, last, callDepth) {
     override fun addRepresentationTo(
         traceRepresentation: MutableList<TraceEventRepresentation>,
         verboseTrace: Boolean
     ): TraceNode? {
-        val actorRepresentation = prefix + actorRepresentation + if (resultRepresentation != null) ": $resultRepresentation" else ""
+        val actorRepresentation =
+            prefix + actorRepresentation + if (resultRepresentation != null) ": $resultRepresentation" else ""
         traceRepresentation.add(TraceEventRepresentation(iThread, actorRepresentation))
-        return if (!shouldBeExpanded(verboseTrace)) {
+        
+        if (!shouldBeExpanded(verboseTrace)) {
+            if (isCustomThreadActor) directChildren.forEach { it.addRepresentationTo(traceRepresentation, true) }
             lastState?.let { traceRepresentation.add(stateEventRepresentation(iThread, it)) }
-            lastInternalEvent.next
-        } else {
-            next
-        }
+            return lastInternalEvent.next
+        } 
+        return next
     }
 }
 
