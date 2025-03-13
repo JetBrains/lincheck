@@ -29,10 +29,12 @@ abstract class BaseCoroutineTest(
     protected fun executeCoroutineTest(block: (CoroutineDispatcher) -> Unit) {
         val result = runCatching {
             runConcurrentTest(invocations) {
-                val dispatcher = createDispatcher()
-                block(dispatcher)
-                if (dispatcher is Closeable) {
-                    dispatcher.close()
+                createDispatcher().let { dispatcher ->
+                    try {
+                        block(dispatcher)
+                    } finally {
+                        (dispatcher as? Closeable)?.close()
+                    }
                 }
             }
         }
