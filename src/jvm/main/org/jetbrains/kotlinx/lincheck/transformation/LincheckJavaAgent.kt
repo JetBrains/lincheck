@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.transformation
 
 import net.bytebuddy.agent.ByteBuddyAgent
 import org.jetbrains.kotlinx.lincheck.canonicalClassName
+import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.runInIgnoredSection
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.MODEL_CHECKING
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.STRESS
@@ -396,15 +397,18 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         Logger.debug { "Transforming $internalClassName" }
 
         val reader = ClassReader(classBytes)
-        val classNode = ClassNode()
-        reader.accept(classNode, 0)
 
-        val labelToNumberMap: Map<MethodNode, MutableMap<LabelNode, Int>> = mapLabelIndexes(classNode)
-        val methods: Map<String, Map<Int, List<LocalVariableInfo>>> = mapMethodsToLabels(classNode, labelToNumberMap)
+        // the following code is required for local variables access tracking
+        var methods: Map<String, Map<Int, List<LocalVariableInfo>>>? = null
+        if (isInTraceDebuggerMode) {
+            val classNode = ClassNode()
+            reader.accept(classNode, 0)
+            val labelToNumberMap: Map<MethodNode, MutableMap<LabelNode, Int>> = mapLabelIndexes(classNode)
+            methods = mapMethodsToLabels(classNode, labelToNumberMap)
+        }
 
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
         val visitor = LincheckClassVisitor(writer, instrumentationMode, methods)
-
         try {
             reader.accept(visitor, ClassReader.EXPAND_FRAMES)
             writer.toByteArray()
