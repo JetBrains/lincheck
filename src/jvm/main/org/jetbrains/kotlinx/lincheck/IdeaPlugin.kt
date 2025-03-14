@@ -198,8 +198,8 @@ internal fun ManagedStrategy.runReplayIfPluginEnabled(failure: LincheckFailure) 
  * | SPIN_CYCLE_START               | 4    |
  * | SPIN_CYCLE_SWITCH              | 5    |
  * | OBSTRUCTION_FREEDOM_VIOLATION  | 6    |
- * | REGULAR_READ                   | 7    |
- * | REGULAR_WRITE                  | 8    |
+ * | LOCAL_READ                     | 7    |
+ * | LOCAL_WRITE                    | 8    |
  * | FIELD_READ                     | 9    |
  * | FIELD_WRITE                    | 10   |
  */
@@ -224,9 +224,13 @@ internal fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Ar
                     "null" to -1
                 }
                 val type = when {
-                    event is ReadTracePoint ->
+                    event is ReadTracePoint && event.isLocal ->
+                        TracePointType.LOCAL_READ
+                    event is WriteTracePoint && event.isLocal ->
+                        TracePointType.LOCAL_WRITE
+                    event is ReadTracePoint && !event.isLocal ->
                         TracePointType.FIELD_READ
-                    event is WriteTracePoint ->
+                    event is WriteTracePoint && !event.isLocal ->
                         TracePointType.FIELD_WRITE
                     event is SpinCycleStartTracePoint ->
                         TracePointType.SPIN_CYCLE_START
@@ -292,8 +296,8 @@ private enum class TracePointType {
     SPIN_CYCLE_START,
     SPIN_CYCLE_SWITCH,
     OBSTRUCTION_FREEDOM_VIOLATION,
-    REGULAR_READ,
-    REGULAR_WRITE,
+    LOCAL_READ,
+    LOCAL_WRITE,
     FIELD_READ,
     FIELD_WRITE,
 }
