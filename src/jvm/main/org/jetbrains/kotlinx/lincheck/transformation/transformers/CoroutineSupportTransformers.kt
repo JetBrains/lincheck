@@ -14,7 +14,6 @@ import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.commons.AdviceAdapter
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.canonicalClassName
-import org.jetbrains.kotlinx.lincheck.util.Logger
 import org.objectweb.asm.Type.getType
 import org.objectweb.asm.commons.GeneratorAdapter
 import sun.nio.ch.lincheck.*
@@ -66,7 +65,6 @@ internal class CoroutineDelaySupportTransformer(
             return
         }
 
-        Logger.warn { "Instrument delay function" }
         invokeIfInTestingCode(
             original = {
                 visitMethodInsn(opcode, owner, name, desc, itf)
