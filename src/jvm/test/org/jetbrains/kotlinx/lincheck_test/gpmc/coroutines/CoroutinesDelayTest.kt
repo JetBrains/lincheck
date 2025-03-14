@@ -26,7 +26,7 @@ import kotlin.time.toDuration
 class CoroutinesDelayTest {
     @Test
     fun testDelay() {
-        runConcurrentTest(1) {
+        runConcurrentTest(invocations = 1) {
             Executors.newFixedThreadPool(1).asCoroutineDispatcher().use { dispatcher ->
                 runBlocking(dispatcher) {
                     val nElements = 2
