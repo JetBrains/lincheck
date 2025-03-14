@@ -53,6 +53,7 @@ internal class LocalVariablesAnalyzerAdapter(
         super.visitVarInsn(opcode, varIndex)
     }
 
+    @Suppress("UNUSED_PARAMETER")
     private fun visitWriteVarInsn(localVariableInfo: LocalVariableInfo, opcode: Int, varIndex: Int) = adapter.run {
         invokeIfInTestingCode(
             original = {

@@ -1137,6 +1137,42 @@ abstract class ManagedStrategy(
         }
     }
 
+    override fun beforeLocalRead(codeLocation: Int, name: String?, value: Any?) = runInIgnoredSection {
+        if (!collectTrace) return@runInIgnoredSection
+        val iThread = threadScheduler.getCurrentThreadId()
+        val tracePoint = if (collectTrace) {
+            ReadTracePoint(
+                ownerRepresentation = null,
+                iThread = iThread,
+                actorId = currentActorId[iThread]!!,
+                callStackTrace = callStackTrace[iThread]!!,
+                fieldName = name ?: "<unknown variable>",
+                codeLocation = codeLocation,
+            ).also { it.initializeReadValue(adornedStringRepresentation(value), objectFqTypeName(value)) }
+        } else {
+            null
+        }
+        traceCollector!!.passCodeLocation(tracePoint)
+    }
+
+    override fun beforeLocalWrite(codeLocation: Int, name: String?, value: Any?) = runInIgnoredSection{
+        if (!collectTrace) return@runInIgnoredSection
+        val iThread = threadScheduler.getCurrentThreadId()
+        val tracePoint = if (collectTrace) {
+            WriteTracePoint(
+                ownerRepresentation = null,
+                iThread = iThread,
+                actorId = currentActorId[iThread]!!,
+                callStackTrace = callStackTrace[iThread]!!,
+                fieldName = name ?: "<unknown variable>",
+                codeLocation = codeLocation,
+            ).also { it.initializeWrittenValue(adornedStringRepresentation(value), objectFqTypeName(value)) }
+        } else {
+            null
+        }
+        traceCollector!!.passCodeLocation(tracePoint)
+    }
+
     override fun getThreadLocalRandom(): InjectedRandom = runInIgnoredSection {
         return randoms[threadScheduler.getCurrentThreadId()]!!
     }
@@ -1608,42 +1644,6 @@ abstract class ManagedStrategy(
         )
         callStackTrace.add(stackTraceElement)
         beforeMethodEnter(owner)
-    }
-
-    override fun beforeLocalRead(codeLocation: Int, name: String?, value: Any?) = runInIgnoredSection {
-        if (!collectTrace) return@runInIgnoredSection
-        val iThread = currentThread
-        val tracePoint = if (collectTrace) {
-            ReadTracePoint(
-                ownerRepresentation = null,
-                iThread = iThread,
-                actorId = currentActorId[iThread],
-                callStackTrace = callStackTrace[iThread],
-                fieldName = name ?: "<unknown variable>",
-                stackTraceElement = CodeLocations.stackTrace(codeLocation)
-            ).also { it.initializeReadValue(adornedStringRepresentation(value)) }
-        } else {
-            null
-        }
-        traceCollector!!.passCodeLocation(tracePoint)
-    }
-
-    override fun beforeLocalWrite(codeLocation: Int, name: String?, value: Any?) = runInIgnoredSection{
-        if (!collectTrace) return@runInIgnoredSection
-        val iThread = currentThread
-        val tracePoint = if (collectTrace) {
-            WriteTracePoint(
-                ownerRepresentation = null,
-                iThread = iThread,
-                actorId = currentActorId[iThread],
-                callStackTrace = callStackTrace[iThread],
-                fieldName = name ?: "<unknown variable>",
-                stackTraceElement = CodeLocations.stackTrace(codeLocation)
-            ).also { it.initializeWrittenValue(adornedStringRepresentation(value)) }
-        } else {
-            null
-        }
-        traceCollector!!.passCodeLocation(tracePoint)
     }
 
     private fun createBeforeMethodCallTracePoint(
