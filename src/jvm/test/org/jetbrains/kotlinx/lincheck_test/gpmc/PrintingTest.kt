@@ -25,10 +25,9 @@ class PrintingTest {
 
     @Ignore("Println's hang the execution")
     @Test(timeout = TIMEOUT)
-    fun testPrintsWithLatch() {
+    fun testBarrierWithPrints() {
         runConcurrentTest(1) {
-            val numberOfThreads = 2
-            val barrier = CyclicBarrier(numberOfThreads) {
+            val barrier = CyclicBarrier(2) {
                 println("All threads have reached the barrier. Proceeding...")
             }
 
@@ -41,6 +40,23 @@ class PrintingTest {
                 println("Thread 1 is waiting at the barrier")
                 barrier.await()
                 println("Thread 1 has passed the barrier")
+            }
+
+            t1.join()
+            t2.join()
+        }
+    }
+
+    @Test
+    fun testBarrier() {
+        runConcurrentTest(10000) {
+            val barrier = CyclicBarrier(2)
+
+            val t1 = thread {
+                barrier.await()
+            }
+            val t2 = thread {
+                barrier.await()
             }
 
             t1.join()
