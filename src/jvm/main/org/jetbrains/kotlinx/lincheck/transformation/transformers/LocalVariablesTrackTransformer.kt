@@ -24,10 +24,10 @@ internal class LocalVariablesAnalyzerAdapter(
     private val locals: Map<Int, List<LocalVariableInfo>>
 ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
 
-    private var currentLabelIndex = -1
+    private val visitedLabels = HashSet<Label>()
 
     override fun visitLabel(label: Label) {
-        currentLabelIndex++
+        visitedLabels += label
         super.visitLabel(label)
     }
 
@@ -48,14 +48,14 @@ internal class LocalVariablesAnalyzerAdapter(
         if (isRead) {
             visitReadVarInsn(localVariableInfo, opcode, varIndex)
         } else {
-            visitWriteVarInsn(localVariableInfo, opcode, varIndex)
+            visitWriteVarInsn(localVariableInfo)
         }
 
         super.visitVarInsn(opcode, varIndex)
     }
 
     @Suppress("UNUSED_PARAMETER")
-    private fun visitWriteVarInsn(localVariableInfo: LocalVariableInfo, opcode: Int, varIndex: Int) = adapter.run {
+    private fun visitWriteVarInsn(localVariableInfo: LocalVariableInfo) = adapter.run {
         invokeIfInTestingCode(
             original = {
             },
@@ -102,11 +102,12 @@ internal class LocalVariablesAnalyzerAdapter(
 
     private fun getVariableName(varIndex: Int): LocalVariableInfo? {
         val localList = locals[varIndex] ?: return null
-        val result = findNameForLabelIndex(currentLabelIndex, localList)
-
-        return result // ?: findNameForLabelIndex(currentLabelIndex + 1, localList)
+        return findNameForLabelIndex(localList)
     }
 
-    private fun findNameForLabelIndex(index: Int, localList: List<LocalVariableInfo>) =
-        localList.find { (_, range) -> index + 1 in range }
+    private fun findNameForLabelIndex(localList: List<LocalVariableInfo>) =
+        localList.find { (_, range, _) -> 
+            val (start, finish) = range
+            start in visitedLabels && finish !in visitedLabels
+        }
 }

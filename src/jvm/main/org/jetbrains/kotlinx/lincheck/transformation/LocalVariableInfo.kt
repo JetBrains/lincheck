@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
+import org.objectweb.asm.Label
 import org.objectweb.asm.Type
 
-data class LocalVariableInfo(val name: String, val labelIndexRange: IntRange, val type: Type)
+data class LocalVariableInfo(val name: String, val labelIndexRange: Pair<Label, Label>, val type: Type)

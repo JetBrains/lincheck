@@ -28,8 +28,6 @@ import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.ClassNode
-import org.objectweb.asm.tree.LabelNode
-import org.objectweb.asm.tree.MethodNode
 import sun.misc.Unsafe
 import java.io.File
 import java.lang.instrument.ClassFileTransformer
@@ -403,8 +401,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         if (isInTraceDebuggerMode) {
             val classNode = ClassNode()
             reader.accept(classNode, 0)
-            val labelToNumberMap: Map<MethodNode, MutableMap<LabelNode, Int>> = mapLabelIndexes(classNode)
-            methods = mapMethodsToLabels(classNode, labelToNumberMap)
+            methods = mapMethodsToLabels(classNode)
         }
 
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
@@ -420,45 +417,24 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
     }
 
     private fun mapMethodsToLabels(
-        classNode: ClassNode,
-        labelToNumberMap: Map<MethodNode, MutableMap<LabelNode, Int>>
+        classNode: ClassNode
     ): Map<String, Map<Int, List<LocalVariableInfo>>> {
         return classNode.methods.associateBy(
             keySelector = { m -> m.name + m.desc },
             valueTransform = { m ->
-                val labMap = labelToNumberMap[m] ?: emptyMap()
                 val result = mutableMapOf<Int, MutableList<LocalVariableInfo>>()
 
                 m.localVariables?.forEach { local ->
                     val index = local.index
                     val list = result.getOrPut(index) { mutableListOf() }
-                    val from = labMap[local.start]
-                    val to = labMap[local.end]
-                    if (from == null || to == null) return@forEach
 
                     val type = Type.getType(local.desc)
-                    list += LocalVariableInfo(local.name, IntRange(from, to), type)
+                    list += LocalVariableInfo(local.name, local.start.label to local.end.label, type)
                 }
 
                 result
             }
         )
-    }
-
-    private fun mapLabelIndexes(classNode: ClassNode): Map<MethodNode, MutableMap<LabelNode, Int>> = classNode.methods.associateWith { methodNode ->
-        val result = mutableMapOf<LabelNode, Int>()
-        val instructions = methodNode.instructions
-        var index = 0
-
-        var node = instructions.first
-        while (node != null) {
-            if (node is LabelNode) {
-                result[node] = index++
-            }
-            node = node.next
-        }
-
-        result
     }
 
     @Suppress("SpellCheckingInspection")
