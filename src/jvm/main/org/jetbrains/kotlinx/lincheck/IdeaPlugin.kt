@@ -175,7 +175,7 @@ internal fun ManagedStrategy.runReplayIfPluginEnabled(failure: LincheckFailure) 
  *
  * Each trace point is transformed into the line of the following form:
  * `type;iThread;callDepth;shouldBeExpanded;eventId;representation;stackTraceElement;codeLocationId;relatedTypes;isStatic`.
- * 
+ *
  *
  *   stackTraceElement is "className:methodName:fileName:lineNumber" or "null" string if it is not applicable
  *   codeLocationId is strictly growing abstract id of location, and it must grow in syntactic order to
@@ -198,6 +198,10 @@ internal fun ManagedStrategy.runReplayIfPluginEnabled(failure: LincheckFailure) 
  * | SPIN_CYCLE_START               | 4    |
  * | SPIN_CYCLE_SWITCH              | 5    |
  * | OBSTRUCTION_FREEDOM_VIOLATION  | 6    |
+ * | REGULAR_READ                   | 7    |
+ * | REGULAR_WRITE                  | 8    |
+ * | FIELD_READ                     | 9    |
+ * | FIELD_WRITE                    | 10   |
  */
 internal fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Array<String> {
     val nThreads = trace.trace.maxOf { it.iThread } + 1
@@ -223,19 +227,19 @@ internal fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Ar
                     is SwitchEventTracePoint -> {
                         when (event.reason) {
                             SwitchReason.ActiveLock -> {
-                                5
+                                TracePointType.SPIN_CYCLE_SWITCH
                             }
-                            else -> 3
+                            else -> TracePointType.SWITCH
                         }
                     }
-                    is SpinCycleStartTracePoint -> 4
-                    is ObstructionFreedomViolationExecutionAbortTracePoint -> 6
-                    else -> 0
+                    is SpinCycleStartTracePoint -> TracePointType.SPIN_CYCLE_START
+                    is ObstructionFreedomViolationExecutionAbortTracePoint -> TracePointType.OBSTRUCTION_FREEDOM_VIOLATION
+                    else -> TracePointType.REGULAR
                 }
-                
+
                 val relatedTypes = getRelatedTypeList(event)
                 if (representation.isNotEmpty()) {
-                    representations.add("$type;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${eventId};${representation};${location};${locationId};[${relatedTypes.joinToString(",")}];false")
+                    representations.add("${type.ordinal};${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${eventId};${representation};${location};${locationId};[${relatedTypes.joinToString(",")}];false")
                 }
             }
 
@@ -244,25 +248,28 @@ internal fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Ar
                 val representation = node.call.toStringImpl(withLocation = false)
                 val ste = node.call.stackTraceElement
                 val location = "${ste.className}:${ste.methodName}:${ste.fileName}:${ste.lineNumber}"
+                val type = TracePointType.REGULAR
 
                 val relatedTypes = getRelatedTypeList(node.call)
                 if (representation.isNotEmpty()) {
-                    representations.add("0;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};${location};${node.call.codeLocation};[${relatedTypes.joinToString(",")}];${node.call.isStatic}")
+                    representations.add("${type.ordinal};${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};${location};${node.call.codeLocation};[${relatedTypes.joinToString(",")}];${node.call.isStatic}")
                 }
             }
 
             is ActorNode -> {
                 val beforeEventId = -1
                 val representation = node.actorRepresentation
+                val type = TracePointType.ACTOR
                 if (representation.isNotEmpty()) {
-                    representations.add("1;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};null;-1;[];false")
+                    representations.add("${type.ordinal};${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};null;-1;[];false")
                 }
             }
 
             is ActorResultNode -> {
                 val beforeEventId = -1
+                val type = TracePointType.RESULT
                 val representation = node.resultRepresentation.toString()
-                representations.add("2;${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};${node.exceptionNumberIfExceptionResult ?: -1};null;-1;[];false")
+                representations.add("${type.ordinal};${node.iThread};${node.callDepth};${node.shouldBeExpanded(false)};${beforeEventId};${representation};${node.exceptionNumberIfExceptionResult ?: -1};null;-1;[];false")
             }
 
             else -> {}
@@ -276,6 +283,19 @@ internal fun constructTraceForPlugin(failure: LincheckFailure, trace: Trace): Ar
     return representations.toTypedArray()
 }
 
+private enum class TracePointType {
+    REGULAR,
+    ACTOR,
+    RESULT,
+    SWITCH,
+    SPIN_CYCLE_START,
+    SPIN_CYCLE_SWITCH,
+    OBSTRUCTION_FREEDOM_VIOLATION,
+    REGULAR_READ,
+    REGULAR_WRITE,
+    FIELD_READ,
+    FIELD_WRITE,
+}
 
 private fun getRelatedTypeList(tracePoint: TracePoint): List<String> = when (tracePoint) {
     is ReadTracePoint -> listOf(tracePoint.valueType)
