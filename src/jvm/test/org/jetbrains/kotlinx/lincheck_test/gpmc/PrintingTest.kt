@@ -14,7 +14,11 @@ import org.jetbrains.kotlinx.lincheck.ExperimentalModelCheckingAPI
 import org.jetbrains.kotlinx.lincheck.runConcurrentTest
 import org.junit.Ignore
 import org.junit.Test
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.CyclicBarrier
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.concurrent.thread
 
 @OptIn(ExperimentalModelCheckingAPI::class)
 class PrintingTest {
@@ -23,11 +27,24 @@ class PrintingTest {
     @Test(timeout = TIMEOUT)
     fun testPrintsWithLatch() {
         runConcurrentTest(1) {
-            println("Before latch creation")
-            val latch = CountDownLatch(1) // class from instrumented module
-            println("After latch creation")
-            latch.countDown()
-            println("Latch count down")
+            val numberOfThreads = 2
+            val barrier = CyclicBarrier(numberOfThreads) {
+                println("All threads have reached the barrier. Proceeding...")
+            }
+
+            val t1 = thread {
+                println("Thread 1 is waiting at the barrier")
+                barrier.await()
+                println("Thread 1 has passed the barrier")
+            }
+            val t2 = thread {
+                println("Thread 1 is waiting at the barrier")
+                barrier.await()
+                println("Thread 1 has passed the barrier")
+            }
+
+            t1.join()
+            t2.join()
         }
     }
 }
