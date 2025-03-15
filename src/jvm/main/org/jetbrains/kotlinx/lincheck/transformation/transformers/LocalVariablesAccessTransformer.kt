@@ -40,9 +40,11 @@ internal class LocalVariablesAccessTransformer(
         when (opcode) {
             Opcodes.ILOAD, Opcodes.LLOAD, Opcodes.FLOAD, Opcodes.DLOAD, Opcodes.ALOAD -> {
                 visitReadVarInsn(localVariableInfo, opcode, varIndex)
+                // visitVarInsn(opcode, varIndex)
             }
             Opcodes.ISTORE, Opcodes.LSTORE, Opcodes.FSTORE, Opcodes.DSTORE, Opcodes.ASTORE -> {
                 visitWriteVarInsn(localVariableInfo, opcode, varIndex)
+                // visitVarInsn(opcode, varIndex)
             }
             else -> {
                 visitVarInsn(opcode, varIndex)
@@ -58,9 +60,9 @@ internal class LocalVariablesAccessTransformer(
             },
             code = {
                 // STACK: value
-                val local = newLocal(OBJECT_TYPE)
-                dup(localVariableInfo.type)
-                box(localVariableInfo.type)
+                val type = getVarInsOpcodeType(opcode)
+                val local = newLocal(type)
+                dup(type)
                 storeLocal(local)
                 // STACK: value
                 visitVarInsn(opcode, varIndex)
@@ -68,6 +70,7 @@ internal class LocalVariablesAccessTransformer(
                 loadNewCodeLocationId()
                 push(localVariableInfo.name)
                 loadLocal(local)
+                box(type)
                 // STACK: codeLocation, varName, boxedValue
                 invokeStatic(Injections::beforeLocalWrite)
                 invokeBeforeEventIfPluginEnabled("write local")
@@ -85,14 +88,15 @@ internal class LocalVariablesAccessTransformer(
                 // STACK: <empty>
                 visitVarInsn(opcode, varIndex)
                 // STACK: value
-                val local = newLocal(OBJECT_TYPE)
-                dup(localVariableInfo.type)
-                box(localVariableInfo.type)
+                val type = getVarInsOpcodeType(opcode)
+                val local = newLocal(type)
+                dup(type)
                 storeLocal(local)
                 // STACK: <empty>
                 loadNewCodeLocationId()
                 push(localVariableInfo.name)
                 loadLocal(local)
+                box(type)
                 // STACK: codeLocation, varName, boxedValue
                 invokeStatic(Injections::beforeLocalRead)
                 invokeBeforeEventIfPluginEnabled("read local")
@@ -107,9 +111,9 @@ internal class LocalVariablesAccessTransformer(
         if (localList.size == 1) {
             return localList.first()
         }
-        if (localList.isUniqueVariable()) {
-            return localList.first()
-        }
+        // if (localList.isUniqueVariable()) {
+        //     return localList.first()
+        // }
         // TODO: handle ambiguity
         return null
         // return findNameForLabelIndex(localList)
@@ -121,6 +125,22 @@ internal class LocalVariablesAccessTransformer(
             val (start, finish) = range
             start in visitedLabels && finish !in visitedLabels
         }
+
+    private fun getVarInsOpcodeType(opcode: Int) = when (opcode) {
+        Opcodes.ILOAD -> Type.INT_TYPE
+        Opcodes.LLOAD -> Type.LONG_TYPE
+        Opcodes.FLOAD -> Type.FLOAT_TYPE
+        Opcodes.DLOAD -> Type.DOUBLE_TYPE
+        Opcodes.ALOAD -> OBJECT_TYPE
+
+        Opcodes.ISTORE -> Type.INT_TYPE
+        Opcodes.LSTORE -> Type.LONG_TYPE
+        Opcodes.FSTORE -> Type.FLOAT_TYPE
+        Opcodes.DSTORE -> Type.DOUBLE_TYPE
+        Opcodes.ASTORE -> OBJECT_TYPE
+
+        else -> throw IllegalArgumentException("Invalid opcode: $opcode")
+    }
 }
 
 private fun List<LocalVariableInfo>.isUniqueVariable(): Boolean {
