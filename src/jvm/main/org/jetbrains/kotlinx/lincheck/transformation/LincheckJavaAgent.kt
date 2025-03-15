@@ -22,6 +22,7 @@ import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransforme
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.INSTRUMENT_ALL_CLASSES
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentationMode
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentedClasses
+import org.jetbrains.kotlinx.lincheck.transformation.transformers.LocalVariableInfo
 import org.jetbrains.kotlinx.lincheck.util.Logger
 import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
 import org.objectweb.asm.ClassReader
@@ -422,17 +423,14 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         return classNode.methods.associateBy(
             keySelector = { m -> m.name + m.desc },
             valueTransform = { m ->
-                val result = mutableMapOf<Int, MutableList<LocalVariableInfo>>()
-
-                m.localVariables?.forEach { local ->
-                    val index = local.index
-                    val list = result.getOrPut(index) { mutableListOf() }
-
-                    val type = Type.getType(local.desc)
-                    list += LocalVariableInfo(local.name, local.start.label to local.end.label, type)
+                mutableMapOf<Int, MutableList<LocalVariableInfo>>().also { map ->
+                    m.localVariables?.forEach { local ->
+                        val index = local.index
+                        val type = Type.getType(local.desc)
+                        val info = LocalVariableInfo(local.name, local.start.label to local.end.label, type)
+                        map.getOrPut(index) { mutableListOf() }.add(info)
+                    }
                 }
-
-                result
             }
         )
     }

@@ -195,7 +195,7 @@ internal class LincheckClassVisitor(
         if (isInTraceDebuggerMode) {
             check(methods != null)
             val locals: Map<Int, List<LocalVariableInfo>> = methods[methodName + desc] ?: emptyMap()
-            mv = LocalVariablesAnalyzerAdapter(fileName, className, methodName, mv.newAdapter(), locals)
+            mv = LocalVariablesAccessTransformer(fileName, className, methodName, mv.newAdapter(), locals)
         }
         // Must appear in code after `SharedMemoryAccessTransformer` (to be able to skip this transformer)
         mv = CoverageBytecodeFilter(

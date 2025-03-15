@@ -16,19 +16,19 @@ import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import sun.nio.ch.lincheck.Injections
 
-internal class LocalVariablesAnalyzerAdapter(
+internal class LocalVariablesAccessTransformer(
     fileName: String,
     className: String,
     methodName: String,
     adapter: GeneratorAdapter,
-    private val locals: Map<Int, List<LocalVariableInfo>>
+    private val locals: Map<Int, List<LocalVariableInfo>>,
 ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
 
     private val visitedLabels = HashSet<Label>()
 
-    override fun visitLabel(label: Label) {
+    override fun visitLabel(label: Label) = adapter.run {
         visitedLabels += label
-        super.visitLabel(label)
+        visitLabel(label)
     }
 
     override fun visitVarInsn(opcode: Int, varIndex: Int) {
@@ -102,12 +102,29 @@ internal class LocalVariablesAnalyzerAdapter(
 
     private fun getVariableName(varIndex: Int): LocalVariableInfo? {
         val localList = locals[varIndex] ?: return null
-        return findNameForLabelIndex(localList)
+        check(localList.isNotEmpty())
+        if (localList.size == 1) {
+            return localList.first()
+        }
+        if (localList.isUniqueVariable()) {
+            return localList.first()
+        }
+        // TODO: handle ambiguity
+        return null
+        // return findNameForLabelIndex(localList)
     }
 
+    // TODO: does not work
     private fun findNameForLabelIndex(localList: List<LocalVariableInfo>) =
         localList.find { (_, range, _) -> 
             val (start, finish) = range
             start in visitedLabels && finish !in visitedLabels
         }
 }
+
+private fun List<LocalVariableInfo>.isUniqueVariable(): Boolean {
+    val name = first().name
+    return all { it.name == name }
+}
+
+internal data class LocalVariableInfo(val name: String, val labelIndexRange: Pair<Label, Label>, val type: Type)
