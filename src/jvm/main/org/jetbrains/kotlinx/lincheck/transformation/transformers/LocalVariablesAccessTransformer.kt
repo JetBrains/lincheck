@@ -59,25 +59,19 @@ internal class LocalVariablesAccessTransformer(
             code = {
                 // STACK: value
                 val local = newLocal(OBJECT_TYPE)
-                if (localVariableInfo.type.sort == Type.DOUBLE || localVariableInfo.type.sort == Type.LONG) {
-                    dup2()
-                    box(localVariableInfo.type)
-                    storeLocal(local)
-                } else {
-                    dup()
-                    box(localVariableInfo.type)
-                    storeLocal(local)
-                }
-
+                dup(localVariableInfo.type)
+                box(localVariableInfo.type)
+                storeLocal(local)
+                // STACK: value
                 visitVarInsn(opcode, varIndex)
-
+                // STACK: <empty>
                 loadNewCodeLocationId()
                 push(localVariableInfo.name)
-
                 loadLocal(local)
+                // STACK: codeLocation, varName, boxedValue
                 invokeStatic(Injections::beforeLocalWrite)
-
                 invokeBeforeEventIfPluginEnabled("write local")
+                // STACK: <empty>
             }
         )
     }
@@ -88,25 +82,21 @@ internal class LocalVariablesAccessTransformer(
                 visitVarInsn(opcode, varIndex)
             },
             code = {
+                // STACK: <empty>
                 visitVarInsn(opcode, varIndex)
-
+                // STACK: value
                 val local = newLocal(OBJECT_TYPE)
-                if (localVariableInfo.type.sort == Type.DOUBLE || localVariableInfo.type.sort == Type.LONG) {
-                    dup2()
-                    box(localVariableInfo.type)
-                    storeLocal(local)
-                } else {
-                    dup()
-                    box(localVariableInfo.type)
-                    storeLocal(local)
-                }
-
+                dup(localVariableInfo.type)
+                box(localVariableInfo.type)
+                storeLocal(local)
+                // STACK: <empty>
                 loadNewCodeLocationId()
                 push(localVariableInfo.name)
                 loadLocal(local)
-
+                // STACK: codeLocation, varName, boxedValue
                 invokeStatic(Injections::beforeLocalRead)
                 invokeBeforeEventIfPluginEnabled("read local")
+                // STACK: <empty>
             }
         )
     }
