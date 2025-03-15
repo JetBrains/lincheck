@@ -31,37 +31,34 @@ internal class LocalVariablesAccessTransformer(
         visitLabel(label)
     }
 
-    override fun visitVarInsn(opcode: Int, varIndex: Int) {
-        val localVariableInfo = getVariableName(varIndex)?.takeIf { it.name != "this" } ?: run {
-            super.visitVarInsn(opcode, varIndex)
+    override fun visitVarInsn(opcode: Int, varIndex: Int) = adapter.run {
+        val localVariableInfo = getVariableName(varIndex)?.takeIf { it.name != "this" }
+        if (localVariableInfo == null) {
+            visitVarInsn(opcode, varIndex)
             return
         }
-        val isRead = when (opcode) {
-            Opcodes.ILOAD, Opcodes.LLOAD, Opcodes.FLOAD, Opcodes.DLOAD, Opcodes.ALOAD -> true
-            Opcodes.ISTORE, Opcodes.LSTORE, Opcodes.FSTORE, Opcodes.DSTORE, Opcodes.ASTORE -> false
-            else -> run {
-                super.visitVarInsn(opcode, varIndex)
-                return
+        when (opcode) {
+            Opcodes.ILOAD, Opcodes.LLOAD, Opcodes.FLOAD, Opcodes.DLOAD, Opcodes.ALOAD -> {
+                visitReadVarInsn(localVariableInfo, opcode, varIndex)
+            }
+            Opcodes.ISTORE, Opcodes.LSTORE, Opcodes.FSTORE, Opcodes.DSTORE, Opcodes.ASTORE -> {
+                visitWriteVarInsn(localVariableInfo, opcode, varIndex)
+            }
+            else -> {
+                visitVarInsn(opcode, varIndex)
             }
         }
-
-        if (isRead) {
-            visitReadVarInsn(localVariableInfo, opcode, varIndex)
-        } else {
-            visitWriteVarInsn(localVariableInfo)
-        }
-
-        super.visitVarInsn(opcode, varIndex)
     }
 
     @Suppress("UNUSED_PARAMETER")
-    private fun visitWriteVarInsn(localVariableInfo: LocalVariableInfo) = adapter.run {
+    private fun visitWriteVarInsn(localVariableInfo: LocalVariableInfo, opcode: Int, varIndex: Int) = adapter.run {
         invokeIfInTestingCode(
             original = {
+                visitVarInsn(opcode, varIndex)
             },
             code = {
+                // STACK: value
                 val local = newLocal(OBJECT_TYPE)
-
                 if (localVariableInfo.type.sort == Type.DOUBLE || localVariableInfo.type.sort == Type.LONG) {
                     dup2()
                     box(localVariableInfo.type)
@@ -71,6 +68,8 @@ internal class LocalVariablesAccessTransformer(
                     box(localVariableInfo.type)
                     storeLocal(local)
                 }
+
+                visitVarInsn(opcode, varIndex)
 
                 loadNewCodeLocationId()
                 push(localVariableInfo.name)
@@ -86,13 +85,25 @@ internal class LocalVariablesAccessTransformer(
     private fun visitReadVarInsn(localVariableInfo: LocalVariableInfo, opcode: Int, varIndex: Int) = adapter.run {
         invokeIfInTestingCode(
             original = {
+                visitVarInsn(opcode, varIndex)
             },
             code = {
+                visitVarInsn(opcode, varIndex)
+
+                val local = newLocal(OBJECT_TYPE)
+                if (localVariableInfo.type.sort == Type.DOUBLE || localVariableInfo.type.sort == Type.LONG) {
+                    dup2()
+                    box(localVariableInfo.type)
+                    storeLocal(local)
+                } else {
+                    dup()
+                    box(localVariableInfo.type)
+                    storeLocal(local)
+                }
+
                 loadNewCodeLocationId()
                 push(localVariableInfo.name)
-
-                mv.visitVarInsn(opcode, varIndex)
-                box(localVariableInfo.type)
+                loadLocal(local)
 
                 invokeStatic(Injections::beforeLocalRead)
                 invokeBeforeEventIfPluginEnabled("read local")
