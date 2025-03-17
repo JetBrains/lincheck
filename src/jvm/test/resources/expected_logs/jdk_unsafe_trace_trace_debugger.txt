@@ -61,12 +61,14 @@ Detailed trace:
 |       tab ➜ Array<Node>#1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1018)                                              |
 |       f ➜ 16 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1018)                                                           |
 |       hash ➜ 1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1018)                                                         |
+|       n = 1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1018)                                                            |
 |       ConcurrentHashMap.tabAt(Array<Node>#1, 1): null at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1018)                  |
 |         tab ➜ Array<Node>#1 at ConcurrentHashMap.tabAt(ConcurrentHashMap.java:760)                                              |
 |         i ➜ 1 at ConcurrentHashMap.tabAt(ConcurrentHashMap.java:760)                                                            |
 |         Array<Node>#1[1].getReferenceAcquire(): null at ConcurrentHashMap.tabAt(ConcurrentHashMap.java:760)                     |
 |       i = null at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1018)                                                         |
 |       tab ➜ Array<Node>#1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1019)                                              |
+|       n ➜ 1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1019)                                                            |
 |       hash ➜ 1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1019)                                                         |
 |       key ➜ 1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1019)                                                          |
 |       value ➜ 2 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1019)                                                        |
@@ -84,8 +86,10 @@ Detailed trace:
 |         b = 0 at ConcurrentHashMap.addCount(ConcurrentHashMap.java:2326)                                                        |
 |         b ➜ 0 at ConcurrentHashMap.addCount(ConcurrentHashMap.java:2326)                                                        |
 |         x ➜ 1 at ConcurrentHashMap.addCount(ConcurrentHashMap.java:2326)                                                        |
+|         s = 1 at ConcurrentHashMap.addCount(ConcurrentHashMap.java:2326)                                                        |
 |         baseCount.compareAndSetLong(0, 1): true at ConcurrentHashMap.addCount(ConcurrentHashMap.java:2327)                      |
 |         check ➜ 0 at ConcurrentHashMap.addCount(ConcurrentHashMap.java:2341)                                                    |
+|         s ➜ 1 at ConcurrentHashMap.addCount(ConcurrentHashMap.java:2343)                                                        |
 |         sizeCtl ➜ 12 at ConcurrentHashMap.addCount(ConcurrentHashMap.java:2343)                                                 |
 |   result: void                                                                                                                  |
 | ------------------------------------------------------------------------------------------------------------------------------- |

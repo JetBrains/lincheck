@@ -33,6 +33,8 @@ Detailed trace:
 |     n ➜ 1 at Random.nextInt(Random.kt:69)                                                                                 |
 |     RandomKt.fastLog2(1): 0 at Random.nextInt(Random.kt:69)                                                               |
 |       value ➜ 1 at RandomKt.fastLog2(Random.kt:372)                                                                       |
+|     rnd = 0 at Random.nextInt(Random.kt:69)                                                                               |
+|     rnd ➜ 0 at Random.nextInt(Random.kt:70)                                                                               |
 |     bits = 0 at Random.nextInt(Random.kt:68)                                                                              |
 |     from ➜ 0 at Random.nextInt(Random.kt:79)                                                                              |
 |     bits ➜ 0 at Random.nextInt(Random.kt:79)                                                                              |
