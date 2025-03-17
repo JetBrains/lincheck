@@ -1,0 +1,40 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| ------------------------------------------------------------------------------------------------------------------------- |
+|                                                         Thread 1                                                          |
+| ------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                               |
+|   NotRandom#1.nextInt(0, 1): 0 at SuccessfulCustomRandomCallRepresentationTest.operation(RandomRepresentationTests.kt:28) |
+|     from ➜ 0 at Random.nextInt(Random.kt:65)                                                                              |
+|     until ➜ 1 at Random.nextInt(Random.kt:65)                                                                             |
+|     RandomKt.checkRangeBounds(0, 1) at Random.nextInt(Random.kt:65)                                                       |
+|       until ➜ 1 at RandomKt.checkRangeBounds(Random.kt:378)                                                               |
+|       from ➜ 0 at RandomKt.checkRangeBounds(Random.kt:378)                                                                |
+|     until ➜ 1 at Random.nextInt(Random.kt:66)                                                                             |
+|     from ➜ 0 at Random.nextInt(Random.kt:66)                                                                              |
+|     n = 1 at Random.nextInt(Random.kt:66)                                                                                 |
+|     n ➜ 1 at Random.nextInt(Random.kt:67)                                                                                 |
+|     n ➜ 1 at Random.nextInt(Random.kt:68)                                                                                 |
+|     n ➜ 1 at Random.nextInt(Random.kt:68)                                                                                 |
+|     n ➜ 1 at Random.nextInt(Random.kt:68)                                                                                 |
+|     n ➜ 1 at Random.nextInt(Random.kt:69)                                                                                 |
+|     RandomKt.fastLog2(1): 0 at Random.nextInt(Random.kt:69)                                                               |
+|       value ➜ 1 at RandomKt.fastLog2(Random.kt:372)                                                                       |
+|     bits = 0 at Random.nextInt(Random.kt:68)                                                                              |
+|     from ➜ 0 at Random.nextInt(Random.kt:79)                                                                              |
+|     bits ➜ 0 at Random.nextInt(Random.kt:79)                                                                              |
+|   result: void                                                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------- |

@@ -1,0 +1,93 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| --------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                Thread 1                                                                 |
+| --------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                             |
+|   NotRandom#1.nextBytes(ByteArray#1): ByteArray#1 at CustomRandomBytesCallRepresentationTest.operation(RandomRepresentationTests.kt:52) |
+|     array ➜ ByteArray#1 at Random.nextBytes(Random.kt:0)                                                                                |
+|     array ➜ ByteArray#1 at Random.nextBytes(Random.kt:253)                                                                              |
+|     array ➜ ByteArray#1 at Random.nextBytes(Random.kt:253)                                                                              |
+|     nextBytes(ByteArray#1, 0, 10): ByteArray#1 at Random.nextBytes(Random.kt:253)                                                       |
+|       array ➜ ByteArray#1 at Random.nextBytes(Random.kt:0)                                                                              |
+|       array ➜ ByteArray#1 at Random.nextBytes(Random.kt:222)                                                                            |
+|       fromIndex ➜ 0 at Random.nextBytes(Random.kt:222)                                                                                  |
+|       IntRange#1.contains(0): true at Random.nextBytes(Random.kt:222)                                                                   |
+|         value ➜ 0 at IntRange.contains(PrimitiveRanges.kt:64)                                                                           |
+|         value ➜ 0 at IntRange.contains(PrimitiveRanges.kt:64)                                                                           |
+|       array ➜ ByteArray#1 at Random.nextBytes(Random.kt:222)                                                                            |
+|       toIndex ➜ 10 at Random.nextBytes(Random.kt:222)                                                                                   |
+|       IntRange#2.contains(10): true at Random.nextBytes(Random.kt:222)                                                                  |
+|         value ➜ 10 at IntRange.contains(PrimitiveRanges.kt:64)                                                                          |
+|         value ➜ 10 at IntRange.contains(PrimitiveRanges.kt:64)                                                                          |
+|       steps = 1 at Random.nextBytes(Random.kt:222)                                                                                      |
+|       steps ➜ 1 at Random.nextBytes(Random.kt:222)                                                                                      |
+|       fromIndex ➜ 0 at Random.nextBytes(Random.kt:223)                                                                                  |
+|       toIndex ➜ 10 at Random.nextBytes(Random.kt:223)                                                                                   |
+|       steps = 1 at Random.nextBytes(Random.kt:223)                                                                                      |
+|       steps ➜ 1 at Random.nextBytes(Random.kt:223)                                                                                      |
+|       toIndex ➜ 10 at Random.nextBytes(Random.kt:225)                                                                                   |
+|       fromIndex ➜ 0 at Random.nextBytes(Random.kt:225)                                                                                  |
+|       steps = 2 at Random.nextBytes(Random.kt:225)                                                                                      |
+|       fromIndex ➜ 0 at Random.nextBytes(Random.kt:227)                                                                                  |
+|       remainder = 0 at Random.nextBytes(Random.kt:228)                                                                                  |
+|       remainder ➜ 0 at Random.nextBytes(Random.kt:228)                                                                                  |
+|       steps ➜ 2 at Random.nextBytes(Random.kt:228)                                                                                      |
+|       remainder ➜ 0 at Random.nextBytes(Random.kt:228)                                                                                  |
+|       v = 0 at Random.nextBytes(Random.kt:229)                                                                                          |
+|       array ➜ ByteArray#1 at Random.nextBytes(Random.kt:230)                                                                            |
+|       v ➜ 0 at Random.nextBytes(Random.kt:230)                                                                                          |
+|       ByteArray#1[0] = 0 at Random.nextBytes(Random.kt:230)                                                                             |
+|       array ➜ ByteArray#1 at Random.nextBytes(Random.kt:231)                                                                            |
+|       v ➜ 0 at Random.nextBytes(Random.kt:231)                                                                                          |
+|       ByteArray#1[1] = 0 at Random.nextBytes(Random.kt:231)                                                                             |
+|       array ➜ ByteArray#1 at Random.nextBytes(Random.kt:232)                                                                            |
+|       v ➜ 0 at Random.nextBytes(Random.kt:232)                                                                                          |
+|       ByteArray#1[2] = 0 at Random.nextBytes(Random.kt:232)                                                                             |
+|       array ➜ ByteArray#1 at Random.nextBytes(Random.kt:233)                                                                            |
+|       v ➜ 0 at Random.nextBytes(Random.kt:233)                                                                                          |
+|       ByteArray#1[3] = 0 at Random.nextBytes(Random.kt:233)                                                                             |
+|       remainder ➜ 1 at Random.nextBytes(Random.kt:228)                                                                                  |
+|       steps ➜ 2 at Random.nextBytes(Random.kt:228)                                                                                      |
+|       remainder ➜ 1 at Random.nextBytes(Random.kt:228)                                                                                  |
+|       v = 0 at Random.nextBytes(Random.kt:229)                                                                                          |
+|       array ➜ ByteArray#1 at Random.nextBytes(Random.kt:230)                                                                            |
+|       v ➜ 0 at Random.nextBytes(Random.kt:230)                                                                                          |
+|       ByteArray#1[4] = 0 at Random.nextBytes(Random.kt:230)                                                                             |
+|       array ➜ ByteArray#1 at Random.nextBytes(Random.kt:231)                                                                            |
+|       v ➜ 0 at Random.nextBytes(Random.kt:231)                                                                                          |
+|       ByteArray#1[5] = 0 at Random.nextBytes(Random.kt:231)                                                                             |
+|       array ➜ ByteArray#1 at Random.nextBytes(Random.kt:232)                                                                            |
+|       v ➜ 0 at Random.nextBytes(Random.kt:232)                                                                                          |
+|       ByteArray#1[6] = 0 at Random.nextBytes(Random.kt:232)                                                                             |
+|       array ➜ ByteArray#1 at Random.nextBytes(Random.kt:233)                                                                            |
+|       v ➜ 0 at Random.nextBytes(Random.kt:233)                                                                                          |
+|       ByteArray#1[7] = 0 at Random.nextBytes(Random.kt:233)                                                                             |
+|       remainder ➜ 2 at Random.nextBytes(Random.kt:228)                                                                                  |
+|       steps ➜ 2 at Random.nextBytes(Random.kt:228)                                                                                      |
+|       toIndex ➜ 10 at Random.nextBytes(Random.kt:237)                                                                                   |
+|       remainder = 2 at Random.nextBytes(Random.kt:237)                                                                                  |
+|       remainder ➜ 2 at Random.nextBytes(Random.kt:238)                                                                                  |
+|       remainder ➜ 2 at Random.nextBytes(Random.kt:239)                                                                                  |
+|       array ➜ ByteArray#1 at Random.nextBytes(Random.kt:240)                                                                            |
+|       ByteArray#1[8] = 0 at Random.nextBytes(Random.kt:240)                                                                             |
+|       remainder ➜ 2 at Random.nextBytes(Random.kt:239)                                                                                  |
+|       array ➜ ByteArray#1 at Random.nextBytes(Random.kt:240)                                                                            |
+|       ByteArray#1[9] = 0 at Random.nextBytes(Random.kt:240)                                                                             |
+|       remainder ➜ 2 at Random.nextBytes(Random.kt:239)                                                                                  |
+|       array ➜ ByteArray#1 at Random.nextBytes(Random.kt:243)                                                                            |
+|   result: void                                                                                                                          |
+| --------------------------------------------------------------------------------------------------------------------------------------- |

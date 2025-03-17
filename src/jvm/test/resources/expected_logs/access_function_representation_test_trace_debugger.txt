@@ -1,0 +1,35 @@
+= Concurrent test failed =
+
+java.lang.IllegalStateException: Check failed.
+	at org.jetbrains.kotlinx.lincheck_test.representation.AccessFunctionRepresentationTest.block(AccessFunctionRepresentationTest.kt:20)
+	at org.jetbrains.kotlinx.lincheck_test.representation.AccessFunctionRepresentationTest.block(AccessFunctionRepresentationTest.kt:13)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:42)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+
+The following interleaving leads to the error:
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|                                                                                             Thread 1                                                                                             |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| AccessFunctionRepresentationTest#1.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:42) |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+
+Detailed trace:
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|                                                                                             Thread 1                                                                                             |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| AccessFunctionRepresentationTest#1.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:42) |
+|   block(): threw IllegalStateException at AccessFunctionRepresentationTest.block(AccessFunctionRepresentationTest.kt:13)                                                                         |
+|     AccessFunctionRepresentationTestKt.runLambda(block$1) at AccessFunctionRepresentationTest.block(AccessFunctionRepresentationTest.kt:19)                                                      |
+|       r ➜ block$1 at AccessFunctionRepresentationTestKt.access$runLambda(AccessFunctionRepresentationTest.kt:0)                                                                                  |
+|       r ➜ block$1 at AccessFunctionRepresentationTestKt.runLambda(AccessFunctionRepresentationTest.kt:40)                                                                                        |
+|       block$1.invoke() at AccessFunctionRepresentationTestKt.runLambda(AccessFunctionRepresentationTest.kt:40)                                                                                   |
+|         invoke() at AccessFunctionRepresentationTest$block$1.invoke(AccessFunctionRepresentationTest.kt:19)                                                                                      |
+|           AccessFunctionRepresentationTest.inc1() at AccessFunctionRepresentationTest$block$1.invoke(AccessFunctionRepresentationTest.kt:19)                                                     |
+|             $this ➜ AccessFunctionRepresentationTest#1 at AccessFunctionRepresentationTest.access$inc1(AccessFunctionRepresentationTest.kt:0)                                                    |
+|             Nested#1.inc2() at AccessFunctionRepresentationTest.inc1(AccessFunctionRepresentationTest.kt:24)                                                                                     |
+|               AccessFunctionRepresentationTest.inc3() at AccessFunctionRepresentationTest$Nested.inc2(AccessFunctionRepresentationTest.kt:33)                                                    |
+|                 $this ➜ AccessFunctionRepresentationTest#1 at AccessFunctionRepresentationTest.access$inc3(AccessFunctionRepresentationTest.kt:0)                                                |
+|                 a ➜ 1 at AccessFunctionRepresentationTest.inc3(AccessFunctionRepresentationTest.kt:28)                                                                                           |
+|                 a = 2 at AccessFunctionRepresentationTest.inc3(AccessFunctionRepresentationTest.kt:28)                                                                                           |
+|   result: IllegalStateException #1                                                                                                                                                               |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

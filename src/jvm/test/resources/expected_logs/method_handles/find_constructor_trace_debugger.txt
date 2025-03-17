@@ -1,0 +1,29 @@
+= Concurrent test failed =
+
+java.lang.IllegalStateException: Check failed.
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:58)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:46)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:42)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+
+The following interleaving leads to the error:
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                    Thread 1                                                                                                    |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| MethodHandlesFindConstructorRepresentationTest#1.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:42) |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+
+Detailed trace:
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                    Thread 1                                                                                                    |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| MethodHandlesFindConstructorRepresentationTest#1.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest$testRunWithModelChecker$result$1$1.invoke(RunConcurrentRepresentationTests.kt:42) |
+|   block(): threw IllegalStateException at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:46)                                                                                       |
+|     doTest() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:55)                                                                                                                 |
+|       constructorHandle = Constructor#1 at MethodHandlesFindConstructorRepresentationTest.doTest(MethodHandlesLookupTests.kt:74)                                                                               |
+|       constructorHandle ➜ Constructor#1 at MethodHandlesFindConstructorRepresentationTest.doTest(MethodHandlesLookupTests.kt:78)                                                                               |
+|       counter = Counter#1 at MethodHandlesFindConstructorRepresentationTest.doTest(MethodHandlesLookupTests.kt:78)                                                                                             |
+|       counter ➜ Counter#1 at MethodHandlesFindConstructorRepresentationTest.doTest(MethodHandlesLookupTests.kt:79)                                                                                             |
+|       Counter#1.value ➜ 42 at MethodHandlesFindConstructorRepresentationTest.doTest(MethodHandlesLookupTests.kt:79)                                                                                            |
+|   result: IllegalStateException #1                                                                                                                                                                             |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

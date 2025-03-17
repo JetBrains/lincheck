@@ -1,0 +1,48 @@
+= Invalid execution results =
+| ---------------------------------------- |
+|                 Thread 1                 |
+| ---------------------------------------- |
+| operation(): IllegalArgumentException #1 |
+| ---------------------------------------- |
+
+---
+The number next to an exception name helps you find its stack trace provided after the interleaving section
+---
+
+The following interleaving leads to the error:
+| ---------------------------------------- |
+|                 Thread 1                 |
+| ---------------------------------------- |
+| operation(): IllegalArgumentException #1 |
+| ---------------------------------------- |
+
+Exception stack traces:
+#1: java.lang.IllegalArgumentException: Random range is empty: [1, 1).
+	at kotlin.random.RandomKt.checkRangeBounds(Random.kt:378)
+	at kotlin.random.Random.nextInt(Random.kt:65)
+	at org.jetbrains.kotlinx.lincheck_test.representation.trace_debugger.FailingCustomRandomCallRepresentationTest.operation(RandomRepresentationTests.kt:40)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+
+Detailed trace:
+| --------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                      Thread 1                                                                       |
+| --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation(): IllegalArgumentException #1                                                                                                            |
+|   NotRandom#1.nextInt(1, 1): threw IllegalArgumentException at FailingCustomRandomCallRepresentationTest.operation(RandomRepresentationTests.kt:40) |
+|     from ➜ 1 at Random.nextInt(Random.kt:65)                                                                                                        |
+|     until ➜ 1 at Random.nextInt(Random.kt:65)                                                                                                       |
+|     RandomKt.checkRangeBounds(1, 1): threw IllegalArgumentException at Random.nextInt(Random.kt:65)                                                 |
+|       until ➜ 1 at RandomKt.checkRangeBounds(Random.kt:378)                                                                                         |
+|       from ➜ 1 at RandomKt.checkRangeBounds(Random.kt:378)                                                                                          |
+|       $i$a$-require-RandomKt$checkRangeBounds$1 = 0 at RandomKt.checkRangeBounds(Random.kt:384)                                                     |
+|       from ➜ 1 at RandomKt.checkRangeBounds(Random.kt:378)                                                                                          |
+|       until ➜ 1 at RandomKt.checkRangeBounds(Random.kt:378)                                                                                         |
+|       RandomKt.boundsErrorMessage(1, 1): "Random range is empty: [1, 1)." at RandomKt.checkRangeBounds(Random.kt:378)                               |
+|         from ➜ 1 at RandomKt.boundsErrorMessage(Random.kt:0)                                                                                        |
+|         until ➜ 1 at RandomKt.boundsErrorMessage(Random.kt:0)                                                                                       |
+|         from ➜ 1 at RandomKt.boundsErrorMessage(Random.kt:382)                                                                                      |
+|         until ➜ 1 at RandomKt.boundsErrorMessage(Random.kt:382)                                                                                     |
+|       $i$a$-require-RandomKt$checkRangeBounds$1 = "Random range is empty: [1, 1)." at RandomKt.checkRangeBounds(Random.kt:378)                      |
+|       $i$a$-require-RandomKt$checkRangeBounds$1 ➜ "Random range is empty: [1, 1)." at RandomKt.checkRangeBounds(Random.kt:378)                      |
+|   result: IllegalArgumentException #1                                                                                                               |
+| --------------------------------------------------------------------------------------------------------------------------------------------------- |

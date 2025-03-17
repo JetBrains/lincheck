@@ -1,0 +1,49 @@
+= Invalid execution results =
+| ------------------------------- |
+|    Thread 1    |    Thread 2    |
+| ------------------------------- |
+| operation(): 2 | operation(): 1 |
+| ------------------------------- |
+
+The following interleaving leads to the error:
+| ------------------------------------------------------------------------------------------------------------------------------------ |
+|    Thread 1    |                                                      Thread 2                                                       |
+| ------------------------------------------------------------------------------------------------------------------------------------ |
+|                | operation(): 1                                                                                                      |
+|                |   badMethod(): threw NotImplementedError at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:96) |
+|                |   e = NotImplementedError#1 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:97)              |
+|                |   counter ➜ 0 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:98)                            |
+|                |   counter = 1 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:98)                            |
+|                |   counter ➜ 1 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:99)                            |
+|                |   switch                                                                                                            |
+| operation(): 2 |                                                                                                                     |
+|                |   counter = 2 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:99)                            |
+|                |   result: 1                                                                                                         |
+| ------------------------------------------------------------------------------------------------------------------------------------ |
+
+Detailed trace:
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                      Thread 1                                                       |                                                      Thread 2                                                       |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                                     | operation(): 1                                                                                                      |
+|                                                                                                                     |   badMethod(): threw NotImplementedError at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:96) |
+|                                                                                                                     |     useless ➜ 0 at CaughtExceptionMethodReportingTest.badMethod(MethodReportingTest.kt:104)                         |
+|                                                                                                                     |     useless = 1 at CaughtExceptionMethodReportingTest.badMethod(MethodReportingTest.kt:104)                         |
+|                                                                                                                     |   e = NotImplementedError#1 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:97)              |
+|                                                                                                                     |   counter ➜ 0 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:98)                            |
+|                                                                                                                     |   counter = 1 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:98)                            |
+|                                                                                                                     |   counter ➜ 1 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:99)                            |
+|                                                                                                                     |   switch                                                                                                            |
+| operation(): 2                                                                                                      |                                                                                                                     |
+|   badMethod(): threw NotImplementedError at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:96) |                                                                                                                     |
+|     useless ➜ 1 at CaughtExceptionMethodReportingTest.badMethod(MethodReportingTest.kt:104)                         |                                                                                                                     |
+|     useless = 2 at CaughtExceptionMethodReportingTest.badMethod(MethodReportingTest.kt:104)                         |                                                                                                                     |
+|   e = NotImplementedError#2 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:97)              |                                                                                                                     |
+|   counter ➜ 1 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:98)                            |                                                                                                                     |
+|   counter = 2 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:98)                            |                                                                                                                     |
+|   counter ➜ 2 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:99)                            |                                                                                                                     |
+|   counter = 3 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:99)                            |                                                                                                                     |
+|   result: 2                                                                                                         |                                                                                                                     |
+|                                                                                                                     |   counter = 2 at CaughtExceptionMethodReportingTest.operation(MethodReportingTest.kt:99)                            |
+|                                                                                                                     |   result: 1                                                                                                         |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -1,0 +1,122 @@
+= Invalid execution results =
+| ----------------------------------------------------------------- |
+|      Thread 1      |                   Thread 2                   |
+| ----------------------------------------------------------------- |
+| operation2(): void |                                              |
+| operation1(): void |                                              |
+| operation1(): void |                                              |
+| operation2(): void |                                              |
+| operation2(): void |                                              |
+| ----------------------------------------------------------------- |
+| operation1(): void | operation2(): IllegalStateException #1 [1,0] |
+| operation1(): void | operation1(): void [1,1]                     |
+| ----------------------------------------------------------------- |
+| operation1(): void |                                              |
+| operation1(): void |                                              |
+| operation1(): void |                                              |
+| operation2(): void |                                              |
+| operation1(): void |                                              |
+| ----------------------------------------------------------------- |
+
+---
+All operations above the horizontal line | ----- | happen before those below the line
+---
+Values in "[..]" brackets indicate the number of completed operations
+in each of the parallel threads seen at the beginning of the current operation
+---
+The number next to an exception name helps you find its stack trace provided after the interleaving section
+---
+
+The following interleaving leads to the error:
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|                                                         Thread 1                                                          |                Thread 2                |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| operation2()                                                                                                              |                                        |
+| operation1()                                                                                                              |                                        |
+| operation1()                                                                                                              |                                        |
+| operation2()                                                                                                              |                                        |
+| operation2()                                                                                                              |                                        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| operation1()                                                                                                              |                                        |
+| operation1()                                                                                                              |                                        |
+|   canEnterForbiddenSection = true at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:29)  |                                        |
+|   switch                                                                                                                  |                                        |
+|                                                                                                                           | operation2(): IllegalStateException #1 |
+|                                                                                                                           | operation1()                           |
+|   canEnterForbiddenSection = false at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:30) |                                        |
+|   result: void                                                                                                            |                                        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| operation1()                                                                                                              |                                        |
+| operation1()                                                                                                              |                                        |
+| operation1()                                                                                                              |                                        |
+| operation2()                                                                                                              |                                        |
+| operation1()                                                                                                              |                                        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+
+Exception stack traces:
+#1: java.lang.IllegalStateException: Violating exception
+	at org.jetbrains.kotlinx.lincheck_test.representation.ClocksWithExceptionsInOutputTest.operation2(ClocksWithExceptionsInOutputTest.kt:34)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+
+Detailed trace:
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|                                                         Thread 1                                                          |                                                                                  Thread 2                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| operation2()                                                                                                              |                                                                                                                                                                            |
+|   canEnterForbiddenSection ➜ false at ClocksWithExceptionsInOutputTest.operation2(ClocksWithExceptionsInOutputTest.kt:34) |                                                                                                                                                                            |
+|   result: void                                                                                                            |                                                                                                                                                                            |
+| operation1()                                                                                                              |                                                                                                                                                                            |
+|   canEnterForbiddenSection = true at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:29)  |                                                                                                                                                                            |
+|   canEnterForbiddenSection = false at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:30) |                                                                                                                                                                            |
+|   result: void                                                                                                            |                                                                                                                                                                            |
+| operation1()                                                                                                              |                                                                                                                                                                            |
+|   canEnterForbiddenSection = true at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:29)  |                                                                                                                                                                            |
+|   canEnterForbiddenSection = false at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:30) |                                                                                                                                                                            |
+|   result: void                                                                                                            |                                                                                                                                                                            |
+| operation2()                                                                                                              |                                                                                                                                                                            |
+|   canEnterForbiddenSection ➜ false at ClocksWithExceptionsInOutputTest.operation2(ClocksWithExceptionsInOutputTest.kt:34) |                                                                                                                                                                            |
+|   result: void                                                                                                            |                                                                                                                                                                            |
+| operation2()                                                                                                              |                                                                                                                                                                            |
+|   canEnterForbiddenSection ➜ false at ClocksWithExceptionsInOutputTest.operation2(ClocksWithExceptionsInOutputTest.kt:34) |                                                                                                                                                                            |
+|   result: void                                                                                                            |                                                                                                                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| operation1()                                                                                                              |                                                                                                                                                                            |
+|   canEnterForbiddenSection = true at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:29)  |                                                                                                                                                                            |
+|   canEnterForbiddenSection = false at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:30) |                                                                                                                                                                            |
+|   result: void                                                                                                            |                                                                                                                                                                            |
+| operation1()                                                                                                              |                                                                                                                                                                            |
+|   canEnterForbiddenSection = true at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:29)  |                                                                                                                                                                            |
+|   switch                                                                                                                  |                                                                                                                                                                            |
+|                                                                                                                           | operation2(): IllegalStateException #1                                                                                                                                     |
+|                                                                                                                           |   canEnterForbiddenSection ➜ true at ClocksWithExceptionsInOutputTest.operation2(ClocksWithExceptionsInOutputTest.kt:34)                                                   |
+|                                                                                                                           |   $i$a$-check-ClocksWithExceptionsInOutputTest$operation2$1 = 0 at ClocksWithExceptionsInOutputTest.operation2(ClocksWithExceptionsInOutputTest.kt:46)                     |
+|                                                                                                                           |   $i$a$-check-ClocksWithExceptionsInOutputTest$operation2$1 = "Violating exception" at ClocksWithExceptionsInOutputTest.operation2(ClocksWithExceptionsInOutputTest.kt:34) |
+|                                                                                                                           |   $i$a$-check-ClocksWithExceptionsInOutputTest$operation2$1 ➜ "Violating exception" at ClocksWithExceptionsInOutputTest.operation2(ClocksWithExceptionsInOutputTest.kt:34) |
+|                                                                                                                           |   result: IllegalStateException #1                                                                                                                                         |
+|                                                                                                                           | operation1()                                                                                                                                                               |
+|                                                                                                                           |   canEnterForbiddenSection = true at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:29)                                                   |
+|                                                                                                                           |   canEnterForbiddenSection = false at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:30)                                                  |
+|                                                                                                                           |   result: void                                                                                                                                                             |
+|   canEnterForbiddenSection = false at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:30) |                                                                                                                                                                            |
+|   result: void                                                                                                            |                                                                                                                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| operation1()                                                                                                              |                                                                                                                                                                            |
+|   canEnterForbiddenSection = true at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:29)  |                                                                                                                                                                            |
+|   canEnterForbiddenSection = false at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:30) |                                                                                                                                                                            |
+|   result: void                                                                                                            |                                                                                                                                                                            |
+| operation1()                                                                                                              |                                                                                                                                                                            |
+|   canEnterForbiddenSection = true at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:29)  |                                                                                                                                                                            |
+|   canEnterForbiddenSection = false at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:30) |                                                                                                                                                                            |
+|   result: void                                                                                                            |                                                                                                                                                                            |
+| operation1()                                                                                                              |                                                                                                                                                                            |
+|   canEnterForbiddenSection = true at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:29)  |                                                                                                                                                                            |
+|   canEnterForbiddenSection = false at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:30) |                                                                                                                                                                            |
+|   result: void                                                                                                            |                                                                                                                                                                            |
+| operation2()                                                                                                              |                                                                                                                                                                            |
+|   canEnterForbiddenSection ➜ false at ClocksWithExceptionsInOutputTest.operation2(ClocksWithExceptionsInOutputTest.kt:34) |                                                                                                                                                                            |
+|   result: void                                                                                                            |                                                                                                                                                                            |
+| operation1()                                                                                                              |                                                                                                                                                                            |
+|   canEnterForbiddenSection = true at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:29)  |                                                                                                                                                                            |
+|   canEnterForbiddenSection = false at ClocksWithExceptionsInOutputTest.operation1(ClocksWithExceptionsInOutputTest.kt:30) |                                                                                                                                                                            |
+|   result: void                                                                                                            |                                                                                                                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
