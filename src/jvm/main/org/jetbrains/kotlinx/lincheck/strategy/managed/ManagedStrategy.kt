@@ -155,12 +155,15 @@ abstract class ManagedStrategy(
 
     protected var replayNumber = 0L
 
-
     /**
-     * Current method call context (static or instance).
-     * Initialized and used only in the trace collecting stage.
+     * For each thread, represents a shadow stack used to reflect the program's actual stack.
+     * 
+     * Collected and used only in the trace collecting stage.
      */
-    private var callStackContextPerThread = mutableThreadMapOf<ArrayList<CallContext>>()
+    // TODO: unify with `callStackTrace`
+    // TODO: handle coroutine resumptions (i.e., unify with `suspendedFunctionsStack`)
+    // TODO: extract into separate class
+    private var shadowStack = mutableThreadMapOf<ArrayList<ShadowStackFrame>>()
 
     /**
      * In case when the plugin is enabled, we also enable [eventIdStrictOrderingCheck] property and check
@@ -607,9 +610,7 @@ abstract class ManagedStrategy(
         currentActorId[threadId] = if (threadId < scenario.nThreads) -1 else 0
         callStackTrace[threadId] = mutableListOf()
         suspendedFunctionsStack[threadId] = mutableListOf()
-        callStackContextPerThread[threadId] = arrayListOf(
-            CallContext.InstanceCallContext(runner.testInstance)
-        )
+        shadowStack[threadId] = arrayListOf(ShadowStackFrame(runner.testInstance))
         lastReadTracePoint[threadId] = null
         randoms[threadId] = InjectedRandom(threadId + 239L)
         objectTracker?.registerThread(threadId, thread)
@@ -626,7 +627,7 @@ abstract class ManagedStrategy(
         currentActorId.clear()
         callStackTrace.clear()
         suspendedFunctionsStack.clear()
-        callStackContextPerThread.clear()
+        shadowStack.clear()
         randoms.clear()
     }
 
@@ -1615,7 +1616,7 @@ abstract class ManagedStrategy(
             if (!resumedStackTrace.isSuffixOf(callStackTrace)) {
                 // restore resumed stack trace elements
                 callStackTrace.addAll(resumedStackTrace)
-                resumedStackTrace.forEach { beforeMethodEnter(it.instance) }
+                resumedStackTrace.forEach { pushShadowStackFrame(it.instance) }
             }
             // since we are in resumption, skip the next ` beforeEvent ` call
             skipNextBeforeEvent = true
@@ -1649,7 +1650,7 @@ abstract class ManagedStrategy(
             methodInvocationId = methodInvocationId
         )
         callStackTrace.add(stackTraceElement)
-        beforeMethodEnter(owner)
+        pushShadowStackFrame(owner)
     }
 
     private fun createBeforeMethodCallTracePoint(
@@ -1820,44 +1821,43 @@ abstract class ManagedStrategy(
      */
     private fun findOwnerName(owner: Any): String? {
         // If the current owner is this - no owner needed.
-        if (isOwnerCurrentContext(owner)) return null
+        if (isCurrentStackFrameReceiver(owner)) return null
         val fieldWithOwner = findFinalFieldWithOwner(runner.testInstance, owner) ?: return adornedStringRepresentation(owner)
         // If such a field is found - construct representation with its owner and name.
         return if (fieldWithOwner is OwnerWithName.InstanceOwnerWithName) {
             val fieldOwner = fieldWithOwner.owner
             val fieldName = fieldWithOwner.fieldName
-            if (!isOwnerCurrentContext(fieldOwner)) {
+            if (!isCurrentStackFrameReceiver(fieldOwner)) {
                 "${adornedStringRepresentation(fieldOwner)}.$fieldName"
             } else fieldName
         } else null
     }
 
     /**
-     * Checks if [owner] is the current `this` in the current method context.
+     * Checks if [owner] is the `this` object (i.e., receiver) of the currently executed method call.
      */
-    private fun isOwnerCurrentContext(owner: Any): Boolean {
+    private fun isCurrentStackFrameReceiver(owner: Any): Boolean {
         val currentThreadId = threadScheduler.getCurrentThreadId()
-        return when (val callContext = callStackContextPerThread[currentThreadId]!!.last()) {
-            is CallContext.InstanceCallContext -> callContext.instance === owner
-            is CallContext.StaticCallContext -> false
-        }
+        val stackTraceElement = shadowStack[currentThreadId]!!.last()
+        return (owner === stackTraceElement.instance)
     }
 
     /* Methods to control the current call context. */
 
-    private fun beforeMethodEnter(owner: Any?) {
+    private fun pushShadowStackFrame(owner: Any?) {
         val currentThreadId = threadScheduler.getCurrentThreadId()
-        if (owner == null) {
-            callStackContextPerThread[currentThreadId]!!.add(CallContext.StaticCallContext)
-        } else {
-            callStackContextPerThread[currentThreadId]!!.add(CallContext.InstanceCallContext(owner))
-        }
+        val shadowStack = shadowStack[currentThreadId]!!
+        val stackFrame = ShadowStackFrame(owner)
+        shadowStack.add(stackFrame)
     }
 
-    private fun afterExitMethod(iThread: Int) {
-        val currentContext = callStackContextPerThread[iThread]!!
-        currentContext.removeLast()
-        check(currentContext.isNotEmpty()) { "Context cannot be empty" }
+    private fun popShadowStackFrame() {
+        val currentThreadId = threadScheduler.getCurrentThreadId()
+        val shadowStack = shadowStack[currentThreadId]!!
+        shadowStack.removeLast()
+        check(shadowStack.isNotEmpty()) {
+            "Shadow stack cannot be empty"
+        }
     }
 
     /**
@@ -1867,7 +1867,7 @@ abstract class ManagedStrategy(
      * @param tracePoint the corresponding trace point for the invocation
      */
     private fun afterMethodCall(iThread: Int, tracePoint: MethodCallTracePoint) {
-        afterExitMethod(iThread)
+        popShadowStackFrame()
         val callStackTrace = callStackTrace[iThread]!!
         if (tracePoint.wasSuspended) {
             // if a method call is suspended, save its call stack element to reuse for continuation resuming
@@ -2118,22 +2118,16 @@ abstract class ManagedStrategy(
             return id
         }
     }
-
-    /**
-     * Current method context in a call stack.
-     */
-    sealed interface CallContext {
-        /**
-         * Indicates that current method is static.
-         */
-        data object StaticCallContext: CallContext
-
-        /**
-         * Indicates that method is called on the instance.
-         */
-        data class InstanceCallContext(val instance: Any): CallContext
-    }
 }
+
+/**
+ * Represents a shadow stack frame used to reflect the program's stack in [ManagedStrategy].
+ *
+ * @property instance the object on which the method was invoked, null in case of a static method.  
+  */
+private class ShadowStackFrame(
+    val instance: Any?,
+)
 
 /**
  * This class is a [ParallelThreadsRunner] with some overrides that add callbacks
