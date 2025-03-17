@@ -153,6 +153,7 @@ internal class LincheckClassVisitor(
         mv = JSRInlinerAdapter(mv, access, methodName, desc, signature, exceptions)
         mv = TryCatchBlockSorter(mv, access, methodName, desc, signature, exceptions)
         mv = CoroutineCancellabilitySupportTransformer(mv, access, className, methodName, desc)
+        mv = CoroutineDelaySupportTransformer(fileName, className, methodName, mv.newAdapter())
         mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
         // We can do further instrumentation in methods of the custom thread subclasses,
         // but not in the `java.lang.Thread` itself.

@@ -14,6 +14,8 @@ import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.commons.AdviceAdapter
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.canonicalClassName
+import org.objectweb.asm.Type.getType
+import org.objectweb.asm.commons.GeneratorAdapter
 import sun.nio.ch.lincheck.*
 
 /**
@@ -41,4 +43,49 @@ internal class CoroutineCancellabilitySupportTransformer(
         super.visitMethodInsn(opcode, owner, name, desc, itf)
     }
 
+}
+
+/**
+ * [CoroutineDelaySupportTransformer] substitutes each invocation of [kotlinx.coroutines.delay] function with
+ * zero delay time. For example, it will transform `delay(100)` to `delay(0)`.
+ *
+ * It is sufficient to only transform `delay(Long)` overload, because
+ * the `delay(Duration)` overload is compiled to the invocation of the first one.
+ */
+internal class CoroutineDelaySupportTransformer(
+    fileName: String,
+    className: String,
+    methodName: String,
+    adapter: GeneratorAdapter,
+) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
+
+    override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
+        if (!isCoroutineDelay(owner, name, desc)) {
+            visitMethodInsn(opcode, owner, name, desc, itf)
+            return
+        }
+
+        invokeIfInTestingCode(
+            original = {
+                visitMethodInsn(opcode, owner, name, desc, itf)
+            },
+            code = {
+                // STACK [INVOKESTATIC]: delay, <cont>
+                val contLocal = newLocal(getType("Lkotlin/coroutines/Continuation;"))
+                storeLocal(contLocal)
+                // STACK [INVOKESTATIC]: delay
+                pop2()
+                push(0L)
+                loadLocal(contLocal)
+                // STACK [INVOKESTATIC]: 0L, <cont>
+                visitMethodInsn(opcode, owner, name, desc, itf)
+            }
+        )
+    }
+
+    private fun isCoroutineDelay(owner: String, methodName: String, desc: String): Boolean = (
+        owner == "kotlinx/coroutines/DelayKt" &&
+        methodName == "delay" &&
+        desc == "(JLkotlin/coroutines/Continuation;)Ljava/lang/Object;"
+    )
 }

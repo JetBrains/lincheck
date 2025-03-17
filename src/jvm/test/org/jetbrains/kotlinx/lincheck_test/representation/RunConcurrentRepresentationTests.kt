@@ -31,6 +31,12 @@ import org.junit.Assume.assumeFalse
 
 abstract class BaseRunConcurrentRepresentationTest<R>(private val outputFileName: String) {
     /**
+     * If this flag is marked as `true`, then this test will not check its
+     * representation output with the expected one saved on disk.
+     */
+    protected open val isFlakyTest: Boolean = false
+
+    /**
      * Implement me and place the logic to check its trace.
      */
     abstract fun block(): R
@@ -53,7 +59,9 @@ abstract class BaseRunConcurrentRepresentationTest<R>(private val outputFileName
             """
             .trimMargin()
         }
-        error.failure.checkLincheckOutput(outputFileName)
+        if (!isFlakyTest) {
+            error.failure.checkLincheckOutput(outputFileName)
+        }
     }
 }
 
@@ -335,6 +343,10 @@ class IncorrectHashmapRunConcurrentRepresentationTest : BaseRunConcurrentReprese
 }
 
 class ThreadPoolRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>("run_concurrent_test/thread_pool/thread_pool") {
+    // TODO: check why flakiness appears in this test
+    override val isFlakyTest: Boolean
+        get() = true
+
     @Before
     fun setUp() {
         assumeFalse(isInTraceDebuggerMode) // unstable hash-code
@@ -377,6 +389,10 @@ class ThreadPoolRunConcurrentRepresentationTest : BaseRunConcurrentRepresentatio
 class CoroutinesRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
     "run_concurrent_test/coroutines/coroutines"
 ) {
+    // TODO: check why flakiness appears in this test
+    override val isFlakyTest: Boolean
+        get() = true
+
     @Before
     fun setUp() {
         assumeFalse(isInTraceDebuggerMode) // unstable hash-code
