@@ -1822,15 +1822,20 @@ abstract class ManagedStrategy(
     private fun findOwnerName(owner: Any): String? {
         // If the current owner is this - no owner needed.
         if (isCurrentStackFrameReceiver(owner)) return null
-        val fieldWithOwner = findFinalFieldWithOwner(runner.testInstance, owner) ?: return adornedStringRepresentation(owner)
+        val finalFieldWithOwner = findFinalFieldWithOwner(runner.testInstance, owner)
+        if (finalFieldWithOwner == null) {
+            return adornedStringRepresentation(owner)
+        }
+        if (finalFieldWithOwner !is OwnerWithName.InstanceOwnerWithName) {
+            return null
+        }
         // If such a field is found - construct representation with its owner and name.
-        return if (fieldWithOwner is OwnerWithName.InstanceOwnerWithName) {
-            val fieldOwner = fieldWithOwner.owner
-            val fieldName = fieldWithOwner.fieldName
-            if (!isCurrentStackFrameReceiver(fieldOwner)) {
-                "${adornedStringRepresentation(fieldOwner)}.$fieldName"
-            } else fieldName
-        } else null
+        val fieldOwner = finalFieldWithOwner.owner
+        val fieldName = finalFieldWithOwner.fieldName
+        if (isCurrentStackFrameReceiver(fieldOwner)) {
+            return fieldName
+        }
+        return "${adornedStringRepresentation(fieldOwner)}.$fieldName"
     }
 
     /**
