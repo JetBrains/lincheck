@@ -10,9 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation
 
+import org.jetbrains.kotlinx.lincheck.TraceDebuggerInjections
 import org.jetbrains.kotlinx.lincheck.canonicalClassName
 import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
-import org.jetbrains.kotlinx.lincheck.transformation.TraceDebuggerAgent.classUnderTraceDebugging
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import java.lang.instrument.ClassFileTransformer
@@ -25,10 +25,6 @@ import java.security.ProtectionDomain
  * in order to enable trace debugging plugin functionality.
  */
 internal object TraceDebuggerAgent {
-    val classUnderTraceDebugging: String = System.getProperty("traceDebugger.className", "")
-    val methodUnderTraceDebugging: String = System.getProperty("traceDebugger.methodName", "")
-
-    @Suppress("UNUSED_PARAMETER")
     @JvmStatic
     fun premain(agentArgs: String?, inst: Instrumentation) {
         check(isInTraceDebuggerMode) {
@@ -36,9 +32,7 @@ internal object TraceDebuggerAgent {
             "VM parameter `lincheck.traceDebuggerMode` is expected to be true. " +
             "Rerun with -Dlincheck.traceDebuggerMode=true."
         }
-        check(classUnderTraceDebugging.isNotEmpty()) { "Class name under trace debugging not specified" }
-        check(methodUnderTraceDebugging.isNotEmpty()) { "Method name under trace debugging not specified" }
-
+        TraceDebuggerInjections.parseArgs(agentArgs)
         inst.addTransformer(TraceDebuggerTransformer, true)
     }
 }
@@ -53,7 +47,7 @@ internal object TraceDebuggerTransformer : ClassFileTransformer {
         classBytes: ByteArray
     ): ByteArray? {
         // If the class should not be transformed, return immediately.
-        if (classUnderTraceDebugging != internalClassName.canonicalClassName) {
+        if (TraceDebuggerInjections.classUnderTraceDebugging != internalClassName.canonicalClassName) {
             return null
         }
         return transformImpl(loader, internalClassName, classBytes)

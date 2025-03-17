@@ -183,7 +183,10 @@ tasks {
         jvmArgs(extraArgs)
     }
 
+    registerIntegrationTestsPrerequisites()
+
     val jvmTest = named<Test>("jvmTest") {
+        dependsOn(traceDebuggerIntegrationTestsPrerequisites)
         val ideaActive = System.getProperty("idea.active") == "true"
         if (!ideaActive) {
             // We need to be able to run these tests in IntelliJ IDEA.

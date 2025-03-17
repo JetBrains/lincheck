@@ -18,22 +18,47 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelChecki
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.ensureClassHierarchyIsTransformed
 import org.jetbrains.kotlinx.lincheck.util.LoggingLevel
 import org.jetbrains.kotlinx.lincheck.verifier.Verifier
+import java.io.File
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 import kotlin.reflect.jvm.kotlinFunction
+import kotlin.system.exitProcess
 
-val isInTraceDebuggerMode = System.getProperty("lincheck.traceDebuggerMode", "false").toBoolean()
+private const val TRACE_DEBUGGER_MODE_PROPERTY = "lincheck.traceDebuggerMode"
+val isInTraceDebuggerMode by lazy { System.getProperty(TRACE_DEBUGGER_MODE_PROPERTY, "false").toBoolean() }
 
 internal object TraceDebuggerInjections {
+    @JvmStatic
+    lateinit var classUnderTraceDebugging: String
+
+    @JvmStatic
+    lateinit var methodUnderTraceDebugging: String
+
+    @JvmStatic
+    var traceDumpFilePath: String? = null
+
+    @JvmStatic
+    fun parseArgs(args: String?) {
+        if (args == null) {
+            error("Please provide class and method names as arguments")
+        }
+
+        val actualArguments = args.split(",")
+        classUnderTraceDebugging = actualArguments.getOrNull(0) ?: error("Class name was not provided")
+        methodUnderTraceDebugging = actualArguments.getOrNull(1) ?: error("Method name was not provided")
+        traceDumpFilePath = actualArguments.getOrNull(2)
+    }
+
     @JvmStatic
     var firstRun = true
 
     @JvmStatic
-    fun runWithLincheck(testClassName: String, testMethodName: String) {
+    fun runWithLincheck() {
         firstRun = false
 
-        val testClass = Class.forName(testClassName)
-        val testMethod = testClass.getMethod(testMethodName)!!
+        val testClass = Class.forName(classUnderTraceDebugging)
+        val testMethod = testClass.methods.find { it.name == methodUnderTraceDebugging }
+            ?: error("Method \"$methodUnderTraceDebugging\" was not found in class \"$classUnderTraceDebugging\". Check that method exists and it is public.")
 
         val isStaticMethod = Modifier.isStatic(testMethod.modifiers)
         val instanceClass = if (isStaticMethod) TraceDebuggerStaticMethodWrapper::class.java else testClass
@@ -64,11 +89,17 @@ internal object TraceDebuggerInjections {
             .logLevel(LoggingLevel.OFF)
             .invocationTimeout(5 * 60 * 1000) // 5 mins
 
-        @Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE")
         val failure = lincheckOptions.checkImpl(instanceClass)
 
         val result = failure!!.results.threadsResults[0][0]
         if (result is ExceptionResult) throw result.throwable
+
+        if (!traceDumpFilePath.isNullOrEmpty() && failure.trace != null) {
+            val dumpFile = File(traceDumpFilePath!!)
+            dumpFile.parentFile.mkdirs()
+            dumpFile.createNewFile()
+            dumpFile.writeText(failure.toString())
+        }
     }
 
     @JvmStatic

@@ -29,7 +29,8 @@ fun Project.registerTraceDebuggerTasks() {
     val runtimeClasspath = configurations.getByName("runtimeClasspath")
 
     val traceDebuggerFatJar = tasks.register<Jar>("traceDebuggerFatJar") {
-        archiveBaseName.set("fat-trace-debugger")
+        archiveBaseName.set("lincheck-fat")
+        archiveVersion.set("")
         duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
         dependsOn("bootstrapJar")
