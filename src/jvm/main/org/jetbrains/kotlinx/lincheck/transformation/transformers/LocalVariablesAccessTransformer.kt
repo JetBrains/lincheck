@@ -111,9 +111,9 @@ internal class LocalVariablesAccessTransformer(
         if (localList.size == 1) {
             return localList.first()
         }
-        // if (localList.isUniqueVariable()) {
-        //     return localList.first()
-        // }
+        if (localList.isUniqueVariable()) {
+            return localList.first()
+        }
         // TODO: handle ambiguity
         return null
         // return findNameForLabelIndex(localList)
@@ -145,7 +145,8 @@ internal class LocalVariablesAccessTransformer(
 
 private fun List<LocalVariableInfo>.isUniqueVariable(): Boolean {
     val name = first().name
-    return all { it.name == name }
+    val type = first().type
+    return all { it.name == name && it.type == type }
 }
 
 internal data class LocalVariableInfo(val name: String, val labelIndexRange: Pair<Label, Label>, val type: Type)
