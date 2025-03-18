@@ -398,12 +398,9 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         val reader = ClassReader(classBytes)
 
         // the following code is required for local variables access tracking
-        var methods: Map<String, Map<Int, List<LocalVariableInfo>>>? = null
-        if (isInTraceDebuggerMode) {
-            val classNode = ClassNode()
-            reader.accept(classNode, 0)
-            methods = mapMethodsToLabels(classNode)
-        }
+        val classNode = ClassNode()
+        reader.accept(classNode, 0)
+        val methods = mapMethodsToLabels(classNode)
 
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
         val visitor = LincheckClassVisitor(writer, instrumentationMode, methods)

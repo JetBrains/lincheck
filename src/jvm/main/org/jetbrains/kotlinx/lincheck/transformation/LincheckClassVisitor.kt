@@ -22,7 +22,7 @@ import sun.nio.ch.lincheck.*
 internal class LincheckClassVisitor(
     private val classVisitor: SafeClassWriter,
     private val instrumentationMode: InstrumentationMode,
-    private val methods: Map<String, Map<Int, List<LocalVariableInfo>>>?,
+    private val methods: Map<String, Map<Int, List<LocalVariableInfo>>>,
 ) : ClassVisitor(ASM_API, classVisitor) {
     private var classVersion = 0
 
@@ -192,11 +192,8 @@ internal class LincheckClassVisitor(
             sv.analyzer = aa
             aa
         }
-        if (isInTraceDebuggerMode) {
-            check(methods != null)
-            val locals: Map<Int, List<LocalVariableInfo>> = methods[methodName + desc] ?: emptyMap()
-            mv = LocalVariablesAccessTransformer(fileName, className, methodName, mv.newAdapter(), locals)
-        }
+        val locals: Map<Int, List<LocalVariableInfo>> = methods[methodName + desc] ?: emptyMap()
+        mv = LocalVariablesAccessTransformer(fileName, className, methodName, mv.newAdapter(), locals)
         // Must appear in code after `SharedMemoryAccessTransformer` (to be able to skip this transformer)
         mv = CoverageBytecodeFilter(
             skipVisitor.newAdapter(),
