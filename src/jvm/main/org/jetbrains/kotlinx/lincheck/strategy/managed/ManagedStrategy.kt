@@ -1143,45 +1143,49 @@ abstract class ManagedStrategy(
     }
 
     override fun afterLocalRead(codeLocation: Int, variableName: String, value: Any?) = runInIgnoredSection {
-        if (!collectTrace) return@runInIgnoredSection
+        if (!collectTrace) return
         val iThread = threadScheduler.getCurrentThreadId()
         val shadowStackFrame = shadowStack[iThread]!!.last()
         shadowStackFrame.setLocalVariable(variableName, value)
-        val tracePoint = if (collectTrace) {
-            ReadTracePoint(
-                ownerRepresentation = null,
-                iThread = iThread,
-                actorId = currentActorId[iThread]!!,
-                callStackTrace = callStackTrace[iThread]!!,
-                fieldName = variableName,
-                codeLocation = codeLocation,
-                isLocal = true,
-            ).also { it.initializeReadValue(adornedStringRepresentation(value), objectFqTypeName(value)) }
-        } else {
-            null
-        }
-        traceCollector!!.passCodeLocation(tracePoint)
+        // TODO: enable local vars tracking in the trace after further polishing
+        // TODO: add a flag to enable local vars tracking in the trace conditionally
+        // val tracePoint = if (collectTrace) {
+        //     ReadTracePoint(
+        //         ownerRepresentation = null,
+        //         iThread = iThread,
+        //         actorId = currentActorId[iThread]!!,
+        //         callStackTrace = callStackTrace[iThread]!!,
+        //         fieldName = variableName,
+        //         codeLocation = codeLocation,
+        //         isLocal = true,
+        //     ).also { it.initializeReadValue(adornedStringRepresentation(value), objectFqTypeName(value)) }
+        // } else {
+        //     null
+        // }
+        // traceCollector!!.passCodeLocation(tracePoint)
     }
 
     override fun afterLocalWrite(codeLocation: Int, variableName: String, value: Any?) = runInIgnoredSection{
-        if (!collectTrace) return@runInIgnoredSection
+        if (!collectTrace) return
         val iThread = threadScheduler.getCurrentThreadId()
         val shadowStackFrame = shadowStack[iThread]!!.last()
         shadowStackFrame.setLocalVariable(variableName, value)
-        val tracePoint = if (collectTrace) {
-            WriteTracePoint(
-                ownerRepresentation = null,
-                iThread = iThread,
-                actorId = currentActorId[iThread]!!,
-                callStackTrace = callStackTrace[iThread]!!,
-                fieldName = variableName,
-                codeLocation = codeLocation,
-                isLocal = true,
-            ).also { it.initializeWrittenValue(adornedStringRepresentation(value), objectFqTypeName(value)) }
-        } else {
-            null
-        }
-        traceCollector!!.passCodeLocation(tracePoint)
+        // TODO: enable local vars tracking in the trace after further polishing
+        // TODO: add a flag to enable local vars tracking in the trace conditionally
+        // val tracePoint = if (collectTrace) {
+        //     WriteTracePoint(
+        //         ownerRepresentation = null,
+        //         iThread = iThread,
+        //         actorId = currentActorId[iThread]!!,
+        //         callStackTrace = callStackTrace[iThread]!!,
+        //         fieldName = variableName,
+        //         codeLocation = codeLocation,
+        //         isLocal = true,
+        //     ).also { it.initializeWrittenValue(adornedStringRepresentation(value), objectFqTypeName(value)) }
+        // } else {
+        //     null
+        // }
+        // traceCollector!!.passCodeLocation(tracePoint)
     }
 
     override fun getThreadLocalRandom(): InjectedRandom = runInIgnoredSection {
