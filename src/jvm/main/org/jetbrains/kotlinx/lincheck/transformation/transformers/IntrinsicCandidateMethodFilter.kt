@@ -24,6 +24,13 @@ internal class IntrinsicCandidateMethodFilter(
     nextAdapter: MethodVisitor
 ) : MethodVisitor(ASM_API, nextAdapter) {
 
+    override fun visitCode() {
+        if (isIntrinsicCandidateMethod(className, methodName, methodDesc)) {
+            this.mv = initialAdapter
+        }
+        return super.visitCode()
+    }
+
     override fun visitAnnotation(desc: String, visible: Boolean): AnnotationVisitor? {
         if (isIntrinsicCandidateAnnotation(desc)) {
             MethodIds.registerIntrinsicMethod(className, methodName, methodDesc)
@@ -34,7 +41,21 @@ internal class IntrinsicCandidateMethodFilter(
     }
 
     private fun isIntrinsicCandidateAnnotation(annotation: String): Boolean = (
-        annotation == "Ljdk/internal/HotSpotIntrinsicCandidate;" /* before java 16 */ ||
-        annotation == "Ljdk/internal/vm/annotation/IntrinsicCandidate;"
+        annotation == "Ljdk/internal/HotSpotIntrinsicCandidate;" /* from java 9 to java 16 */ ||
+        annotation == "Ljdk/internal/vm/annotation/IntrinsicCandidate;" /* for java 17 and after */
     )
+
+    /**
+     * Java 8 does not have `@HotSpotIntrinsicCandidate`/`@IntrinsicCandidate` annotations, thus,
+     * here we manually specify intrinsic methods that could lead to error in lincheck analysis.
+     */
+    private fun isIntrinsicCandidateMethod(owner: String, methodName: String, desc: String): Boolean {
+        return when (owner) {
+            "java/util/Arrays" -> {
+                (methodName == "copyOf" && desc == "([Ljava/lang/Object;ILjava/lang/Class;)[Ljava/lang/Object;") ||
+                (methodName == "copyOfRange" && desc == "([Ljava/lang/Object;IILjava/lang/Class;)[Ljava/lang/Object;")
+            }
+            else -> false
+        }
+    }
 }
