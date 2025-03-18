@@ -26,7 +26,7 @@ internal class IntrinsicCandidateMethodFilter(
 
     override fun visitCode() {
         if (isIntrinsicCandidateMethod(className, methodName, methodDesc)) {
-            this.mv = initialAdapter
+            delegate()
         }
         return super.visitCode()
     }
@@ -34,10 +34,17 @@ internal class IntrinsicCandidateMethodFilter(
     override fun visitAnnotation(desc: String, visible: Boolean): AnnotationVisitor? {
         if (isIntrinsicCandidateAnnotation(desc)) {
             MethodIds.registerIntrinsicMethod(className, methodName, methodDesc)
-            // Change the delegate to redirect to transformer "further" in the chain
-            this.mv = initialAdapter
+            delegate()
         }
         return super.visitAnnotation(desc, visible)
+    }
+
+    /**
+     * Changes the delegate [MethodVisitor] to redirect to transformer "further" in the chain.
+     * Essentially it allows to skip all transformers between `nextAdapter` and `initialAdapter`.
+     */
+    private fun delegate() {
+        this.mv = initialAdapter
     }
 
     private fun isIntrinsicCandidateAnnotation(annotation: String): Boolean = (
