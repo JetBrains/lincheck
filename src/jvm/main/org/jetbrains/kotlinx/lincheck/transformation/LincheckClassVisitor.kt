@@ -69,8 +69,6 @@ internal class LincheckClassVisitor(
         exceptions: Array<String>?
     ): MethodVisitor {
         var mv = super.visitMethod(access, methodName, desc, signature, exceptions)
-        val intrinsicDelegateVisitor = mv
-
         if (access and ACC_NATIVE != 0) return mv
         if (instrumentationMode == STRESS) {
             return if (methodName != "<clinit>" && methodName != "<init>") {
@@ -79,6 +77,7 @@ internal class LincheckClassVisitor(
                 mv
             }
         }
+        val intrinsicDelegateVisitor = mv
         fun MethodVisitor.newAdapter() = GeneratorAdapter(this, access, methodName, desc)
         if (methodName == "<clinit>") {
             mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
@@ -160,6 +159,7 @@ internal class LincheckClassVisitor(
         // We can do further instrumentation in methods of the custom thread subclasses,
         // but not in the `java.lang.Thread` itself.
         if (isThreadClass(className.toCanonicalClassName())) {
+            mv = IntrinsicCandidateMethodFilter(className, methodName, desc, intrinsicDelegateVisitor.newAdapter(), mv.newAdapter())
             return mv
         }
         if (access and ACC_SYNCHRONIZED != 0) {
@@ -197,7 +197,6 @@ internal class LincheckClassVisitor(
         mv = LocalVariablesAccessTransformer(fileName, className, methodName, mv.newAdapter(), locals)
         // Must appear in code after `SharedMemoryAccessTransformer` (to be able to skip this transformer)
         mv = CoverageBytecodeFilter(coverageDelegateVisitor.newAdapter(), mv.newAdapter())
-        // TODO: should this be added in all places in this method where `return mv` exists?
         mv = IntrinsicCandidateMethodFilter(className, methodName, desc, intrinsicDelegateVisitor.newAdapter(), mv.newAdapter())
         return mv
     }
