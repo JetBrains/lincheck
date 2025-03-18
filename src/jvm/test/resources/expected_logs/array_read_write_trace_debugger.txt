@@ -18,8 +18,6 @@ Detailed trace:
 | --------------------------------------------------------------------------------------------------------- |
 | operation()                                                                                               |
 |   IntArray#1[0] ➜ 0 at ArrayReadWriteRepresentationTest.operation(ArrayReadWriteRepresentationTest.kt:21) |
-|   value = 0 at ArrayReadWriteRepresentationTest.operation(ArrayReadWriteRepresentationTest.kt:21)         |
-|   value ➜ 0 at ArrayReadWriteRepresentationTest.operation(ArrayReadWriteRepresentationTest.kt:22)         |
 |   IntArray#1[0] = 1 at ArrayReadWriteRepresentationTest.operation(ArrayReadWriteRepresentationTest.kt:22) |
 |   IntArray#1[1] = 0 at ArrayReadWriteRepresentationTest.operation(ArrayReadWriteRepresentationTest.kt:23) |
 |   result: void                                                                                            |

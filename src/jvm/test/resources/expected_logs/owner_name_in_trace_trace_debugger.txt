@@ -23,9 +23,7 @@ Detailed trace:
 |     value ➜ 2 at OwnerNameInTraceRepresentationTest.readWriteTestMethod(OwnerNameInTraceRepresentationTests.kt:33)                         |
 |     Array<Integer>#1[0] ➜ 4 at OwnerNameInTraceRepresentationTest.readWriteTestMethod(OwnerNameInTraceRepresentationTests.kt:33)           |
 |   stub ➜ StubClass#1 at OwnerNameInTraceRepresentationTest.operation(OwnerNameInTraceRepresentationTests.kt:25)                            |
-|   result = StubClass#1 at OwnerNameInTraceRepresentationTest.operation(OwnerNameInTraceRepresentationTests.kt:25)                          |
-|   result ➜ StubClass#1 at OwnerNameInTraceRepresentationTest.operation(OwnerNameInTraceRepresentationTests.kt:26)                          |
-|   StubClass#1.readWriteTestMethod(): 7 at OwnerNameInTraceRepresentationTest.operation(OwnerNameInTraceRepresentationTests.kt:26)          |
+|   result.readWriteTestMethod(): 7 at OwnerNameInTraceRepresentationTest.operation(OwnerNameInTraceRepresentationTests.kt:26)               |
 |     value = 3 at OwnerNameInTraceRepresentationTest$StubClass.readWriteTestMethod(OwnerNameInTraceRepresentationTests.kt:49)               |
 |     Array<Integer>#2[0] = 4 at OwnerNameInTraceRepresentationTest$StubClass.readWriteTestMethod(OwnerNameInTraceRepresentationTests.kt:50) |
 |     value ➜ 3 at OwnerNameInTraceRepresentationTest$StubClass.readWriteTestMethod(OwnerNameInTraceRepresentationTests.kt:51)               |
