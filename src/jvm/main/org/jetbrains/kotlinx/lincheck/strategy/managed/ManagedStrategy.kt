@@ -1145,6 +1145,8 @@ abstract class ManagedStrategy(
     override fun afterLocalRead(codeLocation: Int, variableName: String, value: Any?) = runInIgnoredSection {
         if (!collectTrace) return@runInIgnoredSection
         val iThread = threadScheduler.getCurrentThreadId()
+        val shadowStackFrame = shadowStack[iThread]!!.last()
+        shadowStackFrame.setLocalVariable(variableName, value)
         val tracePoint = if (collectTrace) {
             ReadTracePoint(
                 ownerRepresentation = null,
@@ -1164,6 +1166,8 @@ abstract class ManagedStrategy(
     override fun afterLocalWrite(codeLocation: Int, variableName: String, value: Any?) = runInIgnoredSection{
         if (!collectTrace) return@runInIgnoredSection
         val iThread = threadScheduler.getCurrentThreadId()
+        val shadowStackFrame = shadowStack[iThread]!!.last()
+        shadowStackFrame.setLocalVariable(variableName, value)
         val tracePoint = if (collectTrace) {
             WriteTracePoint(
                 ownerRepresentation = null,
@@ -1820,16 +1824,22 @@ abstract class ManagedStrategy(
      * Otherwise, return beautiful representation for the provided [owner].
      */
     private fun findOwnerName(owner: Any): String? {
-        // If the current owner is this - no owner needed.
+        val threadId = threadScheduler.getCurrentThreadId()
+        // if the current owner is `this` - no owner needed.
         if (isCurrentStackFrameReceiver(owner)) return null
+        // lookup for the object in local variables and use the local variable name if found
+        val shadowStackFrame = shadowStack[threadId]!!.last()
+        shadowStackFrame.getLastAccessVariable(owner)?.let { return it }
+        // lookup for the final field uniquely owning the object
         val finalFieldWithOwner = findFinalFieldWithOwner(runner.testInstance, owner)
+        // if no such field found return object's string representation
         if (finalFieldWithOwner == null) {
             return adornedStringRepresentation(owner)
         }
         if (finalFieldWithOwner !is OwnerWithName.InstanceOwnerWithName) {
             return null
         }
-        // If such a field is found - construct representation with its owner and name.
+        // if such a field is found - construct representation with its owner and name
         val fieldOwner = finalFieldWithOwner.owner
         val fieldName = finalFieldWithOwner.fieldName
         if (isCurrentStackFrameReceiver(fieldOwner)) {
@@ -2128,11 +2138,33 @@ abstract class ManagedStrategy(
 /**
  * Represents a shadow stack frame used to reflect the program's stack in [ManagedStrategy].
  *
- * @property instance the object on which the method was invoked, null in case of a static method.  
+ * @property instance the object on which the method was invoked, null in the case of a static method.
   */
-private class ShadowStackFrame(
-    val instance: Any?,
-)
+private class ShadowStackFrame(val instance: Any?) {
+    private val localVariables: MutableMap<String, LocalVariableState> = mutableMapOf()
+
+    private var accessCounter: Int = 0
+
+    private data class LocalVariableState(
+        val value: Any?,
+        val accessCounter: Int,
+    )
+
+    fun getLocalVariable(name: String): Any? {
+        return localVariables[name]
+    }
+
+    fun setLocalVariable(name: String, value: Any?) {
+        localVariables[name] = LocalVariableState(value, accessCounter++)
+    }
+
+    fun getLastAccessVariable(value: Any?): String? {
+        return localVariables
+            .filter { (_, state) -> state.value === value }
+            .maxByOrNull { (_, state) -> state.accessCounter }
+            ?.key
+    }
+}
 
 /**
  * This class is a [ParallelThreadsRunner] with some overrides that add callbacks
