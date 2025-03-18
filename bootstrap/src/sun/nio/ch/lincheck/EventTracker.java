@@ -10,7 +10,6 @@
 
 package sun.nio.ch.lincheck;
 
-import java.util.*;
 import java.lang.invoke.CallSite;
 
 /**
@@ -68,8 +67,8 @@ public interface EventTracker {
     boolean beforeWriteArrayElement(Object array, int index, Object value, int codeLocation);
     void afterWrite();
 
-    void beforeLocalRead(int codeLocation, String name, Object value);
-    void beforeLocalWrite(int codeLocation, String name, Object value);
+    void afterLocalRead(int codeLocation, String name, Object value);
+    void afterLocalWrite(int codeLocation, String name, Object value);
 
     Object onMethodCall(Object owner, String className, String methodName, int codeLocation, int methodId, String methodDes, Object[] params);
     void onMethodCallReturn(long descriptorId, Object descriptor, Object receiver, Object[] params, Object result);

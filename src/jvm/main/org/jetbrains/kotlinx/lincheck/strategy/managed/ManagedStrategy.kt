@@ -1142,7 +1142,7 @@ abstract class ManagedStrategy(
         }
     }
 
-    override fun beforeLocalRead(codeLocation: Int, name: String?, value: Any?) = runInIgnoredSection {
+    override fun afterLocalRead(codeLocation: Int, variableName: String, value: Any?) = runInIgnoredSection {
         if (!collectTrace) return@runInIgnoredSection
         val iThread = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
@@ -1151,7 +1151,7 @@ abstract class ManagedStrategy(
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
-                fieldName = name ?: "<unknown variable>",
+                fieldName = variableName,
                 codeLocation = codeLocation,
                 isLocal = true,
             ).also { it.initializeReadValue(adornedStringRepresentation(value), objectFqTypeName(value)) }
@@ -1161,7 +1161,7 @@ abstract class ManagedStrategy(
         traceCollector!!.passCodeLocation(tracePoint)
     }
 
-    override fun beforeLocalWrite(codeLocation: Int, name: String?, value: Any?) = runInIgnoredSection{
+    override fun afterLocalWrite(codeLocation: Int, variableName: String, value: Any?) = runInIgnoredSection{
         if (!collectTrace) return@runInIgnoredSection
         val iThread = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
@@ -1170,7 +1170,7 @@ abstract class ManagedStrategy(
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
-                fieldName = name ?: "<unknown variable>",
+                fieldName = variableName,
                 codeLocation = codeLocation,
                 isLocal = true,
             ).also { it.initializeWrittenValue(adornedStringRepresentation(value), objectFqTypeName(value)) }

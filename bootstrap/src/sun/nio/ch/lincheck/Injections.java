@@ -321,13 +321,13 @@ public class Injections {
     }
 
     // TODO: rename to afterLocalRead ?
-    public static void beforeLocalRead(int codeLocation, String name, Object value) {
-        getEventTracker().beforeLocalRead(codeLocation, name, value);
+    public static void afterLocalRead(int codeLocation, String variableName, Object value) {
+        getEventTracker().afterLocalRead(codeLocation, variableName, value);
     }
 
     // TODO: rename to afterLocalWrite ?
-    public static void beforeLocalWrite(int codeLocation, String name, Object value) {
-        getEventTracker().beforeLocalWrite(codeLocation, name, value);
+    public static void afterLocalWrite(int codeLocation, String variableName, Object value) {
+        getEventTracker().afterLocalWrite(codeLocation, variableName, value);
     }
 
     /**
