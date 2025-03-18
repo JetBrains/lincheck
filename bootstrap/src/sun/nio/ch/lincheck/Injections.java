@@ -320,12 +320,10 @@ public class Injections {
         return getEventTracker().beforeReadArrayElement(array, index, codeLocation);
     }
 
-    // TODO: rename to afterLocalRead ?
     public static void afterLocalRead(int codeLocation, String variableName, Object value) {
         getEventTracker().afterLocalRead(codeLocation, variableName, value);
     }
 
-    // TODO: rename to afterLocalWrite ?
     public static void afterLocalWrite(int codeLocation, String variableName, Object value) {
         getEventTracker().afterLocalWrite(codeLocation, variableName, value);
     }
