@@ -73,7 +73,7 @@ internal class LocalVariablesAccessTransformer(
                 box(type)
                 // STACK: codeLocation, varName, boxedValue
                 invokeStatic(Injections::afterLocalWrite)
-                invokeBeforeEventIfPluginEnabled("write local")
+                // invokeBeforeEventIfPluginEnabled("write local")
                 // STACK: <empty>
             }
         )
@@ -99,7 +99,7 @@ internal class LocalVariablesAccessTransformer(
                 box(type)
                 // STACK: codeLocation, varName, boxedValue
                 invokeStatic(Injections::afterLocalRead)
-                invokeBeforeEventIfPluginEnabled("read local")
+                // invokeBeforeEventIfPluginEnabled("read local")
                 // STACK: <empty>
             }
         )
