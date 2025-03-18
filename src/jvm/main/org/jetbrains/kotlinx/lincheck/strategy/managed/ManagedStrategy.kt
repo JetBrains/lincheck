@@ -1831,6 +1831,10 @@ abstract class ManagedStrategy(
         val threadId = threadScheduler.getCurrentThreadId()
         // if the current owner is `this` - no owner needed.
         if (isCurrentStackFrameReceiver(owner)) return null
+        // do not prettify thread names
+        if (owner is Thread) {
+            return adornedStringRepresentation(owner)
+        }
         // lookup for the object in local variables and use the local variable name if found
         val shadowStackFrame = shadowStack[threadId]!!.last()
         shadowStackFrame.getLastAccessVariable(owner)?.let { return it }
