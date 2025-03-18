@@ -57,6 +57,7 @@ internal class IntrinsicCandidateMethodFilter(
      * here we manually specify intrinsic methods that could lead to error in lincheck analysis.
      */
     private fun isIntrinsicCandidateMethod(owner: String, methodName: String, desc: String): Boolean {
+        // TODO: java 8 does not have `@HotSpotIntrinsicCandidate`/`@IntrinsicCandidate` annotations
         return when (owner) {
             "java/util/Arrays" -> {
                 (methodName == "copyOf" && desc == "([Ljava/lang/Object;ILjava/lang/Class;)[Ljava/lang/Object;") ||
