@@ -1328,6 +1328,25 @@ abstract class ManagedStrategy(
         }
     }
 
+    private fun processIntrinsicMethodEffects(
+        methodId: Int,
+        result: Any?
+    ) {
+        if (!MethodIds.isIntrinsicMethod(methodId)) return
+
+        val (owner, methodName, desc) = MethodIds.getMethodDescriptor(methodId)
+        when {
+            owner == "java/util/Arrays" -> {
+                if (
+                    (methodName == "copyOf" && desc == "([Ljava/lang/Object;ILjava/lang/Class;)[Ljava/lang/Object;") ||
+                    (methodName == "copyOfRange" && desc == "([Ljava/lang/Object;IILjava/lang/Class;)[Ljava/lang/Object;")
+                ) {
+                    result?.let { afterNewObjectCreation(it) }
+                }
+            }
+        }
+    }
+
     private fun methodGuaranteeType(
         owner: Any?,
         className: String,
@@ -1433,11 +1452,15 @@ abstract class ManagedStrategy(
         methodName: String,
         descriptorId: Long,
         deterministicMethodDescriptor: Any?,
+        methodId: Int,
         receiver: Any?,
         params: Array<Any?>,
         result: Any?
     ) = runInsideIgnoredSection {
         require(deterministicMethodDescriptor is DeterministicMethodDescriptor<*, *>?)
+        // process intrinsic candidate methods
+        processIntrinsicMethodEffects(methodId, result)
+
         if (isInTraceDebuggerMode && isFirstReplay && deterministicMethodDescriptor != null) {
             deterministicMethodDescriptor.saveFirstResultWithCast(receiver, params, KResult.success(result)) {
                 nativeMethodCallStatesTracker.setState(descriptorId, deterministicMethodDescriptor.methodCallInfo, it)

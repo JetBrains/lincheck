@@ -69,6 +69,8 @@ internal class LincheckClassVisitor(
         exceptions: Array<String>?
     ): MethodVisitor {
         var mv = super.visitMethod(access, methodName, desc, signature, exceptions)
+        val intrinsicDelegateVisitor = mv
+
         if (access and ACC_NATIVE != 0) return mv
         if (instrumentationMode == STRESS) {
             return if (methodName != "<clinit>" && methodName != "<init>") {
@@ -92,7 +94,7 @@ internal class LincheckClassVisitor(
         }
         // In some newer versions of JDK, `ThreadPoolExecutor` uses
         // the internal `ThreadContainer` classes to manage threads in the pool;
-        // This class, in turn, has the method `start,
+        // This class, in turn, has the method `start`,
         // that does not directly call `Thread.start` to start a thread,
         // but instead uses internal API `JavaLangAccess.start`.
         // To detect threads started in this way, we instrument this class
@@ -165,7 +167,7 @@ internal class LincheckClassVisitor(
         }
         // `skipVisitor` must not capture `MethodCallTransformer`
         // (to filter static method calls inserted by coverage library)
-        val skipVisitor: MethodVisitor = mv
+        val coverageDelegateVisitor: MethodVisitor = mv
         mv = MethodCallTransformer(fileName, className, methodName, mv.newAdapter())
         mv = MonitorTransformer(fileName, className, methodName, mv.newAdapter())
         mv = WaitNotifyTransformer(fileName, className, methodName, mv.newAdapter())
@@ -194,10 +196,9 @@ internal class LincheckClassVisitor(
         val locals: Map<Int, List<LocalVariableInfo>> = methods[methodName + desc] ?: emptyMap()
         mv = LocalVariablesAccessTransformer(fileName, className, methodName, mv.newAdapter(), locals)
         // Must appear in code after `SharedMemoryAccessTransformer` (to be able to skip this transformer)
-        mv = CoverageBytecodeFilter(
-            skipVisitor.newAdapter(),
-            mv.newAdapter()
-        )
+        mv = CoverageBytecodeFilter(coverageDelegateVisitor.newAdapter(), mv.newAdapter())
+        // TODO: should this be added in all places in this method where `return mv` exists?
+        mv = IntrinsicCandidateMethodFilter(className, methodName, desc, intrinsicDelegateVisitor.newAdapter(), mv.newAdapter())
         return mv
     }
 

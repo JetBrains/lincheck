@@ -379,7 +379,7 @@ public class Injections {
      * @param receiver is `null` for public static methods.
      * @return Deterministic call descriptor or null.
      */
-    public static Object onMethodCall(String className, String methodName, int codeLocation, int methodId, String methodDesc, Object receiver, Object[] params) {
+    public static Object onMethodCall(String className, String methodName, int codeLocation, String methodDesc, int methodId, Object receiver, Object[] params) {
         // to safely construct the method signature, we need to enter an ignored section
         // because it internally calls code which can be instrumented
         enterIgnoredSection();
@@ -399,8 +399,8 @@ public class Injections {
      * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
      * @param result The call result.
      */
-    public static void onMethodCallReturn(String className, String methodName, long descriptorId, Object descriptor, Object receiver, Object[] params, Object result) {
-        getEventTracker().onMethodCallReturn(className, methodName, descriptorId, descriptor, receiver, params, result);
+    public static void onMethodCallReturn(String className, String methodName, long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params, Object result) {
+        getEventTracker().onMethodCallReturn(className, methodName, descriptorId, descriptor, methodId, receiver, params, result);
     }
 
     /**
@@ -409,8 +409,8 @@ public class Injections {
      * @param descriptor Deterministic call descriptor or null.
      * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
      */
-    public static void onMethodCallReturnVoid(String className, String methodName, long descriptorId, Object descriptor, Object receiver, Object[] params) {
-        getEventTracker().onMethodCallReturn(className, methodName, descriptorId, descriptor, receiver, params, VOID_RESULT);
+    public static void onMethodCallReturnVoid(String className, String methodName, long descriptorId, Object descriptor, int methodId, Object receiver, Object[] params) {
+        getEventTracker().onMethodCallReturn(className, methodName, descriptorId, descriptor, methodId, receiver, params, VOID_RESULT);
     }
 
     /**
