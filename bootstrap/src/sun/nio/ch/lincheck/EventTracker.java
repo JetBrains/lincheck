@@ -37,10 +37,10 @@ public interface EventTracker {
 
     void beforeNewObjectCreation(String className);
     void afterNewObjectCreation(Object obj);
-    
+
     long getNextTraceDebuggerEventTrackerId(TraceDebuggerTracker tracker);
     void advanceCurrentTraceDebuggerEventTrackerId(TraceDebuggerTracker tracker, long oldId);
-    
+
     CallSite getCachedInvokeDynamicCallSite(
             String name,
             String descriptor,
@@ -66,6 +66,9 @@ public interface EventTracker {
                              boolean isStatic, boolean isFinal);
     boolean beforeWriteArrayElement(Object array, int index, Object value, int codeLocation);
     void afterWrite();
+
+    void afterLocalRead(int codeLocation, String name, Object value);
+    void afterLocalWrite(int codeLocation, String name, Object value);
 
     Object onMethodCall(Object owner, String className, String methodName, int codeLocation, int methodId, String methodDes, Object[] params);
     void onMethodCallReturn(long descriptorId, Object descriptor, Object receiver, Object[] params, Object result);

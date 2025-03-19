@@ -144,6 +144,7 @@ internal class ReadTracePoint(
     callStackTrace: CallStackTrace,
     private val fieldName: String,
     codeLocation: Int,
+    val isLocal: Boolean,
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, codeLocation) {
     private lateinit var valueRepresentation: String
     lateinit var valueType: String
@@ -166,7 +167,7 @@ internal class ReadTracePoint(
     }
 
     override fun deepCopy(copiedCallStackTraceElements: HashMap<CallStackTraceElement, CallStackTraceElement>): TracePoint =
-        ReadTracePoint(ownerRepresentation, iThread, actorId, callStackTrace.deepCopy(copiedCallStackTraceElements), fieldName, codeLocation)
+        ReadTracePoint(ownerRepresentation, iThread, actorId, callStackTrace.deepCopy(copiedCallStackTraceElements), fieldName, codeLocation, isLocal)
             .also {
                 it.valueType = valueType
                 it.eventId = eventId
@@ -180,6 +181,7 @@ internal class WriteTracePoint(
     callStackTrace: CallStackTrace,
     private val fieldName: String,
     codeLocation: Int,
+    val isLocal: Boolean,
 ) : CodeLocationTracePoint(iThread, actorId, callStackTrace, codeLocation) {
     private lateinit var valueRepresentation: String
     lateinit var valueType: String
@@ -199,7 +201,7 @@ internal class WriteTracePoint(
     }
     
     override fun deepCopy(copiedCallStackTraceElements: HashMap<CallStackTraceElement, CallStackTraceElement>): TracePoint =
-        WriteTracePoint(ownerRepresentation, iThread, actorId, callStackTrace.deepCopy(copiedCallStackTraceElements), fieldName, codeLocation)
+        WriteTracePoint(ownerRepresentation, iThread, actorId, callStackTrace.deepCopy(copiedCallStackTraceElements), fieldName, codeLocation, isLocal)
             .also {
                 it.eventId = eventId
                 it.valueType = valueType

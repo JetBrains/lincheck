@@ -97,12 +97,12 @@ abstract class ManagedStrategy(
     private val identityHashCodeTracker = ObjectIdentityHashCodeTracker()
     // Tracker of native method call states.
     private val nativeMethodCallStatesTracker = NativeMethodCallStatesTracker()
-    
+
     internal val traceDebuggerEventTrackers: Map<TraceDebuggerTracker, AbstractTraceDebuggerEventTracker> = mapOf(
         TraceDebuggerTracker.IdentityHashCode to identityHashCodeTracker,
         TraceDebuggerTracker.NativeMethodCall to nativeMethodCallStatesTracker,
     )
-    
+
     // Cache for evaluated invoke dynamic call sites
     private val invokeDynamicCallSites = ConcurrentHashMap<ConstantDynamic, CallSite>()
     // Tracker of the monitors' operations.
@@ -152,15 +152,18 @@ abstract class ManagedStrategy(
 
     // Utility class for the plugin integration to provide ids for each trace point
     private var eventIdProvider = EventIdProvider()
-    
+
     protected var replayNumber = 0L
 
-
     /**
-     * Current method call context (static or instance).
-     * Initialized and used only in the trace collecting stage.
+     * For each thread, represents a shadow stack used to reflect the program's actual stack.
+     * 
+     * Collected and used only in the trace collecting stage.
      */
-    private var callStackContextPerThread = mutableThreadMapOf<ArrayList<CallContext>>()
+    // TODO: unify with `callStackTrace`
+    // TODO: handle coroutine resumptions (i.e., unify with `suspendedFunctionsStack`)
+    // TODO: extract into separate class
+    private var shadowStack = mutableThreadMapOf<ArrayList<ShadowStackFrame>>()
 
     /**
      * In case when the plugin is enabled, we also enable [eventIdStrictOrderingCheck] property and check
@@ -607,9 +610,7 @@ abstract class ManagedStrategy(
         currentActorId[threadId] = if (threadId < scenario.nThreads) -1 else 0
         callStackTrace[threadId] = mutableListOf()
         suspendedFunctionsStack[threadId] = mutableListOf()
-        callStackContextPerThread[threadId] = arrayListOf(
-            CallContext.InstanceCallContext(runner.testInstance)
-        )
+        shadowStack[threadId] = arrayListOf(ShadowStackFrame(runner.testInstance))
         lastReadTracePoint[threadId] = null
         randoms[threadId] = InjectedRandom(threadId + 239L)
         objectTracker?.registerThread(threadId, thread)
@@ -626,7 +627,7 @@ abstract class ManagedStrategy(
         currentActorId.clear()
         callStackTrace.clear()
         suspendedFunctionsStack.clear()
-        callStackContextPerThread.clear()
+        shadowStack.clear()
         randoms.clear()
     }
 
@@ -1001,7 +1002,7 @@ abstract class ManagedStrategy(
      */
     override fun beforeReadField(obj: Any?, className: String, fieldName: String, codeLocation: Int,
                                  isStatic: Boolean, isFinal: Boolean) = runInIgnoredSection {
-         updateSnapshotOnFieldAccess(obj, className.canonicalClassName, fieldName)
+        updateSnapshotOnFieldAccess(obj, className.canonicalClassName, fieldName)
         // We need to ensure all the classes related to the reading object are instrumented.
         // The following call checks all the static fields.
         if (isStatic) {
@@ -1023,7 +1024,8 @@ abstract class ManagedStrategy(
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
                 fieldName = fieldName,
-                codeLocation = codeLocation
+                codeLocation = codeLocation,
+                isLocal = false,
             )
         } else {
             null
@@ -1050,7 +1052,8 @@ abstract class ManagedStrategy(
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
                 fieldName = "${adornedStringRepresentation(array)}[$index]",
-                codeLocation = codeLocation
+                codeLocation = codeLocation,
+                isLocal = false,
             )
         } else {
             null
@@ -1091,7 +1094,8 @@ abstract class ManagedStrategy(
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
                 fieldName = fieldName,
-                codeLocation = codeLocation
+                codeLocation = codeLocation,
+                isLocal = false,
             ).also {
                 it.initializeWrittenValue(adornedStringRepresentation(value), objectFqTypeName(value))
             }
@@ -1117,7 +1121,8 @@ abstract class ManagedStrategy(
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
                 fieldName = "${adornedStringRepresentation(array)}[$index]",
-                codeLocation = codeLocation
+                codeLocation = codeLocation,
+                isLocal = false,
             ).also {
                 it.initializeWrittenValue(adornedStringRepresentation(value), objectFqTypeName(value))
             }
@@ -1135,6 +1140,52 @@ abstract class ManagedStrategy(
                 traceCollector?.addStateRepresentation()
             }
         }
+    }
+
+    override fun afterLocalRead(codeLocation: Int, variableName: String, value: Any?) = runInIgnoredSection {
+        if (!collectTrace) return
+        val iThread = threadScheduler.getCurrentThreadId()
+        val shadowStackFrame = shadowStack[iThread]!!.last()
+        shadowStackFrame.setLocalVariable(variableName, value)
+        // TODO: enable local vars tracking in the trace after further polishing
+        // TODO: add a flag to enable local vars tracking in the trace conditionally
+        // val tracePoint = if (collectTrace) {
+        //     ReadTracePoint(
+        //         ownerRepresentation = null,
+        //         iThread = iThread,
+        //         actorId = currentActorId[iThread]!!,
+        //         callStackTrace = callStackTrace[iThread]!!,
+        //         fieldName = variableName,
+        //         codeLocation = codeLocation,
+        //         isLocal = true,
+        //     ).also { it.initializeReadValue(adornedStringRepresentation(value), objectFqTypeName(value)) }
+        // } else {
+        //     null
+        // }
+        // traceCollector!!.passCodeLocation(tracePoint)
+    }
+
+    override fun afterLocalWrite(codeLocation: Int, variableName: String, value: Any?) = runInIgnoredSection{
+        if (!collectTrace) return
+        val iThread = threadScheduler.getCurrentThreadId()
+        val shadowStackFrame = shadowStack[iThread]!!.last()
+        shadowStackFrame.setLocalVariable(variableName, value)
+        // TODO: enable local vars tracking in the trace after further polishing
+        // TODO: add a flag to enable local vars tracking in the trace conditionally
+        // val tracePoint = if (collectTrace) {
+        //     WriteTracePoint(
+        //         ownerRepresentation = null,
+        //         iThread = iThread,
+        //         actorId = currentActorId[iThread]!!,
+        //         callStackTrace = callStackTrace[iThread]!!,
+        //         fieldName = variableName,
+        //         codeLocation = codeLocation,
+        //         isLocal = true,
+        //     ).also { it.initializeWrittenValue(adornedStringRepresentation(value), objectFqTypeName(value)) }
+        // } else {
+        //     null
+        // }
+        // traceCollector!!.passCodeLocation(tracePoint)
     }
 
     override fun getThreadLocalRandom(): InjectedRandom = runInIgnoredSection {
@@ -1462,7 +1513,7 @@ abstract class ManagedStrategy(
         // this "ignore" section.
         leaveIgnoredSection()
     }
-    
+
     private fun <T> KResult<T>.toBootstrapResult() =
         if (isSuccess) BootstrapResult.fromSuccess(getOrThrow())
         else BootstrapResult.fromFailure(exceptionOrNull()!!)
@@ -1573,7 +1624,7 @@ abstract class ManagedStrategy(
             if (!resumedStackTrace.isSuffixOf(callStackTrace)) {
                 // restore resumed stack trace elements
                 callStackTrace.addAll(resumedStackTrace)
-                resumedStackTrace.forEach { beforeMethodEnter(it.instance) }
+                resumedStackTrace.forEach { pushShadowStackFrame(it.instance) }
             }
             // since we are in resumption, skip the next ` beforeEvent ` call
             skipNextBeforeEvent = true
@@ -1607,7 +1658,7 @@ abstract class ManagedStrategy(
             methodInvocationId = methodInvocationId
         )
         callStackTrace.add(stackTraceElement)
-        beforeMethodEnter(owner)
+        pushShadowStackFrame(owner)
     }
 
     private fun createBeforeMethodCallTracePoint(
@@ -1653,7 +1704,7 @@ abstract class ManagedStrategy(
         }
         error("Unknown atomic method $className::$methodName")
     }
-    
+
     private fun objectFqTypeName(obj: Any?): String {
         val enumPrefix = if (obj?.javaClass?.isEnum == true) "Enum:" else ""
         return "$enumPrefix${obj?.javaClass?.name ?: "null"}"
@@ -1764,7 +1815,7 @@ abstract class ManagedStrategy(
         tracePoint.initializeParameters(parameters.drop(1))
         return tracePoint
     }
-    
+
     private fun MethodCallTracePoint.initializeParameters(parameters: List<Any?>) =
         initializeParameters(parameters.map { adornedStringRepresentation(it) }, parameters.map { objectFqTypeName(it) })
 
@@ -1777,45 +1828,59 @@ abstract class ManagedStrategy(
      * Otherwise, return beautiful representation for the provided [owner].
      */
     private fun findOwnerName(owner: Any): String? {
-        // If the current owner is this - no owner needed.
-        if (isOwnerCurrentContext(owner)) return null
-        val fieldWithOwner = findFinalFieldWithOwner(runner.testInstance, owner) ?: return adornedStringRepresentation(owner)
-        // If such a field is found - construct representation with its owner and name.
-        return if (fieldWithOwner is OwnerWithName.InstanceOwnerWithName) {
-            val fieldOwner = fieldWithOwner.owner
-            val fieldName = fieldWithOwner.fieldName
-            if (!isOwnerCurrentContext(fieldOwner)) {
-                "${adornedStringRepresentation(fieldOwner)}.$fieldName"
-            } else fieldName
-        } else null
+        val threadId = threadScheduler.getCurrentThreadId()
+        // if the current owner is `this` - no owner needed.
+        if (isCurrentStackFrameReceiver(owner)) return null
+        // do not prettify thread names
+        if (owner is Thread) {
+            return adornedStringRepresentation(owner)
+        }
+        // lookup for the object in local variables and use the local variable name if found
+        val shadowStackFrame = shadowStack[threadId]!!.last()
+        shadowStackFrame.getLastAccessVariable(owner)?.let { return it }
+        // lookup for the final field uniquely owning the object
+        val finalFieldWithOwner = findFinalFieldWithOwner(runner.testInstance, owner)
+        // if no such field found return object's string representation
+        if (finalFieldWithOwner == null) {
+            return adornedStringRepresentation(owner)
+        }
+        if (finalFieldWithOwner !is OwnerWithName.InstanceOwnerWithName) {
+            return null
+        }
+        // if such a field is found - construct representation with its owner and name
+        val fieldOwner = finalFieldWithOwner.owner
+        val fieldName = finalFieldWithOwner.fieldName
+        if (isCurrentStackFrameReceiver(fieldOwner)) {
+            return fieldName
+        }
+        return "${adornedStringRepresentation(fieldOwner)}.$fieldName"
     }
 
     /**
-     * Checks if [owner] is the current `this` in the current method context.
+     * Checks if [owner] is the `this` object (i.e., receiver) of the currently executed method call.
      */
-    private fun isOwnerCurrentContext(owner: Any): Boolean {
+    private fun isCurrentStackFrameReceiver(owner: Any): Boolean {
         val currentThreadId = threadScheduler.getCurrentThreadId()
-        return when (val callContext = callStackContextPerThread[currentThreadId]!!.last()) {
-            is CallContext.InstanceCallContext -> callContext.instance === owner
-            is CallContext.StaticCallContext -> false
-        }
+        val stackTraceElement = shadowStack[currentThreadId]!!.last()
+        return (owner === stackTraceElement.instance)
     }
 
     /* Methods to control the current call context. */
 
-    private fun beforeMethodEnter(owner: Any?) {
+    private fun pushShadowStackFrame(owner: Any?) {
         val currentThreadId = threadScheduler.getCurrentThreadId()
-        if (owner == null) {
-            callStackContextPerThread[currentThreadId]!!.add(CallContext.StaticCallContext)
-        } else {
-            callStackContextPerThread[currentThreadId]!!.add(CallContext.InstanceCallContext(owner))
-        }
+        val shadowStack = shadowStack[currentThreadId]!!
+        val stackFrame = ShadowStackFrame(owner)
+        shadowStack.add(stackFrame)
     }
 
-    private fun afterExitMethod(iThread: Int) {
-        val currentContext = callStackContextPerThread[iThread]!!
-        currentContext.removeLast()
-        check(currentContext.isNotEmpty()) { "Context cannot be empty" }
+    private fun popShadowStackFrame() {
+        val currentThreadId = threadScheduler.getCurrentThreadId()
+        val shadowStack = shadowStack[currentThreadId]!!
+        shadowStack.removeLast()
+        check(shadowStack.isNotEmpty()) {
+            "Shadow stack cannot be empty"
+        }
     }
 
     /**
@@ -1825,7 +1890,7 @@ abstract class ManagedStrategy(
      * @param tracePoint the corresponding trace point for the invocation
      */
     private fun afterMethodCall(iThread: Int, tracePoint: MethodCallTracePoint) {
-        afterExitMethod(iThread)
+        popShadowStackFrame()
         val callStackTrace = callStackTrace[iThread]!!
         if (tracePoint.wasSuspended) {
             // if a method call is suspended, save its call stack element to reuse for continuation resuming
@@ -2076,20 +2141,36 @@ abstract class ManagedStrategy(
             return id
         }
     }
+}
 
-    /**
-     * Current method context in a call stack.
-     */
-    sealed interface CallContext {
-        /**
-         * Indicates that current method is static.
-         */
-        data object StaticCallContext: CallContext
+/**
+ * Represents a shadow stack frame used to reflect the program's stack in [ManagedStrategy].
+ *
+ * @property instance the object on which the method was invoked, null in the case of a static method.
+  */
+private class ShadowStackFrame(val instance: Any?) {
+    private val localVariables: MutableMap<String, LocalVariableState> = mutableMapOf()
 
-        /**
-         * Indicates that method is called on the instance.
-         */
-        data class InstanceCallContext(val instance: Any): CallContext
+    private var accessCounter: Int = 0
+
+    private data class LocalVariableState(
+        val value: Any?,
+        val accessCounter: Int,
+    )
+
+    fun getLocalVariable(name: String): Any? {
+        return localVariables[name]
+    }
+
+    fun setLocalVariable(name: String, value: Any?) {
+        localVariables[name] = LocalVariableState(value, accessCounter++)
+    }
+
+    fun getLastAccessVariable(value: Any?): String? {
+        return localVariables
+            .filter { (_, state) -> state.value === value }
+            .maxByOrNull { (_, state) -> state.accessCounter }
+            ?.key
     }
 }
 

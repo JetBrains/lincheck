@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.transformation
 
 import net.bytebuddy.agent.ByteBuddyAgent
 import org.jetbrains.kotlinx.lincheck.canonicalClassName
+import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.runInIgnoredSection
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.MODEL_CHECKING
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.STRESS
@@ -21,10 +22,13 @@ import org.jetbrains.kotlinx.lincheck.transformation.LincheckClassFileTransforme
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.INSTRUMENT_ALL_CLASSES
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentationMode
 import org.jetbrains.kotlinx.lincheck.transformation.LincheckJavaAgent.instrumentedClasses
+import org.jetbrains.kotlinx.lincheck.transformation.transformers.LocalVariableInfo
 import org.jetbrains.kotlinx.lincheck.util.Logger
 import org.jetbrains.kotlinx.lincheck.util.readFieldViaUnsafe
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
+import org.objectweb.asm.Type
+import org.objectweb.asm.tree.ClassNode
 import sun.misc.Unsafe
 import java.io.File
 import java.lang.instrument.ClassFileTransformer
@@ -392,8 +396,14 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         Logger.debug { "Transforming $internalClassName" }
 
         val reader = ClassReader(classBytes)
+
+        // the following code is required for local variables access tracking
+        val classNode = ClassNode()
+        reader.accept(classNode, 0)
+        val methods = mapMethodsToLabels(classNode)
+
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
-        val visitor = LincheckClassVisitor(writer, instrumentationMode)
+        val visitor = LincheckClassVisitor(writer, instrumentationMode, methods)
         try {
             reader.accept(visitor, ClassReader.EXPAND_FRAMES)
             writer.toByteArray()
@@ -402,6 +412,24 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
             e.printStackTrace()
             classBytes
         }
+    }
+
+    private fun mapMethodsToLabels(
+        classNode: ClassNode
+    ): Map<String, Map<Int, List<LocalVariableInfo>>> {
+        return classNode.methods.associateBy(
+            keySelector = { m -> m.name + m.desc },
+            valueTransform = { m ->
+                mutableMapOf<Int, MutableList<LocalVariableInfo>>().also { map ->
+                    m.localVariables?.forEach { local ->
+                        val index = local.index
+                        val type = Type.getType(local.desc)
+                        val info = LocalVariableInfo(local.name, local.start.label to local.end.label, type)
+                        map.getOrPut(index) { mutableListOf() }.add(info)
+                    }
+                }
+            }
+        )
     }
 
     @Suppress("SpellCheckingInspection")
