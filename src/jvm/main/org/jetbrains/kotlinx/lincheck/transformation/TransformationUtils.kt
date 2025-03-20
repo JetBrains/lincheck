@@ -500,7 +500,9 @@ internal fun isCoroutineStateMachineClass(className: String): Boolean {
     if (className.startsWith("java.")) return false
     if (className.startsWith("kotlin.") && !className.startsWith("kotlin.coroutines.")) return false
     return isCoroutineStateMachineClassMap.computeIfAbsent(className) {
-        getSuperclassName(className) == "kotlin.coroutines.jvm.internal.ContinuationImpl"
+        val internalClassName = className.toInternalClassName()
+        val superclassName = getSuperclassName(internalClassName)
+        superclassName?.toCanonicalClassName() == "kotlin.coroutines.jvm.internal.ContinuationImpl"
     }
 }
 
