@@ -10,7 +10,6 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
-import org.jetbrains.kotlinx.lincheck.canonicalClassName
 import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.objectweb.asm.Opcodes.*

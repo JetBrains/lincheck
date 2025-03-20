@@ -11,8 +11,6 @@
 package org.jetbrains.kotlinx.lincheck.transformation
 
 import org.jetbrains.kotlinx.lincheck.TraceDebuggerInjections
-import org.jetbrains.kotlinx.lincheck.transformation.TraceDebuggerAgent.classUnderTraceDebugging
-import org.jetbrains.kotlinx.lincheck.transformation.TraceDebuggerAgent.methodUnderTraceDebugging
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.commons.GeneratorAdapter
@@ -45,7 +43,8 @@ class TraceDebuggerClassVisitor(
         fun MethodVisitor.newAdapter() = GeneratorAdapter(this, access, methodName, desc)
 
         var mv = super.visitMethod(access, methodName, desc, signature, exceptions)
-        if (className == TraceDebuggerInjections.classUnderTraceDebugging && methodName == TraceDebuggerInjections.methodUnderTraceDebugging) {
+        if (className == TraceDebuggerInjections.classUnderTraceDebugging &&
+            methodName == TraceDebuggerInjections.methodUnderTraceDebugging) {
             mv = TraceDebuggerRunMethodTransformer(mv.newAdapter())
         }
 

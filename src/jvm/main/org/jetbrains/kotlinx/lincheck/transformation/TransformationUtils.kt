@@ -473,11 +473,25 @@ private val isThreadSubclassMap = ConcurrentHashMap<String, Boolean>()
 private const val JAVA_THREAD_CLASSNAME = "java.lang.Thread"
 
 /**
+ * Tests if the provided [className] represents one of jdk internal [ThreadContainer] classes
+ * that use [JavaLangAccess.start] API to start threads.
+ */
+internal fun isThreadContainerClass(className: String): Boolean =
+    className == "jdk.internal.vm.SharedThreadContainer"  ||
+    className == "jdk.internal.misc.ThreadFlock"
+
+/**
  * Determines whether the given class name corresponds to an internal coroutine-related class.
  */
 internal fun isCoroutineInternalClass(className: String): Boolean =
     className == "kotlin.coroutines.intrinsics.IntrinsicsKt" ||
     className == "kotlinx.coroutines.internal.StackTraceRecoveryKt"
+
+/**
+ * Tests if the provided [className] represents an internal coroutine dispatcher class.
+ */
+internal fun isCoroutineDispatcherInternalClass(className: String): Boolean =
+    className.startsWith("kotlinx.coroutines.internal") && className.contains("DispatchedContinuation")
 
 /**
  * Checks whether the given class name represents a coroutine state machine class.
@@ -529,24 +543,11 @@ internal fun isStackTraceElementClass(className: String): Boolean =
     className == "java.lang.StackTraceElement"
 
 /**
- * Tests if the provided [className] represents one of jdk internal [ThreadContainer] classes
- * that use [JavaLangAccess.start] API to start threads.
- */
-internal fun isThreadContainerClass(className: String): Boolean =
-    className == "jdk.internal.vm.SharedThreadContainer"  ||
-    className == "jdk.internal.misc.ThreadFlock"
-
-/**
  * Checks if the provided class name matches the [JavaLangAccess] class.
  */
 internal fun isJavaLangAccessClass(className: String): Boolean =
     className == "jdk.internal.access.JavaLangAccess"
 
-/**
- * Tests if the provided [className] represents an internal coroutine dispatcher class.
- */
-internal fun isCoroutineDispatcherInternalClass(className: String): Boolean =
-    className.startsWith("kotlinx.coroutines.internal") && className.contains("DispatchedContinuation")
 
 /**
  * Extracts the simple class name from a fully qualified canonical class name.
