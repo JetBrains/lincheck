@@ -10,6 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.native_calls
 
+import sun.nio.ch.lincheck.Types.ArgumentType
+
 internal fun getDeterministicTimeMethodDescriptorOrNull(
     methodCallInfo: MethodCallInfo
 ): DeterministicMethodDescriptor<*, *>? {

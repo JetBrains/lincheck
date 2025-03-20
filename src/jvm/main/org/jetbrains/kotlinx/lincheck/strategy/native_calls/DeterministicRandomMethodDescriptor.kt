@@ -14,6 +14,7 @@ import sun.nio.ch.lincheck.InjectedRandom
 import sun.nio.ch.lincheck.Injections
 import java.lang.reflect.Modifier
 import java.util.concurrent.ConcurrentHashMap
+import sun.nio.ch.lincheck.Types.*
 
 internal fun getDeterministicRandomMethodDescriptorOrNull(
     methodCallInfo: MethodCallInfo,
@@ -38,7 +39,7 @@ internal fun getDeterministicRandomMethodDescriptorOrNull(
 
         else -> {
             require(currentMethodType.argumentTypes.all {
-                it is ArgumentType.Primitive || it == ArgumentType.Array(ArgumentType.Primitive.Byte)
+                it is ArgumentType.Primitive || it == ArgumentType.Array(TypeByte)
             }) {
                 "Only primitive arguments and ByteArrays are supported for default deterministic random: $methodCallInfo"
             }
@@ -69,16 +70,16 @@ private fun MethodSignature.isSecureRandomMethodToSkip() = when (name) {
 private fun ArgumentType.Object.isSecureRandom() = className == "java.security.SecureRandom"
 
 private val byteArrayMethodType = MethodType(
-    argumentTypes = listOf(ArgumentType.Array(ArgumentType.Primitive.Byte)),
-    returnType = Type.Void,
+    arrayOf(ArgumentType.Array(TypeByte)),
+    TypeVoid,
 )
 
 private val secureByteArrayMethodType = MethodType(
-    argumentTypes = listOf(
-        ArgumentType.Array(ArgumentType.Primitive.Byte),
+    arrayOf(
+        ArgumentType.Array(TypeByte),
         ArgumentType.Object("java.security.SecureRandomParameters")
     ),
-    returnType = Type.Void,
+    TypeVoid,
 )
 
 private val classMethodsImpl: MutableMap<Class<*>, Set<MethodSignature>> = ConcurrentHashMap()

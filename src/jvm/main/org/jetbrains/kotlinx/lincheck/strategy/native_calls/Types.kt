@@ -10,65 +10,19 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.native_calls
 
-import org.objectweb.asm.Type.getArgumentTypes
-import org.objectweb.asm.Type.getReturnType
 import org.objectweb.asm.commons.Method
+import sun.nio.ch.lincheck.Types
+import sun.nio.ch.lincheck.Types.convertAsmMethodType
 
-internal data class MethodSignature(val name: String, val methodType: MethodType)
-internal data class MethodType(val argumentTypes: List<ArgumentType>, val returnType: Type)
+internal val TypeVoid = Types.Type.Void.get()
+internal val TypeInt = Types.ArgumentType.Primitive.Int.get()
+internal val TypeLong = Types.ArgumentType.Primitive.Long.get()
+internal val TypeDouble = Types.ArgumentType.Primitive.Double.get()
+internal val TypeFloat = Types.ArgumentType.Primitive.Float.get()
+internal val TypeBoolean = Types.ArgumentType.Primitive.Boolean.get()
+internal val TypeByte = Types.ArgumentType.Primitive.Byte.get()
+internal val TypeShort = Types.ArgumentType.Primitive.Short.get()
+internal val TypeChar = Types.ArgumentType.Primitive.Char.get()
 
-internal sealed class ArgumentType: Type() {
-    sealed class Primitive : ArgumentType() {
-        data object Int : Primitive()
-        data object Long : Primitive()
-        data object Double : Primitive()
-        data object Float : Primitive()
-        data object Boolean : Primitive()
-        data object Byte : Primitive()
-        data object Short : Primitive()
-        data object Char : Primitive()
-    }
-    data class Object(val className: String) : ArgumentType()
-    data class Array(val type: ArgumentType) : ArgumentType()
-}
-
-internal sealed class Type {
-    data object Void : Type()
-}
-
-private fun convertAsmArgumentTypeName(className: String): ArgumentType = when (className) {
-    "I" -> ArgumentType.Primitive.Int
-    "J" -> ArgumentType.Primitive.Long
-    "D" -> ArgumentType.Primitive.Double
-    "F" -> ArgumentType.Primitive.Float
-    "Z" -> ArgumentType.Primitive.Boolean
-    "B" -> ArgumentType.Primitive.Byte
-    "S" -> ArgumentType.Primitive.Short
-    "C" -> ArgumentType.Primitive.Char
-    else -> if (className.startsWith("[")) {
-        ArgumentType.Array(convertAsmArgumentTypeName(className.drop(1)))
-    } else {
-        require(className.startsWith("L") && className.endsWith(";")) {
-            "Invalid type name: $className"
-        }
-        ArgumentType.Object(className.drop(1).dropLast(1).replace('/', '.'))
-    }
-}
-
-private fun convertAsmTypeName(className: String): Type = when (className) {
-    "V" -> Type.Void
-    else -> convertAsmArgumentTypeName(className)
-}
-
-private fun convertAsmMethodType(methodDesc: String): MethodType {
-    val argumentTypeStrings = getArgumentTypes(methodDesc)
-    val returnType = getReturnType(methodDesc)
-    return MethodType(
-        argumentTypes = argumentTypeStrings.map { convertAsmArgumentTypeName(it.descriptor) },
-        returnType = convertAsmTypeName(returnType.descriptor),
-    )
-}
-
-internal fun Method.toMethodSignature() = MethodSignature(this.name, convertAsmMethodType(this.descriptor))
+internal fun Method.toMethodSignature() = Types.MethodSignature(this.name, convertAsmMethodType(this.descriptor))
 internal fun java.lang.reflect.Method.toMethodSignature() = Method.getMethod(this).toMethodSignature()
-internal fun convertAsmMethodToMethodSignature(methodName: String, methodDesc: String) = MethodSignature(methodName, convertAsmMethodType(methodDesc))

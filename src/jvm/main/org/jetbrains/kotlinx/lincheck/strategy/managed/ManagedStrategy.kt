@@ -18,6 +18,7 @@ import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.util.*
+import sun.nio.ch.lincheck.Types.ArgumentType
 import sun.nio.ch.lincheck.*
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicFieldUpdaterNames.getAtomicFieldUpdaterDescriptor
@@ -27,10 +28,8 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.adorne
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanObjectNumeration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
-import org.jetbrains.kotlinx.lincheck.strategy.native_calls.ArgumentType
 import org.jetbrains.kotlinx.lincheck.strategy.native_calls.DeterministicMethodDescriptor
 import org.jetbrains.kotlinx.lincheck.strategy.native_calls.MethodCallInfo
-import org.jetbrains.kotlinx.lincheck.strategy.native_calls.convertAsmMethodToMethodSignature
 import org.jetbrains.kotlinx.lincheck.strategy.native_calls.getDeterministicMethodDescriptorOrNull
 import org.jetbrains.kotlinx.lincheck.strategy.native_calls.runFromStateWithCast
 import org.jetbrains.kotlinx.lincheck.strategy.native_calls.saveFirstResultWithCast
@@ -1371,7 +1370,7 @@ abstract class ManagedStrategy(
         methodName: String,
         codeLocation: Int,
         methodId: Int,
-        methodDesc: String,
+        methodSignature: Types.MethodSignature,
         params: Array<Any?>
     ): Any? {
         val guarantee = runInIgnoredSection {
@@ -1437,7 +1436,7 @@ abstract class ManagedStrategy(
         val deterministicMethodDescriptor = runInIgnoredSection {
             val methodCallInfo = MethodCallInfo(
                 ownerType = ArgumentType.Object(className),
-                methodSignature = convertAsmMethodToMethodSignature(methodName, methodDesc),
+                methodSignature = methodSignature,
                 codeLocation = codeLocation,
                 methodId = methodId,
             )

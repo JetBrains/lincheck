@@ -10,6 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.native_calls
 
+import sun.nio.ch.lincheck.Types.*
+
 internal data class MethodCallInfo(
     val ownerType: ArgumentType.Object,
     val methodSignature: MethodSignature,
