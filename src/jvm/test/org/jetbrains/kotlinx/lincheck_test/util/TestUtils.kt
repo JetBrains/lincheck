@@ -204,7 +204,9 @@ fun checkTraceHasNoLincheckEvents(trace: String) {
 }
 
 fun checkFailureIsNotLincheckInternalBug(failure: LincheckFailure) {
-    check("You've caught a bug in Lincheck." !in failure.toString()) { "Internal Lincheck bug was detected\n$failure" }
+    check("You've caught a bug in Lincheck." !in failure.toString()) {
+        "Internal Lincheck bug was detected\n$failure"
+    }
 }
 
 /**

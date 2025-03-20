@@ -15,7 +15,6 @@ import org.objectweb.asm.Label
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import org.objectweb.asm.commons.GeneratorAdapter
-import org.objectweb.asm.commons.GeneratorAdapter.*
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import sun.nio.ch.lincheck.*
 
@@ -96,7 +95,7 @@ internal class ThreadTransformer(
         if (isThreadJoinCall(owner, name, desc) &&
             // in some JDK implementations, `Thread` methods may themselves call `join`,
             // so we do not instrument `join` class inside the `Thread` class itself.
-            className != JAVA_THREAD_CLASSNAME
+            !isThreadClass(className.toCanonicalClassName())
         ) {
             // STACK: joiningThread, timeout?, nanos?
             val nArguments = Type.getArgumentTypes(desc).size
@@ -140,18 +139,18 @@ internal class ThreadTransformer(
     }
 
     private fun isThreadStartMethod(methodName: String, desc: String): Boolean =
-        methodName == "start" && desc == VOID_METHOD_DESCRIPTOR && isThreadSubClass(className)
+        methodName == "start" && desc == VOID_METHOD_DESCRIPTOR && isThreadSubClass(className.toCanonicalClassName())
     
     private fun isJavaLangAccessThreadStartMethod(className: String, methodName: String): Boolean =
-        className == "jdk/internal/access/JavaLangAccess" && methodName == "start"
+        methodName == "start" && isJavaLangAccessClass(className.toCanonicalClassName())
 
     private fun isThreadRunMethod(methodName: String, desc: String): Boolean =
-        methodName == "run" && desc == VOID_METHOD_DESCRIPTOR && isThreadSubClass(className)
+        methodName == "run" && desc == VOID_METHOD_DESCRIPTOR && isThreadSubClass(className.toCanonicalClassName())
 
     // TODO: add support for thread joins with time limit
     private fun isThreadJoinCall(className: String, methodName: String, desc: String) =
         // no need to check for thread subclasses here, since join methods are marked as final
-        className == JAVA_THREAD_CLASSNAME && methodName == "join" && (
+        methodName == "join" && isThreadClass(className.toCanonicalClassName()) && (
             desc == "()V" || desc == "(J)V" || desc == "(JI)V"
         )
 }

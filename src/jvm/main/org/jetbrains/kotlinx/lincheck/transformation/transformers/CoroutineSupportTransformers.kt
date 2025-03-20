@@ -13,7 +13,6 @@ package org.jetbrains.kotlinx.lincheck.transformation.transformers
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.commons.AdviceAdapter
 import org.jetbrains.kotlinx.lincheck.transformation.*
-import org.jetbrains.kotlinx.lincheck.canonicalClassName
 import org.objectweb.asm.Type.getType
 import org.objectweb.asm.commons.GeneratorAdapter
 import sun.nio.ch.lincheck.*
@@ -38,7 +37,7 @@ internal class CoroutineCancellabilitySupportTransformer(
         if (isGetResult) {
             dup()
             invokeStatic(Injections::storeCancellableContinuation)
-            className?.canonicalClassName?.let { coroutineCallingClasses += it }
+            className?.toCanonicalClassName()?.let { coroutineCallingClasses += it }
         }
         super.visitMethodInsn(opcode, owner, name, desc, itf)
     }

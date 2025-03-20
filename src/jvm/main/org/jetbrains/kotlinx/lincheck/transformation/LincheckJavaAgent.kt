@@ -11,7 +11,6 @@
 package org.jetbrains.kotlinx.lincheck.transformation
 
 import net.bytebuddy.agent.ByteBuddyAgent
-import org.jetbrains.kotlinx.lincheck.canonicalClassName
 import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.runInIgnoredSection
 import org.jetbrains.kotlinx.lincheck.transformation.InstrumentationMode.MODEL_CHECKING
@@ -372,7 +371,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         // - https://youtrack.jetbrains.com/issue/KT-16727/
         if (internalClassName == null) return null
         // If the class should not be transformed, return immediately.
-        if (!shouldTransform(internalClassName.canonicalClassName, instrumentationMode)) {
+        if (!shouldTransform(internalClassName.toCanonicalClassName(), instrumentationMode)) {
             return null
         }
         // In the model checking mode, we transform classes lazily,
@@ -380,9 +379,9 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         if (!INSTRUMENT_ALL_CLASSES &&
             instrumentationMode == MODEL_CHECKING &&
             // do not re-transform already instrumented classes
-            internalClassName.canonicalClassName !in instrumentedClasses &&
+            internalClassName.toCanonicalClassName() !in instrumentedClasses &&
             // always transform eagerly instrumented classes
-            !isEagerlyInstrumentedClass(internalClassName.canonicalClassName)) {
+            !isEagerlyInstrumentedClass(internalClassName.toCanonicalClassName())) {
             return null
         }
         return transformImpl(loader, internalClassName, classBytes)
@@ -392,7 +391,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
         loader: ClassLoader?,
         internalClassName: String,
         classBytes: ByteArray
-    ): ByteArray = transformedClassesCache.computeIfAbsent(internalClassName.canonicalClassName) {
+    ): ByteArray = transformedClassesCache.computeIfAbsent(internalClassName.toCanonicalClassName()) {
         Logger.debug { "Transforming $internalClassName" }
 
         val reader = ClassReader(classBytes)

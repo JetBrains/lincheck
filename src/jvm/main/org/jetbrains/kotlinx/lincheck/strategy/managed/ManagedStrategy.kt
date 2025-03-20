@@ -157,7 +157,7 @@ abstract class ManagedStrategy(
 
     /**
      * For each thread, represents a shadow stack used to reflect the program's actual stack.
-     * 
+     *
      * Collected and used only in the trace collecting stage.
      */
     // TODO: unify with `callStackTrace`
@@ -1002,11 +1002,11 @@ abstract class ManagedStrategy(
      */
     override fun beforeReadField(obj: Any?, className: String, fieldName: String, codeLocation: Int,
                                  isStatic: Boolean, isFinal: Boolean) = runInIgnoredSection {
-        updateSnapshotOnFieldAccess(obj, className.canonicalClassName, fieldName)
+        updateSnapshotOnFieldAccess(obj, className, fieldName)
         // We need to ensure all the classes related to the reading object are instrumented.
         // The following call checks all the static fields.
         if (isStatic) {
-            LincheckJavaAgent.ensureClassHierarchyIsTransformed(className.canonicalClassName)
+            LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
         }
         // Optimization: do not track final field reads
         if (isFinal) {
@@ -1019,7 +1019,7 @@ abstract class ManagedStrategy(
         val iThread = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
             ReadTracePoint(
-                ownerRepresentation = if (isStatic) simpleClassName(className) else findOwnerName(obj!!),
+                ownerRepresentation = if (isStatic) className.toSimpleClassName() else findOwnerName(obj!!),
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
@@ -1077,7 +1077,7 @@ abstract class ManagedStrategy(
 
     override fun beforeWriteField(obj: Any?, className: String, fieldName: String, value: Any?, codeLocation: Int,
                                   isStatic: Boolean, isFinal: Boolean): Boolean = runInIgnoredSection {
-        updateSnapshotOnFieldAccess(obj, className.canonicalClassName, fieldName)
+        updateSnapshotOnFieldAccess(obj, className, fieldName)
         objectTracker?.registerObjectLink(fromObject = obj ?: StaticObject, toObject = value)
         if (!shouldTrackObjectAccess(obj)) {
             return@runInIgnoredSection false
@@ -1089,7 +1089,7 @@ abstract class ManagedStrategy(
         val iThread = threadScheduler.getCurrentThreadId()
         val tracePoint = if (collectTrace) {
             WriteTracePoint(
-                ownerRepresentation = if (isStatic) simpleClassName(className) else findOwnerName(obj!!),
+                ownerRepresentation = if (isStatic) className.toSimpleClassName() else findOwnerName(obj!!),
                 iThread = iThread,
                 actorId = currentActorId[iThread]!!,
                 callStackTrace = callStackTrace[iThread]!!,
@@ -1678,11 +1678,11 @@ abstract class ManagedStrategy(
             methodName = methodName,
             callStackTrace = callStackTrace,
             codeLocation = codeLocation,
-            isStatic = owner == null
+            isStatic = (owner == null)
         )
         // handle non-atomic methods
         if (atomicMethodDescriptor == null) {
-            val ownerName = if (owner != null) findOwnerName(owner) else simpleClassName(className)
+            val ownerName = if (owner != null) findOwnerName(owner) else className.toSimpleClassName()
             if (ownerName != null) {
                 tracePoint.initializeOwnerName(ownerName)
             }
@@ -1709,8 +1709,6 @@ abstract class ManagedStrategy(
         val enumPrefix = if (obj?.javaClass?.isEnum == true) "Enum:" else ""
         return "$enumPrefix${obj?.javaClass?.name ?: "null"}"
     }
-
-    private fun simpleClassName(className: String) = className.canonicalClassName.takeLastWhile { it != '.' }
 
     private fun initializeUnsafeMethodCallTracePoint(
         tracePoint: MethodCallTracePoint,

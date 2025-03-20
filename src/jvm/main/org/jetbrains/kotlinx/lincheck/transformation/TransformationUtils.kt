@@ -109,7 +109,7 @@ internal fun GeneratorAdapter.storeLocals(
 
 /**
  * Duplicates the value on the top of the stack.
- * 
+ *
  * Before execution:
  * STACK: x
  *
@@ -422,29 +422,6 @@ internal fun isPrimitive(type: Type): Boolean {
     }
 }
 
-private val isThreadSubclassMap = ConcurrentHashMap<String, Boolean>()
-
-internal fun isThreadSubClass(internalClassName: String): Boolean {
-    if (internalClassName == JAVA_THREAD_CLASSNAME) return true
-    return isThreadSubclassMap.computeIfAbsent(internalClassName) {
-        isSubClassOf(internalClassName, JAVA_THREAD_CLASSNAME)
-    }
-}
-
-private val isCoroutineStateMachineClassMap = ConcurrentHashMap<String, Boolean>()
-
-internal fun isCoroutineStateMachineClass(internalClassName: String): Boolean {
-    if (internalClassName.startsWith("java/")) return false
-    if (internalClassName.startsWith("kotlin/") && !internalClassName.startsWith("kotlin/coroutines/")) return false
-    return isCoroutineStateMachineClassMap.computeIfAbsent(internalClassName) {
-        getSuperclassName(internalClassName) == "kotlin/coroutines/jvm/internal/ContinuationImpl"
-    }
-}
-
-internal fun isCoroutineInternalClass(internalClassName: String): Boolean =
-    internalClassName == "kotlin/coroutines/intrinsics/IntrinsicsKt" ||
-    internalClassName == "kotlinx/coroutines/internal/StackTraceRecoveryKt"
-
 private fun getSuperclassName(internalClassName: String): String? {
     class SuperclassClassVisitor : ClassVisitor(ASM_API) {
         var internalSuperclassName: String? = null
@@ -474,6 +451,62 @@ private fun isSubClassOf(internalClassName: String, internalSuperClassName: Stri
         ?: return false
     return isSubClassOf(superclassName, internalSuperClassName)
 }
+
+/**
+ * Determines whether a given class is a subclass of the `Thread` class.
+ */
+internal fun isThreadSubClass(className: String): Boolean {
+    if (isThreadClass(className)) return true
+    return isThreadSubclassMap.computeIfAbsent(className) {
+        isSubClassOf(className.toInternalClassName(), JAVA_THREAD_CLASSNAME.toInternalClassName())
+    }
+}
+
+/**
+ * Checks if the given class name corresponds to the Java Thread class.
+ */
+internal fun isThreadClass(className: String): Boolean =
+    className == JAVA_THREAD_CLASSNAME
+
+private val isThreadSubclassMap = ConcurrentHashMap<String, Boolean>()
+
+private const val JAVA_THREAD_CLASSNAME = "java.lang.Thread"
+
+/**
+ * Tests if the provided [className] represents one of jdk internal [ThreadContainer] classes
+ * that use [JavaLangAccess.start] API to start threads.
+ */
+internal fun isThreadContainerClass(className: String): Boolean =
+    className == "jdk.internal.vm.SharedThreadContainer"  ||
+    className == "jdk.internal.misc.ThreadFlock"
+
+/**
+ * Determines whether the given class name corresponds to an internal coroutine-related class.
+ */
+internal fun isCoroutineInternalClass(className: String): Boolean =
+    className == "kotlin.coroutines.intrinsics.IntrinsicsKt" ||
+    className == "kotlinx.coroutines.internal.StackTraceRecoveryKt"
+
+/**
+ * Tests if the provided [className] represents an internal coroutine dispatcher class.
+ */
+internal fun isCoroutineDispatcherInternalClass(className: String): Boolean =
+    className.startsWith("kotlinx.coroutines.internal") && className.contains("DispatchedContinuation")
+
+/**
+ * Checks whether the given class name represents a coroutine state machine class.
+ */
+internal fun isCoroutineStateMachineClass(className: String): Boolean {
+    if (className.startsWith("java.")) return false
+    if (className.startsWith("kotlin.") && !className.startsWith("kotlin.coroutines.")) return false
+    return isCoroutineStateMachineClassMap.computeIfAbsent(className) {
+        val internalClassName = className.toInternalClassName()
+        val superclassName = getSuperclassName(internalClassName)
+        superclassName?.toCanonicalClassName() == "kotlin.coroutines.jvm.internal.ContinuationImpl"
+    }
+}
+
+private val isCoroutineStateMachineClassMap = ConcurrentHashMap<String, Boolean>()
 
 /**
  * Tests if the provided [className] contains `"ClassLoader"` as a substring.
@@ -512,18 +545,31 @@ internal fun isStackTraceElementClass(className: String): Boolean =
     className == "java.lang.StackTraceElement"
 
 /**
- * Tests if the provided [className] represents one of jdk internal [ThreadContainer] classes
- * that use [JavaLangAccess.start] API to start threads.
+ * Checks if the provided class name matches the [JavaLangAccess] class.
  */
-internal fun isThreadContainerClass(className: String): Boolean =
-    className == "jdk.internal.vm.SharedThreadContainer"  ||
-    className == "jdk.internal.misc.ThreadFlock"
+internal fun isJavaLangAccessClass(className: String): Boolean =
+    className == "jdk.internal.access.JavaLangAccess"
+
 
 /**
- * Tests if the provided [className] represents an internal coroutine dispatcher class.
+ * Extracts the simple class name from a fully qualified canonical class name.
  */
-internal fun isCoroutineDispatcherInternalClass(className: String): Boolean =
-    className.startsWith("kotlinx.coroutines.internal") && className.contains("DispatchedContinuation")
+internal fun String.toSimpleClassName() =
+    this.takeLastWhile { it != '.' }
+
+/**
+ * Converts a string representing a class name in internal format (e.g., "com/example/MyClass")
+ * into a canonical class name format with (e.g., "com.example.MyClass").
+ */
+internal fun String.toCanonicalClassName() =
+    this.replace('/', '.')
+
+/**
+ * Converts a string representing a class name in canonical format (e.g., "com.example.MyClass")
+ * into an internal class name format with (e.g., "com/example/MyClass").
+ */
+internal fun String.toInternalClassName() =
+    this.replace('.', '/')
 
 internal const val ASM_API = Opcodes.ASM9
 
@@ -531,5 +577,3 @@ internal val STRING_TYPE = getType(String::class.java)
 internal val CLASS_TYPE = getType(Class::class.java)
 
 internal val CLASS_FOR_NAME_METHOD = Method("forName", CLASS_TYPE, arrayOf(STRING_TYPE))
-
-internal const val JAVA_THREAD_CLASSNAME = "java/lang/Thread"

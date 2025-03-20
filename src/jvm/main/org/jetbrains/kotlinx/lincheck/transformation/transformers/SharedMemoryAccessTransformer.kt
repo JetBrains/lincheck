@@ -34,8 +34,8 @@ internal class SharedMemoryAccessTransformer(
 
     override fun visitFieldInsn(opcode: Int, owner: String, fieldName: String, desc: String) = adapter.run {
         if (
-            isCoroutineInternalClass(owner) ||
-            isCoroutineStateMachineClass(owner) ||
+            isCoroutineInternalClass(owner.toCanonicalClassName()) ||
+            isCoroutineStateMachineClass(owner.toCanonicalClassName()) ||
             // when initializing our own fields in constructor, we do not want to track that;
             // otherwise `VerifyError` will be thrown, see https://github.com/JetBrains/lincheck/issues/424
             (methodName == "<init>" && className == owner)
@@ -53,7 +53,7 @@ internal class SharedMemoryAccessTransformer(
                     code = {
                         // STACK: <empty>
                         pushNull()
-                        push(owner)
+                        push(owner.toCanonicalClassName())
                         push(fieldName)
                         loadNewCodeLocationId()
                         push(true) // isStatic
@@ -86,7 +86,7 @@ internal class SharedMemoryAccessTransformer(
                         // STACK: obj
                         dup()
                         // STACK: obj, obj
-                        push(owner)
+                        push(owner.toCanonicalClassName())
                         push(fieldName)
                         loadNewCodeLocationId()
                         push(false) // isStatic
@@ -122,7 +122,7 @@ internal class SharedMemoryAccessTransformer(
                         copyLocal(valueLocal)
                         // STACK: value
                         pushNull()
-                        push(owner)
+                        push(owner.toCanonicalClassName())
                         push(fieldName)
                         loadLocal(valueLocal)
                         box(valueType)
@@ -160,7 +160,7 @@ internal class SharedMemoryAccessTransformer(
                         // STACK: obj
                         dup()
                         // STACK: obj, obj
-                        push(owner)
+                        push(owner.toCanonicalClassName())
                         push(fieldName)
                         loadLocal(valueLocal)
                         box(valueType)

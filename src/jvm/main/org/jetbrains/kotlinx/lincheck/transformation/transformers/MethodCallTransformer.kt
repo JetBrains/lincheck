@@ -10,7 +10,6 @@
 
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
-import org.jetbrains.kotlinx.lincheck.canonicalClassName
 import org.jetbrains.kotlinx.lincheck.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.objectweb.asm.Opcodes.*
@@ -38,7 +37,7 @@ internal class MethodCallTransformer(
             visitMethodInsn(opcode, owner, name, desc, itf)
             return
         }
-        if (isCoroutineInternalClass(owner)) {
+        if (isCoroutineInternalClass(owner.toCanonicalClassName())) {
             invokeInIgnoredSection {
                 visitMethodInsn(opcode, owner, name, desc, itf)
             }
@@ -78,7 +77,7 @@ internal class MethodCallTransformer(
             null -> pushNull()
             else -> loadLocal(receiver)
         }
-        push(owner.canonicalClassName)
+        push(owner.toCanonicalClassName())
         push(name)
         loadNewCodeLocationId()
         // STACK [INVOKEVIRTUAL]: owner, owner, className, methodName, codeLocation
@@ -95,16 +94,16 @@ internal class MethodCallTransformer(
         storeLocal(argumentsArrayLocal)
         loadLocal(argumentsArrayLocal)
         invokeStatic(Injections::onMethodCall)
-        
+
         val deterministicMethodDescriptor = newLocal(OBJECT_TYPE)
         storeLocal(deterministicMethodDescriptor)
-        
+
         val deterministicCallIdLocal = newLocal(LONG_TYPE)
         pushDeterministicCallId(deterministicMethodDescriptor)
         storeLocal(deterministicCallIdLocal)
-        
+
         invokeBeforeEventIfPluginEnabled("method call $methodName", setMethodEventId = true)
-        
+
         tryCatchFinally(
             tryBlock = {
                 val returnType = getReturnType(desc)
@@ -143,7 +142,7 @@ internal class MethodCallTransformer(
             }
         )
     }
-    
+
     private fun GeneratorAdapter.pushDeterministicCallId(deterministicMethodDescriptor: Int) {
         if (!isInTraceDebuggerMode) {
             push(0L)
@@ -160,7 +159,7 @@ internal class MethodCallTransformer(
         push(0L)
         visitLabel(endIf)
     }
-    
+
     private fun GeneratorAdapter.invokeMethodOrDeterministicCall(
         deterministicMethodDescriptor: Int, deterministicCallIdLocal: Int, returnType: Type,
         receiverLocal: Int?, parametersLocal: Int,

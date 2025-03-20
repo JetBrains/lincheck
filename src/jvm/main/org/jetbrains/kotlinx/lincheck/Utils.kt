@@ -186,8 +186,6 @@ internal fun collectThreadDump(runner: Runner) = Thread.getAllStackTraces().filt
     t is TestThread && runner.isCurrentRunnerThread(t)
 }
 
-internal val String.canonicalClassName get() = this.replace('/', '.')
-
 internal val Throwable.text: String get() {
     val writer = StringWriter()
     printStackTrace(PrintWriter(writer))
