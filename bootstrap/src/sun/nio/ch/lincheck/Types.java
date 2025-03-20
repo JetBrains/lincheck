@@ -46,10 +46,12 @@ public class Types {
             }
         }
 
-        public static List<String> getAllTypeDescriptors(String methodDesc) {
+        public static List<Type> getAllTypeDescriptors(String methodDesc) {
             List<String> descriptors = new ArrayList<>();
             iterateThroughDescriptors(methodDesc, descriptors::add);
-            return descriptors;
+            return descriptors.stream()
+                    .map(Types::convertAsmTypeName)
+                    .collect(Collectors.toList());
         }
     }
 
@@ -84,12 +86,12 @@ public class Types {
     }
 
     public static MethodType convertAsmMethodType(String methodDesc) {
-        List<String> typeStrings = Utils.getAllTypeDescriptors(methodDesc); // last one is return type
+        List<Type> types = Utils.getAllTypeDescriptors(methodDesc); // last one is return type
 
-        Type returnType = Types.convertAsmTypeName(typeStrings.get(typeStrings.size() - 1));
-        List<ArgumentType> argumentTypes = typeStrings.stream()
-                .limit(typeStrings.size() - 1)
-                .map((descriptor) -> (ArgumentType) Types.convertAsmTypeName(descriptor))
+        Type returnType = types.get(types.size() - 1);
+        List<ArgumentType> argumentTypes = types.stream()
+                .limit(types.size() - 1)
+                .map((arg) -> (ArgumentType) arg)
                 .collect(Collectors.toList());
 
         return new MethodType(argumentTypes, returnType);
