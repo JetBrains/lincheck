@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.native_calls
 
-import sun.nio.ch.lincheck.Types.ArgumentType
+import sun.nio.ch.lincheck.Types
 
 internal fun getDeterministicTimeMethodDescriptorOrNull(
     methodCallInfo: MethodCallInfo
@@ -21,4 +21,4 @@ internal fun getDeterministicTimeMethodDescriptorOrNull(
     return PureDeterministicMethodDescriptor(methodCallInfo) { _, _ -> 1337L /* any constant value */ }
 }
 
-private val systemType = ArgumentType.Object("java.lang.System")
+private val systemType = Types.ObjectType("java.lang.System")

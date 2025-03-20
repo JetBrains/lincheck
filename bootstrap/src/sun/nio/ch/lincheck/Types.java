@@ -13,101 +13,151 @@ package sun.nio.ch.lincheck;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 public class Types {
-    private static class Utils {
-        /**
-         * Calls `consumer` for each descriptor substring of the `methodDesc`, including the return type of the method.
-         * @param methodDesc descriptor of the method.
-         * @param consumer callback called for each descriptor type. Passed parameter is the substring which contains the next descriptor type.
-         */
-        private static void iterateThroughDescriptors(String methodDesc, Consumer<String> consumer) {
-            // Modified code for iterating over the type descriptors
-            // in the method descriptor (which look like this: "(args...)ret")
-            int currentOffset = 1;
-
-            while (methodDesc.charAt(currentOffset) != ')') {
-                int currentDescriptorTypeOffset = currentOffset;
-                while (methodDesc.charAt(currentOffset) == '[') {
-                    currentOffset++;
-                }
-                if (methodDesc.charAt(currentOffset++) == 'L') {
-                    int semiColumnOffset = methodDesc.indexOf(';', currentOffset);
-                    currentOffset = Math.max(currentOffset, semiColumnOffset + 1);
-                }
-                if (consumer != null) {
-                    consumer.accept(methodDesc.substring(currentDescriptorTypeOffset, currentOffset));
-                }
-            }
-            if (consumer != null) {
-                consumer.accept(methodDesc.substring(currentOffset + 1));
-            }
-        }
-
-        public static List<Type> getAllTypeDescriptors(String methodDesc) {
-            List<String> descriptors = new ArrayList<>();
-            iterateThroughDescriptors(methodDesc, descriptors::add);
-            return descriptors.stream()
-                    .map(Types::convertAsmTypeName)
-                    .collect(Collectors.toList());
-        }
-    }
-
-    private static ArgumentType convertAsmArgumentTypeName(String className) {
+    private static Type convertAsmArgumentTypeName(String className) {
         switch (className) {
-            case "I": return ArgumentType.Primitive.Int.get();
-            case "J": return ArgumentType.Primitive.Long.get();
-            case "D": return ArgumentType.Primitive.Double.get();
-            case "F": return ArgumentType.Primitive.Float.get();
-            case "Z": return ArgumentType.Primitive.Boolean.get();
-            case "B": return ArgumentType.Primitive.Byte.get();
-            case "S": return ArgumentType.Primitive.Short.get();
-            case "C": return ArgumentType.Primitive.Char.get();
+            case "I": return IntType.get();
+            case "J": return LongType.get();
+            case "D": return DoubleType.get();
+            case "F": return FloatType.get();
+            case "Z": return BooleanType.get();
+            case "B": return ByteType.get();
+            case "S": return ShortType.get();
+            case "C": return CharType.get();
             default:
                 if (className.startsWith("[")) {
-                    return new ArgumentType.Array(convertAsmArgumentTypeName(className.substring(1)));
+                    return new ArrayType(convertAsmArgumentTypeName(className.substring(1)));
                 } else {
                     if (!className.startsWith("L") || !className.endsWith(";")) {
                         throw new IllegalArgumentException("Invalid type name: " + className);
                     }
-                    return new ArgumentType.Object(className.substring(1, className.length() - 1).replace('/', '.'));
+                    return new ObjectType(className.substring(1, className.length() - 1).replace('/', '.'));
                 }
         }
     }
 
     private static Type convertAsmTypeName(String className) {
         if ("V".equals(className)) {
-            return Type.Void.get();
+            return VoidType.get();
         } else {
             return convertAsmArgumentTypeName(className);
         }
     }
 
+    /**
+     * Parses each descriptor substring of the `methodDesc`, including the return type of the method.
+     *
+     * @param methodDesc descriptor of the method.
+     */
     public static MethodType convertAsmMethodType(String methodDesc) {
-        List<Type> types = Utils.getAllTypeDescriptors(methodDesc); // last one is return type
+        // Modified code for parsing the type descriptors
+        // in the method descriptor (which look like this: "(args...)ret")
+        List<Type> argumentTypes = new ArrayList<>();
+        int currentOffset = 1;
 
-        Type returnType = types.get(types.size() - 1);
-        List<ArgumentType> argumentTypes = types.stream()
-                .limit(types.size() - 1)
-                .map((arg) -> (ArgumentType) arg)
-                .collect(Collectors.toList());
+        while (methodDesc.charAt(currentOffset) != ')') {
+            int currentDescriptorTypeOffset = currentOffset;
+            while (methodDesc.charAt(currentOffset) == '[') {
+                currentOffset++;
+            }
+            if (methodDesc.charAt(currentOffset++) == 'L') {
+                int semiColumnOffset = methodDesc.indexOf(';', currentOffset);
+                currentOffset = Math.max(currentOffset, semiColumnOffset + 1);
+            }
+            argumentTypes.add(
+                    convertAsmTypeName(methodDesc.substring(currentDescriptorTypeOffset, currentOffset))
+            );
+        }
+        Type returnType = convertAsmTypeName(methodDesc.substring(currentOffset + 1));
 
         return new MethodType(argumentTypes, returnType);
     }
 
-    // ------ Methods -------------------- //
+    public static final VoidType VOID_TYPE = VoidType.get();
+    public static final IntType INT_TYPE = IntType.get();
+    public static final LongType LONG_TYPE = LongType.get();
+    public static final DoubleType DOUBLE_TYPE = DoubleType.get();
+    public static final FloatType FLOAT_TYPE = FloatType.get();
+    public static final BooleanType BOOLEAN_TYPE = BooleanType.get();
+    public static final ByteType BYTE_TYPE = ByteType.get();
+    public static final ShortType SHORT_TYPE = ShortType.get();
+    public static final CharType CHAR_TYPE = CharType.get();
+
+    public abstract static class Type {}
+
+    public static final class VoidType extends Type {
+        private VoidType() {}
+        static class Holder {
+            static final VoidType INSTANCE = new VoidType();
+        }
+        public static VoidType get() {
+            return Holder.INSTANCE;
+        }
+    }
+
+    public static final class ObjectType extends Type {
+        private final String className;
+
+        public ObjectType(String className) {
+            this.className = className;
+        }
+
+        public String getClassName() {
+            return className;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) return true;
+            if (!(obj instanceof ObjectType)) return false;
+
+            ObjectType other = (ObjectType) obj;
+            return className.equals(other.className);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(className);
+        }
+    }
+
+    public static final class ArrayType extends Type {
+        private final Type type;
+
+        public ArrayType(Type type) {
+            this.type = type;
+        }
+
+        public Type getType() {
+            return type;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) return true;
+            if (!(obj instanceof ArrayType)) return false;
+
+            ArrayType other = (ArrayType) obj;
+            return type.equals(other.type);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(type);
+        }
+    }
+
     public static class MethodType {
-        private final List<ArgumentType> argumentTypes;
+        private final List<Type> argumentTypes;
         private final Type returnType;
 
-        public MethodType(List<ArgumentType> argumentTypes, Type returnType) {
+        public MethodType(List<Type> argumentTypes, Type returnType) {
             this.argumentTypes = argumentTypes;
             this.returnType = returnType;
         }
 
-        public List<ArgumentType> getArgumentTypes() {
+        public List<Type> getArgumentTypes() {
             return argumentTypes;
         }
 
@@ -116,14 +166,14 @@ public class Types {
         }
 
         @Override
-        public boolean equals(java.lang.Object obj) {
+        public boolean equals(Object obj) {
             if (this == obj) return true;
             if (!(obj instanceof MethodType)) return false;
 
             MethodType other = (MethodType) obj;
             return (
-                returnType.equals(other.returnType) &&
-                argumentTypes.equals(other.argumentTypes)
+                    returnType.equals(other.returnType) &&
+                            argumentTypes.equals(other.argumentTypes)
             );
         }
 
@@ -133,179 +183,77 @@ public class Types {
         }
     }
 
-    public static class MethodSignature {
-        private final String name;
-        private final MethodType methodType;
-
-        public MethodSignature(String name, MethodType methodType) {
-            this.name = name;
-            this.methodType = methodType;
+    public static final class IntType extends Type {
+        private IntType() {}
+        private static class Holder {
+            static final IntType INSTANCE = new IntType();
         }
-
-        public String getName() {
-            return name;
-        }
-
-        public MethodType getMethodType() {
-            return methodType;
-        }
-
-        @Override
-        public boolean equals(java.lang.Object obj) {
-            if (this == obj) return true;
-            if (!(obj instanceof MethodSignature)) return false;
-
-            MethodSignature other = (MethodSignature) obj;
-            return (
-                name.equals(other.name) &&
-                methodType.equals(other.methodType)
-            );
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(name, methodType);
+        public static IntType get() {
+            return IntType.Holder.INSTANCE;
         }
     }
 
-    // ------ Types ---------------------- //
-    public abstract static class Type {
-        public static final class Void extends Type {
-            private Void() {}
-            static class Holder {
-                static final Void INSTANCE = new Void();
-            }
-            public static Void get() {
-                return Holder.INSTANCE;
-            }
+    public static final class LongType extends Type {
+        private LongType() {}
+        private static class Holder {
+            static final LongType INSTANCE = new LongType();
+        }
+        public static LongType get() {
+            return LongType.Holder.INSTANCE;
         }
     }
-
-    public abstract static class ArgumentType extends Type {
-        public static final class Object extends ArgumentType {
-            private final String className;
-
-            public Object(String className) {
-                this.className = className;
-            }
-
-            public String getClassName() {
-                return className;
-            }
-
-            @Override
-            public boolean equals(java.lang.Object obj) {
-                if (this == obj) return true;
-                if (!(obj instanceof ArgumentType.Object)) return false;
-
-                ArgumentType.Object other = (ArgumentType.Object) obj;
-                return className.equals(other.className);
-            }
-
-            @Override
-            public int hashCode() {
-                return Objects.hash(className);
-            }
+    public static final class DoubleType extends Type {
+        private DoubleType() {}
+        private static class Holder {
+            static final DoubleType INSTANCE = new DoubleType();
         }
-        public static final class Array extends ArgumentType {
-            private final ArgumentType type;
-
-            public Array(ArgumentType type) {
-                this.type = type;
-            }
-
-            public ArgumentType getType() {
-                return type;
-            }
-
-            @Override
-            public boolean equals(java.lang.Object obj) {
-                if (this == obj) return true;
-                if (!(obj instanceof ArgumentType.Array)) return false;
-
-                ArgumentType.Array other = (ArgumentType.Array) obj;
-                return type.equals(other.type);
-            }
-
-            @Override
-            public int hashCode() {
-                return Objects.hash(type);
-            }
+        public static DoubleType get() {
+            return DoubleType.Holder.INSTANCE;
         }
-
-        public abstract static class Primitive extends ArgumentType {
-            public static final class Int extends Primitive {
-                private Int() {}
-                private static class Holder {
-                    static final Int INSTANCE = new Int();
-                }
-                public static Int get() {
-                    return Int.Holder.INSTANCE;
-                }
-            }
-            public static final class Long extends Primitive {
-                private Long() {}
-                private static class Holder {
-                    static final Long INSTANCE = new Long();
-                }
-                public static Long get() {
-                    return Long.Holder.INSTANCE;
-                }
-            }
-            public static final class Double extends Primitive {
-                private Double() {}
-                private static class Holder {
-                    static final Double INSTANCE = new Double();
-                }
-                public static Double get() {
-                    return Double.Holder.INSTANCE;
-                }
-            }
-            public static final class Float extends Primitive {
-                private Float() {}
-                private static class Holder {
-                    static final Float INSTANCE = new Float();
-                }
-                public static Float get() {
-                    return Float.Holder.INSTANCE;
-                }
-            }
-            public static final class Boolean extends Primitive {
-                private Boolean() {}
-                private static class Holder {
-                    static final Boolean INSTANCE = new Boolean();
-                }
-                public static Boolean get() {
-                    return Boolean.Holder.INSTANCE;
-                }
-            }
-            public static final class Byte extends Primitive {
-                private Byte() {}
-                private static class Holder {
-                    static final Byte INSTANCE = new Byte();
-                }
-                public static Byte get() {
-                    return Byte.Holder.INSTANCE;
-                }
-            }
-            public static final class Short extends Primitive {
-                private Short() {}
-                private static class Holder {
-                    static final Short INSTANCE = new Short();
-                }
-                public static Short get() {
-                    return Short.Holder.INSTANCE;
-                }
-            }
-            public static final class Char extends Primitive {
-                private Char() {}
-                private static class Holder {
-                    static final Char INSTANCE = new Char();
-                }
-                public static Char get() {
-                    return Char.Holder.INSTANCE;
-                }
-            }
+    }
+    public static final class FloatType extends Type {
+        private FloatType() {}
+        private static class Holder {
+            static final FloatType INSTANCE = new FloatType();
+        }
+        public static FloatType get() {
+            return FloatType.Holder.INSTANCE;
+        }
+    }
+    public static final class BooleanType extends Type {
+        private BooleanType() {}
+        private static class Holder {
+            static final BooleanType INSTANCE = new BooleanType();
+        }
+        public static BooleanType get() {
+            return BooleanType.Holder.INSTANCE;
+        }
+    }
+    public static final class ByteType extends Type {
+        private ByteType() {}
+        private static class Holder {
+            static final ByteType INSTANCE = new ByteType();
+        }
+        public static ByteType get() {
+            return ByteType.Holder.INSTANCE;
+        }
+    }
+    public static final class ShortType extends Type {
+        private ShortType() {}
+        private static class Holder {
+            static final ShortType INSTANCE = new ShortType();
+        }
+        public static ShortType get() {
+            return ShortType.Holder.INSTANCE;
+        }
+    }
+    public static final class CharType extends Type {
+        private CharType() {}
+        private static class Holder {
+            static final CharType INSTANCE = new CharType();
+        }
+        public static CharType get() {
+            return CharType.Holder.INSTANCE;
         }
     }
 }

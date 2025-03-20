@@ -18,7 +18,6 @@ import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.util.*
-import sun.nio.ch.lincheck.Types.ArgumentType
 import sun.nio.ch.lincheck.*
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicFieldUpdaterNames.getAtomicFieldUpdaterDescriptor
@@ -1370,7 +1369,7 @@ abstract class ManagedStrategy(
         methodName: String,
         codeLocation: Int,
         methodId: Int,
-        methodSignature: Types.MethodSignature,
+        methodSignature: MethodSignature,
         params: Array<Any?>
     ): Any? {
         val guarantee = runInIgnoredSection {
@@ -1435,7 +1434,7 @@ abstract class ManagedStrategy(
         }
         val deterministicMethodDescriptor = runInIgnoredSection {
             val methodCallInfo = MethodCallInfo(
-                ownerType = ArgumentType.Object(className),
+                ownerType = Types.ObjectType(className),
                 methodSignature = methodSignature,
                 codeLocation = codeLocation,
                 methodId = methodId,
