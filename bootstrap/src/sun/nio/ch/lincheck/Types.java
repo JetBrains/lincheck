@@ -10,26 +10,22 @@
 
 package sun.nio.ch.lincheck;
 
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public class Types {
     private static class Utils {
-        @FunctionalInterface
-        private interface Consumer2<T, U> {
-            void accept(T t, U u);
-        }
-
         /**
-         * Calculate the number of type descriptors encoded in the `methodDesc`. For each descriptor substring it calls the `consumer`.
+         * Calls `consumer` for each descriptor substring of the `methodDesc`, including the return type of the method.
          * @param methodDesc descriptor of the method.
-         * @param consumer callback called for each descriptor type. Passed parameters are `begin` and `end` — indexes for the type descriptor substring in the `methodDesc`.
-         * @return total number of type descriptors in the method descriptor (e.g. number of arguments and plus one: the return type).
+         * @param consumer callback called for each descriptor type. Passed parameter is the substring which contains the next descriptor type.
          */
-        private static int iterateThroughDescriptors(String methodDesc, Consumer2<Integer, Integer> consumer) {
+        private static void iterateThroughDescriptors(String methodDesc, Consumer<String> consumer) {
             // Modified code for iterating over the type descriptors
             // in the method descriptor (which look like this: "(args...)ret")
-            int argumentCount = 0;
             int currentOffset = 1;
 
             while (methodDesc.charAt(currentOffset) != ')') {
@@ -42,27 +38,17 @@ public class Types {
                     currentOffset = Math.max(currentOffset, semiColumnOffset + 1);
                 }
                 if (consumer != null) {
-                    consumer.accept(currentDescriptorTypeOffset, currentOffset);
+                    consumer.accept(methodDesc.substring(currentDescriptorTypeOffset, currentOffset));
                 }
-                argumentCount++;
             }
             if (consumer != null) {
-                consumer.accept(currentOffset + 1, methodDesc.length());
+                consumer.accept(methodDesc.substring(currentOffset + 1));
             }
-
-            return argumentCount + 1 /* return type */;
         }
 
-        public static String[] getAllTypeDescriptors(String methodDesc) {
-            int descriptorsCount = iterateThroughDescriptors(methodDesc, null);
-            String[] descriptors = new String[descriptorsCount];
-            int[] currentIndex = { 0 };
-
-            iterateThroughDescriptors(methodDesc, (begin, end) -> {
-                descriptors[currentIndex[0]] = methodDesc.substring(begin, end);
-                currentIndex[0]++;
-            });
-
+        public static List<String> getAllTypeDescriptors(String methodDesc) {
+            List<String> descriptors = new ArrayList<>();
+            iterateThroughDescriptors(methodDesc, descriptors::add);
             return descriptors;
         }
     }
@@ -98,29 +84,28 @@ public class Types {
     }
 
     public static MethodType convertAsmMethodType(String methodDesc) {
-        String[] typeStrings = Utils.getAllTypeDescriptors(methodDesc); // last one is return type
+        List<String> typeStrings = Utils.getAllTypeDescriptors(methodDesc); // last one is return type
 
-        ArgumentType[] argumentTypes = new ArgumentType[typeStrings.length - 1];
-        Type returnType = Types.convertAsmTypeName(typeStrings[typeStrings.length - 1]);
-
-        for (int i = 0; i < argumentTypes.length; ++i) {
-            argumentTypes[i] = convertAsmArgumentTypeName(typeStrings[i]);
-        }
+        Type returnType = Types.convertAsmTypeName(typeStrings.get(typeStrings.size() - 1));
+        List<ArgumentType> argumentTypes = typeStrings.stream()
+                .limit(typeStrings.size() - 1)
+                .map((descriptor) -> (ArgumentType) Types.convertAsmTypeName(descriptor))
+                .collect(Collectors.toList());
 
         return new MethodType(argumentTypes, returnType);
     }
 
     // ------ Methods -------------------- //
     public static class MethodType {
-        private final ArgumentType[] argumentTypes;
+        private final List<ArgumentType> argumentTypes;
         private final Type returnType;
 
-        public MethodType(ArgumentType[] argumentTypes, Type returnType) {
+        public MethodType(List<ArgumentType> argumentTypes, Type returnType) {
             this.argumentTypes = argumentTypes;
             this.returnType = returnType;
         }
 
-        public ArgumentType[] getArgumentTypes() {
+        public List<ArgumentType> getArgumentTypes() {
             return argumentTypes;
         }
 
@@ -136,13 +121,13 @@ public class Types {
             MethodType other = (MethodType) obj;
             return (
                 returnType.equals(other.returnType) &&
-                Arrays.equals(argumentTypes, other.argumentTypes)
+                argumentTypes.equals(other.argumentTypes)
             );
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(returnType, Arrays.hashCode(argumentTypes));
+            return Objects.hash(returnType, argumentTypes);
         }
     }
 

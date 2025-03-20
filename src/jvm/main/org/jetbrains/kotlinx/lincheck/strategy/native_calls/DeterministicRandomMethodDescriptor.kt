@@ -70,12 +70,12 @@ private fun MethodSignature.isSecureRandomMethodToSkip() = when (name) {
 private fun ArgumentType.Object.isSecureRandom() = className == "java.security.SecureRandom"
 
 private val byteArrayMethodType = MethodType(
-    arrayOf(ArgumentType.Array(TypeByte)),
+    listOf(ArgumentType.Array(TypeByte)),
     TypeVoid,
 )
 
 private val secureByteArrayMethodType = MethodType(
-    arrayOf(
+    listOf(
         ArgumentType.Array(TypeByte),
         ArgumentType.Object("java.security.SecureRandomParameters")
     ),
