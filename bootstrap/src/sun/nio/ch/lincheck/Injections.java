@@ -368,10 +368,10 @@ public class Injections {
     /**
      * Called from the instrumented code before any method call.
      *
-     * @param owner is `null` for public static methods.
+     * @param receiver is `null` for public static methods.
      * @return Deterministic call descriptor or null.
      */
-    public static Object onMethodCall(Object owner, String className, String methodName, int codeLocation, int methodId, String methodDesc, Object[] params) {
+    public static Object onMethodCall(String className, String methodName, int codeLocation, int methodId, String methodDesc, Object receiver, Object[] params) {
         // to safely construct the method signature we need to enter ignored section
         // because it internally calls code which has instrumentation
         boolean entered = enterIgnoredSection();
@@ -381,7 +381,7 @@ public class Injections {
         } finally {
             if (entered) leaveIgnoredSection();
         }
-        return getEventTracker().onMethodCall(owner, className, methodName, codeLocation, methodId, methodSignature, params);
+        return getEventTracker().onMethodCall(className, methodName, codeLocation, methodId, methodSignature, receiver, params);
     }
 
     /**
@@ -391,8 +391,8 @@ public class Injections {
      * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
      * @param result The call result.
      */
-    public static void onMethodCallReturn(long descriptorId, Object descriptor, Object receiver, Object[] params, Object result) {
-        getEventTracker().onMethodCallReturn(descriptorId, descriptor, receiver, params, result);
+    public static void onMethodCallReturn(String className, String methodName, long descriptorId, Object descriptor, Object receiver, Object[] params, Object result) {
+        getEventTracker().onMethodCallReturn(className, methodName, descriptorId, descriptor, receiver, params, result);
     }
 
     /**
@@ -401,8 +401,8 @@ public class Injections {
      * @param descriptor Deterministic call descriptor or null.
      * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
      */
-    public static void onMethodCallReturnVoid(long descriptorId, Object descriptor, Object receiver, Object[] params) {
-        getEventTracker().onMethodCallReturn(descriptorId, descriptor, receiver, params, VOID_RESULT);
+    public static void onMethodCallReturnVoid(String className, String methodName, long descriptorId, Object descriptor, Object receiver, Object[] params) {
+        getEventTracker().onMethodCallReturn(className, methodName, descriptorId, descriptor, receiver, params, VOID_RESULT);
     }
 
     /**
@@ -412,8 +412,8 @@ public class Injections {
      * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
      * @param t Thrown exception.
      */
-    public static void onMethodCallException(long descriptorId, Object descriptor, Object receiver, Object[] params, Throwable t) {
-        getEventTracker().onMethodCallException(descriptorId, descriptor, receiver, params, t);
+    public static void onMethodCallException(String className, String methodName, long descriptorId, Object descriptor, Object receiver, Object[] params, Throwable t) {
+        getEventTracker().onMethodCallException(className, methodName, descriptorId, descriptor, receiver, params, t);
     }
 
     /**

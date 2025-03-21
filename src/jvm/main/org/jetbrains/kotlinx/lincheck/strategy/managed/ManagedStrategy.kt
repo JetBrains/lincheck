@@ -1368,17 +1368,17 @@ abstract class ManagedStrategy(
     }
 
     override fun onMethodCall(
-        owner: Any?,
         className: String,
         methodName: String,
         codeLocation: Int,
         methodId: Int,
         methodSignature: MethodSignature,
+        receiver: Any?,
         params: Array<Any?>
     ): Any? {
         val guarantee = runInIgnoredSection {
             // process method effect on the static memory snapshot
-            processMethodEffectOnStaticSnapshot(owner, params)
+            processMethodEffectOnStaticSnapshot(receiver, params)
             // re-throw abort error if the thread was aborted
             val threadId = threadScheduler.getCurrentThreadId()
             if (threadScheduler.isAborted(threadId)) {
@@ -1386,27 +1386,27 @@ abstract class ManagedStrategy(
             }
             // first check if the called method is an atomics API method
             // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
-            val atomicMethodDescriptor = getAtomicMethodDescriptor(owner, methodName)
+            val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodName)
             // get method's concurrency guarantee
             val guarantee = when {
                 (atomicMethodDescriptor != null) -> ManagedGuaranteeType.TREAT_AS_ATOMIC
-                else -> methodGuaranteeType(owner, className, methodName)
+                else -> methodGuaranteeType(receiver, className, methodName)
             }
             // in case if a static method is called, ensure its class is instrumented
-            if (owner == null && atomicMethodDescriptor == null && guarantee == null) { // static method
+            if (receiver == null && atomicMethodDescriptor == null && guarantee == null) { // static method
                 LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
             }
             // in case of atomics API setter method call, notify the object tracker about a new link between objects
             if (atomicMethodDescriptor != null && atomicMethodDescriptor.kind.isSetter) {
                 objectTracker?.registerObjectLink(
-                    fromObject = atomicMethodDescriptor.getAccessedObject(owner!!, params),
-                    toObject = atomicMethodDescriptor.getSetValue(owner, params)
+                    fromObject = atomicMethodDescriptor.getAccessedObject(receiver!!, params),
+                    toObject = atomicMethodDescriptor.getSetValue(receiver, params)
                 )
             }
             // check for livelock and create the method call trace point
             if (collectTrace) {
                 traceCollector!!.checkActiveLockDetected()
-                addBeforeMethodCallTracePoint(threadId, owner, codeLocation, methodId, className, methodName, params,
+                addBeforeMethodCallTracePoint(threadId, receiver, codeLocation, methodId, className, methodName, params,
                     atomicMethodDescriptor
                 )
             }
@@ -1448,7 +1448,15 @@ abstract class ManagedStrategy(
         return deterministicMethodDescriptor
     }
 
-    override fun onMethodCallReturn(descriptorId: Long, descriptor: Any?, receiver: Any?, params: Array<Any?>, result: Any?) {
+    override fun onMethodCallReturn(
+        className: String,
+        methodName: String,
+        descriptorId: Long,
+        descriptor: Any?,
+        receiver: Any?,
+        params: Array<Any?>,
+        result: Any?
+    ) {
         runInIgnoredSection {
             if (isInTraceDebuggerMode && isFirstReplay && descriptor != null) {
                 require(descriptor is DeterministicMethodDescriptor<*, *>)
@@ -1482,11 +1490,19 @@ abstract class ManagedStrategy(
         leaveIgnoredSection()
     }
 
-    override fun onMethodCallException(descriptorId: Long, descriptor: Any?, receiver: Any?, params: Array<Any?>, t: Throwable) {
+    override fun onMethodCallException(
+        className: String,
+        methodName: String,
+        descriptorId: Long,
+        descriptor: Any?,
+        receiver: Any?,
+        params: Array<Any?>,
+        throwable: Throwable
+    ) {
         if (isInTraceDebuggerMode && isFirstReplay && descriptor != null) {
             require(descriptor is DeterministicMethodDescriptor<*, *>)
             runInIgnoredSection {
-                descriptor.saveFirstResult(receiver, params, KResult.failure(t)) {
+                descriptor.saveFirstResult(receiver, params, KResult.failure(throwable)) {
                     nativeMethodCallStatesTracker.setState(descriptorId, descriptor.methodCallInfo, it)
                 }
             }
@@ -1505,7 +1521,7 @@ abstract class ManagedStrategy(
                 if (callStackTrace[threadId]!!.isEmpty())
                     return@runInIgnoredSection
                 val tracePoint = callStackTrace[threadId]!!.last().tracePoint
-                tracePoint.initializeThrownException(t)
+                tracePoint.initializeThrownException(throwable)
                 afterMethodCall(threadId, tracePoint)
                 traceCollector!!.addStateRepresentation()
             }

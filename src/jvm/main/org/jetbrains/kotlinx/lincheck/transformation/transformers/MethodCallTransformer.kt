@@ -80,7 +80,7 @@ internal class MethodCallTransformer(
             else -> null
         }
         // STACK: <empty>
-        processMethodCallEnter(desc, owner, name, receiverLocal, argumentsArrayLocal)
+        processMethodCallEnter(owner, name, desc, receiverLocal, argumentsArrayLocal)
         // STACK: deterministicCallDescriptor
         val deterministicMethodDescriptorLocal = newLocal(OBJECT_TYPE)
         val deterministicCallIdLocal = newLocal(LONG_TYPE)
@@ -106,6 +106,8 @@ internal class MethodCallTransformer(
                 }
                 // STACK: result?
                 processMethodCallReturn(
+                    owner,
+                    name,
                     returnType,
                     deterministicCallIdLocal,
                     deterministicMethodDescriptorLocal,
@@ -117,6 +119,8 @@ internal class MethodCallTransformer(
             catchBlock = {
                 // STACK: exception
                 processMethodCallException(
+                    owner,
+                    name,
                     deterministicCallIdLocal,
                     deterministicMethodDescriptorLocal,
                     receiverLocal,
@@ -127,26 +131,26 @@ internal class MethodCallTransformer(
     }
 
     private fun processMethodCallEnter(
+        className: String,
+        methodName: String,
         desc: String,
-        owner: String,
-        name: String,
         receiverLocal: Int?,
         argumentsArrayLocal: Int
     ) = adapter.run {
         // STACK: <empty>
-        pushReceiver(receiverLocal)
-        push(owner.toCanonicalClassName())
-        push(name)
+        push(className.toCanonicalClassName())
+        push(methodName)
         loadNewCodeLocationId()
-        // STACK: receiver?, className, methodName, codeLocation
-        push(MethodIds.getMethodId(owner, name, desc))
+        // STACK: className, methodName, codeLocation
+        push(MethodIds.getMethodId(className, methodName, desc))
         push(desc)
-        // STACK: receiver?, className, methodName, codeLocation, methodId, methodDesc
+        // STACK: className, methodName, codeLocation, methodId, methodDesc
+        pushReceiver(receiverLocal)
         loadLocal(argumentsArrayLocal)
-        // STACK: receiver?, className, methodName, codeLocation, methodId, methodDesc, argumentsArray
+        // STACK: className, methodName, codeLocation, methodId, methodDesc, receiver?, argumentsArray
         invokeStatic(Injections::onMethodCall)
         // STACK: deterministicCallDescriptor
-        invokeBeforeEventIfPluginEnabled("method call $methodName", setMethodEventId = true)
+        invokeBeforeEventIfPluginEnabled("method call ${this@MethodCallTransformer.methodName}", setMethodEventId = true)
     }
 
     private fun pushDeterministicCallId(deterministicMethodDescriptorLocal: Int) = adapter.run {
@@ -210,6 +214,8 @@ internal class MethodCallTransformer(
     }
 
     private fun processMethodCallReturn(
+        className: String,
+        methodName: String,
         returnType: Type,
         deterministicCallIdLocal: Int,
         deterministicMethodDescriptorLocal: Int,
@@ -221,6 +227,8 @@ internal class MethodCallTransformer(
             (returnType == VOID_TYPE) -> null
             else -> newLocal(returnType).also { storeLocal(it) }
         }
+        push(className.toCanonicalClassName())
+        push(methodName)
         loadLocal(deterministicCallIdLocal)
         loadLocal(deterministicMethodDescriptorLocal)
         pushReceiver(receiverLocal)
@@ -229,7 +237,7 @@ internal class MethodCallTransformer(
             loadLocal(it)
             box(returnType)
         }
-        // STACK: deterministicCallId, deterministicMethodDescriptor, receiver, arguments, result?
+        // STACK: className, methodName, deterministicCallId, deterministicMethodDescriptor, receiver, arguments, result?
         when {
             (returnType == VOID_TYPE) -> invokeStatic(Injections::onMethodCallReturnVoid)
             else                      -> invokeStatic(Injections::onMethodCallReturn)
@@ -239,6 +247,8 @@ internal class MethodCallTransformer(
     }
 
     private fun processMethodCallException(
+        className: String,
+        methodName: String,
         deterministicCallIdLocal: Int,
         deterministicMethodDescriptorLocal: Int,
         receiverLocal: Int?,
@@ -248,12 +258,14 @@ internal class MethodCallTransformer(
         val exceptionLocal = newLocal(THROWABLE_TYPE)
         storeLocal(exceptionLocal)
         // STACK: <empty>
+        push(className.toCanonicalClassName())
+        push(methodName)
         loadLocal(deterministicCallIdLocal)
         loadLocal(deterministicMethodDescriptorLocal)
         pushReceiver(receiverLocal)
         loadLocal(argumentsArrayLocal)
         loadLocal(exceptionLocal)
-        // STACK: deterministicCallId, deterministicMethodDescriptor, receiver, params, exception
+        // STACK: className, methodName, deterministicCallId, deterministicMethodDescriptor, receiver, params, exception
         invokeStatic(Injections::onMethodCallException)
         // STACK: <empty>
         loadLocal(exceptionLocal)

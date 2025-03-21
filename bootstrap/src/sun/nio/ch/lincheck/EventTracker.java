@@ -70,9 +70,11 @@ public interface EventTracker {
     void afterLocalRead(int codeLocation, String name, Object value);
     void afterLocalWrite(int codeLocation, String name, Object value);
 
-    Object onMethodCall(Object owner, String className, String methodName, int codeLocation, int methodId, MethodSignature methodSignature, Object[] params);
-    void onMethodCallReturn(long descriptorId, Object descriptor, Object receiver, Object[] params, Object result);
-    void onMethodCallException(long descriptorId, Object descriptor, Object receiver, Object[] params, Throwable t);
+    Object onMethodCall(String className, String methodName, int codeLocation, int methodId, MethodSignature methodSignature, Object receiver, Object[] params);
+    void onMethodCallReturn(String className, String methodName, long descriptorId, Object descriptor, Object receiver, Object[] params, Object result);
+    void onMethodCallException(String className, String methodName, long descriptorId, Object descriptor, Object receiver, Object[] params, Throwable t);
+
+    BootstrapResult<?> invokeDeterministicallyOrNull(long descriptorId, Object descriptor, Object receiver, Object[] params);
 
     InjectedRandom getThreadLocalRandom();
     int randomNextInt();
@@ -83,6 +85,4 @@ public interface EventTracker {
     void beforeEvent(int eventId, String type);
     int getEventId();
     void setLastMethodCallEventId();
-
-    BootstrapResult<?> invokeDeterministicallyOrNull(long descriptorId, Object descriptor, Object receiver, Object[] params);
 }
