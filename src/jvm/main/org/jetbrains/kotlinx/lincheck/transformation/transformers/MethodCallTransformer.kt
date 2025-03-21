@@ -217,28 +217,25 @@ internal class MethodCallTransformer(
         argumentsArrayLocal: Int
     ) = adapter.run {
         // STACK: result?
-        if (returnType == VOID_TYPE) {
-            // STACK: <empty>
-            loadLocal(deterministicCallIdLocal)
-            loadLocal(deterministicMethodDescriptorLocal)
-            pushReceiver(receiverLocal)
-            loadLocal(argumentsArrayLocal)
-            invokeStatic(Injections::onMethodCallReturnVoid)
-            // STACK: <empty>
-        } else {
-            // STACK: result
-            val resultLocal = newLocal(returnType)
-            storeLocal(resultLocal)
-            loadLocal(deterministicCallIdLocal)
-            loadLocal(deterministicMethodDescriptorLocal)
-            pushReceiver(receiverLocal)
-            loadLocal(argumentsArrayLocal)
-            loadLocal(resultLocal)
-            box(returnType)
-            invokeStatic(Injections::onMethodCallReturn)
-            loadLocal(resultLocal)
-            // STACK: result
+        val resultLocal = when {
+            (returnType == VOID_TYPE) -> null
+            else -> newLocal(returnType).also { storeLocal(it) }
         }
+        loadLocal(deterministicCallIdLocal)
+        loadLocal(deterministicMethodDescriptorLocal)
+        pushReceiver(receiverLocal)
+        loadLocal(argumentsArrayLocal)
+        resultLocal?.let {
+            loadLocal(it)
+            box(returnType)
+        }
+        // STACK: deterministicCallId, deterministicMethodDescriptor, receiver, arguments, result?
+        when {
+            (returnType == VOID_TYPE) -> invokeStatic(Injections::onMethodCallReturnVoid)
+            else                      -> invokeStatic(Injections::onMethodCallReturn)
+        }
+        resultLocal?.let { loadLocal(it) }
+        // STACK: result?
     }
 
     private fun processMethodCallException(
