@@ -52,7 +52,7 @@ public class Types {
      */
     public static MethodType convertAsmMethodType(String methodDesc) {
         // Modified code for parsing the type descriptors
-        // in the method descriptor (which look like this: "(args...)ret")
+        // in the method descriptor (which looks like this: "(args...)ret")
         List<Type> argumentTypes = new ArrayList<>();
         int currentOffset = 1;
 
