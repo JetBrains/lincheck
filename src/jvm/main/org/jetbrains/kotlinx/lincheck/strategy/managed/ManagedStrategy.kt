@@ -1360,6 +1360,10 @@ abstract class ManagedStrategy(
                 return guarantee.type
             }
         }
+        // Ignore methods called on standard I/O streams
+        when (owner) {
+            System.`in`, System.out, System.err -> return ManagedGuaranteeType.IGNORE
+        }
         return null
     }
 
