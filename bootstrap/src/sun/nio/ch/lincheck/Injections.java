@@ -11,7 +11,6 @@
 package sun.nio.ch.lincheck;
 
 import java.lang.invoke.CallSite;
-import java.util.function.Supplier;
 
 import static sun.nio.ch.lincheck.Types.convertAsmMethodType;
 
