@@ -138,6 +138,16 @@ public class Types {
         }
     }
 
+    public static final class VoidType extends Type {}
+    public static final class IntType extends Type {}
+    public static final class LongType extends Type {}
+    public static final class DoubleType extends Type {}
+    public static final class FloatType extends Type {}
+    public static final class BooleanType extends Type {}
+    public static final class ByteType extends Type {}
+    public static final class ShortType extends Type {}
+    public static final class CharType extends Type {}
+
     public static class MethodType {
         private final List<Type> argumentTypes;
         private final Type returnType;
@@ -162,8 +172,8 @@ public class Types {
 
             MethodType other = (MethodType) obj;
             return (
-                returnType.equals(other.returnType) &&
-                argumentTypes.equals(other.argumentTypes)
+                    returnType.equals(other.returnType) &&
+                            argumentTypes.equals(other.argumentTypes)
             );
         }
 
@@ -172,14 +182,4 @@ public class Types {
             return Objects.hash(returnType, argumentTypes);
         }
     }
-
-    public static final class VoidType extends Type {}
-    public static final class IntType extends Type {}
-    public static final class LongType extends Type {}
-    public static final class DoubleType extends Type {}
-    public static final class FloatType extends Type {}
-    public static final class BooleanType extends Type {}
-    public static final class ByteType extends Type {}
-    public static final class ShortType extends Type {}
-    public static final class CharType extends Type {}
 }
