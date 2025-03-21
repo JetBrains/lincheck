@@ -148,9 +148,6 @@ abstract class ManagedStrategy(
     // User-specified guarantees on specific function, which can be considered as atomic or ignored.
     private val userDefinedGuarantees: List<ManagedStrategyGuarantee>? = testCfg.guarantees.ifEmpty { null }
 
-    // Predefined guarantees on specific `PrintStream` instances on which we do not want to track method calls.
-    private val predefinedGuarantees: List<ManagedStrategyGuarantee> = listOf(forInstances(System.`in`, System.out, System.err).allMethods().ignore())
-
     // Utility class for the plugin integration to provide ids for each trace point
     private var eventIdProvider = EventIdProvider()
 
@@ -1357,18 +1354,16 @@ abstract class ManagedStrategy(
     }
 
     private fun methodGuaranteeType(owner: Any?, className: String, methodName: String): ManagedGuaranteeType? = runInIgnoredSection {
-        predefinedGuarantees
-            .plus(userDefinedGuarantees ?: emptyList())
-            .forEach { guarantee ->
-                val ownerName = owner?.javaClass?.canonicalName ?: className
-                if (
-                    guarantee.instancePredicate(owner) &&
-                    guarantee.classPredicate(ownerName) &&
-                    guarantee.methodPredicate(methodName)
-                ) {
-                    return guarantee.type
-                }
+        userDefinedGuarantees?.forEach { guarantee ->
+            val ownerName = owner?.javaClass?.canonicalName ?: className
+            if (guarantee.classPredicate(ownerName) && guarantee.methodPredicate(methodName)) {
+                return guarantee.type
             }
+        }
+        // Ignore methods called on standard I/O streams
+        when (owner) {
+            System.`in`, System.out, System.err -> return ManagedGuaranteeType.IGNORE
+        }
         return null
     }
 

@@ -28,26 +28,14 @@ fun forClasses(vararg classes: KClass<*>) = forClasses {
 /**
  * ManagedGuarantee will be constructed for all classes satisfying [classPredicate].
  */
-fun forClasses(classPredicate: (fullClassName: String) -> Boolean) = ManagedStrategyGuarantee.MethodBuilder({ true }, classPredicate)
-
-/**
- * ManagedGuarantee will be constructed for all [instances].
- */
-internal fun forInstances(vararg instances: Any) = forInstances { it in instances }
-
-/**
- * ManagedGuarantee will be constructed for all objects satisfying [instancePredicate].
- */
-internal fun forInstances(instancePredicate: (instance: Any?) -> Boolean) = ManagedStrategyGuarantee.MethodBuilder(instancePredicate, { true })
+fun forClasses(classPredicate: (fullClassName: String) -> Boolean) = ManagedStrategyGuarantee.MethodBuilder(classPredicate)
 
 class ManagedStrategyGuarantee private constructor(
-    internal val instancePredicate: (instance: Any?) -> Boolean,
     internal val classPredicate: (fullClassName: String) -> Boolean,
     internal val methodPredicate: (methodName: String) -> Boolean,
     internal val type: ManagedGuaranteeType
 ) {
     class MethodBuilder internal constructor(
-        private val instancePredicate: (instance: Any?) -> Boolean,
         private val classPredicate: (fullClassName: String) -> Boolean
     ) {
         /**
@@ -63,11 +51,10 @@ class ManagedStrategyGuarantee private constructor(
         /**
          * ManagedGuarantee will be constructed for all methods satisfying [methodPredicate]
          */
-        fun methods(methodPredicate: (methodName: String) -> Boolean) = GuaranteeBuilder(instancePredicate, classPredicate, methodPredicate)
+        fun methods(methodPredicate: (methodName: String) -> Boolean) = GuaranteeBuilder(classPredicate, methodPredicate)
     }
 
     class GuaranteeBuilder internal constructor(
-        private val instancePredicate: (instance: Any?) -> Boolean,
         private val classPredicate: (fullClassName: String) -> Boolean,
         private val methodPredicate: (methodName: String) -> Boolean
     ) {
@@ -76,7 +63,7 @@ class ManagedStrategyGuarantee private constructor(
          * interesting code locations inside, and no switch point will be added due to the
          * specified method calls.
          */
-        fun ignore() = ManagedStrategyGuarantee(instancePredicate, classPredicate, methodPredicate, ManagedGuaranteeType.IGNORE)
+        fun ignore() = ManagedStrategyGuarantee(classPredicate, methodPredicate, ManagedGuaranteeType.IGNORE)
 
         /**
          * The methods will be treated by model checking strategy as an atomic operation, so that
@@ -86,7 +73,7 @@ class ManagedStrategyGuarantee private constructor(
          * In contract with the [ignore] mode, switch points are added right before and after the
          * specified method calls.
          */
-        fun treatAsAtomic() = ManagedStrategyGuarantee(instancePredicate, classPredicate, methodPredicate, ManagedGuaranteeType.TREAT_AS_ATOMIC)
+        fun treatAsAtomic() = ManagedStrategyGuarantee(classPredicate, methodPredicate, ManagedGuaranteeType.TREAT_AS_ATOMIC)
     }
 }
 
