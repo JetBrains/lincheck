@@ -17,14 +17,14 @@ import java.util.Objects;
 public class Types {
     private static Type convertAsmArgumentTypeName(String className) {
         switch (className) {
-            case "I": return IntType.get();
-            case "J": return LongType.get();
-            case "D": return DoubleType.get();
-            case "F": return FloatType.get();
-            case "Z": return BooleanType.get();
-            case "B": return ByteType.get();
-            case "S": return ShortType.get();
-            case "C": return CharType.get();
+            case "I": return INT_TYPE;
+            case "J": return LONG_TYPE;
+            case "D": return DOUBLE_TYPE;
+            case "F": return FLOAT_TYPE;
+            case "Z": return BOOLEAN_TYPE;
+            case "B": return BYTE_TYPE;
+            case "S": return SHORT_TYPE;
+            case "C": return CHAR_TYPE;
             default:
                 if (className.startsWith("[")) {
                     return new ArrayType(convertAsmArgumentTypeName(className.substring(1)));
@@ -39,7 +39,7 @@ public class Types {
 
     private static Type convertAsmTypeName(String className) {
         if ("V".equals(className)) {
-            return VoidType.get();
+            return VOID_TYPE;
         } else {
             return convertAsmArgumentTypeName(className);
         }
@@ -74,27 +74,17 @@ public class Types {
         return new MethodType(argumentTypes, returnType);
     }
 
-    public static final VoidType VOID_TYPE = VoidType.get();
-    public static final IntType INT_TYPE = IntType.get();
-    public static final LongType LONG_TYPE = LongType.get();
-    public static final DoubleType DOUBLE_TYPE = DoubleType.get();
-    public static final FloatType FLOAT_TYPE = FloatType.get();
-    public static final BooleanType BOOLEAN_TYPE = BooleanType.get();
-    public static final ByteType BYTE_TYPE = ByteType.get();
-    public static final ShortType SHORT_TYPE = ShortType.get();
-    public static final CharType CHAR_TYPE = CharType.get();
+    public static final VoidType VOID_TYPE = new VoidType();
+    public static final IntType INT_TYPE = new IntType();
+    public static final LongType LONG_TYPE = new LongType();
+    public static final DoubleType DOUBLE_TYPE = new DoubleType();
+    public static final FloatType FLOAT_TYPE = new FloatType();
+    public static final BooleanType BOOLEAN_TYPE = new BooleanType();
+    public static final ByteType BYTE_TYPE = new ByteType();
+    public static final ShortType SHORT_TYPE = new ShortType();
+    public static final CharType CHAR_TYPE = new CharType();
 
     public abstract static class Type {}
-
-    public static final class VoidType extends Type {
-        private VoidType() {}
-        static class Holder {
-            static final VoidType INSTANCE = new VoidType();
-        }
-        public static VoidType get() {
-            return Holder.INSTANCE;
-        }
-    }
 
     public static final class ObjectType extends Type {
         private final String className;
@@ -172,8 +162,8 @@ public class Types {
 
             MethodType other = (MethodType) obj;
             return (
-                    returnType.equals(other.returnType) &&
-                            argumentTypes.equals(other.argumentTypes)
+                returnType.equals(other.returnType) &&
+                argumentTypes.equals(other.argumentTypes)
             );
         }
 
@@ -183,77 +173,13 @@ public class Types {
         }
     }
 
-    public static final class IntType extends Type {
-        private IntType() {}
-        private static class Holder {
-            static final IntType INSTANCE = new IntType();
-        }
-        public static IntType get() {
-            return IntType.Holder.INSTANCE;
-        }
-    }
-
-    public static final class LongType extends Type {
-        private LongType() {}
-        private static class Holder {
-            static final LongType INSTANCE = new LongType();
-        }
-        public static LongType get() {
-            return LongType.Holder.INSTANCE;
-        }
-    }
-    public static final class DoubleType extends Type {
-        private DoubleType() {}
-        private static class Holder {
-            static final DoubleType INSTANCE = new DoubleType();
-        }
-        public static DoubleType get() {
-            return DoubleType.Holder.INSTANCE;
-        }
-    }
-    public static final class FloatType extends Type {
-        private FloatType() {}
-        private static class Holder {
-            static final FloatType INSTANCE = new FloatType();
-        }
-        public static FloatType get() {
-            return FloatType.Holder.INSTANCE;
-        }
-    }
-    public static final class BooleanType extends Type {
-        private BooleanType() {}
-        private static class Holder {
-            static final BooleanType INSTANCE = new BooleanType();
-        }
-        public static BooleanType get() {
-            return BooleanType.Holder.INSTANCE;
-        }
-    }
-    public static final class ByteType extends Type {
-        private ByteType() {}
-        private static class Holder {
-            static final ByteType INSTANCE = new ByteType();
-        }
-        public static ByteType get() {
-            return ByteType.Holder.INSTANCE;
-        }
-    }
-    public static final class ShortType extends Type {
-        private ShortType() {}
-        private static class Holder {
-            static final ShortType INSTANCE = new ShortType();
-        }
-        public static ShortType get() {
-            return ShortType.Holder.INSTANCE;
-        }
-    }
-    public static final class CharType extends Type {
-        private CharType() {}
-        private static class Holder {
-            static final CharType INSTANCE = new CharType();
-        }
-        public static CharType get() {
-            return CharType.Holder.INSTANCE;
-        }
-    }
+    public static final class VoidType extends Type {}
+    public static final class IntType extends Type {}
+    public static final class LongType extends Type {}
+    public static final class DoubleType extends Type {}
+    public static final class FloatType extends Type {}
+    public static final class BooleanType extends Type {}
+    public static final class ByteType extends Type {}
+    public static final class ShortType extends Type {}
+    public static final class CharType extends Type {}
 }
