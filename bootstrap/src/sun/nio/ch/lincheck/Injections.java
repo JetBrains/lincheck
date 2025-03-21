@@ -391,9 +391,7 @@ public class Injections {
      * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
      * @param result The call result.
      */
-    public static void onMethodCallReturn(
-            long descriptorId, Object descriptor, Object receiver, Object[] params, Object result
-    ) {
+    public static void onMethodCallReturn(long descriptorId, Object descriptor, Object receiver, Object[] params, Object result) {
         getEventTracker().onMethodCallReturn(descriptorId, descriptor, receiver, params, result);
     }
 
@@ -405,6 +403,17 @@ public class Injections {
      */
     public static void onMethodCallReturnVoid(long descriptorId, Object descriptor, Object receiver, Object[] params) {
         getEventTracker().onMethodCallReturn(descriptorId, descriptor, receiver, params, VOID_RESULT);
+    }
+
+    /**
+     * Called from the instrumented code after any method call threw an exception
+     *
+     * @param descriptor Deterministic call descriptor or null.
+     * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
+     * @param t Thrown exception.
+     */
+    public static void onMethodCallException(long descriptorId, Object descriptor, Object receiver, Object[] params, Throwable t) {
+        getEventTracker().onMethodCallException(descriptorId, descriptor, receiver, params, t);
     }
 
     /**
@@ -431,19 +440,6 @@ public class Injections {
      */
     public static Object getFromOrThrow(BootstrapResult<?> result) throws Throwable {
         return result.getOrThrow();
-    }
-
-    /**
-     * Called from the instrumented code after any method call threw an exception
-     * 
-     * @param descriptor Deterministic call descriptor or null.
-     * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
-     * @param t Thrown exception.
-     */
-    public static void onMethodCallException(
-            long descriptorId, Object descriptor, Object receiver, Object[] params, Throwable t
-    ) {
-        getEventTracker().onMethodCallException(descriptorId, descriptor, receiver, params, t);
     }
 
     /**

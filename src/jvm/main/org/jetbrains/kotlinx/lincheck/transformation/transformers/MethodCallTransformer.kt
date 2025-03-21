@@ -67,90 +67,96 @@ internal class MethodCallTransformer(
     }
 
     private fun processMethodCall(desc: String, opcode: Int, owner: String, name: String, itf: Boolean) = adapter.run {
-        // STACK [INVOKEVIRTUAL]: owner, arguments
-        // STACK [INVOKESTATIC] :        arguments
+        val receiverType = Type.getType("L$owner;")
+        val returnType = getReturnType(desc)
+        // STACK: receiver?, arguments
         val argumentLocals = storeArguments(desc)
-        val receiver = if (opcode == INVOKESTATIC) null else newLocal(getType("L$owner;"))
-        receiver?.let { storeLocal(it) }
-        // STACK : <empty>
-        when (receiver) {
-            null -> pushNull()
-            else -> loadLocal(receiver)
+        val argumentsArrayLocal = newLocal(OBJECT_TYPE).also {
+            pushArray(argumentLocals)
+            storeLocal(it)
         }
-        push(owner.toCanonicalClassName())
-        push(name)
-        loadNewCodeLocationId()
-        // STACK [INVOKEVIRTUAL]: owner, owner, className, methodName, codeLocation
-        // STACK [INVOKESTATIC]:         null, className, methodName, codeLocation
-        adapter.push(MethodIds.getMethodId(owner, name, desc))
-        // STACK [INVOKEVIRTUAL]: owner, owner, className, methodName, codeLocation, methodId
-        // STACK [INVOKESTATIC]:         null, className, methodName, codeLocation, methodId
-        adapter.push(desc)
-        // STACK [INVOKEVIRTUAL]: owner, owner, className, methodName, codeLocation, methodId, methodDesc
-        // STACK [INVOKESTATIC]:         null, className, methodName, codeLocation, methodId, methodDesc
-        pushArray(argumentLocals)
-        // STACK: ..., argumentsArray
-        val argumentsArrayLocal = newLocal(getType("[Ljava/lang/Object;"))
-        storeLocal(argumentsArrayLocal)
-        loadLocal(argumentsArrayLocal)
-        invokeStatic(Injections::onMethodCall)
-
-        val deterministicMethodDescriptor = newLocal(OBJECT_TYPE)
-        storeLocal(deterministicMethodDescriptor)
-
+        val receiverLocal = when {
+            (opcode != INVOKESTATIC) -> newLocal(receiverType).also { storeLocal(it) }
+            else -> null
+        }
+        // STACK: <empty>
+        processMethodCallEnter(desc, owner, name, receiverLocal, argumentsArrayLocal)
+        // STACK: deterministicCallDescriptor
+        val deterministicMethodDescriptorLocal = newLocal(OBJECT_TYPE)
         val deterministicCallIdLocal = newLocal(LONG_TYPE)
-        pushDeterministicCallId(deterministicMethodDescriptor)
+        storeLocal(deterministicMethodDescriptorLocal)
+        pushDeterministicCallId(deterministicMethodDescriptorLocal)
         storeLocal(deterministicCallIdLocal)
-
-        invokeBeforeEventIfPluginEnabled("method call $methodName", setMethodEventId = true)
-
+        // STACK: <empty>
         tryCatchFinally(
             tryBlock = {
-                val returnType = getReturnType(desc)
                 invokeMethodOrDeterministicCall(
-                    deterministicMethodDescriptor, deterministicCallIdLocal, returnType, receiver, argumentsArrayLocal
+                    returnType,
+                    deterministicCallIdLocal,
+                    deterministicMethodDescriptorLocal,
+                    receiverLocal,
+                    argumentsArrayLocal,
                 ) {
                     // STACK: <empty>
-                    receiver?.let { loadLocal(it) }
+                    receiverLocal?.let { loadLocal(it) }
                     loadLocals(argumentLocals)
-                    // STACK [INVOKEVIRTUAL]: owner, arguments
-                    // STACK [INVOKESTATIC] :        arguments
+                    // STACK: receiver?, arguments
                     visitMethodInsn(opcode, owner, name, desc, itf)
-                    // STACK: result/<empty> for void
+                    // STACK: result?
                 }
-
-                // STACK: result/<empty> for void
-                processMethodCallResult(
-                    deterministicCallIdLocal, deterministicMethodDescriptor, desc, receiver, argumentsArrayLocal
+                // STACK: result?
+                processMethodCallReturn(
+                    returnType,
+                    deterministicCallIdLocal,
+                    deterministicMethodDescriptorLocal,
+                    receiverLocal,
+                    argumentsArrayLocal,
                 )
-                // STACK: result/<empty> for void
+                // STACK: result?
             },
             catchBlock = {
-                val exceptionLocal = newLocal(getType(Throwable::class.java))
-                storeLocal(exceptionLocal)
-                // STACK: <empty>
-                loadLocal(deterministicCallIdLocal)
-                loadLocal(deterministicMethodDescriptor)
-                if (receiver == null) pushNull() else loadLocal(receiver)
-                loadLocal(argumentsArrayLocal)
-                loadLocal(exceptionLocal)
-                // STACK: deterministicCallId, deterministicMethodDescriptor, receiver, params, exception
-                invokeStatic(Injections::onMethodCallException)
-                // STACK: <empty>
-                loadLocal(exceptionLocal)
-                throwException()
+                // STACK: exception
+                processMethodCallException(
+                    deterministicCallIdLocal,
+                    deterministicMethodDescriptorLocal,
+                    receiverLocal,
+                    argumentsArrayLocal,
+                )
             }
         )
     }
 
-    private fun GeneratorAdapter.pushDeterministicCallId(deterministicMethodDescriptor: Int) {
+    private fun processMethodCallEnter(
+        desc: String,
+        owner: String,
+        name: String,
+        receiverLocal: Int?,
+        argumentsArrayLocal: Int
+    ) = adapter.run {
+        // STACK: <empty>
+        pushReceiver(receiverLocal)
+        push(owner.toCanonicalClassName())
+        push(name)
+        loadNewCodeLocationId()
+        // STACK: receiver?, className, methodName, codeLocation
+        push(MethodIds.getMethodId(owner, name, desc))
+        push(desc)
+        // STACK: receiver?, className, methodName, codeLocation, methodId, methodDesc
+        loadLocal(argumentsArrayLocal)
+        // STACK: receiver?, className, methodName, codeLocation, methodId, methodDesc, argumentsArray
+        invokeStatic(Injections::onMethodCall)
+        // STACK: deterministicCallDescriptor
+        invokeBeforeEventIfPluginEnabled("method call $methodName", setMethodEventId = true)
+    }
+
+    private fun pushDeterministicCallId(deterministicMethodDescriptorLocal: Int) = adapter.run {
         if (!isInTraceDebuggerMode) {
             push(0L)
             return
         }
         val elseIf = newLabel()
         val endIf = newLabel()
-        loadLocal(deterministicMethodDescriptor)
+        loadLocal(deterministicMethodDescriptorLocal)
         ifNull(elseIf)
         getStatic(traceDebuggerTrackerEnumType, NativeMethodCall.name, traceDebuggerTrackerEnumType)
         invokeStatic(Injections::getNextTraceDebuggerEventTrackerId)
@@ -160,77 +166,111 @@ internal class MethodCallTransformer(
         visitLabel(endIf)
     }
 
-    private fun GeneratorAdapter.invokeMethodOrDeterministicCall(
-        deterministicMethodDescriptor: Int, deterministicCallIdLocal: Int, returnType: Type,
-        receiverLocal: Int?, parametersLocal: Int,
+    private fun invokeMethodOrDeterministicCall(
+        returnType: Type,
+        deterministicCallIdLocal: Int,
+        deterministicMethodDescriptorLocal: Int,
+        receiverLocal: Int?,
+        argumentsArrayLocal: Int,
         invokeDefault: GeneratorAdapter.() -> Unit,
-    ) {
-        val onDefaultMethodCall = newLabel()
-        val endIf = newLabel()
+    ) = adapter.run {
+        val onDefaultMethodCallLabel = newLabel()
+        val endIfLabel = newLabel()
         // STACK: <empty>
-        loadLocal(deterministicMethodDescriptor)
-        ifNull(onDefaultMethodCall) // If not deterministic call, we just call it regularly
+        loadLocal(deterministicMethodDescriptorLocal)
+        ifNull(onDefaultMethodCallLabel) // If not deterministic call, we just call it regularly
         // STACK: <empty>
         invokeInIgnoredSection {
             loadLocal(deterministicCallIdLocal)
-            loadLocal(deterministicMethodDescriptor)
-            if (receiverLocal == null) pushNull() else loadLocal(receiverLocal)
-            loadLocal(parametersLocal)
+            loadLocal(deterministicMethodDescriptorLocal)
+            pushReceiver(receiverLocal)
+            loadLocal(argumentsArrayLocal)
             // STACK: deterministicCallId, deterministicMethodDescriptor, receiver, parameters
             invokeStatic(Injections::invokeDeterministicallyOrNull)
-            // STACK: JavaResult
-            val result = newLocal(getType(BootstrapResult::class.java))
-            storeLocal(result)
+            // STACK: BootstrapResult
+            val resultLocal = newLocal(getType(BootstrapResult::class.java))
+            storeLocal(resultLocal)
             // STACK: <empty>
-            loadLocal(result)
-            // STACK: JavaResult
-            ifNull(onDefaultMethodCall)
+            loadLocal(resultLocal)
+            // STACK: BootstrapResult
+            ifNull(onDefaultMethodCallLabel)
             // STACK: <empty>
-            loadLocal(result)
-            // STACK: JavaResult
+            loadLocal(resultLocal)
+            // STACK: BootstrapResult
             invokeStatic(Injections::getFromOrThrow)
-            // STACK: Object
+            // STACK: result
             if (returnType == VOID_TYPE) pop() else unbox(returnType)
         }
-        goTo(endIf)
-        visitLabel(onDefaultMethodCall)
+        goTo(endIfLabel)
+        visitLabel(onDefaultMethodCallLabel)
         // STACK: <empty>
         invokeDefault()
-        // STACK: <returnType>/<empty> (for void)
-        visitLabel(endIf)
+        // STACK: result?
+        visitLabel(endIfLabel)
     }
 
-    private fun processMethodCallResult(
+    private fun processMethodCallReturn(
+        returnType: Type,
         deterministicCallIdLocal: Int,
         deterministicMethodDescriptorLocal: Int,
-        desc: String,
-        receiver: Int?,
+        receiverLocal: Int?,
         argumentsArrayLocal: Int
     ) = adapter.run {
         // STACK: result?
-        val resultType = Type.getReturnType(desc)
-        if (resultType == VOID_TYPE) {
+        if (returnType == VOID_TYPE) {
             // STACK: <empty>
             loadLocal(deterministicCallIdLocal)
             loadLocal(deterministicMethodDescriptorLocal)
-            if (receiver == null) pushNull() else loadLocal(receiver)
+            pushReceiver(receiverLocal)
             loadLocal(argumentsArrayLocal)
             invokeStatic(Injections::onMethodCallReturnVoid)
             // STACK: <empty>
         } else {
             // STACK: result
-            val resultLocal = newLocal(resultType)
+            val resultLocal = newLocal(returnType)
             storeLocal(resultLocal)
             loadLocal(deterministicCallIdLocal)
             loadLocal(deterministicMethodDescriptorLocal)
-            if (receiver == null) pushNull() else loadLocal(receiver)
+            pushReceiver(receiverLocal)
             loadLocal(argumentsArrayLocal)
             loadLocal(resultLocal)
-            box(resultType)
+            box(returnType)
             invokeStatic(Injections::onMethodCallReturn)
             loadLocal(resultLocal)
             // STACK: result
         }
+    }
+
+    private fun processMethodCallException(
+        deterministicCallIdLocal: Int,
+        deterministicMethodDescriptorLocal: Int,
+        receiverLocal: Int?,
+        argumentsArrayLocal: Int,
+    ) = adapter.run {
+        // STACK: exception
+        val exceptionLocal = newLocal(THROWABLE_TYPE)
+        storeLocal(exceptionLocal)
+        // STACK: <empty>
+        loadLocal(deterministicCallIdLocal)
+        loadLocal(deterministicMethodDescriptorLocal)
+        pushReceiver(receiverLocal)
+        loadLocal(argumentsArrayLocal)
+        loadLocal(exceptionLocal)
+        // STACK: deterministicCallId, deterministicMethodDescriptor, receiver, params, exception
+        invokeStatic(Injections::onMethodCallException)
+        // STACK: <empty>
+        loadLocal(exceptionLocal)
+        throwException()
+    }
+
+    private fun pushReceiver(receiverLocal: Int?) = adapter.run {
+        // STACK: <empty>
+        if (receiverLocal != null) {
+            loadLocal(receiverLocal)
+        } else {
+            pushNull()
+        }
+        // STACK: receiver?
     }
 
     private fun isIgnoredMethod(className: String) =
