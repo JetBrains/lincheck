@@ -165,7 +165,7 @@ internal class LincheckClassVisitor(
         if (access and ACC_SYNCHRONIZED != 0) {
             mv = SynchronizedMethodTransformer(fileName, className, methodName, mv.newAdapter(), classVersion)
         }
-        // `skipVisitor` must not capture `MethodCallTransformer`
+        // `coverageDelegateVisitor` must not capture `MethodCallTransformer`
         // (to filter static method calls inserted by coverage library)
         val coverageDelegateVisitor: MethodVisitor = mv
         mv = MethodCallTransformer(fileName, className, methodName, mv.newAdapter())
