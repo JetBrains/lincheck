@@ -12,6 +12,8 @@ package sun.nio.ch.lincheck;
 
 import java.lang.invoke.CallSite;
 
+import static sun.nio.ch.lincheck.Types.convertAsmMethodType;
+
 /**
  * Methods of this object are called from the instrumented code.
  */
@@ -370,7 +372,16 @@ public class Injections {
      * @return Deterministic call descriptor or null.
      */
     public static Object onMethodCall(Object owner, String className, String methodName, int codeLocation, int methodId, String methodDesc, Object[] params) {
-        return getEventTracker().onMethodCall(owner, className, methodName, codeLocation, methodId, methodDesc, params);
+        // to safely construct the method signature we need to enter ignored section
+        // because it internally calls code which has instrumentation
+        boolean entered = enterIgnoredSection();
+        MethodSignature methodSignature;
+        try {
+            methodSignature = new MethodSignature(methodName, convertAsmMethodType(methodDesc));
+        } finally {
+            if (entered) leaveIgnoredSection();
+        }
+        return getEventTracker().onMethodCall(owner, className, methodName, codeLocation, methodId, methodSignature, params);
     }
 
     /**
