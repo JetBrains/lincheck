@@ -20,6 +20,7 @@ import org.jetbrains.kotlinx.lincheck.transformation.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.kotlinx.lincheck.util.runInsideIgnoredSection
 import sun.nio.ch.lincheck.*
+import sun.nio.ch.lincheck.Types.*
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicFieldUpdaterNames.getAtomicFieldUpdaterDescriptor
 import org.jetbrains.kotlinx.lincheck.strategy.managed.AtomicReferenceMethodType.*
@@ -28,6 +29,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.adorne
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanObjectNumeration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
+import  org.jetbrains.kotlinx.lincheck.strategy.managed.IntrinsicCallType.*
 import org.jetbrains.kotlinx.lincheck.strategy.native_calls.DeterministicMethodDescriptor
 import org.jetbrains.kotlinx.lincheck.strategy.native_calls.MethodCallInfo
 import org.jetbrains.kotlinx.lincheck.strategy.native_calls.getDeterministicMethodDescriptorOrNull
@@ -1328,22 +1330,19 @@ abstract class ManagedStrategy(
         }
     }
 
-    private fun processIntrinsicMethodEffects(
+    private fun processIntrinsicMethodEffectsOnObjectTracker(
         methodId: Int,
         result: Any?
     ) {
-        if (!MethodIds.isIntrinsicMethod(methodId)) return
+        if (!IntrinsicMethods.isIntrinsicMethod(methodId)) return
 
-        val (owner, methodName, desc) = MethodIds.getMethodDescriptor(methodId)
-        when {
-            owner == "java/util/Arrays" -> {
-                if (
-                    (methodName == "copyOf" && desc == "([Ljava/lang/Object;ILjava/lang/Class;)[Ljava/lang/Object;") ||
-                    (methodName == "copyOfRange" && desc == "([Ljava/lang/Object;IILjava/lang/Class;)[Ljava/lang/Object;")
-                ) {
-                    result?.let { afterNewObjectCreation(it) }
-                }
-            }
+        val (owner, methodSignature) = IntrinsicMethods.getIntrinsicMethodDescriptor(methodId)
+        val intrinsicCallType = IntrinsicCallNames.getIntrinsicMethodCallType(owner, methodSignature)
+
+        when (intrinsicCallType) {
+            is ArraysCopyOfIntrinsicCall,
+            is ArraysCopyOfRangeIntrinsicCall -> result?.let { afterNewObjectCreation(it) }
+            else -> {}
         }
     }
 
@@ -1459,7 +1458,7 @@ abstract class ManagedStrategy(
     ) = runInsideIgnoredSection {
         require(deterministicMethodDescriptor is DeterministicMethodDescriptor<*, *>?)
         // process intrinsic candidate methods
-        processIntrinsicMethodEffects(methodId, result)
+        processIntrinsicMethodEffectsOnObjectTracker(methodId, result)
 
         if (isInTraceDebuggerMode && isFirstReplay && deterministicMethodDescriptor != null) {
             deterministicMethodDescriptor.saveFirstResultWithCast(receiver, params, KResult.success(result)) {

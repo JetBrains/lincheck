@@ -11,7 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.ASM_API
-import org.jetbrains.kotlinx.lincheck.transformation.MethodIds
+import org.jetbrains.kotlinx.lincheck.transformation.IntrinsicMethods
 import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.MethodVisitor
 
@@ -33,7 +33,7 @@ internal class IntrinsicCandidateMethodFilter(
 
     override fun visitAnnotation(desc: String, visible: Boolean): AnnotationVisitor? {
         if (isIntrinsicCandidateAnnotation(desc)) {
-            MethodIds.registerIntrinsicMethod(className, methodName, methodDesc)
+            IntrinsicMethods.registerIntrinsicMethod(className, methodName, methodDesc)
             delegate()
         }
         return super.visitAnnotation(desc, visible)

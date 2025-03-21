@@ -16,6 +16,8 @@ import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.addMutableField
 import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.collectFieldInformation
 import org.jetbrains.kotlinx.lincheck.transformation.FinalFields.isFinalField
 import org.objectweb.asm.*
+import sun.nio.ch.lincheck.MethodSignature
+import sun.nio.ch.lincheck.Types.*
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.collections.ArrayList
@@ -65,33 +67,27 @@ internal object CodeLocations {
 internal object MethodIds {
 
     private val map: MutableMap<String, Int> = hashMapOf()
-    private val remap: ConcurrentHashMap<Int, String> = ConcurrentHashMap()
-    private val intrinsics: MutableSet<Int> = Collections.newSetFromMap(ConcurrentHashMap())
 
     @Synchronized
     fun getMethodId(owner: String, name: String, desc: String): Int {
-        val key = "$owner:$name:$desc"
-        return map.computeIfAbsent(key) {
-            val value = map.size + 1
-            remap[value] = key
-            value
-        }
+        return map.computeIfAbsent("$owner:$name:$desc") { map.size + 1 }
     }
+}
+
+internal object IntrinsicMethods {
+    private val methodDescriptors: ConcurrentHashMap<Int, Pair<String, MethodSignature>> = ConcurrentHashMap()
+    private val methodIds: MutableSet<Int> = Collections.newSetFromMap(ConcurrentHashMap())
 
     fun registerIntrinsicMethod(owner: String, name: String, desc: String) {
-        val methodId = getMethodId(owner, name, desc)
-        intrinsics.add(methodId)
+        val methodId = MethodIds.getMethodId(owner, name, desc)
+        methodDescriptors[methodId] = Pair(owner.toCanonicalClassName(), MethodSignature(name, convertAsmMethodType(desc)))
+        methodIds.add(methodId)
     }
 
-    fun getMethodDescriptor(methodId: Int): Triple<String, String, String> {
-        return remap[methodId]!!.split(":").let {
-            check(it.size == 3) { "Method name is not a triple: ${it.joinToString(":")}" }
-            Triple(it[0], it[1], it[2])
-        }
-    }
+    fun isIntrinsicMethod(methodId: Int): Boolean = methodIds.contains(methodId)
 
-    fun isIntrinsicMethod(methodId: Int): Boolean {
-        return intrinsics.contains(methodId)
+    fun getIntrinsicMethodDescriptor(methodId: Int): Pair<String, MethodSignature> {
+        return methodDescriptors[methodId] ?: error("Attempt to get intrinsic method descriptor for non registered method: methodId = $methodId")
     }
 }
 

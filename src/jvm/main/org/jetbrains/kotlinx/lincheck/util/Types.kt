@@ -17,3 +17,8 @@ import sun.nio.ch.lincheck.Types.convertAsmMethodType
 
 internal fun Method.toMethodSignature() = MethodSignature(this.name, convertAsmMethodType(this.descriptor))
 internal fun java.lang.reflect.Method.toMethodSignature() = Method.getMethod(this).toMethodSignature()
+
+object PredefinedTypes {
+    internal val ARRAY_OF_OBJECTS_TYPE = ArrayType(ObjectType("java.lang.Object"))
+    internal val CLASS_TYPE = ObjectType("java.lang.Class")
+}
