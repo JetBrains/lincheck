@@ -31,7 +31,7 @@ public class MethodSignature {
     }
 
     @Override
-    public boolean equals(java.lang.Object obj) {
+    public boolean equals(Object obj) {
         if (this == obj) return true;
         if (!(obj instanceof MethodSignature)) return false;
 

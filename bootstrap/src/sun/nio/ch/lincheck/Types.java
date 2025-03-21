@@ -15,8 +15,9 @@ import java.util.List;
 import java.util.Objects;
 
 public class Types {
-    private static Type convertAsmArgumentTypeName(String className) {
+    private static Type convertAsmTypeName(String className) {
         switch (className) {
+            case "V": return VOID_TYPE;
             case "I": return INT_TYPE;
             case "J": return LONG_TYPE;
             case "D": return DOUBLE_TYPE;
@@ -27,21 +28,13 @@ public class Types {
             case "C": return CHAR_TYPE;
             default:
                 if (className.startsWith("[")) {
-                    return new ArrayType(convertAsmArgumentTypeName(className.substring(1)));
+                    return new ArrayType(convertAsmTypeName(className.substring(1)));
                 } else {
                     if (!className.startsWith("L") || !className.endsWith(";")) {
                         throw new IllegalArgumentException("Invalid type name: " + className);
                     }
                     return new ObjectType(className.substring(1, className.length() - 1).replace('/', '.'));
                 }
-        }
-    }
-
-    private static Type convertAsmTypeName(String className) {
-        if ("V".equals(className)) {
-            return VOID_TYPE;
-        } else {
-            return convertAsmArgumentTypeName(className);
         }
     }
 
@@ -66,7 +59,7 @@ public class Types {
                 currentOffset = Math.max(currentOffset, semiColumnOffset + 1);
             }
             argumentTypes.add(
-                    convertAsmTypeName(methodDesc.substring(currentDescriptorTypeOffset, currentOffset))
+                convertAsmTypeName(methodDesc.substring(currentDescriptorTypeOffset, currentOffset))
             );
         }
         Type returnType = convertAsmTypeName(methodDesc.substring(currentOffset + 1));
@@ -74,15 +67,28 @@ public class Types {
         return new MethodType(argumentTypes, returnType);
     }
 
-    public static final VoidType VOID_TYPE = new VoidType();
-    public static final IntType INT_TYPE = new IntType();
-    public static final LongType LONG_TYPE = new LongType();
-    public static final DoubleType DOUBLE_TYPE = new DoubleType();
-    public static final FloatType FLOAT_TYPE = new FloatType();
+    public static boolean isPrimitive(Types.Type type) {
+        return (
+            type instanceof IntType     ||
+            type instanceof LongType    ||
+            type instanceof DoubleType  ||
+            type instanceof FloatType   ||
+            type instanceof BooleanType ||
+            type instanceof ByteType    ||
+            type instanceof ShortType   ||
+            type instanceof CharType
+        );
+    }
+
+    public static final    VoidType    VOID_TYPE = new VoidType();
+    public static final     IntType     INT_TYPE = new IntType();
+    public static final    LongType    LONG_TYPE = new LongType();
+    public static final  DoubleType  DOUBLE_TYPE = new DoubleType();
+    public static final   FloatType   FLOAT_TYPE = new FloatType();
     public static final BooleanType BOOLEAN_TYPE = new BooleanType();
-    public static final ByteType BYTE_TYPE = new ByteType();
-    public static final ShortType SHORT_TYPE = new ShortType();
-    public static final CharType CHAR_TYPE = new CharType();
+    public static final    ByteType    BYTE_TYPE = new ByteType();
+    public static final   ShortType   SHORT_TYPE = new ShortType();
+    public static final    CharType    CHAR_TYPE = new CharType();
 
     public abstract static class Type {}
 
@@ -113,14 +119,14 @@ public class Types {
     }
 
     public static final class ArrayType extends Type {
-        private final Type type;
+        private final Type elementType;
 
-        public ArrayType(Type type) {
-            this.type = type;
+        public ArrayType(Type elementType) {
+            this.elementType = elementType;
         }
 
-        public Type getType() {
-            return type;
+        public Type getElementType() {
+            return elementType;
         }
 
         @Override
@@ -129,12 +135,12 @@ public class Types {
             if (!(obj instanceof ArrayType)) return false;
 
             ArrayType other = (ArrayType) obj;
-            return type.equals(other.type);
+            return elementType.equals(other.elementType);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(type);
+            return Objects.hash(elementType);
         }
     }
 

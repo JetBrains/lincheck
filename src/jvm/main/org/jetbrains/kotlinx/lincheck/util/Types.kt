@@ -15,17 +15,5 @@ import sun.nio.ch.lincheck.MethodSignature
 import sun.nio.ch.lincheck.Types.*
 import sun.nio.ch.lincheck.Types.convertAsmMethodType
 
-internal fun Type.isPrimitive() = when (this) {
-    is IntType     -> true
-    is LongType    -> true
-    is DoubleType  -> true
-    is FloatType   -> true
-    is BooleanType -> true
-    is ByteType    -> true
-    is ShortType   -> true
-    is CharType    -> true
-    else -> false
-}
-
 internal fun Method.toMethodSignature() = MethodSignature(this.name, convertAsmMethodType(this.descriptor))
 internal fun java.lang.reflect.Method.toMethodSignature() = Method.getMethod(this).toMethodSignature()

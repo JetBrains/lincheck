@@ -10,7 +10,6 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.native_calls
 
-import org.jetbrains.kotlinx.lincheck.util.isPrimitive
 import org.jetbrains.kotlinx.lincheck.util.toMethodSignature
 import sun.nio.ch.lincheck.InjectedRandom
 import sun.nio.ch.lincheck.Injections
@@ -43,7 +42,7 @@ internal fun getDeterministicRandomMethodDescriptorOrNull(
 
         else -> {
             require(currentMethodType.argumentTypes.all {
-                it.isPrimitive() || it == ArrayType(Types.BYTE_TYPE)
+                Types.isPrimitive(it) || it == ArrayType(Types.BYTE_TYPE)
             }) {
                 "Only primitive arguments and ByteArrays are supported for default deterministic random: $methodCallInfo"
             }
