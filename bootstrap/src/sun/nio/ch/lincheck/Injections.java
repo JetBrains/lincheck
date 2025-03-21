@@ -374,12 +374,12 @@ public class Injections {
     public static Object onMethodCall(Object owner, String className, String methodName, int codeLocation, int methodId, String methodDesc, Object[] params) {
         // to safely construct the method signature we need to enter ignored section
         // because it internally calls code which has instrumentation
-        enterIgnoredSection();
+        boolean entered = enterIgnoredSection();
         MethodSignature methodSignature;
         try {
             methodSignature = new MethodSignature(methodName, convertAsmMethodType(methodDesc));
         } finally {
-            leaveIgnoredSection();
+            if (entered) leaveIgnoredSection();
         }
         return getEventTracker().onMethodCall(owner, className, methodName, codeLocation, methodId, methodSignature, params);
     }
