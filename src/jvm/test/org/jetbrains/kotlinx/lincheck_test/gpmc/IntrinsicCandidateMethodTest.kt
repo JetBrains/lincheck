@@ -19,6 +19,7 @@ import kotlin.concurrent.thread
 /**
  * Here we aim to test the problem with jit optimizing out calls
  * to local object manager. Which used to cause invalid thread switch attempt.
+ * The issues used to easily reproduce on old jdks (e.g. 8, 11).
  *
  * See [Invalid thread switch attempt](https://github.com/JetBrains/lincheck/issues/576).
  */
