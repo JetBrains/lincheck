@@ -118,32 +118,6 @@ public class Injections {
     }
 
     /**
-     * Allows to run a `Runnable` in ignored section.
-     */
-    private static void runInIgnoredSection(Runnable r) {
-        enterIgnoredSection();
-        try {
-            r.run();
-        } finally {
-            leaveIgnoredSection();
-        }
-    }
-
-    /**
-     * Allows to run a `Supplier<T>` in ignored section.
-     *
-     * @return values produced by supplier.
-     */
-    private static <T> T runInIgnoredSection(Supplier<T> s) {
-        enterIgnoredSection();
-        try {
-            return s.get();
-        } finally {
-            leaveIgnoredSection();
-        }
-    }
-
-    /**
      * Current thread reports that it is going to start a new child thread {@code forkedThread}.
      *
      * @return whether the trace point was created
@@ -401,9 +375,13 @@ public class Injections {
     public static Object onMethodCall(Object owner, String className, String methodName, int codeLocation, int methodId, String methodDesc, Object[] params) {
         // to safely construct the method signature we need to enter ignored section
         // because it internally calls code which has instrumentation
-        MethodSignature methodSignature = runInIgnoredSection(
-            () -> new MethodSignature(methodName, convertAsmMethodType(methodDesc))
-        );
+        enterIgnoredSection();
+        MethodSignature methodSignature;
+        try {
+            methodSignature = new MethodSignature(methodName, convertAsmMethodType(methodDesc));
+        } finally {
+            leaveIgnoredSection();
+        }
         return getEventTracker().onMethodCall(owner, className, methodName, codeLocation, methodId, methodSignature, params);
     }
 
