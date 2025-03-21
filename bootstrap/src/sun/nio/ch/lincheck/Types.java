@@ -178,8 +178,8 @@ public class Types {
 
             MethodType other = (MethodType) obj;
             return (
-                    returnType.equals(other.returnType) &&
-                            argumentTypes.equals(other.argumentTypes)
+                returnType.equals(other.returnType) &&
+                argumentTypes.equals(other.argumentTypes)
             );
         }
 
