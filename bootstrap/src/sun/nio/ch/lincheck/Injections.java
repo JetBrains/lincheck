@@ -68,12 +68,18 @@ public class Injections {
         }
     }
 
+    /**
+     * Enables analysis for the current thread.
+    */
     public static void enableAnalysis() {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) return;
         descriptor.enableAnalysis();
     }
 
+    /**
+     * Disables analysis for the current thread.
+    */
     public static void disableAnalysis() {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) return;

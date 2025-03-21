@@ -12,6 +12,41 @@ package org.jetbrains.kotlinx.lincheck.util
 
 import sun.nio.ch.lincheck.ThreadDescriptor
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
+import sun.nio.ch.lincheck.Injections
+
+/**
+ * Enables analysis for the current thread.
+ */
+internal fun enableAnalysis() {
+    Injections.enableAnalysis()
+}
+
+/**
+ * Disables analysis for the current thread.
+ */
+internal fun disableAnalysis() {
+    Injections.disableAnalysis()
+}
+
+/**
+ * Enters an ignored section for the current thread.
+ *
+ * Has no effect on if the current thread is untracked,
+ * that is not registered in the Lincheck strategy.
+ */
+internal fun enterIgnoredSection() {
+    Injections.enterIgnoredSection()
+}
+
+/**
+ * Leaves an ignored section for the current thread.
+ *
+ * Has no effect on if the current thread is untracked,
+ * that is not registered in the Lincheck strategy.
+ */
+internal fun leaveIgnoredSection() {
+    Injections.leaveIgnoredSection()
+}
 
 /**
  * Executes a given block of code within an ignored section.
