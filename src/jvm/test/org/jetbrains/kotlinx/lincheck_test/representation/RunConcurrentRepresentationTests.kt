@@ -24,7 +24,6 @@ import java.util.concurrent.atomic.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlin.concurrent.thread
-import kotlin.random.Random
 import org.junit.*
 import org.junit.Assume.assumeFalse
 
@@ -55,13 +54,51 @@ abstract class BaseRunConcurrentRepresentationTest<R>(private val outputFileName
         check(error is LincheckAssertionError) {
             """
             |The test should throw LincheckAssertionError, but instead it failed with:
-            |$error
+            |${error.stackTraceToString()}
             """
             .trimMargin()
         }
         if (!isFlakyTest) {
             error.failure.checkLincheckOutput(outputFileName)
         }
+    }
+}
+
+class NoEventsRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
+    "run_concurrent_test/no_events"
+) {
+    override fun block() {
+        check(false)
+    }
+}
+
+class IncrementAndFailConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
+    "run_concurrent_test/increment_and_fail"
+) {
+    var x = 0
+
+    override fun block() {
+        x++
+        check(false)
+    }
+}
+
+
+@Ignore // TODO: does not provide a thread dump
+class InfiniteLoopRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
+    "run_concurrent_test/infinite_loop"
+) {
+    override fun block() {
+        while (true) {}
+    }
+}
+
+class MainThreadBlockedRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
+    "run_concurrent_test/main_thread_blocked"
+) {
+    override fun block() {
+       val q = ArrayBlockingQueue<Int>(1)
+       q.take() // should block
     }
 }
 
