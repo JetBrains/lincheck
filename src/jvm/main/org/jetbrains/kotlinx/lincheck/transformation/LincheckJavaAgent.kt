@@ -504,7 +504,7 @@ internal object LincheckClassFileTransformer : ClassFileTransformer {
     // We should always eagerly transform the following classes.
     internal fun isEagerlyInstrumentedClass(className: String): Boolean =
         // `ClassLoader` classes, to wrap `loadClass` methods in the ignored section.
-        containsClassloaderInName(className) ||
+        isClassLoaderClassName(className) ||
         // `MethodHandle` class, to wrap its methods (except `invoke` methods) in the ignored section.
         isMethodHandleRelatedClass(className) ||
         // `StackTraceElement` class, to wrap all its methods into the ignored section.

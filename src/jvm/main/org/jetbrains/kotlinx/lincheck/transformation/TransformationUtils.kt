@@ -505,7 +505,7 @@ private val isCoroutineStateMachineClassMap = ConcurrentHashMap<String, Boolean>
 /**
  * Tests if the provided [className] contains `"ClassLoader"` as a substring.
  */
-internal fun containsClassloaderInName(className: String): Boolean =
+internal fun isClassLoaderClassName(className: String): Boolean =
     className.contains("ClassLoader")
 
 /**

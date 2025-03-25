@@ -82,6 +82,14 @@ internal class LincheckClassVisitor(
             mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             return mv
         }
+        // Wrap `ClassLoader::loadClass` calls into ignored sections
+        // to ensure their code is not analyzed by the Lincheck.
+        if (isClassLoaderClassName(className.toCanonicalClassName())) {
+            if (isLoadClassMethod(methodName, desc)) {
+                mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
+            }
+            return mv
+        }
         // In some newer versions of JDK, `ThreadPoolExecutor` uses
         // the internal `ThreadContainer` classes to manage threads in the pool;
         // This class, in turn, has the method `start,
@@ -93,14 +101,6 @@ internal class LincheckClassVisitor(
             if (methodName == "start") {
                 mv = ThreadTransformer(fileName, className, methodName, desc, mv.newAdapter())
             } else {
-                mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
-            }
-            return mv
-        }
-        // Wrap `ClassLoader::loadClass` calls into ignored sections
-        // to ensure their code is not analyzed by the Lincheck.
-        if (containsClassloaderInName(className.toCanonicalClassName())) {
-            if (methodName == "loadClass" && desc == "(Ljava/lang/String;)Ljava/lang/Class;") {
                 mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             }
             return mv
@@ -269,6 +269,9 @@ private class WrapMethodInIgnoredSectionTransformer(
     }
 
 }
+
+private fun isLoadClassMethod(methodName: String, desc: String) =
+    methodName == "loadClass" && desc == "(Ljava/lang/String;)Ljava/lang/Class;"
 
 // Set storing canonical names of the classes that call internal coroutine functions;
 // it is used to optimize class re-transformation in stress mode by remembering
