@@ -100,7 +100,7 @@ internal class LincheckClassVisitor(
         // Wrap `ClassLoader::loadClass` calls into ignored sections
         // to ensure their code is not analyzed by the Lincheck.
         if (containsClassloaderInName(className.toCanonicalClassName())) {
-            if (methodName == "loadClass") {
+            if (methodName == "loadClass" && desc == "(Ljava/lang/String;)Ljava/lang/Class;") {
                 mv = WrapMethodInIgnoredSectionTransformer(fileName, className, methodName, mv.newAdapter())
             }
             return mv
@@ -242,15 +242,14 @@ private class WrapMethodInIgnoredSectionTransformer(
     adapter: GeneratorAdapter,
 ) : ManagedStrategyMethodVisitor(fileName, className, methodName, adapter) {
 
-    private val tryBlockStart: Label = adapter.newLabel()
-    private val tryBlockEnd: Label = adapter.newLabel()
+    private val tryBlock: Label = adapter.newLabel()
     private val catchBlock: Label = adapter.newLabel()
 
     override fun visitCode() = adapter.run {
         visitCode()
         invokeStatic(Injections::enterIgnoredSection)
-        visitTryCatchBlock(tryBlockStart, tryBlockEnd, catchBlock, null)
-        visitLabel(tryBlockStart)
+        visitTryCatchBlock(tryBlock, catchBlock, catchBlock, null)
+        visitLabel(tryBlock)
     }
 
     override fun visitInsn(opcode: Int) = adapter.run {
@@ -263,7 +262,6 @@ private class WrapMethodInIgnoredSectionTransformer(
     }
 
     override fun visitMaxs(maxStack: Int, maxLocals: Int) = adapter.run {
-        visitLabel(tryBlockEnd)
         visitLabel(catchBlock)
         invokeStatic(Injections::leaveIgnoredSection)
         visitInsn(ATHROW)
