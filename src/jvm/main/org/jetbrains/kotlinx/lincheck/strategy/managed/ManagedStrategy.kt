@@ -458,7 +458,10 @@ abstract class ManagedStrategy(
                 // even if it hasn't completed its `postExecution` actors yet.
                 it.threadsResults[0].size == scenario.initExecution.size + scenario.parallelExecution.size + scenario.postExecution.size
             } &&
-            threadScheduler.getRegisteredThreads().keys.none(threadScheduler::isBlocked) // no blocked user threads exists
+            threadScheduler.getRegisteredThreads().keys.none {
+                threadScheduler.isBlocked(it) &&
+                threadScheduler.getBlockingReason(it)!! !is BlockingReason.Parked
+            } // no blocked user threads exists (only parked threads permitted)
         ) {
             // The main thread finished its execution (actually all `TestThread`s did): successfully or not, we don't care.
             // If all user threads (those that are not `TestThread` instances) are not blocked, then abort
