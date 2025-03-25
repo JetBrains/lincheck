@@ -449,6 +449,23 @@ abstract class ManagedStrategy(
         }
         // check we are in the right thread
         check(iThread == threadScheduler.scheduledThreadId)
+        // check if only "daemon" threads are left
+        if (
+            runner.executor.threads.map { it.threadId }.all(threadScheduler::isFinished) && // all `TestThread`s are finished (including main: with id of zero)
+            runner.collectExecutionResults().let {
+                // Check that main thread has completed all execution parts.
+                // Additional check is required, because main thread will be marked as finished
+                // even if it hasn't completed its `postExecution` actors yet.
+                it.threadsResults[0].size == scenario.initExecution.size + scenario.parallelExecution.size + scenario.postExecution.size
+            } &&
+            threadScheduler.getRegisteredThreads().keys.none(threadScheduler::isBlocked) // no blocked user threads exists
+        ) {
+            // The main thread finished its execution (actually all `TestThread`s did): successfully or not, we don't care.
+            // If all user threads (those that are not `TestThread` instances) are not blocked, then abort
+            // the running user threads. Essentially treating them as "daemons", which completion we do not wait for.
+            // Thus, abort all of them and allow `runner` to process the invocation result accordingly.
+            threadScheduler.abortAllThreads()
+        }
         // check if we need to switch
         val shouldSwitch = when {
             loopDetector.replayModeEnabled -> loopDetector.shouldSwitchInReplayMode()

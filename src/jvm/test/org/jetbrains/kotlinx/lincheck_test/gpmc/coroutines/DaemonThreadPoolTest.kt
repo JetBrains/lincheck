@@ -10,25 +10,34 @@
 
 package org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines
 
-import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.ExperimentalModelCheckingAPI
 import org.jetbrains.kotlinx.lincheck.runConcurrentTest
-import org.junit.Ignore
 import org.junit.Test
 import java.util.concurrent.Executors
 
-@OptIn(ExperimentalModelCheckingAPI::class)
+@OptIn(ExperimentalModelCheckingAPI::class, DelicateCoroutinesApi::class)
 class DaemonThreadPoolTest {
-
-    @Ignore("Daemon threads are treated as active, see https://github.com/JetBrains/lincheck/issues/542")
+    //@Ignore("Daemon threads are treated as active, see https://github.com/JetBrains/lincheck/issues/542")
     @Test
     fun testUselessThreadPool() {
         runConcurrentTest(1000) {
-            val pool = Executors.newFixedThreadPool(1).asCoroutineDispatcher()
+            val pool = Executors.newFixedThreadPool(2).asCoroutineDispatcher()
             runBlocking(pool) { /* do nothing */ }
-            // pool.close() -- this call tells gpmc that threads are not in infinite spinning,
-            //                 but interleavings exploration still happens
+            // pool.close() -- should not be required
+        }
+    }
+
+    @Test
+    fun testInfiniteCoroutineAsDaemon() {
+        runConcurrentTest(1000) {
+            val pool = Executors.newFixedThreadPool(1).asCoroutineDispatcher()
+            var x = 0
+            GlobalScope.launch(pool) {
+                // 1. coroutine has no parent job
+                // 2. coroutine uses thread from the `pool`
+                while (true) x++
+            }
         }
     }
 }
