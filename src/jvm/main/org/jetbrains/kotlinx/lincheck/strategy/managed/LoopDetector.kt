@@ -119,9 +119,11 @@ internal class LoopDetector(
      * Should be called only in replay mode.
      */
     val replayModeCurrentlyInSpinCycle: Boolean get() =
-        replayModeLoopDetectorHelper!!.currentlyInSpinCycle
+        replayModeLoopDetectorHelper?.currentlyInSpinCycle ?: false
 
     fun enableReplayMode(failDueToDeadlockInTheEnd: Boolean) {
+        if (isInTraceDebuggerMode) return
+
         val contextSwitchesBeforeHalt =
             findMaxPrefixLengthWithNoCycleOnSuffix(currentInterleavingHistory)?.let { it.executionsBeforeCycle + it.cyclePeriod }
                 ?: currentInterleavingHistory.size
