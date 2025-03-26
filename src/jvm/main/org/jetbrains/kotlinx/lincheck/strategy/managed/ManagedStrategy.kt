@@ -1328,7 +1328,20 @@ abstract class ManagedStrategy(
         }
     }
 
-    private fun methodGuaranteeType(owner: Any?, className: String, methodName: String): ManagedGuaranteeType? {
+    private fun methodGuaranteeType(
+        owner: Any?,
+        className: String,
+        methodName: String,
+        atomicMethodDescriptor: AtomicMethodDescriptor?,
+        deterministicMethodDescriptor: DeterministicMethodDescriptor<*, *>?,
+    ): ManagedGuaranteeType? {
+        if (atomicMethodDescriptor != null) {
+            return ManagedGuaranteeType.TREAT_AS_ATOMIC
+        }
+        // TODO: decide if we need to introduce special `DETERMINISTIC` guarantee?
+        if (deterministicMethodDescriptor != null) {
+            return ManagedGuaranteeType.IGNORE
+        }
         userDefinedGuarantees?.forEach { guarantee ->
             val ownerName = owner?.javaClass?.canonicalName ?: className
             if (guarantee.classPredicate(ownerName) && guarantee.methodPredicate(methodName)) {
@@ -1361,11 +1374,19 @@ abstract class ManagedStrategy(
         // check if the called method is an atomics API method
         // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
         val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodName)
+        // obtain deterministic method descriptor if required
+        val methodCallInfo = MethodCallInfo(
+            ownerType = Types.ObjectType(className),
+            methodSignature = methodSignature,
+            codeLocation = codeLocation,
+            methodId = methodId,
+        )
+        val deterministicMethodDescriptor = getDeterministicMethodDescriptorOrNull(methodCallInfo)
         // get method's concurrency guarantee
-        val guarantee = when {
-            (atomicMethodDescriptor != null) -> ManagedGuaranteeType.TREAT_AS_ATOMIC
-            else -> methodGuaranteeType(receiver, className, methodName)
-        }
+        val guarantee = methodGuaranteeType(receiver, className, methodName,
+            atomicMethodDescriptor,
+            deterministicMethodDescriptor,
+        )
         // in case if a static method is called, ensure its class is instrumented
         if (receiver == null && atomicMethodDescriptor == null && guarantee == null) { // static method
             LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
@@ -1399,18 +1420,9 @@ abstract class ManagedStrategy(
         if (guarantee == null) {
             loopDetector.beforeMethodCall(codeLocation, params)
         }
-        // obtain deterministic method descriptor if required
-        val methodCallInfo = MethodCallInfo(
-            ownerType = Types.ObjectType(className),
-            methodSignature = methodSignature,
-            codeLocation = codeLocation,
-            methodId = methodId,
-        )
-        val deterministicMethodDescriptor = getDeterministicMethodDescriptorOrNull(methodCallInfo)
         // if the method is atomic or should be ignored, then we enter an ignored section
         if (guarantee == ManagedGuaranteeType.IGNORE ||
-            guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC ||
-            deterministicMethodDescriptor != null) {
+            guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC) {
             enterIgnoredSection()
         }
         return deterministicMethodDescriptor
@@ -1420,15 +1432,15 @@ abstract class ManagedStrategy(
         className: String,
         methodName: String,
         descriptorId: Long,
-        descriptor: Any?,
+        deterministicMethodDescriptor: Any?,
         receiver: Any?,
         params: Array<Any?>,
         result: Any?
     ) = runInsideIgnoredSection {
-        if (isInTraceDebuggerMode && isFirstReplay && descriptor != null) {
-            require(descriptor is DeterministicMethodDescriptor<*, *>)
-            descriptor.saveFirstResultWithCast(receiver, params, KResult.success(result)) {
-                nativeMethodCallStatesTracker.setState(descriptorId, descriptor.methodCallInfo, it)
+        require(deterministicMethodDescriptor is DeterministicMethodDescriptor<*, *>?)
+        if (isInTraceDebuggerMode && isFirstReplay && deterministicMethodDescriptor != null) {
+            deterministicMethodDescriptor.saveFirstResultWithCast(receiver, params, KResult.success(result)) {
+                nativeMethodCallStatesTracker.setState(descriptorId, deterministicMethodDescriptor.methodCallInfo, it)
             }
         }
         loopDetector.afterMethodCall()
@@ -1437,10 +1449,10 @@ abstract class ManagedStrategy(
         // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
         val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodName)
         // get method's concurrency guarantee
-        val guarantee = when {
-            (atomicMethodDescriptor != null) -> ManagedGuaranteeType.TREAT_AS_ATOMIC
-            else -> methodGuaranteeType(receiver, className, methodName)
-        }
+        val guarantee = methodGuaranteeType(receiver, className, methodName,
+            atomicMethodDescriptor,
+            deterministicMethodDescriptor,
+        )
         if (collectTrace) {
             // an empty stack trace case is possible and can occur when we resume the coroutine,
             // and it results in a call to a top-level actor `suspend` function;
@@ -1460,8 +1472,7 @@ abstract class ManagedStrategy(
         }
         // if the method is atomic or ignored, then we leave an ignored section
         if (guarantee == ManagedGuaranteeType.IGNORE ||
-            guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC ||
-            descriptor != null) {
+            guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC) {
             leaveIgnoredSection()
         }
     }
@@ -1470,15 +1481,15 @@ abstract class ManagedStrategy(
         className: String,
         methodName: String,
         descriptorId: Long,
-        descriptor: Any?,
+        deterministicMethodDescriptor: Any?,
         receiver: Any?,
         params: Array<Any?>,
         throwable: Throwable
     ) = runInsideIgnoredSection {
-        if (isInTraceDebuggerMode && isFirstReplay && descriptor != null) {
-            require(descriptor is DeterministicMethodDescriptor<*, *>)
-            descriptor.saveFirstResult(receiver, params, KResult.failure(throwable)) {
-                nativeMethodCallStatesTracker.setState(descriptorId, descriptor.methodCallInfo, it)
+        require(deterministicMethodDescriptor is DeterministicMethodDescriptor<*, *>?)
+        if (isInTraceDebuggerMode && isFirstReplay && deterministicMethodDescriptor != null) {
+            deterministicMethodDescriptor.saveFirstResult(receiver, params, KResult.failure(throwable)) {
+                nativeMethodCallStatesTracker.setState(descriptorId, deterministicMethodDescriptor.methodCallInfo, it)
             }
         }
         loopDetector.afterMethodCall()
@@ -1487,10 +1498,10 @@ abstract class ManagedStrategy(
         // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
         val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodName)
         // get method's concurrency guarantee
-        val guarantee = when {
-            (atomicMethodDescriptor != null) -> ManagedGuaranteeType.TREAT_AS_ATOMIC
-            else -> methodGuaranteeType(receiver, className, methodName)
-        }
+        val guarantee = methodGuaranteeType(receiver, className, methodName,
+            atomicMethodDescriptor,
+            deterministicMethodDescriptor,
+        )
         if (collectTrace) {
             // this case is possible and can occur when we resume the coroutine,
             // and it results in a call to a top-level actor `suspend` function;
@@ -1504,8 +1515,7 @@ abstract class ManagedStrategy(
         }
         // if the method is atomic or ignored, then we leave an ignored section
         if (guarantee == ManagedGuaranteeType.IGNORE ||
-            guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC ||
-            descriptor != null) {
+            guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC) {
             leaveIgnoredSection()
         }
     }
