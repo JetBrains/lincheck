@@ -291,7 +291,7 @@ private val Type.requiresBoxing: Boolean
  *
  * @param setMethodEventId a flag that identifies that method call event id set is required
  */
-internal fun GeneratorAdapter.invokeBeforeEvent(debugMessage: String, setMethodEventId: Boolean) = invokeInIgnoredSection {
+internal fun GeneratorAdapter.invokeBeforeEvent(debugMessage: String, setMethodEventId: Boolean) = invokeInsideIgnoredSection {
     ifStatement(
         condition = {
             invokeStatic(Injections::shouldInvokeBeforeEvent)
@@ -385,7 +385,7 @@ internal inline fun GeneratorAdapter.invokeIfInAnalyzedCode(
  *
  * @param code A block of bytecode to be executed inside the ignored section.
  */
-internal fun GeneratorAdapter.invokeInIgnoredSection(
+internal fun GeneratorAdapter.invokeInsideIgnoredSection(
     code: GeneratorAdapter.() -> Unit
 ) {
     invokeStatic(Injections::enterIgnoredSection)

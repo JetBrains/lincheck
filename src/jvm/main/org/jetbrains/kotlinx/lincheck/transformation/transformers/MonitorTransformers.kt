@@ -148,7 +148,7 @@ internal class SynchronizedMethodTransformer(
                 visitLdcInsn(classType)
             } else {
                 visitLdcInsn(classType.className)
-                invokeInIgnoredSection {
+                invokeInsideIgnoredSection {
                     invokeStatic(CLASS_TYPE, CLASS_FOR_NAME_METHOD)
                 }
             }

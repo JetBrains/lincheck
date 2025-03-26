@@ -11,7 +11,6 @@
 package org.jetbrains.kotlinx.lincheck.transformation.transformers
 
 import org.jetbrains.kotlinx.lincheck.transformation.*
-import org.jetbrains.kotlinx.lincheck.transformation.invokeInIgnoredSection
 import org.objectweb.asm.Handle
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Opcodes.INVOKESTATIC
@@ -80,7 +79,7 @@ internal class DeterministicInvokeDynamicTransformer(
         putInvokeDynamicCallStaticArgumentsOnStack(name, descriptor, bootstrapMethodHandle, bootstrapMethodArguments)
 
         // Map.get(key)
-        invokeInIgnoredSection {
+        invokeInsideIgnoredSection {
             invokeStatic(Injections::getCachedInvokeDynamicCallSite)
         }
 
@@ -113,7 +112,7 @@ internal class DeterministicInvokeDynamicTransformer(
         loadLocal(callSite)
         
         // Map.set(key, value)
-        invokeInIgnoredSection {
+        invokeInsideIgnoredSection {
             invokeStatic(Injections::putCachedInvokeDynamicCallSite)
         }
         
@@ -161,7 +160,7 @@ internal class DeterministicInvokeDynamicTransformer(
         bootstrapMethodArguments: Array<out Any?>
     ) {
         putStackArgumentsForMetafactory(bootstrapMethodHandle, name, descriptor, bootstrapMethodArguments)
-        invokeInIgnoredSection {
+        invokeInsideIgnoredSection {
             visitMethodInsn(
                 INVOKESTATIC,
                 bootstrapMethodHandle.owner,
@@ -172,7 +171,7 @@ internal class DeterministicInvokeDynamicTransformer(
         }
     }
     
-    private fun GeneratorAdapter.getCallSiteTarget() = invokeInIgnoredSection {
+    private fun GeneratorAdapter.getCallSiteTarget() = invokeInsideIgnoredSection {
         invokeVirtual(callSiteType, callSiteTargetMethod)
     }
 

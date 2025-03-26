@@ -38,7 +38,7 @@ internal class MethodCallTransformer(
             return
         }
         if (isCoroutineInternalClass(owner.toCanonicalClassName())) {
-            invokeInIgnoredSection {
+            invokeInsideIgnoredSection {
                 visitMethodInsn(opcode, owner, name, desc, itf)
             }
             return
