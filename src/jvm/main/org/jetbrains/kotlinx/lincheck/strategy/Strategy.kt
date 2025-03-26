@@ -29,6 +29,14 @@ abstract class Strategy protected constructor(
 ) : Closeable {
 
     /**
+     * Strict invocations bound will treat spin cycle replays in [ManagedStrategy] as actual invocations.
+     *
+     * Setting this flag to `true` could lead to existing errors being undetected by the strategy
+     * when small number of invocations is set (like, 1) and spin cycle replay is required.
+     */
+    internal val strictInvocationsBound: Boolean = System.getProperty("lincheck.strictInvocationsBound").toBoolean()
+
+    /**
      * Runner used for executing the test scenario.
      */
     internal abstract val runner: Runner
@@ -116,9 +124,23 @@ abstract class Strategy protected constructor(
  * @return the failure, if detected, null otherwise.
  */
 fun Strategy.runIteration(invocations: Int, verifier: Verifier): LincheckFailure? {
+    var isReplayingSameInvocation = false
     for (invocation in 0 until invocations) {
-        if (!nextInvocation()) return null
-        val result = runInvocation()
+        if (!isReplayingSameInvocation && !nextInvocation()) return null
+        isReplayingSameInvocation = false
+        var result: InvocationResult = runInvocation()
+
+        if (strictInvocationsBound) {
+            if (result is SpinCycleFoundAndReplayRequired) {
+                isReplayingSameInvocation = true
+                continue
+            }
+        }
+        else {
+            while (result is SpinCycleFoundAndReplayRequired) {
+                result = runInvocation()
+            }
+        }
 
         val failure = try {
             verify(result, verifier)
