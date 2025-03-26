@@ -10,9 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck.util
 
-import sun.nio.ch.lincheck.ThreadDescriptor
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import sun.nio.ch.lincheck.Injections
+import sun.nio.ch.lincheck.ThreadDescriptor
 
 /**
  * Enables analysis for the current thread.
@@ -50,6 +50,10 @@ internal fun leaveIgnoredSection() {
 
 /**
  * Executes a given block of code within an ignored section.
+ *
+ * NOTE: this method is intended to be used during runtime,
+ * *not* during bytecode instrumentation in the [org.jetbrains.kotlinx.lincheck.transformation] package.
+ * In that context, please use [org.jetbrains.kotlinx.lincheck.transformation.invokeInsideIgnoredSection] instead.
  *
  * @param block the code to execute within the ignored section.
  * @return result of the [block] invocation.
