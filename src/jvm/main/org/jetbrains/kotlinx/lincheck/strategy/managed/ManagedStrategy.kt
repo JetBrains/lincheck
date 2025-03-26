@@ -1332,7 +1332,7 @@ abstract class ManagedStrategy(
         }
     }
 
-    private fun methodGuaranteeType(owner: Any?, className: String, methodName: String): ManagedGuaranteeType? = runInsideIgnoredSection {
+    private fun methodGuaranteeType(owner: Any?, className: String, methodName: String): ManagedGuaranteeType? {
         userDefinedGuarantees?.forEach { guarantee ->
             val ownerName = owner?.javaClass?.canonicalName ?: className
             if (guarantee.classPredicate(ownerName) && guarantee.methodPredicate(methodName)) {
