@@ -183,29 +183,30 @@ internal class MethodCallTransformer(
         // STACK: <empty>
         loadLocal(deterministicMethodDescriptorLocal)
         ifNull(onDefaultMethodCallLabel) // If not deterministic call, we just call it regularly
+
         // STACK: <empty>
-        invokeInIgnoredSection {
-            loadLocal(deterministicCallIdLocal)
-            loadLocal(deterministicMethodDescriptorLocal)
-            pushReceiver(receiverLocal)
-            loadLocal(argumentsArrayLocal)
-            // STACK: deterministicCallId, deterministicMethodDescriptor, receiver, parameters
-            invokeStatic(Injections::invokeDeterministicallyOrNull)
-            // STACK: BootstrapResult
-            val resultLocal = newLocal(getType(BootstrapResult::class.java))
-            storeLocal(resultLocal)
-            // STACK: <empty>
-            loadLocal(resultLocal)
-            // STACK: BootstrapResult
-            ifNull(onDefaultMethodCallLabel)
-            // STACK: <empty>
-            loadLocal(resultLocal)
-            // STACK: BootstrapResult
-            invokeStatic(Injections::getFromOrThrow)
-            // STACK: result
-            if (returnType == VOID_TYPE) pop() else unbox(returnType)
-        }
+        loadLocal(deterministicCallIdLocal)
+        loadLocal(deterministicMethodDescriptorLocal)
+        pushReceiver(receiverLocal)
+        loadLocal(argumentsArrayLocal)
+        // STACK: deterministicCallId, deterministicMethodDescriptor, receiver, parameters
+        invokeStatic(Injections::invokeDeterministicallyOrNull)
+        // STACK: BootstrapResult
+        val resultLocal = newLocal(getType(BootstrapResult::class.java))
+        storeLocal(resultLocal)
+        // STACK: <empty>
+        loadLocal(resultLocal)
+        // STACK: BootstrapResult
+        ifNull(onDefaultMethodCallLabel)
+        // STACK: <empty>
+        loadLocal(resultLocal)
+        // STACK: BootstrapResult
+        invokeStatic(Injections::getFromOrThrow)
+        // STACK: result?
+        if (returnType == VOID_TYPE) pop() else unbox(returnType)
+        // STACK: boxedResult?
         goTo(endIfLabel)
+
         visitLabel(onDefaultMethodCallLabel)
         // STACK: <empty>
         invokeDefault()

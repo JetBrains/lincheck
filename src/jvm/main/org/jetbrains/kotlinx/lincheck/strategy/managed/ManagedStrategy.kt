@@ -1522,13 +1522,15 @@ abstract class ManagedStrategy(
         descriptor: Any?,
         receiver: Any?,
         params: Array<Any?>
-    ): BootstrapResult<*>? = when {
-        descriptor !is DeterministicMethodDescriptor<*, *> -> null
-        !isInTraceDebuggerMode -> descriptor.runFake(receiver, params).toBootstrapResult()
-        isFirstReplay -> null
-        else -> runInsideIgnoredSection {
-            val state = nativeMethodCallStatesTracker.getState(descriptorId, descriptor.methodCallInfo)
-            descriptor.runFromStateWithCast(receiver, params, state).toBootstrapResult()
+    ): BootstrapResult<*>? = runInsideIgnoredSection {
+        when {
+            descriptor !is DeterministicMethodDescriptor<*, *> -> null
+            !isInTraceDebuggerMode -> descriptor.runFake(receiver, params).toBootstrapResult()
+            isFirstReplay -> null
+            else -> {
+                val state = nativeMethodCallStatesTracker.getState(descriptorId, descriptor.methodCallInfo)
+                descriptor.runFromStateWithCast(receiver, params, state).toBootstrapResult()
+            }
         }
     }
 
