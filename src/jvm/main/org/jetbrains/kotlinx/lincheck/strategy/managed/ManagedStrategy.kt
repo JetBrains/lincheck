@@ -1235,7 +1235,7 @@ abstract class ManagedStrategy(
     private fun Injections.HandlePojo.toAsmHandle(): Handle =
         Handle(tag, owner, name, desc, isInterface)
 
-    override fun getNextTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker): TraceDebuggerEventId =
+    override fun getNextTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker): TraceDebuggerEventId = runInsideIgnoredSection {
         traceDebuggerEventTrackers[tracker]?.getNextId() ?: 0
 
     override fun afterNewObjectCreation(obj: Any) {
@@ -1246,10 +1246,8 @@ abstract class ManagedStrategy(
         }
     }
 
-    private fun shouldTrackObjectAccess(obj: Any?): Boolean {
-        // by default, we track accesses to all objects
-        if (objectTracker == null) return true
-        return objectTracker!!.shouldTrackObjectAccess(obj ?: StaticObject)
+    override fun advanceCurrentTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker, oldId: TraceDebuggerEventId): Unit = runInsideIgnoredSection {
+        traceDebuggerEventTrackers[tracker]?.advanceCurrentId(oldId)
     }
 
     /**
