@@ -1193,20 +1193,30 @@ abstract class ManagedStrategy(
         // traceCollector!!.passCodeLocation(tracePoint)
     }
 
+    override fun beforeNewObjectCreation(className: String) = runInsideIgnoredSection {
+        LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
+    }
+
+    override fun afterNewObjectCreation(obj: Any) {
+        if (obj.isImmutable) return
+        runInsideIgnoredSection {
+            identityHashCodeTracker.afterNewTrackedObjectCreation(obj)
+            objectTracker?.registerNewObject(obj)
+        }
+    }
+
+    private fun shouldTrackObjectAccess(obj: Any?): Boolean {
+        // by default, we track accesses to all objects
+        if (objectTracker == null) return true
+        return objectTracker!!.shouldTrackObjectAccess(obj ?: StaticObject)
+    }
+
     override fun getThreadLocalRandom(): InjectedRandom = runInsideIgnoredSection {
         return randoms[threadScheduler.getCurrentThreadId()]!!
     }
 
     override fun randomNextInt(): Int = runInsideIgnoredSection {
         getThreadLocalRandom().nextInt()
-    }
-
-    override fun beforeNewObjectCreation(className: String) = runInsideIgnoredSection {
-        LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
-    }
-
-    override fun advanceCurrentTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker, oldId: TraceDebuggerEventId) {
-        traceDebuggerEventTrackers[tracker]?.advanceCurrentId(oldId)
     }
 
     override fun getCachedInvokeDynamicCallSite(
@@ -1237,13 +1247,6 @@ abstract class ManagedStrategy(
 
     override fun getNextTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker): TraceDebuggerEventId = runInsideIgnoredSection {
         traceDebuggerEventTrackers[tracker]?.getNextId() ?: 0
-
-    override fun afterNewObjectCreation(obj: Any) {
-        if (obj.isImmutable) return
-        runInsideIgnoredSection {
-            identityHashCodeTracker.afterNewTrackedObjectCreation(obj)
-            objectTracker?.registerNewObject(obj)
-        }
     }
 
     override fun advanceCurrentTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker, oldId: TraceDebuggerEventId): Unit = runInsideIgnoredSection {
