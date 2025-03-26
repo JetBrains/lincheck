@@ -478,14 +478,7 @@ abstract class ManagedStrategy(
         // if any kind of live-lock was detected, check for obstruction-freedom violation
         if (decision.isLivelockDetected) {
             failIfObstructionFreedomIsRequired {
-                if (decision is LoopDetector.Decision.LivelockFailureDetected) {
-                    // if failure is detected, add a special obstruction-freedom violation
-                    // trace point to account for that
-                    traceCollector?.passObstructionFreedomViolationTracePoint(iThread, beforeMethodCall = tracePoint is MethodCallTracePoint)
-                } else {
-                    // otherwise log the last event that caused obstruction-freedom violation
-                    traceCollector?.passCodeLocation(tracePoint)
-                }
+                traceCollector?.passObstructionFreedomViolationTracePoint(iThread, beforeMethodCall = tracePoint is MethodCallTracePoint)
                 OBSTRUCTION_FREEDOM_SPINLOCK_VIOLATION_MESSAGE
             }
         }
