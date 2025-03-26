@@ -91,8 +91,8 @@ public class Injections {
      * A code inside the ignored section is not analyzed by the Lincheck.
      *
      * <p>
-     * Has no effect on if the current thread is untracked,
-     * that is not registered in the Lincheck strategy.
+     * Does not affect the current thread if it is untracked
+     * (e.g. not registered in the Lincheck strategy).
      */
     public static void enterIgnoredSection() {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
@@ -104,8 +104,8 @@ public class Injections {
      * Leaves an ignored section for the current thread.
      *
      * <p>
-     * Has no effect on if the current thread is untracked,
-     * that is not registered in the Lincheck strategy.
+     * Does not affect the current thread if it is untracked
+     * (e.g. not registered in the Lincheck strategy).
      */
     public static void leaveIgnoredSection() {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();

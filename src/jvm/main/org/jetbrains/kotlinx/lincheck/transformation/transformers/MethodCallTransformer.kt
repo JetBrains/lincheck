@@ -71,7 +71,7 @@ internal class MethodCallTransformer(
         val returnType = getReturnType(desc)
         // STACK: receiver?, arguments
         val argumentLocals = storeArguments(desc)
-        val argumentsArrayLocal = newLocal(OBJECT_TYPE).also {
+        val argumentsArrayLocal = newLocal(OBJECT_ARRAY_TYPE).also {
             pushArray(argumentLocals)
             storeLocal(it)
         }

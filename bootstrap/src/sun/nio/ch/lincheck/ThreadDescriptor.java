@@ -136,7 +136,7 @@ public class ThreadDescriptor {
      *
      * <p>
      * Ignored sections are re-entrant, meaning the thread may enter
-     * the ignored section multiple times before exiting it
+     * the ignored section multiple times before exiting it.
      */
     public void enterIgnoredSection() {
         ignoredSectionDepth++;

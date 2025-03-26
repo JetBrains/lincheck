@@ -31,8 +31,8 @@ internal fun disableAnalysis() {
 /**
  * Enters an ignored section for the current thread.
  *
- * Has no effect on if the current thread is untracked,
- * that is not registered in the Lincheck strategy.
+     * Does not affect the current thread if it is untracked
+     * (e.g. not registered in the Lincheck strategy).
  */
 internal fun enterIgnoredSection() {
     Injections.enterIgnoredSection()
@@ -41,8 +41,8 @@ internal fun enterIgnoredSection() {
 /**
  * Leaves an ignored section for the current thread.
  *
- * Has no effect on if the current thread is untracked,
- * that is not registered in the Lincheck strategy.
+     * Does not affect the current thread if it is untracked
+     * (e.g. not registered in the Lincheck strategy).
  */
 internal fun leaveIgnoredSection() {
     Injections.leaveIgnoredSection()
