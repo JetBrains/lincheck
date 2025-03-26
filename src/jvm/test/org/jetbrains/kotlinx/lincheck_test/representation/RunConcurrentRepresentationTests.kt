@@ -316,6 +316,10 @@ class KotlinThreadRunConcurrentRepresentationTest : BaseRunConcurrentRepresentat
 
 // TODO investigate difference for trace debugger (Evgeniy Moiseenko)
 class LivelockRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>("run_concurrent_test/livelock") {
+
+    @Before // spin-loop detection is unsupported in trace debugger mode
+    fun setUp() = assumeFalse(isInTraceDebuggerMode)
+
     override fun block() {
         var counter = 0
         val lock1 = SpinLock()

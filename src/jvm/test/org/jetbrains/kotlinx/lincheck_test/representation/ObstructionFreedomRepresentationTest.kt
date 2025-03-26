@@ -18,6 +18,7 @@ import org.jetbrains.kotlinx.lincheck_test.util.*
 
 import java.util.concurrent.atomic.*
 import org.junit.*
+import org.junit.Assume.assumeFalse
 
 /**
  * This test checks that the last event in the case of an active lock
@@ -26,6 +27,9 @@ import org.junit.*
 class ObstructionFreedomActiveLockRepresentationTest : BaseTraceRepresentationTest(
     "obstruction_freedom_violation_with_no_detected_cycle"
 ) {
+    @Before // spin-loop detection is unsupported in trace debugger mode
+    fun setUp() = assumeFalse(isInTraceDebuggerMode)
+
     private val counter = AtomicInteger(0)
 
     override fun operation() {
