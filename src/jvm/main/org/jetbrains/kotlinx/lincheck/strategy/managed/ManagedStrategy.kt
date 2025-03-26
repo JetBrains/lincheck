@@ -1336,7 +1336,7 @@ abstract class ManagedStrategy(
         deterministicMethodDescriptor: DeterministicMethodDescriptor<*, *>?,
     ): ManagedGuaranteeType? {
         if (atomicMethodDescriptor != null) {
-            return ManagedGuaranteeType.TREAT_AS_ATOMIC
+            return ManagedGuaranteeType.ATOMIC
         }
         // TODO: decide if we need to introduce special `DETERMINISTIC` guarantee?
         if (deterministicMethodDescriptor != null) {
@@ -1408,7 +1408,7 @@ abstract class ManagedStrategy(
         // in case of an atomic method, we create a switch point before the method call;
         // note that in case we resume atomic method there is no need to create the switch point,
         // since there is already a switch point between the suspension point and resumption
-        if (guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC &&
+        if (guarantee == ManagedGuaranteeType.ATOMIC &&
             // do not create a trace point on resumption
             !isResumptionMethodCall(threadId, className, methodName, params, atomicMethodDescriptor)
         ) {
@@ -1422,7 +1422,7 @@ abstract class ManagedStrategy(
         }
         // if the method is atomic or should be ignored, then we enter an ignored section
         if (guarantee == ManagedGuaranteeType.IGNORE ||
-            guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC) {
+            guarantee == ManagedGuaranteeType.ATOMIC) {
             enterIgnoredSection()
         }
         return deterministicMethodDescriptor
@@ -1472,7 +1472,7 @@ abstract class ManagedStrategy(
         }
         // if the method is atomic or ignored, then we leave an ignored section
         if (guarantee == ManagedGuaranteeType.IGNORE ||
-            guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC) {
+            guarantee == ManagedGuaranteeType.ATOMIC) {
             leaveIgnoredSection()
         }
     }
@@ -1515,7 +1515,7 @@ abstract class ManagedStrategy(
         }
         // if the method is atomic or ignored, then we leave an ignored section
         if (guarantee == ManagedGuaranteeType.IGNORE ||
-            guarantee == ManagedGuaranteeType.TREAT_AS_ATOMIC) {
+            guarantee == ManagedGuaranteeType.ATOMIC) {
             leaveIgnoredSection()
         }
     }
