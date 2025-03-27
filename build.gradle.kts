@@ -180,7 +180,6 @@ tasks {
         extraArgs.add("-Dlincheck.version=$version")
         findProperty("lincheck.logFile")?.let { extraArgs.add("-Dlincheck.logFile=${it as String}") }
         findProperty("lincheck.logLevel")?.let { extraArgs.add("-Dlincheck.logLevel=${it as String}") }
-        findProperty("lincheck.strictInvocationsBound")?.let { extraArgs.add("-Dlincheck.strictInvocationsBound=${it as String}") }
         jvmArgs(extraArgs)
     }
 

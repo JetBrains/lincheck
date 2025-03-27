@@ -156,14 +156,6 @@ abstract class ManagedStrategy(
     protected var replayNumber = 0L
 
     /**
-     * Strict invocations bound will treat spin cycle replays in [ManagedStrategy] as actual invocations.
-     *
-     * Setting this flag to `true` could lead to existing errors being undetected by the strategy
-     * when small number of invocations is set (like, 1) and spin cycle replay is required.
-     */
-    private val strictInvocationsBound: Boolean = System.getProperty("lincheck.strictInvocationsBound").toBoolean()
-
-    /**
      * For each thread, represents a shadow stack used to reflect the program's actual stack.
      *
      * Collected and used only in the trace collecting stage.
@@ -280,36 +272,33 @@ abstract class ManagedStrategy(
      * Runs the current invocation.
      */
     override fun runInvocation(): InvocationResult {
-        while (true) {
-            initializeInvocation()
-            val result: InvocationResult = try {
-                runner.run()
-            } finally {
-                restoreStaticMemorySnapshot()
-            }
-            // In case the runner detects a deadlock, some threads can still manipulate the current strategy,
-            // so we're not interested in suddenInvocationResult in this case
-            // and immediately return RunnerTimeoutInvocationResult.
-            if (result is RunnerTimeoutInvocationResult) {
-                return result
-            }
-            // If strategy has not detected a sudden invocation result,
-            // then return, otherwise process the sudden result.
-            val suddenResult = suddenInvocationResult ?: return result
-            // Check if an invocation replay is required
-            val isReplayRequired = (suddenResult is SpinCycleFoundAndReplayRequired)
-            if (isReplayRequired) {
-                enableSpinCycleReplay()
-                if (strictInvocationsBound) {
-                    return suddenResult
-                }
-                continue
-            }
-            // Unexpected `ThreadAbortedError` should be thrown.
-            check(result is UnexpectedExceptionInvocationResult)
-            // Otherwise return the sudden result
+        initializeInvocation()
+        val result: InvocationResult = try {
+            runner.run()
+        } finally {
+            restoreStaticMemorySnapshot()
+        }
+        // In case the runner detects a deadlock, some threads can still manipulate the current strategy,
+        // so we're not interested in suddenInvocationResult in this case
+        // and immediately return RunnerTimeoutInvocationResult.
+        if (result is RunnerTimeoutInvocationResult) {
+            return result
+        }
+        // If strategy has not detected a sudden invocation result,
+        // then return, otherwise process the sudden result.
+        val suddenResult = suddenInvocationResult ?: return result
+        // Check if an invocation replay is required
+        val isReplayRequired = (suddenResult is SpinCycleFoundAndReplayRequired)
+        if (isReplayRequired) {
+            enableSpinCycleReplay()
+            // TODO: returning here instead of continuing in a cycle leads to an issue:
+            //  see https://github.com/JetBrains/lincheck/issues/590
             return suddenResult
         }
+        // Unexpected `ThreadAbortedError` should be thrown.
+        check(result is UnexpectedExceptionInvocationResult)
+        // Otherwise return the sudden result
+        return suddenResult
     }
 
     protected open fun enableSpinCycleReplay() {}
