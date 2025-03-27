@@ -116,6 +116,11 @@ public class Types {
         public int hashCode() {
             return Objects.hash(className);
         }
+
+        @Override
+        public String toString() {
+            return className;
+        }
     }
 
     public static final class ArrayType extends Type {
@@ -142,17 +147,75 @@ public class Types {
         public int hashCode() {
             return Objects.hash(elementType);
         }
+
+        @Override
+        public String toString() {
+            return elementType.toString() + "[]";
+        }
     }
 
-    public static final class VoidType extends Type {}
-    public static final class IntType extends Type {}
-    public static final class LongType extends Type {}
-    public static final class DoubleType extends Type {}
-    public static final class FloatType extends Type {}
-    public static final class BooleanType extends Type {}
-    public static final class ByteType extends Type {}
-    public static final class ShortType extends Type {}
-    public static final class CharType extends Type {}
+    public static final class VoidType extends Type {
+        @Override
+        public String toString() {
+            return "void";
+        }
+    }
+    
+    public static final class IntType extends Type {
+        @Override
+        public String toString() {
+            return "int";
+        }
+    }
+    
+    public static final class LongType extends Type {
+        @Override
+        public String toString() {
+            return "long";
+        }
+    }
+    
+    public static final class DoubleType extends Type {
+        @Override
+        public String toString() {
+            return "double";
+        }
+    }
+    
+    public static final class FloatType extends Type {
+        @Override
+        public String toString() {
+            return "float";
+        }
+    }
+    
+    public static final class BooleanType extends Type {
+        @Override
+        public String toString() {
+            return "boolean";
+        }
+    }
+    
+    public static final class ByteType extends Type {
+        @Override
+        public String toString() {
+            return "byte";
+        }
+    }
+    
+    public static final class ShortType extends Type {
+        @Override
+        public String toString() {
+            return "short";
+        }
+    }
+    
+    public static final class CharType extends Type {
+        @Override
+        public String toString() {
+            return "char";
+        }
+    }
 
     public static class MethodType {
         private final List<Type> argumentTypes;
@@ -186,6 +249,21 @@ public class Types {
         @Override
         public int hashCode() {
             return Objects.hash(returnType, argumentTypes);
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder sb = new StringBuilder();
+            sb.append("(");
+            for (int i = 0; i < argumentTypes.size(); i++) {
+                if (i > 0) {
+                    sb.append(", ");
+                }
+                sb.append(argumentTypes.get(i).toString());
+            }
+            sb.append("): ");
+            sb.append(returnType.toString());
+            return sb.toString();
         }
     }
 }

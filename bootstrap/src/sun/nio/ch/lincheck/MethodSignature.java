@@ -46,4 +46,9 @@ public class MethodSignature {
     public int hashCode() {
         return Objects.hash(name, methodType);
     }
+    
+    @Override
+    public String toString() {
+        return name + methodType;
+    }
 }
