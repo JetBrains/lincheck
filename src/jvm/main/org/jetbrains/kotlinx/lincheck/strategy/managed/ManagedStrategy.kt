@@ -1333,13 +1333,13 @@ abstract class ManagedStrategy(
      * Propagates the modification done by intrinsic calls to the strategy.
      * This functionality is required, because we cannot instrument intrinsic methods directly.
      *
-     * *Must be called from [runInIgnoredSection].*
+     * *Must be called from [runInsideIgnoredSection].*
      */
     private fun processIntrinsicMethodEffects(
         methodId: Int,
         result: Any?
     ) {
-        if (!MethodIds.isIntrinsicMethod(methodId)) return
+        check(MethodIds.isIntrinsicMethod(methodId)) { "Processing intrinsic method effect of non-intrinsic call" }
         val intrinsicDescriptor = MethodIds.getIntrinsicMethodDescriptor(methodId)
 
         if (
@@ -1462,7 +1462,9 @@ abstract class ManagedStrategy(
     ) = runInsideIgnoredSection {
         require(deterministicMethodDescriptor is DeterministicMethodDescriptor<*, *>?)
         // process intrinsic candidate methods
-        processIntrinsicMethodEffects(methodId, result)
+        if (MethodIds.isIntrinsicMethod(methodId)) {
+            processIntrinsicMethodEffects(methodId, result)
+        }
 
         if (isInTraceDebuggerMode && isFirstReplay && deterministicMethodDescriptor != null) {
             deterministicMethodDescriptor.saveFirstResultWithCast(receiver, params, KResult.success(result)) {
