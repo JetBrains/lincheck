@@ -495,7 +495,7 @@ internal sealed class SwitchReason(private val reason: String) {
  * Method call stack trace element info.
  * All method calls are enumerated with unique ids to distinguish different calls of the same method.
  *
- * @property id unique identifier of the call stack trace element.
+ * @property callId unique identifier of the call stack trace element.
  * @property tracePoint the method call trace point corresponding to this call stack element.
  * @property instance the object on which the method was invoked (null in case of static method).
  * @property methodInvocationId identifier of the method invocation;
@@ -504,7 +504,7 @@ internal sealed class SwitchReason(private val reason: String) {
  * @see [org.jetbrains.kotlinx.lincheck.transformation.MethodIds].
  */
 internal class CallStackTraceElement(
-    val id: Int,
+    val callId: Int,
     val tracePoint: MethodCallTracePoint,
     val instance: Any?,
     val methodInvocationId: Int
@@ -512,7 +512,7 @@ internal class CallStackTraceElement(
     fun deepCopy(copiedCallStackTraceElements: HashMap<CallStackTraceElement, CallStackTraceElement>): CallStackTraceElement =
         copiedCallStackTraceElements.computeIfAbsent(this) {
             CallStackTraceElement(
-                id,
+                callId,
                 tracePoint.deepCopy(copiedCallStackTraceElements),
                 instance,
                 methodInvocationId

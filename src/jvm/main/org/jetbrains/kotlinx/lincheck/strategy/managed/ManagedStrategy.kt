@@ -1660,7 +1660,7 @@ abstract class ManagedStrategy(
             params.map { primitiveOrIdentityHashCode(it) }.toTypedArray().contentHashCode()
         )
         val stackTraceElement = CallStackTraceElement(
-            id = callId,
+            callId = callId,
             tracePoint = tracePoint,
             instance = owner,
             methodInvocationId = methodInvocationId
