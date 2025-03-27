@@ -28,6 +28,8 @@ internal data class MethodDescriptor(
     val methodName: String get() = methodSignature.name
     val returnType: Type get() = methodSignature.methodType.returnType
     val argumentTypes: List<Type> get() = methodSignature.methodType.argumentTypes
+
+    override fun toString(): String = "$className.$methodSignature"
 }
 
 internal fun MethodDescriptor.isArraysCopyOfIntrinsic(): Boolean {
