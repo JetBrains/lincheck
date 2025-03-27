@@ -14,6 +14,7 @@ import org.jetbrains.kotlinx.lincheck.ExperimentalModelCheckingAPI
 import org.jetbrains.kotlinx.lincheck.runConcurrentTest
 import org.junit.Test
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 
 /**
@@ -28,26 +29,28 @@ class IntrinsicCandidateMethodTest {
 
     @Test
     fun testArraysCopyOf() {
-        runConcurrentTest(10000) {
+        runConcurrentTest(15000) {
             val threads = mutableListOf<Thread>()
-            val l = CountDownLatch(1)
+            val a = AtomicInteger(0)
 
             // `ArrayList::copyOf` method is called internally (on array resize)
             // which is annotated with @[HotSpot]IntrinsicCandidate. Method's body is substituted
             // with predefined assembly, thus, execution was non-deterministic, because the
             // substitution overrides lincheck's instrumentation unexpectedly.
+            // Operation inside each thread does not really matter, but with some operations it harder to trigger jit.
             threads += thread {
-                l.await()
+                a.incrementAndGet()
             }
 
             threads += thread {
-                l.await()
+                a.incrementAndGet()
             }
 
-            l.countDown()
+            a.incrementAndGet()
             for (t in threads) {
                 t.join()
             }
+            check(a.get() == 3)
         }
     }
 }
