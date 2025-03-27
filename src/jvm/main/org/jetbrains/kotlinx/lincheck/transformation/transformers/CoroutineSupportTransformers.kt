@@ -64,11 +64,11 @@ internal class CoroutineDelaySupportTransformer(
             return
         }
 
-        invokeIfInTestingCode(
+        invokeIfInAnalyzedCode(
             original = {
                 visitMethodInsn(opcode, owner, name, desc, itf)
             },
-            code = {
+            instrumented = {
                 // STACK [INVOKESTATIC]: delay, <cont>
                 val contLocal = newLocal(getType("Lkotlin/coroutines/Continuation;"))
                 storeLocal(contLocal)

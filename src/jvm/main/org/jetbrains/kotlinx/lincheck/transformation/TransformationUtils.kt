@@ -291,7 +291,7 @@ private val Type.requiresBoxing: Boolean
  *
  * @param setMethodEventId a flag that identifies that method call event id set is required
  */
-internal fun GeneratorAdapter.invokeBeforeEvent(debugMessage: String, setMethodEventId: Boolean) = invokeInIgnoredSection {
+internal fun GeneratorAdapter.invokeBeforeEvent(debugMessage: String, setMethodEventId: Boolean) = invokeInsideIgnoredSection {
     ifStatement(
         condition = {
             invokeStatic(Injections::shouldInvokeBeforeEvent)
@@ -359,23 +359,23 @@ internal inline fun GeneratorAdapter.ifStatement(
 }
 
 /**
- * Generates an if-then-else statement, testing if the current execution point
- * is currently inside a Lincheck tested section
- * (i.e., not inside the ignored section of the analysis).
- * If so, the [original] bytecode sequence will be executed, otherwise
- * the instrumented [code] will be executed.
+ * Generates an if-then-else statement,
+ * testing if the current execution point is inside a Lincheck analyzed code
+ *
+ * If so, the [original] bytecode sequence will be executed,
+ * otherwise the [instrumented] bytecode will be executed.
  *
  * @param original the original code.
- * @param code the code to execute in the Lincheck's testing context.
+ * @param instrumented the code to execute in the Lincheck's analysis context.
  */
-internal inline fun GeneratorAdapter.invokeIfInTestingCode(
+internal inline fun GeneratorAdapter.invokeIfInAnalyzedCode(
     original: GeneratorAdapter.() -> Unit,
-    code: GeneratorAdapter.() -> Unit
+    instrumented: GeneratorAdapter.() -> Unit
 ) {
     ifStatement(
-        condition = { invokeStatic(Injections::inIgnoredSection) },
-        thenClause = original,
-        elseClause = code
+        condition = { invokeStatic(Injections::inAnalyzedCode) },
+        thenClause = instrumented,
+        elseClause = original,
     )
 }
 
@@ -385,21 +385,15 @@ internal inline fun GeneratorAdapter.invokeIfInTestingCode(
  *
  * @param code A block of bytecode to be executed inside the ignored section.
  */
-internal inline fun GeneratorAdapter.invokeInIgnoredSection(
+internal fun GeneratorAdapter.invokeInsideIgnoredSection(
     code: GeneratorAdapter.() -> Unit
 ) {
     invokeStatic(Injections::enterIgnoredSection)
-    val enteredIgnoredSection = newLocal(BOOLEAN_TYPE)
-    storeLocal(enteredIgnoredSection)
-    code()
-    ifStatement(
-        condition = {
-            loadLocal(enteredIgnoredSection)
-        },
-        thenClause = {
+    tryCatchFinally(
+        tryBlock = { code() },
+        finallyBlock = {
             invokeStatic(Injections::leaveIgnoredSection)
         },
-        elseClause = {}
     )
 }
 
@@ -511,7 +505,7 @@ private val isCoroutineStateMachineClassMap = ConcurrentHashMap<String, Boolean>
 /**
  * Tests if the provided [className] contains `"ClassLoader"` as a substring.
  */
-internal fun containsClassloaderInName(className: String): Boolean =
+internal fun isClassLoaderClassName(className: String): Boolean =
     className.contains("ClassLoader")
 
 /**
@@ -573,7 +567,9 @@ internal fun String.toInternalClassName() =
 
 internal const val ASM_API = Opcodes.ASM9
 
+internal val OBJECT_ARRAY_TYPE = getType(Array<Any>::class.java)
 internal val STRING_TYPE = getType(String::class.java)
 internal val CLASS_TYPE = getType(Class::class.java)
+internal val THROWABLE_TYPE = getType(Throwable::class.java)
 
 internal val CLASS_FOR_NAME_METHOD = Method("forName", CLASS_TYPE, arrayOf(STRING_TYPE))

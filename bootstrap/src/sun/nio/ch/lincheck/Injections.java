@@ -68,36 +68,44 @@ public class Injections {
         }
     }
 
-    public static void enterTestingCode() {
+    /**
+     * Enables analysis for the current thread.
+    */
+    public static void enableAnalysis() {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) return;
-        descriptor.enterTestingCode();
+        descriptor.enableAnalysis();
     }
 
-    public static void leaveTestingCode() {
+    /**
+     * Disables analysis for the current thread.
+    */
+    public static void disableAnalysis() {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
         if (descriptor == null) return;
-        descriptor.leaveTestingCode();
+        descriptor.disableAnalysis();
     }
 
     /**
      * Enters an ignored section for the current thread.
      * A code inside the ignored section is not analyzed by the Lincheck.
      *
-     * Note that the thread may not actually enter the ignored section in the following cases.
-     *   1. The thread is not registered in the Lincheck strategy.
-     *   2. The thread is already inside the ignored section.
-     *
-     * @return true if the thread successfully entered the ignored section, false otherwise.
+     * <p>
+     * Does not affect the current thread if it is untracked
+     * (e.g. not registered in the Lincheck strategy).
      */
-    public static boolean enterIgnoredSection() {
+    public static void enterIgnoredSection() {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
-        if (descriptor == null) return false;
-        return descriptor.enterIgnoredSection();
+        if (descriptor == null) return;
+        descriptor.enterIgnoredSection();
     }
 
     /**
      * Leaves an ignored section for the current thread.
+     *
+     * <p>
+     * Does not affect the current thread if it is untracked
+     * (e.g. not registered in the Lincheck strategy).
      */
     public static void leaveIgnoredSection() {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
@@ -110,10 +118,10 @@ public class Injections {
      *
      * @return true if the current thread is inside an ignored section, false otherwise.
      */
-    public static boolean inIgnoredSection() {
+    public static boolean inAnalyzedCode() {
         ThreadDescriptor descriptor = ThreadDescriptor.getCurrentThreadDescriptor();
-        if (descriptor == null) return true;
-        return descriptor.inIgnoredSection();
+        if (descriptor == null) return false;
+        return descriptor.inAnalyzedCode();
     }
 
     /**
@@ -368,43 +376,52 @@ public class Injections {
     /**
      * Called from the instrumented code before any method call.
      *
-     * @param owner is `null` for public static methods.
+     * @param receiver is `null` for public static methods.
      * @return Deterministic call descriptor or null.
      */
-    public static Object onMethodCall(Object owner, String className, String methodName, int codeLocation, int methodId, String methodDesc, Object[] params) {
-        // to safely construct the method signature we need to enter ignored section
-        // because it internally calls code which has instrumentation
-        boolean entered = enterIgnoredSection();
+    public static Object onMethodCall(String className, String methodName, int codeLocation, int methodId, String methodDesc, Object receiver, Object[] params) {
+        // to safely construct the method signature, we need to enter an ignored section
+        // because it internally calls code which can be instrumented
+        enterIgnoredSection();
         MethodSignature methodSignature;
         try {
             methodSignature = new MethodSignature(methodName, convertAsmMethodType(methodDesc));
         } finally {
-            if (entered) leaveIgnoredSection();
+            leaveIgnoredSection();
         }
-        return getEventTracker().onMethodCall(owner, className, methodName, codeLocation, methodId, methodSignature, params);
+        return getEventTracker().onMethodCall(className, methodName, codeLocation, methodId, methodSignature, receiver, params);
     }
 
     /**
      * Called from the instrumented code after any method successful call, i.e., without any exception.
-     * 
+     *
      * @param descriptor Deterministic call descriptor or null.
      * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
      * @param result The call result.
      */
-    public static void onMethodCallReturn(
-            long descriptorId, Object descriptor, Object receiver, Object[] params, Object result
-    ) {
-        getEventTracker().onMethodCallReturn(descriptorId, descriptor, receiver, params, result);
+    public static void onMethodCallReturn(String className, String methodName, long descriptorId, Object descriptor, Object receiver, Object[] params, Object result) {
+        getEventTracker().onMethodCallReturn(className, methodName, descriptorId, descriptor, receiver, params, result);
     }
 
     /**
      * Called from the instrumented code after any method that returns void successful call, i.e., without any exception.
-     * 
+     *
      * @param descriptor Deterministic call descriptor or null.
      * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
      */
-    public static void onMethodCallReturnVoid(long descriptorId, Object descriptor, Object receiver, Object[] params) {
-        getEventTracker().onMethodCallReturn(descriptorId, descriptor, receiver, params, VOID_RESULT);
+    public static void onMethodCallReturnVoid(String className, String methodName, long descriptorId, Object descriptor, Object receiver, Object[] params) {
+        getEventTracker().onMethodCallReturn(className, methodName, descriptorId, descriptor, receiver, params, VOID_RESULT);
+    }
+
+    /**
+     * Called from the instrumented code after any method call threw an exception
+     *
+     * @param descriptor Deterministic call descriptor or null.
+     * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
+     * @param t Thrown exception.
+     */
+    public static void onMethodCallException(String className, String methodName, long descriptorId, Object descriptor, Object receiver, Object[] params, Throwable t) {
+        getEventTracker().onMethodCallException(className, methodName, descriptorId, descriptor, receiver, params, t);
     }
 
     /**
@@ -431,19 +448,6 @@ public class Injections {
      */
     public static Object getFromOrThrow(BootstrapResult<?> result) throws Throwable {
         return result.getOrThrow();
-    }
-
-    /**
-     * Called from the instrumented code after any method call threw an exception
-     * 
-     * @param descriptor Deterministic call descriptor or null.
-     * @param descriptorId Deterministic call descriptor id when applicable, or any other value otherwise.
-     * @param t Thrown exception.
-     */
-    public static void onMethodCallException(
-            long descriptorId, Object descriptor, Object receiver, Object[] params, Throwable t
-    ) {
-        getEventTracker().onMethodCallException(descriptorId, descriptor, receiver, params, t);
     }
 
     /**

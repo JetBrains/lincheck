@@ -73,11 +73,11 @@ class ManagedStrategyGuarantee private constructor(
          * In contract with the [ignore] mode, switch points are added right before and after the
          * specified method calls.
          */
-        fun treatAsAtomic() = ManagedStrategyGuarantee(classPredicate, methodPredicate, ManagedGuaranteeType.TREAT_AS_ATOMIC)
+        fun treatAsAtomic() = ManagedStrategyGuarantee(classPredicate, methodPredicate, ManagedGuaranteeType.ATOMIC)
     }
 }
 
 internal enum class ManagedGuaranteeType {
     IGNORE,
-    TREAT_AS_ATOMIC
+    ATOMIC
 }

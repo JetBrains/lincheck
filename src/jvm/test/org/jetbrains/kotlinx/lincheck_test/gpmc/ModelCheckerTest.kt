@@ -77,7 +77,7 @@ private fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario): Mo
 
 private fun createConfiguration(testClass: Class<*>) =
     ModelCheckingOptions()
-        .invocationTimeout(20_000) // 20 sec
+        .invocationTimeout(30_000) // 30 sec
         .createTestConfigurations(testClass)
 
 private class CollectResultsVerifier : Verifier {

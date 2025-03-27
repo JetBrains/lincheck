@@ -59,18 +59,16 @@ public class ThreadDescriptor {
     private WeakReference<Object> eventTrackerData = null;
 
     /**
-     * This flag indicates whether the Lincheck is currently running analyzed test code.
+     * This flag indicates whether the Lincheck analysis is currently enabled in this thread.
      */
-    private boolean inTestingCode = false;
+    private boolean isAnalysisEnabled = false;
 
     /**
-     * This flag is used to disable tracking of all events.
+     * Counter keeping track of the ignored section re-entrance depth.
      *
-     * <p>
-     * If Lincheck enters a code block for which analysis should be disabled, this flag is set to `true`.
-     * Notably, such code blocks can be nested, but only the outermost one changes the flag.
+     * @see #inIgnoredSection
      */
-    private boolean inIgnoredSection = false;
+    private int ignoredSectionDepth = 0;
 
     public ThreadDescriptor(Thread thread) {
         if (thread == null) {
@@ -99,30 +97,85 @@ public class ThreadDescriptor {
         this.eventTrackerData = new WeakReference<>(eventTrackerData);
     }
 
+    /**
+     * Determines whether the thread is currently within an analyzed code section,
+     * that is analysis was enabled and the thread is not currently within an ignored section.
+     *
+     * @return true if the thread is in a section of analyzed code, false otherwise.
+     */
+    public boolean inAnalyzedCode() {
+        return isAnalysisEnabled && (ignoredSectionDepth == 0);
+    }
+
+    /**
+     * Enables analysis for this thread.
+     */
+    public void enableAnalysis() {
+        isAnalysisEnabled = true;
+    }
+
+    /**
+     * Disables analysis for this thread.
+     */
+    public void disableAnalysis() {
+        isAnalysisEnabled = false;
+    }
+
+    /**
+     * Checks if this thread is currently within an ignored section.
+     * Ignored section is used to temporarily disable tracking of all events.
+     *
+     * @return true if the thread is within an ignored section, false otherwise.
+     */
     public boolean inIgnoredSection() {
-        return !inTestingCode || inIgnoredSection;
+        return ignoredSectionDepth > 0;
     }
 
-    public boolean enterIgnoredSection() {
-        if (inIgnoredSection) return false;
-        inIgnoredSection = true;
-        return true;
+    /**
+     * Enters an ignored section in this thread.
+     *
+     * <p>
+     * Ignored sections are re-entrant, meaning the thread may enter
+     * the ignored section multiple times before exiting it.
+     */
+    public void enterIgnoredSection() {
+        ignoredSectionDepth++;
     }
 
+    /**
+     * Exits an ignored section for this thread.
+     *
+     * <p>
+     * Ignored sections are re-entrant, meaning the thread may need to exit
+     * the section multiple times if previously it entered it multiple times.
+     */
     public void leaveIgnoredSection() {
-        inIgnoredSection = false;
+        ignoredSectionDepth--;
     }
 
-    public boolean inTestingCode() {
-        return inTestingCode;
+    /**
+     * Resets the ignored section re-entrance depth for this thread to 0 and returns the previous depth.
+     *
+     * <p>
+     * This can be used to temporarily exit the current ignored section
+     * and then later re-enter it with the same re-entrance depth,
+     * using the corresponding restore method.
+     *
+     * @return the previous depth of the ignored section before it was reset.
+     */
+    public int saveAndResetIgnoredSectionDepth() {
+        int depth = ignoredSectionDepth;
+        ignoredSectionDepth = 0;
+        return depth;
     }
 
-    public void enterTestingCode() {
-        inTestingCode = true;
-    }
-
-    public void leaveTestingCode() {
-        inTestingCode = false;
+    /**
+     * Restores the ignored section re-entrance depth for this thread to the given value.
+     *
+     * @param depth the depth to which the ignored section re-entrance is being restored.
+     */
+    public void restoreIgnoredSectionDepth(int depth) {
+        ignoredSectionDepth = depth;
     }
 
     /*
