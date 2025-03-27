@@ -29,14 +29,6 @@ abstract class Strategy protected constructor(
 ) : Closeable {
 
     /**
-     * Strict invocations bound will treat spin cycle replays in [ManagedStrategy] as actual invocations.
-     *
-     * Setting this flag to `true` could lead to existing errors being undetected by the strategy
-     * when small number of invocations is set (like, 1) and spin cycle replay is required.
-     */
-    internal val strictInvocationsBound: Boolean = System.getProperty("lincheck.strictInvocationsBound").toBoolean()
-
-    /**
      * Runner used for executing the test scenario.
      */
     internal abstract val runner: Runner

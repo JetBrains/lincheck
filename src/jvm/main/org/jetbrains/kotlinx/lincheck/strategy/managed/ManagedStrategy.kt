@@ -156,6 +156,14 @@ abstract class ManagedStrategy(
     protected var replayNumber = 0L
 
     /**
+     * Strict invocations bound will treat spin cycle replays in [ManagedStrategy] as actual invocations.
+     *
+     * Setting this flag to `true` could lead to existing errors being undetected by the strategy
+     * when small number of invocations is set (like, 1) and spin cycle replay is required.
+     */
+    private val strictInvocationsBound: Boolean = System.getProperty("lincheck.strictInvocationsBound").toBoolean()
+
+    /**
      * For each thread, represents a shadow stack used to reflect the program's actual stack.
      *
      * Collected and used only in the trace collecting stage.
