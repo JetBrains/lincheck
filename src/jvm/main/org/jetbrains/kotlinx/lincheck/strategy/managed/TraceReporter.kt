@@ -264,8 +264,9 @@ internal fun constructTraceGraph(
 
         for (call in event.callStackTrace) {
             // Switch events that happen as a first event of the method are lifted out of the method in the trace
-            if (!callNodes.containsKey(call.callId) && event is SwitchEventTracePoint) break
-            val callNode = callNodes.computeIfAbsent(call.callId) {
+            val callId = call.tracePoint.callId
+            if (!callNodes.containsKey(callId) && event is SwitchEventTracePoint) break
+            val callNode = callNodes.computeIfAbsent(callId) {
                 // create a new call node if needed
                 val result = traceGraphNodes.createAndAppend { lastNode ->
                     val callDepth = innerNode.callDepth + 1
@@ -412,12 +413,13 @@ private fun compressCallStackTrace(
         val currentElement = oldStacktrace.removeFirst()
         
         // if element was removed (or seen) by previous iteration continue
-        if (removed.contains(currentElement.callId)) continue
-        if (seen.contains(currentElement.callId)) {
+        val currentElementCallId = currentElement.tracePoint.callId
+        if (removed.contains(currentElementCallId)) continue
+        if (seen.contains(currentElementCallId)) {
             compressedStackTrace.add(currentElement)
             continue
         }
-        seen.add(currentElement.callId)
+        seen.add(currentElementCallId)
         
         // if next element is null, we reached end of list
         val nextElement = oldStacktrace.firstOrNull()
@@ -432,7 +434,7 @@ private fun compressCallStackTrace(
         if (isUserThreadStart(currentElement, nextElement)) {
             // we do not mark currentElement as removed, since that is a unique call from Thread.kt
             // marking it prevents starts of other threads from being detected.
-            removed.add(nextElement.callId)
+            removed.add(nextElement.tracePoint.callId)
             continue
         }
         
@@ -448,7 +450,7 @@ private fun compressCallStackTrace(
             check(currentElement.tracePoint.thrownException == nextElement.tracePoint.thrownException)
             
             // Mark next as removed
-            removed.add(nextElement.callId)
+            removed.add(nextElement.tracePoint.callId)
             compressedStackTrace.add(currentElement)
             continue
         }

@@ -211,6 +211,9 @@ internal class WriteTracePoint(
 
 internal class MethodCallTracePoint(
     iThread: Int, actorId: Int,
+    // unique identifier of method call trace point
+    // TODO: unify with `eventId`
+    val callId: Int,
     val className: String,
     var methodName: String,
     callStackTrace: CallStackTrace,
@@ -259,7 +262,7 @@ internal class MethodCallTracePoint(
     }
 
     override fun deepCopy(copiedCallStackTraceElements: HashMap<CallStackTraceElement, CallStackTraceElement>): MethodCallTracePoint =
-        MethodCallTracePoint(iThread, actorId, className, methodName, callStackTrace.deepCopy(copiedCallStackTraceElements), codeLocation, isStatic)
+        MethodCallTracePoint(iThread, actorId, callId, className, methodName, callStackTrace.deepCopy(copiedCallStackTraceElements), codeLocation, isStatic)
             .also {
                 it.eventId = eventId
                 it.returnedValue = returnedValue
@@ -495,7 +498,6 @@ internal sealed class SwitchReason(private val reason: String) {
  * Method call stack trace element info.
  * All method calls are enumerated with unique ids to distinguish different calls of the same method.
  *
- * @property callId unique identifier of the call stack trace element.
  * @property tracePoint the method call trace point corresponding to this call stack element.
  * @property instance the object on which the method was invoked (null in case of static method).
  * @property methodInvocationId identifier of the method invocation;
@@ -504,7 +506,6 @@ internal sealed class SwitchReason(private val reason: String) {
  * @see [org.jetbrains.kotlinx.lincheck.transformation.MethodIds].
  */
 internal class CallStackTraceElement(
-    val callId: Int,
     val tracePoint: MethodCallTracePoint,
     val instance: Any?,
     val methodInvocationId: Int
@@ -512,7 +513,6 @@ internal class CallStackTraceElement(
     fun deepCopy(copiedCallStackTraceElements: HashMap<CallStackTraceElement, CallStackTraceElement>): CallStackTraceElement =
         copiedCallStackTraceElements.computeIfAbsent(this) {
             CallStackTraceElement(
-                callId,
                 tracePoint.deepCopy(copiedCallStackTraceElements),
                 instance,
                 methodInvocationId

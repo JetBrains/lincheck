@@ -1648,6 +1648,7 @@ abstract class ManagedStrategy(
         val tracePoint = createBeforeMethodCallTracePoint(
             iThread = threadId,
             owner = owner,
+            callId = callId,
             className = className,
             methodName = methodName,
             params = params,
@@ -1660,7 +1661,6 @@ abstract class ManagedStrategy(
             params.map { primitiveOrIdentityHashCode(it) }.toTypedArray().contentHashCode()
         )
         val stackTraceElement = CallStackTraceElement(
-            callId = callId,
             tracePoint = tracePoint,
             instance = owner,
             methodInvocationId = methodInvocationId
@@ -1672,6 +1672,7 @@ abstract class ManagedStrategy(
     private fun createBeforeMethodCallTracePoint(
         iThread: Int,
         owner: Any?,
+        callId: Int,
         className: String,
         methodName: String,
         params: Array<Any?>,
@@ -1682,6 +1683,7 @@ abstract class ManagedStrategy(
         val tracePoint = MethodCallTracePoint(
             iThread = iThread,
             actorId = currentActorId[iThread]!!,
+            callId = callId,
             className = className,
             methodName = methodName,
             callStackTrace = callStackTrace,
