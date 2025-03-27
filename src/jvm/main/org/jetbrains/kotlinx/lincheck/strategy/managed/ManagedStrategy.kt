@@ -29,7 +29,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.adorne
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectLabelFactory.cleanObjectNumeration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.UnsafeName.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.VarHandleMethodType.*
-import  org.jetbrains.kotlinx.lincheck.strategy.managed.IntrinsicCallType.*
 import org.jetbrains.kotlinx.lincheck.strategy.native_calls.DeterministicMethodDescriptor
 import org.jetbrains.kotlinx.lincheck.strategy.native_calls.MethodCallInfo
 import org.jetbrains.kotlinx.lincheck.strategy.native_calls.getDeterministicMethodDescriptorOrNull
@@ -1330,19 +1329,24 @@ abstract class ManagedStrategy(
         }
     }
 
-    private fun processIntrinsicMethodEffectsOnObjectTracker(
+    /**
+     * Propagates the modification done by intrinsic calls to the strategy.
+     * This functionality is required, because we cannot instrument intrinsic methods directly.
+     *
+     * *Must be called from [runInIgnoredSection].*
+     */
+    private fun processIntrinsicMethodEffects(
         methodId: Int,
         result: Any?
     ) {
-        if (!IntrinsicMethods.isIntrinsicMethod(methodId)) return
+        if (!MethodIds.isIntrinsicMethod(methodId)) return
+        val intrinsicDescriptor = MethodIds.getIntrinsicMethodDescriptor(methodId)
 
-        val (owner, methodSignature) = IntrinsicMethods.getIntrinsicMethodDescriptor(methodId)
-        val intrinsicCallType = IntrinsicCallNames.getIntrinsicMethodCallType(owner, methodSignature)
-
-        when (intrinsicCallType) {
-            is ArraysCopyOfIntrinsicCall,
-            is ArraysCopyOfRangeIntrinsicCall -> result?.let { afterNewObjectCreation(it) }
-            else -> {}
+        if (
+            intrinsicDescriptor.isArraysCopyOfIntrinsic() ||
+            intrinsicDescriptor.isArraysCopyOfRangeIntrinsic()
+        ) {
+            result?.let { afterNewObjectCreation(it) }
         }
     }
 
@@ -1458,7 +1462,7 @@ abstract class ManagedStrategy(
     ) = runInsideIgnoredSection {
         require(deterministicMethodDescriptor is DeterministicMethodDescriptor<*, *>?)
         // process intrinsic candidate methods
-        processIntrinsicMethodEffectsOnObjectTracker(methodId, result)
+        processIntrinsicMethodEffects(methodId, result)
 
         if (isInTraceDebuggerMode && isFirstReplay && deterministicMethodDescriptor != null) {
             deterministicMethodDescriptor.saveFirstResultWithCast(receiver, params, KResult.success(result)) {

@@ -18,7 +18,41 @@ import sun.nio.ch.lincheck.Types.convertAsmMethodType
 internal fun Method.toMethodSignature() = MethodSignature(this.name, convertAsmMethodType(this.descriptor))
 internal fun java.lang.reflect.Method.toMethodSignature() = Method.getMethod(this).toMethodSignature()
 
-object PredefinedTypes {
-    internal val ARRAY_OF_OBJECTS_TYPE = ArrayType(ObjectType("java.lang.Object"))
-    internal val CLASS_TYPE = ObjectType("java.lang.Class")
+internal data class MethodDescriptor(
+    val className: String,
+    val methodSignature: MethodSignature
+) {
+    constructor(className: String, methodName: String, desc: String) :
+        this(className, MethodSignature(methodName, convertAsmMethodType(desc)))
+
+    val methodName: String get() = methodSignature.name
+    val returnType: Type get() = methodSignature.methodType.returnType
+    val argumentTypes: List<Type> get() = methodSignature.methodType.argumentTypes
 }
+
+internal fun MethodDescriptor.isArraysCopyOfIntrinsic(): Boolean {
+    return (
+        className == "java.util.Arrays" &&
+        methodName == "copyOf" &&
+        returnType == ARRAY_OF_OBJECTS_TYPE &&
+        argumentTypes == listOf(ARRAY_OF_OBJECTS_TYPE, INT_TYPE, CLASS_TYPE)
+    )
+}
+
+internal fun MethodDescriptor.isArraysCopyOfRangeIntrinsic(): Boolean {
+    return (
+        className == "java.util.Arrays" &&
+        methodName == "copyOfRange" &&
+        returnType == ARRAY_OF_OBJECTS_TYPE &&
+        argumentTypes == listOf(ARRAY_OF_OBJECTS_TYPE, INT_TYPE, INT_TYPE, CLASS_TYPE)
+    )
+}
+
+// TODO: java 8 does not have `@HotSpotIntrinsicCandidate`/`@IntrinsicCandidate` annotations
+//  add all tracked intrinsics here
+internal fun MethodDescriptor.isTrackedIntrinsic(): Boolean =
+    isArraysCopyOfIntrinsic() ||
+    isArraysCopyOfIntrinsic()
+
+private val ARRAY_OF_OBJECTS_TYPE = ArrayType(ObjectType("java.lang.Object"))
+private val CLASS_TYPE = ObjectType("java.lang.Class")

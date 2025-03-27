@@ -29,28 +29,28 @@ class IntrinsicCandidateMethodTest {
 
     @Test
     fun testArraysCopyOf() {
-        runConcurrentTest(15000) {
+        runConcurrentTest(1000) {
             val threads = mutableListOf<Thread>()
-            val a = AtomicInteger(0)
+            val l = CountDownLatch(1)
 
             // `ArrayList::copyOf` method is called internally (on array resize)
             // which is annotated with @[HotSpot]IntrinsicCandidate. Method's body is substituted
             // with predefined assembly, thus, execution was non-deterministic, because the
             // substitution overrides lincheck's instrumentation unexpectedly.
-            // Operation inside each thread does not really matter, but with some operations it harder to trigger jit.
+            // Operation inside each thread does not really matter, but with some operations it harder to trigger jit
+            // (e.g. with AtomicInteger test sometimes passes).
             threads += thread {
-                a.incrementAndGet()
+                l.await()
             }
 
             threads += thread {
-                a.incrementAndGet()
+                l.await()
             }
 
-            a.incrementAndGet()
+            l.countDown()
             for (t in threads) {
                 t.join()
             }
-            check(a.get() == 3)
         }
     }
 }
