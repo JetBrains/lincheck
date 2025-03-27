@@ -124,23 +124,9 @@ abstract class Strategy protected constructor(
  * @return the failure, if detected, null otherwise.
  */
 fun Strategy.runIteration(invocations: Int, verifier: Verifier): LincheckFailure? {
-    var isReplayingSameInvocation = false
     for (invocation in 0 until invocations) {
-        if (!isReplayingSameInvocation && !nextInvocation()) return null
-        isReplayingSameInvocation = false
-        var result: InvocationResult = runInvocation()
-
-        if (strictInvocationsBound) {
-            if (result is SpinCycleFoundAndReplayRequired) {
-                isReplayingSameInvocation = true
-                continue
-            }
-        }
-        else {
-            while (result is SpinCycleFoundAndReplayRequired) {
-                result = runInvocation()
-            }
-        }
+        if (!nextInvocation()) return null
+        val result = runInvocation()
 
         val failure = try {
             verify(result, verifier)
@@ -167,6 +153,7 @@ fun Strategy.runIteration(invocations: Int, verifier: Verifier): LincheckFailure
  * @return failure, if invocation results are incorrect, null otherwise.
  */
 fun Strategy.verify(result: InvocationResult, verifier: Verifier): LincheckFailure? = when (result) {
+    is SpinCycleFoundAndReplayRequired -> null
     is CompletedInvocationResult ->
         if (!verifier.verifyResults(scenario, result.results)) {
             IncorrectResultsFailure(scenario, result.results, tryCollectTrace(result))

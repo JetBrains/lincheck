@@ -272,31 +272,36 @@ abstract class ManagedStrategy(
      * Runs the current invocation.
      */
     override fun runInvocation(): InvocationResult {
-        initializeInvocation()
-        val result: InvocationResult = try {
-            runner.run()
-        } finally {
-            restoreStaticMemorySnapshot()
-        }
-        // In case the runner detects a deadlock, some threads can still manipulate the current strategy,
-        // so we're not interested in suddenInvocationResult in this case
-        // and immediately return RunnerTimeoutInvocationResult.
-        if (result is RunnerTimeoutInvocationResult) {
-            return result
-        }
-        // If strategy has not detected a sudden invocation result,
-        // then return, otherwise process the sudden result.
-        val suddenResult = suddenInvocationResult ?: return result
-        // Check if an invocation replay is required
-        val isReplayRequired = (suddenResult is SpinCycleFoundAndReplayRequired)
-        if (isReplayRequired) {
-            enableSpinCycleReplay()
+        while (true) {
+            initializeInvocation()
+            val result: InvocationResult = try {
+                runner.run()
+            } finally {
+                restoreStaticMemorySnapshot()
+            }
+            // In case the runner detects a deadlock, some threads can still manipulate the current strategy,
+            // so we're not interested in suddenInvocationResult in this case
+            // and immediately return RunnerTimeoutInvocationResult.
+            if (result is RunnerTimeoutInvocationResult) {
+                return result
+            }
+            // If strategy has not detected a sudden invocation result,
+            // then return, otherwise process the sudden result.
+            val suddenResult = suddenInvocationResult ?: return result
+            // Check if an invocation replay is required
+            val isReplayRequired = (suddenResult is SpinCycleFoundAndReplayRequired)
+            if (isReplayRequired) {
+                enableSpinCycleReplay()
+                if (strictInvocationsBound) {
+                    return suddenResult
+                }
+                continue
+            }
+            // Unexpected `ThreadAbortedError` should be thrown.
+            check(result is UnexpectedExceptionInvocationResult)
+            // Otherwise return the sudden result
             return suddenResult
         }
-        // Unexpected `ThreadAbortedError` should be thrown.
-        check(result is UnexpectedExceptionInvocationResult)
-        // Otherwise return the sudden result
-        return suddenResult
     }
 
     protected open fun enableSpinCycleReplay() {}
