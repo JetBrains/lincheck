@@ -926,13 +926,13 @@ internal fun afterSpinCycleTraceCollected(
         var firstI = spinCycleFirstTracePointCallStackTrace.lastIndex
         var count = 0
         while (firstI >= 0) {
-            val identifier = spinCycleFirstTracePointCallStackTrace[firstI].tracePoint.methodInvocationId
+            val methodInvocationHash = spinCycleFirstTracePointCallStackTrace[firstI].tracePoint.methodInvocationHash
             // Comparing corresponding calls.
-            if (identifier != currentCallStackTrace[currentI].tracePoint.methodInvocationId) break
+            if (methodInvocationHash != currentCallStackTrace[currentI].tracePoint.methodInvocationHash) break
             // Check for the last trace point before the cycle.
             if ((tracePointBeforeCycle != null) &&
                 (tracePointBeforeCycle.callStackTrace.lastIndex >= firstI) &&
-                (tracePointBeforeCycle.callStackTrace[firstI].tracePoint.methodInvocationId == identifier)
+                (tracePointBeforeCycle.callStackTrace[firstI].tracePoint.methodInvocationHash == methodInvocationHash)
             ) break
 
             currentI--

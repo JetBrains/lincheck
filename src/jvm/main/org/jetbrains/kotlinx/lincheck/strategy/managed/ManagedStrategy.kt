@@ -1644,9 +1644,9 @@ abstract class ManagedStrategy(
         } else {
             methodParams
         }
-        // Method invocation id used to calculate spin cycle start label call depth.
+        // Method invocation hash used to calculate spin cycle start label call depth.
         // Two calls are considered equals if two same methods were called with the same parameters.
-        val methodInvocationId = Objects.hash(methodId,
+        val methodInvocationHash = Objects.hash(methodId,
             params.map { primitiveOrIdentityHashCode(it) }.toTypedArray().contentHashCode()
         )
         // The code location of the new method call is currently the last one
@@ -1659,7 +1659,7 @@ abstract class ManagedStrategy(
             codeLocation = codeLocation,
             atomicMethodDescriptor = atomicMethodDescriptor,
             callId = callId,
-            methodInvocationId = methodInvocationId
+            methodInvocationHash = methodInvocationHash
         )
         val stackTraceElement = CallStackTraceElement(
             tracePoint = tracePoint,
@@ -1678,14 +1678,14 @@ abstract class ManagedStrategy(
         codeLocation: Int,
         atomicMethodDescriptor: AtomicMethodDescriptor?,
         callId: Int,
-        methodInvocationId: Int,
+        methodInvocationHash: Int,
     ): MethodCallTracePoint {
         val callStackTrace = callStackTrace[iThread]!!
         val tracePoint = MethodCallTracePoint(
             iThread = iThread,
             actorId = currentActorId[iThread]!!,
             callId = callId,
-            methodInvocationId = methodInvocationId,
+            methodInvocationHash = methodInvocationHash,
             className = className,
             methodName = methodName,
             callStackTrace = callStackTrace,

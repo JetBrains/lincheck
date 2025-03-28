@@ -216,9 +216,9 @@ internal class MethodCallTracePoint(
     // unique identifier of method call trace point
     // TODO: unify with `eventId`
     val callId: Int,
-    // identifier of the method invocation;
-    // encompasses the id of the method itself and hash codes of its parameters
-    val methodInvocationId: Int,
+    // hash of the method invocation;
+    // encompasses the hash of method id and hash codes of its parameters
+    val methodInvocationHash: Int,
     callStackTrace: CallStackTrace,
     codeLocation: Int,
     val isStatic: Boolean,
@@ -271,7 +271,7 @@ internal class MethodCallTracePoint(
             className = className,
             methodName = methodName,
             callId = callId,
-            methodInvocationId = methodInvocationId,
+            methodInvocationHash = methodInvocationHash,
             callStackTrace = callStackTrace.deepCopy(copiedCallStackTraceElements),
             codeLocation = codeLocation,
             isStatic = isStatic
