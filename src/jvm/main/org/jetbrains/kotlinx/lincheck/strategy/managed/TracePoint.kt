@@ -211,11 +211,14 @@ internal class WriteTracePoint(
 
 internal class MethodCallTracePoint(
     iThread: Int, actorId: Int,
+    val className: String,
+    var methodName: String,
     // unique identifier of method call trace point
     // TODO: unify with `eventId`
     val callId: Int,
-    val className: String,
-    var methodName: String,
+    // identifier of the method invocation;
+    // encompasses the id of the method itself and hash codes of its parameters
+    val methodInvocationId: Int,
     callStackTrace: CallStackTrace,
     codeLocation: Int,
     val isStatic: Boolean,
@@ -262,15 +265,25 @@ internal class MethodCallTracePoint(
     }
 
     override fun deepCopy(copiedCallStackTraceElements: HashMap<CallStackTraceElement, CallStackTraceElement>): MethodCallTracePoint =
-        MethodCallTracePoint(iThread, actorId, callId, className, methodName, callStackTrace.deepCopy(copiedCallStackTraceElements), codeLocation, isStatic)
-            .also {
-                it.eventId = eventId
-                it.returnedValue = returnedValue
-                it.thrownException = thrownException
-                it.parameters = parameters
-                it.ownerName = ownerName
-                it.parameterTypes = parameterTypes
-            }
+        MethodCallTracePoint(
+            iThread = iThread,
+            actorId = actorId,
+            className = className,
+            methodName = methodName,
+            callId = callId,
+            methodInvocationId = methodInvocationId,
+            callStackTrace = callStackTrace.deepCopy(copiedCallStackTraceElements),
+            codeLocation = codeLocation,
+            isStatic = isStatic
+        )
+        .also {
+            it.eventId = eventId
+            it.returnedValue = returnedValue
+            it.thrownException = thrownException
+            it.parameters = parameters
+            it.ownerName = ownerName
+            it.parameterTypes = parameterTypes
+        }
 
     fun initializeVoidReturnedValue() {
         returnedValue = ReturnedValueResult.VoidResult
@@ -500,22 +513,18 @@ internal sealed class SwitchReason(private val reason: String) {
  *
  * @property tracePoint the method call trace point corresponding to this call stack element.
  * @property instance the object on which the method was invoked (null in case of static method).
- * @property methodInvocationId identifier of the method invocation;
- *   encompasses the id of the method itself and ids of its parameters (i.e., their hash codes).
  *
  * @see [org.jetbrains.kotlinx.lincheck.transformation.MethodIds].
  */
 internal class CallStackTraceElement(
     val tracePoint: MethodCallTracePoint,
     val instance: Any?,
-    val methodInvocationId: Int
 ) {
     fun deepCopy(copiedCallStackTraceElements: HashMap<CallStackTraceElement, CallStackTraceElement>): CallStackTraceElement =
         copiedCallStackTraceElements.computeIfAbsent(this) {
             CallStackTraceElement(
                 tracePoint.deepCopy(copiedCallStackTraceElements),
                 instance,
-                methodInvocationId
             )
         }
 }

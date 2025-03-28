@@ -1644,26 +1644,26 @@ abstract class ManagedStrategy(
         } else {
             methodParams
         }
-        // The code location of the new method call is currently the last one
-        val tracePoint = createBeforeMethodCallTracePoint(
-            iThread = threadId,
-            owner = owner,
-            callId = callId,
-            className = className,
-            methodName = methodName,
-            params = params,
-            codeLocation = codeLocation,
-            atomicMethodDescriptor = atomicMethodDescriptor,
-        )
         // Method invocation id used to calculate spin cycle start label call depth.
         // Two calls are considered equals if two same methods were called with the same parameters.
         val methodInvocationId = Objects.hash(methodId,
             params.map { primitiveOrIdentityHashCode(it) }.toTypedArray().contentHashCode()
         )
+        // The code location of the new method call is currently the last one
+        val tracePoint = createBeforeMethodCallTracePoint(
+            iThread = threadId,
+            owner = owner,
+            className = className,
+            methodName = methodName,
+            params = params,
+            codeLocation = codeLocation,
+            atomicMethodDescriptor = atomicMethodDescriptor,
+            callId = callId,
+            methodInvocationId = methodInvocationId
+        )
         val stackTraceElement = CallStackTraceElement(
             tracePoint = tracePoint,
             instance = owner,
-            methodInvocationId = methodInvocationId
         )
         callStackTrace.add(stackTraceElement)
         pushShadowStackFrame(owner)
@@ -1672,18 +1672,20 @@ abstract class ManagedStrategy(
     private fun createBeforeMethodCallTracePoint(
         iThread: Int,
         owner: Any?,
-        callId: Int,
         className: String,
         methodName: String,
         params: Array<Any?>,
         codeLocation: Int,
         atomicMethodDescriptor: AtomicMethodDescriptor?,
+        callId: Int,
+        methodInvocationId: Int,
     ): MethodCallTracePoint {
         val callStackTrace = callStackTrace[iThread]!!
         val tracePoint = MethodCallTracePoint(
             iThread = iThread,
             actorId = currentActorId[iThread]!!,
             callId = callId,
+            methodInvocationId = methodInvocationId,
             className = className,
             methodName = methodName,
             callStackTrace = callStackTrace,
